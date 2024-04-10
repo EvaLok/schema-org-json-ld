@@ -1,0 +1,27 @@
+{
+    "name": "evalok/schema-org-json-ld",
+    "description": "library for generating json-ld rich results",
+	"keywords": [
+		"schema.org",
+		"json-ld",
+		"rich results",
+		"Google",
+		"Product",
+		"ProductGroup",
+		"Product variant"
+	],
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Evalok\\SchemaOrgJsonLd\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Eva Beekers",
+            "email": "eva.aedea@gmail.com"
+        }
+    ],
+    "require": {}
+}
