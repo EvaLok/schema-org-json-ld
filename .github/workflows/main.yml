@@ -1,0 +1,29 @@
+name: Test and Build
+
+on:
+    push:
+        branches:
+            - master
+
+
+jobs:
+    build-and-deploy:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v2
+
+            - name: Install composer and dependencies
+              uses: php-actions/composer@v6
+
+            - name: PHPUnit Tests
+              uses: php-actions/phpunit@v3
+              env:
+                  XDEBUG_MODE: coverage
+              with:
+                  bootstrap: vendor/autoload.php
+                  php_extensions: xdebug
+
+            - name: Run Unit Tests
+              run: composer run test-unit
