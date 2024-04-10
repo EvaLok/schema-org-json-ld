@@ -23,5 +23,7 @@
             "email": "eva.aedea@gmail.com"
         }
     ],
-    "require": {}
+    "require": {
+		"php" : ">=8.1.0"
+	}
 }
