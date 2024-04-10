@@ -17,13 +17,11 @@ jobs:
             - name: Install composer and dependencies
               uses: php-actions/composer@v6
 
-            - name: PHPUnit Tests
-              uses: php-actions/phpunit@v3
-              env:
-                  XDEBUG_MODE: coverage
+            - name: Setup PHP with XDebug
+              uses: shivammathur/setup-php@v2
               with:
-                  bootstrap: vendor/autoload.php
-                  php_extensions: xdebug
+                  php-version: 8.1
+                  coverage: xdebug
 
             - name: Run Unit Tests
               run: composer run test-unit
