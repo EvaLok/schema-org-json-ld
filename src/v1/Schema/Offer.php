@@ -2,7 +2,9 @@
 
 namespace EvaLok\SchemaOrgJsonLd\v1\Schema;
 
-class Offer {
+use EvaLok\SchemaOrgJsonLd\v1\TypedSchema;
+
+class Offer extends TypedSchema {
 	const A_SCHEMA_TYPE = 'Offer';
 
 	public function __construct(

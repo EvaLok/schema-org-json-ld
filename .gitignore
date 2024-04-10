@@ -1,6 +1,9 @@
 composer.phar
 /vendor/
 
-
+# ide
 .idea
+
+# test stuff
+.phpunit.result.cache
 

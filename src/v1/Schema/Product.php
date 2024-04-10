@@ -2,7 +2,9 @@
 
 namespace EvaLok\SchemaOrgJsonLd\v1\Schema;
 
-class Product {
+use EvaLok\SchemaOrgJsonLd\v1\TypedSchema;
+
+class Product extends TypedSchema {
 	const A_SCHEMA_TYPE = 'Product';
 
 	function __construct(
