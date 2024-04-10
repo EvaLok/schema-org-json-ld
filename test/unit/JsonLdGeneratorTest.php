@@ -11,7 +11,7 @@ final class JsonLdGeneratorTest extends TestCase {
 	public function testShouldGenerateValidJsonLd() {
 		$product = new Product(
 			name: "Executive Anvil",
-			images: [
+			image: [
 				"https://example.com/photos/1x1/photo.jpg",
 				"https://example.com/photos/4x3/photo.jpg",
 				"https://example.com/photos/16x9/photo.jpg"
@@ -34,5 +34,11 @@ final class JsonLdGeneratorTest extends TestCase {
 		);
 
 		$this->assertIsString($json);
+
+		$output_json_obj = json_decode($json);
+		$comparison_obj = json_decode(file_get_contents(__DIR__ . '/../samples/Product.json'));
+
+		$this->assertEquals($comparison_obj, $output_json_obj, "resultant json_decode objects should be equal");
+
 	}
 }

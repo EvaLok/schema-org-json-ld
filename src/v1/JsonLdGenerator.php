@@ -7,17 +7,16 @@ use UnitEnum;
 
 class JsonLdGenerator {
 	public static function SchemaToJson(
-		TypedSchema $schema,
-		$initialContext = true
+		TypedSchema $schema
 	): string {
 		$obj = self::SchemaToObject($schema);
 
-		return json_encode($obj, JSON_PRETTY_PRINT);
+		return json_encode($obj, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES);
 	}
 
 	public static function SchemaToObject(
 		TypedSchema $schema,
-					$initialContext = true
+		$initialContext = true
 	): array {
 		$obj = [];
 

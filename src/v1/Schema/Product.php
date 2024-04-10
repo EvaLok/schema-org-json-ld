@@ -9,12 +9,12 @@ class Product extends TypedSchema {
 
 	function __construct(
 		public string $name,
-		/** @var string[] $images */
-		public array $images,
+		/** @var string[] $image */
+		public array  $image,
 		public string $description,
 		public string $sku,
 		/** @var Offer[] $offers */
-		public array $offers,
+		public array  $offers,
 	) {
 
 	}

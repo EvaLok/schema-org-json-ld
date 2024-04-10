@@ -9,12 +9,12 @@
 	],
 	"description": "Sleeker than ACME's Classic Anvil, the Executive Anvil is perfect for the business traveler looking for something to drop from a height.",
 	"sku": "0446310786",
-	"offers": {
+	"offers": [{
 		"@type": "Offer",
 		"url": "https://example.com/anvil",
 		"priceCurrency": "USD",
 		"price": 119.99,
 		"itemCondition": "https://schema.org/NewCondition",
 		"availability": "https://schema.org/InStock"
-	}
+	}]
 }
