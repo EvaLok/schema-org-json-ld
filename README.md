@@ -4,6 +4,11 @@ library for generating json-ld rich results
 work-in-progress; currently only supports `Product` and `Offer` schema.org `Thing`s, along with some (but not all) of their essential properties. Pull Requests welcome! 
 
 
+## install
+`composer require evabee/schema-org-json-ld`
+
+please note that the alternative vendor name is correct. due to packagist wanting excessive Github permissions i'm locked out of the default vendor namespace.
+
 ### example usage
 
 ```php
