@@ -38,12 +38,23 @@ class JsonLdGenerator {
 	): void {
 
 		foreach( $properties as $k => $v ){
-			if ( is_string($v) || is_numeric($v) ) {
+			if ( is_null($v) ) {
+				continue;
+			}
+
+			else if ( is_string($v) || is_numeric($v) ) {
 				$obj[$k] = $v;
 			}
 
 			else if ( $v instanceof UnitEnum ) {
 				$obj[$k] = $v->value;
+			}
+
+			else if ( $v instanceof TypedSchema ) {
+				$obj[$k] = self::SchemaToObject(
+					schema: $v,
+					initialContext: false,
+				);
 			}
 
 			else if ( is_array($v) ) {

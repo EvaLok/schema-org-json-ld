@@ -15,6 +15,8 @@ class Product extends TypedSchema {
 		public string $sku,
 		/** @var Offer[] $offers */
 		public array  $offers,
+		public null|Brand $brand = null,
+		public null|string $mpn = null,
 	) {
 
 	}
