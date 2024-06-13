@@ -2,7 +2,6 @@
 
 namespace EvaLok\SchemaOrgJsonLd\v1;
 
-use PHPUnit\Event\Runtime\PHP;
 use UnitEnum;
 
 class JsonLdGenerator {
