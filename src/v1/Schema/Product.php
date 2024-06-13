@@ -17,6 +17,7 @@ class Product extends TypedSchema {
 		public array  $offers,
 		public null|Brand $brand = null,
 		public null|string $mpn = null,
+		public null|QuantitativeValue $weight = null,
 	) {
 
 	}

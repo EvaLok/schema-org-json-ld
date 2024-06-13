@@ -10,6 +10,11 @@
 	"description": "Sleeker than ACME's Classic Anvil, the Executive Anvil is perfect for the business traveler looking for something to drop from a height.",
 	"sku": "0446310786",
 	"mpn": "ACME0444246625",
+	"weight": {
+		"@type": "QuantitativeValue",
+		"value": "55.67",
+		"unitCode": "LBR"
+	},
 	"brand": {
 		"@type": "Brand",
 		"name": "ACME (tm)"

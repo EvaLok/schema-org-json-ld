@@ -6,6 +6,7 @@ use EvaLok\SchemaOrgJsonLd\v1\Schema\ItemAvailability;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Offer;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\OfferItemCondition;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Product;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\QuantitativeValue;
 use PHPUnit\Framework\TestCase;
 
 final class JsonLdGeneratorTest extends TestCase {
@@ -57,6 +58,10 @@ final class JsonLdGeneratorTest extends TestCase {
 				name: "ACME (tm)",
 			),
 			mpn: "ACME0444246625",
+			weight: new QuantitativeValue(
+				value: 55.67,
+				unitCode: "LBR"
+			),
 			offers: [
 				new Offer(
 					url: "https://example.com/anvil",
