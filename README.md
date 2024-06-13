@@ -22,6 +22,14 @@ $product = new Product(
 	],
 	description: "Sleeker than ACME's Classic Anvil, the Executive Anvil is perfect for the business traveler looking for something to drop from a height.",
 	sku: "0446310786",
+	brand: new Brand(
+		name: "ACME (tm)",
+	),
+	mpn: "ACME0444246625",
+	weight: new QuantitativeValue(
+		value: 55.67,
+		unitCode: "LBR"
+	),
 	offers: [
 		new Offer(
 			url: "https://example.com/anvil",
@@ -41,7 +49,7 @@ $json = JsonLdGenerator::SchemaToJson(
 ... this will output:
 
 ```json
- {
+{
 	"@context": "https://schema.org/",
 	"@type": "Product",
 	"name": "Executive Anvil",
@@ -52,6 +60,16 @@ $json = JsonLdGenerator::SchemaToJson(
 	],
 	"description": "Sleeker than ACME's Classic Anvil, the Executive Anvil is perfect for the business traveler looking for something to drop from a height.",
 	"sku": "0446310786",
+	"mpn": "ACME0444246625",
+	"weight": {
+		"@type": "QuantitativeValue",
+		"value": "55.67",
+		"unitCode": "LBR"
+	},
+	"brand": {
+		"@type": "Brand",
+		"name": "ACME (tm)"
+	},
 	"offers": [{
 		"@type": "Offer",
 		"url": "https://example.com/anvil",
@@ -61,7 +79,6 @@ $json = JsonLdGenerator::SchemaToJson(
 		"availability": "https://schema.org/InStock"
 	}]
 }
-
 ```
 
 see unit tests directory for more details:
