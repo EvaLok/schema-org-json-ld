@@ -1,6 +1,8 @@
 # schema-org-json-ld
 library for generating json-ld rich results
 
+Tested & Validates using Google "Rich Results Test": https://search.google.com/test/rich-results/result?id=w9p4dIgAFSLjb4tw6k3fIg
+
 work-in-progress; currently only supports `Product` and `Offer` schema.org `Thing`s, along with some (but not all) of their essential properties. Pull Requests welcome! 
 
 
