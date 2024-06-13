@@ -12,10 +12,13 @@ class QuantitativeValue extends TypedSchema {
 	 * unitCode ref: https://github.com/schemaorg/schemaorg/wiki/Using-UN-CEFACT-Codes
 	 * - kilogram: KGM
 	 * - US pound: LBR
+	 * - day: DAY
 	 */
 	function __construct(
-		public float $value,
-		public string $unitCode,
+		public null|float $value = null,
+		public null|string $unitCode = null,
+		public null|float $minValue = null,
+		public null|float $maxValue = null,
 	){
 
 	}
