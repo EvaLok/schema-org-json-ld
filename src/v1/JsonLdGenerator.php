@@ -21,7 +21,6 @@ class JsonLdGenerator {
 
 		if ( $initialContext ) {
 			$obj['@context'] = "https://schema.org/";
-			$initialContext = false;
 		}
 
 		$obj['@type'] = $schema::A_SCHEMA_TYPE;
