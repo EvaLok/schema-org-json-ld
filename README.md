@@ -1,7 +1,7 @@
 # schema-org-json-ld
 library for generating json-ld rich results
 
-Tested & Validates using Google "Rich Results Test": https://search.google.com/test/rich-results/result?id=w9p4dIgAFSLjb4tw6k3fIg
+Tested & Validates using Google "Rich Results Test": https://search.google.com/test/rich-results/result?id=eeuHnX6wLe1IqxNkqd42xA
 
 work-in-progress; currently only supports `Product` and `Offer` schema.org `Thing`s, along with some (but not all) of their essential properties. Pull Requests welcome! 
 
@@ -14,7 +14,6 @@ please note that the alternative vendor name is correct. due to packagist wantin
 ### example usage
 
 ```php
-
 $product = new Product(
 	name: "Executive Anvil",
 	image: [
@@ -38,7 +37,60 @@ $product = new Product(
 			priceCurrency: "USD",
 			price: 119.99,
 			itemCondition: OfferItemCondition::NewCondition,
-			availability: ItemAvailability::InStock
+			availability: ItemAvailability::InStock,
+			shippingDetails: [
+				new OfferShippingDetails(
+					shippingDestination: new DefinedRegion(
+						addressCountry: "US",
+						addressRegion: [ "CA", "NV", "AZ" ]
+					),
+					shippingRate: new MonetaryAmount(
+						value: 3.49,
+						currency: "USD",
+					),
+					deliveryTime: new ShippingDeliveryTime(
+						handlingTime: new QuantitativeValue(
+							unitCode: "DAY",
+							minValue: 0,
+							maxValue: 1
+						),
+						transitTime: new QuantitativeValue(
+							unitCode: "DAY",
+							minValue: 1,
+							maxValue: 5
+						)
+					)
+				),
+				new OfferShippingDetails(
+					shippingDestination: new DefinedRegion(
+						addressCountry: "US",
+						addressRegion: [ "HI" ]
+					),
+					shippingRate: new MonetaryAmount(
+						value: 77.49,
+						currency: "USD",
+					),
+					deliveryTime: new ShippingDeliveryTime(
+						handlingTime: new QuantitativeValue(
+							unitCode: "DAY",
+							minValue: 0,
+							maxValue: 1
+						),
+						transitTime: new QuantitativeValue(
+							unitCode: "DAY",
+							minValue: 4,
+							maxValue: 10
+						)
+					)
+				),
+				new OfferShippingDetails(
+					shippingDestination: new DefinedRegion(
+						addressCountry: "US",
+						addressRegion: [ "AK" ]
+					),
+					doesNotShip: true,
+				),
+			]
 		)
 	]
 );
@@ -62,25 +114,103 @@ $json = JsonLdGenerator::SchemaToJson(
 	],
 	"description": "Sleeker than ACME's Classic Anvil, the Executive Anvil is perfect for the business traveler looking for something to drop from a height.",
 	"sku": "0446310786",
-	"mpn": "ACME0444246625",
-	"weight": {
-		"@type": "QuantitativeValue",
-		"value": "55.67",
-		"unitCode": "LBR"
-	},
+	"offers": [
+		{
+			"@type": "Offer",
+			"url": "https://example.com/anvil",
+			"priceCurrency": "USD",
+			"price": 119.99,
+			"itemCondition": "https://schema.org/NewCondition",
+			"availability": "https://schema.org/InStock",
+			"shippingDetails": [
+				{
+					"@type": "OfferShippingDetails",
+					"shippingDestination": {
+						"@type": "DefinedRegion",
+						"addressCountry": "US",
+						"addressRegion": [
+							"CA",
+							"NV",
+							"AZ"
+						]
+					},
+					"shippingRate": {
+						"@type": "MonetaryAmount",
+						"currency": "USD",
+						"value": 3.49
+					},
+					"deliveryTime": {
+						"@type": "ShippingDeliveryTime",
+						"handlingTime": {
+							"@type": "QuantitativeValue",
+							"unitCode": "DAY",
+							"minValue": 0,
+							"maxValue": 1
+						},
+						"transitTime": {
+							"@type": "QuantitativeValue",
+							"unitCode": "DAY",
+							"minValue": 1,
+							"maxValue": 5
+						}
+					}
+				},
+				{
+					"@type": "OfferShippingDetails",
+					"shippingDestination": {
+						"@type": "DefinedRegion",
+						"addressCountry": "US",
+						"addressRegion": [
+							"HI"
+						]
+					},
+					"shippingRate": {
+						"@type": "MonetaryAmount",
+						"currency": "USD",
+						"value": 77.49
+					},
+					"deliveryTime": {
+						"@type": "ShippingDeliveryTime",
+						"handlingTime": {
+							"@type": "QuantitativeValue",
+							"unitCode": "DAY",
+							"minValue": 0,
+							"maxValue": 1
+						},
+						"transitTime": {
+							"@type": "QuantitativeValue",
+							"unitCode": "DAY",
+							"minValue": 4,
+							"maxValue": 10
+						}
+					}
+				},
+				{
+					"@type": "OfferShippingDetails",
+					"shippingDestination": {
+						"@type": "DefinedRegion",
+						"addressCountry": "US",
+						"addressRegion": [
+							"AK"
+						]
+					},
+					"doesNotShip": true
+				}
+			]
+		}
+	],
 	"brand": {
 		"@type": "Brand",
 		"name": "ACME (tm)"
 	},
-	"offers": [{
-		"@type": "Offer",
-		"url": "https://example.com/anvil",
-		"priceCurrency": "USD",
-		"price": 119.99,
-		"itemCondition": "https://schema.org/NewCondition",
-		"availability": "https://schema.org/InStock"
-	}]
+	"mpn": "ACME0444246625",
+	"weight": {
+		"@type": "QuantitativeValue",
+		"value": 55.67,
+		"unitCode": "LBR"
+	}
 }
+
 ```
 
 see unit tests directory for more details:
