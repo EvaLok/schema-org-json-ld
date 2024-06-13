@@ -41,7 +41,7 @@ class JsonLdGenerator {
 				continue;
 			}
 
-			else if ( is_string($v) || is_numeric($v) ) {
+			else if ( is_string($v) || is_numeric($v) || is_bool($v) ) {
 				$obj[$k] = $v;
 			}
 
@@ -66,7 +66,7 @@ class JsonLdGenerator {
 					}
 				} else {
 					foreach( $v as $element ) {
-						if ( is_string($element) || is_numeric($element) ) {
+						if ( is_string($element) || is_numeric($element) || is_bool($element) ) {
 							$obj[$k][] = $element;
 						}
 

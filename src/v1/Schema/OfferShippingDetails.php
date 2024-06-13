@@ -9,8 +9,8 @@ class OfferShippingDetails extends TypedSchema {
 
 	function __construct(
 		public DefinedRegion $shippingDestination,
-		public MonetaryAmount $shippingRate,
-		public ShippingDeliveryTime $deliveryTime,
+		public null|MonetaryAmount $shippingRate = null,
+		public null|ShippingDeliveryTime $deliveryTime = null,
 		public null|bool $doesNotShip = null,
 	){
 

@@ -2,11 +2,15 @@
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Brand;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\DefinedRegion;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ItemAvailability;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\MonetaryAmount;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Offer;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\OfferItemCondition;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\OfferShippingDetails;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Product;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\QuantitativeValue;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\ShippingDeliveryTime;
 use PHPUnit\Framework\TestCase;
 
 final class JsonLdGeneratorTest extends TestCase {
@@ -68,7 +72,60 @@ final class JsonLdGeneratorTest extends TestCase {
 					priceCurrency: "USD",
 					price: 119.99,
 					itemCondition: OfferItemCondition::NewCondition,
-					availability: ItemAvailability::InStock
+					availability: ItemAvailability::InStock,
+					shippingDetails: [
+						new OfferShippingDetails(
+							shippingDestination: new DefinedRegion(
+								addressCountry: "US",
+								addressRegion: [ "CA", "NV", "AZ" ]
+							),
+							shippingRate: new MonetaryAmount(
+								value: 3.49,
+								currency: "USD",
+							),
+							deliveryTime: new ShippingDeliveryTime(
+								handlingTime: new QuantitativeValue(
+									unitCode: "DAY",
+									minValue: 0,
+									maxValue: 1
+								),
+								transitTime: new QuantitativeValue(
+									unitCode: "DAY",
+									minValue: 1,
+									maxValue: 5
+								)
+							)
+						),
+						new OfferShippingDetails(
+							shippingDestination: new DefinedRegion(
+								addressCountry: "US",
+								addressRegion: [ "HI" ]
+							),
+							shippingRate: new MonetaryAmount(
+								value: 77.49,
+								currency: "USD",
+							),
+							deliveryTime: new ShippingDeliveryTime(
+								handlingTime: new QuantitativeValue(
+									unitCode: "DAY",
+									minValue: 0,
+									maxValue: 1
+								),
+								transitTime: new QuantitativeValue(
+									unitCode: "DAY",
+									minValue: 4,
+									maxValue: 10
+								)
+							)
+						),
+						new OfferShippingDetails(
+							shippingDestination: new DefinedRegion(
+								addressCountry: "US",
+								addressRegion: [ "AK" ]
+							),
+							doesNotShip: true,
+						),
+					]
 				)
 			]
 		);

@@ -10,12 +10,12 @@ class DefinedRegion extends TypedSchema {
 	/**
 	 * @param string $addressCountry
 	 * - eg: "US"
-	 * @param string[] $definedRegion
+	 * @param string[] $addressRegion
 	 * - eg: [ "CA", "NV", "AZ" ]
 	 */
-	public function __construct(
+	function __construct(
 		public string $addressCountry,
-		public array $definedRegion,
+		public array $addressRegion,
 	) {
 
 	}
