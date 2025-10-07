@@ -2,8 +2,10 @@
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Brand;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\BreadcrumbList;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\DefinedRegion;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ItemAvailability;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\ListItem;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\MonetaryAmount;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Offer;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\OfferItemCondition;
@@ -141,5 +143,37 @@ final class JsonLdGeneratorTest extends TestCase {
 
 		$this->assertEquals($comparison_obj, $output_json_obj, "resultant json_decode objects should be equal");
 
+	}
+
+	public function testShouldGenerateValidBreadcrumbList() {
+		$breadcrumbList = new BreadcrumbList(
+			itemListElement: [
+				new ListItem(
+					position: 1,
+					name: "Books",
+					item: "https://example.com/books"
+				),
+				new ListItem(
+					position: 2,
+					name: "Science Fiction",
+					item: "https://example.com/books/sciencefiction"
+				),
+				new ListItem(
+					position: 3,
+					name: "Award Winners"
+				)
+			]
+		);
+
+		$json = JsonLdGenerator::SchemaToJson(
+			schema: $breadcrumbList
+		);
+
+		$this->assertIsString($json);
+
+		$output_json_obj = json_decode($json);
+		$comparison_obj = json_decode(file_get_contents(__DIR__ . '/../samples/BreadcrumbList.json'));
+
+		$this->assertEquals($comparison_obj, $output_json_obj, "resultant json_decode objects should be equal");
 	}
 }
