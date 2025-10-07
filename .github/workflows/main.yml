@@ -4,24 +4,35 @@ on:
     push:
         branches:
             - master
-
+    pull_request:
+        branches:
+            - master
 
 jobs:
-    build-and-deploy:
+    test:
         runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                php-version: ['8.1', '8.2', '8.3', '8.4']
+
+        name: PHP ${{ matrix.php-version }}
 
         steps:
             - name: Checkout
-              uses: actions/checkout@v2
+              uses: actions/checkout@v4
 
-            - name: Install composer and dependencies
-              uses: php-actions/composer@v6
-
-            - name: Setup PHP with XDebug
+            - name: Setup PHP
               uses: shivammathur/setup-php@v2
               with:
-                  php-version: 8.1
-                  coverage: xdebug
+                  php-version: ${{ matrix.php-version }}
+                  coverage: none
+
+            - name: Validate composer.json
+              run: composer validate --strict
+
+            - name: Install dependencies
+              run: composer install --prefer-dist --no-progress
 
             - name: Run Unit Tests
               run: composer run test-unit
