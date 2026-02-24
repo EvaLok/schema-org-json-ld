@@ -1,0 +1,74 @@
+name: Orchestrator
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  orchestrate:
+    if: contains(github.event.issue.labels.*.name, 'orchestrator-run')
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+
+    steps:
+      - name: Checkout work repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.ORCHESTRATOR_PAT }}
+          fetch-depth: 0
+
+      - name: Fetch system prompt
+        uses: actions/checkout@v4
+        with:
+          repository: EvaLok/schema-org-json-ld-system-prompt
+          token: ${{ secrets.ORCHESTRATOR_PAT }}
+          path: .system-prompt
+          ref: main
+
+      - name: Load system prompt
+        id: prompt
+        run: |
+          {
+            echo "content<<PROMPT_EOF"
+            cat .system-prompt/orchestrator-prompt.md
+            echo "PROMPT_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Run Orchestrator
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.ORCHESTRATOR_PAT }}
+          system_prompt: ${{ steps.prompt.outputs.content }}
+          claude_args: |
+            --model claude-opus-4-6
+          settings: |
+            {
+              "permissions": {
+                "allow": [
+                  "Edit",
+                  "Write",
+                  "Bash(gh *)",
+                  "Bash(git *)",
+                  "Bash(jq *)",
+                  "Bash(mkdir *)",
+                  "Bash(ls *)",
+                  "Bash(date *)",
+                  "Bash(wc *)",
+                  "Bash(sort *)",
+                  "Bash(composer *)",
+                  "WebFetch(domain:schema.org)",
+                  "WebFetch(domain:developers.google.com)",
+                  "WebFetch(domain:search.google.com)"
+                ]
+              }
+            }
+
+      - name: Cleanup
+        if: always()
+        run: rm -rf .system-prompt

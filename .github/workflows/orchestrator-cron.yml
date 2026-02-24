@@ -1,0 +1,27 @@
+name: Orchestrator Cron
+
+on:
+  schedule:
+    - cron: '0 0,3,6,9,12,15,18,21 * * *'
+    - cron: '30 1,4,7,10,13,16,19,22 * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: orchestrator
+  cancel-in-progress: false
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Create orchestrator issue
+        run: |
+          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
+          gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Orchestrator Cycle - $TIMESTAMP" \
+            --label "orchestrator-run" \
+            --body "@claude Run your orchestrator cycle. Follow STARTUP_CHECKLIST.md."
+        env:
+          GH_TOKEN: ${{ secrets.ORCHESTRATOR_PAT }}
