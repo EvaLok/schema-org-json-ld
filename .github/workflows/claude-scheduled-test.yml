@@ -1,0 +1,30 @@
+name: Claude Scheduled Test
+
+on:
+  schedule:
+    - cron: '25 11 24 2 *'  # 11:25 UTC on Feb 24 - one-time test
+
+jobs:
+  claude-scheduled:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Code
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: "--model claude-opus-4-6"
+          prompt: |
+            Post a comment on issue #4 confirming that this scheduled GitHub Action ran successfully.
+            Include the current UTC timestamp in the comment.
+            Use the gh CLI to post the comment.
+          direct_prompt: true
+          allowed_tools: "Bash(gh issue comment:*)"
