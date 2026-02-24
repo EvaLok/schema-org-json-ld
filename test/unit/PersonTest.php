@@ -3,6 +3,7 @@
 namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\InteractionCounter;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Organization;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Person;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\PostalAddress;
@@ -36,6 +37,10 @@ final class PersonTest extends TestCase {
 		$this->assertFalse(property_exists($obj, 'givenName'));
 		$this->assertFalse(property_exists($obj, 'familyName'));
 		$this->assertFalse(property_exists($obj, 'address'));
+		$this->assertFalse(property_exists($obj, 'interactionStatistic'));
+		$this->assertFalse(property_exists($obj, 'agentInteractionStatistic'));
+		$this->assertFalse(property_exists($obj, 'identifier'));
+		$this->assertFalse(property_exists($obj, 'alternateName'));
 	}
 
 	public function testFullOutputWithNestedTypes(): void {
@@ -61,6 +66,16 @@ final class PersonTest extends TestCase {
 				postalCode: '1011AB',
 				addressCountry: 'NL',
 			),
+			interactionStatistic: new InteractionCounter(
+				interactionType: 'https://schema.org/LikeAction',
+				userInteractionCount: 11,
+			),
+			agentInteractionStatistic: new InteractionCounter(
+				interactionType: 'https://schema.org/WriteAction',
+				userInteractionCount: 7,
+			),
+			identifier: 'user-123',
+			alternateName: 'johnny',
 		);
 		$json = JsonLdGenerator::SchemaToJson(schema: $person);
 		$obj = json_decode($json);
@@ -78,6 +93,10 @@ final class PersonTest extends TestCase {
 		$this->assertEquals('Doe', $obj->familyName);
 		$this->assertEquals('PostalAddress', $obj->address->{'@type'});
 		$this->assertEquals('123 Main Street', $obj->address->streetAddress);
+		$this->assertEquals('InteractionCounter', $obj->interactionStatistic->{'@type'});
+		$this->assertEquals('InteractionCounter', $obj->agentInteractionStatistic->{'@type'});
+		$this->assertEquals('user-123', $obj->identifier);
+		$this->assertEquals('johnny', $obj->alternateName);
 	}
 
 	public function testSameAsSerializesAsArrayOfStrings(): void {
