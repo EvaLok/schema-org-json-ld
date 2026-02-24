@@ -40,7 +40,20 @@
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability"],
-    "in_progress": [],
+    "in_progress": [
+      {
+        "type": "ImageObject",
+        "issue": 25,
+        "dispatched_at": "2026-02-24T17:14:48Z",
+        "model": "gpt-5.3-codex"
+      },
+      {
+        "type": "Person",
+        "issue": 27,
+        "dispatched_at": "2026-02-24T17:15:02Z",
+        "model": "gpt-5.3-codex"
+      }
+    ],
     "planned_next": [
       {
         "type": "ImageObject",
@@ -84,7 +97,20 @@
       ]
     }
   },
-  "agent_sessions": [],
+  "agent_sessions": [
+    {
+      "issue": 25,
+      "title": "ImageObject",
+      "status": "dispatched",
+      "dispatched_at": "2026-02-24T17:14:48Z"
+    },
+    {
+      "issue": 27,
+      "title": "Person",
+      "status": "dispatched",
+      "dispatched_at": "2026-02-24T17:15:02Z"
+    }
+  ],
   "blockers": [],
   "last_cycle": {
     "issue": 20,
