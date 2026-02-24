@@ -190,11 +190,32 @@ composer run test-unit
 
 PHP 8.3 and all composer dependencies are pre-installed in your environment via `copilot-setup-steps.yml`. Run `composer run test-unit` after implementing your changes and confirm all tests pass (both new and existing). Do not mark your PR as ready if tests fail.
 
+## Code Style
+
+This project uses **PHP-CS-Fixer** to enforce consistent code style. A CI job will reject PRs with style violations.
+
+**Before committing**, run the auto-fixer:
+
+```bash
+composer run cs-fix
+```
+
+This automatically fixes all formatting issues (indentation, brace placement, import ordering, whitespace). You do not need to manually fix style — just run this command. You can verify style compliance without auto-fixing via `composer run cs-check`.
+
+Key style rules enforced by the fixer:
+- Tab indentation (not spaces)
+- Opening braces on same line (`class Foo {`, `function bar() {`)
+- Alphabetically ordered imports
+- No unused imports
+- Short array syntax (`[]` not `array()`)
+- PER-CS2.0 base ruleset
+
 ## Quality Checklist
 
 Before marking your PR as ready:
 
 - [ ] All existing tests pass (`composer run test-unit`)
+- [ ] Code style is clean (`composer run cs-fix` — run this before committing)
 - [ ] New tests added for all new/modified schema types
 - [ ] No `mixed` types — all types explicit
 - [ ] Constructor promotion used for all properties

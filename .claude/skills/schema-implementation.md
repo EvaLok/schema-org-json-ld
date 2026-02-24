@@ -87,7 +87,15 @@ File: `test/samples/{TypeName}.json`
 
 Create if the type is complex. Match the expected JSON-LD output format. Used for test assertions via `json_decode(file_get_contents(...))`.
 
-## Step 7: Run tests
+## Step 7: Fix code style
+
+```bash
+composer run cs-fix
+```
+
+Run the auto-fixer before committing. This handles all formatting (tabs, braces, imports, whitespace). Do NOT manually fix style issues — just run this command.
+
+## Step 8: Run tests
 
 ```bash
 composer run test-unit
