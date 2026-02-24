@@ -49,57 +49,71 @@
         "pr": 28,
         "issue": 27,
         "merged_at": "2026-02-24T17:28:06Z"
-      }
-    ],
-    "enums_implemented": ["OfferItemCondition", "ItemAvailability"],
-    "in_progress": [
-      {
-        "type": "Article",
-        "issue": 32,
-        "sub_types": ["NewsArticle", "BlogPosting"],
-        "dispatched_at": "2026-02-24T17:49:24Z",
-        "model": "gpt-5.3-codex"
       },
       {
         "type": "Event",
+        "pr": 35,
         "issue": 33,
         "sub_types": ["Place", "EventStatusType"],
-        "dispatched_at": "2026-02-24T17:49:25Z",
+        "merged_at": "2026-02-24T18:01:00Z"
+      },
+      {
+        "type": "Article",
+        "pr": 34,
+        "issue": 32,
+        "sub_types": ["NewsArticle", "BlogPosting"],
+        "merged_at": "2026-02-24T18:02:00Z"
+      }
+    ],
+    "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType"],
+    "in_progress": [
+      {
+        "type": "LocalBusiness",
+        "issue": 36,
+        "sub_types": ["GeoCoordinates", "OpeningHoursSpecification", "DayOfWeek"],
+        "dispatched_at": "2026-02-24T18:03:12Z",
+        "model": "gpt-5.3-codex"
+      },
+      {
+        "type": "Recipe",
+        "issue": 37,
+        "sub_types": ["NutritionInformation", "HowToStep"],
+        "dispatched_at": "2026-02-24T18:03:13Z",
         "model": "gpt-5.3-codex"
       }
     ],
     "planned_next": [
       {
-        "type": "LocalBusiness",
-        "priority": 1,
-        "reason": "All dependencies met. Popular Google type for local SEO.",
-        "depends_on": ["Organization", "PostalAddress", "AggregateRating", "Review"]
-      },
-      {
-        "type": "Recipe",
-        "priority": 2,
-        "reason": "All dependencies met. Popular Google type.",
-        "depends_on": ["Person", "AggregateRating", "Review", "ImageObject"]
-      },
-      {
         "type": "Video",
-        "priority": 3,
-        "reason": "Dependencies met. Common type.",
+        "priority": 1,
+        "reason": "Dependencies met (ImageObject). Common Google type.",
         "depends_on": ["ImageObject"]
       },
       {
         "type": "SoftwareApp",
-        "priority": 4,
+        "priority": 2,
         "reason": "Dependencies met (AggregateRating, Review, Offer).",
         "depends_on": ["AggregateRating", "Review", "Offer"]
+      },
+      {
+        "type": "Movie",
+        "priority": 3,
+        "reason": "Dependencies met (AggregateRating, Review, Person, Organization).",
+        "depends_on": ["AggregateRating", "Review", "Person", "Organization"]
+      },
+      {
+        "type": "JobPosting",
+        "priority": 4,
+        "reason": "Dependencies met (Organization, PostalAddress).",
+        "depends_on": ["Organization", "PostalAddress"]
       }
     ],
     "google_rich_results_types": {
       "not_implemented": [
         "Carousel", "Course list", "Dataset", "Discussion forum",
         "Education Q&A", "Employer aggregate rating",
-        "Job posting", "Local business", "Math solver",
-        "Movie", "Profile page", "Q&A", "Recipe",
+        "Job posting", "Math solver",
+        "Movie", "Profile page", "Q&A",
         "Review snippet", "Software app", "Speakable",
         "Subscription/paywalled content", "Vacation rental", "Video"
       ]
@@ -107,25 +121,25 @@
   },
   "agent_sessions": [
     {
-      "issue": 32,
-      "type": "Article",
+      "issue": 36,
+      "type": "LocalBusiness",
       "status": "dispatched",
-      "dispatched_at": "2026-02-24T17:49:24Z"
+      "dispatched_at": "2026-02-24T18:03:12Z"
     },
     {
-      "issue": 33,
-      "type": "Event",
+      "issue": 37,
+      "type": "Recipe",
       "status": "dispatched",
-      "dispatched_at": "2026-02-24T17:49:25Z"
+      "dispatched_at": "2026-02-24T18:03:13Z"
     }
   ],
   "blockers": [],
   "last_cycle": {
     "issue": 31,
-    "timestamp": "2026-02-24T17:49:00Z",
-    "summary": "Cycle 5: Handled Eva input (#29, #30). Updated AGENTS.md with CS-Fixer guidance. Dispatched Article (#32) and Event (#33)."
+    "timestamp": "2026-02-24T18:03:00Z",
+    "summary": "Cycle 5: Merged Article+NewsArticle+BlogPosting (#34), Event+Place+EventStatusType (#35). Dispatched LocalBusiness (#36), Recipe (#37). 46 tests passing. 10 Google types now implemented."
   },
-  "test_count": 32,
-  "total_schema_types": 8,
-  "total_sub_types": 16
+  "test_count": 46,
+  "total_schema_types": 10,
+  "total_sub_types": 22
 }
