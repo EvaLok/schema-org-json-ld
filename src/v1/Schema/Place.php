@@ -9,6 +9,7 @@ class Place extends TypedSchema {
 
 	public function __construct(
 		public string $name,
-		public PostalAddress $address,
+		public null|PostalAddress $address = null,
+		public null|GeoCoordinates|GeoShape $geo = null,
 	) {}
 }
