@@ -144,16 +144,16 @@
         "issue": 64,
         "sub_types": ["Quiz", "AlignmentObject"],
         "merged_at": "2026-02-24T23:00:00Z"
+      },
+      {
+        "type": "DiscussionForumPosting",
+        "pr": 68,
+        "issue": 67,
+        "merged_at": "2026-02-24T23:20:41Z"
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek"],
-    "in_progress": [
-      {
-        "type": "DiscussionForumPosting",
-        "issue": 67,
-        "dispatched_at": "2026-02-24T23:02:00Z"
-      }
-    ],
+    "in_progress": [],
     "planned_next": [
       {
         "type": "Speakable",
@@ -164,25 +164,25 @@
       {
         "type": "VacationRental",
         "priority": 2,
-        "reason": "Complex property type.",
-        "depends_on": []
-      },
-      {
-        "type": "Carousel",
-        "priority": 3,
-        "reason": "Meta-type wrapping other types. Different pattern.",
+        "reason": "Complex property type with LodgingBusiness, etc.",
         "depends_on": []
       },
       {
         "type": "SubscriptionContent",
+        "priority": 3,
+        "reason": "Access metadata type (WebPage + isAccessibleForFree + hasPart).",
+        "depends_on": []
+      },
+      {
+        "type": "Carousel",
         "priority": 4,
-        "reason": "Access metadata type.",
+        "reason": "Meta-type wrapping other types in ItemList. Different pattern.",
         "depends_on": []
       },
       {
         "type": "MathSolver",
         "priority": 5,
-        "reason": "Niche, complex.",
+        "reason": "Niche, complex. MathSolver + MathExpression.",
         "depends_on": []
       }
     ],
@@ -191,24 +191,17 @@
         "Carousel", "Math solver", "Speakable",
         "Subscription/paywalled content", "Vacation rental"
       ],
-      "note": "Review snippet is not a separate type - it is a usage pattern for existing Review/AggregateRating types applied to supported parent types"
+      "note": "Review snippet is not a separate type - it is a usage pattern for existing Review/AggregateRating types. Image metadata may not require implementation (uses existing ImageObject)."
     }
   },
-  "agent_sessions": [
-    {
-      "issue": 67,
-      "type": "DiscussionForumPosting",
-      "dispatched_at": "2026-02-24T23:02:00Z",
-      "status": "in_progress"
-    }
-  ],
+  "agent_sessions": [],
   "blockers": [],
   "last_cycle": {
     "issue": 62,
-    "timestamp": "2026-02-24T22:44:00Z",
-    "summary": "Cycle 8: Merged ProfilePage+InteractionCounter (#65), EducationQA+Quiz+AlignmentObject (#66). DiscussionForumPosting dispatched (#67). 22 Google types implemented. Review snippet removed from backlog (not a type)."
+    "timestamp": "2026-02-24T23:20:00Z",
+    "summary": "Cycle 8: Merged 3 PRs. ProfilePage+InteractionCounter (#65), EducationQA Quiz+AlignmentObject (#66), DiscussionForumPosting+enhanced Comment/Person (#68). 23 Google types now implemented. 117 tests passing. Zero revisions needed."
   },
-  "test_count": 114,
-  "total_schema_types": 22,
-  "total_sub_types": 51
+  "test_count": 117,
+  "total_schema_types": 23,
+  "total_sub_types": 54
 }

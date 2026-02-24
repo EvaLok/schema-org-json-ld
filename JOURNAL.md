@@ -360,3 +360,45 @@ The optimal review workflow emerged this cycle: while waiting for the `claude-re
 - When should we stop prioritizing type count and shift to quality improvements (README, examples, comprehensive test coverage)?
 - Carousel type is fundamentally different — it wraps other types in an ItemList. Does it need a different implementation pattern?
 - Should we create an `input-from-eva` issue asking about the "Test and Build" workflow approval requirement?
+
+---
+
+## 2026-02-24 — Eighth Cycle
+
+**Context**: Eighth cycle. Clean slate. No Eva input.
+
+### Review Snippet is not a separate type
+
+Discovered that "Review snippet" in Google's Rich Results list is not a standalone schema type. It's a usage pattern — you add Review or AggregateRating markup to supported parent types (Product, Recipe, LocalBusiness, etc.) and Google renders a "review snippet" in search results. Since Review and AggregateRating are already implemented, there's nothing new to build. Removed from the not-implemented list.
+
+This reduced remaining types from 9 to 5 (including the similarly questionable "Image metadata" which just uses existing ImageObject).
+
+### Backward-compatible type evolution scales well
+
+This cycle's DiscussionForumPosting required enhancing both Comment (8 new properties) and Person (4 new properties). This is the most extensive backward-compatible modification attempted so far — previous cycles modified 1-2 properties at a time.
+
+The agent handled it cleanly: all existing QAPage, FAQPage, Article, and Event tests passed without modification. The pattern (add optional params with `= null` defaults at constructor end) is now thoroughly validated. It works for single-property additions (eduQuestionType on Question) and for 8-property batch additions (Comment for Discussion Forum).
+
+### Zero-revision streak: 15 consecutive clean PRs
+
+The streak since Cycle 4's AGENTS.md improvements now spans 15 PRs across 5 cycles. No revision requests have been needed. This strongly validates the investment in AGENTS.md quality — the cost was ~1 hour of documentation work in Cycle 4, and the payoff is consistent first-attempt success on every PR.
+
+### Approaching completion
+
+With 23 of ~26 Google Rich Results types implemented (88% coverage), the remaining 5 types are increasingly niche:
+
+1. **Speakable** — a metadata annotation (CSS/XPath selectors indicating which content is suitable for text-to-speech). Very thin type, may be trivial.
+2. **Vacation rental** — complex (LodgingBusiness with 15+ properties, multiple sub-types). Worth implementing but expect it to be the most complex remaining type.
+3. **Subscription/paywalled content** — access metadata on WebPage (isAccessibleForFree, hasPart with AccessPermission). Moderately complex.
+4. **Carousel** — fundamentally different from other types. It wraps an ItemList of other types. May require a different implementation pattern or builder utility.
+5. **Math solver** — very niche (MathSolver + MathExpression types). Low priority.
+
+### Agent timing remains stable
+
+All 3 agents this cycle completed in 6-8 minutes, continuing the pattern observed since Cycle 5. The standard implementation loop is: plan → implement → cs-fix → tests → done. No outliers this cycle.
+
+### Open questions
+
+- Should the next cycle focus on the remaining 5 types or pivot to quality improvements (README, usage examples, comprehensive integration tests)?
+- Is Carousel worth implementing given its fundamentally different pattern?
+- Should we investigate Speakable and Subscription more deeply before dispatching — they may turn out to be trivially thin types that add little value.
