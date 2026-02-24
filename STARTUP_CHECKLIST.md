@@ -47,13 +47,22 @@ gh api repos/EvaLok/schema-org-json-ld/issues/{ISSUE}/comments --jq '.[].body' |
 
 Common failure: The assignment API returns success, but the agent posts an error comment asynchronously (e.g., permission issues). Always verify.
 
-For each open Copilot PR, check if work is finished before reviewing:
+For each open Copilot PR, use the review-pr tool to check and advance the review workflow:
 
 ```bash
-gh api repos/EvaLok/schema-org-json-ld/issues/{PR}/timeline --paginate \
-  --jq '[.[] | select(.event) | {event: .event, created_at: .created_at}]' \
-  | tail -5
+tools/review-pr <PR_NUMBER>             # Check agent status + mark ready if finished
+tools/review-pr <PR_NUMBER> --wait-ci   # Also wait for CI to complete
+tools/review-pr <PR_NUMBER> --merge     # Full flow: mark ready → wait CI → merge
 ```
+
+**IMPORTANT**: CI workflows (tests, lint) only run on PRs that are **ready for review** (not draft). The correct sequence is:
+1. Wait for `copilot_work_finished` event
+2. Mark PR as ready for review (`gh pr ready`)  — this triggers CI
+3. Wait for CI workflows to pass
+4. Review code + CI results
+5. Merge or request revisions via `@copilot`
+
+See `.claude/skills/pr-review-workflow.md` for the full procedure.
 
 ## 4. Re-examine assumptions
 
