@@ -103,41 +103,67 @@
         "issue": 50,
         "sub_types": ["AdministrativeArea"],
         "merged_at": "2026-02-24T20:18:00Z"
+      },
+      {
+        "type": "Course",
+        "pr": 57,
+        "issue": 56,
+        "sub_types": ["CourseInstance", "Schedule"],
+        "merged_at": "2026-02-24T21:39:00Z"
+      },
+      {
+        "type": "Dataset",
+        "pr": 55,
+        "issue": 54,
+        "sub_types": ["DataDownload", "DataCatalog", "GeoShape"],
+        "merged_at": "2026-02-24T21:50:00Z"
+      },
+      {
+        "type": "EmployerAggregateRating",
+        "pr": 59,
+        "issue": 58,
+        "merged_at": "2026-02-24T22:10:00Z"
+      },
+      {
+        "type": "QAPage",
+        "pr": 61,
+        "issue": 60,
+        "sub_types": ["Comment"],
+        "merged_at": "2026-02-24T22:10:00Z"
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek"],
     "in_progress": [],
     "planned_next": [
       {
-        "type": "Course",
-        "priority": 1,
-        "reason": "Simple type, few dependencies. Part of Course list Rich Result.",
-        "depends_on": ["Organization", "AggregateRating"]
-      },
-      {
-        "type": "Dataset",
-        "priority": 2,
-        "reason": "Simple type, no complex dependencies.",
-        "depends_on": []
-      },
-      {
-        "type": "Q&A",
-        "priority": 3,
-        "reason": "Builds on FAQ pattern. Uses Answer type already implemented.",
-        "depends_on": ["Answer"]
-      },
-      {
         "type": "ReviewSnippet",
-        "priority": 4,
-        "reason": "Extends existing Review/AggregateRating patterns.",
+        "priority": 1,
+        "reason": "Extends existing Review/AggregateRating patterns. Thin wrapper.",
         "depends_on": ["Review", "AggregateRating"]
+      },
+      {
+        "type": "ProfilePage",
+        "priority": 2,
+        "reason": "Simple metadata type.",
+        "depends_on": ["Person"]
+      },
+      {
+        "type": "DiscussionForum",
+        "priority": 3,
+        "reason": "Comment/post structure. Uses Comment type now available.",
+        "depends_on": ["Comment"]
+      },
+      {
+        "type": "EducationQ&A",
+        "priority": 4,
+        "reason": "Extends QAPage pattern.",
+        "depends_on": ["QAPage"]
       }
     ],
     "google_rich_results_types": {
       "not_implemented": [
-        "Carousel", "Course list", "Dataset", "Discussion forum",
-        "Education Q&A", "Employer aggregate rating",
-        "Math solver", "Profile page", "Q&A",
+        "Carousel", "Discussion forum", "Education Q&A",
+        "Math solver", "Profile page",
         "Review snippet", "Speakable",
         "Subscription/paywalled content", "Vacation rental"
       ]
@@ -146,11 +172,11 @@
   "agent_sessions": [],
   "blockers": [],
   "last_cycle": {
-    "issue": 43,
-    "timestamp": "2026-02-24T20:20:00Z",
-    "summary": "Cycle 6: Built orchestrator tools (#40, #42). Merged 4 PRs: VideoObject (#45), SoftwareApplication+MobileApplication+WebApplication (#47), Movie (#49), JobPosting+AdministrativeArea (#51). 76 tests passing. 16 Google types now implemented."
+    "issue": 53,
+    "timestamp": "2026-02-24T22:15:00Z",
+    "summary": "Cycle 7: Handled Eva input #52 (PR review workflow). Merged 4 PRs: Course+CourseInstance+Schedule (#57), Dataset+DataDownload+DataCatalog+GeoShape (#55), EmployerAggregateRating (#59), QAPage+Comment+enhanced Question/Answer (#61). 101 tests passing. 20 Google types now implemented."
   },
-  "test_count": 76,
-  "total_schema_types": 16,
-  "total_sub_types": 37
+  "test_count": 101,
+  "total_schema_types": 20,
+  "total_sub_types": 46
 }

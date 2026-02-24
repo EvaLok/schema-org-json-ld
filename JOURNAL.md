@@ -309,3 +309,54 @@ The 10 remaining Google Rich Results types, roughly ordered by implementation fe
 
 - Should we continue at 4 types/cycle pace, or slow down to focus on quality improvements?
 - Some remaining types (Math solver, Speakable, Carousel) may not map well to the simple TypedSchema pattern. Worth investigating before dispatching.
+
+---
+
+## 2026-02-24 — Seventh Cycle
+
+**Context**: Seventh cycle. Clean slate. One Eva input (#52) about PR review workflow.
+
+### New PR review workflow works well
+
+Eva's input #52 was actionable: CI workflows only run on non-draft PRs, so the previous approach of reviewing while still draft was incorrect. Created a skill doc, a `tools/review-pr` script, and updated the checklist.
+
+The corrected workflow (wait for agent → mark ready → CI runs → verify → merge) adds ~5 minutes per PR due to CI wait time, but this is largely overlapped with local test verification. The net impact on cycle time is minimal.
+
+### Backward-compatible type modifications
+
+QAPage required modifying existing Question and Answer types (adding optional properties). This was the first time an agent task required modifying existing types with data, not just structure. The agent handled it cleanly:
+- Made `acceptedAnswer` optional in Question (was required)
+- Added 7 new optional properties to Question
+- Added 5 new optional properties to Answer
+- All existing FAQPage tests passed without modification
+
+This confirms that the "add optional properties" pattern works well for evolving types. The key design principle: never change a required property to a different type or remove it. Only add new optional properties with `= null` defaults.
+
+### Dataset agent duration outlier
+
+The Dataset task took 19 minutes (vs 5-8 for other tasks this cycle). This is consistent with the Cycle 5 observation that complex tasks with 4+ new types and modifications take longer. The Dataset spec had 4 new types, 12 tests, and a Place.php modification — the most complex single-task scope dispatched since Recipe (Cycle 5).
+
+### 20 types milestone — approaching completion
+
+With 20 of ~26 Google Rich Results types implemented, we've reached ~77% coverage. The remaining 9 types are increasingly niche:
+- **Feasible soon**: Review snippet, Profile page, Discussion forum, Education Q&A
+- **May need investigation**: Carousel (meta-type wrapping other types), Speakable (metadata annotation), Subscription/paywalled content (access metadata)
+- **Complex/niche**: Math solver, Vacation rental
+
+### Zero-revision streak: 12 consecutive clean PRs
+
+Since adding the tab indentation rule and cs-fix instruction to AGENTS.md (Cycle 4), no PR has needed a revision request. This is a strong signal that the agent guidance (AGENTS.md + skills) is comprehensive enough for routine schema implementations.
+
+### "Test and Build" CI still requires manual approval
+
+The `claude-review` workflow runs automatically on non-draft PRs, but the "Test and Build" workflow still shows `action_required`. This is a GitHub Actions limitation for bot-authored PRs (needs manual approval for first-time contributors). Tests continue to be verified locally. Worth noting for Eva if she wants to adjust Actions settings.
+
+### CI overlap pattern
+
+The optimal review workflow emerged this cycle: while waiting for the `claude-review` CI check (4-6 min), verify tests locally. By the time local verification is done, CI is usually complete or nearly so. This eliminates the CI wait as a bottleneck.
+
+### Open questions
+
+- When should we stop prioritizing type count and shift to quality improvements (README, examples, comprehensive test coverage)?
+- Carousel type is fundamentally different — it wraps other types in an ItemList. Does it need a different implementation pattern?
+- Should we create an `input-from-eva` issue asking about the "Test and Build" workflow approval requirement?
