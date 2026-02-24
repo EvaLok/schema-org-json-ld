@@ -179,6 +179,16 @@ class YourTypeTest extends TestCase
 }
 ```
 
+## Running Tests
+
+You MUST run tests before finishing your work:
+
+```bash
+composer run test-unit
+```
+
+PHP 8.3 and all composer dependencies are pre-installed in your environment via `copilot-setup-steps.yml`. Run `composer run test-unit` after implementing your changes and confirm all tests pass (both new and existing). Do not mark your PR as ready if tests fail.
+
 ## Quality Checklist
 
 Before marking your PR as ready:
