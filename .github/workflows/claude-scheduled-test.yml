@@ -2,7 +2,7 @@ name: Claude Scheduled Test
 
 on:
   schedule:
-    - cron: '25 15 24 2 *'  # 15:25 UTC on Feb 24 - one-time test
+    - cron: '30 15 24 2 *'  # 15:30 UTC on Feb 24 - one-time test
 
 jobs:
   claude-scheduled:
@@ -24,6 +24,12 @@ jobs:
           claude_args: |
             --model claude-opus-4-6
             --allowedTools "Bash(gh issue comment:*)"
+          settings: |
+            {
+              "permissions": {
+                "allow": ["Bash(gh issue comment:*)"]
+              }
+            }
           prompt: |
             Post a comment on issue #4 confirming that this scheduled GitHub Action ran successfully.
             Include the current UTC timestamp in the comment.
