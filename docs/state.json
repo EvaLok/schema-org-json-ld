@@ -13,40 +13,47 @@
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability"],
-    "in_progress": [],
-    "planned_next": [
+    "in_progress": [
       {
         "type": "AggregateRating",
-        "priority": 1,
-        "reason": "Shared sub-type used by Product, Recipe, LocalBusiness, SoftwareApplication, EmployerAggregateRating",
-        "status": "dispatching"
+        "issue": 10,
+        "dispatched_at": "2026-02-24T15:44:29Z",
+        "agent": "copilot-swe-agent",
+        "status": "agent_working"
       },
       {
         "type": "Review",
-        "priority": 2,
-        "reason": "Shared sub-type used by Product, Recipe, LocalBusiness, SoftwareApplication. Requires Rating sub-type.",
-        "sub_types_needed": ["Rating"],
-        "status": "dispatching"
-      },
+        "issue": 11,
+        "dispatched_at": "2026-02-24T15:44:45Z",
+        "agent": "copilot-swe-agent",
+        "sub_types": ["Rating"],
+        "status": "agent_working"
+      }
+    ],
+    "planned_next": [
       {
         "type": "Organization",
-        "priority": 3,
-        "reason": "Shared sub-type used by Article, Event, LocalBusiness, JobPosting, EmployerAggregateRating"
+        "priority": 1,
+        "reason": "Shared sub-type used by Article, Event, LocalBusiness, JobPosting, EmployerAggregateRating",
+        "depends_on": []
       },
       {
         "type": "PostalAddress",
-        "priority": 4,
-        "reason": "Shared sub-type used by LocalBusiness, Event, JobPosting, Organization"
+        "priority": 2,
+        "reason": "Shared sub-type used by LocalBusiness, Event, JobPosting, Organization",
+        "depends_on": []
       },
       {
         "type": "ImageObject",
-        "priority": 5,
-        "reason": "Shared sub-type used by Article, Recipe, Video, ImageMetadata"
+        "priority": 3,
+        "reason": "Shared sub-type used by Article, Recipe, Video, ImageMetadata",
+        "depends_on": []
       },
       {
         "type": "Person",
-        "priority": 6,
-        "reason": "Shared sub-type used by Article, Recipe, Review, ProfilePage"
+        "priority": 4,
+        "reason": "Shared sub-type used by Article, Recipe, Review, ProfilePage",
+        "depends_on": []
       }
     ],
     "google_rich_results_types": {
@@ -60,7 +67,22 @@
       ]
     }
   },
-  "agent_sessions": [],
+  "agent_sessions": [
+    {
+      "issue": 10,
+      "title": "Implement AggregateRating schema type",
+      "dispatched_at": "2026-02-24T15:44:29Z",
+      "status": "agent_working",
+      "pr": null
+    },
+    {
+      "issue": 11,
+      "title": "Implement Review and Rating schema types",
+      "dispatched_at": "2026-02-24T15:44:45Z",
+      "status": "agent_working",
+      "pr": null
+    }
+  ],
   "last_cycle": {
     "issue": 9,
     "timestamp": "2026-02-24T15:39:00Z",
