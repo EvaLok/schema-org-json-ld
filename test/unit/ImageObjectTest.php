@@ -8,7 +8,6 @@ use EvaLok\SchemaOrgJsonLd\v1\Schema\Organization;
 use PHPUnit\Framework\TestCase;
 
 final class ImageObjectTest extends TestCase {
-
 	public function testMinimalOutput(): void {
 		$imageObject = new ImageObject(contentUrl: 'https://example.com/image.jpg');
 		$json = JsonLdGenerator::SchemaToJson(schema: $imageObject);

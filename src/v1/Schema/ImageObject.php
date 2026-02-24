@@ -5,8 +5,7 @@ namespace EvaLok\SchemaOrgJsonLd\v1\Schema;
 use EvaLok\SchemaOrgJsonLd\v1\TypedSchema;
 
 class ImageObject extends TypedSchema {
-
-	const A_SCHEMA_TYPE = 'ImageObject';
+	public const A_SCHEMA_TYPE = 'ImageObject';
 
 	public function __construct(
 		public string $contentUrl,
@@ -23,7 +22,5 @@ class ImageObject extends TypedSchema {
 		public null|Organization $creator = null,
 		public null|string $datePublished = null,
 		public null|string $uploadDate = null,
-	) {
-
-	}
+	) {}
 }
