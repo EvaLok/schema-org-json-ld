@@ -6,7 +6,6 @@ use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\BlogPosting;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ImageObject;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Organization;
-use EvaLok\SchemaOrgJsonLd\v1\Schema\Person;
 use PHPUnit\Framework\TestCase;
 
 final class BlogPostingTest extends TestCase {
