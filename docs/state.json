@@ -130,53 +130,85 @@
         "issue": 60,
         "sub_types": ["Comment"],
         "merged_at": "2026-02-24T22:10:00Z"
-      }
-    ],
-    "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek"],
-    "in_progress": [],
-    "planned_next": [
-      {
-        "type": "ReviewSnippet",
-        "priority": 1,
-        "reason": "Extends existing Review/AggregateRating patterns. Thin wrapper.",
-        "depends_on": ["Review", "AggregateRating"]
       },
       {
         "type": "ProfilePage",
+        "pr": 65,
+        "issue": 63,
+        "sub_types": ["InteractionCounter"],
+        "merged_at": "2026-02-24T23:00:00Z"
+      },
+      {
+        "type": "EducationQA",
+        "pr": 66,
+        "issue": 64,
+        "sub_types": ["Quiz", "AlignmentObject"],
+        "merged_at": "2026-02-24T23:00:00Z"
+      }
+    ],
+    "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek"],
+    "in_progress": [
+      {
+        "type": "DiscussionForumPosting",
+        "issue": 67,
+        "dispatched_at": "2026-02-24T23:02:00Z"
+      }
+    ],
+    "planned_next": [
+      {
+        "type": "Speakable",
+        "priority": 1,
+        "reason": "Metadata annotation type. Simple.",
+        "depends_on": []
+      },
+      {
+        "type": "VacationRental",
         "priority": 2,
-        "reason": "Simple metadata type.",
-        "depends_on": ["Person"]
+        "reason": "Complex property type.",
+        "depends_on": []
       },
       {
-        "type": "DiscussionForum",
+        "type": "Carousel",
         "priority": 3,
-        "reason": "Comment/post structure. Uses Comment type now available.",
-        "depends_on": ["Comment"]
+        "reason": "Meta-type wrapping other types. Different pattern.",
+        "depends_on": []
       },
       {
-        "type": "EducationQ&A",
+        "type": "SubscriptionContent",
         "priority": 4,
-        "reason": "Extends QAPage pattern.",
-        "depends_on": ["QAPage"]
+        "reason": "Access metadata type.",
+        "depends_on": []
+      },
+      {
+        "type": "MathSolver",
+        "priority": 5,
+        "reason": "Niche, complex.",
+        "depends_on": []
       }
     ],
     "google_rich_results_types": {
       "not_implemented": [
-        "Carousel", "Discussion forum", "Education Q&A",
-        "Math solver", "Profile page",
-        "Review snippet", "Speakable",
+        "Carousel", "Math solver", "Speakable",
         "Subscription/paywalled content", "Vacation rental"
-      ]
+      ],
+      "note": "Review snippet is not a separate type - it is a usage pattern for existing Review/AggregateRating types applied to supported parent types"
     }
   },
-  "agent_sessions": [],
+  "agent_sessions": [
+    {
+      "issue": 67,
+      "type": "DiscussionForumPosting",
+      "dispatched_at": "2026-02-24T23:02:00Z",
+      "status": "in_progress"
+    }
+  ],
   "blockers": [],
   "last_cycle": {
-    "issue": 53,
-    "timestamp": "2026-02-24T22:15:00Z",
-    "summary": "Cycle 7: Handled Eva input #52 (PR review workflow). Merged 4 PRs: Course+CourseInstance+Schedule (#57), Dataset+DataDownload+DataCatalog+GeoShape (#55), EmployerAggregateRating (#59), QAPage+Comment+enhanced Question/Answer (#61). 101 tests passing. 20 Google types now implemented."
+    "issue": 62,
+    "timestamp": "2026-02-24T22:44:00Z",
+    "summary": "Cycle 8: Merged ProfilePage+InteractionCounter (#65), EducationQA+Quiz+AlignmentObject (#66). DiscussionForumPosting dispatched (#67). 22 Google types implemented. Review snippet removed from backlog (not a type)."
   },
-  "test_count": 101,
-  "total_schema_types": 20,
-  "total_sub_types": 46
+  "test_count": 114,
+  "total_schema_types": 22,
+  "total_sub_types": 51
 }
