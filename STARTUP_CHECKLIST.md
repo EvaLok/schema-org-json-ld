@@ -18,6 +18,15 @@ These are priority directives from Eva. Act on them before anything else. Close 
 
 ## 3. Check agent work status
 
+Use the `tools/agent-status` script for a consolidated view:
+
+```bash
+tools/agent-status              # Full overview: open issues, PRs, concurrency
+tools/agent-status <PR_NUMBER>  # Detailed status for a specific PR
+```
+
+Or manually:
+
 ```bash
 # Open PRs from Copilot
 gh pr list --state open --json number,title,author,labels,isDraft
@@ -61,6 +70,8 @@ Read your recent journal and worklog entries with fresh eyes:
 - Clean up any orphan files or incomplete work
 
 ## 6. Check concurrency
+
+Use `tools/agent-status` (the overview includes a concurrency count), or manually:
 
 ```bash
 # Count in-flight agent sessions
