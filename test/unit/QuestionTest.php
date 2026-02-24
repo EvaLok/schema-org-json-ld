@@ -23,4 +23,15 @@ final class QuestionTest extends TestCase {
 		$this->assertEquals('Answer', $obj->acceptedAnswer->{'@type'});
 		$this->assertEquals('You can return items within 30 days.', $obj->acceptedAnswer->text);
 	}
+
+	public function testEduQuestionTypeIsSerializedWhenProvided(): void {
+		$schema = new Question(
+			name: 'What is 2 + 2?',
+			eduQuestionType: 'Flashcard',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('Flashcard', $obj->eduQuestionType);
+	}
 }
