@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+# tools/agent-status — Check the status of Copilot agent sessions
+#
+# Usage:
+#   tools/agent-status              # Show all in-flight and recent sessions
+#   tools/agent-status <PR_NUMBER>  # Check specific PR status
+#   tools/agent-status --help       # Show help
+#
+# Combines issue/PR/timeline checks into a single command.
+# Requires: gh (GitHub CLI), jq
+
+set -euo pipefail
+
+REPO="EvaLok/schema-org-json-ld"
+
+show_help() {
+    echo "Usage: tools/agent-status [PR_NUMBER]"
+    echo ""
+    echo "With no arguments: shows all in-flight agent sessions and recent activity."
+    echo "With PR_NUMBER: shows detailed status for that specific PR."
+    echo ""
+    echo "Output includes:"
+    echo "  - Open issues assigned to copilot-swe-agent[bot]"
+    echo "  - Open PRs from the agent (draft and ready)"
+    echo "  - Copilot work events (started/finished) for each PR"
+    echo "  - CI check status for each PR"
+    echo "  - Concurrency count (max 2 in-flight)"
+}
+
+check_pr() {
+    local pr_num="$1"
+    echo "=== PR #${pr_num} ==="
+
+    # PR metadata
+    gh pr view "$pr_num" --repo "$REPO" --json title,state,isDraft,author,createdAt \
+        --jq '"  Title: \(.title)\n  State: \(.state)\n  Draft: \(.isDraft)\n  Author: \(.author.login)\n  Created: \(.createdAt)"'
+
+    # Copilot work events
+    echo "  Work events:"
+    local events
+    events=$(gh api "repos/${REPO}/issues/${pr_num}/timeline" --paginate \
+        --jq '[.[] | select(.event | test("copilot_work")) | {event: .event, created_at: .created_at}]' 2>/dev/null || echo "[]")
+    if [ "$events" = "[]" ] || [ -z "$events" ]; then
+        echo "    (none)"
+    else
+        echo "$events" | jq -r '.[] | "    \(.event) at \(.created_at)"'
+    fi
+
+    # Determine status
+    local finished
+    finished=$(echo "$events" | jq '[.[] | select(.event == "copilot_work_finished")] | length' 2>/dev/null || echo "0")
+    local started
+    started=$(echo "$events" | jq '[.[] | select(.event == "copilot_work_started")] | length' 2>/dev/null || echo "0")
+
+    if [ "$finished" -gt 0 ]; then
+        echo "  Status: FINISHED — ready for review"
+    elif [ "$started" -gt 0 ]; then
+        echo "  Status: IN PROGRESS — agent still working"
+    else
+        echo "  Status: UNKNOWN — no work events found"
+    fi
+
+    # CI checks
+    echo "  CI checks:"
+    gh pr checks "$pr_num" --repo "$REPO" 2>/dev/null | head -5 || echo "    (no checks)"
+
+    echo ""
+}
+
+show_overview() {
+    echo "=== Agent Status Overview ==="
+    echo ""
+
+    # Open issues assigned to agent
+    echo "--- Open Agent Issues ---"
+    local issues
+    issues=$(gh issue list --repo "$REPO" --assignee "copilot-swe-agent[bot]" --state open \
+        --json number,title --jq '.[] | "  #\(.number): \(.title)"' 2>/dev/null)
+    if [ -z "$issues" ]; then
+        echo "  (none)"
+    else
+        echo "$issues"
+    fi
+    echo ""
+
+    # Open PRs from agent
+    echo "--- Open Agent PRs ---"
+    local prs
+    prs=$(gh pr list --repo "$REPO" --state open \
+        --json number,title,isDraft,author \
+        --jq '.[] | select(.author.login == "app/copilot-swe-agent") | "  #\(.number): \(.title) [draft=\(.isDraft)]"' 2>/dev/null)
+    if [ -z "$prs" ]; then
+        echo "  (none)"
+    else
+        echo "$prs"
+        echo ""
+        # Check each open PR for work status
+        local pr_nums
+        pr_nums=$(gh pr list --repo "$REPO" --state open \
+            --json number,author \
+            --jq '.[] | select(.author.login == "app/copilot-swe-agent") | .number' 2>/dev/null)
+        for pr in $pr_nums; do
+            check_pr "$pr"
+        done
+    fi
+    echo ""
+
+    # Concurrency count
+    local open_issues
+    open_issues=$(gh issue list --repo "$REPO" --assignee "copilot-swe-agent[bot]" --state open --json number | jq length 2>/dev/null || echo "0")
+    local draft_prs
+    draft_prs=$(gh pr list --repo "$REPO" --state open \
+        --json isDraft,author \
+        --jq '[.[] | select(.isDraft and .author.login == "app/copilot-swe-agent")] | length' 2>/dev/null || echo "0")
+    local in_flight=$((open_issues + draft_prs))
+    echo "--- Concurrency ---"
+    echo "  In-flight sessions: ${in_flight}/2"
+    if [ "$in_flight" -ge 2 ]; then
+        echo "  WARNING: At concurrency limit. Do not dispatch new tasks."
+    else
+        echo "  OK: Can dispatch $((2 - in_flight)) more task(s)."
+    fi
+
+    # Recently merged (last 5)
+    echo ""
+    echo "--- Recently Merged ---"
+    gh pr list --repo "$REPO" --state merged --limit 5 \
+        --json number,title,mergedAt \
+        --jq '.[] | "  #\(.number): \(.title) (merged \(.mergedAt))"' 2>/dev/null
+}
+
+# Main
+case "${1:-}" in
+    --help|-h)
+        show_help
+        ;;
+    "")
+        show_overview
+        ;;
+    *)
+        check_pr "$1"
+        ;;
+esac

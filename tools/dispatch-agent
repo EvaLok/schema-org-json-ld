@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# tools/dispatch-agent — Create an issue and assign it to the Copilot coding agent
+#
+# Usage:
+#   tools/dispatch-agent --title "TITLE" --body-file FILE [--model MODEL] [--label LABEL]
+#   tools/dispatch-agent --help
+#
+# Creates a GitHub issue with the given title and body, assigns copilot-swe-agent[bot],
+# and specifies the model via agent_assignment. Updates state.json with the new session.
+#
+# Options:
+#   --title TITLE       Issue title (required)
+#   --body-file FILE    Path to file containing issue body (required)
+#   --model MODEL       Coding agent model (default: gpt-5.3-codex)
+#   --label LABEL       Additional label (default: agent-task)
+#
+# Requires: gh, jq
+
+set -euo pipefail
+
+REPO="EvaLok/schema-org-json-ld"
+DEFAULT_MODEL="gpt-5.3-codex"
+DEFAULT_LABEL="agent-task"
+
+show_help() {
+    echo "tools/dispatch-agent — Create and assign an agent issue"
+    echo ""
+    echo "Usage:"
+    echo "  tools/dispatch-agent --title \"TITLE\" --body-file FILE [--model MODEL]"
+    echo ""
+    echo "Options:"
+    echo "  --title TITLE       Issue title (required)"
+    echo "  --body-file FILE    File with issue body markdown (required)"
+    echo "  --model MODEL       Agent model (default: ${DEFAULT_MODEL})"
+    echo "  --label LABEL       Issue label (default: ${DEFAULT_LABEL})"
+    echo ""
+    echo "Available models: gpt-5.3-codex, gpt-5.2-codex, claude-sonnet-4.5, claude-opus-4.5"
+}
+
+TITLE=""
+BODY_FILE=""
+MODEL="$DEFAULT_MODEL"
+LABEL="$DEFAULT_LABEL"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --title) TITLE="$2"; shift 2 ;;
+        --body-file) BODY_FILE="$2"; shift 2 ;;
+        --model) MODEL="$2"; shift 2 ;;
+        --label) LABEL="$2"; shift 2 ;;
+        --help|-h) show_help; exit 0 ;;
+        *) echo "Unknown option: $1" >&2; show_help >&2; exit 1 ;;
+    esac
+done
+
+if [ -z "$TITLE" ] || [ -z "$BODY_FILE" ]; then
+    echo "Error: --title and --body-file are required" >&2
+    show_help >&2
+    exit 1
+fi
+
+if [ ! -f "$BODY_FILE" ]; then
+    echo "Error: Body file not found: ${BODY_FILE}" >&2
+    exit 1
+fi
+
+BODY=$(cat "$BODY_FILE")
+
+# Create issue with agent assignment
+echo "Creating issue: ${TITLE}"
+echo "Model: ${MODEL}"
+echo "Label: ${LABEL}"
+
+RESULT=$(gh api /repos/${REPO}/issues --method POST --input - <<EOF
+{
+  "title": $(echo "$TITLE" | jq -Rs .),
+  "body": $(echo "$BODY" | jq -Rs .),
+  "labels": ["${LABEL}"],
+  "assignees": ["copilot-swe-agent[bot]"],
+  "agent_assignment": {
+    "target_repo": "${REPO}",
+    "base_branch": "master",
+    "model": "${MODEL}",
+    "custom_instructions": ""
+  }
+}
+EOF
+)
+
+ISSUE_NUM=$(echo "$RESULT" | jq '.number')
+ISSUE_URL=$(echo "$RESULT" | jq -r '.html_url')
+
+echo ""
+echo "Dispatched: Issue #${ISSUE_NUM}"
+echo "URL: ${ISSUE_URL}"
+echo ""
+echo "Remember to check agent status in ~5 minutes:"
+echo "  tools/agent-status ${ISSUE_NUM}"
