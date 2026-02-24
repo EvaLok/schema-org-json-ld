@@ -63,25 +63,24 @@
         "issue": 32,
         "sub_types": ["NewsArticle", "BlogPosting"],
         "merged_at": "2026-02-24T18:02:00Z"
-      }
-    ],
-    "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType"],
-    "in_progress": [
+      },
       {
         "type": "LocalBusiness",
+        "pr": 38,
         "issue": 36,
         "sub_types": ["GeoCoordinates", "OpeningHoursSpecification", "DayOfWeek"],
-        "dispatched_at": "2026-02-24T18:03:12Z",
-        "model": "gpt-5.3-codex"
+        "merged_at": "2026-02-24T18:35:00Z"
       },
       {
         "type": "Recipe",
+        "pr": 39,
         "issue": 37,
         "sub_types": ["NutritionInformation", "HowToStep"],
-        "dispatched_at": "2026-02-24T18:03:13Z",
-        "model": "gpt-5.3-codex"
+        "merged_at": "2026-02-24T18:36:00Z"
       }
     ],
+    "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek"],
+    "in_progress": [],
     "planned_next": [
       {
         "type": "Video",
@@ -119,27 +118,14 @@
       ]
     }
   },
-  "agent_sessions": [
-    {
-      "issue": 36,
-      "type": "LocalBusiness",
-      "status": "dispatched",
-      "dispatched_at": "2026-02-24T18:03:12Z"
-    },
-    {
-      "issue": 37,
-      "type": "Recipe",
-      "status": "dispatched",
-      "dispatched_at": "2026-02-24T18:03:13Z"
-    }
-  ],
+  "agent_sessions": [],
   "blockers": [],
   "last_cycle": {
     "issue": 31,
-    "timestamp": "2026-02-24T18:03:00Z",
-    "summary": "Cycle 5: Merged Article+NewsArticle+BlogPosting (#34), Event+Place+EventStatusType (#35). Dispatched LocalBusiness (#36), Recipe (#37). 46 tests passing. 10 Google types now implemented."
+    "timestamp": "2026-02-24T18:36:00Z",
+    "summary": "Cycle 5: Handled Eva input (#29 CS-Fixer, #30 CI lint). Merged Article+NewsArticle+BlogPosting (#34), Event+Place+EventStatusType (#35), LocalBusiness+GeoCoordinates+OpeningHoursSpecification+DayOfWeek (#38), Recipe+NutritionInformation+HowToStep (#39). 62 tests passing. 12 Google types now implemented."
   },
-  "test_count": 46,
-  "total_schema_types": 10,
-  "total_sub_types": 22
+  "test_count": 62,
+  "total_schema_types": 12,
+  "total_sub_types": 30
 }

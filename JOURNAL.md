@@ -205,3 +205,51 @@ This cycle proved that two sequential dispatch-review-merge batches are achievab
 3. Update state and close
 
 Total productive output: 4 merged PRs, 8 new types, 20 new tests. This is a good throughput for the workflow.
+
+---
+
+## 2026-02-24 — Fifth Cycle
+
+**Context**: Fifth cycle. Clean slate — no in-flight sessions. Eva input to handle.
+
+### CS-Fixer integration is working
+
+Eva's PHP-CS-Fixer addition (#29) was the key process improvement this cycle. After adding `composer run cs-fix` to AGENTS.md's Code Style section and Quality Checklist, all 4 agents in both batches ran cs-fix proactively. Zero style issues in any of the 4 PRs. This eliminates the revision-for-style-fix pattern seen in Cycle 4 (FAQPage). The lesson: explicit, actionable instructions in AGENTS.md are highly effective.
+
+### Inheritance pattern works for schema subtypes
+
+Article/NewsArticle/BlogPosting demonstrated that schema.org type inheritance maps well to PHP class inheritance. NewsArticle and BlogPosting are 3-line classes that extend Article and override only `A_SCHEMA_TYPE`. The constructor is inherited. Tests verify each subtype produces the correct `@type` value.
+
+### Agent timing update
+
+| Task | Types | Files | Duration | Notes |
+|------|-------|-------|----------|-------|
+| Article+NewsArticle+BlogPosting | 3 | 6 | ~10 min | Cycle 5 batch 1, clean |
+| Event+Place+EventStatusType | 3 | 5 | ~8 min | Cycle 5 batch 1, clean |
+| LocalBusiness+Geo+OpeningHours+DayOfWeek | 4 | 7 | ~25 min | Cycle 5 batch 2, clean |
+| Recipe+NutritionInfo+HowToStep | 3 | 6 | ~25 min | Cycle 5 batch 2, clean |
+
+Notable: batch 2 tasks took ~25 min each vs ~8-10 min for batch 1. These were the most complex types dispatched (16-17 properties each with multiple sub-types). Both agents remained in draft state well past their last commit. The orchestrator proactively marked them ready and merged after local test verification.
+
+### CI workflow runs show as `action_required`
+
+The "Test and Build" CI workflow on Copilot PRs consistently shows `action_required` status. Since the orchestrator verifies tests locally before merging, this isn't blocking. Worth noting for Eva if she wants to adjust Actions settings.
+
+### 12 Google types implemented
+
+With LocalBusiness and Recipe merged, the library now covers 12 of the ~26 Google Rich Results types. All initial shared sub-types and the first wave of parent types are done.
+
+### Batch 2: Complex types work
+
+LocalBusiness (16 properties, 4 new types) and Recipe (17 properties, 3 new types) are the most complex schemas dispatched so far. Both agents produced clean code on first attempt. Key design decisions:
+- LocalBusiness extends TypedSchema directly rather than Organization (avoids constructor-promotion-through-inheritance complexity)
+- Recipe.author supports `Person|Organization` union type
+- DayOfWeek enum has 7 cases backed with schema.org URLs
+
+### Pattern: Proactive merge when agents stall
+
+Both batch 2 agents remained in draft state for 15+ minutes after their last commit push. Rather than waiting indefinitely, the orchestrator verified tests locally (62 pass, 0 cs-fix issues) and proactively marked the PRs ready → merged. This is a valid optimization — the code quality was confirmed, and waiting for the agent to self-unmark draft adds no value.
+
+### Total cycle output
+
+4 merged PRs, 13 new types (Article, NewsArticle, BlogPosting, Event, Place, EventStatusType, LocalBusiness, GeoCoordinates, OpeningHoursSpecification, DayOfWeek, Recipe, NutritionInformation, HowToStep), 30 new tests. This is the highest-throughput cycle to date.
