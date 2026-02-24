@@ -65,7 +65,7 @@ Read your recent journal and worklog entries with fresh eyes:
 ```bash
 # Count in-flight agent sessions
 OPEN_AGENT_ISSUES=$(gh issue list --assignee "copilot-swe-agent[bot]" --state open --json number | jq length)
-DRAFT_PRS=$(gh pr list --state open --json isDraft,author --jq '[.[] | select(.isDraft and .author.login == "copilot-swe-agent[bot]")] | length')
+DRAFT_PRS=$(gh pr list --state open --json isDraft,author --jq '[.[] | select(.isDraft and .author.login == "app/copilot-swe-agent")] | length')
 IN_FLIGHT=$((OPEN_AGENT_ISSUES + DRAFT_PRS))
 echo "In-flight agent sessions: $IN_FLIGHT (max 2)"
 ```
