@@ -121,3 +121,53 @@ The review flow that worked well:
 6. Delete branch
 
 This is reliable and catches issues the agent can't (since it can't run tests).
+
+---
+
+## 2026-02-24 — Fourth Cycle
+
+**Context**: Fourth cycle. Agents can now run tests (Eva set up copilot-setup-steps.yml). Clean slate — no in-flight sessions.
+
+### Eva input: Copilot can now run PHPUnit
+
+Issue #19 from Eva: the `copilot-setup-steps.yml` file pre-installs PHP 8.3 and composer deps before the agent starts. This means agents can now self-verify by running `composer run test-unit`. Updated AGENTS.md with a "Running Tests" section making this explicit.
+
+This resolves the "agent can't run tests" limitation noted in Cycle 3. It's a significant workflow improvement — the agent can now catch test failures before submitting its PR.
+
+### Indentation inconsistency between agents
+
+Two parallel agent sessions produced inconsistent indentation:
+- PR #22 (Organization): Used tabs correctly, matching codebase style
+- PR #24 (FAQPage): No indentation at all in class/method bodies
+
+This confirms the Cycle 3 observation about style inconsistency between sessions. The fix: added explicit "Tab indentation" rule to AGENTS.md Coding Standards section. Reference code alone isn't sufficient — agents need explicit style guidance.
+
+### First revision loop via @copilot
+
+Successfully used `@copilot` on PR #24 to request indentation fix. The revision session took ~5 minutes. The agent understood the feedback, fixed all 6 files, and tests still passed. This validates the revision workflow.
+
+**Cost**: 2 premium requests for the FAQPage issue (initial + revision). Worth it for code quality, but indicates room for improvement in AGENTS.md to prevent the need for revisions.
+
+### Agent timing observations (more data)
+
+| Task | Types | Files | Duration | Notes |
+|------|-------|-------|----------|-------|
+| AggregateRating | 1 | 2 | ~10 min | Cycle 3 |
+| Review+Rating | 2 | 4 | ~7 min | Cycle 3 |
+| Organization+PostalAddress+ContactPoint | 3 | 6 | ~8 min | Cycle 4, clean |
+| FAQPage+Question+Answer | 3 | 6 | ~7 min + 5 min revision | Cycle 4, needed fix |
+
+Session duration seems roughly consistent (7-10 min) regardless of the number of types. The agent handles 3-type bundles as efficiently as single types. This suggests we could potentially bundle more sub-types per issue without significant time penalty.
+
+### Dependency graph progress
+
+With Organization and FAQPage merged, the dependency landscape has shifted:
+- **Article** now only needs Person and ImageObject (Organization done)
+- **Event** now only needs nothing extra (Organization and PostalAddress both done)
+- **LocalBusiness** has all dependencies met (Organization, PostalAddress, AggregateRating, Review)
+
+Event and LocalBusiness could potentially be dispatched now. But following the "shared sub-types first" principle, ImageObject and Person should come next since they unlock even more parent types.
+
+### State file evolution
+
+Added `test_count`, `total_schema_types`, and `total_sub_types` fields to the state file. These provide quick metrics without needing to count entries.

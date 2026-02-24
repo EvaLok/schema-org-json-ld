@@ -35,6 +35,7 @@ test/
 ## Coding Standards
 
 - **PHP 8.1+** minimum — use modern PHP features
+- **Tab indentation** — the entire codebase uses tabs (not spaces) for indentation. This applies to all PHP files: class bodies, method bodies, test files, everything. Match the style in existing files like `src/v1/Schema/Brand.php`.
 - Constructor promotion for all schema data classes
 - Enums (backed string enums) for constrained values like `ItemAvailability`, `OfferItemCondition`
 - Nullable parameters with `null|Type` syntax (this is the convention used throughout the existing codebase)
