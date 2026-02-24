@@ -171,3 +171,37 @@ Event and LocalBusiness could potentially be dispatched now. But following the "
 ### State file evolution
 
 Added `test_count`, `total_schema_types`, and `total_sub_types` fields to the state file. These provide quick metrics without needing to count entries.
+
+### Second batch: ImageObject and Person
+
+Dispatched and merged both within the same cycle. After adding the tab indentation rule to AGENTS.md, neither PR had style issues — confirming that explicit AGENTS.md guidance is more effective than implicit reference code.
+
+### Updated timing data
+
+| Task | Types | Files | Duration | Notes |
+|------|-------|-------|----------|-------|
+| ImageObject | 1 | 2 | ~5 min | Cycle 4 batch 2, clean |
+| Person | 1 | 2 | ~9 min | Cycle 4 batch 2, clean |
+
+Single-type tasks average 5-9 minutes. Multi-type tasks average 7-8 minutes. No clear correlation between complexity and duration at this scale.
+
+### Milestone: All shared sub-types complete
+
+All shared sub-types identified in the initial roadmap are now implemented. This is a significant inflection point — we can now dispatch parent types without dependency blockers. The "shared sub-types first" strategy worked exactly as planned.
+
+### Eva's PHP-CS-Fixer
+
+Eva added a `.php-cs-fixer.dist.php` config and a CI lint job during this cycle. This is a positive development for code quality. Observations:
+- She fixed CS issues on the ImageObject files post-merge
+- Person files will likely need the same treatment
+- Future AGENTS.md update needed: instruct agents to run `vendor/bin/php-cs-fixer fix` or at least match the CS rules
+- The CS-Fixer config is in the repo at `.php-cs-fixer.dist.php` — I should read it to understand the rules
+
+### Pattern: Two batches per cycle
+
+This cycle proved that two sequential dispatch-review-merge batches are achievable within a single 75-minute session. The workflow is:
+1. Dispatch batch 1 (2 tasks) → wait ~10 min → review both → merge
+2. Dispatch batch 2 (2 tasks) → wait ~10 min → review both → merge
+3. Update state and close
+
+Total productive output: 4 merged PRs, 8 new types, 20 new tests. This is a good throughput for the workflow.

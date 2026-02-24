@@ -37,87 +37,73 @@
         "issue": 23,
         "sub_types": ["Question", "Answer"],
         "merged_at": "2026-02-24T17:12:03Z"
+      },
+      {
+        "type": "ImageObject",
+        "pr": 26,
+        "issue": 25,
+        "merged_at": "2026-02-24T17:23:30Z"
+      },
+      {
+        "type": "Person",
+        "pr": 28,
+        "issue": 27,
+        "merged_at": "2026-02-24T17:28:06Z"
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability"],
-    "in_progress": [
-      {
-        "type": "ImageObject",
-        "issue": 25,
-        "dispatched_at": "2026-02-24T17:14:48Z",
-        "model": "gpt-5.3-codex"
-      },
-      {
-        "type": "Person",
-        "issue": 27,
-        "dispatched_at": "2026-02-24T17:15:02Z",
-        "model": "gpt-5.3-codex"
-      }
-    ],
+    "in_progress": [],
     "planned_next": [
       {
-        "type": "ImageObject",
-        "priority": 1,
-        "reason": "Shared sub-type used by Article, Recipe, Video, ImageMetadata",
-        "depends_on": []
-      },
-      {
-        "type": "Person",
-        "priority": 2,
-        "reason": "Shared sub-type used by Article, Recipe, Review, ProfilePage",
-        "depends_on": []
-      },
-      {
         "type": "Article",
-        "priority": 3,
-        "reason": "Popular parent type, depends on Organization, Person, ImageObject",
+        "priority": 1,
+        "reason": "Popular parent type. All dependencies now met: Organization, Person, ImageObject",
         "depends_on": ["Organization", "Person", "ImageObject"]
       },
       {
         "type": "Event",
-        "priority": 4,
-        "reason": "Popular parent type, depends on Organization, PostalAddress",
+        "priority": 2,
+        "reason": "Popular parent type. All dependencies met: Organization, PostalAddress",
         "depends_on": ["Organization", "PostalAddress"]
       },
       {
         "type": "LocalBusiness",
-        "priority": 5,
-        "reason": "Popular parent type, depends on Organization, PostalAddress, AggregateRating, Review",
+        "priority": 3,
+        "reason": "Popular parent type. All dependencies met: Organization, PostalAddress, AggregateRating, Review",
         "depends_on": ["Organization", "PostalAddress", "AggregateRating", "Review"]
+      },
+      {
+        "type": "Recipe",
+        "priority": 4,
+        "reason": "Popular parent type. Dependencies: Person (author), AggregateRating, Review, ImageObject — all met",
+        "depends_on": ["Person", "AggregateRating", "Review", "ImageObject"]
+      },
+      {
+        "type": "Video",
+        "priority": 5,
+        "reason": "Common type, depends on ImageObject (thumbnail) — met",
+        "depends_on": ["ImageObject"]
       }
     ],
     "google_rich_results_types": {
       "not_implemented": [
         "Article", "Carousel", "Course list", "Dataset", "Discussion forum",
         "Education Q&A", "Employer aggregate rating", "Event",
-        "Image metadata", "Job posting", "Local business", "Math solver",
+        "Job posting", "Local business", "Math solver",
         "Movie", "Profile page", "Q&A", "Recipe",
         "Review snippet", "Software app", "Speakable",
         "Subscription/paywalled content", "Vacation rental", "Video"
       ]
     }
   },
-  "agent_sessions": [
-    {
-      "issue": 25,
-      "title": "ImageObject",
-      "status": "dispatched",
-      "dispatched_at": "2026-02-24T17:14:48Z"
-    },
-    {
-      "issue": 27,
-      "title": "Person",
-      "status": "dispatched",
-      "dispatched_at": "2026-02-24T17:15:02Z"
-    }
-  ],
+  "agent_sessions": [],
   "blockers": [],
   "last_cycle": {
     "issue": 20,
-    "timestamp": "2026-02-24T17:12:00Z",
-    "summary": "Cycle 4: Handled Eva input #19 (test running). Dispatched and merged Organization (#21->PR#22) and FAQPage (#23->PR#24). 25 tests passing. Added tab indentation guidance to AGENTS.md."
+    "timestamp": "2026-02-24T17:28:00Z",
+    "summary": "Cycle 4: Dispatched and merged 4 types in 2 batches. Organization+PostalAddress+ContactPoint (#21->PR#22), FAQPage+Question+Answer (#23->PR#24), ImageObject (#25->PR#26), Person (#27->PR#28). 32 tests passing. All shared sub-types now complete — parent types (Article, Event, LocalBusiness, Recipe) are unblocked."
   },
-  "test_count": 25,
-  "total_schema_types": 6,
-  "total_sub_types": 14
+  "test_count": 32,
+  "total_schema_types": 8,
+  "total_sub_types": 16
 }
