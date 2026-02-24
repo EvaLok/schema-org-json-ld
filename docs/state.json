@@ -1,0 +1,69 @@
+{
+  "schema_status": {
+    "implemented": [
+      {
+        "type": "Product",
+        "pr": 2,
+        "sub_types": ["Brand", "Offer", "OfferShippingDetails", "DefinedRegion", "ShippingDeliveryTime", "QuantitativeValue", "MonetaryAmount"]
+      },
+      {
+        "type": "BreadcrumbList",
+        "pr": 2,
+        "sub_types": ["ListItem"]
+      }
+    ],
+    "enums_implemented": ["OfferItemCondition", "ItemAvailability"],
+    "in_progress": [],
+    "planned_next": [
+      {
+        "type": "AggregateRating",
+        "priority": 1,
+        "reason": "Shared sub-type used by Product, Recipe, LocalBusiness, SoftwareApplication, EmployerAggregateRating",
+        "status": "dispatching"
+      },
+      {
+        "type": "Review",
+        "priority": 2,
+        "reason": "Shared sub-type used by Product, Recipe, LocalBusiness, SoftwareApplication. Requires Rating sub-type.",
+        "sub_types_needed": ["Rating"],
+        "status": "dispatching"
+      },
+      {
+        "type": "Organization",
+        "priority": 3,
+        "reason": "Shared sub-type used by Article, Event, LocalBusiness, JobPosting, EmployerAggregateRating"
+      },
+      {
+        "type": "PostalAddress",
+        "priority": 4,
+        "reason": "Shared sub-type used by LocalBusiness, Event, JobPosting, Organization"
+      },
+      {
+        "type": "ImageObject",
+        "priority": 5,
+        "reason": "Shared sub-type used by Article, Recipe, Video, ImageMetadata"
+      },
+      {
+        "type": "Person",
+        "priority": 6,
+        "reason": "Shared sub-type used by Article, Recipe, Review, ProfilePage"
+      }
+    ],
+    "google_rich_results_types": {
+      "not_implemented": [
+        "Article", "Carousel", "Course list", "Dataset", "Discussion forum",
+        "Education Q&A", "Employer aggregate rating", "Event", "FAQ",
+        "Image metadata", "Job posting", "Local business", "Math solver",
+        "Movie", "Organization", "Profile page", "Q&A", "Recipe",
+        "Review snippet", "Software app", "Speakable",
+        "Subscription/paywalled content", "Vacation rental", "Video"
+      ]
+    }
+  },
+  "agent_sessions": [],
+  "last_cycle": {
+    "issue": 9,
+    "timestamp": "2026-02-24T15:39:00Z",
+    "actions_run": 22358023337
+  }
+}
