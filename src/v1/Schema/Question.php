@@ -9,6 +9,14 @@ class Question extends TypedSchema {
 
 	public function __construct(
 		public string $name,
-		public Answer $acceptedAnswer,
+		public null|Answer $acceptedAnswer = null,
+		/** @var Answer[] $suggestedAnswer */
+		public null|array $suggestedAnswer = null,
+		public null|int $answerCount = null,
+		public null|string $text = null,
+		public null|int $upvoteCount = null,
+		public null|Person|Organization $author = null,
+		public null|string $datePublished = null,
+		public null|string $dateModified = null,
 	) {}
 }
