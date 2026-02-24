@@ -26,37 +26,52 @@
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability"],
-    "in_progress": [],
-    "planned_next": [
+    "in_progress": [
       {
         "type": "Organization",
-        "priority": 1,
-        "reason": "Shared sub-type used by Article, Event, LocalBusiness, JobPosting, EmployerAggregateRating",
-        "depends_on": []
+        "issue": 21,
+        "sub_types": ["PostalAddress", "ContactPoint"],
+        "dispatched_at": "2026-02-24T16:53:49Z",
+        "model": "gpt-5.3-codex"
       },
       {
-        "type": "PostalAddress",
-        "priority": 2,
-        "reason": "Shared sub-type used by LocalBusiness, Event, JobPosting, Organization",
-        "depends_on": []
-      },
+        "type": "FAQPage",
+        "issue": 23,
+        "sub_types": ["Question", "Answer"],
+        "dispatched_at": "2026-02-24T16:54:05Z",
+        "model": "gpt-5.3-codex"
+      }
+    ],
+    "planned_next": [
       {
         "type": "ImageObject",
-        "priority": 3,
+        "priority": 1,
         "reason": "Shared sub-type used by Article, Recipe, Video, ImageMetadata",
         "depends_on": []
       },
       {
         "type": "Person",
-        "priority": 4,
+        "priority": 2,
         "reason": "Shared sub-type used by Article, Recipe, Review, ProfilePage",
         "depends_on": []
+      },
+      {
+        "type": "Article",
+        "priority": 3,
+        "reason": "Popular parent type, depends on Organization, Person, ImageObject",
+        "depends_on": ["Organization", "Person", "ImageObject"]
+      },
+      {
+        "type": "Event",
+        "priority": 4,
+        "reason": "Popular parent type, depends on Organization, PostalAddress",
+        "depends_on": ["Organization", "PostalAddress"]
       }
     ],
     "google_rich_results_types": {
       "not_implemented": [
         "Article", "Carousel", "Course list", "Dataset", "Discussion forum",
-        "Education Q&A", "Employer aggregate rating", "Event", "FAQ",
+        "Education Q&A", "Employer aggregate rating", "Event",
         "Image metadata", "Job posting", "Local business", "Math solver",
         "Movie", "Organization", "Profile page", "Q&A", "Recipe",
         "Review snippet", "Software app", "Speakable",
@@ -64,11 +79,24 @@
       ]
     }
   },
-  "agent_sessions": [],
+  "agent_sessions": [
+    {
+      "issue": 21,
+      "title": "Organization + PostalAddress + ContactPoint",
+      "status": "dispatched",
+      "dispatched_at": "2026-02-24T16:53:49Z"
+    },
+    {
+      "issue": 23,
+      "title": "FAQPage + Question + Answer",
+      "status": "dispatched",
+      "dispatched_at": "2026-02-24T16:54:05Z"
+    }
+  ],
   "blockers": [],
   "last_cycle": {
-    "issue": 14,
-    "timestamp": "2026-02-24T16:20:00Z",
-    "summary": "First successful end-to-end cycle. Dispatched, reviewed, and merged AggregateRating (#15→PR#16) and Review+Rating (#17→PR#18). All 12 tests pass. Cleaned up branches."
+    "issue": 20,
+    "timestamp": "2026-02-24T16:54:00Z",
+    "summary": "Cycle 4: Handled Eva input #19 (agents can now run tests). Updated AGENTS.md. Dispatched Organization (#21) and FAQPage (#23) to Copilot."
   }
 }
