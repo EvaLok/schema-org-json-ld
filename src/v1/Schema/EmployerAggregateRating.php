@@ -1,0 +1,18 @@
+<?php
+
+namespace EvaLok\SchemaOrgJsonLd\v1\Schema;
+
+use EvaLok\SchemaOrgJsonLd\v1\TypedSchema;
+
+class EmployerAggregateRating extends TypedSchema {
+	public const A_SCHEMA_TYPE = 'EmployerAggregateRating';
+
+	public function __construct(
+		public Organization $itemReviewed,
+		public float|int $ratingValue,
+		public null|int $ratingCount = null,
+		public null|int $reviewCount = null,
+		public null|float|int $bestRating = null,
+		public null|float|int $worstRating = null,
+	) {}
+}
