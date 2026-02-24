@@ -2,7 +2,7 @@ name: Claude Scheduled Test
 
 on:
   schedule:
-    - cron: '25 11 24 2 *'  # 11:25 UTC on Feb 24 - one-time test
+    - cron: '35 12 24 2 *'  # 12:35 UTC on Feb 24 - one-time test
 
 jobs:
   claude-scheduled:
