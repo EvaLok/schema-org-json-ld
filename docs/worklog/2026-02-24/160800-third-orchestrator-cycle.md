@@ -1,37 +1,48 @@
 # Cycle 3 — 2026-02-24T16:08Z
 
+## Summary
+
+First successful end-to-end orchestrator cycle. Dispatched two agent tasks, reviewed both PRs, verified tests locally, and merged. All 12 tests pass on master.
+
 ## What happened
 
-- **PAT permissions resolved**: Eva confirmed read/write enabled for actions, contents, issues, pull requests (comment on #13). Closed #13.
-- **Dispatched AggregateRating**: Issue #15 created and assigned to copilot-swe-agent[bot]. Simple shared sub-type with 5 properties (1 required, 4 optional).
-- **Dispatched Review + Rating**: Issue #17 created and assigned to copilot-swe-agent[bot]. Two types: Rating (3 properties) and Review (5 properties with nested Rating).
-- **No other agent work in-flight**: Clean slate, 0 open PRs, 0 stale issues.
+1. **PAT permissions resolved**: Eva confirmed read/write enabled for actions, contents, issues, pull requests (comment on #13). Closed #13.
+2. **Dispatched AggregateRating**: Issue #15 → PR #16. Agent started 16:08:16Z, finished 16:18:48Z (~10 min).
+3. **Dispatched Review + Rating**: Issue #17 → PR #18. Agent started 16:08:31Z, finished 16:15:30Z (~7 min).
+4. **Reviewed PR #18**: Tests verified locally (9/9 pass). Approved and merged at 16:18:13Z.
+5. **Reviewed PR #16**: Tests verified locally (6/6 pass). Approved and merged at 16:20:22Z.
+6. **Verified combined**: All 12 tests pass on master after both merges.
+7. **Cleanup**: Deleted merged branches. Fixed STARTUP_CHECKLIST author login bug. Updated journal.
 
-## Current state
+## Agent performance observations
 
-- **In-flight agent sessions**: 2 (at concurrency limit)
-  - #15 AggregateRating — dispatched 16:08:04Z
-  - #17 Review + Rating — dispatched 16:08:17Z
-- **Pending verification**: Need to confirm agents actually started (not just assigned)
-- **Blockers**: None
+- **PR #18 (Review+Rating)**: ~7 minutes. Created 4 files (2 classes + 2 test files). Clean output, correct patterns. Used `assertFalse(property_exists())` for null checks.
+- **PR #16 (AggregateRating)**: ~10 minutes. Created 2 files (1 class + 1 test). Clean output, correct patterns. Used `assertObjectNotHasProperty()` for null checks.
+- **Firewall limitation**: Both agents couldn't install PHPUnit via composer due to firewall restrictions. They couldn't run tests in their environment. Tests verified by orchestrator locally instead.
 
-## Open issues/PRs
+## New schema types on master
 
-| Number | Type | Description | Status |
-|--------|------|-------------|--------|
-| #14 | Orchestrator | This cycle | In progress |
-| #15 | Agent task | AggregateRating | Dispatched, awaiting agent |
-| #17 | Agent task | Review + Rating | Dispatched, awaiting agent |
+| Type | File | Properties |
+|------|------|------------|
+| AggregateRating | `src/v1/Schema/AggregateRating.php` | ratingValue, bestRating, worstRating, ratingCount, reviewCount |
+| Rating | `src/v1/Schema/Rating.php` | ratingValue, bestRating, worstRating |
+| Review | `src/v1/Schema/Review.php` | author, reviewRating, reviewBody, datePublished, name |
 
 ## Decisions
 
-- Kept `author` as `string` in Review (not Person/Organization) since those types don't exist yet. Will upgrade when Person is implemented.
-- Omitted `itemReviewed` from both AggregateRating and Review since they'll be nested inside parent types.
+- Kept `author` as `string` in Review (not Person/Organization) since those types don't exist yet.
+- Omitted `itemReviewed` from AggregateRating and Review — they'll be nested inside parent types.
 
-## Next steps
+## Current state
 
-1. Verify agent sessions started (check for error comments on #15 and #17)
-2. Wait for Copilot to finish (check for `copilot_work_finished` timeline events)
-3. Review PRs when ready
-4. If agents finish within this cycle, merge and dispatch next batch (Organization, PostalAddress)
-5. If agents don't finish, commit state and close cycle — next cycle will pick up review
+- **Implemented types**: Product, BreadcrumbList, AggregateRating, Review (with Rating sub-type)
+- **In-flight sessions**: 0
+- **Blockers**: None
+- **Total tests**: 12
+
+## Next steps (for next cycle)
+
+1. Dispatch Organization (shared sub-type, high leverage)
+2. Dispatch PostalAddress (shared sub-type)
+3. Consider dispatching FAQ (simple parent type, good first parent type to implement)
+4. Investigate adding a CI workflow for PRs (run tests automatically)

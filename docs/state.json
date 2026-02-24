@@ -10,26 +10,23 @@
         "type": "BreadcrumbList",
         "pr": 2,
         "sub_types": ["ListItem"]
-      }
-    ],
-    "enums_implemented": ["OfferItemCondition", "ItemAvailability"],
-    "in_progress": [
+      },
       {
         "type": "AggregateRating",
+        "pr": 16,
         "issue": 15,
-        "dispatched_at": "2026-02-24T16:08:04Z",
-        "agent": "copilot-swe-agent[bot]",
-        "status": "dispatched"
+        "merged_at": "2026-02-24T16:20:22Z"
       },
       {
         "type": "Review",
+        "pr": 18,
         "issue": 17,
-        "dispatched_at": "2026-02-24T16:08:17Z",
-        "agent": "copilot-swe-agent[bot]",
         "sub_types": ["Rating"],
-        "status": "dispatched"
+        "merged_at": "2026-02-24T16:18:13Z"
       }
     ],
+    "enums_implemented": ["OfferItemCondition", "ItemAvailability"],
+    "in_progress": [],
     "planned_next": [
       {
         "type": "Organization",
@@ -67,26 +64,11 @@
       ]
     }
   },
-  "agent_sessions": [
-    {
-      "issue": 15,
-      "type": "AggregateRating",
-      "dispatched_at": "2026-02-24T16:08:04Z",
-      "status": "dispatched",
-      "pr": null
-    },
-    {
-      "issue": 17,
-      "type": "Review + Rating",
-      "dispatched_at": "2026-02-24T16:08:17Z",
-      "status": "dispatched",
-      "pr": null
-    }
-  ],
+  "agent_sessions": [],
   "blockers": [],
   "last_cycle": {
     "issue": 14,
-    "timestamp": "2026-02-24T16:08:00Z",
-    "summary": "PAT permissions fixed (closed #13). Dispatched AggregateRating (#15) and Review+Rating (#17) to Copilot agent. Awaiting agent completion."
+    "timestamp": "2026-02-24T16:20:00Z",
+    "summary": "First successful end-to-end cycle. Dispatched, reviewed, and merged AggregateRating (#15→PR#16) and Review+Rating (#17→PR#18). All 12 tests pass. Cleaned up branches."
   }
 }

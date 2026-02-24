@@ -90,7 +90,34 @@ Issue numbers and PR numbers share a namespace on GitHub. Creating issue #15 res
 
 Kept `author` as `string` in the Review type rather than `Person|Organization`. Rationale: Person and Organization types don't exist yet, and we want to keep the issue scope manageable. The agent doesn't need to deal with union types of missing classes. We'll upgrade when Person is implemented (priority 4 in the roadmap).
 
-### Open questions
+### Agent session timing (answered)
 
-- How long does a typical Copilot agent session take for a simple schema type? Tracking this to calibrate expectations.
-- Will the agent create separate test files as specified, or add tests to the existing JsonLdGeneratorTest? The issue spec is clear, but worth verifying.
+- **Review+Rating (2 types + 2 test files)**: ~7 minutes
+- **AggregateRating (1 type + 1 test file)**: ~10 minutes
+- Paradoxically, the simpler task took longer. Sample size is too small to draw conclusions. Both are well within the 60-minute timeout.
+
+### Agent test file behavior (answered)
+
+The agent correctly created separate test files as specified (`RatingTest.php`, `ReviewTest.php`, `AggregateRatingTest.php`). It did NOT add to the existing `JsonLdGeneratorTest.php`. The issue spec was clear enough.
+
+### Agent can't run tests (firewall limitation)
+
+The Copilot agent's firewall blocks downloads from `api.github.com` for composer dependencies. This means the agent cannot install PHPUnit and therefore cannot verify its own tests. The orchestrator must verify tests locally before merging. This is a significant limitation — it means the agent can't self-verify, increasing the risk of broken code reaching review.
+
+Possible mitigation: Set up a CI workflow that runs tests on PR branches. This would catch failures before the orchestrator reviews. However, the orchestrator can't push workflow changes directly.
+
+### Observation: null-check style inconsistency
+
+PR #16 used `assertObjectNotHasProperty()` (matching AGENTS.md examples) while PR #18 used `assertFalse(property_exists())`. Both are functionally equivalent. The inconsistency comes from two independent agent sessions following slightly different patterns. Not worth fixing now, but worth noting for AGENTS.md improvement — could add explicit guidance on which assertion to use.
+
+### Pattern: Orchestrator review flow
+
+The review flow that worked well:
+1. Wait for `copilot_work_finished` event
+2. Fetch branch locally
+3. Run tests
+4. Review diff
+5. Mark ready, approve, squash merge
+6. Delete branch
+
+This is reliable and catches issues the agent can't (since it can't run tests).
