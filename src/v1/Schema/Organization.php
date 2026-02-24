@@ -5,8 +5,7 @@ namespace EvaLok\SchemaOrgJsonLd\v1\Schema;
 use EvaLok\SchemaOrgJsonLd\v1\TypedSchema;
 
 class Organization extends TypedSchema {
-
-	const A_SCHEMA_TYPE = 'Organization';
+	public const A_SCHEMA_TYPE = 'Organization';
 
 	public function __construct(
 		public string $name,
@@ -22,7 +21,5 @@ class Organization extends TypedSchema {
 		public null|string $foundingDate = null,
 		public null|string $alternateName = null,
 		public null|string $legalName = null,
-	) {
-
-	}
+	) {}
 }

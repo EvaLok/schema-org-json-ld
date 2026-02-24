@@ -9,7 +9,6 @@ use EvaLok\SchemaOrgJsonLd\v1\Schema\Question;
 use PHPUnit\Framework\TestCase;
 
 final class FAQPageTest extends TestCase {
-
 	public function testMinimalOutput(): void {
 		$schema = new FAQPage(
 			mainEntity: [

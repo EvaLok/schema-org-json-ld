@@ -8,7 +8,6 @@ use EvaLok\SchemaOrgJsonLd\v1\Schema\Question;
 use PHPUnit\Framework\TestCase;
 
 final class QuestionTest extends TestCase {
-
 	public function testMinimalOutput(): void {
 		$schema = new Question(
 			name: 'What is the return policy?',

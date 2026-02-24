@@ -6,4 +6,5 @@ composer.phar
 
 # test stuff
 .phpunit.result.cache
+.php-cs-fixer.cache
 

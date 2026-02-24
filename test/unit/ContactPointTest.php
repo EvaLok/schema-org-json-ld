@@ -7,7 +7,6 @@ use EvaLok\SchemaOrgJsonLd\v1\Schema\ContactPoint;
 use PHPUnit\Framework\TestCase;
 
 final class ContactPointTest extends TestCase {
-
 	public function testMinimalOutput(): void {
 		$contactPoint = new ContactPoint();
 		$json = JsonLdGenerator::SchemaToJson(schema: $contactPoint);

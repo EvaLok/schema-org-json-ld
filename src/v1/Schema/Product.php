@@ -5,9 +5,9 @@ namespace EvaLok\SchemaOrgJsonLd\v1\Schema;
 use EvaLok\SchemaOrgJsonLd\v1\TypedSchema;
 
 class Product extends TypedSchema {
-	const A_SCHEMA_TYPE = 'Product';
+	public const A_SCHEMA_TYPE = 'Product';
 
-	function __construct(
+	public function __construct(
 		public string $name,
 		/** @var string[] $image */
 		public array  $image,
@@ -18,7 +18,5 @@ class Product extends TypedSchema {
 		public null|Brand $brand = null,
 		public null|string $mpn = null,
 		public null|QuantitativeValue $weight = null,
-	) {
-
-	}
+	) {}
 }

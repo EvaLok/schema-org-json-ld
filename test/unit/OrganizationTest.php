@@ -9,7 +9,6 @@ use EvaLok\SchemaOrgJsonLd\v1\Schema\PostalAddress;
 use PHPUnit\Framework\TestCase;
 
 final class OrganizationTest extends TestCase {
-
 	public function testMinimalOutput(): void {
 		$organization = new Organization(name: 'Example Inc.');
 		$json = JsonLdGenerator::SchemaToJson(schema: $organization);

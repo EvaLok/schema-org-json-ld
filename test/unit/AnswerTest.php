@@ -7,7 +7,6 @@ use EvaLok\SchemaOrgJsonLd\v1\Schema\Answer;
 use PHPUnit\Framework\TestCase;
 
 final class AnswerTest extends TestCase {
-
 	public function testMinimalOutput(): void {
 		$schema = new Answer(text: 'You can return items within 30 days.');
 		$json = JsonLdGenerator::SchemaToJson(schema: $schema);

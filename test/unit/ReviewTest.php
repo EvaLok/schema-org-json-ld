@@ -8,7 +8,6 @@ use EvaLok\SchemaOrgJsonLd\v1\Schema\Review;
 use PHPUnit\Framework\TestCase;
 
 final class ReviewTest extends TestCase {
-
 	public function testMinimalOutput(): void {
 		$review = new Review(
 			author: 'Jane Doe',

@@ -7,7 +7,6 @@ use EvaLok\SchemaOrgJsonLd\v1\Schema\AggregateRating;
 use PHPUnit\Framework\TestCase;
 
 final class AggregateRatingTest extends TestCase {
-
 	public function testMinimalOutput(): void {
 		$schema = new AggregateRating(ratingValue: 4.5);
 		$json = JsonLdGenerator::SchemaToJson(schema: $schema);

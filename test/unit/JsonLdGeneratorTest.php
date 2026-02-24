@@ -22,7 +22,7 @@ final class JsonLdGeneratorTest extends TestCase {
 			image: [
 				"https://example.com/photos/1x1/photo.jpg",
 				"https://example.com/photos/4x3/photo.jpg",
-				"https://example.com/photos/16x9/photo.jpg"
+				"https://example.com/photos/16x9/photo.jpg",
 			],
 			description: "Sleeker than ACME's Classic Anvil, the Executive Anvil is perfect for the business traveler looking for something to drop from a height.",
 			sku: "0446310786",
@@ -32,13 +32,13 @@ final class JsonLdGeneratorTest extends TestCase {
 					priceCurrency: "USD",
 					price: 119.99,
 					itemCondition: OfferItemCondition::NewCondition,
-					availability: ItemAvailability::InStock
-				)
-			]
+					availability: ItemAvailability::InStock,
+				),
+			],
 		);
 
 		$json = JsonLdGenerator::SchemaToJson(
-			schema: $product
+			schema: $product,
 		);
 
 		$this->assertIsString($json);
@@ -56,7 +56,7 @@ final class JsonLdGeneratorTest extends TestCase {
 			image: [
 				"https://example.com/photos/1x1/photo.jpg",
 				"https://example.com/photos/4x3/photo.jpg",
-				"https://example.com/photos/16x9/photo.jpg"
+				"https://example.com/photos/16x9/photo.jpg",
 			],
 			description: "Sleeker than ACME's Classic Anvil, the Executive Anvil is perfect for the business traveler looking for something to drop from a height.",
 			sku: "0446310786",
@@ -66,7 +66,7 @@ final class JsonLdGeneratorTest extends TestCase {
 			mpn: "ACME0444246625",
 			weight: new QuantitativeValue(
 				value: 55.67,
-				unitCode: "LBR"
+				unitCode: "LBR",
 			),
 			offers: [
 				new Offer(
@@ -79,7 +79,7 @@ final class JsonLdGeneratorTest extends TestCase {
 						new OfferShippingDetails(
 							shippingDestination: new DefinedRegion(
 								addressCountry: "US",
-								addressRegion: [ "CA", "NV", "AZ" ]
+								addressRegion: [ "CA", "NV", "AZ" ],
 							),
 							shippingRate: new MonetaryAmount(
 								value: 3.49,
@@ -89,19 +89,19 @@ final class JsonLdGeneratorTest extends TestCase {
 								handlingTime: new QuantitativeValue(
 									unitCode: "DAY",
 									minValue: 0,
-									maxValue: 1
+									maxValue: 1,
 								),
 								transitTime: new QuantitativeValue(
 									unitCode: "DAY",
 									minValue: 1,
-									maxValue: 5
-								)
-							)
+									maxValue: 5,
+								),
+							),
 						),
 						new OfferShippingDetails(
 							shippingDestination: new DefinedRegion(
 								addressCountry: "US",
-								addressRegion: [ "HI" ]
+								addressRegion: [ "HI" ],
 							),
 							shippingRate: new MonetaryAmount(
 								value: 77.49,
@@ -111,29 +111,29 @@ final class JsonLdGeneratorTest extends TestCase {
 								handlingTime: new QuantitativeValue(
 									unitCode: "DAY",
 									minValue: 0,
-									maxValue: 1
+									maxValue: 1,
 								),
 								transitTime: new QuantitativeValue(
 									unitCode: "DAY",
 									minValue: 4,
-									maxValue: 10
-								)
-							)
+									maxValue: 10,
+								),
+							),
 						),
 						new OfferShippingDetails(
 							shippingDestination: new DefinedRegion(
 								addressCountry: "US",
-								addressRegion: [ "AK" ]
+								addressRegion: [ "AK" ],
 							),
 							doesNotShip: true,
 						),
-					]
-				)
-			]
+					],
+				),
+			],
 		);
 
 		$json = JsonLdGenerator::SchemaToJson(
-			schema: $product
+			schema: $product,
 		);
 
 		$this->assertIsString($json);
@@ -151,22 +151,22 @@ final class JsonLdGeneratorTest extends TestCase {
 				new ListItem(
 					position: 1,
 					name: "Books",
-					item: "https://example.com/books"
+					item: "https://example.com/books",
 				),
 				new ListItem(
 					position: 2,
 					name: "Science Fiction",
-					item: "https://example.com/books/sciencefiction"
+					item: "https://example.com/books/sciencefiction",
 				),
 				new ListItem(
 					position: 3,
-					name: "Award Winners"
-				)
-			]
+					name: "Award Winners",
+				),
+			],
 		);
 
 		$json = JsonLdGenerator::SchemaToJson(
-			schema: $breadcrumbList
+			schema: $breadcrumbList,
 		);
 
 		$this->assertIsString($json);
