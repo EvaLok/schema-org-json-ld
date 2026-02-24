@@ -93,7 +93,7 @@ Create if the type is complex. Match the expected JSON-LD output format. Used fo
 composer run test-unit
 ```
 
-All existing tests plus new tests must pass.
+All existing tests plus new tests must pass. PHP 8.3 and composer dependencies are pre-installed in your environment. You MUST run tests and confirm they pass before finishing your work.
 
 ## Common mistakes to avoid
 
