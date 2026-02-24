@@ -77,13 +77,23 @@
         "issue": 37,
         "sub_types": ["NutritionInformation", "HowToStep"],
         "merged_at": "2026-02-24T18:36:00Z"
+      },
+      {
+        "type": "VideoObject",
+        "pr": 45,
+        "issue": 44,
+        "merged_at": "2026-02-24T20:06:00Z"
+      },
+      {
+        "type": "SoftwareApplication",
+        "pr": 47,
+        "issue": 46,
+        "sub_types": ["MobileApplication", "WebApplication"],
+        "merged_at": "2026-02-24T20:07:00Z"
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek"],
-    "in_progress": [
-      {"type": "VideoObject", "issue": 44},
-      {"type": "SoftwareApplication", "issue": 46}
-    ],
+    "in_progress": [],
     "planned_next": [
       {
         "type": "Movie",
@@ -94,8 +104,8 @@
       {
         "type": "JobPosting",
         "priority": 2,
-        "reason": "Dependencies met (Organization, PostalAddress).",
-        "depends_on": ["Organization", "PostalAddress"]
+        "reason": "Dependencies met (Organization, PostalAddress, Place, MonetaryAmount).",
+        "depends_on": ["Organization", "PostalAddress", "Place", "MonetaryAmount"]
       }
     ],
     "google_rich_results_types": {
@@ -109,17 +119,14 @@
       ]
     }
   },
-  "agent_sessions": [
-    {"issue": 44, "model": "gpt-5.3-codex", "types": "VideoObject", "dispatched_at": "2026-02-24T19:52:10Z"},
-    {"issue": 46, "model": "gpt-5.3-codex", "types": "SoftwareApplication+MobileApplication+WebApplication", "dispatched_at": "2026-02-24T19:52:25Z"}
-  ],
+  "agent_sessions": [],
   "blockers": [],
   "last_cycle": {
     "issue": 43,
-    "timestamp": "2026-02-24T19:52:00Z",
-    "summary": "Cycle 6: In progress. Built orchestrator tools (#40, #42). Dispatched VideoObject (#44) and SoftwareApplication (#46)."
+    "timestamp": "2026-02-24T20:07:00Z",
+    "summary": "Cycle 6: In progress. Batch 1 merged: VideoObject (#45), SoftwareApplication+MobileApplication+WebApplication (#47). 69 tests. Dispatching batch 2."
   },
-  "test_count": 62,
-  "total_schema_types": 12,
-  "total_sub_types": 30
+  "test_count": 69,
+  "total_schema_types": 14,
+  "total_sub_types": 34
 }
