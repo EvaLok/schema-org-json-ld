@@ -90,49 +90,67 @@
         "issue": 46,
         "sub_types": ["MobileApplication", "WebApplication"],
         "merged_at": "2026-02-24T20:07:00Z"
-      }
-    ],
-    "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek"],
-    "in_progress": [
-      {"type": "Movie", "issue": 48},
-      {"type": "JobPosting", "issue": 50}
-    ],
-    "planned_next": [
+      },
       {
         "type": "Movie",
-        "priority": 1,
-        "reason": "Dependencies met (AggregateRating, Review, Person, Organization).",
-        "depends_on": ["AggregateRating", "Review", "Person", "Organization"]
+        "pr": 49,
+        "issue": 48,
+        "merged_at": "2026-02-24T20:18:00Z"
       },
       {
         "type": "JobPosting",
+        "pr": 51,
+        "issue": 50,
+        "sub_types": ["AdministrativeArea"],
+        "merged_at": "2026-02-24T20:18:00Z"
+      }
+    ],
+    "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek"],
+    "in_progress": [],
+    "planned_next": [
+      {
+        "type": "Course",
+        "priority": 1,
+        "reason": "Simple type, few dependencies. Part of Course list Rich Result.",
+        "depends_on": ["Organization", "AggregateRating"]
+      },
+      {
+        "type": "Dataset",
         "priority": 2,
-        "reason": "Dependencies met (Organization, PostalAddress, Place, MonetaryAmount).",
-        "depends_on": ["Organization", "PostalAddress", "Place", "MonetaryAmount"]
+        "reason": "Simple type, no complex dependencies.",
+        "depends_on": []
+      },
+      {
+        "type": "Q&A",
+        "priority": 3,
+        "reason": "Builds on FAQ pattern. Uses Answer type already implemented.",
+        "depends_on": ["Answer"]
+      },
+      {
+        "type": "ReviewSnippet",
+        "priority": 4,
+        "reason": "Extends existing Review/AggregateRating patterns.",
+        "depends_on": ["Review", "AggregateRating"]
       }
     ],
     "google_rich_results_types": {
       "not_implemented": [
         "Carousel", "Course list", "Dataset", "Discussion forum",
         "Education Q&A", "Employer aggregate rating",
-        "Job posting", "Math solver",
-        "Movie", "Profile page", "Q&A",
+        "Math solver", "Profile page", "Q&A",
         "Review snippet", "Speakable",
         "Subscription/paywalled content", "Vacation rental"
       ]
     }
   },
-  "agent_sessions": [
-    {"issue": 48, "model": "gpt-5.3-codex", "types": "Movie", "dispatched_at": "2026-02-24T20:05:15Z"},
-    {"issue": 50, "model": "gpt-5.3-codex", "types": "JobPosting+AdministrativeArea", "dispatched_at": "2026-02-24T20:05:31Z"}
-  ],
+  "agent_sessions": [],
   "blockers": [],
   "last_cycle": {
     "issue": 43,
-    "timestamp": "2026-02-24T20:07:00Z",
-    "summary": "Cycle 6: In progress. Batch 1 merged: VideoObject (#45), SoftwareApplication+MobileApplication+WebApplication (#47). 69 tests. Dispatching batch 2."
+    "timestamp": "2026-02-24T20:20:00Z",
+    "summary": "Cycle 6: Built orchestrator tools (#40, #42). Merged 4 PRs: VideoObject (#45), SoftwareApplication+MobileApplication+WebApplication (#47), Movie (#49), JobPosting+AdministrativeArea (#51). 76 tests passing. 16 Google types now implemented."
   },
-  "test_count": 69,
-  "total_schema_types": 14,
-  "total_sub_types": 34
+  "test_count": 76,
+  "total_schema_types": 16,
+  "total_sub_types": 37
 }

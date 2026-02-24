@@ -253,3 +253,59 @@ Both batch 2 agents remained in draft state for 15+ minutes after their last com
 ### Total cycle output
 
 4 merged PRs, 13 new types (Article, NewsArticle, BlogPosting, Event, Place, EventStatusType, LocalBusiness, GeoCoordinates, OpeningHoursSpecification, DayOfWeek, Recipe, NutritionInformation, HowToStep), 30 new tests. This is the highest-throughput cycle to date.
+
+---
+
+## 2026-02-24 — Sixth Cycle
+
+**Context**: Sixth cycle. Clean slate — no in-flight sessions. Two Eva input issues to handle.
+
+### Orchestrator tooling built
+
+Eva requested tools for two repetitive operations (#40, #42). Created three shell scripts in `tools/`:
+
+1. **`tools/agent-status`**: Consolidates all PR/issue/agent status polling into a single command. Shows open agent issues, open PRs, copilot work events, CI checks, and concurrency count. Eliminates the 5-6 separate `gh api` calls that were needed before.
+
+2. **`tools/update-state`**: Atomic operations for `docs/state.json` and worklog entries. Commands like `--add-implemented`, `--add-in-progress`, `--set-cycle`, `--worklog`, `--commit`. Prevents the state/worklog drift Eva noticed.
+
+3. **`tools/dispatch-agent`**: Standardised issue creation with agent assignment. Takes `--title`, `--body-file`, `--model` and handles the `gh api` call with `agent_assignment` correctly.
+
+**Observation**: The tools were written but couldn't be tested in this session due to sandbox restrictions on executing custom scripts. They'll be usable in subsequent GitHub Actions runs where the sandbox is less restrictive. The scripts follow standard bash patterns and should work correctly.
+
+### Zero-revision streak continues
+
+All 4 PRs this cycle passed on first attempt — no `@copilot` revision requests needed. This extends the streak from Cycle 5 (also 4/4 clean). The AGENTS.md improvements (tab indentation rule, cs-fix instruction, quality checklist) from Cycles 4-5 have been highly effective. The cost per type implementation is now consistently 1 premium request.
+
+### 16 types milestone
+
+With this cycle's 4 new types (VideoObject, SoftwareApplication, Movie, JobPosting), the library now covers 16 of the ~26 Google Rich Results types. We've passed the halfway point. The remaining types are increasingly niche.
+
+### Agent timing is stable
+
+All 4 agents this cycle completed in 8-10 minutes, consistent with Cycle 5 batch 1 (8-10 min). The complex types from Cycle 5 batch 2 (LocalBusiness, Recipe at ~25 min) appear to have been outliers. The typical implementation cycle is: initial plan (1 min) → implementation commit (6-8 min) → cs-fix commit (1 min) → done.
+
+### Inheritance pattern confirmed
+
+SoftwareApplication/MobileApplication/WebApplication followed the same inheritance pattern as Article/NewsArticle/BlogPosting. The agents consistently produce clean 3-line subclass files. This pattern is now well-established and doesn't need any additional AGENTS.md guidance.
+
+### Remaining types analysis
+
+The 10 remaining Google Rich Results types, roughly ordered by implementation feasibility:
+- **Course list**: Straightforward. Needs Course type with Organization (exists).
+- **Dataset**: Simple metadata type.
+- **Q&A page**: Similar to FAQPage. Uses Answer (exists).
+- **Review snippet**: Thin wrapper around existing Review/AggregateRating.
+- **Employer aggregate rating**: Thin wrapper around AggregateRating + Organization.
+- **Profile page**: Simple type.
+- **Discussion forum**: Comment/post structure.
+- **Vacation rental**: Complex property type.
+- **Speakable**: Metadata annotation.
+- **Math solver**: Niche, complex.
+- **Carousel**: Meta-type wrapping other types.
+- **Subscription/paywalled content**: Access metadata.
+- **Education Q&A**: Extends Q&A pattern.
+
+### Open questions
+
+- Should we continue at 4 types/cycle pace, or slow down to focus on quality improvements?
+- Some remaining types (Math solver, Speakable, Carousel) may not map well to the simple TypedSchema pattern. Worth investigating before dispatching.
