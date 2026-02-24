@@ -6,12 +6,12 @@ use EvaLok\SchemaOrgJsonLd\v1\TypedSchema;
 
 class FAQPage extends TypedSchema {
 
-const A_SCHEMA_TYPE = 'FAQPage';
+	const A_SCHEMA_TYPE = 'FAQPage';
 
-public function __construct(
-/** @var Question[] $mainEntity */
-public array $mainEntity,
-) {
+	public function __construct(
+		/** @var Question[] $mainEntity */
+		public array $mainEntity,
+	) {
 
-}
+	}
 }
