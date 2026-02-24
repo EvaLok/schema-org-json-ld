@@ -29,12 +29,21 @@ gh issue list --assignee "copilot-swe-agent[bot]" --state open --json number,tit
 gh pr list --state merged --limit 5 --json number,title,mergedAt
 ```
 
+For each open Copilot issue, **check the comments** to verify the agent actually started (not just assigned):
+
+```bash
+# Check if agent posted an error instead of starting
+gh api repos/EvaLok/schema-org-json-ld/issues/{ISSUE}/comments --jq '.[].body' | head -5
+```
+
+Common failure: The assignment API returns success, but the agent posts an error comment asynchronously (e.g., permission issues). Always verify.
+
 For each open Copilot PR, check if work is finished before reviewing:
 
 ```bash
-gh api repos/{owner}/{repo}/issues/{PR}/timeline --paginate \
-  --jq '.[] | select(.event | test("copilot_work")) | {event, created_at}' \
-  | tail -3
+gh api repos/EvaLok/schema-org-json-ld/issues/{PR}/timeline --paginate \
+  --jq '[.[] | select(.event) | {event: .event, created_at: .created_at}]' \
+  | tail -5
 ```
 
 ## 4. Re-examine assumptions

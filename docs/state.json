@@ -13,45 +13,44 @@
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability"],
-    "in_progress": [
+    "in_progress": [],
+    "planned_next": [
       {
         "type": "AggregateRating",
-        "issue": 10,
-        "dispatched_at": "2026-02-24T15:44:29Z",
-        "agent": "copilot-swe-agent",
-        "status": "agent_working"
+        "priority": 1,
+        "reason": "Shared sub-type used by Product, Recipe, LocalBusiness, SoftwareApplication",
+        "depends_on": [],
+        "previous_attempt": "Issue #10 failed due to PAT permissions"
       },
       {
         "type": "Review",
-        "issue": 11,
-        "dispatched_at": "2026-02-24T15:44:45Z",
-        "agent": "copilot-swe-agent",
+        "priority": 2,
+        "reason": "Shared sub-type with Rating. Used by Product, Recipe, LocalBusiness",
+        "depends_on": [],
         "sub_types": ["Rating"],
-        "status": "agent_working"
-      }
-    ],
-    "planned_next": [
+        "previous_attempt": "Issue #11 failed due to PAT permissions"
+      },
       {
         "type": "Organization",
-        "priority": 1,
+        "priority": 3,
         "reason": "Shared sub-type used by Article, Event, LocalBusiness, JobPosting, EmployerAggregateRating",
         "depends_on": []
       },
       {
         "type": "PostalAddress",
-        "priority": 2,
+        "priority": 4,
         "reason": "Shared sub-type used by LocalBusiness, Event, JobPosting, Organization",
         "depends_on": []
       },
       {
         "type": "ImageObject",
-        "priority": 3,
+        "priority": 5,
         "reason": "Shared sub-type used by Article, Recipe, Video, ImageMetadata",
         "depends_on": []
       },
       {
         "type": "Person",
-        "priority": 4,
+        "priority": 6,
         "reason": "Shared sub-type used by Article, Recipe, Review, ProfilePage",
         "depends_on": []
       }
@@ -67,25 +66,18 @@
       ]
     }
   },
-  "agent_sessions": [
+  "agent_sessions": [],
+  "blockers": [
     {
-      "issue": 10,
-      "title": "Implement AggregateRating schema type",
-      "dispatched_at": "2026-02-24T15:44:29Z",
-      "status": "agent_working",
-      "pr": null
-    },
-    {
-      "issue": 11,
-      "title": "Implement Review and Rating schema types",
-      "dispatched_at": "2026-02-24T15:44:45Z",
-      "status": "agent_working",
-      "pr": null
+      "issue": 13,
+      "description": "PAT permissions insufficient for Copilot coding agent assignment",
+      "impact": "Cannot dispatch any work to coding agent",
+      "status": "waiting_for_eva"
     }
   ],
   "last_cycle": {
-    "issue": 9,
-    "timestamp": "2026-02-24T15:39:00Z",
-    "actions_run": 22358023337
+    "issue": 12,
+    "timestamp": "2026-02-24T15:53:00Z",
+    "summary": "Discovered PAT permission failure. Closed failed issues #10, #11. Created question #13 for Eva. Improved AGENTS.md accuracy. Created schema implementation skill."
   }
 }
