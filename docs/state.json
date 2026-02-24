@@ -52,43 +52,52 @@
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability"],
-    "in_progress": [],
-    "planned_next": [
+    "in_progress": [
       {
         "type": "Article",
-        "priority": 1,
-        "reason": "Popular parent type. All dependencies now met: Organization, Person, ImageObject",
-        "depends_on": ["Organization", "Person", "ImageObject"]
+        "issue": 32,
+        "sub_types": ["NewsArticle", "BlogPosting"],
+        "dispatched_at": "2026-02-24T17:49:24Z",
+        "model": "gpt-5.3-codex"
       },
       {
         "type": "Event",
-        "priority": 2,
-        "reason": "Popular parent type. All dependencies met: Organization, PostalAddress",
-        "depends_on": ["Organization", "PostalAddress"]
-      },
+        "issue": 33,
+        "sub_types": ["Place", "EventStatusType"],
+        "dispatched_at": "2026-02-24T17:49:25Z",
+        "model": "gpt-5.3-codex"
+      }
+    ],
+    "planned_next": [
       {
         "type": "LocalBusiness",
-        "priority": 3,
-        "reason": "Popular parent type. All dependencies met: Organization, PostalAddress, AggregateRating, Review",
+        "priority": 1,
+        "reason": "All dependencies met. Popular Google type for local SEO.",
         "depends_on": ["Organization", "PostalAddress", "AggregateRating", "Review"]
       },
       {
         "type": "Recipe",
-        "priority": 4,
-        "reason": "Popular parent type. Dependencies: Person (author), AggregateRating, Review, ImageObject — all met",
+        "priority": 2,
+        "reason": "All dependencies met. Popular Google type.",
         "depends_on": ["Person", "AggregateRating", "Review", "ImageObject"]
       },
       {
         "type": "Video",
-        "priority": 5,
-        "reason": "Common type, depends on ImageObject (thumbnail) — met",
+        "priority": 3,
+        "reason": "Dependencies met. Common type.",
         "depends_on": ["ImageObject"]
+      },
+      {
+        "type": "SoftwareApp",
+        "priority": 4,
+        "reason": "Dependencies met (AggregateRating, Review, Offer).",
+        "depends_on": ["AggregateRating", "Review", "Offer"]
       }
     ],
     "google_rich_results_types": {
       "not_implemented": [
-        "Article", "Carousel", "Course list", "Dataset", "Discussion forum",
-        "Education Q&A", "Employer aggregate rating", "Event",
+        "Carousel", "Course list", "Dataset", "Discussion forum",
+        "Education Q&A", "Employer aggregate rating",
         "Job posting", "Local business", "Math solver",
         "Movie", "Profile page", "Q&A", "Recipe",
         "Review snippet", "Software app", "Speakable",
@@ -96,12 +105,25 @@
       ]
     }
   },
-  "agent_sessions": [],
+  "agent_sessions": [
+    {
+      "issue": 32,
+      "type": "Article",
+      "status": "dispatched",
+      "dispatched_at": "2026-02-24T17:49:24Z"
+    },
+    {
+      "issue": 33,
+      "type": "Event",
+      "status": "dispatched",
+      "dispatched_at": "2026-02-24T17:49:25Z"
+    }
+  ],
   "blockers": [],
   "last_cycle": {
-    "issue": 20,
-    "timestamp": "2026-02-24T17:28:00Z",
-    "summary": "Cycle 4: Dispatched and merged 4 types in 2 batches. Organization+PostalAddress+ContactPoint (#21->PR#22), FAQPage+Question+Answer (#23->PR#24), ImageObject (#25->PR#26), Person (#27->PR#28). 32 tests passing. All shared sub-types now complete — parent types (Article, Event, LocalBusiness, Recipe) are unblocked."
+    "issue": 31,
+    "timestamp": "2026-02-24T17:49:00Z",
+    "summary": "Cycle 5: Handled Eva input (#29, #30). Updated AGENTS.md with CS-Fixer guidance. Dispatched Article (#32) and Event (#33)."
   },
   "test_count": 32,
   "total_schema_types": 8,
