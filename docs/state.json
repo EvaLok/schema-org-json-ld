@@ -93,7 +93,10 @@
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek"],
-    "in_progress": [],
+    "in_progress": [
+      {"type": "Movie", "issue": 48},
+      {"type": "JobPosting", "issue": 50}
+    ],
     "planned_next": [
       {
         "type": "Movie",
@@ -119,7 +122,10 @@
       ]
     }
   },
-  "agent_sessions": [],
+  "agent_sessions": [
+    {"issue": 48, "model": "gpt-5.3-codex", "types": "Movie", "dispatched_at": "2026-02-24T20:05:15Z"},
+    {"issue": 50, "model": "gpt-5.3-codex", "types": "JobPosting+AdministrativeArea", "dispatched_at": "2026-02-24T20:05:31Z"}
+  ],
   "blockers": [],
   "last_cycle": {
     "issue": 43,
