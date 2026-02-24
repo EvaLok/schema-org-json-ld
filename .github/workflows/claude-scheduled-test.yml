@@ -2,7 +2,7 @@ name: Claude Scheduled Test
 
 on:
   schedule:
-    - cron: '15 15 24 2 *'  # 15:15 UTC on Feb 24 - one-time test
+    - cron: '25 15 24 2 *'  # 15:25 UTC on Feb 24 - one-time test
 
 jobs:
   claude-scheduled:
@@ -21,7 +21,9 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          claude_args: "--model claude-opus-4-6 --allowedTools 'Bash(gh issue comment:*)'"
+          claude_args: |
+            --model claude-opus-4-6
+            --allowedTools "Bash(gh issue comment:*)"
           prompt: |
             Post a comment on issue #4 confirming that this scheduled GitHub Action ran successfully.
             Include the current UTC timestamp in the comment.
