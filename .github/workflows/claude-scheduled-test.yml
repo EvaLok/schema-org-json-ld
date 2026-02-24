@@ -2,8 +2,8 @@ name: Claude Scheduled Test
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '30 15 24 2 *'  # 15:30 UTC on Feb 24 - one-time test
+  # schedule:
+  #   - cron: '30 15 24 2 *'  # 15:30 UTC on Feb 24 - one-time test
 
 jobs:
   claude-scheduled:
