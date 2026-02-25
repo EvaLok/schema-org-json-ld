@@ -245,7 +245,10 @@
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration"],
-    "in_progress": [],
+    "in_progress": [
+      {"type": "LocalBusiness subtypes", "issue": 128, "details": "department property + FoodEstablishment + Restaurant + Store"},
+      {"type": "Organization properties", "issue": 130, "details": "numberOfEmployees, taxID, vatID, naics, duns, leiCode, iso6523Code, globalLocationNumber"}
+    ],
     "planned_next": [],
     "google_rich_results_types": {
       "not_implemented": [],
@@ -258,13 +261,28 @@
       ]
     }
   },
-  "agent_sessions": [],
+  "agent_sessions": [
+    {
+      "issue": 128,
+      "title": "LocalBusiness department + FoodEstablishment/Restaurant/Store subtypes",
+      "dispatched_at": "2026-02-25T18:14:00Z",
+      "model": "gpt-5.3-codex",
+      "status": "in_flight"
+    },
+    {
+      "issue": 130,
+      "title": "Organization Google-recommended properties",
+      "dispatched_at": "2026-02-25T18:15:00Z",
+      "model": "gpt-5.3-codex",
+      "status": "in_flight"
+    }
+  ],
   "qc_processed": [8],
   "blockers": [],
   "last_cycle": {
-    "issue": 120,
-    "timestamp": "2026-02-25T15:41:00Z",
-    "summary": "Cycle 19: EventAttendanceMode/VirtualLocation (PR #124) and HowToSection (PR #125). 2 PRs merged, 35 consecutive zero-revision. 225 tests, 1254 assertions. QC validation request #121 sent."
+    "issue": 127,
+    "timestamp": "2026-02-25T18:07:43Z",
+    "summary": "Cycle 20: Dispatched LocalBusiness subtypes (#128) and Organization properties (#130). QC request #121 closed (all validated). Stale issue #126 closed."
   },
   "test_count": 225,
   "total_schema_types": 28,
