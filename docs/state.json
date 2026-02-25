@@ -215,12 +215,17 @@
         "issue": 110,
         "sub_types_added": ["Clip"],
         "merged_at": "2026-02-25T12:40:00Z"
+      },
+      {
+        "description": "Add itemReviewed to Review, create Thing sub-type (QC fix)",
+        "pr": 117,
+        "issue": 116,
+        "sub_types_added": ["Thing"],
+        "merged_at": "2026-02-25T14:15:00Z"
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek"],
-    "in_progress": [
-      {"type": "Review-itemReviewed-fix", "issue": 116}
-    ],
+    "in_progress": [],
     "planned_next": [],
     "google_rich_results_types": {
       "not_implemented": [],
@@ -239,12 +244,6 @@
   },
   "agent_sessions": [
     {
-      "issue": 116,
-      "model": "gpt-5.3-codex",
-      "types": "Review itemReviewed + Thing",
-      "dispatched_at": "2026-02-25T14:06:00Z"
-    },
-    {
       "issue": 118,
       "model": "gpt-5.3-codex",
       "types": "Offer.itemCondition + CourseInstance.courseMode optional",
@@ -258,7 +257,7 @@
     "timestamp": "2026-02-25T12:20:00Z",
     "summary": "Cycle 17: Full audit of all 28 types. Fixed HIGH-priority gaps: Product (aggregateRating, review) and VideoObject (interactionStatistic, Clip/hasPart, ineligibleRegion). New Clip sub-type. 213 tests, 1209 assertions. 31 consecutive zero-revision PRs."
   },
-  "test_count": 213,
+  "test_count": 216,
   "total_schema_types": 28,
-  "total_sub_types": 65
+  "total_sub_types": 66
 }
