@@ -21,5 +21,13 @@ class Organization extends TypedSchema {
 		public null|string $foundingDate = null,
 		public null|string $alternateName = null,
 		public null|string $legalName = null,
+		public null|QuantitativeValue $numberOfEmployees = null,
+		public null|string $taxID = null,
+		public null|string $vatID = null,
+		public null|string $naics = null,
+		public null|string $duns = null,
+		public null|string $leiCode = null,
+		public null|string $iso6523Code = null,
+		public null|string $globalLocationNumber = null,
 	) {}
 }
