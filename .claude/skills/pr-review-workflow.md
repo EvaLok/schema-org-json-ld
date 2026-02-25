@@ -18,11 +18,10 @@ Check for `copilot_work_finished` in the PR timeline:
 
 ```bash
 gh api repos/EvaLok/schema-org-json-ld/issues/{PR}/timeline --paginate \
-  --jq '[.[] | select(.event | test("copilot_work")) | {event: .event, created_at: .created_at}]' \
-  | tail -5
+  --jq '.[] | select(.event) | select(.event | test("copilot")) | {event, created_at}'
 ```
 
-Or use the tool: `tools/agent-status <PR_NUMBER>`
+**Note**: Avoid `!= null` in jq expressions passed via `--jq` — the `!` gets shell-escaped by the permission system. Use chained `select()` instead. Also avoid `tail` (not in allowed commands) — the jq expression already filters to relevant events.
 
 **Do not proceed until `copilot_work_finished` appears.** The agent pushes multiple commits during a session — reviewing mid-session wastes effort.
 
