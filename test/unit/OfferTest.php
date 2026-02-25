@@ -86,4 +86,17 @@ final class OfferTest extends TestCase {
 
 		$this->assertEquals('2026-02-01T09:00:00+00:00', $obj->validFrom);
 	}
+
+	public function testItemConditionOmittedWhenNull(): void {
+		$schema = new Offer(
+			url: 'https://example.com/anvil',
+			priceCurrency: 'USD',
+			price: 119.99,
+			availability: ItemAvailability::InStock,
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertFalse(property_exists($obj, 'itemCondition'));
+	}
 }

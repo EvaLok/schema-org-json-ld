@@ -103,4 +103,18 @@ final class CourseTest extends TestCase {
 		$this->assertEquals(4.7, $obj->aggregateRating->ratingValue);
 		$this->assertEquals('https://example.edu/images/cs101.jpg', $obj->image);
 	}
+
+	public function testCourseInstanceCourseModeOmittedWhenNull(): void {
+		$course = new Course(
+			name: 'Introduction to Computer Science',
+			description: 'Learn core computing concepts.',
+			hasCourseInstance: [
+				new CourseInstance(),
+			],
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $course);
+		$obj = json_decode($json);
+
+		$this->assertFalse(property_exists($obj->hasCourseInstance[0], 'courseMode'));
+	}
 }
