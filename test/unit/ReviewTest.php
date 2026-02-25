@@ -5,8 +5,10 @@ namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Organization;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Person;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Product;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Rating;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Review;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Thing;
 use PHPUnit\Framework\TestCase;
 
 final class ReviewTest extends TestCase {
@@ -37,6 +39,7 @@ final class ReviewTest extends TestCase {
 		$this->assertFalse(property_exists($obj, 'reviewBody'));
 		$this->assertFalse(property_exists($obj, 'datePublished'));
 		$this->assertFalse(property_exists($obj, 'name'));
+		$this->assertFalse(property_exists($obj, 'itemReviewed'));
 	}
 
 	public function testFullOutput(): void {
@@ -85,5 +88,37 @@ final class ReviewTest extends TestCase {
 
 		$this->assertEquals('Organization', $obj->author->{'@type'});
 		$this->assertEquals('Example Inc', $obj->author->name);
+	}
+
+	public function testOutputWithItemReviewedAsThing(): void {
+		$review = new Review(
+			author: 'Jane Doe',
+			reviewRating: new Rating(ratingValue: 5),
+			itemReviewed: new Thing(name: 'Executive Anvil'),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $review);
+		$obj = json_decode($json);
+
+		$this->assertEquals('Thing', $obj->itemReviewed->{'@type'});
+		$this->assertEquals('Executive Anvil', $obj->itemReviewed->name);
+	}
+
+	public function testOutputWithItemReviewedAsProduct(): void {
+		$review = new Review(
+			author: 'Jane Doe',
+			reviewRating: new Rating(ratingValue: 5),
+			itemReviewed: new Product(
+				name: 'Executive Anvil',
+				image: ['https://example.com/photos/1x1/photo.jpg'],
+				description: 'Sleeker than ACME\'s Classic Anvil.',
+				sku: '0446310786',
+				offers: [],
+			),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $review);
+		$obj = json_decode($json);
+
+		$this->assertEquals('Product', $obj->itemReviewed->{'@type'});
+		$this->assertEquals('Executive Anvil', $obj->itemReviewed->name);
 	}
 }
