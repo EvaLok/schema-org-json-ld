@@ -3,6 +3,8 @@
 namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Clip;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\InteractionCounter;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\VideoObject;
 use PHPUnit\Framework\TestCase;
 
@@ -39,6 +41,9 @@ final class VideoObjectTest extends TestCase {
 		$this->assertFalse(property_exists($obj, 'duration'));
 		$this->assertFalse(property_exists($obj, 'expires'));
 		$this->assertFalse(property_exists($obj, 'regionsAllowed'));
+		$this->assertFalse(property_exists($obj, 'interactionStatistic'));
+		$this->assertFalse(property_exists($obj, 'hasPart'));
+		$this->assertFalse(property_exists($obj, 'ineligibleRegion'));
 	}
 
 	public function testFullOutput(): void {
@@ -65,5 +70,67 @@ final class VideoObjectTest extends TestCase {
 		$this->assertEquals('PT2M30S', $obj->duration);
 		$this->assertEquals('2026-12-31T23:59:59+00:00', $obj->expires);
 		$this->assertEquals('US,CA', $obj->regionsAllowed);
+	}
+
+	public function testWithInteractionStatistic(): void {
+		$videoObject = new VideoObject(
+			name: 'How to tie a tie',
+			thumbnailUrl: ['https://example.com/thumb.jpg'],
+			uploadDate: '2026-02-24',
+			interactionStatistic: new InteractionCounter(
+				interactionType: 'https://schema.org/WatchAction',
+				userInteractionCount: 54321,
+			),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $videoObject);
+		$obj = json_decode($json);
+
+		$this->assertEquals('InteractionCounter', $obj->interactionStatistic->{'@type'});
+		$this->assertEquals('https://schema.org/WatchAction', $obj->interactionStatistic->interactionType);
+		$this->assertEquals(54321, $obj->interactionStatistic->userInteractionCount);
+	}
+
+	public function testWithIneligibleRegion(): void {
+		$videoObject = new VideoObject(
+			name: 'How to tie a tie',
+			thumbnailUrl: ['https://example.com/thumb.jpg'],
+			uploadDate: '2026-02-24',
+			ineligibleRegion: 'US',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $videoObject);
+		$obj = json_decode($json);
+
+		$this->assertEquals('US', $obj->ineligibleRegion);
+	}
+
+	public function testWithHasPartKeyMoments(): void {
+		$videoObject = new VideoObject(
+			name: 'How to tie a tie',
+			thumbnailUrl: ['https://example.com/thumb.jpg'],
+			uploadDate: '2026-02-24',
+			hasPart: [
+				new Clip(
+					name: 'Create the knot',
+					startOffset: 30,
+					url: 'https://example.com/video?t=30',
+					endOffset: 75,
+				),
+				new Clip(
+					name: 'Tighten and finish',
+					startOffset: 76,
+					url: 'https://example.com/video?t=76',
+				),
+			],
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $videoObject);
+		$obj = json_decode($json);
+
+		$this->assertCount(2, $obj->hasPart);
+		$this->assertEquals('Clip', $obj->hasPart[0]->{'@type'});
+		$this->assertEquals('Create the knot', $obj->hasPart[0]->name);
+		$this->assertEquals(30, $obj->hasPart[0]->startOffset);
+		$this->assertEquals('https://example.com/video?t=30', $obj->hasPart[0]->url);
+		$this->assertEquals(75, $obj->hasPart[0]->endOffset);
+		$this->assertObjectNotHasProperty('endOffset', $obj->hasPart[1]);
 	}
 }
