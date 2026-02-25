@@ -43,6 +43,7 @@ final class OfferTest extends TestCase {
 		$obj = json_decode($json);
 
 		$this->assertFalse(property_exists($obj, 'shippingDetails'));
+		$this->assertFalse(property_exists($obj, 'validFrom'));
 	}
 
 	public function testWithShippingDetails(): void {
@@ -69,5 +70,20 @@ final class OfferTest extends TestCase {
 		$this->assertEquals('DefinedRegion', $obj->shippingDetails[0]->shippingDestination->{'@type'});
 		$this->assertEquals('US', $obj->shippingDetails[0]->shippingDestination->addressCountry);
 		$this->assertEquals(['CA', 'NV', 'AZ'], $obj->shippingDetails[0]->shippingDestination->addressRegion);
+	}
+
+	public function testWithValidFrom(): void {
+		$schema = new Offer(
+			url: 'https://example.com/anvil',
+			priceCurrency: 'USD',
+			price: 119.99,
+			itemCondition: OfferItemCondition::NewCondition,
+			availability: ItemAvailability::InStock,
+			validFrom: '2026-02-01T09:00:00+00:00',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('2026-02-01T09:00:00+00:00', $obj->validFrom);
 	}
 }

@@ -12,6 +12,7 @@ class MonetaryAmount extends TypedSchema {
 		public null|float $value = null,
 		public null|float $minValue = null,
 		public null|float $maxValue = null,
+		public null|string $unitText = null,
 	) {}
 
 }
