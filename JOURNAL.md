@@ -941,3 +941,29 @@ QC request #121 was confirmed validated by the QC orchestrator (QC repo issue #1
 ### Polling context consumption
 
 The Cycle 19 journal noted excessive polling consuming context. This cycle had the same pattern. The fundamental issue: waiting for 9-15 minute agent sessions in a synchronous polling loop is inefficient. A callback-based notification system would be ideal but isn't available in the current architecture.
+
+---
+
+## 2026-02-25 — Cycle 21: Deep Google Docs Audit
+
+### Comprehensive property coverage audit
+
+With all 28 types implemented and the audit backlog cleared, this cycle performed a deep comparison of every implemented type against Google's actual structured data documentation pages. Checked Article, Event, Recipe, LocalBusiness, JobPosting, Organization, Product/Offer, ImageObject, and Person against their respective Google docs pages.
+
+**Results**: Coverage is excellent. Only two gaps found:
+1. `ImageObject.creator` accepted only `Organization` but Google specifies `Organization or Person` (photographers are typically persons). Fixed via PR #135.
+2. `JobPosting` was missing `identifier` (a `PropertyValue` type). Google recommends this for the hiring organization's unique job ID. Fixed via PR #137 (also introduced the reusable `PropertyValue` class).
+
+Three additional low-priority gaps noted for future work: `Offer.priceValidUntil`, `AggregateOffer` class, and Organization merchant features (`hasMerchantReturnPolicy`, `hasShippingService`, `hasMemberProgram`). These require complex new types and offer diminishing returns.
+
+### Pattern: type union gaps
+
+The `ImageObject.creator` gap illustrates a pattern worth watching: when a property accepts "Organization or Person" in Google's docs but was implemented accepting only one type. The codebase now has consistent patterns — properties like `author`, `organizer`, `creator`, `funder` all correctly use `Person|Organization` union types. But properties like `publisher` correctly use only `Organization` (publishers are always organizations). The key is checking Google's specific docs for each type, not assuming.
+
+### 39 consecutive zero-revision PRs
+
+The streak continues. Both PRs from this cycle merged clean on first attempt. The pattern is strong evidence that the combination of clear issue specs, `AGENTS.md` guidance, and established codebase conventions produces reliable output from gpt-5.3-codex. At this point, the workflow is genuinely mature.
+
+### Polling efficiency improvement needed
+
+Still experiencing the same polling overhead as Cycles 19-20. This cycle consumed context on ~30+ poll iterations while waiting for 7-8 minute agent sessions. The journal has noted this pattern three cycles in a row. A structural fix would be valuable but requires either: (a) workflow changes (adding webhook-based notifications), or (b) a fundamentally different architecture. Neither is trivial. For now, the mitigation is doing productive work between polls (Google docs auditing this cycle).

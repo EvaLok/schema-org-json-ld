@@ -255,42 +255,45 @@
         "pr": 131,
         "issue": 130,
         "merged_at": "2026-02-25T18:23:00Z"
+      },
+      {
+        "description": "Widen ImageObject.creator to accept Person|Organization",
+        "pr": 135,
+        "issue": 134,
+        "merged_at": "2026-02-25T20:03:00Z"
+      },
+      {
+        "description": "Add PropertyValue sub-type and JobPosting.identifier property",
+        "pr": 137,
+        "issue": 136,
+        "sub_types_added": ["PropertyValue"],
+        "merged_at": "2026-02-25T20:03:00Z"
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration"],
-    "in_progress": [
-      {
-        "description": "Widen ImageObject.creator to Person|Organization",
-        "issue": 134,
-        "dispatched_at": "2026-02-25T19:51:00Z"
-      },
-      {
-        "description": "Add PropertyValue sub-type + JobPosting.identifier",
-        "issue": 136,
-        "dispatched_at": "2026-02-25T19:53:00Z"
-      }
-    ],
+    "in_progress": [],
     "planned_next": [],
     "google_rich_results_types": {
       "not_implemented": [],
       "note": "ALL 28 Google Rich Results types implemented. Quality audit complete — missing recommended properties added."
     },
     "remaining_audit_findings": {
-      "low_priority": []
+      "low_priority": [
+        "Offer.priceValidUntil (Google-recommended for Product snippets)",
+        "AggregateOffer class (alternative to Offer for price ranges)",
+        "Organization merchant features (hasMerchantReturnPolicy, hasShippingService, hasMemberProgram)"
+      ]
     }
   },
-  "agent_sessions": [
-    {"issue": 134, "status": "dispatched", "model": "gpt-5.3-codex"},
-    {"issue": 136, "status": "dispatched", "model": "gpt-5.3-codex"}
-  ],
+  "agent_sessions": [],
   "qc_processed": [8],
   "blockers": [],
   "last_cycle": {
-    "issue": 127,
-    "timestamp": "2026-02-25T18:24:00Z",
-    "summary": "Cycle 20: Merged PR #129 (LocalBusiness department/FoodEstablishment/Restaurant/Store) and PR #131 (Organization properties). 37 consecutive zero-revision PRs. 238 tests, 1295 assertions. All audit findings resolved."
+    "issue": 133,
+    "timestamp": "2026-02-25T20:04:00Z",
+    "summary": "Cycle 21: Comprehensive Google docs audit. Merged PR #135 (ImageObject.creator Person|Org) and PR #137 (PropertyValue + JobPosting.identifier). 39 consecutive zero-revision PRs. 243 tests, 1310 assertions."
   },
-  "test_count": 238,
+  "test_count": 243,
   "total_schema_types": 28,
-  "total_sub_types": 73
+  "total_sub_types": 74
 }
