@@ -764,3 +764,58 @@ With this cycle, the library is:
 - Is there value in continuing automated cycles if all work is complete?
 - Should the orchestrator recommend a release to Eva?
 - The workflow has been validated across 15 cycles and 27 clean agent PRs — what's the next interesting challenge?
+
+---
+
+## 2026-02-25 — Sixteenth Cycle
+
+**Context**: Sixteenth cycle. Clean slate, no Eva input. First systematic property-level quality audit.
+
+### Quality audits against Google's docs surface real gaps
+
+This cycle introduced a new kind of quality work: systematically comparing each implementation against Google's structured data documentation to find missing recommended properties. Previous audits focused on code style, test coverage, and structural issues. This audit compared property lists.
+
+The findings were significant — 5 genuinely missing Google-recommended properties across 5 schema classes:
+
+1. **MonetaryAmount.unitText** — Critical for JobPosting salary data. Without it, Google can't determine if a salary is hourly, monthly, or yearly.
+2. **Review.author type** — Was `string`, should be `string|Person|Organization`. Google expects nested objects, not plain strings.
+3. **Offer.validFrom** — Recommended for Event ticket offers (when tickets go on sale).
+4. **Recipe.video** — Google recommends video on recipes. VideoObject already existed, just needed the property.
+5. **JobPosting.jobLocation** — Was required, but Google says remote jobs should omit it. Made nullable.
+
+### Pattern: property-level audit is high-value
+
+Previous cycles focused on getting types implemented. This cycle's audit revealed that "implemented" doesn't mean "complete" — every type had its required properties, but several were missing recommended ones that affect Rich Results quality.
+
+This suggests that after implementing a type, a follow-up property audit is worthwhile. Not every recommended property matters equally, but the ones found here (salary period, author format, video support) genuinely affect user experience.
+
+### Backward-compatible property fixes are safe
+
+All 5 fixes were backward-compatible:
+- Adding optional params (`unitText`, `validFrom`, `video`) with `= null` defaults
+- Widening a type (`string` → `string|Person|Organization`)
+- Making a required param optional (`Place $jobLocation` → `null|Place $jobLocation = null`)
+
+Existing code continues to work unchanged. This validates the design pattern: required params first, optional params with `= null` at the end. It makes the API naturally extensible without breaking changes.
+
+### Agent performance: consistent and clean
+
+Both agents completed in ~7 minutes, consistent with the 7-10 minute window observed across all 16 cycles. The zero-revision streak extends to 29 consecutive clean PRs.
+
+### Remaining audit findings (low priority)
+
+Several findings from the audit were intentionally deferred as low-priority:
+- LocalBusiness missing `department` (niche use case)
+- LocalBusiness subtypes (Restaurant, Store) not implemented
+- Offer.itemCondition should be optional for non-Product uses
+- CourseInstance.courseMode unnecessarily required
+- HowToSection not supported for Recipe grouped instructions
+- EventAttendanceMode/VirtualLocation not supported
+
+These are all valid improvements but affect edge cases rather than the core Rich Results output.
+
+### Open questions
+
+- Is there value in auditing the remaining 22 types not covered this cycle?
+- Should the library evolve toward stricter Google validation (e.g., warning when required-for-Google properties are missing)?
+- The orchestrator has now spent 6 cycles on quality work after completing type implementation. Is this the right ratio, or should Eva decide the next focus?
