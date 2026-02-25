@@ -1,6 +1,6 @@
 # schema-org-json-ld
 
-PHP library for generating schema.org JSON-LD structured data for Google Rich Results. Covers **27 Google Rich Results types** backed by **65 schema classes**, with type-safe constructor-promoted properties and automatic serialization.
+PHP library for generating schema.org JSON-LD structured data for Google Rich Results. Covers **28 Google Rich Results types** backed by **67 schema classes**, with type-safe constructor-promoted properties and automatic serialization.
 
 Tested & validated using the [Google Rich Results Test](https://search.google.com/test/rich-results/result?id=eeuHnX6wLe1IqxNkqd42xA).
 
@@ -28,6 +28,7 @@ Tested & validated using the [Google Rich Results Test](https://search.google.co
   - [Image Metadata](#image-metadata)
   - [Job Posting](#job-posting)
   - [Local Business](#local-business)
+  - [Math Solver](#math-solver)
   - [Movie](#movie)
   - [Organization](#organization)
   - [Product](#product)
@@ -112,6 +113,7 @@ The pattern is always the same: instantiate a schema class, pass it to `JsonLdGe
 | Image metadata | `ImageObject` |
 | Job posting | `JobPosting`, `Organization`, `Place`, `MonetaryAmount`, `AdministrativeArea` |
 | Local business | `LocalBusiness`, `PostalAddress`, `GeoCoordinates`, `OpeningHoursSpecification`, `AggregateRating`, `Review` |
+| Math solver | `MathSolver`, `SolveMathAction` |
 | Movie | `Movie`, `Person`, `AggregateRating`, `Review` |
 | Organization | `Organization`, `PostalAddress`, `ContactPoint` |
 | Product | `Product`, `Offer`, `Brand`, `OfferShippingDetails`, `ShippingDeliveryTime`, `DefinedRegion`, `MonetaryAmount`, `QuantitativeValue` |
@@ -920,6 +922,57 @@ $json = JsonLdGenerator::SchemaToJson(schema: $localBusiness);
         "bestRating": 5,
         "reviewCount": 218
     }
+}
+```
+
+---
+
+### Math Solver
+
+```php
+<?php
+
+use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\MathSolver;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\SolveMathAction;
+
+$mathSolver = new MathSolver(
+	url: 'https://example.com/math-solver',
+	usageInfo: 'https://example.com/math-solver/usage',
+	potentialAction: new SolveMathAction(
+		target: 'https://example.com/math-solver?expression={math_expression}',
+		mathExpressionInput: 'x^2 + 4x + 4 = 0',
+	),
+	name: 'Equation Solver',
+	inLanguage: 'en',
+	learningResourceType: 'Math solver',
+	assesses: ['Algebra', 'Equations'],
+);
+
+$json = JsonLdGenerator::SchemaToJson(schema: $mathSolver);
+```
+
+```json
+{
+    "@context": "https://schema.org/",
+    "@type": [
+        "MathSolver",
+        "LearningResource"
+    ],
+    "url": "https://example.com/math-solver",
+    "usageInfo": "https://example.com/math-solver/usage",
+    "potentialAction": {
+        "@type": "SolveMathAction",
+        "target": "https://example.com/math-solver?expression={math_expression}",
+        "mathExpression-input": "x^2 + 4x + 4 = 0"
+    },
+    "name": "Equation Solver",
+    "inLanguage": "en",
+    "learningResourceType": "Math solver",
+    "assesses": [
+        "Algebra",
+        "Equations"
+    ]
 }
 ```
 
