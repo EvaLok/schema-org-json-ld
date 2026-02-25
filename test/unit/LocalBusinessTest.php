@@ -130,4 +130,51 @@ final class LocalBusinessTest extends TestCase {
 		$this->assertEquals('hello@example.com', $obj->email);
 		$this->assertEquals('https://www.facebook.com/example', $obj->sameAs[0]);
 	}
+
+	public function testDepartmentOutput(): void {
+		$department = new LocalBusiness(
+			name: 'Hospital Pharmacy',
+			address: new PostalAddress(
+				streetAddress: '10 Health Ave',
+				addressLocality: 'Amsterdam',
+			),
+			openingHoursSpecification: [
+				new OpeningHoursSpecification(
+					dayOfWeek: DayOfWeek::Monday,
+					opens: '08:00',
+					closes: '17:00',
+				),
+			],
+		);
+		$localBusiness = new LocalBusiness(
+			name: 'General Hospital',
+			address: new PostalAddress(streetAddress: '1 Medical Plaza'),
+			department: $department,
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $localBusiness);
+		$obj = json_decode($json);
+
+		$this->assertEquals('LocalBusiness', $obj->department->{'@type'});
+		$this->assertEquals('Hospital Pharmacy', $obj->department->name);
+		$this->assertEquals('OpeningHoursSpecification', $obj->department->openingHoursSpecification[0]->{'@type'});
+	}
+
+	public function testDepartmentArrayOutput(): void {
+		$localBusiness = new LocalBusiness(
+			name: 'General Hospital',
+			address: new PostalAddress(streetAddress: '1 Medical Plaza'),
+			department: [
+				new LocalBusiness(
+					name: 'Hospital Pharmacy',
+					address: new PostalAddress(streetAddress: '10 Health Ave'),
+				),
+			],
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $localBusiness);
+		$obj = json_decode($json);
+
+		$this->assertCount(1, $obj->department);
+		$this->assertEquals('LocalBusiness', $obj->department[0]->{'@type'});
+		$this->assertEquals('Hospital Pharmacy', $obj->department[0]->name);
+	}
 }

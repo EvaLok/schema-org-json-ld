@@ -28,5 +28,7 @@ class LocalBusiness extends TypedSchema {
 		public null|string $email = null,
 		/** @var string[] $sameAs */
 		public null|array $sameAs = null,
+		/** @var LocalBusiness[] $department */
+		public null|LocalBusiness|array $department = null,
 	) {}
 }
