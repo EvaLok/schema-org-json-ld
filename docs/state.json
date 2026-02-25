@@ -198,22 +198,7 @@
       "note": "Review snippet is not a separate type. Image metadata uses existing ImageObject. All other Google Rich Results types are now implemented. Math Solver requires JsonLdGenerator changes — see question #78."
     }
   },
-  "agent_sessions": [
-    {
-      "issue": 80,
-      "title": "Update README and composer.json",
-      "dispatched_at": "2026-02-25T02:21:51Z",
-      "model": "gpt-5.3-codex",
-      "type": "documentation"
-    },
-    {
-      "issue": 81,
-      "title": "Add tests for untested sub-types",
-      "dispatched_at": "2026-02-25T02:21:56Z",
-      "model": "gpt-5.3-codex",
-      "type": "test-coverage"
-    }
-  ],
+  "agent_sessions": [],
   "blockers": [
     {
       "type": "MathSolver",
@@ -224,9 +209,9 @@
   "last_cycle": {
     "issue": 79,
     "timestamp": "2026-02-25T02:17:00Z",
-    "summary": "Cycle 10: Quality improvement cycle. Dispatched README update (#80) and test coverage expansion (#81). Focus on documentation and test quality rather than new types."
+    "summary": "Cycle 10: Quality improvement cycle. Merged README update (#82) and test coverage expansion (#83). 160 tests, 21 zero-revision PRs."
   },
-  "test_count": 140,
+  "test_count": 160,
   "total_schema_types": 27,
   "total_sub_types": 62
 }
