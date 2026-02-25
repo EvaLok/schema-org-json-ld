@@ -251,7 +251,7 @@
         "merged_at": "2026-02-25T18:23:00Z"
       },
       {
-        "description": "Add Google-recommended properties to Organization (numberOfEmployees, taxID, vatID, etc.)",
+        "description": "Add Google-recommended Organization properties (numberOfEmployees, taxID, vatID, etc.)",
         "pr": 131,
         "issue": 130,
         "merged_at": "2026-02-25T18:23:00Z"
@@ -275,29 +275,28 @@
         "issue": 139,
         "sub_types_added": ["AggregateOffer"],
         "merged_at": "2026-02-25T21:21:00Z"
-      }
-    ],
-    "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration"],
-    "in_progress": [
-      {
-        "type": "MerchantReturnPolicy",
-        "issue": 143,
-        "sub_types": ["MerchantReturnPolicySeasonalOverride", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration"],
-        "dispatched_at": "2026-02-25T22:48:06Z",
-        "model": "gpt-5.3-codex"
       },
       {
-        "type": "MemberProgram",
+        "description": "Add MerchantReturnPolicy + 5 enums + seasonal override",
+        "pr": 144,
+        "issue": 143,
+        "sub_types_added": ["MerchantReturnPolicy", "MerchantReturnPolicySeasonalOverride", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration"],
+        "merged_at": "2026-02-25T23:00:00Z"
+      },
+      {
+        "description": "Add MemberProgram + MemberProgramTier + TierBenefitEnumeration",
+        "pr": 146,
         "issue": 145,
-        "sub_types": ["MemberProgramTier", "TierBenefitEnumeration"],
-        "dispatched_at": "2026-02-25T22:48:19Z",
-        "model": "gpt-5.3-codex"
+        "sub_types_added": ["MemberProgram", "MemberProgramTier", "TierBenefitEnumeration"],
+        "merged_at": "2026-02-25T23:00:00Z"
       }
     ],
+    "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration"],
+    "in_progress": [],
     "planned_next": [
       "ShippingService (+ ShippingConditions, ServicePeriod, ShippingRateSettings, FulfillmentTypeEnumeration)",
-      "Organization update (wire hasMerchantReturnPolicy, hasMemberProgram, hasShippingService)",
-      "DefinedRegion fix (make addressRegion nullable, add postalCode)"
+      "DefinedRegion fix (make addressRegion nullable, add postalCode)",
+      "Organization update (wire hasMerchantReturnPolicy, hasMemberProgram, hasShippingService)"
     ],
     "google_rich_results_types": {
       "not_implemented": [],
@@ -305,22 +304,20 @@
     },
     "remaining_audit_findings": {
       "low_priority": [
-        "Organization merchant features (hasMerchantReturnPolicy, hasShippingService, hasMemberProgram)"
+        "ShippingService for Organization (last remaining merchant feature)",
+        "Organization wiring (hasMerchantReturnPolicy, hasMemberProgram, hasShippingService)"
       ]
     }
   },
-  "agent_sessions": [
-    {"issue": 143, "type": "MerchantReturnPolicy", "status": "dispatched", "dispatched_at": "2026-02-25T22:48:06Z"},
-    {"issue": 145, "type": "MemberProgram", "status": "dispatched", "dispatched_at": "2026-02-25T22:48:19Z"}
-  ],
+  "agent_sessions": [],
   "qc_processed": [8],
   "blockers": [],
   "last_cycle": {
     "issue": 142,
-    "timestamp": "2026-02-25T22:48:00Z",
-    "summary": "Cycle 23: Dispatched MerchantReturnPolicy (#143) and MemberProgram (#145) — Organization merchant features. QC request #141 still pending."
+    "timestamp": "2026-02-25T23:00:00Z",
+    "summary": "Cycle 23: Merged PR #144 (MerchantReturnPolicy + 5 enums + seasonal override) and PR #146 (MemberProgram + MemberProgramTier + TierBenefitEnumeration). 42 consecutive zero-revision PRs. 259 tests (combined)."
   },
-  "test_count": 248,
+  "test_count": 259,
   "total_schema_types": 28,
-  "total_sub_types": 75
+  "total_sub_types": 85
 }
