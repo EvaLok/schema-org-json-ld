@@ -18,5 +18,6 @@ class Offer extends TypedSchema {
 		public null|OfferItemCondition $itemCondition = null,
 		public null|array $shippingDetails = null,
 		public null|string $validFrom = null,
+		public null|string $priceValidUntil = null,
 	) {}
 }

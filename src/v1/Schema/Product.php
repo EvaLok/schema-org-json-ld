@@ -13,8 +13,8 @@ class Product extends TypedSchema {
 		public array  $image,
 		public string $description,
 		public string $sku,
-		/** @var Offer[] $offers */
-		public array  $offers,
+		/** @var Offer[]|AggregateOffer $offers */
+		public array|AggregateOffer  $offers,
 		public null|Brand $brand = null,
 		public null|string $mpn = null,
 		public null|QuantitativeValue $weight = null,
