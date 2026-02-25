@@ -967,3 +967,50 @@ The streak continues. Both PRs from this cycle merged clean on first attempt. Th
 ### Polling efficiency improvement needed
 
 Still experiencing the same polling overhead as Cycles 19-20. This cycle consumed context on ~30+ poll iterations while waiting for 7-8 minute agent sessions. The journal has noted this pattern three cycles in a row. A structural fix would be valuable but requires either: (a) workflow changes (adding webhook-based notifications), or (b) a fundamentally different architecture. Neither is trivial. For now, the mitigation is doing productive work between polls (Google docs auditing this cycle).
+
+---
+
+## 2026-02-25 — Cycle 22: AggregateOffer, ADRs, and Project Retrospective
+
+### 40 consecutive zero-revision PRs
+
+A round number milestone. PR #140 (AggregateOffer + Offer.priceValidUntil + Product.offers widening) merged clean on first attempt, extending the streak to 40. This is strong validation that the AGENTS.md + issue spec + cs-fix combination produces reliable output consistently across all task types: new classes, property additions, type widening, and test modifications — all in a single PR.
+
+### Productive use of polling wait time
+
+After noting the polling problem in Cycles 19-21, this cycle made a deliberate effort to do substantive work during agent wait time. Created 3 Architecture Decision Records:
+- ADR 0002: Product offers union type design decision
+- ADR 0003: Reflection-based serialization (retrospective)
+- ADR 0004: Shared sub-types first strategy (retrospective)
+
+This is a better pattern than the passive polling loops of previous cycles. The key insight: when the agent is working, the orchestrator should do knowledge work (documentation, ADRs, journal, audits) rather than monitoring.
+
+### Polling remains a context drain
+
+Despite the productive work during polling, the cycle still consumed context on ~20 poll iterations for a 7.5-minute agent session. The wall-clock time between tool calls is very short (~15 seconds), so "waiting a few minutes" translates to many rapid tool calls. The journal has recommended a structural fix for 4 consecutive cycles. This may be the single largest remaining efficiency improvement.
+
+### Only one low-priority gap remains
+
+With AggregateOffer and Offer.priceValidUntil resolved, the only remaining audit finding is Organization merchant features (hasMerchantReturnPolicy, hasShippingService, hasMemberProgram). These require complex new types (MerchantReturnPolicy, ShippingService, MemberProgram) and offer genuinely diminishing returns — they're for merchant-specific Rich Results features that most users won't need.
+
+### Project status: essentially complete
+
+The library now covers:
+- 28/28 Google Rich Results types (100%)
+- 75 sub-types supporting those types
+- 248 tests, 1329 assertions
+- 40 consecutive clean agent PRs
+- Comprehensive README with examples for all types
+- 4 ADRs documenting key architectural decisions
+
+The workflow has been validated across 22 cycles spanning ~24 hours. Key workflow metrics:
+- Average agent session: 7-10 minutes
+- Average cost per type: 1 premium request (no revisions needed)
+- Throughput: up to 4 PRs per 75-minute cycle
+- Quality: 100% first-attempt success rate since Cycle 5
+
+### Open questions
+
+- Should the orchestrator recommend a v1.0.0 release to Eva?
+- Is there value in continuing automated cycles with only Organization merchant features remaining?
+- Could the polling problem be mitigated by running the agent check as a background Task agent?

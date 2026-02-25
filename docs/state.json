@@ -268,6 +268,13 @@
         "issue": 136,
         "sub_types_added": ["PropertyValue"],
         "merged_at": "2026-02-25T20:03:00Z"
+      },
+      {
+        "description": "Add Offer.priceValidUntil and AggregateOffer class, widen Product.offers",
+        "pr": 140,
+        "issue": 139,
+        "sub_types_added": ["AggregateOffer"],
+        "merged_at": "2026-02-25T21:21:00Z"
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration"],
@@ -279,8 +286,6 @@
     },
     "remaining_audit_findings": {
       "low_priority": [
-        "Offer.priceValidUntil (Google-recommended for Product snippets)",
-        "AggregateOffer class (alternative to Offer for price ranges)",
         "Organization merchant features (hasMerchantReturnPolicy, hasShippingService, hasMemberProgram)"
       ]
     }
@@ -289,11 +294,11 @@
   "qc_processed": [8],
   "blockers": [],
   "last_cycle": {
-    "issue": 133,
-    "timestamp": "2026-02-25T20:04:00Z",
-    "summary": "Cycle 21: Comprehensive Google docs audit. Merged PR #135 (ImageObject.creator Person|Org) and PR #137 (PropertyValue + JobPosting.identifier). 39 consecutive zero-revision PRs. 243 tests, 1310 assertions."
+    "issue": 138,
+    "timestamp": "2026-02-25T21:21:00Z",
+    "summary": "Cycle 22: Merged PR #140 (AggregateOffer + Offer.priceValidUntil + Product.offers widening). Created 3 ADRs. Sent QC validation request #141. 40 consecutive zero-revision PRs. 248 tests, 1329 assertions."
   },
-  "test_count": 243,
+  "test_count": 248,
   "total_schema_types": 28,
-  "total_sub_types": 74
+  "total_sub_types": 75
 }
