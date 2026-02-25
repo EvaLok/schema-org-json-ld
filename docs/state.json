@@ -198,7 +198,16 @@
       "note": "Review snippet is not a separate type. Image metadata uses existing ImageObject. All other Google Rich Results types are now implemented. Math Solver requires JsonLdGenerator changes — see question #78."
     }
   },
-  "agent_sessions": [],
+  "agent_sessions": [
+    {
+      "issue": 91,
+      "task": "Comprehensive README with TOC and examples for all 27 schema types",
+      "model": "claude-sonnet-4.5",
+      "dispatched_at": "2026-02-25T05:10:29Z",
+      "status": "in_progress",
+      "eva_directive": "#89"
+    }
+  ],
   "blockers": [
     {
       "type": "MathSolver",
@@ -207,9 +216,9 @@
     }
   ],
   "last_cycle": {
-    "issue": 84,
-    "timestamp": "2026-02-25T03:50:00Z",
-    "summary": "Cycle 11: Completed test coverage — every schema class now has dedicated tests. Merged core type tests (#86) and sub-type tests (#88). 184 tests, 23 zero-revision PRs."
+    "issue": 90,
+    "timestamp": "2026-02-25T05:05:00Z",
+    "summary": "Cycle 12: Eva directive #89 — comprehensive README. Dispatched issue #91 to agent (claude-sonnet-4.5). Awaiting PR."
   },
   "test_count": 184,
   "total_schema_types": 27,
