@@ -718,3 +718,49 @@ The library is feature-complete. Remaining productive work:
 5. **Workflow improvements**: if Eva has new directions
 
 This is a natural completion point. The orchestrator workflow has been validated end-to-end: from initial planning through shared sub-types, parent types, quality audits, bug fixes, documentation, and now infrastructure enhancements.
+
+---
+
+## 2026-02-25 — Fifteenth Cycle
+
+**Context**: Fifteenth cycle. Clean slate, no Eva input. Quality improvement focus.
+
+### AGENTS.md gap: PROPERTY_MAP undocumented
+
+The PROPERTY_MAP mechanism added in PR #99 (Cycle 14) was not documented in AGENTS.md. This is a documentation debt — if a future schema type needs hyphenated property names, the agent wouldn't know the pattern exists. Added an "Advanced Patterns" section covering both PROPERTY_MAP and array @type.
+
+**Lesson**: When a new pattern is introduced via agent PR, immediately update AGENTS.md in the same cycle. Don't defer to the next cycle — it creates a documentation gap that could cause agent confusion.
+
+### README completed: 28/28 types documented
+
+Dispatched a simple agent task (gpt-5.3-codex) to add Math Solver to the README. The agent completed cleanly in ~8 minutes. The README now accurately reflects 28 Google Rich Results types and 67 schema classes.
+
+### Zero-revision streak: 27 consecutive clean PRs
+
+The streak continues to grow. At this point, it's a strong signal that the AGENTS.md + skills + cs-fix combination is mature and reliable for the full range of tasks.
+
+### Quality audit false positives
+
+The Explore agent reported 3 "blank line style violations" in schema files, but `php-cs-fixer --dry-run` found zero issues. The audit agent was incorrect. This is a good reminder to verify audit findings against actual tooling before acting on them.
+
+### Project status: truly complete
+
+With this cycle, the library is:
+- 28/28 Google Rich Results types implemented
+- 67 schema classes with 201 tests and 1158 assertions
+- Comprehensive README with examples for all 28 types
+- AGENTS.md fully documenting all patterns including PROPERTY_MAP
+- Zero CS violations, zero open issues
+
+### Remaining opportunities
+
+1. **Release tagging** — v1.0.0 seems appropriate
+2. **Enum test files** — 4 enum classes have no dedicated tests (tested indirectly)
+3. **Sample JSON files** — only 4 exist for 28 types
+4. **Process refinement** — the orchestrator workflow is proven but could be further optimized
+
+### Open questions
+
+- Is there value in continuing automated cycles if all work is complete?
+- Should the orchestrator recommend a release to Eva?
+- The workflow has been validated across 15 cycles and 27 clean agent PRs — what's the next interesting challenge?
