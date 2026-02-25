@@ -2,7 +2,7 @@
 
 ## Summary
 
-Twentieth orchestrator cycle. QC validation request #121 closed (all validated). Dispatched 2 concurrent agent tasks: LocalBusiness subtypes (#128) and Organization properties (#130). Stale issue #126 closed.
+Twentieth orchestrator cycle. QC validation request #121 closed (all validated). Dispatched and merged 2 concurrent agent tasks: LocalBusiness subtypes (PR #129) and Organization properties (PR #131). All audit findings resolved. 37 consecutive zero-revision PRs.
 
 ## What happened
 
@@ -34,17 +34,22 @@ Both dispatched concurrently (no file overlap). Using gpt-5.3-codex for both.
 
 | Task | Issue | PR | Agent Time | Revision? |
 |------|-------|-----|-----------|-----------|
-| LocalBusiness subtypes | #128 | #129 | pending | pending |
-| Organization properties | #130 | #131 | pending | pending |
+| LocalBusiness subtypes | #128 | #129 | ~9 min | No |
+| Organization properties | #130 | #131 | ~7 min | No |
 
-## Current state
+Both PRs merged clean on first attempt. 37 consecutive zero-revision PRs.
 
-- **In-flight**: PR #129 (LocalBusiness), PR #131 (Organization)
-- **QC**: Request #121 closed (validated). No new QC reports.
+## Review results
 
-## Next steps
+- **PR #129 (LocalBusiness subtypes)**: Merged at ~18:23Z. Clean implementation — department property on LocalBusiness, FoodEstablishment with constructor pass-through + acceptsReservations, Restaurant/Store as thin subtypes. Tests cover department (single + array), FoodEstablishment (minimal, reservations bool/URL, inherited props), Restaurant (minimal + full), Store (minimal + inherited).
+- **PR #131 (Organization properties)**: Merged at ~18:23Z. Clean addition of 8 properties to Organization constructor. Tests cover numberOfEmployees with QuantitativeValue, business identifiers, and null omission.
+- Local verification: 238 tests, 1295 assertions.
 
-- Wait for Copilot to finish both PRs
-- Mark ready for review, wait for CI
-- Review and merge
-- Update state file with final results
+## Final state
+
+- **Implemented types**: 28 Google Rich Results types — 100% coverage
+- **Sub-types**: 73 (added FoodEstablishment, Restaurant, Store)
+- **Total tests**: 238 tests, 1295 assertions
+- **Consecutive zero-revision PRs**: 37
+- **Audit findings**: All resolved (was 2 low-priority, now 0)
+- **QC**: Request #121 closed (validated). No new reports.
