@@ -4,6 +4,7 @@ namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\AggregateRating;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\HowToSection;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\HowToStep;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\NutritionInformation;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Organization;
@@ -108,5 +109,39 @@ final class RecipeTest extends TestCase {
 
 		$this->assertEquals('Organization', $obj->author->{'@type'});
 		$this->assertEquals('Review', $obj->review->{'@type'});
+	}
+
+	public function testRecipeInstructionsSupportsHowToSectionArray(): void {
+		$schema = new Recipe(
+			name: 'Grandma Cookies',
+			image: ['https://example.com/cookies.jpg'],
+			recipeInstructions: [
+				new HowToSection(
+					name: 'Prepare the filling',
+					itemListElement: [
+						new HowToStep(text: 'Dice the onions.'),
+						new HowToStep(text: 'Saute until golden.'),
+					],
+				),
+				new HowToSection(
+					name: 'Assemble the pie',
+					itemListElement: [
+						new HowToStep(text: 'Roll out the dough.'),
+						new HowToStep(text: 'Fill with the prepared mixture.'),
+					],
+				),
+			],
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('HowToSection', $obj->recipeInstructions[0]->{'@type'});
+		$this->assertEquals('Prepare the filling', $obj->recipeInstructions[0]->name);
+		$this->assertEquals('HowToStep', $obj->recipeInstructions[0]->itemListElement[0]->{'@type'});
+		$this->assertEquals('Dice the onions.', $obj->recipeInstructions[0]->itemListElement[0]->text);
+		$this->assertEquals('HowToSection', $obj->recipeInstructions[1]->{'@type'});
+		$this->assertEquals('Assemble the pie', $obj->recipeInstructions[1]->name);
+		$this->assertEquals('HowToStep', $obj->recipeInstructions[1]->itemListElement[1]->{'@type'});
+		$this->assertEquals('Fill with the prepared mixture.', $obj->recipeInstructions[1]->itemListElement[1]->text);
 	}
 }
