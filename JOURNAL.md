@@ -854,3 +854,42 @@ After 2 audit cycles covering all 28 types:
 - 22 out of 28 types were already fully compliant
 - All HIGH and MEDIUM priority gaps resolved
 - Only low-priority edge cases remain
+
+---
+
+## 2026-02-25 — Cycle 18: Permission Analysis and QC Integration
+
+### The permission model problem
+
+This cycle's major insight was understanding why the orchestrator keeps hitting tool use failures. The `anthropics/claude-code-action@v1` uses an explicit allowlist of Bash command prefixes: `gh`, `git`, `jq`, `mkdir`, `ls`, `date`, `wc`, `sort`, `composer`. ANY command not matching these prefixes (bash, echo, cat, chmod, env, grep) gets blocked and requires manual approval — which hangs in the automated environment.
+
+This explains ALL the recurring failures across sessions:
+- `echo "VAR=$VAR"` — blocked (echo not in allowlist)
+- `bash tools/agent-status` — blocked (bash not in allowlist)
+- `chmod +x tools/script` — blocked (chmod not in allowlist)
+- Multi-line `gh issue comment` arguments — sometimes blocked due to shell argument parsing vs the `gh *` pattern matcher
+
+**Takeaway**: The shell tools I built in previous cycles (agent-status, review-pr, dispatch-agent, update-state) have NEVER actually worked in the automated environment. Every cycle has been using raw gh/git/jq commands directly, not the tools. The tools are documentation, not automation.
+
+### Fix applied
+
+1. Updated STARTUP_CHECKLIST to use ONLY allowed command patterns (replaced `tools/` references with direct gh/jq commands)
+2. Created `.claude/skills/orchestrator-permissions.md` documenting the full allowlist
+3. Built 5 new tools (comment-issue, session-info, qc-check, create-issue, post-opening) — these will work once the workflow is updated
+4. Proposed workflow change to Eva: add `Bash(bash tools/*)`, `Bash(chmod +x tools/*)`, `Bash(cat *)`, `Bash(echo *)` to the allowlist
+5. Can't push workflow changes — PAT lacks `workflow` scope (by design). Eva must make this change.
+
+**Pattern**: When building tools for an automated environment, always verify the permission model FIRST. Building tools that can't execute is wasted effort. Future tool development should be gated on the workflow update.
+
+### First QC integration
+
+QC orchestrator at `EvaLok/schema-org-json-ld-qc` produced its first real report: Review class missing `itemReviewed` property. This is a genuine finding — standalone Reviews need to specify what they're reviewing. The cross-repo QC communication protocol worked smoothly:
+1. Polled QC repo for `qc-outbound` issues from EvaLok
+2. Found issue #8 with validation failure details
+3. Created `qc-inbound` acknowledgement issue #115 on our repo
+4. Dispatched fix to Copilot as issue #116
+5. Tracking QC report #8 in state file's `qc_processed` array
+
+### gh api vs gh issue comment
+
+A key finding: `gh api repos/.../issues/N/comments -X POST -f body="text"` works reliably, but `gh issue comment N --body "text"` sometimes gets blocked by the permission system. The `-X POST -f body=` pattern matches the `gh *` allowlist, but the `--body` flag with multi-line content sometimes fails pattern matching. **Always use `gh api` for posting comments in the automated environment.**
