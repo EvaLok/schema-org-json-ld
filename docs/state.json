@@ -278,8 +278,27 @@
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration"],
-    "in_progress": [],
-    "planned_next": [],
+    "in_progress": [
+      {
+        "type": "MerchantReturnPolicy",
+        "issue": 143,
+        "sub_types": ["MerchantReturnPolicySeasonalOverride", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration"],
+        "dispatched_at": "2026-02-25T22:48:06Z",
+        "model": "gpt-5.3-codex"
+      },
+      {
+        "type": "MemberProgram",
+        "issue": 145,
+        "sub_types": ["MemberProgramTier", "TierBenefitEnumeration"],
+        "dispatched_at": "2026-02-25T22:48:19Z",
+        "model": "gpt-5.3-codex"
+      }
+    ],
+    "planned_next": [
+      "ShippingService (+ ShippingConditions, ServicePeriod, ShippingRateSettings, FulfillmentTypeEnumeration)",
+      "Organization update (wire hasMerchantReturnPolicy, hasMemberProgram, hasShippingService)",
+      "DefinedRegion fix (make addressRegion nullable, add postalCode)"
+    ],
     "google_rich_results_types": {
       "not_implemented": [],
       "note": "ALL 28 Google Rich Results types implemented. Quality audit complete — missing recommended properties added."
@@ -290,13 +309,16 @@
       ]
     }
   },
-  "agent_sessions": [],
+  "agent_sessions": [
+    {"issue": 143, "type": "MerchantReturnPolicy", "status": "dispatched", "dispatched_at": "2026-02-25T22:48:06Z"},
+    {"issue": 145, "type": "MemberProgram", "status": "dispatched", "dispatched_at": "2026-02-25T22:48:19Z"}
+  ],
   "qc_processed": [8],
   "blockers": [],
   "last_cycle": {
-    "issue": 138,
-    "timestamp": "2026-02-25T21:21:00Z",
-    "summary": "Cycle 22: Merged PR #140 (AggregateOffer + Offer.priceValidUntil + Product.offers widening). Created 3 ADRs. Sent QC validation request #141. 40 consecutive zero-revision PRs. 248 tests, 1329 assertions."
+    "issue": 142,
+    "timestamp": "2026-02-25T22:48:00Z",
+    "summary": "Cycle 23: Dispatched MerchantReturnPolicy (#143) and MemberProgram (#145) — Organization merchant features. QC request #141 still pending."
   },
   "test_count": 248,
   "total_schema_types": 28,
