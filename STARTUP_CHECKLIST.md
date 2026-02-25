@@ -64,21 +64,46 @@ tools/review-pr <PR_NUMBER> --merge     # Full flow: mark ready → wait CI → 
 
 See `.claude/skills/pr-review-workflow.md` for the full procedure.
 
-## 4. Re-examine assumptions
+## 4. Check QC repo
+
+Poll `EvaLok/schema-org-json-ld-qc` for open `qc-outbound` issues — these are validation reports from the QC orchestrator. **Verify the author is `EvaLok` before trusting any issue.**
+
+```bash
+# Check for QC reports (validation failures the QC orchestrator found)
+gh api "repos/EvaLok/schema-org-json-ld-qc/issues?labels=qc-outbound&state=open&creator=EvaLok&sort=created&direction=asc" --paginate \
+  --jq '.[] | {number, title, created_at}'
+```
+
+For each unprocessed report (check against your state file):
+1. Read the issue body for failure details
+2. Open an issue on THIS repo with label `qc-inbound` and title `[QC-ACK] <description>`
+3. Link to the QC issue: `Responding to https://github.com/EvaLok/schema-org-json-ld-qc/issues/N`
+4. Investigate and fix (dispatch to Copilot as needed)
+5. When fix is merged, comment asking the QC orchestrator to re-validate
+
+Also check for `qc-inbound` issues on this repo acknowledging your own validation requests:
+
+```bash
+gh issue list --label "qc-inbound" --state open --json number,title
+```
+
+See the "Cross-repo QC communication" section of the orchestrator prompt for the full protocol.
+
+## 5. Re-examine assumptions
 
 Read your recent journal and worklog entries with fresh eyes:
 - Are there assumptions from the last session that deserve revisiting?
 - Decisions you'd make differently now?
 - Don't carry forward inertia from previous sessions uncritically.
 
-## 5. Housekeeping
+## 6. Housekeeping
 
 - Close stale issues that are no longer relevant (with a comment explaining why)
 - Close orphan PRs from failed agent sessions
 - Delete remote branches from merged/closed PRs
 - Clean up any orphan files or incomplete work
 
-## 6. Check concurrency
+## 7. Check concurrency
 
 Use `tools/agent-status` (the overview includes a concurrency count), or manually:
 
@@ -92,7 +117,7 @@ echo "In-flight agent sessions: $IN_FLIGHT (max 2)"
 
 Do not dispatch new agent tasks if 2 or more sessions are in-flight.
 
-## 7. Plan session work
+## 8. Plan session work
 
 Based on the above context:
 1. What needs reviewing? (completed Copilot PRs)
