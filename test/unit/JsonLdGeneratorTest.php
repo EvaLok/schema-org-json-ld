@@ -13,6 +13,7 @@ use EvaLok\SchemaOrgJsonLd\v1\Schema\OfferShippingDetails;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Product;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\QuantitativeValue;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ShippingDeliveryTime;
+use EvaLok\SchemaOrgJsonLd\v1\TypedSchema;
 use PHPUnit\Framework\TestCase;
 
 final class JsonLdGeneratorTest extends TestCase {
@@ -249,5 +250,75 @@ final class JsonLdGeneratorTest extends TestCase {
 		$this->assertCount(2, $output_json_obj->image);
 		$this->assertEquals('https://example.com/photos/1x1/photo.jpg', $output_json_obj->image[0]);
 		$this->assertEquals('https://example.com/photos/4x3/photo.jpg', $output_json_obj->image[1]);
+	}
+
+	public function testShouldHandleArrayTypeCorrectly() {
+		// Create a temporary test schema with array @type
+		$testSchemaClass = new class ('') extends TypedSchema {
+			public const A_SCHEMA_TYPE = ['TestType1', 'TestType2'];
+
+			public function __construct(
+				public string $name,
+			) {}
+		};
+
+		$schema = new ($testSchemaClass::class)(name: 'Test Schema');
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('https://schema.org/', $obj->{'@context'});
+		$this->assertIsArray($obj->{'@type'});
+		$this->assertCount(2, $obj->{'@type'});
+		$this->assertEquals('TestType1', $obj->{'@type'}[0]);
+		$this->assertEquals('TestType2', $obj->{'@type'}[1]);
+		$this->assertEquals('Test Schema', $obj->name);
+	}
+
+	public function testShouldApplyPropertyMapWhenPresent() {
+		// Create a temporary test schema with PROPERTY_MAP
+		$testSchemaClass = new class ('', '', '') extends TypedSchema {
+			public const A_SCHEMA_TYPE = 'TestTypeWithMap';
+			public const PROPERTY_MAP = [
+				'phpPropertyName' => 'json-property-name',
+				'anotherProperty' => 'another-json-property',
+			];
+
+			public function __construct(
+				public string $phpPropertyName,
+				public string $anotherProperty,
+				public string $regularProperty,
+			) {}
+		};
+
+		$schema = new ($testSchemaClass::class)(
+			phpPropertyName: 'value1',
+			anotherProperty: 'value2',
+			regularProperty: 'value3',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('https://schema.org/', $obj->{'@context'});
+		$this->assertEquals('TestTypeWithMap', $obj->{'@type'});
+		// Mapped properties should use the JSON-LD names
+		$this->assertEquals('value1', $obj->{'json-property-name'});
+		$this->assertEquals('value2', $obj->{'another-json-property'});
+		// Regular property should remain unchanged
+		$this->assertEquals('value3', $obj->regularProperty);
+		// Original PHP property names should not exist in output
+		$this->assertFalse(property_exists($obj, 'phpPropertyName'));
+		$this->assertFalse(property_exists($obj, 'anotherProperty'));
+	}
+
+	public function testShouldNotBreakSchemasWithoutPropertyMap() {
+		// Ensure existing schemas without PROPERTY_MAP still work correctly (regression test)
+		$brand = new Brand(name: 'Test Brand', description: 'Test Description');
+		$json = JsonLdGenerator::SchemaToJson(schema: $brand);
+		$obj = json_decode($json);
+
+		$this->assertEquals('https://schema.org/', $obj->{'@context'});
+		$this->assertEquals('Brand', $obj->{'@type'});
+		$this->assertEquals('Test Brand', $obj->name);
+		$this->assertEquals('Test Description', $obj->description);
 	}
 }

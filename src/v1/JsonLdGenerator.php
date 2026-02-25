@@ -25,7 +25,20 @@ class JsonLdGenerator {
 
 		$obj['@type'] = $schema::A_SCHEMA_TYPE;
 
-		self::AddPropertiesToObject(get_object_vars($schema), $obj);
+		$properties = get_object_vars($schema);
+
+		// Apply PROPERTY_MAP if defined
+		if (defined($schema::class . '::PROPERTY_MAP')) {
+			$propertyMap = constant($schema::class . '::PROPERTY_MAP');
+			foreach ($propertyMap as $phpName => $jsonLdName) {
+				if (array_key_exists($phpName, $properties)) {
+					$properties[$jsonLdName] = $properties[$phpName];
+					unset($properties[$phpName]);
+				}
+			}
+		}
+
+		self::AddPropertiesToObject($properties, $obj);
 
 		return $obj;
 	}
