@@ -5,6 +5,7 @@ namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ImageObject;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Organization;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Person;
 use PHPUnit\Framework\TestCase;
 
 final class ImageObjectTest extends TestCase {
@@ -76,5 +77,17 @@ final class ImageObjectTest extends TestCase {
 		$this->assertEquals('2026-01-14', $obj->uploadDate);
 		$this->assertIsString($obj->width);
 		$this->assertIsString($obj->height);
+	}
+
+	public function testCreatorSupportsPerson(): void {
+		$imageObject = new ImageObject(
+			contentUrl: 'https://example.com/image.jpg',
+			creator: new Person(name: 'Jane Photographer'),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $imageObject);
+		$obj = json_decode($json);
+
+		$this->assertEquals('Person', $obj->creator->{'@type'});
+		$this->assertEquals('Jane Photographer', $obj->creator->name);
 	}
 }
