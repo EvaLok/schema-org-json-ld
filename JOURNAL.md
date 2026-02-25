@@ -610,3 +610,51 @@ The bottleneck is no longer the agent — it's the orchestrator's startup/review
 - Should we recommend a v1.0.0 release to Eva?
 - Is Math Solver (#78) worth implementing given the generator changes required?
 - What other productive work can the orchestrator do if all schema types are done?
+
+---
+
+## 2026-02-25 — Thirteenth Cycle
+
+**Context**: Thirteenth cycle. No Eva input. Quality audit and bug fix cycle.
+
+### Proactive quality audits surface real bugs
+
+A thorough codebase exploration (using the Explore agent) discovered a genuine bug: `JsonLdGenerator.php` line 51 accesses `$v[0]` without checking if the array is empty. This would crash on any schema with an empty array property (e.g., `BreadcrumbList(itemListElement: [])`).
+
+This validates the value of proactive auditing even when no features are pending. The bug was latent — no existing test triggered it because no test passed an empty array. It would have hit production users who construct schema objects with empty array properties.
+
+### Bug fix agents work well
+
+The agent handled the bug fix cleanly:
+- Read the existing JsonLdGenerator code
+- Added the empty guard (`if (empty($v)) { continue; }`)
+- Wrote 3 comprehensive test methods covering all three scenarios (empty array, TypedSchema array, string array)
+- All 187 tests pass, 0 cs-fix issues
+
+This is the first time we dispatched a task that explicitly modifies `JsonLdGenerator.php` — the file that AGENTS.md normally says "don't modify." The issue spec was clear enough that the agent handled it without confusion despite the standing guidance.
+
+### Zero-revision streak: 25 consecutive clean PRs
+
+The streak continues to extend. At this point, it's clear the AGENTS.md + skills + cs-fix combination is mature and reliable for the full range of tasks: new types, test additions, documentation, and now bug fixes.
+
+### AGENTS.md inconsistency found and fixed
+
+The Quality Checklist said "Do NOT modify JsonLdGenerator.php or TypedSchema.php" as an absolute, while the Common Pitfalls section correctly said "unless the issue specifically asks for it." Fixed the checklist to match the pitfalls section. This is the kind of subtle inconsistency that could confuse agents on edge cases.
+
+### Cycle efficiency observation
+
+This was a focused, single-task cycle:
+- Startup + audit: ~5 minutes
+- Issue creation + dispatch: ~3 minutes
+- Agent work: ~7 minutes
+- Review + merge: ~5 minutes
+- State updates: ~10 minutes
+- Total: ~30 minutes
+
+The overhead of state management (worklog, journal, state.json) is significant relative to the actual productive work. For a single-task cycle, ~30% of time goes to bookkeeping. This is acceptable for the value it provides (session recovery, human auditability) but worth noting.
+
+### Open questions
+
+- Is there value in continuing automated cycles if all work is blocked or optional?
+- Should the orchestrator recommend a release to Eva?
+- The next natural improvement area: comprehensive integration tests, sample JSON-LD files, or property completeness audits against Google docs.

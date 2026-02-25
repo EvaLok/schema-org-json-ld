@@ -207,11 +207,11 @@
     }
   ],
   "last_cycle": {
-    "issue": 90,
-    "timestamp": "2026-02-25T05:05:00Z",
-    "summary": "Cycle 12: Eva directive #89 — comprehensive README with TOC and all 27 type examples. Merged PR #92. Zero-revision streak: 24."
+    "issue": 93,
+    "timestamp": "2026-02-25T06:24:00Z",
+    "summary": "Cycle 13: Fixed empty array handling bug in JsonLdGenerator (PR #95). Quality audit cycle. Zero-revision streak: 25."
   },
-  "test_count": 184,
+  "test_count": 187,
   "total_schema_types": 27,
   "total_sub_types": 62
 }
