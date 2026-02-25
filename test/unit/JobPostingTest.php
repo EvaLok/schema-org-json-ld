@@ -9,6 +9,7 @@ use EvaLok\SchemaOrgJsonLd\v1\Schema\MonetaryAmount;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Organization;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Place;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\PostalAddress;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\PropertyValue;
 use PHPUnit\Framework\TestCase;
 
 final class JobPostingTest extends TestCase {
@@ -62,6 +63,7 @@ final class JobPostingTest extends TestCase {
 		$this->assertFalse(property_exists($obj, 'applicantLocationRequirements'));
 		$this->assertFalse(property_exists($obj, 'jobLocationType'));
 		$this->assertFalse(property_exists($obj, 'directApply'));
+		$this->assertFalse(property_exists($obj, 'identifier'));
 	}
 
 	public function testFullOutputWithNestedSchemas(): void {
@@ -123,5 +125,25 @@ final class JobPostingTest extends TestCase {
 		$this->assertFalse(property_exists($obj, 'jobLocation'));
 		$this->assertEquals('TELECOMMUTE', $obj->jobLocationType);
 		$this->assertEquals('United States', $obj->applicantLocationRequirements->name);
+	}
+
+	public function testIdentifierWithPropertyValue(): void {
+		$jobPosting = new JobPosting(
+			title: 'Senior Backend Engineer',
+			description: '<p>Build scalable APIs.</p>',
+			datePosted: '2026-02-24',
+			hiringOrganization: new Organization(name: 'Example Corp'),
+			identifier: new PropertyValue(
+				name: 'MagsRUs',
+				value: '1234567',
+			),
+		);
+
+		$json = JsonLdGenerator::SchemaToJson(schema: $jobPosting);
+		$obj = json_decode($json);
+
+		$this->assertEquals('PropertyValue', $obj->identifier->{'@type'});
+		$this->assertEquals('MagsRUs', $obj->identifier->name);
+		$this->assertEquals('1234567', $obj->identifier->value);
 	}
 }

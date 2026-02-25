@@ -19,5 +19,6 @@ class JobPosting extends TypedSchema {
 		public null|AdministrativeArea $applicantLocationRequirements = null,
 		public null|string $jobLocationType = null,
 		public null|bool $directApply = null,
+		public null|PropertyValue $identifier = null,
 	) {}
 }
