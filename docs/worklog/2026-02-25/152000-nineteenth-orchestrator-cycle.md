@@ -37,25 +37,27 @@ Both dispatched concurrently (no file overlap). Using gpt-5.3-codex for both.
 
 | Task | Issue | PR | Agent Time | Revision? |
 |------|-------|-----|-----------|-----------|
-| EventAttendanceMode/VirtualLocation | #122 | TBD | TBD | TBD |
-| HowToSection | #123 | TBD | TBD | TBD |
+| EventAttendanceMode/VirtualLocation | #122 | #124 | ~11 min | No |
+| HowToSection | #123 | #125 | ~9 min | No |
 
-## Current state
+Both PRs merged clean on first attempt. 35 consecutive zero-revision PRs.
+
+## Review results
+
+- **PR #125 (HowToSection)**: Merged at 15:38:55Z. Clean implementation — HowToSection class with name + itemListElement (HowToStep[]), tests cover minimal/multi-step and Recipe integration.
+- **PR #124 (EventAttendanceMode)**: Merged at 15:40:50Z. Clean implementation — EventAttendanceModeEnumeration enum (3 values), VirtualLocation class (url + optional name), Event constructor widened. Tests cover online/mixed events.
+- Local verification: 225 tests, 1254 assertions, 0 CS violations.
+
+## Final state
 
 - **Implemented types**: 28 Google Rich Results types — 100% coverage
-- **In-flight sessions**: 2 (#122, #123)
-- **Blockers**: None
-- **Total tests**: 218 (before new PRs)
+- **Sub-types**: 69 (added VirtualLocation, EventAttendanceModeEnumeration, HowToSection)
+- **Enums**: 5 (added EventAttendanceModeEnumeration)
+- **Total tests**: 225 tests, 1254 assertions
 - **QC validation**: Request #121 pending
+- **Consecutive zero-revision PRs**: 35
 
-## Remaining low-priority audit findings (after this cycle)
+## Remaining low-priority audit findings
 
 - LocalBusiness missing department property
 - LocalBusiness subtypes (Restaurant, Store, etc.) not implemented
-
-## Next steps
-
-1. Review PRs when agents complete
-2. Merge if clean
-3. Update state file with new types/sub-types
-4. Check QC repo for validation results

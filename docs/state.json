@@ -228,9 +228,23 @@
         "pr": 119,
         "issue": 118,
         "merged_at": "2026-02-25T14:18:00Z"
+      },
+      {
+        "description": "Add EventAttendanceModeEnumeration, VirtualLocation, widen Event.location type",
+        "pr": 124,
+        "issue": 122,
+        "sub_types_added": ["VirtualLocation", "EventAttendanceModeEnumeration"],
+        "merged_at": "2026-02-25T15:40:50Z"
+      },
+      {
+        "description": "Add HowToSection for grouped Recipe instructions",
+        "pr": 125,
+        "issue": 123,
+        "sub_types_added": ["HowToSection"],
+        "merged_at": "2026-02-25T15:38:55Z"
       }
     ],
-    "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek"],
+    "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration"],
     "in_progress": [],
     "planned_next": [],
     "google_rich_results_types": {
@@ -240,9 +254,7 @@
     "remaining_audit_findings": {
       "low_priority": [
         "LocalBusiness missing department property",
-        "LocalBusiness subtypes (Restaurant, Store, etc.) not implemented",
-        "HowToSection not supported for Recipe grouped instructions",
-        "EventAttendanceMode/VirtualLocation not supported"
+        "LocalBusiness subtypes (Restaurant, Store, etc.) not implemented"
       ]
     }
   },
@@ -250,11 +262,11 @@
   "qc_processed": [8],
   "blockers": [],
   "last_cycle": {
-    "issue": 114,
-    "timestamp": "2026-02-25T14:00:00Z",
-    "summary": "Cycle 18: Permission analysis + tools (Eva #113), QC report fix (Review itemReviewed + Thing), optional params fix (Offer/CourseInstance). 2 PRs merged, 33 consecutive zero-revision. 218 tests, 1219 assertions."
+    "issue": 120,
+    "timestamp": "2026-02-25T15:41:00Z",
+    "summary": "Cycle 19: EventAttendanceMode/VirtualLocation (PR #124) and HowToSection (PR #125). 2 PRs merged, 35 consecutive zero-revision. 225 tests, 1254 assertions. QC validation request #121 sent."
   },
-  "test_count": 218,
+  "test_count": 225,
   "total_schema_types": 28,
-  "total_sub_types": 66
+  "total_sub_types": 69
 }

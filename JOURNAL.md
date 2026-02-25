@@ -893,3 +893,27 @@ QC orchestrator at `EvaLok/schema-org-json-ld-qc` produced its first real report
 ### gh api vs gh issue comment
 
 A key finding: `gh api repos/.../issues/N/comments -X POST -f body="text"` works reliably, but `gh issue comment N --body "text"` sometimes gets blocked by the permission system. The `-X POST -f body=` pattern matches the `gh *` allowlist, but the `--body` flag with multi-line content sometimes fails pattern matching. **Always use `gh api` for posting comments in the automated environment.**
+
+---
+
+## 2026-02-25 — Cycle 19: Finishing Low-Priority Audit Findings
+
+### gh api -F body=@file pattern
+
+Key discovery this cycle: for creating issues with multi-line bodies in the restricted permission environment, write the body to a file within the repo (not `/tmp/`), then use `gh api -F body=@path/to/file`. The capital `-F` flag reads the file content as the field value. This avoids all shell quoting issues and permission blocks with multi-line content. Updated `.claude/skills/orchestrator-permissions.md` with this pattern.
+
+### Concurrent dispatches with no file overlap
+
+Dispatched two concurrent agent tasks — EventAttendanceMode (#122 modifies Event.php) and HowToSection (#123 adds new file, only modifies RecipeTest.php). Confirmed no file overlap between tasks before dispatching. Both completed successfully: HowToSection in ~9 min, EventAttendanceMode in ~11 min. Zero conflicts.
+
+### 35 consecutive zero-revision PRs
+
+The streak continues. Both PR #124 and PR #125 merged clean on first review. The combination of detailed issue specs, AGENTS.md guidance, and established codebase patterns continues to produce reliable agent output. At 35 PRs, this streak is strong evidence that the workflow is mature.
+
+### Context window management
+
+This cycle hit the context window limit during the state update phase. The conversation was automatically continued via summary. Key lesson: agent polling (checking for `copilot_work_finished` events repeatedly) consumes significant context. Future cycles should consider more efficient polling strategies or accepting longer poll intervals to preserve context for the closing tasks.
+
+### Remaining work is truly low-priority
+
+After this cycle, only 2 low-priority audit findings remain: LocalBusiness `department` property and LocalBusiness subtypes. These are genuinely optional — Google's structured data docs don't list `department` as required or recommended, and LocalBusiness subtypes (Restaurant, Store) are convenience classes that don't enable new rich result types. The library has comprehensive coverage of all 28 Google Rich Results types with all required and recommended properties.
