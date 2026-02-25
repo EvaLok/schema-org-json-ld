@@ -4,11 +4,18 @@
 	"keywords": [
 		"schema.org",
 		"json-ld",
+		"structured data",
 		"rich results",
-		"Google",
-		"Product",
-		"ProductGroup",
-		"Product variant"
+		"google",
+		"seo",
+		"product",
+		"article",
+		"event",
+		"recipe",
+		"faq",
+		"job posting",
+		"local business",
+		"video"
 	],
     "type": "library",
     "license": "MIT",

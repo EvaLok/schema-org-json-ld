@@ -3,7 +3,36 @@ library for generating json-ld rich results
 
 Tested & Validates using Google "Rich Results Test": https://search.google.com/test/rich-results/result?id=eeuHnX6wLe1IqxNkqd42xA
 
-work-in-progress; currently only supports `Product` and `Offer` schema.org `Thing`s, along with some (but not all) of their essential properties. Pull Requests welcome! 
+PHP library for generating schema.org JSON-LD with broad Google Rich Results coverage (27 rich result types backed by 65 schema classes).
+
+## supported types
+
+| Google Rich Results category | Supported schema types |
+| --- | --- |
+| Article | `Article`, `NewsArticle`, `BlogPosting` |
+| Breadcrumb | `BreadcrumbList` |
+| Carousel | `ItemList` |
+| Course | `Course` |
+| Dataset | `Dataset` |
+| Discussion forum | `DiscussionForumPosting` |
+| Education Q&A | `Quiz` |
+| Employer aggregate rating | `EmployerAggregateRating` |
+| Event | `Event` |
+| FAQ | `FAQPage` |
+| Job posting | `JobPosting` |
+| Local business | `LocalBusiness` |
+| Movie | `Movie` |
+| Organization | `Organization` |
+| Product | `Product`, `Offer`, `Brand`, `OfferShippingDetails`, `ShippingDeliveryTime` |
+| Profile page | `ProfilePage` |
+| Q&A | `QAPage` |
+| Recipe | `Recipe` |
+| Review snippet | `Review`, `AggregateRating` |
+| Software app | `SoftwareApplication`, `MobileApplication`, `WebApplication` |
+| Speakable | `SpeakableSpecification` |
+| Subscription/paywalled content | `WebPageElement` |
+| Vacation rental | `VacationRental` |
+| Video | `VideoObject` |
 
 
 ## install
@@ -211,6 +240,61 @@ $json = JsonLdGenerator::SchemaToJson(
 	}
 }
 
+```
+
+### more examples
+
+#### article (simple)
+
+```php
+$article = new Article(
+	headline: "How to use schema.org JSON-LD in PHP",
+	datePublished: "2026-02-25",
+);
+```
+
+```json
+{
+	"@type": "Article",
+	"headline": "How to use schema.org JSON-LD in PHP"
+}
+```
+
+#### faq page (simple)
+
+```php
+$faq = new FAQPage(
+	mainEntity: [
+		new Question(
+			name: "Do you support FAQ rich results?",
+			acceptedAnswer: new Answer(text: "Yes."),
+		),
+	],
+);
+```
+
+```json
+{
+	"@type": "FAQPage",
+	"mainEntity": [{ "@type": "Question" }]
+}
+```
+
+#### event (simple)
+
+```php
+$event = new Event(
+	name: "PHP SEO Meetup",
+	startDate: "2026-03-15T18:00:00+00:00",
+	location: new Place(name: "Online"),
+);
+```
+
+```json
+{
+	"@type": "Event",
+	"name": "PHP SEO Meetup"
+}
 ```
 
 see unit tests directory for more details:
