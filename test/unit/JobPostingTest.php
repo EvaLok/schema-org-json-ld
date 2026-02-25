@@ -113,10 +113,6 @@ final class JobPostingTest extends TestCase {
 			description: '<p>Work from anywhere in the US.</p>',
 			datePosted: '2026-02-24',
 			hiringOrganization: new Organization(name: 'Example Corp'),
-			jobLocation: new Place(
-				name: 'Remote',
-				address: new PostalAddress(streetAddress: 'N/A'),
-			),
 			jobLocationType: 'TELECOMMUTE',
 			applicantLocationRequirements: new AdministrativeArea(name: 'United States'),
 		);
@@ -124,6 +120,7 @@ final class JobPostingTest extends TestCase {
 		$json = JsonLdGenerator::SchemaToJson(schema: $jobPosting);
 		$obj = json_decode($json);
 
+		$this->assertFalse(property_exists($obj, 'jobLocation'));
 		$this->assertEquals('TELECOMMUTE', $obj->jobLocationType);
 		$this->assertEquals('United States', $obj->applicantLocationRequirements->name);
 	}

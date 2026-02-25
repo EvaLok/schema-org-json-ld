@@ -12,7 +12,7 @@ class JobPosting extends TypedSchema {
 		public string $description,
 		public string $datePosted,
 		public Organization $hiringOrganization,
-		public Place $jobLocation,
+		public null|Place $jobLocation = null,
 		public null|MonetaryAmount $baseSalary = null,
 		public null|string $employmentType = null,
 		public null|string $validThrough = null,
