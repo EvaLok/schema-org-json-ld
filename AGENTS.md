@@ -24,11 +24,12 @@ test/
 **CRITICAL**: Schema classes do NOT implement `toArray()` or any serialization methods. The `JsonLdGenerator` class handles all serialization by reflecting on the public properties of the schema class. You only need to define the class with constructor-promoted properties.
 
 `JsonLdGenerator::SchemaToJson(schema: $schema)` does the following automatically:
-- Adds `@context` and `@type` (from the class constant `A_SCHEMA_TYPE`)
-- Skips null properties
+- Adds `@context` and `@type` (from the class constant `A_SCHEMA_TYPE` — supports both string and array values)
+- Skips null properties and empty arrays
 - Recursively serializes nested `TypedSchema` instances
 - Extracts `.value` from backed string enums
 - Handles arrays of schema objects and primitives
+- Remaps property names via `PROPERTY_MAP` if defined (for hyphenated JSON-LD names)
 
 **You do not need to write any serialization logic.**
 
@@ -226,6 +227,41 @@ Before marking your PR as ready:
 - [ ] Enums used for constrained value sets (not magic strings)
 - [ ] No breaking changes to existing public API
 - [ ] Do NOT modify `JsonLdGenerator.php` or `TypedSchema.php` unless the issue specifically asks for it
+
+## Advanced Patterns
+
+### Array `@type` (multiple types)
+
+Some schema.org types require multiple `@type` values. Set `A_SCHEMA_TYPE` to an array instead of a string — `JsonLdGenerator` handles both automatically.
+
+```php
+class MathSolver extends TypedSchema {
+	public const A_SCHEMA_TYPE = ['MathSolver', 'LearningResource'];
+	// ...
+}
+```
+
+This produces `"@type": ["MathSolver", "LearningResource"]` in the JSON-LD output.
+
+### PROPERTY_MAP (hyphenated JSON-LD property names)
+
+Some schema.org properties use hyphenated names (e.g., `mathExpression-input`) which are not valid PHP identifiers. Use the `PROPERTY_MAP` constant to map PHP-friendly property names to their JSON-LD equivalents.
+
+```php
+class SolveMathAction extends TypedSchema {
+	public const A_SCHEMA_TYPE = 'SolveMathAction';
+	public const PROPERTY_MAP = [
+		'mathExpressionInput' => 'mathExpression-input',
+	];
+
+	public function __construct(
+		public string $target,
+		public string $mathExpressionInput,  // maps to "mathExpression-input" in output
+	) {}
+}
+```
+
+`JsonLdGenerator` automatically checks for `PROPERTY_MAP` and remaps property names before serialization. Classes without `PROPERTY_MAP` are unaffected.
 
 ## Common Pitfalls
 
