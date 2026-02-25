@@ -218,7 +218,9 @@
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek"],
-    "in_progress": [],
+    "in_progress": [
+      {"type": "Review-itemReviewed-fix", "issue": 116}
+    ],
     "planned_next": [],
     "google_rich_results_types": {
       "not_implemented": [],
@@ -235,7 +237,15 @@
       ]
     }
   },
-  "agent_sessions": [],
+  "agent_sessions": [
+    {
+      "issue": 116,
+      "model": "gpt-5.3-codex",
+      "types": "Review itemReviewed + Thing",
+      "dispatched_at": "2026-02-25T14:06:00Z"
+    }
+  ],
+  "qc_processed": [8],
   "blockers": [],
   "last_cycle": {
     "issue": 108,
