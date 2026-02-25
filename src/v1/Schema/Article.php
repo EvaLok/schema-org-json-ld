@@ -17,5 +17,6 @@ class Article extends TypedSchema {
 		public null|array $image = null,
 		public null|string $description = null,
 		public null|Organization $publisher = null,
+		public null|SpeakableSpecification $speakable = null,
 	) {}
 }
