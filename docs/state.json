@@ -258,7 +258,18 @@
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration"],
-    "in_progress": [],
+    "in_progress": [
+      {
+        "description": "Widen ImageObject.creator to Person|Organization",
+        "issue": 134,
+        "dispatched_at": "2026-02-25T19:51:00Z"
+      },
+      {
+        "description": "Add PropertyValue sub-type + JobPosting.identifier",
+        "issue": 136,
+        "dispatched_at": "2026-02-25T19:53:00Z"
+      }
+    ],
     "planned_next": [],
     "google_rich_results_types": {
       "not_implemented": [],
@@ -268,7 +279,10 @@
       "low_priority": []
     }
   },
-  "agent_sessions": [],
+  "agent_sessions": [
+    {"issue": 134, "status": "dispatched", "model": "gpt-5.3-codex"},
+    {"issue": 136, "status": "dispatched", "model": "gpt-5.3-codex"}
+  ],
   "qc_processed": [8],
   "blockers": [],
   "last_cycle": {
