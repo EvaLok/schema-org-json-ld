@@ -153,53 +153,78 @@
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek"],
-    "in_progress": [],
-    "planned_next": [
+    "in_progress": [
       {
         "type": "Speakable",
+        "issue": 70,
+        "pr": 71,
+        "dispatched_at": "2026-02-25T00:25:50Z",
+        "sub_types": ["SpeakableSpecification"],
+        "modifies": ["Article"]
+      },
+      {
+        "type": "Carousel",
+        "issue": 72,
+        "pr": 73,
+        "dispatched_at": "2026-02-25T00:26:09Z",
+        "sub_types": ["ItemList"],
+        "modifies": ["ListItem"]
+      }
+    ],
+    "planned_next": [
+      {
+        "type": "SubscriptionContent",
         "priority": 1,
-        "reason": "Metadata annotation type. Simple.",
-        "depends_on": []
+        "reason": "Access metadata type (WebPageElement + isAccessibleForFree on Article).",
+        "depends_on": ["Speakable"],
+        "note": "Must wait for Speakable to merge since both modify Article.php"
       },
       {
         "type": "VacationRental",
         "priority": 2,
-        "reason": "Complex property type with LodgingBusiness, etc.",
-        "depends_on": []
-      },
-      {
-        "type": "SubscriptionContent",
-        "priority": 3,
-        "reason": "Access metadata type (WebPage + isAccessibleForFree + hasPart).",
-        "depends_on": []
-      },
-      {
-        "type": "Carousel",
-        "priority": 4,
-        "reason": "Meta-type wrapping other types in ItemList. Different pattern.",
+        "reason": "Complex property type. 4 new types: VacationRental, Accommodation, BedDetails, LocationFeatureSpecification.",
         "depends_on": []
       },
       {
         "type": "MathSolver",
-        "priority": 5,
-        "reason": "Niche, complex. MathSolver + MathExpression.",
-        "depends_on": []
+        "priority": 3,
+        "reason": "Requires JsonLdGenerator changes (multi-type @type, hyphenated property names). Deferred pending design discussion.",
+        "depends_on": [],
+        "blocker": "Needs generator modifications — question-for-eva needed"
       }
     ],
     "google_rich_results_types": {
       "not_implemented": [
-        "Carousel", "Math solver", "Speakable",
-        "Subscription/paywalled content", "Vacation rental"
+        "Math solver", "Speakable (in progress)",
+        "Subscription/paywalled content", "Vacation rental",
+        "Carousel (in progress)"
       ],
-      "note": "Review snippet is not a separate type - it is a usage pattern for existing Review/AggregateRating types. Image metadata may not require implementation (uses existing ImageObject)."
+      "note": "Review snippet is not a separate type. Image metadata uses existing ImageObject."
     }
   },
-  "agent_sessions": [],
+  "agent_sessions": [
+    {
+      "issue": 70,
+      "pr": 71,
+      "type": "Speakable",
+      "model": "gpt-5.3-codex",
+      "status": "agent_working",
+      "dispatched_at": "2026-02-25T00:25:50Z"
+    },
+    {
+      "issue": 72,
+      "pr": 73,
+      "type": "Carousel",
+      "model": "gpt-5.3-codex",
+      "status": "agent_working",
+      "dispatched_at": "2026-02-25T00:26:09Z"
+    }
+  ],
   "blockers": [],
   "last_cycle": {
-    "issue": 62,
-    "timestamp": "2026-02-24T23:20:00Z",
-    "summary": "Cycle 8: Merged 3 PRs. ProfilePage+InteractionCounter (#65), EducationQA Quiz+AlignmentObject (#66), DiscussionForumPosting+enhanced Comment/Person (#68). 23 Google types now implemented. 117 tests passing. Zero revisions needed."
+    "issue": 69,
+    "timestamp": "2026-02-25T00:26:00Z",
+    "summary": "Cycle 9 in progress. Dispatched Speakable (#70/#71) and Carousel (#72/#73). Planning Subscription and Vacation Rental for batch 2. Math Solver deferred."
   },
   "test_count": 117,
   "total_schema_types": 23,
