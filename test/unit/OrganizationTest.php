@@ -6,6 +6,7 @@ use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ContactPoint;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Organization;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\PostalAddress;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\QuantitativeValue;
 use PHPUnit\Framework\TestCase;
 
 final class OrganizationTest extends TestCase {
@@ -86,5 +87,49 @@ final class OrganizationTest extends TestCase {
 		$this->assertEquals('2020-01-01', $obj->foundingDate);
 		$this->assertEquals('Example', $obj->alternateName);
 		$this->assertEquals('Example Incorporated', $obj->legalName);
+	}
+
+	public function testNumberOfEmployeesOutput(): void {
+		$organization = new Organization(
+			name: 'Example Inc.',
+			numberOfEmployees: new QuantitativeValue(value: 500),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $organization);
+		$obj = json_decode($json);
+
+		$this->assertEquals('QuantitativeValue', $obj->numberOfEmployees->{'@type'});
+		$this->assertEquals(500, $obj->numberOfEmployees->value);
+	}
+
+	public function testBusinessIdentifiers(): void {
+		$organization = new Organization(
+			name: 'Example Inc.',
+			taxID: 'TAX-123',
+			vatID: 'VAT-456',
+			naics: '541511',
+			duns: '123456789',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $organization);
+		$obj = json_decode($json);
+
+		$this->assertEquals('TAX-123', $obj->taxID);
+		$this->assertEquals('VAT-456', $obj->vatID);
+		$this->assertEquals('541511', $obj->naics);
+		$this->assertEquals('123456789', $obj->duns);
+	}
+
+	public function testAllNewPropertiesOmittedWhenNull(): void {
+		$organization = new Organization(name: 'Example Inc.');
+		$json = JsonLdGenerator::SchemaToJson(schema: $organization);
+		$obj = json_decode($json);
+
+		$this->assertFalse(property_exists($obj, 'numberOfEmployees'));
+		$this->assertFalse(property_exists($obj, 'taxID'));
+		$this->assertFalse(property_exists($obj, 'vatID'));
+		$this->assertFalse(property_exists($obj, 'naics'));
+		$this->assertFalse(property_exists($obj, 'duns'));
+		$this->assertFalse(property_exists($obj, 'leiCode'));
+		$this->assertFalse(property_exists($obj, 'iso6523Code'));
+		$this->assertFalse(property_exists($obj, 'globalLocationNumber'));
 	}
 }
