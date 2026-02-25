@@ -18,5 +18,8 @@ class Article extends TypedSchema {
 		public null|string $description = null,
 		public null|Organization $publisher = null,
 		public null|SpeakableSpecification $speakable = null,
+		public null|bool $isAccessibleForFree = null,
+		/** @var WebPageElement[]|WebPageElement|null $hasPart */
+		public null|WebPageElement|array $hasPart = null,
 	) {}
 }
