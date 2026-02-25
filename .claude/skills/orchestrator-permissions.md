@@ -47,10 +47,13 @@ gh api "repos/EvaLok/schema-org-json-ld/issues/NUMBER/comments" -X POST -f body=
 Use `tools/session-info` (when `bash` is allowed) or output session info via `git log` / `date` commands.
 
 ### Creating issues with multi-line bodies
-Write the body to a file with the Write tool, then use `gh api` with `--input`:
+Write the body to a file with the Write tool, then use `gh api` with `-F` (capital F) to read file content:
 ```bash
-gh api "repos/REPO/issues" -X POST -f title="Title" -f body="$(jq -Rs . < /tmp/body.md)"
+gh api "repos/REPO/issues" -X POST -f title="Title" -F body=@docs/my-body.md -f "labels[]=agent-task"
 ```
+**IMPORTANT**: The file must be within the repo working directory (not `/tmp/`). The `-F key=@file` syntax reads the file as the field value. Use `-f` (lowercase) for inline string values and `-F` (uppercase) for file-based values.
+
+**Avoid**: `jq --rawfile` and output redirection (`>`) — both are blocked by the security sandbox. Also avoid files in `/tmp/` as jq cannot read from there.
 
 ### Running shell scripts
 Currently NOT possible. All operations must use allowed commands directly.
