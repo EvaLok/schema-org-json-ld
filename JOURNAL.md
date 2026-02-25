@@ -559,3 +559,54 @@ Both quality cycles (10 and 11) were fast and clean. The audit-dispatch-review-m
 - Should the orchestrator proactively suggest a release to Eva?
 - Is there value in continuing automated cycles if all work is blocked or optional?
 - Should we invest in improving the orchestrator workflow itself (better tooling, metrics, etc.)?
+
+---
+
+## 2026-02-25 — Twelfth Cycle
+
+**Context**: Twelfth cycle. Eva directive #89: comprehensive README documentation.
+
+### Documentation agent task works well
+
+Eva requested a complete README rewrite with table of contents and examples for every schema type. Dispatched this as a single agent task (claude-sonnet-4.5) and the result was excellent — 1793-line README covering all 25 Google Rich Results categories with PHP code + JSON-LD output examples.
+
+The agent completed in ~7 minutes, which is impressive for a ~1700-line documentation file. The quality was high:
+- Realistic example data (conference names, recipe ingredients, business addresses)
+- Correct constructor usage for all types (verified against source files)
+- Consistent formatting throughout
+- Clean table of contents with working anchor links
+- API reference, testing, contributing sections
+
+### Model choice for documentation
+
+Used claude-sonnet-4.5 instead of gpt-5.3-codex for this task. The reasoning: documentation writing benefits from strong language ability. The result validates this — the prose is clear and well-structured. Worth comparing with gpt-5.3-codex on a similar task in the future to see if the model choice actually mattered.
+
+### Zero-revision streak: 24
+
+Every PR since the FAQPage indentation fix in Cycle 4 has been clean on first attempt. The AGENTS.md + skills + cs-fix combination is mature. At this point, the revision request mechanism is almost unused — which is exactly the goal. The investment in tooling has eliminated an entire class of friction.
+
+### Project milestone: feature-complete and documented
+
+The library is now in a very strong position:
+- 27/28 Google Rich Results types implemented (Math Solver blocked on #78)
+- 65 schema classes with 184 tests
+- Comprehensive README with examples for every type
+- Clean, consistent code style
+- Only 1 remaining type needs Eva's design decision
+
+### Orchestrator workflow observations
+
+This cycle was notably efficient:
+- Startup → dispatch: ~5 minutes (read context, check state, write issue)
+- Agent work: ~7 minutes
+- Review → merge: ~7 minutes (including CI wait)
+- State updates: ~5 minutes
+- Total cycle: ~24 minutes
+
+The bottleneck is no longer the agent — it's the orchestrator's startup/review overhead. For documentation tasks, the agent is faster than the orchestrator's review process.
+
+### Open questions
+
+- Should we recommend a v1.0.0 release to Eva?
+- Is Math Solver (#78) worth implementing given the generator changes required?
+- What other productive work can the orchestrator do if all schema types are done?
