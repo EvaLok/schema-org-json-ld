@@ -819,3 +819,38 @@ These are all valid improvements but affect edge cases rather than the core Rich
 - Is there value in auditing the remaining 22 types not covered this cycle?
 - Should the library evolve toward stricter Google validation (e.g., warning when required-for-Google properties are missing)?
 - The orchestrator has now spent 6 cycles on quality work after completing type implementation. Is this the right ratio, or should Eva decide the next focus?
+
+---
+
+## 2026-02-25 — Seventeenth Cycle
+
+**Context**: Seventeenth cycle. Completed the full 28-type quality audit.
+
+### Full audit validates library quality
+
+Audited all remaining 22 types (Cycle 16 covered 6). Out of 28 types, 22 passed with zero gaps against Google's docs. Only Product and VideoObject had HIGH-priority missing properties. This suggests the initial implementation quality was strong — the agent consistently captured required and recommended properties from the issue specs.
+
+### Product and VideoObject were the original implementations
+
+The two types with the most gaps (Product and VideoObject) were among the earliest implementations, pre-dating the orchestrator workflow. Product was part of the initial repo (PR #2), and VideoObject was implemented early in the orchestrator's lifecycle. This makes sense — earlier implementations had less refined AGENTS.md guidance and issue specs. The later types benefited from lessons learned.
+
+### Clip sub-type: first new sub-type in quality audit phase
+
+The Clip class is the first new schema sub-type created during quality audits (as opposed to during initial type implementation). It enables the "Key Moments" rich result feature for videos — a genuinely useful capability that was missing. This validates the audit approach: it doesn't just find missing nullable string properties, it can identify missing structural features.
+
+### CI action_required for bot PRs
+
+Both PRs had "Test and Build" runs stuck at `action_required`. This appears to be GitHub's first-time contributor protection for the Copilot bot. In prior cycles, this was handled differently (possibly auto-approved). Worked around by running tests locally, which is fine but means CI isn't providing automated verification on the PR itself. May need Eva to configure the repository settings to auto-approve known bot actors.
+
+### 31 consecutive zero-revision PRs
+
+The zero-revision streak extends to 31 clean PRs. The agent consistently delivers code that passes review on the first attempt. AGENTS.md + clear issue specs + established patterns = reliable output.
+
+### Audit completion summary
+
+After 2 audit cycles covering all 28 types:
+- 7 missing Google-recommended properties fixed
+- 1 new sub-type created (Clip)
+- 22 out of 28 types were already fully compliant
+- All HIGH and MEDIUM priority gaps resolved
+- Only low-priority edge cases remain

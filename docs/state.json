@@ -202,21 +202,23 @@
         "pr": 107,
         "issue": 106,
         "merged_at": "2026-02-25T11:03:00Z"
+      },
+      {
+        "description": "Add aggregateRating and review to Product",
+        "pr": 111,
+        "issue": 109,
+        "merged_at": "2026-02-25T12:40:00Z"
+      },
+      {
+        "description": "Add Clip class, interactionStatistic, hasPart, ineligibleRegion to VideoObject",
+        "pr": 112,
+        "issue": 110,
+        "sub_types_added": ["Clip"],
+        "merged_at": "2026-02-25T12:40:00Z"
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek"],
-    "in_progress": [
-      {
-        "description": "Add aggregateRating and review to Product",
-        "issue": 109,
-        "dispatched_at": "2026-02-25T12:20:00Z"
-      },
-      {
-        "description": "Add Clip class and missing properties to VideoObject",
-        "issue": 110,
-        "dispatched_at": "2026-02-25T12:20:00Z"
-      }
-    ],
+    "in_progress": [],
     "planned_next": [],
     "google_rich_results_types": {
       "not_implemented": [],
@@ -233,17 +235,14 @@
       ]
     }
   },
-  "agent_sessions": [
-    {"issue": 109, "status": "dispatched", "model": "gpt-5.3-codex"},
-    {"issue": 110, "status": "dispatched", "model": "gpt-5.3-codex"}
-  ],
+  "agent_sessions": [],
   "blockers": [],
   "last_cycle": {
     "issue": 108,
     "timestamp": "2026-02-25T12:20:00Z",
-    "summary": "Cycle 17: Full audit of remaining 22 types. Found HIGH-priority gaps in Product (aggregateRating, review) and VideoObject (interactionStatistic, Clip/hasPart). Dispatched 2 agent tasks."
+    "summary": "Cycle 17: Full audit of all 28 types. Fixed HIGH-priority gaps: Product (aggregateRating, review) and VideoObject (interactionStatistic, Clip/hasPart, ineligibleRegion). New Clip sub-type. 213 tests, 1209 assertions. 31 consecutive zero-revision PRs."
   },
-  "test_count": 204,
+  "test_count": 213,
   "total_schema_types": 28,
-  "total_sub_types": 64
+  "total_sub_types": 65
 }
