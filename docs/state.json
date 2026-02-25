@@ -205,7 +205,18 @@
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek"],
-    "in_progress": [],
+    "in_progress": [
+      {
+        "description": "Add aggregateRating and review to Product",
+        "issue": 109,
+        "dispatched_at": "2026-02-25T12:20:00Z"
+      },
+      {
+        "description": "Add Clip class and missing properties to VideoObject",
+        "issue": 110,
+        "dispatched_at": "2026-02-25T12:20:00Z"
+      }
+    ],
     "planned_next": [],
     "google_rich_results_types": {
       "not_implemented": [],
@@ -222,12 +233,15 @@
       ]
     }
   },
-  "agent_sessions": [],
+  "agent_sessions": [
+    {"issue": 109, "status": "dispatched", "model": "gpt-5.3-codex"},
+    {"issue": 110, "status": "dispatched", "model": "gpt-5.3-codex"}
+  ],
   "blockers": [],
   "last_cycle": {
-    "issue": 103,
-    "timestamp": "2026-02-25T11:05:00Z",
-    "summary": "Cycle 16: Quality audit against Google docs, dispatched and merged 2 fix PRs (#105, #107). 5 missing recommended properties added. 204 tests, 1169 assertions. 29 consecutive zero-revision PRs."
+    "issue": 108,
+    "timestamp": "2026-02-25T12:20:00Z",
+    "summary": "Cycle 17: Full audit of remaining 22 types. Found HIGH-priority gaps in Product (aggregateRating, review) and VideoObject (interactionStatistic, Clip/hasPart). Dispatched 2 agent tasks."
   },
   "test_count": 204,
   "total_schema_types": 28,
