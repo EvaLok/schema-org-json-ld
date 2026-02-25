@@ -8,7 +8,7 @@ class Review extends TypedSchema {
 	public const A_SCHEMA_TYPE = 'Review';
 
 	public function __construct(
-		public string $author,
+		public string|Person|Organization $author,
 		public Rating $reviewRating,
 		public null|string $reviewBody = null,
 		public null|string $datePublished = null,

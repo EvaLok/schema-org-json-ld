@@ -3,6 +3,8 @@
 namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Organization;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Person;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Rating;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Review;
 use PHPUnit\Framework\TestCase;
@@ -59,5 +61,29 @@ final class ReviewTest extends TestCase {
 		$this->assertEquals('A great product!', $obj->reviewBody);
 		$this->assertEquals('2026-01-15', $obj->datePublished);
 		$this->assertEquals('Excellent', $obj->name);
+	}
+
+	public function testAuthorAsPerson(): void {
+		$review = new Review(
+			author: new Person(name: 'Jane Doe'),
+			reviewRating: new Rating(ratingValue: 5),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $review);
+		$obj = json_decode($json);
+
+		$this->assertEquals('Person', $obj->author->{'@type'});
+		$this->assertEquals('Jane Doe', $obj->author->name);
+	}
+
+	public function testAuthorAsOrganization(): void {
+		$review = new Review(
+			author: new Organization(name: 'Example Inc'),
+			reviewRating: new Rating(ratingValue: 5),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $review);
+		$obj = json_decode($json);
+
+		$this->assertEquals('Organization', $obj->author->{'@type'});
+		$this->assertEquals('Example Inc', $obj->author->name);
 	}
 }

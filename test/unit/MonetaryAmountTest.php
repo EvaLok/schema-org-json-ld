@@ -19,6 +19,7 @@ final class MonetaryAmountTest extends TestCase {
 		$this->assertFalse(property_exists($obj, 'value'));
 		$this->assertFalse(property_exists($obj, 'minValue'));
 		$this->assertFalse(property_exists($obj, 'maxValue'));
+		$this->assertFalse(property_exists($obj, 'unitText'));
 	}
 
 	public function testFullOutput(): void {
@@ -27,6 +28,7 @@ final class MonetaryAmountTest extends TestCase {
 			value: 10.99,
 			minValue: 5.00,
 			maxValue: 15.00,
+			unitText: 'HOUR',
 		);
 		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
 		$obj = json_decode($json);
@@ -35,5 +37,6 @@ final class MonetaryAmountTest extends TestCase {
 		$this->assertEquals(10.99, $obj->value);
 		$this->assertEquals(5.00, $obj->minValue);
 		$this->assertEquals(15.00, $obj->maxValue);
+		$this->assertEquals('HOUR', $obj->unitText);
 	}
 }
