@@ -4,6 +4,7 @@ namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Event;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\EventAttendanceModeEnumeration;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\EventStatusType;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ItemAvailability;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Offer;
@@ -12,6 +13,7 @@ use EvaLok\SchemaOrgJsonLd\v1\Schema\Organization;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Person;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Place;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\PostalAddress;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\VirtualLocation;
 use PHPUnit\Framework\TestCase;
 
 final class EventTest extends TestCase {
@@ -49,6 +51,7 @@ final class EventTest extends TestCase {
 
 		$this->assertFalse(property_exists($obj, 'description'));
 		$this->assertFalse(property_exists($obj, 'endDate'));
+		$this->assertFalse(property_exists($obj, 'eventAttendanceMode'));
 		$this->assertFalse(property_exists($obj, 'eventStatus'));
 		$this->assertFalse(property_exists($obj, 'image'));
 		$this->assertFalse(property_exists($obj, 'offers'));
@@ -123,5 +126,38 @@ final class EventTest extends TestCase {
 
 		$this->assertEquals('Offer', $obj->offers->{'@type'});
 		$this->assertEquals('Person', $obj->performer->{'@type'});
+	}
+
+	public function testOnlineEventWithVirtualLocationAndAttendanceMode(): void {
+		$event = new Event(
+			name: 'Online Jazz Night',
+			startDate: '2026-04-01T20:00:00+02:00',
+			location: new VirtualLocation(url: 'https://example.com/join'),
+			eventAttendanceMode: EventAttendanceModeEnumeration::OnlineEventAttendanceMode,
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $event);
+		$obj = json_decode($json);
+
+		$this->assertEquals('VirtualLocation', $obj->location->{'@type'});
+		$this->assertEquals('https://example.com/join', $obj->location->url);
+		$this->assertEquals('https://schema.org/OnlineEventAttendanceMode', $obj->eventAttendanceMode);
+	}
+
+	public function testMixedEventWithPlaceAndVirtualLocationArray(): void {
+		$event = new Event(
+			name: 'Hybrid Jazz Night',
+			startDate: '2026-04-01T20:00:00+02:00',
+			location: [
+				new Place(name: 'Main Theater'),
+				new VirtualLocation(url: 'https://example.com/join'),
+			],
+			eventAttendanceMode: EventAttendanceModeEnumeration::MixedEventAttendanceMode,
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $event);
+		$obj = json_decode($json);
+
+		$this->assertEquals('Place', $obj->location[0]->{'@type'});
+		$this->assertEquals('VirtualLocation', $obj->location[1]->{'@type'});
+		$this->assertEquals('https://schema.org/MixedEventAttendanceMode', $obj->eventAttendanceMode);
 	}
 }

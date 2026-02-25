@@ -10,9 +10,11 @@ class Event extends TypedSchema {
 	public function __construct(
 		public string $name,
 		public string $startDate,
-		public Place $location,
+		/** @var Place[]|VirtualLocation[] $location */
+		public Place|VirtualLocation|array $location,
 		public null|string $description = null,
 		public null|string $endDate = null,
+		public null|EventAttendanceModeEnumeration $eventAttendanceMode = null,
 		public null|EventStatusType $eventStatus = null,
 		/** @var string[] $image */
 		public null|array $image = null,
