@@ -18,5 +18,8 @@ class Product extends TypedSchema {
 		public null|Brand $brand = null,
 		public null|string $mpn = null,
 		public null|QuantitativeValue $weight = null,
+		public null|AggregateRating $aggregateRating = null,
+		/** @var null|Review|Review[] $review */
+		public null|Review|array $review = null,
 	) {}
 }
