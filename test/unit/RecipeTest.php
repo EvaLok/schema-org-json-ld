@@ -11,6 +11,7 @@ use EvaLok\SchemaOrgJsonLd\v1\Schema\Person;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Rating;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Recipe;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Review;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\VideoObject;
 use PHPUnit\Framework\TestCase;
 
 final class RecipeTest extends TestCase {
@@ -43,6 +44,7 @@ final class RecipeTest extends TestCase {
 		$this->assertFalse(property_exists($obj, 'recipeInstructions'));
 		$this->assertFalse(property_exists($obj, 'aggregateRating'));
 		$this->assertFalse(property_exists($obj, 'review'));
+		$this->assertFalse(property_exists($obj, 'video'));
 	}
 
 	public function testFullOutputWithNestedTypes(): void {
@@ -73,6 +75,11 @@ final class RecipeTest extends TestCase {
 					reviewBody: 'Amazing cookies!',
 				),
 			],
+			video: new VideoObject(
+				name: 'Cookie recipe video',
+				thumbnailUrl: ['https://example.com/cookies-thumb.jpg'],
+				uploadDate: '2026-01-20',
+			),
 		);
 		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
 		$obj = json_decode($json);
@@ -83,6 +90,7 @@ final class RecipeTest extends TestCase {
 		$this->assertEquals('NutritionInformation', $obj->nutrition->{'@type'});
 		$this->assertEquals('AggregateRating', $obj->aggregateRating->{'@type'});
 		$this->assertEquals('Review', $obj->review[0]->{'@type'});
+		$this->assertEquals('VideoObject', $obj->video->{'@type'});
 	}
 
 	public function testAuthorSupportsOrganizationAndReviewSupportsSingleObject(): void {

@@ -29,5 +29,6 @@ class Recipe extends TypedSchema {
 		public null|AggregateRating $aggregateRating = null,
 		/** @var Review[] $review */
 		public null|Review|array $review = null,
+		public null|VideoObject $video = null,
 	) {}
 }
