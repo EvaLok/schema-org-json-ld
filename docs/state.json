@@ -150,83 +150,68 @@
         "pr": 68,
         "issue": 67,
         "merged_at": "2026-02-24T23:20:41Z"
-      }
-    ],
-    "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek"],
-    "in_progress": [
+      },
       {
         "type": "Speakable",
-        "issue": 70,
         "pr": 71,
-        "dispatched_at": "2026-02-25T00:25:50Z",
+        "issue": 70,
         "sub_types": ["SpeakableSpecification"],
-        "modifies": ["Article"]
+        "merged_at": "2026-02-25T00:36:00Z"
       },
       {
         "type": "Carousel",
-        "issue": 72,
         "pr": 73,
-        "dispatched_at": "2026-02-25T00:26:09Z",
+        "issue": 72,
         "sub_types": ["ItemList"],
-        "modifies": ["ListItem"]
-      }
-    ],
-    "planned_next": [
+        "modifies": ["ListItem"],
+        "merged_at": "2026-02-25T00:37:00Z"
+      },
       {
         "type": "SubscriptionContent",
-        "priority": 1,
-        "reason": "Access metadata type (WebPageElement + isAccessibleForFree on Article).",
-        "depends_on": ["Speakable"],
-        "note": "Must wait for Speakable to merge since both modify Article.php"
+        "pr": 75,
+        "issue": 74,
+        "sub_types": ["WebPageElement"],
+        "modifies": ["Article"],
+        "merged_at": "2026-02-25T00:49:00Z"
       },
       {
         "type": "VacationRental",
-        "priority": 2,
-        "reason": "Complex property type. 4 new types: VacationRental, Accommodation, BedDetails, LocationFeatureSpecification.",
-        "depends_on": []
-      },
+        "pr": 77,
+        "issue": 76,
+        "sub_types": ["Accommodation", "BedDetails", "LocationFeatureSpecification"],
+        "merged_at": "2026-02-25T00:50:00Z"
+      }
+    ],
+    "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek"],
+    "in_progress": [],
+    "planned_next": [
       {
         "type": "MathSolver",
-        "priority": 3,
-        "reason": "Requires JsonLdGenerator changes (multi-type @type, hyphenated property names). Deferred pending design discussion.",
+        "priority": 1,
+        "reason": "Requires JsonLdGenerator changes (multi-type @type, hyphenated property names). Question for Eva (#78).",
         "depends_on": [],
-        "blocker": "Needs generator modifications — question-for-eva needed"
+        "blocker": "Needs generator modifications — awaiting Eva's decision on #78"
       }
     ],
     "google_rich_results_types": {
-      "not_implemented": [
-        "Math solver", "Speakable (in progress)",
-        "Subscription/paywalled content", "Vacation rental",
-        "Carousel (in progress)"
-      ],
-      "note": "Review snippet is not a separate type. Image metadata uses existing ImageObject."
+      "not_implemented": ["Math solver"],
+      "note": "Review snippet is not a separate type. Image metadata uses existing ImageObject. All other Google Rich Results types are now implemented. Math Solver requires JsonLdGenerator changes — see question #78."
     }
   },
-  "agent_sessions": [
+  "agent_sessions": [],
+  "blockers": [
     {
-      "issue": 70,
-      "pr": 71,
-      "type": "Speakable",
-      "model": "gpt-5.3-codex",
-      "status": "agent_working",
-      "dispatched_at": "2026-02-25T00:25:50Z"
-    },
-    {
-      "issue": 72,
-      "pr": 73,
-      "type": "Carousel",
-      "model": "gpt-5.3-codex",
-      "status": "agent_working",
-      "dispatched_at": "2026-02-25T00:26:09Z"
+      "type": "MathSolver",
+      "issue": 78,
+      "reason": "Requires JsonLdGenerator changes. Awaiting Eva's decision."
     }
   ],
-  "blockers": [],
   "last_cycle": {
     "issue": 69,
-    "timestamp": "2026-02-25T00:26:00Z",
-    "summary": "Cycle 9 in progress. Dispatched Speakable (#70/#71) and Carousel (#72/#73). Planning Subscription and Vacation Rental for batch 2. Math Solver deferred."
+    "timestamp": "2026-02-25T00:50:00Z",
+    "summary": "Cycle 9: Merged 4 PRs in 2 batches. Speakable (#71), Carousel (#73), Subscription/Paywalled (#75), VacationRental (#77). 27 Google types now implemented. 140 tests passing. Zero revisions needed. Only Math Solver remaining (blocked on generator design decision)."
   },
-  "test_count": 117,
-  "total_schema_types": 23,
-  "total_sub_types": 54
+  "test_count": 140,
+  "total_schema_types": 27,
+  "total_sub_types": 62
 }

@@ -402,3 +402,69 @@ All 3 agents this cycle completed in 6-8 minutes, continuing the pattern observe
 - Should the next cycle focus on the remaining 5 types or pivot to quality improvements (README, usage examples, comprehensive integration tests)?
 - Is Carousel worth implementing given its fundamentally different pattern?
 - Should we investigate Speakable and Subscription more deeply before dispatching — they may turn out to be trivially thin types that add little value.
+
+---
+
+## 2026-02-25 — Ninth Cycle
+
+**Context**: Ninth cycle. Clean slate. No Eva input. Research and implement all remaining feasible types.
+
+### Near-complete Google Rich Results coverage achieved
+
+This cycle implemented the last 4 feasible Google Rich Results types: Speakable, Carousel, Subscription/Paywalled Content, and Vacation Rental. The library now covers 27 of 28 types (96%). The only remaining type is Math Solver, which requires changes to the core `JsonLdGenerator` — a design decision deferred to Eva via question #78.
+
+### Research before dispatch pays off
+
+Spending time at the start of the cycle to thoroughly research all 5 remaining types was valuable:
+- Speakable turned out to be trivially simple (as suspected)
+- Carousel's ListItem modification worked cleanly because the existing `JsonLdGenerator` already handles `string|TypedSchema` union types
+- Subscription/Paywalled Content was simpler than expected — just a thin WebPageElement + two Article properties
+- Vacation Rental was the most complex but well within the agent's demonstrated capabilities
+- Math Solver genuinely requires generator changes — confirmed by research, not assumed
+
+This upfront research eliminated false starts and allowed optimal batching (no file conflicts between concurrent tasks).
+
+### Batching by file conflicts is effective
+
+The key insight this cycle: plan batches around file conflicts, not just complexity.
+- Batch 1: Speakable (modifies Article) + Carousel (modifies ListItem) — no overlap
+- Batch 2: Subscription (modifies Article) + Vacation Rental (new files only) — no overlap
+- Speakable had to merge before Subscription could dispatch, since both modify Article
+
+This constraint-based batching ensures zero merge conflicts without serializing everything.
+
+### Zero-revision streak: 19 consecutive clean PRs
+
+The streak now spans 5 cycles (Cycles 5-9). The combination of:
+1. Comprehensive AGENTS.md with explicit style rules
+2. cs-fix as a mandatory step
+3. Well-researched issue specs with expected JSON-LD output
+
+...produces consistent first-attempt success. The agent guidance infrastructure is mature.
+
+### Math Solver is the first type that needs generator changes
+
+Every previous type (27 of them) fit cleanly into the `TypedSchema` + `JsonLdGenerator` pattern. Math Solver is the first to require:
+1. Array `@type` (`["MathSolver", "LearningResource"]`)
+2. Hyphenated property names (`mathExpression-input`)
+
+These are legitimate schema.org features used by other types beyond Math Solver. Supporting them would make the library more generally useful, but it's a core infrastructure change that should be Eva's call.
+
+### Vacation Rental is the deepest nesting so far
+
+VacationRental → Accommodation → BedDetails[]/LocationFeatureSpecification[]/QuantitativeValue — 4 levels of nesting. The agent handled it cleanly, and the JsonLdGenerator's recursive serialization worked correctly. This validates the architecture for even complex types.
+
+### Agent timing: consistently 7-10 minutes
+
+| Batch 1 | Batch 2 |
+|---------|---------|
+| Speakable: ~7 min | Subscription: ~8 min |
+| Carousel: ~8 min | Vacation Rental: ~10 min |
+
+All within the established 7-10 minute window. The Vacation Rental (4 new types, most complex) was at the upper end but not an outlier like LocalBusiness and Recipe in Cycle 5.
+
+### Open questions
+
+- What should the orchestrator focus on now that type implementation is essentially complete?
+- Should we invest in README/documentation, integration tests, or new features?
+- Will Eva want Math Solver implemented or not? The design decision is non-blocking for everything else.
