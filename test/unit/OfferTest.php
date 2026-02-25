@@ -44,6 +44,7 @@ final class OfferTest extends TestCase {
 
 		$this->assertFalse(property_exists($obj, 'shippingDetails'));
 		$this->assertFalse(property_exists($obj, 'validFrom'));
+		$this->assertFalse(property_exists($obj, 'priceValidUntil'));
 	}
 
 	public function testWithShippingDetails(): void {
@@ -85,6 +86,21 @@ final class OfferTest extends TestCase {
 		$obj = json_decode($json);
 
 		$this->assertEquals('2026-02-01T09:00:00+00:00', $obj->validFrom);
+	}
+
+	public function testWithPriceValidUntil(): void {
+		$schema = new Offer(
+			url: 'https://example.com/anvil',
+			priceCurrency: 'USD',
+			price: 119.99,
+			itemCondition: OfferItemCondition::NewCondition,
+			availability: ItemAvailability::InStock,
+			priceValidUntil: '2026-12-31',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('2026-12-31', $obj->priceValidUntil);
 	}
 
 	public function testItemConditionOmittedWhenNull(): void {

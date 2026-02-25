@@ -3,6 +3,7 @@
 namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\AggregateOffer;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\AggregateRating;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Brand;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ItemAvailability;
@@ -182,5 +183,28 @@ final class ProductTest extends TestCase {
 		$this->assertEquals('Review', $obj->review[0]->{'@type'});
 		$this->assertEquals('Jane Doe', $obj->review[0]->author);
 		$this->assertEquals('John Doe', $obj->review[1]->author);
+	}
+
+	public function testOutputWithAggregateOffer(): void {
+		$schema = new Product(
+			name: 'Executive Anvil',
+			image: ['https://example.com/photos/1x1/photo.jpg'],
+			description: 'Sleeker than ACME\'s Classic Anvil.',
+			sku: '0446310786',
+			offers: new AggregateOffer(
+				lowPrice: 99.99,
+				priceCurrency: 'USD',
+				highPrice: 129.99,
+				offerCount: 12,
+			),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('AggregateOffer', $obj->offers->{'@type'});
+		$this->assertEquals(99.99, $obj->offers->lowPrice);
+		$this->assertEquals('USD', $obj->offers->priceCurrency);
+		$this->assertEquals(129.99, $obj->offers->highPrice);
+		$this->assertEquals(12, $obj->offers->offerCount);
 	}
 }
