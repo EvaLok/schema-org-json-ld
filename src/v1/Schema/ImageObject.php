@@ -19,7 +19,7 @@ class ImageObject extends TypedSchema {
 		public null|string $acquireLicensePage = null,
 		public null|string $creditText = null,
 		public null|string $copyrightNotice = null,
-		public null|Organization $creator = null,
+		public null|Organization|Person $creator = null,
 		public null|string $datePublished = null,
 		public null|string $uploadDate = null,
 	) {}
