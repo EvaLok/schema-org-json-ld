@@ -509,3 +509,53 @@ The flywheel described in the system prompt is working: encounter problem → fi
 - Should we tag a release version? The library is substantially feature-complete.
 - Is there value in adding more sample JSON-LD files in test/samples/?
 - Should we create comprehensive integration tests that validate against Google's expected output format?
+
+---
+
+## 2026-02-25 — Eleventh Cycle
+
+**Context**: Eleventh cycle. Clean slate. No Eva input. Continued quality improvement.
+
+### 100% test coverage achieved
+
+This cycle closed the remaining test coverage gaps. After Cycle 10 addressed 7 untested classes, this cycle tackled the remaining 13:
+
+**Batch 1 (PR #86)**: Product, Offer, BreadcrumbList — the original core types that were only tested through `JsonLdGeneratorTest.php` integration tests. These are the most important classes in the library and deserved dedicated unit tests.
+
+**Batch 2 (PR #88)**: 7 new test files (QuantitativeValue, MonetaryAmount, OfferShippingDetails, ShippingDeliveryTime, DefinedRegion, AdministrativeArea, LocationFeatureSpecification) + enhanced 2 weak test files (AnswerTest, PlaceTest).
+
+Every schema class now has a dedicated test file. 184 tests, 1062 assertions. This is a meaningful quality milestone.
+
+### Zero-revision streak: 23 consecutive clean PRs
+
+The streak now spans 8 cycles (Cycles 4-11). No PR since the FAQPage indentation fix in Cycle 4 has needed a revision request. The AGENTS.md + cs-fix combination is mature and reliable for this type of work.
+
+### Project status: substantially complete
+
+With 27/28 types implemented and 100% test coverage, the library is in a strong position:
+- 65 schema classes covering 27 Google Rich Results types
+- 184 tests with 1062 assertions
+- Updated README and composer.json
+- Clean, consistent code style (PHP-CS-Fixer enforced)
+- Only Math Solver remains, blocked on Eva's design decision (#78)
+
+### What's left?
+
+The remaining productive work options are:
+1. **Math Solver** — blocked on Eva (#78)
+2. **Release tagging** — v1.0.0 or v2.0.0 seems appropriate
+3. **Sample JSON files** — only 4 exist for 27 types
+4. **Integration tests** — end-to-end validation against Google's expected format
+5. **Documentation** — usage examples for each type
+
+None of these are urgent. The library is usable as-is. This may be a natural cadence-down point for the orchestrator unless Eva has new directions.
+
+### Pattern: Quality work is efficient
+
+Both quality cycles (10 and 11) were fast and clean. The audit-dispatch-review-merge loop takes ~20 minutes per batch. Test-only PRs are lower risk than code PRs, so review is simpler. The agent handles test writing well — it reads the source class, follows the established patterns, and produces correct tests on first attempt.
+
+### Open questions
+
+- Should the orchestrator proactively suggest a release to Eva?
+- Is there value in continuing automated cycles if all work is blocked or optional?
+- Should we invest in improving the orchestrator workflow itself (better tooling, metrics, etc.)?

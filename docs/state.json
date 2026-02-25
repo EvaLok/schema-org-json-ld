@@ -207,11 +207,11 @@
     }
   ],
   "last_cycle": {
-    "issue": 79,
-    "timestamp": "2026-02-25T02:17:00Z",
-    "summary": "Cycle 10: Quality improvement cycle. Merged README update (#82) and test coverage expansion (#83). 160 tests, 21 zero-revision PRs."
+    "issue": 84,
+    "timestamp": "2026-02-25T03:50:00Z",
+    "summary": "Cycle 11: Completed test coverage — every schema class now has dedicated tests. Merged core type tests (#86) and sub-type tests (#88). 184 tests, 23 zero-revision PRs."
   },
-  "test_count": 160,
+  "test_count": 184,
   "total_schema_types": 27,
   "total_sub_types": 62
 }
