@@ -9,7 +9,8 @@ class ListItem extends TypedSchema {
 
 	public function __construct(
 		public int $position,
-		public string $name,
-		public null|string $item = null,
+		public null|string $name = null,
+		public null|string|TypedSchema $item = null,
+		public null|string $url = null,
 	) {}
 }
