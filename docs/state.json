@@ -198,7 +198,22 @@
       "note": "Review snippet is not a separate type. Image metadata uses existing ImageObject. All other Google Rich Results types are now implemented. Math Solver requires JsonLdGenerator changes — see question #78."
     }
   },
-  "agent_sessions": [],
+  "agent_sessions": [
+    {
+      "issue": 80,
+      "title": "Update README and composer.json",
+      "dispatched_at": "2026-02-25T02:21:51Z",
+      "model": "gpt-5.3-codex",
+      "type": "documentation"
+    },
+    {
+      "issue": 81,
+      "title": "Add tests for untested sub-types",
+      "dispatched_at": "2026-02-25T02:21:56Z",
+      "model": "gpt-5.3-codex",
+      "type": "test-coverage"
+    }
+  ],
   "blockers": [
     {
       "type": "MathSolver",
@@ -207,9 +222,9 @@
     }
   ],
   "last_cycle": {
-    "issue": 69,
-    "timestamp": "2026-02-25T00:50:00Z",
-    "summary": "Cycle 9: Merged 4 PRs in 2 batches. Speakable (#71), Carousel (#73), Subscription/Paywalled (#75), VacationRental (#77). 27 Google types now implemented. 140 tests passing. Zero revisions needed. Only Math Solver remaining (blocked on generator design decision)."
+    "issue": 79,
+    "timestamp": "2026-02-25T02:17:00Z",
+    "summary": "Cycle 10: Quality improvement cycle. Dispatched README update (#80) and test coverage expansion (#81). Focus on documentation and test quality rather than new types."
   },
   "test_count": 140,
   "total_schema_types": 27,
