@@ -48,6 +48,10 @@ class JsonLdGenerator {
 					initialContext: false,
 				);
 			} elseif (is_array($v)) {
+				if (empty($v)) {
+					continue;
+				}
+
 				if ($v[0] instanceof TypedSchema) {
 					foreach ($v as $schema) {
 						$obj[$k][] = self::SchemaToObject(

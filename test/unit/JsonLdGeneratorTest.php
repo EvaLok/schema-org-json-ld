@@ -176,4 +176,78 @@ final class JsonLdGeneratorTest extends TestCase {
 
 		$this->assertEquals($comparison_obj, $output_json_obj, "resultant json_decode objects should be equal");
 	}
+
+	public function testShouldSkipEmptyArrayProperties() {
+		$breadcrumbList = new BreadcrumbList(
+			itemListElement: [],
+		);
+
+		$json = JsonLdGenerator::SchemaToJson(
+			schema: $breadcrumbList,
+		);
+
+		$this->assertIsString($json);
+
+		$output_json_obj = json_decode($json);
+
+		$this->assertEquals('https://schema.org/', $output_json_obj->{'@context'});
+		$this->assertEquals('BreadcrumbList', $output_json_obj->{'@type'});
+		$this->assertObjectNotHasProperty('itemListElement', $output_json_obj);
+	}
+
+	public function testShouldHandleNonEmptyTypedSchemaArrays() {
+		$breadcrumbList = new BreadcrumbList(
+			itemListElement: [
+				new ListItem(
+					position: 1,
+					name: "Books",
+					item: "https://example.com/books",
+				),
+			],
+		);
+
+		$json = JsonLdGenerator::SchemaToJson(
+			schema: $breadcrumbList,
+		);
+
+		$this->assertIsString($json);
+
+		$output_json_obj = json_decode($json);
+		$this->assertCount(1, $output_json_obj->itemListElement);
+		$this->assertEquals(1, $output_json_obj->itemListElement[0]->position);
+		$this->assertEquals('Books', $output_json_obj->itemListElement[0]->name);
+		$this->assertEquals('https://example.com/books', $output_json_obj->itemListElement[0]->item);
+	}
+
+	public function testShouldHandleNonEmptyStringArrays() {
+		$product = new Product(
+			name: "Executive Anvil",
+			image: [
+				"https://example.com/photos/1x1/photo.jpg",
+				"https://example.com/photos/4x3/photo.jpg",
+			],
+			description: "An anvil",
+			sku: "0446310786",
+			offers: [
+				new Offer(
+					url: "https://example.com/anvil",
+					priceCurrency: "USD",
+					price: 119.99,
+					itemCondition: OfferItemCondition::NewCondition,
+					availability: ItemAvailability::InStock,
+				),
+			],
+		);
+
+		$json = JsonLdGenerator::SchemaToJson(
+			schema: $product,
+		);
+
+		$this->assertIsString($json);
+
+		$output_json_obj = json_decode($json);
+		$this->assertCount(2, $output_json_obj->image);
+		$this->assertEquals('https://example.com/photos/1x1/photo.jpg', $output_json_obj->image[0]);
+		$this->assertEquals('https://example.com/photos/4x3/photo.jpg', $output_json_obj->image[1]);
+	}
 }
