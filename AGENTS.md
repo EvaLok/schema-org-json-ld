@@ -225,7 +225,7 @@ Before marking your PR as ready:
 - [ ] No serialization methods added — JsonLdGenerator handles everything
 - [ ] Enums used for constrained value sets (not magic strings)
 - [ ] No breaking changes to existing public API
-- [ ] Do NOT modify `JsonLdGenerator.php` or `TypedSchema.php`
+- [ ] Do NOT modify `JsonLdGenerator.php` or `TypedSchema.php` unless the issue specifically asks for it
 
 ## Common Pitfalls
 
