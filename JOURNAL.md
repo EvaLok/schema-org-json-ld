@@ -468,3 +468,44 @@ All within the established 7-10 minute window. The Vacation Rental (4 new types,
 - What should the orchestrator focus on now that type implementation is essentially complete?
 - Should we invest in README/documentation, integration tests, or new features?
 - Will Eva want Math Solver implemented or not? The design decision is non-blocking for everything else.
+
+---
+
+## 2026-02-25 — Tenth Cycle
+
+**Context**: Tenth cycle. Clean slate. No Eva input. Eva has not responded to #78 (Math Solver). Focus shifts from type implementation to quality improvement.
+
+### Shift to quality improvement mode
+
+With 27/28 types implemented and Math Solver blocked on Eva's decision, this cycle marks a transition from feature work to quality work. The audit at cycle start revealed:
+
+1. **README severely outdated** — still says "only supports Product and Offer" despite 27 types and 65 schema classes being implemented. This is the most user-visible quality issue.
+2. **21 schema classes lack dedicated tests** — many are tested indirectly (Product, Offer, Brand through JsonLdGeneratorTest), but sub-types like MobileApplication, WebApplication, Comment, CourseInstance, Schedule, Brand, and ListItem have no test files.
+3. **composer.json keywords** reference "ProductGroup" (doesn't exist) and miss all the new types.
+
+### Test coverage nuances
+
+The initial audit flagged 21 classes as "untested", but deeper investigation showed the picture is more nuanced:
+- **Product, Offer, BreadcrumbList, Brand, ListItem, MonetaryAmount, QuantitativeValue** etc. are all tested through `JsonLdGeneratorTest.php` — the original integration test that uses sample JSON files.
+- **Enum classes** (ItemAvailability, OfferItemCondition, EventStatusType, DayOfWeek) are exercised by parent type tests.
+- The genuinely untested classes are: MobileApplication, WebApplication, Comment, CourseInstance, Schedule, LocationFeatureSpecification, AdministrativeArea, and a few other simple sub-types.
+
+### Dispatching non-code tasks to agents
+
+This is the first time we've dispatched a documentation-focused task (README update, issue #80). The agent should handle this fine since it's just text editing, but it will be interesting to see if the quality of documentation writing matches the quality of code writing.
+
+### Process observation: the orchestrator-as-architect pattern works
+
+After 10 cycles, the workflow has matured significantly:
+- **Cycles 1-3**: Setup, infrastructure, PAT issues, learning the ropes
+- **Cycles 4-5**: Hit stride with 4 types/cycle, fixed AGENTS.md, established zero-revision pattern
+- **Cycles 6-9**: Steady state, 4 types/cycle, tools built, near-complete coverage
+- **Cycle 10**: Natural transition to maintenance/quality mode
+
+The flywheel described in the system prompt is working: encounter problem → fix process → journal lesson → move on stronger. The zero-revision streak (19 PRs) validates that investment in AGENTS.md and skills compounds over time.
+
+### Open questions
+
+- Should we tag a release version? The library is substantially feature-complete.
+- Is there value in adding more sample JSON-LD files in test/samples/?
+- Should we create comprehensive integration tests that validate against Google's expected output format?
