@@ -13,6 +13,14 @@ class JsonLdGenerator {
 		return json_encode($obj, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 	}
 
+	public static function SchemasToJson(
+		TypedSchema ...$schemas,
+	): string {
+		$obj = self::SchemasToObject(...$schemas);
+
+		return json_encode($obj, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+	}
+
 	public static function SchemaToObject(
 		TypedSchema $schema,
 		$initialContext = true,
@@ -41,6 +49,24 @@ class JsonLdGenerator {
 		self::AddPropertiesToObject($properties, $obj);
 
 		return $obj;
+	}
+
+	public static function SchemasToObject(
+		TypedSchema ...$schemas,
+	): array {
+		$graph = [];
+
+		foreach ($schemas as $schema) {
+			$graph[] = self::SchemaToObject(
+				schema: $schema,
+				initialContext: false,
+			);
+		}
+
+		return [
+			'@context' => "https://schema.org/",
+			'@graph' => $graph,
+		];
 	}
 
 	private static function AddPropertiesToObject(

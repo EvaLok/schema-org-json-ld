@@ -2032,6 +2032,61 @@ $json = JsonLdGenerator::SchemaToJson(schema: $video);
 }
 ```
 
+## Multiple Schemas per Page (@graph)
+
+When a page contains multiple rich result entities (for example an `Article` and a `BreadcrumbList`), you can combine them into a single JSON-LD block using `@graph`.
+
+```php
+<?php
+
+use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Article;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\BreadcrumbList;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\ListItem;
+
+$article = new Article(
+	headline: 'How to Bake Sourdough Bread',
+);
+
+$breadcrumb = new BreadcrumbList(
+	itemListElement: [
+		new ListItem(position: 1, name: 'Recipes', item: 'https://example.com/recipes'),
+		new ListItem(position: 2, name: 'Bread', item: 'https://example.com/recipes/bread'),
+	],
+);
+
+$json = JsonLdGenerator::SchemasToJson($article, $breadcrumb);
+```
+
+```json
+{
+    "@context": "https://schema.org/",
+    "@graph": [
+        {
+            "@type": "Article",
+            "headline": "How to Bake Sourdough Bread"
+        },
+        {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                {
+                    "@type": "ListItem",
+                    "position": 1,
+                    "name": "Recipes",
+                    "item": "https://example.com/recipes"
+                },
+                {
+                    "@type": "ListItem",
+                    "position": 2,
+                    "name": "Bread",
+                    "item": "https://example.com/recipes/bread"
+                }
+            ]
+        }
+    ]
+}
+```
+
 ---
 
 ## API Reference
