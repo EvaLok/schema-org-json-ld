@@ -1,6 +1,7 @@
 <?php
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Article;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Brand;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\BreadcrumbList;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\DefinedRegion;
@@ -10,6 +11,7 @@ use EvaLok\SchemaOrgJsonLd\v1\Schema\MonetaryAmount;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Offer;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\OfferItemCondition;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\OfferShippingDetails;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Organization;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Product;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\QuantitativeValue;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ShippingDeliveryTime;
@@ -320,5 +322,79 @@ final class JsonLdGeneratorTest extends TestCase {
 		$this->assertEquals('Brand', $obj->{'@type'});
 		$this->assertEquals('Test Brand', $obj->name);
 		$this->assertEquals('Test Description', $obj->description);
+	}
+
+	public function testSchemasToJsonWithTwoSchemas(): void {
+		$article = new Article(headline: 'Test article');
+		$breadcrumbList = new BreadcrumbList(
+			itemListElement: [
+				new ListItem(position: 1, name: 'Home', item: 'https://example.com'),
+			],
+		);
+
+		$json = JsonLdGenerator::SchemasToJson($article, $breadcrumbList);
+		$obj = json_decode($json);
+
+		$this->assertEquals('https://schema.org/', $obj->{'@context'});
+		$this->assertIsArray($obj->{'@graph'});
+		$this->assertCount(2, $obj->{'@graph'});
+		$this->assertEquals('Article', $obj->{'@graph'}[0]->{'@type'});
+		$this->assertEquals('BreadcrumbList', $obj->{'@graph'}[1]->{'@type'});
+		$this->assertObjectNotHasProperty('@context', $obj->{'@graph'}[0]);
+		$this->assertObjectNotHasProperty('@context', $obj->{'@graph'}[1]);
+	}
+
+	public function testSchemasToJsonWithSingleSchema(): void {
+		$article = new Article(headline: 'Single schema');
+
+		$json = JsonLdGenerator::SchemasToJson($article);
+		$obj = json_decode($json);
+
+		$this->assertIsArray($obj->{'@graph'});
+		$this->assertCount(1, $obj->{'@graph'});
+		$this->assertEquals('Article', $obj->{'@graph'}[0]->{'@type'});
+	}
+
+	public function testSchemasToJsonWithThreeSchemas(): void {
+		$article = new Article(headline: 'Three schemas');
+		$breadcrumbList = new BreadcrumbList(
+			itemListElement: [
+				new ListItem(position: 1, name: 'Home', item: 'https://example.com'),
+			],
+		);
+		$organization = new Organization(name: 'Example Org');
+
+		$json = JsonLdGenerator::SchemasToJson($article, $breadcrumbList, $organization);
+		$obj = json_decode($json);
+
+		$this->assertCount(3, $obj->{'@graph'});
+		$this->assertEquals('Article', $obj->{'@graph'}[0]->{'@type'});
+		$this->assertEquals('BreadcrumbList', $obj->{'@graph'}[1]->{'@type'});
+		$this->assertEquals('Organization', $obj->{'@graph'}[2]->{'@type'});
+	}
+
+	public function testSchemasToObjectReturnsArray(): void {
+		$article = new Article(headline: 'Array output');
+		$organization = new Organization(name: 'Example Org');
+
+		$obj = JsonLdGenerator::SchemasToObject($article, $organization);
+
+		$this->assertIsArray($obj);
+		$this->assertEquals('https://schema.org/', $obj['@context']);
+		$this->assertIsArray($obj['@graph']);
+		$this->assertCount(2, $obj['@graph']);
+		$this->assertEquals('Article', $obj['@graph'][0]['@type']);
+		$this->assertEquals('Organization', $obj['@graph'][1]['@type']);
+	}
+
+	public function testGraphElementsHaveNoContext(): void {
+		$article = new Article(headline: 'No context in graph items');
+		$organization = new Organization(name: 'Example Org');
+
+		$obj = JsonLdGenerator::SchemasToObject($article, $organization);
+
+		foreach ($obj['@graph'] as $graphElement) {
+			$this->assertArrayNotHasKey('@context', $graphElement);
+		}
 	}
 }
