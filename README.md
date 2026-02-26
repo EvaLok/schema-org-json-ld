@@ -108,7 +108,7 @@ The pattern is always the same: instantiate a schema class, pass it to `JsonLdGe
 | Breadcrumb | `BreadcrumbList`, `ListItem` |
 | Carousel | `ItemList`, `ListItem` |
 | Course | `Course`, `CourseInstance`, `Schedule` |
-| Dataset | `Dataset`, `DataDownload`, `DataCatalog` |
+| Dataset | `Dataset`, `DataDownload`, `DataCatalog`, `GeoShape` |
 | Discussion forum | `DiscussionForumPosting`, `Comment`, `InteractionCounter` |
 | Education Q&A | `Quiz`, `Question`, `Answer`, `AlignmentObject` |
 | Employer aggregate rating | `EmployerAggregateRating` |
@@ -116,19 +116,19 @@ The pattern is always the same: instantiate a schema class, pass it to `JsonLdGe
 | FAQ | `FAQPage`, `Question`, `Answer` |
 | Image metadata | `ImageObject` |
 | Job posting | `JobPosting`, `Organization`, `Place`, `MonetaryAmount`, `AdministrativeArea`, `PropertyValue` |
-| Local business | `LocalBusiness`, `FoodEstablishment`, `Restaurant`, `Store`, `PostalAddress`, `GeoCoordinates`, `OpeningHoursSpecification`, `AggregateRating`, `Review` |
+| Local business | `LocalBusiness`, `FoodEstablishment`, `Restaurant`, `Store`, `PostalAddress`, `GeoCoordinates`, `OpeningHoursSpecification`, `AggregateRating`, `Review`, `DayOfWeek` |
 | Math solver | `MathSolver`, `SolveMathAction` |
 | Movie | `Movie`, `Person`, `AggregateRating`, `Review` |
-| Organization | `Organization`, `PostalAddress`, `ContactPoint`, `MerchantReturnPolicy`, `MerchantReturnPolicySeasonalOverride`, `MemberProgram`, `MemberProgramTier`, `ShippingService` |
-| Product | `Product`, `Offer`, `AggregateOffer`, `Brand`, `OfferShippingDetails`, `ShippingDeliveryTime`, `DefinedRegion`, `MonetaryAmount`, `QuantitativeValue`, `AggregateRating`, `Review`, `SizeSpecification`, `ProductGroup`, `PeopleAudience`, `Certification`, `UnitPriceSpecification` |
+| Organization | `Organization`, `PostalAddress`, `ContactPoint`, `MerchantReturnPolicy`, `MerchantReturnPolicySeasonalOverride`, `MemberProgram`, `MemberProgramTier`, `ShippingService`, `MerchantReturnEnumeration`, `RefundTypeEnumeration`, `ReturnFeesEnumeration`, `ReturnLabelSourceEnumeration`, `ReturnMethodEnumeration`, `TierBenefitEnumeration` |
+| Product | `Product`, `Offer`, `AggregateOffer`, `Brand`, `OfferShippingDetails`, `ShippingDeliveryTime`, `DefinedRegion`, `MonetaryAmount`, `QuantitativeValue`, `AggregateRating`, `Review`, `SizeSpecification`, `ProductGroup`, `PeopleAudience`, `Certification`, `UnitPriceSpecification`, `ShippingConditions`, `ServicePeriod`, `ShippingRateSettings`, `OfferItemCondition`, `ItemAvailability` |
 | Profile page | `ProfilePage`, `Person`, `Organization` |
 | Q&A | `QAPage`, `Question`, `Answer` |
 | Recipe | `Recipe`, `Person`, `NutritionInformation`, `HowToStep`, `HowToSection`, `AggregateRating`, `VideoObject` |
-| Review snippet | `Review`, `AggregateRating`, `Rating` |
+| Review snippet | `Review`, `AggregateRating`, `Rating`, `Thing` |
 | Software app | `SoftwareApplication`, `MobileApplication`, `WebApplication` |
 | Speakable | `SpeakableSpecification` (via `Article`) |
 | Subscription/paywalled content | `WebPageElement` (via `Article`) |
-| Vacation rental | `VacationRental`, `Accommodation`, `BedDetails`, `PostalAddress`, `AggregateRating` |
+| Vacation rental | `VacationRental`, `Accommodation`, `BedDetails`, `PostalAddress`, `AggregateRating`, `LocationFeatureSpecification` |
 | Video | `VideoObject`, `Clip`, `InteractionCounter` |
 
 ---
@@ -306,6 +306,7 @@ $json = JsonLdGenerator::SchemaToJson(schema: $carousel);
 <?php
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\AggregateRating;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Course;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\CourseInstance;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ItemAvailability;
@@ -335,6 +336,11 @@ $course = new Course(
 			availability: ItemAvailability::InStock,
 		),
 	],
+	courseCode: 'CS101',
+	inLanguage: 'en',
+	totalHistoricalEnrollment: 15000,
+	aggregateRating: new AggregateRating(ratingValue: 4.8, reviewCount: 342, bestRating: 5),
+	image: 'https://example.com/images/web-dev-course.jpg',
 );
 
 $json = JsonLdGenerator::SchemaToJson(schema: $course);
@@ -375,7 +381,17 @@ $json = JsonLdGenerator::SchemaToJson(schema: $course);
                 "repeatCount": 12
             }
         }
-    ]
+    ],
+    "courseCode": "CS101",
+    "inLanguage": "en",
+    "totalHistoricalEnrollment": 15000,
+    "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": 4.8,
+        "bestRating": 5,
+        "reviewCount": 342
+    },
+    "image": "https://example.com/images/web-dev-course.jpg"
 }
 ```
 
@@ -395,15 +411,20 @@ $dataset = new Dataset(
 	name: 'PHP Developer Survey 2025',
 	description: 'Annual survey of PHP developer demographics and tool usage.',
 	url: 'https://example.com/datasets/php-survey-2025',
+	sameAs: 'https://doi.org/10.5281/zenodo.1234567',
 	creator: new Organization(name: 'PHP Foundation'),
 	license: 'https://creativecommons.org/licenses/by/4.0/',
 	keywords: ['PHP', 'developer survey', 'programming'],
+	isAccessibleForFree: true,
+	temporalCoverage: '2020-01-01/2025-12-31',
 	distribution: [
 		new DataDownload(
 			contentUrl: 'https://example.com/datasets/php-survey-2025.csv',
 			encodingFormat: 'text/csv',
 		),
 	],
+	version: '2.1',
+	citation: 'Doe, J. (2026). Example Climate Dataset. Zenodo.',
 );
 
 $json = JsonLdGenerator::SchemaToJson(schema: $dataset);
@@ -416,6 +437,7 @@ $json = JsonLdGenerator::SchemaToJson(schema: $dataset);
     "name": "PHP Developer Survey 2025",
     "description": "Annual survey of PHP developer demographics and tool usage.",
     "url": "https://example.com/datasets/php-survey-2025",
+    "sameAs": "https://doi.org/10.5281/zenodo.1234567",
     "creator": {
         "@type": "Organization",
         "name": "PHP Foundation"
@@ -426,13 +448,17 @@ $json = JsonLdGenerator::SchemaToJson(schema: $dataset);
         "developer survey",
         "programming"
     ],
+    "isAccessibleForFree": true,
+    "temporalCoverage": "2020-01-01/2025-12-31",
     "distribution": [
         {
             "@type": "DataDownload",
             "contentUrl": "https://example.com/datasets/php-survey-2025.csv",
             "encodingFormat": "text/csv"
         }
-    ]
+    ],
+    "version": "2.1",
+    "citation": "Doe, J. (2026). Example Climate Dataset. Zenodo."
 }
 ```
 
@@ -792,11 +818,13 @@ $json = JsonLdGenerator::SchemaToJson(schema: $image);
 <?php
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\AdministrativeArea;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\JobPosting;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\MonetaryAmount;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Organization;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Place;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\PostalAddress;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\PropertyValue;
 
 $job = new JobPosting(
 	title: 'Senior PHP Developer',
@@ -820,6 +848,10 @@ $job = new JobPosting(
 	baseSalary: new MonetaryAmount(currency: 'USD', minValue: 120000, maxValue: 160000),
 	employmentType: 'FULL_TIME',
 	validThrough: '2026-03-15',
+	applicantLocationRequirements: new AdministrativeArea(name: 'United States'),
+	jobLocationType: 'TELECOMMUTE',
+	directApply: true,
+	identifier: new PropertyValue(name: 'TechCorp', value: 'TC-2026-PHP-001'),
 );
 
 $json = JsonLdGenerator::SchemaToJson(schema: $job);
@@ -857,7 +889,18 @@ $json = JsonLdGenerator::SchemaToJson(schema: $job);
         "maxValue": 160000
     },
     "employmentType": "FULL_TIME",
-    "validThrough": "2026-03-15"
+    "validThrough": "2026-03-15",
+    "applicantLocationRequirements": {
+        "@type": "AdministrativeArea",
+        "name": "United States"
+    },
+    "jobLocationType": "TELECOMMUTE",
+    "directApply": true,
+    "identifier": {
+        "@type": "PropertyValue",
+        "name": "TechCorp",
+        "value": "TC-2026-PHP-001"
+    }
 }
 ```
 
@@ -874,7 +917,11 @@ use EvaLok\SchemaOrgJsonLd\v1\Schema\DayOfWeek;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\GeoCoordinates;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\LocalBusiness;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\OpeningHoursSpecification;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Person;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\PostalAddress;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Rating;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Restaurant;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Review;
 
 $localBusiness = new LocalBusiness(
 	name: 'The Corner Café',
@@ -887,6 +934,8 @@ $localBusiness = new LocalBusiness(
 	),
 	url: 'https://cornercafe.example.com',
 	telephone: '+15035550100',
+	description: 'A cozy neighborhood cafe serving artisan coffee and pastries.',
+	image: ['https://cornercafe.example.com/photos/storefront.jpg'],
 	priceRange: '$$',
 	geo: new GeoCoordinates(latitude: 45.5231, longitude: -122.6765),
 	openingHoursSpecification: [
@@ -894,9 +943,33 @@ $localBusiness = new LocalBusiness(
 		new OpeningHoursSpecification(dayOfWeek: DayOfWeek::Saturday, opens: '08:00', closes: '16:00'),
 	],
 	aggregateRating: new AggregateRating(ratingValue: 4.7, reviewCount: 218, bestRating: 5),
+	review: new Review(
+		author: new Person(name: 'Jane D.'),
+		reviewRating: new Rating(ratingValue: 5, bestRating: 5),
+		reviewBody: 'Best coffee in Portland!',
+	),
+	menu: 'https://cornercafe.example.com/menu',
+	servesCuisine: 'Coffee, Pastries',
+	logo: 'https://cornercafe.example.com/logo.png',
 );
 
 $json = JsonLdGenerator::SchemaToJson(schema: $localBusiness);
+```
+
+```php
+$restaurant = new Restaurant(
+	name: 'Fine Dining Place',
+	address: new PostalAddress(
+		streetAddress: '100 Main St',
+		addressLocality: 'Portland',
+		addressRegion: 'OR',
+		postalCode: '97201',
+		addressCountry: 'US',
+	),
+	servesCuisine: 'French',
+	acceptsReservations: true,
+	priceRange: '$$$',
+);
 ```
 
 ```json
@@ -914,6 +987,10 @@ $json = JsonLdGenerator::SchemaToJson(schema: $localBusiness);
     },
     "url": "https://cornercafe.example.com",
     "telephone": "+15035550100",
+    "description": "A cozy neighborhood cafe serving artisan coffee and pastries.",
+    "image": [
+        "https://cornercafe.example.com/photos/storefront.jpg"
+    ],
     "priceRange": "$$",
     "geo": {
         "@type": "GeoCoordinates",
@@ -939,7 +1016,23 @@ $json = JsonLdGenerator::SchemaToJson(schema: $localBusiness);
         "ratingValue": 4.7,
         "bestRating": 5,
         "reviewCount": 218
-    }
+    },
+    "review": {
+        "@type": "Review",
+        "author": {
+            "@type": "Person",
+            "name": "Jane D."
+        },
+        "reviewRating": {
+            "@type": "Rating",
+            "ratingValue": 5,
+            "bestRating": 5
+        },
+        "reviewBody": "Best coffee in Portland!"
+    },
+    "menu": "https://cornercafe.example.com/menu",
+    "servesCuisine": "Coffee, Pastries",
+    "logo": "https://cornercafe.example.com/logo.png"
 }
 ```
 
@@ -1061,12 +1154,14 @@ use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ContactPoint;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Organization;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\PostalAddress;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\QuantitativeValue;
 
 $org = new Organization(
 	name: 'PHP Foundation',
 	url: 'https://php.foundation',
 	logo: 'https://php.foundation/logo.png',
 	description: 'Supporting the PHP ecosystem.',
+	email: 'info@php.foundation',
 	telephone: '+1-800-PHP-HELP',
 	address: new PostalAddress(
 		streetAddress: '1 Open Source Way',
@@ -1081,6 +1176,13 @@ $org = new Organization(
 		availableLanguage: 'English',
 	),
 	sameAs: ['https://github.com/php', 'https://twitter.com/php_net'],
+	foundingDate: '2021-11-22',
+	alternateName: 'The PHP Foundation',
+	legalName: 'PHP Foundation Inc.',
+	numberOfEmployees: new QuantitativeValue(value: 50),
+	// hasMerchantReturnPolicy: new MerchantReturnPolicy(...),
+	// hasMemberProgram: new MemberProgram(...),
+	// hasShippingService: new ShippingService(...),
 );
 
 $json = JsonLdGenerator::SchemaToJson(schema: $org);
@@ -1094,6 +1196,7 @@ $json = JsonLdGenerator::SchemaToJson(schema: $org);
     "url": "https://php.foundation",
     "logo": "https://php.foundation/logo.png",
     "description": "Supporting the PHP ecosystem.",
+    "email": "info@php.foundation",
     "telephone": "+1-800-PHP-HELP",
     "address": {
         "@type": "PostalAddress",
@@ -1112,9 +1215,27 @@ $json = JsonLdGenerator::SchemaToJson(schema: $org);
     "sameAs": [
         "https://github.com/php",
         "https://twitter.com/php_net"
-    ]
+    ],
+    "foundingDate": "2021-11-22",
+    "alternateName": "The PHP Foundation",
+    "legalName": "PHP Foundation Inc.",
+    "numberOfEmployees": {
+        "@type": "QuantitativeValue",
+        "value": 50
+    }
 }
 ```
+
+`hasMerchantReturnPolicy`, `hasMemberProgram`, and `hasShippingService` accept `MerchantReturnPolicy`, `MemberProgram`, and `ShippingService` objects respectively (or arrays of those objects).
+
+Additional organization identifier fields supported by `Organization`:
+- `taxID`
+- `vatID`
+- `naics`
+- `duns`
+- `leiCode`
+- `iso6523Code`
+- `globalLocationNumber`
 
 ---
 
@@ -1585,6 +1706,9 @@ use EvaLok\SchemaOrgJsonLd\v1\Schema\ItemAvailability;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\MobileApplication;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Offer;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\OfferItemCondition;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Person;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Rating;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Review;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\SoftwareApplication;
 
 $app = new SoftwareApplication(
@@ -1599,6 +1723,13 @@ $app = new SoftwareApplication(
 	aggregateRating: new AggregateRating(ratingValue: 4.6, ratingCount: 8900, bestRating: 5),
 	applicationCategory: 'DeveloperApplication',
 	operatingSystem: 'Windows, macOS, Linux',
+	review: new Review(
+		author: new Person(name: 'Mike R.'),
+		reviewRating: new Rating(ratingValue: 5, bestRating: 5),
+		reviewBody: 'Excellent photo editor!',
+	),
+	description: 'A powerful photo editing application for professionals.',
+	screenshot: 'https://example.com/screenshots/photoeditor-main.png',
 );
 
 $json = JsonLdGenerator::SchemaToJson(schema: $app);
@@ -1624,7 +1755,22 @@ $json = JsonLdGenerator::SchemaToJson(schema: $app);
         "ratingCount": 8900
     },
     "applicationCategory": "DeveloperApplication",
-    "operatingSystem": "Windows, macOS, Linux"
+    "operatingSystem": "Windows, macOS, Linux",
+    "review": {
+        "@type": "Review",
+        "author": {
+            "@type": "Person",
+            "name": "Mike R."
+        },
+        "reviewRating": {
+            "@type": "Rating",
+            "ratingValue": 5,
+            "bestRating": 5
+        },
+        "reviewBody": "Excellent photo editor!"
+    },
+    "description": "A powerful photo editing application for professionals.",
+    "screenshot": "https://example.com/screenshots/photoeditor-main.png"
 }
 ```
 
@@ -1827,6 +1973,8 @@ $json = JsonLdGenerator::SchemaToJson(schema: $rental);
 <?php
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Clip;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\InteractionCounter;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\VideoObject;
 
 $video = new VideoObject(
@@ -1840,6 +1988,12 @@ $video = new VideoObject(
 	contentUrl: 'https://example.com/videos/php83-tutorial.mp4',
 	embedUrl: 'https://example.com/embed/php83-tutorial',
 	duration: 'PT22M30S',
+	expires: '2027-01-10',
+	regionsAllowed: 'US,CA,GB',
+	interactionStatistic: new InteractionCounter(interactionType: 'WatchAction', userInteractionCount: 45000),
+	hasPart: [
+		new Clip(name: 'Introduction', startOffset: 0, endOffset: 120, url: 'https://example.com/videos/php83-tutorial#intro'),
+	],
 );
 
 $json = JsonLdGenerator::SchemaToJson(schema: $video);
@@ -1858,7 +2012,23 @@ $json = JsonLdGenerator::SchemaToJson(schema: $video);
     "description": "A comprehensive introduction to the new features in PHP 8.3.",
     "contentUrl": "https://example.com/videos/php83-tutorial.mp4",
     "embedUrl": "https://example.com/embed/php83-tutorial",
-    "duration": "PT22M30S"
+    "duration": "PT22M30S",
+    "expires": "2027-01-10",
+    "regionsAllowed": "US,CA,GB",
+    "interactionStatistic": {
+        "@type": "InteractionCounter",
+        "interactionType": "WatchAction",
+        "userInteractionCount": 45000
+    },
+    "hasPart": [
+        {
+            "@type": "Clip",
+            "name": "Introduction",
+            "startOffset": 0,
+            "url": "https://example.com/videos/php83-tutorial#intro",
+            "endOffset": 120
+        }
+    ]
 }
 ```
 
