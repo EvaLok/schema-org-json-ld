@@ -120,7 +120,7 @@ The pattern is always the same: instantiate a schema class, pass it to `JsonLdGe
 | Math solver | `MathSolver`, `SolveMathAction` |
 | Movie | `Movie`, `Person`, `AggregateRating`, `Review` |
 | Organization | `Organization`, `PostalAddress`, `ContactPoint`, `MerchantReturnPolicy`, `MemberProgram`, `ShippingService` |
-| Product | `Product`, `Offer`, `AggregateOffer`, `Brand`, `OfferShippingDetails`, `ShippingDeliveryTime`, `DefinedRegion`, `MonetaryAmount`, `QuantitativeValue`, `AggregateRating`, `Review` |
+| Product | `Product`, `Offer`, `AggregateOffer`, `Brand`, `OfferShippingDetails`, `ShippingDeliveryTime`, `DefinedRegion`, `MonetaryAmount`, `QuantitativeValue`, `AggregateRating`, `Review`, `SizeSpecification`, `ProductGroup`, `PeopleAudience`, `Certification`, `UnitPriceSpecification` |
 | Profile page | `ProfilePage`, `Person`, `Organization` |
 | Q&A | `QAPage`, `Question`, `Answer` |
 | Recipe | `Recipe`, `Person`, `NutritionInformation`, `HowToStep`, `HowToSection`, `AggregateRating`, `VideoObject` |
@@ -592,6 +592,7 @@ $json = JsonLdGenerator::SchemaToJson(schema: $employerRating);
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Event;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\EventAttendanceModeEnumeration;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\EventStatusType;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ItemAvailability;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Offer;
@@ -599,22 +600,27 @@ use EvaLok\SchemaOrgJsonLd\v1\Schema\OfferItemCondition;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Organization;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Place;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\PostalAddress;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\VirtualLocation;
 
 $event = new Event(
 	name: 'PHP Conference 2026',
 	startDate: '2026-06-15T09:00:00+00:00',
-	location: new Place(
-		name: 'Convention Center',
-		address: new PostalAddress(
-			streetAddress: '123 Main St',
-			addressLocality: 'San Francisco',
-			addressRegion: 'CA',
-			postalCode: '94102',
-			addressCountry: 'US',
+	location: [
+		new Place(
+			name: 'Convention Center',
+			address: new PostalAddress(
+				streetAddress: '123 Main St',
+				addressLocality: 'San Francisco',
+				addressRegion: 'CA',
+				postalCode: '94102',
+				addressCountry: 'US',
+			),
 		),
-	),
+		new VirtualLocation(url: 'https://stream.example.com/phpconf2026', name: 'Livestream'),
+	],
 	description: 'The premier PHP conference on the west coast.',
 	endDate: '2026-06-17T17:00:00+00:00',
+	eventAttendanceMode: EventAttendanceModeEnumeration::MixedEventAttendanceMode,
 	eventStatus: EventStatusType::EventScheduled,
 	image: ['https://example.com/phpconf2026.jpg'],
 	organizer: new Organization(name: 'PHP Foundation', url: 'https://php.foundation'),
@@ -638,20 +644,28 @@ $json = JsonLdGenerator::SchemaToJson(schema: $event);
     "@type": "Event",
     "name": "PHP Conference 2026",
     "startDate": "2026-06-15T09:00:00+00:00",
-    "location": {
-        "@type": "Place",
-        "name": "Convention Center",
-        "address": {
-            "@type": "PostalAddress",
-            "streetAddress": "123 Main St",
-            "addressLocality": "San Francisco",
-            "addressRegion": "CA",
-            "postalCode": "94102",
-            "addressCountry": "US"
+    "location": [
+        {
+            "@type": "Place",
+            "name": "Convention Center",
+            "address": {
+                "@type": "PostalAddress",
+                "streetAddress": "123 Main St",
+                "addressLocality": "San Francisco",
+                "addressRegion": "CA",
+                "postalCode": "94102",
+                "addressCountry": "US"
+            }
+        },
+        {
+            "@type": "VirtualLocation",
+            "url": "https://stream.example.com/phpconf2026",
+            "name": "Livestream"
         }
-    },
+    ],
     "description": "The premier PHP conference on the west coast.",
     "endDate": "2026-06-17T17:00:00+00:00",
+    "eventAttendanceMode": "https://schema.org/MixedEventAttendanceMode",
     "eventStatus": "https://schema.org/EventScheduled",
     "image": [
         "https://example.com/phpconf2026.jpg"
@@ -1111,15 +1125,21 @@ $json = JsonLdGenerator::SchemaToJson(schema: $org);
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Brand;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Certification;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\DefinedRegion;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ItemAvailability;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\MonetaryAmount;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Offer;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\OfferItemCondition;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\OfferShippingDetails;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Organization;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\PeopleAudience;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Product;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\ProductGroup;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\QuantitativeValue;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ShippingDeliveryTime;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\SizeSpecification;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\UnitPriceSpecification;
 
 $product = new Product(
 	name: 'Executive Anvil',
@@ -1133,6 +1153,17 @@ $product = new Product(
 	brand: new Brand(name: 'ACME (tm)'),
 	mpn: 'ACME0444246625',
 	weight: new QuantitativeValue(value: 55.67, unitCode: 'LBR'),
+	size: new SizeSpecification(name: 'M', sizeGroup: 'Mens', sizeSystem: 'US'),
+	isVariantOf: new ProductGroup(
+		name: 'Executive Anvil',
+		productGroupID: 'anvil-executive-family',
+		variesBy: ['https://schema.org/size'],
+	),
+	audience: new PeopleAudience(suggestedGender: 'Male', suggestedMinAge: 18),
+	hasCertification: new Certification(
+		name: 'Business Traveler Safety Standard',
+		issuedBy: new Organization(name: 'ACME Compliance Board'),
+	),
 	offers: [
 		new Offer(
 			url: 'https://example.com/anvil',
@@ -1140,6 +1171,11 @@ $product = new Product(
 			price: 119.99,
 			itemCondition: OfferItemCondition::NewCondition,
 			availability: ItemAvailability::InStock,
+			priceSpecification: new UnitPriceSpecification(
+				price: 119.99,
+				priceCurrency: 'USD',
+				priceType: 'https://schema.org/StrikethroughPrice',
+			),
 			shippingDetails: [
 				new OfferShippingDetails(
 					shippingDestination: new DefinedRegion(addressCountry: 'US', addressRegion: ['CA', 'NV', 'AZ']),
@@ -1181,6 +1217,12 @@ $json = JsonLdGenerator::SchemaToJson(schema: $product);
             "price": 119.99,
             "itemCondition": "https://schema.org/NewCondition",
             "availability": "https://schema.org/InStock",
+            "priceSpecification": {
+                "@type": "UnitPriceSpecification",
+                "price": 119.99,
+                "priceCurrency": "USD",
+                "priceType": "https://schema.org/StrikethroughPrice"
+            },
             "shippingDetails": [
                 {
                     "@type": "OfferShippingDetails",
@@ -1231,6 +1273,33 @@ $json = JsonLdGenerator::SchemaToJson(schema: $product);
         "@type": "QuantitativeValue",
         "value": 55.67,
         "unitCode": "LBR"
+    },
+    "size": {
+        "@type": "SizeSpecification",
+        "name": "M",
+        "sizeGroup": "Mens",
+        "sizeSystem": "US"
+    },
+    "isVariantOf": {
+        "@type": "ProductGroup",
+        "name": "Executive Anvil",
+        "productGroupID": "anvil-executive-family",
+        "variesBy": [
+            "https://schema.org/size"
+        ]
+    },
+    "audience": {
+        "@type": "PeopleAudience",
+        "suggestedGender": "Male",
+        "suggestedMinAge": 18
+    },
+    "hasCertification": {
+        "@type": "Certification",
+        "name": "Business Traveler Safety Standard",
+        "issuedBy": {
+            "@type": "Organization",
+            "name": "ACME Compliance Board"
+        }
     }
 }
 ```
@@ -1350,6 +1419,7 @@ $json = JsonLdGenerator::SchemaToJson(schema: $qa);
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\AggregateRating;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\HowToSection;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\HowToStep;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\NutritionInformation;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Person;
@@ -1377,9 +1447,14 @@ $recipe = new Recipe(
 		'2 cups all-purpose flour',
 	],
 	recipeInstructions: [
-		new HowToStep(name: 'Prepare filling', text: 'Mix sliced apples with sugar and cinnamon in a large bowl.'),
-		new HowToStep(name: 'Make crust',      text: 'Combine flour, butter, and water to form a dough. Roll out for crust.'),
-		new HowToStep(name: 'Bake',            text: 'Pour filling into crust-lined pie dish, cover with top crust, bake at 375°F for 1 hour.'),
+		new HowToSection(
+			name: 'Prepare pie',
+			itemListElement: [
+				new HowToStep(name: 'Prepare filling', text: 'Mix sliced apples with sugar and cinnamon in a large bowl.'),
+				new HowToStep(name: 'Make crust', text: 'Combine flour, butter, and water to form a dough. Roll out for crust.'),
+				new HowToStep(name: 'Bake', text: 'Pour filling into crust-lined pie dish, cover with top crust, bake at 375°F for 1 hour.'),
+			],
+		),
 	],
 	nutrition: new NutritionInformation(calories: '320 calories', fatContent: '12 g', carbohydrateContent: '52 g'),
 	aggregateRating: new AggregateRating(ratingValue: 4.9, ratingCount: 1200, bestRating: 5),
@@ -1417,19 +1492,25 @@ $json = JsonLdGenerator::SchemaToJson(schema: $recipe);
     ],
     "recipeInstructions": [
         {
-            "@type": "HowToStep",
-            "text": "Mix sliced apples with sugar and cinnamon in a large bowl.",
-            "name": "Prepare filling"
-        },
-        {
-            "@type": "HowToStep",
-            "text": "Combine flour, butter, and water to form a dough. Roll out for crust.",
-            "name": "Make crust"
-        },
-        {
-            "@type": "HowToStep",
-            "text": "Pour filling into crust-lined pie dish, cover with top crust, bake at 375°F for 1 hour.",
-            "name": "Bake"
+            "@type": "HowToSection",
+            "name": "Prepare pie",
+            "itemListElement": [
+                {
+                    "@type": "HowToStep",
+                    "text": "Mix sliced apples with sugar and cinnamon in a large bowl.",
+                    "name": "Prepare filling"
+                },
+                {
+                    "@type": "HowToStep",
+                    "text": "Combine flour, butter, and water to form a dough. Roll out for crust.",
+                    "name": "Make crust"
+                },
+                {
+                    "@type": "HowToStep",
+                    "text": "Pour filling into crust-lined pie dish, cover with top crust, bake at 375°F for 1 hour.",
+                    "name": "Bake"
+                }
+            ]
         }
     ],
     "nutrition": {
@@ -1796,6 +1877,7 @@ $json = JsonLdGenerator::SchemaToJson(schema: $mySchema);
 
 **Behaviour:**
 - Automatically adds `@context` (`https://schema.org/`) and `@type` (from the class constant).
+- `A_SCHEMA_TYPE` can be either a string (`'Product'`) or an array of strings (`['MathSolver', 'LearningResource']`).
 - Skips `null` properties — only set properties are included in the output.
 - Recursively serializes nested `TypedSchema` instances.
 - Backed string enums (e.g. `ItemAvailability`, `OfferItemCondition`, `EventStatusType`) are automatically serialized to their `.value` (the full schema.org URL).
@@ -1807,6 +1889,14 @@ All schema classes extend `TypedSchema`. The only requirement is that each class
 
 ```php
 public const A_SCHEMA_TYPE = 'TypeName'; // e.g. 'Product', 'Article'
+```
+
+For schema.org properties that use names that are not valid PHP identifiers (for example `mathExpression-input`), define:
+
+```php
+public const PROPERTY_MAP = [
+	'mathExpressionInput' => 'mathExpression-input',
+];
 ```
 
 Schema classes use constructor promotion — all data is passed via the constructor and stored as public properties. No methods are needed beyond the constructor.
