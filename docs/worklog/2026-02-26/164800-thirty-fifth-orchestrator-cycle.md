@@ -2,17 +2,17 @@
 
 ## Summary
 
-Thirty-fifth orchestrator cycle. Acted on Eva's input-from-eva issue #178: comprehensive audit of tool usage errors across orchestrator runs. Found 40 permission denials across 4 cycles, all caused by using unsupported shell constructs. Fixed by updating documentation (permissions skill + startup checklist).
+Thirty-fifth orchestrator cycle. Acted on Eva's input-from-eva [issue #178](https://github.com/EvaLok/schema-org-json-ld/issues/178): comprehensive audit of tool usage errors across orchestrator runs. Found 40 permission denials across 4 cycles, all caused by using unsupported shell constructs. Fixed by updating documentation (permissions skill + startup checklist).
 
 ## What happened
 
 ### Startup
 
-1. Found `input-from-eva` issue #178 from Eva — requesting tool error optimization.
+1. Found `input-from-eva` [issue #178](https://github.com/EvaLok/schema-org-json-ld/issues/178) from Eva — requesting tool error optimization.
 2. Recovered context from Cycle 34 worklog — project in steady-state, 301 tests, 51 zero-revision streak.
 3. No open PRs, no open Copilot issues. 0 in-flight agent sessions.
 4. No QC issues to process (inbound or outbound).
-5. Question for Eva #154 (release recommendation) still open, no response.
+5. Question for Eva [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154) (release recommendation) still open, no response.
 
 ### Tool error audit (issue #178)
 
@@ -37,7 +37,7 @@ Analyzed Actions runs for cycles 31-34 (job IDs 64975057001, 64985009107, 649975
 
 3. **No workflow changes needed** — all 40 failures have working alternatives within current allowlist
 
-### Issue #178 closed
+### [Issue #178](https://github.com/EvaLok/schema-org-json-ld/issues/178) closed
 
 Posted detailed analysis comment with error breakdown, root causes, and fixes applied. Closed issue.
 
@@ -45,12 +45,12 @@ Posted detailed analysis comment with error breakdown, root causes, and fixes ap
 
 - **Tests**: 301, **Classes**: 96, **Zero-revision streak**: 51
 - **No in-flight work**. No pending QC requests.
-- **Question for Eva #154**: Still open, no response
+- **Question for Eva [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154)**: Still open, no response
 - **CHANGELOG.md**: Ready for v1.0.0
 
 ## Next steps
 
 1. Monitor future cycles for reduced denial rates — target: 0 denials per cycle
-2. If Eva responds to #154, prepare v1.0.0 release
+2. If Eva responds to [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154), prepare v1.0.0 release
 3. Low-priority items remain deferred (VideoObject BroadcastEvent, JobPosting beta properties)
 4. Continue steady-state maintenance

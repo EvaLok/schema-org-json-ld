@@ -6,18 +6,18 @@ First successful end-to-end orchestrator cycle. Dispatched two agent tasks, revi
 
 ## What happened
 
-1. **PAT permissions resolved**: Eva confirmed read/write enabled for actions, contents, issues, pull requests (comment on #13). Closed #13.
-2. **Dispatched AggregateRating**: Issue #15 → PR #16. Agent started 16:08:16Z, finished 16:18:48Z (~10 min).
-3. **Dispatched Review + Rating**: Issue #17 → PR #18. Agent started 16:08:31Z, finished 16:15:30Z (~7 min).
-4. **Reviewed PR #18**: Tests verified locally (9/9 pass). Approved and merged at 16:18:13Z.
-5. **Reviewed PR #16**: Tests verified locally (6/6 pass). Approved and merged at 16:20:22Z.
+1. **PAT permissions resolved**: Eva confirmed read/write enabled for actions, contents, issues, pull requests (comment on [#13](https://github.com/EvaLok/schema-org-json-ld/issues/13)). Closed [#13](https://github.com/EvaLok/schema-org-json-ld/issues/13).
+2. **Dispatched AggregateRating**: [Issue #15](https://github.com/EvaLok/schema-org-json-ld/issues/15) → [PR #16](https://github.com/EvaLok/schema-org-json-ld/issues/16). Agent started 16:08:16Z, finished 16:18:48Z (~10 min).
+3. **Dispatched Review + Rating**: [Issue #17](https://github.com/EvaLok/schema-org-json-ld/issues/17) → [PR #18](https://github.com/EvaLok/schema-org-json-ld/issues/18). Agent started 16:08:31Z, finished 16:15:30Z (~7 min).
+4. **Reviewed [PR #18](https://github.com/EvaLok/schema-org-json-ld/issues/18)**: Tests verified locally (9/9 pass). Approved and merged at 16:18:13Z.
+5. **Reviewed [PR #16](https://github.com/EvaLok/schema-org-json-ld/issues/16)**: Tests verified locally (6/6 pass). Approved and merged at 16:20:22Z.
 6. **Verified combined**: All 12 tests pass on master after both merges.
 7. **Cleanup**: Deleted merged branches. Fixed STARTUP_CHECKLIST author login bug. Updated journal.
 
 ## Agent performance observations
 
-- **PR #18 (Review+Rating)**: ~7 minutes. Created 4 files (2 classes + 2 test files). Clean output, correct patterns. Used `assertFalse(property_exists())` for null checks.
-- **PR #16 (AggregateRating)**: ~10 minutes. Created 2 files (1 class + 1 test). Clean output, correct patterns. Used `assertObjectNotHasProperty()` for null checks.
+- **[PR #18](https://github.com/EvaLok/schema-org-json-ld/issues/18) (Review+Rating)**: ~7 minutes. Created 4 files (2 classes + 2 test files). Clean output, correct patterns. Used `assertFalse(property_exists())` for null checks.
+- **[PR #16](https://github.com/EvaLok/schema-org-json-ld/issues/16) (AggregateRating)**: ~10 minutes. Created 2 files (1 class + 1 test). Clean output, correct patterns. Used `assertObjectNotHasProperty()` for null checks.
 - **Firewall limitation**: Both agents couldn't install PHPUnit via composer due to firewall restrictions. They couldn't run tests in their environment. Tests verified by orchestrator locally instead.
 
 ## New schema types on master

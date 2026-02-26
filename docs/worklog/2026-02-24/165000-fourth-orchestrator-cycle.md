@@ -8,19 +8,19 @@ Most productive cycle yet. Dispatched and merged 4 agent tasks in 2 batches (8 n
 
 ### Batch 1: Organization + FAQPage
 
-1. **Handled input-from-eva #19**: Eva added `copilot-setup-steps.yml` so agents can run tests. Updated AGENTS.md. Closed #19.
-2. **Dispatched Organization** (issue #21): Includes PostalAddress and ContactPoint sub-types. Model: gpt-5.3-codex.
-3. **Dispatched FAQPage** (issue #23): Includes Question and Answer sub-types. Model: gpt-5.3-codex.
-4. **Reviewed PR #22 (Organization)**: Agent ~8 min. Clean first-attempt. All 21 tests pass. Merged 17:03:31Z.
-5. **Reviewed PR #24 (FAQPage)**: Agent ~7 min. No indentation. Requested fix via @copilot. Revision ~5 min. Fixed. All 16 tests pass. Merged 17:12:03Z.
+1. **Handled input-from-eva [#19](https://github.com/EvaLok/schema-org-json-ld/issues/19)**: Eva added `copilot-setup-steps.yml` so agents can run tests. Updated AGENTS.md. Closed [#19](https://github.com/EvaLok/schema-org-json-ld/issues/19).
+2. **Dispatched Organization** ([issue #21](https://github.com/EvaLok/schema-org-json-ld/issues/21)): Includes PostalAddress and ContactPoint sub-types. Model: gpt-5.3-codex.
+3. **Dispatched FAQPage** ([issue #23](https://github.com/EvaLok/schema-org-json-ld/issues/23)): Includes Question and Answer sub-types. Model: gpt-5.3-codex.
+4. **Reviewed [PR #22](https://github.com/EvaLok/schema-org-json-ld/issues/22) (Organization)**: Agent ~8 min. Clean first-attempt. All 21 tests pass. Merged 17:03:31Z.
+5. **Reviewed [PR #24](https://github.com/EvaLok/schema-org-json-ld/issues/24) (FAQPage)**: Agent ~7 min. No indentation. Requested fix via @copilot. Revision ~5 min. Fixed. All 16 tests pass. Merged 17:12:03Z.
 6. **Added tab indentation rule to AGENTS.md**.
 
 ### Batch 2: ImageObject + Person
 
-7. **Dispatched ImageObject** (issue #25). Model: gpt-5.3-codex.
-8. **Dispatched Person** (issue #27). Model: gpt-5.3-codex.
-9. **Reviewed PR #26 (ImageObject)**: Agent ~5 min. Clean. All 28 tests pass. Merged 17:23:30Z.
-10. **Reviewed PR #28 (Person)**: Agent ~9 min. Clean. All 29 tests pass. Merged 17:28:06Z.
+7. **Dispatched ImageObject** ([issue #25](https://github.com/EvaLok/schema-org-json-ld/issues/25)). Model: gpt-5.3-codex.
+8. **Dispatched Person** ([issue #27](https://github.com/EvaLok/schema-org-json-ld/issues/27)). Model: gpt-5.3-codex.
+9. **Reviewed [PR #26](https://github.com/EvaLok/schema-org-json-ld/issues/26) (ImageObject)**: Agent ~5 min. Clean. All 28 tests pass. Merged 17:23:30Z.
+10. **Reviewed [PR #28](https://github.com/EvaLok/schema-org-json-ld/issues/28) (Person)**: Agent ~9 min. Clean. All 29 tests pass. Merged 17:28:06Z.
 11. **Verified combined**: All 32 tests pass on master.
 
 ### Eva's concurrent changes

@@ -36,8 +36,8 @@ Audited 6 schema type implementations against Google's structured data docs:
 
 ### Agent dispatches
 
-- **Issue #104 → PR #105**: Offer, MonetaryAmount, Review property fixes. Agent time: ~7 min.
-- **Issue #106 → PR #107**: Recipe, JobPosting property fixes. Agent time: ~7 min.
+- **[Issue #104](https://github.com/EvaLok/schema-org-json-ld/issues/104) → [PR #105](https://github.com/EvaLok/schema-org-json-ld/issues/105)**: Offer, MonetaryAmount, Review property fixes. Agent time: ~7 min.
+- **[Issue #106](https://github.com/EvaLok/schema-org-json-ld/issues/106) → [PR #107](https://github.com/EvaLok/schema-org-json-ld/issues/107)**: Recipe, JobPosting property fixes. Agent time: ~7 min.
 - Both dispatched concurrently (no file overlap). Both merged after local test verification + CI pass.
 
 ## Agent performance

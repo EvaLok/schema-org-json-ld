@@ -2,7 +2,7 @@
 
 ## Summary
 
-Eighth orchestrator cycle. Merged 3 PRs in 2 batches: ProfilePage+InteractionCounter (#65), EducationQA Quiz+AlignmentObject (#66), DiscussionForumPosting+enhanced Comment/Person (#68). All 3 PRs passed on first attempt — zero revisions needed. 117 tests passing on master. 23 Google Rich Results types now implemented. Review snippet removed from backlog (not a separate type).
+Eighth orchestrator cycle. Merged 3 PRs in 2 batches: ProfilePage+InteractionCounter ([#65](https://github.com/EvaLok/schema-org-json-ld/issues/65)), EducationQA Quiz+AlignmentObject ([#66](https://github.com/EvaLok/schema-org-json-ld/issues/66)), DiscussionForumPosting+enhanced Comment/Person ([#68](https://github.com/EvaLok/schema-org-json-ld/issues/68)). All 3 PRs passed on first attempt — zero revisions needed. 117 tests passing on master. 23 Google Rich Results types now implemented. Review snippet removed from backlog (not a separate type).
 
 ## What happened
 
@@ -19,13 +19,13 @@ Determined that "Review snippet" is not a separate schema type. It is a usage pa
 
 ### Batch 1: ProfilePage + Education Q&A (merged)
 
-5. **Issue #63 → PR #65 (ProfilePage)**: 2 new types (ProfilePage, InteractionCounter). 6 new tests. Agent time: ~7 min. CI passed. Clean first attempt.
-6. **Issue #64 → PR #66 (Education Q&A)**: 2 new types (Quiz, AlignmentObject) + Question.php modified (eduQuestionType property). 7 new tests (3+3+1). Agent time: ~6 min. CI passed. Clean first attempt.
+5. **[Issue #63](https://github.com/EvaLok/schema-org-json-ld/issues/63) → [PR #65](https://github.com/EvaLok/schema-org-json-ld/issues/65) (ProfilePage)**: 2 new types (ProfilePage, InteractionCounter). 6 new tests. Agent time: ~7 min. CI passed. Clean first attempt.
+6. **[Issue #64](https://github.com/EvaLok/schema-org-json-ld/issues/64) → [PR #66](https://github.com/EvaLok/schema-org-json-ld/issues/66) (Education Q&A)**: 2 new types (Quiz, AlignmentObject) + Question.php modified (eduQuestionType property). 7 new tests (3+3+1). Agent time: ~6 min. CI passed. Clean first attempt.
 7. Merged both. 114 tests on master.
 
 ### Batch 2: DiscussionForumPosting (merged)
 
-8. **Issue #67 → PR #68 (DiscussionForumPosting)**: 1 new type + Comment.php enhanced (8 new optional properties) + Person.php enhanced (4 new optional properties). 3 new tests + PersonTest updated. Agent time: ~8 min. CI passed. Clean first attempt.
+8. **[Issue #67](https://github.com/EvaLok/schema-org-json-ld/issues/67) → [PR #68](https://github.com/EvaLok/schema-org-json-ld/issues/68) (DiscussionForumPosting)**: 1 new type + Comment.php enhanced (8 new optional properties) + Person.php enhanced (4 new optional properties). 3 new tests + PersonTest updated. Agent time: ~8 min. CI passed. Clean first attempt.
 9. Merged. 117 tests on master.
 
 ## Agent performance observations
@@ -46,11 +46,11 @@ Notable:
 
 | Type | File | PR |
 |------|------|----|
-| InteractionCounter | `src/v1/Schema/InteractionCounter.php` | #65 |
-| ProfilePage | `src/v1/Schema/ProfilePage.php` | #65 |
-| AlignmentObject | `src/v1/Schema/AlignmentObject.php` | #66 |
-| Quiz | `src/v1/Schema/Quiz.php` | #66 |
-| DiscussionForumPosting | `src/v1/Schema/DiscussionForumPosting.php` | #68 |
+| InteractionCounter | `src/v1/Schema/InteractionCounter.php` | [#65](https://github.com/EvaLok/schema-org-json-ld/issues/65) |
+| ProfilePage | `src/v1/Schema/ProfilePage.php` | [#65](https://github.com/EvaLok/schema-org-json-ld/issues/65) |
+| AlignmentObject | `src/v1/Schema/AlignmentObject.php` | [#66](https://github.com/EvaLok/schema-org-json-ld/issues/66) |
+| Quiz | `src/v1/Schema/Quiz.php` | [#66](https://github.com/EvaLok/schema-org-json-ld/issues/66) |
+| DiscussionForumPosting | `src/v1/Schema/DiscussionForumPosting.php` | [#68](https://github.com/EvaLok/schema-org-json-ld/issues/68) |
 
 Types modified: Question (added eduQuestionType), Comment (added 8 optional properties), Person (added 4 optional properties)
 

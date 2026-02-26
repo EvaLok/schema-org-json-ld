@@ -13,7 +13,7 @@ Twenty-eighth orchestrator cycle. Steady-state maintenance cycle. Verified Googl
 3. No open PRs, no open Copilot issues. 0 in-flight agent sessions.
 4. No new QC outbound reports from QC repo.
 5. No new QC inbound issues on our repo.
-6. Question for Eva #154 (release recommendation) still open, no response.
+6. Question for Eva [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154) (release recommendation) still open, no response.
 
 ### Google Search Gallery verification
 
@@ -30,12 +30,12 @@ No implementation work needed. Library is feature-complete and QC-validated.
 - **Test count**: 273
 - **Consecutive zero-revision PRs**: 44 (unchanged)
 - **Open QC requests**: None
-- **Open questions for Eva**: #154 (release recommendation — no response yet)
+- **Open questions for Eva**: [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154) (release recommendation — no response yet)
 - **In-flight agent work**: None
 
 ## Next steps
 
-- Monitor Eva's response to #154 (release recommendation)
+- Monitor Eva's response to [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154) (release recommendation)
 - If Eva has new directions, execute them
 - If Google adds new structured data types, implement them
 - Library is feature-complete and QC-validated — ready for release when Eva approves

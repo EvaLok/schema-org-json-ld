@@ -2,26 +2,26 @@
 
 ## Summary
 
-Sixth orchestrator cycle. Handled two Eva input issues (#40, #42) by building orchestrator shell tools. Dispatched and merged 2 batches (4 PRs total): VideoObject+SoftwareApplication (batch 1), Movie+JobPosting (batch 2). All 4 PRs passed on first attempt — zero revisions needed. 76 tests passing on master. 16 Google Rich Results types now implemented.
+Sixth orchestrator cycle. Handled two Eva input issues ([#40](https://github.com/EvaLok/schema-org-json-ld/issues/40), [#42](https://github.com/EvaLok/schema-org-json-ld/issues/42)) by building orchestrator shell tools. Dispatched and merged 2 batches (4 PRs total): VideoObject+SoftwareApplication (batch 1), Movie+JobPosting (batch 2). All 4 PRs passed on first attempt — zero revisions needed. 76 tests passing on master. 16 Google Rich Results types now implemented.
 
 ## What happened
 
 ### Eva input handled
-1. **#40 (worklog/state tools)**: Created `tools/update-state` — atomic operations for state.json and worklog entries. Prevents state/worklog drift.
-2. **#42 (agent status polling)**: Created `tools/agent-status` — consolidated PR/issue/agent status checks. Also created `tools/dispatch-agent` for standardised issue creation.
+1. **[#40](https://github.com/EvaLok/schema-org-json-ld/issues/40) (worklog/state tools)**: Created `tools/update-state` — atomic operations for state.json and worklog entries. Prevents state/worklog drift.
+2. **[#42](https://github.com/EvaLok/schema-org-json-ld/issues/42) (agent status polling)**: Created `tools/agent-status` — consolidated PR/issue/agent status checks. Also created `tools/dispatch-agent` for standardised issue creation.
 3. Updated STARTUP_CHECKLIST.md to reference the new tools.
 
 ### Housekeeping
-4. Deleted stale branch `copilot/add-event-schema-type` from merged PR #35.
+4. Deleted stale branch `copilot/add-event-schema-type` from merged [PR #35](https://github.com/EvaLok/schema-org-json-ld/issues/35).
 
 ### Batch 1: VideoObject + SoftwareApplication (merged)
-5. **Issue #44 → PR #45 (VideoObject)**: Simple media type. 3 tests. Agent time: ~10 min. Clean first attempt.
-6. **Issue #46 → PR #47 (SoftwareApplication)**: With MobileApplication and WebApplication subtypes. 4 tests. Agent time: ~10 min. Clean first attempt.
+5. **[Issue #44](https://github.com/EvaLok/schema-org-json-ld/issues/44) → [PR #45](https://github.com/EvaLok/schema-org-json-ld/issues/45) (VideoObject)**: Simple media type. 3 tests. Agent time: ~10 min. Clean first attempt.
+6. **[Issue #46](https://github.com/EvaLok/schema-org-json-ld/issues/46) → [PR #47](https://github.com/EvaLok/schema-org-json-ld/issues/47) (SoftwareApplication)**: With MobileApplication and WebApplication subtypes. 4 tests. Agent time: ~10 min. Clean first attempt.
 7. Merged both. 69 tests on master.
 
 ### Batch 2: Movie + JobPosting (merged)
-8. **Issue #48 → PR #49 (Movie)**: Uses Person, AggregateRating, Review. 3 tests. Agent time: ~8 min. Clean first attempt.
-9. **Issue #50 → PR #51 (JobPosting)**: With new AdministrativeArea sub-type. Uses Organization, Place, MonetaryAmount. 4 tests including TELECOMMUTE scenario. Agent time: ~9 min. Clean first attempt.
+8. **[Issue #48](https://github.com/EvaLok/schema-org-json-ld/issues/48) → [PR #49](https://github.com/EvaLok/schema-org-json-ld/issues/49) (Movie)**: Uses Person, AggregateRating, Review. 3 tests. Agent time: ~8 min. Clean first attempt.
+9. **[Issue #50](https://github.com/EvaLok/schema-org-json-ld/issues/50) → [PR #51](https://github.com/EvaLok/schema-org-json-ld/issues/51) (JobPosting)**: With new AdministrativeArea sub-type. Uses Organization, Place, MonetaryAmount. 4 tests including TELECOMMUTE scenario. Agent time: ~9 min. Clean first attempt.
 10. Merged both. 76 tests on master.
 
 ## Agent performance observations
@@ -43,13 +43,13 @@ Key observations:
 
 | Type | File | PR |
 |------|------|----|
-| VideoObject | `src/v1/Schema/VideoObject.php` | #45 |
-| SoftwareApplication | `src/v1/Schema/SoftwareApplication.php` | #47 |
-| MobileApplication | `src/v1/Schema/MobileApplication.php` | #47 |
-| WebApplication | `src/v1/Schema/WebApplication.php` | #47 |
-| Movie | `src/v1/Schema/Movie.php` | #49 |
-| JobPosting | `src/v1/Schema/JobPosting.php` | #51 |
-| AdministrativeArea | `src/v1/Schema/AdministrativeArea.php` | #51 |
+| VideoObject | `src/v1/Schema/VideoObject.php` | [#45](https://github.com/EvaLok/schema-org-json-ld/issues/45) |
+| SoftwareApplication | `src/v1/Schema/SoftwareApplication.php` | [#47](https://github.com/EvaLok/schema-org-json-ld/issues/47) |
+| MobileApplication | `src/v1/Schema/MobileApplication.php` | [#47](https://github.com/EvaLok/schema-org-json-ld/issues/47) |
+| WebApplication | `src/v1/Schema/WebApplication.php` | [#47](https://github.com/EvaLok/schema-org-json-ld/issues/47) |
+| Movie | `src/v1/Schema/Movie.php` | [#49](https://github.com/EvaLok/schema-org-json-ld/issues/49) |
+| JobPosting | `src/v1/Schema/JobPosting.php` | [#51](https://github.com/EvaLok/schema-org-json-ld/issues/51) |
+| AdministrativeArea | `src/v1/Schema/AdministrativeArea.php` | [#51](https://github.com/EvaLok/schema-org-json-ld/issues/51) |
 
 ## Current state
 

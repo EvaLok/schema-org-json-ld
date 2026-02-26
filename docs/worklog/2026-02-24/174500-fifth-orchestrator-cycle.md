@@ -7,21 +7,21 @@ Fifth orchestrator cycle. Handled Eva's input issues. Dispatched and merged 2 ba
 ## What happened
 
 ### Eva input handled
-1. **#29 (PHP-CS-Fixer)**: Updated AGENTS.md with "Code Style" section and `composer run cs-fix` instructions. Updated schema-implementation skill. Closed.
-2. **#30 (CI lint on PHP 8.1)**: Acknowledged, no action needed. Closed.
+1. **[#29](https://github.com/EvaLok/schema-org-json-ld/issues/29) (PHP-CS-Fixer)**: Updated AGENTS.md with "Code Style" section and `composer run cs-fix` instructions. Updated schema-implementation skill. Closed.
+2. **[#30](https://github.com/EvaLok/schema-org-json-ld/issues/30) (CI lint on PHP 8.1)**: Acknowledged, no action needed. Closed.
 
 ### Batch 1: Article + Event (merged)
-3. **Dispatched Article** (issue #32): Article, NewsArticle, BlogPosting. Model: gpt-5.3-codex. Agent time: ~10 min.
-4. **Dispatched Event** (issue #33): Event, Place, EventStatusType. Model: gpt-5.3-codex. Agent time: ~8 min.
-5. **Reviewed PR #34 (Article)**: Clean first attempt. Elegant inheritance: NewsArticle/BlogPosting extend Article, only override A_SCHEMA_TYPE. 9 test methods.
-6. **Reviewed PR #35 (Event)**: Clean first attempt. EventStatusType enum correct. Place with PostalAddress nesting works. 5 test methods.
+3. **Dispatched Article** ([issue #32](https://github.com/EvaLok/schema-org-json-ld/issues/32)): Article, NewsArticle, BlogPosting. Model: gpt-5.3-codex. Agent time: ~10 min.
+4. **Dispatched Event** ([issue #33](https://github.com/EvaLok/schema-org-json-ld/issues/33)): Event, Place, EventStatusType. Model: gpt-5.3-codex. Agent time: ~8 min.
+5. **Reviewed [PR #34](https://github.com/EvaLok/schema-org-json-ld/issues/34) (Article)**: Clean first attempt. Elegant inheritance: NewsArticle/BlogPosting extend Article, only override A_SCHEMA_TYPE. 9 test methods.
+6. **Reviewed [PR #35](https://github.com/EvaLok/schema-org-json-ld/issues/35) (Event)**: Clean first attempt. EventStatusType enum correct. Place with PostalAddress nesting works. 5 test methods.
 7. **Merged both**: All 46 tests pass on master.
 
 ### Batch 2: LocalBusiness + Recipe (merged)
-8. **Dispatched LocalBusiness** (issue #36): With GeoCoordinates, OpeningHoursSpecification, DayOfWeek. Model: gpt-5.3-codex.
-9. **Dispatched Recipe** (issue #37): With NutritionInformation, HowToStep. Model: gpt-5.3-codex.
-10. **Reviewed PR #38 (LocalBusiness)**: Clean implementation. 16 properties on LocalBusiness, DayOfWeek enum (7 cases), GeoCoordinates, OpeningHoursSpecification. 7 tests across 3 files.
-11. **Reviewed PR #39 (Recipe)**: Clean implementation. 17 properties on Recipe with Person|Organization author. HowToStep, NutritionInformation (10 optional props). 9 tests across 3 files.
+8. **Dispatched LocalBusiness** ([issue #36](https://github.com/EvaLok/schema-org-json-ld/issues/36)): With GeoCoordinates, OpeningHoursSpecification, DayOfWeek. Model: gpt-5.3-codex.
+9. **Dispatched Recipe** ([issue #37](https://github.com/EvaLok/schema-org-json-ld/issues/37)): With NutritionInformation, HowToStep. Model: gpt-5.3-codex.
+10. **Reviewed [PR #38](https://github.com/EvaLok/schema-org-json-ld/issues/38) (LocalBusiness)**: Clean implementation. 16 properties on LocalBusiness, DayOfWeek enum (7 cases), GeoCoordinates, OpeningHoursSpecification. 7 tests across 3 files.
+11. **Reviewed [PR #39](https://github.com/EvaLok/schema-org-json-ld/issues/39) (Recipe)**: Clean implementation. 17 properties on Recipe with Person|Organization author. HowToStep, NutritionInformation (10 optional props). 9 tests across 3 files.
 12. **Merged both**: All 62 tests pass on master.
 
 ## Agent performance observations
@@ -42,19 +42,19 @@ Key observations:
 
 | Type | File | PR |
 |------|------|----|
-| Article | `src/v1/Schema/Article.php` | #34 |
-| NewsArticle | `src/v1/Schema/NewsArticle.php` | #34 |
-| BlogPosting | `src/v1/Schema/BlogPosting.php` | #34 |
-| Event | `src/v1/Schema/Event.php` | #35 |
-| Place | `src/v1/Schema/Place.php` | #35 |
-| EventStatusType | `src/v1/Schema/EventStatusType.php` | #35 |
-| LocalBusiness | `src/v1/Schema/LocalBusiness.php` | #38 |
-| GeoCoordinates | `src/v1/Schema/GeoCoordinates.php` | #38 |
-| OpeningHoursSpecification | `src/v1/Schema/OpeningHoursSpecification.php` | #38 |
-| DayOfWeek | `src/v1/Schema/DayOfWeek.php` | #38 |
-| Recipe | `src/v1/Schema/Recipe.php` | #39 |
-| NutritionInformation | `src/v1/Schema/NutritionInformation.php` | #39 |
-| HowToStep | `src/v1/Schema/HowToStep.php` | #39 |
+| Article | `src/v1/Schema/Article.php` | [#34](https://github.com/EvaLok/schema-org-json-ld/issues/34) |
+| NewsArticle | `src/v1/Schema/NewsArticle.php` | [#34](https://github.com/EvaLok/schema-org-json-ld/issues/34) |
+| BlogPosting | `src/v1/Schema/BlogPosting.php` | [#34](https://github.com/EvaLok/schema-org-json-ld/issues/34) |
+| Event | `src/v1/Schema/Event.php` | [#35](https://github.com/EvaLok/schema-org-json-ld/issues/35) |
+| Place | `src/v1/Schema/Place.php` | [#35](https://github.com/EvaLok/schema-org-json-ld/issues/35) |
+| EventStatusType | `src/v1/Schema/EventStatusType.php` | [#35](https://github.com/EvaLok/schema-org-json-ld/issues/35) |
+| LocalBusiness | `src/v1/Schema/LocalBusiness.php` | [#38](https://github.com/EvaLok/schema-org-json-ld/issues/38) |
+| GeoCoordinates | `src/v1/Schema/GeoCoordinates.php` | [#38](https://github.com/EvaLok/schema-org-json-ld/issues/38) |
+| OpeningHoursSpecification | `src/v1/Schema/OpeningHoursSpecification.php` | [#38](https://github.com/EvaLok/schema-org-json-ld/issues/38) |
+| DayOfWeek | `src/v1/Schema/DayOfWeek.php` | [#38](https://github.com/EvaLok/schema-org-json-ld/issues/38) |
+| Recipe | `src/v1/Schema/Recipe.php` | [#39](https://github.com/EvaLok/schema-org-json-ld/issues/39) |
+| NutritionInformation | `src/v1/Schema/NutritionInformation.php` | [#39](https://github.com/EvaLok/schema-org-json-ld/issues/39) |
+| HowToStep | `src/v1/Schema/HowToStep.php` | [#39](https://github.com/EvaLok/schema-org-json-ld/issues/39) |
 
 ## Current state
 

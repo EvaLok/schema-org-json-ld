@@ -2,7 +2,7 @@
 
 ## Summary
 
-Twenty-second orchestrator cycle. Merged PR #140 (AggregateOffer + Offer.priceValidUntil + Product.offers widening). Created 3 ADRs. Sent comprehensive QC validation request #141. 40 consecutive zero-revision PRs.
+Twenty-second orchestrator cycle. Merged [PR #140](https://github.com/EvaLok/schema-org-json-ld/issues/140) (AggregateOffer + Offer.priceValidUntil + Product.offers widening). Created 3 ADRs. Sent comprehensive QC validation request [#141](https://github.com/EvaLok/schema-org-json-ld/issues/141). 40 consecutive zero-revision PRs.
 
 ## What happened
 
@@ -15,17 +15,17 @@ Twenty-second orchestrator cycle. Merged PR #140 (AggregateOffer + Offer.priceVa
 
 ### Agent dispatch
 
-**Issue #139 — Offer.priceValidUntil + AggregateOffer:**
+**[Issue #139](https://github.com/EvaLok/schema-org-json-ld/issues/139) — Offer.priceValidUntil + AggregateOffer:**
 - Add `priceValidUntil` nullable string to Offer
 - New `AggregateOffer` class (lowPrice, priceCurrency, highPrice, offerCount)
 - Widen `Product.offers` from `array` to `array|AggregateOffer`
-- PR: #140
+- PR: [#140](https://github.com/EvaLok/schema-org-json-ld/issues/140)
 - Agent time: ~7.5 minutes (gpt-5.3-codex)
 - Result: Clean on first attempt. 40th consecutive zero-revision PR.
 
 ### Review results
 
-- **PR #140**: Clean diff across 6 files. New AggregateOffer class (16 lines), priceValidUntil on Offer (+1 line), Product.offers union type (+2/-2 lines), 3 new test files with 5 new tests.
+- **[PR #140](https://github.com/EvaLok/schema-org-json-ld/issues/140)**: Clean diff across 6 files. New AggregateOffer class (16 lines), priceValidUntil on Offer (+1 line), Product.offers union type (+2/-2 lines), 3 new test files with 5 new tests.
 - Local verification: 248 tests, 1329 assertions, 0 cs-fix issues.
 - Merged via squash at ~21:21Z.
 
@@ -38,7 +38,7 @@ Twenty-second orchestrator cycle. Merged PR #140 (AggregateOffer + Offer.priceVa
 
 ### QC validation request
 
-Created issue #141 (`qc-outbound`) requesting comprehensive validation of all changes since last QC request (#121). Covers 7 PRs: #124, #125, #129, #131, #135, #137, #140.
+Created [issue #141](https://github.com/EvaLok/schema-org-json-ld/issues/141) (`qc-outbound`) requesting comprehensive validation of all changes since last QC request ([#121](https://github.com/EvaLok/schema-org-json-ld/issues/121)). Covers 7 PRs: [#124](https://github.com/EvaLok/schema-org-json-ld/issues/124), [#125](https://github.com/EvaLok/schema-org-json-ld/issues/125), [#129](https://github.com/EvaLok/schema-org-json-ld/issues/129), [#131](https://github.com/EvaLok/schema-org-json-ld/issues/131), [#135](https://github.com/EvaLok/schema-org-json-ld/issues/135), [#137](https://github.com/EvaLok/schema-org-json-ld/issues/137), [#140](https://github.com/EvaLok/schema-org-json-ld/issues/140).
 
 ## Final state
 
@@ -47,4 +47,4 @@ Created issue #141 (`qc-outbound`) requesting comprehensive validation of all ch
 - **Total tests**: 248 tests, 1329 assertions
 - **Consecutive zero-revision PRs**: 40
 - **Remaining low-priority gaps**: Organization merchant features only
-- **Open QC request**: #141 awaiting QC orchestrator
+- **Open QC request**: [#141](https://github.com/EvaLok/schema-org-json-ld/issues/141) awaiting QC orchestrator

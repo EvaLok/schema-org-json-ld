@@ -2,14 +2,14 @@
 
 ## What happened
 
-This is the second orchestrator cycle. Discovered that the first cycle's agent dispatches (issues #10 and #11) both failed because the ORCHESTRATOR_PAT lacks the necessary permissions for the Copilot coding agent assignment API.
+This is the second orchestrator cycle. Discovered that the first cycle's agent dispatches (issues [#10](https://github.com/EvaLok/schema-org-json-ld/issues/10) and [#11](https://github.com/EvaLok/schema-org-json-ld/issues/11)) both failed because the ORCHESTRATOR_PAT lacks the necessary permissions for the Copilot coding agent assignment API.
 
 ## Actions taken
 
-1. **Discovered agent failure**: Both #10 (AggregateRating) and #11 (Review/Rating) returned: "The token used to assign the agent doesn't have the necessary permissions."
-2. **Closed failed issues**: #10 and #11 closed with explanatory comments.
-3. **Created question-for-eva**: Issue #13 — asking Eva to update the PAT permissions.
-4. **Housekeeping**: Closed previous orchestrator cycle #9. Verified no stale branches exist.
+1. **Discovered agent failure**: Both [#10](https://github.com/EvaLok/schema-org-json-ld/issues/10) (AggregateRating) and [#11](https://github.com/EvaLok/schema-org-json-ld/issues/11) (Review/Rating) returned: "The token used to assign the agent doesn't have the necessary permissions."
+2. **Closed failed issues**: [#10](https://github.com/EvaLok/schema-org-json-ld/issues/10) and [#11](https://github.com/EvaLok/schema-org-json-ld/issues/11) closed with explanatory comments.
+3. **Created question-for-eva**: [Issue #13](https://github.com/EvaLok/schema-org-json-ld/issues/13) — asking Eva to update the PAT permissions.
+4. **Housekeeping**: Closed previous orchestrator cycle [#9](https://github.com/EvaLok/schema-org-json-ld/issues/9). Verified no stale branches exist.
 5. **Fixed AGENTS.md**: Major accuracy improvements:
    - Corrected the serialization documentation (classes have NO methods; JsonLdGenerator does everything via reflection)
    - Fixed nullable syntax guidance (`null|Type` not `?Type` to match existing code)
@@ -21,11 +21,11 @@ This is the second orchestrator cycle. Discovered that the first cycle's agent d
 ## Current state
 
 ### Blocker
-- **Issue #13**: PAT permissions insufficient for Copilot agent assignment. Cannot dispatch any work until Eva updates the token.
+- **[Issue #13](https://github.com/EvaLok/schema-org-json-ld/issues/13)**: PAT permissions insufficient for Copilot agent assignment. Cannot dispatch any work until Eva updates the token.
 
 ### Open issues
-- #12 (this cycle) — orchestrator-run
-- #13 (question for Eva) — PAT permissions
+- [#12](https://github.com/EvaLok/schema-org-json-ld/issues/12) (this cycle) — orchestrator-run
+- [#13](https://github.com/EvaLok/schema-org-json-ld/issues/13) (question for Eva) — PAT permissions
 
 ### No agent sessions in-flight
 All sessions failed. Zero active.
@@ -37,6 +37,6 @@ All sessions failed. Zero active.
 
 ## Next steps
 
-1. **Wait for Eva** to fix PAT permissions (issue #13)
+1. **Wait for Eva** to fix PAT permissions ([issue #13](https://github.com/EvaLok/schema-org-json-ld/issues/13))
 2. Once permissions are fixed, re-dispatch AggregateRating and Review/Rating
 3. Continue with Organization, PostalAddress, ImageObject, Person after those complete

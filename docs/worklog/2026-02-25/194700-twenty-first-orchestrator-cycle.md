@@ -2,7 +2,7 @@
 
 ## Summary
 
-Twenty-first orchestrator cycle. Comprehensive Google docs audit of all implemented types. Dispatched 2 quality fixes: ImageObject.creator type widening and PropertyValue + JobPosting.identifier. Closed stale cycle #132.
+Twenty-first orchestrator cycle. Comprehensive Google docs audit of all implemented types. Dispatched 2 quality fixes: ImageObject.creator type widening and PropertyValue + JobPosting.identifier. Closed stale cycle [#132](https://github.com/EvaLok/schema-org-json-ld/issues/132).
 
 ## What happened
 
@@ -12,7 +12,7 @@ Twenty-first orchestrator cycle. Comprehensive Google docs audit of all implemen
 2. No QC reports pending from QC orchestrator.
 3. Clean slate: 0 in-flight sessions, only 1 stale branch (origin/master only).
 4. Recovered context from Cycle 20 worklog — all 28 types implemented, all audit findings resolved.
-5. Closed stale orchestrator issue #132 (incomplete cycle, no work done).
+5. Closed stale orchestrator [issue #132](https://github.com/EvaLok/schema-org-json-ld/issues/132) (incomplete cycle, no work done).
 
 ### Google docs comprehensive audit
 
@@ -32,23 +32,23 @@ Performed deep audit comparing our implementations against Google's structured d
 
 | Gap | Severity | Status |
 |-----|----------|--------|
-| ImageObject.creator should accept Person | Low | Dispatched #134 |
-| JobPosting missing identifier (PropertyValue) | Low | Dispatched #136 |
+| ImageObject.creator should accept Person | Low | Dispatched [#134](https://github.com/EvaLok/schema-org-json-ld/issues/134) |
+| JobPosting missing identifier (PropertyValue) | Low | Dispatched [#136](https://github.com/EvaLok/schema-org-json-ld/issues/136) |
 | Offer missing priceValidUntil | Low | Future work |
 | No AggregateOffer class | Low | Future work |
 | Organization missing merchant features | Low | Diminishing returns |
 
 ### Agent dispatches
 
-**Issue #134 — ImageObject.creator type widening:**
+**[Issue #134](https://github.com/EvaLok/schema-org-json-ld/issues/134) — ImageObject.creator type widening:**
 - Change `null|Organization` to `null|Organization|Person`
 - Add test for Person creator
-- PR: #135
+- PR: [#135](https://github.com/EvaLok/schema-org-json-ld/issues/135)
 
-**Issue #136 — PropertyValue + JobPosting.identifier:**
+**[Issue #136](https://github.com/EvaLok/schema-org-json-ld/issues/136) — PropertyValue + JobPosting.identifier:**
 - New PropertyValue class (name + value)
 - Add identifier property to JobPosting
-- PR: #137
+- PR: [#137](https://github.com/EvaLok/schema-org-json-ld/issues/137)
 
 Both dispatched concurrently (no file overlap). Using gpt-5.3-codex.
 
@@ -56,15 +56,15 @@ Both dispatched concurrently (no file overlap). Using gpt-5.3-codex.
 
 | Task | Issue | PR | Agent Time | Revision? |
 |------|-------|-----|-----------|-----------|
-| ImageObject.creator | #134 | #135 | ~7 min | No |
-| PropertyValue + identifier | #136 | #137 | ~8 min | No |
+| ImageObject.creator | [#134](https://github.com/EvaLok/schema-org-json-ld/issues/134) | [#135](https://github.com/EvaLok/schema-org-json-ld/issues/135) | ~7 min | No |
+| PropertyValue + identifier | [#136](https://github.com/EvaLok/schema-org-json-ld/issues/136) | [#137](https://github.com/EvaLok/schema-org-json-ld/issues/137) | ~8 min | No |
 
 Both PRs merged clean on first attempt. 39 consecutive zero-revision PRs.
 
 ## Review results
 
-- **PR #135 (ImageObject.creator)**: Minimal, clean diff. Changed `null|Organization` to `null|Organization|Person` on line 22. Added `testCreatorSupportsPerson()` test. Merged ~20:03Z.
-- **PR #137 (PropertyValue + identifier)**: New `PropertyValue` class (14 lines), `identifier` property on JobPosting, `PropertyValueTest` (51 lines, 3 tests), `JobPostingTest` updated. Merged ~20:03Z.
+- **[PR #135](https://github.com/EvaLok/schema-org-json-ld/issues/135) (ImageObject.creator)**: Minimal, clean diff. Changed `null|Organization` to `null|Organization|Person` on line 22. Added `testCreatorSupportsPerson()` test. Merged ~20:03Z.
+- **[PR #137](https://github.com/EvaLok/schema-org-json-ld/issues/137) (PropertyValue + identifier)**: New `PropertyValue` class (14 lines), `identifier` property on JobPosting, `PropertyValueTest` (51 lines, 3 tests), `JobPostingTest` updated. Merged ~20:03Z.
 - Local verification: 243 tests, 1310 assertions.
 
 ## Final state

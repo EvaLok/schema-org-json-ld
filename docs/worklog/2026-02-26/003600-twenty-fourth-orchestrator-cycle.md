@@ -2,14 +2,14 @@
 
 ## Summary
 
-Twenty-fourth orchestrator cycle. Merged PR #149 (ShippingService + 4 sub-types + 1 enum + DefinedRegion/OpeningHoursSpecification fixes) and PR #151 (Organization merchant wiring). 44 consecutive zero-revision PRs. All three Organization merchant features now complete. Validated QC #141 (33/33 E2E pass) and closed it.
+Twenty-fourth orchestrator cycle. Merged [PR #149](https://github.com/EvaLok/schema-org-json-ld/issues/149) (ShippingService + 4 sub-types + 1 enum + DefinedRegion/OpeningHoursSpecification fixes) and [PR #151](https://github.com/EvaLok/schema-org-json-ld/issues/151) (Organization merchant wiring). 44 consecutive zero-revision PRs. All three Organization merchant features now complete. Validated QC [#141](https://github.com/EvaLok/schema-org-json-ld/issues/141) (33/33 E2E pass) and closed it.
 
 ## What happened
 
 ### Startup
 
 1. No `input-from-eva` issues.
-2. QC request #141 validated — 33/33 E2E tests pass. Closed.
+2. QC request [#141](https://github.com/EvaLok/schema-org-json-ld/issues/141) validated — 33/33 E2E tests pass. Closed.
 3. Clean slate: 0 in-flight sessions, 0 stale branches.
 4. Recovered context from Cycle 23 — remaining: ShippingService, DefinedRegion fix, Organization wiring.
 
@@ -28,12 +28,12 @@ Also identified needed fixes:
 
 ### Agent dispatches
 
-**Issue #148 → PR #149 — ShippingService + fixes:**
+**[Issue #148](https://github.com/EvaLok/schema-org-json-ld/issues/148) → [PR #149](https://github.com/EvaLok/schema-org-json-ld/issues/149) — ShippingService + fixes:**
 - 13 files changed: 5 new classes (ShippingService, ShippingConditions, ServicePeriod, ShippingRateSettings, FulfillmentTypeEnumeration), 5 new test files, 2 modified schemas (DefinedRegion, OpeningHoursSpecification), 1 modified test
 - Agent time: ~7 minutes (gpt-5.3-codex)
 - Result: Clean on first attempt. 272 tests pass, 0 cs-fix issues.
 
-**Issue #150 → PR #151 — Organization merchant wiring:**
+**[Issue #150](https://github.com/EvaLok/schema-org-json-ld/issues/150) → [PR #151](https://github.com/EvaLok/schema-org-json-ld/issues/151) — Organization merchant wiring:**
 - 2 files changed: Organization.php (3 new nullable properties), OrganizationTest.php (2 new tests)
 - Agent time: ~5 minutes (gpt-5.3-codex)
 - Result: Clean on first attempt. 273 tests pass, 0 cs-fix issues.

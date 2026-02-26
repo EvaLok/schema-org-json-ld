@@ -12,12 +12,12 @@ Thirty-first orchestrator cycle. Comprehensive README documentation audit and di
 2. Recovered context from Cycle 30 worklog — clean state, all 28 types implemented, 296 tests, 49 zero-revision streak.
 3. No open PRs, no open Copilot issues. 0 in-flight agent sessions.
 4. No new QC outbound reports from QC repo.
-5. QC acknowledged our request #165 as QC issue #41, with agent tasks #42 and #43 dispatched. QC PR #44 (ProductGroup) in draft.
-6. Question for Eva #154 (release recommendation) still open, no response.
+5. QC acknowledged our request [#165](https://github.com/EvaLok/schema-org-json-ld/issues/165) as QC issue #41, with agent tasks #42 and #43 dispatched. QC PR #44 (ProductGroup) in draft.
+6. Question for Eva [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154) (release recommendation) still open, no response.
 
 ### Housekeeping
 
-- Deleted 2 stale remote branches: `copilot/add-product-group-people-audience` (PR #163, merged), `copilot/add-product-text-properties` (PR #161, merged).
+- Deleted 2 stale remote branches: `copilot/add-product-group-people-audience` ([PR #163](https://github.com/EvaLok/schema-org-json-ld/issues/163), merged), `copilot/add-product-text-properties` ([PR #161](https://github.com/EvaLok/schema-org-json-ld/issues/161), merged).
 
 ### README documentation audit
 
@@ -36,20 +36,20 @@ Systematic comparison of 7 README sections against source constructors found:
 
 ### Dispatches
 
-1. **#171** (agent task) → **PR #172** — Comprehensive README update: complete Supported Types table + expand 7 usage examples
+1. **[#171](https://github.com/EvaLok/schema-org-json-ld/issues/171)** (agent task) → **[PR #172](https://github.com/EvaLok/schema-org-json-ld/issues/172)** — Comprehensive README update: complete Supported Types table + expand 7 usage examples
 
 ### PR reviews
 
-1. **PR #172** (README update) — Merged at 11:06:20Z. All 7 sections updated correctly. Supported Types table completed with 16 missing classes/enums. 183 lines added, 13 removed. Only README.md changed. Zero revisions needed. Minor omission: `FulfillmentTypeEnumeration` missing from Product row — fixed via direct commit.
+1. **[PR #172](https://github.com/EvaLok/schema-org-json-ld/issues/172)** (README update) — Merged at 11:06:20Z. All 7 sections updated correctly. Supported Types table completed with 16 missing classes/enums. 183 lines added, 13 removed. Only README.md changed. Zero revisions needed. Minor omission: `FulfillmentTypeEnumeration` missing from Product row — fixed via direct commit.
 
 ### Direct fixes
 
 1. README Supported Types table: added `FulfillmentTypeEnumeration` to Product row (missed by agent)
-2. Deleted stale branch `copilot/update-readme-supported-types` from merged PR #172
+2. Deleted stale branch `copilot/update-readme-supported-types` from merged [PR #172](https://github.com/EvaLok/schema-org-json-ld/issues/172)
 
 ### QC status
 
-- QC repo issue #41 acknowledges our request #165
+- QC repo issue #41 acknowledges our request [#165](https://github.com/EvaLok/schema-org-json-ld/issues/165)
 - QC agent tasks #42, #43 dispatched for Product property validation
 - QC PR #44 (ProductGroup) in draft
 - QC PRs #34, #35 merged (MerchantReturnPolicy, MemberProgram/ShippingService coverage)
@@ -59,11 +59,11 @@ Systematic comparison of 7 README sections against source constructors found:
 
 - **Tests**: 296, **Classes**: 96, **Zero-revision streak**: 50
 - **No in-flight work**. All dispatched PRs merged.
-- **QC #165**: Acknowledged by QC as #41, validation in progress
-- **Question for Eva #154**: Still open, no response
+- **QC [#165](https://github.com/EvaLok/schema-org-json-ld/issues/165)**: Acknowledged by QC as #41, validation in progress
+- **Question for Eva [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154)**: Still open, no response
 
 ## Next steps
 
 1. Monitor QC issue #41 for validation results
-2. If Eva responds to #154 (release), prepare v1.0.0 release
+2. If Eva responds to [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154) (release), prepare v1.0.0 release
 3. Consider edge-case improvements or test coverage expansion

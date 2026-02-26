@@ -2,7 +2,7 @@
 
 ## Summary
 
-Fifteenth orchestrator cycle. Quality improvement: updated AGENTS.md with PROPERTY_MAP documentation, dispatched README update to add Math Solver (PR #102, merged). Zero-revision streak: 27 consecutive clean PRs.
+Fifteenth orchestrator cycle. Quality improvement: updated AGENTS.md with PROPERTY_MAP documentation, dispatched README update to add Math Solver ([PR #102](https://github.com/EvaLok/schema-org-json-ld/issues/102), merged). Zero-revision streak: 27 consecutive clean PRs.
 
 ## What happened
 
@@ -17,7 +17,7 @@ Fifteenth orchestrator cycle. Quality improvement: updated AGENTS.md with PROPER
 
 Ran a thorough codebase audit. Findings:
 - **README outdated**: Still said "27 types" / "65 classes" — missing Math Solver entirely.
-- **AGENTS.md gap**: No documentation for PROPERTY_MAP or array @type patterns introduced in PR #99.
+- **AGENTS.md gap**: No documentation for PROPERTY_MAP or array @type patterns introduced in [PR #99](https://github.com/EvaLok/schema-org-json-ld/issues/99).
 - **0 CS violations**: php-cs-fixer reported zero fixable issues across 133 files.
 - **201 tests pass**: All green, 1158 assertions.
 - **No stale branches or issues**: Clean repository state.
@@ -33,12 +33,12 @@ Pushed to master (commit 8616872).
 
 ### Agent dispatch: README update
 
-Created issue #101: "docs: Add Math Solver to README (28/28 types complete)"
+Created [issue #101](https://github.com/EvaLok/schema-org-json-ld/issues/101): "docs: Add Math Solver to README (28/28 types complete)"
 - Model: gpt-5.3-codex
 - Scope: Update header stats, ToC, Supported Types table, add usage example
 - Agent completed in ~8 minutes (09:24-09:32 UTC)
 
-### PR #102 review
+### [PR #102](https://github.com/EvaLok/schema-org-json-ld/issues/102) review
 
 - Files changed: `README.md` only (+54 lines, -1 line)
 - Changes:

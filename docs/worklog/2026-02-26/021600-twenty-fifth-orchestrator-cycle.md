@@ -2,7 +2,7 @@
 
 ## Summary
 
-Twenty-fifth orchestrator cycle. Maintenance cycle — no code dispatches. Opened QC validation request for Cycles 23-24 merchant features (#153). Opened release recommendation for Eva (#154). Ran test coverage audit — all 81 schema classes have dedicated tests; only 11 enum types lack dedicated test files (tested indirectly through parent types).
+Twenty-fifth orchestrator cycle. Maintenance cycle — no code dispatches. Opened QC validation request for Cycles 23-24 merchant features ([#153](https://github.com/EvaLok/schema-org-json-ld/issues/153)). Opened release recommendation for Eva ([#154](https://github.com/EvaLok/schema-org-json-ld/issues/154)). Ran test coverage audit — all 81 schema classes have dedicated tests; only 11 enum types lack dedicated test files (tested indirectly through parent types).
 
 ## What happened
 
@@ -15,9 +15,9 @@ Twenty-fifth orchestrator cycle. Maintenance cycle — no code dispatches. Opene
 
 ### Actions taken
 
-1. **QC validation request (#153)**: Opened for Cycles 23-24 changes — MerchantReturnPolicy, MemberProgram, ShippingService, Organization merchant wiring. This was planned in Cycle 24 but not executed before that cycle ended.
+1. **QC validation request ([#153](https://github.com/EvaLok/schema-org-json-ld/issues/153))**: Opened for Cycles 23-24 changes — MerchantReturnPolicy, MemberProgram, ShippingService, Organization merchant wiring. This was planned in Cycle 24 but not executed before that cycle ended.
 
-2. **Release recommendation (#154)**: Opened `question-for-eva` issue recommending v1.0.0 release. Last release was v0.0.4 (June 2024) with only Product + BreadcrumbList. The library now has 28 types, 95 sub-types, 273 tests.
+2. **Release recommendation ([#154](https://github.com/EvaLok/schema-org-json-ld/issues/154))**: Opened `question-for-eva` issue recommending v1.0.0 release. Last release was v0.0.4 (June 2024) with only Product + BreadcrumbList. The library now has 28 types, 95 sub-types, 273 tests.
 
 3. **Test coverage audit**: Verified all 81 schema classes have dedicated test files. The 11 enum types (DayOfWeek, ItemAvailability, EventStatusType, etc.) don't have dedicated tests but are exercised through parent type tests.
 
@@ -32,13 +32,13 @@ With all 28 Google Rich Results types implemented and all quality audit findings
 - **Enums**: 12
 - **Test count**: 273
 - **Consecutive zero-revision PRs**: 44 (unchanged)
-- **Open QC requests**: #153 (awaiting QC validation)
-- **Open questions for Eva**: #154 (release recommendation)
+- **Open QC requests**: [#153](https://github.com/EvaLok/schema-org-json-ld/issues/153) (awaiting QC validation)
+- **Open questions for Eva**: [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154) (release recommendation)
 
 ## Next steps
 
-- Monitor QC repo for response to #153
-- Monitor Eva's response to #154 (release recommendation)
+- Monitor QC repo for response to [#153](https://github.com/EvaLok/schema-org-json-ld/issues/153)
+- Monitor Eva's response to [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154) (release recommendation)
 - If Eva wants a release, prepare release notes and tag
 - If Eva has new directions, execute them
 - Otherwise, the orchestrator has completed its secondary objective (all Google Rich Results types)

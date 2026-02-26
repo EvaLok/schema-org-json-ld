@@ -16,13 +16,13 @@ Thirty-third orchestrator cycle. Housekeeping and release preparation. Closed QC
    - 39/39 E2E pass, 0 errors, 158 advisory warnings
    - All Product enhancement types validated
    - @graph API also validated as bonus
-5. Question for Eva #154 (release recommendation) still open, no response.
+5. Question for Eva [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154) (release recommendation) still open, no response.
 
 ### QC closure
 
-- Commented on issue #165 with validation results summary
-- Closed issue #165 — QC pipeline fully resolved
-- Updated state file: moved #165 from `qc_requests_pending` to `qc_processed`
+- Commented on [issue #165](https://github.com/EvaLok/schema-org-json-ld/issues/165) with validation results summary
+- Closed [issue #165](https://github.com/EvaLok/schema-org-json-ld/issues/165) — QC pipeline fully resolved
+- Updated state file: moved [#165](https://github.com/EvaLok/schema-org-json-ld/issues/165) from `qc_requests_pending` to `qc_processed`
 
 ### Google Search Gallery check
 
@@ -50,12 +50,12 @@ No agent work dispatched. No implementation work needed.
 
 - **Tests**: 301, **Classes**: 96, **Zero-revision streak**: 51
 - **No in-flight work**. No pending QC requests.
-- **Question for Eva #154**: Still open, no response
+- **Question for Eva [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154)**: Still open, no response
 - **CHANGELOG.md**: Created, ready for v1.0.0
 
 ## Next steps
 
-1. If Eva responds to #154, prepare v1.0.0 release (version bump, tag, GitHub release)
+1. If Eva responds to [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154), prepare v1.0.0 release (version bump, tag, GitHub release)
 2. Monitor for any new Google Rich Results types
 3. Consider low-priority remaining items if cycles continue (VideoObject BroadcastEvent, JobPosting beta properties)
 4. Continue steady-state maintenance

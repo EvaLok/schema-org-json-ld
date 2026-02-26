@@ -2,33 +2,33 @@
 
 ## Summary
 
-Seventh orchestrator cycle. Handled Eva input #52 (PR review workflow update). Merged 4 PRs in 2 batches: Course+CourseInstance+Schedule (#57), Dataset+DataDownload+DataCatalog+GeoShape (#55), EmployerAggregateRating (#59), QAPage+Comment+enhanced Question/Answer (#61). All 4 PRs passed on first attempt — zero revisions needed. 101 tests passing on master. 20 Google Rich Results types now implemented.
+Seventh orchestrator cycle. Handled Eva input [#52](https://github.com/EvaLok/schema-org-json-ld/issues/52) (PR review workflow update). Merged 4 PRs in 2 batches: Course+CourseInstance+Schedule ([#57](https://github.com/EvaLok/schema-org-json-ld/issues/57)), Dataset+DataDownload+DataCatalog+GeoShape ([#55](https://github.com/EvaLok/schema-org-json-ld/issues/55)), EmployerAggregateRating ([#59](https://github.com/EvaLok/schema-org-json-ld/issues/59)), QAPage+Comment+enhanced Question/Answer ([#61](https://github.com/EvaLok/schema-org-json-ld/issues/61)). All 4 PRs passed on first attempt — zero revisions needed. 101 tests passing on master. 20 Google Rich Results types now implemented.
 
 ## What happened
 
 ### Eva input handled
-1. **#52 (PR review workflow)**: Eva pointed out that CI workflows only run on non-draft PRs. Created:
+1. **[#52](https://github.com/EvaLok/schema-org-json-ld/issues/52) (PR review workflow)**: Eva pointed out that CI workflows only run on non-draft PRs. Created:
    - `.claude/skills/pr-review-workflow.md` — skill documenting the full review sequence
    - `tools/review-pr` — shell script automating status checks, ready marking, CI polling, merge
    - Updated `STARTUP_CHECKLIST.md` with corrected workflow
-   - Issue #52 closed with summary comment.
+   - [Issue #52](https://github.com/EvaLok/schema-org-json-ld/issues/52) closed with summary comment.
 
 ### Housekeeping
 2. No stale branches or issues found. Only `master` branch exists.
 
 ### Batch 1: Course + Dataset (merged)
-3. **Issue #56 → PR #57 (Course)**: 3 new types (Course, CourseInstance, Schedule). 3 new tests. Agent time: ~8 min. CI passed (claude-review). Clean first attempt.
-4. **Issue #54 → PR #55 (Dataset)**: 4 new types (Dataset, DataDownload, DataCatalog, GeoShape) + Place.php modified (address optional, geo added). 12 new tests. Agent time: ~19 min. CI passed. Clean first attempt.
+3. **[Issue #56](https://github.com/EvaLok/schema-org-json-ld/issues/56) → [PR #57](https://github.com/EvaLok/schema-org-json-ld/issues/57) (Course)**: 3 new types (Course, CourseInstance, Schedule). 3 new tests. Agent time: ~8 min. CI passed (claude-review). Clean first attempt.
+4. **[Issue #54](https://github.com/EvaLok/schema-org-json-ld/issues/54) → [PR #55](https://github.com/EvaLok/schema-org-json-ld/issues/55) (Dataset)**: 4 new types (Dataset, DataDownload, DataCatalog, GeoShape) + Place.php modified (address optional, geo added). 12 new tests. Agent time: ~19 min. CI passed. Clean first attempt.
 5. Merged both. 91 tests on master.
 
 ### Batch 2: EmployerAggregateRating + QAPage (merged)
-6. **Issue #58 → PR #59 (EmployerAggregateRating)**: 1 new type. 5 new tests. Agent time: ~8 min. CI passed. Clean first attempt.
-7. **Issue #60 → PR #61 (QAPage)**: 2 new types (QAPage, Comment) + Question.php and Answer.php enhanced with optional properties for Q&A support. 5 new tests. Agent time: ~5 min. CI passed. Backward-compatible with existing FAQPage tests. Clean first attempt.
+6. **[Issue #58](https://github.com/EvaLok/schema-org-json-ld/issues/58) → [PR #59](https://github.com/EvaLok/schema-org-json-ld/issues/59) (EmployerAggregateRating)**: 1 new type. 5 new tests. Agent time: ~8 min. CI passed. Clean first attempt.
+7. **[Issue #60](https://github.com/EvaLok/schema-org-json-ld/issues/60) → [PR #61](https://github.com/EvaLok/schema-org-json-ld/issues/61) (QAPage)**: 2 new types (QAPage, Comment) + Question.php and Answer.php enhanced with optional properties for Q&A support. 5 new tests. Agent time: ~5 min. CI passed. Backward-compatible with existing FAQPage tests. Clean first attempt.
 8. Merged both. 101 tests on master.
 
 ## New PR review workflow in action
 
-This was the first cycle using the corrected PR review workflow (per Eva's #52):
+This was the first cycle using the corrected PR review workflow (per Eva's [#52](https://github.com/EvaLok/schema-org-json-ld/issues/52)):
 1. Wait for `copilot_work_finished`
 2. Mark PR as ready for review (triggers CI)
 3. Run tests locally while CI runs
@@ -57,16 +57,16 @@ Notable:
 
 | Type | File | PR |
 |------|------|----|
-| Course | `src/v1/Schema/Course.php` | #57 |
-| CourseInstance | `src/v1/Schema/CourseInstance.php` | #57 |
-| Schedule | `src/v1/Schema/Schedule.php` | #57 |
-| Dataset | `src/v1/Schema/Dataset.php` | #55 |
-| DataDownload | `src/v1/Schema/DataDownload.php` | #55 |
-| DataCatalog | `src/v1/Schema/DataCatalog.php` | #55 |
-| GeoShape | `src/v1/Schema/GeoShape.php` | #55 |
-| EmployerAggregateRating | `src/v1/Schema/EmployerAggregateRating.php` | #59 |
-| QAPage | `src/v1/Schema/QAPage.php` | #61 |
-| Comment | `src/v1/Schema/Comment.php` | #61 |
+| Course | `src/v1/Schema/Course.php` | [#57](https://github.com/EvaLok/schema-org-json-ld/issues/57) |
+| CourseInstance | `src/v1/Schema/CourseInstance.php` | [#57](https://github.com/EvaLok/schema-org-json-ld/issues/57) |
+| Schedule | `src/v1/Schema/Schedule.php` | [#57](https://github.com/EvaLok/schema-org-json-ld/issues/57) |
+| Dataset | `src/v1/Schema/Dataset.php` | [#55](https://github.com/EvaLok/schema-org-json-ld/issues/55) |
+| DataDownload | `src/v1/Schema/DataDownload.php` | [#55](https://github.com/EvaLok/schema-org-json-ld/issues/55) |
+| DataCatalog | `src/v1/Schema/DataCatalog.php` | [#55](https://github.com/EvaLok/schema-org-json-ld/issues/55) |
+| GeoShape | `src/v1/Schema/GeoShape.php` | [#55](https://github.com/EvaLok/schema-org-json-ld/issues/55) |
+| EmployerAggregateRating | `src/v1/Schema/EmployerAggregateRating.php` | [#59](https://github.com/EvaLok/schema-org-json-ld/issues/59) |
+| QAPage | `src/v1/Schema/QAPage.php` | [#61](https://github.com/EvaLok/schema-org-json-ld/issues/61) |
+| Comment | `src/v1/Schema/Comment.php` | [#61](https://github.com/EvaLok/schema-org-json-ld/issues/61) |
 
 Types modified: Place (added geo), Question (added QA properties), Answer (added QA properties)
 

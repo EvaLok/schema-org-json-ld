@@ -2,14 +2,14 @@
 
 ## Summary
 
-Eleventh orchestrator cycle. Continued quality improvement — closed remaining test coverage gaps. Merged 2 PRs: core type tests (#86) and sub-type tests (#88). 184 tests now passing (up from 160). Zero-revision streak: 23 consecutive clean PRs.
+Eleventh orchestrator cycle. Continued quality improvement — closed remaining test coverage gaps. Merged 2 PRs: core type tests ([#86](https://github.com/EvaLok/schema-org-json-ld/issues/86)) and sub-type tests ([#88](https://github.com/EvaLok/schema-org-json-ld/issues/88)). 184 tests now passing (up from 160). Zero-revision streak: 23 consecutive clean PRs.
 
 ## What happened
 
 ### Startup
 
 1. No `input-from-eva` issues.
-2. Eva has not responded to #78 (Math Solver design decision).
+2. Eva has not responded to [#78](https://github.com/EvaLok/schema-org-json-ld/issues/78) (Math Solver design decision).
 3. Clean slate: 0 in-flight sessions, no stale branches/issues.
 4. Recovered context from Cycle 10 worklog.
 
@@ -29,8 +29,8 @@ Deep audit of test suite revealed 13 schema classes still without dedicated test
 
 ### Dispatch: Two concurrent agent tasks
 
-- **Issue #85 → PR #86**: Product, Offer, BreadcrumbList dedicated tests (3 new files, 8 test methods). Agent time: ~8 min.
-- **Issue #87 → PR #88**: 7 new test files + 2 enhancements (16 new test methods). Agent time: ~8 min.
+- **[Issue #85](https://github.com/EvaLok/schema-org-json-ld/issues/85) → [PR #86](https://github.com/EvaLok/schema-org-json-ld/issues/86)**: Product, Offer, BreadcrumbList dedicated tests (3 new files, 8 test methods). Agent time: ~8 min.
+- **[Issue #87](https://github.com/EvaLok/schema-org-json-ld/issues/87) → [PR #88](https://github.com/EvaLok/schema-org-json-ld/issues/88)**: 7 new test files + 2 enhancements (16 new test methods). Agent time: ~8 min.
 
 Both merged after local verification (184 tests pass, 0 CS issues) and CI passing.
 
@@ -48,7 +48,7 @@ Zero-revision streak: now 23 consecutive clean PRs since Cycle 4.
 - **Implemented types**: 27 Google Rich Results types (all except Math Solver)
 - **Total schema classes**: 65
 - **In-flight sessions**: 0
-- **Blockers**: Math Solver needs Eva's decision (#78)
+- **Blockers**: Math Solver needs Eva's decision ([#78](https://github.com/EvaLok/schema-org-json-ld/issues/78))
 - **Total tests**: 184 (up from 160, +24 new tests)
 - **Test coverage**: Every schema class now has a dedicated test file
 - **Agent premium requests this cycle**: 2 (2 dispatches, 0 revisions)
@@ -66,7 +66,7 @@ All 65 schema classes now have dedicated unit tests. The test suite covers:
 
 ## Next steps (for next cycle)
 
-1. Check if Eva responded to #78 (Math Solver)
+1. Check if Eva responded to [#78](https://github.com/EvaLok/schema-org-json-ld/issues/78) (Math Solver)
 2. The library is now substantially complete — 27/28 types, 100% test coverage
 3. Consider tagging a release version
 4. May be a natural pause point unless Eva has new directions

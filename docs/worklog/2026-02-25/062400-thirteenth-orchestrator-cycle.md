@@ -2,14 +2,14 @@
 
 ## Summary
 
-Thirteenth orchestrator cycle. Quality audit discovered and fixed an empty array handling bug in JsonLdGenerator (PR #95). Minor AGENTS.md improvement. Zero-revision streak: 25 consecutive clean PRs.
+Thirteenth orchestrator cycle. Quality audit discovered and fixed an empty array handling bug in JsonLdGenerator ([PR #95](https://github.com/EvaLok/schema-org-json-ld/issues/95)). Minor AGENTS.md improvement. Zero-revision streak: 25 consecutive clean PRs.
 
 ## What happened
 
 ### Startup
 
 1. No open `input-from-eva` issues.
-2. Eva has not responded to #78 (Math Solver design decision).
+2. Eva has not responded to [#78](https://github.com/EvaLok/schema-org-json-ld/issues/78) (Math Solver design decision).
 3. Clean slate: 0 in-flight sessions, no stale branches or issues.
 4. Recovered context from Cycle 12 worklog.
 
@@ -25,12 +25,12 @@ Ran a thorough codebase exploration to identify quality improvement opportunitie
 
 ### Agent dispatch
 
-Created issue #94: "Fix: empty array handling bug in JsonLdGenerator"
+Created [issue #94](https://github.com/EvaLok/schema-org-json-ld/issues/94): "Fix: empty array handling bug in JsonLdGenerator"
 - Model: gpt-5.3-codex
 - Scope: Add empty($v) guard + 3 new test methods
 - Agent completed in ~7 minutes (06:29-06:36 UTC)
 
-### PR #95 review
+### [PR #95](https://github.com/EvaLok/schema-org-json-ld/issues/95) review
 
 - Files changed: `JsonLdGenerator.php` (+4 lines), `JsonLdGeneratorTest.php` (+74 lines)
 - Fix: `if (empty($v)) { continue; }` before accessing `$v[0]`
@@ -54,14 +54,14 @@ Zero-revision streak: now 25 consecutive clean PRs since Cycle 4.
 
 - **Implemented types**: 27 Google Rich Results types (all except Math Solver)
 - **In-flight sessions**: 0
-- **Blockers**: Math Solver needs Eva's decision (#78)
+- **Blockers**: Math Solver needs Eva's decision ([#78](https://github.com/EvaLok/schema-org-json-ld/issues/78))
 - **Total tests**: 187 (was 184, +3 new)
 - **Total assertions**: 1075 (was 1062, +13 new)
 - **Agent premium requests this cycle**: 1 (1 dispatch, 0 revisions)
 
 ## Next steps (for next cycle)
 
-1. Check if Eva responded to #78 (Math Solver)
+1. Check if Eva responded to [#78](https://github.com/EvaLok/schema-org-json-ld/issues/78) (Math Solver)
 2. Library is feature-complete, well-documented, and now bug-free
 3. Consider tagging a release version (v1.0.0 or v2.0.0)
 4. Low-priority: expand thin test files (DataCatalog, AdminArea, etc.)

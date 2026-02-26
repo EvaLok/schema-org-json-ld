@@ -13,7 +13,7 @@ Thirty-second orchestrator cycle. Added `@graph` support for multi-schema JSON-L
 3. No open PRs, no open Copilot issues. 0 in-flight agent sessions.
 4. No new QC outbound reports from QC repo.
 5. QC issue #41 (ProductGroup validation) still in progress. QC agent tasks #42, #43 still open. QC PR #44 (ProductGroup) in draft — Copilot finished work but PR not yet reviewed/merged by QC orchestrator.
-6. Question for Eva #154 (release recommendation) still open, no response.
+6. Question for Eva [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154) (release recommendation) still open, no response.
 7. QC repo issue #39: independent QC assessment confirms library is ready for v1.0.0 (37 types validated, 0 errors, 141 advisory warnings).
 
 ### Housekeeping
@@ -30,11 +30,11 @@ Identified `@graph` support as a genuine missing capability:
 
 ### Dispatches
 
-1. **#174** (agent task) → **PR #175** — Add `@graph` support: `SchemasToJson()` and `SchemasToObject()` methods
+1. **[#174](https://github.com/EvaLok/schema-org-json-ld/issues/174)** (agent task) → **[PR #175](https://github.com/EvaLok/schema-org-json-ld/issues/175)** — Add `@graph` support: `SchemasToJson()` and `SchemasToObject()` methods
 
 ### PR reviews
 
-1. **PR #175** (@graph support) — Merged at ~12:32Z. Clean implementation:
+1. **[PR #175](https://github.com/EvaLok/schema-org-json-ld/issues/175)** (@graph support) — Merged at ~12:32Z. Clean implementation:
    - `SchemasToJson(TypedSchema ...$schemas): string` — variadic, returns JSON with `@context` + `@graph`
    - `SchemasToObject(TypedSchema ...$schemas): array` — PHP array equivalent
    - 5 new tests in `JsonLdGeneratorTest.php`
@@ -53,12 +53,12 @@ Identified `@graph` support as a genuine missing capability:
 
 - **Tests**: 301, **Classes**: 96, **Zero-revision streak**: 51
 - **No in-flight work**. All dispatched PRs merged.
-- **QC #165**: Still in progress (QC #41)
-- **Question for Eva #154**: Still open, no response
+- **QC [#165](https://github.com/EvaLok/schema-org-json-ld/issues/165)**: Still in progress (QC #41)
+- **Question for Eva [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154)**: Still open, no response
 
 ## Next steps
 
 1. Monitor QC issue #41 for validation results
-2. If Eva responds to #154, prepare v1.0.0 release
+2. If Eva responds to [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154), prepare v1.0.0 release
 3. Consider sending QC a new validation request for the @graph feature
 4. Look for additional infrastructure improvements (error handling, edge cases)

@@ -2,14 +2,14 @@
 
 ## Summary
 
-Twenty-third orchestrator cycle. Merged PR #144 (MerchantReturnPolicy + 5 enums + seasonal override) and PR #146 (MemberProgram + MemberProgramTier + TierBenefitEnumeration). 42 consecutive zero-revision PRs. 2 of 3 Organization merchant features now implemented.
+Twenty-third orchestrator cycle. Merged [PR #144](https://github.com/EvaLok/schema-org-json-ld/issues/144) (MerchantReturnPolicy + 5 enums + seasonal override) and [PR #146](https://github.com/EvaLok/schema-org-json-ld/issues/146) (MemberProgram + MemberProgramTier + TierBenefitEnumeration). 42 consecutive zero-revision PRs. 2 of 3 Organization merchant features now implemented.
 
 ## What happened
 
 ### Startup
 
 1. No `input-from-eva` issues.
-2. No QC reports from QC orchestrator (request #141 still pending).
+2. No QC reports from QC orchestrator (request [#141](https://github.com/EvaLok/schema-org-json-ld/issues/141) still pending).
 3. Clean slate: 0 in-flight sessions, 0 stale branches.
 4. Recovered context from Cycle 22 — identified Organization merchant features as remaining work.
 
@@ -24,12 +24,12 @@ Identified existing reusable types: MonetaryAmount, OfferItemCondition, Quantita
 
 ### Agent dispatches
 
-**Issue #143 → PR #144 — MerchantReturnPolicy:**
+**[Issue #143](https://github.com/EvaLok/schema-org-json-ld/issues/143) → [PR #144](https://github.com/EvaLok/schema-org-json-ld/issues/144) — MerchantReturnPolicy:**
 - 9 new files: MerchantReturnPolicy, MerchantReturnPolicySeasonalOverride, 5 enums, 2 test files
 - Agent time: ~8 minutes (gpt-5.3-codex)
 - Result: Clean on first attempt. 252 tests pass, 0 cs-fix issues.
 
-**Issue #145 → PR #146 — MemberProgram:**
+**[Issue #145](https://github.com/EvaLok/schema-org-json-ld/issues/145) → [PR #146](https://github.com/EvaLok/schema-org-json-ld/issues/146) — MemberProgram:**
 - 5 new files: MemberProgram, MemberProgramTier, TierBenefitEnumeration, 2 test files
 - Agent time: ~8 minutes (gpt-5.3-codex)
 - Result: Clean on first attempt. 255 tests pass, 0 cs-fix issues.
@@ -44,7 +44,7 @@ Both PRs reviewed and merged via squash. 42 consecutive zero-revision PRs.
 - **Sub-types**: 85 (added 10 new: MerchantReturnPolicy, MerchantReturnPolicySeasonalOverride, 5 enums, MemberProgram, MemberProgramTier, TierBenefitEnumeration)
 - **Enums**: 11 (added 6 new)
 - **Consecutive zero-revision PRs**: 42
-- **Open QC request**: #141 awaiting QC orchestrator
+- **Open QC request**: [#141](https://github.com/EvaLok/schema-org-json-ld/issues/141) awaiting QC orchestrator
 
 ## Next steps
 

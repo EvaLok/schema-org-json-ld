@@ -2,18 +2,18 @@
 
 ## Summary
 
-Twelfth orchestrator cycle. Acted on Eva's priority directive #89: comprehensive README with table of contents and examples for all 27 schema types. Dispatched issue #91, merged PR #92. Zero-revision streak: 24 consecutive clean PRs.
+Twelfth orchestrator cycle. Acted on Eva's priority directive [#89](https://github.com/EvaLok/schema-org-json-ld/issues/89): comprehensive README with table of contents and examples for all 27 schema types. Dispatched [issue #91](https://github.com/EvaLok/schema-org-json-ld/issues/91), merged [PR #92](https://github.com/EvaLok/schema-org-json-ld/issues/92). Zero-revision streak: 24 consecutive clean PRs.
 
 ## What happened
 
 ### Startup
 
-1. Eva input #89: "add table of contents and complete documentation to README.md" — comprehensive README with TOC and examples for every schema type.
-2. Eva has not responded to #78 (Math Solver design decision).
+1. Eva input [#89](https://github.com/EvaLok/schema-org-json-ld/issues/89): "add table of contents and complete documentation to README.md" — comprehensive README with TOC and examples for every schema type.
+2. Eva has not responded to [#78](https://github.com/EvaLok/schema-org-json-ld/issues/78) (Math Solver design decision).
 3. Clean slate: 0 in-flight sessions, no stale branches/issues.
 4. Recovered context from Cycle 11 worklog.
 
-### Eva's directive (#89)
+### Eva's directive ([#89](https://github.com/EvaLok/schema-org-json-ld/issues/89))
 
 Eva wants the README rewritten to be "what you'd commonly see for high quality open source projects" with:
 - Full table of contents
@@ -22,13 +22,13 @@ Eva wants the README rewritten to be "what you'd commonly see for high quality o
 
 ### Agent dispatch
 
-Created issue #91: "Comprehensive README with TOC and examples for all 27 schema types"
+Created [issue #91](https://github.com/EvaLok/schema-org-json-ld/issues/91): "Comprehensive README with TOC and examples for all 27 schema types"
 - Model: claude-sonnet-4.5 (documentation task benefits from strong writing ability)
 - Task: Complete README rewrite with PHP code + JSON-LD output for all 27 types
 - Instructed agent to generate JSON output by running the actual library, not guessing
-- Closed Eva's input issue #89 with action summary
+- Closed Eva's input [issue #89](https://github.com/EvaLok/schema-org-json-ld/issues/89) with action summary
 
-### PR #92 review
+### [PR #92](https://github.com/EvaLok/schema-org-json-ld/issues/92) review
 
 - Agent completed in ~7 minutes (copilot_work_started: 05:10:53Z, copilot_work_finished: 05:17:30Z)
 - Only file changed: README.md (+1712, -220 lines)
@@ -52,14 +52,14 @@ Zero-revision streak: now 24 consecutive clean PRs since Cycle 4.
 
 - **Implemented types**: 27 Google Rich Results types (all except Math Solver)
 - **In-flight sessions**: 0
-- **Blockers**: Math Solver needs Eva's decision (#78)
+- **Blockers**: Math Solver needs Eva's decision ([#78](https://github.com/EvaLok/schema-org-json-ld/issues/78))
 - **Total tests**: 184 (unchanged)
 - **README**: Comprehensive with TOC and examples for all 27 types
 - **Agent premium requests this cycle**: 1 (1 dispatch, 0 revisions)
 
 ## Next steps (for next cycle)
 
-1. Check if Eva responded to #78 (Math Solver)
+1. Check if Eva responded to [#78](https://github.com/EvaLok/schema-org-json-ld/issues/78) (Math Solver)
 2. Library is now feature-complete AND well-documented
 3. Consider tagging a release version
 4. May be a natural pause point unless Eva has new directions

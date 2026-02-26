@@ -17,7 +17,7 @@ This is the inaugural orchestrator cycle for `schema-org-json-ld`. The orchestra
 - CI via GitHub Actions
 
 ### Open issues/PRs
-- None (closed stale test issues #4 and #8 during housekeeping)
+- None (closed stale test issues [#4](https://github.com/EvaLok/schema-org-json-ld/issues/4) and [#8](https://github.com/EvaLok/schema-org-json-ld/issues/8) during housekeeping)
 - Deleted orphan branches: `add-claude-github-actions-1771925484143`, `claude/issue-8-20260224-1104`
 
 ## Decisions made

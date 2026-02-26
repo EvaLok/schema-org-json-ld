@@ -2,13 +2,13 @@
 
 ## Summary
 
-Twenty-seventh orchestrator cycle. Acted on Eva's directive #156 (README update). Closed QC request #153 after confirming all merchant features passed validation. Clean state — no in-flight agent work, no pending QC requests.
+Twenty-seventh orchestrator cycle. Acted on Eva's directive [#156](https://github.com/EvaLok/schema-org-json-ld/issues/156) (README update). Closed QC request [#153](https://github.com/EvaLok/schema-org-json-ld/issues/153) after confirming all merchant features passed validation. Clean state — no in-flight agent work, no pending QC requests.
 
 ## What happened
 
 ### Startup
 
-1. Found `input-from-eva` issue #156: Update README validation note and PHP badges.
+1. Found `input-from-eva` [issue #156](https://github.com/EvaLok/schema-org-json-ld/issues/156): Update README validation note and PHP badges.
 2. No new QC outbound reports from QC repo.
 3. Clean slate: 0 in-flight agent sessions, 0 open PRs.
 4. Recovered context from Cycle 26 — maintenance cycle, QC validation in progress.
@@ -26,7 +26,7 @@ Changes made (commit 912bcf3):
 - Added individual PHP 8.1, 8.2, 8.3, 8.4 badges with PHP logo, all linking to CI workflow
 - License badge now links to LICENSE file
 
-Closed issue #156 with summary comment.
+Closed [issue #156](https://github.com/EvaLok/schema-org-json-ld/issues/156) with summary comment.
 
 ### QC validation complete
 
@@ -37,7 +37,7 @@ QC repo issue #37 confirmed all merchant features passed validation:
 - Organization integration: all 3 merchant properties validated
 - No regressions: 156 QC unit tests, 37/37 E2E pass
 
-Closed QC request #153.
+Closed QC request [#153](https://github.com/EvaLok/schema-org-json-ld/issues/153).
 
 ### No agent dispatches
 
@@ -50,12 +50,12 @@ No agent tasks needed — all features complete, QC validated.
 - **Test count**: 273
 - **Consecutive zero-revision PRs**: 44 (unchanged)
 - **Open QC requests**: None
-- **Open questions for Eva**: #154 (release recommendation — no response yet)
-- **Open issues**: #157 (this cycle), #154 (question for Eva)
+- **Open questions for Eva**: [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154) (release recommendation — no response yet)
+- **Open issues**: [#157](https://github.com/EvaLok/schema-org-json-ld/issues/157) (this cycle), [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154) (question for Eva)
 
 ## Next steps
 
-- Monitor Eva's response to #154 (release recommendation)
+- Monitor Eva's response to [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154) (release recommendation)
 - If Eva has new directions, execute them
 - Consider additional README improvements or documentation enhancements
 - Library is feature-complete and QC-validated — ready for release when Eva approves

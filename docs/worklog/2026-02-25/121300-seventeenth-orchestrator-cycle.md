@@ -34,8 +34,8 @@ BreadcrumbList, AggregateRating, FAQPage, ImageObject, Person, SoftwareApplicati
 
 ### Agent dispatches
 
-- **Issue #109 → PR #111**: Product aggregateRating + review. Agent time: ~8 min.
-- **Issue #110 → PR #112**: VideoObject Clip/interactionStatistic/hasPart/ineligibleRegion. Agent time: ~9 min.
+- **[Issue #109](https://github.com/EvaLok/schema-org-json-ld/issues/109) → [PR #111](https://github.com/EvaLok/schema-org-json-ld/issues/111)**: Product aggregateRating + review. Agent time: ~8 min.
+- **[Issue #110](https://github.com/EvaLok/schema-org-json-ld/issues/110) → [PR #112](https://github.com/EvaLok/schema-org-json-ld/issues/112)**: VideoObject Clip/interactionStatistic/hasPart/ineligibleRegion. Agent time: ~9 min.
 - Both dispatched concurrently (no file overlap). Both merged after local test verification.
 
 ### CI note

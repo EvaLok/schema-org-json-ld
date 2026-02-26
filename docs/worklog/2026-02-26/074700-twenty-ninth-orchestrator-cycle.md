@@ -13,7 +13,7 @@ Twenty-ninth orchestrator cycle. Proactive audit of Google merchant listing docs
 3. No open PRs, no open Copilot issues. 0 in-flight agent sessions.
 4. No new QC outbound reports from QC repo.
 5. No new QC inbound issues on our repo.
-6. Question for Eva #154 (release recommendation) still open, no response.
+6. Question for Eva [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154) (release recommendation) still open, no response.
 
 ### Google Search Gallery check
 
@@ -51,13 +51,13 @@ Spot-checked our Product/Offer implementations against Google's merchant listing
 
 ### Agent dispatches and reviews
 
-1. **#160 / PR #161** — Product text properties + SizeSpecification
+1. **[#160](https://github.com/EvaLok/schema-org-json-ld/issues/160) / [PR #161](https://github.com/EvaLok/schema-org-json-ld/issues/161)** — Product text properties + SizeSpecification
    - Dispatched at 07:51, Copilot finished at 07:59 (8 minutes)
    - Reviewed: Clean implementation, 121 additions, all patterns followed
    - CI passed (claude-review: SUCCESS)
    - **MERGED** at ~08:05
 
-2. **#162 / PR #163** — ProductGroup, PeopleAudience, Certification, UnitPriceSpecification
+2. **[#162](https://github.com/EvaLok/schema-org-json-ld/issues/162) / [PR #163](https://github.com/EvaLok/schema-org-json-ld/issues/163)** — ProductGroup, PeopleAudience, Certification, UnitPriceSpecification
    - Dispatched at 07:51, Copilot finished at 08:01 (9 minutes)
    - Reviewed: Excellent implementation, 364 additions, comprehensive tests
    - CI passed (claude-review: SUCCESS)
@@ -69,9 +69,9 @@ Spot-checked our Product/Offer implementations against Google's merchant listing
 
 ## Decisions
 
-1. **Split into 2 issues**: Separated simple text properties (#160) from complex sub-types (#162) to keep each issue focused.
+1. **Split into 2 issues**: Separated simple text properties ([#160](https://github.com/EvaLok/schema-org-json-ld/issues/160)) from complex sub-types ([#162](https://github.com/EvaLok/schema-org-json-ld/issues/162)) to keep each issue focused.
 
-2. **Expected merge conflict**: Both PRs insert new params after `review` in Product.php. Merging #161 first was intentional — it's simpler and less likely to have issues.
+2. **Expected merge conflict**: Both PRs insert new params after `review` in Product.php. Merging [#161](https://github.com/EvaLok/schema-org-json-ld/issues/161) first was intentional — it's simpler and less likely to have issues.
 
 3. **Manual rebase after Copilot failed**: After 3 Copilot sessions couldn't do a proper rebase (kept adding fix commits on top instead of rebasing), the orchestrator resolved it manually. This is the correct escalation path — Copilot agents struggle with interactive rebase operations.
 
@@ -79,12 +79,12 @@ Spot-checked our Product/Offer implementations against Google's merchant listing
 
 ## Final state
 
-- **PR #161**: MERGED (Product text properties + SizeSpecification)
-- **PR #163**: MERGED (ProductGroup, PeopleAudience, Certification, UnitPriceSpecification)
+- **[PR #161](https://github.com/EvaLok/schema-org-json-ld/issues/161)**: MERGED (Product text properties + SizeSpecification)
+- **[PR #163](https://github.com/EvaLok/schema-org-json-ld/issues/163)**: MERGED (ProductGroup, PeopleAudience, Certification, UnitPriceSpecification)
 - **Tests**: 290 (up from 273)
 - **Schema classes**: 96 (up from 91)
 - **Sub-types**: 100 (up from 95)
-- **Open questions for Eva**: #154 (release recommendation — no response yet)
+- **Open questions for Eva**: [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154) (release recommendation — no response yet)
 
 ## Lessons
 

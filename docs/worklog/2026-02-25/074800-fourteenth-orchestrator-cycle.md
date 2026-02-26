@@ -2,13 +2,13 @@
 
 ## Summary
 
-Fourteenth orchestrator cycle. Implemented Math Solver — the final Google Rich Results type (28/28). Eva approved Option A (#96) for JsonLdGenerator changes. Agent dispatched on #98, PR #99 merged cleanly. Zero-revision streak: 26 consecutive clean PRs.
+Fourteenth orchestrator cycle. Implemented Math Solver — the final Google Rich Results type (28/28). Eva approved Option A ([#96](https://github.com/EvaLok/schema-org-json-ld/issues/96)) for JsonLdGenerator changes. Agent dispatched on [#98](https://github.com/EvaLok/schema-org-json-ld/issues/98), [PR #99](https://github.com/EvaLok/schema-org-json-ld/issues/99) merged cleanly. Zero-revision streak: 26 consecutive clean PRs.
 
 ## What happened
 
 ### Startup
 
-1. **Eva input found**: Issue #96 — Eva approved Option A for Math Solver (#78). Acknowledged and closed both #96 and #78.
+1. **Eva input found**: [Issue #96](https://github.com/EvaLok/schema-org-json-ld/issues/96) — Eva approved Option A for Math Solver ([#78](https://github.com/EvaLok/schema-org-json-ld/issues/78)). Acknowledged and closed both [#96](https://github.com/EvaLok/schema-org-json-ld/issues/96) and [#78](https://github.com/EvaLok/schema-org-json-ld/issues/78).
 2. Clean slate: 0 in-flight sessions, no stale branches or issues.
 3. Recovered context from Cycle 13 worklog.
 
@@ -23,12 +23,12 @@ Verified that array `@type` already works (PHP assigns arrays naturally). Only c
 
 ### Agent dispatch
 
-Created issue #98: "Implement Math Solver with JsonLdGenerator enhancements"
+Created [issue #98](https://github.com/EvaLok/schema-org-json-ld/issues/98): "Implement Math Solver with JsonLdGenerator enhancements"
 - Model: claude-sonnet-4.5 (chosen for core infrastructure modification)
 - Scope: JsonLdGenerator PROPERTY_MAP support + MathSolver + SolveMathAction + tests
 - Agent started at 07:51:44Z, finished at 08:01:48Z (~10 minutes)
 
-### PR #99 review
+### [PR #99](https://github.com/EvaLok/schema-org-json-ld/issues/99) review
 
 - Files changed: JsonLdGenerator.php (+15 lines), MathSolver.php (new), SolveMathAction.php (new), 3 test files
 - JsonLdGenerator change: PROPERTY_MAP support using `defined()` + `constant()`. Minimal and backward-compatible.

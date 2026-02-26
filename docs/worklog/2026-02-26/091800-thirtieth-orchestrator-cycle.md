@@ -13,7 +13,7 @@ Thirtieth orchestrator cycle. README documentation audit revealed significant ga
 3. No open PRs, no open Copilot issues. 0 in-flight agent sessions.
 4. No new QC outbound reports from QC repo.
 5. No new QC inbound issues on our repo.
-6. Question for Eva #154 (release recommendation) still open, no response.
+6. Question for Eva [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154) (release recommendation) still open, no response.
 7. Google Search Gallery unchanged — same 26 types.
 
 ### README documentation audit
@@ -32,14 +32,14 @@ Comprehensive comparison of README.md examples against current source constructo
 
 ### Dispatches
 
-1. **#165** (QC request) — Validation request for Cycle 29 Product enhancements (PRs #161, #163)
-2. **#166** (agent task) → **PR #167** — Comprehensive README update covering Event, Product, Recipe, API reference sections
-3. **#168** (agent task) → **PR #169** — Widen interactionStatistic to arrays in 4 classes + add aggregateRating/review to ProductGroup
+1. **[#165](https://github.com/EvaLok/schema-org-json-ld/issues/165)** (QC request) — Validation request for Cycle 29 Product enhancements (PRs [#161](https://github.com/EvaLok/schema-org-json-ld/issues/161), [#163](https://github.com/EvaLok/schema-org-json-ld/issues/163))
+2. **[#166](https://github.com/EvaLok/schema-org-json-ld/issues/166)** (agent task) → **[PR #167](https://github.com/EvaLok/schema-org-json-ld/issues/167)** — Comprehensive README update covering Event, Product, Recipe, API reference sections
+3. **[#168](https://github.com/EvaLok/schema-org-json-ld/issues/168)** (agent task) → **[PR #169](https://github.com/EvaLok/schema-org-json-ld/issues/169)** — Widen interactionStatistic to arrays in 4 classes + add aggregateRating/review to ProductGroup
 
 ### PR reviews
 
-1. **PR #167** (README update) — Merged at 09:40:30Z. Covered 4 of 9 requested sections (Event, Product, Recipe, API reference). Verified constructor signatures against source (Certification.issuedBy, VirtualLocation, EventAttendanceModeEnumeration). Zero revisions needed.
-2. **PR #169** (quality improvements) — Agent stalled mid-work (`copilot_work_finished` never emitted, second commit message "Changes before error encountered"), but all code changes were complete and correct. Marked ready manually, CI passed (all 4 PHP versions + code style), merged at 09:56:06Z. Zero revisions needed.
+1. **[PR #167](https://github.com/EvaLok/schema-org-json-ld/issues/167)** (README update) — Merged at 09:40:30Z. Covered 4 of 9 requested sections (Event, Product, Recipe, API reference). Verified constructor signatures against source (Certification.issuedBy, VirtualLocation, EventAttendanceModeEnumeration). Zero revisions needed.
+2. **[PR #169](https://github.com/EvaLok/schema-org-json-ld/issues/169)** (quality improvements) — Agent stalled mid-work (`copilot_work_finished` never emitted, second commit message "Changes before error encountered"), but all code changes were complete and correct. Marked ready manually, CI passed (all 4 PHP versions + code style), merged at 09:56:06Z. Zero revisions needed.
 
 ### Direct fixes
 
@@ -60,6 +60,6 @@ Comprehensive comparison of README.md examples against current source constructo
 ## Final state
 
 - **Tests**: 296 (6 new), **Classes**: 96, **Sub-types**: 100, **Zero-revision streak**: 49
-- **QC #165**: Filed, awaiting QC orchestrator pickup
-- **Question for Eva #154**: Still open, no response
+- **QC [#165](https://github.com/EvaLok/schema-org-json-ld/issues/165)**: Filed, awaiting QC orchestrator pickup
+- **Question for Eva [#154](https://github.com/EvaLok/schema-org-json-ld/issues/154)**: Still open, no response
 - All dispatched work merged. No open PRs. No blockers.
