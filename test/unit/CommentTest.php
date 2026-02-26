@@ -77,4 +77,27 @@ final class CommentTest extends TestCase {
 		$this->assertFalse(property_exists($obj, 'sharedContent'));
 		$this->assertFalse(property_exists($obj, 'creativeWorkStatus'));
 	}
+
+	public function testInteractionStatisticSerializesAsArray(): void {
+		$schema = new Comment(
+			text: 'Nice article!',
+			interactionStatistic: [
+				new InteractionCounter(
+					interactionType: 'https://schema.org/LikeAction',
+					userInteractionCount: 3,
+				),
+				new InteractionCounter(
+					interactionType: 'https://schema.org/CommentAction',
+					userInteractionCount: 1,
+				),
+			],
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertCount(2, $obj->interactionStatistic);
+		$this->assertEquals('InteractionCounter', $obj->interactionStatistic[0]->{'@type'});
+		$this->assertEquals('https://schema.org/LikeAction', $obj->interactionStatistic[0]->interactionType);
+		$this->assertEquals('https://schema.org/CommentAction', $obj->interactionStatistic[1]->interactionType);
+	}
 }

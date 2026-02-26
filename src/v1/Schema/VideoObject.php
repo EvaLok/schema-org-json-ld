@@ -18,7 +18,8 @@ class VideoObject extends TypedSchema {
 		public null|string $duration = null,
 		public null|string $expires = null,
 		public null|string $regionsAllowed = null,
-		public null|InteractionCounter $interactionStatistic = null,
+		/** @var InteractionCounter|InteractionCounter[]|null $interactionStatistic */
+		public null|InteractionCounter|array $interactionStatistic = null,
 		/** @var null|Clip[] $hasPart */
 		public null|array $hasPart = null,
 		public null|string $ineligibleRegion = null,

@@ -17,5 +17,7 @@ class ProductGroup extends TypedSchema {
 		public null|string $url = null,
 		public null|string $description = null,
 		public null|Brand $brand = null,
+		public null|AggregateRating $aggregateRating = null,
+		public null|Review $review = null,
 	) {}
 }

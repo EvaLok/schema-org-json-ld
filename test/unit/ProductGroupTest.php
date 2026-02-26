@@ -3,9 +3,12 @@
 namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\AggregateRating;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Brand;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Product;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ProductGroup;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Rating;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Review;
 use PHPUnit\Framework\TestCase;
 
 final class ProductGroupTest extends TestCase {
@@ -70,5 +73,40 @@ final class ProductGroupTest extends TestCase {
 		$this->assertEquals('Product', $obj->hasVariant[0]->{'@type'});
 		$this->assertEquals('Winter Jacket Blue M', $obj->hasVariant[0]->name);
 		$this->assertEquals('Winter Jacket Black L', $obj->hasVariant[1]->name);
+	}
+
+	public function testOutputWithAggregateRating(): void {
+		$schema = new ProductGroup(
+			name: 'Winter Jacket',
+			aggregateRating: new AggregateRating(
+				ratingValue: 4.4,
+				reviewCount: 89,
+			),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('AggregateRating', $obj->aggregateRating->{'@type'});
+		$this->assertEquals(4.4, $obj->aggregateRating->ratingValue);
+		$this->assertEquals(89, $obj->aggregateRating->reviewCount);
+	}
+
+	public function testOutputWithReview(): void {
+		$schema = new ProductGroup(
+			name: 'Winter Jacket',
+			review: new Review(
+				author: 'Jane Doe',
+				reviewRating: new Rating(ratingValue: 5),
+				reviewBody: 'Excellent jacket.',
+			),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('Review', $obj->review->{'@type'});
+		$this->assertEquals('Jane Doe', $obj->review->author);
+		$this->assertEquals('Rating', $obj->review->reviewRating->{'@type'});
+		$this->assertEquals(5, $obj->review->reviewRating->ratingValue);
+		$this->assertEquals('Excellent jacket.', $obj->review->reviewBody);
 	}
 }

@@ -18,7 +18,8 @@ class DiscussionForumPosting extends TypedSchema {
 		public null|VideoObject $video = null,
 		/** @var Comment[] $comment */
 		public null|array $comment = null,
-		public null|InteractionCounter $interactionStatistic = null,
+		/** @var InteractionCounter|InteractionCounter[]|null $interactionStatistic */
+		public null|InteractionCounter|array $interactionStatistic = null,
 		public null|string $isPartOf = null,
 		public null|string $sharedContent = null,
 		public null|string $creativeWorkStatus = null,

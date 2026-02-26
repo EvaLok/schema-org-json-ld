@@ -114,4 +114,27 @@ final class PersonTest extends TestCase {
 		$this->assertEquals('https://example.com/a', $obj->sameAs[0]);
 		$this->assertEquals('https://example.com/b', $obj->sameAs[1]);
 	}
+
+	public function testInteractionStatisticSerializesAsArray(): void {
+		$person = new Person(
+			name: 'John Doe',
+			interactionStatistic: [
+				new InteractionCounter(
+					interactionType: 'https://schema.org/LikeAction',
+					userInteractionCount: 11,
+				),
+				new InteractionCounter(
+					interactionType: 'https://schema.org/FollowAction',
+					userInteractionCount: 3,
+				),
+			],
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $person);
+		$obj = json_decode($json);
+
+		$this->assertCount(2, $obj->interactionStatistic);
+		$this->assertEquals('InteractionCounter', $obj->interactionStatistic[0]->{'@type'});
+		$this->assertEquals('https://schema.org/LikeAction', $obj->interactionStatistic[0]->interactionType);
+		$this->assertEquals('https://schema.org/FollowAction', $obj->interactionStatistic[1]->interactionType);
+	}
 }
