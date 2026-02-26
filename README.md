@@ -1,6 +1,6 @@
 # schema-org-json-ld
 
-PHP library for generating schema.org JSON-LD structured data for Google Rich Results. Covers **28 Google Rich Results types** backed by **67 schema classes**, with type-safe constructor-promoted properties and automatic serialization.
+PHP library for generating schema.org JSON-LD structured data for Google Rich Results. Covers **28 Google Rich Results types** backed by **91 schema classes**, with type-safe constructor-promoted properties and automatic serialization.
 
 Tested & validated using the [Google Rich Results Test](https://search.google.com/test/rich-results/result?id=eeuHnX6wLe1IqxNkqd42xA).
 
@@ -108,24 +108,24 @@ The pattern is always the same: instantiate a schema class, pass it to `JsonLdGe
 | Discussion forum | `DiscussionForumPosting`, `Comment`, `InteractionCounter` |
 | Education Q&A | `Quiz`, `Question`, `Answer`, `AlignmentObject` |
 | Employer aggregate rating | `EmployerAggregateRating` |
-| Event | `Event`, `Place`, `Offer`, `EventStatusType` |
+| Event | `Event`, `Place`, `VirtualLocation`, `Offer`, `EventStatusType`, `EventAttendanceModeEnumeration` |
 | FAQ | `FAQPage`, `Question`, `Answer` |
 | Image metadata | `ImageObject` |
-| Job posting | `JobPosting`, `Organization`, `Place`, `MonetaryAmount`, `AdministrativeArea` |
-| Local business | `LocalBusiness`, `PostalAddress`, `GeoCoordinates`, `OpeningHoursSpecification`, `AggregateRating`, `Review` |
+| Job posting | `JobPosting`, `Organization`, `Place`, `MonetaryAmount`, `AdministrativeArea`, `PropertyValue` |
+| Local business | `LocalBusiness`, `FoodEstablishment`, `Restaurant`, `Store`, `PostalAddress`, `GeoCoordinates`, `OpeningHoursSpecification`, `AggregateRating`, `Review` |
 | Math solver | `MathSolver`, `SolveMathAction` |
 | Movie | `Movie`, `Person`, `AggregateRating`, `Review` |
-| Organization | `Organization`, `PostalAddress`, `ContactPoint` |
-| Product | `Product`, `Offer`, `Brand`, `OfferShippingDetails`, `ShippingDeliveryTime`, `DefinedRegion`, `MonetaryAmount`, `QuantitativeValue` |
+| Organization | `Organization`, `PostalAddress`, `ContactPoint`, `MerchantReturnPolicy`, `MemberProgram`, `ShippingService` |
+| Product | `Product`, `Offer`, `AggregateOffer`, `Brand`, `OfferShippingDetails`, `ShippingDeliveryTime`, `DefinedRegion`, `MonetaryAmount`, `QuantitativeValue`, `AggregateRating`, `Review` |
 | Profile page | `ProfilePage`, `Person`, `Organization` |
 | Q&A | `QAPage`, `Question`, `Answer` |
-| Recipe | `Recipe`, `Person`, `NutritionInformation`, `HowToStep`, `AggregateRating` |
+| Recipe | `Recipe`, `Person`, `NutritionInformation`, `HowToStep`, `HowToSection`, `AggregateRating`, `VideoObject` |
 | Review snippet | `Review`, `AggregateRating`, `Rating` |
 | Software app | `SoftwareApplication`, `MobileApplication`, `WebApplication` |
 | Speakable | `SpeakableSpecification` (via `Article`) |
 | Subscription/paywalled content | `WebPageElement` (via `Article`) |
 | Vacation rental | `VacationRental`, `Accommodation`, `BedDetails`, `PostalAddress`, `AggregateRating` |
-| Video | `VideoObject` |
+| Video | `VideoObject`, `Clip` |
 
 ---
 
