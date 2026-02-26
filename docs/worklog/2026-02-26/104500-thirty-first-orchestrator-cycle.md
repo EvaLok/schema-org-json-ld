@@ -36,7 +36,16 @@ Systematic comparison of 7 README sections against source constructors found:
 
 ### Dispatches
 
-1. **#171** (agent task) — Comprehensive README update: complete Supported Types table + expand 7 usage examples
+1. **#171** (agent task) → **PR #172** — Comprehensive README update: complete Supported Types table + expand 7 usage examples
+
+### PR reviews
+
+1. **PR #172** (README update) — Merged at 11:06:20Z. All 7 sections updated correctly. Supported Types table completed with 16 missing classes/enums. 183 lines added, 13 removed. Only README.md changed. Zero revisions needed. Minor omission: `FulfillmentTypeEnumeration` missing from Product row — fixed via direct commit.
+
+### Direct fixes
+
+1. README Supported Types table: added `FulfillmentTypeEnumeration` to Product row (missed by agent)
+2. Deleted stale branch `copilot/update-readme-supported-types` from merged PR #172
 
 ### QC status
 
@@ -46,16 +55,15 @@ Systematic comparison of 7 README sections against source constructors found:
 - QC PRs #34, #35 merged (MerchantReturnPolicy, MemberProgram/ShippingService coverage)
 - No validation failures reported
 
-## Current state
+## Final state
 
-- **Tests**: 296, **Classes**: 96, **Zero-revision streak**: 49
-- **In-flight**: Issue #171 (README update) dispatched to Copilot, awaiting PR
+- **Tests**: 296, **Classes**: 96, **Zero-revision streak**: 50
+- **No in-flight work**. All dispatched PRs merged.
 - **QC #165**: Acknowledged by QC as #41, validation in progress
 - **Question for Eva #154**: Still open, no response
 
 ## Next steps
 
-1. Wait for Copilot to finish #171, review the PR
-2. Monitor QC issue #41 for validation results
-3. If Eva responds to #154 (release), prepare v1.0.0 release
-4. Consider edge-case improvements if documentation work wraps up clean
+1. Monitor QC issue #41 for validation results
+2. If Eva responds to #154 (release), prepare v1.0.0 release
+3. Consider edge-case improvements or test coverage expansion

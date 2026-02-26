@@ -120,7 +120,7 @@ The pattern is always the same: instantiate a schema class, pass it to `JsonLdGe
 | Math solver | `MathSolver`, `SolveMathAction` |
 | Movie | `Movie`, `Person`, `AggregateRating`, `Review` |
 | Organization | `Organization`, `PostalAddress`, `ContactPoint`, `MerchantReturnPolicy`, `MerchantReturnPolicySeasonalOverride`, `MemberProgram`, `MemberProgramTier`, `ShippingService`, `MerchantReturnEnumeration`, `RefundTypeEnumeration`, `ReturnFeesEnumeration`, `ReturnLabelSourceEnumeration`, `ReturnMethodEnumeration`, `TierBenefitEnumeration` |
-| Product | `Product`, `Offer`, `AggregateOffer`, `Brand`, `OfferShippingDetails`, `ShippingDeliveryTime`, `DefinedRegion`, `MonetaryAmount`, `QuantitativeValue`, `AggregateRating`, `Review`, `SizeSpecification`, `ProductGroup`, `PeopleAudience`, `Certification`, `UnitPriceSpecification`, `ShippingConditions`, `ServicePeriod`, `ShippingRateSettings`, `OfferItemCondition`, `ItemAvailability` |
+| Product | `Product`, `Offer`, `AggregateOffer`, `Brand`, `OfferShippingDetails`, `ShippingDeliveryTime`, `DefinedRegion`, `MonetaryAmount`, `QuantitativeValue`, `AggregateRating`, `Review`, `SizeSpecification`, `ProductGroup`, `PeopleAudience`, `Certification`, `UnitPriceSpecification`, `ShippingConditions`, `ServicePeriod`, `ShippingRateSettings`, `FulfillmentTypeEnumeration`, `OfferItemCondition`, `ItemAvailability` |
 | Profile page | `ProfilePage`, `Person`, `Organization` |
 | Q&A | `QAPage`, `Question`, `Answer` |
 | Recipe | `Recipe`, `Person`, `NutritionInformation`, `HowToStep`, `HowToSection`, `AggregateRating`, `VideoObject` |

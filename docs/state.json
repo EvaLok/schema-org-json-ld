@@ -350,10 +350,12 @@
   "agent_sessions": [
     {
       "issue": 171,
+      "pr": 172,
       "title": "Update README: complete Supported Types table + expand 7 usage examples",
       "dispatched_at": "2026-02-26T10:50:00Z",
-      "status": "dispatched",
-      "model": "gpt-5.3-codex"
+      "status": "merged",
+      "model": "gpt-5.3-codex",
+      "merged_at": "2026-02-26T11:06:20Z"
     }
   ],
   "qc_processed": [8, 37],
@@ -366,12 +368,12 @@
   "last_cycle": {
     "issue": 170,
     "timestamp": "2026-02-26T10:45:00Z",
-    "summary": "Cycle 31: README documentation sweep. Audited 7 sections, found 50+ undocumented properties and 16 missing classes in Supported Types table. Dispatched #171 for comprehensive README update. QC #165 acknowledged as QC#41, validation in progress."
+    "summary": "Cycle 31: README documentation sweep. Audited 7 sections, found 50+ undocumented properties and 16 missing classes in Supported Types table. Dispatched #171 → PR #172 merged (comprehensive README update). QC #165 acknowledged as QC#41, validation in progress. Direct fix: added FulfillmentTypeEnumeration to Supported Types table."
   },
   "test_count": 296,
   "total_schema_types": 28,
   "total_sub_types": 100,
   "total_schema_classes": 96,
   "total_enums": 12,
-  "consecutive_zero_revision_prs": 49
+  "consecutive_zero_revision_prs": 50
 }
