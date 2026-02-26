@@ -202,19 +202,32 @@
         "pr": 191,
         "issue": 186,
         "merged_at": "2026-02-26T19:04:41Z"
+      },
+      {
+        "description": "Consolidate all enums under src/v1/Enum namespace",
+        "pr": 192,
+        "issue": 184,
+        "merged_at": "2026-02-26T19:50:00Z"
+      },
+      {
+        "description": "Expand JsonLdGenerator edge-case test coverage",
+        "pr": 193,
+        "issue": 182,
+        "merged_at": "2026-02-26T19:52:00Z"
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
+    "enum_namespace": "EvaLok\\SchemaOrgJsonLd\\v1\\Enum",
     "in_progress": [
       {
-        "issue": 184,
-        "title": "Consolidate enum class locations",
-        "dispatched_at": "2026-02-26T19:05:00Z"
+        "issue": 196,
+        "title": "Add video and itemListElement to HowToStep",
+        "dispatched_at": "2026-02-26T19:53:00Z"
       },
       {
-        "issue": 182,
-        "title": "Add edge-case and negative tests",
-        "dispatched_at": "2026-02-26T19:05:00Z"
+        "issue": 197,
+        "title": "Add datePublished, BroadcastEvent, subjectOf",
+        "dispatched_at": "2026-02-26T19:53:00Z"
       }
     ],
     "planned_next": [
@@ -226,14 +239,10 @@
     ],
     "google_rich_results_types": {
       "not_implemented": [],
-      "note": "ALL 28 Google Rich Results types implemented. Product merchant listing properties now fully covered."
+      "note": "ALL 28 Google Rich Results types implemented."
     },
     "remaining_audit_findings": {
       "low_priority": [
-        {
-          "type": "VideoObject",
-          "missing": "publication (BroadcastEvent) for live streams — niche use case"
-        },
         {
           "type": "JobPosting",
           "missing": "Beta properties (educationRequirements, experienceRequirements, experienceInPlaceOfEducation)"
@@ -243,58 +252,60 @@
   },
   "agent_sessions": [
     {
-      "issue": 183,
-      "pr": 190,
-      "title": "Handle json_encode() failure in JsonLdGenerator",
-      "dispatched_at": "2026-02-26T18:19:00Z",
-      "status": "merged",
-      "model": "gpt-5.3-codex",
-      "merged_at": "2026-02-26T19:04:34Z"
-    },
-    {
-      "issue": 186,
-      "pr": 191,
-      "title": "Add declare(strict_types=1) to all PHP files",
-      "dispatched_at": "2026-02-26T18:19:00Z",
-      "status": "merged",
-      "model": "gpt-5.3-codex",
-      "merged_at": "2026-02-26T19:04:41Z"
-    },
-    {
       "issue": 184,
+      "pr": 192,
       "title": "Consolidate enum class locations",
       "dispatched_at": "2026-02-26T19:05:00Z",
+      "status": "merged",
+      "model": "gpt-5.3-codex",
+      "merged_at": "2026-02-26T19:50:00Z"
+    },
+    {
+      "issue": 182,
+      "pr": 193,
+      "title": "Add edge-case and negative tests",
+      "dispatched_at": "2026-02-26T19:05:00Z",
+      "status": "merged",
+      "model": "gpt-5.3-codex",
+      "merged_at": "2026-02-26T19:52:00Z"
+    },
+    {
+      "issue": 196,
+      "title": "Add video and itemListElement to HowToStep",
+      "dispatched_at": "2026-02-26T19:53:00Z",
       "status": "in_progress",
       "model": "gpt-5.3-codex"
     },
     {
-      "issue": 182,
-      "title": "Add edge-case and negative tests",
-      "dispatched_at": "2026-02-26T19:05:00Z",
+      "issue": 197,
+      "title": "Add datePublished, BroadcastEvent, subjectOf",
+      "dispatched_at": "2026-02-26T19:53:00Z",
       "status": "in_progress",
       "model": "gpt-5.3-codex"
     }
   ],
-  "qc_processed": [8, 37, 165],
+  "qc_processed": [8, 37, 57, 165],
   "qc_requests_pending": [],
   "qc_status": {
-    "request_165": "COMPLETE. QC issue #41 closed. 39/39 E2E pass, 0 errors, 158 warnings. @graph API also validated."
+    "request_165": "COMPLETE. QC issue #41 closed. 39/39 E2E pass, 0 errors, 158 warnings. @graph API also validated.",
+    "report_57": "ACKNOWLEDGED. QC-ACK issue #195 opened. Dispatched #196 (HowToStep) and #197 (datePublished/BroadcastEvent/subjectOf)."
   },
   "blockers": [],
   "open_questions_for_eva": [],
   "eva_input_issues": {
-    "closed_this_cycle": [180, 183, 185, 186, 187, 188],
-    "remaining_open": [181, 182, 184]
+    "closed_this_cycle": [182, 184],
+    "closed_prior_cycles": [180, 183, 185, 186, 187, 188],
+    "remaining_open": [181]
   },
   "last_cycle": {
-    "issue": 189,
-    "timestamp": "2026-02-26T18:15:00Z",
-    "summary": "Cycle 36: Addressed 6 of Eva's 9 input-from-eva issues. Merged PRs #190 (json_encode fix) and #191 (strict_types). Split JOURNAL.md into per-date files. Converted worklog/journal references to clickable links. Dispatched #184 (enum consolidation) and #182 (edge-case tests)."
+    "issue": 194,
+    "timestamp": "2026-02-26T19:45:00Z",
+    "summary": "Cycle 37: Merged PRs #192 (enum consolidation) and #193 (edge-case tests). Closed Eva's issues #184 and #182. Processed QC report #57. Dispatched #196 and #197 for QC fixes. Updated AGENTS.md, README, and skills for enum namespace."
   },
-  "test_count": 303,
+  "test_count": 309,
   "total_schema_types": 28,
   "total_sub_types": 100,
   "total_schema_classes": 96,
   "total_enums": 12,
-  "consecutive_zero_revision_prs": 53
+  "consecutive_zero_revision_prs": 55
 }
