@@ -304,30 +304,40 @@
         "issue": 150,
         "modifies": ["Organization"],
         "merged_at": "2026-02-26T00:48:06Z"
-      }
-    ],
-    "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
-    "in_progress": [
+      },
       {
         "description": "Add Product text properties (color, material, pattern, size, GTINs) + SizeSpecification",
+        "pr": 161,
         "issue": 160,
-        "dispatched_at": "2026-02-26T07:51:31Z",
-        "model": "gpt-5.3-codex"
+        "sub_types_added": ["SizeSpecification"],
+        "merged_at": "2026-02-26T08:05:00Z"
       },
       {
         "description": "Add ProductGroup, PeopleAudience, Certification, UnitPriceSpecification + wire to Product/Offer",
+        "pr": 163,
         "issue": 162,
-        "dispatched_at": "2026-02-26T07:51:57Z",
-        "model": "gpt-5.3-codex"
+        "sub_types_added": ["ProductGroup", "PeopleAudience", "Certification", "UnitPriceSpecification"],
+        "merged_at": "2026-02-26T08:35:17Z"
       }
     ],
+    "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
+    "in_progress": [],
     "planned_next": [],
     "google_rich_results_types": {
       "not_implemented": [],
-      "note": "ALL 28 Google Rich Results types implemented. Now enhancing Product with Google-recommended merchant listing properties."
+      "note": "ALL 28 Google Rich Results types implemented. Product merchant listing properties now fully covered."
     },
     "remaining_audit_findings": {
-      "low_priority": []
+      "low_priority": [
+        {
+          "type": "VideoObject",
+          "missing": "publication (BroadcastEvent) for live streams — niche use case"
+        },
+        {
+          "type": "JobPosting",
+          "missing": "Beta properties (educationRequirements, experienceRequirements, experienceInPlaceOfEducation)"
+        }
+      ]
     }
   },
   "agent_sessions": [
@@ -345,9 +355,10 @@
       "pr": 163,
       "title": "Add ProductGroup, PeopleAudience, Certification, UnitPriceSpecification",
       "dispatched_at": "2026-02-26T07:51:57Z",
-      "status": "rebasing",
+      "status": "merged",
       "model": "gpt-5.3-codex",
-      "note": "Merge conflict with #161, requested rebase at 08:06"
+      "merged_at": "2026-02-26T08:35:17Z",
+      "note": "Merge conflict with #161 resolved by orchestrator rebase"
     }
   ],
   "qc_processed": [8, 37],
@@ -356,13 +367,13 @@
   "open_questions_for_eva": [154],
   "last_cycle": {
     "issue": 159,
-    "timestamp": "2026-02-26T07:47:00Z",
-    "summary": "Cycle 29: Audited Google merchant listing docs, found missing Product properties. Dispatched #160 and #162 for Product enhancements."
+    "timestamp": "2026-02-26T08:35:00Z",
+    "summary": "Cycle 29: Audited Google merchant listing docs, dispatched #160 and #162. Both merged. Product now fully covers Google merchant listing properties."
   },
-  "test_count": 273,
+  "test_count": 290,
   "total_schema_types": 28,
-  "total_sub_types": 95,
-  "total_schema_classes": 91,
+  "total_sub_types": 100,
+  "total_schema_classes": 96,
   "total_enums": 12,
-  "consecutive_zero_revision_prs": 44
+  "consecutive_zero_revision_prs": 46
 }

@@ -2,7 +2,7 @@
 
 ## Summary
 
-Twenty-ninth orchestrator cycle. Proactive audit of Google merchant listing docs revealed significant gaps in Product recommended properties. Dispatched 2 agent tasks, reviewed and merged first, requesting rebase for second (merge conflict as expected).
+Twenty-ninth orchestrator cycle. Proactive audit of Google merchant listing docs revealed significant gaps in Product recommended properties. Dispatched 2 agent tasks, reviewed and merged both. Resolved merge conflict manually after Copilot's 3 rebase attempts couldn't properly rebase the branch.
 
 ## What happened
 
@@ -62,26 +62,32 @@ Spot-checked our Product/Offer implementations against Google's merchant listing
    - Reviewed: Excellent implementation, 364 additions, comprehensive tests
    - CI passed (claude-review: SUCCESS)
    - **Merge conflict** (expected — both PRs modified Product.php at same insertion point)
-   - Requested rebase via @copilot comment at 08:06
-   - Rebase in progress
+   - Copilot attempted 3 rebase sessions (08:06-08:12, 08:13-08:19) — kept adding fix commits instead of rebasing
+   - Orchestrator resolved manually: fetched branch, ran `git rebase origin/master`, resolved Product.php conflict (keep both property sets), skipped redundant fix commits, force-pushed
+   - All 6 CI checks passed after rebase
+   - **MERGED** at 08:35:17
 
 ## Decisions
 
 1. **Split into 2 issues**: Separated simple text properties (#160) from complex sub-types (#162) to keep each issue focused.
 
-2. **Expected merge conflict**: Both PRs insert new params after `review` in Product.php. Merging #161 first was intentional — it's simpler and less likely to have issues. The rebase for #163 is a known cost of parallel development.
+2. **Expected merge conflict**: Both PRs insert new params after `review` in Product.php. Merging #161 first was intentional — it's simpler and less likely to have issues.
 
-3. **Comprehensive audit**: Used waiting time productively to audit ALL types, not just Product. Found the library is in excellent shape — Product was the only type with significant gaps.
+3. **Manual rebase after Copilot failed**: After 3 Copilot sessions couldn't do a proper rebase (kept adding fix commits on top instead of rebasing), the orchestrator resolved it manually. This is the correct escalation path — Copilot agents struggle with interactive rebase operations.
+
+4. **Comprehensive audit**: Used waiting time productively to audit ALL types, not just Product. Found the library is in excellent shape — Product was the only type with significant gaps.
 
 ## Final state
 
 - **PR #161**: MERGED (Product text properties + SizeSpecification)
-- **PR #163**: Awaiting rebase by Copilot (merge conflict resolution)
+- **PR #163**: MERGED (ProductGroup, PeopleAudience, Certification, UnitPriceSpecification)
+- **Tests**: 290 (up from 273)
+- **Schema classes**: 96 (up from 91)
+- **Sub-types**: 100 (up from 95)
 - **Open questions for Eva**: #154 (release recommendation — no response yet)
 
-## Next steps
+## Lessons
 
-- Wait for Copilot to finish rebase on PR #163
-- Review the rebased code and merge
-- Consider dispatching BroadcastEvent for VideoObject (live stream support) — low priority
-- Consider dispatching JobPosting beta properties — very low priority
+1. **Copilot can't rebase**: When a branch has merge conflicts with master, Copilot's @copilot rebase mechanism adds fix commits on top rather than doing a proper `git rebase`. After 2-3 failed attempts, it's faster for the orchestrator to resolve manually.
+
+2. **Periodic re-verification pays off**: The comprehensive audit found Product gaps that existed since the original implementation. Regular re-checks against upstream docs catch drift.

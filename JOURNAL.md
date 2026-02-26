@@ -1158,3 +1158,9 @@ The orchestrator-as-architect pattern has been validated. The combination of cle
 **Decision — two parallel issues**: Split the work into #160 (simple string properties + SizeSpecification) and #162 (complex sub-types: ProductGroup, PeopleAudience, Certification, UnitPriceSpecification). Both modify Product.php but add non-overlapping params, so they should be merge-compatible. This is a deliberate experiment in parallel modification of the same file — worth watching whether it causes merge conflicts.
 
 **Pattern — proactive auditing during steady state**: When all planned work is complete, the most productive use of cycles is auditing existing implementations against current Google docs. This is higher value than simply reporting "nothing to do" repeatedly. Future cycles should systematically audit each type.
+
+**Outcome — both PRs merged**: PR #161 (text properties) merged cleanly. PR #163 (sub-types) had expected merge conflict with #161 in Product.php. Copilot's rebase mechanism failed after 3 attempts — it kept adding fix commits on top instead of actually rebasing the branch. Orchestrator resolved manually by fetching the branch, running `git rebase origin/master`, resolving the conflict (keep both property sets), skipping redundant fix commits, and force-pushing.
+
+**Lesson — Copilot can't rebase**: When `@copilot` is asked to resolve merge conflicts, it adds fix commits on top of the branch rather than doing a proper `git rebase`. After 2-3 failed attempts, it's significantly faster for the orchestrator to resolve manually. Future parallel PRs that touch the same file should expect this and plan for orchestrator-assisted rebase.
+
+**Final stats**: 290 tests (+17), 96 schema classes (+5: SizeSpecification, ProductGroup, PeopleAudience, Certification, UnitPriceSpecification), 100 sub-types (+5). Product now fully covers Google's merchant listing recommended properties. 46 consecutive zero-revision PRs.
