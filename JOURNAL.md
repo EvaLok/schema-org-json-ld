@@ -1066,3 +1066,67 @@ With PR #151 merged, the library has achieved full coverage of all planned featu
 - 95 sub-types covering the full schema.org type graph needed for Google Rich Results
 
 Opening a QC validation request for Cycles 23-24 changes to confirm end-to-end correctness.
+
+---
+
+## 2026-02-26 — Cycle 25: Maintenance and Project Retrospective
+
+### Context
+
+First cycle with no implementation work to do. All 28 Google Rich Results types are implemented, all quality audit findings resolved, all merchant features complete. This is a maintenance/housekeeping cycle.
+
+### QC validation request for merchant features
+
+Opened #153 requesting validation of Cycles 23-24 changes (MerchantReturnPolicy, MemberProgram, ShippingService, Organization merchant wiring). This was planned in Cycle 24 but the cycle ended before it could be sent. Lesson: QC requests should be sent immediately after merging, not deferred to "end of cycle."
+
+### Release recommendation
+
+Opened #154 recommending v1.0.0 to Eva. The last release (v0.0.4) was from June 2024 and only covered Product + BreadcrumbList. The library has grown from 2 types to 28 types, from ~10 classes to 91+ classes, from a handful of tests to 273 tests. This is a significant enough change to warrant a major version bump.
+
+### Test coverage: complete for classes, acceptable for enums
+
+Audit confirmed all 81 schema classes have dedicated test files. The 11 enum types don't have dedicated tests, which is acceptable — they're simple value objects (backed string enums mapping to schema.org URLs) and are exercised through parent type tests. Adding dedicated enum tests would be low-value busywork.
+
+### Project retrospective: 25 cycles, 48 hours
+
+Looking back across 25 cycles:
+
+**Timeline:**
+- Cycles 1-3 (Feb 24): Infrastructure setup, PAT issues, AGENTS.md rewrite. Foundational work.
+- Cycles 4-5 (Feb 24): Hit stride. Fixed indentation, established zero-revision pattern. 4 types/cycle.
+- Cycles 6-9 (Feb 24): Steady state implementation. 3-4 types/cycle. Near-complete coverage.
+- Cycles 10-11 (Feb 25): Quality shift — test coverage, README, documentation.
+- Cycles 12-15 (Feb 25): Eva directives (README), quality audits, MathSolver.
+- Cycles 16-22 (Feb 25): Deep Google docs audits, property gap fixes, QC validation.
+- Cycles 23-24 (Feb 25-26): Merchant features sprint. Completed final Organization wiring.
+- Cycle 25 (Feb 26): Maintenance. Feature work complete.
+
+**Key metrics:**
+- 28/28 Google Rich Results types (100%)
+- 95 sub-types
+- 273 tests
+- 44 consecutive zero-revision PRs (since Cycle 5)
+- ~55 total PRs merged
+- 1 revision ever needed (tab indentation in Cycle 3, fixed by updating AGENTS.md)
+
+**What worked well:**
+1. **Investing in AGENTS.md early** — the single most impactful decision. Every minute spent on documentation paid dividends across 44+ agent PRs.
+2. **Shared sub-types first** — building Organization, PostalAddress, AggregateRating, Person before parent types avoided rework and enabled clean parent type implementations.
+3. **File conflict-aware batching** — planning concurrent dispatches around file conflicts eliminated merge issues.
+4. **cs-fix as mandatory step** — automated code style eliminated an entire class of review feedback.
+5. **Research before dispatch** — spending 5-10 minutes reading Google docs before writing issue specs produced better first-attempt results than rushing to dispatch.
+6. **QC orchestrator integration** — external validation caught real issues (Review.itemReviewed missing) that internal tests missed.
+
+**What could be improved:**
+1. **Polling overhead** — noted in journals for 5+ cycles but never fixed. Each 7-minute agent session consumed 20-30 polling iterations. A webhook or event-driven architecture would eliminate this.
+2. **Context consumption** — the orchestrator's 75-minute window is generous but the context window fills up from verbose API responses. Better response parsing would help.
+3. **State file evolution** — the JSON state file worked but could benefit from more structured tooling (scripts for common queries).
+
+**Workflow maturity assessment:**
+The orchestrator-as-architect pattern has been validated. The combination of clear specifications + well-maintained agent instructions + automated style enforcement produces reliable, first-attempt-success code from the coding agent. The workflow is genuinely good — not perfect, but the friction points (polling, context management) are well-understood and bounded.
+
+### Open questions
+
+- What should the orchestrator do when all planned work is complete? Options: (a) stop cycling, (b) proactive improvements, (c) wait for Eva's direction.
+- Is there value in the orchestrator creating comprehensive integration tests (generating full-page JSON-LD with multiple nested types)?
+- Should the 11 enum types get dedicated tests for completeness, or is indirect coverage sufficient?

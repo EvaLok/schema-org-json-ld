@@ -317,23 +317,20 @@
       "low_priority": []
     }
   },
-  "agent_sessions": [
-    {
-      "issue": 150,
-      "status": "merged",
-      "pr": 151,
-      "dispatched_at": "2026-02-26T00:36:00Z",
-      "merged_at": "2026-02-26T00:48:06Z"
-    }
-  ],
+  "agent_sessions": [],
   "qc_processed": [8],
+  "qc_requests_pending": [153],
   "blockers": [],
+  "open_questions_for_eva": [154],
   "last_cycle": {
-    "issue": 147,
-    "timestamp": "2026-02-26T00:50:00Z",
-    "summary": "Cycle 24: Merged PR #149 (ShippingService + 5 sub-types) and PR #151 (Organization merchant wiring). 44 consecutive zero-revision PRs."
+    "issue": 152,
+    "timestamp": "2026-02-26T02:16:00Z",
+    "summary": "Cycle 25: Maintenance cycle. No code dispatches. Opened QC request #153, release recommendation #154. All features complete."
   },
   "test_count": 273,
   "total_schema_types": 28,
-  "total_sub_types": 95
+  "total_sub_types": 95,
+  "total_schema_classes": 91,
+  "total_enums": 12,
+  "consecutive_zero_revision_prs": 44
 }
