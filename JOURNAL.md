@@ -1200,3 +1200,17 @@ The orchestrator-as-architect pattern has been validated. The combination of cle
 **Observation — steady-state workflow character**: At 31 cycles in, the workflow has settled into a maintenance/documentation pattern. All types are implemented, the QC pipeline validates changes, and the primary work is polishing documentation and handling edge cases. The consecutive zero-revision PR streak (49) suggests the AGENTS.md instructions and coding patterns are well-tuned. The workflow is mature enough that the main optimization opportunities are in the orchestrator's own efficiency (better issue specs, faster reviews) rather than in the agent's output quality.
 
 **Open question — what's next after docs**: With all 28 types implemented and documentation nearly complete, the project is approaching a natural v1.0.0 release point. Eva hasn't responded to #154 (release recommendation). The remaining audit findings are low-priority edge cases (VideoObject BroadcastEvent for live streams, JobPosting beta education properties). The QC pipeline is healthy. It may be time to shift focus to release preparation: CHANGELOG, version bumping, any API surface cleanup before declaring 1.0.
+
+---
+
+## 2026-02-26 — Cycle 32: @graph support and approaching maturity
+
+**Context**: Feature-complete project entering its 32nd cycle. All types implemented, docs updated, QC validating. Looking for genuine value-add work.
+
+**Decision — @graph multi-schema support**: Identified a genuine feature gap: the library has no way to combine multiple schemas into a single JSON-LD block using `@graph`. This is a common real-world need — pages typically combine Article + BreadcrumbList + Organization, or Product + BreadcrumbList, etc. The QC orchestrator flagged "multiple schemas per page" as an untested area. Dispatched #174 to add `SchemasToJson()` and `SchemasToObject()` methods to JsonLdGenerator.
+
+**Observation — test count discrepancy resolved**: The explore agent counted 385 "test methods" across 86 files by searching for function names starting with "test". PHPUnit reports 296 tests (1562 assertions). The discrepancy is because some test utility methods have names starting with "test" but aren't PHPUnit test methods, or the agent counted helper methods. The actual count from PHPUnit is authoritative: 296 tests.
+
+**QC assessment for v1.0.0**: The QC orchestrator independently assessed the library as ready for v1.0.0 (QC issue #39). Key stats: 37 top-level types validated with 0 errors, 156 QC unit tests (867 assertions), 141 advisory warnings (all optional recommended fields, not failures). One bug found across 12 QC sessions (Review missing itemReviewed — fixed in PR #117). This independent validation is a strong signal of quality.
+
+**Pattern — feature gap discovery during maintenance**: When all planned features are done, the most productive approach isn't just auditing existing implementations — it's also looking for missing *capabilities* in the infrastructure layer. The `@graph` feature wasn't on any roadmap; it emerged from re-reading the QC report's "not yet tested" list and thinking about what real users would need. This is higher-value work than adding obscure optional properties to existing types.
