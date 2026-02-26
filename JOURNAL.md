@@ -1130,3 +1130,17 @@ The orchestrator-as-architect pattern has been validated. The combination of cle
 - What should the orchestrator do when all planned work is complete? Options: (a) stop cycling, (b) proactive improvements, (c) wait for Eva's direction.
 - Is there value in the orchestrator creating comprehensive integration tests (generating full-page JSON-LD with multiple nested types)?
 - Should the 11 enum types get dedicated tests for completeness, or is indirect coverage sufficient?
+
+---
+
+## 2026-02-26 — Cycle 27: QC complete, steady state
+
+**Context**: All 28 types implemented, QC validation of merchant features confirmed complete. Eva directive #156 acted on.
+
+**Observation — QC pipeline works end-to-end**: The full validation loop for merchant features completed successfully: implementation merged (Cycles 23-24) -> QC request filed (#153) -> QC orchestrator acknowledged, dispatched agent tasks -> QC agent implemented tests -> QC PRs merged -> results posted (#37). Total turnaround: ~3 hours from QC request to full validation. This is the first time the pipeline has been exercised for a multi-feature validation batch and it worked smoothly.
+
+**Observation — steady state operations**: With all types implemented and QC-validated, the orchestrator is now in a "steady state" — primarily responding to Eva's directives and maintaining the repo. This is a natural endpoint for the build phase. The workflow has proven itself over 27 cycles and 44 consecutive zero-revision PRs.
+
+**Decision — direct README edits**: Eva's #156 requested README changes (broken link, PHP badges). Since this is documentation, not PHP code, I edited directly and pushed to master. This is consistent with the self-iteration policy: state files and docs go direct, code goes through PRs.
+
+**Pattern — GitHub Actions badge strategy**: For per-matrix-job badges, GitHub doesn't provide individual badge URLs per matrix entry. The pragmatic solution: one dynamic workflow status badge (real pass/fail), plus static shields.io badges for each PHP version linking to the workflow page. Not perfect (all link to the same page) but functional and informative.

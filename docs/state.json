@@ -318,14 +318,14 @@
     }
   },
   "agent_sessions": [],
-  "qc_processed": [8],
-  "qc_requests_pending": [153],
+  "qc_processed": [8, 37],
+  "qc_requests_pending": [],
   "blockers": [],
   "open_questions_for_eva": [154],
   "last_cycle": {
-    "issue": 155,
-    "timestamp": "2026-02-26T03:49:00Z",
-    "summary": "Cycle 26: Maintenance cycle. Updated README (class count 67→91, merchant sub-types). Cleaned 2 stale branches. QC validation in progress (QC PRs #34, #35)."
+    "issue": 157,
+    "timestamp": "2026-02-26T05:04:00Z",
+    "summary": "Cycle 27: Acted on Eva directive #156 (README badges/validation link). Closed QC request #153 (all merchant features validated). Clean state."
   },
   "test_count": 273,
   "total_schema_types": 28,
