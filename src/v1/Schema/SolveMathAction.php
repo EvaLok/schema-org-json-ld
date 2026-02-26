@@ -12,6 +12,9 @@ class SolveMathAction extends TypedSchema {
 		'mathExpressionInput' => 'mathExpression-input',
 	];
 
+	/**
+	 * @param string|string[]|null $eduQuestionType
+	 */
 	public function __construct(
 		public string $target,
 		public string $mathExpressionInput,

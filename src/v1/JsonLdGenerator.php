@@ -33,9 +33,12 @@ class JsonLdGenerator {
 		return $json;
 	}
 
+	/**
+	 * @return array<string, mixed>
+	 */
 	public static function SchemaToObject(
 		TypedSchema $schema,
-		$initialContext = true,
+		bool $initialContext = true,
 	): array {
 		$obj = [];
 
@@ -63,6 +66,9 @@ class JsonLdGenerator {
 		return $obj;
 	}
 
+	/**
+	 * @return array<string, mixed>
+	 */
 	public static function SchemasToObject(
 		TypedSchema ...$schemas,
 	): array {
@@ -81,6 +87,10 @@ class JsonLdGenerator {
 		];
 	}
 
+	/**
+	 * @param array<string, mixed> $properties
+	 * @param array<string, mixed> $obj
+	 */
 	private static function AddPropertiesToObject(
 		array $properties,
 		array &$obj,
