@@ -2,9 +2,6 @@
 
 namespace EvaLok\SchemaOrgJsonLd\v1\Schema;
 
-use EvaLok\SchemaOrgJsonLd\v1\Schema\MemberProgram;
-use EvaLok\SchemaOrgJsonLd\v1\Schema\MerchantReturnPolicy;
-use EvaLok\SchemaOrgJsonLd\v1\Schema\ShippingService;
 use EvaLok\SchemaOrgJsonLd\v1\TypedSchema;
 
 class Organization extends TypedSchema {
