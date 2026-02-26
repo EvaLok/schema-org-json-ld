@@ -8,7 +8,7 @@ You are implementing features for `schema-org-json-ld`, a PHP library that gener
 src/
   v1/
     Schema/           # Schema type classes (Product, Offer, Brand, etc.)
-    JsonLdGenerator.php   # Serialization engine — do NOT modify
+    JsonLdGenerator.php   # Serialization engine
     TypedSchema.php       # Abstract base class — do NOT modify
 test/
   unit/               # PHPUnit tests
@@ -36,9 +36,10 @@ test/
 ## Coding Standards
 
 - **PHP 8.1+** minimum — use modern PHP features
+- **`declare(strict_types=1);`** — required in ALL PHP files, enforced by PHP-CS-Fixer
 - **Tab indentation** — the entire codebase uses tabs (not spaces) for indentation. This applies to all PHP files: class bodies, method bodies, test files, everything. Match the style in existing files like `src/v1/Schema/Brand.php`.
 - Constructor promotion for all schema data classes
-- Enums (backed string enums) for constrained values like `ItemAvailability`, `OfferItemCondition`
+- Enums (backed string enums) for constrained values — stored in `src/v1/Enum/`
 - Nullable parameters with `null|Type` syntax (this is the convention used throughout the existing codebase)
 - No `mixed` types — be explicit
 - Type-hint everything: parameters, return types, properties
@@ -61,6 +62,8 @@ When implementing a new schema.org type:
 
 ```php
 <?php
+
+declare(strict_types=1);
 
 namespace EvaLok\SchemaOrgJsonLd\v1\Schema;
 
