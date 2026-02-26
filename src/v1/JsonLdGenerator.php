@@ -9,16 +9,26 @@ class JsonLdGenerator {
 		TypedSchema $schema,
 	): string {
 		$obj = self::SchemaToObject($schema);
+		$json = json_encode($obj, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
-		return json_encode($obj, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+		if ($json === false) {
+			throw new \RuntimeException('Failed to encode schema to JSON-LD: ' . json_last_error_msg());
+		}
+
+		return $json;
 	}
 
 	public static function SchemasToJson(
 		TypedSchema ...$schemas,
 	): string {
 		$obj = self::SchemasToObject(...$schemas);
+		$json = json_encode($obj, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
-		return json_encode($obj, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+		if ($json === false) {
+			throw new \RuntimeException('Failed to encode schemas to JSON-LD: ' . json_last_error_msg());
+		}
+
+		return $json;
 	}
 
 	public static function SchemaToObject(

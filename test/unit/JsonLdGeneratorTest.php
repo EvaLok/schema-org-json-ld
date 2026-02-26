@@ -397,4 +397,34 @@ final class JsonLdGeneratorTest extends TestCase {
 			$this->assertArrayNotHasKey('@context', $graphElement);
 		}
 	}
+
+	public function testSchemaToJsonThrowsRuntimeExceptionWhenJsonEncodeFails(): void {
+		$schema = new class ("\xB1\x31") extends TypedSchema {
+			public const A_SCHEMA_TYPE = 'InvalidUtf8Schema';
+
+			public function __construct(
+				public string $name,
+			) {}
+		};
+
+		$this->expectException(\RuntimeException::class);
+		$this->expectExceptionMessage('Malformed UTF-8 characters');
+
+		JsonLdGenerator::SchemaToJson($schema);
+	}
+
+	public function testSchemasToJsonThrowsRuntimeExceptionWhenJsonEncodeFails(): void {
+		$schema = new class ("\xB1\x31") extends TypedSchema {
+			public const A_SCHEMA_TYPE = 'InvalidUtf8Schema';
+
+			public function __construct(
+				public string $name,
+			) {}
+		};
+
+		$this->expectException(\RuntimeException::class);
+		$this->expectExceptionMessage('Malformed UTF-8 characters');
+
+		JsonLdGenerator::SchemasToJson($schema);
+	}
 }
