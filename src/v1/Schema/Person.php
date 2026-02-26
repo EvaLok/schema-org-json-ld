@@ -21,7 +21,8 @@ class Person extends TypedSchema {
 		public null|string $givenName = null,
 		public null|string $familyName = null,
 		public null|PostalAddress $address = null,
-		public null|InteractionCounter $interactionStatistic = null,
+		/** @var InteractionCounter|InteractionCounter[]|null $interactionStatistic */
+		public null|InteractionCounter|array $interactionStatistic = null,
 		public null|InteractionCounter $agentInteractionStatistic = null,
 		public null|string $identifier = null,
 		public null|string $alternateName = null,

@@ -139,4 +139,29 @@ final class DiscussionForumPostingTest extends TestCase {
 		$this->assertEquals('https://example.com/shared-comment-content', $obj->comment[0]->sharedContent);
 		$this->assertEquals('Deleted', $obj->comment[0]->creativeWorkStatus);
 	}
+
+	public function testInteractionStatisticSerializesAsArray(): void {
+		$schema = new DiscussionForumPosting(
+			author: new Person(name: 'Author Name'),
+			datePublished: '2024-03-01T08:34:34+02:00',
+			text: 'Post content',
+			interactionStatistic: [
+				new InteractionCounter(
+					interactionType: 'https://schema.org/LikeAction',
+					userInteractionCount: 27,
+				),
+				new InteractionCounter(
+					interactionType: 'https://schema.org/ViewAction',
+					userInteractionCount: 102,
+				),
+			],
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertCount(2, $obj->interactionStatistic);
+		$this->assertEquals('InteractionCounter', $obj->interactionStatistic[0]->{'@type'});
+		$this->assertEquals('https://schema.org/LikeAction', $obj->interactionStatistic[0]->interactionType);
+		$this->assertEquals('https://schema.org/ViewAction', $obj->interactionStatistic[1]->interactionType);
+	}
 }

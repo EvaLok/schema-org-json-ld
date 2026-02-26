@@ -90,6 +90,31 @@ final class VideoObjectTest extends TestCase {
 		$this->assertEquals(54321, $obj->interactionStatistic->userInteractionCount);
 	}
 
+	public function testWithInteractionStatisticArray(): void {
+		$videoObject = new VideoObject(
+			name: 'How to tie a tie',
+			thumbnailUrl: ['https://example.com/thumb.jpg'],
+			uploadDate: '2026-02-24',
+			interactionStatistic: [
+				new InteractionCounter(
+					interactionType: 'https://schema.org/WatchAction',
+					userInteractionCount: 54321,
+				),
+				new InteractionCounter(
+					interactionType: 'https://schema.org/LikeAction',
+					userInteractionCount: 123,
+				),
+			],
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $videoObject);
+		$obj = json_decode($json);
+
+		$this->assertCount(2, $obj->interactionStatistic);
+		$this->assertEquals('InteractionCounter', $obj->interactionStatistic[0]->{'@type'});
+		$this->assertEquals('https://schema.org/WatchAction', $obj->interactionStatistic[0]->interactionType);
+		$this->assertEquals('https://schema.org/LikeAction', $obj->interactionStatistic[1]->interactionType);
+	}
+
 	public function testWithIneligibleRegion(): void {
 		$videoObject = new VideoObject(
 			name: 'How to tie a tie',
