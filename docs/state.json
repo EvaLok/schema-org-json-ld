@@ -328,7 +328,13 @@
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
-    "in_progress": [],
+    "in_progress": [
+      {
+        "type": "@graph support",
+        "issue": 174,
+        "description": "Add SchemasToJson/SchemasToObject methods for multi-schema @graph output"
+      }
+    ],
     "planned_next": [],
     "google_rich_results_types": {
       "not_implemented": [],
@@ -349,13 +355,11 @@
   },
   "agent_sessions": [
     {
-      "issue": 171,
-      "pr": 172,
-      "title": "Update README: complete Supported Types table + expand 7 usage examples",
-      "dispatched_at": "2026-02-26T10:50:00Z",
-      "status": "merged",
-      "model": "gpt-5.3-codex",
-      "merged_at": "2026-02-26T11:06:20Z"
+      "issue": 174,
+      "title": "Add @graph support for multiple schemas per page",
+      "dispatched_at": "2026-02-26T12:20:30Z",
+      "status": "in_progress",
+      "model": "gpt-5.3-codex"
     }
   ],
   "qc_processed": [8, 37],
@@ -366,9 +370,9 @@
   "blockers": [],
   "open_questions_for_eva": [154],
   "last_cycle": {
-    "issue": 170,
-    "timestamp": "2026-02-26T10:45:00Z",
-    "summary": "Cycle 31: README documentation sweep. Audited 7 sections, found 50+ undocumented properties and 16 missing classes in Supported Types table. Dispatched #171 → PR #172 merged (comprehensive README update). QC #165 acknowledged as QC#41, validation in progress. Direct fix: added FulfillmentTypeEnumeration to Supported Types table."
+    "issue": 173,
+    "timestamp": "2026-02-26T12:13:00Z",
+    "summary": "Cycle 32: Dispatched #174 (@graph support for multi-schema pages). QC #41 still in progress. Eva has not responded to #154 (release)."
   },
   "test_count": 296,
   "total_schema_types": 28,
