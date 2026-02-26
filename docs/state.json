@@ -323,9 +323,9 @@
   "blockers": [],
   "open_questions_for_eva": [154],
   "last_cycle": {
-    "issue": 157,
-    "timestamp": "2026-02-26T05:04:00Z",
-    "summary": "Cycle 27: Acted on Eva directive #156 (README badges/validation link). Closed QC request #153 (all merchant features validated). Clean state."
+    "issue": 158,
+    "timestamp": "2026-02-26T06:21:00Z",
+    "summary": "Cycle 28: Steady-state maintenance. Verified Google Search Gallery unchanged. No new work. Release recommendation #154 awaiting Eva."
   },
   "test_count": 273,
   "total_schema_types": 28,
