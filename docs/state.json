@@ -289,48 +289,49 @@
         "issue": 145,
         "sub_types_added": ["MemberProgram", "MemberProgramTier", "TierBenefitEnumeration"],
         "merged_at": "2026-02-25T23:00:00Z"
+      },
+      {
+        "description": "Add ShippingService + ShippingConditions + ServicePeriod + ShippingRateSettings + FulfillmentTypeEnumeration + DefinedRegion/OpeningHoursSpecification fixes",
+        "pr": 149,
+        "issue": 148,
+        "sub_types_added": ["ShippingService", "ShippingConditions", "ServicePeriod", "ShippingRateSettings", "FulfillmentTypeEnumeration"],
+        "modifies": ["DefinedRegion", "OpeningHoursSpecification"],
+        "merged_at": "2026-02-26T00:35:26Z"
       }
     ],
-    "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration"],
+    "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
     "in_progress": [
       {
-        "description": "ShippingService + sub-types + DefinedRegion fix + OpeningHoursSpecification fix",
-        "issue": 148,
-        "dispatched_at": "2026-02-26T00:20:00Z",
-        "model": "gpt-5.3-codex",
-        "new_types": ["ShippingService", "ShippingConditions", "ServicePeriod", "ShippingRateSettings", "FulfillmentTypeEnumeration"],
-        "modifies": ["DefinedRegion", "OpeningHoursSpecification"]
+        "description": "Organization wiring (hasMerchantReturnPolicy, hasMemberProgram, hasShippingService)",
+        "issue": 150,
+        "dispatched_at": "2026-02-26T00:36:00Z",
+        "model": "gpt-5.3-codex"
       }
     ],
-    "planned_next": [
-      "Organization update (wire hasMerchantReturnPolicy, hasMemberProgram, hasShippingService)"
-    ],
+    "planned_next": [],
     "google_rich_results_types": {
       "not_implemented": [],
       "note": "ALL 28 Google Rich Results types implemented. Quality audit complete — missing recommended properties added."
     },
     "remaining_audit_findings": {
-      "low_priority": [
-        "ShippingService for Organization (last remaining merchant feature)",
-        "Organization wiring (hasMerchantReturnPolicy, hasMemberProgram, hasShippingService)"
-      ]
+      "low_priority": []
     }
   },
   "agent_sessions": [
     {
-      "issue": 148,
+      "issue": 150,
       "status": "dispatched",
-      "dispatched_at": "2026-02-26T00:20:00Z"
+      "dispatched_at": "2026-02-26T00:36:00Z"
     }
   ],
   "qc_processed": [8],
   "blockers": [],
   "last_cycle": {
     "issue": 147,
-    "timestamp": "2026-02-26T00:20:00Z",
-    "summary": "Cycle 24: Dispatched #148 (ShippingService + sub-types). Closed QC request #141 (validated). In progress."
+    "timestamp": "2026-02-26T00:36:00Z",
+    "summary": "Cycle 24: Merged PR #149 (ShippingService + 5 sub-types). Dispatched #150 (Organization wiring). 43 consecutive zero-revision PRs."
   },
-  "test_count": 259,
+  "test_count": 272,
   "total_schema_types": 28,
-  "total_sub_types": 85
+  "total_sub_types": 90
 }
