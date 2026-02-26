@@ -2,10 +2,14 @@
 
 PHP library for generating schema.org JSON-LD structured data for Google Rich Results. Covers **28 Google Rich Results types** backed by **91 schema classes**, with type-safe constructor-promoted properties and automatic serialization.
 
-Tested & validated using the [Google Rich Results Test](https://search.google.com/test/rich-results/result?id=eeuHnX6wLe1IqxNkqd42xA).
+Validated against the [Google Rich Results Test](https://search.google.com/test/rich-results) via the [schema-org-json-ld-qc](https://github.com/EvaLok/schema-org-json-ld-qc) validation suite.
 
-![PHP](https://img.shields.io/badge/PHP-8.1%2B-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+[![Tests](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/main.yml/badge.svg)](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/main.yml)
+[![PHP 8.1](https://img.shields.io/badge/PHP-8.1-777BB4?logo=php&logoColor=white)](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/main.yml)
+[![PHP 8.2](https://img.shields.io/badge/PHP-8.2-777BB4?logo=php&logoColor=white)](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/main.yml)
+[![PHP 8.3](https://img.shields.io/badge/PHP-8.3-777BB4?logo=php&logoColor=white)](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/main.yml)
+[![PHP 8.4](https://img.shields.io/badge/PHP-8.4-777BB4?logo=php&logoColor=white)](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/main.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 ---
 
