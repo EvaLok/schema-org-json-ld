@@ -32,5 +32,9 @@ class Product extends TypedSchema {
 		public null|string $gtin13 = null,
 		public null|string $gtin14 = null,
 		public null|string $isbn = null,
+		public null|ProductGroup $isVariantOf = null,
+		public null|PeopleAudience $audience = null,
+		/** @var null|Certification|Certification[] $hasCertification */
+		public null|Certification|array $hasCertification = null,
 	) {}
 }

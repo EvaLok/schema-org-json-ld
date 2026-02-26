@@ -8,6 +8,8 @@ use EvaLok\SchemaOrgJsonLd\v1\Schema\ItemAvailability;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Offer;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\OfferItemCondition;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\OfferShippingDetails;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\QuantitativeValue;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\UnitPriceSpecification;
 use PHPUnit\Framework\TestCase;
 
 final class OfferTest extends TestCase {
@@ -114,5 +116,36 @@ final class OfferTest extends TestCase {
 		$obj = json_decode($json);
 
 		$this->assertFalse(property_exists($obj, 'itemCondition'));
+	}
+
+	public function testWithPriceSpecification(): void {
+		$schema = new Offer(
+			url: 'https://example.com/anvil',
+			priceCurrency: 'USD',
+			price: 119.99,
+			availability: ItemAvailability::InStock,
+			priceSpecification: [
+				new UnitPriceSpecification(
+					price: 11.99,
+					priceCurrency: 'USD',
+					priceType: 'https://schema.org/StrikethroughPrice',
+					referenceQuantity: new QuantitativeValue(
+						value: 1,
+						unitCode: 'KGM',
+					),
+				),
+			],
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertCount(1, $obj->priceSpecification);
+		$this->assertEquals('UnitPriceSpecification', $obj->priceSpecification[0]->{'@type'});
+		$this->assertEquals(11.99, $obj->priceSpecification[0]->price);
+		$this->assertEquals('USD', $obj->priceSpecification[0]->priceCurrency);
+		$this->assertEquals('https://schema.org/StrikethroughPrice', $obj->priceSpecification[0]->priceType);
+		$this->assertEquals('QuantitativeValue', $obj->priceSpecification[0]->referenceQuantity->{'@type'});
+		$this->assertEquals(1, $obj->priceSpecification[0]->referenceQuantity->value);
+		$this->assertEquals('KGM', $obj->priceSpecification[0]->referenceQuantity->unitCode);
 	}
 }
