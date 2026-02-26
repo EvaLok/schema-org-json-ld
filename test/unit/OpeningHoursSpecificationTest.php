@@ -28,12 +28,12 @@ final class OpeningHoursSpecificationTest extends TestCase {
 	public function testOptionalFieldsOmittedWhenNull(): void {
 		$openingHoursSpecification = new OpeningHoursSpecification(
 			dayOfWeek: DayOfWeek::Tuesday,
-			opens: '10:00',
-			closes: '19:00',
 		);
 		$json = JsonLdGenerator::SchemaToJson(schema: $openingHoursSpecification);
 		$obj = json_decode($json);
 
+		$this->assertFalse(property_exists($obj, 'opens'));
+		$this->assertFalse(property_exists($obj, 'closes'));
 		$this->assertFalse(property_exists($obj, 'validFrom'));
 		$this->assertFalse(property_exists($obj, 'validThrough'));
 	}
@@ -54,5 +54,20 @@ final class OpeningHoursSpecificationTest extends TestCase {
 		$this->assertEquals('17:00', $obj->closes);
 		$this->assertEquals('2026-01-01', $obj->validFrom);
 		$this->assertEquals('2026-12-31', $obj->validThrough);
+	}
+
+	public function testDateOnlyOutput(): void {
+		$openingHoursSpecification = new OpeningHoursSpecification(
+			validFrom: '2026-11-20',
+			validThrough: '2026-12-02',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $openingHoursSpecification);
+		$obj = json_decode($json);
+
+		$this->assertEquals('2026-11-20', $obj->validFrom);
+		$this->assertEquals('2026-12-02', $obj->validThrough);
+		$this->assertFalse(property_exists($obj, 'dayOfWeek'));
+		$this->assertFalse(property_exists($obj, 'opens'));
+		$this->assertFalse(property_exists($obj, 'closes'));
 	}
 }
