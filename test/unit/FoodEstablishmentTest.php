@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
+use EvaLok\SchemaOrgJsonLd\v1\Enum\DayOfWeek;
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
-use EvaLok\SchemaOrgJsonLd\v1\Schema\DayOfWeek;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\FoodEstablishment;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\GeoCoordinates;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\OpeningHoursSpecification;

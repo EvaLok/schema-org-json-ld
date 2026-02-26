@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace EvaLok\SchemaOrgJsonLd\v1\Schema;
 
+use EvaLok\SchemaOrgJsonLd\v1\Enum\MerchantReturnEnumeration;
+use EvaLok\SchemaOrgJsonLd\v1\Enum\OfferItemCondition;
+use EvaLok\SchemaOrgJsonLd\v1\Enum\RefundTypeEnumeration;
+use EvaLok\SchemaOrgJsonLd\v1\Enum\ReturnFeesEnumeration;
+use EvaLok\SchemaOrgJsonLd\v1\Enum\ReturnLabelSourceEnumeration;
+use EvaLok\SchemaOrgJsonLd\v1\Enum\ReturnMethodEnumeration;
 use EvaLok\SchemaOrgJsonLd\v1\TypedSchema;
 
 class MerchantReturnPolicy extends TypedSchema {

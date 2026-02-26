@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
+use EvaLok\SchemaOrgJsonLd\v1\Enum\MerchantReturnEnumeration;
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
-use EvaLok\SchemaOrgJsonLd\v1\Schema\MerchantReturnEnumeration;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\MerchantReturnPolicySeasonalOverride;
 use PHPUnit\Framework\TestCase;
 

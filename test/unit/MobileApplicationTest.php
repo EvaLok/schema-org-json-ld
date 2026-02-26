@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
+use EvaLok\SchemaOrgJsonLd\v1\Enum\ItemAvailability;
+use EvaLok\SchemaOrgJsonLd\v1\Enum\OfferItemCondition;
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\AggregateRating;
-use EvaLok\SchemaOrgJsonLd\v1\Schema\ItemAvailability;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\MobileApplication;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Offer;
-use EvaLok\SchemaOrgJsonLd\v1\Schema\OfferItemCondition;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Rating;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Review;
 use PHPUnit\Framework\TestCase;

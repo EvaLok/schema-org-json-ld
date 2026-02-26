@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
+use EvaLok\SchemaOrgJsonLd\v1\Enum\MerchantReturnEnumeration;
+use EvaLok\SchemaOrgJsonLd\v1\Enum\OfferItemCondition;
+use EvaLok\SchemaOrgJsonLd\v1\Enum\RefundTypeEnumeration;
+use EvaLok\SchemaOrgJsonLd\v1\Enum\ReturnFeesEnumeration;
+use EvaLok\SchemaOrgJsonLd\v1\Enum\ReturnLabelSourceEnumeration;
+use EvaLok\SchemaOrgJsonLd\v1\Enum\ReturnMethodEnumeration;
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
-use EvaLok\SchemaOrgJsonLd\v1\Schema\MerchantReturnEnumeration;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\MerchantReturnPolicy;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\MerchantReturnPolicySeasonalOverride;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\MonetaryAmount;
-use EvaLok\SchemaOrgJsonLd\v1\Schema\OfferItemCondition;
-use EvaLok\SchemaOrgJsonLd\v1\Schema\RefundTypeEnumeration;
-use EvaLok\SchemaOrgJsonLd\v1\Schema\ReturnFeesEnumeration;
-use EvaLok\SchemaOrgJsonLd\v1\Schema\ReturnLabelSourceEnumeration;
-use EvaLok\SchemaOrgJsonLd\v1\Schema\ReturnMethodEnumeration;
 use PHPUnit\Framework\TestCase;
 
 final class MerchantReturnPolicyTest extends TestCase {

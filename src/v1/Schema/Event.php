@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace EvaLok\SchemaOrgJsonLd\v1\Schema;
 
+use EvaLok\SchemaOrgJsonLd\v1\Enum\EventAttendanceModeEnumeration;
+use EvaLok\SchemaOrgJsonLd\v1\Enum\EventStatusType;
 use EvaLok\SchemaOrgJsonLd\v1\TypedSchema;
 
 class Event extends TypedSchema {

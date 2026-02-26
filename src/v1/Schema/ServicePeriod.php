@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace EvaLok\SchemaOrgJsonLd\v1\Schema;
 
+use EvaLok\SchemaOrgJsonLd\v1\Enum\DayOfWeek;
 use EvaLok\SchemaOrgJsonLd\v1\TypedSchema;
 
 class ServicePeriod extends TypedSchema {
