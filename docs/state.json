@@ -325,16 +325,17 @@
         "issue": 168,
         "modifies": ["Person", "DiscussionForumPosting", "Comment", "VideoObject", "ProductGroup"],
         "merged_at": "2026-02-26T09:56:06Z"
+      },
+      {
+        "description": "Add @graph support: SchemasToJson/SchemasToObject methods for multi-schema JSON-LD output",
+        "pr": 175,
+        "issue": 174,
+        "modifies": ["JsonLdGenerator"],
+        "merged_at": "2026-02-26T12:32:00Z"
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
-    "in_progress": [
-      {
-        "type": "@graph support",
-        "issue": 174,
-        "description": "Add SchemasToJson/SchemasToObject methods for multi-schema @graph output"
-      }
-    ],
+    "in_progress": [],
     "planned_next": [],
     "google_rich_results_types": {
       "not_implemented": [],
@@ -356,10 +357,12 @@
   "agent_sessions": [
     {
       "issue": 174,
+      "pr": 175,
       "title": "Add @graph support for multiple schemas per page",
       "dispatched_at": "2026-02-26T12:20:30Z",
-      "status": "in_progress",
-      "model": "gpt-5.3-codex"
+      "status": "merged",
+      "model": "gpt-5.3-codex",
+      "merged_at": "2026-02-26T12:32:00Z"
     }
   ],
   "qc_processed": [8, 37],
@@ -372,12 +375,12 @@
   "last_cycle": {
     "issue": 173,
     "timestamp": "2026-02-26T12:13:00Z",
-    "summary": "Cycle 32: Dispatched #174 (@graph support for multi-schema pages). QC #41 still in progress. Eva has not responded to #154 (release)."
+    "summary": "Cycle 32: Dispatched #174 (@graph support) → PR #175 merged. Added SchemasToJson/SchemasToObject to JsonLdGenerator. 301 tests, 51 zero-revision streak."
   },
-  "test_count": 296,
+  "test_count": 301,
   "total_schema_types": 28,
   "total_sub_types": 100,
   "total_schema_classes": 96,
   "total_enums": 12,
-  "consecutive_zero_revision_prs": 50
+  "consecutive_zero_revision_prs": 51
 }
