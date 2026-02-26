@@ -52,7 +52,7 @@ For each open Copilot PR, check if the agent has finished work:
 
 ```bash
 gh api "repos/EvaLok/schema-org-json-ld/issues/{PR}/timeline" --paginate \
-  --jq '[.[] | select(.event != null) | select(.event | test("copilot_work")) | {event, created_at}]'
+  --jq '.[] | select(.event) | select(.event | test("copilot")) | {event, created_at}'
 ```
 
 **IMPORTANT**: CI workflows (tests, lint) only run on PRs that are **ready for review** (not draft). The correct sequence is:
