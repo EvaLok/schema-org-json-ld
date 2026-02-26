@@ -230,14 +230,14 @@
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
     "enum_namespace": "EvaLok\\SchemaOrgJsonLd\\v1\\Enum",
-    "in_progress": [],
-    "planned_next": [
+    "in_progress": [
       {
         "issue": 181,
         "title": "Add PHPStan static analysis to CI",
-        "note": "Needs workflow change — Eva must merge"
+        "note": "Dispatched to Copilot. Needs workflow change — Eva must merge resulting PR."
       }
     ],
+    "planned_next": [],
     "google_rich_results_types": {
       "not_implemented": [],
       "note": "ALL 28 Google Rich Results types implemented."
@@ -253,40 +253,11 @@
   },
   "agent_sessions": [
     {
-      "issue": 184,
-      "pr": 192,
-      "title": "Consolidate enum class locations",
-      "dispatched_at": "2026-02-26T19:05:00Z",
-      "status": "merged",
-      "model": "gpt-5.3-codex",
-      "merged_at": "2026-02-26T19:50:00Z"
-    },
-    {
-      "issue": 182,
-      "pr": 193,
-      "title": "Add edge-case and negative tests",
-      "dispatched_at": "2026-02-26T19:05:00Z",
-      "status": "merged",
-      "model": "gpt-5.3-codex",
-      "merged_at": "2026-02-26T19:52:00Z"
-    },
-    {
-      "issue": 196,
-      "pr": 198,
-      "title": "Add video and itemListElement to HowToStep",
-      "dispatched_at": "2026-02-26T19:53:00Z",
-      "status": "merged",
-      "model": "gpt-5.3-codex",
-      "merged_at": "2026-02-26T20:03:00Z"
-    },
-    {
-      "issue": 197,
-      "pr": 199,
-      "title": "Add datePublished, BroadcastEvent, subjectOf",
-      "dispatched_at": "2026-02-26T19:53:00Z",
-      "status": "merged",
-      "model": "gpt-5.3-codex",
-      "merged_at": "2026-02-26T20:04:00Z"
+      "issue": 181,
+      "title": "Add PHPStan static analysis to CI",
+      "dispatched_at": "2026-02-26T21:15:00Z",
+      "status": "in_progress",
+      "model": "gpt-5.3-codex"
     }
   ],
   "qc_processed": [8, 37, 57, 165],
@@ -299,14 +270,14 @@
   "blockers": [],
   "open_questions_for_eva": [],
   "eva_input_issues": {
-    "closed_this_cycle": [182, 184],
-    "closed_prior_cycles": [180, 183, 185, 186, 187, 188],
+    "closed_this_cycle": [201],
+    "closed_prior_cycles": [180, 182, 183, 184, 185, 186, 187, 188],
     "remaining_open": [181]
   },
   "last_cycle": {
-    "issue": 194,
-    "timestamp": "2026-02-26T19:45:00Z",
-    "summary": "Cycle 37: Merged 4 PRs (#192 enum consolidation, #193 edge-case tests, #198 HowToStep, #199 datePublished/BroadcastEvent/subjectOf). Closed Eva's issues #182 and #184. Processed QC report #57 and fixed all reported property gaps. Opened QC re-validation request #200."
+    "issue": 202,
+    "timestamp": "2026-02-26T21:11:00Z",
+    "summary": "Cycle 38: Closed Eva's #201 (retired zero-revision streak metric). Dispatched PHPStan issue #181 to Copilot. QC re-validation #200 still pending."
   },
   "test_count": 321,
   "total_schema_types": 28,
