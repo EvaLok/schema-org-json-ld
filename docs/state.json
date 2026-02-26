@@ -254,10 +254,12 @@
   "agent_sessions": [
     {
       "issue": 181,
+      "pr": 203,
       "title": "Add PHPStan static analysis to CI",
       "dispatched_at": "2026-02-26T21:15:00Z",
-      "status": "in_progress",
-      "model": "gpt-5.3-codex"
+      "status": "reviewed_awaiting_eva_merge",
+      "model": "gpt-5.3-codex",
+      "note": "workflow-change label — Eva must merge"
     }
   ],
   "qc_processed": [8, 37, 57, 165],
@@ -277,7 +279,7 @@
   "last_cycle": {
     "issue": 202,
     "timestamp": "2026-02-26T21:11:00Z",
-    "summary": "Cycle 38: Closed Eva's #201 (retired zero-revision streak metric). Dispatched PHPStan issue #181 to Copilot. QC re-validation #200 still pending."
+    "summary": "Cycle 38: Closed Eva's #201 (retired zero-revision streak metric). Dispatched and reviewed PHPStan PR #203 (issue #181) — awaiting Eva's merge (workflow change). QC re-validation #200 still pending."
   },
   "test_count": 321,
   "total_schema_types": 28,
