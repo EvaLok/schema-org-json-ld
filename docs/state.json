@@ -318,6 +318,13 @@
         "issue": 162,
         "sub_types_added": ["ProductGroup", "PeopleAudience", "Certification", "UnitPriceSpecification"],
         "merged_at": "2026-02-26T08:35:17Z"
+      },
+      {
+        "description": "Widen interactionStatistic to arrays in Person/DiscussionForumPosting/Comment/VideoObject + add aggregateRating/review to ProductGroup",
+        "pr": 169,
+        "issue": 168,
+        "modifies": ["Person", "DiscussionForumPosting", "Comment", "VideoObject", "ProductGroup"],
+        "merged_at": "2026-02-26T09:56:06Z"
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
@@ -342,38 +349,38 @@
   },
   "agent_sessions": [
     {
-      "issue": 160,
-      "pr": 161,
-      "title": "Add Product text properties + SizeSpecification",
-      "dispatched_at": "2026-02-26T07:51:31Z",
+      "issue": 166,
+      "pr": 167,
+      "title": "Update README with post-Cycle-12 enhancements",
+      "dispatched_at": "2026-02-26T09:24:33Z",
       "status": "merged",
       "model": "gpt-5.3-codex",
-      "merged_at": "2026-02-26T08:05:00Z"
+      "merged_at": "2026-02-26T09:40:30Z"
     },
     {
-      "issue": 162,
-      "pr": 163,
-      "title": "Add ProductGroup, PeopleAudience, Certification, UnitPriceSpecification",
-      "dispatched_at": "2026-02-26T07:51:57Z",
+      "issue": 168,
+      "pr": 169,
+      "title": "Widen interactionStatistic to arrays + ProductGroup aggregateRating/review",
+      "dispatched_at": "2026-02-26T09:35:12Z",
       "status": "merged",
       "model": "gpt-5.3-codex",
-      "merged_at": "2026-02-26T08:35:17Z",
-      "note": "Merge conflict with #161 resolved by orchestrator rebase"
+      "merged_at": "2026-02-26T09:56:06Z",
+      "note": "Agent stalled (copilot_work_finished never emitted), but code was complete. Marked ready manually."
     }
   ],
   "qc_processed": [8, 37],
-  "qc_requests_pending": [],
+  "qc_requests_pending": [165],
   "blockers": [],
   "open_questions_for_eva": [154],
   "last_cycle": {
-    "issue": 159,
-    "timestamp": "2026-02-26T08:35:00Z",
-    "summary": "Cycle 29: Audited Google merchant listing docs, dispatched #160 and #162. Both merged. Product now fully covers Google merchant listing properties."
+    "issue": 164,
+    "timestamp": "2026-02-26T09:18:00Z",
+    "summary": "Cycle 30: README docs audit, dispatched #166 and #168. PR #167 merged (README update). PR #169 merged (interactionStatistic arrays + ProductGroup review/rating). QC request #165 filed. Direct README fixes (class count, table rows). ADR 0005 created. AGENTS.md updated with Documentation section."
   },
-  "test_count": 290,
+  "test_count": 296,
   "total_schema_types": 28,
   "total_sub_types": 100,
   "total_schema_classes": 96,
   "total_enums": 12,
-  "consecutive_zero_revision_prs": 46
+  "consecutive_zero_revision_prs": 49
 }

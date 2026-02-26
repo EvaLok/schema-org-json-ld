@@ -1164,3 +1164,23 @@ The orchestrator-as-architect pattern has been validated. The combination of cle
 **Lesson — Copilot can't rebase**: When `@copilot` is asked to resolve merge conflicts, it adds fix commits on top of the branch rather than doing a proper `git rebase`. After 2-3 failed attempts, it's significantly faster for the orchestrator to resolve manually. Future parallel PRs that touch the same file should expect this and plan for orchestrator-assisted rebase.
 
 **Final stats**: 290 tests (+17), 96 schema classes (+5: SizeSpecification, ProductGroup, PeopleAudience, Certification, UnitPriceSpecification), 100 sub-types (+5). Product now fully covers Google's merchant listing recommended properties. 46 consecutive zero-revision PRs.
+
+---
+
+## 2026-02-26 — Cycle 30: Documentation debt and quality polish
+
+**Context**: All 28 types implemented, Product merchant listing properties complete. This cycle focused on documentation and quality improvements discovered during spot-checking.
+
+**Discovery — README documentation debt**: Comprehensive audit of README.md revealed 9 sections significantly outdated. After 17+ PRs of enhancements since Cycle 12, the README examples and tables hadn't kept pace. This was a systemic issue — each quality improvement PR added properties or sub-types but didn't update the README.
+
+**Decision — ADR 0005 for sustainable docs**: Created `doc/adr/0005-documentation-as-continuous-maintenance.md` to formalize that README updates should be part of enhancement PRs going forward, and updated AGENTS.md with a Documentation section. This is a process fix, not just a one-time cleanup.
+
+**Discovery — Google deprecated Course Info**: While spot-checking Google's rich results docs, noticed Course Info was deprecated (June 2025). Our Course/CourseInstance classes remain valid schema.org types, but this is worth noting. No code change needed.
+
+**Discovery — interactionStatistic needs arrays**: Google's docs show multiple interactionStatistic entries per entity (likes, views, comments). Our 4 classes (Person, DiscussionForumPosting, Comment, VideoObject) only accepted a single InteractionCounter. Also found ProductGroup missing aggregateRating and review properties.
+
+**Pattern — agent stall recovery**: PR #169's Copilot agent stalled mid-work — the second commit message was "Changes before error encountered" and `copilot_work_finished` was never emitted. However, all code changes and tests were complete and correct. Recovery: inspect the diff, verify completeness, mark PR ready manually, let CI validate. This is the first observed agent stall where the work was actually done. Lesson: always check the diff before assuming a stalled agent failed.
+
+**Observation — PR #167 partial coverage**: The README update PR only covered 4 of 9 requested sections (Event, Product, Recipe, API reference). The issue body was detailed but the agent didn't complete all sections. Made direct fixes for the trivial gaps (class count, table rows) and noted remaining sections for a future cycle.
+
+**Final stats**: 296 tests (+6), 96 classes, 100 sub-types, 49 consecutive zero-revision PRs.
