@@ -119,7 +119,7 @@ The pattern is always the same: instantiate a schema class, pass it to `JsonLdGe
 | Local business | `LocalBusiness`, `FoodEstablishment`, `Restaurant`, `Store`, `PostalAddress`, `GeoCoordinates`, `OpeningHoursSpecification`, `AggregateRating`, `Review` |
 | Math solver | `MathSolver`, `SolveMathAction` |
 | Movie | `Movie`, `Person`, `AggregateRating`, `Review` |
-| Organization | `Organization`, `PostalAddress`, `ContactPoint`, `MerchantReturnPolicy`, `MemberProgram`, `ShippingService` |
+| Organization | `Organization`, `PostalAddress`, `ContactPoint`, `MerchantReturnPolicy`, `MerchantReturnPolicySeasonalOverride`, `MemberProgram`, `MemberProgramTier`, `ShippingService` |
 | Product | `Product`, `Offer`, `AggregateOffer`, `Brand`, `OfferShippingDetails`, `ShippingDeliveryTime`, `DefinedRegion`, `MonetaryAmount`, `QuantitativeValue`, `AggregateRating`, `Review`, `SizeSpecification`, `ProductGroup`, `PeopleAudience`, `Certification`, `UnitPriceSpecification` |
 | Profile page | `ProfilePage`, `Person`, `Organization` |
 | Q&A | `QAPage`, `Question`, `Answer` |
@@ -129,7 +129,7 @@ The pattern is always the same: instantiate a schema class, pass it to `JsonLdGe
 | Speakable | `SpeakableSpecification` (via `Article`) |
 | Subscription/paywalled content | `WebPageElement` (via `Article`) |
 | Vacation rental | `VacationRental`, `Accommodation`, `BedDetails`, `PostalAddress`, `AggregateRating` |
-| Video | `VideoObject`, `Clip` |
+| Video | `VideoObject`, `Clip`, `InteractionCounter` |
 
 ---
 
