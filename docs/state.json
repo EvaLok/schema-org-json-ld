@@ -297,17 +297,17 @@
         "sub_types_added": ["ShippingService", "ShippingConditions", "ServicePeriod", "ShippingRateSettings", "FulfillmentTypeEnumeration"],
         "modifies": ["DefinedRegion", "OpeningHoursSpecification"],
         "merged_at": "2026-02-26T00:35:26Z"
+      },
+      {
+        "description": "Wire hasMerchantReturnPolicy, hasMemberProgram, hasShippingService to Organization",
+        "pr": 151,
+        "issue": 150,
+        "modifies": ["Organization"],
+        "merged_at": "2026-02-26T00:48:06Z"
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
-    "in_progress": [
-      {
-        "description": "Organization wiring (hasMerchantReturnPolicy, hasMemberProgram, hasShippingService)",
-        "issue": 150,
-        "dispatched_at": "2026-02-26T00:36:00Z",
-        "model": "gpt-5.3-codex"
-      }
-    ],
+    "in_progress": [],
     "planned_next": [],
     "google_rich_results_types": {
       "not_implemented": [],
@@ -320,18 +320,20 @@
   "agent_sessions": [
     {
       "issue": 150,
-      "status": "dispatched",
-      "dispatched_at": "2026-02-26T00:36:00Z"
+      "status": "merged",
+      "pr": 151,
+      "dispatched_at": "2026-02-26T00:36:00Z",
+      "merged_at": "2026-02-26T00:48:06Z"
     }
   ],
   "qc_processed": [8],
   "blockers": [],
   "last_cycle": {
     "issue": 147,
-    "timestamp": "2026-02-26T00:36:00Z",
-    "summary": "Cycle 24: Merged PR #149 (ShippingService + 5 sub-types). Dispatched #150 (Organization wiring). 43 consecutive zero-revision PRs."
+    "timestamp": "2026-02-26T00:50:00Z",
+    "summary": "Cycle 24: Merged PR #149 (ShippingService + 5 sub-types) and PR #151 (Organization merchant wiring). 44 consecutive zero-revision PRs."
   },
-  "test_count": 272,
+  "test_count": 273,
   "total_schema_types": 28,
-  "total_sub_types": 90
+  "total_sub_types": 95
 }
