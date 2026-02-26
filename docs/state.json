@@ -192,151 +192,38 @@
     ],
     "quality_fixes": [
       {
-        "description": "Add validFrom to Offer, unitText to MonetaryAmount, Person/Org author to Review",
-        "pr": 105,
-        "issue": 104,
-        "merged_at": "2026-02-25T11:03:00Z"
+        "description": "Handle json_encode() failure in JsonLdGenerator",
+        "pr": 190,
+        "issue": 183,
+        "merged_at": "2026-02-26T19:04:34Z"
       },
       {
-        "description": "Add video to Recipe, make jobLocation nullable on JobPosting",
-        "pr": 107,
-        "issue": 106,
-        "merged_at": "2026-02-25T11:03:00Z"
-      },
-      {
-        "description": "Add aggregateRating and review to Product",
-        "pr": 111,
-        "issue": 109,
-        "merged_at": "2026-02-25T12:40:00Z"
-      },
-      {
-        "description": "Add Clip class, interactionStatistic, hasPart, ineligibleRegion to VideoObject",
-        "pr": 112,
-        "issue": 110,
-        "sub_types_added": ["Clip"],
-        "merged_at": "2026-02-25T12:40:00Z"
-      },
-      {
-        "description": "Add itemReviewed to Review, create Thing sub-type (QC fix)",
-        "pr": 117,
-        "issue": 116,
-        "sub_types_added": ["Thing"],
-        "merged_at": "2026-02-25T14:15:00Z"
-      },
-      {
-        "description": "Make Offer.itemCondition and CourseInstance.courseMode optional",
-        "pr": 119,
-        "issue": 118,
-        "merged_at": "2026-02-25T14:18:00Z"
-      },
-      {
-        "description": "Add EventAttendanceModeEnumeration, VirtualLocation, widen Event.location type",
-        "pr": 124,
-        "issue": 122,
-        "sub_types_added": ["VirtualLocation", "EventAttendanceModeEnumeration"],
-        "merged_at": "2026-02-25T15:40:50Z"
-      },
-      {
-        "description": "Add HowToSection for grouped Recipe instructions",
-        "pr": 125,
-        "issue": 123,
-        "sub_types_added": ["HowToSection"],
-        "merged_at": "2026-02-25T15:38:55Z"
-      },
-      {
-        "description": "Add department to LocalBusiness, FoodEstablishment, Restaurant, Store subtypes",
-        "pr": 129,
-        "issue": 128,
-        "sub_types_added": ["FoodEstablishment", "Restaurant", "Store"],
-        "merged_at": "2026-02-25T18:23:00Z"
-      },
-      {
-        "description": "Add Google-recommended Organization properties (numberOfEmployees, taxID, vatID, etc.)",
-        "pr": 131,
-        "issue": 130,
-        "merged_at": "2026-02-25T18:23:00Z"
-      },
-      {
-        "description": "Widen ImageObject.creator to accept Person|Organization",
-        "pr": 135,
-        "issue": 134,
-        "merged_at": "2026-02-25T20:03:00Z"
-      },
-      {
-        "description": "Add PropertyValue sub-type and JobPosting.identifier property",
-        "pr": 137,
-        "issue": 136,
-        "sub_types_added": ["PropertyValue"],
-        "merged_at": "2026-02-25T20:03:00Z"
-      },
-      {
-        "description": "Add Offer.priceValidUntil and AggregateOffer class, widen Product.offers",
-        "pr": 140,
-        "issue": 139,
-        "sub_types_added": ["AggregateOffer"],
-        "merged_at": "2026-02-25T21:21:00Z"
-      },
-      {
-        "description": "Add MerchantReturnPolicy + 5 enums + seasonal override",
-        "pr": 144,
-        "issue": 143,
-        "sub_types_added": ["MerchantReturnPolicy", "MerchantReturnPolicySeasonalOverride", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration"],
-        "merged_at": "2026-02-25T23:00:00Z"
-      },
-      {
-        "description": "Add MemberProgram + MemberProgramTier + TierBenefitEnumeration",
-        "pr": 146,
-        "issue": 145,
-        "sub_types_added": ["MemberProgram", "MemberProgramTier", "TierBenefitEnumeration"],
-        "merged_at": "2026-02-25T23:00:00Z"
-      },
-      {
-        "description": "Add ShippingService + ShippingConditions + ServicePeriod + ShippingRateSettings + FulfillmentTypeEnumeration + DefinedRegion/OpeningHoursSpecification fixes",
-        "pr": 149,
-        "issue": 148,
-        "sub_types_added": ["ShippingService", "ShippingConditions", "ServicePeriod", "ShippingRateSettings", "FulfillmentTypeEnumeration"],
-        "modifies": ["DefinedRegion", "OpeningHoursSpecification"],
-        "merged_at": "2026-02-26T00:35:26Z"
-      },
-      {
-        "description": "Wire hasMerchantReturnPolicy, hasMemberProgram, hasShippingService to Organization",
-        "pr": 151,
-        "issue": 150,
-        "modifies": ["Organization"],
-        "merged_at": "2026-02-26T00:48:06Z"
-      },
-      {
-        "description": "Add Product text properties (color, material, pattern, size, GTINs) + SizeSpecification",
-        "pr": 161,
-        "issue": 160,
-        "sub_types_added": ["SizeSpecification"],
-        "merged_at": "2026-02-26T08:05:00Z"
-      },
-      {
-        "description": "Add ProductGroup, PeopleAudience, Certification, UnitPriceSpecification + wire to Product/Offer",
-        "pr": 163,
-        "issue": 162,
-        "sub_types_added": ["ProductGroup", "PeopleAudience", "Certification", "UnitPriceSpecification"],
-        "merged_at": "2026-02-26T08:35:17Z"
-      },
-      {
-        "description": "Widen interactionStatistic to arrays in Person/DiscussionForumPosting/Comment/VideoObject + add aggregateRating/review to ProductGroup",
-        "pr": 169,
-        "issue": 168,
-        "modifies": ["Person", "DiscussionForumPosting", "Comment", "VideoObject", "ProductGroup"],
-        "merged_at": "2026-02-26T09:56:06Z"
-      },
-      {
-        "description": "Add @graph support: SchemasToJson/SchemasToObject methods for multi-schema JSON-LD output",
-        "pr": 175,
-        "issue": 174,
-        "modifies": ["JsonLdGenerator"],
-        "merged_at": "2026-02-26T12:32:00Z"
+        "description": "Add declare(strict_types=1) to all PHP files",
+        "pr": 191,
+        "issue": 186,
+        "merged_at": "2026-02-26T19:04:41Z"
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
-    "in_progress": [],
-    "planned_next": [],
+    "in_progress": [
+      {
+        "issue": 184,
+        "title": "Consolidate enum class locations",
+        "dispatched_at": "2026-02-26T19:05:00Z"
+      },
+      {
+        "issue": 182,
+        "title": "Add edge-case and negative tests",
+        "dispatched_at": "2026-02-26T19:05:00Z"
+      }
+    ],
+    "planned_next": [
+      {
+        "issue": 181,
+        "title": "Add PHPStan static analysis to CI",
+        "note": "Needs workflow change — Eva must merge"
+      }
+    ],
     "google_rich_results_types": {
       "not_implemented": [],
       "note": "ALL 28 Google Rich Results types implemented. Product merchant listing properties now fully covered."
@@ -356,13 +243,36 @@
   },
   "agent_sessions": [
     {
-      "issue": 174,
-      "pr": 175,
-      "title": "Add @graph support for multiple schemas per page",
-      "dispatched_at": "2026-02-26T12:20:30Z",
+      "issue": 183,
+      "pr": 190,
+      "title": "Handle json_encode() failure in JsonLdGenerator",
+      "dispatched_at": "2026-02-26T18:19:00Z",
       "status": "merged",
       "model": "gpt-5.3-codex",
-      "merged_at": "2026-02-26T12:32:00Z"
+      "merged_at": "2026-02-26T19:04:34Z"
+    },
+    {
+      "issue": 186,
+      "pr": 191,
+      "title": "Add declare(strict_types=1) to all PHP files",
+      "dispatched_at": "2026-02-26T18:19:00Z",
+      "status": "merged",
+      "model": "gpt-5.3-codex",
+      "merged_at": "2026-02-26T19:04:41Z"
+    },
+    {
+      "issue": 184,
+      "title": "Consolidate enum class locations",
+      "dispatched_at": "2026-02-26T19:05:00Z",
+      "status": "in_progress",
+      "model": "gpt-5.3-codex"
+    },
+    {
+      "issue": 182,
+      "title": "Add edge-case and negative tests",
+      "dispatched_at": "2026-02-26T19:05:00Z",
+      "status": "in_progress",
+      "model": "gpt-5.3-codex"
     }
   ],
   "qc_processed": [8, 37, 165],
@@ -371,16 +281,20 @@
     "request_165": "COMPLETE. QC issue #41 closed. 39/39 E2E pass, 0 errors, 158 warnings. @graph API also validated."
   },
   "blockers": [],
-  "open_questions_for_eva": [154],
-  "last_cycle": {
-    "issue": 179,
-    "timestamp": "2026-02-26T16:48:00Z",
-    "summary": "Cycle 35: Acted on Eva's #178 — audited 40 tool errors across 4 cycles, fixed via permissions skill + checklist updates. No dispatches."
+  "open_questions_for_eva": [],
+  "eva_input_issues": {
+    "closed_this_cycle": [180, 183, 185, 186, 187, 188],
+    "remaining_open": [181, 182, 184]
   },
-  "test_count": 301,
+  "last_cycle": {
+    "issue": 189,
+    "timestamp": "2026-02-26T18:15:00Z",
+    "summary": "Cycle 36: Addressed 6 of Eva's 9 input-from-eva issues. Merged PRs #190 (json_encode fix) and #191 (strict_types). Split JOURNAL.md into per-date files. Converted worklog/journal references to clickable links. Dispatched #184 (enum consolidation) and #182 (edge-case tests)."
+  },
+  "test_count": 303,
   "total_schema_types": 28,
   "total_sub_types": 100,
   "total_schema_classes": 96,
   "total_enums": 12,
-  "consecutive_zero_revision_prs": 51
+  "consecutive_zero_revision_prs": 53
 }
