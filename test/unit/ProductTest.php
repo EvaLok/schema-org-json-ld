@@ -6,10 +6,14 @@ use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\AggregateOffer;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\AggregateRating;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Brand;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Certification;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ItemAvailability;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Organization;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Offer;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\OfferItemCondition;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\PeopleAudience;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Product;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\ProductGroup;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\QuantitativeValue;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Rating;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Review;
@@ -259,5 +263,37 @@ final class ProductTest extends TestCase {
 		$this->assertEquals('USD', $obj->offers->priceCurrency);
 		$this->assertEquals(129.99, $obj->offers->highPrice);
 		$this->assertEquals(12, $obj->offers->offerCount);
+	}
+
+	public function testOutputWithMerchantListingProperties(): void {
+		$schema = new Product(
+			name: 'Executive Anvil Variant',
+			image: ['https://example.com/photos/1x1/photo.jpg'],
+			description: 'Variant product.',
+			sku: '0446310786-VAR',
+			offers: [],
+			isVariantOf: new ProductGroup(name: 'Executive Anvil Family'),
+			audience: new PeopleAudience(
+				suggestedGender: 'Unisex',
+				suggestedMinAge: 12,
+			),
+			hasCertification: [
+				new Certification(
+					name: 'EPREL',
+					issuedBy: new Organization(name: 'EU Energy Labelling Authority'),
+				),
+			],
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('ProductGroup', $obj->isVariantOf->{'@type'});
+		$this->assertEquals('Executive Anvil Family', $obj->isVariantOf->name);
+		$this->assertEquals('PeopleAudience', $obj->audience->{'@type'});
+		$this->assertEquals('Unisex', $obj->audience->suggestedGender);
+		$this->assertEquals(12, $obj->audience->suggestedMinAge);
+		$this->assertCount(1, $obj->hasCertification);
+		$this->assertEquals('Certification', $obj->hasCertification[0]->{'@type'});
+		$this->assertEquals('EPREL', $obj->hasCertification[0]->name);
 	}
 }
