@@ -1,6 +1,6 @@
 # schema-org-json-ld
 
-PHP library for generating schema.org JSON-LD structured data for Google Rich Results. Covers **28 Google Rich Results types** backed by **96 schema classes**, with type-safe constructor-promoted properties and automatic serialization.
+PHP library for generating schema.org JSON-LD structured data for Google Rich Results. Covers **28 Google Rich Results types** backed by **97 schema classes**, with type-safe constructor-promoted properties and automatic serialization.
 
 Validated against the [Google Rich Results Test](https://search.google.com/test/rich-results) via the [schema-org-json-ld-qc](https://github.com/EvaLok/schema-org-json-ld-qc) validation suite.
 
@@ -129,7 +129,7 @@ The pattern is always the same: instantiate a schema class, pass it to `JsonLdGe
 | Speakable | `SpeakableSpecification` (via `Article`) |
 | Subscription/paywalled content | `WebPageElement` (via `Article`) |
 | Vacation rental | `VacationRental`, `Accommodation`, `BedDetails`, `PostalAddress`, `AggregateRating`, `LocationFeatureSpecification` |
-| Video | `VideoObject`, `Clip`, `InteractionCounter` |
+| Video | `VideoObject`, `Clip`, `InteractionCounter`, `BroadcastEvent` |
 
 ---
 

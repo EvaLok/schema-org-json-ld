@@ -38,5 +38,6 @@ class Product extends TypedSchema {
 		public null|PeopleAudience $audience = null,
 		/** @var null|Certification|Certification[] $hasCertification */
 		public null|Certification|array $hasCertification = null,
+		public null|string $subjectOf = null,
 	) {}
 }

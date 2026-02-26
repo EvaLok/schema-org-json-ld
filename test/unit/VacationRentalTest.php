@@ -81,6 +81,7 @@ final class VacationRentalTest extends TestCase {
 			brand: new Brand(name: 'Beach Stays'),
 			checkinTime: '16:00',
 			checkoutTime: '10:00',
+			datePublished: '2026-02-26',
 			description: 'Spacious beachfront vacation home.',
 			knowsLanguage: ['en-US', 'es-ES'],
 			review: [
@@ -99,6 +100,7 @@ final class VacationRentalTest extends TestCase {
 		$this->assertEquals('Brand', $obj->brand->{'@type'});
 		$this->assertEquals('16:00', $obj->checkinTime);
 		$this->assertEquals('10:00', $obj->checkoutTime);
+		$this->assertEquals('2026-02-26', $obj->datePublished);
 		$this->assertEquals('Spacious beachfront vacation home.', $obj->description);
 		$this->assertEquals('en-US', $obj->knowsLanguage[0]);
 		$this->assertEquals('Review', $obj->review[0]->{'@type'});
@@ -128,6 +130,7 @@ final class VacationRentalTest extends TestCase {
 		$this->assertFalse(property_exists($obj, 'brand'));
 		$this->assertFalse(property_exists($obj, 'checkinTime'));
 		$this->assertFalse(property_exists($obj, 'checkoutTime'));
+		$this->assertFalse(property_exists($obj, 'datePublished'));
 		$this->assertFalse(property_exists($obj, 'description'));
 		$this->assertFalse(property_exists($obj, 'knowsLanguage'));
 		$this->assertFalse(property_exists($obj, 'review'));

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\BroadcastEvent;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Clip;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\InteractionCounter;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\VideoObject;
@@ -46,6 +47,7 @@ final class VideoObjectTest extends TestCase {
 		$this->assertFalse(property_exists($obj, 'interactionStatistic'));
 		$this->assertFalse(property_exists($obj, 'hasPart'));
 		$this->assertFalse(property_exists($obj, 'ineligibleRegion'));
+		$this->assertFalse(property_exists($obj, 'publication'));
 	}
 
 	public function testFullOutput(): void {
@@ -159,5 +161,25 @@ final class VideoObjectTest extends TestCase {
 		$this->assertEquals('https://example.com/video?t=30', $obj->hasPart[0]->url);
 		$this->assertEquals(75, $obj->hasPart[0]->endOffset);
 		$this->assertObjectNotHasProperty('endOffset', $obj->hasPart[1]);
+	}
+
+	public function testWithPublication(): void {
+		$videoObject = new VideoObject(
+			name: 'Live cooking stream',
+			thumbnailUrl: ['https://example.com/thumb.jpg'],
+			uploadDate: '2026-02-24',
+			publication: new BroadcastEvent(
+				isLiveBroadcast: true,
+				startDate: '2026-02-24T20:00:00+00:00',
+				endDate: '2026-02-24T21:00:00+00:00',
+			),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $videoObject);
+		$obj = json_decode($json);
+
+		$this->assertEquals('BroadcastEvent', $obj->publication->{'@type'});
+		$this->assertTrue($obj->publication->isLiveBroadcast);
+		$this->assertEquals('2026-02-24T20:00:00+00:00', $obj->publication->startDate);
+		$this->assertEquals('2026-02-24T21:00:00+00:00', $obj->publication->endDate);
 	}
 }

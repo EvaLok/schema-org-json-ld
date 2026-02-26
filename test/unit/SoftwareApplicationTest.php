@@ -57,6 +57,7 @@ final class SoftwareApplicationTest extends TestCase {
 
 		$this->assertFalse(property_exists($obj, 'applicationCategory'));
 		$this->assertFalse(property_exists($obj, 'operatingSystem'));
+		$this->assertFalse(property_exists($obj, 'datePublished'));
 		$this->assertFalse(property_exists($obj, 'review'));
 		$this->assertFalse(property_exists($obj, 'description'));
 		$this->assertFalse(property_exists($obj, 'screenshot'));
@@ -77,6 +78,7 @@ final class SoftwareApplicationTest extends TestCase {
 			aggregateRating: new AggregateRating(ratingValue: 4.8, ratingCount: 1250),
 			applicationCategory: 'BusinessApplication',
 			operatingSystem: 'iOS 16+',
+			datePublished: '2026-02-26',
 			review: new Review(
 				author: 'Jane Doe',
 				reviewRating: new Rating(ratingValue: 5),
@@ -94,6 +96,7 @@ final class SoftwareApplicationTest extends TestCase {
 		$this->assertEquals(1250, $obj->aggregateRating->ratingCount);
 		$this->assertEquals('BusinessApplication', $obj->applicationCategory);
 		$this->assertEquals('iOS 16+', $obj->operatingSystem);
+		$this->assertEquals('2026-02-26', $obj->datePublished);
 		$this->assertEquals('Review', $obj->review->{'@type'});
 		$this->assertEquals('Excellent app!', $obj->review->reviewBody);
 		$this->assertEquals('Example app description', $obj->description);
