@@ -4,9 +4,16 @@ namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ContactPoint;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\MemberProgram;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\MemberProgramTier;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\MerchantReturnEnumeration;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\MerchantReturnPolicy;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Organization;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\PostalAddress;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\QuantitativeValue;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\ShippingConditions;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\ShippingService;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\TierBenefitEnumeration;
 use PHPUnit\Framework\TestCase;
 
 final class OrganizationTest extends TestCase {
@@ -131,5 +138,37 @@ final class OrganizationTest extends TestCase {
 		$this->assertFalse(property_exists($obj, 'leiCode'));
 		$this->assertFalse(property_exists($obj, 'iso6523Code'));
 		$this->assertFalse(property_exists($obj, 'globalLocationNumber'));
+		$this->assertFalse(property_exists($obj, 'hasMerchantReturnPolicy'));
+		$this->assertFalse(property_exists($obj, 'hasMemberProgram'));
+		$this->assertFalse(property_exists($obj, 'hasShippingService'));
+	}
+
+	public function testMerchantPropertiesOutput(): void {
+		$organization = new Organization(
+			name: 'Example Inc.',
+			hasMerchantReturnPolicy: new MerchantReturnPolicy(
+				applicableCountry: 'NL',
+				returnPolicyCategory: MerchantReturnEnumeration::MerchantReturnFiniteReturnWindow,
+			),
+			hasMemberProgram: new MemberProgram(
+				name: 'Example Rewards',
+				description: 'Membership rewards program',
+				hasTiers: [
+					new MemberProgramTier(
+						name: 'Gold',
+						hasTierBenefit: TierBenefitEnumeration::TierBenefitLoyaltyPoints,
+					),
+				],
+			),
+			hasShippingService: new ShippingService(
+				shippingConditions: new ShippingConditions(),
+			),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $organization);
+		$obj = json_decode($json);
+
+		$this->assertEquals('MerchantReturnPolicy', $obj->hasMerchantReturnPolicy->{'@type'});
+		$this->assertEquals('MemberProgram', $obj->hasMemberProgram->{'@type'});
+		$this->assertEquals('ShippingService', $obj->hasShippingService->{'@type'});
 	}
 }

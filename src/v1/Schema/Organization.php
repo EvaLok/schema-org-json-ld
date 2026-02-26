@@ -2,6 +2,9 @@
 
 namespace EvaLok\SchemaOrgJsonLd\v1\Schema;
 
+use EvaLok\SchemaOrgJsonLd\v1\Schema\MemberProgram;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\MerchantReturnPolicy;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\ShippingService;
 use EvaLok\SchemaOrgJsonLd\v1\TypedSchema;
 
 class Organization extends TypedSchema {
@@ -29,5 +32,11 @@ class Organization extends TypedSchema {
 		public null|string $leiCode = null,
 		public null|string $iso6523Code = null,
 		public null|string $globalLocationNumber = null,
+		/** @var MerchantReturnPolicy[]|MerchantReturnPolicy $hasMerchantReturnPolicy */
+		public null|MerchantReturnPolicy|array $hasMerchantReturnPolicy = null,
+		/** @var MemberProgram[]|MemberProgram $hasMemberProgram */
+		public null|MemberProgram|array $hasMemberProgram = null,
+		/** @var ShippingService[]|ShippingService $hasShippingService */
+		public null|ShippingService|array $hasShippingService = null,
 	) {}
 }
