@@ -5,10 +5,10 @@ namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\DefinedRegion;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ItemAvailability;
-use EvaLok\SchemaOrgJsonLd\v1\Schema\QuantitativeValue;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Offer;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\OfferItemCondition;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\OfferShippingDetails;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\QuantitativeValue;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\UnitPriceSpecification;
 use PHPUnit\Framework\TestCase;
 
