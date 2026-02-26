@@ -16,6 +16,7 @@ class SoftwareApplication extends TypedSchema {
 		public null|AggregateRating $aggregateRating,
 		public null|string $applicationCategory = null,
 		public null|string $operatingSystem = null,
+		public null|string $datePublished = null,
 		public null|Review $review = null,
 		public null|string $description = null,
 		public null|string $screenshot = null,

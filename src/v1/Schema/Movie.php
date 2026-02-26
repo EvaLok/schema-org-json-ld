@@ -14,6 +14,7 @@ class Movie extends TypedSchema {
 		public string $image,
 		public null|AggregateRating $aggregateRating = null,
 		public null|string $dateCreated = null,
+		public null|string $datePublished = null,
 		public null|Person $director = null,
 		public null|Review $review = null,
 		public null|string $description = null,

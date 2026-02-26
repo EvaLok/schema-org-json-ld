@@ -23,6 +23,7 @@ class VacationRental extends TypedSchema {
 		public null|Brand $brand = null,
 		public null|string $checkinTime = null,
 		public null|string $checkoutTime = null,
+		public null|string $datePublished = null,
 		public null|string $description = null,
 		/** @var string[] $knowsLanguage */
 		public null|array $knowsLanguage = null,

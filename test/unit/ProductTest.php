@@ -96,6 +96,7 @@ final class ProductTest extends TestCase {
 		$this->assertFalse(property_exists($obj, 'gtin13'));
 		$this->assertFalse(property_exists($obj, 'gtin14'));
 		$this->assertFalse(property_exists($obj, 'isbn'));
+		$this->assertFalse(property_exists($obj, 'subjectOf'));
 	}
 
 	public function testOutputWithAdditionalTextProperties(): void {
@@ -111,6 +112,7 @@ final class ProductTest extends TestCase {
 			size: 'Large',
 			inProductGroupWithID: 'ANVIL-GROUP-1',
 			gtin: '1234567890123',
+			subjectOf: 'https://example.com/articles/executive-anvil',
 		);
 		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
 		$obj = json_decode($json);
@@ -121,6 +123,7 @@ final class ProductTest extends TestCase {
 		$this->assertEquals('Large', $obj->size);
 		$this->assertEquals('ANVIL-GROUP-1', $obj->inProductGroupWithID);
 		$this->assertEquals('1234567890123', $obj->gtin);
+		$this->assertEquals('https://example.com/articles/executive-anvil', $obj->subjectOf);
 	}
 
 	public function testOutputWithSizeSpecification(): void {
