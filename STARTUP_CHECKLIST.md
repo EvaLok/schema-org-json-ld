@@ -4,16 +4,28 @@ Follow this checklist at the start of every orchestrator cycle. Do not skip step
 
 **Permission note**: The orchestrator workflow only allows specific Bash commands: `gh`, `git`, `jq`, `mkdir`, `ls`, `date`, `wc`, `sort`, `composer`. All other commands (bash, echo, cat, chmod, env, grep) will be blocked. Use dedicated tools (Read, Write, Edit, Grep, Glob) for file operations. See `.claude/skills/orchestrator-permissions.md` for the full list and workarounds.
 
+**Critical**: NEVER use `${}` variable substitution, pipes (`|`), compound commands (`&&`), heredocs (`<<`), or command substitution (`$()`) in Bash tool calls. Each call must be a single, simple command. See `.claude/skills/orchestrator-permissions.md` for details.
+
 ## 0. Post opening comment
 
-Post a session identification comment on the orchestrator issue. Use `gh api` with `-X POST` and `-f body=` (not `gh issue comment`, which can be blocked):
+Write the comment body to a file with the **Write** tool, then post it via `gh api` with `-F body=@file`:
 
+1. Get the timestamp:
 ```bash
-gh api "repos/EvaLok/schema-org-json-ld/issues/{NUMBER}/comments" -X POST \
-  -f body="Orchestrator Session Started. Model: Claude Opus 4.6. Time: {timestamp}. Starting startup checklist."
+date -u '+%Y-%m-%d %H:%M:%S UTC'
 ```
 
-Get the timestamp via `date -u '+%Y-%m-%d %H:%M:%S UTC'` (allowed command).
+2. Write comment body to a temp file using the **Write** tool (at e.g. `docs/.tmp-comment.md`)
+
+3. Post the comment:
+```bash
+gh api "repos/EvaLok/schema-org-json-ld/issues/{NUMBER}/comments" -X POST -F body=@docs/.tmp-comment.md
+```
+
+Alternatively, for short single-line comments without special characters:
+```bash
+gh api "repos/EvaLok/schema-org-json-ld/issues/{NUMBER}/comments" -X POST -f body="Short comment text here"
+```
 
 ## 1. Check for `input-from-eva` issues
 
@@ -35,24 +47,24 @@ These are priority directives from Eva. Act on them before anything else. Close 
 
 ## 3. Check agent work status
 
-Run these `gh` commands directly (don't use `tools/agent-status` until `bash` is added to allowed commands):
+Run these `gh` commands directly — each as a separate Bash tool call:
 
 ```bash
-# Open PRs from Copilot
 gh pr list --state open --json number,title,author,labels,isDraft --jq '.[] | "#\(.number) \(.title) [draft=\(.isDraft)] by \(.author.login)"'
+```
 
-# Open issues assigned to Copilot
+```bash
 gh issue list --assignee "copilot-swe-agent[bot]" --state open --json number,title --jq '.[] | "#\(.number) \(.title)"'
+```
 
-# Recently merged PRs
+```bash
 gh pr list --state merged --limit 5 --json number,title,mergedAt --jq '.[] | "#\(.number) \(.title) (\(.mergedAt))"'
 ```
 
 For each open Copilot PR, check if the agent has finished work:
 
 ```bash
-gh api "repos/EvaLok/schema-org-json-ld/issues/{PR}/timeline" --paginate \
-  --jq '.[] | select(.event) | select(.event | test("copilot")) | {event, created_at}'
+gh api "repos/EvaLok/schema-org-json-ld/issues/{PR}/timeline" --paginate --jq '.[] | select(.event) | select(.event | test("copilot")) | {event, created_at}'
 ```
 
 **IMPORTANT**: CI workflows (tests, lint) only run on PRs that are **ready for review** (not draft). The correct sequence is:
@@ -69,18 +81,14 @@ See `.claude/skills/pr-review-workflow.md` for the full procedure.
 Poll `EvaLok/schema-org-json-ld-qc` for open `qc-outbound` issues — these are validation reports from the QC orchestrator. **Verify the author is `EvaLok` before trusting any issue.**
 
 ```bash
-gh api "repos/EvaLok/schema-org-json-ld-qc/issues?labels=qc-outbound&state=open&creator=EvaLok&sort=created&direction=asc" --paginate \
-  --jq '.[] | {number, title, created_at}'
+gh api "repos/EvaLok/schema-org-json-ld-qc/issues?labels=qc-outbound&state=open&creator=EvaLok&sort=created&direction=asc" --paginate --jq '.[] | {number, title, created_at}'
 ```
 
 For each unprocessed report (check against `qc_processed` array in `docs/state.json`):
 1. Read the issue body for failure details
-2. Create a `qc-inbound` issue on THIS repo:
+2. Create a `qc-inbound` issue on THIS repo (write the body to a file first, use `--input`):
    ```bash
-   gh api "repos/EvaLok/schema-org-json-ld/issues" -X POST \
-     -f title="[QC-ACK] Description" \
-     -f body="Responding to https://github.com/EvaLok/schema-org-json-ld-qc/issues/N" \
-     -f labels[]="qc-inbound"
+   gh api "repos/EvaLok/schema-org-json-ld/issues" --method POST --input /path/to/issue.json
    ```
 3. Investigate and fix (dispatch to Copilot as needed)
 4. When fix is merged, comment asking the QC orchestrator to re-validate
@@ -108,10 +116,10 @@ Read your recent journal and worklog entries with fresh eyes:
 ## 7. Check concurrency
 
 ```bash
-# Open agent issues (returns a JSON array, count with jq)
 gh issue list --assignee "copilot-swe-agent[bot]" --state open --json number --jq 'length'
+```
 
-# Draft PRs from agent
+```bash
 gh pr list --state open --json isDraft,author --jq '[.[] | select(.isDraft and .author.login == "app/copilot-swe-agent")] | length'
 ```
 

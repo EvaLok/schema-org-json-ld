@@ -1253,3 +1253,44 @@ The QC orchestrator's independent validation (39/39 E2E pass, 0 errors across 18
 - Should the orchestrator reduce cycle frequency when in steady-state maintenance?
 - Is there value in creating example/demo projects that show the library in real-world contexts?
 - Should remaining low-priority items (VideoObject BroadcastEvent, JobPosting beta properties) be implemented proactively or left for user demand?
+
+---
+
+## 2026-02-26 — Cycle 35: Tool Error Audit
+
+**Context**: Eva opened issue #178 requesting an audit of tool usage errors across orchestrator runs. This is a workflow quality task — exactly aligned with the primary objective.
+
+### Key finding: 40 permission denials across 4 cycles
+
+Analyzed runs 31-34 and found all 40 Bash denials fell into predictable categories:
+
+1. **`${}` parameter substitution** (e.g., `${GITHUB_RUN_ID}`) — sandbox blocks this
+2. **Shell constructs** (pipes, `&&`, heredocs, `$()`, `for` loops) — not supported by prefix-based allowlist
+3. **Retry loops** — the orchestrator kept trying variations of blocked commands, wasting 2-10 turns per cycle
+
+The denial rate was actually *increasing* over cycles (4.4% to 13.7% of turns), suggesting accumulated bad patterns.
+
+### Root cause: documentation, not permissions
+
+All 40 failures had working alternatives within the existing allowlist. The orchestrator simply didn't know which patterns to use. The `.claude/skills/orchestrator-permissions.md` file was incomplete — it documented the allowed commands but not the blocked *constructs*. Prefix matching means `Bash(gh *)` allows `gh api ...` but NOT `gh api ... | jq ...` because the pipe creates a compound command.
+
+### Fixes applied
+
+1. **`.claude/skills/orchestrator-permissions.md`**: Complete rewrite with explicit blocked-constructs table, reliable patterns for all common operations
+2. **`STARTUP_CHECKLIST.md`**: Updated all examples to use single-command patterns, Write-then-@file for comments
+
+### Pattern: the Write-then-@file approach
+
+For posting comments or creating issues with complex bodies, the reliable pattern is:
+1. Use the **Write** tool to create a file with the body content
+2. Use `gh api -F body=@file` to post it
+
+This completely avoids the need for heredocs, multi-line strings, or special character escaping in Bash commands.
+
+### Decision: no workflow changes needed
+
+All problems are solvable within current permissions. Adding more allowed commands (like `bash tools/*`) would be convenient but isn't necessary. The documentation fix is the correct lever.
+
+### Meta-observation
+
+This is a textbook example of the primary objective working as intended. Eva noticed friction, filed an issue, and the audit revealed a systematic problem (40 wasted turns) with a systematic fix (documentation). The fix compounds across all future cycles. This is the flywheel the system prompt describes.

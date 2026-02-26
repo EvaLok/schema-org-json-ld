@@ -18,7 +18,26 @@ The orchestrator workflow only permits these Bash command prefixes:
 
 WebFetch is allowed for `schema.org`, `developers.google.com`, `search.google.com` domains only.
 
-## NOT allowed (will require user approval and block)
+## BLOCKED constructs (will cause denial and waste turns)
+
+These shell constructs are **always blocked** by the prefix-based permission system, regardless of which commands they contain:
+
+| Construct | Example | Why blocked |
+|-----------|---------|-------------|
+| `${}` substitution | `git commit -m "${VAR}"` | Sandbox blocks parameter substitution |
+| Pipes | `gh api ... \| jq ...` | Prefix match only covers first command |
+| Compound `&&` / `||` | `git commit -m "msg" && git push` | Not a single command |
+| Heredocs `<<` | `gh api --input - <<'JSON'` | Shell construct, not a simple command |
+| Command substitution `$()` | `git commit -m "$(cat ...)"` | Subprocess invocation |
+| For loops | `for f in *.php; do ...; done` | Shell scripting |
+| Process substitution `<()` | `gh api --input <(jq ...)` | Requires bash subprocess |
+| Redirects `>` `>>` | `jq ... > file.json` | Output redirection blocked |
+| Semicolons | `git add .; git commit` | Multiple commands |
+
+### Key rule
+**Each Bash tool call must be a single, simple command with no shell constructs.** If you need compound operations, use separate Bash tool calls.
+
+## NOT allowed commands (will require user approval)
 
 - `bash`, `sh` — cannot run scripts directly
 - `echo`, `printf` — cannot produce text output
@@ -29,39 +48,71 @@ WebFetch is allowed for `schema.org`, `developers.google.com`, `search.google.co
 - `curl`, `wget` — cannot make HTTP requests (use `gh api` or WebFetch)
 - Any other command not in the allow list
 
-## Workarounds
+## Reliable patterns for common operations
 
 ### Posting comments on issues
-Instead of `gh issue comment`, use `gh api` with jq-encoded body:
+
+Use `gh api` with `-f body="..."` — plain text only, NO `${}` variables:
+
 ```bash
-gh api "repos/EvaLok/schema-org-json-ld/issues/NUMBER/comments" -X POST \
-  --input <(jq -n --arg body "Comment text" '{"body": $body}')
+gh api "repos/EvaLok/schema-org-json-ld/issues/NUMBER/comments" -X POST -f body="Comment text here. No dollar-brace variables."
 ```
 
-**IMPORTANT**: The `--input <(jq ...)` pattern uses process substitution which requires `bash`. This currently doesn't work either. Use the simpler form:
+For multi-line or complex comments, write the body to a file first with the **Write** tool, then use `-F body=@file`:
+
 ```bash
-gh api "repos/EvaLok/schema-org-json-ld/issues/NUMBER/comments" -X POST -f body="Comment text"
+gh api "repos/EvaLok/schema-org-json-ld/issues/NUMBER/comments" -X POST -F body=@/path/to/comment.md
+```
+
+**Never use**: `${}`, heredocs, process substitution, or pipe chains in comment commands.
+
+### Creating issues
+
+Write the JSON payload to a file with the **Write** tool, then use `--input`:
+
+```bash
+gh api "repos/EvaLok/schema-org-json-ld/issues" --method POST --input /path/to/issue.json
+```
+
+The JSON file should contain `title`, `body`, `labels`, `assignees`, and optionally `agent_assignment`.
+
+### Git commit and push
+
+Always use separate commands (not `&&`). Use simple single-line messages:
+
+```bash
+git add docs/state.json docs/worklog/
+```
+```bash
+git commit -m "Cycle 35: description of changes"
+```
+```bash
+git push
+```
+
+**Never use**: `$(cat <<'EOF'...)` for multi-line commit messages. If you need a multi-line message, use `-m "line 1" -m "line 2"` (multiple `-m` flags).
+
+### Closing issues
+
+```bash
+gh api "repos/EvaLok/schema-org-json-ld/issues/NUMBER" -X PATCH -f state=closed
+```
+
+### Searching code / files
+
+**Never use** `grep`, `find`, pipes, or `for` loops. Instead:
+
+- **Find files**: Use the `Glob` tool with patterns like `src/**/*.php`
+- **Search content**: Use the `Grep` tool with regex patterns
+- **Read files**: Use the `Read` tool
+- **Count items**: Use `wc -l filename` on a single file, or use the `Grep` tool with `output_mode: "count"`
+
+### Getting timestamps
+
+```bash
+date -u '+%Y-%m-%d %H:%M:%S UTC'
 ```
 
 ### Reading environment variables
-Use `tools/session-info` (when `bash` is allowed) or output session info via `git log` / `date` commands.
 
-### Creating issues with multi-line bodies
-Write the body to a file with the Write tool, then use `gh api` with `-F` (capital F) to read file content:
-```bash
-gh api "repos/REPO/issues" -X POST -f title="Title" -F body=@docs/my-body.md -f "labels[]=agent-task"
-```
-**IMPORTANT**: The file must be within the repo working directory (not `/tmp/`). The `-F key=@file` syntax reads the file as the field value. Use `-f` (lowercase) for inline string values and `-F` (uppercase) for file-based values.
-
-**Avoid**: `jq --rawfile` and output redirection (`>`) — both are blocked by the security sandbox. Also avoid files in `/tmp/` as jq cannot read from there.
-
-### Running shell scripts
-Currently NOT possible. All operations must use allowed commands directly.
-When `Bash(bash tools/*)` is added to the workflow, use: `bash tools/scriptname args`
-
-## Proposed workflow additions
-These have been proposed to Eva via PR with label `workflow-change`:
-- `Bash(bash tools/*)` — run orchestrator tools
-- `Bash(echo *)` — basic text output
-- `Bash(cat *)` — pipe file content
-- `Bash(chmod *)` — set file permissions
+Environment variables cannot be accessed directly (no `${}`, no `env`, no `printenv`). Use `date` for timestamps and `git` for repo info. The GitHub run ID should be captured at workflow level if needed.
