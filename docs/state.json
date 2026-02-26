@@ -214,22 +214,23 @@
         "pr": 193,
         "issue": 182,
         "merged_at": "2026-02-26T19:52:00Z"
+      },
+      {
+        "description": "Add HowToStep video + itemListElement",
+        "pr": 198,
+        "issue": 196,
+        "merged_at": "2026-02-26T20:03:00Z"
+      },
+      {
+        "description": "Add datePublished, BroadcastEvent, subjectOf",
+        "pr": 199,
+        "issue": 197,
+        "merged_at": "2026-02-26T20:04:00Z"
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
     "enum_namespace": "EvaLok\\SchemaOrgJsonLd\\v1\\Enum",
-    "in_progress": [
-      {
-        "issue": 196,
-        "title": "Add video and itemListElement to HowToStep",
-        "dispatched_at": "2026-02-26T19:53:00Z"
-      },
-      {
-        "issue": 197,
-        "title": "Add datePublished, BroadcastEvent, subjectOf",
-        "dispatched_at": "2026-02-26T19:53:00Z"
-      }
-    ],
+    "in_progress": [],
     "planned_next": [
       {
         "issue": 181,
@@ -271,24 +272,29 @@
     },
     {
       "issue": 196,
+      "pr": 198,
       "title": "Add video and itemListElement to HowToStep",
       "dispatched_at": "2026-02-26T19:53:00Z",
-      "status": "in_progress",
-      "model": "gpt-5.3-codex"
+      "status": "merged",
+      "model": "gpt-5.3-codex",
+      "merged_at": "2026-02-26T20:03:00Z"
     },
     {
       "issue": 197,
+      "pr": 199,
       "title": "Add datePublished, BroadcastEvent, subjectOf",
       "dispatched_at": "2026-02-26T19:53:00Z",
-      "status": "in_progress",
-      "model": "gpt-5.3-codex"
+      "status": "merged",
+      "model": "gpt-5.3-codex",
+      "merged_at": "2026-02-26T20:04:00Z"
     }
   ],
   "qc_processed": [8, 37, 57, 165],
-  "qc_requests_pending": [],
+  "qc_requests_pending": [200],
   "qc_status": {
     "request_165": "COMPLETE. QC issue #41 closed. 39/39 E2E pass, 0 errors, 158 warnings. @graph API also validated.",
-    "report_57": "ACKNOWLEDGED. QC-ACK issue #195 opened. Dispatched #196 (HowToStep) and #197 (datePublished/BroadcastEvent/subjectOf)."
+    "report_57": "ALL FIXES MERGED. PRs #198, #199. QC re-validation requested via #200.",
+    "request_200": "PENDING. Validate QC-57 fixes."
   },
   "blockers": [],
   "open_questions_for_eva": [],
@@ -300,12 +306,12 @@
   "last_cycle": {
     "issue": 194,
     "timestamp": "2026-02-26T19:45:00Z",
-    "summary": "Cycle 37: Merged PRs #192 (enum consolidation) and #193 (edge-case tests). Closed Eva's issues #184 and #182. Processed QC report #57. Dispatched #196 and #197 for QC fixes. Updated AGENTS.md, README, and skills for enum namespace."
+    "summary": "Cycle 37: Merged 4 PRs (#192 enum consolidation, #193 edge-case tests, #198 HowToStep, #199 datePublished/BroadcastEvent/subjectOf). Closed Eva's issues #182 and #184. Processed QC report #57 and fixed all reported property gaps. Opened QC re-validation request #200. 57 consecutive zero-revision PRs."
   },
-  "test_count": 309,
+  "test_count": 321,
   "total_schema_types": 28,
-  "total_sub_types": 100,
-  "total_schema_classes": 96,
+  "total_sub_types": 101,
+  "total_schema_classes": 97,
   "total_enums": 12,
-  "consecutive_zero_revision_prs": 55
+  "consecutive_zero_revision_prs": 57
 }

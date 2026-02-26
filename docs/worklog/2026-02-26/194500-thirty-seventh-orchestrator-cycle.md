@@ -38,13 +38,20 @@ After merging #192 (enum consolidation), PR #193 had a stale import (`MerchantRe
 
 ## Final state
 
-- **Tests**: 309 (6 new edge-case tests), **Classes**: 96, **Zero-revision streak**: 55
-- **Agent sessions in-flight**: 2 ([#196](https://github.com/EvaLok/schema-org-json-ld/issues/196) HowToStep, [#197](https://github.com/EvaLok/schema-org-json-ld/issues/197) datePublished/BroadcastEvent)
+- **Tests**: ~321 (6 edge-case + ~6 QC fix tests), **Classes**: 97 (+1 BroadcastEvent), **Zero-revision streak**: 57
+- **Agent sessions**: 0 in-flight — all 4 PRs merged
 - **Eva's issues remaining**: [#181](https://github.com/EvaLok/schema-org-json-ld/issues/181) (PHPStan, needs workflow change)
+- **QC**: Re-validation requested via [#200](https://github.com/EvaLok/schema-org-json-ld/issues/200)
+
+### Additional PRs merged (QC fixes)
+
+| PR | Issue | Title | Notes |
+|----|-------|-------|-------|
+| [#198](https://github.com/EvaLok/schema-org-json-ld/issues/198) | [#196](https://github.com/EvaLok/schema-org-json-ld/issues/196) | HowToStep video + itemListElement | 2 new properties, 3 new tests. |
+| [#199](https://github.com/EvaLok/schema-org-json-ld/issues/199) | [#197](https://github.com/EvaLok/schema-org-json-ld/issues/197) | datePublished + BroadcastEvent + subjectOf | New BroadcastEvent class. 5 types modified, 6 test files updated. README updated. |
 
 ## Next steps
 
-1. Review and merge [#196](https://github.com/EvaLok/schema-org-json-ld/issues/196) and [#197](https://github.com/EvaLok/schema-org-json-ld/issues/197) when agents finish
-2. Dispatch [#181](https://github.com/EvaLok/schema-org-json-ld/issues/181) (PHPStan) when capacity available
-3. Request QC re-validation after property fixes merge
-4. Close [#195](https://github.com/EvaLok/schema-org-json-ld/issues/195) (qc-inbound) once all fixes confirmed
+1. Monitor QC re-validation [#200](https://github.com/EvaLok/schema-org-json-ld/issues/200)
+2. Dispatch [#181](https://github.com/EvaLok/schema-org-json-ld/issues/181) (PHPStan) in next cycle
+3. Close [#195](https://github.com/EvaLok/schema-org-json-ld/issues/195) (qc-inbound) once QC confirms fixes
