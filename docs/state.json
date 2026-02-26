@@ -349,33 +349,24 @@
   },
   "agent_sessions": [
     {
-      "issue": 166,
-      "pr": 167,
-      "title": "Update README with post-Cycle-12 enhancements",
-      "dispatched_at": "2026-02-26T09:24:33Z",
-      "status": "merged",
-      "model": "gpt-5.3-codex",
-      "merged_at": "2026-02-26T09:40:30Z"
-    },
-    {
-      "issue": 168,
-      "pr": 169,
-      "title": "Widen interactionStatistic to arrays + ProductGroup aggregateRating/review",
-      "dispatched_at": "2026-02-26T09:35:12Z",
-      "status": "merged",
-      "model": "gpt-5.3-codex",
-      "merged_at": "2026-02-26T09:56:06Z",
-      "note": "Agent stalled (copilot_work_finished never emitted), but code was complete. Marked ready manually."
+      "issue": 171,
+      "title": "Update README: complete Supported Types table + expand 7 usage examples",
+      "dispatched_at": "2026-02-26T10:50:00Z",
+      "status": "dispatched",
+      "model": "gpt-5.3-codex"
     }
   ],
   "qc_processed": [8, 37],
   "qc_requests_pending": [165],
+  "qc_status": {
+    "request_165": "Acknowledged by QC repo as issue #41. Agent tasks #42, #43 dispatched. PR #44 in draft."
+  },
   "blockers": [],
   "open_questions_for_eva": [154],
   "last_cycle": {
-    "issue": 164,
-    "timestamp": "2026-02-26T09:18:00Z",
-    "summary": "Cycle 30: README docs audit, dispatched #166 and #168. PR #167 merged (README update). PR #169 merged (interactionStatistic arrays + ProductGroup review/rating). QC request #165 filed. Direct README fixes (class count, table rows). ADR 0005 created. AGENTS.md updated with Documentation section."
+    "issue": 170,
+    "timestamp": "2026-02-26T10:45:00Z",
+    "summary": "Cycle 31: README documentation sweep. Audited 7 sections, found 50+ undocumented properties and 16 missing classes in Supported Types table. Dispatched #171 for comprehensive README update. QC #165 acknowledged as QC#41, validation in progress."
   },
   "test_count": 296,
   "total_schema_types": 28,

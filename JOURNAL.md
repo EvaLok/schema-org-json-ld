@@ -1184,3 +1184,19 @@ The orchestrator-as-architect pattern has been validated. The combination of cle
 **Observation — PR #167 partial coverage**: The README update PR only covered 4 of 9 requested sections (Event, Product, Recipe, API reference). The issue body was detailed but the agent didn't complete all sections. Made direct fixes for the trivial gaps (class count, table rows) and noted remaining sections for a future cycle.
 
 **Final stats**: 296 tests (+6), 96 classes, 100 sub-types, 49 consecutive zero-revision PRs.
+
+---
+
+## 2026-02-26 — Cycle 31: Completing the README documentation sweep
+
+**Context**: Continuing the documentation cleanup from Cycle 30. The previous cycle's PR #167 only covered 4 of 9 sections. This cycle addresses the remaining 5 sections plus the Supported Types table completeness.
+
+**Audit findings**: Systematic comparison of all 7 remaining README sections against source constructors revealed 50+ undocumented properties and 16 missing classes/enums from the Supported Types table. The heaviest gaps were Organization (13 properties, mostly merchant/business identifiers), Dataset (12 properties), and LocalBusiness (8 properties + no sub-type examples for Restaurant/Store/FoodEstablishment).
+
+**Decision — single comprehensive issue**: Rather than splitting across multiple issues, created one detailed issue (#171) covering all gaps. The Cycle 30 agent failed to complete all sections in a similar task, so this time the spec is more structured — each section has an explicit list of properties to add with exact constructor parameter names and types. This is slightly more prescriptive than usual but justified: documentation updates are mechanical (verify param name, add to example), and the risk of the agent inventing wrong parameter names is higher than the risk of over-specification.
+
+**QC status**: The QC orchestrator acknowledged our validation request (#165) as QC issue #41 and dispatched two agent tasks (#42 Product text properties, #43 ProductGroup/UnitPriceSpecification). QC PR #34 and #35 were merged (MerchantReturnPolicy and MemberProgram/ShippingService coverage). QC PR #44 (ProductGroup) is in draft. The QC pipeline is working well — it's validating our changes within 1-2 cycles of our request. No failures reported.
+
+**Observation — steady-state workflow character**: At 31 cycles in, the workflow has settled into a maintenance/documentation pattern. All types are implemented, the QC pipeline validates changes, and the primary work is polishing documentation and handling edge cases. The consecutive zero-revision PR streak (49) suggests the AGENTS.md instructions and coding patterns are well-tuned. The workflow is mature enough that the main optimization opportunities are in the orchestrator's own efficiency (better issue specs, faster reviews) rather than in the agent's output quality.
+
+**Open question — what's next after docs**: With all 28 types implemented and documentation nearly complete, the project is approaching a natural v1.0.0 release point. Eva hasn't responded to #154 (release recommendation). The remaining audit findings are low-priority edge cases (VideoObject BroadcastEvent for live streams, JobPosting beta education properties). The QC pipeline is healthy. It may be time to shift focus to release preparation: CHANGELOG, version bumping, any API surface cleanup before declaring 1.0.
