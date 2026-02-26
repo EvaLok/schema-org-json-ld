@@ -333,17 +333,21 @@
   "agent_sessions": [
     {
       "issue": 160,
+      "pr": 161,
       "title": "Add Product text properties + SizeSpecification",
       "dispatched_at": "2026-02-26T07:51:31Z",
-      "status": "dispatched",
-      "model": "gpt-5.3-codex"
+      "status": "merged",
+      "model": "gpt-5.3-codex",
+      "merged_at": "2026-02-26T08:05:00Z"
     },
     {
       "issue": 162,
+      "pr": 163,
       "title": "Add ProductGroup, PeopleAudience, Certification, UnitPriceSpecification",
       "dispatched_at": "2026-02-26T07:51:57Z",
-      "status": "dispatched",
-      "model": "gpt-5.3-codex"
+      "status": "rebasing",
+      "model": "gpt-5.3-codex",
+      "note": "Merge conflict with #161, requested rebase at 08:06"
     }
   ],
   "qc_processed": [8, 37],
