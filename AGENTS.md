@@ -8,6 +8,7 @@ You are implementing features for `schema-org-json-ld`, a PHP library that gener
 src/
   v1/
     Schema/           # Schema type classes (Product, Offer, Brand, etc.)
+    Enum/             # Backed string enums (ItemAvailability, DayOfWeek, etc.)
     JsonLdGenerator.php   # Serialization engine
     TypedSchema.php       # Abstract base class — do NOT modify
 test/
@@ -115,7 +116,9 @@ class Product extends TypedSchema {
 ```php
 <?php
 
-namespace EvaLok\SchemaOrgJsonLd\v1\Schema;
+declare(strict_types=1);
+
+namespace EvaLok\SchemaOrgJsonLd\v1\Enum;
 
 enum ItemAvailability: string {
     case InStock = 'https://schema.org/InStock';
