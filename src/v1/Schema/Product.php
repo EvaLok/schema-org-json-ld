@@ -21,5 +21,16 @@ class Product extends TypedSchema {
 		public null|AggregateRating $aggregateRating = null,
 		/** @var null|Review|Review[] $review */
 		public null|Review|array $review = null,
+		public null|string $color = null,
+		public null|string $material = null,
+		public null|string $pattern = null,
+		public null|string|SizeSpecification $size = null,
+		public null|string $inProductGroupWithID = null,
+		public null|string $gtin = null,
+		public null|string $gtin8 = null,
+		public null|string $gtin12 = null,
+		public null|string $gtin13 = null,
+		public null|string $gtin14 = null,
+		public null|string $isbn = null,
 	) {}
 }

@@ -13,6 +13,7 @@ use EvaLok\SchemaOrgJsonLd\v1\Schema\Product;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\QuantitativeValue;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Rating;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Review;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\SizeSpecification;
 use PHPUnit\Framework\TestCase;
 
 final class ProductTest extends TestCase {
@@ -78,6 +79,58 @@ final class ProductTest extends TestCase {
 		$this->assertFalse(property_exists($obj, 'weight'));
 		$this->assertFalse(property_exists($obj, 'aggregateRating'));
 		$this->assertFalse(property_exists($obj, 'review'));
+		$this->assertFalse(property_exists($obj, 'color'));
+		$this->assertFalse(property_exists($obj, 'material'));
+		$this->assertFalse(property_exists($obj, 'pattern'));
+		$this->assertFalse(property_exists($obj, 'size'));
+		$this->assertFalse(property_exists($obj, 'inProductGroupWithID'));
+		$this->assertFalse(property_exists($obj, 'gtin'));
+		$this->assertFalse(property_exists($obj, 'gtin8'));
+		$this->assertFalse(property_exists($obj, 'gtin12'));
+		$this->assertFalse(property_exists($obj, 'gtin13'));
+		$this->assertFalse(property_exists($obj, 'gtin14'));
+		$this->assertFalse(property_exists($obj, 'isbn'));
+	}
+
+	public function testOutputWithAdditionalTextProperties(): void {
+		$schema = new Product(
+			name: 'Executive Anvil',
+			image: ['https://example.com/photos/1x1/photo.jpg'],
+			description: 'Sleeker than ACME\'s Classic Anvil.',
+			sku: '0446310786',
+			offers: [],
+			color: 'Black',
+			material: 'Steel',
+			pattern: 'Striped',
+			size: 'Large',
+			inProductGroupWithID: 'ANVIL-GROUP-1',
+			gtin: '1234567890123',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('Black', $obj->color);
+		$this->assertEquals('Steel', $obj->material);
+		$this->assertEquals('Striped', $obj->pattern);
+		$this->assertEquals('Large', $obj->size);
+		$this->assertEquals('ANVIL-GROUP-1', $obj->inProductGroupWithID);
+		$this->assertEquals('1234567890123', $obj->gtin);
+	}
+
+	public function testOutputWithSizeSpecification(): void {
+		$schema = new Product(
+			name: 'Executive Anvil',
+			image: ['https://example.com/photos/1x1/photo.jpg'],
+			description: 'Sleeker than ACME\'s Classic Anvil.',
+			sku: '0446310786',
+			offers: [],
+			size: new SizeSpecification(name: 'Large'),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('SizeSpecification', $obj->size->{'@type'});
+		$this->assertEquals('Large', $obj->size->name);
 	}
 
 	public function testFullOutput(): void {
