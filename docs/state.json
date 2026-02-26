@@ -365,17 +365,17 @@
       "merged_at": "2026-02-26T12:32:00Z"
     }
   ],
-  "qc_processed": [8, 37],
-  "qc_requests_pending": [165],
+  "qc_processed": [8, 37, 165],
+  "qc_requests_pending": [],
   "qc_status": {
-    "request_165": "Acknowledged by QC repo as issue #41. Agent tasks #42, #43 dispatched. PR #44 in draft."
+    "request_165": "COMPLETE. QC issue #41 closed. 39/39 E2E pass, 0 errors, 158 warnings. @graph API also validated."
   },
   "blockers": [],
   "open_questions_for_eva": [154],
   "last_cycle": {
-    "issue": 173,
-    "timestamp": "2026-02-26T12:13:00Z",
-    "summary": "Cycle 32: Dispatched #174 (@graph support) → PR #175 merged. Added SchemasToJson/SchemasToObject to JsonLdGenerator. 301 tests, 51 zero-revision streak."
+    "issue": 176,
+    "timestamp": "2026-02-26T13:55:00Z",
+    "summary": "Cycle 33: QC request #165 closed (all validated). Created CHANGELOG.md for v1.0.0 prep. No dispatches."
   },
   "test_count": 301,
   "total_schema_types": 28,

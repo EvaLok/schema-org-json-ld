@@ -1214,3 +1214,42 @@ The orchestrator-as-architect pattern has been validated. The combination of cle
 **QC assessment for v1.0.0**: The QC orchestrator independently assessed the library as ready for v1.0.0 (QC issue #39). Key stats: 37 top-level types validated with 0 errors, 156 QC unit tests (867 assertions), 141 advisory warnings (all optional recommended fields, not failures). One bug found across 12 QC sessions (Review missing itemReviewed — fixed in PR #117). This independent validation is a strong signal of quality.
 
 **Pattern — feature gap discovery during maintenance**: When all planned features are done, the most productive approach isn't just auditing existing implementations — it's also looking for missing *capabilities* in the infrastructure layer. The `@graph` feature wasn't on any roadmap; it emerged from re-reading the QC report's "not yet tested" list and thinking about what real users would need. This is higher-value work than adding obscure optional properties to existing types.
+
+---
+
+## 2026-02-26 — Cycle 33: QC closure and release preparation
+
+**Context**: All types implemented, @graph support merged, QC validation complete. This is a housekeeping and release-preparation cycle.
+
+### QC validation loop complete
+
+QC request #165 (Cycle 29 Product enhancements) is fully resolved. The QC orchestrator's final report on QC issue #41:
+- 185 QC unit tests passing (987 assertions)
+- 39/39 E2E validations pass, 0 errors, 158 advisory warnings
+- All Product enhancement types covered: ProductGroup, SizeSpecification, PeopleAudience, Certification, UnitPriceSpecification
+- Product text properties (color, material, pattern, size, GTIN) validated
+- @graph API (SchemasToJson/SchemasToObject) validated as a bonus
+
+This closes the last open QC request. The full QC validation pipeline has been exercised successfully across 5 QC sessions over 2 days.
+
+### CHANGELOG.md created
+
+Created a comprehensive CHANGELOG.md following Keep a Changelog format. This documents the journey from v0.0.4 (10 schema files, Product-only) to the current state (96 classes, 12 enums, 301 tests). Organized by: new Rich Results types (26), shared sub-types, Product enhancements, Organization merchant features, infrastructure (@graph), and enums. This is a concrete deliverable for Eva when she's ready to publish v1.0.0.
+
+### Google Search Gallery check — no new types
+
+Checked Google's Search Gallery for any additions since the project started. Still shows the same set of types. "Book actions" is listed but requires a Google partnership program — it's not standard structured data markup. No new types to implement.
+
+### Observation — natural project cadence
+
+The project has settled into a maintenance rhythm. With all 28 types implemented, QC-validated, and documented, each cycle's useful work surface is small: checking for Google docs updates, responding to Eva's directives, and incremental improvements. The CHANGELOG creation was a genuine value-add; future cycles should look for similar concrete deliverables rather than busywork.
+
+### Observation — QC as quality evidence
+
+The QC orchestrator's independent validation (39/39 E2E pass, 0 errors across 185 tests) provides strong third-party evidence that the library works correctly. Combined with our 301 internal tests and 51 consecutive zero-revision PRs, this makes a compelling case for v1.0.0 readiness. Eva's decision on #154 is the only blocker.
+
+### Open questions
+
+- Should the orchestrator reduce cycle frequency when in steady-state maintenance?
+- Is there value in creating example/demo projects that show the library in real-world contexts?
+- Should remaining low-priority items (VideoObject BroadcastEvent, JobPosting beta properties) be implemented proactively or left for user demand?
