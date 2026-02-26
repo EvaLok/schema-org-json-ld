@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use EvaLok\SchemaOrgJsonLd\v1\Enum\ItemAvailability;
+use EvaLok\SchemaOrgJsonLd\v1\Enum\MerchantReturnEnumeration;
 use EvaLok\SchemaOrgJsonLd\v1\Enum\OfferItemCondition;
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Article;
@@ -10,6 +11,8 @@ use EvaLok\SchemaOrgJsonLd\v1\Schema\Brand;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\BreadcrumbList;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\DefinedRegion;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ListItem;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\MerchantReturnPolicy;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\MerchantReturnPolicySeasonalOverride;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\MonetaryAmount;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Offer;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\OfferShippingDetails;
@@ -254,6 +257,159 @@ final class JsonLdGeneratorTest extends TestCase {
 		$this->assertCount(2, $output_json_obj->image);
 		$this->assertEquals('https://example.com/photos/1x1/photo.jpg', $output_json_obj->image[0]);
 		$this->assertEquals('https://example.com/photos/4x3/photo.jpg', $output_json_obj->image[1]);
+	}
+
+	public function testShouldExcludeEmptyArrayPropertyOnProduct(): void {
+		$product = new Product(
+			name: 'Executive Anvil',
+			image: ['https://example.com/photos/1x1/photo.jpg'],
+			description: 'An anvil',
+			sku: '0446310786',
+			offers: [],
+		);
+
+		$json = JsonLdGenerator::SchemaToJson(schema: $product);
+		$obj = json_decode($json);
+
+		$this->assertEquals('Product', $obj->{'@type'});
+		$this->assertObjectNotHasProperty('offers', $obj);
+	}
+
+	public function testShouldSerializeSpecialCharactersInStrings(): void {
+		$product = new Product(
+			name: 'Café "Élite" & Friends <Best>',
+			image: ['https://example.com/photos/1x1/photo.jpg'],
+			description: "AT&T &amp; Unicode snowman ☃ and emoji 😊",
+			sku: 'sku-"001"&x',
+			offers: [
+				new Offer(
+					url: 'https://example.com/anvil?name="elite"&q=1',
+					priceCurrency: 'USD',
+					price: 119.99,
+					itemCondition: OfferItemCondition::NewCondition,
+					availability: ItemAvailability::InStock,
+				),
+			],
+		);
+
+		$json = JsonLdGenerator::SchemaToJson(schema: $product);
+		$obj = json_decode($json);
+
+		$this->assertEquals('Café "Élite" & Friends <Best>', $obj->name);
+		$this->assertEquals('AT&T &amp; Unicode snowman ☃ and emoji 😊', $obj->description);
+		$this->assertEquals('sku-"001"&x', $obj->sku);
+		$this->assertEquals('https://example.com/anvil?name="elite"&q=1', $obj->offers[0]->url);
+	}
+
+	public function testShouldSerializeDeeplyNestedObjectGraphWithMerchantReturnPolicySeasonalOverride(): void {
+		$product = new Product(
+			name: 'Executive Anvil',
+			image: ['https://example.com/photos/1x1/photo.jpg'],
+			description: 'An anvil',
+			sku: '0446310786',
+			offers: [
+				new Offer(
+					url: 'https://example.com/anvil',
+					priceCurrency: 'USD',
+					price: 119.99,
+					itemCondition: OfferItemCondition::NewCondition,
+					availability: ItemAvailability::InStock,
+				),
+			],
+		);
+		$organization = new Organization(
+			name: 'ACME Corp',
+			hasMerchantReturnPolicy: [
+				new MerchantReturnPolicy(
+					applicableCountry: ['US', 'CA'],
+					returnPolicyCategory: MerchantReturnEnumeration::MerchantReturnFiniteReturnWindow,
+					merchantReturnDays: 30,
+					returnPolicySeasonalOverride: [
+						new MerchantReturnPolicySeasonalOverride(
+							startDate: '2026-11-01',
+							endDate: '2026-12-31',
+							returnPolicyCategory: MerchantReturnEnumeration::MerchantReturnFiniteReturnWindow,
+							merchantReturnDays: 60,
+						),
+					],
+				),
+			],
+		);
+
+		$json = JsonLdGenerator::SchemasToJson($product, $organization);
+		$obj = json_decode($json);
+
+		$this->assertEquals('Product', $obj->{'@graph'}[0]->{'@type'});
+		$this->assertEquals('Offer', $obj->{'@graph'}[0]->offers[0]->{'@type'});
+		$this->assertEquals('Organization', $obj->{'@graph'}[1]->{'@type'});
+		$this->assertEquals('MerchantReturnPolicy', $obj->{'@graph'}[1]->hasMerchantReturnPolicy[0]->{'@type'});
+		$this->assertEquals(
+			'MerchantReturnPolicySeasonalOverride',
+			$obj->{'@graph'}[1]->hasMerchantReturnPolicy[0]->returnPolicySeasonalOverride[0]->{'@type'},
+		);
+	}
+
+	public function testShouldSerializeSingleAndMultipleOfferArrays(): void {
+		$singleOfferProduct = new Product(
+			name: 'Single Offer Product',
+			image: ['https://example.com/photos/1x1/photo.jpg'],
+			description: 'Single offer',
+			sku: 'single-offer',
+			offers: [
+				new Offer(
+					url: 'https://example.com/single',
+					priceCurrency: 'USD',
+					price: 10.0,
+					availability: ItemAvailability::InStock,
+				),
+			],
+		);
+		$multiOfferProduct = new Product(
+			name: 'Multi Offer Product',
+			image: ['https://example.com/photos/1x1/photo.jpg'],
+			description: 'Multi offer',
+			sku: 'multi-offer',
+			offers: [
+				new Offer(
+					url: 'https://example.com/one',
+					priceCurrency: 'USD',
+					price: 10.0,
+					availability: ItemAvailability::InStock,
+				),
+				new Offer(
+					url: 'https://example.com/two',
+					priceCurrency: 'USD',
+					price: 20.0,
+					availability: ItemAvailability::OutOfStock,
+				),
+			],
+		);
+
+		$singleObj = json_decode(JsonLdGenerator::SchemaToJson(schema: $singleOfferProduct));
+		$multiObj = json_decode(JsonLdGenerator::SchemaToJson(schema: $multiOfferProduct));
+
+		$this->assertCount(1, $singleObj->offers);
+		$this->assertEquals('https://example.com/single', $singleObj->offers[0]->url);
+		$this->assertCount(2, $multiObj->offers);
+		$this->assertEquals('https://example.com/one', $multiObj->offers[0]->url);
+		$this->assertEquals('https://example.com/two', $multiObj->offers[1]->url);
+	}
+
+	public function testShouldSerializeMixedScalarArraysAsSerializationStressCase(): void {
+		// Intentional generator stress test: validates scalar + enum array handling independent of schema.org semantics.
+		$region = new DefinedRegion(
+			addressCountry: 'US',
+			// Deliberately mixed scalar types to verify raw serializer behavior for array elements.
+			addressRegion: ['CA', 90210, true, ItemAvailability::InStock],
+		);
+
+		$obj = json_decode(JsonLdGenerator::SchemaToJson(schema: $region));
+
+		$this->assertCount(4, $obj->addressRegion);
+		$this->assertEquals('CA', $obj->addressRegion[0]);
+		$this->assertEquals(90210, $obj->addressRegion[1]);
+		$this->assertTrue($obj->addressRegion[2]);
+		$this->assertEquals(ItemAvailability::InStock->value, $obj->addressRegion[3]);
 	}
 
 	public function testShouldHandleArrayTypeCorrectly() {
