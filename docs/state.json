@@ -307,25 +307,53 @@
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
-    "in_progress": [],
+    "in_progress": [
+      {
+        "description": "Add Product text properties (color, material, pattern, size, GTINs) + SizeSpecification",
+        "issue": 160,
+        "dispatched_at": "2026-02-26T07:51:31Z",
+        "model": "gpt-5.3-codex"
+      },
+      {
+        "description": "Add ProductGroup, PeopleAudience, Certification, UnitPriceSpecification + wire to Product/Offer",
+        "issue": 162,
+        "dispatched_at": "2026-02-26T07:51:57Z",
+        "model": "gpt-5.3-codex"
+      }
+    ],
     "planned_next": [],
     "google_rich_results_types": {
       "not_implemented": [],
-      "note": "ALL 28 Google Rich Results types implemented. Quality audit complete — missing recommended properties added."
+      "note": "ALL 28 Google Rich Results types implemented. Now enhancing Product with Google-recommended merchant listing properties."
     },
     "remaining_audit_findings": {
       "low_priority": []
     }
   },
-  "agent_sessions": [],
+  "agent_sessions": [
+    {
+      "issue": 160,
+      "title": "Add Product text properties + SizeSpecification",
+      "dispatched_at": "2026-02-26T07:51:31Z",
+      "status": "dispatched",
+      "model": "gpt-5.3-codex"
+    },
+    {
+      "issue": 162,
+      "title": "Add ProductGroup, PeopleAudience, Certification, UnitPriceSpecification",
+      "dispatched_at": "2026-02-26T07:51:57Z",
+      "status": "dispatched",
+      "model": "gpt-5.3-codex"
+    }
+  ],
   "qc_processed": [8, 37],
   "qc_requests_pending": [],
   "blockers": [],
   "open_questions_for_eva": [154],
   "last_cycle": {
-    "issue": 158,
-    "timestamp": "2026-02-26T06:21:00Z",
-    "summary": "Cycle 28: Steady-state maintenance. Verified Google Search Gallery unchanged. No new work. Release recommendation #154 awaiting Eva."
+    "issue": 159,
+    "timestamp": "2026-02-26T07:47:00Z",
+    "summary": "Cycle 29: Audited Google merchant listing docs, found missing Product properties. Dispatched #160 and #162 for Product enhancements."
   },
   "test_count": 273,
   "total_schema_types": 28,

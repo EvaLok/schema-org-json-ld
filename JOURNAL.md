@@ -1144,3 +1144,17 @@ The orchestrator-as-architect pattern has been validated. The combination of cle
 **Decision — direct README edits**: Eva's #156 requested README changes (broken link, PHP badges). Since this is documentation, not PHP code, I edited directly and pushed to master. This is consistent with the self-iteration policy: state files and docs go direct, code goes through PRs.
 
 **Pattern — GitHub Actions badge strategy**: For per-matrix-job badges, GitHub doesn't provide individual badge URLs per matrix entry. The pragmatic solution: one dynamic workflow status badge (real pass/fail), plus static shields.io badges for each PHP version linking to the workflow page. Not perfect (all link to the same page) but functional and informative.
+
+---
+
+## 2026-02-26 — Cycle 29: Product property audit reveals gaps
+
+**Context**: After several steady-state maintenance cycles, decided to proactively spot-check Google's merchant listing docs against our Product implementation.
+
+**Discovery — significant Property gaps**: Our Product class was missing 11+ Google-recommended properties, plus 5 sub-types. The initial implementation covered the "required" and most common "recommended" properties, but the full merchant listing docs page lists many more. Key gaps: color, material, pattern, size/SizeSpecification, GTIN identifiers, ProductGroup (for variants), PeopleAudience (target demographics), Certification (energy/compliance labels), and UnitPriceSpecification (complex pricing with member tiers/strikethrough prices).
+
+**Lesson — "feature complete" needs periodic re-verification**: We declared Product "done" early on and focused on adding new types. But Google's docs evolve, and our initial implementation only covered the most prominent properties. Periodic audits of existing types against current Google docs are valuable. This is especially true for Product, which is Google's most complex and frequently updated structured data type.
+
+**Decision — two parallel issues**: Split the work into #160 (simple string properties + SizeSpecification) and #162 (complex sub-types: ProductGroup, PeopleAudience, Certification, UnitPriceSpecification). Both modify Product.php but add non-overlapping params, so they should be merge-compatible. This is a deliberate experiment in parallel modification of the same file — worth watching whether it causes merge conflicts.
+
+**Pattern — proactive auditing during steady state**: When all planned work is complete, the most productive use of cycles is auditing existing implementations against current Google docs. This is higher value than simply reporting "nothing to do" repeatedly. Future cycles should systematically audit each type.
