@@ -15,6 +15,10 @@ use EvaLok\SchemaOrgJsonLd\v1\TypedSchema;
 class MerchantReturnPolicy extends TypedSchema {
 	public const A_SCHEMA_TYPE = 'MerchantReturnPolicy';
 
+	/**
+	 * @param string|string[] $applicableCountry
+	 * @param MerchantReturnPolicySeasonalOverride|MerchantReturnPolicySeasonalOverride[]|null $returnPolicySeasonalOverride
+	 */
 	public function __construct(
 		public string|array $applicableCountry,
 		public MerchantReturnEnumeration $returnPolicyCategory,
