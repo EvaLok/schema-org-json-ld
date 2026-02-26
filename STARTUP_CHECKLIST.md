@@ -38,7 +38,7 @@ These are priority directives from Eva. Act on them before anything else. Close 
 ## 2. Recover context
 
 - Use the **Read** tool to read the latest entry in `docs/worklog/` (find it with `ls -t docs/worklog/*/`)
-- Use the **Read** tool to read `JOURNAL.md` for recent reflections and patterns
+- Use the **Read** tool to read the latest file in `docs/journal/` for recent reflections and patterns
 - Use the **Read** tool to read `docs/state.json` for machine-readable state
 - Check open `question-for-eva` issues:
   ```bash
@@ -133,3 +133,12 @@ Based on the above context:
 3. What needs iterating? (AGENTS.md updates, process improvements)
 
 Prioritise reviews over new dispatches — unreviewed PRs block progress.
+
+## Writing conventions
+
+When writing journal entries (`docs/journal/`) or worklog entries (`docs/worklog/`), always use **clickable markdown links** for issue and PR references:
+
+- `[#N](https://github.com/EvaLok/schema-org-json-ld/issues/N)` — not bare `#N`
+- `[PR #N](https://github.com/EvaLok/schema-org-json-ld/issues/N)` — not bare `PR #N`
+
+GitHub auto-redirects `/issues/N` to `/pull/N` for PRs, so using `/issues/` for all references is fine.
