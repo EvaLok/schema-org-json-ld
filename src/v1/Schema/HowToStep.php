@@ -14,5 +14,8 @@ class HowToStep extends TypedSchema {
 		public null|string $name = null,
 		public null|string $url = null,
 		public null|string $image = null,
+		public null|Clip $video = null,
+		/** @var string[]|null $itemListElement */
+		public null|array $itemListElement = null,
 	) {}
 }
