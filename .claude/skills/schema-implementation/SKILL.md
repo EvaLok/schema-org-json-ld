@@ -110,6 +110,14 @@ composer run test-unit
 
 All existing tests plus new tests must pass. PHP 8.3 and composer dependencies are pre-installed in your environment. You MUST run tests and confirm they pass before finishing your work.
 
+## Step 9: Run static analysis
+
+```bash
+composer run phpstan
+```
+
+PHPStan must pass cleanly before finishing your work.
+
 ## Common mistakes to avoid
 
 1. Adding a `toArray()` method — don't do this, JsonLdGenerator uses reflection

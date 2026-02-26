@@ -223,6 +223,7 @@ Before marking your PR as ready:
 
 - [ ] All existing tests pass (`composer run test-unit`)
 - [ ] Code style is clean (`composer run cs-fix` — run this before committing)
+- [ ] PHPStan passes (`composer run phpstan`)
 - [ ] New tests added for all new/modified schema types
 - [ ] No `mixed` types — all types explicit
 - [ ] Constructor promotion used for all properties
