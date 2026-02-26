@@ -292,10 +292,17 @@
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration"],
-    "in_progress": [],
+    "in_progress": [
+      {
+        "description": "ShippingService + sub-types + DefinedRegion fix + OpeningHoursSpecification fix",
+        "issue": 148,
+        "dispatched_at": "2026-02-26T00:20:00Z",
+        "model": "gpt-5.3-codex",
+        "new_types": ["ShippingService", "ShippingConditions", "ServicePeriod", "ShippingRateSettings", "FulfillmentTypeEnumeration"],
+        "modifies": ["DefinedRegion", "OpeningHoursSpecification"]
+      }
+    ],
     "planned_next": [
-      "ShippingService (+ ShippingConditions, ServicePeriod, ShippingRateSettings, FulfillmentTypeEnumeration)",
-      "DefinedRegion fix (make addressRegion nullable, add postalCode)",
       "Organization update (wire hasMerchantReturnPolicy, hasMemberProgram, hasShippingService)"
     ],
     "google_rich_results_types": {
@@ -309,13 +316,19 @@
       ]
     }
   },
-  "agent_sessions": [],
+  "agent_sessions": [
+    {
+      "issue": 148,
+      "status": "dispatched",
+      "dispatched_at": "2026-02-26T00:20:00Z"
+    }
+  ],
   "qc_processed": [8],
   "blockers": [],
   "last_cycle": {
-    "issue": 142,
-    "timestamp": "2026-02-25T23:00:00Z",
-    "summary": "Cycle 23: Merged PR #144 (MerchantReturnPolicy + 5 enums + seasonal override) and PR #146 (MemberProgram + MemberProgramTier + TierBenefitEnumeration). 42 consecutive zero-revision PRs. 259 tests (combined)."
+    "issue": 147,
+    "timestamp": "2026-02-26T00:20:00Z",
+    "summary": "Cycle 24: Dispatched #148 (ShippingService + sub-types). Closed QC request #141 (validated). In progress."
   },
   "test_count": 259,
   "total_schema_types": 28,
