@@ -263,6 +263,15 @@ class SolveMathAction extends TypedSchema {
 
 `JsonLdGenerator` automatically checks for `PROPERTY_MAP` and remaps property names before serialization. Classes without `PROPERTY_MAP` are unaffected.
 
+## Documentation
+
+When adding significant new properties or sub-types to existing schema classes, update `README.md` as part of the same PR:
+- Update the **Supported Types** table if new sub-types are added
+- Update the class count in the header (line 3) if new classes are created
+- Add or expand usage examples in the relevant type section
+
+This keeps documentation in sync with code. See `doc/adr/0005-documentation-as-continuous-maintenance.md`.
+
 ## Common Pitfalls
 
 - **Don't implement `toArray()`**: Schema classes have NO methods. The JsonLdGenerator does all serialization via reflection on public properties. If you add a `toArray()` method, it will break the pattern.
