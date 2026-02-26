@@ -395,9 +395,11 @@ final class JsonLdGeneratorTest extends TestCase {
 		$this->assertEquals('https://example.com/two', $multiObj->offers[1]->url);
 	}
 
-	public function testShouldSerializeMixedScalarArrays(): void {
+	public function testShouldSerializeMixedScalarArraysAsSerializationStressCase(): void {
+		// Intentional generator stress test: validates scalar + enum array handling independent of schema.org semantics.
 		$region = new DefinedRegion(
 			addressCountry: 'US',
+			// Deliberately mixed scalar types to verify raw serializer behavior for array elements.
 			addressRegion: ['CA', 90210, true, ItemAvailability::InStock],
 		);
 
