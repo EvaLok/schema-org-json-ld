@@ -29,5 +29,11 @@ class Organization extends TypedSchema {
 		public null|string $leiCode = null,
 		public null|string $iso6523Code = null,
 		public null|string $globalLocationNumber = null,
+		/** @var MerchantReturnPolicy[]|MerchantReturnPolicy $hasMerchantReturnPolicy */
+		public null|MerchantReturnPolicy|array $hasMerchantReturnPolicy = null,
+		/** @var MemberProgram[]|MemberProgram $hasMemberProgram */
+		public null|MemberProgram|array $hasMemberProgram = null,
+		/** @var ShippingService[]|ShippingService $hasShippingService */
+		public null|ShippingService|array $hasShippingService = null,
 	) {}
 }
