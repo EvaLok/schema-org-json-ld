@@ -306,12 +306,11 @@
   "last_cycle": {
     "issue": 194,
     "timestamp": "2026-02-26T19:45:00Z",
-    "summary": "Cycle 37: Merged 4 PRs (#192 enum consolidation, #193 edge-case tests, #198 HowToStep, #199 datePublished/BroadcastEvent/subjectOf). Closed Eva's issues #182 and #184. Processed QC report #57 and fixed all reported property gaps. Opened QC re-validation request #200. 57 consecutive zero-revision PRs."
+    "summary": "Cycle 37: Merged 4 PRs (#192 enum consolidation, #193 edge-case tests, #198 HowToStep, #199 datePublished/BroadcastEvent/subjectOf). Closed Eva's issues #182 and #184. Processed QC report #57 and fixed all reported property gaps. Opened QC re-validation request #200."
   },
   "test_count": 321,
   "total_schema_types": 28,
   "total_sub_types": 101,
   "total_schema_classes": 97,
-  "total_enums": 12,
-  "consecutive_zero_revision_prs": 57
+  "total_enums": 12
 }
