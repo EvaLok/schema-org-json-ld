@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace EvaLok\SchemaOrgJsonLd\v1\Schema;
+namespace EvaLok\SchemaOrgJsonLd\v1\Enum;
 
 enum ReturnFeesEnumeration: string {
 	case FreeReturn = 'https://schema.org/FreeReturn';

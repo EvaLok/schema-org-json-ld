@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace EvaLok\SchemaOrgJsonLd\v1\Schema;
 
+use EvaLok\SchemaOrgJsonLd\v1\Enum\ItemAvailability;
+use EvaLok\SchemaOrgJsonLd\v1\Enum\OfferItemCondition;
 use EvaLok\SchemaOrgJsonLd\v1\TypedSchema;
 
 class Offer extends TypedSchema {

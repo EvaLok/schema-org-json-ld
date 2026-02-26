@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
+use EvaLok\SchemaOrgJsonLd\v1\Enum\TierBenefitEnumeration;
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\MemberProgramTier;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\QuantitativeValue;
-use EvaLok\SchemaOrgJsonLd\v1\Schema\TierBenefitEnumeration;
 use PHPUnit\Framework\TestCase;
 
 final class MemberProgramTierTest extends TestCase {

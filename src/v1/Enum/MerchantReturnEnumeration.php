@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace EvaLok\SchemaOrgJsonLd\v1\Schema;
+namespace EvaLok\SchemaOrgJsonLd\v1\Enum;
 
 enum MerchantReturnEnumeration: string {
 	case MerchantReturnFiniteReturnWindow = 'https://schema.org/MerchantReturnFiniteReturnWindow';
