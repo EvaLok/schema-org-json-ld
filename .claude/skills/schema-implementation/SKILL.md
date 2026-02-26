@@ -56,13 +56,15 @@ Rules:
 
 ## Step 4: Create enum types (if needed)
 
-File: `src/v1/Schema/{EnumName}.php`
+File: `src/v1/Enum/{EnumName}.php`
 
 Template:
 ```php
 <?php
 
-namespace EvaLok\SchemaOrgJsonLd\v1\Schema;
+declare(strict_types=1);
+
+namespace EvaLok\SchemaOrgJsonLd\v1\Enum;
 
 enum {EnumName}: string {
     case CaseName = 'https://schema.org/CaseName';
