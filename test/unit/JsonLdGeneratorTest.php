@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Article;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Brand;

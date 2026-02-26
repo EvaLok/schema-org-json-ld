@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
 use EvaLok\SchemaOrgJsonLd\v1\Enum\FulfillmentTypeEnumeration;

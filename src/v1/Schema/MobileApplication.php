@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace EvaLok\SchemaOrgJsonLd\v1\Schema;
 
 class MobileApplication extends SoftwareApplication {

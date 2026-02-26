@@ -6,7 +6,8 @@ $finder = (new PhpCsFixer\Finder())
 ;
 
 return (new PhpCsFixer\Config())
-    ->setRules([
+	->setRiskyAllowed(true)
+	->setRules([
         // Base ruleset
         '@PER-CS2.0' => true,
 
@@ -31,8 +32,7 @@ return (new PhpCsFixer\Config())
         // Array syntax
         'array_syntax' => ['syntax' => 'short'],
 
-        // No strict_types — matches existing codebase
-        'declare_strict_types' => false,
+		'declare_strict_types' => true,
     ])
     ->setIndent("\t")
     ->setLineEnding("\n")
