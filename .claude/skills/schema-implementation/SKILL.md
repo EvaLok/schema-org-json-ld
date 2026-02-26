@@ -1,4 +1,9 @@
-# Skill: Implement a Schema.org Type
+---
+name: schema-implementation
+description: Step-by-step procedure for implementing a new schema.org type in this library, including class structure, enum creation, test writing, and code style.
+---
+
+# Implement a Schema.org Type
 
 Step-by-step procedure for implementing a new schema.org type in this library.
 

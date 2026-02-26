@@ -1,4 +1,9 @@
-# Skill: Creating GitHub Issues and Comments
+---
+name: github-issues-comments
+description: How to create well-formatted GitHub issues and comments without shell escaping problems. Use when creating issues, editing issue bodies, commenting on issues/PRs, or creating pull requests via the gh CLI.
+---
+
+# Creating GitHub Issues and Comments
 
 How to create well-formatted GitHub issues and comments without shell escaping problems.
 

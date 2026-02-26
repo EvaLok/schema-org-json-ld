@@ -1,4 +1,10 @@
-# Skill: Orchestrator Permission Model
+---
+name: orchestrator-permissions
+description: Documentation of allowed Bash commands, blocked constructs, and reliable patterns for the orchestrator workflow permission model.
+user-invocable: false
+---
+
+# Orchestrator Permission Model
 
 ## Allowed commands
 

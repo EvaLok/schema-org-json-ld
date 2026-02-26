@@ -1,4 +1,10 @@
-# Skill: PR Review Workflow
+---
+name: pr-review-workflow
+description: Step-by-step procedure for reviewing PRs created by the Copilot coding agent, including CI wait, code review checklist, and merge/revision workflow.
+disable-model-invocation: true
+---
+
+# PR Review Workflow
 
 Step-by-step procedure for reviewing PRs created by the Copilot coding agent.
 
