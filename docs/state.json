@@ -238,6 +238,12 @@
         "pr": 206,
         "issue": 205,
         "merged_at": "2026-02-26T23:04:00Z"
+      },
+      {
+        "description": "Upgrade PHPStan to level 9 — add @var annotation for PROPERTY_MAP constant",
+        "pr": 209,
+        "issue": 208,
+        "merged_at": "2026-02-27T00:31:02Z"
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
@@ -256,7 +262,7 @@
         }
       ]
     },
-    "phpstan_level": 8,
+    "phpstan_level": 9,
     "phpstan_max_assessment": {
       "level_9_errors": 3,
       "level_max_errors": 8,
@@ -264,15 +270,7 @@
       "note": "Level 9: constant() returns mixed. Level max: additional reflective code issues in AddPropertiesToObject."
     }
   },
-  "agent_sessions": [
-    {
-      "issue": 208,
-      "pr": 209,
-      "description": "PHPStan level 9 upgrade",
-      "dispatched_at": "2026-02-27T00:22:30Z",
-      "status": "in_progress"
-    }
-  ],
+  "agent_sessions": [],
   "qc_processed": [8, 37, 57, 165],
   "qc_requests_pending": [200],
   "qc_status": {
@@ -290,7 +288,7 @@
   "last_cycle": {
     "issue": 207,
     "timestamp": "2026-02-27T00:19:00Z",
-    "summary": "Cycle 40: PHPStan bumped 6->8 (free win). Dispatched #208 for level 9 fix. QC #200 acknowledged by QC-63."
+    "summary": "Cycle 40: PHPStan upgraded 6->9 (8 free, 9 via PR #209). QC #200 acknowledged by QC-63."
   },
   "test_count": 313,
   "total_schema_types": 28,

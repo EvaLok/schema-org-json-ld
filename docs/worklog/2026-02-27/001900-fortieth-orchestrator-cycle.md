@@ -2,7 +2,7 @@
 
 ## Summary
 
-Fortieth orchestrator cycle. Assessed PHPStan levels 7-9 and `max`. Levels 7-8 passed with 0 errors — bumped directly from 6 to 8. Dispatched [#208](https://github.com/EvaLok/schema-org-json-ld/issues/208) to Copilot for level 9 upgrade (3 errors in JsonLdGenerator.php). [PR #209](https://github.com/EvaLok/schema-org-json-ld/issues/209) pending review.
+Fortieth orchestrator cycle. Assessed PHPStan levels 7-9 and `max`. Levels 7-8 passed with 0 errors — bumped directly from 6 to 8. Dispatched [#208](https://github.com/EvaLok/schema-org-json-ld/issues/208) to Copilot for level 9 upgrade (3 errors in JsonLdGenerator.php). [PR #209](https://github.com/EvaLok/schema-org-json-ld/issues/209) reviewed, verified locally, and merged. PHPStan now at level 9.
 
 ## What happened
 
@@ -31,7 +31,7 @@ All errors are in `JsonLdGenerator.php` — the serialization engine that uses r
 
 1. **Bumped phpstan.neon from 6 to 8** — direct push, 0 errors, 313 tests pass
 2. **Dispatched [#208](https://github.com/EvaLok/schema-org-json-ld/issues/208)** — PHPStan level 9 fix (add `@var array<string, string>` annotation for PROPERTY_MAP constant)
-3. [PR #209](https://github.com/EvaLok/schema-org-json-ld/issues/209) — Copilot working
+3. **Reviewed [PR #209](https://github.com/EvaLok/schema-org-json-ld/issues/209)** — Copilot completed in ~7.5 minutes (2 commits). Added exactly the `@var` annotation and level bump. Verified locally: PHPStan level 9 = 0 errors, 313 tests pass. Merged via squash.
 
 ### Level max assessment
 
@@ -43,12 +43,12 @@ These would require `@var` assertions inside each branch of the foreach loop, or
 
 ## Final state
 
-- **Open PRs**: [#209](https://github.com/EvaLok/schema-org-json-ld/issues/209) (PHPStan level 9, Copilot in progress)
-- **QC**: Re-validation [#200](https://github.com/EvaLok/schema-org-json-ld/issues/200) acknowledged, QC working
-- **Tests**: 313, **Classes**: 97, **PHPStan**: level 8 (pending upgrade to 9)
+- **Open PRs**: None
+- **QC**: Re-validation [#200](https://github.com/EvaLok/schema-org-json-ld/issues/200) acknowledged (QC-63), QC working on reducing warnings
+- **Tests**: 313, **Classes**: 97, **PHPStan**: level 9 (0 errors)
 
 ## Next steps
 
-1. Review and merge [PR #209](https://github.com/EvaLok/schema-org-json-ld/issues/209) when Copilot finishes
-2. Consider PHPStan `max` level as future work (low priority)
-3. Monitor QC re-validation [#200](https://github.com/EvaLok/schema-org-json-ld/issues/200)
+1. Consider PHPStan `max` level as future work (5 additional errors, low priority)
+2. Monitor QC re-validation [#200](https://github.com/EvaLok/schema-org-json-ld/issues/200)
+3. Steady-state maintenance — respond to Eva directives, QC reports
