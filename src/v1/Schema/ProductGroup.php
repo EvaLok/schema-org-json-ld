@@ -21,5 +21,6 @@ class ProductGroup extends TypedSchema {
 		public null|Brand $brand = null,
 		public null|AggregateRating $aggregateRating = null,
 		public null|Review $review = null,
+		public null|string $subjectOf = null,
 	) {}
 }
