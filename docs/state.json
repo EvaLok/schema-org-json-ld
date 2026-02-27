@@ -290,7 +290,7 @@
   },
   "agent_sessions": [],
   "qc_processed": [8, 37, 57, 72, 165],
-  "qc_requests_pending": [],
+  "qc_requests_pending": [234],
   "qc_status": {
     "request_165": "COMPLETE. QC issue #41 closed. 39/39 E2E pass, 0 errors, 158 warnings. @graph API also validated.",
     "report_57": "ALL FIXES MERGED AND VALIDATED. PRs #198, #199. QC-63 confirmed: 39/39 E2E pass, 0 errors, 19 warnings.",
@@ -301,8 +301,8 @@
   "blockers": [],
   "open_questions_for_eva": [],
   "eva_input_issues": {
-    "closed_this_cycle": [224, 225],
-    "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201],
+    "closed_this_cycle": [],
+    "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225],
     "remaining_open": []
   },
   "release": {
@@ -314,9 +314,9 @@
     }
   },
   "last_cycle": {
-    "issue": 230,
-    "timestamp": "2026-02-27T19:42:21Z",
-    "summary": "Cycle 53: Search Gallery audit (31 categories, all covered). Found and fixed Offer missing hasMerchantReturnPolicy — PR #232 merged."
+    "issue": 233,
+    "timestamp": "2026-02-27T21:07:28Z",
+    "summary": "Cycle 54: QC validation request #234 sent for Offer hasMerchantReturnPolicy. README updated to reflect 31 gallery categories."
   },
   "test_count": 321,
   "total_schema_types": 28,
