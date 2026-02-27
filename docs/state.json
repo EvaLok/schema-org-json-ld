@@ -259,24 +259,32 @@
         {
           "type": "JobPosting",
           "missing": "Beta properties (educationRequirements, experienceRequirements, experienceInPlaceOfEducation)"
+        },
+        {
+          "type": "Recipe",
+          "missing": "Optional properties (expires, hasPart, publication, region, interaction) — 10 QC warnings"
+        },
+        {
+          "type": "Product/ProductGroup",
+          "missing": "isVariantOf — structural change for circular references — 4 QC warnings"
         }
       ]
     },
     "phpstan_level": 9,
     "phpstan_max_assessment": {
-      "level_9_errors": 3,
-      "level_max_errors": 8,
+      "level_9_errors": 0,
+      "level_max_errors": 5,
       "all_in": "JsonLdGenerator.php",
-      "note": "Level 9: constant() returns mixed. Level max: additional reflective code issues in AddPropertiesToObject."
+      "note": "Level 9 achieved (0 errors). Level max: 5 additional errors from reflective code in AddPropertiesToObject."
     }
   },
   "agent_sessions": [],
   "qc_processed": [8, 37, 57, 165],
-  "qc_requests_pending": [200],
+  "qc_requests_pending": [],
   "qc_status": {
     "request_165": "COMPLETE. QC issue #41 closed. 39/39 E2E pass, 0 errors, 158 warnings. @graph API also validated.",
-    "report_57": "ALL FIXES MERGED. PRs #198, #199. QC re-validation requested via #200.",
-    "request_200": "ACKNOWLEDGED. QC-63 on QC repo. 39/39 E2E pass, 0 errors, 58 warnings. QC working on reducing warnings."
+    "report_57": "ALL FIXES MERGED AND VALIDATED. PRs #198, #199. QC-63 confirmed: 39/39 E2E pass, 0 errors, 19 warnings.",
+    "request_200": "COMPLETE. QC-63 validated. 39/39 E2E pass, 0 errors, 19 warnings (down from 58, 67% reduction). Issues #195 and #200 closed."
   },
   "blockers": [],
   "open_questions_for_eva": [],
@@ -286,9 +294,9 @@
     "remaining_open": []
   },
   "last_cycle": {
-    "issue": 207,
-    "timestamp": "2026-02-27T00:19:00Z",
-    "summary": "Cycle 40: PHPStan upgraded 6->9 (8 free, 9 via PR #209). QC #200 acknowledged by QC-63."
+    "issue": 210,
+    "timestamp": "2026-02-27T02:16:00Z",
+    "summary": "Cycle 41: Maintenance. Closed QC issues #195 and #200 (validation complete, 19 warnings). Clean state."
   },
   "test_count": 313,
   "total_schema_types": 28,
