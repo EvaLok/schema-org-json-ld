@@ -25,5 +25,6 @@ class Offer extends TypedSchema {
 		public null|string $priceValidUntil = null,
 		/** @var null|UnitPriceSpecification|UnitPriceSpecification[] $priceSpecification */
 		public null|UnitPriceSpecification|array $priceSpecification = null,
+		public null|MerchantReturnPolicy $hasMerchantReturnPolicy = null,
 	) {}
 }
