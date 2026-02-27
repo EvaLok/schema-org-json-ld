@@ -113,6 +113,10 @@ gh api "repos/EvaLok/schema-org-json-ld/issues/NUMBER" -X PATCH -f state=closed
 - **Read files**: Use the `Read` tool
 - **Count items**: Use `wc -l filename` on a single file, or use the `Grep` tool with `output_mode: "count"`
 
+### Creating directories
+
+The `mkdir` command is on the allowed list but may be blocked by an additional sandbox security layer. If `mkdir` fails with a "may only create directories in allowed working directories" error, use the **Write** tool instead — it creates parent directories automatically when writing a file.
+
 ### Getting timestamps
 
 ```bash
