@@ -301,7 +301,7 @@
     "request_215": "COMPLETE. QC repo #74 closed. QC PR #76 merged (10:16 UTC). 39/39 E2E pass, 0 errors. All 5 Recipe optional properties validated. Issue #215 closed."
   },
   "blockers": [],
-  "open_questions_for_eva": [],
+  "open_questions_for_eva": [222],
   "eva_input_issues": {
     "closed_this_cycle": [],
     "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201],
