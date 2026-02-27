@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-02-27
+
+Full Google Rich Results coverage. See [GitHub release notes](https://github.com/EvaLok/schema-org-json-ld/releases/tag/1.0.0) for details.
+
 ### Added
 
 #### Google Rich Results types (26 new)
@@ -54,7 +58,7 @@ Comprehensive Google merchant listing property coverage:
 - Text properties: color, material, pattern, size, inProductGroupWithID
 - GTIN identifiers: gtin, gtin8, gtin12, gtin13, gtin14, isbn
 - **SizeSpecification** — sizeSystem, sizeGroup
-- **ProductGroup** — variant support with hasVariant, variesBy, productGroupID
+- **ProductGroup** — variant support with hasVariant, variesBy, productGroupID, subjectOf
 - **PeopleAudience** — suggestedMinAge, suggestedMaxAge, suggestedGender
 - **Certification** — energy/compliance labels with certificationAuthority
 - **UnitPriceSpecification** — complex pricing with referenceQuantity, priceType
@@ -70,6 +74,10 @@ Comprehensive Google merchant listing property coverage:
 #### Infrastructure
 
 - **`@graph` support** — `SchemasToJson()` and `SchemasToObject()` methods for composing multiple schemas into a single JSON-LD block with shared `@context`
+- **Enum namespace** — all 12 enums consolidated under `src/v1/Enum/`
+- **Graceful error handling** — `json_encode()` failures in JsonLdGenerator return empty string/null instead of throwing
+- **PHPStan level 9** — full static analysis with CI enforcement
+- **`declare(strict_types=1)`** — enforced across all source and test files
 
 #### Enums (12 total)
 
@@ -89,12 +97,19 @@ Comprehensive Google merchant listing property coverage:
 - **ImageObject** — creator widened to accept `Person|Organization`
 - **CourseInstance** — courseMode made optional
 - **ListItem** — enhanced for Carousel support
+- **HowToStep** — added video and itemListElement properties
+- **Recipe** — added expires, hasPart, publication, ineligibleRegion, interactionStatistic
+- **VideoObject** — added datePublished property
+
+### Breaking changes from 0.0.4
+
+- **Enum classes moved** from `SchemaOrg\v1\Schema\*` to `SchemaOrg\v1\Enum\*`
 
 ### Stats
 
-- **96 schema classes** (up from 10)
+- **86 schema classes** (up from 10)
 - **12 enum types** (up from 2)
-- **301 tests, 1584 assertions**
+- **320 tests, 1600+ assertions**
 - **PHP 8.1+ / 8.2 / 8.3 / 8.4 supported**
 
 ## [0.0.4] - 2024-06-13
@@ -117,7 +132,8 @@ Comprehensive Google merchant listing property coverage:
 
 - Initial release with JsonLdGenerator and TypedSchema base
 
-[Unreleased]: https://github.com/EvaLok/schema-org-json-ld/compare/0.0.4...HEAD
+[Unreleased]: https://github.com/EvaLok/schema-org-json-ld/compare/1.0.0...HEAD
+[1.0.0]: https://github.com/EvaLok/schema-org-json-ld/compare/0.0.4...1.0.0
 [0.0.4]: https://github.com/EvaLok/schema-org-json-ld/compare/0.0.3...0.0.4
 [0.0.3]: https://github.com/EvaLok/schema-org-json-ld/compare/0.0.2...0.0.3
 [0.0.2]: https://github.com/EvaLok/schema-org-json-ld/compare/0.0.1...0.0.2
