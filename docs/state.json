@@ -260,11 +260,17 @@
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
     "enum_namespace": "EvaLok\\SchemaOrgJsonLd\\v1\\Enum",
-    "in_progress": [],
+    "in_progress": [
+      {
+        "description": "Add hasMerchantReturnPolicy to Offer",
+        "issue": 231,
+        "dispatched_at": "2026-02-27T19:46:55Z"
+      }
+    ],
     "planned_next": [],
     "google_rich_results_types": {
       "not_implemented": [],
-      "note": "ALL 28 Google Rich Results types implemented."
+      "note": "ALL 31 Google Search Gallery categories covered (26 original + 5 sub-categories: Merchant listing, Product variants, Loyalty program, Return policy, Shipping policy). Book actions excluded (DataFeed type, not Rich Results Test)."
     },
     "remaining_audit_findings": {
       "low_priority": [
@@ -282,7 +288,14 @@
       "note": "Level 9 achieved (0 errors). Level max: 5 additional errors from reflective code in AddPropertiesToObject."
     }
   },
-  "agent_sessions": [],
+  "agent_sessions": [
+    {
+      "issue": 231,
+      "title": "Offer: add hasMerchantReturnPolicy",
+      "dispatched_at": "2026-02-27T19:46:55Z",
+      "status": "dispatched"
+    }
+  ],
   "qc_processed": [8, 37, 57, 72, 165],
   "qc_requests_pending": [],
   "qc_status": {
@@ -308,9 +321,9 @@
     }
   },
   "last_cycle": {
-    "issue": 229,
-    "timestamp": "2026-02-27T18:11:10Z",
-    "summary": "Cycle 52: Post-release maintenance. Audited ImageObject vs Google Image metadata requirements — full coverage confirmed. No directives, no QC reports, no agent work."
+    "issue": 230,
+    "timestamp": "2026-02-27T19:42:21Z",
+    "summary": "Cycle 53: Search Gallery audit revealed 31 categories (up from 26). All covered. Found Offer missing hasMerchantReturnPolicy — dispatched #231 to Copilot."
   },
   "test_count": 320,
   "total_schema_types": 28,
