@@ -52,6 +52,7 @@ class JsonLdGenerator {
 
 		// Apply PROPERTY_MAP if defined
 		if (defined($schema::class . '::PROPERTY_MAP')) {
+			/** @var array<string, string> $propertyMap */
 			$propertyMap = constant($schema::class . '::PROPERTY_MAP');
 			foreach ($propertyMap as $phpName => $jsonLdName) {
 				if (array_key_exists($phpName, $properties)) {
