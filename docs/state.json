@@ -278,8 +278,16 @@
       "note": "Level 9 achieved (0 errors). Level max: 5 additional errors from reflective code in AddPropertiesToObject."
     }
   },
-  "agent_sessions": [],
-  "qc_processed": [8, 37, 57, 165],
+  "agent_sessions": [
+    {
+      "issue": 213,
+      "title": "Add 5 optional properties to Recipe",
+      "dispatched_at": "2026-02-27T05:03:12Z",
+      "status": "dispatched",
+      "qc_source": "https://github.com/EvaLok/schema-org-json-ld-qc/issues/72"
+    }
+  ],
+  "qc_processed": [8, 37, 57, 72, 165],
   "qc_requests_pending": [],
   "qc_status": {
     "request_165": "COMPLETE. QC issue #41 closed. 39/39 E2E pass, 0 errors, 158 warnings. @graph API also validated.",
@@ -294,9 +302,9 @@
     "remaining_open": []
   },
   "last_cycle": {
-    "issue": 211,
-    "timestamp": "2026-02-27T03:48:00Z",
-    "summary": "Cycle 42: Documentation audit. Fixed README class count (97→98), type count (28→26 Google categories). All 313 tests pass."
+    "issue": 212,
+    "timestamp": "2026-02-27T05:01:00Z",
+    "summary": "Cycle 43: Processed QC report #72 — dispatched agent task #213 to add 5 optional Recipe properties."
   },
   "test_count": 313,
   "total_schema_types": 28,
