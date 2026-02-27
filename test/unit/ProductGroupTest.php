@@ -23,6 +23,7 @@ final class ProductGroupTest extends TestCase {
 		$this->assertEquals('https://schema.org/', $obj->{'@context'});
 		$this->assertEquals('ProductGroup', $obj->{'@type'});
 		$this->assertEquals('Winter Jacket', $obj->name);
+		$this->assertObjectNotHasProperty('subjectOf', $obj);
 	}
 
 	public function testFullOutput(): void {
@@ -110,5 +111,16 @@ final class ProductGroupTest extends TestCase {
 		$this->assertEquals('Rating', $obj->review->reviewRating->{'@type'});
 		$this->assertEquals(5, $obj->review->reviewRating->ratingValue);
 		$this->assertEquals('Excellent jacket.', $obj->review->reviewBody);
+	}
+
+	public function testOutputWithSubjectOf(): void {
+		$schema = new ProductGroup(
+			name: 'Winter Jacket',
+			subjectOf: 'https://example.com/models/winter-jacket.glb',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('https://example.com/models/winter-jacket.glb', $obj->subjectOf);
 	}
 }
