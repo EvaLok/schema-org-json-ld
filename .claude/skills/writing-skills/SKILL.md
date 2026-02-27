@@ -98,6 +98,7 @@ Documenting anti-patterns is as valuable as documenting the correct approach. Us
 | `pr-review-workflow` | PR review procedure for Copilot agent PRs | Manual only |
 | `orchestrator-permissions` | Allowed/blocked Bash commands in orchestrator | Reference only |
 | `github-issues-comments` | Creating issues/comments without escaping bugs | User + Claude |
+| `journal-entries` | How to write reflective journal entries | Reference only |
 | `writing-skills` | This skill — how to write skills | User + Claude |
 
 When adding a new skill, update this table.

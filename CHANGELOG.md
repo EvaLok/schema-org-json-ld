@@ -110,7 +110,7 @@ Comprehensive Google merchant listing property coverage:
 - **86 schema classes** (up from 10)
 - **12 enum types** (up from 2)
 - **320 tests, 1600+ assertions**
-- **PHP 8.1+ / 8.2 / 8.3 / 8.4 supported**
+- **PHP 8.1+ / 8.2 / 8.3 / 8.4 / 8.5 supported**
 
 ## [0.0.4] - 2024-06-13
 
