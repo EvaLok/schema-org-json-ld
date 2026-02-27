@@ -5,9 +5,6 @@ declare(strict_types=1);
 namespace EvaLok\SchemaOrgJsonLd\v1\Schema;
 
 use EvaLok\SchemaOrgJsonLd\v1\TypedSchema;
-use EvaLok\SchemaOrgJsonLd\v1\Schema\BroadcastEvent;
-use EvaLok\SchemaOrgJsonLd\v1\Schema\Clip;
-use EvaLok\SchemaOrgJsonLd\v1\Schema\InteractionCounter;
 
 class Recipe extends TypedSchema {
 	public const A_SCHEMA_TYPE = 'Recipe';
