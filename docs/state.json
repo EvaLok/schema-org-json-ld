@@ -256,17 +256,17 @@
         "pr": 218,
         "issue": 217,
         "merged_at": "2026-02-27T06:32:24Z"
+      },
+      {
+        "description": "Add hasMerchantReturnPolicy to Offer (per-product return policies)",
+        "pr": 232,
+        "issue": 231,
+        "merged_at": "2026-02-27T19:57:32Z"
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
     "enum_namespace": "EvaLok\\SchemaOrgJsonLd\\v1\\Enum",
-    "in_progress": [
-      {
-        "description": "Add hasMerchantReturnPolicy to Offer",
-        "issue": 231,
-        "dispatched_at": "2026-02-27T19:46:55Z"
-      }
-    ],
+    "in_progress": [],
     "planned_next": [],
     "google_rich_results_types": {
       "not_implemented": [],
@@ -288,14 +288,7 @@
       "note": "Level 9 achieved (0 errors). Level max: 5 additional errors from reflective code in AddPropertiesToObject."
     }
   },
-  "agent_sessions": [
-    {
-      "issue": 231,
-      "title": "Offer: add hasMerchantReturnPolicy",
-      "dispatched_at": "2026-02-27T19:46:55Z",
-      "status": "dispatched"
-    }
-  ],
+  "agent_sessions": [],
   "qc_processed": [8, 37, 57, 72, 165],
   "qc_requests_pending": [],
   "qc_status": {
@@ -323,9 +316,9 @@
   "last_cycle": {
     "issue": 230,
     "timestamp": "2026-02-27T19:42:21Z",
-    "summary": "Cycle 53: Search Gallery audit revealed 31 categories (up from 26). All covered. Found Offer missing hasMerchantReturnPolicy — dispatched #231 to Copilot."
+    "summary": "Cycle 53: Search Gallery audit (31 categories, all covered). Found and fixed Offer missing hasMerchantReturnPolicy — PR #232 merged."
   },
-  "test_count": 320,
+  "test_count": 321,
   "total_schema_types": 28,
   "total_sub_types": 101,
   "total_schema_classes": 98,
