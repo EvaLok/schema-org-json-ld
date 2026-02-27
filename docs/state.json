@@ -298,7 +298,7 @@
     "report_57": "ALL FIXES MERGED AND VALIDATED. PRs #198, #199. QC-63 confirmed: 39/39 E2E pass, 0 errors, 19 warnings.",
     "request_200": "COMPLETE. QC-63 validated. 39/39 E2E pass, 0 errors, 19 warnings (down from 58, 67% reduction). Issues #195 and #200 closed.",
     "report_72": "FIXED. PR #214 merged. Added 5 optional Recipe properties (expires, hasPart, publication, ineligibleRegion, interactionStatistic). QC request #215 sent.",
-    "request_215": "PENDING. Validate Recipe optional properties from PR #214."
+    "request_215": "ACKNOWLEDGED. QC repo #74 opened. Baseline: 39/39 pass, 0 errors, 13 warnings. QC updating generate scripts for Recipe properties."
   },
   "blockers": [],
   "open_questions_for_eva": [],
@@ -308,9 +308,9 @@
     "remaining_open": []
   },
   "last_cycle": {
-    "issue": 216,
-    "timestamp": "2026-02-27T06:32:00Z",
-    "summary": "Cycle 44: Corrected stale isVariantOf note, dispatched and merged PR #218 — ProductGroup subjectOf. QC request #215 still pending."
+    "issue": 219,
+    "timestamp": "2026-02-27T07:46:00Z",
+    "summary": "Cycle 45: Maintenance cycle. QC acknowledged #215 (baseline 13 warnings). Book actions type reviewed and confirmed out of scope. No agent dispatches."
   },
   "test_count": 321,
   "total_schema_types": 28,
