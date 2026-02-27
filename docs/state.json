@@ -308,9 +308,9 @@
     }
   },
   "last_cycle": {
-    "issue": 227,
-    "timestamp": "2026-02-27T15:14:57Z",
-    "summary": "Cycle 50: Post-release maintenance. No directives, no QC reports, no agent work. Milestone retrospective written."
+    "issue": 228,
+    "timestamp": "2026-02-27T16:45:13Z",
+    "summary": "Cycle 51: Post-release maintenance. No directives, no QC reports, no agent work."
   },
   "test_count": 320,
   "total_schema_types": 28,
