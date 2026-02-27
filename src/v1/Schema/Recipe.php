@@ -32,5 +32,12 @@ class Recipe extends TypedSchema {
 		/** @var Review[] $review */
 		public null|Review|array $review = null,
 		public null|VideoObject $video = null,
+		public null|string $expires = null,
+		/** @var Clip[]|HowToSection[]|null $hasPart */
+		public null|array $hasPart = null,
+		public null|BroadcastEvent $publication = null,
+		public null|string $ineligibleRegion = null,
+		/** @var InteractionCounter|InteractionCounter[]|null $interactionStatistic */
+		public null|InteractionCounter|array $interactionStatistic = null,
 	) {}
 }
