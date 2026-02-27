@@ -6,8 +6,11 @@ namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\AggregateRating;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\BroadcastEvent;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Clip;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\HowToSection;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\HowToStep;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\InteractionCounter;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\NutritionInformation;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Organization;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Person;
@@ -145,5 +148,90 @@ final class RecipeTest extends TestCase {
 		$this->assertEquals('Assemble the pie', $obj->recipeInstructions[1]->name);
 		$this->assertEquals('HowToStep', $obj->recipeInstructions[1]->itemListElement[1]->{'@type'});
 		$this->assertEquals('Fill with the prepared mixture.', $obj->recipeInstructions[1]->itemListElement[1]->text);
+	}
+
+	public function testNewOptionalFieldsOmittedWhenNull(): void {
+		$schema = new Recipe(
+			name: 'Grandma Cookies',
+			image: ['https://example.com/cookies.jpg'],
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertFalse(property_exists($obj, 'expires'));
+		$this->assertFalse(property_exists($obj, 'hasPart'));
+		$this->assertFalse(property_exists($obj, 'publication'));
+		$this->assertFalse(property_exists($obj, 'ineligibleRegion'));
+		$this->assertFalse(property_exists($obj, 'interactionStatistic'));
+	}
+
+	public function testExpiresField(): void {
+		$schema = new Recipe(
+			name: 'Grandma Cookies',
+			image: ['https://example.com/cookies.jpg'],
+			expires: '2027-02-01',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('2027-02-01', $obj->expires);
+	}
+
+	public function testHasPartWithClipArray(): void {
+		$schema = new Recipe(
+			name: 'Grandma Cookies',
+			image: ['https://example.com/cookies.jpg'],
+			hasPart: [
+				new Clip(
+					name: 'Mixing ingredients',
+					startOffset: 0,
+					url: 'https://example.com/video#mixing',
+				),
+			],
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('Clip', $obj->hasPart[0]->{'@type'});
+	}
+
+	public function testPublicationField(): void {
+		$schema = new Recipe(
+			name: 'Grandma Cookies',
+			image: ['https://example.com/cookies.jpg'],
+			publication: new BroadcastEvent(isLiveBroadcast: true),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('BroadcastEvent', $obj->publication->{'@type'});
+		$this->assertTrue($obj->publication->isLiveBroadcast);
+	}
+
+	public function testIneligibleRegionField(): void {
+		$schema = new Recipe(
+			name: 'Grandma Cookies',
+			image: ['https://example.com/cookies.jpg'],
+			ineligibleRegion: 'US',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('US', $obj->ineligibleRegion);
+	}
+
+	public function testInteractionStatisticField(): void {
+		$schema = new Recipe(
+			name: 'Grandma Cookies',
+			image: ['https://example.com/cookies.jpg'],
+			interactionStatistic: new InteractionCounter(
+				interactionType: 'https://schema.org/LikeAction',
+				userInteractionCount: 42,
+			),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('InteractionCounter', $obj->interactionStatistic->{'@type'});
 	}
 }

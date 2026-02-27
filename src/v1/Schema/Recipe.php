@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace EvaLok\SchemaOrgJsonLd\v1\Schema;
 
 use EvaLok\SchemaOrgJsonLd\v1\TypedSchema;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\BroadcastEvent;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Clip;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\InteractionCounter;
 
 class Recipe extends TypedSchema {
 	public const A_SCHEMA_TYPE = 'Recipe';
@@ -32,5 +35,12 @@ class Recipe extends TypedSchema {
 		/** @var Review[] $review */
 		public null|Review|array $review = null,
 		public null|VideoObject $video = null,
+		public null|string $expires = null,
+		/** @var Clip[]|HowToSection[]|null $hasPart */
+		public null|array $hasPart = null,
+		public null|BroadcastEvent $publication = null,
+		public null|string $ineligibleRegion = null,
+		/** @var InteractionCounter|InteractionCounter[]|null $interactionStatistic */
+		public null|InteractionCounter|array $interactionStatistic = null,
 	) {}
 }
