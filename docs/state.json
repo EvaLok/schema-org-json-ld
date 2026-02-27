@@ -250,17 +250,17 @@
         "pr": 214,
         "issue": 213,
         "merged_at": "2026-02-27T05:22:08Z"
+      },
+      {
+        "description": "Add subjectOf to ProductGroup",
+        "pr": 218,
+        "issue": 217,
+        "merged_at": "2026-02-27T06:32:24Z"
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
     "enum_namespace": "EvaLok\\SchemaOrgJsonLd\\v1\\Enum",
-    "in_progress": [
-      {
-        "description": "Add subjectOf to ProductGroup",
-        "issue": 217,
-        "dispatched_at": "2026-02-27T06:22:30Z"
-      }
-    ],
+    "in_progress": [],
     "planned_next": [],
     "google_rich_results_types": {
       "not_implemented": [],
@@ -278,7 +278,7 @@
         },
         {
           "type": "ProductGroup",
-          "missing": "subjectOf (2 warnings) — dispatched as #217. isVariantOf already implemented on Product (line 37); QC scripts need to exercise it (2 warnings)."
+          "missing": "subjectOf RESOLVED in PR #218. isVariantOf already implemented on Product (line 37); QC scripts need to exercise it (2 warnings)."
         }
       ]
     },
@@ -290,15 +290,7 @@
       "note": "Level 9 achieved (0 errors). Level max: 5 additional errors from reflective code in AddPropertiesToObject."
     }
   },
-  "agent_sessions": [
-    {
-      "issue": 217,
-      "title": "ProductGroup: add optional subjectOf property",
-      "dispatched_at": "2026-02-27T06:22:30Z",
-      "model": "gpt-5.3-codex",
-      "status": "dispatched"
-    }
-  ],
+  "agent_sessions": [],
   "qc_processed": [8, 37, 57, 72, 165],
   "qc_requests_pending": [215],
   "qc_status": {
@@ -317,10 +309,10 @@
   },
   "last_cycle": {
     "issue": 216,
-    "timestamp": "2026-02-27T06:22:00Z",
-    "summary": "Cycle 44: Corrected stale isVariantOf note, dispatched #217 for ProductGroup subjectOf. QC request #215 still pending."
+    "timestamp": "2026-02-27T06:32:00Z",
+    "summary": "Cycle 44: Corrected stale isVariantOf note, dispatched and merged PR #218 — ProductGroup subjectOf. QC request #215 still pending."
   },
-  "test_count": 319,
+  "test_count": 321,
   "total_schema_types": 28,
   "total_sub_types": 101,
   "total_schema_classes": 98,
