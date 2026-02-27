@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
 use EvaLok\SchemaOrgJsonLd\v1\Enum\ItemAvailability;
+use EvaLok\SchemaOrgJsonLd\v1\Enum\MerchantReturnEnumeration;
 use EvaLok\SchemaOrgJsonLd\v1\Enum\OfferItemCondition;
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\DefinedRegion;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\MerchantReturnPolicy;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Offer;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\OfferShippingDetails;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\QuantitativeValue;
@@ -49,6 +51,7 @@ final class OfferTest extends TestCase {
 		$this->assertFalse(property_exists($obj, 'shippingDetails'));
 		$this->assertFalse(property_exists($obj, 'validFrom'));
 		$this->assertFalse(property_exists($obj, 'priceValidUntil'));
+		$this->assertFalse(property_exists($obj, 'hasMerchantReturnPolicy'));
 	}
 
 	public function testWithShippingDetails(): void {
@@ -149,5 +152,26 @@ final class OfferTest extends TestCase {
 		$this->assertEquals('QuantitativeValue', $obj->priceSpecification[0]->referenceQuantity->{'@type'});
 		$this->assertEquals(1, $obj->priceSpecification[0]->referenceQuantity->value);
 		$this->assertEquals('KGM', $obj->priceSpecification[0]->referenceQuantity->unitCode);
+	}
+
+	public function testWithMerchantReturnPolicy(): void {
+		$schema = new Offer(
+			url: 'https://example.com/anvil',
+			priceCurrency: 'USD',
+			price: 119.99,
+			availability: ItemAvailability::InStock,
+			hasMerchantReturnPolicy: new MerchantReturnPolicy(
+				applicableCountry: 'US',
+				returnPolicyCategory: MerchantReturnEnumeration::MerchantReturnFiniteReturnWindow,
+				merchantReturnDays: 30,
+			),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('MerchantReturnPolicy', $obj->hasMerchantReturnPolicy->{'@type'});
+		$this->assertEquals('US', $obj->hasMerchantReturnPolicy->applicableCountry);
+		$this->assertEquals('https://schema.org/MerchantReturnFiniteReturnWindow', $obj->hasMerchantReturnPolicy->returnPolicyCategory);
+		$this->assertEquals(30, $obj->hasMerchantReturnPolicy->merchantReturnDays);
 	}
 }
