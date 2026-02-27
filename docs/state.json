@@ -292,13 +292,13 @@
   },
   "agent_sessions": [],
   "qc_processed": [8, 37, 57, 72, 165],
-  "qc_requests_pending": [215],
+  "qc_requests_pending": [],
   "qc_status": {
     "request_165": "COMPLETE. QC issue #41 closed. 39/39 E2E pass, 0 errors, 158 warnings. @graph API also validated.",
     "report_57": "ALL FIXES MERGED AND VALIDATED. PRs #198, #199. QC-63 confirmed: 39/39 E2E pass, 0 errors, 19 warnings.",
     "request_200": "COMPLETE. QC-63 validated. 39/39 E2E pass, 0 errors, 19 warnings (down from 58, 67% reduction). Issues #195 and #200 closed.",
     "report_72": "FIXED. PR #214 merged. Added 5 optional Recipe properties (expires, hasPart, publication, ineligibleRegion, interactionStatistic). QC request #215 sent.",
-    "request_215": "ACKNOWLEDGED. QC repo #74 opened. Baseline: 39/39 pass, 0 errors, 13 warnings. QC PR #76 Copilot finished (07:43 UTC), awaiting QC review/merge. No final E2E results yet."
+    "request_215": "COMPLETE. QC repo #74 closed. QC PR #76 merged (10:16 UTC). 39/39 E2E pass, 0 errors. All 5 Recipe optional properties validated. Issue #215 closed."
   },
   "blockers": [],
   "open_questions_for_eva": [],
@@ -308,9 +308,9 @@
     "remaining_open": []
   },
   "last_cycle": {
-    "issue": 220,
-    "timestamp": "2026-02-27T09:14:00Z",
-    "summary": "Cycle 46: Pre-release review for v1.0.0. All checks pass (320 tests, PHPStan level 9). QC validation still pending (QC PR #76 Copilot done, awaiting review). Recommend commit ffc352b once QC validates."
+    "issue": 221,
+    "timestamp": "2026-02-27T10:45:00Z",
+    "summary": "Cycle 47: QC validation complete (39/39 E2E pass, 0 errors). Closed QC request #215. All gates passed for v1.0.0. Created question-for-eva with recommended commit hash."
   },
   "test_count": 320,
   "total_schema_types": 28,
