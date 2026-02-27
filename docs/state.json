@@ -271,14 +271,6 @@
         {
           "type": "JobPosting",
           "missing": "Beta properties (educationRequirements, experienceRequirements, experienceInPlaceOfEducation)"
-        },
-        {
-          "type": "Recipe",
-          "missing": "RESOLVED in PR #214 — added expires, hasPart, publication, ineligibleRegion, interactionStatistic"
-        },
-        {
-          "type": "ProductGroup",
-          "missing": "subjectOf RESOLVED in PR #218. isVariantOf already implemented on Product (line 37); QC scripts need to exercise it (2 warnings)."
         }
       ]
     },
@@ -301,16 +293,24 @@
     "request_215": "COMPLETE. QC repo #74 closed. QC PR #76 merged (10:16 UTC). 39/39 E2E pass, 0 errors. All 5 Recipe optional properties validated. Issue #215 closed."
   },
   "blockers": [],
-  "open_questions_for_eva": [222],
+  "open_questions_for_eva": [],
   "eva_input_issues": {
-    "closed_this_cycle": [],
+    "closed_this_cycle": [224, 225],
     "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201],
     "remaining_open": []
   },
+  "release": {
+    "v1.0.0": {
+      "tag": "v1.0.0",
+      "commit": "5836b38",
+      "tagged_at": "2026-02-27T13:25:27Z",
+      "release_url": "https://github.com/EvaLok/schema-org-json-ld/releases/tag/v1.0.0"
+    }
+  },
   "last_cycle": {
-    "issue": 223,
-    "timestamp": "2026-02-27T12:09:00Z",
-    "summary": "Cycle 48: Steady-state maintenance. All checks clean. v1.0.0 recommendation (#222) still pending Eva's response. No new dispatches — holding to preserve recommended commit hash."
+    "issue": 226,
+    "timestamp": "2026-02-27T13:49:10Z",
+    "summary": "Cycle 49: v1.0.0 released by Eva. Handled PHP 8.5 support (#224) and journal-entries skill (#225). Clean state."
   },
   "test_count": 320,
   "total_schema_types": 28,
