@@ -256,15 +256,29 @@
         }
       ]
     },
-    "phpstan_level": 6
+    "phpstan_level": 8,
+    "phpstan_max_assessment": {
+      "level_9_errors": 3,
+      "level_max_errors": 8,
+      "all_in": "JsonLdGenerator.php",
+      "note": "Level 9: constant() returns mixed. Level max: additional reflective code issues in AddPropertiesToObject."
+    }
   },
-  "agent_sessions": [],
+  "agent_sessions": [
+    {
+      "issue": 208,
+      "pr": 209,
+      "description": "PHPStan level 9 upgrade",
+      "dispatched_at": "2026-02-27T00:22:30Z",
+      "status": "in_progress"
+    }
+  ],
   "qc_processed": [8, 37, 57, 165],
   "qc_requests_pending": [200],
   "qc_status": {
     "request_165": "COMPLETE. QC issue #41 closed. 39/39 E2E pass, 0 errors, 158 warnings. @graph API also validated.",
     "report_57": "ALL FIXES MERGED. PRs #198, #199. QC re-validation requested via #200.",
-    "request_200": "PENDING. Validate QC-57 fixes."
+    "request_200": "ACKNOWLEDGED. QC-63 on QC repo. 39/39 E2E pass, 0 errors, 58 warnings. QC working on reducing warnings."
   },
   "blockers": [],
   "open_questions_for_eva": [],
@@ -274,9 +288,9 @@
     "remaining_open": []
   },
   "last_cycle": {
-    "issue": 204,
-    "timestamp": "2026-02-26T22:44:00Z",
-    "summary": "Cycle 39: PHPStan upgraded from level 5 to level 6 via PR #206. AGENTS.md updated with correct @param pattern. QC re-validation #200 still pending. All Eva issues closed."
+    "issue": 207,
+    "timestamp": "2026-02-27T00:19:00Z",
+    "summary": "Cycle 40: PHPStan bumped 6->8 (free win). Dispatched #208 for level 9 fix. QC #200 acknowledged by QC-63."
   },
   "test_count": 313,
   "total_schema_types": 28,
