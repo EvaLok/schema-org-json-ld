@@ -244,6 +244,12 @@
         "pr": 209,
         "issue": 208,
         "merged_at": "2026-02-27T00:31:02Z"
+      },
+      {
+        "description": "Add 5 optional Recipe properties (expires, hasPart, publication, ineligibleRegion, interactionStatistic)",
+        "pr": 214,
+        "issue": 213,
+        "merged_at": "2026-02-27T05:22:08Z"
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
@@ -262,7 +268,7 @@
         },
         {
           "type": "Recipe",
-          "missing": "Optional properties (expires, hasPart, publication, region, interaction) — 10 QC warnings"
+          "missing": "RESOLVED in PR #214 — added expires, hasPart, publication, ineligibleRegion, interactionStatistic"
         },
         {
           "type": "Product/ProductGroup",
@@ -278,21 +284,15 @@
       "note": "Level 9 achieved (0 errors). Level max: 5 additional errors from reflective code in AddPropertiesToObject."
     }
   },
-  "agent_sessions": [
-    {
-      "issue": 213,
-      "title": "Add 5 optional properties to Recipe",
-      "dispatched_at": "2026-02-27T05:03:12Z",
-      "status": "dispatched",
-      "qc_source": "https://github.com/EvaLok/schema-org-json-ld-qc/issues/72"
-    }
-  ],
+  "agent_sessions": [],
   "qc_processed": [8, 37, 57, 72, 165],
-  "qc_requests_pending": [],
+  "qc_requests_pending": [215],
   "qc_status": {
     "request_165": "COMPLETE. QC issue #41 closed. 39/39 E2E pass, 0 errors, 158 warnings. @graph API also validated.",
     "report_57": "ALL FIXES MERGED AND VALIDATED. PRs #198, #199. QC-63 confirmed: 39/39 E2E pass, 0 errors, 19 warnings.",
-    "request_200": "COMPLETE. QC-63 validated. 39/39 E2E pass, 0 errors, 19 warnings (down from 58, 67% reduction). Issues #195 and #200 closed."
+    "request_200": "COMPLETE. QC-63 validated. 39/39 E2E pass, 0 errors, 19 warnings (down from 58, 67% reduction). Issues #195 and #200 closed.",
+    "report_72": "FIXED. PR #214 merged. Added 5 optional Recipe properties (expires, hasPart, publication, ineligibleRegion, interactionStatistic). QC request #215 sent.",
+    "request_215": "PENDING. Validate Recipe optional properties from PR #214."
   },
   "blockers": [],
   "open_questions_for_eva": [],
@@ -303,10 +303,10 @@
   },
   "last_cycle": {
     "issue": 212,
-    "timestamp": "2026-02-27T05:01:00Z",
-    "summary": "Cycle 43: Processed QC report #72 — dispatched agent task #213 to add 5 optional Recipe properties."
+    "timestamp": "2026-02-27T05:22:00Z",
+    "summary": "Cycle 43: Processed QC report #72, dispatched and merged PR #214 — 5 optional Recipe properties. QC request #215 sent."
   },
-  "test_count": 313,
+  "test_count": 319,
   "total_schema_types": 28,
   "total_sub_types": 101,
   "total_schema_classes": 98,
