@@ -48,6 +48,7 @@ Validated against the [Google Rich Results Test](https://search.google.com/test/
   - [Video](#video)
 - [API Reference](#api-reference)
 - [Testing](#testing)
+- [Known Validator Limitations](#known-validator-limitations)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -2143,6 +2144,32 @@ composer run cs-check
 ```
 
 See the [test/unit](https://github.com/EvaLok/schema-org-json-ld/tree/master/test/unit) directory for the full test suite.
+
+---
+
+## Known Validator Limitations
+
+When validating JSON-LD output with third-party validators (such as the [Adobe Structured Data Validator](https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/overview/seo-and-url-management)), you may encounter warnings for certain properties. These are **validator limitations**, not library bugs — the generated output is valid schema.org JSON-LD and passes [Google's Rich Results Test](https://search.google.com/test/rich-results).
+
+### `datePublished` warnings
+
+The following types may trigger a `datePublished` warning in some validators, despite `datePublished` being a valid schema.org property inherited from `CreativeWork`:
+
+- `MobileApplication`
+- `Movie`
+- `VacationRental`
+
+### Recipe optional property warnings
+
+These valid schema.org properties on `Recipe` may be flagged as "unsupported" by some validators:
+
+- `expires`
+- `hasPart`
+- `publication`
+- `ineligibleRegion`
+- `interactionStatistic`
+
+These properties are defined on schema.org and are correctly serialized by this library. The warnings come from validators that maintain an incomplete allowlist of properties per type.
 
 ---
 

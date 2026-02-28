@@ -45,6 +45,26 @@ These are priority directives from Eva. Act on them before anything else. Close 
   gh issue list --label "question-for-eva" --state open --json number,title
   ```
 
+## 2.5. Steady-state check
+
+After recovering context, determine whether this cycle has any work to do. Compare the current state against the last cycle. If **ALL** of these are true:
+
+- No new commits on `master` since the last cycle (other than orchestrator state commits)
+- No open PRs requiring review
+- No open agent sessions
+- No new QC reports or requests
+- No `input-from-eva` issues
+- No new `audit-outbound` issues
+- The Google Search Gallery has not changed
+
+Then this is an **idle cycle**. Increment `consecutive_idle_cycles` in `docs/state.json`. If this counter exceeds 3, do NOT write a worklog entry or journal entry. Instead:
+
+1. Post a brief comment on the orchestrator issue: "No changes detected since cycle N. Idle cycle count: X. Skipping."
+2. Update only `last_cycle` and `consecutive_idle_cycles` in `docs/state.json`
+3. Commit, push, and close the issue
+
+This avoids creating noise in git history during maintenance periods. **Reset `consecutive_idle_cycles` to 0** whenever a cycle performs substantive work (dispatching, reviewing, merging, fixing).
+
 ## 3. Check agent work status
 
 Run these `gh` commands directly — each as a separate Bash tool call:
