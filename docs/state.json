@@ -299,12 +299,25 @@
     "request_215": "COMPLETE. QC repo #74 closed. QC PR #76 merged (10:16 UTC). 39/39 E2E pass, 0 errors. All 5 Recipe optional properties validated. Issue #215 closed.",
     "request_234": "COMPLETE. QC repo #84 closed. 188 QC unit tests, 39/39 E2E pass, 0 errors, 15 warnings (all known false positives). Offer.hasMerchantReturnPolicy validated. Issue #234 closed."
   },
-  "blockers": [],
-  "open_questions_for_eva": [],
+  "blockers": ["npm/TS plan awaiting Eva approval (#247)"],
+  "open_questions_for_eva": [245],
   "eva_input_issues": {
     "closed_this_cycle": [],
     "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225],
-    "remaining_open": []
+    "remaining_open": [247]
+  },
+  "typescript_plan": {
+    "status": "draft_v1_posted",
+    "issue": 247,
+    "qc_coordination_issue": 249,
+    "plan_version": 1,
+    "awaiting": "Eva feedback/approval",
+    "phases": [
+      {"phase": 1, "name": "Scaffold & infrastructure", "status": "blocked_on_approval"},
+      {"phase": 2, "name": "Enum & shared sub-type port", "status": "planned"},
+      {"phase": 3, "name": "Schema type port", "status": "planned"},
+      {"phase": 4, "name": "Build, test, publish", "status": "planned"}
+    ]
   },
   "release": {
     "v1.0.0": {
@@ -315,9 +328,9 @@
     }
   },
   "last_cycle": {
-    "issue": 244,
-    "timestamp": "2026-02-28T12:06:29Z",
-    "summary": "Cycle 64: Processing audit recommendations. Implementing idle cycle detection, cleaning up tools/, documenting validator false positives."
+    "issue": 248,
+    "timestamp": "2026-02-28T13:42:54Z",
+    "summary": "Cycle 65: Processed Eva directive #247 (npm/TypeScript package). Posted Draft v1 restructuring plan. Opened QC coordination issue #249."
   },
   "consecutive_idle_cycles": 0,
   "audit_processed": [2, 3, 4, 5],
