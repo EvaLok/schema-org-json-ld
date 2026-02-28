@@ -22,20 +22,12 @@ jobs:
           token: ${{ secrets.ORCHESTRATOR_PAT }}
           fetch-depth: 0
 
-      - name: Fetch system prompt
-        uses: actions/checkout@v4
-        with:
-          repository: EvaLok/schema-org-json-ld-system-prompt
-          token: ${{ secrets.ORCHESTRATOR_PAT }}
-          path: .system-prompt
-          ref: main
-
       - name: Load system prompt
         id: prompt
         run: |
           {
             echo "content<<PROMPT_EOF"
-            cat .system-prompt/orchestrator-prompt.md
+            cat .github/workflows/orchestrator-prompt.md
             echo "PROMPT_EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -68,7 +60,3 @@ jobs:
                 ]
               }
             }
-
-      - name: Cleanup
-        if: always()
-        run: rm -rf .system-prompt
