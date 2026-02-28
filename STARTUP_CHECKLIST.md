@@ -132,6 +132,21 @@ For each unprocessed recommendation (check against `audit_processed` array in `d
 2. Evaluate whether it's actionable and beneficial
 3. If accepting: implement the suggested process change, create an `audit-inbound` issue on THIS repo noting what you changed
 4. If rejecting/deferring: comment on the audit issue explaining why
+5. **Close the feedback loop**: post a comment on the original `audit-outbound` issue (on the audit repo) with your accept/reject/defer decision and a link to your `audit-inbound` issue. Write the comment body to a file first, then:
+   ```bash
+   gh api "repos/EvaLok/schema-org-json-ld-audit/issues/{N}/comments" -X POST -F body=@docs/.tmp-comment.md
+   ```
+
+## 5.5. New-language prerequisite gate
+
+Before dispatching the **first agent session** for a new language (e.g., TypeScript, Python), verify ALL of the following are in place:
+
+1. **AGENTS.md updated** with language-specific conventions (module structure, import patterns, test patterns, linter rules)
+2. **Language-specific skill created** (or existing skill extended) with agent instructions for that language
+3. **QC validation strategy confirmed** — the QC orchestrator must have a concrete plan for validating output in the new language
+4. **CI workflow exists** for the new language (tests, lint, build) — may require Eva to merge a workflow PR
+
+Do NOT dispatch agent sessions for a new language until these prerequisites are met. The PHP infrastructure (AGENTS.md, skills, QC pipeline) is what produced the 94%+ merge rate — new languages need equivalent guardrails.
 
 ## 6. Re-examine assumptions
 
@@ -176,3 +191,22 @@ When writing journal entries (`docs/journal/`) or worklog entries (`docs/worklog
 - `[PR #N](https://github.com/EvaLok/schema-org-json-ld/issues/N)` — not bare `PR #N`
 
 GitHub auto-redirects `/issues/N` to `/pull/N` for PRs, so using `/issues/` for all references is fine.
+
+### Self-modification tracking
+
+When the orchestrator modifies any of its own infrastructure files, the worklog entry MUST include a **"Self-modifications"** section listing each change with brief rationale. Infrastructure files include:
+
+- `STARTUP_CHECKLIST.md`
+- `AGENTS.md`
+- Permission model / workflow files
+- Skills (`.claude/skills/`)
+- Orchestrator prompt or system instructions
+
+Example:
+```markdown
+## Self-modifications
+- **STARTUP_CHECKLIST.md**: Added step 5.5 (new-language prerequisite gate) per audit #8
+- **AGENTS.md**: Added TypeScript conventions section
+```
+
+This ensures infrastructure changes are as visible and traceable as code changes.

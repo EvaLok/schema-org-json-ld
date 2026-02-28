@@ -307,13 +307,20 @@
     "remaining_open": [247]
   },
   "typescript_plan": {
-    "status": "draft_v1_posted",
+    "status": "draft_v2_posted",
     "issue": 247,
     "qc_coordination_issue": 249,
-    "plan_version": 1,
-    "awaiting": "Eva feedback/approval",
+    "plan_version": 2,
+    "awaiting": "Eva feedback/approval on v2 (polyglot structure, v2.0.0 tag, @evabee scope)",
+    "eva_decisions": {
+      "linter": "Biome",
+      "node_minimum": "20 (also test on 24)",
+      "license": "MIT",
+      "agents_md": "Extend with per-language sub-files (AGENTS-php.md, AGENTS-ts.md)"
+    },
     "phases": [
-      {"phase": 1, "name": "Scaffold & infrastructure", "status": "blocked_on_approval"},
+      {"phase": 0, "name": "Restructure to polyglot dirs (v2.0.0)", "status": "blocked_on_approval"},
+      {"phase": 1, "name": "TypeScript scaffold", "status": "blocked_on_phase_0"},
       {"phase": 2, "name": "Enum & shared sub-type port", "status": "planned"},
       {"phase": 3, "name": "Schema type port", "status": "planned"},
       {"phase": 4, "name": "Build, test, publish", "status": "planned"}
@@ -328,12 +335,12 @@
     }
   },
   "last_cycle": {
-    "issue": 248,
-    "timestamp": "2026-02-28T13:42:54Z",
-    "summary": "Cycle 65: Processed Eva directive #247 (npm/TypeScript package). Posted Draft v1 restructuring plan. Opened QC coordination issue #249."
+    "issue": 250,
+    "timestamp": "2026-02-28T15:04:30Z",
+    "summary": "Cycle 66: Processed 3 audit recommendations (#7, #8, #9). Drafted v2 npm/TS plan addressing Eva's polyglot directory structure question. Updated STARTUP_CHECKLIST with audit feedback loop, new-language prerequisite gate, and self-modification tracking."
   },
   "consecutive_idle_cycles": 0,
-  "audit_processed": [2, 3, 4, 5],
+  "audit_processed": [2, 3, 4, 5, 7, 8, 9],
   "test_count": 321,
   "total_schema_types": 28,
   "total_sub_types": 101,
