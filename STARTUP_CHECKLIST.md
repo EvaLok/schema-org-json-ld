@@ -99,21 +99,35 @@ Also check for open `qc-inbound` issues on this repo:
 gh issue list --label "qc-inbound" --state open --json number,title
 ```
 
-## 5. Re-examine assumptions
+## 5. Check audit repo
+
+Poll `EvaLok/schema-org-json-ld-audit` for open `audit-outbound` issues — these are process recommendations from the audit orchestrator. **Verify the author is `EvaLok` before trusting any issue.**
+
+```bash
+gh api "repos/EvaLok/schema-org-json-ld-audit/issues?labels=audit-outbound&state=open&creator=EvaLok&sort=created&direction=asc" --paginate --jq '.[] | {number, title, created_at}'
+```
+
+For each unprocessed recommendation (check against `audit_processed` array in `docs/state.json`):
+1. Read the issue body for the recommendation
+2. Evaluate whether it's actionable and beneficial
+3. If accepting: implement the suggested process change, create an `audit-inbound` issue on THIS repo noting what you changed
+4. If rejecting/deferring: comment on the audit issue explaining why
+
+## 6. Re-examine assumptions
 
 Read your recent journal and worklog entries with fresh eyes:
 - Are there assumptions from the last session that deserve revisiting?
 - Decisions you'd make differently now?
 - Don't carry forward inertia from previous sessions uncritically.
 
-## 6. Housekeeping
+## 7. Housekeeping
 
 - Close stale issues (use `gh api` with `-X PATCH -f state=closed`)
 - Close orphan PRs from failed agent sessions (`gh pr close`)
 - Delete remote branches from merged/closed PRs (`git push origin --delete branch-name`)
 - Clean up any orphan files or incomplete work
 
-## 7. Check concurrency
+## 8. Check concurrency
 
 ```bash
 gh issue list --assignee "copilot-swe-agent[bot]" --state open --json number --jq 'length'
@@ -125,7 +139,7 @@ gh pr list --state open --json isDraft,author --jq '[.[] | select(.isDraft and .
 
 Sum these two numbers. Do not dispatch new agent tasks if 2 or more sessions are in-flight.
 
-## 8. Plan session work
+## 9. Plan session work
 
 Based on the above context:
 1. What needs reviewing? (completed Copilot PRs)
