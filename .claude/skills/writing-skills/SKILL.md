@@ -100,5 +100,6 @@ Documenting anti-patterns is as valuable as documenting the correct approach. Us
 | `github-issues-comments` | Creating issues/comments without escaping bugs | User + Claude |
 | `journal-entries` | How to write reflective journal entries | Reference only |
 | `writing-skills` | This skill — how to write skills | User + Claude |
+| `ts-schema-implementation` | Procedure for implementing a TS schema.org type | User + Claude |
 
 When adding a new skill, update this table.
