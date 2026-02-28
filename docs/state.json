@@ -319,8 +319,16 @@
       "license": "MIT",
       "agents_md": "Extend with per-language sub-files (AGENTS-php.md, AGENTS-ts.md)"
     },
+    "preparatory_artifacts": {
+      "AGENTS-ts.md": "Created cycle 70 (skeleton). Per audit #16.",
+      "ts_implementation_skill": "Not yet created. Required before Phase 1 dispatch."
+    },
+    "audit_enhancements": {
+      "phase_0_qc_checkpoint": "Accepted (audit #15). Phase 0 completion requires QC E2E validation before Phase 1.",
+      "ts_guardrails_enumeration": "Accepted (audit #16). AGENTS-ts.md + TS skill required before Phase 1 dispatch."
+    },
     "phases": [
-      {"phase": 0, "name": "Restructure to polyglot dirs (v2.0.0)", "status": "blocked_on_approval"},
+      {"phase": 0, "name": "Restructure to polyglot dirs (v2.0.0)", "status": "blocked_on_approval", "note": "Phase 0 completion now requires QC validation (audit #15)"},
       {"phase": 1, "name": "TypeScript scaffold", "status": "blocked_on_phase_0"},
       {"phase": 2, "name": "Enum & shared sub-type port", "status": "planned"},
       {"phase": 3, "name": "Schema type port", "status": "planned"},
@@ -336,12 +344,12 @@
     }
   },
   "last_cycle": {
-    "issue": 255,
-    "timestamp": "2026-02-28T19:35:00Z",
-    "summary": "Cycle 69: Near-idle. Closed audit-inbound #254 (batch 3 verified). No new Eva response on #247 (TS plan Draft v2). No new QC/audit reports."
+    "issue": 256,
+    "timestamp": "2026-02-28T21:04:00Z",
+    "summary": "Cycle 70: Processed audit batch 4 (#15, #16) — both accepted. Created AGENTS-ts.md skeleton. Still awaiting Eva response on TS plan Draft v2 (#247)."
   },
-  "consecutive_idle_cycles": 1,
-  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13],
+  "consecutive_idle_cycles": 0,
+  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16],
   "test_count": 321,
   "total_schema_types": 28,
   "total_sub_types": 101,
