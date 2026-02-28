@@ -44,6 +44,7 @@ These are priority directives from Eva. Act on them before anything else. Close 
   ```bash
   gh issue list --label "question-for-eva" --state open --json number,title
   ```
+- **Cross-repo question sync**: When a `question-for-eva` issue on THIS repo is resolved, check whether the QC repo has an equivalent open issue for the same question. If so, note it in the worklog — the QC orchestrator can only close its own issues, but awareness prevents stale cross-repo state from being missed.
 
 ## 2.5. Steady-state check
 
@@ -161,6 +162,7 @@ Read your recent journal and worklog entries with fresh eyes:
 - Close orphan PRs from failed agent sessions (`gh pr close`)
 - Delete remote branches from merged/closed PRs (`git push origin --delete branch-name`)
 - Clean up any orphan files or incomplete work
+- **Audit-inbound lifecycle**: Review open `audit-inbound` issues. Close any whose recommended changes have been verified (checklist updated, convention added, etc.). Include a brief closing comment confirming what was implemented.
 
 ## 8. Check concurrency
 
