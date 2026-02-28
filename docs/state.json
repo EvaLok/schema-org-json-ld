@@ -300,7 +300,7 @@
     "request_234": "COMPLETE. QC repo #84 closed. 188 QC unit tests, 39/39 E2E pass, 0 errors, 15 warnings (all known false positives). Offer.hasMerchantReturnPolicy validated. Issue #234 closed."
   },
   "blockers": ["npm/TS plan awaiting Eva approval (#247)"],
-  "open_questions_for_eva": [245],
+  "open_questions_for_eva": [],
   "eva_input_issues": {
     "closed_this_cycle": [],
     "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225],
@@ -312,6 +312,7 @@
     "qc_coordination_issue": 249,
     "plan_version": 2,
     "awaiting": "Eva feedback/approval on v2 (polyglot structure, v2.0.0 tag, @evabee scope)",
+    "qc_validation_strategy": "Aligned. QC repo #98: ts-consumer/ dir, parity testing, begins after Phase 1 merge",
     "eva_decisions": {
       "linter": "Biome",
       "node_minimum": "20 (also test on 24)",
@@ -335,9 +336,9 @@
     }
   },
   "last_cycle": {
-    "issue": 250,
-    "timestamp": "2026-02-28T15:04:30Z",
-    "summary": "Cycle 66: Processed 3 audit recommendations (#7, #8, #9). Drafted v2 npm/TS plan addressing Eva's polyglot directory structure question. Updated STARTUP_CHECKLIST with audit feedback loop, new-language prerequisite gate, and self-modification tracking."
+    "issue": 252,
+    "timestamp": "2026-02-28T16:40:00Z",
+    "summary": "Cycle 67: Closed #245 (cron frequency — Eva says keep current schedule). Processed QC TS validation strategy (QC #98). No new Eva response on #247 plan."
   },
   "consecutive_idle_cycles": 0,
   "audit_processed": [2, 3, 4, 5, 7, 8, 9],
