@@ -315,9 +315,9 @@
     }
   },
   "last_cycle": {
-    "issue": 240,
-    "timestamp": "2026-02-28T06:08:07Z",
-    "summary": "Cycle 60: Maintenance cycle. Gallery note: Product snippet may be separate entry (same Product type, already covered). Fact check/ClaimReview being phased out by Google. Package tracking still 404. Steady state."
+    "issue": 241,
+    "timestamp": "2026-02-28T07:39:18Z",
+    "summary": "Cycle 61: Maintenance cycle. Gallery unchanged. ClaimReview still phasing out. Package tracking still 404. Steady state."
   },
   "test_count": 321,
   "total_schema_types": 28,
