@@ -370,10 +370,17 @@
       "release_url": "https://github.com/EvaLok/schema-org-json-ld/releases/tag/v1.0.0"
     }
   },
+  "phase_2_draft_specs": {
+    "2a": "docs/draft-phase-2a-enums.json",
+    "2b": "docs/draft-phase-2b-leaf-subtypes.json",
+    "2c": "docs/draft-phase-2c-leaf-subtypes-2.json",
+    "ready_to_dispatch": true,
+    "blocked_on": "Phase 1 merge (PR #270)"
+  },
   "last_cycle": {
-    "issue": 271,
-    "timestamp": "2026-03-01T06:30:00Z",
-    "summary": "Cycle 76: PR #270 (Phase 1 TS scaffold) reviewed and approved. Waiting for Eva to merge (workflow file). Audit #26 accepted (post-merge CI verification). Phase 2 decomposition planned."
+    "issue": 273,
+    "timestamp": "2026-03-01T07:41:00Z",
+    "summary": "Cycle 77: Phase 1 still waiting for Eva merge. Prepared Phase 2a/2b/2c issue specs. Closed audit-inbound #272. No new QC/audit items."
   },
   "consecutive_idle_cycles": 0,
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26],
