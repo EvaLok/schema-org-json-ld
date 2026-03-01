@@ -1,4 +1,5 @@
 import { TypedSchema } from "../TypedSchema.js";
+import type { ImageObject } from "./ImageObject.js";
 import type { Organization } from "./Organization.js";
 import type { Person } from "./Person.js";
 import type { SpeakableSpecification } from "./SpeakableSpecification.js";
@@ -9,7 +10,7 @@ export interface ArticleOptions {
 	author?: Person | Organization | readonly (Person | Organization)[] | null;
 	datePublished?: string | null;
 	dateModified?: string | null;
-	image?: readonly string[] | null;
+	image?: readonly (string | ImageObject)[] | null;
 	description?: string | null;
 	publisher?: Organization | null;
 	speakable?: SpeakableSpecification | null;
@@ -18,7 +19,7 @@ export interface ArticleOptions {
 }
 
 export class Article extends TypedSchema {
-	static readonly schemaType = "Article";
+	static readonly schemaType: string = "Article";
 
 	public readonly headline: string;
 	public readonly author:
@@ -28,7 +29,7 @@ export class Article extends TypedSchema {
 		| null;
 	public readonly datePublished: string | null;
 	public readonly dateModified: string | null;
-	public readonly image: readonly string[] | null;
+	public readonly image: readonly (string | ImageObject)[] | null;
 	public readonly description: string | null;
 	public readonly publisher: Organization | null;
 	public readonly speakable: SpeakableSpecification | null;
