@@ -300,9 +300,17 @@
       "pr": 263
     }
   },
-  "agent_sessions": [],
+  "agent_sessions": [
+    {
+      "issue": 269,
+      "title": "Phase 1: TypeScript scaffold",
+      "dispatched_at": "2026-03-01T05:08:00Z",
+      "model": "gpt-5.3-codex",
+      "status": "in_progress"
+    }
+  ],
   "qc_processed": [8, 37, 57, 72, 165],
-  "qc_requests_pending": [265],
+  "qc_requests_pending": [],
   "qc_status": {
     "request_165": "COMPLETE. QC issue #41 closed. 39/39 E2E pass, 0 errors, 158 warnings. @graph API also validated.",
     "report_57": "ALL FIXES MERGED AND VALIDATED. PRs #198, #199. QC-63 confirmed: 39/39 E2E pass, 0 errors, 19 warnings.",
@@ -310,7 +318,7 @@
     "report_72": "FIXED. PR #214 merged. Added 5 optional Recipe properties (expires, hasPart, publication, ineligibleRegion, interactionStatistic). QC request #215 sent.",
     "request_215": "COMPLETE. QC repo #74 closed. QC PR #76 merged (10:16 UTC). 39/39 E2E pass, 0 errors. All 5 Recipe optional properties validated. Issue #215 closed.",
     "request_234": "COMPLETE. QC repo #84 closed. 188 QC unit tests, 39/39 E2E pass, 0 errors, 15 warnings (all known false positives). Offer.hasMerchantReturnPolicy validated. Issue #234 closed.",
-    "request_265": "PENDING. Post-Phase 0 restructure E2E validation. Sent 2026-03-01T02:24Z."
+    "request_265": "COMPLETE. QC repo #114 closed. 188 tests, 1133 assertions, ALL PASS. 39/39 E2E, 0 errors, 15 warnings (known false positives). Phase 0 gate cleared."
   },
   "blockers": [],
   "open_questions_for_eva": [],
@@ -345,8 +353,8 @@
       "constructor_ergonomics": "Accepted (audit #20). Options object for >5 optional properties."
     },
     "phases": [
-      {"phase": 0, "name": "Restructure to polyglot dirs (v1.x)", "status": "merged", "issue": 262, "pr": 263, "merged_at": "2026-03-01T02:23:00Z", "qc_validation": "pending (QC-REQUEST #265)"},
-      {"phase": 1, "name": "TypeScript scaffold", "status": "blocked_on_qc_validation"},
+      {"phase": 0, "name": "Restructure to polyglot dirs (v1.x)", "status": "complete", "issue": 262, "pr": 263, "merged_at": "2026-03-01T02:23:00Z", "qc_validation": "passed (QC #114, 2026-03-01T04:43Z)"},
+      {"phase": 1, "name": "TypeScript scaffold", "status": "dispatched", "issue": 269, "dispatched_at": "2026-03-01T05:08:00Z"},
       {"phase": 2, "name": "Enum & shared sub-type port", "status": "planned"},
       {"phase": 3, "name": "Schema type port", "status": "planned"},
       {"phase": 4, "name": "Build, test, publish", "status": "planned"}
@@ -361,9 +369,9 @@
     }
   },
   "last_cycle": {
-    "issue": 266,
-    "timestamp": "2026-03-01T03:52:00Z",
-    "summary": "Cycle 74: Processed audit #23 (QC path pattern, acknowledged), #24 (comment signing, accepted+implemented). Phase 1 spec prepared. QC-REQUEST #265 still pending. Closed #261, #267."
+    "issue": 268,
+    "timestamp": "2026-03-01T05:10:00Z",
+    "summary": "Cycle 75: QC-REQUEST #265 validated (Phase 0 gate cleared). Phase 1 TypeScript scaffold dispatched (#269, gpt-5.3-codex). AGENTS-ts.md updated to match approved plan layout."
   },
   "consecutive_idle_cycles": 0,
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24],

@@ -7,6 +7,12 @@ This file supplements the main `AGENTS.md` with TypeScript-specific conventions.
 ## Repository Structure (polyglot layout)
 
 ```
+# Root-level config (alongside composer.json)
+package.json              # @evabee/schema-org-json-ld
+tsconfig.json             # TypeScript compiler config
+biome.json                # Biome linter/formatter config
+
+# TypeScript source and build config
 ts/
   src/
     schema/           # Schema type classes (Product, Offer, Brand, etc.)
@@ -17,10 +23,8 @@ ts/
   test/
     schema/           # Vitest tests per schema type
     samples/          # Sample JSON-LD output files
-  tsconfig.json
-  tsup.config.ts
-  biome.json
-  vitest.config.ts
+  tsup.config.ts          # Build tool config (dual ESM/CJS)
+  vitest.config.ts        # Test framework config
 ```
 
 - **Module format**: ESM-first, dual ESM/CJS via tsup
