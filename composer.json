@@ -21,7 +21,7 @@
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "EvaLok\\SchemaOrgJsonLd\\": "src/"
+            "EvaLok\\SchemaOrgJsonLd\\": "php/src/"
         }
     },
     "authors": [
@@ -39,7 +39,7 @@
         "phpstan/phpstan": "^2.0"
     },
 	"scripts": {
-		"test-unit": "phpunit --bootstrap vendor/autoload.php test/unit",
+		"test-unit": "phpunit --bootstrap vendor/autoload.php php/test/unit",
 		"cs-check": "php-cs-fixer fix --dry-run --diff",
 		"cs-fix": "php-cs-fixer fix",
 		"phpstan": "phpstan analyse"

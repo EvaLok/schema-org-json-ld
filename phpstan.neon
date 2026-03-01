@@ -1,7 +1,7 @@
 parameters:
 	level: 9
 	paths:
-		- src
+		- php/src
 	ignoreErrors:
 		- message: '#Access to an undefined property UnitEnum::\$value#'
-		  path: src/v1/JsonLdGenerator.php
+		  path: php/src/v1/JsonLdGenerator.php
