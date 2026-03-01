@@ -31,7 +31,7 @@ export interface RecipeOptions {
 	review?: Review | readonly Review[] | null;
 	video?: VideoObject | null;
 	expires?: string | null;
-	hasPart?: readonly Clip[] | null;
+	hasPart?: readonly (Clip | HowToSection)[] | null;
 	publication?: BroadcastEvent | null;
 	ineligibleRegion?: string | null;
 	interactionStatistic?:
@@ -64,7 +64,7 @@ export class Recipe extends TypedSchema {
 	public readonly review: Review | readonly Review[] | null;
 	public readonly video: VideoObject | null;
 	public readonly expires: string | null;
-	public readonly hasPart: readonly Clip[] | null;
+	public readonly hasPart: readonly (Clip | HowToSection)[] | null;
 	public readonly publication: BroadcastEvent | null;
 	public readonly ineligibleRegion: string | null;
 	public readonly interactionStatistic:
