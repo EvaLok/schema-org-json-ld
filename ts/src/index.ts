@@ -1,6 +1,15 @@
 export { JsonLdGenerator } from "./JsonLdGenerator.js";
 export { TypedSchema } from "./TypedSchema.js";
+export { AdministrativeArea } from "./schema/AdministrativeArea.js";
 export { Brand } from "./schema/Brand.js";
+export { ContactPoint } from "./schema/ContactPoint.js";
+export { GeoCoordinates } from "./schema/GeoCoordinates.js";
+export { GeoShape } from "./schema/GeoShape.js";
+export { MonetaryAmount } from "./schema/MonetaryAmount.js";
+export { PostalAddress } from "./schema/PostalAddress.js";
+export { PropertyValue } from "./schema/PropertyValue.js";
+export { QuantitativeValue } from "./schema/QuantitativeValue.js";
+export { Rating } from "./schema/Rating.js";
 export { DayOfWeek } from "./enum/DayOfWeek.js";
 export { EventAttendanceModeEnumeration } from "./enum/EventAttendanceModeEnumeration.js";
 export { EventStatusType } from "./enum/EventStatusType.js";
