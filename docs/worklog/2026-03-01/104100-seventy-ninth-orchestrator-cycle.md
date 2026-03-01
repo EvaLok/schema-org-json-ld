@@ -2,7 +2,7 @@
 
 ## Summary
 
-Phase 3b-3d all merged (23 types total). Phase 3e spec written and dispatched (9 types). Comprehensive dependency analysis completed for all remaining PHP types — organized into 4 batches (3d-3g). 68 TS modules on master.
+Phase 3b-3e all merged (32 types total). Phase 3f spec written and dispatched (10 types). Comprehensive dependency analysis completed for all remaining PHP types — organized into 4 batches (3d-3g). 77 TS modules on master.
 
 ## Startup checklist results
 
@@ -57,12 +57,23 @@ Comprehensive analysis of all remaining PHP schema types not yet ported to TypeS
 - Minor barrel file ordering note (ShippingService/ShippingRateSettings) — non-functional, will fix in Phase 3e
 - Merged at ~11:19 UTC. Issue [#289](https://github.com/EvaLok/schema-org-json-ld/issues/289) closed.
 
-### Phase 3e: SPEC WRITTEN AND DISPATCHED
+### Phase 3e: DISPATCHED, REVIEWED, MERGED
 
-- Spec: `docs/draft-phase-3e-level5-6.json`
-- Issue [#291](https://github.com/EvaLok/schema-org-json-ld/issues/291) created and assigned to Copilot
+- Issue [#291](https://github.com/EvaLok/schema-org-json-ld/issues/291) -> PR [#292](https://github.com/EvaLok/schema-org-json-ld/pull/292)
 - 9 Level 5-6 types: EmployerAggregateRating, JobPosting, Certification, ImageObject, Review, Answer, CourseInstance, ProfilePage, Dataset
 - 3 use options object (JobPosting, ImageObject, Dataset), 6 use positional
+- Copilot finished in ~7 min, CI green, parallel review APPROVE
+- Minor barrel file ordering note (ProfilePage/PostalAddress) — non-functional, will fix in Phase 3f
+- Merged at ~11:31 UTC. Issue [#291](https://github.com/EvaLok/schema-org-json-ld/issues/291) closed.
+
+### Phase 3f: SPEC WRITTEN AND DISPATCHED
+
+- Spec: `docs/draft-phase-3f-level7.json`
+- Issue [#293](https://github.com/EvaLok/schema-org-json-ld/issues/293) created and assigned to Copilot
+- 10 Level-7 types: Question, Comment, Article, Event, SoftwareApplication, Movie, LocalBusiness, Course, Recipe, VacationRental
+- ALL 10 use options object pattern (all have >5 optional properties)
+- Notable: Comment and LocalBusiness have self-referential properties
+- Recipe is largest (21 optional properties)
 - Copilot working
 
 ## Current state
@@ -71,14 +82,15 @@ Comprehensive analysis of all remaining PHP schema types not yet ported to TypeS
 - **Phase 3b**: COMPLETE (9 Level-1 types)
 - **Phase 3c**: COMPLETE (8 Level-2 types)
 - **Phase 3d**: COMPLETE (6 Level 3-5 types)
-- **Phase 3e**: IN-FLIGHT ([#291](https://github.com/EvaLok/schema-org-json-ld/issues/291), Copilot working)
-- **Phase 3f-3g**: PLANNED (22 types across 2 batches)
+- **Phase 3e**: COMPLETE (9 Level 5-6 types)
+- **Phase 3f**: IN-FLIGHT ([#293](https://github.com/EvaLok/schema-org-json-ld/issues/293), Copilot working)
+- **Phase 3g**: PLANNED (12 Level 8+ types)
 - **Agent sessions**: 1/2
-- **TS types on master**: 54 schema + 12 enums + JsonLdGenerator + TypedSchema = 68 modules
+- **TS types on master**: 63 schema + 12 enums + JsonLdGenerator + TypedSchema = 77 modules
 
 ## Next steps
 
-1. **Review Phase 3e PR** when Copilot finishes
-2. **After 3e merges**: Dispatch Phase 3f (10 types)
-3. **Write Phase 3f spec** — can do during 3e review
-4. **Continue sequential dispatch** through remaining phases
+1. **Review Phase 3f PR** when Copilot finishes
+2. **After 3f merges**: Dispatch Phase 3g (12 types, final batch)
+3. **Write Phase 3g spec** — can do during 3f review
+4. **Phase 4**: Build, test, publish after all types ported
