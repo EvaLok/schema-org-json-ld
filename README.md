@@ -2143,7 +2143,7 @@ composer run cs-fix
 composer run cs-check
 ```
 
-See the [test/unit](https://github.com/EvaLok/schema-org-json-ld/tree/master/test/unit) directory for the full test suite.
+See the [php/test/unit](https://github.com/EvaLok/schema-org-json-ld/tree/master/php/test/unit) directory for the full test suite.
 
 ---
 
@@ -2178,8 +2178,8 @@ These properties are defined on schema.org and are correctly serialized by this 
 Contributions are welcome! Please:
 
 1. Fork the repository and create a feature branch.
-2. Add or update schema classes in `src/v1/Schema/`.
-3. Write tests in `test/unit/` — see existing tests for the pattern.
+2. Add or update schema classes in `php/src/v1/Schema/`.
+3. Write tests in `php/test/unit/` — see existing tests for the pattern.
 4. Run `composer run cs-fix` to fix code style.
 5. Run `composer run test-unit` to ensure all tests pass.
 6. Open a pull request with a clear description of the change.
