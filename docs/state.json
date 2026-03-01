@@ -274,6 +274,12 @@
         "pr": 270,
         "issue": 269,
         "merged_at": "2026-03-01T08:50:04Z"
+      },
+      {
+        "description": "Add verify-build artifact smoke test (audit #39)",
+        "pr": 317,
+        "issue": 316,
+        "merged_at": "2026-03-01T22:43:20Z"
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
@@ -452,7 +458,9 @@
       "title": "Add build-artifact smoke test (verify-build script)",
       "dispatched_at": "2026-03-01T21:08:00Z",
       "model": "gpt-5.3-codex",
-      "status": "dispatched",
+      "status": "merged",
+      "pr": 317,
+      "merged_at": "2026-03-01T22:43:20Z",
       "audit_inbound": 315,
       "note": "Per audit #39. Validates npm pack tarball: ESM + CJS imports + JSON-LD output."
     }
@@ -503,7 +511,7 @@
       "barrel_file_conflicts": "Accepted (audit #29). Sequential dispatch for Phase 2. STARTUP_CHECKLIST Step 8 updated.",
       "qc_exit_criteria": "Accepted (audit #35). Definition of Done posted on QC-REQUEST #299. STARTUP_CHECKLIST Step 4 updated.",
       "class_inventory_reconciliation": "Accepted (audit #37). Step 5.6 added to STARTUP_CHECKLIST. QAPage + Restaurant dispatch #311.",
-      "build_artifact_validation": "Accepted (audit #39). Dispatched #316 for verify-build script. Audit-inbound #315."
+      "build_artifact_validation": "COMPLETE (audit #39). PR #317 merged 22:43Z. verify-build script validates ESM+CJS+JSON-LD from packed tarball. Audit-inbound #315 closed."
     },
     "phases": [
       {"phase": 0, "name": "Restructure to polyglot dirs (v1.x)", "status": "complete", "issue": 262, "pr": 263, "merged_at": "2026-03-01T02:23:00Z", "qc_validation": "passed (QC #114, 2026-03-01T04:43Z)"},
@@ -522,9 +530,9 @@
     }
   },
   "last_cycle": {
-    "issue": 314,
-    "timestamp": "2026-03-01T21:08:00Z",
-    "summary": "Cycle 86: Accepted audit #39 (build-artifact validation). Dispatched #316 to create verify-build smoke test. Audit-inbound #315 created."
+    "issue": 318,
+    "timestamp": "2026-03-01T22:40:00Z",
+    "summary": "Cycle 87: Reviewed and merged PR #317 (verify-build script, audit #39). Audit-inbound #315 closed. All Phase 4 blockers remain on Eva (PR #305 + NPM_TOKEN)."
   },
   "consecutive_idle_cycles": 0,
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39],
