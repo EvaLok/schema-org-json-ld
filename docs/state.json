@@ -376,6 +376,15 @@
       "title": "Phase 3d: Port 6 schema types (Level 3-5)",
       "dispatched_at": "2026-03-01T11:08:00Z",
       "model": "gpt-5.3-codex",
+      "status": "merged",
+      "pr": 290,
+      "merged_at": "2026-03-01T11:19:35Z"
+    },
+    {
+      "issue": 291,
+      "title": "Phase 3e: Port 9 schema types (Level 5-6)",
+      "dispatched_at": "2026-03-01T11:20:00Z",
+      "model": "gpt-5.3-codex",
       "status": "dispatched",
       "pr": null
     }
@@ -428,7 +437,7 @@
       {"phase": 0, "name": "Restructure to polyglot dirs (v1.x)", "status": "complete", "issue": 262, "pr": 263, "merged_at": "2026-03-01T02:23:00Z", "qc_validation": "passed (QC #114, 2026-03-01T04:43Z)"},
       {"phase": 1, "name": "TypeScript scaffold", "status": "complete", "issue": 269, "pr": 270, "merged_at": "2026-03-01T08:50:04Z", "ci_verified": "TypeScript CI success on master push (08:50:06Z)"},
       {"phase": 2, "name": "Enum & shared sub-type port", "status": "complete", "dispatch_strategy": "sequential (per audit #29)", "decomposition": {"2a": {"description": "All 12 enums (1 session)", "status": "merged", "issue": 276, "pr": 277, "merged_at": "2026-03-01T09:17:42Z"}, "2b": {"description": "Leaf sub-types batch 1 (9 types)", "status": "merged", "issue": 278, "pr": 279, "merged_at": "2026-03-01T09:26:06Z"}, "2c": {"description": "Leaf sub-types batch 2 (9 types)", "status": "merged", "issue": 280, "pr": 281, "merged_at": "2026-03-01T09:36:17Z"}}},
-      {"phase": 3, "name": "Schema type port", "status": "in_progress", "dispatch_strategy": "sequential (per audit #29)", "decomposition": {"3a": {"description": "Level-0 types (12 types, no schema deps)", "status": "merged", "issue": 282, "pr": 283, "merged_at": "2026-03-01T09:47:23Z"}, "3b": {"description": "Level-1 types (9 types, deps on ported types)", "status": "merged", "issue": 284, "pr": 285, "merged_at": "2026-03-01T10:49:00Z"}, "3c": {"description": "Level-2 types (8 types, deps on L0/L1)", "status": "merged", "issue": 287, "pr": 288, "merged_at": "2026-03-01T11:07:00Z"}, "3d": {"description": "Level 3-5 types (6 types: VideoObject, MathSolver, ShippingService, Offer, Organization, Person)", "status": "dispatched", "issue": 289, "spec": "docs/draft-phase-3d-level3-5.json"}, "3e": {"description": "Level 5-6 types (9 types: EmployerAggregateRating, JobPosting, Certification, ImageObject, Review, Answer, CourseInstance, ProfilePage, Dataset)", "status": "planned"}, "3f": {"description": "Level 7 types (10 types: Question, Comment, Article, Event, SoftwareApplication, Movie, LocalBusiness, Course, Recipe, VacationRental)", "status": "planned"}, "3g": {"description": "Level 8+ types (12 types: BlogPosting, NewsArticle, DiscussionForumPosting, FAQPage, Quiz, MobileApplication, WebApplication, FoodEstablishment, Store, Product, ProductGroup + inheritance)", "status": "planned"}}},
+      {"phase": 3, "name": "Schema type port", "status": "in_progress", "dispatch_strategy": "sequential (per audit #29)", "decomposition": {"3a": {"description": "Level-0 types (12 types, no schema deps)", "status": "merged", "issue": 282, "pr": 283, "merged_at": "2026-03-01T09:47:23Z"}, "3b": {"description": "Level-1 types (9 types, deps on ported types)", "status": "merged", "issue": 284, "pr": 285, "merged_at": "2026-03-01T10:49:00Z"}, "3c": {"description": "Level-2 types (8 types, deps on L0/L1)", "status": "merged", "issue": 287, "pr": 288, "merged_at": "2026-03-01T11:07:00Z"}, "3d": {"description": "Level 3-5 types (6 types: VideoObject, MathSolver, ShippingService, Offer, Organization, Person)", "status": "merged", "issue": 289, "pr": 290, "merged_at": "2026-03-01T11:19:35Z"}, "3e": {"description": "Level 5-6 types (9 types: EmployerAggregateRating, JobPosting, Certification, ImageObject, Review, Answer, CourseInstance, ProfilePage, Dataset)", "status": "dispatched", "issue": 291, "spec": "docs/draft-phase-3e-level5-6.json"}, "3f": {"description": "Level 7 types (10 types: Question, Comment, Article, Event, SoftwareApplication, Movie, LocalBusiness, Course, Recipe, VacationRental)", "status": "planned"}, "3g": {"description": "Level 8+ types (12 types: BlogPosting, NewsArticle, DiscussionForumPosting, FAQPage, Quiz, MobileApplication, WebApplication, FoodEstablishment, Store, Product, ProductGroup + inheritance)", "status": "planned"}}},
       {"phase": 4, "name": "Build, test, publish", "status": "planned"}
     ]
   },
@@ -475,12 +484,17 @@
     "3c_merged": true,
     "3d": "docs/draft-phase-3d-level3-5.json",
     "3d_dispatched": true,
-    "3d_issue": 289
+    "3d_issue": 289,
+    "3d_pr": 290,
+    "3d_merged": true,
+    "3e": "docs/draft-phase-3e-level5-6.json",
+    "3e_dispatched": true,
+    "3e_issue": 291
   },
   "last_cycle": {
     "issue": 286,
-    "timestamp": "2026-03-01T10:55:00Z",
-    "summary": "Cycle 79: Phase 3b merged (9 L1), Phase 3c merged (8 L2), Phase 3d dispatched (6 L3-5). 62 TS modules on master. 37 types remaining across 3e-3g."
+    "timestamp": "2026-03-01T11:20:00Z",
+    "summary": "Cycle 79: Phase 3b-3d merged (23 types), Phase 3e dispatched (9 L5-6). 68 TS modules on master. 31 types remaining across 3e-3g."
   },
   "consecutive_idle_cycles": 0,
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29],
