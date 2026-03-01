@@ -304,7 +304,19 @@
       "ts": "ts/src/, ts/test/",
       "restructured_at": "2026-03-01T02:23:00Z",
       "ts_scaffold_at": "2026-03-01T08:50:04Z",
+      "ts_port_complete_at": "2026-03-01T12:11:00Z",
       "pr": 263
+    },
+    "typescript_stats": {
+      "schema_types": 84,
+      "enums": 12,
+      "core_modules": 2,
+      "total_modules": 98,
+      "port_complete": true,
+      "port_duration": "~3.5 hours (08:50-12:11 UTC)",
+      "prs_merged": 11,
+      "agent_sessions": 11,
+      "zero_revision_rounds": true
     }
   },
   "agent_sessions": [
@@ -403,12 +415,21 @@
       "title": "Phase 3g: Port 11 schema types (Level 8+, final batch)",
       "dispatched_at": "2026-03-01T11:47:00Z",
       "model": "gpt-5.3-codex",
+      "status": "merged",
+      "pr": 296,
+      "merged_at": "2026-03-01T12:11:00Z"
+    },
+    {
+      "issue": 300,
+      "title": "Phase 4a: npm package polish (metadata, README, build verification)",
+      "dispatched_at": "2026-03-01T12:14:00Z",
+      "model": "gpt-5.3-codex",
       "status": "dispatched",
       "pr": null
     }
   ],
   "qc_processed": [8, 37, 57, 72, 165],
-  "qc_requests_pending": [],
+  "qc_requests_pending": [299],
   "qc_status": {
     "request_165": "COMPLETE. QC issue #41 closed. 39/39 E2E pass, 0 errors, 158 warnings. @graph API also validated.",
     "report_57": "ALL FIXES MERGED AND VALIDATED. PRs #198, #199. QC-63 confirmed: 39/39 E2E pass, 0 errors, 19 warnings.",
@@ -455,8 +476,8 @@
       {"phase": 0, "name": "Restructure to polyglot dirs (v1.x)", "status": "complete", "issue": 262, "pr": 263, "merged_at": "2026-03-01T02:23:00Z", "qc_validation": "passed (QC #114, 2026-03-01T04:43Z)"},
       {"phase": 1, "name": "TypeScript scaffold", "status": "complete", "issue": 269, "pr": 270, "merged_at": "2026-03-01T08:50:04Z", "ci_verified": "TypeScript CI success on master push (08:50:06Z)"},
       {"phase": 2, "name": "Enum & shared sub-type port", "status": "complete", "dispatch_strategy": "sequential (per audit #29)", "decomposition": {"2a": {"description": "All 12 enums (1 session)", "status": "merged", "issue": 276, "pr": 277, "merged_at": "2026-03-01T09:17:42Z"}, "2b": {"description": "Leaf sub-types batch 1 (9 types)", "status": "merged", "issue": 278, "pr": 279, "merged_at": "2026-03-01T09:26:06Z"}, "2c": {"description": "Leaf sub-types batch 2 (9 types)", "status": "merged", "issue": 280, "pr": 281, "merged_at": "2026-03-01T09:36:17Z"}}},
-      {"phase": 3, "name": "Schema type port", "status": "in_progress", "dispatch_strategy": "sequential (per audit #29)", "decomposition": {"3a": {"description": "Level-0 types (12 types, no schema deps)", "status": "merged", "issue": 282, "pr": 283, "merged_at": "2026-03-01T09:47:23Z"}, "3b": {"description": "Level-1 types (9 types, deps on ported types)", "status": "merged", "issue": 284, "pr": 285, "merged_at": "2026-03-01T10:49:00Z"}, "3c": {"description": "Level-2 types (8 types, deps on L0/L1)", "status": "merged", "issue": 287, "pr": 288, "merged_at": "2026-03-01T11:07:00Z"}, "3d": {"description": "Level 3-5 types (6 types: VideoObject, MathSolver, ShippingService, Offer, Organization, Person)", "status": "merged", "issue": 289, "pr": 290, "merged_at": "2026-03-01T11:19:35Z"}, "3e": {"description": "Level 5-6 types (9 types: EmployerAggregateRating, JobPosting, Certification, ImageObject, Review, Answer, CourseInstance, ProfilePage, Dataset)", "status": "merged", "issue": 291, "pr": 292, "merged_at": "2026-03-01T11:31:02Z"}, "3f": {"description": "Level 7 types (10 types: Question, Comment, Article, Event, SoftwareApplication, Movie, LocalBusiness, Course, Recipe, VacationRental)", "status": "merged", "issue": 293, "pr": 294, "merged_at": "2026-03-01T11:46:07Z"}, "3g": {"description": "Level 8+ types (11 types: FAQPage, Quiz, BlogPosting, NewsArticle, MobileApplication, WebApplication, FoodEstablishment, Store, DiscussionForumPosting, ProductGroup, Product)", "status": "dispatched", "issue": 295, "spec": "docs/draft-phase-3g-level8.json"}, "3g": {"description": "Level 8+ types (12 types: BlogPosting, NewsArticle, DiscussionForumPosting, FAQPage, Quiz, MobileApplication, WebApplication, FoodEstablishment, Store, Product, ProductGroup + inheritance)", "status": "planned"}}},
-      {"phase": 4, "name": "Build, test, publish", "status": "planned"}
+      {"phase": 3, "name": "Schema type port", "status": "complete", "dispatch_strategy": "sequential (per audit #29)", "decomposition": {"3a": {"description": "Level-0 types (12 types, no schema deps)", "status": "merged", "issue": 282, "pr": 283, "merged_at": "2026-03-01T09:47:23Z"}, "3b": {"description": "Level-1 types (9 types, deps on ported types)", "status": "merged", "issue": 284, "pr": 285, "merged_at": "2026-03-01T10:49:00Z"}, "3c": {"description": "Level-2 types (8 types, deps on L0/L1)", "status": "merged", "issue": 287, "pr": 288, "merged_at": "2026-03-01T11:07:00Z"}, "3d": {"description": "Level 3-5 types (6 types: VideoObject, MathSolver, ShippingService, Offer, Organization, Person)", "status": "merged", "issue": 289, "pr": 290, "merged_at": "2026-03-01T11:19:35Z"}, "3e": {"description": "Level 5-6 types (9 types: EmployerAggregateRating, JobPosting, Certification, ImageObject, Review, Answer, CourseInstance, ProfilePage, Dataset)", "status": "merged", "issue": 291, "pr": 292, "merged_at": "2026-03-01T11:31:02Z"}, "3f": {"description": "Level 7 types (10 types: Question, Comment, Article, Event, SoftwareApplication, Movie, LocalBusiness, Course, Recipe, VacationRental)", "status": "merged", "issue": 293, "pr": 294, "merged_at": "2026-03-01T11:46:07Z"}, "3g": {"description": "Level 8+ types (11 types with inheritance)", "status": "merged", "issue": 295, "pr": 296, "merged_at": "2026-03-01T12:11:00Z"}}},
+      {"phase": 4, "name": "Build, test, publish", "status": "in_progress", "decomposition": {"4a": {"description": "npm package polish (metadata, README, build verification)", "status": "dispatched", "issue": 300}, "4b": {"description": "npm publish workflow (needs Eva)", "status": "planned"}, "4c": {"description": "npm publish (after QC validation)", "status": "planned"}}}
     ]
   },
   "release": {
@@ -520,12 +541,12 @@
     "3g_issue": 295
   },
   "last_cycle": {
-    "issue": 286,
-    "timestamp": "2026-03-01T11:47:00Z",
-    "summary": "Cycle 79: Phase 3b-3f merged (42 types), Phase 3g dispatched (11, final batch). 87 TS modules on master. 11 types remaining in 3g."
+    "issue": 297,
+    "timestamp": "2026-03-01T12:06:00Z",
+    "summary": "Cycle 80: Phase 3g merged (11 types with inheritance) — Phase 3 COMPLETE. All 98 PHP types ported to TypeScript. QC-REQUEST #299 sent. Audit #32 accepted. Phase 4a (package polish) dispatched."
   },
   "consecutive_idle_cycles": 0,
-  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29],
+  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32],
   "test_count": 321,
   "total_schema_types": 28,
   "total_sub_types": 101,
