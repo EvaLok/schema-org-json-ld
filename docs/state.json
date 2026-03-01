@@ -340,6 +340,24 @@
       "title": "Phase 2c: Port leaf sub-types batch 2 (9 types)",
       "dispatched_at": "2026-03-01T09:27:00Z",
       "model": "gpt-5.3-codex",
+      "status": "merged",
+      "pr": 281,
+      "merged_at": "2026-03-01T09:36:17Z"
+    },
+    {
+      "issue": 282,
+      "title": "Phase 3a: Port 12 Level-0 schema types (no schema deps)",
+      "dispatched_at": "2026-03-01T09:39:00Z",
+      "model": "gpt-5.3-codex",
+      "status": "merged",
+      "pr": 283,
+      "merged_at": "2026-03-01T09:47:23Z"
+    },
+    {
+      "issue": 284,
+      "title": "Phase 3b: Port 9 Level-1 schema types",
+      "dispatched_at": "2026-03-01T09:48:00Z",
+      "model": "gpt-5.3-codex",
       "status": "dispatched",
       "pr": null
     }
@@ -391,8 +409,8 @@
     "phases": [
       {"phase": 0, "name": "Restructure to polyglot dirs (v1.x)", "status": "complete", "issue": 262, "pr": 263, "merged_at": "2026-03-01T02:23:00Z", "qc_validation": "passed (QC #114, 2026-03-01T04:43Z)"},
       {"phase": 1, "name": "TypeScript scaffold", "status": "complete", "issue": 269, "pr": 270, "merged_at": "2026-03-01T08:50:04Z", "ci_verified": "TypeScript CI success on master push (08:50:06Z)"},
-      {"phase": 2, "name": "Enum & shared sub-type port", "status": "in_progress", "dispatch_strategy": "sequential (per audit #29)", "decomposition": {"2a": {"description": "All 12 enums (1 session)", "status": "merged", "issue": 276, "pr": 277, "merged_at": "2026-03-01T09:17:42Z"}, "2b": {"description": "Leaf sub-types batch 1 (9 types)", "status": "merged", "issue": 278, "pr": 279, "merged_at": "2026-03-01T09:26:06Z"}, "2c": {"description": "Leaf sub-types batch 2 (9 types)", "status": "dispatched", "issue": 280}}},
-      {"phase": 3, "name": "Schema type port", "status": "planned"},
+      {"phase": 2, "name": "Enum & shared sub-type port", "status": "complete", "dispatch_strategy": "sequential (per audit #29)", "decomposition": {"2a": {"description": "All 12 enums (1 session)", "status": "merged", "issue": 276, "pr": 277, "merged_at": "2026-03-01T09:17:42Z"}, "2b": {"description": "Leaf sub-types batch 1 (9 types)", "status": "merged", "issue": 278, "pr": 279, "merged_at": "2026-03-01T09:26:06Z"}, "2c": {"description": "Leaf sub-types batch 2 (9 types)", "status": "merged", "issue": 280, "pr": 281, "merged_at": "2026-03-01T09:36:17Z"}}},
+      {"phase": 3, "name": "Schema type port", "status": "in_progress", "dispatch_strategy": "sequential (per audit #29)", "decomposition": {"3a": {"description": "Level-0 types (12 types, no schema deps)", "status": "merged", "issue": 282, "pr": 283, "merged_at": "2026-03-01T09:47:23Z"}, "3b": {"description": "Level-1 types (9 types, deps on ported types)", "status": "dispatched", "issue": 284}, "3c": {"description": "Level-2 types (8 types, deps on L0/L1)", "status": "spec_ready", "spec": "docs/draft-phase-3c-level2.json"}}},
       {"phase": 4, "name": "Build, test, publish", "status": "planned"}
     ]
   },
@@ -417,12 +435,25 @@
     "2b_pr": 279,
     "2b_merged": true,
     "2c_dispatched": true,
-    "2c_issue": 280
+    "2c_issue": 280,
+    "2c_pr": 281,
+    "2c_merged": true
+  },
+  "phase_3_draft_specs": {
+    "3a": "docs/.tmp-dispatch-3a.json",
+    "3a_dispatched": true,
+    "3a_issue": 282,
+    "3a_pr": 283,
+    "3a_merged": true,
+    "3b": "docs/draft-phase-3b-level1.json",
+    "3b_dispatched": true,
+    "3b_issue": 284,
+    "3c": "docs/draft-phase-3c-level2.json"
   },
   "last_cycle": {
     "issue": 274,
-    "timestamp": "2026-03-01T09:07:43Z",
-    "summary": "Cycle 78: Phase 1 merged. Audit #29 accepted. Phase 2a+2b dispatched/reviewed/merged. Phase 2c dispatched (#280). 30 TS types total (12 enums + 10 schema + Brand + JsonLdGenerator + TypedSchema)."
+    "timestamp": "2026-03-01T09:55:00Z",
+    "summary": "Cycle 78 (extended): Phase 2 COMPLETE (2c merged). Phase 3 begun: 3a (12 Level-0 types) dispatched/reviewed/merged, 3b (9 Level-1 types) dispatched and in-flight. 45 TS modules on master total."
   },
   "consecutive_idle_cycles": 0,
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29],

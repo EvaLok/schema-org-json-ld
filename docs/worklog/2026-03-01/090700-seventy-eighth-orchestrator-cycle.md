@@ -2,7 +2,7 @@
 
 ## Summary
 
-Most productive cycle to date. Phase 1 TypeScript scaffold merged by Eva. Audit #29 accepted (sequential dispatch). Phase 2a (12 enums) and Phase 2b (9 leaf sub-types) both dispatched, reviewed, and merged within the same cycle. Phase 2c dispatched and in-flight at cycle end.
+Most productive cycle to date. Phase 1 TypeScript scaffold merged by Eva. Audit #29 accepted (sequential dispatch). Phase 2 fully completed (2a/2b/2c all merged). Phase 3 begun with dependency analysis and first batch dispatched. 30 new TypeScript types on master this cycle.
 
 ## Startup checklist results
 
@@ -38,16 +38,34 @@ Parallel dispatch causes barrel file merge conflicts. Changed to sequential disp
 - 9 schema files + 9 test files + barrel update = 19 files
 - Copilot finished in ~6 min, CI green, merged at 09:26 UTC
 
-### Phase 2c: DISPATCHED
+### Phase 2c: DISPATCHED, REVIEWED, MERGED
 
-- Issue [#280](https://github.com/EvaLok/schema-org-json-ld/issues/280) — 9 more leaf sub-types
-- Model: gpt-5.3-codex
-- In-flight at cycle end
+- Issue [#280](https://github.com/EvaLok/schema-org-json-ld/issues/280) → PR [#281](https://github.com/EvaLok/schema-org-json-ld/issues/281)
+- 9 leaf sub-types: LocationFeatureSpecification, AlignmentObject, SizeSpecification, SpeakableSpecification, WebPageElement, BedDetails, DataCatalog, DataDownload, VirtualLocation
+- 9 schema files + 9 test files + barrel update = 19 files
+- Copilot finished in ~5 min, CI green, merged at 09:36 UTC
+
+**Phase 2: COMPLETE.** All 30 types merged (12 enums + 18 leaf sub-types + Brand).
+
+### Audit-inbound #275: CLOSED
+
+Sequential dispatch verified across all 3 Phase 2 sub-phases. Zero barrel file conflicts. [#275](https://github.com/EvaLok/schema-org-json-ld/issues/275) closed with summary.
+
+### Phase 3: DECOMPOSITION AND DISPATCH
+
+Performed comprehensive dependency analysis of remaining 69 PHP types. Organized into dependency levels:
+
+- **Level 0** (12 types): No schema deps — AggregateOffer, AggregateRating, BroadcastEvent, Clip, DefinedRegion, InteractionCounter, NutritionInformation, PeopleAudience, Schedule, ShippingRateSettings, SolveMathAction, Thing
+- **Level 1** (9 types): Deps on ported types only — Accommodation, HowToStep, HowToSection, ListItem, MerchantReturnPolicySeasonalOverride, OpeningHoursSpecification, Place, ServicePeriod, ShippingDeliveryTime
+- **Level 2** (8 types): Deps on L0/L1 — BreadcrumbList, ItemList, MemberProgramTier, MemberProgram, UnitPriceSpecification, OfferShippingDetails, ShippingConditions, MerchantReturnPolicy
+- **Level 3+** (~40 types): Core composites and final types (Person, Organization, ImageObject, VideoObject, then all top-level types)
+
+Phase 3a dispatched as [#282](https://github.com/EvaLok/schema-org-json-ld/issues/282) (12 Level-0 types). Specs prepared for 3b and 3c.
 
 ### Housekeeping
 
 - Deleted stale branches: `copilot/setup-typescript-infrastructure`, `copilot/port-enums-to-typescript`, `copilot/port-leaf-sub-types-to-typescript`
-- Closed issues: [#269](https://github.com/EvaLok/schema-org-json-ld/issues/269), [#276](https://github.com/EvaLok/schema-org-json-ld/issues/276), [#278](https://github.com/EvaLok/schema-org-json-ld/issues/278)
+- Closed issues: [#269](https://github.com/EvaLok/schema-org-json-ld/issues/269), [#276](https://github.com/EvaLok/schema-org-json-ld/issues/276), [#278](https://github.com/EvaLok/schema-org-json-ld/issues/278), [#280](https://github.com/EvaLok/schema-org-json-ld/issues/280), [#275](https://github.com/EvaLok/schema-org-json-ld/issues/275)
 
 ## Self-modifications
 
@@ -57,14 +75,16 @@ Parallel dispatch causes barrel file merge conflicts. Changed to sequential disp
 
 - **Phase 0**: COMPLETE
 - **Phase 1**: COMPLETE
-- **Phase 2a**: COMPLETE (12 enums merged)
-- **Phase 2b**: COMPLETE (9 leaf sub-types merged)
-- **Phase 2c**: IN-FLIGHT ([#280](https://github.com/EvaLok/schema-org-json-ld/issues/280), Copilot working)
+- **Phase 2**: COMPLETE (12 enums + 18 leaf sub-types merged)
+- **Phase 3a**: IN-FLIGHT ([#282](https://github.com/EvaLok/schema-org-json-ld/issues/282), Copilot working on 12 Level-0 types)
+- **Phase 3b**: SPEC READY (9 Level-1 types)
+- **Phase 3c**: SPEC READY (8 Level-2 types)
 - **Agent sessions**: 1/2
-- **TS types ported so far**: 12 enums + 10 schema types + Brand + JsonLdGenerator + TypedSchema = 25 modules
+- **TS types ported so far**: 12 enums + 19 schema types + JsonLdGenerator + TypedSchema = 33 modules
 
 ## Next steps
 
-1. **Review Phase 2c PR** when Copilot finishes (next cycle)
-2. **After 2c merges**: Plan Phase 3 decomposition (complex schema types with dependencies)
-3. **Close audit-inbound [#275](https://github.com/EvaLok/schema-org-json-ld/issues/275)** after verifying sequential dispatch worked
+1. **Review Phase 3a PR** when Copilot finishes
+2. **After 3a merges**: Dispatch Phase 3b (Level-1 types)
+3. **Continue sequential dispatch** through 3c, 3d, etc.
+4. **Plan Phase 3d+** specs for Level 3+ types (Person, Organization, ImageObject, etc.)
