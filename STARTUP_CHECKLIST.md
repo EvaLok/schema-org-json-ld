@@ -204,6 +204,8 @@ gh pr list --state open --json isDraft,author --jq '[.[] | select(.isDraft and .
 
 Sum these two numbers. Do not dispatch new agent tasks if 2 or more sessions are in-flight.
 
+**Shared file conflict check (per audit #29):** Before dispatching concurrent sessions, identify shared files (barrel exports `index.ts`, `package.json`, `tsconfig.json`) that multiple sessions will modify. If overlap exists, dispatch sequentially — merge the first PR before dispatching the second session. This is especially important for TypeScript barrel files where every session adds exports.
+
 ## 9. Plan session work
 
 Based on the above context:

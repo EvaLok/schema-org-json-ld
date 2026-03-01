@@ -268,6 +268,12 @@
         "pr": 263,
         "issue": 262,
         "merged_at": "2026-03-01T02:23:00Z"
+      },
+      {
+        "description": "Phase 1: TypeScript scaffold (core infrastructure + Brand)",
+        "pr": 270,
+        "issue": 269,
+        "merged_at": "2026-03-01T08:50:04Z"
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
@@ -295,8 +301,9 @@
     },
     "directory_layout": {
       "php": "php/src/, php/test/",
-      "ts": "not yet created (Phase 1)",
+      "ts": "ts/src/, ts/test/",
       "restructured_at": "2026-03-01T02:23:00Z",
+      "ts_scaffold_at": "2026-03-01T08:50:04Z",
       "pr": 263
     }
   },
@@ -306,9 +313,17 @@
       "title": "Phase 1: TypeScript scaffold",
       "dispatched_at": "2026-03-01T05:08:00Z",
       "model": "gpt-5.3-codex",
-      "status": "pr_approved",
+      "status": "merged",
       "pr": 270,
-      "pr_status": "approved, waiting for Eva to merge (workflow file)"
+      "merged_at": "2026-03-01T08:50:04Z"
+    },
+    {
+      "issue": 276,
+      "title": "Phase 2a: Port all 12 enums to TypeScript",
+      "dispatched_at": "2026-03-01T09:11:00Z",
+      "model": "gpt-5.3-codex",
+      "status": "dispatched",
+      "pr": null
     }
   ],
   "qc_processed": [8, 37, 57, 72, 165],
@@ -352,12 +367,13 @@
       "phase_0_qc_checkpoint": "Accepted (audit #15). Phase 0 completion requires QC E2E validation before Phase 1.",
       "ts_guardrails_enumeration": "Accepted (audit #16). AGENTS-ts.md + TS skill complete.",
       "conditional_approval_reconciliation": "Accepted (audit #19). Step 1.5 added to STARTUP_CHECKLIST.",
-      "constructor_ergonomics": "Accepted (audit #20). Options object for >5 optional properties."
+      "constructor_ergonomics": "Accepted (audit #20). Options object for >5 optional properties.",
+      "barrel_file_conflicts": "Accepted (audit #29). Sequential dispatch for Phase 2. STARTUP_CHECKLIST Step 8 updated."
     },
     "phases": [
       {"phase": 0, "name": "Restructure to polyglot dirs (v1.x)", "status": "complete", "issue": 262, "pr": 263, "merged_at": "2026-03-01T02:23:00Z", "qc_validation": "passed (QC #114, 2026-03-01T04:43Z)"},
-      {"phase": 1, "name": "TypeScript scaffold", "status": "pr_approved", "issue": 269, "pr": 270, "dispatched_at": "2026-03-01T05:08:00Z", "approved_at": "2026-03-01T06:18:00Z", "note": "Waiting for Eva to merge (workflow file)"},
-      {"phase": 2, "name": "Enum & shared sub-type port", "status": "planned", "decomposition": {"2a": "All 12 enums (1 session)", "2b": "Leaf sub-types batch 1: PostalAddress, GeoCoordinates, GeoShape, AdministrativeArea, MonetaryAmount, QuantitativeValue, Rating, ContactPoint, PropertyValue (1 session)", "2c": "Leaf sub-types batch 2: LocationFeatureSpecification, AlignmentObject, SizeSpecification, SpeakableSpecification, WebPageElement, BedDetails, DataCatalog, DataDownload, VirtualLocation (1 session)"}},
+      {"phase": 1, "name": "TypeScript scaffold", "status": "complete", "issue": 269, "pr": 270, "merged_at": "2026-03-01T08:50:04Z", "ci_verified": "TypeScript CI success on master push (08:50:06Z)"},
+      {"phase": 2, "name": "Enum & shared sub-type port", "status": "in_progress", "dispatch_strategy": "sequential (per audit #29)", "decomposition": {"2a": {"description": "All 12 enums (1 session)", "status": "dispatched", "issue": 276}, "2b": {"description": "Leaf sub-types batch 1: PostalAddress, GeoCoordinates, GeoShape, AdministrativeArea, MonetaryAmount, QuantitativeValue, Rating, ContactPoint, PropertyValue (1 session)", "status": "blocked_on_2a"}, "2c": {"description": "Leaf sub-types batch 2: LocationFeatureSpecification, AlignmentObject, SizeSpecification, SpeakableSpecification, WebPageElement, BedDetails, DataCatalog, DataDownload, VirtualLocation (1 session)", "status": "blocked_on_2b"}}},
       {"phase": 3, "name": "Schema type port", "status": "planned"},
       {"phase": 4, "name": "Build, test, publish", "status": "planned"}
     ]
@@ -374,16 +390,16 @@
     "2a": "docs/draft-phase-2a-enums.json",
     "2b": "docs/draft-phase-2b-leaf-subtypes.json",
     "2c": "docs/draft-phase-2c-leaf-subtypes-2.json",
-    "ready_to_dispatch": true,
-    "blocked_on": "Phase 1 merge (PR #270)"
+    "2a_dispatched": true,
+    "2a_issue": 276
   },
   "last_cycle": {
-    "issue": 273,
-    "timestamp": "2026-03-01T07:41:00Z",
-    "summary": "Cycle 77: Phase 1 still waiting for Eva merge. Prepared Phase 2a/2b/2c issue specs. Closed audit-inbound #272. No new QC/audit items."
+    "issue": 274,
+    "timestamp": "2026-03-01T09:07:43Z",
+    "summary": "Cycle 78: Phase 1 merged! Audit #29 accepted (sequential dispatch). Phase 2a dispatched (#276). TS CI verified on master."
   },
   "consecutive_idle_cycles": 0,
-  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26],
+  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29],
   "test_count": 321,
   "total_schema_types": 28,
   "total_sub_types": 101,
