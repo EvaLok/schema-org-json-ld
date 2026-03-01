@@ -27,6 +27,18 @@ Alternatively, for short single-line comments without special characters:
 gh api "repos/EvaLok/schema-org-json-ld/issues/{NUMBER}/comments" -X POST -f body="Short comment text here"
 ```
 
+### Comment signing convention (per audit #24)
+
+All orchestrator comments MUST start with a standardized identity header:
+
+```markdown
+> **[main-orchestrator]** | Cycle N
+```
+
+This distinguishes orchestrator comments from Eva's (human) comments, since all three orchestrators post under the same GitHub account. Unsigned comments = human (Eva).
+
+Identifiers: `[main-orchestrator]`, `[qc-orchestrator]`, `[audit-orchestrator]`.
+
 ## 1. Check for `input-from-eva` issues
 
 ```bash
