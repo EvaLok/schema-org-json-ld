@@ -446,6 +446,15 @@
       "status": "merged",
       "pr": 312,
       "merged_at": "2026-03-01T18:18:42Z"
+    },
+    {
+      "issue": 316,
+      "title": "Add build-artifact smoke test (verify-build script)",
+      "dispatched_at": "2026-03-01T21:08:00Z",
+      "model": "gpt-5.3-codex",
+      "status": "dispatched",
+      "audit_inbound": 315,
+      "note": "Per audit #39. Validates npm pack tarball: ESM + CJS imports + JSON-LD output."
     }
   ],
   "qc_processed": [8, 37, 57, 72, 165],
@@ -493,7 +502,8 @@
       "constructor_ergonomics": "Accepted (audit #20). Options object for >5 optional properties.",
       "barrel_file_conflicts": "Accepted (audit #29). Sequential dispatch for Phase 2. STARTUP_CHECKLIST Step 8 updated.",
       "qc_exit_criteria": "Accepted (audit #35). Definition of Done posted on QC-REQUEST #299. STARTUP_CHECKLIST Step 4 updated.",
-      "class_inventory_reconciliation": "Accepted (audit #37). Step 5.6 added to STARTUP_CHECKLIST. QAPage + Restaurant dispatch #311."
+      "class_inventory_reconciliation": "Accepted (audit #37). Step 5.6 added to STARTUP_CHECKLIST. QAPage + Restaurant dispatch #311.",
+      "build_artifact_validation": "Accepted (audit #39). Dispatched #316 for verify-build script. Audit-inbound #315."
     },
     "phases": [
       {"phase": 0, "name": "Restructure to polyglot dirs (v1.x)", "status": "complete", "issue": 262, "pr": 263, "merged_at": "2026-03-01T02:23:00Z", "qc_validation": "passed (QC #114, 2026-03-01T04:43Z)"},
@@ -512,12 +522,12 @@
     }
   },
   "last_cycle": {
-    "issue": 313,
-    "timestamp": "2026-03-01T19:36:00Z",
-    "summary": "Cycle 85: Idle cycle — all blockers external (Eva: PR #305 merge + NPM_TOKEN #304). Housekeeping: removed 10 stale Phase 2-3 draft spec files."
+    "issue": 314,
+    "timestamp": "2026-03-01T21:08:00Z",
+    "summary": "Cycle 86: Accepted audit #39 (build-artifact validation). Dispatched #316 to create verify-build smoke test. Audit-inbound #315 created."
   },
-  "consecutive_idle_cycles": 1,
-  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37],
+  "consecutive_idle_cycles": 0,
+  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39],
   "test_count": 321,
   "total_schema_types": 28,
   "total_sub_types": 101,
