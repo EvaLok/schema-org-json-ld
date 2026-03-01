@@ -42,19 +42,31 @@ Comprehensive analysis of all remaining PHP schema types not yet ported to TypeS
 
 - Deleted stale branches: `copilot/port-leaf-sub-types-batch-2`, `copilot/port-level-0-schema-types`, `copilot/port-schema-types-to-typescript`
 
+### Phase 3c: DISPATCHED, REVIEWED, MERGED
+
+- Issue [#287](https://github.com/EvaLok/schema-org-json-ld/issues/287) -> PR [#288](https://github.com/EvaLok/schema-org-json-ld/issues/288)
+- 8 Level-2 types: MemberProgramTier, MemberProgram, UnitPriceSpecification, OfferShippingDetails, BreadcrumbList, ItemList, ShippingConditions, MerchantReturnPolicy
+- Copilot finished in ~7 min, CI green, review APPROVE, merged at ~11:07 UTC
+
+### Phase 3d: DISPATCHED
+
+- Issue [#289](https://github.com/EvaLok/schema-org-json-ld/issues/289) created
+- 6 types: VideoObject, MathSolver, ShippingService, Offer, Organization, Person
+- Copilot working
+
 ## Current state
 
 - **Phase 3a**: COMPLETE (12 Level-0 types)
 - **Phase 3b**: COMPLETE (9 Level-1 types)
-- **Phase 3c**: IN-FLIGHT ([#287](https://github.com/EvaLok/schema-org-json-ld/issues/287), Copilot working)
-- **Phase 3d**: SPEC READY (6 Level 3-5 types)
+- **Phase 3c**: COMPLETE (8 Level-2 types)
+- **Phase 3d**: IN-FLIGHT ([#289](https://github.com/EvaLok/schema-org-json-ld/issues/289), Copilot working)
 - **Phase 3e-3g**: PLANNED (31 types across 3 batches)
 - **Agent sessions**: 1/2
-- **TS types on master**: 40 schema + 12 enums + JsonLdGenerator + TypedSchema = 54 modules
+- **TS types on master**: 48 schema + 12 enums + JsonLdGenerator + TypedSchema = 62 modules
 
 ## Next steps
 
-1. **Wait for Phase 3c PR** — review and merge when Copilot finishes
-2. **Dispatch Phase 3d** (6 types: VideoObject, MathSolver, ShippingService, Offer, Organization, Person)
-3. **Write Phase 3e spec** (9 types) — can do during 3d review
+1. **Review Phase 3d PR** when Copilot finishes
+2. **After 3d merges**: Dispatch Phase 3e (9 types)
+3. **Write Phase 3e spec** — can do during 3d review
 4. **Continue sequential dispatch** through remaining phases
