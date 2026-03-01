@@ -6,7 +6,7 @@ export interface FoodEstablishmentOptions extends LocalBusinessOptions {
 }
 
 export class FoodEstablishment extends LocalBusiness {
-	static readonly schemaType = "FoodEstablishment";
+	static readonly schemaType: string = "FoodEstablishment";
 
 	public readonly acceptsReservations: boolean | string | null;
 
