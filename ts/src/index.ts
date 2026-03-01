@@ -1,3 +1,15 @@
 export { JsonLdGenerator } from "./JsonLdGenerator.js";
 export { TypedSchema } from "./TypedSchema.js";
 export { Brand } from "./schema/Brand.js";
+export { DayOfWeek } from "./enum/DayOfWeek.js";
+export { EventAttendanceModeEnumeration } from "./enum/EventAttendanceModeEnumeration.js";
+export { EventStatusType } from "./enum/EventStatusType.js";
+export { FulfillmentTypeEnumeration } from "./enum/FulfillmentTypeEnumeration.js";
+export { ItemAvailability } from "./enum/ItemAvailability.js";
+export { MerchantReturnEnumeration } from "./enum/MerchantReturnEnumeration.js";
+export { OfferItemCondition } from "./enum/OfferItemCondition.js";
+export { RefundTypeEnumeration } from "./enum/RefundTypeEnumeration.js";
+export { ReturnFeesEnumeration } from "./enum/ReturnFeesEnumeration.js";
+export { ReturnLabelSourceEnumeration } from "./enum/ReturnLabelSourceEnumeration.js";
+export { ReturnMethodEnumeration } from "./enum/ReturnMethodEnumeration.js";
+export { TierBenefitEnumeration } from "./enum/TierBenefitEnumeration.js";
