@@ -188,6 +188,18 @@ Before dispatching the **first agent session** for a new language (e.g., TypeScr
 
 Do NOT dispatch agent sessions for a new language until these prerequisites are met. The PHP infrastructure (AGENTS.md, skills, QC pipeline) is what produced the 94%+ merge rate — new languages need equivalent guardrails.
 
+## 5.6. Class inventory reconciliation (per audit #37)
+
+After declaring a cross-language port **complete** (or after the final batch of a multi-phase port merges), verify completeness at the directory level:
+
+1. Compare source language class directory against target language class directory
+2. Verify every source class has a target equivalent
+3. Flag any discrepancies before closing the port or publishing
+
+**Why:** Numeric module counts can coincidentally match even when composition differs (e.g., PHP: 86 schema + 12 enums = 98; TS: 84 schema + 12 enums + 2 core = 98). Only a file-level comparison catches missing types.
+
+This step applies to any multi-batch porting effort, not just PHP→TS.
+
 ## 6. Re-examine assumptions
 
 Read your recent journal and worklog entries with fresh eyes:
