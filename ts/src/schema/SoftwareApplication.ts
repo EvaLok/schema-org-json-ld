@@ -16,7 +16,7 @@ export interface SoftwareApplicationOptions {
 }
 
 export class SoftwareApplication extends TypedSchema {
-	static readonly schemaType = "SoftwareApplication";
+	static readonly schemaType: string = "SoftwareApplication";
 
 	public readonly name: string;
 	public readonly offers: Offer | readonly Offer[];

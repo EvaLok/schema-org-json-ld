@@ -19,7 +19,7 @@ export interface ArticleOptions {
 }
 
 export class Article extends TypedSchema {
-	static readonly schemaType = "Article";
+	static readonly schemaType: string = "Article";
 
 	public readonly headline: string;
 	public readonly author:

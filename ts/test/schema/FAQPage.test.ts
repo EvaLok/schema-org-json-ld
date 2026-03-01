@@ -53,7 +53,10 @@ describe("FAQPage", () => {
 			unknown
 		>;
 		const acceptedAnswer = (
-			(obj.mainEntity as Record<string, unknown>[])[0] as Record<string, unknown>
+			(obj.mainEntity as Record<string, unknown>[])[0] as Record<
+				string,
+				unknown
+			>
 		).acceptedAnswer as Record<string, unknown>;
 
 		expect(acceptedAnswer["@type"]).toBe("Answer");

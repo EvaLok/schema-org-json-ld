@@ -26,7 +26,7 @@ export interface LocalBusinessOptions {
 }
 
 export class LocalBusiness extends TypedSchema {
-	static readonly schemaType = "LocalBusiness";
+	static readonly schemaType: string = "LocalBusiness";
 
 	public readonly name: string;
 	public readonly address: PostalAddress;

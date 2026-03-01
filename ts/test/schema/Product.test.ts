@@ -127,7 +127,10 @@ describe("Product", () => {
 			offers: [offer],
 			review: [new Review("Jane", new Rating(5))],
 			hasCertification: [
-				new Certification("Eco Certified", new Organization({ name: "Cert Org" })),
+				new Certification(
+					"Eco Certified",
+					new Organization({ name: "Cert Org" }),
+				),
 			],
 			size: "M",
 		});
