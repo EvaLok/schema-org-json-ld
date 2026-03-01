@@ -2,39 +2,52 @@
 
 ## Summary
 
-Seventy-eighth orchestrator cycle. Phase 1 TypeScript scaffold merged by Eva. TypeScript CI verified passing on master. Audit #29 accepted (sequential dispatch to avoid barrel file conflicts). Phase 2a (enums) dispatched to Copilot.
+Most productive cycle to date. Phase 1 TypeScript scaffold merged by Eva. Audit #29 accepted (sequential dispatch). Phase 2a (12 enums) and Phase 2b (9 leaf sub-types) both dispatched, reviewed, and merged within the same cycle. Phase 2c dispatched and in-flight at cycle end.
 
 ## Startup checklist results
 
 - **Eva input**: [#247](https://github.com/EvaLok/schema-org-json-ld/issues/247) still open (TS plan, executing)
 - **Open questions**: None
 - **Open PRs**: None (Phase 1 merged!)
-- **Agent sessions**: 0/2 at start → 1/2 after dispatching Phase 2a
+- **Agent sessions**: 0/2 at start
 - **QC outbound**: No new validation reports
 - **Audit outbound**: [#29](https://github.com/EvaLok/schema-org-json-ld-audit/issues/29) — barrel file conflict warning (new, processed this cycle)
-- **Concurrency**: 0/2 at start → 1/2 after dispatch
+- **Concurrency**: 0/2 at start
 - **Recently merged**: [PR #270](https://github.com/EvaLok/schema-org-json-ld/issues/270) — Phase 1 TypeScript scaffold (merged 08:50 UTC by Eva)
 
 ## What happened
 
 ### Phase 1: COMPLETE
 
-PR [#270](https://github.com/EvaLok/schema-org-json-ld/issues/270) merged by Eva at 08:50 UTC. TypeScript CI workflow (`ci-ts.yml`) verified passing on master — the push event at 08:50:06Z triggered it automatically and it succeeded. No manual workflow dispatch needed (the workflow didn't have `workflow_dispatch` trigger, but the push trigger covered it). Issue [#269](https://github.com/EvaLok/schema-org-json-ld/issues/269) was already closed by Eva.
+PR [#270](https://github.com/EvaLok/schema-org-json-ld/issues/270) merged by Eva at 08:50 UTC. TypeScript CI workflow verified passing on master (push trigger). Issue [#269](https://github.com/EvaLok/schema-org-json-ld/issues/269) closed.
 
 ### Audit #29: ACCEPTED
 
-The audit orchestrator correctly identified that parallel dispatch of Phase 2a and 2b would cause merge conflicts on `ts/src/index.ts` (barrel file). Both sessions branch from the same master commit, and both add export lines. The analysis at the type level said "no dependencies" but missed file-level shared resources.
+Parallel dispatch causes barrel file merge conflicts. Changed to sequential dispatch (2a → merge → 2b → merge → 2c). Created [#275](https://github.com/EvaLok/schema-org-json-ld/issues/275) (audit-inbound). STARTUP_CHECKLIST Step 8 updated.
 
-**Decision**: Dispatch Phase 2 sub-phases sequentially (2a → merge → 2b → merge → 2c). The enums session is small and fast, so the delay is minimal.
+### Phase 2a: DISPATCHED, REVIEWED, MERGED
 
-**Changes made**:
-- Created [#275](https://github.com/EvaLok/schema-org-json-ld/issues/275) (audit-inbound)
-- Responded on audit repo [#29](https://github.com/EvaLok/schema-org-json-ld-audit/issues/29)
-- STARTUP_CHECKLIST Step 8 updated with shared file conflict check
+- Issue [#276](https://github.com/EvaLok/schema-org-json-ld/issues/276) → PR [#277](https://github.com/EvaLok/schema-org-json-ld/issues/277)
+- 12 enums, 40 enum cases, 1 test file, all 14 files clean
+- Copilot finished in ~5 min, CI green, merged at 09:17 UTC
 
-### Phase 2a: DISPATCHED
+### Phase 2b: DISPATCHED, REVIEWED, MERGED
 
-Issue [#276](https://github.com/EvaLok/schema-org-json-ld/issues/276) — Port all 12 enums to TypeScript. Model: gpt-5.3-codex. Using the pre-prepared spec from `docs/draft-phase-2a-enums.json`.
+- Issue [#278](https://github.com/EvaLok/schema-org-json-ld/issues/278) → PR [#279](https://github.com/EvaLok/schema-org-json-ld/issues/279)
+- 9 leaf sub-types: PostalAddress (options object), GeoCoordinates, GeoShape, AdministrativeArea, MonetaryAmount, QuantitativeValue, Rating, ContactPoint, PropertyValue
+- 9 schema files + 9 test files + barrel update = 19 files
+- Copilot finished in ~6 min, CI green, merged at 09:26 UTC
+
+### Phase 2c: DISPATCHED
+
+- Issue [#280](https://github.com/EvaLok/schema-org-json-ld/issues/280) — 9 more leaf sub-types
+- Model: gpt-5.3-codex
+- In-flight at cycle end
+
+### Housekeeping
+
+- Deleted stale branches: `copilot/setup-typescript-infrastructure`, `copilot/port-enums-to-typescript`, `copilot/port-leaf-sub-types-to-typescript`
+- Closed issues: [#269](https://github.com/EvaLok/schema-org-json-ld/issues/269), [#276](https://github.com/EvaLok/schema-org-json-ld/issues/276), [#278](https://github.com/EvaLok/schema-org-json-ld/issues/278)
 
 ## Self-modifications
 
@@ -42,16 +55,16 @@ Issue [#276](https://github.com/EvaLok/schema-org-json-ld/issues/276) — Port a
 
 ## Current state
 
-- **Phase 0**: COMPLETE (merged + QC validated)
-- **Phase 1**: COMPLETE (merged 08:50 UTC, CI verified)
-- **Phase 2a**: DISPATCHED ([#276](https://github.com/EvaLok/schema-org-json-ld/issues/276), waiting for Copilot)
-- **Phase 2b**: Blocked on 2a merge
-- **Phase 2c**: Blocked on 2b merge
+- **Phase 0**: COMPLETE
+- **Phase 1**: COMPLETE
+- **Phase 2a**: COMPLETE (12 enums merged)
+- **Phase 2b**: COMPLETE (9 leaf sub-types merged)
+- **Phase 2c**: IN-FLIGHT ([#280](https://github.com/EvaLok/schema-org-json-ld/issues/280), Copilot working)
 - **Agent sessions**: 1/2
+- **TS types ported so far**: 12 enums + 10 schema types + Brand + JsonLdGenerator + TypedSchema = 25 modules
 
 ## Next steps
 
-1. **Wait for Copilot** to complete Phase 2a (should be fast — 12 simple enums)
-2. **Review PR** when `copilot_work_finished` event appears
-3. **After 2a merges**: Dispatch Phase 2b using `docs/draft-phase-2b-leaf-subtypes.json`
-4. **Close audit-inbound [#275](https://github.com/EvaLok/schema-org-json-ld/issues/275)** after verifying implementation
+1. **Review Phase 2c PR** when Copilot finishes (next cycle)
+2. **After 2c merges**: Plan Phase 3 decomposition (complex schema types with dependencies)
+3. **Close audit-inbound [#275](https://github.com/EvaLok/schema-org-json-ld/issues/275)** after verifying sequential dispatch worked
