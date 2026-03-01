@@ -4,7 +4,12 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-const scriptDir = path.dirname(decodeURIComponent(new URL(import.meta.url).pathname));
+const scriptUrl = new URL(import.meta.url);
+const scriptPath =
+	process.platform === "win32"
+		? decodeURIComponent(scriptUrl.pathname.replace(/^\/([A-Za-z]:)/, "$1"))
+		: decodeURIComponent(scriptUrl.pathname);
+const scriptDir = path.dirname(scriptPath);
 const repoRoot = path.resolve(scriptDir, "..");
 
 const REQUIRED_EXPORTS = [
@@ -72,7 +77,7 @@ try {
 		.filter((line) => line.endsWith(".tgz"))
 		.pop();
 
-	if (tarballName === undefined) {
+	if (!tarballName) {
 		throw new Error(`Unable to find tarball name in npm pack output:\n${packOutput}`);
 	}
 
