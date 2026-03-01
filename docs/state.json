@@ -448,7 +448,7 @@
     "request_215": "COMPLETE. QC repo #74 closed. QC PR #76 merged (10:16 UTC). 39/39 E2E pass, 0 errors. All 5 Recipe optional properties validated. Issue #215 closed.",
     "request_234": "COMPLETE. QC repo #84 closed. 188 QC unit tests, 39/39 E2E pass, 0 errors, 15 warnings (all known false positives). Offer.hasMerchantReturnPolicy validated. Issue #234 closed.",
     "request_265": "COMPLETE. QC repo #114 closed. 188 tests, 1133 assertions, ALL PASS. 39/39 E2E, 0 errors, 15 warnings (known false positives). Phase 0 gate cleared.",
-    "request_299": "IN PROGRESS. QC-ACK #122 (QC repo): Initial parity PASS — 4 types validated (Article, BreadcrumbList, FAQPage, Event), all 301 TS tests pass, Adobe validator 0 errors/0 warnings, PHP baseline unchanged. Expanding coverage."
+    "request_299": "IN PROGRESS. QC-ACK #122 (QC repo): Initial parity PASS — 4 types validated (Article, BreadcrumbList, FAQPage, Event), all 301 TS tests pass, Adobe validator 0 errors/0 warnings, PHP baseline unchanged. Expanding coverage. Definition of Done posted (cycle 82, per audit #35): 5 explicit criteria."
   },
   "blockers": [],
   "open_questions_for_eva": [304],
@@ -481,14 +481,15 @@
       "ts_guardrails_enumeration": "Accepted (audit #16). AGENTS-ts.md + TS skill complete.",
       "conditional_approval_reconciliation": "Accepted (audit #19). Step 1.5 added to STARTUP_CHECKLIST.",
       "constructor_ergonomics": "Accepted (audit #20). Options object for >5 optional properties.",
-      "barrel_file_conflicts": "Accepted (audit #29). Sequential dispatch for Phase 2. STARTUP_CHECKLIST Step 8 updated."
+      "barrel_file_conflicts": "Accepted (audit #29). Sequential dispatch for Phase 2. STARTUP_CHECKLIST Step 8 updated.",
+      "qc_exit_criteria": "Accepted (audit #35). Definition of Done posted on QC-REQUEST #299. STARTUP_CHECKLIST Step 4 updated."
     },
     "phases": [
       {"phase": 0, "name": "Restructure to polyglot dirs (v1.x)", "status": "complete", "issue": 262, "pr": 263, "merged_at": "2026-03-01T02:23:00Z", "qc_validation": "passed (QC #114, 2026-03-01T04:43Z)"},
       {"phase": 1, "name": "TypeScript scaffold", "status": "complete", "issue": 269, "pr": 270, "merged_at": "2026-03-01T08:50:04Z", "ci_verified": "TypeScript CI success on master push (08:50:06Z)"},
       {"phase": 2, "name": "Enum & shared sub-type port", "status": "complete", "dispatch_strategy": "sequential (per audit #29)", "decomposition": {"2a": {"description": "All 12 enums (1 session)", "status": "merged", "issue": 276, "pr": 277, "merged_at": "2026-03-01T09:17:42Z"}, "2b": {"description": "Leaf sub-types batch 1 (9 types)", "status": "merged", "issue": 278, "pr": 279, "merged_at": "2026-03-01T09:26:06Z"}, "2c": {"description": "Leaf sub-types batch 2 (9 types)", "status": "merged", "issue": 280, "pr": 281, "merged_at": "2026-03-01T09:36:17Z"}}},
       {"phase": 3, "name": "Schema type port", "status": "complete", "dispatch_strategy": "sequential (per audit #29)", "decomposition": {"3a": {"description": "Level-0 types (12 types, no schema deps)", "status": "merged", "issue": 282, "pr": 283, "merged_at": "2026-03-01T09:47:23Z"}, "3b": {"description": "Level-1 types (9 types, deps on ported types)", "status": "merged", "issue": 284, "pr": 285, "merged_at": "2026-03-01T10:49:00Z"}, "3c": {"description": "Level-2 types (8 types, deps on L0/L1)", "status": "merged", "issue": 287, "pr": 288, "merged_at": "2026-03-01T11:07:00Z"}, "3d": {"description": "Level 3-5 types (6 types: VideoObject, MathSolver, ShippingService, Offer, Organization, Person)", "status": "merged", "issue": 289, "pr": 290, "merged_at": "2026-03-01T11:19:35Z"}, "3e": {"description": "Level 5-6 types (9 types: EmployerAggregateRating, JobPosting, Certification, ImageObject, Review, Answer, CourseInstance, ProfilePage, Dataset)", "status": "merged", "issue": 291, "pr": 292, "merged_at": "2026-03-01T11:31:02Z"}, "3f": {"description": "Level 7 types (10 types: Question, Comment, Article, Event, SoftwareApplication, Movie, LocalBusiness, Course, Recipe, VacationRental)", "status": "merged", "issue": 293, "pr": 294, "merged_at": "2026-03-01T11:46:07Z"}, "3g": {"description": "Level 8+ types (11 types with inheritance)", "status": "merged", "issue": 295, "pr": 296, "merged_at": "2026-03-01T12:11:00Z"}}},
-      {"phase": 4, "name": "Build, test, publish", "status": "in_progress", "decomposition": {"4a": {"description": "npm package polish (metadata, README, build verification)", "status": "merged", "issue": 300, "pr": 301, "merged_at": "2026-03-01T12:22:48Z"}, "4b": {"description": "npm publish workflow (needs Eva)", "status": "dispatched", "issue": 303, "note": "Workflow file — Eva must merge. NPM_TOKEN secret needed (question #304)"}, "4c": {"description": "npm publish (after QC validation + Eva merges 4b + NPM_TOKEN configured)", "status": "planned"}}}
+      {"phase": 4, "name": "Build, test, publish", "status": "in_progress", "decomposition": {"4a": {"description": "npm package polish (metadata, README, build verification)", "status": "merged", "issue": 300, "pr": 301, "merged_at": "2026-03-01T12:22:48Z"}, "4b": {"description": "npm publish workflow (needs Eva)", "status": "reviewed_awaiting_eva", "issue": 303, "pr": 305, "note": "Workflow file — Eva must merge. NPM_TOKEN secret needed (question #304)"}, "4c": {"description": "npm publish (after QC validation + Eva merges 4b + NPM_TOKEN configured)", "status": "planned"}}}
     ]
   },
   "release": {
@@ -552,12 +553,12 @@
     "3g_issue": 295
   },
   "last_cycle": {
-    "issue": 302,
-    "timestamp": "2026-03-01T13:43:00Z",
-    "summary": "Cycle 81: Phase 4b dispatched (npm publish workflow). QC-ACK #122 initial parity PASS. Closed superseded #249. Housekeeping (deleted stale branch)."
+    "issue": 306,
+    "timestamp": "2026-03-01T15:04:00Z",
+    "summary": "Cycle 82: Processed audit #35 (QC exit criteria). Posted Definition of Done on QC-REQUEST #299. Updated STARTUP_CHECKLIST. Waiting on Eva (PR #305, NPM_TOKEN) and QC (full validation)."
   },
   "consecutive_idle_cycles": 0,
-  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32],
+  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35],
   "test_count": 321,
   "total_schema_types": 28,
   "total_sub_types": 101,

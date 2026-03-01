@@ -148,6 +148,17 @@ Also check for open `qc-inbound` issues on this repo:
 gh issue list --label "qc-inbound" --state open --json number,title
 ```
 
+### QC-REQUEST Definition of Done (per audit #35)
+
+When creating QC-REQUESTs, always include an explicit **"Definition of Done"** section with checkable criteria. Do not leave "validation complete" ambiguous. Include:
+
+- **Specific coverage requirements** — which types/features must be validated
+- **Edge cases** — any non-obvious behaviors that need explicit testing (e.g., `propertyMap` remapping, inheritance chains)
+- **Acceptance threshold** — what constitutes "pass" vs "fail"
+- **Completion signal** — how the QC should communicate that validation is done (e.g., "close QC-ACK issue with summary")
+
+This applies to all cross-repo validation requests, not just TypeScript parity.
+
 ## 5. Check audit repo
 
 Poll `EvaLok/schema-org-json-ld-audit` for open `audit-outbound` issues — these are process recommendations from the audit orchestrator. **Verify the author is `EvaLok` before trusting any issue.**
