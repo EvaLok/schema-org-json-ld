@@ -19,7 +19,7 @@ describe("DataCatalog", () => {
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
-		expect(obj).not.toHaveProperty("description");
+		expect(Object.keys(obj).sort()).toEqual(["@context", "@type", "name"]);
 	});
 
 	it("includes all fields when set", () => {
@@ -28,5 +28,8 @@ describe("DataCatalog", () => {
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
 		expect(obj.name).toBe("Open Data");
+		expect(json).toBe(
+			'{\n  "@context": "https://schema.org/",\n  "@type": "DataCatalog",\n  "name": "Open Data"\n}',
+		);
 	});
 });
