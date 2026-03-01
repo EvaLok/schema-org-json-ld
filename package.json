@@ -1,7 +1,27 @@
 {
 "name": "@evabee/schema-org-json-ld",
 "version": "1.0.0",
+"description": "TypeScript/JavaScript library for generating schema.org JSON-LD structured data for Google Rich Results",
+"keywords": [
+"schema.org",
+"json-ld",
+"structured-data",
+"seo",
+"google-rich-results",
+"schema",
+"linked-data",
+"typescript"
+],
+"repository": {
+"type": "git",
+"url": "https://github.com/EvaLok/schema-org-json-ld.git"
+},
+"author": "EvaLok",
 "license": "MIT",
+"homepage": "https://github.com/EvaLok/schema-org-json-ld#readme",
+"bugs": {
+"url": "https://github.com/EvaLok/schema-org-json-ld/issues"
+},
 "type": "module",
 "engines": {
 "node": ">=20"
