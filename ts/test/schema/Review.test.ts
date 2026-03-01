@@ -21,7 +21,14 @@ describe("Review", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new Review("Jane Doe", new Rating(5), null, null, null, null);
+		const schema = new Review(
+			"Jane Doe",
+			new Rating(5),
+			null,
+			null,
+			null,
+			null,
+		);
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -46,9 +53,17 @@ describe("Review", () => {
 			new Organization({ name: "Example Corp" }),
 			new Rating(4),
 		);
-		const organizationJson = JsonLdGenerator.schemaToJson(organizationAuthorSchema);
-		const organizationObj = JSON.parse(organizationJson) as Record<string, unknown>;
-		const organizationAuthor = organizationObj.author as Record<string, unknown>;
+		const organizationJson = JsonLdGenerator.schemaToJson(
+			organizationAuthorSchema,
+		);
+		const organizationObj = JSON.parse(organizationJson) as Record<
+			string,
+			unknown
+		>;
+		const organizationAuthor = organizationObj.author as Record<
+			string,
+			unknown
+		>;
 
 		expect(organizationAuthor["@type"]).toBe("Organization");
 	});

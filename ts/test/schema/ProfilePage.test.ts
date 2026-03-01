@@ -18,7 +18,11 @@ describe("ProfilePage", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new ProfilePage(new Person({ name: "Jane Doe" }), null, null);
+		const schema = new ProfilePage(
+			new Person({ name: "Jane Doe" }),
+			null,
+			null,
+		);
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

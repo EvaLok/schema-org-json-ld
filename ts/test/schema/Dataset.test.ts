@@ -71,7 +71,10 @@ describe("Dataset", () => {
 			spatialCoverage: new Place("Global"),
 			includedInDataCatalog: new DataCatalog("Example Data Catalog"),
 			distribution: [
-				new DataDownload("https://example.com/datasets/products.csv", "text/csv"),
+				new DataDownload(
+					"https://example.com/datasets/products.csv",
+					"text/csv",
+				),
 			],
 			variableMeasured: "price",
 			measurementTechnique: "survey",
@@ -94,7 +97,10 @@ describe("Dataset", () => {
 		expect(creator["@type"]).toBe("Person");
 		expect(funder["@type"]).toBe("Organization");
 		expect(obj.keywords).toEqual(["products", "catalog"]);
-		expect(obj.identifier).toEqual(["dataset-123", "doi:10.1234/example-dataset"]);
+		expect(obj.identifier).toEqual([
+			"dataset-123",
+			"doi:10.1234/example-dataset",
+		]);
 		expect(spatialCoverage["@type"]).toBe("Place");
 		expect(includedInDataCatalog["@type"]).toBe("DataCatalog");
 		expect(distribution[0]?.["@type"]).toBe("DataDownload");

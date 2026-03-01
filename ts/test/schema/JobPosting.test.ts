@@ -73,10 +73,8 @@ describe("JobPosting", () => {
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const jobLocation = obj.jobLocation as Record<string, unknown>;
 		const baseSalary = obj.baseSalary as Record<string, unknown>;
-		const applicantLocationRequirements = obj.applicantLocationRequirements as Record<
-			string,
-			unknown
-		>;
+		const applicantLocationRequirements =
+			obj.applicantLocationRequirements as Record<string, unknown>;
 		const identifier = obj.identifier as Record<string, unknown>;
 
 		expect(jobLocation["@type"]).toBe("Place");

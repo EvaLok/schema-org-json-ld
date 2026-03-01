@@ -42,7 +42,10 @@ describe("Certification", () => {
 		);
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
-		const certificationRating = obj.certificationRating as Record<string, unknown>;
+		const certificationRating = obj.certificationRating as Record<
+			string,
+			unknown
+		>;
 
 		expect(obj.certificationIdentification).toBe("CSA-12345");
 		expect(certificationRating["@type"]).toBe("Rating");
