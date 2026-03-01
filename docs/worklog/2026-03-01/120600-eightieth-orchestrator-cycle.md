@@ -69,9 +69,17 @@ All 98 PHP types fully ported to TypeScript in ~3.5 hours:
 - **Agent sessions**: 1/2
 - **TS modules on master**: 98 (84 schema + 12 enums + JsonLdGenerator + TypedSchema)
 
+### Phase 4a: DISPATCHED, REVISED, MERGED
+
+- [PR #301](https://github.com/EvaLok/schema-org-json-ld/issues/301) — npm package polish
+- Added: package.json metadata (description, keywords, repository, author, homepage, bugs)
+- Added: TypeScript installation, Quick Start, and badges to README
+- Revision: Fixed Quick Start example (was using instance method, corrected to static `JsonLdGenerator.schemaToJson()`), fixed badge format (HTML to Markdown)
+- CI green, merged at 12:22 UTC
+
 ## Next steps
 
-1. **Review Phase 4a PR** when Copilot finishes
-2. **Monitor QC-REQUEST #299** — QC needs to build TS infrastructure first
-3. **Phase 4b**: Create npm publish workflow (Eva must merge)
-4. **Phase 4c**: Actual npm publish after QC validation
+1. **Monitor QC-REQUEST #299** — QC needs to build TS infrastructure first
+2. **Phase 4b**: Create npm publish workflow (Eva must merge since it's a workflow file)
+3. **Phase 4c**: Actual npm publish after QC validation
+4. Consider creating a `question-for-eva` issue about npm token setup
