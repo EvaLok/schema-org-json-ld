@@ -1,6 +1,6 @@
 # schema-org-json-ld
 
-PHP library for generating schema.org JSON-LD structured data for Google Rich Results. Covers **all 31 Google Search Gallery categories** backed by **98 schema classes**, with type-safe constructor-promoted properties and automatic serialization.
+PHP and TypeScript/JavaScript library for generating schema.org JSON-LD structured data for Google Rich Results. Covers **all 31 Google Search Gallery categories** backed by **98 schema classes/modules**, with type-safe constructor-promoted properties and automatic serialization.
 
 Validated against the [Google Rich Results Test](https://search.google.com/test/rich-results) via the [schema-org-json-ld-qc](https://github.com/EvaLok/schema-org-json-ld-qc) validation suite.
 
@@ -10,6 +10,10 @@ Validated against the [Google Rich Results Test](https://search.google.com/test/
 [![PHP 8.3](https://img.shields.io/badge/PHP-8.3-777BB4?logo=php&logoColor=white)](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/main.yml)
 [![PHP 8.4](https://img.shields.io/badge/PHP-8.4-777BB4?logo=php&logoColor=white)](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/main.yml)
 [![PHP 8.5](https://img.shields.io/badge/PHP-8.5-777BB4?logo=php&logoColor=white)](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/main.yml)
+[![TypeScript CI](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/ci-ts.yml/badge.svg)](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/ci-ts.yml)
+[![Node 20](https://img.shields.io/badge/Node-20-339933?logo=node.js&logoColor=white)](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/ci-ts.yml)
+[![Node 24](https://img.shields.io/badge/Node-24-339933?logo=node.js&logoColor=white)](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/ci-ts.yml)
+[![npm](https://img.shields.io/npm/v/@evabee/schema-org-json-ld)](https://www.npmjs.com/package/@evabee/schema-org-json-ld)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 ---
@@ -56,6 +60,18 @@ Validated against the [Google Rich Results Test](https://search.google.com/test/
 
 ## Installation
 
+### TypeScript / JavaScript
+
+```bash
+npm install @evabee/schema-org-json-ld
+# or
+yarn add @evabee/schema-org-json-ld
+# or
+bun add @evabee/schema-org-json-ld
+```
+
+### PHP
+
 ```bash
 composer require evabee/schema-org-json-ld
 ```
@@ -65,6 +81,8 @@ composer require evabee/schema-org-json-ld
 ---
 
 ## Quick Start
+
+### PHP
 
 ```php
 <?php
@@ -99,6 +117,21 @@ $json = JsonLdGenerator::SchemaToJson(schema: $article);
 ```
 
 The pattern is always the same: instantiate a schema class, pass it to `JsonLdGenerator::SchemaToJson()`, and embed the result in a `<script type="application/ld+json">` tag.
+
+### TypeScript / JavaScript
+
+```typescript
+import { JsonLdGenerator, Product, Brand, Offer } from '@evabee/schema-org-json-ld';
+
+const product = new Product(
+	'Executive Anvil',
+	[new Offer({ price: '119.99', priceCurrency: 'USD' })],
+	{ brand: new Brand('ACME'), description: 'Sleekest anvil on the market' }
+);
+
+const jsonLd = JsonLdGenerator.schemaToJson(product);
+// Returns a JSON-LD string
+```
 
 ---
 
