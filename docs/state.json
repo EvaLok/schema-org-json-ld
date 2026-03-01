@@ -306,7 +306,9 @@
       "title": "Phase 1: TypeScript scaffold",
       "dispatched_at": "2026-03-01T05:08:00Z",
       "model": "gpt-5.3-codex",
-      "status": "in_progress"
+      "status": "pr_approved",
+      "pr": 270,
+      "pr_status": "approved, waiting for Eva to merge (workflow file)"
     }
   ],
   "qc_processed": [8, 37, 57, 72, 165],
@@ -354,8 +356,8 @@
     },
     "phases": [
       {"phase": 0, "name": "Restructure to polyglot dirs (v1.x)", "status": "complete", "issue": 262, "pr": 263, "merged_at": "2026-03-01T02:23:00Z", "qc_validation": "passed (QC #114, 2026-03-01T04:43Z)"},
-      {"phase": 1, "name": "TypeScript scaffold", "status": "dispatched", "issue": 269, "dispatched_at": "2026-03-01T05:08:00Z"},
-      {"phase": 2, "name": "Enum & shared sub-type port", "status": "planned"},
+      {"phase": 1, "name": "TypeScript scaffold", "status": "pr_approved", "issue": 269, "pr": 270, "dispatched_at": "2026-03-01T05:08:00Z", "approved_at": "2026-03-01T06:18:00Z", "note": "Waiting for Eva to merge (workflow file)"},
+      {"phase": 2, "name": "Enum & shared sub-type port", "status": "planned", "decomposition": {"2a": "All 12 enums (1 session)", "2b": "Leaf sub-types batch 1: PostalAddress, GeoCoordinates, GeoShape, AdministrativeArea, MonetaryAmount, QuantitativeValue, Rating, ContactPoint, PropertyValue (1 session)", "2c": "Leaf sub-types batch 2: LocationFeatureSpecification, AlignmentObject, SizeSpecification, SpeakableSpecification, WebPageElement, BedDetails, DataCatalog, DataDownload, VirtualLocation (1 session)"}},
       {"phase": 3, "name": "Schema type port", "status": "planned"},
       {"phase": 4, "name": "Build, test, publish", "status": "planned"}
     ]
@@ -369,12 +371,12 @@
     }
   },
   "last_cycle": {
-    "issue": 268,
-    "timestamp": "2026-03-01T05:10:00Z",
-    "summary": "Cycle 75: QC-REQUEST #265 validated (Phase 0 gate cleared). Phase 1 TypeScript scaffold dispatched (#269, gpt-5.3-codex). AGENTS-ts.md updated to match approved plan layout."
+    "issue": 271,
+    "timestamp": "2026-03-01T06:30:00Z",
+    "summary": "Cycle 76: PR #270 (Phase 1 TS scaffold) reviewed and approved. Waiting for Eva to merge (workflow file). Audit #26 accepted (post-merge CI verification). Phase 2 decomposition planned."
   },
   "consecutive_idle_cycles": 0,
-  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24],
+  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26],
   "test_count": 321,
   "total_schema_types": 28,
   "total_sub_types": 101,

@@ -118,6 +118,11 @@ gh api "repos/EvaLok/schema-org-json-ld/issues/{PR}/timeline" --paginate --jq '.
 4. Review code + CI results
 5. Merge or request revisions via `@copilot`
 
+**New CI workflow PRs** (per audit #26): If a PR introduces a new workflow file (`.github/workflows/*.yml`), the new workflow cannot run on the PR itself (it doesn't exist on master yet). After merge:
+1. Trigger the new workflow manually via `gh workflow run <workflow-name>`
+2. Verify it passes on the merge commit
+3. If it fails, immediately create a fix issue and dispatch to Copilot
+
 See `.claude/skills/pr-review-workflow.md` for the full procedure.
 
 ## 4. Check QC repo
