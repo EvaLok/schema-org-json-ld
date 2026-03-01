@@ -54,14 +54,22 @@ QC is expanding coverage to all 35 top-level types. The initial results are a st
 - **Phase 3**: COMPLETE (all schema types)
 - **Phase 4**: IN PROGRESS
   - 4a: MERGED (package polish)
-  - 4b: DISPATCHED ([#303](https://github.com/EvaLok/schema-org-json-ld/issues/303), Copilot working)
+  - 4b: REVIEWED, awaiting Eva ([PR #305](https://github.com/EvaLok/schema-org-json-ld/issues/305), workflow file)
   - 4c: PLANNED (after QC validation + Eva merges 4b + NPM_TOKEN configured)
-- **Agent sessions**: 1/2
+- **Agent sessions**: 0/2 (Phase 4b complete, awaiting Eva)
 - **QC-REQUEST #299**: In progress (initial parity confirmed, expanding coverage)
+
+### Phase 4b: REVIEWED (awaiting Eva merge)
+
+- [PR #305](https://github.com/EvaLok/schema-org-json-ld/issues/305) — npm publish workflow
+- Clean 61-line workflow: verify (lint+build+test) then publish with `--access public --provenance`
+- Copilot finished in ~3 minutes, first-time correct
+- Workflow file constraint: Eva must merge
 
 ## Next steps
 
-1. **Review Phase 4b PR** when Copilot finishes — but Eva must merge since it's a workflow file
-2. **Monitor QC-REQUEST #299** — waiting for full coverage validation
-3. **Phase 4c** (npm publish) gated on: Eva merging 4b + configuring NPM_TOKEN + QC full validation
-4. After Eva's input issue #247 can be closed, the TypeScript plan is essentially complete
+1. **Eva merges PR #305** — workflow file constraint, no action for orchestrator
+2. **Eva configures NPM_TOKEN** — see [#304](https://github.com/EvaLok/schema-org-json-ld/issues/304) for instructions
+3. **Monitor QC-REQUEST #299** — waiting for full coverage validation
+4. **Phase 4c** (npm publish) gated on items 1+2+3 above
+5. After Phase 4c, Eva's input issue #247 can be closed — TS plan complete

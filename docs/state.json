@@ -433,7 +433,9 @@
       "title": "Phase 4b: npm publish workflow",
       "dispatched_at": "2026-03-01T13:47:00Z",
       "model": "gpt-5.3-codex",
-      "status": "in_progress"
+      "status": "reviewed_awaiting_eva",
+      "pr": 305,
+      "note": "Workflow file — Eva must merge. NPM_TOKEN secret also needed."
     }
   ],
   "qc_processed": [8, 37, 57, 72, 165],
