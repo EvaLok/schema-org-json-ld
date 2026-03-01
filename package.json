@@ -39,12 +39,13 @@
 "files": [
 "dist"
 ],
-"scripts": {
-"build": "tsup --config ts/tsup.config.ts",
-"test": "vitest --config ts/vitest.config.ts",
-"lint": "biome check ts",
-"format": "biome format --write ts"
-},
+	"scripts": {
+		"build": "tsup --config ts/tsup.config.ts",
+		"test": "vitest --config ts/vitest.config.ts",
+		"lint": "biome check ts",
+		"format": "biome format --write ts",
+		"verify-build": "node scripts/verify-build.mjs"
+	},
 "devDependencies": {
 "@biomejs/biome": "^1.9.4",
 "tsup": "^8.5.0",
