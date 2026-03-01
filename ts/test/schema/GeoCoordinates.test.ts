@@ -20,7 +20,12 @@ describe("GeoCoordinates", () => {
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
-		expect(Object.keys(obj)).toEqual(["@context", "@type", "latitude", "longitude"]);
+		expect(Object.keys(obj)).toEqual([
+			"@context",
+			"@type",
+			"latitude",
+			"longitude",
+		]);
 	});
 
 	it("includes all fields when set", () => {
