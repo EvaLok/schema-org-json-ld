@@ -308,18 +308,16 @@
       "pr": 263
     },
     "typescript_stats": {
-      "schema_types": 84,
+      "schema_types": 86,
       "enums": 12,
       "core_modules": 2,
-      "total_modules": 98,
-      "port_complete": false,
-      "missing_types": ["QAPage", "Restaurant"],
-      "fix_issue": 311,
-      "port_duration": "~3.5 hours (08:50-12:11 UTC)",
-      "prs_merged": 11,
-      "agent_sessions": 11,
+      "total_modules": 100,
+      "port_complete": true,
+      "port_duration": "~3.5 hours (08:50-12:11 UTC) + 10 min fix (18:08-18:18 UTC)",
+      "prs_merged": 12,
+      "agent_sessions": 12,
       "zero_revision_rounds": true,
-      "note": "2 types missing per audit #37. Fix dispatched."
+      "audit_37_fix": "QAPage + Restaurant ported via PR #312 (2026-03-01T18:18:42Z)"
     }
   },
   "agent_sessions": [
@@ -445,7 +443,9 @@
       "title": "Port QAPage + Restaurant to TypeScript (audit #37 fix)",
       "dispatched_at": "2026-03-01T18:08:00Z",
       "model": "gpt-5.3-codex",
-      "status": "in_progress"
+      "status": "merged",
+      "pr": 312,
+      "merged_at": "2026-03-01T18:18:42Z"
     }
   ],
   "qc_processed": [8, 37, 57, 72, 165],
@@ -566,13 +566,13 @@
   "last_cycle": {
     "issue": 309,
     "timestamp": "2026-03-01T18:08:00Z",
-    "summary": "Cycle 84: Accepted audit #37 (2 missing TS types). Dispatched #311 to port QAPage + Restaurant. STARTUP_CHECKLIST updated (step 5.6). Audit-inbound #310 created."
+    "summary": "Cycle 84: Accepted audit #37, dispatched+merged PR #312 (QAPage + Restaurant). TS port now truly complete (86/86 schema classes). STARTUP_CHECKLIST step 5.6 added. Audit-inbound #310 closed."
   },
   "consecutive_idle_cycles": 0,
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37],
   "test_count": 321,
   "total_schema_types": 28,
   "total_sub_types": 101,
-  "total_schema_classes": 98,
+  "total_schema_classes": 100,
   "total_enums": 12
 }
