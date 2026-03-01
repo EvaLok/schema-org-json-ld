@@ -10,10 +10,10 @@ Validated against the [Google Rich Results Test](https://search.google.com/test/
 [![PHP 8.3](https://img.shields.io/badge/PHP-8.3-777BB4?logo=php&logoColor=white)](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/main.yml)
 [![PHP 8.4](https://img.shields.io/badge/PHP-8.4-777BB4?logo=php&logoColor=white)](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/main.yml)
 [![PHP 8.5](https://img.shields.io/badge/PHP-8.5-777BB4?logo=php&logoColor=white)](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/main.yml)
-<a href="https://github.com/EvaLok/schema-org-json-ld/actions/workflows/ci-ts.yml"><img src="https://github.com/EvaLok/schema-org-json-ld/actions/workflows/ci-ts.yml/badge.svg"></a>
-<a href="https://github.com/EvaLok/schema-org-json-ld/actions/workflows/ci-ts.yml"><img src="https://img.shields.io/badge/Node-20-339933?logo=node.js&amp;logoColor=white"></a>
-<a href="https://github.com/EvaLok/schema-org-json-ld/actions/workflows/ci-ts.yml"><img src="https://img.shields.io/badge/Node-24-339933?logo=node.js&amp;logoColor=white"></a>
-<a href="https://www.npmjs.com/package/@evabee/schema-org-json-ld"><img src="https://img.shields.io/npm/v/@evabee/schema-org-json-ld"></a>
+[![TypeScript CI](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/ci-ts.yml/badge.svg)](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/ci-ts.yml)
+[![Node 20](https://img.shields.io/badge/Node-20-339933?logo=node.js&logoColor=white)](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/ci-ts.yml)
+[![Node 24](https://img.shields.io/badge/Node-24-339933?logo=node.js&logoColor=white)](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/ci-ts.yml)
+[![npm](https://img.shields.io/npm/v/@evabee/schema-org-json-ld)](https://www.npmjs.com/package/@evabee/schema-org-json-ld)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 ---
@@ -129,8 +129,7 @@ const product = new Product(
 	{ brand: new Brand('ACME'), description: 'Sleekest anvil on the market' }
 );
 
-const generator = new JsonLdGenerator();
-const jsonLd = generator.generate(product);
+const jsonLd = JsonLdGenerator.schemaToJson(product);
 // Returns a JSON-LD string
 ```
 
