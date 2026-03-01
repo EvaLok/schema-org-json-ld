@@ -358,6 +358,15 @@
       "title": "Phase 3b: Port 9 Level-1 schema types",
       "dispatched_at": "2026-03-01T09:48:00Z",
       "model": "gpt-5.3-codex",
+      "status": "merged",
+      "pr": 285,
+      "merged_at": "2026-03-01T10:49:00Z"
+    },
+    {
+      "issue": 287,
+      "title": "Phase 3c: Port 8 Level-2 schema types",
+      "dispatched_at": "2026-03-01T10:50:00Z",
+      "model": "gpt-5.3-codex",
       "status": "dispatched",
       "pr": null
     }
@@ -410,7 +419,7 @@
       {"phase": 0, "name": "Restructure to polyglot dirs (v1.x)", "status": "complete", "issue": 262, "pr": 263, "merged_at": "2026-03-01T02:23:00Z", "qc_validation": "passed (QC #114, 2026-03-01T04:43Z)"},
       {"phase": 1, "name": "TypeScript scaffold", "status": "complete", "issue": 269, "pr": 270, "merged_at": "2026-03-01T08:50:04Z", "ci_verified": "TypeScript CI success on master push (08:50:06Z)"},
       {"phase": 2, "name": "Enum & shared sub-type port", "status": "complete", "dispatch_strategy": "sequential (per audit #29)", "decomposition": {"2a": {"description": "All 12 enums (1 session)", "status": "merged", "issue": 276, "pr": 277, "merged_at": "2026-03-01T09:17:42Z"}, "2b": {"description": "Leaf sub-types batch 1 (9 types)", "status": "merged", "issue": 278, "pr": 279, "merged_at": "2026-03-01T09:26:06Z"}, "2c": {"description": "Leaf sub-types batch 2 (9 types)", "status": "merged", "issue": 280, "pr": 281, "merged_at": "2026-03-01T09:36:17Z"}}},
-      {"phase": 3, "name": "Schema type port", "status": "in_progress", "dispatch_strategy": "sequential (per audit #29)", "decomposition": {"3a": {"description": "Level-0 types (12 types, no schema deps)", "status": "merged", "issue": 282, "pr": 283, "merged_at": "2026-03-01T09:47:23Z"}, "3b": {"description": "Level-1 types (9 types, deps on ported types)", "status": "dispatched", "issue": 284}, "3c": {"description": "Level-2 types (8 types, deps on L0/L1)", "status": "spec_ready", "spec": "docs/draft-phase-3c-level2.json"}}},
+      {"phase": 3, "name": "Schema type port", "status": "in_progress", "dispatch_strategy": "sequential (per audit #29)", "decomposition": {"3a": {"description": "Level-0 types (12 types, no schema deps)", "status": "merged", "issue": 282, "pr": 283, "merged_at": "2026-03-01T09:47:23Z"}, "3b": {"description": "Level-1 types (9 types, deps on ported types)", "status": "merged", "issue": 284, "pr": 285, "merged_at": "2026-03-01T10:49:00Z"}, "3c": {"description": "Level-2 types (8 types, deps on L0/L1)", "status": "dispatched", "issue": 287}, "3d": {"description": "Level 3-5 types (6 types: VideoObject, MathSolver, ShippingService, Offer, Organization, Person)", "status": "spec_ready", "spec": "docs/draft-phase-3d-level3-5.json"}, "3e": {"description": "Level 5-6 types (9 types: EmployerAggregateRating, JobPosting, Certification, ImageObject, Review, Answer, CourseInstance, ProfilePage, Dataset)", "status": "planned"}, "3f": {"description": "Level 7 types (10 types: Question, Comment, Article, Event, SoftwareApplication, Movie, LocalBusiness, Course, Recipe, VacationRental)", "status": "planned"}, "3g": {"description": "Level 8+ types (12 types: BlogPosting, NewsArticle, DiscussionForumPosting, FAQPage, Quiz, MobileApplication, WebApplication, FoodEstablishment, Store, Product, ProductGroup + inheritance)", "status": "planned"}}},
       {"phase": 4, "name": "Build, test, publish", "status": "planned"}
     ]
   },
@@ -448,12 +457,17 @@
     "3b": "docs/draft-phase-3b-level1.json",
     "3b_dispatched": true,
     "3b_issue": 284,
-    "3c": "docs/draft-phase-3c-level2.json"
+    "3b_pr": 285,
+    "3b_merged": true,
+    "3c": "docs/draft-phase-3c-level2.json",
+    "3c_dispatched": true,
+    "3c_issue": 287,
+    "3d": "docs/draft-phase-3d-level3-5.json"
   },
   "last_cycle": {
-    "issue": 274,
-    "timestamp": "2026-03-01T09:55:00Z",
-    "summary": "Cycle 78 (extended): Phase 2 COMPLETE (2c merged). Phase 3 begun: 3a (12 Level-0 types) dispatched/reviewed/merged, 3b (9 Level-1 types) dispatched and in-flight. 45 TS modules on master total."
+    "issue": 286,
+    "timestamp": "2026-03-01T10:55:00Z",
+    "summary": "Cycle 79: Phase 3b merged (9 Level-1 types). Phase 3c dispatched (8 Level-2 types). Phase 3d-3g specs planned (37 remaining types across 4 batches). 54 TS modules on master."
   },
   "consecutive_idle_cycles": 0,
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29],
