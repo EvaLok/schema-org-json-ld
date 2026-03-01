@@ -93,7 +93,12 @@ Must test:
 
 File: `ts/src/schema/{TypeName}.ts`
 
-Template:
+**First, count optional properties.** This determines which constructor pattern to use:
+- **≤5 optional properties**: Use positional constructor parameters
+- **>5 optional properties**: Use an options object constructor
+
+### Pattern A: Positional constructor (≤5 optional properties)
+
 ```typescript
 import { TypedSchema } from '../TypedSchema';
 
@@ -113,12 +118,50 @@ export class TypeName extends TypedSchema {
 }
 ```
 
-Rules:
+### Pattern B: Options object constructor (>5 optional properties)
+
+PHP has named parameters (`new Recipe(name: 'Cake', cookTime: 'PT1H')`). TypeScript only has positional args. An options object provides the same ergonomics:
+
+```typescript
+import { TypedSchema } from '../TypedSchema';
+
+export interface TypeNameOptions {
+  requiredProp: string;
+  optionalProp?: string | null;
+  nestedProp?: NestedType | null;
+  enumProp?: SomeEnum | null;
+  // ... more optional properties
+}
+
+export class TypeName extends TypedSchema {
+  static readonly schemaType = 'TypeName';
+
+  public readonly requiredProp: string;
+  public readonly optionalProp: string | null;
+  public readonly nestedProp: NestedType | null;
+  public readonly enumProp: SomeEnum | null;
+
+  constructor(options: TypeNameOptions) {
+    super();
+    this.requiredProp = options.requiredProp;
+    this.optionalProp = options.optionalProp ?? null;
+    this.nestedProp = options.nestedProp ?? null;
+    this.enumProp = options.enumProp ?? null;
+  }
+}
+```
+
+The options interface:
+- Is exported alongside the class (named `{TypeName}Options`)
+- Uses `?:` for optional fields (this is the interface contract)
+- Required fields have no `?:`
+
+Rules (both patterns):
 - Extend `TypedSchema`
 - Set `static readonly schemaType` to the exact schema.org type name
-- Use `public readonly` for all constructor parameters
-- Required parameters first (no default value), optional parameters last (default to `null`)
-- Use `Type | null` union syntax for optionals (NOT `?:` optional syntax)
+- Use `public readonly` for all properties
+- Required properties have no default value, optional properties default to `null`
+- Use `Type | null` union syntax for class properties (NOT `?:` on the class)
 - For array properties, use `readonly Type[]` with default `= []`
 - Do NOT add serialization methods — `JsonLdGenerator` handles everything
 - Do NOT modify `JsonLdGenerator.ts` or `TypedSchema.ts` unless the issue specifically asks
@@ -186,8 +229,9 @@ Compare your TypeScript JSON-LD output against the PHP version:
 3. **Forgetting `schemaType`** — this determines the `@type` in JSON-LD output
 4. **Using default exports** — this project uses named exports only
 5. **Using `require()`** — this is an ESM-first project
-6. **Using `?:` for optional params** — use `Type | null = null` (matches PHP convention, ensures property exists with explicit null)
+6. **Using `?:` for optional class properties** — use `Type | null = null` for class properties (matches PHP convention, ensures property exists with explicit null). Note: `?:` IS correct in options interfaces.
 7. **Modifying JsonLdGenerator.ts or TypedSchema.ts** — never modify these unless specifically instructed
 8. **Forgetting to update index.ts** — all new public types must be exported from the barrel
 9. **Writing tests after implementation** — write tests FIRST (TDD), then implement to make them pass
 10. **Mismatched property names vs PHP** — check the PHP implementation to ensure property names are identical
+11. **Using positional constructor for large types** — if a type has >5 optional properties, use an options object constructor. Positional constructors with many `null` arguments are unusable. See Step 4 for the threshold rule.

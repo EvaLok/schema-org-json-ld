@@ -288,7 +288,15 @@
       "note": "Level 9 achieved (0 errors). Level max: 5 additional errors from reflective code in AddPropertiesToObject."
     }
   },
-  "agent_sessions": [],
+  "agent_sessions": [
+    {
+      "issue": 262,
+      "title": "Phase 0: Restructure to polyglot directory layout",
+      "model": "gpt-5.3-codex",
+      "dispatched_at": "2026-03-01T00:27:00Z",
+      "status": "in_progress"
+    }
+  ],
   "qc_processed": [8, 37, 57, 72, 165],
   "qc_requests_pending": [],
   "qc_status": {
@@ -299,7 +307,7 @@
     "request_215": "COMPLETE. QC repo #74 closed. QC PR #76 merged (10:16 UTC). 39/39 E2E pass, 0 errors. All 5 Recipe optional properties validated. Issue #215 closed.",
     "request_234": "COMPLETE. QC repo #84 closed. 188 QC unit tests, 39/39 E2E pass, 0 errors, 15 warnings (all known false positives). Offer.hasMerchantReturnPolicy validated. Issue #234 closed."
   },
-  "blockers": ["npm/TS plan awaiting Eva approval (#247)"],
+  "blockers": [],
   "open_questions_for_eva": [],
   "eva_input_issues": {
     "closed_this_cycle": [],
@@ -307,28 +315,32 @@
     "remaining_open": [247]
   },
   "typescript_plan": {
-    "status": "draft_v2_posted",
+    "status": "approved_executing",
     "issue": 247,
     "qc_coordination_issue": 249,
-    "plan_version": 2,
-    "awaiting": "Eva feedback/approval on v2 (polyglot structure, v2.0.0 tag, @evabee scope)",
+    "plan_version": 3,
+    "approved_at": "2026-02-28T23:05:22Z",
     "qc_validation_strategy": "Aligned. QC repo #98: ts-consumer/ dir, parity testing, begins after Phase 1 merge",
     "eva_decisions": {
       "linter": "Biome",
       "node_minimum": "20 (also test on 24)",
       "license": "MIT",
-      "agents_md": "Extend with per-language sub-files (AGENTS-php.md, AGENTS-ts.md)"
+      "agents_md": "Extend with per-language sub-files (AGENTS-php.md, AGENTS-ts.md)",
+      "version": "Stay v1.x (no v2.0.0 for restructure)",
+      "scope": "@evabee/schema-org-json-ld"
     },
     "preparatory_artifacts": {
-      "AGENTS-ts.md": "Created cycle 70 (skeleton). Per audit #16.",
-      "ts_implementation_skill": "Created cycle 71. .claude/skills/ts-schema-implementation/SKILL.md"
+      "AGENTS-ts.md": "Created cycle 70, updated cycle 72 (options object pattern per audit #20)",
+      "ts_implementation_skill": "Created cycle 71, updated cycle 72 (Pattern A/B per audit #20)"
     },
     "audit_enhancements": {
       "phase_0_qc_checkpoint": "Accepted (audit #15). Phase 0 completion requires QC E2E validation before Phase 1.",
-      "ts_guardrails_enumeration": "Accepted (audit #16). AGENTS-ts.md + TS skill required before Phase 1 dispatch."
+      "ts_guardrails_enumeration": "Accepted (audit #16). AGENTS-ts.md + TS skill complete.",
+      "conditional_approval_reconciliation": "Accepted (audit #19). Step 1.5 added to STARTUP_CHECKLIST.",
+      "constructor_ergonomics": "Accepted (audit #20). Options object for >5 optional properties."
     },
     "phases": [
-      {"phase": 0, "name": "Restructure to polyglot dirs (v2.0.0)", "status": "blocked_on_approval", "note": "Phase 0 completion now requires QC validation (audit #15)"},
+      {"phase": 0, "name": "Restructure to polyglot dirs (v1.x)", "status": "dispatched", "issue": 262, "note": "Phase 0 completion requires QC E2E validation before Phase 1"},
       {"phase": 1, "name": "TypeScript scaffold", "status": "blocked_on_phase_0"},
       {"phase": 2, "name": "Enum & shared sub-type port", "status": "planned"},
       {"phase": 3, "name": "Schema type port", "status": "planned"},
@@ -344,12 +356,12 @@
     }
   },
   "last_cycle": {
-    "issue": 258,
-    "timestamp": "2026-02-28T22:38:00Z",
-    "summary": "Cycle 71: Created TS implementation skill (.claude/skills/ts-schema-implementation/). Both audit #16 preparatory artifacts now complete (AGENTS-ts.md + skill). Still awaiting Eva response on TS plan Draft v2 (#247)."
+    "issue": 259,
+    "timestamp": "2026-03-01T00:19:00Z",
+    "summary": "Cycle 72: Eva approved TS plan. Processed audit batch 5 (#18/#19/#20). Created Draft v3 with reconciliation. Fixed AGENTS-ts.md constructor pattern. Dispatched Phase 0 restructure (#262)."
   },
   "consecutive_idle_cycles": 0,
-  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16],
+  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20],
   "test_count": 321,
   "total_schema_types": 28,
   "total_sub_types": 101,

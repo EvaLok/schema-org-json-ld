@@ -42,7 +42,9 @@ The TypeScript version mirrors the PHP library's architecture 1:1 for Phase 1. E
 
 ### Schema classes
 
-TypeScript schema classes use `readonly` constructor parameters instead of PHP constructor promotion:
+TypeScript schema classes use `readonly` constructor parameters instead of PHP constructor promotion.
+
+#### Small types (≤5 optional properties): positional constructor
 
 ```typescript
 import { TypedSchema } from '../TypedSchema';
@@ -59,12 +61,61 @@ export class Brand extends TypedSchema {
 }
 ```
 
+#### Large types (>5 optional properties): options object constructor
+
+PHP has named parameters, so callers can skip optional args: `new Recipe(name: 'Cake', cookTime: 'PT1H')`. TypeScript has only positional args — passing `null` 12 times to reach a specific parameter is unusable. Use an options object instead:
+
+```typescript
+import { TypedSchema } from '../TypedSchema';
+
+export interface RecipeOptions {
+  name: string;
+  description?: string | null;
+  image?: string | ImageObject | null;
+  cookTime?: string | null;
+  prepTime?: string | null;
+  totalTime?: string | null;
+  recipeYield?: string | null;
+  // ... remaining optional properties
+}
+
+export class Recipe extends TypedSchema {
+  static readonly schemaType = 'Recipe';
+
+  public readonly name: string;
+  public readonly description: string | null;
+  public readonly image: string | ImageObject | null;
+  public readonly cookTime: string | null;
+  public readonly prepTime: string | null;
+  public readonly totalTime: string | null;
+  public readonly recipeYield: string | null;
+
+  constructor(options: RecipeOptions) {
+    super();
+    this.name = options.name;
+    this.description = options.description ?? null;
+    this.image = options.image ?? null;
+    this.cookTime = options.cookTime ?? null;
+    this.prepTime = options.prepTime ?? null;
+    this.totalTime = options.totalTime ?? null;
+    this.recipeYield = options.recipeYield ?? null;
+  }
+}
+```
+
+**Threshold rule**: Count total optional properties. If >5, use an options object. If ≤5, positional params are fine. When in doubt, use an options object — it's always more readable.
+
+The options interface is exported alongside the class for consumer use. Name it `{TypeName}Options`.
+
 Rules:
 - Extend `TypedSchema`
 - Set `static readonly schemaType` to the exact schema.org type name
-- Use `public readonly` for all constructor parameters
-- Required parameters have no default value
-- Optional parameters default to `null` with `Type | null` union syntax
+- Use `public readonly` for all properties
+- For small types (≤5 optional): use `public readonly` constructor parameters
+- For large types (>5 optional): use an options object with a `{TypeName}Options` interface
+- Required parameters have no default value; optional parameters default to `null`
+- Use `Type | null` union syntax for optionals (NOT `?:` optional syntax on class properties)
+- In options interfaces, use `?:` for optional fields (this is the interface contract, not the class property)
 - Array properties use TypeScript array types: `readonly Offer[]`
 - Do NOT add serialization methods — `JsonLdGenerator` handles everything
 
@@ -236,5 +287,6 @@ Before marking your PR as ready:
 3. **Forgetting `schemaType`** — this determines the `@type` in JSON-LD output
 4. **Using default exports** — this project uses named exports only
 5. **Using `require()`** — this is an ESM-first project
-6. **Using `?:` for optional** — use `Type | null = null` for optional constructor params (matches PHP convention and ensures the property exists with an explicit null)
+6. **Using `?:` for optional class properties** — use `Type | null = null` for class properties (matches PHP convention and ensures the property exists with an explicit null). Note: `?:` IS correct in options interfaces.
 7. **Modifying JsonLdGenerator.ts or TypedSchema.ts** — never modify these unless specifically instructed
+8. **Using positional constructor for large types** — if a type has >5 optional properties, use an options object constructor instead. Positional constructors with many `null` arguments are unusable.
