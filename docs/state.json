@@ -262,6 +262,12 @@
         "pr": 232,
         "issue": 231,
         "merged_at": "2026-02-27T19:57:32Z"
+      },
+      {
+        "description": "Phase 0: Restructure PHP codebase under php/ prefix",
+        "pr": 263,
+        "issue": 262,
+        "merged_at": "2026-03-01T02:23:00Z"
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
@@ -286,26 +292,25 @@
       "level_max_errors": 5,
       "all_in": "JsonLdGenerator.php",
       "note": "Level 9 achieved (0 errors). Level max: 5 additional errors from reflective code in AddPropertiesToObject."
+    },
+    "directory_layout": {
+      "php": "php/src/, php/test/",
+      "ts": "not yet created (Phase 1)",
+      "restructured_at": "2026-03-01T02:23:00Z",
+      "pr": 263
     }
   },
-  "agent_sessions": [
-    {
-      "issue": 262,
-      "title": "Phase 0: Restructure to polyglot directory layout",
-      "model": "gpt-5.3-codex",
-      "dispatched_at": "2026-03-01T00:27:00Z",
-      "status": "in_progress"
-    }
-  ],
+  "agent_sessions": [],
   "qc_processed": [8, 37, 57, 72, 165],
-  "qc_requests_pending": [],
+  "qc_requests_pending": [265],
   "qc_status": {
     "request_165": "COMPLETE. QC issue #41 closed. 39/39 E2E pass, 0 errors, 158 warnings. @graph API also validated.",
     "report_57": "ALL FIXES MERGED AND VALIDATED. PRs #198, #199. QC-63 confirmed: 39/39 E2E pass, 0 errors, 19 warnings.",
     "request_200": "COMPLETE. QC-63 validated. 39/39 E2E pass, 0 errors, 19 warnings (down from 58, 67% reduction). Issues #195 and #200 closed.",
     "report_72": "FIXED. PR #214 merged. Added 5 optional Recipe properties (expires, hasPart, publication, ineligibleRegion, interactionStatistic). QC request #215 sent.",
     "request_215": "COMPLETE. QC repo #74 closed. QC PR #76 merged (10:16 UTC). 39/39 E2E pass, 0 errors. All 5 Recipe optional properties validated. Issue #215 closed.",
-    "request_234": "COMPLETE. QC repo #84 closed. 188 QC unit tests, 39/39 E2E pass, 0 errors, 15 warnings (all known false positives). Offer.hasMerchantReturnPolicy validated. Issue #234 closed."
+    "request_234": "COMPLETE. QC repo #84 closed. 188 QC unit tests, 39/39 E2E pass, 0 errors, 15 warnings (all known false positives). Offer.hasMerchantReturnPolicy validated. Issue #234 closed.",
+    "request_265": "PENDING. Post-Phase 0 restructure E2E validation. Sent 2026-03-01T02:24Z."
   },
   "blockers": [],
   "open_questions_for_eva": [],
@@ -340,8 +345,8 @@
       "constructor_ergonomics": "Accepted (audit #20). Options object for >5 optional properties."
     },
     "phases": [
-      {"phase": 0, "name": "Restructure to polyglot dirs (v1.x)", "status": "dispatched", "issue": 262, "note": "Phase 0 completion requires QC E2E validation before Phase 1"},
-      {"phase": 1, "name": "TypeScript scaffold", "status": "blocked_on_phase_0"},
+      {"phase": 0, "name": "Restructure to polyglot dirs (v1.x)", "status": "merged", "issue": 262, "pr": 263, "merged_at": "2026-03-01T02:23:00Z", "qc_validation": "pending (QC-REQUEST #265)"},
+      {"phase": 1, "name": "TypeScript scaffold", "status": "blocked_on_qc_validation"},
       {"phase": 2, "name": "Enum & shared sub-type port", "status": "planned"},
       {"phase": 3, "name": "Schema type port", "status": "planned"},
       {"phase": 4, "name": "Build, test, publish", "status": "planned"}
@@ -356,9 +361,9 @@
     }
   },
   "last_cycle": {
-    "issue": 259,
-    "timestamp": "2026-03-01T00:19:00Z",
-    "summary": "Cycle 72: Eva approved TS plan. Processed audit batch 5 (#18/#19/#20). Created Draft v3 with reconciliation. Fixed AGENTS-ts.md constructor pattern. Dispatched Phase 0 restructure (#262)."
+    "issue": 264,
+    "timestamp": "2026-03-01T02:16:00Z",
+    "summary": "Cycle 73: Phase 0 merged (PR #263). Restructured PHP under php/ prefix. QC-REQUEST #265 sent for post-restructure E2E validation. Audit-inbound #260 closed."
   },
   "consecutive_idle_cycles": 0,
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20],
