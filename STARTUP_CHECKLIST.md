@@ -250,6 +250,17 @@ Verify that `php/src/v1/` and `ts/src/` have matching schema class coverage:
 
 Skip this step if `typescript_plan.status` is not `complete` — the TypeScript port is still in progress and coverage will be uneven by design.
 
+## 5.9. Pre-publish validation gate (per audit #49)
+
+**Permanent step.** Before any npm publish (Phase 4c or future releases), verify QC parity coverage uses **absolute denominators** — not self-scoped ones.
+
+1. Read the QC repo's state file or latest QC-ACK closing comment
+2. Verify `ts_parity_checked == ts_parity_total` AND `ts_parity_total == total_schema_types` (currently 86)
+3. If the QC reports e.g. "25/25 parity match", that's a self-scoped denominator — actual coverage is 25/86 (29%). Reject as insufficient.
+4. Do NOT proceed with publish until the QC reports coverage against the full type count
+
+**Why:** Audit #49 identified that in the initial TS validation, all three orchestrators consumed a self-scoped denominator (25/25) at face value, masking 29% actual coverage. Eva caught the gap. This step ensures partial coverage is always visible as partial.
+
 ## 6. Re-examine assumptions
 
 Read your recent journal and worklog entries with fresh eyes:

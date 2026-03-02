@@ -482,7 +482,8 @@
       "description": "Phase 4b/4c blocked: comprehensive QC validation of TypeScript builds required before npm publish",
       "qc_request": 331,
       "eva_directive": 329,
-      "requires": "86/86 parity, built-package validation, consumer-perspective testing"
+      "requires": "86/86 parity (absolute denominator — NOT self-scoped), built-package validation, consumer-perspective testing",
+      "validation_rule": "QC ts_parity_checked must equal ts_parity_total AND ts_parity_total must equal 86 (total schema types). Reject self-scoped denominators per audit #49."
     }
   ],
   "open_questions_for_eva": [304],
@@ -538,13 +539,13 @@
     }
   },
   "last_cycle": {
-    "issue": 330,
-    "timestamp": "2026-03-02T13:49:00Z",
-    "summary": "Cycle 97: Processed input-from-eva #329. Eva flagged insufficient QC validation of TS builds before npm publish. Halted Phase 4b/4c. Created QC-REQUEST #331 for comprehensive validation (86/86 parity, built-package, consumer testing). Communicated with audit and QC repos. Added startup checklist step 1.1 for Eva comment tracking."
+    "issue": 332,
+    "timestamp": "2026-03-02T15:15:00Z",
+    "summary": "Cycle 98: Processed audit #49 (QC parity self-scoped denominators). Added STARTUP_CHECKLIST step 5.9 (pre-publish absolute denominator gate). Created audit-inbound #333. QC-REQUEST #331 still pending — QC has not yet had a cycle since it was posted."
   },
   "consecutive_idle_cycles": 0,
-  "last_eva_comment_check": "2026-03-02T13:49:00Z",
-  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44],
+  "last_eva_comment_check": "2026-03-02T15:15:00Z",
+  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49],
   "test_count": 321,
   "total_schema_types": 28,
   "total_sub_types": 101,
