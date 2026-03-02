@@ -474,6 +474,7 @@
     "report_72": "FIXED. PR #214 merged. Added 5 optional Recipe properties (expires, hasPart, publication, ineligibleRegion, interactionStatistic). QC request #215 sent.",
     "request_215": "COMPLETE. QC repo #74 closed. QC PR #76 merged (10:16 UTC). 39/39 E2E pass, 0 errors. All 5 Recipe optional properties validated. Issue #215 closed.",
     "request_234": "COMPLETE. QC repo #84 closed. 188 QC unit tests, 39/39 E2E pass, 0 errors, 15 warnings (all known false positives). Offer.hasMerchantReturnPolicy validated. Issue #234 closed.",
+    "request_331": "IN PROGRESS. QC-ACK #138 open. Built-package validated. Parity: 39/86 (45%). 2 constructor mismatches fixed in QC test code (not library bugs). Multi-cycle effort — 47 building-block types remaining.",
     "request_265": "COMPLETE. QC repo #114 closed. 188 tests, 1133 assertions, ALL PASS. 39/39 E2E, 0 errors, 15 warnings (known false positives). Phase 0 gate cleared.",
     "request_299": "COMPLETE. QC-ACK #122 closed (2026-03-01T16:37Z). 23/23 parity match, 0 E2E errors, 14 warnings (known false positives). All DoD criteria satisfied: top-level parity, propertyMap, inheritance chains, Adobe E2E. Issue #299 closed."
   },
@@ -539,12 +540,12 @@
     }
   },
   "last_cycle": {
-    "issue": 332,
-    "timestamp": "2026-03-02T15:15:00Z",
-    "summary": "Cycle 98: Processed audit #49 (QC parity self-scoped denominators). Added STARTUP_CHECKLIST step 5.9 (pre-publish absolute denominator gate). Created audit-inbound #333. QC-REQUEST #331 still pending — QC has not yet had a cycle since it was posted."
+    "issue": 334,
+    "timestamp": "2026-03-02T16:47:00Z",
+    "summary": "Cycle 99: QC responded to QC-REQUEST #331 via QC-ACK #138. Parity expanded 25/86 → 39/86 (45%). 2 constructor mismatches investigated — QC test code differences, not library bugs. Closed audit-inbound #333. Monitoring continues."
   },
   "consecutive_idle_cycles": 0,
-  "last_eva_comment_check": "2026-03-02T15:15:00Z",
+  "last_eva_comment_check": "2026-03-02T16:47:00Z",
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49],
   "test_count": 321,
   "total_schema_types": 28,
