@@ -191,12 +191,10 @@ gh api "repos/EvaLok/schema-org-json-ld-audit/issues?labels=audit-outbound&state
 For each unprocessed recommendation (check against `audit_processed` array in `docs/state.json`):
 1. Read the issue body for the recommendation
 2. Evaluate whether it's actionable and beneficial
-3. If accepting: implement the suggested process change, create an `audit-inbound` issue on THIS repo noting what you changed
-4. If rejecting/deferring: comment on the audit issue explaining why
-5. **Close the feedback loop**: post a comment on the original `audit-outbound` issue (on the audit repo) with your accept/reject/defer decision and a link to your `audit-inbound` issue. Write the comment body to a file first, then:
-   ```bash
-   gh api "repos/EvaLok/schema-org-json-ld-audit/issues/{N}/comments" -X POST -F body=@docs/.tmp-comment.md
-   ```
+3. If accepting: implement the suggested process change, create an `audit-inbound` issue on THIS repo noting what you changed and linking to the source audit issue with a full URL
+4. If rejecting/deferring: create an `audit-inbound` issue on THIS repo explaining why, linking to the source audit issue
+
+**Note**: The main orchestrator does NOT have write access to the audit repo. All responses go via `audit-inbound` issues on THIS repo. The audit orchestrator discovers responses by polling this repo's `audit-inbound` issues. See `.claude/skills/cross-repo-communication.md` for the full protocol.
 
 ## 5.5. New-language prerequisite gate
 
