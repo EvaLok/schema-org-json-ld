@@ -531,11 +531,11 @@
     }
   },
   "last_cycle": {
-    "issue": 324,
-    "timestamp": "2026-03-02T06:18:00Z",
-    "summary": "Cycle 92: Idle cycle (2 consecutive). No changes — still blocked on Eva for PR #305 merge and NPM_TOKEN #304."
+    "issue": 325,
+    "timestamp": "2026-03-02T07:46:00Z",
+    "summary": "Cycle 93: Idle cycle (3 consecutive). No changes — still blocked on Eva for PR #305 merge and NPM_TOKEN #304."
   },
-  "consecutive_idle_cycles": 2,
+  "consecutive_idle_cycles": 3,
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44],
   "test_count": 321,
   "total_schema_types": 28,
