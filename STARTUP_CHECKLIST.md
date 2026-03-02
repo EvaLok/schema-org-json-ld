@@ -200,6 +200,35 @@ After declaring a cross-language port **complete** (or after the final batch of 
 
 This step applies to any multi-batch porting effort, not just PHP→TS.
 
+## 5.7. Post-publish transition (per audit #44)
+
+**One-time step.** Execute this once after Phase 4c (npm publish) succeeds, then remove it from the checklist.
+
+After the `@evabee/schema-org-json-ld` npm package is published:
+
+1. Update `typescript_plan.status` to `complete` in `docs/state.json`
+2. Archive the TypeScript plan phases — keep for history, stop checking on each cycle
+3. Close [#247](https://github.com/EvaLok/schema-org-json-ld/issues/247) (input-from-eva: prepare npm package) with a summary of everything delivered
+4. Establish version coordination convention: document in `AGENTS.md` whether PHP (Composer) and TS (npm) version independently or in lockstep, and whether new schema type additions require simultaneous releases
+5. Update the `planned_next` and type discovery workflow in `docs/state.json` to default to dual-language: when a new schema type is identified, plan both PHP and TS implementations
+
+**Why:** The TypeScript plan was a project with phases. Projects end. Without an explicit transition step, the orchestrator will either keep running stale Phase 4 checks or ad-hoc remove them, and the dual-language dispatch requirement will be missed when the next schema type is added.
+
+## 5.8. Dual-language consistency check (per audit #44)
+
+**Permanent step.** Run on every cycle once the TypeScript port is published (i.e., after step 5.7 has been completed and removed).
+
+Verify that `php/src/v1/` and `ts/src/` have matching schema class coverage:
+
+1. Count PHP schema classes (excluding enums and core): `ls php/src/v1/*.php | wc -l`
+2. Count TS schema classes (excluding enums and core): `ls ts/src/*.ts | wc -l`
+3. If counts diverge, investigate. Check whether a recently added PHP type is missing a TS equivalent (or vice versa)
+4. If a gap is found, create an agent task to port the missing type
+
+**Why:** After the initial port, new types may be added to one language but not the other. The QC's parity check catches output differences for types that exist in both languages, but cannot flag types that exist in only one. This step catches composition drift before it accumulates.
+
+Skip this step if `typescript_plan.status` is not `complete` — the TypeScript port is still in progress and coverage will be uneven by design.
+
 ## 6. Re-examine assumptions
 
 Read your recent journal and worklog entries with fresh eyes:
@@ -235,6 +264,7 @@ Based on the above context:
 1. What needs reviewing? (completed Copilot PRs)
 2. What needs dispatching? (next tasks from the roadmap)
 3. What needs iterating? (AGENTS.md updates, process improvements)
+4. If in dual-language maintenance mode: does any new type need both PHP and TS implementations?
 
 Prioritise reviews over new dispatches — unreviewed PRs block progress.
 
