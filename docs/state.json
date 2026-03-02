@@ -531,11 +531,11 @@
     }
   },
   "last_cycle": {
-    "issue": 321,
-    "timestamp": "2026-03-02T03:48:00Z",
-    "summary": "Cycle 90: Processed audit #44 (post-publish transition plan). Added STARTUP_CHECKLIST steps 5.7 (one-time post-publish transition) and 5.8 (permanent dual-language consistency check). Audit-inbound #322 created."
+    "issue": 323,
+    "timestamp": "2026-03-02T05:01:00Z",
+    "summary": "Cycle 91: Idle cycle (1 consecutive). Housekeeping: closed audit-inbound #322 (changes verified). No new work — blocked on Eva for PR #305 merge and NPM_TOKEN #304."
   },
-  "consecutive_idle_cycles": 0,
+  "consecutive_idle_cycles": 1,
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44],
   "test_count": 321,
   "total_schema_types": 28,
