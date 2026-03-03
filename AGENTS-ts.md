@@ -46,32 +46,33 @@ The TypeScript version mirrors the PHP library's architecture 1:1 for Phase 1. E
 
 ### Schema classes
 
-TypeScript schema classes use `readonly` constructor parameters instead of PHP constructor promotion.
-
-#### Small types (≤5 optional properties): positional constructor
+**All schema classes use the options-object constructor pattern.** This is a uniform convention — no exceptions, regardless of how many properties a class has. This ensures consumers never need to worry about constructor parameter ordering, matching the ergonomics of PHP's named parameters.
 
 ```typescript
 import { TypedSchema } from '../TypedSchema';
+
+export interface BrandOptions {
+  name: string;
+  description?: string | null;
+}
 
 export class Brand extends TypedSchema {
   static readonly schemaType = 'Brand';
 
-  constructor(
-    public readonly name: string,
-    public readonly description: string | null = null,
-  ) {
+  public readonly name: string;
+  public readonly description: string | null;
+
+  constructor(options: BrandOptions) {
     super();
+    this.name = options.name;
+    this.description = options.description ?? null;
   }
 }
 ```
 
-#### Large types (>5 optional properties): options object constructor
-
-PHP has named parameters, so callers can skip optional args: `new Recipe(name: 'Cake', cookTime: 'PT1H')`. TypeScript has only positional args — passing `null` 12 times to reach a specific parameter is unusable. Use an options object instead:
+For types with many properties, the pattern is identical — just more fields:
 
 ```typescript
-import { TypedSchema } from '../TypedSchema';
-
 export interface RecipeOptions {
   name: string;
   description?: string | null;
@@ -88,40 +89,31 @@ export class Recipe extends TypedSchema {
 
   public readonly name: string;
   public readonly description: string | null;
-  public readonly image: string | ImageObject | null;
-  public readonly cookTime: string | null;
-  public readonly prepTime: string | null;
-  public readonly totalTime: string | null;
-  public readonly recipeYield: string | null;
+  // ... property declarations
 
   constructor(options: RecipeOptions) {
     super();
     this.name = options.name;
     this.description = options.description ?? null;
-    this.image = options.image ?? null;
-    this.cookTime = options.cookTime ?? null;
-    this.prepTime = options.prepTime ?? null;
-    this.totalTime = options.totalTime ?? null;
-    this.recipeYield = options.recipeYield ?? null;
+    // ... assignments
   }
 }
 ```
-
-**Threshold rule**: Count total optional properties. If >5, use an options object. If ≤5, positional params are fine. When in doubt, use an options object — it's always more readable.
 
 The options interface is exported alongside the class for consumer use. Name it `{TypeName}Options`.
 
 Rules:
 - Extend `TypedSchema`
 - Set `static readonly schemaType` to the exact schema.org type name
-- Use `public readonly` for all properties
-- For small types (≤5 optional): use `public readonly` constructor parameters
-- For large types (>5 optional): use an options object with a `{TypeName}Options` interface
-- Required parameters have no default value; optional parameters default to `null`
-- Use `Type | null` union syntax for optionals (NOT `?:` optional syntax on class properties)
+- Use `public readonly` for all properties (declared in the class body, NOT in constructor params)
+- **Always** use an options-object constructor with a `{TypeName}Options` interface — even for simple types with few properties
+- Required fields in the options interface have no `?:`; optional fields use `?:` with `Type | null`
+- Required parameters have no default value; optional parameters default to `null` (via `?? null` in constructor)
+- Use `Type | null` union syntax for class property declarations (NOT `?:` optional syntax on class properties)
 - In options interfaces, use `?:` for optional fields (this is the interface contract, not the class property)
 - Array properties use TypeScript array types: `readonly Offer[]`
 - Do NOT add serialization methods — `JsonLdGenerator` handles everything
+- **Do NOT use positional constructor parameters** — this is a breaking API change from the old pattern. All constructors take a single options object.
 
 ### Multi-type schemas
 
@@ -139,17 +131,24 @@ export class MathSolver extends TypedSchema {
 For schema.org properties with hyphenated names (invalid as JS identifiers), use a static `propertyMap`:
 
 ```typescript
+export interface SolveMathActionOptions {
+  target: string;
+  mathExpressionInput: string;
+}
+
 export class SolveMathAction extends TypedSchema {
   static readonly schemaType = 'SolveMathAction';
   static readonly propertyMap: Record<string, string> = {
     mathExpressionInput: 'mathExpression-input',
   };
 
-  constructor(
-    public readonly target: string,
-    public readonly mathExpressionInput: string,
-  ) {
+  public readonly target: string;
+  public readonly mathExpressionInput: string;
+
+  constructor(options: SolveMathActionOptions) {
     super();
+    this.target = options.target;
+    this.mathExpressionInput = options.mathExpressionInput;
   }
 }
 ```
@@ -239,7 +238,7 @@ import { YourType } from '../../src/schema/YourType';
 
 describe('YourType', () => {
   it('produces minimal JSON-LD output', () => {
-    const schema = new YourType('value');
+    const schema = new YourType({ requiredProp: 'value' });
     const json = JsonLdGenerator.schemaToJson(schema);
     const obj = JSON.parse(json);
 
@@ -249,7 +248,7 @@ describe('YourType', () => {
   });
 
   it('omits optional fields when null', () => {
-    const schema = new YourType('value');
+    const schema = new YourType({ requiredProp: 'value' });
     const json = JsonLdGenerator.schemaToJson(schema);
     const obj = JSON.parse(json);
 
@@ -257,7 +256,7 @@ describe('YourType', () => {
   });
 
   it('includes all fields when set', () => {
-    const schema = new YourType('value', 'present');
+    const schema = new YourType({ requiredProp: 'value', optionalField: 'present' });
     const json = JsonLdGenerator.schemaToJson(schema);
     const obj = JSON.parse(json);
 
@@ -293,4 +292,4 @@ Before marking your PR as ready:
 5. **Using `require()`** — this is an ESM-first project
 6. **Using `?:` for optional class properties** — use `Type | null = null` for class properties (matches PHP convention and ensures the property exists with an explicit null). Note: `?:` IS correct in options interfaces.
 7. **Modifying JsonLdGenerator.ts or TypedSchema.ts** — never modify these unless specifically instructed
-8. **Using positional constructor for large types** — if a type has >5 optional properties, use an options object constructor instead. Positional constructors with many `null` arguments are unusable.
+8. **Using positional constructor parameters** — ALL schema classes must use the options-object constructor pattern. Never use positional constructor parameters, regardless of how many properties the class has. This ensures uniform API ergonomics matching PHP's named parameters.
