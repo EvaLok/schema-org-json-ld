@@ -293,14 +293,7 @@
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
     "enum_namespace": "EvaLok\\SchemaOrgJsonLd\\v1\\Enum",
-    "in_progress": [
-      {
-        "type": "AggregateRating.itemReviewed",
-        "issue": 370,
-        "dispatched_at": "2026-03-03T09:25:00Z",
-        "model": "gpt-5.3-codex"
-      }
-    ],
+    "in_progress": [],
     "planned_next": [],
     "google_rich_results_types": {
       "not_implemented": [],
@@ -574,7 +567,9 @@
       "title": "Add AggregateRating.itemReviewed (PHP + TS)",
       "dispatched_at": "2026-03-03T09:25:00Z",
       "model": "gpt-5.3-codex",
-      "status": "dispatched",
+      "status": "merged",
+      "pr": 371,
+      "merged_at": "2026-03-03T09:39:10Z",
       "qc_report": 160
     }
   ],
@@ -663,18 +658,18 @@
     ]
   },
   "copilot_metrics": {
-    "dispatch_to_pr_rate": "23/23 (100%)",
-    "pr_merge_rate": "23/23 (100%)",
-    "note": "All 23 main-orchestrator dispatches produced PRs that were merged. Zero silent failures. #364 required 1 revision round (mixed-array bug)."
+    "dispatch_to_pr_rate": "24/24 (100%)",
+    "pr_merge_rate": "24/24 (100%)",
+    "note": "All 24 main-orchestrator dispatches produced PRs that were merged. 1 revision round (#364 mixed-array bug). Zero silent failures."
   },
   "last_cycle": {
     "issue": 367,
     "timestamp": "2026-03-03T09:15:00Z",
-    "summary": "Cycle 108: PR #364 merged (property gaps + mixed-array fix). QC-REPORT #160 processed (AggregateRating.itemReviewed → #370 dispatched). Audit #62 accepted (type classification → #369). Property gap audit complete (all 23 standalone types audited). QC parity 49/86."
+    "summary": "Cycle 108: PR #364 merged (property gaps + mixed-array fix). PR #371 merged (AggregateRating.itemReviewed). QC-REPORT #160 resolved. Audit #62 accepted (type classification). Property gap audit complete (all 23 standalone types). QC parity 49/86."
   },
   "last_eva_comment_check": "2026-03-03T09:15:00Z",
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62],
-  "test_count": 337,
+  "test_count": 338,
   "total_schema_types": 28,
   "total_sub_types": 104,
   "total_schema_classes": 103,

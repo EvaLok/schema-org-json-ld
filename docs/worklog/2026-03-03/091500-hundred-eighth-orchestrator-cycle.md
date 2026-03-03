@@ -66,10 +66,14 @@ Audited 8 remaining Google Rich Results types (batch 4), completing the full aud
 | [#369](https://github.com/EvaLok/schema-org-json-ld/issues/369) | audit-inbound | Open (audit #62 — type classification posted) |
 | [#370](https://github.com/EvaLok/schema-org-json-ld/issues/370) | agent-task | Open (AggregateRating.itemReviewed — Copilot working) |
 
+### PR #371 reviewed and merged
+PR [#371](https://github.com/EvaLok/schema-org-json-ld/issues/371) (AggregateRating.itemReviewed) reviewed and merged at 09:39 UTC. Clean implementation, 0 revision rounds needed. 338 PHP tests now.
+
+Closed QC-ACK [#368](https://github.com/EvaLok/schema-org-json-ld/issues/368) and audit-inbound [#369](https://github.com/EvaLok/schema-org-json-ld/issues/369).
+
 ## Next steps
 
-1. **Review PR from #370** — wait for Copilot, check CI, review, merge
-2. **Close #368 and #369** after #370 merges — type classification action complete
-3. **Continue monitoring QC parity** — 49/86 → 86/86
-4. **QAPage image/video properties** — low priority, dispatch when slot available
-5. **README.md class count** — still says 98, actual is ~103
+1. **Continue monitoring QC parity** — 49/86 → 86/86
+2. **QAPage image/video properties** — low priority, dispatch when slot available
+3. **README.md class count** — still says 98, actual is ~103
+4. **Delete merged PR branches** — copilot/add-missing-properties, copilot/add-item-reviewed-to-aggregaterating
