@@ -13,6 +13,8 @@ class Answer extends TypedSchema {
 		public string $text,
 		public null|Person|Organization $author = null,
 		public null|string $url = null,
+		public null|string|ImageObject $image = null,
+		public null|string|VideoObject $video = null,
 		public null|int $upvoteCount = null,
 		public null|string $datePublished = null,
 		public null|string $dateModified = null,

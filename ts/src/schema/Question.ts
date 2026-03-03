@@ -1,12 +1,16 @@
 import { TypedSchema } from "../TypedSchema.js";
 import type { Answer } from "./Answer.js";
+import type { ImageObject } from "./ImageObject.js";
 import type { Organization } from "./Organization.js";
 import type { Person } from "./Person.js";
+import type { VideoObject } from "./VideoObject.js";
 
 export interface QuestionOptions {
 	name: string;
 	acceptedAnswer?: Answer | null;
 	suggestedAnswer?: readonly Answer[] | null;
+	image?: string | ImageObject | null;
+	video?: string | VideoObject | null;
 	answerCount?: number | null;
 	text?: string | null;
 	upvoteCount?: number | null;
@@ -22,6 +26,8 @@ export class Question extends TypedSchema {
 	public readonly name: string;
 	public readonly acceptedAnswer: Answer | null;
 	public readonly suggestedAnswer: readonly Answer[] | null;
+	public readonly image: string | ImageObject | null;
+	public readonly video: string | VideoObject | null;
 	public readonly answerCount: number | null;
 	public readonly text: string | null;
 	public readonly upvoteCount: number | null;
@@ -35,6 +41,8 @@ export class Question extends TypedSchema {
 		this.name = options.name;
 		this.acceptedAnswer = options.acceptedAnswer ?? null;
 		this.suggestedAnswer = options.suggestedAnswer ?? null;
+		this.image = options.image ?? null;
+		this.video = options.video ?? null;
 		this.answerCount = options.answerCount ?? null;
 		this.text = options.text ?? null;
 		this.upvoteCount = options.upvoteCount ?? null;

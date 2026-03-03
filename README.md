@@ -1,6 +1,6 @@
 # schema-org-json-ld
 
-PHP and TypeScript/JavaScript library for generating schema.org JSON-LD structured data for Google Rich Results. Covers **all 31 Google Search Gallery categories** backed by **98 schema classes/modules**, with type-safe constructor-promoted properties and automatic serialization.
+PHP and TypeScript/JavaScript library for generating schema.org JSON-LD structured data for Google Rich Results. Covers **all 31 Google Search Gallery categories** backed by **89 schema classes/modules** (**88 primary schema types + 1 additional sub-type**), with type-safe constructor-promoted properties and automatic serialization.
 
 Validated against the [Google Rich Results Test](https://search.google.com/test/rich-results) via the [schema-org-json-ld-qc](https://github.com/EvaLok/schema-org-json-ld-qc) validation suite.
 
