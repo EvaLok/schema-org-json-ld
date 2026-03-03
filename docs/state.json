@@ -82,7 +82,9 @@
         "type": "VideoObject",
         "pr": 45,
         "issue": 44,
-        "merged_at": "2026-02-24T20:06:00Z"
+        "merged_at": "2026-02-24T20:06:00Z",
+        "sub_types": ["SeekToAction"],
+        "potentialAction_pr": 362
       },
       {
         "type": "SoftwareApplication",
@@ -287,9 +289,9 @@
     "enum_namespace": "EvaLok\\SchemaOrgJsonLd\\v1\\Enum",
     "in_progress": [
       {
-        "type": "SeekToAction + VideoObject.potentialAction",
-        "issue": 361,
-        "dispatched_at": "2026-03-03T06:23:00Z",
+        "type": "QuantitativeValue.unitText, Dataset.hasPart/isPartOf, Organization ProfilePage fields",
+        "issue": 363,
+        "dispatched_at": "2026-03-03T06:50:00Z",
         "model": "gpt-5.3-codex"
       }
     ],
@@ -319,10 +321,10 @@
       "pr": 263
     },
     "typescript_stats": {
-      "schema_types": 88,
+      "schema_types": 89,
       "enums": 12,
       "core_modules": 2,
-      "total_modules": 102,
+      "total_modules": 103,
       "port_complete": true,
       "port_duration": "~3.5 hours (08:50-12:11 UTC) + 10 min fix (18:08-18:18 UTC)",
       "prs_merged": 12,
@@ -525,6 +527,15 @@
       "status": "merged",
       "pr": 357,
       "merged_at": "2026-03-03T04:29:00Z"
+    },
+    {
+      "issue": 361,
+      "title": "Add SeekToAction and VideoObject.potentialAction (PHP + TS)",
+      "dispatched_at": "2026-03-03T06:23:00Z",
+      "model": "gpt-5.3-codex",
+      "status": "merged",
+      "pr": 362,
+      "merged_at": "2026-03-03T06:50:00Z"
     }
   ],
   "qc_processed": [8, 37, 57, 72, 165],
@@ -612,20 +623,20 @@
     ]
   },
   "copilot_metrics": {
-    "dispatch_to_pr_rate": "21/21 (100%)",
-    "pr_merge_rate": "21/21 (100%)",
-    "note": "All 21 main-orchestrator dispatches produced PRs that were merged. Zero silent failures."
+    "dispatch_to_pr_rate": "22/22 (100%)",
+    "pr_merge_rate": "22/22 (100%)",
+    "note": "All 22 main-orchestrator dispatches produced PRs that were merged. Zero silent failures."
   },
   "last_cycle": {
     "issue": 359,
     "timestamp": "2026-03-03T06:16:00Z",
-    "summary": "Cycle 107: Audit #60 accepted (stale dispatch detection + Copilot metrics). Property gap audit batch 2: Organization, LocalBusiness, SoftwareApp clean; VideoObject missing SeekToAction — dispatched #361. QC parity at 49/86 (up from 39)."
+    "summary": "Cycle 107: Audit #60 accepted. Property gap audit (15 types). SeekToAction dispatched → PR #362 merged. Property gaps #363 dispatched. QC parity 49/86."
   },
   "last_eva_comment_check": "2026-03-03T06:16:00Z",
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60],
   "test_count": 332,
   "total_schema_types": 28,
-  "total_sub_types": 103,
-  "total_schema_classes": 102,
+  "total_sub_types": 104,
+  "total_schema_classes": 103,
   "total_enums": 12
 }
