@@ -301,16 +301,15 @@
     },
     "remaining_audit_findings": {
       "low_priority": [
-        "QAPage: Question and Answer missing image/video recommended properties",
         "VacationRental: Review.contentReferenceTime (French listings only, very niche)"
       ],
-      "note": "Property gap audit complete (all 23 standalone types). Most types at 100% coverage. AggregateRating.itemReviewed fix dispatched (#370)."
+      "note": "Property gap audit complete (all 23 standalone types). Most types at 100% coverage. QAPage Question/Answer image+video added via PR #376."
     },
     "property_gap_audit": {
       "types_audited": 23,
       "100_percent_coverage": ["Article", "Recipe", "Event", "Product", "FAQPage", "Organization", "LocalBusiness", "SoftwareApplication", "Movie", "ProfilePage", "BreadcrumbList", "EmployerAggregateRating", "Quiz", "Review", "MathSolver", "SpeakableSpecification"],
       "gaps_fixed": ["QuantitativeValue.unitText (PR #364)", "Dataset.hasPart/isPartOf (PR #364)", "Organization ProfilePage fields (PR #364)", "VideoObject.potentialAction/SeekToAction (PR #362)", "JobPosting beta properties (PR #355)", "Review.positiveNotes/negativeNotes (PR #357)", "AggregateRating.itemReviewed (dispatched #370)"],
-      "remaining_low_priority": ["QAPage: Question/Answer image+video (recommended)", "VacationRental: Review.contentReferenceTime (French only)"]
+      "remaining_low_priority": ["VacationRental: Review.contentReferenceTime (French only)"]
     },
     "type_classification": {
       "standalone_testable": 28,
@@ -577,18 +576,22 @@
       "title": "Comprehensive quality sweep: QAPage properties + edge-case tests + README",
       "dispatched_at": "2026-03-03T10:51:00Z",
       "model": "gpt-5.3-codex",
-      "status": "dispatched",
+      "status": "merged",
+      "pr": 376,
+      "merged_at": "2026-03-03T11:10:00Z",
       "eva_directive": 372,
-      "note": "First high-complexity dispatch per Eva #372. 100+ new test methods target, 70+ files."
+      "note": "First high-complexity dispatch per Eva #372. Part 1 (Question/Answer image+video) and Part 3 (README) delivered. Part 2 (test expansion) underdelivered — only 2 types covered with data-provider padding. Follow-up needed for genuine edge-case test expansion."
     },
     {
       "issue": 375,
       "title": "Cross-language parity verification tool",
       "dispatched_at": "2026-03-03T10:51:00Z",
       "model": "gpt-5.3-codex",
-      "status": "dispatched",
+      "status": "merged",
+      "pr": 377,
+      "merged_at": "2026-03-03T11:08:00Z",
       "eva_directive": 372,
-      "note": "First auditing tool dispatch per Eva #372. Creates tools/parity-check.ts."
+      "note": "First auditing tool dispatch per Eva #372. Created tools/parity-check.ts. Known limitation: TS extends interface regex doesn't handle FoodEstablishmentOptions extends LocalBusinessOptions. Affects 1/88 classes."
     }
   ],
   "qc_processed": [8, 37, 57, 72, 160, 165],
@@ -676,14 +679,14 @@
     ]
   },
   "copilot_metrics": {
-    "dispatch_to_pr_rate": "24/24 (100%)",
-    "pr_merge_rate": "24/24 (100%)",
-    "note": "All 24 main-orchestrator dispatches produced PRs that were merged. 1 revision round (#364 mixed-array bug). Zero silent failures. Cycle 109: first high-complexity dispatches (#374, #375) per Eva #372."
+    "dispatch_to_pr_rate": "26/26 (100%)",
+    "pr_merge_rate": "26/26 (100%)",
+    "note": "All 26 main-orchestrator dispatches produced PRs that were merged. 1 revision round (#364 mixed-array bug). Zero silent failures. Cycle 109: merged #376 (quality sweep, partial delivery on Part 2) and #377 (parity tool, 1 known limitation)."
   },
   "last_cycle": {
     "issue": 373,
-    "timestamp": "2026-03-03T10:45:00Z",
-    "summary": "Cycle 109: Eva directive #372 processed (leverage 5.3-codex). Dispatched 2 complex tasks: #374 (quality sweep + 100+ tests) and #375 (parity verification tool). Both concurrent on gpt-5.3-codex."
+    "timestamp": "2026-03-03T11:10:00Z",
+    "summary": "Cycle 109: Eva directive #372 processed. Dispatched 2 complex tasks. PR #377 (parity tool) merged — first auditing tool, known extends-regex limitation. PR #376 (quality sweep) merged — Question/Answer image+video added, README updated, but test expansion underdelivered (data-provider padding instead of genuine coverage). Follow-up needed for edge-case tests."
   },
   "last_eva_comment_check": "2026-03-03T10:45:00Z",
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62],
