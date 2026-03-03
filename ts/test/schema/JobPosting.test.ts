@@ -61,7 +61,7 @@ describe("JobPosting", () => {
 			datePosted: "2026-03-01",
 			hiringOrganization: new Organization({ name: "Example Corp" }),
 			jobLocation: new Place("Remote"),
-			baseSalary: new MonetaryAmount("USD", 120000),
+			baseSalary: new MonetaryAmount({ currency: "USD", value: 120000 }),
 			employmentType: "FULL_TIME",
 			validThrough: "2026-04-01",
 			applicantLocationRequirements: new AdministrativeArea({ name: "US" }),

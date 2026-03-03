@@ -71,8 +71,8 @@ describe("Accommodation", () => {
 				new BedDetails({ numberOfBeds: 1, typeOfBed: "Sofa bed" }),
 			],
 			amenityFeature: [
-				new LocationFeatureSpecification("WiFi", true),
-				new LocationFeatureSpecification("Parking", false),
+				new LocationFeatureSpecification({ name: "WiFi", value: true }),
+				new LocationFeatureSpecification({ name: "Parking", value: false }),
 			],
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);

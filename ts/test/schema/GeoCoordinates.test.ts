@@ -5,7 +5,10 @@ import { GeoCoordinates } from "../../src/schema/GeoCoordinates";
 
 describe("GeoCoordinates", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new GeoCoordinates(40.7128, -74.006);
+		const schema = new GeoCoordinates({
+			latitude: 40.7128,
+			longitude: -74.006,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -16,7 +19,10 @@ describe("GeoCoordinates", () => {
 	});
 
 	it("has no optional fields to omit when null", () => {
-		const schema = new GeoCoordinates(40.7128, -74.006);
+		const schema = new GeoCoordinates({
+			latitude: 40.7128,
+			longitude: -74.006,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -29,7 +35,10 @@ describe("GeoCoordinates", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new GeoCoordinates(40.7128, -74.006);
+		const schema = new GeoCoordinates({
+			latitude: 40.7128,
+			longitude: -74.006,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -38,7 +47,10 @@ describe("GeoCoordinates", () => {
 	});
 
 	it("matches PHP parity JSON-LD output", () => {
-		const schema = new GeoCoordinates(40.7128, -74.006);
+		const schema = new GeoCoordinates({
+			latitude: 40.7128,
+			longitude: -74.006,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 
 		expect(json).toBe(

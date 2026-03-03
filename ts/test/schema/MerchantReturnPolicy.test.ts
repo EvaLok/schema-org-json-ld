@@ -87,12 +87,13 @@ describe("MerchantReturnPolicy", () => {
 	});
 
 	it("supports returnPolicySeasonalOverride as single and array", () => {
-		const overrideA = new MerchantReturnPolicySeasonalOverride(
-			"2026-11-20",
-			"2026-12-31",
-			MerchantReturnEnumeration.MerchantReturnFiniteReturnWindow,
-			45,
-		);
+		const overrideA = new MerchantReturnPolicySeasonalOverride({
+			startDate: "2026-11-20",
+			endDate: "2026-12-31",
+			returnPolicyCategory:
+				MerchantReturnEnumeration.MerchantReturnFiniteReturnWindow,
+			merchantReturnDays: 45,
+		});
 		const singleSchema = new MerchantReturnPolicy({
 			applicableCountry: "US",
 			returnPolicyCategory:
@@ -111,11 +112,12 @@ describe("MerchantReturnPolicy", () => {
 			"MerchantReturnPolicySeasonalOverride",
 		);
 
-		const overrideB = new MerchantReturnPolicySeasonalOverride(
-			"2027-01-01",
-			"2027-01-15",
-			MerchantReturnEnumeration.MerchantReturnUnlimitedWindow,
-		);
+		const overrideB = new MerchantReturnPolicySeasonalOverride({
+			startDate: "2027-01-01",
+			endDate: "2027-01-15",
+			returnPolicyCategory:
+				MerchantReturnEnumeration.MerchantReturnUnlimitedWindow,
+		});
 		const arraySchema = new MerchantReturnPolicy({
 			applicableCountry: "US",
 			returnPolicyCategory:
@@ -145,22 +147,31 @@ describe("MerchantReturnPolicy", () => {
 			merchantReturnLink: "https://example.com/returns",
 			returnMethod: ReturnMethodEnumeration.ReturnByMail,
 			returnFees: ReturnFeesEnumeration.ReturnShippingFees,
-			returnShippingFeesAmount: new MonetaryAmount("USD", 6.99),
+			returnShippingFeesAmount: new MonetaryAmount({
+				currency: "USD",
+				value: 6.99,
+			}),
 			refundType: RefundTypeEnumeration.FullRefund,
 			itemCondition: OfferItemCondition.NewCondition,
 			returnLabelSource:
 				ReturnLabelSourceEnumeration.ReturnLabelDownloadAndPrint,
 			returnPolicyCountry: "US",
-			restockingFee: new MonetaryAmount("USD", 10),
+			restockingFee: new MonetaryAmount({ currency: "USD", value: 10 }),
 			customerRemorseReturnFees:
 				ReturnFeesEnumeration.ReturnFeesCustomerResponsibility,
 			customerRemorseReturnLabelSource:
 				ReturnLabelSourceEnumeration.ReturnLabelCustomerResponsibility,
-			customerRemorseReturnShippingFeesAmount: new MonetaryAmount("USD", 12),
+			customerRemorseReturnShippingFeesAmount: new MonetaryAmount({
+				currency: "USD",
+				value: 12,
+			}),
 			itemDefectReturnFees: ReturnFeesEnumeration.FreeReturn,
 			itemDefectReturnLabelSource:
 				ReturnLabelSourceEnumeration.ReturnLabelInBox,
-			itemDefectReturnShippingFeesAmount: new MonetaryAmount("USD", 0),
+			itemDefectReturnShippingFeesAmount: new MonetaryAmount({
+				currency: "USD",
+				value: 0,
+			}),
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;

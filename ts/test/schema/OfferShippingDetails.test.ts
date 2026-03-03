@@ -43,7 +43,7 @@ describe("OfferShippingDetails", () => {
 	it("includes all fields when set", () => {
 		const schema = new OfferShippingDetails(
 			new DefinedRegion({ addressCountry: "US", addressRegion: "CA" }),
-			new MonetaryAmount("USD", 4.99),
+			new MonetaryAmount({ currency: "USD", value: 4.99 }),
 			new ShippingDeliveryTime(
 				new QuantitativeValue(1, "DAY"),
 				new QuantitativeValue(3, "DAY"),

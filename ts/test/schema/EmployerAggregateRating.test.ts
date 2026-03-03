@@ -6,10 +6,10 @@ import { Organization } from "../../src/schema/Organization";
 
 describe("EmployerAggregateRating", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new EmployerAggregateRating(
-			new Organization({ name: "Example Corp" }),
-			4.7,
-		);
+		const schema = new EmployerAggregateRating({
+			itemReviewed: new Organization({ name: "Example Corp" }),
+			ratingValue: 4.7,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const itemReviewed = obj.itemReviewed as Record<string, unknown>;
@@ -21,14 +21,14 @@ describe("EmployerAggregateRating", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new EmployerAggregateRating(
-			new Organization({ name: "Example Corp" }),
-			4.7,
-			null,
-			null,
-			null,
-			null,
-		);
+		const schema = new EmployerAggregateRating({
+			itemReviewed: new Organization({ name: "Example Corp" }),
+			ratingValue: 4.7,
+			ratingCount: null,
+			reviewCount: null,
+			bestRating: null,
+			worstRating: null,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -39,14 +39,14 @@ describe("EmployerAggregateRating", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new EmployerAggregateRating(
-			new Organization({ name: "Example Corp" }),
-			4.7,
-			120,
-			80,
-			5,
-			1,
-		);
+		const schema = new EmployerAggregateRating({
+			itemReviewed: new Organization({ name: "Example Corp" }),
+			ratingValue: 4.7,
+			ratingCount: 120,
+			reviewCount: 80,
+			bestRating: 5,
+			worstRating: 1,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

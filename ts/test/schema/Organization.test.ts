@@ -78,12 +78,16 @@ describe("Organization", () => {
 					MerchantReturnEnumeration.MerchantReturnFiniteReturnWindow,
 			}),
 			hasMemberProgram: [
-				new MemberProgram("Rewards+", "Loyalty program", [
-					new MemberProgramTier(
-						"Gold",
-						TierBenefitEnumeration.TierBenefitLoyaltyPoints,
-					),
-				]),
+				new MemberProgram({
+					name: "Rewards+",
+					description: "Loyalty program",
+					hasTiers: [
+						new MemberProgramTier({
+							name: "Gold",
+							hasTierBenefit: TierBenefitEnumeration.TierBenefitLoyaltyPoints,
+						}),
+					],
+				}),
 			],
 			hasShippingService: new ShippingService(new ShippingConditions({})),
 		});
@@ -120,12 +124,16 @@ describe("Organization", () => {
 				}),
 			],
 			hasMemberProgram: [
-				new MemberProgram("Rewards+", "Loyalty program", [
-					new MemberProgramTier(
-						"Gold",
-						TierBenefitEnumeration.TierBenefitLoyaltyPoints,
-					),
-				]),
+				new MemberProgram({
+					name: "Rewards+",
+					description: "Loyalty program",
+					hasTiers: [
+						new MemberProgramTier({
+							name: "Gold",
+							hasTierBenefit: TierBenefitEnumeration.TierBenefitLoyaltyPoints,
+						}),
+					],
+				}),
 			],
 			hasShippingService: [new ShippingService(new ShippingConditions({}))],
 		});

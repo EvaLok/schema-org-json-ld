@@ -5,7 +5,10 @@ import { InteractionCounter } from "../../src/schema/InteractionCounter";
 
 describe("InteractionCounter", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new InteractionCounter("https://schema.org/LikeAction", 123);
+		const schema = new InteractionCounter({
+			interactionType: "https://schema.org/LikeAction",
+			userInteractionCount: 123,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -16,11 +19,11 @@ describe("InteractionCounter", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new InteractionCounter(
-			"https://schema.org/LikeAction",
-			123,
-			null,
-		);
+		const schema = new InteractionCounter({
+			interactionType: "https://schema.org/LikeAction",
+			userInteractionCount: 123,
+			interactionService: null,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -28,11 +31,11 @@ describe("InteractionCounter", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new InteractionCounter(
-			"https://schema.org/LikeAction",
-			123,
-			"YouTube",
-		);
+		const schema = new InteractionCounter({
+			interactionType: "https://schema.org/LikeAction",
+			userInteractionCount: 123,
+			interactionService: "YouTube",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

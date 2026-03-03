@@ -5,7 +5,10 @@ import { LocationFeatureSpecification } from "../../src/schema/LocationFeatureSp
 
 describe("LocationFeatureSpecification", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new LocationFeatureSpecification("Parking", true);
+		const schema = new LocationFeatureSpecification({
+			name: "Parking",
+			value: true,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -16,7 +19,10 @@ describe("LocationFeatureSpecification", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new LocationFeatureSpecification("Parking", "reserved");
+		const schema = new LocationFeatureSpecification({
+			name: "Parking",
+			value: "reserved",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -25,8 +31,14 @@ describe("LocationFeatureSpecification", () => {
 	});
 
 	it("supports boolean and string union values", () => {
-		const booleanSchema = new LocationFeatureSpecification("WiFi", false);
-		const stringSchema = new LocationFeatureSpecification("Pool", "seasonal");
+		const booleanSchema = new LocationFeatureSpecification({
+			name: "WiFi",
+			value: false,
+		});
+		const stringSchema = new LocationFeatureSpecification({
+			name: "Pool",
+			value: "seasonal",
+		});
 
 		const booleanObj = JSON.parse(
 			JsonLdGenerator.schemaToJson(booleanSchema),

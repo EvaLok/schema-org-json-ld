@@ -30,7 +30,7 @@ describe("Place", () => {
 		const schema = new Place(
 			"Googleplex",
 			null,
-			new GeoCoordinates(37.422, -122.084),
+			new GeoCoordinates({ latitude: 37.422, longitude: -122.084 }),
 		);
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
@@ -45,7 +45,7 @@ describe("Place", () => {
 		const schema = new Place(
 			"Googleplex",
 			new PostalAddress({ streetAddress: "1600 Amphitheatre Parkway" }),
-			new GeoShape("37.42242 -122.08585 37.42242 -122.08585"),
+			new GeoShape({ box: "37.42242 -122.08585 37.42242 -122.08585" }),
 		);
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;

@@ -6,11 +6,14 @@ import { SolveMathAction } from "../../src/schema/SolveMathAction";
 
 describe("MathSolver", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new MathSolver(
-			"https://example.com/math-solver",
-			"https://example.com/usage",
-			new SolveMathAction("https://example.com/solve", "x+1=2"),
-		);
+		const schema = new MathSolver({
+			url: "https://example.com/math-solver",
+			usageInfo: "https://example.com/usage",
+			potentialAction: new SolveMathAction(
+				"https://example.com/solve",
+				"x+1=2",
+			),
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const potentialAction = obj.potentialAction as Record<string, unknown>;
@@ -23,15 +26,18 @@ describe("MathSolver", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new MathSolver(
-			"https://example.com/math-solver",
-			"https://example.com/usage",
-			new SolveMathAction("https://example.com/solve", "x+1=2"),
-			null,
-			null,
-			null,
-			null,
-		);
+		const schema = new MathSolver({
+			url: "https://example.com/math-solver",
+			usageInfo: "https://example.com/usage",
+			potentialAction: new SolveMathAction(
+				"https://example.com/solve",
+				"x+1=2",
+			),
+			name: null,
+			inLanguage: null,
+			learningResourceType: null,
+			assesses: null,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -42,21 +48,21 @@ describe("MathSolver", () => {
 	});
 
 	it("includes optional fields when set", () => {
-		const schema = new MathSolver(
-			"https://example.com/math-solver",
-			"https://example.com/usage",
-			[
+		const schema = new MathSolver({
+			url: "https://example.com/math-solver",
+			usageInfo: "https://example.com/usage",
+			potentialAction: [
 				new SolveMathAction("https://example.com/solve/algebra", "x+1=2"),
 				new SolveMathAction(
 					"https://example.com/solve/geometry",
 					"a^2+b^2=c^2",
 				),
 			],
-			"Math Helper",
-			"en",
-			"Practice Problem",
-			["Algebra", "Geometry"],
-		);
+			name: "Math Helper",
+			inLanguage: "en",
+			learningResourceType: "Practice Problem",
+			assesses: ["Algebra", "Geometry"],
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const potentialAction = obj.potentialAction as Record<string, unknown>[];

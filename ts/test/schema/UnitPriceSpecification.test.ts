@@ -42,10 +42,10 @@ describe("UnitPriceSpecification", () => {
 			"USD",
 			"https://schema.org/SalePrice",
 			150,
-			new MemberProgramTier(
-				"Gold",
-				TierBenefitEnumeration.TierBenefitLoyaltyPoints,
-			),
+			new MemberProgramTier({
+				name: "Gold",
+				hasTierBenefit: TierBenefitEnumeration.TierBenefitLoyaltyPoints,
+			}),
 			new QuantitativeValue(1, "C62"),
 		);
 		const json = JsonLdGenerator.schemaToJson(schema);

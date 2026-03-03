@@ -53,10 +53,10 @@ describe("ShippingService", () => {
 			"Fast delivery service",
 			FulfillmentTypeEnumeration.FulfillmentTypeDelivery,
 			new ServicePeriod(new QuantitativeValue(2, "DAY")),
-			new MemberProgramTier(
-				"Gold",
-				TierBenefitEnumeration.TierBenefitLoyaltyPoints,
-			),
+			new MemberProgramTier({
+				name: "Gold",
+				hasTierBenefit: TierBenefitEnumeration.TierBenefitLoyaltyPoints,
+			}),
 		);
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;

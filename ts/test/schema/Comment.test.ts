@@ -44,7 +44,10 @@ describe("Comment", () => {
 			text: "Top level",
 			author: new Person({ name: "Alice" }),
 			comment: [new Comment({ text: "Nested reply" })],
-			interactionStatistic: new InteractionCounter("LikeAction", 10),
+			interactionStatistic: new InteractionCounter({
+				interactionType: "LikeAction",
+				userInteractionCount: 10,
+			}),
 		});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
 			string,
@@ -67,8 +70,14 @@ describe("Comment", () => {
 			text: "Top level",
 			author: new Organization({ name: "Example Org" }),
 			interactionStatistic: [
-				new InteractionCounter("LikeAction", 10),
-				new InteractionCounter("ShareAction", 3),
+				new InteractionCounter({
+					interactionType: "LikeAction",
+					userInteractionCount: 10,
+				}),
+				new InteractionCounter({
+					interactionType: "ShareAction",
+					userInteractionCount: 3,
+				}),
 			],
 		});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<

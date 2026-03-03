@@ -6,7 +6,9 @@ import { ListItem } from "../../src/schema/ListItem";
 
 describe("BreadcrumbList", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new BreadcrumbList({ itemListElement: [new ListItem(1)] });
+		const schema = new BreadcrumbList({
+			itemListElement: [new ListItem({ position: 1 })],
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const itemListElement = obj.itemListElement as Record<string, unknown>[];
@@ -20,8 +22,16 @@ describe("BreadcrumbList", () => {
 	it("preserves nested ListItem values", () => {
 		const schema = new BreadcrumbList({
 			itemListElement: [
-				new ListItem(1, "Home", "https://example.com"),
-				new ListItem(2, "Products", "https://example.com/products"),
+				new ListItem({
+					position: 1,
+					name: "Home",
+					item: "https://example.com",
+				}),
+				new ListItem({
+					position: 2,
+					name: "Products",
+					item: "https://example.com/products",
+				}),
 			],
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);
@@ -36,12 +46,12 @@ describe("BreadcrumbList", () => {
 	it("includes all fields when set in nested items", () => {
 		const schema = new BreadcrumbList({
 			itemListElement: [
-				new ListItem(
-					1,
-					"Home",
-					"https://example.com",
-					"https://example.com/list-item/home",
-				),
+				new ListItem({
+					position: 1,
+					name: "Home",
+					item: "https://example.com",
+					url: "https://example.com/list-item/home",
+				}),
 			],
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);

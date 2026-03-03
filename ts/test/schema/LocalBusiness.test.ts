@@ -92,7 +92,7 @@ describe("LocalBusiness", () => {
 		const singleReviewSchema = new LocalBusiness({
 			name: "Cafe",
 			address,
-			geo: new GeoCoordinates(40.0, -73.0),
+			geo: new GeoCoordinates({ latitude: 40.0, longitude: -73.0 }),
 			openingHoursSpecification: [new OpeningHoursSpecification()],
 			aggregateRating: new AggregateRating({ ratingValue: 4.2 }),
 			review: new Review("Jane", new Rating(5)),
