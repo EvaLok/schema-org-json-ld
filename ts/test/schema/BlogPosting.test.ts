@@ -50,7 +50,10 @@ describe("BlogPosting", () => {
 				"https://example.com/image.jpg",
 				new ImageObject({ contentUrl: "https://example.com/image-object.jpg" }),
 			],
-			hasPart: new WebPageElement(true, ".content"),
+			hasPart: new WebPageElement({
+				isAccessibleForFree: true,
+				cssSelector: ".content",
+			}),
 		});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
 			string,

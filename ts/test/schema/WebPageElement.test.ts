@@ -5,7 +5,10 @@ import { WebPageElement } from "../../src/schema/WebPageElement";
 
 describe("WebPageElement", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new WebPageElement(true, ".article-body");
+		const schema = new WebPageElement({
+			isAccessibleForFree: true,
+			cssSelector: ".article-body",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -16,7 +19,10 @@ describe("WebPageElement", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new WebPageElement(false, ".paywalled");
+		const schema = new WebPageElement({
+			isAccessibleForFree: false,
+			cssSelector: ".paywalled",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -24,7 +30,10 @@ describe("WebPageElement", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new WebPageElement(false, ".paywalled");
+		const schema = new WebPageElement({
+			isAccessibleForFree: false,
+			cssSelector: ".paywalled",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

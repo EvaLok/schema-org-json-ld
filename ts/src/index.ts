@@ -170,6 +170,7 @@ export { VideoObject } from "./schema/VideoObject.js";
 export type { VideoObjectOptions } from "./schema/VideoObject.js";
 export { WebApplication } from "./schema/WebApplication.js";
 export { WebPageElement } from "./schema/WebPageElement.js";
+export type { WebPageElementOptions } from "./schema/WebPageElement.js";
 export { DayOfWeek } from "./enum/DayOfWeek.js";
 export { EventAttendanceModeEnumeration } from "./enum/EventAttendanceModeEnumeration.js";
 export { EventStatusType } from "./enum/EventStatusType.js";

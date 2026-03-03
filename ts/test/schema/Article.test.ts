@@ -78,7 +78,10 @@ describe("Article", () => {
 	it("supports hasPart as single and array", () => {
 		const singlePart = new Article({
 			headline: "Single part",
-			hasPart: new WebPageElement(true, ".main"),
+			hasPart: new WebPageElement({
+				isAccessibleForFree: true,
+				cssSelector: ".main",
+			}),
 		});
 		const singleObj = JSON.parse(
 			JsonLdGenerator.schemaToJson(singlePart),
@@ -88,7 +91,12 @@ describe("Article", () => {
 
 		const arrayPart = new Article({
 			headline: "Array part",
-			hasPart: [new WebPageElement(true, ".main")],
+			hasPart: [
+				new WebPageElement({
+					isAccessibleForFree: true,
+					cssSelector: ".main",
+				}),
+			],
 		});
 		const arrayObj = JSON.parse(
 			JsonLdGenerator.schemaToJson(arrayPart),
