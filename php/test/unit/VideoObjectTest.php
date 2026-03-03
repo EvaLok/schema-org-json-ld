@@ -49,7 +49,7 @@ final class VideoObjectTest extends TestCase {
 		$this->assertFalse(property_exists($obj, 'hasPart'));
 		$this->assertFalse(property_exists($obj, 'ineligibleRegion'));
 		$this->assertFalse(property_exists($obj, 'publication'));
-		$this->assertFalse(property_exists($obj, 'potentialAction'));
+		$this->assertObjectNotHasProperty('potentialAction', $obj);
 	}
 
 	public function testFullOutput(): void {

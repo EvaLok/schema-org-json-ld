@@ -21,6 +21,6 @@ final class SeekToActionTest extends TestCase {
 		$this->assertEquals('SeekToAction', $obj->{'@type'});
 		$this->assertEquals('https://example.com/watch?v=abc&t={seek_to_second_number}', $obj->target);
 		$this->assertEquals('required name=seek_to_second_number', $obj->{'startOffset-input'});
-		$this->assertFalse(property_exists($obj, 'startOffsetInput'));
+		$this->assertObjectNotHasProperty('startOffsetInput', $obj);
 	}
 }
