@@ -674,7 +674,7 @@
   ],
   "open_questions_for_eva": [403],
   "eva_input_issues": {
-    "closed_this_cycle": [400],
+    "closed_this_cycle": [],
     "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225, 340, 348, 372, 378, 396],
     "remaining_open": [247, 329, 401]
   },
@@ -742,13 +742,13 @@
     "note": "31 dispatches, 31 merged, 0 in-flight. 2 revision rounds total (#364 mixed-array bug, #384 missing required props). Zero silent failures."
   },
   "last_cycle": {
-    "issue": 402,
-    "timestamp": "2026-03-03T21:09:00Z",
-    "summary": "Cycle 116: Closed PR #305 + issue #304 per Eva confirmation. Acknowledged Eva #400 (OIDC publishing). Responded to Eva #401 (pre-publish review). Processed audit #75 (verify-build CI) and #76 (QC-ACK stale body). Added multi-party pre-publish checkpoint (step 5.10) and expanded convention sweep to include scripts/. Created workflow-change request #403."
+    "issue": 406,
+    "timestamp": "2026-03-03T22:42:54Z",
+    "summary": "Cycle 117: Housekeeping — closed stale audit-inbound #404, #405 and stale issue #303 (Phase 4b, superseded by Eva's direct push). Fixed stale test_count in state.json (338 → 832). Proactive scan found no infrastructure issues. All systems nominal, awaiting Eva for npm publish."
   },
-  "last_eva_comment_check": "2026-03-03T21:09:00Z",
+  "last_eva_comment_check": "2026-03-03T22:42:54Z",
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71, 73, 75, 76],
-  "test_count": 338,
+  "test_count": {"php": 423, "ts": 409, "total": 832, "last_verified": "cycle 113"},
   "total_schema_types": 28,
   "total_sub_types": 104,
   "total_schema_classes": 103,
