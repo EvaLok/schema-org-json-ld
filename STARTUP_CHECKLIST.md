@@ -265,6 +265,22 @@ Skip this step if `typescript_plan.status` is not `complete` — the TypeScript 
 
 **Why:** Audit #49 identified that in the initial TS validation, all three orchestrators consumed a self-scoped denominator (25/25) at face value, masking 29% actual coverage. Eva caught the gap. Audit #68 corrected the denominator from 88 to 76 (excluding 12 enum types). Audit #73 further refined it from 76 to 73 (excluding 3 building-block types that cannot be parity-tested standalone — they are validated through parent types in the QC's architecture).
 
+## 5.10. Multi-party pre-publish checkpoint (per Eva #401, audit #75)
+
+**Permanent step.** Before recommending an npm publish (or any release) to Eva, the orchestrator must:
+
+1. **Run verify-build locally**: Execute `npm run verify-build` (or confirm CI ran it on the exact commit being considered for release). If it fails, fix it before proceeding.
+2. **Confirm all CI checks green** on the current `master` HEAD — not just "last PR CI was green," but the actual merge commit.
+3. **Confirm state.json metrics are current**: Verify `phpstan_level`, `typescript_stats`, `copilot_metrics`, and `qc_status` reflect reality, not stale snapshots.
+4. **Request QC final validation**: Open a `qc-outbound` QC-REQUEST asking the QC orchestrator to validate the exact commit SHA being considered for release. Include:
+   - Commit SHA
+   - Request to confirm parity (73/73) against that SHA
+   - Request to run E2E tests against the built package from that SHA
+5. **Request audit sign-off**: Open a `qc-outbound`-style issue (or comment on existing audit coordination) asking the audit orchestrator to confirm that all pre-publish steps were followed. Include: which validation gates passed, which commit is being proposed, what has changed since last validation.
+6. **Wait for both QC and audit to respond** before recommending publish to Eva. Do NOT recommend publish based solely on main orchestrator's own checks.
+
+**Why:** Eva's [#401](https://github.com/EvaLok/schema-org-json-ld/issues/401) identified that the orchestrator recommended publishing while `verify-build.mjs` was broken (for 11 cycles). Multi-party verification provides redundancy — the QC tests the built package independently, and the audit confirms the process was followed. No single orchestrator's "all gates satisfied" assertion should be sufficient for a publish recommendation.
+
 ## 6. Re-examine assumptions
 
 Read your recent journal and worklog entries with fresh eyes:
@@ -334,12 +350,14 @@ This ensures infrastructure changes are as visible and traceable as code changes
 
 ### Convention change sweep
 
-When a **coding convention** changes (e.g., constructor pattern, naming convention, file layout), ALL documentation of that convention must be updated in the same cycle. Files to sweep:
+When a **coding convention** changes (e.g., constructor pattern, naming convention, file layout), ALL documentation AND consumer code of that convention must be updated in the same cycle. Files to sweep:
 
 - `AGENTS.md`
 - `AGENTS-ts.md`
 - All skills in `.claude/skills/` that reference the convention
 - `README.md` (user-facing examples)
 - Related ADRs in `doc/adr/`
+- `scripts/` (any scripts that instantiate schema classes or use library APIs)
+- `tools/` (any tools that reference the convention)
 
-**Why:** In cycle 105, stale documentation was found across 5 files after the Phase 0 restructure and constructor pattern change. Agents reading outdated conventions produce incorrect code. A single sweep at convention-change time prevents multi-cycle accumulation of stale docs.
+**Why:** In cycle 105, stale documentation was found across 5 files after the Phase 0 restructure and constructor pattern change. In cycle 115, Eva found `verify-build.mjs` was broken for 11 cycles because `scripts/` was not in the sweep list — the constructor refactoring (cycle 104) changed `new Brand("Acme")` to `new Brand({ name: "Acme" })` but the script was never updated. A single sweep at convention-change time prevents multi-cycle accumulation of stale docs and broken scripts.
