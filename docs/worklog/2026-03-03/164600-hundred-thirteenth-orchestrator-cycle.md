@@ -40,9 +40,15 @@ Dispatched [#392](https://github.com/EvaLok/schema-org-json-ld/issues/392) to Co
 ## Self-modifications
 - **STARTUP_CHECKLIST.md**: Step 4 — updated QC-REPORT fix procedure to require notification on active QC-REQUEST thread (per audit #71)
 
+### PR #393 reviewed and merged
+- Copilot finished in 4 minutes (16:59–17:03Z). 6 files changed, all correct.
+- CI: All 9 checks passed (PHP 8.1–8.5, Node 20+24, Code Style, Static Analysis)
+- **Merged** as squash commit. Branch cleaned up.
+- Constructor refactoring now **complete**: all 89 TS schema classes use options-object pattern.
+
 ## Current state
 
-- **Copilot sessions**: 1 in-flight (#392), 29/30 merged (97%)
+- **Copilot sessions**: 0 in-flight, 30/30 merged (100%)
 - **Schema classes**: 88/88 PHP/TS, 12/12 enums
 - **QC parity**: 49/76 testable types (64%)
 - **Phase 4 blocked**: QC validation at 49/76. PR #305 waiting for Eva.
@@ -56,10 +62,14 @@ Dispatched [#392](https://github.com/EvaLok/schema-org-json-ld/issues/392) to Co
 | [#305](https://github.com/EvaLok/schema-org-json-ld/issues/305) | PR | Open (workflow file — Eva must merge) |
 | [#329](https://github.com/EvaLok/schema-org-json-ld/issues/329) | input-from-eva | Open (TS testing directive — pending QC validation) |
 | [#331](https://github.com/EvaLok/schema-org-json-ld/issues/331) | qc-outbound | Open (comprehensive TS validation — QC at 49/76) |
-| [#392](https://github.com/EvaLok/schema-org-json-ld/issues/392) | agent-task | Dispatched (WebPageElement options-object fix) |
+
+## Milestones
+- **30/30 Copilot dispatches merged (100% merge rate)**: Only 2 revision rounds total
+- **Constructor refactoring 100% complete**: All 89 TS classes use options-object pattern
+- **Parity tool validated**: AST-based tool detected the missed WebPageElement
 
 ## Next steps
 
-1. Review and merge PR from #392 when Copilot finishes
-2. Continue monitoring QC progress toward 76/76 parity
-3. When QC reaches 76/76, proceed with Phase 4c (npm publish gate clearance)
+1. Continue monitoring QC progress toward 76/76 parity
+2. When QC reaches 76/76, proceed with Phase 4c (npm publish gate clearance)
+3. Look for additional quality improvements in next cycle
