@@ -62,6 +62,7 @@ class JsonLdGenerator {
 			}
 		}
 
+		/** @var array<string, mixed> $properties */
 		self::AddPropertiesToObject($properties, $obj);
 
 		return $obj;
@@ -115,6 +116,7 @@ class JsonLdGenerator {
 				}
 
 				if ($v[0] instanceof TypedSchema) {
+					/** @var TypedSchema[] $v */
 					foreach ($v as $schema) {
 						$obj[$k][] = self::SchemaToObject(
 							schema: $schema,
@@ -122,6 +124,7 @@ class JsonLdGenerator {
 						);
 					}
 				} else {
+					/** @var array<string|int|float|bool|UnitEnum> $v */
 					foreach ($v as $element) {
 						if (is_string($element) || is_numeric($element) || is_bool($element)) {
 							$obj[$k][] = $element;
