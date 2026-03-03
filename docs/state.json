@@ -639,8 +639,8 @@
       "description": "Phase 4b/4c blocked: comprehensive QC validation of TypeScript builds required before npm publish",
       "qc_request": 331,
       "eva_directive": 329,
-      "requires": "86/86 parity (absolute denominator — NOT self-scoped), built-package validation, consumer-perspective testing",
-      "validation_rule": "QC ts_parity_checked must equal ts_parity_total AND ts_parity_total must equal 86 (total schema types). Reject self-scoped denominators per audit #49."
+      "requires": "76/76 parity (absolute denominator — NOT self-scoped), built-package validation, consumer-perspective testing",
+      "validation_rule": "QC ts_parity_checked must equal ts_parity_total AND ts_parity_total must equal 76 (total_testable_types = 88 schema - 12 enums). Enums excluded per audit #62 type classification. Reject self-scoped denominators per audit #49. Updated per audit #68."
     }
   ],
   "open_questions_for_eva": [304],
@@ -721,5 +721,7 @@
   "total_schema_types": 28,
   "total_sub_types": 104,
   "total_schema_classes": 103,
-  "total_enums": 12
+  "total_enums": 12,
+  "total_testable_types": 76,
+  "total_testable_types_note": "88 schema classes - 12 enums = 76. Enums don't produce JSON-LD output. Per audit #62 type classification, audit #68 denominator fix."
 }

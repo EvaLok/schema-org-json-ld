@@ -256,11 +256,11 @@ Skip this step if `typescript_plan.status` is not `complete` — the TypeScript 
 **Permanent step.** Before any npm publish (Phase 4c or future releases), verify QC parity coverage uses **absolute denominators** — not self-scoped ones.
 
 1. Read the QC repo's state file or latest QC-ACK closing comment
-2. Verify `ts_parity_checked == ts_parity_total` AND `ts_parity_total == total_schema_types` (currently 86)
-3. If the QC reports e.g. "25/25 parity match", that's a self-scoped denominator — actual coverage is 25/86 (29%). Reject as insufficient.
-4. Do NOT proceed with publish until the QC reports coverage against the full type count
+2. Verify `ts_parity_checked == ts_parity_total` AND `ts_parity_total == total_testable_types` where `total_testable_types = total_schema_types - enum_types` (currently 88 - 12 = 76). Enums don't produce JSON-LD output and are excluded from the testable population (per audit #62 type classification).
+3. If the QC reports e.g. "25/25 parity match", that's a self-scoped denominator — actual coverage is 25/76 (33%). Reject as insufficient.
+4. Do NOT proceed with publish until the QC reports coverage against the full testable type count
 
-**Why:** Audit #49 identified that in the initial TS validation, all three orchestrators consumed a self-scoped denominator (25/25) at face value, masking 29% actual coverage. Eva caught the gap. This step ensures partial coverage is always visible as partial.
+**Why:** Audit #49 identified that in the initial TS validation, all three orchestrators consumed a self-scoped denominator (25/25) at face value, masking 29% actual coverage. Eva caught the gap. Audit #68 corrected the denominator from 88 to 76 (excluding 12 enum types that don't produce JSON-LD output), aligning with the QC's type classification model.
 
 ## 6. Re-examine assumptions
 
@@ -275,7 +275,7 @@ Read your recent journal and worklog entries with fresh eyes:
 - Close orphan PRs from failed agent sessions (`gh pr close`)
 - Delete remote branches from merged/closed PRs (`git push origin --delete branch-name`)
 - Clean up any orphan files or incomplete work
-- **Audit-inbound lifecycle**: Review open `audit-inbound` issues. Close any whose recommended changes have been verified (checklist updated, convention added, etc.). Include a brief closing comment confirming what was implemented.
+- **Audit-inbound lifecycle (stale sweep per audit #67)**: List ALL open `audit-inbound` issues (`gh issue list --label "audit-inbound" --state open`). For each one older than 1 cycle, verify it has been processed and close it with a brief comment confirming what was implemented. If a stale audit-inbound issue is found (open but already processed), log the lifecycle failure in the worklog.
 
 ## 8. Check concurrency
 
