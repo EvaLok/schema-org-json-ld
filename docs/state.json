@@ -571,6 +571,24 @@
       "pr": 371,
       "merged_at": "2026-03-03T09:39:10Z",
       "qc_report": 160
+    },
+    {
+      "issue": 374,
+      "title": "Comprehensive quality sweep: QAPage properties + edge-case tests + README",
+      "dispatched_at": "2026-03-03T10:51:00Z",
+      "model": "gpt-5.3-codex",
+      "status": "dispatched",
+      "eva_directive": 372,
+      "note": "First high-complexity dispatch per Eva #372. 100+ new test methods target, 70+ files."
+    },
+    {
+      "issue": 375,
+      "title": "Cross-language parity verification tool",
+      "dispatched_at": "2026-03-03T10:51:00Z",
+      "model": "gpt-5.3-codex",
+      "status": "dispatched",
+      "eva_directive": 372,
+      "note": "First auditing tool dispatch per Eva #372. Creates tools/parity-check.ts."
     }
   ],
   "qc_processed": [8, 37, 57, 72, 160, 165],
@@ -597,8 +615,8 @@
   ],
   "open_questions_for_eva": [304],
   "eva_input_issues": {
-    "closed_this_cycle": [348],
-    "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225, 340],
+    "closed_this_cycle": [372],
+    "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225, 340, 348],
     "remaining_open": [247, 304, 329]
   },
   "typescript_plan": {
@@ -660,14 +678,14 @@
   "copilot_metrics": {
     "dispatch_to_pr_rate": "24/24 (100%)",
     "pr_merge_rate": "24/24 (100%)",
-    "note": "All 24 main-orchestrator dispatches produced PRs that were merged. 1 revision round (#364 mixed-array bug). Zero silent failures."
+    "note": "All 24 main-orchestrator dispatches produced PRs that were merged. 1 revision round (#364 mixed-array bug). Zero silent failures. Cycle 109: first high-complexity dispatches (#374, #375) per Eva #372."
   },
   "last_cycle": {
-    "issue": 367,
-    "timestamp": "2026-03-03T09:15:00Z",
-    "summary": "Cycle 108: PR #364 merged (property gaps + mixed-array fix). PR #371 merged (AggregateRating.itemReviewed). QC-REPORT #160 resolved. Audit #62 accepted (type classification). Property gap audit complete (all 23 standalone types). QC parity 49/86."
+    "issue": 373,
+    "timestamp": "2026-03-03T10:45:00Z",
+    "summary": "Cycle 109: Eva directive #372 processed (leverage 5.3-codex). Dispatched 2 complex tasks: #374 (quality sweep + 100+ tests) and #375 (parity verification tool). Both concurrent on gpt-5.3-codex."
   },
-  "last_eva_comment_check": "2026-03-03T09:15:00Z",
+  "last_eva_comment_check": "2026-03-03T10:45:00Z",
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62],
   "test_count": 338,
   "total_schema_types": 28,
