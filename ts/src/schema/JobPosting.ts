@@ -1,6 +1,8 @@
 import { TypedSchema } from "../TypedSchema.js";
 import type { AdministrativeArea } from "./AdministrativeArea.js";
+import type { EducationalOccupationalCredential } from "./EducationalOccupationalCredential.js";
 import type { MonetaryAmount } from "./MonetaryAmount.js";
+import type { OccupationalExperienceRequirements } from "./OccupationalExperienceRequirements.js";
 import type { Organization } from "./Organization.js";
 import type { Place } from "./Place.js";
 import type { PropertyValue } from "./PropertyValue.js";
@@ -18,6 +20,14 @@ export interface JobPostingOptions {
 	jobLocationType?: string | null;
 	directApply?: boolean | null;
 	identifier?: PropertyValue | null;
+	educationRequirements?:
+		| EducationalOccupationalCredential
+		| string
+		| readonly EducationalOccupationalCredential[]
+		| readonly string[]
+		| null;
+	experienceRequirements?: OccupationalExperienceRequirements | string | null;
+	experienceInPlaceOfEducation?: boolean | null;
 }
 
 export class JobPosting extends TypedSchema {
@@ -35,6 +45,17 @@ export class JobPosting extends TypedSchema {
 	public readonly jobLocationType: string | null;
 	public readonly directApply: boolean | null;
 	public readonly identifier: PropertyValue | null;
+	public readonly educationRequirements:
+		| EducationalOccupationalCredential
+		| string
+		| readonly EducationalOccupationalCredential[]
+		| readonly string[]
+		| null;
+	public readonly experienceRequirements:
+		| OccupationalExperienceRequirements
+		| string
+		| null;
+	public readonly experienceInPlaceOfEducation: boolean | null;
 
 	constructor(options: JobPostingOptions) {
 		super();
@@ -51,5 +72,9 @@ export class JobPosting extends TypedSchema {
 		this.jobLocationType = options.jobLocationType ?? null;
 		this.directApply = options.directApply ?? null;
 		this.identifier = options.identifier ?? null;
+		this.educationRequirements = options.educationRequirements ?? null;
+		this.experienceRequirements = options.experienceRequirements ?? null;
+		this.experienceInPlaceOfEducation =
+			options.experienceInPlaceOfEducation ?? null;
 	}
 }

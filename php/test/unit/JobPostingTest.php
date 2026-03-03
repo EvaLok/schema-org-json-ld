@@ -6,8 +6,10 @@ namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\AdministrativeArea;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\EducationalOccupationalCredential;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\JobPosting;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\MonetaryAmount;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\OccupationalExperienceRequirements;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Organization;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Place;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\PostalAddress;
@@ -66,6 +68,9 @@ final class JobPostingTest extends TestCase {
 		$this->assertFalse(property_exists($obj, 'jobLocationType'));
 		$this->assertFalse(property_exists($obj, 'directApply'));
 		$this->assertFalse(property_exists($obj, 'identifier'));
+		$this->assertFalse(property_exists($obj, 'educationRequirements'));
+		$this->assertFalse(property_exists($obj, 'experienceRequirements'));
+		$this->assertFalse(property_exists($obj, 'experienceInPlaceOfEducation'));
 	}
 
 	public function testFullOutputWithNestedSchemas(): void {
@@ -147,5 +152,107 @@ final class JobPostingTest extends TestCase {
 		$this->assertEquals('PropertyValue', $obj->identifier->{'@type'});
 		$this->assertEquals('MagsRUs', $obj->identifier->name);
 		$this->assertEquals('1234567', $obj->identifier->value);
+	}
+
+	public function testEducationRequirementsWithCredentialObject(): void {
+		$jobPosting = new JobPosting(
+			title: 'Senior Backend Engineer',
+			description: '<p>Build scalable APIs.</p>',
+			datePosted: '2026-02-24',
+			hiringOrganization: new Organization(name: 'Example Corp'),
+			educationRequirements: new EducationalOccupationalCredential(
+				credentialCategory: 'bachelor degree',
+			),
+		);
+
+		$json = JsonLdGenerator::SchemaToJson(schema: $jobPosting);
+		$obj = json_decode($json);
+
+		$this->assertEquals('EducationalOccupationalCredential', $obj->educationRequirements->{'@type'});
+		$this->assertEquals('bachelor degree', $obj->educationRequirements->credentialCategory);
+	}
+
+	public function testEducationRequirementsWithString(): void {
+		$jobPosting = new JobPosting(
+			title: 'Senior Backend Engineer',
+			description: '<p>Build scalable APIs.</p>',
+			datePosted: '2026-02-24',
+			hiringOrganization: new Organization(name: 'Example Corp'),
+			educationRequirements: 'no requirements',
+		);
+
+		$json = JsonLdGenerator::SchemaToJson(schema: $jobPosting);
+		$obj = json_decode($json);
+
+		$this->assertEquals('no requirements', $obj->educationRequirements);
+	}
+
+	public function testEducationRequirementsWithCredentialArray(): void {
+		$jobPosting = new JobPosting(
+			title: 'Senior Backend Engineer',
+			description: '<p>Build scalable APIs.</p>',
+			datePosted: '2026-02-24',
+			hiringOrganization: new Organization(name: 'Example Corp'),
+			educationRequirements: [
+				new EducationalOccupationalCredential(credentialCategory: 'bachelor degree'),
+				new EducationalOccupationalCredential(credentialCategory: 'professional certificate'),
+			],
+		);
+
+		$json = JsonLdGenerator::SchemaToJson(schema: $jobPosting);
+		$obj = json_decode($json);
+
+		$this->assertCount(2, $obj->educationRequirements);
+		$this->assertEquals('EducationalOccupationalCredential', $obj->educationRequirements[0]->{'@type'});
+		$this->assertEquals('bachelor degree', $obj->educationRequirements[0]->credentialCategory);
+		$this->assertEquals('professional certificate', $obj->educationRequirements[1]->credentialCategory);
+	}
+
+	public function testExperienceRequirementsWithObject(): void {
+		$jobPosting = new JobPosting(
+			title: 'Senior Backend Engineer',
+			description: '<p>Build scalable APIs.</p>',
+			datePosted: '2026-02-24',
+			hiringOrganization: new Organization(name: 'Example Corp'),
+			experienceRequirements: new OccupationalExperienceRequirements(
+				monthsOfExperience: 24,
+			),
+		);
+
+		$json = JsonLdGenerator::SchemaToJson(schema: $jobPosting);
+		$obj = json_decode($json);
+
+		$this->assertEquals('OccupationalExperienceRequirements', $obj->experienceRequirements->{'@type'});
+		$this->assertEquals(24, $obj->experienceRequirements->monthsOfExperience);
+	}
+
+	public function testExperienceRequirementsWithString(): void {
+		$jobPosting = new JobPosting(
+			title: 'Senior Backend Engineer',
+			description: '<p>Build scalable APIs.</p>',
+			datePosted: '2026-02-24',
+			hiringOrganization: new Organization(name: 'Example Corp'),
+			experienceRequirements: 'no requirements',
+		);
+
+		$json = JsonLdGenerator::SchemaToJson(schema: $jobPosting);
+		$obj = json_decode($json);
+
+		$this->assertEquals('no requirements', $obj->experienceRequirements);
+	}
+
+	public function testExperienceInPlaceOfEducationTrue(): void {
+		$jobPosting = new JobPosting(
+			title: 'Senior Backend Engineer',
+			description: '<p>Build scalable APIs.</p>',
+			datePosted: '2026-02-24',
+			hiringOrganization: new Organization(name: 'Example Corp'),
+			experienceInPlaceOfEducation: true,
+		);
+
+		$json = JsonLdGenerator::SchemaToJson(schema: $jobPosting);
+		$obj = json_decode($json);
+
+		$this->assertTrue($obj->experienceInPlaceOfEducation);
 	}
 }

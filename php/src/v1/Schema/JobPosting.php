@@ -22,5 +22,9 @@ class JobPosting extends TypedSchema {
 		public null|string $jobLocationType = null,
 		public null|bool $directApply = null,
 		public null|PropertyValue $identifier = null,
+		/** @var array<EducationalOccupationalCredential|string>|EducationalOccupationalCredential|string|null $educationRequirements */
+		public null|EducationalOccupationalCredential|string|array $educationRequirements = null,
+		public null|OccupationalExperienceRequirements|string $experienceRequirements = null,
+		public null|bool $experienceInPlaceOfEducation = null,
 	) {}
 }
