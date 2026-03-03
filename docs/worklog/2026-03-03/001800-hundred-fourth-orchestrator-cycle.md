@@ -19,12 +19,24 @@
 
 3. **Noted audit [#56](https://github.com/EvaLok/schema-org-json-ld-audit/issues/56)**: QC-targeted recommendation about QC Copilot dispatch pipeline. No action needed from main orchestrator. Added to audit_processed.
 
-### Batch plan
+### Batch execution (all 3 completed in this cycle)
 
 Sequential dispatch (per audit #29 — barrel file conflicts):
-- **Batch 1** (A-D, 16 classes): [#342](https://github.com/EvaLok/schema-org-json-ld/issues/342) — dispatched
-- **Batch 2** (E-M, ~15 classes): after batch 1 merges
-- **Batch 3** (O-V, ~21 classes): after batch 2 merges
+
+| Batch | Range | Classes | Issue | PR | Merged |
+|-------|-------|---------|-------|-----|--------|
+| 1 | A-D | 16 | [#342](https://github.com/EvaLok/schema-org-json-ld/issues/342) | [#343](https://github.com/EvaLok/schema-org-json-ld/pull/343) | 00:46:46Z |
+| 2 | E-M | 15 | [#344](https://github.com/EvaLok/schema-org-json-ld/issues/344) | [#345](https://github.com/EvaLok/schema-org-json-ld/pull/345) | 01:07:51Z |
+| 3 | O-V | 22 | [#346](https://github.com/EvaLok/schema-org-json-ld/issues/346) | [#347](https://github.com/EvaLok/schema-org-json-ld/pull/347) | 01:26:40Z |
+
+**Total**: 53 classes converted, 8 skipped (no constructor/inherit), ~160 files changed across 3 PRs. All builds, tests, and Biome passed. Eva directive [#340](https://github.com/EvaLok/schema-org-json-ld/issues/340) closed.
+
+### Review observations
+
+- All 3 Copilot sessions produced correct conversions on first attempt — zero revision rounds
+- Cross-reference test updates were comprehensive (e.g., Product.test.ts, Organization.test.ts updated when their nested types were converted)
+- Special cases preserved: MathSolver multi-type `schemaType`, SolveMathAction `propertyMap`, array types, union types
+- MobileApplication, WebApplication, Restaurant, Store, BlogPosting, NewsArticle, FoodEstablishment, NutritionInformation correctly skipped (no own constructor)
 
 ## Self-modifications
 
@@ -32,9 +44,9 @@ Sequential dispatch (per audit #29 — barrel file conflicts):
 
 ## Current state
 
-- **Constructor refactoring**: batch 1 dispatched, batches 2-3 planned
-- **Phase 4 still blocked**: QC parity at 39/86 (unchanged)
-- **No new QC reports or Eva comments on tracked issues**
+- **Constructor refactoring**: COMPLETE — all 53 classes converted across 3 batches
+- **Phase 4 still blocked**: QC parity at 39/86 (unchanged). QC will need to re-validate (constructor signatures changed — affects parity testing callsites)
+- **Eva directive #340**: CLOSED
 - **Consecutive idle cycles**: reset to 0
 
 ## Open issues/PRs
@@ -47,13 +59,9 @@ Sequential dispatch (per audit #29 — barrel file conflicts):
 | [#329](https://github.com/EvaLok/schema-org-json-ld/issues/329) | input-from-eva | Open (TS testing directive — pending QC validation) |
 | [#331](https://github.com/EvaLok/schema-org-json-ld/issues/331) | qc-outbound | Open (comprehensive TS validation — QC at 39/86) |
 | [#338](https://github.com/EvaLok/schema-org-json-ld/issues/338) | audit-inbound | Open (response to audit #53) |
-| [#340](https://github.com/EvaLok/schema-org-json-ld/issues/340) | input-from-eva | Open (uniform constructor pattern directive) |
-| [#342](https://github.com/EvaLok/schema-org-json-ld/issues/342) | agent-task | Dispatched (batch 1 constructor refactoring) |
 
 ## Next steps
 
-- Wait for batch 1 PR from Copilot, review when `copilot_work_finished`
-- After batch 1 merges, dispatch batch 2 (E-M, ~15 classes)
-- After batch 2 merges, dispatch batch 3 (O-V, ~21 classes)
-- After all 3 batches merge, note that QC will need to re-validate (constructor signatures changed)
+- QC orchestrator will need to update its parity test callsites (constructor signatures changed). Note on QC-REQUEST #331 may be appropriate.
 - Continue monitoring QC parity progress toward 86/86
+- Phase 4b/4c still blocked pending QC validation + Eva actions (PR #305, NPM_TOKEN)

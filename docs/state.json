@@ -284,8 +284,8 @@
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
     "enum_namespace": "EvaLok\\SchemaOrgJsonLd\\v1\\Enum",
-    "in_progress": ["constructor-refactoring-batch-1"],
-    "planned_next": ["constructor-refactoring-batch-2", "constructor-refactoring-batch-3"],
+    "in_progress": [],
+    "planned_next": [],
     "google_rich_results_types": {
       "not_implemented": [],
       "note": "ALL 31 Google Search Gallery categories covered (26 original + 5 sub-categories: Merchant listing, Product variants, Loyalty program, Return policy, Shipping policy). Book actions excluded (DataFeed type, not Rich Results Test)."
@@ -469,7 +469,29 @@
       "title": "Refactor TS constructors to options-object pattern (batch 1: A-D)",
       "dispatched_at": "2026-03-03T00:26:18Z",
       "model": "gpt-5.3-codex",
-      "status": "dispatched",
+      "status": "merged",
+      "pr": 343,
+      "merged_at": "2026-03-03T00:46:46Z",
+      "eva_directive": 340
+    },
+    {
+      "issue": 344,
+      "title": "Refactor TS constructors to options-object pattern (batch 2: E-M)",
+      "dispatched_at": "2026-03-03T00:47:54Z",
+      "model": "gpt-5.3-codex",
+      "status": "merged",
+      "pr": 345,
+      "merged_at": "2026-03-03T01:07:51Z",
+      "eva_directive": 340
+    },
+    {
+      "issue": 346,
+      "title": "Refactor TS constructors to options-object pattern (batch 3: O-V)",
+      "dispatched_at": "2026-03-03T01:08:28Z",
+      "model": "gpt-5.3-codex",
+      "status": "merged",
+      "pr": 347,
+      "merged_at": "2026-03-03T01:26:40Z",
       "eva_directive": 340
     }
   ],
@@ -499,7 +521,7 @@
   "eva_input_issues": {
     "closed_this_cycle": [],
     "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225],
-    "remaining_open": [247, 304, 329, 340]
+    "remaining_open": [247, 304, 329]
   },
   "typescript_plan": {
     "status": "approved_executing",
@@ -549,18 +571,18 @@
   },
   "constructor_refactoring": {
     "eva_directive": 340,
-    "status": "in_progress",
-    "total_classes_to_convert": 52,
+    "status": "complete",
+    "total_classes_converted": 53,
     "batches": [
-      {"batch": 1, "range": "A-D", "classes": 16, "issue": 342, "status": "dispatched", "dispatched_at": "2026-03-03T00:26:18Z"},
-      {"batch": 2, "range": "E-M", "classes": 15, "issue": null, "status": "planned"},
-      {"batch": 3, "range": "O-V", "classes": 21, "issue": null, "status": "planned"}
+      {"batch": 1, "range": "A-D", "classes": 16, "issue": 342, "pr": 343, "status": "merged", "merged_at": "2026-03-03T00:46:46Z"},
+      {"batch": 2, "range": "E-M", "classes": 15, "issue": 344, "pr": 345, "status": "merged", "merged_at": "2026-03-03T01:07:51Z"},
+      {"batch": 3, "range": "O-V", "classes": 22, "issue": 346, "pr": 347, "status": "merged", "merged_at": "2026-03-03T01:26:40Z"}
     ]
   },
   "last_cycle": {
     "issue": 341,
-    "timestamp": "2026-03-03T00:18:11Z",
-    "summary": "Cycle 104: Processing Eva directive #340 (uniform options-object constructors). AGENTS-ts.md updated. Batch 1 (#342, 16 classes A-D) dispatched. Audit #56 noted (QC-targeted)."
+    "timestamp": "2026-03-03T01:26:40Z",
+    "summary": "Cycle 104: Eva directive #340 COMPLETE. Uniform options-object constructor pattern applied to all 53 TS schema classes across 3 batches. PRs #343 (A-D), #345 (E-M), #347 (O-V) all merged. AGENTS-ts.md updated. Issue #340 closed."
   },
   "consecutive_idle_cycles": 0,
   "last_eva_comment_check": "2026-03-03T00:18:11Z",
