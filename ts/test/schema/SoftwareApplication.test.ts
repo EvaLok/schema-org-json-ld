@@ -37,7 +37,7 @@ describe("SoftwareApplication", () => {
 		const schema = new SoftwareApplication({
 			name: "Example App",
 			offers: offer,
-			aggregateRating: new AggregateRating(4.5),
+			aggregateRating: new AggregateRating({ ratingValue: 4.5 }),
 			applicationCategory: null,
 			operatingSystem: null,
 			datePublished: null,
@@ -57,7 +57,7 @@ describe("SoftwareApplication", () => {
 		const schema = new SoftwareApplication({
 			name: "Example App",
 			offers: [offer],
-			aggregateRating: new AggregateRating(4.5),
+			aggregateRating: new AggregateRating({ ratingValue: 4.5 }),
 			review: new Review("Jane", new Rating(5)),
 			description: "A productivity app",
 		});

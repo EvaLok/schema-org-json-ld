@@ -5,7 +5,7 @@ import { Brand } from "../../src/schema/Brand";
 
 describe("Brand", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new Brand("ACME");
+		const schema = new Brand({ name: "ACME" });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -18,7 +18,10 @@ describe("Brand", () => {
 	});
 
 	it("includes description when provided", () => {
-		const schema = new Brand("ACME", "ACME brand description");
+		const schema = new Brand({
+			name: "ACME",
+			description: "ACME brand description",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -26,7 +29,7 @@ describe("Brand", () => {
 	});
 
 	it("omits description when null", () => {
-		const schema = new Brand("ACME");
+		const schema = new Brand({ name: "ACME" });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

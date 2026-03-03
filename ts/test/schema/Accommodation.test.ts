@@ -66,7 +66,10 @@ describe("Accommodation", () => {
 			numberOfBathroomsTotal: 1,
 			numberOfRooms: 2,
 			floorSize: new QuantitativeValue(45, "MTK"),
-			bed: [new BedDetails(1, "Queen"), new BedDetails(1, "Sofa bed")],
+			bed: [
+				new BedDetails({ numberOfBeds: 1, typeOfBed: "Queen" }),
+				new BedDetails({ numberOfBeds: 1, typeOfBed: "Sofa bed" }),
+			],
 			amenityFeature: [
 				new LocationFeatureSpecification("WiFi", true),
 				new LocationFeatureSpecification("Parking", false),

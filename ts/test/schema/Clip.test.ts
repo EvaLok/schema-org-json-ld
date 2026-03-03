@@ -5,7 +5,11 @@ import { Clip } from "../../src/schema/Clip";
 
 describe("Clip", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new Clip("Intro", 0, "https://example.com/video#t=0");
+		const schema = new Clip({
+			name: "Intro",
+			startOffset: 0,
+			url: "https://example.com/video#t=0",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -17,7 +21,11 @@ describe("Clip", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new Clip("Intro", 0, "https://example.com/video#t=0", null);
+		const schema = new Clip({
+			name: "Intro",
+			startOffset: 0,
+			url: "https://example.com/video#t=0",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -25,7 +33,12 @@ describe("Clip", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new Clip("Intro", 0, "https://example.com/video#t=0", 90);
+		const schema = new Clip({
+			name: "Intro",
+			startOffset: 0,
+			url: "https://example.com/video#t=0",
+			endOffset: 90,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

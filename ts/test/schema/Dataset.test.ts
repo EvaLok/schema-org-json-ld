@@ -69,12 +69,12 @@ describe("Dataset", () => {
 			isAccessibleForFree: true,
 			temporalCoverage: "2024-01-01/2026-01-01",
 			spatialCoverage: new Place("Global"),
-			includedInDataCatalog: new DataCatalog("Example Data Catalog"),
+			includedInDataCatalog: new DataCatalog({ name: "Example Data Catalog" }),
 			distribution: [
-				new DataDownload(
-					"https://example.com/datasets/products.csv",
-					"text/csv",
-				),
+				new DataDownload({
+					contentUrl: "https://example.com/datasets/products.csv",
+					encodingFormat: "text/csv",
+				}),
 			],
 			variableMeasured: "price",
 			measurementTechnique: "survey",

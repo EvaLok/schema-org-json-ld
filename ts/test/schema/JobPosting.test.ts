@@ -64,7 +64,7 @@ describe("JobPosting", () => {
 			baseSalary: new MonetaryAmount("USD", 120000),
 			employmentType: "FULL_TIME",
 			validThrough: "2026-04-01",
-			applicantLocationRequirements: new AdministrativeArea("US"),
+			applicantLocationRequirements: new AdministrativeArea({ name: "US" }),
 			jobLocationType: "TELECOMMUTE",
 			directApply: true,
 			identifier: new PropertyValue("job-id", "SE-123"),

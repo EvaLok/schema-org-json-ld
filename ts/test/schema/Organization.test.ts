@@ -67,7 +67,10 @@ describe("Organization", () => {
 				streetAddress: "1600 Amphitheatre Parkway",
 				addressLocality: "Mountain View",
 			}),
-			contactPoint: new ContactPoint("555-0100", "support@example.com"),
+			contactPoint: new ContactPoint({
+				telephone: "555-0100",
+				email: "support@example.com",
+			}),
 			sameAs: ["https://x.com/example"],
 			hasMerchantReturnPolicy: new MerchantReturnPolicy({
 				applicableCountry: "US",

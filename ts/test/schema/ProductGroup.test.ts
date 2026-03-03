@@ -67,8 +67,8 @@ describe("ProductGroup", () => {
 			productGroupID: "TSHIRT-001",
 			variesBy: "color",
 			hasVariant: product,
-			brand: new Brand("BrandCo"),
-			aggregateRating: new AggregateRating(4.4),
+			brand: new Brand({ name: "BrandCo" }),
+			aggregateRating: new AggregateRating({ ratingValue: 4.4 }),
 			review: new Review("Jane", new Rating(5)),
 		});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<

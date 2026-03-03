@@ -68,8 +68,8 @@ describe("Question", () => {
 	it("supports suggestedAnswer as an array", () => {
 		const schema = new Question({
 			name: "What is 2 + 2?",
-			acceptedAnswer: new Answer("4"),
-			suggestedAnswer: [new Answer("3"), new Answer("5")],
+			acceptedAnswer: new Answer({ text: "4" }),
+			suggestedAnswer: [new Answer({ text: "3" }), new Answer({ text: "5" })],
 		});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
 			string,

@@ -11,9 +11,9 @@ describe("QAPage", () => {
 		const schema = new QAPage(
 			new Question({
 				name: "How do I reset my password?",
-				acceptedAnswer: new Answer(
-					"Click the forgot password link on the login page.",
-				),
+				acceptedAnswer: new Answer({
+					text: "Click the forgot password link on the login page.",
+				}),
 			}),
 		);
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
@@ -38,8 +38,8 @@ describe("QAPage", () => {
 			new Question({
 				name: "What is the best PHP framework?",
 				suggestedAnswer: [
-					new Answer("Laravel is very popular."),
-					new Answer("Symfony is very flexible."),
+					new Answer({ text: "Laravel is very popular." }),
+					new Answer({ text: "Symfony is very flexible." }),
 				],
 			}),
 		);
@@ -65,10 +65,10 @@ describe("QAPage", () => {
 		const schema = new QAPage(
 			new Question({
 				name: "How do I reset my password?",
-				acceptedAnswer: new Answer(
-					"Click the forgot password link on the login page.",
-				),
-				suggestedAnswer: [new Answer("You can also contact support.")],
+				acceptedAnswer: new Answer({
+					text: "Click the forgot password link on the login page.",
+				}),
+				suggestedAnswer: [new Answer({ text: "You can also contact support." })],
 				answerCount: 2,
 				text: "I cannot find the reset password option anywhere on the site.",
 				upvoteCount: 42,

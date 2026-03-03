@@ -74,8 +74,8 @@ describe("VacationRental", () => {
 			longitude: -74.006,
 			containsPlace,
 			address: new PostalAddress({ streetAddress: "1 Ocean Ave" }),
-			aggregateRating: new AggregateRating(4.8),
-			brand: new Brand("Coastal Stays"),
+			aggregateRating: new AggregateRating({ ratingValue: 4.8 }),
+			brand: new Brand({ name: "Coastal Stays" }),
 			knowsLanguage: ["en", "es"],
 			review: [new Review("Jane", new Rating(5))],
 		});

@@ -40,7 +40,12 @@ describe("HowToStep", () => {
 			"Step 1",
 			"https://example.com/steps/1",
 			"https://example.com/steps/1.jpg",
-			new Clip("Step 1 clip", 0, "https://example.com/video#t=0", 30),
+			new Clip({
+				name: "Step 1 clip",
+				startOffset: 0,
+				url: "https://example.com/video#t=0",
+				endOffset: 30,
+			}),
 			["Measure flour", "Add eggs"],
 		);
 		const json = JsonLdGenerator.schemaToJson(schema);

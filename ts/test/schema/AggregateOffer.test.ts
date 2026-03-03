@@ -5,7 +5,7 @@ import { AggregateOffer } from "../../src/schema/AggregateOffer";
 
 describe("AggregateOffer", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new AggregateOffer(9.99, "USD");
+		const schema = new AggregateOffer({ lowPrice: 9.99, priceCurrency: "USD" });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -16,7 +16,7 @@ describe("AggregateOffer", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new AggregateOffer(9.99, "USD", null, null);
+		const schema = new AggregateOffer({ lowPrice: 9.99, priceCurrency: "USD" });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -25,7 +25,12 @@ describe("AggregateOffer", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new AggregateOffer(9.99, "USD", 19.99, 42);
+		const schema = new AggregateOffer({
+			lowPrice: 9.99,
+			priceCurrency: "USD",
+			highPrice: 19.99,
+			offerCount: 42,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

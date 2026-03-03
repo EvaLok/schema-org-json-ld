@@ -46,7 +46,7 @@ describe("Movie", () => {
 		const schema = new Movie({
 			name: "Interstellar",
 			image: "https://example.com/interstellar.jpg",
-			aggregateRating: new AggregateRating(4.8),
+			aggregateRating: new AggregateRating({ ratingValue: 4.8 }),
 			director: new Person({ name: "Christopher Nolan" }),
 			review: new Review("Jane", new Rating(5)),
 			actor: [

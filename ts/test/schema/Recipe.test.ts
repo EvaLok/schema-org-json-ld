@@ -72,15 +72,22 @@ describe("Recipe", () => {
 				new HowToStep("Cook on skillet"),
 			],
 			nutrition: new NutritionInformation(),
-			aggregateRating: new AggregateRating(4.7),
+			aggregateRating: new AggregateRating({ ratingValue: 4.7 }),
 			review: new Review("Jane", new Rating(5)),
 			video: new VideoObject({
 				name: "Pancake Tutorial",
 				thumbnailUrl: ["https://example.com/thumb.jpg"],
 				uploadDate: "2026-01-01",
 			}),
-			hasPart: [new Clip("Intro", 0, "https://example.com/video#t=0", 30)],
-			publication: new BroadcastEvent(true),
+			hasPart: [
+				new Clip({
+					name: "Intro",
+					startOffset: 0,
+					url: "https://example.com/video#t=0",
+					endOffset: 30,
+				}),
+			],
+			publication: new BroadcastEvent({ isLiveBroadcast: true }),
 			interactionStatistic: new InteractionCounter("LikeAction", 42),
 		});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
