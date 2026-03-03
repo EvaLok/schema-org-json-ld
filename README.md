@@ -232,6 +232,22 @@ $json = JsonLdGenerator::SchemaToJson(schema: $article);
 }
 ```
 
+**TypeScript:**
+
+```typescript
+import { Article, JsonLdGenerator, Person } from '@evabee/schema-org-json-ld';
+
+const article = new Article({
+  headline: 'How to Use Schema.org JSON-LD in PHP',
+  author: new Person({ name: 'Jane Smith', url: 'https://example.com/jane' }),
+  datePublished: '2026-01-15',
+});
+
+const json = JsonLdGenerator.schemaToJson(article);
+```
+
+Output is identical to the PHP JSON example above.
+
 Use `NewsArticle` or `BlogPosting` by substituting the class name — the constructor is identical:
 
 ```php
@@ -291,6 +307,24 @@ $json = JsonLdGenerator::SchemaToJson(schema: $breadcrumb);
 }
 ```
 
+**TypeScript:**
+
+```typescript
+import { BreadcrumbList, JsonLdGenerator, ListItem } from '@evabee/schema-org-json-ld';
+
+const breadcrumb = new BreadcrumbList({
+  itemListElement: [
+    new ListItem({ position: 1, name: 'Home', item: 'https://example.com' }),
+    new ListItem({ position: 2, name: 'Books', item: 'https://example.com/books' }),
+    new ListItem({ position: 3, name: 'Science & Nature', item: 'https://example.com/books/science' }),
+  ],
+});
+
+const json = JsonLdGenerator.schemaToJson(breadcrumb);
+```
+
+Output is identical to the PHP JSON example above.
+
 ---
 
 ### Carousel
@@ -342,6 +376,26 @@ $json = JsonLdGenerator::SchemaToJson(schema: $carousel);
     "numberOfItems": 3
 }
 ```
+
+**TypeScript:**
+
+```typescript
+import { ItemList, JsonLdGenerator, ListItem } from '@evabee/schema-org-json-ld';
+
+const carousel = new ItemList({
+  itemListElement: [
+    new ListItem({ position: 1, url: 'https://example.com/articles/1' }),
+    new ListItem({ position: 2, url: 'https://example.com/articles/2' }),
+    new ListItem({ position: 3, url: 'https://example.com/articles/3' }),
+  ],
+  itemListOrder: 'ItemListOrderAscending',
+  numberOfItems: 3,
+});
+
+const json = JsonLdGenerator.schemaToJson(carousel);
+```
+
+Output is identical to the PHP JSON example above.
 
 ---
 
@@ -440,6 +494,22 @@ $json = JsonLdGenerator::SchemaToJson(schema: $course);
 }
 ```
 
+**TypeScript:**
+
+```typescript
+import { Course, JsonLdGenerator, Organization } from '@evabee/schema-org-json-ld';
+
+const course = new Course({
+  name: 'Advanced PHP Development',
+  description: 'Master PHP 8.x features, design patterns, and best practices.',
+  provider: new Organization({ name: 'PHP Academy', url: 'https://phpacademy.example.com' }),
+});
+
+const json = JsonLdGenerator.schemaToJson(course);
+```
+
+Output is identical to the PHP JSON example above.
+
 ---
 
 ### Dataset
@@ -507,6 +577,21 @@ $json = JsonLdGenerator::SchemaToJson(schema: $dataset);
 }
 ```
 
+**TypeScript:**
+
+```typescript
+import { Dataset, JsonLdGenerator } from '@evabee/schema-org-json-ld';
+
+const dataset = new Dataset({
+  name: 'PHP Developer Survey 2025',
+  description: 'Annual survey of PHP developer demographics and tool usage.',
+});
+
+const json = JsonLdGenerator.schemaToJson(dataset);
+```
+
+Output is identical to the PHP JSON example above.
+
 ---
 
 ### Discussion Forum
@@ -544,6 +629,24 @@ $json = JsonLdGenerator::SchemaToJson(schema: $post);
     "url": "https://forum.example.com/threads/db-migrations"
 }
 ```
+
+**TypeScript:**
+
+```typescript
+import { DiscussionForumPosting, JsonLdGenerator, Person } from '@evabee/schema-org-json-ld';
+
+const post = new DiscussionForumPosting({
+  author: new Person({ name: 'ForumUser42', url: 'https://forum.example.com/users/42' }),
+  datePublished: '2026-01-10T14:30:00+00:00',
+  text: 'What is the best way to handle database migrations in PHP?',
+  headline: 'Best approach for DB migrations?',
+  url: 'https://forum.example.com/threads/db-migrations',
+});
+
+const json = JsonLdGenerator.schemaToJson(post);
+```
+
+Output is identical to the PHP JSON example above.
 
 ---
 
@@ -616,6 +719,21 @@ $json = JsonLdGenerator::SchemaToJson(schema: $quiz);
 }
 ```
 
+**TypeScript:**
+
+```typescript
+import { JsonLdGenerator, Question, Quiz } from '@evabee/schema-org-json-ld';
+
+const quiz = new Quiz({
+  hasPart: [new Question({ name: 'What does PHP stand for?' })],
+  name: 'PHP Basics Quiz',
+});
+
+const json = JsonLdGenerator.schemaToJson(quiz);
+```
+
+Output is identical to the PHP JSON example above.
+
 ---
 
 ### Employer Aggregate Rating
@@ -653,6 +771,24 @@ $json = JsonLdGenerator::SchemaToJson(schema: $employerRating);
     "worstRating": 1
 }
 ```
+
+**TypeScript:**
+
+```typescript
+import { EmployerAggregateRating, JsonLdGenerator, Organization } from '@evabee/schema-org-json-ld';
+
+const employerRating = new EmployerAggregateRating({
+  itemReviewed: new Organization({ name: 'TechCorp Inc.', url: 'https://techcorp.example.com' }),
+  ratingValue: 4.2,
+  ratingCount: 350,
+  bestRating: 5,
+  worstRating: 1,
+});
+
+const json = JsonLdGenerator.schemaToJson(employerRating);
+```
+
+Output is identical to the PHP JSON example above.
 
 ---
 
@@ -759,6 +895,22 @@ $json = JsonLdGenerator::SchemaToJson(schema: $event);
 }
 ```
 
+**TypeScript:**
+
+```typescript
+import { Event, JsonLdGenerator, Place } from '@evabee/schema-org-json-ld';
+
+const event = new Event({
+  name: 'PHP Conference 2026',
+  startDate: '2026-06-15T09:00:00+00:00',
+  location: [new Place({ name: 'Convention Center' })],
+});
+
+const json = JsonLdGenerator.schemaToJson(event);
+```
+
+Output is identical to the PHP JSON example above.
+
 ---
 
 ### FAQ
@@ -816,6 +968,20 @@ $json = JsonLdGenerator::SchemaToJson(schema: $faq);
 }
 ```
 
+**TypeScript:**
+
+```typescript
+import { FAQPage, JsonLdGenerator, Question } from '@evabee/schema-org-json-ld';
+
+const faq = new FAQPage({
+  mainEntity: [new Question({ name: 'What is schema.org JSON-LD?' })],
+});
+
+const json = JsonLdGenerator.schemaToJson(faq);
+```
+
+Output is identical to the PHP JSON example above.
+
 ---
 
 ### Image Metadata
@@ -854,6 +1020,20 @@ $json = JsonLdGenerator::SchemaToJson(schema: $image);
     }
 }
 ```
+
+**TypeScript:**
+
+```typescript
+import { ImageObject, JsonLdGenerator } from '@evabee/schema-org-json-ld';
+
+const image = new ImageObject({
+  contentUrl: 'https://example.com/photos/sunset.jpg',
+});
+
+const json = JsonLdGenerator.schemaToJson(image);
+```
+
+Output is identical to the PHP JSON example above.
 
 ---
 
@@ -948,6 +1128,27 @@ $json = JsonLdGenerator::SchemaToJson(schema: $job);
     }
 }
 ```
+
+**TypeScript:**
+
+```typescript
+import { JobPosting, JsonLdGenerator, Organization } from '@evabee/schema-org-json-ld';
+
+const job = new JobPosting({
+  title: 'Senior PHP Developer',
+  description: 'We are looking for an experienced PHP developer to join our team.',
+  datePosted: '2026-01-15',
+  hiringOrganization: new Organization({
+    name: 'TechCorp Inc.',
+    url: 'https://techcorp.example.com',
+    logo: 'https://techcorp.example.com/logo.png',
+  }),
+});
+
+const json = JsonLdGenerator.schemaToJson(job);
+```
+
+Output is identical to the PHP JSON example above.
 
 ---
 
@@ -1081,6 +1282,21 @@ $restaurant = new Restaurant(
 }
 ```
 
+**TypeScript:**
+
+```typescript
+import { JsonLdGenerator, LocalBusiness, PostalAddress } from '@evabee/schema-org-json-ld';
+
+const localBusiness = new LocalBusiness({
+  name: 'The Corner Café',
+  address: new PostalAddress({ streetAddress: '789 Oak Street' }),
+});
+
+const json = JsonLdGenerator.schemaToJson(localBusiness);
+```
+
+Output is identical to the PHP JSON example above.
+
 ---
 
 ### Math Solver
@@ -1131,6 +1347,29 @@ $json = JsonLdGenerator::SchemaToJson(schema: $mathSolver);
     ]
 }
 ```
+
+**TypeScript:**
+
+```typescript
+import { JsonLdGenerator, MathSolver, SolveMathAction } from '@evabee/schema-org-json-ld';
+
+const mathSolver = new MathSolver({
+  url: 'https://example.com/math-solver',
+  usageInfo: 'https://example.com/math-solver/usage',
+  potentialAction: new SolveMathAction({
+    target: 'https://example.com/math-solver?expression={math_expression}',
+    mathExpressionInput: 'x^2 + 4x + 4 = 0',
+  }),
+  name: 'Equation Solver',
+  inLanguage: 'en',
+  learningResourceType: 'Math solver',
+  assesses: ['Algebra', 'Equations'],
+});
+
+const json = JsonLdGenerator.schemaToJson(mathSolver);
+```
+
+Output is identical to the PHP JSON example above.
 
 ---
 
@@ -1187,6 +1426,21 @@ $json = JsonLdGenerator::SchemaToJson(schema: $movie);
     ]
 }
 ```
+
+**TypeScript:**
+
+```typescript
+import { JsonLdGenerator, Movie } from '@evabee/schema-org-json-ld';
+
+const movie = new Movie({
+  name: 'The PHP Chronicles',
+  image: 'https://example.com/movies/php-chronicles-poster.jpg',
+});
+
+const json = JsonLdGenerator.schemaToJson(movie);
+```
+
+Output is identical to the PHP JSON example above.
 
 ---
 
@@ -1270,6 +1524,21 @@ $json = JsonLdGenerator::SchemaToJson(schema: $org);
     }
 }
 ```
+
+**TypeScript:**
+
+```typescript
+import { JsonLdGenerator, Organization } from '@evabee/schema-org-json-ld';
+
+const org = new Organization({
+  name: 'PHP Foundation',
+  url: 'https://php.foundation',
+});
+
+const json = JsonLdGenerator.schemaToJson(org);
+```
+
+Output is identical to the PHP JSON example above.
 
 `hasMerchantReturnPolicy`, `hasMemberProgram`, and `hasShippingService` accept `MerchantReturnPolicy`, `MemberProgram`, and `ShippingService` objects respectively (or arrays of those objects).
 
@@ -1470,6 +1739,31 @@ $json = JsonLdGenerator::SchemaToJson(schema: $product);
 }
 ```
 
+**TypeScript:**
+
+```typescript
+import { ItemAvailability, JsonLdGenerator, Offer, Product } from '@evabee/schema-org-json-ld';
+
+const product = new Product({
+  name: 'Executive Anvil',
+  image: ['https://example.com/photos/1x1/photo.jpg'],
+  description: "Sleeker than ACME's Classic Anvil, the Executive Anvil is perfect for the business traveler looking for something to drop from a height.",
+  sku: '0446310786',
+  offers: [
+    new Offer({
+      url: 'https://example.com/anvil',
+      priceCurrency: 'USD',
+      price: 119.99,
+      availability: ItemAvailability.InStock,
+    }),
+  ],
+});
+
+const json = JsonLdGenerator.schemaToJson(product);
+```
+
+Output is identical to the PHP JSON example above.
+
 ---
 
 ### Profile Page
@@ -1517,6 +1811,22 @@ $json = JsonLdGenerator::SchemaToJson(schema: $profile);
     "dateModified": "2026-01-15"
 }
 ```
+
+**TypeScript:**
+
+```typescript
+import { JsonLdGenerator, Person, ProfilePage } from '@evabee/schema-org-json-ld';
+
+const profile = new ProfilePage({
+  mainEntity: new Person({ name: 'Alice Dev', url: 'https://example.com/alice' }),
+  dateCreated: '2020-01-01',
+  dateModified: '2026-01-15',
+});
+
+const json = JsonLdGenerator.schemaToJson(profile);
+```
+
+Output is identical to the PHP JSON example above.
 
 ---
 
@@ -1575,6 +1885,20 @@ $json = JsonLdGenerator::SchemaToJson(schema: $qa);
     }
 }
 ```
+
+**TypeScript:**
+
+```typescript
+import { JsonLdGenerator, QAPage, Question } from '@evabee/schema-org-json-ld';
+
+const qa = new QAPage({
+  mainEntity: new Question({ name: 'How do I install Composer?' }),
+});
+
+const json = JsonLdGenerator.schemaToJson(qa);
+```
+
+Output is identical to the PHP JSON example above.
 
 ---
 
@@ -1694,6 +2018,21 @@ $json = JsonLdGenerator::SchemaToJson(schema: $recipe);
 }
 ```
 
+**TypeScript:**
+
+```typescript
+import { JsonLdGenerator, Recipe } from '@evabee/schema-org-json-ld';
+
+const recipe = new Recipe({
+  name: "Grandma's Apple Pie",
+  image: ['https://example.com/photos/applepie-1x1.jpg', 'https://example.com/photos/applepie-4x3.jpg'],
+});
+
+const json = JsonLdGenerator.schemaToJson(recipe);
+```
+
+Output is identical to the PHP JSON example above.
+
 ---
 
 ### Review Snippet
@@ -1733,6 +2072,24 @@ $json = JsonLdGenerator::SchemaToJson(schema: $review);
     "name": "Great product"
 }
 ```
+
+**TypeScript:**
+
+```typescript
+import { JsonLdGenerator, Rating, Review } from '@evabee/schema-org-json-ld';
+
+const review = new Review({
+  author: 'Jane Reviewer',
+  reviewRating: new Rating({ ratingValue: 4, bestRating: 5 }),
+  reviewBody: 'Excellent product! Works exactly as described and arrived quickly.',
+  datePublished: '2026-01-20',
+  name: 'Great product',
+});
+
+const json = JsonLdGenerator.schemaToJson(review);
+```
+
+Output is identical to the PHP JSON example above.
 
 `Review` and `AggregateRating` are typically embedded inside a `Product`, `Movie`, `Recipe`, etc. rather than used standalone. The `review` and `aggregateRating` properties are available on all relevant schema types.
 
@@ -1819,6 +2176,27 @@ $json = JsonLdGenerator::SchemaToJson(schema: $app);
 }
 ```
 
+**TypeScript:**
+
+```typescript
+import { AggregateRating, ItemAvailability, JsonLdGenerator, Offer, SoftwareApplication } from '@evabee/schema-org-json-ld';
+
+const app = new SoftwareApplication({
+  name: 'CodeHelper Pro',
+  offers: new Offer({
+    url: 'https://codehelper.example.com/buy',
+    priceCurrency: 'USD',
+    price: 9.99,
+    availability: ItemAvailability.InStock,
+  }),
+  aggregateRating: new AggregateRating({ ratingValue: 4.6, ratingCount: 8900 }),
+});
+
+const json = JsonLdGenerator.schemaToJson(app);
+```
+
+Output is identical to the PHP JSON example above.
+
 Use `MobileApplication` or `WebApplication` by substituting the class name:
 
 ```php
@@ -1866,6 +2244,22 @@ $json = JsonLdGenerator::SchemaToJson(schema: $article);
 }
 ```
 
+**TypeScript:**
+
+```typescript
+import { Article, JsonLdGenerator, SpeakableSpecification } from '@evabee/schema-org-json-ld';
+
+const article = new Article({
+  headline: 'Latest News: PHP Reaches New Heights',
+  datePublished: '2026-01-25',
+  speakable: new SpeakableSpecification({ cssSelector: ['.headline', '.summary'] }),
+});
+
+const json = JsonLdGenerator.schemaToJson(article);
+```
+
+Output is identical to the PHP JSON example above.
+
 ---
 
 ### Subscription / Paywalled Content
@@ -1906,6 +2300,23 @@ $json = JsonLdGenerator::SchemaToJson(schema: $article);
     }
 }
 ```
+
+**TypeScript:**
+
+```typescript
+import { Article, JsonLdGenerator, WebPageElement } from '@evabee/schema-org-json-ld';
+
+const article = new Article({
+  headline: 'Premium: Advanced PHP Patterns Deep Dive',
+  datePublished: '2026-02-01',
+  isAccessibleForFree: false,
+  hasPart: new WebPageElement(false, '.premium-content'),
+});
+
+const json = JsonLdGenerator.schemaToJson(article);
+```
+
+Output is identical to the PHP JSON example above.
 
 ---
 
@@ -2010,6 +2421,33 @@ $json = JsonLdGenerator::SchemaToJson(schema: $rental);
 }
 ```
 
+**TypeScript:**
+
+```typescript
+import { Accommodation, BedDetails, JsonLdGenerator, QuantitativeValue, VacationRental } from '@evabee/schema-org-json-ld';
+
+const rental = new VacationRental({
+  name: 'Beachside Cottage',
+  identifier: 'cottage-42',
+  image: ['https://example.com/rentals/cottage-1.jpg', 'https://example.com/rentals/cottage-2.jpg'],
+  latitude: 36.8516,
+  longitude: -75.9779,
+  containsPlace: new Accommodation({
+    occupancy: new QuantitativeValue({ value: 4, unitCode: 'C62' }),
+    numberOfBedrooms: 2,
+    numberOfBathroomsTotal: 1,
+    bed: [
+      new BedDetails({ numberOfBeds: 1, typeOfBed: 'King' }),
+      new BedDetails({ numberOfBeds: 2, typeOfBed: 'Twin' }),
+    ],
+  }),
+});
+
+const json = JsonLdGenerator.schemaToJson(rental);
+```
+
+Output is identical to the PHP JSON example above.
+
 ---
 
 ### Video
@@ -2077,6 +2515,22 @@ $json = JsonLdGenerator::SchemaToJson(schema: $video);
 }
 ```
 
+**TypeScript:**
+
+```typescript
+import { JsonLdGenerator, VideoObject } from '@evabee/schema-org-json-ld';
+
+const video = new VideoObject({
+  name: 'Getting Started with PHP 8.3',
+  uploadDate: '2026-01-10',
+  thumbnailUrl: ['https://example.com/thumbnails/php83-tutorial-1x1.jpg'],
+});
+
+const json = JsonLdGenerator.schemaToJson(video);
+```
+
+Output is identical to the PHP JSON example above.
+
 ## Multiple Schemas per Page (@graph)
 
 When a page contains multiple rich result entities (for example an `Article` and a `BreadcrumbList`), you can combine them into a single JSON-LD block using `@graph`.
@@ -2136,7 +2590,7 @@ $json = JsonLdGenerator::SchemasToJson($article, $breadcrumb);
 
 ## API Reference
 
-### `JsonLdGenerator::SchemaToJson(TypedSchema $schema): string`
+### PHP: `JsonLdGenerator::SchemaToJson(TypedSchema $schema): string`
 
 Serializes any schema object to a JSON-LD string ready to embed in HTML.
 
@@ -2153,20 +2607,47 @@ $json = JsonLdGenerator::SchemaToJson(schema: $mySchema);
 - Backed string enums (e.g. `ItemAvailability`, `OfferItemCondition`, `EventStatusType`) are automatically serialized to their `.value` (the full schema.org URL).
 - Arrays of schema objects and primitives are both handled correctly.
 
+### TypeScript: `JsonLdGenerator.schemaToJson(schema: TypedSchema): string`
+
+TypeScript uses the same serialization behavior with a lowercase `schemaToJson` method name:
+
+```typescript
+const json = JsonLdGenerator.schemaToJson(mySchema);
+```
+
+### TypeScript: `JsonLdGenerator.schemasToJson(...schemas: TypedSchema[]): string`
+
+Use this variant to generate an `@graph` payload from multiple schema objects:
+
+```typescript
+const json = JsonLdGenerator.schemasToJson(article, breadcrumb);
+```
+
 ### `TypedSchema` (abstract base class)
 
-All schema classes extend `TypedSchema`. The only requirement is that each class defines the class constant:
+All schema classes extend `TypedSchema`.
+
+- PHP uses `public const A_SCHEMA_TYPE = 'TypeName';`
+- TypeScript uses `static readonly schemaType = 'TypeName';`
+
+The only requirement is that each class defines the schema type constant/property:
 
 ```php
 public const A_SCHEMA_TYPE = 'TypeName'; // e.g. 'Product', 'Article'
 ```
 
-For schema.org properties that use names that are not valid PHP identifiers (for example `mathExpression-input`), define:
+For schema.org properties that use names that are not valid language identifiers (for example `mathExpression-input`), define a property map:
 
 ```php
 public const PROPERTY_MAP = [
 	'mathExpressionInput' => 'mathExpression-input',
 ];
+```
+
+```typescript
+static readonly propertyMap: Record<string, string> = {
+  mathExpressionInput: 'mathExpression-input',
+};
 ```
 
 Schema classes use constructor promotion — all data is passed via the constructor and stored as public properties. No methods are needed beyond the constructor.
@@ -2176,17 +2657,18 @@ Schema classes use constructor promotion — all data is passed via the construc
 ## Testing
 
 ```bash
-# Run unit tests
+# PHP
 composer run test-unit
-
-# Fix code style
 composer run cs-fix
-
-# Check code style without modifying files
 composer run cs-check
+
+# TypeScript
+npm run test       # Run Vitest tests
+npm run build      # Build ESM/CJS
+npx biome check    # Lint
 ```
 
-See the [php/test/unit](https://github.com/EvaLok/schema-org-json-ld/tree/master/php/test/unit) directory for the full test suite.
+See the [php/test/unit](https://github.com/EvaLok/schema-org-json-ld/tree/master/php/test/unit) and [ts/test](https://github.com/EvaLok/schema-org-json-ld/tree/master/ts/test) directories for the full test suites.
 
 ---
 
@@ -2221,13 +2703,14 @@ These properties are defined on schema.org and are correctly serialized by this 
 Contributions are welcome! Please:
 
 1. Fork the repository and create a feature branch.
-2. Add or update schema classes in `php/src/v1/Schema/`.
-3. Write tests in `php/test/unit/` — see existing tests for the pattern.
-4. Run `composer run cs-fix` to fix code style.
-5. Run `composer run test-unit` to ensure all tests pass.
-6. Open a pull request with a clear description of the change.
+2. Add or update schema classes in `php/src/v1/Schema/` (PHP) or `ts/src/schema/` (TypeScript).
+3. Write tests in `php/test/unit/` (PHP) or `ts/test/schema/` (TypeScript).
+4. Run `composer run cs-fix` and `composer run test-unit` for PHP changes.
+5. Run `npm run test`, `npm run build`, and `npx biome check` for TypeScript changes.
+6. For TypeScript schema additions, follow the options-object constructor pattern and update barrel exports in `ts/src/index.ts`.
+7. Open a pull request with a clear description of the change.
 
-When adding a new schema type, follow the pattern in existing classes: extend `TypedSchema`, set `A_SCHEMA_TYPE`, use constructor promotion, and keep `null|Type` syntax for optional properties.
+When adding a new schema type, follow the existing language-specific patterns: PHP classes extend `TypedSchema` and set `A_SCHEMA_TYPE`; TypeScript classes extend `TypedSchema`, set `schemaType`, and use options-object constructors.
 
 ---
 
