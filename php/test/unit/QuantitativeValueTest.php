@@ -38,14 +38,14 @@ final class QuantitativeValueTest extends TestCase {
 
 	public function testUnitTextOutput(): void {
 		$schema = new QuantitativeValue(
-			value: 1000,
-			unitText: 'YEAR',
+			value: 40,
+			unitText: 'HOUR',
 		);
 		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
 		$obj = json_decode($json);
 
-		$this->assertEquals(1000, $obj->value);
-		$this->assertEquals('YEAR', $obj->unitText);
+		$this->assertEquals(40, $obj->value);
+		$this->assertEquals('HOUR', $obj->unitText);
 	}
 
 	public function testMinMaxRange(): void {

@@ -34,8 +34,8 @@ describe("QuantitativeValue", () => {
 	it("includes all fields when set", () => {
 		const schema = new QuantitativeValue({
 			value: 10.5,
-			unitCode: "KGM",
-			unitText: "YEAR",
+			unitCode: "HUR",
+			unitText: "HOUR",
 			minValue: 5,
 			maxValue: 20,
 		});
@@ -43,8 +43,8 @@ describe("QuantitativeValue", () => {
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
 		expect(obj.value).toBe(10.5);
-		expect(obj.unitCode).toBe("KGM");
-		expect(obj.unitText).toBe("YEAR");
+		expect(obj.unitCode).toBe("HUR");
+		expect(obj.unitText).toBe("HOUR");
 		expect(obj.minValue).toBe(5);
 		expect(obj.maxValue).toBe(20);
 	});
@@ -52,15 +52,15 @@ describe("QuantitativeValue", () => {
 	it("matches PHP parity JSON-LD output", () => {
 		const schema = new QuantitativeValue({
 			value: 10.5,
-			unitCode: "KGM",
-			unitText: "YEAR",
+			unitCode: "HUR",
+			unitText: "HOUR",
 			minValue: 5,
 			maxValue: 20,
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 
 		expect(json).toBe(
-			'{\n  "@context": "https://schema.org/",\n  "@type": "QuantitativeValue",\n  "value": 10.5,\n  "unitCode": "KGM",\n  "unitText": "YEAR",\n  "minValue": 5,\n  "maxValue": 20\n}',
+			'{\n  "@context": "https://schema.org/",\n  "@type": "QuantitativeValue",\n  "value": 10.5,\n  "unitCode": "HUR",\n  "unitText": "HOUR",\n  "minValue": 5,\n  "maxValue": 20\n}',
 		);
 	});
 });
