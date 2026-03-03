@@ -105,7 +105,7 @@ try {
 	assertRequiredExports(cjsPkg, "CJS");
 	pass("CJS require validated");
 
-	const brand = new cjsPkg.Brand("Acme");
+	const brand = new cjsPkg.Brand({ name: "Acme" });
 	const offer = new cjsPkg.Offer({
 		url: "https://example.com/products/widget",
 		priceCurrency: "USD",

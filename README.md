@@ -12,6 +12,7 @@ Validated against the [Google Rich Results Test](https://search.google.com/test/
 [![PHP 8.5](https://img.shields.io/badge/PHP-8.5-777BB4?logo=php&logoColor=white)](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/main.yml)
 [![TypeScript CI](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/ci-ts.yml/badge.svg)](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/ci-ts.yml)
 [![Node 20](https://img.shields.io/badge/Node-20-339933?logo=node.js&logoColor=white)](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/ci-ts.yml)
+[![Node 22](https://img.shields.io/badge/Node-22-339933?logo=node.js&logoColor=white)](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/ci-ts.yml)
 [![Node 24](https://img.shields.io/badge/Node-24-339933?logo=node.js&logoColor=white)](https://github.com/EvaLok/schema-org-json-ld/actions/workflows/ci-ts.yml)
 [![npm](https://img.shields.io/npm/v/@evabee/schema-org-json-ld)](https://www.npmjs.com/package/@evabee/schema-org-json-ld)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
