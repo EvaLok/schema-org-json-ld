@@ -319,14 +319,12 @@
       "enums": 12,
       "note": "Per audit #73: 88 total - 12 enums - 3 building-block-only = 73 standalone-parity-testable. QC architecture maxes at 73 for parity (building-block types validated through parents). E2E denominator is ~28 standalone types."
     },
-    "phpstan_level": 9,
+    "phpstan_level": "max",
     "phpstan_max_assessment": {
-      "level_9_errors": 0,
-      "level_max_errors": 3,
-      "regression_pr": 364,
-      "fix_issue": 398,
-      "fix_status": "dispatched",
-      "note": "PR #364 (mixed-array serialization) introduced 3 'Cannot access an offset on mixed' errors at level max. Fix dispatched as #398. Config remains at level 9 until fix merges."
+      "level_max_errors": 0,
+      "fix_pr": 399,
+      "fix_merged_at": "2026-03-03T19:59:56Z",
+      "note": "Level max achieved. Fixed 3 mixed-offset errors with local array accumulator in AddPropertiesToObject()."
     },
     "directory_layout": {
       "php": "php/src/, php/test/",
@@ -643,7 +641,10 @@
       "title": "Upgrade PHPStan to level max: fix 3 mixed-offset errors in JsonLdGenerator",
       "dispatched_at": "2026-03-03T19:49:00Z",
       "model": "gpt-5.3-codex",
-      "status": "dispatched"
+      "status": "merged",
+      "pr": 399,
+      "merged_at": "2026-03-03T19:59:56Z",
+      "note": "Fixed mixed-offset access with local array accumulator. PHPStan config upgraded 9->max. CI green on all 7 checks."
     }
   ],
   "qc_processed": [8, 37, 57, 72, 160, 165],
@@ -734,15 +735,15 @@
     ]
   },
   "copilot_metrics": {
-    "dispatch_to_pr_rate": "30/30 (100%)",
-    "pr_merge_rate": "30/30 (100%)",
-    "in_flight": 1,
-    "note": "30 dispatches, 30 merged, 1 in-flight (#398 PHPStan max). 2 revision rounds total (#364 mixed-array bug, #384 missing required props). Zero silent failures."
+    "dispatch_to_pr_rate": "31/31 (100%)",
+    "pr_merge_rate": "31/31 (100%)",
+    "in_flight": 0,
+    "note": "31 dispatches, 31 merged, 0 in-flight. 2 revision rounds total (#364 mixed-array bug, #384 missing required props). Zero silent failures."
   },
   "last_cycle": {
     "issue": 397,
     "timestamp": "2026-03-03T19:43:00Z",
-    "summary": "Cycle 115: Acknowledged Eva #396 (Node 22 CI). Dispatched #398 (PHPStan level max fix). Updated AGENTS-ts.md for Node 22. Proactive scan found no other urgent improvements."
+    "summary": "Cycle 115: Acknowledged Eva #396 (Node 22 CI). Dispatched+merged #398/#399 (PHPStan level max). Eva pushed publish-npm.yml (OIDC). PR #305 likely superseded."
   },
   "last_eva_comment_check": "2026-03-03T19:43:00Z",
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71, 73],
