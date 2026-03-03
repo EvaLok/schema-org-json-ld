@@ -285,7 +285,14 @@
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
     "enum_namespace": "EvaLok\\SchemaOrgJsonLd\\v1\\Enum",
-    "in_progress": [],
+    "in_progress": [
+      {
+        "type": "SeekToAction + VideoObject.potentialAction",
+        "issue": 361,
+        "dispatched_at": "2026-03-03T06:23:00Z",
+        "model": "gpt-5.3-codex"
+      }
+    ],
     "planned_next": [],
     "google_rich_results_types": {
       "not_implemented": [],
@@ -610,11 +617,11 @@
     "note": "All 21 main-orchestrator dispatches produced PRs that were merged. Zero silent failures."
   },
   "last_cycle": {
-    "issue": 352,
-    "timestamp": "2026-03-03T03:48:00Z",
-    "summary": "Cycle 106: Audit #58 processed (QC parity gap). PR #355 merged (JobPosting beta — 2 new sub-types). PR #357 merged (Review positiveNotes/negativeNotes). All audit findings resolved. Schema classes: 88/88 PHP/TS, 332 tests. Convention change sweep added to STARTUP_CHECKLIST."
+    "issue": 359,
+    "timestamp": "2026-03-03T06:16:00Z",
+    "summary": "Cycle 107: Audit #60 accepted (stale dispatch detection + Copilot metrics). Property gap audit batch 2: Organization, LocalBusiness, SoftwareApp clean; VideoObject missing SeekToAction — dispatched #361. QC parity at 49/86 (up from 39)."
   },
-  "last_eva_comment_check": "2026-03-03T03:48:00Z",
+  "last_eva_comment_check": "2026-03-03T06:16:00Z",
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60],
   "test_count": 332,
   "total_schema_types": 28,
