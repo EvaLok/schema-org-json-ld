@@ -90,4 +90,37 @@ final class MovieTest extends TestCase {
 		$this->assertEquals('Person', $obj->actor[1]->{'@type'});
 		$this->assertEquals('Anne Hathaway', $obj->actor[1]->name);
 	}
+
+	public function testAggregateRatingAndReviewTogether(): void {
+		$movie = new Movie(
+			name: 'Interstellar',
+			image: 'https://example.com/interstellar.jpg',
+			aggregateRating: new AggregateRating(
+				ratingValue: 4.8,
+				ratingCount: 2000,
+			),
+			review: new Review(
+				author: 'Film Critic',
+				reviewRating: new Rating(ratingValue: 4),
+				reviewBody: 'Thought-provoking and emotional.',
+			),
+		);
+		$obj = json_decode(JsonLdGenerator::SchemaToJson(schema: $movie));
+
+		$this->assertEquals(4.8, $obj->aggregateRating->ratingValue);
+		$this->assertEquals('Thought-provoking and emotional.', $obj->review->reviewBody);
+		$this->assertEquals(4, $obj->review->reviewRating->ratingValue);
+	}
+
+	public function testDateCreatedWithoutDatePublished(): void {
+		$movie = new Movie(
+			name: 'Interstellar',
+			image: 'https://example.com/interstellar.jpg',
+			dateCreated: '2014-11-07',
+		);
+		$obj = json_decode(JsonLdGenerator::SchemaToJson(schema: $movie));
+
+		$this->assertEquals('2014-11-07', $obj->dateCreated);
+		$this->assertFalse(property_exists($obj, 'datePublished'));
+	}
 }

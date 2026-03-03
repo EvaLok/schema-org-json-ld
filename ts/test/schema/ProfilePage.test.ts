@@ -46,4 +46,36 @@ describe("ProfilePage", () => {
 		expect(obj.dateCreated).toBe("2026-02-01");
 		expect(obj.dateModified).toBe("2026-03-01");
 	});
+
+	it("supports Organization as the only mainEntity field", () => {
+		const schema = new ProfilePage({
+			mainEntity: new Organization({ name: "Acme Inc" }),
+		});
+		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
+			string,
+			unknown
+		>;
+		const mainEntity = obj.mainEntity as Record<string, unknown>;
+
+		expect(obj["@type"]).toBe("ProfilePage");
+		expect(mainEntity["@type"]).toBe("Organization");
+		expect(mainEntity.name).toBe("Acme Inc");
+	});
+
+	it("serializes dateCreated and dateModified with Person mainEntity", () => {
+		const schema = new ProfilePage({
+			mainEntity: new Person({ name: "John Doe" }),
+			dateCreated: "2025-02-01",
+			dateModified: "2025-02-15",
+		});
+		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
+			string,
+			unknown
+		>;
+		const mainEntity = obj.mainEntity as Record<string, unknown>;
+
+		expect(mainEntity["@type"]).toBe("Person");
+		expect(obj.dateCreated).toBe("2025-02-01");
+		expect(obj.dateModified).toBe("2025-02-15");
+	});
 });

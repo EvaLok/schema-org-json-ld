@@ -68,4 +68,46 @@ describe("Movie", () => {
 		expect(actor).toHaveLength(2);
 		expect(actor[0]?.["@type"]).toBe("Person");
 	});
+
+	it("serializes aggregateRating with an individual review", () => {
+		const schema = new Movie({
+			name: "Interstellar",
+			image: "https://example.com/interstellar.jpg",
+			aggregateRating: new AggregateRating({
+				ratingValue: 4.8,
+				ratingCount: 2000,
+			}),
+			review: new Review({
+				author: "Film Critic",
+				reviewRating: new Rating({ ratingValue: 4 }),
+				reviewBody: "Thought-provoking and emotional.",
+			}),
+		});
+		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
+			string,
+			unknown
+		>;
+		const aggregateRating = obj.aggregateRating as Record<string, unknown>;
+		const review = obj.review as Record<string, unknown>;
+		const reviewRating = review.reviewRating as Record<string, unknown>;
+
+		expect(aggregateRating.ratingValue).toBe(4.8);
+		expect(review.reviewBody).toBe("Thought-provoking and emotional.");
+		expect(reviewRating.ratingValue).toBe(4);
+	});
+
+	it("includes dateCreated without requiring datePublished", () => {
+		const schema = new Movie({
+			name: "Interstellar",
+			image: "https://example.com/interstellar.jpg",
+			dateCreated: "2014-11-07",
+		});
+		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
+			string,
+			unknown
+		>;
+
+		expect(obj.dateCreated).toBe("2014-11-07");
+		expect(obj).not.toHaveProperty("datePublished");
+	});
 });

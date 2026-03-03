@@ -46,4 +46,42 @@ final class RestaurantTest extends TestCase {
 		$this->assertEquals('$$', $obj->priceRange);
 		$this->assertEquals('AggregateRating', $obj->aggregateRating->{'@type'});
 	}
+
+	public function testTypeRemainsRestaurantWithInheritedLocalBusinessFields(): void {
+		$restaurant = new Restaurant(
+			name: 'Example Bistro',
+			address: new PostalAddress(streetAddress: '123 Main Street'),
+			telephone: '+31-20-123-4567',
+			url: 'https://example.com/restaurant',
+		);
+		$obj = json_decode(JsonLdGenerator::SchemaToJson(schema: $restaurant));
+
+		$this->assertEquals('Restaurant', $obj->{'@type'});
+		$this->assertEquals('+31-20-123-4567', $obj->telephone);
+		$this->assertEquals('https://example.com/restaurant', $obj->url);
+	}
+
+	public function testAcceptsReservationsAsUrlString(): void {
+		$restaurant = new Restaurant(
+			name: 'Example Bistro',
+			address: new PostalAddress(streetAddress: '123 Main Street'),
+			acceptsReservations: 'https://example.com/reservations',
+		);
+		$obj = json_decode(JsonLdGenerator::SchemaToJson(schema: $restaurant));
+
+		$this->assertEquals('https://example.com/reservations', $obj->acceptsReservations);
+	}
+
+	public function testMenuAndCuisineSerializeTogether(): void {
+		$restaurant = new Restaurant(
+			name: 'Example Bistro',
+			address: new PostalAddress(streetAddress: '123 Main Street'),
+			menu: 'https://example.com/menu',
+			servesCuisine: 'Italian',
+		);
+		$obj = json_decode(JsonLdGenerator::SchemaToJson(schema: $restaurant));
+
+		$this->assertEquals('https://example.com/menu', $obj->menu);
+		$this->assertEquals('Italian', $obj->servesCuisine);
+	}
 }

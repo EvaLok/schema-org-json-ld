@@ -46,4 +46,26 @@ final class ProfilePageTest extends TestCase {
 		$this->assertEquals('2025-01-01', $obj->dateCreated);
 		$this->assertEquals('2025-01-31', $obj->dateModified);
 	}
+
+	public function testMinimalOutputWithOrganizationMainEntity(): void {
+		$schema = new ProfilePage(mainEntity: new Organization(name: 'Acme Inc'));
+		$obj = json_decode(JsonLdGenerator::SchemaToJson(schema: $schema));
+
+		$this->assertEquals('ProfilePage', $obj->{'@type'});
+		$this->assertEquals('Organization', $obj->mainEntity->{'@type'});
+		$this->assertEquals('Acme Inc', $obj->mainEntity->name);
+	}
+
+	public function testDateCreatedAndDateModifiedWithPersonMainEntity(): void {
+		$schema = new ProfilePage(
+			mainEntity: new Person(name: 'John Doe'),
+			dateCreated: '2025-02-01',
+			dateModified: '2025-02-15',
+		);
+		$obj = json_decode(JsonLdGenerator::SchemaToJson(schema: $schema));
+
+		$this->assertEquals('Person', $obj->mainEntity->{'@type'});
+		$this->assertEquals('2025-02-01', $obj->dateCreated);
+		$this->assertEquals('2025-02-15', $obj->dateModified);
+	}
 }

@@ -70,4 +70,51 @@ describe("Restaurant", () => {
 		expect(obj.telephone).toBe("+1-555-1234");
 		expect(obj.description).toBe("Neighborhood restaurant");
 	});
+
+	it("preserves Restaurant type when inherited fields are present", () => {
+		const schema = new Restaurant({
+			name: "Example Bistro",
+			address,
+			telephone: "+31-20-123-4567",
+			url: "https://example.com/restaurant",
+		});
+		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
+			string,
+			unknown
+		>;
+
+		expect(obj["@type"]).toBe("Restaurant");
+		expect(obj.telephone).toBe("+31-20-123-4567");
+		expect(obj.url).toBe("https://example.com/restaurant");
+	});
+
+	it("supports acceptsReservations as URL string", () => {
+		const schema = new Restaurant({
+			name: "Example Bistro",
+			address,
+			acceptsReservations: "https://example.com/reservations",
+		});
+		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
+			string,
+			unknown
+		>;
+
+		expect(obj.acceptsReservations).toBe("https://example.com/reservations");
+	});
+
+	it("serializes menu and servesCuisine together", () => {
+		const schema = new Restaurant({
+			name: "Example Bistro",
+			address,
+			menu: "https://example.com/menu",
+			servesCuisine: "Italian",
+		});
+		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
+			string,
+			unknown
+		>;
+
+		expect(obj.menu).toBe("https://example.com/menu");
+		expect(obj.servesCuisine).toBe("Italian");
+	});
 });
