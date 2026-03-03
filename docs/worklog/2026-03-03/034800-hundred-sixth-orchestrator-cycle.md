@@ -20,7 +20,7 @@ Proactive scan of 5 high-traffic types (Article, Recipe, Event, Product, FAQ) ag
 
 ### Agent dispatch & review
 - [#354](https://github.com/EvaLok/schema-org-json-ld/issues/354): JobPosting beta properties (PHP + TS). Creates 2 new sub-types + adds 3 properties. PR [#355](https://github.com/EvaLok/schema-org-json-ld/pull/355) — **reviewed and merged**. 321 PHP tests pass, PHPStan level max clean. Schema classes now 88/88 PHP/TS.
-- [#356](https://github.com/EvaLok/schema-org-json-ld/issues/356): Review positiveNotes/negativeNotes (PHP + TS). Dispatched to Copilot after #355 merge to avoid barrel file conflicts.
+- [#356](https://github.com/EvaLok/schema-org-json-ld/issues/356): Review positiveNotes/negativeNotes (PHP + TS). Dispatched to Copilot after #355 merge to avoid barrel file conflicts. PR [#357](https://github.com/EvaLok/schema-org-json-ld/issues/357) — **reviewed and merged**. 332 PHP tests pass, PHPStan clean.
 
 ### Process improvement
 - Added convention change sweep to STARTUP_CHECKLIST (formalizes pattern from cycle 105 journal)
@@ -30,9 +30,10 @@ Proactive scan of 5 high-traffic types (Article, Recipe, Event, Product, FAQ) ag
 
 ## Current state
 
-- **Merged**: PR [#355](https://github.com/EvaLok/schema-org-json-ld/issues/355) (JobPosting beta properties) — all audit findings now resolved
-- **Agent in flight**: [#356](https://github.com/EvaLok/schema-org-json-ld/issues/356) (Review positiveNotes/negativeNotes)
+- **Merged this cycle**: PR [#355](https://github.com/EvaLok/schema-org-json-ld/issues/355) (JobPosting beta properties), PR [#357](https://github.com/EvaLok/schema-org-json-ld/issues/357) (Review positiveNotes/negativeNotes)
+- **All audit findings resolved**: No remaining low_priority items
 - **Schema classes**: 88/88 PHP/TS, 12/12 enums — perfect parity
+- **Tests**: 332 PHP tests, 1700 assertions, PHPStan level max clean
 - **QC parity**: 39/86 (45%), alerted about metric gap via [#331](https://github.com/EvaLok/schema-org-json-ld/issues/331)
 - **Phase 4 blocked**: QC validation at 39/86 (needs 86/86). PR #305 waiting for Eva.
 
@@ -46,10 +47,9 @@ Proactive scan of 5 high-traffic types (Article, Recipe, Event, Product, FAQ) ag
 | [#329](https://github.com/EvaLok/schema-org-json-ld/issues/329) | input-from-eva | Open (TS testing directive — pending QC validation) |
 | [#331](https://github.com/EvaLok/schema-org-json-ld/issues/331) | qc-outbound | Open (comprehensive TS validation — QC at 39/86) |
 | [#353](https://github.com/EvaLok/schema-org-json-ld/issues/353) | audit-inbound | Open (audit #58 — QC parity gap) |
-| [#356](https://github.com/EvaLok/schema-org-json-ld/issues/356) | agent-task | Open (Review positiveNotes/negativeNotes — agent working) |
 
 ## Next steps
 
-- Review and merge PR from #356 when agent finishes
 - Continue monitoring QC parity progress (39/86 → 86/86)
 - Phase 4b/4c remain blocked on QC validation + Eva actions
+- Future property gap audit: consider scanning more types against Google docs
