@@ -6,10 +6,10 @@ import { ShippingDeliveryTime } from "../../src/schema/ShippingDeliveryTime";
 
 describe("ShippingDeliveryTime", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new ShippingDeliveryTime(
-			new QuantitativeValue(1, "DAY"),
-			new QuantitativeValue(3, "DAY"),
-		);
+		const schema = new ShippingDeliveryTime({
+			handlingTime: new QuantitativeValue({ value: 1, unitCode: "DAY" }),
+			transitTime: new QuantitativeValue({ value: 3, unitCode: "DAY" }),
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -18,10 +18,10 @@ describe("ShippingDeliveryTime", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new ShippingDeliveryTime(
-			new QuantitativeValue(1, "DAY"),
-			new QuantitativeValue(3, "DAY"),
-		);
+		const schema = new ShippingDeliveryTime({
+			handlingTime: new QuantitativeValue({ value: 1, unitCode: "DAY" }),
+			transitTime: new QuantitativeValue({ value: 3, unitCode: "DAY" }),
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const handlingTime = obj.handlingTime as Record<string, unknown>;
@@ -36,10 +36,10 @@ describe("ShippingDeliveryTime", () => {
 	});
 
 	it("omits null fields from nested QuantitativeValue objects", () => {
-		const schema = new ShippingDeliveryTime(
-			new QuantitativeValue(null, null),
-			new QuantitativeValue(3, "DAY"),
-		);
+		const schema = new ShippingDeliveryTime({
+			handlingTime: new QuantitativeValue({ value: null, unitCode: null }),
+			transitTime: new QuantitativeValue({ value: 3, unitCode: "DAY" }),
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const handlingTime = obj.handlingTime as Record<string, unknown>;

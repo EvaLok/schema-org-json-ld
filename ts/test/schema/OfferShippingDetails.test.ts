@@ -9,9 +9,9 @@ import { ShippingDeliveryTime } from "../../src/schema/ShippingDeliveryTime";
 
 describe("OfferShippingDetails", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new OfferShippingDetails(
-			new DefinedRegion({ addressCountry: "US" }),
-		);
+		const schema = new OfferShippingDetails({
+			shippingDestination: new DefinedRegion({ addressCountry: "US" }),
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const shippingDestination = obj.shippingDestination as Record<
@@ -26,12 +26,12 @@ describe("OfferShippingDetails", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new OfferShippingDetails(
-			new DefinedRegion({ addressCountry: "US" }),
-			null,
-			null,
-			null,
-		);
+		const schema = new OfferShippingDetails({
+			shippingDestination: new DefinedRegion({ addressCountry: "US" }),
+			shippingRate: null,
+			deliveryTime: null,
+			doesNotShip: null,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -41,15 +41,18 @@ describe("OfferShippingDetails", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new OfferShippingDetails(
-			new DefinedRegion({ addressCountry: "US", addressRegion: "CA" }),
-			new MonetaryAmount({ currency: "USD", value: 4.99 }),
-			new ShippingDeliveryTime(
-				new QuantitativeValue(1, "DAY"),
-				new QuantitativeValue(3, "DAY"),
-			),
-			false,
-		);
+		const schema = new OfferShippingDetails({
+			shippingDestination: new DefinedRegion({
+				addressCountry: "US",
+				addressRegion: "CA",
+			}),
+			shippingRate: new MonetaryAmount({ currency: "USD", value: 4.99 }),
+			deliveryTime: new ShippingDeliveryTime({
+				handlingTime: new QuantitativeValue({ value: 1, unitCode: "DAY" }),
+				transitTime: new QuantitativeValue({ value: 3, unitCode: "DAY" }),
+			}),
+			doesNotShip: false,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const shippingRate = obj.shippingRate as Record<string, unknown>;

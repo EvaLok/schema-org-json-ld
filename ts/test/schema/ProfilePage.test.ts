@@ -7,7 +7,9 @@ import { ProfilePage } from "../../src/schema/ProfilePage";
 
 describe("ProfilePage", () => {
 	it("produces minimal JSON-LD output with Person as mainEntity", () => {
-		const schema = new ProfilePage(new Person({ name: "Jane Doe" }));
+		const schema = new ProfilePage({
+			mainEntity: new Person({ name: "Jane Doe" }),
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const mainEntity = obj.mainEntity as Record<string, unknown>;
@@ -18,11 +20,11 @@ describe("ProfilePage", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new ProfilePage(
-			new Person({ name: "Jane Doe" }),
-			null,
-			null,
-		);
+		const schema = new ProfilePage({
+			mainEntity: new Person({ name: "Jane Doe" }),
+			dateCreated: null,
+			dateModified: null,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -31,11 +33,11 @@ describe("ProfilePage", () => {
 	});
 
 	it("includes all fields and supports Organization as mainEntity", () => {
-		const schema = new ProfilePage(
-			new Organization({ name: "Example Org" }),
-			"2026-02-01",
-			"2026-03-01",
-		);
+		const schema = new ProfilePage({
+			mainEntity: new Organization({ name: "Example Org" }),
+			dateCreated: "2026-02-01",
+			dateModified: "2026-03-01",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const mainEntity = obj.mainEntity as Record<string, unknown>;

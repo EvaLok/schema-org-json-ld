@@ -73,7 +73,10 @@ describe("Recipe", () => {
 			],
 			nutrition: new NutritionInformation(),
 			aggregateRating: new AggregateRating({ ratingValue: 4.7 }),
-			review: new Review("Jane", new Rating(5)),
+			review: new Review({
+				author: "Jane",
+				reviewRating: new Rating({ ratingValue: 5 }),
+			}),
 			video: new VideoObject({
 				name: "Pancake Tutorial",
 				thumbnailUrl: ["https://example.com/thumb.jpg"],
@@ -117,7 +120,12 @@ describe("Recipe", () => {
 		const schema = new Recipe({
 			name: "Pancakes",
 			image: ["https://example.com/pancakes.jpg"],
-			review: [new Review("Jane", new Rating(5))],
+			review: [
+				new Review({
+					author: "Jane",
+					reviewRating: new Rating({ ratingValue: 5 }),
+				}),
+			],
 			interactionStatistic: [
 				new InteractionCounter({
 					interactionType: "LikeAction",

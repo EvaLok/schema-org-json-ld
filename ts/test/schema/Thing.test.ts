@@ -5,7 +5,7 @@ import { Thing } from "../../src/schema/Thing";
 
 describe("Thing", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new Thing("Generic Thing");
+		const schema = new Thing({ name: "Generic Thing" });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -15,7 +15,7 @@ describe("Thing", () => {
 	});
 
 	it("has no optional fields to include in output", () => {
-		const schema = new Thing("Only Required");
+		const schema = new Thing({ name: "Only Required" });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -23,7 +23,7 @@ describe("Thing", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new Thing("Complete Thing");
+		const schema = new Thing({ name: "Complete Thing" });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

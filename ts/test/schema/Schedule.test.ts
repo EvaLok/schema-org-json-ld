@@ -5,7 +5,7 @@ import { Schedule } from "../../src/schema/Schedule";
 
 describe("Schedule", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new Schedule("P1D");
+		const schema = new Schedule({ repeatFrequency: "P1D" });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -15,7 +15,12 @@ describe("Schedule", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new Schedule("P1D", null, null, null);
+		const schema = new Schedule({
+			repeatFrequency: "P1D",
+			repeatCount: null,
+			startDate: null,
+			endDate: null,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -25,7 +30,12 @@ describe("Schedule", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new Schedule("P1D", 10, "2026-01-01", "2026-01-10");
+		const schema = new Schedule({
+			repeatFrequency: "P1D",
+			repeatCount: 10,
+			startDate: "2026-01-01",
+			endDate: "2026-01-10",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

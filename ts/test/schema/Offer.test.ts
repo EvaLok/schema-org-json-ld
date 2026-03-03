@@ -61,11 +61,16 @@ describe("Offer", () => {
 			availability: ItemAvailability.InStock,
 			itemCondition: OfferItemCondition.NewCondition,
 			shippingDetails: [
-				new OfferShippingDetails(new DefinedRegion({ addressCountry: "US" })),
+				new OfferShippingDetails({
+					shippingDestination: new DefinedRegion({ addressCountry: "US" }),
+				}),
 			],
 			validFrom: "2026-02-01",
 			priceValidUntil: "2026-12-31",
-			priceSpecification: new UnitPriceSpecification(19.99, "USD"),
+			priceSpecification: new UnitPriceSpecification({
+				price: 19.99,
+				priceCurrency: "USD",
+			}),
 			hasMerchantReturnPolicy: new MerchantReturnPolicy({
 				applicableCountry: "US",
 				returnPolicyCategory:
@@ -99,8 +104,12 @@ describe("Offer", () => {
 			price: 19.99,
 			availability: ItemAvailability.InStock,
 			priceSpecification: [
-				new UnitPriceSpecification(19.99, "USD"),
-				new UnitPriceSpecification(17.99, "USD", "Sale"),
+				new UnitPriceSpecification({ price: 19.99, priceCurrency: "USD" }),
+				new UnitPriceSpecification({
+					price: 17.99,
+					priceCurrency: "USD",
+					priceType: "Sale",
+				}),
 			],
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);

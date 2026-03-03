@@ -5,7 +5,7 @@ import { ShippingRateSettings } from "../../src/schema/ShippingRateSettings";
 
 describe("ShippingRateSettings", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new ShippingRateSettings();
+		const schema = new ShippingRateSettings({});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -14,7 +14,10 @@ describe("ShippingRateSettings", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new ShippingRateSettings(null, null);
+		const schema = new ShippingRateSettings({
+			orderPercentage: null,
+			weightPercentage: null,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -23,7 +26,10 @@ describe("ShippingRateSettings", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new ShippingRateSettings(2.5, 1.25);
+		const schema = new ShippingRateSettings({
+			orderPercentage: 2.5,
+			weightPercentage: 1.25,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

@@ -58,7 +58,10 @@ describe("SoftwareApplication", () => {
 			name: "Example App",
 			offers: [offer],
 			aggregateRating: new AggregateRating({ ratingValue: 4.5 }),
-			review: new Review("Jane", new Rating(5)),
+			review: new Review({
+				author: "Jane",
+				reviewRating: new Rating({ ratingValue: 5 }),
+			}),
 			description: "A productivity app",
 		});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<

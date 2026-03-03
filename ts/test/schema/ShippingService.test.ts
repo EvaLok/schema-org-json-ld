@@ -11,7 +11,9 @@ import { ShippingService } from "../../src/schema/ShippingService";
 
 describe("ShippingService", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new ShippingService(new ShippingConditions({}));
+		const schema = new ShippingService({
+			shippingConditions: new ShippingConditions({}),
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const shippingConditions = obj.shippingConditions as Record<
@@ -25,14 +27,14 @@ describe("ShippingService", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new ShippingService(
-			new ShippingConditions({}),
-			null,
-			null,
-			null,
-			null,
-			null,
-		);
+		const schema = new ShippingService({
+			shippingConditions: new ShippingConditions({}),
+			name: null,
+			description: null,
+			fulfillmentType: null,
+			handlingTime: null,
+			validForMemberTier: null,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -44,20 +46,22 @@ describe("ShippingService", () => {
 	});
 
 	it("includes optional fields when set and supports shippingConditions array", () => {
-		const schema = new ShippingService(
-			[
+		const schema = new ShippingService({
+			shippingConditions: [
 				new ShippingConditions({}),
 				new ShippingConditions({ doesNotShip: false }),
 			],
-			"Priority Shipping",
-			"Fast delivery service",
-			FulfillmentTypeEnumeration.FulfillmentTypeDelivery,
-			new ServicePeriod(new QuantitativeValue(2, "DAY")),
-			new MemberProgramTier({
+			name: "Priority Shipping",
+			description: "Fast delivery service",
+			fulfillmentType: FulfillmentTypeEnumeration.FulfillmentTypeDelivery,
+			handlingTime: new ServicePeriod({
+				duration: new QuantitativeValue({ value: 2, unitCode: "DAY" }),
+			}),
+			validForMemberTier: new MemberProgramTier({
 				name: "Gold",
 				hasTierBenefit: TierBenefitEnumeration.TierBenefitLoyaltyPoints,
 			}),
-		);
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const shippingConditions = obj.shippingConditions as Record<

@@ -22,7 +22,7 @@ describe("Event", () => {
 		const schema = new Event({
 			name: "Concert",
 			startDate: "2026-04-01T20:00:00Z",
-			location: new Place("City Hall"),
+			location: new Place({ name: "City Hall" }),
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
@@ -38,7 +38,7 @@ describe("Event", () => {
 		const schema = new Event({
 			name: "Concert",
 			startDate: "2026-04-01T20:00:00Z",
-			location: new Place("City Hall"),
+			location: new Place({ name: "City Hall" }),
 			description: null,
 			endDate: null,
 			eventAttendanceMode: null,
@@ -61,7 +61,7 @@ describe("Event", () => {
 		const virtualSchema = new Event({
 			name: "Webinar",
 			startDate: "2026-04-01T20:00:00Z",
-			location: new VirtualLocation("https://example.com/live"),
+			location: new VirtualLocation({ url: "https://example.com/live" }),
 		});
 		const virtualObj = JSON.parse(
 			JsonLdGenerator.schemaToJson(virtualSchema),
@@ -73,8 +73,8 @@ describe("Event", () => {
 			name: "Hybrid Event",
 			startDate: "2026-04-01T20:00:00Z",
 			location: [
-				new Place("City Hall"),
-				new VirtualLocation("https://example.com/live"),
+				new Place({ name: "City Hall" }),
+				new VirtualLocation({ url: "https://example.com/live" }),
 			],
 		});
 		const arrayObj = JSON.parse(
@@ -90,7 +90,7 @@ describe("Event", () => {
 		const singleOfferSchema = new Event({
 			name: "Concert",
 			startDate: "2026-04-01T20:00:00Z",
-			location: new Place("City Hall"),
+			location: new Place({ name: "City Hall" }),
 			offers: offer,
 			eventAttendanceMode:
 				EventAttendanceModeEnumeration.OnlineEventAttendanceMode,
@@ -112,7 +112,7 @@ describe("Event", () => {
 		const arrayOfferSchema = new Event({
 			name: "Concert",
 			startDate: "2026-04-01T20:00:00Z",
-			location: new Place("City Hall"),
+			location: new Place({ name: "City Hall" }),
 			offers: [offer],
 			performer: [new Person({ name: "Alice" })],
 		});

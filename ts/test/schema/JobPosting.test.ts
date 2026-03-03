@@ -60,14 +60,14 @@ describe("JobPosting", () => {
 			description: "Build great products.",
 			datePosted: "2026-03-01",
 			hiringOrganization: new Organization({ name: "Example Corp" }),
-			jobLocation: new Place("Remote"),
+			jobLocation: new Place({ name: "Remote" }),
 			baseSalary: new MonetaryAmount({ currency: "USD", value: 120000 }),
 			employmentType: "FULL_TIME",
 			validThrough: "2026-04-01",
 			applicantLocationRequirements: new AdministrativeArea({ name: "US" }),
 			jobLocationType: "TELECOMMUTE",
 			directApply: true,
-			identifier: new PropertyValue("job-id", "SE-123"),
+			identifier: new PropertyValue({ name: "job-id", value: "SE-123" }),
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;

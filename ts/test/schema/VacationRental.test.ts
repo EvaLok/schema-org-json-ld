@@ -12,7 +12,7 @@ import { VacationRental } from "../../src/schema/VacationRental";
 
 describe("VacationRental", () => {
 	const containsPlace = new Accommodation({
-		occupancy: new QuantitativeValue(4),
+		occupancy: new QuantitativeValue({ value: 4 }),
 	});
 
 	it("produces minimal JSON-LD output with all 6 required fields", () => {
@@ -77,7 +77,12 @@ describe("VacationRental", () => {
 			aggregateRating: new AggregateRating({ ratingValue: 4.8 }),
 			brand: new Brand({ name: "Coastal Stays" }),
 			knowsLanguage: ["en", "es"],
-			review: [new Review("Jane", new Rating(5))],
+			review: [
+				new Review({
+					author: "Jane",
+					reviewRating: new Rating({ ratingValue: 5 }),
+				}),
+			],
 		});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
 			string,
