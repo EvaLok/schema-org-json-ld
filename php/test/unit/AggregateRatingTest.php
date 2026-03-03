@@ -6,6 +6,7 @@ namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\AggregateRating;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Thing;
 use PHPUnit\Framework\TestCase;
 
 final class AggregateRatingTest extends TestCase {
@@ -29,6 +30,7 @@ final class AggregateRatingTest extends TestCase {
 		$this->assertObjectNotHasProperty('worstRating', $obj);
 		$this->assertObjectNotHasProperty('ratingCount', $obj);
 		$this->assertObjectNotHasProperty('reviewCount', $obj);
+		$this->assertObjectNotHasProperty('itemReviewed', $obj);
 	}
 
 	public function testFullOutput(): void {
@@ -48,5 +50,17 @@ final class AggregateRatingTest extends TestCase {
 		$this->assertEquals(1, $obj->worstRating);
 		$this->assertEquals(200, $obj->ratingCount);
 		$this->assertEquals(50, $obj->reviewCount);
+	}
+
+	public function testStandaloneOutputWithItemReviewed(): void {
+		$schema = new AggregateRating(
+			ratingValue: 4.5,
+			itemReviewed: new Thing(name: 'Executive Anvil'),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('Thing', $obj->itemReviewed->{'@type'});
+		$this->assertEquals('Executive Anvil', $obj->itemReviewed->name);
 	}
 }
