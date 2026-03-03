@@ -2,6 +2,7 @@ import { TypedSchema } from "../TypedSchema.js";
 import type { BroadcastEvent } from "./BroadcastEvent.js";
 import type { Clip } from "./Clip.js";
 import type { InteractionCounter } from "./InteractionCounter.js";
+import type { SeekToAction } from "./SeekToAction.js";
 
 export interface VideoObjectOptions {
 	name: string;
@@ -20,6 +21,7 @@ export interface VideoObjectOptions {
 	hasPart?: readonly Clip[] | null;
 	ineligibleRegion?: string | null;
 	publication?: BroadcastEvent | null;
+	potentialAction?: SeekToAction | null;
 }
 
 export class VideoObject extends TypedSchema {
@@ -41,6 +43,7 @@ export class VideoObject extends TypedSchema {
 	public readonly hasPart: readonly Clip[] | null;
 	public readonly ineligibleRegion: string | null;
 	public readonly publication: BroadcastEvent | null;
+	public readonly potentialAction: SeekToAction | null;
 
 	constructor(options: VideoObjectOptions) {
 		super();
@@ -57,5 +60,6 @@ export class VideoObject extends TypedSchema {
 		this.hasPart = options.hasPart ?? null;
 		this.ineligibleRegion = options.ineligibleRegion ?? null;
 		this.publication = options.publication ?? null;
+		this.potentialAction = options.potentialAction ?? null;
 	}
 }

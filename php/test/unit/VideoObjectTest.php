@@ -8,6 +8,7 @@ use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\BroadcastEvent;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Clip;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\InteractionCounter;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\SeekToAction;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\VideoObject;
 use PHPUnit\Framework\TestCase;
 
@@ -48,6 +49,7 @@ final class VideoObjectTest extends TestCase {
 		$this->assertFalse(property_exists($obj, 'hasPart'));
 		$this->assertFalse(property_exists($obj, 'ineligibleRegion'));
 		$this->assertFalse(property_exists($obj, 'publication'));
+		$this->assertFalse(property_exists($obj, 'potentialAction'));
 	}
 
 	public function testFullOutput(): void {
@@ -181,5 +183,24 @@ final class VideoObjectTest extends TestCase {
 		$this->assertTrue($obj->publication->isLiveBroadcast);
 		$this->assertEquals('2026-02-24T20:00:00+00:00', $obj->publication->startDate);
 		$this->assertEquals('2026-02-24T21:00:00+00:00', $obj->publication->endDate);
+	}
+
+	public function testWithPotentialAction(): void {
+		$videoObject = new VideoObject(
+			name: 'How to tie a tie',
+			thumbnailUrl: ['https://example.com/thumb.jpg'],
+			uploadDate: '2026-02-24',
+			potentialAction: new SeekToAction(
+				target: 'https://example.com/watch?v=abc&t={seek_to_second_number}',
+				startOffsetInput: 'required name=seek_to_second_number',
+			),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $videoObject);
+		$obj = json_decode($json);
+
+		$this->assertEquals('SeekToAction', $obj->potentialAction->{'@type'});
+		$this->assertEquals('https://example.com/watch?v=abc&t={seek_to_second_number}', $obj->potentialAction->target);
+		$this->assertEquals('required name=seek_to_second_number', $obj->potentialAction->{'startOffset-input'});
+		$this->assertObjectNotHasProperty('startOffsetInput', $obj->potentialAction);
 	}
 }
