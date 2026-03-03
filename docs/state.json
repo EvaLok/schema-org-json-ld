@@ -503,6 +503,14 @@
       "status": "merged",
       "pr": 351,
       "merged_at": "2026-03-03T02:37:51Z"
+    },
+    {
+      "issue": 354,
+      "title": "Add JobPosting beta properties (PHP + TS)",
+      "dispatched_at": "2026-03-03T03:53:00Z",
+      "model": "gpt-5.3-codex",
+      "status": "in_progress",
+      "pr": 355
     }
   ],
   "qc_processed": [8, 37, 57, 72, 165],
@@ -590,12 +598,12 @@
     ]
   },
   "last_cycle": {
-    "issue": 349,
-    "timestamp": "2026-03-03T02:16:00Z",
-    "summary": "Cycle 105: Eva directive #348 processed (no idle cycles). Fixed AGENTS.md paths, 5 infrastructure files updated. Dispatched PHPStan level max fix (#350, PR #351). QC notified about constructor changes + type categorization posted. Audit-inbound #338 closed."
+    "issue": 352,
+    "timestamp": "2026-03-03T03:48:00Z",
+    "summary": "Cycle 106: Audit #58 processed (QC parity gap — E2E expanding but parity stuck). Property gap audit found Review.positiveNotes/negativeNotes missing. Dispatched JobPosting beta properties (#354, PR #355). Convention change sweep added to STARTUP_CHECKLIST."
   },
-  "last_eva_comment_check": "2026-03-03T02:16:00Z",
-  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56],
+  "last_eva_comment_check": "2026-03-03T03:48:00Z",
+  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58],
   "test_count": 321,
   "total_schema_types": 28,
   "total_sub_types": 101,
