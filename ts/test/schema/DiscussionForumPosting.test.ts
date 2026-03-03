@@ -67,7 +67,10 @@ describe("DiscussionForumPosting", () => {
 				uploadDate: "2026-03-01",
 			}),
 			comment: [new Comment({ text: "Nice post" })],
-			interactionStatistic: new InteractionCounter("LikeAction", 5),
+			interactionStatistic: new InteractionCounter({
+				interactionType: "LikeAction",
+				userInteractionCount: 5,
+			}),
 		});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
 			string,
@@ -93,7 +96,12 @@ describe("DiscussionForumPosting", () => {
 			author: new Person({ name: "Jane" }),
 			datePublished: "2026-03-01",
 			text: "Post text",
-			interactionStatistic: [new InteractionCounter("LikeAction", 5)],
+			interactionStatistic: [
+				new InteractionCounter({
+					interactionType: "LikeAction",
+					userInteractionCount: 5,
+				}),
+			],
 		});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
 			string,

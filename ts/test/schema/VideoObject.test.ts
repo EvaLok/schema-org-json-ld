@@ -68,7 +68,10 @@ describe("VideoObject", () => {
 			duration: "PT2M",
 			expires: "2026-12-31",
 			regionsAllowed: "US",
-			interactionStatistic: new InteractionCounter("WatchAction", 123),
+			interactionStatistic: new InteractionCounter({
+				interactionType: "WatchAction",
+				userInteractionCount: 123,
+			}),
 			hasPart: [
 				new Clip({
 					name: "Intro",
@@ -110,8 +113,14 @@ describe("VideoObject", () => {
 			thumbnailUrl: ["https://example.com/thumb.jpg"],
 			uploadDate: "2026-02-28",
 			interactionStatistic: [
-				new InteractionCounter("WatchAction", 123),
-				new InteractionCounter("LikeAction", 10),
+				new InteractionCounter({
+					interactionType: "WatchAction",
+					userInteractionCount: 123,
+				}),
+				new InteractionCounter({
+					interactionType: "LikeAction",
+					userInteractionCount: 10,
+				}),
 			],
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);

@@ -68,8 +68,8 @@ describe("Recipe", () => {
 			image: ["https://example.com/pancakes.jpg"],
 			author: new Organization({ name: "Example Kitchen" }),
 			recipeInstructions: [
-				new HowToStep("Mix ingredients"),
-				new HowToStep("Cook on skillet"),
+				new HowToStep({ text: "Mix ingredients" }),
+				new HowToStep({ text: "Cook on skillet" }),
 			],
 			nutrition: new NutritionInformation(),
 			aggregateRating: new AggregateRating({ ratingValue: 4.7 }),
@@ -88,7 +88,10 @@ describe("Recipe", () => {
 				}),
 			],
 			publication: new BroadcastEvent({ isLiveBroadcast: true }),
-			interactionStatistic: new InteractionCounter("LikeAction", 42),
+			interactionStatistic: new InteractionCounter({
+				interactionType: "LikeAction",
+				userInteractionCount: 42,
+			}),
 		});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
 			string,
@@ -115,7 +118,12 @@ describe("Recipe", () => {
 			name: "Pancakes",
 			image: ["https://example.com/pancakes.jpg"],
 			review: [new Review("Jane", new Rating(5))],
-			interactionStatistic: [new InteractionCounter("LikeAction", 42)],
+			interactionStatistic: [
+				new InteractionCounter({
+					interactionType: "LikeAction",
+					userInteractionCount: 42,
+				}),
+			],
 		});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
 			string,

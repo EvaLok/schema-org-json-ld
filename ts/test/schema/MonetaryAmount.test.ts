@@ -5,7 +5,7 @@ import { MonetaryAmount } from "../../src/schema/MonetaryAmount";
 
 describe("MonetaryAmount", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new MonetaryAmount("USD");
+		const schema = new MonetaryAmount({ currency: "USD" });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -15,7 +15,13 @@ describe("MonetaryAmount", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new MonetaryAmount("USD", null, null, null, null);
+		const schema = new MonetaryAmount({
+			currency: "USD",
+			value: null,
+			minValue: null,
+			maxValue: null,
+			unitText: null,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -26,7 +32,13 @@ describe("MonetaryAmount", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new MonetaryAmount("USD", 10.5, 5, 20, "per item");
+		const schema = new MonetaryAmount({
+			currency: "USD",
+			value: 10.5,
+			minValue: 5,
+			maxValue: 20,
+			unitText: "per item",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -38,7 +50,13 @@ describe("MonetaryAmount", () => {
 	});
 
 	it("matches PHP parity JSON-LD output", () => {
-		const schema = new MonetaryAmount("USD", 10.5, 5, 20, "per item");
+		const schema = new MonetaryAmount({
+			currency: "USD",
+			value: 10.5,
+			minValue: 5,
+			maxValue: 20,
+			unitText: "per item",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 
 		expect(json).toBe(

@@ -6,11 +6,12 @@ import { MerchantReturnPolicySeasonalOverride } from "../../src/schema/MerchantR
 
 describe("MerchantReturnPolicySeasonalOverride", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new MerchantReturnPolicySeasonalOverride(
-			"2026-11-20",
-			"2026-12-31",
-			MerchantReturnEnumeration.MerchantReturnFiniteReturnWindow,
-		);
+		const schema = new MerchantReturnPolicySeasonalOverride({
+			startDate: "2026-11-20",
+			endDate: "2026-12-31",
+			returnPolicyCategory:
+				MerchantReturnEnumeration.MerchantReturnFiniteReturnWindow,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -24,12 +25,13 @@ describe("MerchantReturnPolicySeasonalOverride", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new MerchantReturnPolicySeasonalOverride(
-			"2026-11-20",
-			"2026-12-31",
-			MerchantReturnEnumeration.MerchantReturnFiniteReturnWindow,
-			null,
-		);
+		const schema = new MerchantReturnPolicySeasonalOverride({
+			startDate: "2026-11-20",
+			endDate: "2026-12-31",
+			returnPolicyCategory:
+				MerchantReturnEnumeration.MerchantReturnFiniteReturnWindow,
+			merchantReturnDays: null,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -37,12 +39,13 @@ describe("MerchantReturnPolicySeasonalOverride", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new MerchantReturnPolicySeasonalOverride(
-			"2026-11-20",
-			"2026-12-31",
-			MerchantReturnEnumeration.MerchantReturnFiniteReturnWindow,
-			45,
-		);
+		const schema = new MerchantReturnPolicySeasonalOverride({
+			startDate: "2026-11-20",
+			endDate: "2026-12-31",
+			returnPolicyCategory:
+				MerchantReturnEnumeration.MerchantReturnFiniteReturnWindow,
+			merchantReturnDays: 45,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

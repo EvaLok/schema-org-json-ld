@@ -6,9 +6,10 @@ import { HowToStep } from "../../src/schema/HowToStep";
 
 describe("HowToSection", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new HowToSection("Preparation", [
-			new HowToStep("Mix ingredients"),
-		]);
+		const schema = new HowToSection({
+			name: "Preparation",
+			itemListElement: [new HowToStep({ text: "Mix ingredients" })],
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const itemListElement = obj.itemListElement as Record<string, unknown>[];
@@ -21,9 +22,19 @@ describe("HowToSection", () => {
 	});
 
 	it("omits null fields inside nested HowToStep entries", () => {
-		const schema = new HowToSection("Preparation", [
-			new HowToStep("Mix ingredients", null, null, null, null, null),
-		]);
+		const schema = new HowToSection({
+			name: "Preparation",
+			itemListElement: [
+				new HowToStep({
+					text: "Mix ingredients",
+					name: null,
+					url: null,
+					image: null,
+					video: null,
+					itemListElement: null,
+				}),
+			],
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const firstStep = (
@@ -38,10 +49,13 @@ describe("HowToSection", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new HowToSection("Preparation", [
-			new HowToStep("Mix ingredients", "Step 1"),
-			new HowToStep("Bake for 20 minutes", "Step 2"),
-		]);
+		const schema = new HowToSection({
+			name: "Preparation",
+			itemListElement: [
+				new HowToStep({ text: "Mix ingredients", name: "Step 1" }),
+				new HowToStep({ text: "Bake for 20 minutes", name: "Step 2" }),
+			],
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const itemListElement = obj.itemListElement as Record<string, unknown>[];

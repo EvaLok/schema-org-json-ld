@@ -59,8 +59,14 @@ describe("Person", () => {
 			address: new PostalAddress({
 				streetAddress: "1600 Amphitheatre Parkway",
 			}),
-			interactionStatistic: new InteractionCounter("LikeAction", 12),
-			agentInteractionStatistic: new InteractionCounter("FollowAction", 42),
+			interactionStatistic: new InteractionCounter({
+				interactionType: "LikeAction",
+				userInteractionCount: 12,
+			}),
+			agentInteractionStatistic: new InteractionCounter({
+				interactionType: "FollowAction",
+				userInteractionCount: 42,
+			}),
 			identifier: "person-123",
 			alternateName: "J. Doe",
 		});
@@ -88,8 +94,14 @@ describe("Person", () => {
 		const schema = new Person({
 			name: "Jane Doe",
 			interactionStatistic: [
-				new InteractionCounter("LikeAction", 12),
-				new InteractionCounter("ShareAction", 3),
+				new InteractionCounter({
+					interactionType: "LikeAction",
+					userInteractionCount: 12,
+				}),
+				new InteractionCounter({
+					interactionType: "ShareAction",
+					userInteractionCount: 3,
+				}),
 			],
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);

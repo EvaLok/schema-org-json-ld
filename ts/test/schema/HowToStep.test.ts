@@ -6,7 +6,7 @@ import { HowToStep } from "../../src/schema/HowToStep";
 
 describe("HowToStep", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new HowToStep("Mix ingredients");
+		const schema = new HowToStep({ text: "Mix ingredients" });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -16,14 +16,14 @@ describe("HowToStep", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new HowToStep(
-			"Mix ingredients",
-			null,
-			null,
-			null,
-			null,
-			null,
-		);
+		const schema = new HowToStep({
+			text: "Mix ingredients",
+			name: null,
+			url: null,
+			image: null,
+			video: null,
+			itemListElement: null,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -35,19 +35,19 @@ describe("HowToStep", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new HowToStep(
-			"Mix ingredients",
-			"Step 1",
-			"https://example.com/steps/1",
-			"https://example.com/steps/1.jpg",
-			new Clip({
+		const schema = new HowToStep({
+			text: "Mix ingredients",
+			name: "Step 1",
+			url: "https://example.com/steps/1",
+			image: "https://example.com/steps/1.jpg",
+			video: new Clip({
 				name: "Step 1 clip",
 				startOffset: 0,
 				url: "https://example.com/video#t=0",
 				endOffset: 30,
 			}),
-			["Measure flour", "Add eggs"],
-		);
+			itemListElement: ["Measure flour", "Add eggs"],
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const video = obj.video as Record<string, unknown>;

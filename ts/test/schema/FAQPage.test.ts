@@ -7,7 +7,9 @@ import { Question } from "../../src/schema/Question";
 
 describe("FAQPage", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new FAQPage([new Question({ name: "What is this?" })]);
+		const schema = new FAQPage({
+			mainEntity: [new Question({ name: "What is this?" })],
+		});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
 			string,
 			unknown
@@ -21,13 +23,15 @@ describe("FAQPage", () => {
 	});
 
 	it("omits null nested optional fields", () => {
-		const schema = new FAQPage([
-			new Question({
-				name: "What is this?",
-				acceptedAnswer: null,
-				text: null,
-			}),
-		]);
+		const schema = new FAQPage({
+			mainEntity: [
+				new Question({
+					name: "What is this?",
+					acceptedAnswer: null,
+					text: null,
+				}),
+			],
+		});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
 			string,
 			unknown
@@ -42,12 +46,14 @@ describe("FAQPage", () => {
 	});
 
 	it("includes full nested question data", () => {
-		const schema = new FAQPage([
-			new Question({
-				name: "What is this?",
-				acceptedAnswer: new Answer({ text: "A FAQ entry." }),
-			}),
-		]);
+		const schema = new FAQPage({
+			mainEntity: [
+				new Question({
+					name: "What is this?",
+					acceptedAnswer: new Answer({ text: "A FAQ entry." }),
+				}),
+			],
+		});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
 			string,
 			unknown

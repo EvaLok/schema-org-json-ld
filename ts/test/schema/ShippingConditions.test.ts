@@ -60,7 +60,7 @@ describe("ShippingConditions", () => {
 
 	it("supports shippingRate as MonetaryAmount", () => {
 		const schema = new ShippingConditions({
-			shippingRate: new MonetaryAmount("USD", 7.99),
+			shippingRate: new MonetaryAmount({ currency: "USD", value: 7.99 }),
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
@@ -74,7 +74,7 @@ describe("ShippingConditions", () => {
 		const schema = new ShippingConditions({
 			doesNotShip: false,
 			numItems: new QuantitativeValue(2, "C62"),
-			orderValue: new MonetaryAmount("USD", 50),
+			orderValue: new MonetaryAmount({ currency: "USD", value: 50 }),
 			shippingDestination: new DefinedRegion({ addressCountry: "US" }),
 			shippingOrigin: new DefinedRegion({
 				addressCountry: "US",

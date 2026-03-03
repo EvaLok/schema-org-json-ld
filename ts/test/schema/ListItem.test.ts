@@ -6,7 +6,7 @@ import { ListItem } from "../../src/schema/ListItem";
 
 describe("ListItem", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new ListItem(1);
+		const schema = new ListItem({ position: 1 });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -16,7 +16,12 @@ describe("ListItem", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new ListItem(1, null, null, null);
+		const schema = new ListItem({
+			position: 1,
+			name: null,
+			item: null,
+			url: null,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -26,12 +31,12 @@ describe("ListItem", () => {
 	});
 
 	it("supports string URL for item", () => {
-		const schema = new ListItem(
-			1,
-			"Getting started",
-			"https://example.com/getting-started",
-			"https://example.com/list-item",
-		);
+		const schema = new ListItem({
+			position: 1,
+			name: "Getting started",
+			item: "https://example.com/getting-started",
+			url: "https://example.com/list-item",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -41,12 +46,12 @@ describe("ListItem", () => {
 	});
 
 	it("supports TypedSchema for item", () => {
-		const schema = new ListItem(
-			2,
-			"Brand item",
-			new Brand({ name: "Acme" }),
-			null,
-		);
+		const schema = new ListItem({
+			position: 2,
+			name: "Brand item",
+			item: new Brand({ name: "Acme" }),
+			url: null,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const item = obj.item as Record<string, unknown>;

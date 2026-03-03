@@ -7,10 +7,10 @@ import { QuantitativeValue } from "../../src/schema/QuantitativeValue";
 
 describe("MemberProgramTier", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new MemberProgramTier(
-			"Gold",
-			TierBenefitEnumeration.TierBenefitLoyaltyPoints,
-		);
+		const schema = new MemberProgramTier({
+			name: "Gold",
+			hasTierBenefit: TierBenefitEnumeration.TierBenefitLoyaltyPoints,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -23,13 +23,13 @@ describe("MemberProgramTier", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new MemberProgramTier(
-			"Gold",
-			TierBenefitEnumeration.TierBenefitLoyaltyPoints,
-			null,
-			null,
-			null,
-		);
+		const schema = new MemberProgramTier({
+			name: "Gold",
+			hasTierBenefit: TierBenefitEnumeration.TierBenefitLoyaltyPoints,
+			hasTierRequirement: null,
+			membershipPointsEarned: null,
+			url: null,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -39,10 +39,13 @@ describe("MemberProgramTier", () => {
 	});
 
 	it("supports hasTierBenefit as an array of enum values", () => {
-		const schema = new MemberProgramTier("Platinum", [
-			TierBenefitEnumeration.TierBenefitLoyaltyPoints,
-			TierBenefitEnumeration.TierBenefitLoyaltyPrice,
-		]);
+		const schema = new MemberProgramTier({
+			name: "Platinum",
+			hasTierBenefit: [
+				TierBenefitEnumeration.TierBenefitLoyaltyPoints,
+				TierBenefitEnumeration.TierBenefitLoyaltyPrice,
+			],
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -53,13 +56,13 @@ describe("MemberProgramTier", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new MemberProgramTier(
-			"Gold",
-			TierBenefitEnumeration.TierBenefitLoyaltyPrice,
-			"Spend at least $1000 annually",
-			new QuantitativeValue(1200, "C62"),
-			"https://example.com/membership/gold",
-		);
+		const schema = new MemberProgramTier({
+			name: "Gold",
+			hasTierBenefit: TierBenefitEnumeration.TierBenefitLoyaltyPrice,
+			hasTierRequirement: "Spend at least $1000 annually",
+			membershipPointsEarned: new QuantitativeValue(1200, "C62"),
+			url: "https://example.com/membership/gold",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const membershipPointsEarned = obj.membershipPointsEarned as Record<

@@ -5,7 +5,7 @@ import { GeoShape } from "../../src/schema/GeoShape";
 
 describe("GeoShape", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new GeoShape();
+		const schema = new GeoShape({});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -14,7 +14,7 @@ describe("GeoShape", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new GeoShape(null);
+		const schema = new GeoShape({ box: null });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -22,7 +22,9 @@ describe("GeoShape", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new GeoShape("37.42242 -122.08585 37.42242 -122.08585");
+		const schema = new GeoShape({
+			box: "37.42242 -122.08585 37.42242 -122.08585",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -30,7 +32,9 @@ describe("GeoShape", () => {
 	});
 
 	it("matches PHP parity JSON-LD output", () => {
-		const schema = new GeoShape("37.42242 -122.08585 37.42242 -122.08585");
+		const schema = new GeoShape({
+			box: "37.42242 -122.08585 37.42242 -122.08585",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 
 		expect(json).toBe(
