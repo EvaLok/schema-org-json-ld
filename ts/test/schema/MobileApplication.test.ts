@@ -97,7 +97,10 @@ describe("MobileApplication", () => {
 		const schema = new MobileApplication({
 			name: "Rated mobile app",
 			offers: offer,
-			aggregateRating: new AggregateRating({ ratingValue: 4.9, ratingCount: 2500 }),
+			aggregateRating: new AggregateRating({
+				ratingValue: 4.9,
+				ratingCount: 2500,
+			}),
 			review: new Review({
 				author: "Alex Reviewer",
 				reviewRating: new Rating({ ratingValue: 5 }),

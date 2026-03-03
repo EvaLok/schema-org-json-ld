@@ -96,7 +96,10 @@ describe("WebApplication", () => {
 		const schema = new WebApplication({
 			name: "Rated web app",
 			offers: offer,
-			aggregateRating: new AggregateRating({ ratingValue: 4.9, ratingCount: 2400 }),
+			aggregateRating: new AggregateRating({
+				ratingValue: 4.9,
+				ratingCount: 2400,
+			}),
 			review: new Review({
 				author: "Alex Reviewer",
 				reviewRating: new Rating({ ratingValue: 5 }),

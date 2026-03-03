@@ -74,7 +74,9 @@ describe("FAQPage", () => {
 			mainEntity: [
 				new Question({
 					name: "How long does shipping take?",
-					acceptedAnswer: new Answer({ text: "Shipping takes 2-4 business days." }),
+					acceptedAnswer: new Answer({
+						text: "Shipping takes 2-4 business days.",
+					}),
 				}),
 			],
 		});
@@ -122,11 +124,26 @@ describe("FAQPage", () => {
 	it("serializes large FAQs with five questions", () => {
 		const schema = new FAQPage({
 			mainEntity: [
-				new Question({ name: "Q1", acceptedAnswer: new Answer({ text: "A1" }) }),
-				new Question({ name: "Q2", acceptedAnswer: new Answer({ text: "A2" }) }),
-				new Question({ name: "Q3", acceptedAnswer: new Answer({ text: "A3" }) }),
-				new Question({ name: "Q4", acceptedAnswer: new Answer({ text: "A4" }) }),
-				new Question({ name: "Q5", acceptedAnswer: new Answer({ text: "A5" }) }),
+				new Question({
+					name: "Q1",
+					acceptedAnswer: new Answer({ text: "A1" }),
+				}),
+				new Question({
+					name: "Q2",
+					acceptedAnswer: new Answer({ text: "A2" }),
+				}),
+				new Question({
+					name: "Q3",
+					acceptedAnswer: new Answer({ text: "A3" }),
+				}),
+				new Question({
+					name: "Q4",
+					acceptedAnswer: new Answer({ text: "A4" }),
+				}),
+				new Question({
+					name: "Q5",
+					acceptedAnswer: new Answer({ text: "A5" }),
+				}),
 			],
 		});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<

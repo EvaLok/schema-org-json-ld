@@ -73,7 +73,10 @@ describe("Movie", () => {
 		const schema = new Movie({
 			name: "Interstellar",
 			image: "https://example.com/interstellar.jpg",
-			aggregateRating: new AggregateRating({ ratingValue: 4.8, ratingCount: 2000 }),
+			aggregateRating: new AggregateRating({
+				ratingValue: 4.8,
+				ratingCount: 2000,
+			}),
 			review: new Review({
 				author: "Film Critic",
 				reviewRating: new Rating({ ratingValue: 4 }),

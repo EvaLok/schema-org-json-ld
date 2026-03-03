@@ -69,10 +69,9 @@ describe("BreadcrumbList", () => {
 			string,
 			unknown
 		>;
-		const item = (obj.itemListElement as Record<string, unknown>[])[0] as Record<
-			string,
-			unknown
-		>;
+		const item = (
+			obj.itemListElement as Record<string, unknown>[]
+		)[0] as Record<string, unknown>;
 
 		expect(item.name).toBe("Checkout");
 		expect(item).not.toHaveProperty("item");
@@ -81,7 +80,11 @@ describe("BreadcrumbList", () => {
 	it("serializes long breadcrumb chains with ordered positions", () => {
 		const schema = new BreadcrumbList({
 			itemListElement: [
-				new ListItem({ position: 1, name: "Home", item: "https://example.com" }),
+				new ListItem({
+					position: 1,
+					name: "Home",
+					item: "https://example.com",
+				}),
 				new ListItem({
 					position: 2,
 					name: "Library",
@@ -130,7 +133,9 @@ describe("BreadcrumbList", () => {
 		>;
 		const itemListElement = obj.itemListElement as Record<string, unknown>[];
 
-		expect(itemListElement[0]?.url).toBe("https://example.com/list-item/products");
+		expect(itemListElement[0]?.url).toBe(
+			"https://example.com/list-item/products",
+		);
 		expect(itemListElement[1]).not.toHaveProperty("item");
 	});
 });
