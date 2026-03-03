@@ -624,6 +624,14 @@
       "pr": 386,
       "merged_at": "2026-03-03T15:27:00Z",
       "note": "52 new tests across 10 types in both PHP and TS. Minor overlaps with existing tests but genuine edge cases. Merged cycle 112."
+    },
+    {
+      "issue": 392,
+      "title": "Convert WebPageElement to options-object constructor pattern",
+      "dispatched_at": "2026-03-03T16:59:00Z",
+      "model": "gpt-5.3-codex",
+      "status": "dispatched",
+      "note": "Last remaining positional-param TS class. Missed during cycle 104 refactoring. Updates 5 files (schema, 3 tests, README)."
     }
   ],
   "qc_processed": [8, 37, 57, 72, 160, 165],
@@ -702,8 +710,9 @@
   },
   "constructor_refactoring": {
     "eva_directive": 340,
-    "status": "complete",
+    "status": "nearly_complete",
     "total_classes_converted": 53,
+    "missed_class": "WebPageElement (fix dispatched #392, cycle 113)",
     "batches": [
       {"batch": 1, "range": "A-D", "classes": 16, "issue": 342, "pr": 343, "status": "merged", "merged_at": "2026-03-03T00:46:46Z"},
       {"batch": 2, "range": "E-M", "classes": 15, "issue": 344, "pr": 345, "status": "merged", "merged_at": "2026-03-03T01:07:51Z"},
@@ -711,17 +720,17 @@
     ]
   },
   "copilot_metrics": {
-    "dispatch_to_pr_rate": "29/29 (100%)",
-    "pr_merge_rate": "29/29 (100%)",
-    "note": "29 dispatches, 29 merged, 0 in-flight. 2 revision rounds total (#364 mixed-array bug, #384 missing required props). Zero silent failures."
+    "dispatch_to_pr_rate": "30/30 (100%)",
+    "pr_merge_rate": "29/30 (97%)",
+    "note": "30 dispatches, 29 merged, 1 in-flight (#392). 2 revision rounds total (#364 mixed-array bug, #384 missing required props). Zero silent failures."
   },
   "last_cycle": {
-    "issue": 387,
-    "timestamp": "2026-03-03T15:17:00Z",
-    "summary": "Cycle 112: Reviewed and merged PR #386 (52 edge-case tests) + PR #384 (README TS examples, 1 revision round). Accepted audit #67 (stale lifecycle sweep) and #68 (denominator fix 86→76). Fixed StoreTest.php import ordering. Closed stale #353. All 29 dispatches merged (100%)."
+    "issue": 390,
+    "timestamp": "2026-03-03T16:46:00Z",
+    "summary": "Cycle 113: Accepted audit #71 (QC-REPORT feedback loop). Parity check found WebPageElement missed by constructor refactoring — dispatched fix #392. All tests pass (423 PHP, 409 TS). Biome clean."
   },
-  "last_eva_comment_check": "2026-03-03T15:17:00Z",
-  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68],
+  "last_eva_comment_check": "2026-03-03T16:46:00Z",
+  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71],
   "test_count": 338,
   "total_schema_types": 28,
   "total_sub_types": 104,

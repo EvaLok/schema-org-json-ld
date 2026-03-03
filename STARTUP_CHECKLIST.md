@@ -164,7 +164,10 @@ For each unprocessed report (check against `qc_processed` array in `docs/state.j
    gh api "repos/EvaLok/schema-org-json-ld/issues" --method POST --input /path/to/issue.json
    ```
 3. Investigate and fix (dispatch to Copilot as needed)
-4. When fix is merged, comment asking the QC orchestrator to re-validate
+4. When fix is merged, **close the feedback loop** (per audit #71):
+   a. Post a comment on the **active QC-REQUEST issue** (currently #331) noting: which QC-REPORT was addressed, the fix PR number, and requesting re-validation of the affected type
+   b. This ensures the QC discovers the fix via the coordination channel it already monitors every session
+   c. Do NOT rely solely on qc-inbound issues — the QC doesn't poll the main repo's closed issues
 
 Also check for open `qc-inbound` issues on this repo:
 
