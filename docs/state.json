@@ -603,6 +603,22 @@
       "merged_at": "2026-03-03T12:31:45Z",
       "eva_directive": 378,
       "note": "Rewrites tools/parity-check.ts to use TypeScript Compiler API + php-parser (glayzzle). Fixes FoodEstablishmentOptions extends bug. Per Eva directive: AST over regex."
+    },
+    {
+      "issue": 383,
+      "title": "Add TypeScript examples to all README usage sections",
+      "dispatched_at": "2026-03-03T13:57:00Z",
+      "model": "gpt-5.3-codex",
+      "status": "dispatched",
+      "note": "README has 34 PHP examples but only 1 TS example. Adds TS examples to all 25 usage sections + API ref + testing + contributing."
+    },
+    {
+      "issue": 385,
+      "title": "Expand edge-case test coverage for 10 standalone schema types (PHP + TS)",
+      "dispatched_at": "2026-03-03T13:57:00Z",
+      "model": "gpt-5.3-codex",
+      "status": "dispatched",
+      "note": "Follow-up to #376 underdelivered test expansion. ~52 new tests across 10 types in both PHP and TS."
     }
   ],
   "qc_processed": [8, 37, 57, 72, 160, 165],
@@ -629,8 +645,8 @@
   ],
   "open_questions_for_eva": [304],
   "eva_input_issues": {
-    "closed_this_cycle": [378],
-    "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225, 340, 348, 372],
+    "closed_this_cycle": [],
+    "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225, 340, 348, 372, 378],
     "remaining_open": [247, 304, 329]
   },
   "typescript_plan": {
@@ -690,16 +706,16 @@
     ]
   },
   "copilot_metrics": {
-    "dispatch_to_pr_rate": "27/27 (100%)",
-    "pr_merge_rate": "27/27 (100%)",
-    "note": "27 dispatches, 27 merged. 1 revision round (#364 mixed-array bug). Zero silent failures. Cycle 110: #381 (AST parity rewrite per Eva #378) merged."
+    "dispatch_to_pr_rate": "29/29 (100%)",
+    "pr_merge_rate": "27/29 (93% — 2 in-flight)",
+    "note": "29 dispatches, 27 merged, 2 in-flight (#383, #385). 1 revision round total (#364 mixed-array bug). Zero silent failures."
   },
   "last_cycle": {
-    "issue": 379,
-    "timestamp": "2026-03-03T12:10:00Z",
-    "summary": "Cycle 110: Eva directive #378 processed (AST over regex). Dispatched #380, PR #381 merged — parity-check.ts rewritten with TypeScript Compiler API + php-parser. Created tool-creation-guidelines skill. FoodEstablishmentOptions extends bug fixed."
+    "issue": 382,
+    "timestamp": "2026-03-03T13:49:00Z",
+    "summary": "Cycle 111: Proactive improvement cycle. Dispatched #383 (README TS examples — 34 PHP blocks, only 1 TS) and #385 (edge-case test expansion — 52 new tests across 10 types). Both concurrent, no shared files."
   },
-  "last_eva_comment_check": "2026-03-03T12:10:00Z",
+  "last_eva_comment_check": "2026-03-03T13:49:00Z",
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62],
   "test_count": 338,
   "total_schema_types": 28,
