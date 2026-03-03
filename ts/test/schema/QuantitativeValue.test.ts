@@ -17,6 +17,7 @@ describe("QuantitativeValue", () => {
 		const schema = new QuantitativeValue({
 			value: null,
 			unitCode: null,
+			unitText: null,
 			minValue: null,
 			maxValue: null,
 		});
@@ -25,6 +26,7 @@ describe("QuantitativeValue", () => {
 
 		expect(obj).not.toHaveProperty("value");
 		expect(obj).not.toHaveProperty("unitCode");
+		expect(obj).not.toHaveProperty("unitText");
 		expect(obj).not.toHaveProperty("minValue");
 		expect(obj).not.toHaveProperty("maxValue");
 	});
@@ -33,6 +35,7 @@ describe("QuantitativeValue", () => {
 		const schema = new QuantitativeValue({
 			value: 10.5,
 			unitCode: "KGM",
+			unitText: "YEAR",
 			minValue: 5,
 			maxValue: 20,
 		});
@@ -41,6 +44,7 @@ describe("QuantitativeValue", () => {
 
 		expect(obj.value).toBe(10.5);
 		expect(obj.unitCode).toBe("KGM");
+		expect(obj.unitText).toBe("YEAR");
 		expect(obj.minValue).toBe(5);
 		expect(obj.maxValue).toBe(20);
 	});
@@ -49,13 +53,14 @@ describe("QuantitativeValue", () => {
 		const schema = new QuantitativeValue({
 			value: 10.5,
 			unitCode: "KGM",
+			unitText: "YEAR",
 			minValue: 5,
 			maxValue: 20,
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 
 		expect(json).toBe(
-			'{\n  "@context": "https://schema.org/",\n  "@type": "QuantitativeValue",\n  "value": 10.5,\n  "unitCode": "KGM",\n  "minValue": 5,\n  "maxValue": 20\n}',
+			'{\n  "@context": "https://schema.org/",\n  "@type": "QuantitativeValue",\n  "value": 10.5,\n  "unitCode": "KGM",\n  "unitText": "YEAR",\n  "minValue": 5,\n  "maxValue": 20\n}',
 		);
 	});
 });

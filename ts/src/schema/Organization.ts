@@ -1,5 +1,7 @@
 import { TypedSchema } from "../TypedSchema.js";
 import type { ContactPoint } from "./ContactPoint.js";
+import type { ImageObject } from "./ImageObject.js";
+import type { InteractionCounter } from "./InteractionCounter.js";
 import type { MemberProgram } from "./MemberProgram.js";
 import type { MerchantReturnPolicy } from "./MerchantReturnPolicy.js";
 import type { PostalAddress } from "./PostalAddress.js";
@@ -24,6 +26,16 @@ export interface OrganizationOptions {
 	vatID?: string | null;
 	naics?: string | null;
 	duns?: string | null;
+	identifier?: string | null;
+	image?: string | ImageObject | null;
+	interactionStatistic?:
+		| InteractionCounter
+		| readonly InteractionCounter[]
+		| null;
+	agentInteractionStatistic?:
+		| InteractionCounter
+		| readonly InteractionCounter[]
+		| null;
 	leiCode?: string | null;
 	iso6523Code?: string | null;
 	globalLocationNumber?: string | null;
@@ -55,6 +67,16 @@ export class Organization extends TypedSchema {
 	public readonly vatID: string | null;
 	public readonly naics: string | null;
 	public readonly duns: string | null;
+	public readonly identifier: string | null;
+	public readonly image: string | ImageObject | null;
+	public readonly interactionStatistic:
+		| InteractionCounter
+		| readonly InteractionCounter[]
+		| null;
+	public readonly agentInteractionStatistic:
+		| InteractionCounter
+		| readonly InteractionCounter[]
+		| null;
 	public readonly leiCode: string | null;
 	public readonly iso6523Code: string | null;
 	public readonly globalLocationNumber: string | null;
@@ -90,6 +112,10 @@ export class Organization extends TypedSchema {
 		this.vatID = options.vatID ?? null;
 		this.naics = options.naics ?? null;
 		this.duns = options.duns ?? null;
+		this.identifier = options.identifier ?? null;
+		this.image = options.image ?? null;
+		this.interactionStatistic = options.interactionStatistic ?? null;
+		this.agentInteractionStatistic = options.agentInteractionStatistic ?? null;
 		this.leiCode = options.leiCode ?? null;
 		this.iso6523Code = options.iso6523Code ?? null;
 		this.globalLocationNumber = options.globalLocationNumber ?? null;

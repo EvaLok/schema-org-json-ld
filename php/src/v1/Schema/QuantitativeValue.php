@@ -19,6 +19,7 @@ class QuantitativeValue extends TypedSchema {
 	public function __construct(
 		public null|float $value = null,
 		public null|string $unitCode = null,
+		public null|string $unitText = null,
 		public null|float $minValue = null,
 		public null|float $maxValue = null,
 	) {}

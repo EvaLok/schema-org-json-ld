@@ -8,6 +8,8 @@ use EvaLok\SchemaOrgJsonLd\v1\Enum\MerchantReturnEnumeration;
 use EvaLok\SchemaOrgJsonLd\v1\Enum\TierBenefitEnumeration;
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ContactPoint;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\ImageObject;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\InteractionCounter;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\MemberProgram;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\MemberProgramTier;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\MerchantReturnPolicy;
@@ -143,6 +145,10 @@ final class OrganizationTest extends TestCase {
 		$this->assertFalse(property_exists($obj, 'hasMerchantReturnPolicy'));
 		$this->assertFalse(property_exists($obj, 'hasMemberProgram'));
 		$this->assertFalse(property_exists($obj, 'hasShippingService'));
+		$this->assertFalse(property_exists($obj, 'identifier'));
+		$this->assertFalse(property_exists($obj, 'image'));
+		$this->assertFalse(property_exists($obj, 'interactionStatistic'));
+		$this->assertFalse(property_exists($obj, 'agentInteractionStatistic'));
 	}
 
 	public function testMerchantPropertiesOutput(): void {
@@ -172,5 +178,32 @@ final class OrganizationTest extends TestCase {
 		$this->assertEquals('MerchantReturnPolicy', $obj->hasMerchantReturnPolicy->{'@type'});
 		$this->assertEquals('MemberProgram', $obj->hasMemberProgram->{'@type'});
 		$this->assertEquals('ShippingService', $obj->hasShippingService->{'@type'});
+	}
+
+	public function testProfilePageRecommendedFieldsOutput(): void {
+		$organization = new Organization(
+			name: 'Example Inc.',
+			identifier: 'org-123',
+			image: new ImageObject(contentUrl: 'https://example.com/profile.png'),
+			interactionStatistic: new InteractionCounter(
+				interactionType: 'https://schema.org/FollowAction',
+				userInteractionCount: 1200,
+			),
+			agentInteractionStatistic: [
+				new InteractionCounter(
+					interactionType: 'https://schema.org/LikeAction',
+					userInteractionCount: 3000,
+				),
+			],
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $organization);
+		$obj = json_decode($json);
+
+		$this->assertEquals('org-123', $obj->identifier);
+		$this->assertEquals('ImageObject', $obj->image->{'@type'});
+		$this->assertEquals('https://example.com/profile.png', $obj->image->contentUrl);
+		$this->assertEquals('InteractionCounter', $obj->interactionStatistic->{'@type'});
+		$this->assertIsArray($obj->agentInteractionStatistic);
+		$this->assertEquals('InteractionCounter', $obj->agentInteractionStatistic[0]->{'@type'});
 	}
 }

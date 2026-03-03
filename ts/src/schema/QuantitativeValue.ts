@@ -3,6 +3,7 @@ import { TypedSchema } from "../TypedSchema.js";
 export interface QuantitativeValueOptions {
 	value?: number | null;
 	unitCode?: string | null;
+	unitText?: string | null;
 	minValue?: number | null;
 	maxValue?: number | null;
 }
@@ -12,6 +13,7 @@ export class QuantitativeValue extends TypedSchema {
 
 	public readonly value: number | null;
 	public readonly unitCode: string | null;
+	public readonly unitText: string | null;
 	public readonly minValue: number | null;
 	public readonly maxValue: number | null;
 
@@ -19,6 +21,7 @@ export class QuantitativeValue extends TypedSchema {
 		super();
 		this.value = options.value ?? null;
 		this.unitCode = options.unitCode ?? null;
+		this.unitText = options.unitText ?? null;
 		this.minValue = options.minValue ?? null;
 		this.maxValue = options.maxValue ?? null;
 	}

@@ -54,6 +54,8 @@ final class DatasetTest extends TestCase {
 		$this->assertObjectNotHasProperty('version', $obj);
 		$this->assertObjectNotHasProperty('alternateName', $obj);
 		$this->assertObjectNotHasProperty('citation', $obj);
+		$this->assertObjectNotHasProperty('hasPart', $obj);
+		$this->assertObjectNotHasProperty('isPartOf', $obj);
 	}
 
 	public function testWithCreatorOrganization(): void {
@@ -120,6 +122,30 @@ final class DatasetTest extends TestCase {
 		$this->assertEquals(['storm', 'weather', 'NOAA'], $obj->keywords);
 		$this->assertIsArray($obj->identifier);
 		$this->assertEquals(['https://doi.org/10.1234/example'], $obj->identifier);
+	}
+
+	public function testHasPartAndIsPartOfOutput(): void {
+		$childDataset = new Dataset(
+			name: 'Child Dataset',
+			description: 'A child dataset.',
+		);
+		$schema = new Dataset(
+			name: 'Parent Dataset',
+			description: 'A parent dataset.',
+			hasPart: [
+				$childDataset,
+				'https://example.com/datasets/child-2',
+			],
+			isPartOf: 'https://example.com/datasets/root',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertIsArray($obj->hasPart);
+		$this->assertEquals('Dataset', $obj->hasPart[0]->{'@type'});
+		$this->assertEquals('Child Dataset', $obj->hasPart[0]->name);
+		$this->assertEquals('https://example.com/datasets/child-2', $obj->hasPart[1]);
+		$this->assertEquals('https://example.com/datasets/root', $obj->isPartOf);
 	}
 
 	public function testFullOutput(): void {
