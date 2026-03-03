@@ -254,16 +254,16 @@ Verify that `php/src/v1/` and `ts/src/` have matching schema class coverage:
 
 Skip this step if `typescript_plan.status` is not `complete` — the TypeScript port is still in progress and coverage will be uneven by design.
 
-## 5.9. Pre-publish validation gate (per audit #49)
+## 5.9. Pre-publish validation gate (per audit #49, #68, #73)
 
 **Permanent step.** Before any npm publish (Phase 4c or future releases), verify QC parity coverage uses **absolute denominators** — not self-scoped ones.
 
 1. Read the QC repo's state file or latest QC-ACK closing comment
-2. Verify `ts_parity_checked == ts_parity_total` AND `ts_parity_total == total_testable_types` where `total_testable_types = total_schema_types - enum_types` (currently 88 - 12 = 76). Enums don't produce JSON-LD output and are excluded from the testable population (per audit #62 type classification).
-3. If the QC reports e.g. "25/25 parity match", that's a self-scoped denominator — actual coverage is 25/76 (33%). Reject as insufficient.
-4. Do NOT proceed with publish until the QC reports coverage against the full testable type count
+2. Verify `ts_parity_checked == ts_parity_total` AND `ts_parity_total == total_standalone_testable_types` where `total_standalone_testable_types = total_schema_types - enum_types - building_block_only_types` (currently 88 - 12 - 3 = 73). Enums don't produce JSON-LD output and are excluded (per audit #62 type classification). Building-block types (3) cannot produce standalone valid JSON-LD and are validated through parent types only (per audit #73).
+3. If the QC reports e.g. "25/25 parity match", that's a self-scoped denominator — actual coverage is 25/73 (34%). Reject as insufficient.
+4. Do NOT proceed with publish until the QC reports coverage against the full standalone-testable type count
 
-**Why:** Audit #49 identified that in the initial TS validation, all three orchestrators consumed a self-scoped denominator (25/25) at face value, masking 29% actual coverage. Eva caught the gap. Audit #68 corrected the denominator from 88 to 76 (excluding 12 enum types that don't produce JSON-LD output), aligning with the QC's type classification model.
+**Why:** Audit #49 identified that in the initial TS validation, all three orchestrators consumed a self-scoped denominator (25/25) at face value, masking 29% actual coverage. Eva caught the gap. Audit #68 corrected the denominator from 88 to 76 (excluding 12 enum types). Audit #73 further refined it from 76 to 73 (excluding 3 building-block types that cannot be parity-tested standalone — they are validated through parent types in the QC's architecture).
 
 ## 6. Re-examine assumptions
 

@@ -313,9 +313,11 @@
     },
     "type_classification": {
       "standalone_testable": 28,
+      "standalone_parity_testable": 73,
+      "building_block_only": 3,
       "building_block": 58,
       "enums": 12,
-      "note": "Posted on QC-REQUEST #331. Realistic E2E denominator is ~28, not 88. Parity should still cover all 88."
+      "note": "Per audit #73: 88 total - 12 enums - 3 building-block-only = 73 standalone-parity-testable. QC architecture maxes at 73 for parity (building-block types validated through parents). E2E denominator is ~28 standalone types."
     },
     "phpstan_level": 9,
     "phpstan_max_assessment": {
@@ -637,7 +639,7 @@
     }
   ],
   "qc_processed": [8, 37, 57, 72, 160, 165],
-  "qc_requests_pending": [331],
+  "qc_requests_pending": [],
   "qc_status": {
     "request_165": "COMPLETE. QC issue #41 closed. 39/39 E2E pass, 0 errors, 158 warnings. @graph API also validated.",
     "report_57": "ALL FIXES MERGED AND VALIDATED. PRs #198, #199. QC-63 confirmed: 39/39 E2E pass, 0 errors, 19 warnings.",
@@ -645,17 +647,17 @@
     "report_72": "FIXED. PR #214 merged. Added 5 optional Recipe properties (expires, hasPart, publication, ineligibleRegion, interactionStatistic). QC request #215 sent.",
     "request_215": "COMPLETE. QC repo #74 closed. QC PR #76 merged (10:16 UTC). 39/39 E2E pass, 0 errors. All 5 Recipe optional properties validated. Issue #215 closed.",
     "request_234": "COMPLETE. QC repo #84 closed. 188 QC unit tests, 39/39 E2E pass, 0 errors, 15 warnings (all known false positives). Offer.hasMerchantReturnPolicy validated. Issue #234 closed.",
-    "request_331": "IN PROGRESS. QC-ACK #138 open. Built-package validated. Parity: 49/86 (57%). 2 constructor mismatches fixed in QC test code (not library bugs). Multi-cycle effort — 37 building-block types remaining.",
+    "request_331": "PARITY COMPLETE. QC-ACK #138. Parity: 73/73 standalone types (100%). 0 E2E errors, 25 warnings (false positives). Class inventory: 88/88 PHP=TS. Per audit #73, 73 is the maximum achievable (3 building-block types validated through parents). Publish gate satisfied.",
     "request_265": "COMPLETE. QC repo #114 closed. 188 tests, 1133 assertions, ALL PASS. 39/39 E2E, 0 errors, 15 warnings (known false positives). Phase 0 gate cleared.",
     "request_299": "COMPLETE. QC-ACK #122 closed (2026-03-01T16:37Z). 23/23 parity match, 0 E2E errors, 14 warnings (known false positives). All DoD criteria satisfied: top-level parity, propertyMap, inheritance chains, Adobe E2E. Issue #299 closed."
   },
   "blockers": [
     {
-      "description": "Phase 4b/4c blocked: comprehensive QC validation of TypeScript builds required before npm publish",
+      "description": "Phase 4b/4c blocked: Eva must merge PR #305 (npm publish workflow) and configure NPM_TOKEN secret",
       "qc_request": 331,
       "eva_directive": 329,
-      "requires": "76/76 parity (absolute denominator — NOT self-scoped), built-package validation, consumer-perspective testing",
-      "validation_rule": "QC ts_parity_checked must equal ts_parity_total AND ts_parity_total must equal 76 (total_testable_types = 88 schema - 12 enums). Enums excluded per audit #62 type classification. Reject self-scoped denominators per audit #49. Updated per audit #68."
+      "qc_validation": "SATISFIED. 73/73 standalone parity (100%). Per audit #73, 73 is the correct denominator (88 - 12 enums - 3 building-block-only = 73).",
+      "remaining_actions": ["Eva merges PR #305", "Eva configures NPM_TOKEN secret (#304)", "Eva approves publish"]
     }
   ],
   "open_questions_for_eva": [304],
@@ -699,7 +701,7 @@
       {"phase": 1, "name": "TypeScript scaffold", "status": "complete", "issue": 269, "pr": 270, "merged_at": "2026-03-01T08:50:04Z", "ci_verified": "TypeScript CI success on master push (08:50:06Z)"},
       {"phase": 2, "name": "Enum & shared sub-type port", "status": "complete", "dispatch_strategy": "sequential (per audit #29)", "decomposition": {"2a": {"description": "All 12 enums (1 session)", "status": "merged", "issue": 276, "pr": 277, "merged_at": "2026-03-01T09:17:42Z"}, "2b": {"description": "Leaf sub-types batch 1 (9 types)", "status": "merged", "issue": 278, "pr": 279, "merged_at": "2026-03-01T09:26:06Z"}, "2c": {"description": "Leaf sub-types batch 2 (9 types)", "status": "merged", "issue": 280, "pr": 281, "merged_at": "2026-03-01T09:36:17Z"}}},
       {"phase": 3, "name": "Schema type port", "status": "complete", "dispatch_strategy": "sequential (per audit #29)", "decomposition": {"3a": {"description": "Level-0 types (12 types, no schema deps)", "status": "merged", "issue": 282, "pr": 283, "merged_at": "2026-03-01T09:47:23Z"}, "3b": {"description": "Level-1 types (9 types, deps on ported types)", "status": "merged", "issue": 284, "pr": 285, "merged_at": "2026-03-01T10:49:00Z"}, "3c": {"description": "Level-2 types (8 types, deps on L0/L1)", "status": "merged", "issue": 287, "pr": 288, "merged_at": "2026-03-01T11:07:00Z"}, "3d": {"description": "Level 3-5 types (6 types: VideoObject, MathSolver, ShippingService, Offer, Organization, Person)", "status": "merged", "issue": 289, "pr": 290, "merged_at": "2026-03-01T11:19:35Z"}, "3e": {"description": "Level 5-6 types (9 types: EmployerAggregateRating, JobPosting, Certification, ImageObject, Review, Answer, CourseInstance, ProfilePage, Dataset)", "status": "merged", "issue": 291, "pr": 292, "merged_at": "2026-03-01T11:31:02Z"}, "3f": {"description": "Level 7 types (10 types: Question, Comment, Article, Event, SoftwareApplication, Movie, LocalBusiness, Course, Recipe, VacationRental)", "status": "merged", "issue": 293, "pr": 294, "merged_at": "2026-03-01T11:46:07Z"}, "3g": {"description": "Level 8+ types (11 types with inheritance)", "status": "merged", "issue": 295, "pr": 296, "merged_at": "2026-03-01T12:11:00Z"}}},
-      {"phase": 4, "name": "Build, test, publish", "status": "blocked_on_qc_validation", "decomposition": {"4a": {"description": "npm package polish (metadata, README, build verification)", "status": "merged", "issue": 300, "pr": 301, "merged_at": "2026-03-01T12:22:48Z"}, "4b": {"description": "npm publish workflow (needs Eva)", "status": "halted_pending_qc", "issue": 303, "pr": 305, "note": "Eva directive #329: comprehensive QC validation required before publish. PR stays open but deprioritised."}, "4c": {"description": "npm publish (after QC validation + Eva merges 4b + NPM_TOKEN configured)", "status": "blocked_on_qc_validation", "qc_gate": "INSUFFICIENT (25/86 parity). QC-REQUEST #331 open for comprehensive validation.", "eva_directive": "Test thoroughly first before releasing, always."}}}
+      {"phase": 4, "name": "Build, test, publish", "status": "qc_gate_cleared_awaiting_eva", "decomposition": {"4a": {"description": "npm package polish (metadata, README, build verification)", "status": "merged", "issue": 300, "pr": 301, "merged_at": "2026-03-01T12:22:48Z"}, "4b": {"description": "npm publish workflow (needs Eva)", "status": "awaiting_eva", "issue": 303, "pr": 305, "note": "QC validation gate SATISFIED (73/73 parity per audit #73). Eva must merge PR #305 and configure NPM_TOKEN (#304)."}, "4c": {"description": "npm publish (after Eva merges 4b + NPM_TOKEN configured)", "status": "awaiting_eva", "qc_gate": "SATISFIED. 73/73 standalone parity (100%). 0 E2E errors. Class inventory: 88/88.", "eva_directive": "Test thoroughly first before releasing, always."}}}
     ]
   },
   "release": {
@@ -732,12 +734,13 @@
     "summary": "Cycle 113: Accepted audit #71 (QC-REPORT feedback loop). Parity check found WebPageElement missed by constructor refactoring — dispatched and merged fix #392/#393. 30/30 merge rate."
   },
   "last_eva_comment_check": "2026-03-03T16:46:00Z",
-  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71],
+  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71, 73],
   "test_count": 338,
   "total_schema_types": 28,
   "total_sub_types": 104,
   "total_schema_classes": 103,
   "total_enums": 12,
   "total_testable_types": 76,
-  "total_testable_types_note": "88 schema classes - 12 enums = 76. Enums don't produce JSON-LD output. Per audit #62 type classification, audit #68 denominator fix."
+  "total_standalone_testable_types": 73,
+  "total_testable_types_note": "88 schema classes - 12 enums = 76 testable. Of those, 73 can be parity-tested standalone; 3 are building-block-only types validated through parent types. Per audits #62, #68, #73. Publish gate uses 73 (standalone-parity-testable)."
 }
