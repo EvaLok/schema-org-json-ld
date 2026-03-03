@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\ItemList;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\ListItem;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Organization;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Person;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Product;
@@ -42,6 +44,8 @@ final class ReviewTest extends TestCase {
 		$this->assertFalse(property_exists($obj, 'datePublished'));
 		$this->assertFalse(property_exists($obj, 'name'));
 		$this->assertFalse(property_exists($obj, 'itemReviewed'));
+		$this->assertFalse(property_exists($obj, 'positiveNotes'));
+		$this->assertFalse(property_exists($obj, 'negativeNotes'));
 	}
 
 	public function testFullOutput(): void {
@@ -122,5 +126,65 @@ final class ReviewTest extends TestCase {
 
 		$this->assertEquals('Product', $obj->itemReviewed->{'@type'});
 		$this->assertEquals('Executive Anvil', $obj->itemReviewed->name);
+	}
+
+	public function testPositiveNotes(): void {
+		$review = new Review(
+			author: 'Jane Doe',
+			reviewRating: new Rating(ratingValue: 5),
+			positiveNotes: new ItemList(itemListElement: [
+				new ListItem(position: 1, name: 'Consistent results'),
+				new ListItem(position: 2, name: 'Still sharp after many uses'),
+			]),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $review);
+		$obj = json_decode($json);
+
+		$this->assertEquals('ItemList', $obj->positiveNotes->{'@type'});
+		$this->assertCount(2, $obj->positiveNotes->itemListElement);
+		$this->assertEquals('ListItem', $obj->positiveNotes->itemListElement[0]->{'@type'});
+		$this->assertEquals(1, $obj->positiveNotes->itemListElement[0]->position);
+		$this->assertEquals('Consistent results', $obj->positiveNotes->itemListElement[0]->name);
+		$this->assertEquals(2, $obj->positiveNotes->itemListElement[1]->position);
+		$this->assertEquals('Still sharp after many uses', $obj->positiveNotes->itemListElement[1]->name);
+	}
+
+	public function testNegativeNotes(): void {
+		$review = new Review(
+			author: 'Jane Doe',
+			reviewRating: new Rating(ratingValue: 5),
+			negativeNotes: new ItemList(itemListElement: [
+				new ListItem(position: 1, name: 'No child protection'),
+			]),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $review);
+		$obj = json_decode($json);
+
+		$this->assertEquals('ItemList', $obj->negativeNotes->{'@type'});
+		$this->assertCount(1, $obj->negativeNotes->itemListElement);
+		$this->assertEquals('ListItem', $obj->negativeNotes->itemListElement[0]->{'@type'});
+		$this->assertEquals(1, $obj->negativeNotes->itemListElement[0]->position);
+		$this->assertEquals('No child protection', $obj->negativeNotes->itemListElement[0]->name);
+	}
+
+	public function testPositiveAndNegativeNotesTogether(): void {
+		$review = new Review(
+			author: 'Jane Doe',
+			reviewRating: new Rating(ratingValue: 4),
+			positiveNotes: new ItemList(itemListElement: [
+				new ListItem(position: 1, name: 'Consistent results'),
+				new ListItem(position: 2, name: 'Still sharp after many uses'),
+			]),
+			negativeNotes: new ItemList(itemListElement: [
+				new ListItem(position: 1, name: 'No child protection'),
+			]),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $review);
+		$obj = json_decode($json);
+
+		$this->assertEquals('ItemList', $obj->positiveNotes->{'@type'});
+		$this->assertCount(2, $obj->positiveNotes->itemListElement);
+		$this->assertEquals('ItemList', $obj->negativeNotes->{'@type'});
+		$this->assertCount(1, $obj->negativeNotes->itemListElement);
 	}
 }
