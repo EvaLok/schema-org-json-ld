@@ -592,6 +592,16 @@
       "merged_at": "2026-03-03T11:08:00Z",
       "eva_directive": 372,
       "note": "First auditing tool dispatch per Eva #372. Created tools/parity-check.ts. Known limitation: TS extends interface regex doesn't handle FoodEstablishmentOptions extends LocalBusinessOptions. Affects 1/88 classes."
+    },
+    {
+      "issue": 380,
+      "title": "Rewrite parity-check tool to use AST parsing instead of regex",
+      "dispatched_at": "2026-03-03T12:15:00Z",
+      "model": "gpt-5.3-codex",
+      "status": "in_progress",
+      "pr": 381,
+      "eva_directive": 378,
+      "note": "Rewrites tools/parity-check.ts to use TypeScript Compiler API + php-parser (glayzzle). Fixes FoodEstablishmentOptions extends bug. Per Eva directive: AST over regex."
     }
   ],
   "qc_processed": [8, 37, 57, 72, 160, 165],
@@ -603,7 +613,7 @@
     "report_72": "FIXED. PR #214 merged. Added 5 optional Recipe properties (expires, hasPart, publication, ineligibleRegion, interactionStatistic). QC request #215 sent.",
     "request_215": "COMPLETE. QC repo #74 closed. QC PR #76 merged (10:16 UTC). 39/39 E2E pass, 0 errors. All 5 Recipe optional properties validated. Issue #215 closed.",
     "request_234": "COMPLETE. QC repo #84 closed. 188 QC unit tests, 39/39 E2E pass, 0 errors, 15 warnings (all known false positives). Offer.hasMerchantReturnPolicy validated. Issue #234 closed.",
-    "request_331": "IN PROGRESS. QC-ACK #138 open. Built-package validated. Parity: 39/86 (45%). 2 constructor mismatches fixed in QC test code (not library bugs). Multi-cycle effort — 47 building-block types remaining.",
+    "request_331": "IN PROGRESS. QC-ACK #138 open. Built-package validated. Parity: 49/86 (57%). 2 constructor mismatches fixed in QC test code (not library bugs). Multi-cycle effort — 37 building-block types remaining.",
     "request_265": "COMPLETE. QC repo #114 closed. 188 tests, 1133 assertions, ALL PASS. 39/39 E2E, 0 errors, 15 warnings (known false positives). Phase 0 gate cleared.",
     "request_299": "COMPLETE. QC-ACK #122 closed (2026-03-01T16:37Z). 23/23 parity match, 0 E2E errors, 14 warnings (known false positives). All DoD criteria satisfied: top-level parity, propertyMap, inheritance chains, Adobe E2E. Issue #299 closed."
   },
@@ -618,8 +628,8 @@
   ],
   "open_questions_for_eva": [304],
   "eva_input_issues": {
-    "closed_this_cycle": [372],
-    "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225, 340, 348],
+    "closed_this_cycle": [378],
+    "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225, 340, 348, 372],
     "remaining_open": [247, 304, 329]
   },
   "typescript_plan": {
@@ -679,16 +689,16 @@
     ]
   },
   "copilot_metrics": {
-    "dispatch_to_pr_rate": "26/26 (100%)",
-    "pr_merge_rate": "26/26 (100%)",
-    "note": "All 26 main-orchestrator dispatches produced PRs that were merged. 1 revision round (#364 mixed-array bug). Zero silent failures. Cycle 109: merged #376 (quality sweep, partial delivery on Part 2) and #377 (parity tool, 1 known limitation)."
+    "dispatch_to_pr_rate": "27/27 (100%)",
+    "pr_merge_rate": "26/27 (96%) — #381 in progress",
+    "note": "27 dispatches, 26 merged, 1 in progress (#381 AST parity rewrite). 1 revision round (#364 mixed-array bug). Zero silent failures."
   },
   "last_cycle": {
-    "issue": 373,
-    "timestamp": "2026-03-03T11:10:00Z",
-    "summary": "Cycle 109: Eva directive #372 processed. Dispatched 2 complex tasks. PR #377 (parity tool) merged — first auditing tool, known extends-regex limitation. PR #376 (quality sweep) merged — Question/Answer image+video added, README updated, but test expansion underdelivered (data-provider padding instead of genuine coverage). Follow-up needed for edge-case tests."
+    "issue": 379,
+    "timestamp": "2026-03-03T12:10:00Z",
+    "summary": "Cycle 110: Eva directive #378 processed (AST over regex). Dispatched #380 to rewrite parity-check.ts with TypeScript Compiler API + php-parser. Created tool-creation-guidelines skill. PR #381 in progress."
   },
-  "last_eva_comment_check": "2026-03-03T10:45:00Z",
+  "last_eva_comment_check": "2026-03-03T12:10:00Z",
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62],
   "test_count": 338,
   "total_schema_types": 28,
