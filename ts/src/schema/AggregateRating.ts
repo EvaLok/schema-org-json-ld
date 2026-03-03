@@ -6,6 +6,7 @@ export interface AggregateRatingOptions {
 	worstRating?: number | null;
 	ratingCount?: number | null;
 	reviewCount?: number | null;
+	itemReviewed?: TypedSchema | null;
 }
 
 export class AggregateRating extends TypedSchema {
@@ -16,6 +17,7 @@ export class AggregateRating extends TypedSchema {
 	public readonly worstRating: number | null;
 	public readonly ratingCount: number | null;
 	public readonly reviewCount: number | null;
+	public readonly itemReviewed: TypedSchema | null;
 
 	constructor(options: AggregateRatingOptions) {
 		super();
@@ -24,5 +26,6 @@ export class AggregateRating extends TypedSchema {
 		this.worstRating = options.worstRating ?? null;
 		this.ratingCount = options.ratingCount ?? null;
 		this.reviewCount = options.reviewCount ?? null;
+		this.itemReviewed = options.itemReviewed ?? null;
 	}
 }

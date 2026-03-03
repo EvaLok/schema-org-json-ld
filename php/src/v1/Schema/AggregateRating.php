@@ -15,5 +15,6 @@ class AggregateRating extends TypedSchema {
 		public null|float|int $worstRating = null,
 		public null|int $ratingCount = null,
 		public null|int $reviewCount = null,
+		public null|TypedSchema $itemReviewed = null,
 	) {}
 }

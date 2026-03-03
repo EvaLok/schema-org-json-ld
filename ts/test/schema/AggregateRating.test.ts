@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { JsonLdGenerator } from "../../src/JsonLdGenerator";
 import { AggregateRating } from "../../src/schema/AggregateRating";
+import { Thing } from "../../src/schema/Thing";
 
 describe("AggregateRating", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
@@ -23,6 +24,7 @@ describe("AggregateRating", () => {
 		expect(obj).not.toHaveProperty("worstRating");
 		expect(obj).not.toHaveProperty("ratingCount");
 		expect(obj).not.toHaveProperty("reviewCount");
+		expect(obj).not.toHaveProperty("itemReviewed");
 	});
 
 	it("includes all fields when set", () => {
@@ -40,5 +42,18 @@ describe("AggregateRating", () => {
 		expect(obj.worstRating).toBe(1);
 		expect(obj.ratingCount).toBe(120);
 		expect(obj.reviewCount).toBe(50);
+	});
+
+	it("includes itemReviewed when set for standalone AggregateRating", () => {
+		const schema = new AggregateRating({
+			ratingValue: 4.5,
+			itemReviewed: new Thing({ name: "Executive Anvil" }),
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+		const itemReviewed = obj.itemReviewed as Record<string, unknown>;
+
+		expect(itemReviewed["@type"]).toBe("Thing");
+		expect(itemReviewed.name).toBe("Executive Anvil");
 	});
 });
