@@ -598,8 +598,9 @@
       "title": "Rewrite parity-check tool to use AST parsing instead of regex",
       "dispatched_at": "2026-03-03T12:15:00Z",
       "model": "gpt-5.3-codex",
-      "status": "in_progress",
+      "status": "merged",
       "pr": 381,
+      "merged_at": "2026-03-03T12:31:45Z",
       "eva_directive": 378,
       "note": "Rewrites tools/parity-check.ts to use TypeScript Compiler API + php-parser (glayzzle). Fixes FoodEstablishmentOptions extends bug. Per Eva directive: AST over regex."
     }
@@ -690,13 +691,13 @@
   },
   "copilot_metrics": {
     "dispatch_to_pr_rate": "27/27 (100%)",
-    "pr_merge_rate": "26/27 (96%) — #381 in progress",
-    "note": "27 dispatches, 26 merged, 1 in progress (#381 AST parity rewrite). 1 revision round (#364 mixed-array bug). Zero silent failures."
+    "pr_merge_rate": "27/27 (100%)",
+    "note": "27 dispatches, 27 merged. 1 revision round (#364 mixed-array bug). Zero silent failures. Cycle 110: #381 (AST parity rewrite per Eva #378) merged."
   },
   "last_cycle": {
     "issue": 379,
     "timestamp": "2026-03-03T12:10:00Z",
-    "summary": "Cycle 110: Eva directive #378 processed (AST over regex). Dispatched #380 to rewrite parity-check.ts with TypeScript Compiler API + php-parser. Created tool-creation-guidelines skill. PR #381 in progress."
+    "summary": "Cycle 110: Eva directive #378 processed (AST over regex). Dispatched #380, PR #381 merged — parity-check.ts rewritten with TypeScript Compiler API + php-parser. Created tool-creation-guidelines skill. FoodEstablishmentOptions extends bug fixed."
   },
   "last_eva_comment_check": "2026-03-03T12:10:00Z",
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62],
