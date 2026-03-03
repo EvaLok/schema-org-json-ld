@@ -9,7 +9,7 @@ import { QuantitativeValue } from "../../src/schema/QuantitativeValue";
 describe("Accommodation", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
 		const schema = new Accommodation({
-			occupancy: new QuantitativeValue(2, "C62"),
+			occupancy: new QuantitativeValue({value: 2, unitCode: "C62"}),
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
@@ -24,7 +24,7 @@ describe("Accommodation", () => {
 
 	it("omits optional fields when null", () => {
 		const schema = new Accommodation({
-			occupancy: new QuantitativeValue(2, "C62"),
+			occupancy: new QuantitativeValue({value: 2, unitCode: "C62"}),
 			additionalType: null,
 			numberOfBedrooms: null,
 			numberOfBathroomsTotal: null,
@@ -47,7 +47,7 @@ describe("Accommodation", () => {
 
 	it("supports partial options object", () => {
 		const schema = new Accommodation({
-			occupancy: new QuantitativeValue(2, "C62"),
+			occupancy: new QuantitativeValue({value: 2, unitCode: "C62"}),
 			numberOfRooms: 3,
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);
@@ -60,12 +60,12 @@ describe("Accommodation", () => {
 
 	it("includes all fields when set", () => {
 		const schema = new Accommodation({
-			occupancy: new QuantitativeValue(2, "C62"),
+			occupancy: new QuantitativeValue({value: 2, unitCode: "C62"}),
 			additionalType: "https://example.com/types/loft",
 			numberOfBedrooms: 1,
 			numberOfBathroomsTotal: 1,
 			numberOfRooms: 2,
-			floorSize: new QuantitativeValue(45, "MTK"),
+			floorSize: new QuantitativeValue({value: 45, unitCode: "MTK"}),
 			bed: [
 				new BedDetails({ numberOfBeds: 1, typeOfBed: "Queen" }),
 				new BedDetails({ numberOfBeds: 1, typeOfBed: "Sofa bed" }),

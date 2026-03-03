@@ -5,7 +5,7 @@ import { Rating } from "../../src/schema/Rating";
 
 describe("Rating", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new Rating(4.5);
+		const schema = new Rating({ratingValue: 4.5});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -15,7 +15,7 @@ describe("Rating", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new Rating(4.5, null, null);
+		const schema = new Rating({ratingValue: 4.5, bestRating: null, worstRating: null});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -24,7 +24,7 @@ describe("Rating", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new Rating(4.5, 5, 1);
+		const schema = new Rating({ratingValue: 4.5, bestRating: 5, worstRating: 1});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -34,7 +34,7 @@ describe("Rating", () => {
 	});
 
 	it("matches PHP parity JSON-LD output", () => {
-		const schema = new Rating(4.5, 5, 1);
+		const schema = new Rating({ratingValue: 4.5, bestRating: 5, worstRating: 1});
 		const json = JsonLdGenerator.schemaToJson(schema);
 
 		expect(json).toBe(

@@ -7,7 +7,7 @@ import { Quiz } from "../../src/schema/Quiz";
 
 describe("Quiz", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new Quiz([new Question({ name: "Question 1" })]);
+		const schema = new Quiz({hasPart: [new Question({ name: "Question 1" })]});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
 			string,
 			unknown
@@ -20,13 +20,7 @@ describe("Quiz", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new Quiz(
-			[new Question({ name: "Question 1" })],
-			null,
-			null,
-			null,
-			null,
-		);
+		const schema = new Quiz({hasPart: [new Question({ name: "Question 1" })], about: null, educationalAlignment: null, name: null, description: null});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
 			string,
 			unknown
@@ -38,16 +32,10 @@ describe("Quiz", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new Quiz(
-			[new Question({ name: "Question 1" })],
-			"Algebra",
-			new AlignmentObject({
+		const schema = new Quiz({hasPart: [new Question({ name: "Question 1" })], about: "Algebra", educationalAlignment: new AlignmentObject({
 				alignmentType: "teaches",
 				targetName: "Linear equations",
-			}),
-			"Math quiz",
-			"A short math quiz",
-		);
+			}), name: "Math quiz", description: "A short math quiz"});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
 			string,
 			unknown

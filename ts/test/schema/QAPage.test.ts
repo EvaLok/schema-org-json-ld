@@ -8,14 +8,12 @@ import { Question } from "../../src/schema/Question";
 
 describe("QAPage", () => {
 	it("produces minimal JSON-LD output with accepted answer", () => {
-		const schema = new QAPage(
-			new Question({
+		const schema = new QAPage({mainEntity: new Question({
 				name: "How do I reset my password?",
 				acceptedAnswer: new Answer({
 					text: "Click the forgot password link on the login page.",
 				}),
-			}),
-		);
+			})});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
 			string,
 			unknown
@@ -34,15 +32,13 @@ describe("QAPage", () => {
 	});
 
 	it("supports suggested answers", () => {
-		const schema = new QAPage(
-			new Question({
+		const schema = new QAPage({mainEntity: new Question({
 				name: "What is the best PHP framework?",
 				suggestedAnswer: [
 					new Answer({ text: "Laravel is very popular." }),
 					new Answer({ text: "Symfony is very flexible." }),
 				],
-			}),
-		);
+			})});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
 			string,
 			unknown
@@ -62,8 +58,7 @@ describe("QAPage", () => {
 	});
 
 	it("produces full JSON-LD output with all Question fields", () => {
-		const schema = new QAPage(
-			new Question({
+		const schema = new QAPage({mainEntity: new Question({
 				name: "How do I reset my password?",
 				acceptedAnswer: new Answer({
 					text: "Click the forgot password link on the login page.",
@@ -77,8 +72,7 @@ describe("QAPage", () => {
 				author: new Person({ name: "Jane Doe" }),
 				datePublished: "2024-01-15",
 				dateModified: "2024-02-01",
-			}),
-		);
+			})});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
 			string,
 			unknown
@@ -105,7 +99,7 @@ describe("QAPage", () => {
 	});
 
 	it("omits null question fields from JSON output", () => {
-		const schema = new QAPage(new Question({ name: "Simple question?" }));
+		const schema = new QAPage({mainEntity: new Question({ name: "Simple question?" })});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
 			string,
 			unknown

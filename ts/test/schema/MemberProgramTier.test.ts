@@ -60,7 +60,7 @@ describe("MemberProgramTier", () => {
 			name: "Gold",
 			hasTierBenefit: TierBenefitEnumeration.TierBenefitLoyaltyPrice,
 			hasTierRequirement: "Spend at least $1000 annually",
-			membershipPointsEarned: new QuantitativeValue(1200, "C62"),
+			membershipPointsEarned: new QuantitativeValue({value: 1200, unitCode: "C62"}),
 			url: "https://example.com/membership/gold",
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);

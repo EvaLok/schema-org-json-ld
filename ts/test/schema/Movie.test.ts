@@ -48,7 +48,7 @@ describe("Movie", () => {
 			image: "https://example.com/interstellar.jpg",
 			aggregateRating: new AggregateRating({ ratingValue: 4.8 }),
 			director: new Person({ name: "Christopher Nolan" }),
-			review: new Review("Jane", new Rating(5)),
+			review: new Review({author: "Jane", reviewRating: new Rating({ratingValue: 5})}),
 			actor: [
 				new Person({ name: "Matthew McConaughey" }),
 				new Person({ name: "Anne Hathaway" }),

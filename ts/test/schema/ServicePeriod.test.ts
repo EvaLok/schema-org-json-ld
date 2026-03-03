@@ -7,7 +7,7 @@ import { ServicePeriod } from "../../src/schema/ServicePeriod";
 
 describe("ServicePeriod", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new ServicePeriod();
+		const schema = new ServicePeriod({});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -16,7 +16,7 @@ describe("ServicePeriod", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new ServicePeriod(null, null, null);
+		const schema = new ServicePeriod({duration: null, businessDays: null, cutoffTime: null});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -26,11 +26,7 @@ describe("ServicePeriod", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new ServicePeriod(
-			new QuantitativeValue(2, "DAY"),
-			[DayOfWeek.Monday, DayOfWeek.Friday],
-			"17:00:00Z",
-		);
+		const schema = new ServicePeriod({duration: new QuantitativeValue({value: 2, unitCode: "DAY"}), businessDays: [DayOfWeek.Monday, DayOfWeek.Friday], cutoffTime: "17:00:00Z"});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const duration = obj.duration as Record<string, unknown>;

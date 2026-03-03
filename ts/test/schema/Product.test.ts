@@ -95,12 +95,12 @@ describe("Product", () => {
 				offerCount: 5,
 			}),
 			brand: new Brand({ name: "BrandCo" }),
-			weight: new QuantitativeValue(1, "KGM"),
+			weight: new QuantitativeValue({value: 1, unitCode: "KGM"}),
 			aggregateRating: new AggregateRating({ ratingValue: 4.5 }),
-			review: new Review("Jane", new Rating(5)),
-			size: new SizeSpecification("M"),
+			review: new Review({author: "Jane", reviewRating: new Rating({ratingValue: 5})}),
+			size: new SizeSpecification({name: "M"}),
 			isVariantOf: new ProductGroup({ name: "T-Shirt family" }),
-			audience: new PeopleAudience("unisex"),
+			audience: new PeopleAudience({suggestedGender: "unisex"}),
 			hasCertification: new Certification({
 				name: "Eco Certified",
 				issuedBy: new Organization({ name: "Cert Org" }),
@@ -130,7 +130,7 @@ describe("Product", () => {
 			description: "Blue shirt",
 			sku: "SKU-123",
 			offers: [offer],
-			review: [new Review("Jane", new Rating(5))],
+			review: [new Review({author: "Jane", reviewRating: new Rating({ratingValue: 5})})],
 			hasCertification: [
 				new Certification({
 					name: "Eco Certified",

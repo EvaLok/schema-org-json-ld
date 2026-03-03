@@ -5,7 +5,7 @@ import { PeopleAudience } from "../../src/schema/PeopleAudience";
 
 describe("PeopleAudience", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new PeopleAudience();
+		const schema = new PeopleAudience({});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -14,7 +14,7 @@ describe("PeopleAudience", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new PeopleAudience(null, null, null);
+		const schema = new PeopleAudience({suggestedGender: null, suggestedMinAge: null, suggestedMaxAge: null});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -24,7 +24,7 @@ describe("PeopleAudience", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new PeopleAudience("Female", 18, 34);
+		const schema = new PeopleAudience({suggestedGender: "Female", suggestedMinAge: 18, suggestedMaxAge: 34});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

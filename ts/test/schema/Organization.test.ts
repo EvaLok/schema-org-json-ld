@@ -89,7 +89,7 @@ describe("Organization", () => {
 					],
 				}),
 			],
-			hasShippingService: new ShippingService(new ShippingConditions({})),
+			hasShippingService: new ShippingService({shippingConditions: new ShippingConditions({})}),
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
@@ -135,7 +135,7 @@ describe("Organization", () => {
 					],
 				}),
 			],
-			hasShippingService: [new ShippingService(new ShippingConditions({}))],
+			hasShippingService: [new ShippingService({shippingConditions: new ShippingConditions({})})],
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;

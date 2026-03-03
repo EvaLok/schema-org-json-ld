@@ -48,7 +48,7 @@ describe("ShippingConditions", () => {
 
 	it("supports shippingRate as ShippingRateSettings", () => {
 		const schema = new ShippingConditions({
-			shippingRate: new ShippingRateSettings(10, null),
+			shippingRate: new ShippingRateSettings({orderPercentage: 10, weightPercentage: null}),
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
@@ -73,21 +73,17 @@ describe("ShippingConditions", () => {
 	it("includes all fields when set", () => {
 		const schema = new ShippingConditions({
 			doesNotShip: false,
-			numItems: new QuantitativeValue(2, "C62"),
+			numItems: new QuantitativeValue({value: 2, unitCode: "C62"}),
 			orderValue: new MonetaryAmount({ currency: "USD", value: 50 }),
 			shippingDestination: new DefinedRegion({ addressCountry: "US" }),
 			shippingOrigin: new DefinedRegion({
 				addressCountry: "US",
 				addressRegion: "NY",
 			}),
-			seasonalOverride: new OpeningHoursSpecification(
-				DayOfWeek.Friday,
-				"09:00",
-				"17:00",
-			),
-			shippingRate: new ShippingRateSettings(5, 2),
-			transitTime: new ServicePeriod(new QuantitativeValue(2, "DAY")),
-			weight: new QuantitativeValue(20, "KGM"),
+			seasonalOverride: new OpeningHoursSpecification({dayOfWeek: DayOfWeek.Friday, opens: "09:00", closes: "17:00"}),
+			shippingRate: new ShippingRateSettings({orderPercentage: 5, weightPercentage: 2}),
+			transitTime: new ServicePeriod({duration: new QuantitativeValue({value: 2, unitCode: "DAY"})}),
+			weight: new QuantitativeValue({value: 20, unitCode: "KGM"}),
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;

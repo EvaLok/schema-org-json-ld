@@ -36,7 +36,7 @@ describe("Certification", () => {
 			name: "AWS Certified Solutions Architect",
 			issuedBy: new Organization({ name: "AWS" }),
 			certificationIdentification: "CSA-12345",
-			certificationRating: new Rating(5),
+			certificationRating: new Rating({ratingValue: 5}),
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;

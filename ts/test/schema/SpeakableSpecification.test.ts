@@ -5,7 +5,7 @@ import { SpeakableSpecification } from "../../src/schema/SpeakableSpecification"
 
 describe("SpeakableSpecification", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new SpeakableSpecification();
+		const schema = new SpeakableSpecification({});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -14,7 +14,7 @@ describe("SpeakableSpecification", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new SpeakableSpecification(null, null);
+		const schema = new SpeakableSpecification({cssSelector: null, xpath: null});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -23,7 +23,7 @@ describe("SpeakableSpecification", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new SpeakableSpecification(".headline", "/html/body/h1");
+		const schema = new SpeakableSpecification({cssSelector: ".headline", xpath: "/html/body/h1"});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -32,14 +32,8 @@ describe("SpeakableSpecification", () => {
 	});
 
 	it("supports string and string[] union values", () => {
-		const stringSchema = new SpeakableSpecification(
-			".headline",
-			"/html/body/h1",
-		);
-		const arraySchema = new SpeakableSpecification(
-			[".headline", ".subheading"],
-			["/html/body/h1", "/html/body/h2"],
-		);
+		const stringSchema = new SpeakableSpecification({cssSelector: ".headline", xpath: "/html/body/h1"});
+		const arraySchema = new SpeakableSpecification({cssSelector: [".headline", ".subheading"], xpath: ["/html/body/h1", "/html/body/h2"]});
 
 		const stringObj = JSON.parse(
 			JsonLdGenerator.schemaToJson(stringSchema),

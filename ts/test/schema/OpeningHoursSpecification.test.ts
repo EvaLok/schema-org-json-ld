@@ -6,7 +6,7 @@ import { OpeningHoursSpecification } from "../../src/schema/OpeningHoursSpecific
 
 describe("OpeningHoursSpecification", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new OpeningHoursSpecification();
+		const schema = new OpeningHoursSpecification({});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -15,7 +15,7 @@ describe("OpeningHoursSpecification", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new OpeningHoursSpecification(null, null, null, null, null);
+		const schema = new OpeningHoursSpecification({dayOfWeek: null, opens: null, closes: null, validFrom: null, validThrough: null});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -27,13 +27,7 @@ describe("OpeningHoursSpecification", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new OpeningHoursSpecification(
-			DayOfWeek.Monday,
-			"09:00",
-			"17:00",
-			"2026-01-01",
-			"2026-12-31",
-		);
+		const schema = new OpeningHoursSpecification({dayOfWeek: DayOfWeek.Monday, opens: "09:00", closes: "17:00", validFrom: "2026-01-01", validThrough: "2026-12-31"});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

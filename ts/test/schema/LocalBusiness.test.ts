@@ -93,9 +93,9 @@ describe("LocalBusiness", () => {
 			name: "Cafe",
 			address,
 			geo: new GeoCoordinates({ latitude: 40.0, longitude: -73.0 }),
-			openingHoursSpecification: [new OpeningHoursSpecification()],
+			openingHoursSpecification: [new OpeningHoursSpecification({})],
 			aggregateRating: new AggregateRating({ ratingValue: 4.2 }),
-			review: new Review("Jane", new Rating(5)),
+			review: new Review({author: "Jane", reviewRating: new Rating({ratingValue: 5})}),
 		});
 		const singleReviewObj = JSON.parse(
 			JsonLdGenerator.schemaToJson(singleReviewSchema),
@@ -106,7 +106,7 @@ describe("LocalBusiness", () => {
 		const arrayReviewSchema = new LocalBusiness({
 			name: "Cafe",
 			address,
-			review: [new Review("Jane", new Rating(5))],
+			review: [new Review({author: "Jane", reviewRating: new Rating({ratingValue: 5})})],
 		});
 		const arrayReviewObj = JSON.parse(
 			JsonLdGenerator.schemaToJson(arrayReviewSchema),
