@@ -49,6 +49,7 @@
   },
 "devDependencies": {
 "@biomejs/biome": "^1.9.4",
+"php-parser": "^3.4.0",
 "tsup": "^8.5.0",
 "typescript": "^5.9.2",
 "vitest": "^3.2.4"

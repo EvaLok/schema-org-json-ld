@@ -36,6 +36,9 @@ describe("parity-check tool", () => {
 		expect(output.join("\n")).toContain(
 			`Enums: ${phpEnumCount}/${tsEnumCount}`,
 		);
+		expect(output.join("\n")).not.toContain(
+			"PHP has property 'acceptsReservations' but TS is missing it",
+		);
 		expect(output.join("\n")).toContain("=== Summary ===");
 	});
 });
