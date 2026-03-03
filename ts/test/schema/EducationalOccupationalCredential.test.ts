@@ -15,14 +15,4 @@ describe("EducationalOccupationalCredential", () => {
 		expect(obj["@type"]).toBe("EducationalOccupationalCredential");
 		expect(obj.credentialCategory).toBe("bachelor degree");
 	});
-
-	it("includes all fields when set", () => {
-		const schema = new EducationalOccupationalCredential({
-			credentialCategory: "professional certificate",
-		});
-		const json = JsonLdGenerator.schemaToJson(schema);
-		const obj = JSON.parse(json) as Record<string, unknown>;
-
-		expect(obj.credentialCategory).toBe("professional certificate");
-	});
 });

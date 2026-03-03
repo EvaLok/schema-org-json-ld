@@ -15,14 +15,4 @@ describe("OccupationalExperienceRequirements", () => {
 		expect(obj["@type"]).toBe("OccupationalExperienceRequirements");
 		expect(obj.monthsOfExperience).toBe(24);
 	});
-
-	it("includes all fields when set", () => {
-		const schema = new OccupationalExperienceRequirements({
-			monthsOfExperience: 60,
-		});
-		const json = JsonLdGenerator.schemaToJson(schema);
-		const obj = JSON.parse(json) as Record<string, unknown>;
-
-		expect(obj.monthsOfExperience).toBe(60);
-	});
 });

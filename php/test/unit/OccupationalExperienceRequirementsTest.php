@@ -22,16 +22,4 @@ final class OccupationalExperienceRequirementsTest extends TestCase {
 		$this->assertEquals('OccupationalExperienceRequirements', $obj->{'@type'});
 		$this->assertEquals(24, $obj->monthsOfExperience);
 	}
-
-	public function testFullOutput(): void {
-		$schema = new OccupationalExperienceRequirements(
-			monthsOfExperience: 60,
-		);
-
-		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
-		$obj = json_decode($json);
-
-		$this->assertEquals('OccupationalExperienceRequirements', $obj->{'@type'});
-		$this->assertEquals(60, $obj->monthsOfExperience);
-	}
 }
