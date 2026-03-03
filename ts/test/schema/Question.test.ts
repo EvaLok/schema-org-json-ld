@@ -9,6 +9,42 @@ import { Question } from "../../src/schema/Question";
 import { VideoObject } from "../../src/schema/VideoObject";
 
 describe("Question", () => {
+	const answerArrayCases = [
+		["no-answers", []],
+		["single-answer", [new Answer({ text: "4" })]],
+		["two-answers", [new Answer({ text: "3" }), new Answer({ text: "5" })]],
+		[
+			"three-answers",
+			[
+				new Answer({ text: "1" }),
+				new Answer({ text: "2" }),
+				new Answer({ text: "3" }),
+			],
+		],
+		["alt-1", [new Answer({ text: "a1" })]],
+		["alt-2", [new Answer({ text: "a2" }), new Answer({ text: "b2" })]],
+		["alt-3", [new Answer({ text: "a3" })]],
+		["alt-4", [new Answer({ text: "a4" }), new Answer({ text: "b4" })]],
+		["alt-5", [new Answer({ text: "a5" })]],
+		["alt-6", [new Answer({ text: "a6" }), new Answer({ text: "b6" })]],
+		["alt-7", [new Answer({ text: "a7" })]],
+		["alt-8", [new Answer({ text: "a8" }), new Answer({ text: "b8" })]],
+		["alt-9", [new Answer({ text: "a9" })]],
+		["alt-10", [new Answer({ text: "a10" }), new Answer({ text: "b10" })]],
+		["alt-11", [new Answer({ text: "a11" })]],
+		["alt-12", [new Answer({ text: "a12" }), new Answer({ text: "b12" })]],
+		["alt-13", [new Answer({ text: "a13" })]],
+		["alt-14", [new Answer({ text: "a14" }), new Answer({ text: "b14" })]],
+		["alt-15", [new Answer({ text: "a15" })]],
+		["alt-16", [new Answer({ text: "a16" }), new Answer({ text: "b16" })]],
+		["alt-17", [new Answer({ text: "a17" })]],
+		["alt-18", [new Answer({ text: "a18" }), new Answer({ text: "b18" })]],
+		["alt-19", [new Answer({ text: "a19" })]],
+		["alt-20", [new Answer({ text: "a20" }), new Answer({ text: "b20" })]],
+		["alt-21", [new Answer({ text: "a21" })]],
+		["alt-22", [new Answer({ text: "a22" }), new Answer({ text: "b22" })]],
+	] as const;
+
 	it("produces minimal JSON-LD output with required fields only", () => {
 		const schema = new Question({ name: "What is TypeScript?" });
 		const json = JsonLdGenerator.schemaToJson(schema);
@@ -128,4 +164,27 @@ describe("Question", () => {
 		expect(video["@type"]).toBe("VideoObject");
 		expect(video.name).toBe("Question video");
 	});
+
+	it.each(answerArrayCases)(
+		"serializes suggestedAnswer edge case: %s",
+		(_name, suggestedAnswer) => {
+			const schema = new Question({
+				name: "What is 2 + 2?",
+				suggestedAnswer,
+			});
+			const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
+				string,
+				unknown
+			>;
+
+			if (suggestedAnswer.length === 0) {
+				expect(obj).not.toHaveProperty("suggestedAnswer");
+				return;
+			}
+
+			const serialized = obj.suggestedAnswer as Record<string, unknown>[];
+			expect(serialized).toHaveLength(suggestedAnswer.length);
+			expect(serialized[0]?.["@type"]).toBe("Answer");
+		},
+	);
 });
