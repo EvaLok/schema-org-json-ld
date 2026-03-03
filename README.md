@@ -2310,7 +2310,7 @@ const article = new Article({
   headline: 'Premium: Advanced PHP Patterns Deep Dive',
   datePublished: '2026-02-01',
   isAccessibleForFree: false,
-  hasPart: new WebPageElement(false, '.premium-content'),
+  hasPart: new WebPageElement({ isAccessibleForFree: false, cssSelector: '.premium-content' }),
 });
 
 const json = JsonLdGenerator.schemaToJson(article);
