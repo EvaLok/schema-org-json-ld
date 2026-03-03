@@ -101,8 +101,9 @@
         "type": "JobPosting",
         "pr": 51,
         "issue": 50,
-        "sub_types": ["AdministrativeArea"],
-        "merged_at": "2026-02-24T20:18:00Z"
+        "sub_types": ["AdministrativeArea", "EducationalOccupationalCredential", "OccupationalExperienceRequirements"],
+        "merged_at": "2026-02-24T20:18:00Z",
+        "beta_properties_pr": 355
       },
       {
         "type": "Course",
@@ -291,12 +292,8 @@
       "note": "ALL 31 Google Search Gallery categories covered (26 original + 5 sub-categories: Merchant listing, Product variants, Loyalty program, Return policy, Shipping policy). Book actions excluded (DataFeed type, not Rich Results Test)."
     },
     "remaining_audit_findings": {
-      "low_priority": [
-        {
-          "type": "JobPosting",
-          "missing": "Beta properties (educationRequirements, experienceRequirements, experienceInPlaceOfEducation)"
-        }
-      ]
+      "low_priority": [],
+      "note": "All audit findings resolved. JobPosting beta properties added via PR #355 (2026-03-03)."
     },
     "phpstan_level": 9,
     "phpstan_max_assessment": {
@@ -315,10 +312,10 @@
       "pr": 263
     },
     "typescript_stats": {
-      "schema_types": 86,
+      "schema_types": 88,
       "enums": 12,
       "core_modules": 2,
-      "total_modules": 100,
+      "total_modules": 102,
       "port_complete": true,
       "port_duration": "~3.5 hours (08:50-12:11 UTC) + 10 min fix (18:08-18:18 UTC)",
       "prs_merged": 12,
@@ -509,8 +506,16 @@
       "title": "Add JobPosting beta properties (PHP + TS)",
       "dispatched_at": "2026-03-03T03:53:00Z",
       "model": "gpt-5.3-codex",
-      "status": "in_progress",
-      "pr": 355
+      "status": "merged",
+      "pr": 355,
+      "merged_at": "2026-03-03T04:15:00Z"
+    },
+    {
+      "issue": 356,
+      "title": "Add Review.positiveNotes and Review.negativeNotes (PHP + TS)",
+      "dispatched_at": "2026-03-03T04:16:00Z",
+      "model": "gpt-5.3-codex",
+      "status": "in_progress"
     }
   ],
   "qc_processed": [8, 37, 57, 72, 165],
@@ -600,13 +605,13 @@
   "last_cycle": {
     "issue": 352,
     "timestamp": "2026-03-03T03:48:00Z",
-    "summary": "Cycle 106: Audit #58 processed (QC parity gap — E2E expanding but parity stuck). Property gap audit found Review.positiveNotes/negativeNotes missing. Dispatched JobPosting beta properties (#354, PR #355). Convention change sweep added to STARTUP_CHECKLIST."
+    "summary": "Cycle 106: Audit #58 processed (QC parity gap). PR #355 merged (JobPosting beta properties — 2 new sub-types). All audit findings resolved. Dispatched #356 (Review positiveNotes/negativeNotes). Schema classes: 88/88 PHP/TS. Convention change sweep added to STARTUP_CHECKLIST."
   },
   "last_eva_comment_check": "2026-03-03T03:48:00Z",
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58],
   "test_count": 321,
   "total_schema_types": 28,
-  "total_sub_types": 101,
-  "total_schema_classes": 100,
+  "total_sub_types": 103,
+  "total_schema_classes": 102,
   "total_enums": 12
 }
