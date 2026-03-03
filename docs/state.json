@@ -283,15 +283,21 @@
         "pr": 317,
         "issue": 316,
         "merged_at": "2026-03-01T22:43:20Z"
+      },
+      {
+        "description": "Add QuantitativeValue.unitText, Dataset.hasPart/isPartOf, Organization ProfilePage fields + fix mixed-array serialization in JsonLdGenerator",
+        "pr": 364,
+        "issue": 363,
+        "merged_at": "2026-03-03T09:31:21Z"
       }
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
     "enum_namespace": "EvaLok\\SchemaOrgJsonLd\\v1\\Enum",
     "in_progress": [
       {
-        "type": "QuantitativeValue.unitText, Dataset.hasPart/isPartOf, Organization ProfilePage fields",
-        "issue": 363,
-        "dispatched_at": "2026-03-03T06:50:00Z",
+        "type": "AggregateRating.itemReviewed",
+        "issue": 370,
+        "dispatched_at": "2026-03-03T09:25:00Z",
         "model": "gpt-5.3-codex"
       }
     ],
@@ -301,8 +307,23 @@
       "note": "ALL 31 Google Search Gallery categories covered (26 original + 5 sub-categories: Merchant listing, Product variants, Loyalty program, Return policy, Shipping policy). Book actions excluded (DataFeed type, not Rich Results Test)."
     },
     "remaining_audit_findings": {
-      "low_priority": [],
-      "note": "All audit findings resolved. JobPosting beta properties added via PR #355 (2026-03-03)."
+      "low_priority": [
+        "QAPage: Question and Answer missing image/video recommended properties",
+        "VacationRental: Review.contentReferenceTime (French listings only, very niche)"
+      ],
+      "note": "Property gap audit complete (all 23 standalone types). Most types at 100% coverage. AggregateRating.itemReviewed fix dispatched (#370)."
+    },
+    "property_gap_audit": {
+      "types_audited": 23,
+      "100_percent_coverage": ["Article", "Recipe", "Event", "Product", "FAQPage", "Organization", "LocalBusiness", "SoftwareApplication", "Movie", "ProfilePage", "BreadcrumbList", "EmployerAggregateRating", "Quiz", "Review", "MathSolver", "SpeakableSpecification"],
+      "gaps_fixed": ["QuantitativeValue.unitText (PR #364)", "Dataset.hasPart/isPartOf (PR #364)", "Organization ProfilePage fields (PR #364)", "VideoObject.potentialAction/SeekToAction (PR #362)", "JobPosting beta properties (PR #355)", "Review.positiveNotes/negativeNotes (PR #357)", "AggregateRating.itemReviewed (dispatched #370)"],
+      "remaining_low_priority": ["QAPage: Question/Answer image+video (recommended)", "VacationRental: Review.contentReferenceTime (French only)"]
+    },
+    "type_classification": {
+      "standalone_testable": 28,
+      "building_block": 58,
+      "enums": 12,
+      "note": "Posted on QC-REQUEST #331. Realistic E2E denominator is ~28, not 88. Parity should still cover all 88."
     },
     "phpstan_level": 9,
     "phpstan_max_assessment": {
@@ -536,9 +557,28 @@
       "status": "merged",
       "pr": 362,
       "merged_at": "2026-03-03T06:50:00Z"
+    },
+    {
+      "issue": 363,
+      "title": "Add missing recommended properties (QuantitativeValue.unitText, Dataset.hasPart/isPartOf, Org ProfilePage fields) + fix mixed-array serialization",
+      "dispatched_at": "2026-03-03T06:50:00Z",
+      "model": "gpt-5.3-codex",
+      "status": "merged",
+      "pr": 364,
+      "merged_at": "2026-03-03T09:31:21Z",
+      "revision_rounds": 1,
+      "note": "Revision required for mixed-array serialization bug in JsonLdGenerator. Fixed per-element type dispatch."
+    },
+    {
+      "issue": 370,
+      "title": "Add AggregateRating.itemReviewed (PHP + TS)",
+      "dispatched_at": "2026-03-03T09:25:00Z",
+      "model": "gpt-5.3-codex",
+      "status": "dispatched",
+      "qc_report": 160
     }
   ],
-  "qc_processed": [8, 37, 57, 72, 165],
+  "qc_processed": [8, 37, 57, 72, 160, 165],
   "qc_requests_pending": [331],
   "qc_status": {
     "request_165": "COMPLETE. QC issue #41 closed. 39/39 E2E pass, 0 errors, 158 warnings. @graph API also validated.",
@@ -623,18 +663,18 @@
     ]
   },
   "copilot_metrics": {
-    "dispatch_to_pr_rate": "22/22 (100%)",
-    "pr_merge_rate": "22/22 (100%)",
-    "note": "All 22 main-orchestrator dispatches produced PRs that were merged. Zero silent failures."
+    "dispatch_to_pr_rate": "23/23 (100%)",
+    "pr_merge_rate": "23/23 (100%)",
+    "note": "All 23 main-orchestrator dispatches produced PRs that were merged. Zero silent failures. #364 required 1 revision round (mixed-array bug)."
   },
   "last_cycle": {
-    "issue": 359,
-    "timestamp": "2026-03-03T06:16:00Z",
-    "summary": "Cycle 107: Audit #60 accepted. Property gap audit (15 types). SeekToAction dispatched → PR #362 merged. Property gaps #363 dispatched. QC parity 49/86."
+    "issue": 367,
+    "timestamp": "2026-03-03T09:15:00Z",
+    "summary": "Cycle 108: PR #364 merged (property gaps + mixed-array fix). QC-REPORT #160 processed (AggregateRating.itemReviewed → #370 dispatched). Audit #62 accepted (type classification → #369). Property gap audit complete (all 23 standalone types audited). QC parity 49/86."
   },
-  "last_eva_comment_check": "2026-03-03T06:16:00Z",
-  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60],
-  "test_count": 332,
+  "last_eva_comment_check": "2026-03-03T09:15:00Z",
+  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62],
+  "test_count": 337,
   "total_schema_types": 28,
   "total_sub_types": 104,
   "total_schema_classes": 103,
