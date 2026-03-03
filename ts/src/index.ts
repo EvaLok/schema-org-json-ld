@@ -137,6 +137,8 @@ export { Review } from "./schema/Review.js";
 export type { ReviewOptions } from "./schema/Review.js";
 export { Schedule } from "./schema/Schedule.js";
 export type { ScheduleOptions } from "./schema/Schedule.js";
+export { SeekToAction } from "./schema/SeekToAction.js";
+export type { SeekToActionOptions } from "./schema/SeekToAction.js";
 export { ServicePeriod } from "./schema/ServicePeriod.js";
 export type { ServicePeriodOptions } from "./schema/ServicePeriod.js";
 export { ShippingConditions } from "./schema/ShippingConditions.js";

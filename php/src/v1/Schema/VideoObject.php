@@ -26,5 +26,6 @@ class VideoObject extends TypedSchema {
 		public null|array $hasPart = null,
 		public null|string $ineligibleRegion = null,
 		public null|BroadcastEvent $publication = null,
+		public null|SeekToAction $potentialAction = null,
 	) {}
 }

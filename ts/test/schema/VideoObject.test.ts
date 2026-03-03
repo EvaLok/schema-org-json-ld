@@ -4,6 +4,7 @@ import { JsonLdGenerator } from "../../src/JsonLdGenerator";
 import { BroadcastEvent } from "../../src/schema/BroadcastEvent";
 import { Clip } from "../../src/schema/Clip";
 import { InteractionCounter } from "../../src/schema/InteractionCounter";
+import { SeekToAction } from "../../src/schema/SeekToAction";
 import { VideoObject } from "../../src/schema/VideoObject";
 
 describe("VideoObject", () => {
@@ -38,6 +39,7 @@ describe("VideoObject", () => {
 			hasPart: null,
 			ineligibleRegion: null,
 			publication: null,
+			potentialAction: null,
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
@@ -52,6 +54,7 @@ describe("VideoObject", () => {
 		expect(obj).not.toHaveProperty("hasPart");
 		expect(obj).not.toHaveProperty("ineligibleRegion");
 		expect(obj).not.toHaveProperty("publication");
+		expect(obj).not.toHaveProperty("potentialAction");
 	});
 
 	it("includes optional fields when set", () => {
@@ -133,5 +136,29 @@ describe("VideoObject", () => {
 		expect(interactionStatistic).toHaveLength(2);
 		expect(interactionStatistic[0]?.["@type"]).toBe("InteractionCounter");
 		expect(interactionStatistic[1]?.["@type"]).toBe("InteractionCounter");
+	});
+
+	it("supports potentialAction as SeekToAction", () => {
+		const schema = new VideoObject({
+			name: "My Video",
+			thumbnailUrl: ["https://example.com/thumb.jpg"],
+			uploadDate: "2026-02-28",
+			potentialAction: new SeekToAction({
+				target: "https://example.com/watch?v=abc&t={seek_to_second_number}",
+				startOffsetInput: "required name=seek_to_second_number",
+			}),
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+		const potentialAction = obj.potentialAction as Record<string, unknown>;
+
+		expect(potentialAction["@type"]).toBe("SeekToAction");
+		expect(potentialAction.target).toBe(
+			"https://example.com/watch?v=abc&t={seek_to_second_number}",
+		);
+		expect(potentialAction["startOffset-input"]).toBe(
+			"required name=seek_to_second_number",
+		);
+		expect(potentialAction).not.toHaveProperty("startOffsetInput");
 	});
 });
