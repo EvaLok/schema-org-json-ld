@@ -17,16 +17,18 @@ Step-by-step procedure for implementing a new schema.org type in this library.
 ## Step 2: Check for dependencies
 
 - Does this type reference other TypedSchema classes?
-- Are they already implemented in `src/v1/Schema/`?
+- Are they already implemented in `php/src/v1/Schema/`?
 - If not, they need to be created too (or the issue should specify using a simpler type like `string` temporarily)
 
 ## Step 3: Create the schema class
 
-File: `src/v1/Schema/{TypeName}.php`
+File: `php/src/v1/Schema/{TypeName}.php`
 
 Template:
 ```php
 <?php
+
+declare(strict_types=1);
 
 namespace EvaLok\SchemaOrgJsonLd\v1\Schema;
 
@@ -56,7 +58,7 @@ Rules:
 
 ## Step 4: Create enum types (if needed)
 
-File: `src/v1/Enum/{EnumName}.php`
+File: `php/src/v1/Enum/{EnumName}.php`
 
 Template:
 ```php
@@ -77,7 +79,7 @@ Rules:
 
 ## Step 5: Write tests
 
-File: `test/unit/{TypeName}Test.php`
+File: `php/test/unit/{TypeName}Test.php`
 
 Must test:
 1. **Minimal construction**: Only required properties, verify JSON output has @context, @type, and required fields
@@ -90,7 +92,7 @@ Always use `JsonLdGenerator::SchemaToJson(schema: $instance)` for serialization 
 
 ## Step 6: Add sample JSON (optional)
 
-File: `test/samples/{TypeName}.json`
+File: `php/test/samples/{TypeName}.json`
 
 Create if the type is complex. Match the expected JSON-LD output format. Used for test assertions via `json_decode(file_get_contents(...))`.
 

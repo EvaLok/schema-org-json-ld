@@ -1,23 +1,36 @@
 # Coding Agent Instructions
 
-You are implementing features for `schema-org-json-ld`, a PHP library that generates schema.org JSON-LD structured data for Google Rich Results.
+You are implementing features for `schema-org-json-ld`, a PHP and TypeScript library that generates schema.org JSON-LD structured data for Google Rich Results.
+
+**For TypeScript work**, also read `AGENTS-ts.md` for TypeScript-specific conventions.
 
 ## Repository Structure
 
 ```
-src/
-  v1/
-    Schema/           # Schema type classes (Product, Offer, Brand, etc.)
-    Enum/             # Backed string enums (ItemAvailability, DayOfWeek, etc.)
-    JsonLdGenerator.php   # Serialization engine
-    TypedSchema.php       # Abstract base class — do NOT modify
-test/
-  unit/               # PHPUnit tests
-  samples/            # Sample JSON-LD output files
+php/
+  src/
+    v1/
+      Schema/           # PHP schema type classes (Product, Offer, Brand, etc.)
+      Enum/             # Backed string enums (ItemAvailability, DayOfWeek, etc.)
+      JsonLdGenerator.php   # Serialization engine
+      TypedSchema.php       # Abstract base class — do NOT modify
+  test/
+    unit/               # PHPUnit tests
+    samples/            # Sample JSON-LD output files
+ts/
+  src/
+    schema/           # TypeScript schema type classes
+    enum/             # TypeScript string enums
+    JsonLdGenerator.ts    # Serialization engine
+    TypedSchema.ts        # Abstract base class — do NOT modify
+    index.ts              # Barrel export
+  test/
+    schema/           # Vitest tests
 ```
 
-- **Namespace**: `EvaLok\SchemaOrgJsonLd`
-- **Autoloading**: PSR-4 via Composer (`src/` maps to namespace root)
+- **PHP namespace**: `EvaLok\SchemaOrgJsonLd`
+- **PHP autoloading**: PSR-4 via Composer (`php/src/` maps to namespace root)
+- **TypeScript package**: `@evabee/schema-org-json-ld`
 - **Default branch**: `master`
 
 ## How Serialization Works
@@ -38,9 +51,9 @@ test/
 
 - **PHP 8.1+** minimum — use modern PHP features
 - **`declare(strict_types=1);`** — required in ALL PHP files, enforced by PHP-CS-Fixer
-- **Tab indentation** — the entire codebase uses tabs (not spaces) for indentation. This applies to all PHP files: class bodies, method bodies, test files, everything. Match the style in existing files like `src/v1/Schema/Brand.php`.
+- **Tab indentation** — the entire codebase uses tabs (not spaces) for indentation. This applies to all PHP files: class bodies, method bodies, test files, everything. Match the style in existing files like `php/src/v1/Schema/Brand.php`.
 - Constructor promotion for all schema data classes
-- Enums (backed string enums) for constrained values — stored in `src/v1/Enum/`
+- Enums (backed string enums) for constrained values — stored in `php/src/v1/Enum/`
 - Nullable parameters with `null|Type` syntax (this is the convention used throughout the existing codebase)
 - No `mixed` types — be explicit
 - Type-hint everything: parameters, return types, properties
@@ -51,13 +64,13 @@ When implementing a new schema.org type:
 
 1. **Check the spec**: Visit `https://schema.org/<TypeName>` for the canonical property list
 2. **Check Google docs**: Visit Google's structured data docs to see which properties are required/recommended for Rich Results
-3. **Create the class** in `src/v1/Schema/` extending `TypedSchema`
+3. **Create the class** in `php/src/v1/Schema/` extending `TypedSchema`
 4. **Set `A_SCHEMA_TYPE`** — override the class constant with the schema.org type name
 5. **Use constructor promotion** — all properties as promoted constructor parameters
 6. **Required params first, optional params last** — optional params default to `null`
 7. **No methods needed** — JsonLdGenerator handles serialization automatically
-8. **Write tests** in `test/unit/` — test the JSON-LD output via `JsonLdGenerator::SchemaToJson()`
-9. **Add sample output** in `test/samples/` if the type is complex enough to warrant it
+8. **Write tests** in `php/test/unit/` — test the JSON-LD output via `JsonLdGenerator::SchemaToJson()`
+9. **Add sample output** in `php/test/samples/` if the type is complex enough to warrant it
 
 ### Reference example — simple type (Brand)
 
