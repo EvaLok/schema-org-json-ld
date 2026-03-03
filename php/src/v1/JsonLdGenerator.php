@@ -115,22 +115,16 @@ class JsonLdGenerator {
 					continue;
 				}
 
-				if ($v[0] instanceof TypedSchema) {
-					/** @var TypedSchema[] $v */
-					foreach ($v as $schema) {
+				foreach ($v as $element) {
+					if ($element instanceof TypedSchema) {
 						$obj[$k][] = self::SchemaToObject(
-							schema: $schema,
+							schema: $element,
 							initialContext: false,
 						);
-					}
-				} else {
-					/** @var array<string|int|float|bool|UnitEnum> $v */
-					foreach ($v as $element) {
-						if (is_string($element) || is_numeric($element) || is_bool($element)) {
-							$obj[$k][] = $element;
-						} elseif ($element instanceof UnitEnum) {
-							$obj[$k][] = $element->value;
-						}
+					} elseif (is_string($element) || is_numeric($element) || is_bool($element)) {
+						$obj[$k][] = $element;
+					} elseif ($element instanceof UnitEnum) {
+						$obj[$k][] = $element->value;
 					}
 				}
 			}
