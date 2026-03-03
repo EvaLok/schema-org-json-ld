@@ -1132,12 +1132,17 @@ $json = JsonLdGenerator::SchemaToJson(schema: $job);
 **TypeScript:**
 
 ```typescript
-import { JobPosting, JsonLdGenerator } from '@evabee/schema-org-json-ld';
+import { JobPosting, JsonLdGenerator, Organization } from '@evabee/schema-org-json-ld';
 
 const job = new JobPosting({
   title: 'Senior PHP Developer',
   description: 'We are looking for an experienced PHP developer to join our team.',
   datePosted: '2026-01-15',
+  hiringOrganization: new Organization({
+    name: 'TechCorp Inc.',
+    url: 'https://techcorp.example.com',
+    logo: 'https://techcorp.example.com/logo.png',
+  }),
 });
 
 const json = JsonLdGenerator.schemaToJson(job);
@@ -1346,11 +1351,19 @@ $json = JsonLdGenerator::SchemaToJson(schema: $mathSolver);
 **TypeScript:**
 
 ```typescript
-import { JsonLdGenerator, MathSolver } from '@evabee/schema-org-json-ld';
+import { JsonLdGenerator, MathSolver, SolveMathAction } from '@evabee/schema-org-json-ld';
 
 const mathSolver = new MathSolver({
   url: 'https://example.com/math-solver',
+  usageInfo: 'https://example.com/math-solver/usage',
+  potentialAction: new SolveMathAction({
+    target: 'https://example.com/math-solver?expression={math_expression}',
+    mathExpressionInput: 'x^2 + 4x + 4 = 0',
+  }),
   name: 'Equation Solver',
+  inLanguage: 'en',
+  learningResourceType: 'Math solver',
+  assesses: ['Algebra', 'Equations'],
 });
 
 const json = JsonLdGenerator.schemaToJson(mathSolver);
@@ -1729,14 +1742,21 @@ $json = JsonLdGenerator::SchemaToJson(schema: $product);
 **TypeScript:**
 
 ```typescript
-import { JsonLdGenerator, Offer, Product } from '@evabee/schema-org-json-ld';
+import { ItemAvailability, JsonLdGenerator, Offer, Product } from '@evabee/schema-org-json-ld';
 
 const product = new Product({
   name: 'Executive Anvil',
   image: ['https://example.com/photos/1x1/photo.jpg'],
   description: "Sleeker than ACME's Classic Anvil, the Executive Anvil is perfect for the business traveler looking for something to drop from a height.",
   sku: '0446310786',
-  offers: [new Offer({ url: 'https://example.com/anvil', priceCurrency: 'USD', price: 119.99 })],
+  offers: [
+    new Offer({
+      url: 'https://example.com/anvil',
+      priceCurrency: 'USD',
+      price: 119.99,
+      availability: ItemAvailability.InStock,
+    }),
+  ],
 });
 
 const json = JsonLdGenerator.schemaToJson(product);
@@ -2005,6 +2025,7 @@ import { JsonLdGenerator, Recipe } from '@evabee/schema-org-json-ld';
 
 const recipe = new Recipe({
   name: "Grandma's Apple Pie",
+  image: ['https://example.com/photos/applepie-1x1.jpg', 'https://example.com/photos/applepie-4x3.jpg'],
 });
 
 const json = JsonLdGenerator.schemaToJson(recipe);
@@ -2158,11 +2179,16 @@ $json = JsonLdGenerator::SchemaToJson(schema: $app);
 **TypeScript:**
 
 ```typescript
-import { AggregateRating, JsonLdGenerator, Offer, SoftwareApplication } from '@evabee/schema-org-json-ld';
+import { AggregateRating, ItemAvailability, JsonLdGenerator, Offer, SoftwareApplication } from '@evabee/schema-org-json-ld';
 
 const app = new SoftwareApplication({
   name: 'CodeHelper Pro',
-  offers: new Offer({ url: 'https://codehelper.example.com/buy', priceCurrency: 'USD', price: 9.99 }),
+  offers: new Offer({
+    url: 'https://codehelper.example.com/buy',
+    priceCurrency: 'USD',
+    price: 9.99,
+    availability: ItemAvailability.InStock,
+  }),
   aggregateRating: new AggregateRating({ ratingValue: 4.6, ratingCount: 8900 }),
 });
 
@@ -2284,7 +2310,7 @@ const article = new Article({
   headline: 'Premium: Advanced PHP Patterns Deep Dive',
   datePublished: '2026-02-01',
   isAccessibleForFree: false,
-  hasPart: new WebPageElement({ isAccessibleForFree: false, cssSelector: '.premium-content' }),
+  hasPart: new WebPageElement(false, '.premium-content'),
 });
 
 const json = JsonLdGenerator.schemaToJson(article);
@@ -2398,7 +2424,7 @@ $json = JsonLdGenerator::SchemaToJson(schema: $rental);
 **TypeScript:**
 
 ```typescript
-import { JsonLdGenerator, VacationRental } from '@evabee/schema-org-json-ld';
+import { Accommodation, BedDetails, JsonLdGenerator, QuantitativeValue, VacationRental } from '@evabee/schema-org-json-ld';
 
 const rental = new VacationRental({
   name: 'Beachside Cottage',
@@ -2406,6 +2432,15 @@ const rental = new VacationRental({
   image: ['https://example.com/rentals/cottage-1.jpg', 'https://example.com/rentals/cottage-2.jpg'],
   latitude: 36.8516,
   longitude: -75.9779,
+  containsPlace: new Accommodation({
+    occupancy: new QuantitativeValue({ value: 4, unitCode: 'C62' }),
+    numberOfBedrooms: 2,
+    numberOfBathroomsTotal: 1,
+    bed: [
+      new BedDetails({ numberOfBeds: 1, typeOfBed: 'King' }),
+      new BedDetails({ numberOfBeds: 2, typeOfBed: 'Twin' }),
+    ],
+  }),
 });
 
 const json = JsonLdGenerator.schemaToJson(rental);
