@@ -667,15 +667,16 @@
       "eva_directive": 329,
       "qc_validation": "SATISFIED. 73/73 standalone parity (100%). Per audit #73, 73 is the correct denominator (88 - 12 enums - 3 building-block-only = 73).",
       "publish_workflow": "publish-npm.yml pushed by Eva (commit f59a531). Uses OIDC provenance, no NPM_TOKEN needed.",
-      "pr_305_status": "Likely superseded. Asked Eva to confirm.",
-      "remaining_actions": ["Eva configures npm trusted publishing (OIDC link)", "Eva creates GitHub Release to trigger publish", "Close PR #305 if confirmed superseded"]
+      "pr_305_status": "CLOSED. Confirmed superseded by Eva (2026-03-03T20:04Z). Branch deleted.",
+      "remaining_actions": ["Eva configures npm trusted publishing (OIDC link)", "Eva creates GitHub Release to trigger publish"],
+      "pre_publish_checkpoint": "NEW (per Eva #401, audit #75): Multi-party sign-off required. Main + QC + audit must all confirm before recommending publish."
     }
   ],
-  "open_questions_for_eva": [304],
+  "open_questions_for_eva": [403],
   "eva_input_issues": {
-    "closed_this_cycle": [396],
-    "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225, 340, 348, 372, 378],
-    "remaining_open": [247, 304, 329]
+    "closed_this_cycle": [400],
+    "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225, 340, 348, 372, 378, 396],
+    "remaining_open": [247, 329, 401]
   },
   "typescript_plan": {
     "status": "approved_executing",
@@ -712,7 +713,7 @@
       {"phase": 1, "name": "TypeScript scaffold", "status": "complete", "issue": 269, "pr": 270, "merged_at": "2026-03-01T08:50:04Z", "ci_verified": "TypeScript CI success on master push (08:50:06Z)"},
       {"phase": 2, "name": "Enum & shared sub-type port", "status": "complete", "dispatch_strategy": "sequential (per audit #29)", "decomposition": {"2a": {"description": "All 12 enums (1 session)", "status": "merged", "issue": 276, "pr": 277, "merged_at": "2026-03-01T09:17:42Z"}, "2b": {"description": "Leaf sub-types batch 1 (9 types)", "status": "merged", "issue": 278, "pr": 279, "merged_at": "2026-03-01T09:26:06Z"}, "2c": {"description": "Leaf sub-types batch 2 (9 types)", "status": "merged", "issue": 280, "pr": 281, "merged_at": "2026-03-01T09:36:17Z"}}},
       {"phase": 3, "name": "Schema type port", "status": "complete", "dispatch_strategy": "sequential (per audit #29)", "decomposition": {"3a": {"description": "Level-0 types (12 types, no schema deps)", "status": "merged", "issue": 282, "pr": 283, "merged_at": "2026-03-01T09:47:23Z"}, "3b": {"description": "Level-1 types (9 types, deps on ported types)", "status": "merged", "issue": 284, "pr": 285, "merged_at": "2026-03-01T10:49:00Z"}, "3c": {"description": "Level-2 types (8 types, deps on L0/L1)", "status": "merged", "issue": 287, "pr": 288, "merged_at": "2026-03-01T11:07:00Z"}, "3d": {"description": "Level 3-5 types (6 types: VideoObject, MathSolver, ShippingService, Offer, Organization, Person)", "status": "merged", "issue": 289, "pr": 290, "merged_at": "2026-03-01T11:19:35Z"}, "3e": {"description": "Level 5-6 types (9 types: EmployerAggregateRating, JobPosting, Certification, ImageObject, Review, Answer, CourseInstance, ProfilePage, Dataset)", "status": "merged", "issue": 291, "pr": 292, "merged_at": "2026-03-01T11:31:02Z"}, "3f": {"description": "Level 7 types (10 types: Question, Comment, Article, Event, SoftwareApplication, Movie, LocalBusiness, Course, Recipe, VacationRental)", "status": "merged", "issue": 293, "pr": 294, "merged_at": "2026-03-01T11:46:07Z"}, "3g": {"description": "Level 8+ types (11 types with inheritance)", "status": "merged", "issue": 295, "pr": 296, "merged_at": "2026-03-01T12:11:00Z"}}},
-      {"phase": 4, "name": "Build, test, publish", "status": "qc_gate_cleared_awaiting_eva", "decomposition": {"4a": {"description": "npm package polish (metadata, README, build verification)", "status": "merged", "issue": 300, "pr": 301, "merged_at": "2026-03-01T12:22:48Z"}, "4b": {"description": "npm publish workflow", "status": "complete_eva_pushed", "note": "Eva pushed publish-npm.yml directly (commit f59a531, OIDC provenance). PR #305 likely superseded. Asked Eva to confirm."}, "4c": {"description": "npm publish (Eva creates GitHub Release to trigger workflow)", "status": "awaiting_eva", "qc_gate": "SATISFIED. 73/73 standalone parity (100%). 0 E2E errors. Class inventory: 88/88.", "eva_directive": "Test thoroughly first before releasing, always."}}}
+      {"phase": 4, "name": "Build, test, publish", "status": "qc_gate_cleared_awaiting_eva", "decomposition": {"4a": {"description": "npm package polish (metadata, README, build verification)", "status": "merged", "issue": 300, "pr": 301, "merged_at": "2026-03-01T12:22:48Z"}, "4b": {"description": "npm publish workflow", "status": "complete_eva_pushed", "note": "Eva pushed publish-npm.yml directly (commit f59a531, OIDC provenance). PR #305 closed per Eva confirmation (cycle 116). Branch deleted."}, "4c": {"description": "npm publish (Eva creates GitHub Release to trigger workflow)", "status": "awaiting_eva", "qc_gate": "SATISFIED. 73/73 standalone parity (100%). 0 E2E errors. Class inventory: 88/88.", "eva_directive": "Test thoroughly first before releasing, always."}}}
     ]
   },
   "release": {
@@ -741,12 +742,12 @@
     "note": "31 dispatches, 31 merged, 0 in-flight. 2 revision rounds total (#364 mixed-array bug, #384 missing required props). Zero silent failures."
   },
   "last_cycle": {
-    "issue": 397,
-    "timestamp": "2026-03-03T19:43:00Z",
-    "summary": "Cycle 115: Acknowledged Eva #396 (Node 22 CI). Dispatched+merged #398/#399 (PHPStan level max). Eva pushed publish-npm.yml (OIDC). PR #305 likely superseded."
+    "issue": 402,
+    "timestamp": "2026-03-03T21:09:00Z",
+    "summary": "Cycle 116: Closed PR #305 + issue #304 per Eva confirmation. Acknowledged Eva #400 (OIDC publishing). Responded to Eva #401 (pre-publish review). Processed audit #75 (verify-build CI) and #76 (QC-ACK stale body). Added multi-party pre-publish checkpoint (step 5.10) and expanded convention sweep to include scripts/. Created workflow-change request #403."
   },
-  "last_eva_comment_check": "2026-03-03T19:43:00Z",
-  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71, 73],
+  "last_eva_comment_check": "2026-03-03T21:09:00Z",
+  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71, 73, 75, 76],
   "test_count": 338,
   "total_schema_types": 28,
   "total_sub_types": 104,
