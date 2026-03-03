@@ -609,16 +609,20 @@
       "title": "Add TypeScript examples to all README usage sections",
       "dispatched_at": "2026-03-03T13:57:00Z",
       "model": "gpt-5.3-codex",
-      "status": "dispatched",
-      "note": "README has 34 PHP examples but only 1 TS example. Adds TS examples to all 25 usage sections + API ref + testing + contributing."
+      "status": "revision_requested",
+      "pr": 384,
+      "revision_rounds": 1,
+      "note": "README has 34 PHP examples but only 1 TS example. 6 examples had missing required constructor properties. Revision requested — Copilot working."
     },
     {
       "issue": 385,
       "title": "Expand edge-case test coverage for 10 standalone schema types (PHP + TS)",
       "dispatched_at": "2026-03-03T13:57:00Z",
       "model": "gpt-5.3-codex",
-      "status": "dispatched",
-      "note": "Follow-up to #376 underdelivered test expansion. ~52 new tests across 10 types in both PHP and TS."
+      "status": "merged",
+      "pr": 386,
+      "merged_at": "2026-03-03T15:27:00Z",
+      "note": "52 new tests across 10 types in both PHP and TS. Minor overlaps with existing tests but genuine edge cases. Merged cycle 112."
     }
   ],
   "qc_processed": [8, 37, 57, 72, 160, 165],
@@ -707,16 +711,16 @@
   },
   "copilot_metrics": {
     "dispatch_to_pr_rate": "29/29 (100%)",
-    "pr_merge_rate": "27/29 (93% — 2 in-flight)",
-    "note": "29 dispatches, 27 merged, 2 in-flight (#383, #385). 1 revision round total (#364 mixed-array bug). Zero silent failures."
+    "pr_merge_rate": "28/29 (97% — 1 in-flight)",
+    "note": "29 dispatches, 28 merged, 1 in-flight (#383 revision). 2 revision rounds total (#364 mixed-array bug, #384 missing required props). Zero silent failures."
   },
   "last_cycle": {
-    "issue": 382,
-    "timestamp": "2026-03-03T13:49:00Z",
-    "summary": "Cycle 111: Proactive improvement cycle. Dispatched #383 (README TS examples — 34 PHP blocks, only 1 TS) and #385 (edge-case test expansion — 52 new tests across 10 types). Both concurrent, no shared files."
+    "issue": 387,
+    "timestamp": "2026-03-03T15:17:00Z",
+    "summary": "Cycle 112: Reviewed and merged PR #386 (52 edge-case tests). Requested revision on PR #384 (6 missing required props in README TS examples). Accepted audit #67 (stale lifecycle sweep) and #68 (denominator fix 86→76). Closed stale #353."
   },
-  "last_eva_comment_check": "2026-03-03T13:49:00Z",
-  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62],
+  "last_eva_comment_check": "2026-03-03T15:17:00Z",
+  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68],
   "test_count": 338,
   "total_schema_types": 28,
   "total_sub_types": 104,
