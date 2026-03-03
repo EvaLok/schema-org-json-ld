@@ -65,7 +65,7 @@ Fetch the PR diff:
 gh pr diff <PR_NUMBER> --repo EvaLok/schema-org-json-ld
 ```
 
-Review checklist:
+### PHP review checklist:
 - [ ] Correct `@type` value in `A_SCHEMA_TYPE`
 - [ ] Required properties match Google Rich Results docs
 - [ ] Constructor uses promotion for all properties
@@ -76,6 +76,21 @@ Review checklist:
 - [ ] Tests cover: minimal output, null omission, full output, nested schemas
 - [ ] Enums use backed string values with schema.org URLs
 - [ ] No modifications to `JsonLdGenerator.php` or `TypedSchema.php`
+
+### TypeScript review checklist:
+- [ ] `static readonly schemaType` matches the schema.org type name
+- [ ] Required properties match Google Rich Results docs (same as PHP)
+- [ ] Options-object constructor pattern used (no positional constructors)
+- [ ] `{TypeName}Options` interface exported alongside class
+- [ ] `public readonly` on all class properties
+- [ ] `Type | null` for optional properties (not `?:` on the class — `?:` is only for options interface)
+- [ ] Optional fields use `?? null` in constructor body
+- [ ] Import paths include `.js` extension
+- [ ] Barrel export added in `ts/src/index.ts`
+- [ ] Tests cover: minimal output, null omission, full output, nested schemas, PHP parity
+- [ ] Enums use string values with full `https://schema.org/` URLs
+- [ ] No modifications to `JsonLdGenerator.ts` or `TypedSchema.ts`
+- [ ] Biome formatting passes (`npx biome check`)
 
 ## Step 5: Merge or request revisions
 

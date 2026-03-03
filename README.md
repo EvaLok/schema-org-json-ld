@@ -121,13 +121,23 @@ The pattern is always the same: instantiate a schema class, pass it to `JsonLdGe
 ### TypeScript / JavaScript
 
 ```typescript
-import { JsonLdGenerator, Product, Brand, Offer } from '@evabee/schema-org-json-ld';
+import {
+  JsonLdGenerator, Product, Brand, Offer, ItemAvailability
+} from '@evabee/schema-org-json-ld';
 
-const product = new Product(
-	'Executive Anvil',
-	[new Offer({ price: '119.99', priceCurrency: 'USD' })],
-	{ brand: new Brand('ACME'), description: 'Sleekest anvil on the market' }
-);
+const product = new Product({
+  name: 'Executive Anvil',
+  image: ['https://example.com/anvil.jpg'],
+  description: 'Sleekest anvil on the market',
+  sku: 'ANVIL-001',
+  offers: [new Offer({
+    url: 'https://example.com/anvil',
+    priceCurrency: 'USD',
+    price: 119.99,
+    availability: ItemAvailability.InStock,
+  })],
+  brand: new Brand({ name: 'ACME' }),
+});
 
 const jsonLd = JsonLdGenerator.schemaToJson(product);
 // Returns a JSON-LD string

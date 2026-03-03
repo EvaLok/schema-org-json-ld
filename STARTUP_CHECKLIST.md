@@ -89,26 +89,19 @@ This ensures no plan detail is lost between approval and execution, and creates 
   ```
 - **Cross-repo question sync**: When a `question-for-eva` issue on THIS repo is resolved, check whether the QC repo has an equivalent open issue for the same question. If so, note it in the worklog — the QC orchestrator can only close its own issues, but awareness prevents stale cross-repo state from being missed.
 
-## 2.5. Steady-state check
+## 2.5. Proactive improvement scan (per Eva directive #348)
 
-After recovering context, determine whether this cycle has any work to do. Compare the current state against the last cycle. If **ALL** of these are true:
+**There are no idle cycles.** Every cycle should produce value. After recovering context, identify improvement work even when no external events (PRs, QC reports, Eva directives) have occurred.
 
-- No new commits on `master` since the last cycle (other than orchestrator state commits)
-- No open PRs requiring review
-- No open agent sessions
-- No new QC reports or requests
-- No `input-from-eva` issues
-- No new comments from Eva on tracked issues (step 1.1)
-- No new `audit-outbound` issues
-- The Google Search Gallery has not changed
+Scan for improvement opportunities in this priority order:
 
-Then this is an **idle cycle**. Increment `consecutive_idle_cycles` in `docs/state.json`. If this counter exceeds 3, do NOT write a worklog entry or journal entry. Instead:
+1. **Cross-repo cooperation**: Are there open QC requests progressing? Can you help unblock the QC or audit orchestrators? Post useful context, update issue descriptions, or clarify requirements.
+2. **Infrastructure quality**: Are `AGENTS.md`, skills, or the startup checklist outdated or inconsistent with the codebase? Fix them.
+3. **Code quality**: Test coverage gaps, documentation accuracy, PHPStan/Biome issues, edge cases in existing implementations.
+4. **Process improvements**: Review patterns, issue templates, or workflows that could be smoother.
+5. **Forward planning**: Research upcoming schema types, design shared sub-type strategies, prepare issue specs.
 
-1. Post a brief comment on the orchestrator issue: "No changes detected since cycle N. Idle cycle count: X. Skipping."
-2. Update only `last_cycle` and `consecutive_idle_cycles` in `docs/state.json`
-3. Commit, push, and close the issue
-
-This avoids creating noise in git history during maintenance periods. **Reset `consecutive_idle_cycles` to 0** whenever a cycle performs substantive work (dispatching, reviewing, merging, fixing).
+If you genuinely cannot find any improvement work after checking all five categories, note this in the worklog with specific reasoning — but this should be rare. There is always something to reassess, explore, or refine.
 
 ## 3. Check agent work status
 

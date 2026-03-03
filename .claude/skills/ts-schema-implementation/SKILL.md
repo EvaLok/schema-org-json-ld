@@ -36,7 +36,7 @@ import { TypeName } from '../../src/schema/TypeName';
 
 describe('TypeName', () => {
   it('produces minimal JSON-LD output with required fields only', () => {
-    const schema = new TypeName('required-value');
+    const schema = new TypeName({ requiredProp: 'required-value' });
     const json = JsonLdGenerator.schemaToJson(schema);
     const obj = JSON.parse(json);
 
@@ -46,7 +46,7 @@ describe('TypeName', () => {
   });
 
   it('omits optional fields when null', () => {
-    const schema = new TypeName('required-value');
+    const schema = new TypeName({ requiredProp: 'required-value' });
     const json = JsonLdGenerator.schemaToJson(schema);
     const obj = JSON.parse(json);
 
@@ -54,7 +54,10 @@ describe('TypeName', () => {
   });
 
   it('includes all fields when set', () => {
-    const schema = new TypeName('required-value', 'optional-value');
+    const schema = new TypeName({
+      requiredProp: 'required-value',
+      optionalProp: 'optional-value',
+    });
     const json = JsonLdGenerator.schemaToJson(schema);
     const obj = JSON.parse(json);
 
@@ -62,8 +65,11 @@ describe('TypeName', () => {
   });
 
   it('serializes nested schemas correctly', () => {
-    const nested = new NestedType('nested-value');
-    const schema = new TypeName('required-value', null, nested);
+    const nested = new NestedType({ name: 'nested-value' });
+    const schema = new TypeName({
+      requiredProp: 'required-value',
+      nestedProp: nested,
+    });
     const json = JsonLdGenerator.schemaToJson(schema);
     const obj = JSON.parse(json);
 
@@ -72,7 +78,10 @@ describe('TypeName', () => {
   });
 
   it('serializes enums to schema.org URLs', () => {
-    const schema = new TypeName('required-value', null, null, SomeEnum.Value);
+    const schema = new TypeName({
+      requiredProp: 'required-value',
+      enumProp: SomeEnum.Value,
+    });
     const json = JsonLdGenerator.schemaToJson(schema);
     const obj = JSON.parse(json);
 
@@ -93,44 +102,16 @@ Must test:
 
 File: `ts/src/schema/{TypeName}.ts`
 
-**First, count optional properties.** This determines which constructor pattern to use:
-- **≤5 optional properties**: Use positional constructor parameters
-- **>5 optional properties**: Use an options object constructor
-
-### Pattern A: Positional constructor (≤5 optional properties)
+**ALL schema classes use the options-object constructor pattern.** This is a uniform convention — no exceptions, regardless of how many properties the class has. This matches PHP's named parameter ergonomics and eliminates positional argument errors.
 
 ```typescript
-import { TypedSchema } from '../TypedSchema';
-
-export class TypeName extends TypedSchema {
-  static readonly schemaType = 'TypeName';
-
-  constructor(
-    // Required properties first (no default value)
-    public readonly requiredProp: string,
-    // Optional properties last (default to null)
-    public readonly optionalProp: string | null = null,
-    public readonly nestedProp: NestedType | null = null,
-    public readonly enumProp: SomeEnum | null = null,
-  ) {
-    super();
-  }
-}
-```
-
-### Pattern B: Options object constructor (>5 optional properties)
-
-PHP has named parameters (`new Recipe(name: 'Cake', cookTime: 'PT1H')`). TypeScript only has positional args. An options object provides the same ergonomics:
-
-```typescript
-import { TypedSchema } from '../TypedSchema';
+import { TypedSchema } from '../TypedSchema.js';
 
 export interface TypeNameOptions {
   requiredProp: string;
   optionalProp?: string | null;
   nestedProp?: NestedType | null;
   enumProp?: SomeEnum | null;
-  // ... more optional properties
 }
 
 export class TypeName extends TypedSchema {
@@ -154,15 +135,17 @@ export class TypeName extends TypedSchema {
 The options interface:
 - Is exported alongside the class (named `{TypeName}Options`)
 - Uses `?:` for optional fields (this is the interface contract)
-- Required fields have no `?:`
+- Required fields have no `?:` — they are mandatory in the options object
+- Optional fields default to `null` via `?? null` in the constructor body
 
-Rules (both patterns):
+Rules:
 - Extend `TypedSchema`
 - Set `static readonly schemaType` to the exact schema.org type name
 - Use `public readonly` for all properties
 - Required properties have no default value, optional properties default to `null`
 - Use `Type | null` union syntax for class properties (NOT `?:` on the class)
-- For array properties, use `readonly Type[]` with default `= []`
+- For array properties, use `readonly Type[]` — optional arrays default to `null` (not `[]`)
+- Import paths must include `.js` extension (ESM convention)
 - Do NOT add serialization methods — `JsonLdGenerator` handles everything
 - Do NOT modify `JsonLdGenerator.ts` or `TypedSchema.ts` unless the issue specifically asks
 
@@ -234,4 +217,5 @@ Compare your TypeScript JSON-LD output against the PHP version:
 8. **Forgetting to update index.ts** — all new public types must be exported from the barrel
 9. **Writing tests after implementation** — write tests FIRST (TDD), then implement to make them pass
 10. **Mismatched property names vs PHP** — check the PHP implementation to ensure property names are identical
-11. **Using positional constructor for large types** — if a type has >5 optional properties, use an options object constructor. Positional constructors with many `null` arguments are unusable. See Step 4 for the threshold rule.
+11. **Using positional constructor parameters** — ALL classes use options-object constructors, no exceptions. Even simple one-property types like `Brand` use `new Brand({ name: 'ACME' })`, not `new Brand('ACME')`.
+12. **Omitting `.js` extension in imports** — ESM requires `.js` extensions: `import { Foo } from './Foo.js'`
