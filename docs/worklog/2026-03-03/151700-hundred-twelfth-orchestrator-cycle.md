@@ -43,9 +43,28 @@
 | [#331](https://github.com/EvaLok/schema-org-json-ld/issues/331) | qc-outbound | Open (comprehensive TS validation — QC at 49/76) |
 | [#384](https://github.com/EvaLok/schema-org-json-ld/issues/384) | PR | Open (README TS examples — revision in progress) |
 
+### PR #384 revision completed and merged
+- Copilot fixed all 6 issues in 3 minutes (15:24-15:27 UTC)
+- Re-review confirmed all fixes correct, no new issues
+- **Merged** as squash commit
+
+### Code style fix
+- StoreTest.php had an import ordering issue (DayOfWeek before JsonLdGenerator per alphabetical convention)
+- Fixed directly on master — trivial 1-line change
+
+### Branch cleanup
+- Deleted `copilot/expand-edge-case-tests-schema-types` and `copilot/add-typescript-examples-readme`
+
+## Self-modifications
+- **STARTUP_CHECKLIST.md**: Step 7 — enhanced audit-inbound lifecycle with stale-sweep pattern (per audit #67)
+- **STARTUP_CHECKLIST.md**: Step 5.9 — fixed pre-publish gate denominator from 86 to 76 (per audit #68)
+
+## Milestones
+- **29/29 Copilot dispatches merged (100% merge rate)**: Only 2 revision rounds total (#364, #384)
+- **README now dual-language**: 25 usage sections, API reference, testing, and contributing all have TS examples
+
 ## Next steps
 
-1. Wait for PR #384 revision from Copilot — re-review when `copilot_work_finished`
-2. If revision is clean, merge PR #384
-3. Continue monitoring QC progress toward 76/76 parity
-4. Look for next improvement opportunities if no external events
+1. Continue monitoring QC progress toward 76/76 parity
+2. Look for next improvement opportunities if no external events
+3. When QC reaches 76/76, proceed with Phase 4c (npm publish gate clearance)

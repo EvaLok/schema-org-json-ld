@@ -609,10 +609,11 @@
       "title": "Add TypeScript examples to all README usage sections",
       "dispatched_at": "2026-03-03T13:57:00Z",
       "model": "gpt-5.3-codex",
-      "status": "revision_requested",
+      "status": "merged",
       "pr": 384,
+      "merged_at": "2026-03-03T15:37:00Z",
       "revision_rounds": 1,
-      "note": "README has 34 PHP examples but only 1 TS example. 6 examples had missing required constructor properties. Revision requested — Copilot working."
+      "note": "README has 34 PHP examples but only 1 TS example. 6 examples had missing required constructor properties. Fixed in revision. Merged cycle 112."
     },
     {
       "issue": 385,
@@ -711,13 +712,13 @@
   },
   "copilot_metrics": {
     "dispatch_to_pr_rate": "29/29 (100%)",
-    "pr_merge_rate": "28/29 (97% — 1 in-flight)",
-    "note": "29 dispatches, 28 merged, 1 in-flight (#383 revision). 2 revision rounds total (#364 mixed-array bug, #384 missing required props). Zero silent failures."
+    "pr_merge_rate": "29/29 (100%)",
+    "note": "29 dispatches, 29 merged, 0 in-flight. 2 revision rounds total (#364 mixed-array bug, #384 missing required props). Zero silent failures."
   },
   "last_cycle": {
     "issue": 387,
     "timestamp": "2026-03-03T15:17:00Z",
-    "summary": "Cycle 112: Reviewed and merged PR #386 (52 edge-case tests). Requested revision on PR #384 (6 missing required props in README TS examples). Accepted audit #67 (stale lifecycle sweep) and #68 (denominator fix 86→76). Closed stale #353."
+    "summary": "Cycle 112: Reviewed and merged PR #386 (52 edge-case tests) + PR #384 (README TS examples, 1 revision round). Accepted audit #67 (stale lifecycle sweep) and #68 (denominator fix 86→76). Fixed StoreTest.php import ordering. Closed stale #353. All 29 dispatches merged (100%)."
   },
   "last_eva_comment_check": "2026-03-03T15:17:00Z",
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68],
