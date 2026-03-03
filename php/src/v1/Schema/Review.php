@@ -16,5 +16,7 @@ class Review extends TypedSchema {
 		public null|string $datePublished = null,
 		public null|string $name = null,
 		public null|TypedSchema $itemReviewed = null,
+		public null|ItemList $positiveNotes = null,
+		public null|ItemList $negativeNotes = null,
 	) {}
 }

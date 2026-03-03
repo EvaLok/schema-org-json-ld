@@ -1,4 +1,5 @@
 import { TypedSchema } from "../TypedSchema.js";
+import type { ItemList } from "./ItemList.js";
 import type { Organization } from "./Organization.js";
 import type { Person } from "./Person.js";
 import type { Rating } from "./Rating.js";
@@ -10,6 +11,8 @@ export interface ReviewOptions {
 	datePublished?: string | null;
 	name?: string | null;
 	itemReviewed?: TypedSchema | null;
+	positiveNotes?: ItemList | null;
+	negativeNotes?: ItemList | null;
 }
 
 export class Review extends TypedSchema {
@@ -21,6 +24,8 @@ export class Review extends TypedSchema {
 	public readonly datePublished: string | null;
 	public readonly name: string | null;
 	public readonly itemReviewed: TypedSchema | null;
+	public readonly positiveNotes: ItemList | null;
+	public readonly negativeNotes: ItemList | null;
 
 	constructor(options: ReviewOptions) {
 		super();
@@ -30,5 +35,7 @@ export class Review extends TypedSchema {
 		this.datePublished = options.datePublished ?? null;
 		this.name = options.name ?? null;
 		this.itemReviewed = options.itemReviewed ?? null;
+		this.positiveNotes = options.positiveNotes ?? null;
+		this.negativeNotes = options.negativeNotes ?? null;
 	}
 }
