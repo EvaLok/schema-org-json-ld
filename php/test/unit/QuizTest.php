@@ -78,4 +78,35 @@ final class QuizTest extends TestCase {
 		$this->assertEquals('Basic Addition Flashcards', $obj->name);
 		$this->assertEquals('Simple flashcards for addition practice.', $obj->description);
 	}
+
+	public function testMultipleQuestionsSerializeInOrder(): void {
+		$schema = new Quiz(
+			hasPart: [
+				new Question(name: 'What is 2 + 2?', acceptedAnswer: new Answer(text: '4')),
+				new Question(name: 'What is 3 + 3?', acceptedAnswer: new Answer(text: '6')),
+			],
+		);
+		$obj = json_decode(JsonLdGenerator::SchemaToJson(schema: $schema));
+
+		$this->assertCount(2, $obj->hasPart);
+		$this->assertEquals('What is 2 + 2?', $obj->hasPart[0]->name);
+		$this->assertEquals('6', $obj->hasPart[1]->acceptedAnswer->text);
+	}
+
+	public function testEducationalAlignmentIncludesTargetUrl(): void {
+		$schema = new Quiz(
+			hasPart: [
+				new Question(name: 'What is 2 + 2?', acceptedAnswer: new Answer(text: '4')),
+			],
+			educationalAlignment: new AlignmentObject(
+				alignmentType: 'assesses',
+				targetName: 'Addition basics',
+				targetUrl: 'https://example.com/curriculum/addition',
+			),
+		);
+		$obj = json_decode(JsonLdGenerator::SchemaToJson(schema: $schema));
+
+		$this->assertEquals('assesses', $obj->educationalAlignment->alignmentType);
+		$this->assertEquals('https://example.com/curriculum/addition', $obj->educationalAlignment->targetUrl);
+	}
 }

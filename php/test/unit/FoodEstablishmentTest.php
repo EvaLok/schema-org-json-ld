@@ -70,4 +70,41 @@ final class FoodEstablishmentTest extends TestCase {
 		$this->assertEquals('GeoCoordinates', $obj->geo->{'@type'});
 		$this->assertEquals('OpeningHoursSpecification', $obj->openingHoursSpecification[0]->{'@type'});
 	}
+
+	public function testMenuAndServesCuisine(): void {
+		$foodEstablishment = new FoodEstablishment(
+			name: 'Example Diner',
+			address: new PostalAddress(streetAddress: '123 Main Street'),
+			menu: 'https://example.com/menu',
+			servesCuisine: 'Italian',
+		);
+		$obj = json_decode(JsonLdGenerator::SchemaToJson(schema: $foodEstablishment));
+
+		$this->assertEquals('https://example.com/menu', $obj->menu);
+		$this->assertEquals('Italian', $obj->servesCuisine);
+	}
+
+	public function testOpeningHoursAcrossMultipleDays(): void {
+		$foodEstablishment = new FoodEstablishment(
+			name: 'Example Diner',
+			address: new PostalAddress(streetAddress: '123 Main Street'),
+			openingHoursSpecification: [
+				new OpeningHoursSpecification(
+					dayOfWeek: DayOfWeek::Monday,
+					opens: '09:00',
+					closes: '18:00',
+				),
+				new OpeningHoursSpecification(
+					dayOfWeek: DayOfWeek::Tuesday,
+					opens: '09:00',
+					closes: '18:00',
+				),
+			],
+		);
+		$obj = json_decode(JsonLdGenerator::SchemaToJson(schema: $foodEstablishment));
+
+		$this->assertCount(2, $obj->openingHoursSpecification);
+		$this->assertEquals('https://schema.org/Monday', $obj->openingHoursSpecification[0]->dayOfWeek);
+		$this->assertEquals('https://schema.org/Tuesday', $obj->openingHoursSpecification[1]->dayOfWeek);
+	}
 }

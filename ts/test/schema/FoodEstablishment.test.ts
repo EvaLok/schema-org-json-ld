@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { JsonLdGenerator } from "../../src/JsonLdGenerator";
+import { DayOfWeek } from "../../src/enum/DayOfWeek";
 import { FoodEstablishment } from "../../src/schema/FoodEstablishment";
+import { OpeningHoursSpecification } from "../../src/schema/OpeningHoursSpecification";
 import { PostalAddress } from "../../src/schema/PostalAddress";
 
 describe("FoodEstablishment", () => {
@@ -58,5 +60,49 @@ describe("FoodEstablishment", () => {
 			JsonLdGenerator.schemaToJson(stringSchema),
 		) as Record<string, unknown>;
 		expect(stringObj.acceptsReservations).toBe("Reservations required");
+	});
+
+	it("serializes menu and servesCuisine together", () => {
+		const schema = new FoodEstablishment({
+			name: "Cafe",
+			address,
+			menu: "https://example.com/menu",
+			servesCuisine: "Italian",
+		});
+		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
+			string,
+			unknown
+		>;
+
+		expect(obj.menu).toBe("https://example.com/menu");
+		expect(obj.servesCuisine).toBe("Italian");
+	});
+
+	it("serializes opening hours across multiple days", () => {
+		const schema = new FoodEstablishment({
+			name: "Cafe",
+			address,
+			openingHoursSpecification: [
+				new OpeningHoursSpecification({
+					dayOfWeek: DayOfWeek.Monday,
+					opens: "09:00",
+					closes: "18:00",
+				}),
+				new OpeningHoursSpecification({
+					dayOfWeek: DayOfWeek.Tuesday,
+					opens: "09:00",
+					closes: "18:00",
+				}),
+			],
+		});
+		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
+			string,
+			unknown
+		>;
+		const hours = obj.openingHoursSpecification as Record<string, unknown>[];
+
+		expect(hours).toHaveLength(2);
+		expect(hours[0]?.dayOfWeek).toBe("https://schema.org/Monday");
+		expect(hours[1]?.dayOfWeek).toBe("https://schema.org/Tuesday");
 	});
 });

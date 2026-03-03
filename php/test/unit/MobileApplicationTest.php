@@ -72,4 +72,66 @@ final class MobileApplicationTest extends TestCase {
 		$this->assertEquals('Example app description', $obj->description);
 		$this->assertEquals('https://example.com/screenshot.png', $obj->screenshot);
 	}
+
+	public function testFreeAppOfferWithZeroPrice(): void {
+		$schema = new MobileApplication(
+			name: 'Free Mobile App',
+			offers: new Offer(
+				url: 'https://example.com/free-mobile',
+				priceCurrency: 'USD',
+				price: 0,
+				itemCondition: OfferItemCondition::NewCondition,
+				availability: ItemAvailability::InStock,
+			),
+			aggregateRating: null,
+		);
+		$obj = json_decode(JsonLdGenerator::SchemaToJson(schema: $schema));
+
+		$this->assertEquals(0, $obj->offers->price);
+		$this->assertEquals('USD', $obj->offers->priceCurrency);
+	}
+
+	public function testAggregateRatingAndNestedReview(): void {
+		$schema = new MobileApplication(
+			name: 'Rated Mobile App',
+			offers: new Offer(
+				url: 'https://example.com/mobile',
+				priceCurrency: 'USD',
+				price: 0,
+				itemCondition: OfferItemCondition::NewCondition,
+				availability: ItemAvailability::InStock,
+			),
+			aggregateRating: new AggregateRating(ratingValue: 4.9, ratingCount: 2500),
+			review: new Review(
+				author: 'Alex Reviewer',
+				reviewRating: new Rating(ratingValue: 5),
+				reviewBody: 'Great app experience.',
+			),
+		);
+		$obj = json_decode(JsonLdGenerator::SchemaToJson(schema: $schema));
+
+		$this->assertEquals(4.9, $obj->aggregateRating->ratingValue);
+		$this->assertEquals('Great app experience.', $obj->review->reviewBody);
+		$this->assertEquals(5, $obj->review->reviewRating->ratingValue);
+	}
+
+	public function testApplicationCategoryAndOperatingSystem(): void {
+		$schema = new MobileApplication(
+			name: 'Business Mobile App',
+			offers: new Offer(
+				url: 'https://example.com/mobile',
+				priceCurrency: 'USD',
+				price: 0,
+				itemCondition: OfferItemCondition::NewCondition,
+				availability: ItemAvailability::InStock,
+			),
+			aggregateRating: null,
+			applicationCategory: 'BusinessApplication',
+			operatingSystem: 'iOS 17+',
+		);
+		$obj = json_decode(JsonLdGenerator::SchemaToJson(schema: $schema));
+
+		$this->assertEquals('BusinessApplication', $obj->applicationCategory);
+		$this->assertEquals('iOS 17+', $obj->operatingSystem);
+	}
 }
