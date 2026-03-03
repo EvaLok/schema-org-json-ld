@@ -661,11 +661,13 @@
   },
   "blockers": [
     {
-      "description": "Phase 4b/4c blocked: Eva must merge PR #305 (npm publish workflow) and configure NPM_TOKEN secret",
+      "description": "Phase 4c: npm publish requires Eva to create a GitHub Release (triggers publish-npm.yml workflow)",
       "qc_request": 331,
       "eva_directive": 329,
       "qc_validation": "SATISFIED. 73/73 standalone parity (100%). Per audit #73, 73 is the correct denominator (88 - 12 enums - 3 building-block-only = 73).",
-      "remaining_actions": ["Eva merges PR #305", "Eva configures NPM_TOKEN secret (#304)", "Eva approves publish"]
+      "publish_workflow": "publish-npm.yml pushed by Eva (commit f59a531). Uses OIDC provenance, no NPM_TOKEN needed.",
+      "pr_305_status": "Likely superseded. Asked Eva to confirm.",
+      "remaining_actions": ["Eva configures npm trusted publishing (OIDC link)", "Eva creates GitHub Release to trigger publish", "Close PR #305 if confirmed superseded"]
     }
   ],
   "open_questions_for_eva": [304],
@@ -709,7 +711,7 @@
       {"phase": 1, "name": "TypeScript scaffold", "status": "complete", "issue": 269, "pr": 270, "merged_at": "2026-03-01T08:50:04Z", "ci_verified": "TypeScript CI success on master push (08:50:06Z)"},
       {"phase": 2, "name": "Enum & shared sub-type port", "status": "complete", "dispatch_strategy": "sequential (per audit #29)", "decomposition": {"2a": {"description": "All 12 enums (1 session)", "status": "merged", "issue": 276, "pr": 277, "merged_at": "2026-03-01T09:17:42Z"}, "2b": {"description": "Leaf sub-types batch 1 (9 types)", "status": "merged", "issue": 278, "pr": 279, "merged_at": "2026-03-01T09:26:06Z"}, "2c": {"description": "Leaf sub-types batch 2 (9 types)", "status": "merged", "issue": 280, "pr": 281, "merged_at": "2026-03-01T09:36:17Z"}}},
       {"phase": 3, "name": "Schema type port", "status": "complete", "dispatch_strategy": "sequential (per audit #29)", "decomposition": {"3a": {"description": "Level-0 types (12 types, no schema deps)", "status": "merged", "issue": 282, "pr": 283, "merged_at": "2026-03-01T09:47:23Z"}, "3b": {"description": "Level-1 types (9 types, deps on ported types)", "status": "merged", "issue": 284, "pr": 285, "merged_at": "2026-03-01T10:49:00Z"}, "3c": {"description": "Level-2 types (8 types, deps on L0/L1)", "status": "merged", "issue": 287, "pr": 288, "merged_at": "2026-03-01T11:07:00Z"}, "3d": {"description": "Level 3-5 types (6 types: VideoObject, MathSolver, ShippingService, Offer, Organization, Person)", "status": "merged", "issue": 289, "pr": 290, "merged_at": "2026-03-01T11:19:35Z"}, "3e": {"description": "Level 5-6 types (9 types: EmployerAggregateRating, JobPosting, Certification, ImageObject, Review, Answer, CourseInstance, ProfilePage, Dataset)", "status": "merged", "issue": 291, "pr": 292, "merged_at": "2026-03-01T11:31:02Z"}, "3f": {"description": "Level 7 types (10 types: Question, Comment, Article, Event, SoftwareApplication, Movie, LocalBusiness, Course, Recipe, VacationRental)", "status": "merged", "issue": 293, "pr": 294, "merged_at": "2026-03-01T11:46:07Z"}, "3g": {"description": "Level 8+ types (11 types with inheritance)", "status": "merged", "issue": 295, "pr": 296, "merged_at": "2026-03-01T12:11:00Z"}}},
-      {"phase": 4, "name": "Build, test, publish", "status": "qc_gate_cleared_awaiting_eva", "decomposition": {"4a": {"description": "npm package polish (metadata, README, build verification)", "status": "merged", "issue": 300, "pr": 301, "merged_at": "2026-03-01T12:22:48Z"}, "4b": {"description": "npm publish workflow (needs Eva)", "status": "awaiting_eva", "issue": 303, "pr": 305, "note": "QC validation gate SATISFIED (73/73 parity per audit #73). Eva must merge PR #305 and configure NPM_TOKEN (#304)."}, "4c": {"description": "npm publish (after Eva merges 4b + NPM_TOKEN configured)", "status": "awaiting_eva", "qc_gate": "SATISFIED. 73/73 standalone parity (100%). 0 E2E errors. Class inventory: 88/88.", "eva_directive": "Test thoroughly first before releasing, always."}}}
+      {"phase": 4, "name": "Build, test, publish", "status": "qc_gate_cleared_awaiting_eva", "decomposition": {"4a": {"description": "npm package polish (metadata, README, build verification)", "status": "merged", "issue": 300, "pr": 301, "merged_at": "2026-03-01T12:22:48Z"}, "4b": {"description": "npm publish workflow", "status": "complete_eva_pushed", "note": "Eva pushed publish-npm.yml directly (commit f59a531, OIDC provenance). PR #305 likely superseded. Asked Eva to confirm."}, "4c": {"description": "npm publish (Eva creates GitHub Release to trigger workflow)", "status": "awaiting_eva", "qc_gate": "SATISFIED. 73/73 standalone parity (100%). 0 E2E errors. Class inventory: 88/88.", "eva_directive": "Test thoroughly first before releasing, always."}}}
     ]
   },
   "release": {
