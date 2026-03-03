@@ -14,6 +14,8 @@ class Question extends TypedSchema {
 		public null|Answer $acceptedAnswer = null,
 		/** @var Answer[] $suggestedAnswer */
 		public null|array $suggestedAnswer = null,
+		public null|string|ImageObject $image = null,
+		public null|string|VideoObject $video = null,
 		public null|int $answerCount = null,
 		public null|string $text = null,
 		public null|int $upvoteCount = null,

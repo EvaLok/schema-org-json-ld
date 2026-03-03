@@ -6,7 +6,9 @@ namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Answer;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\ImageObject;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Question;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\VideoObject;
 use PHPUnit\Framework\TestCase;
 
 final class QuestionTest extends TestCase {
@@ -35,5 +37,43 @@ final class QuestionTest extends TestCase {
 		$obj = json_decode($json);
 
 		$this->assertEquals('Flashcard', $obj->eduQuestionType);
+	}
+
+	public function testImageAndVideoAreOmittedWhenNull(): void {
+		$schema = new Question(name: 'What is TypeScript?');
+		$obj = json_decode(JsonLdGenerator::SchemaToJson(schema: $schema));
+
+		$this->assertFalse(property_exists($obj, 'image'));
+		$this->assertFalse(property_exists($obj, 'video'));
+	}
+
+	public function testImageAndVideoSerializeAsUrls(): void {
+		$schema = new Question(
+			name: 'What is TypeScript?',
+			image: 'https://example.com/question.jpg',
+			video: 'https://example.com/question.mp4',
+		);
+		$obj = json_decode(JsonLdGenerator::SchemaToJson(schema: $schema));
+
+		$this->assertEquals('https://example.com/question.jpg', $obj->image);
+		$this->assertEquals('https://example.com/question.mp4', $obj->video);
+	}
+
+	public function testImageAndVideoSerializeAsObjects(): void {
+		$schema = new Question(
+			name: 'What is TypeScript?',
+			image: new ImageObject(contentUrl: 'https://example.com/question.jpg'),
+			video: new VideoObject(
+				name: 'Question video',
+				thumbnailUrl: ['https://example.com/thumb.jpg'],
+				uploadDate: '2026-03-01',
+			),
+		);
+		$obj = json_decode(JsonLdGenerator::SchemaToJson(schema: $schema));
+
+		$this->assertEquals('ImageObject', $obj->image->{'@type'});
+		$this->assertEquals('https://example.com/question.jpg', $obj->image->contentUrl);
+		$this->assertEquals('VideoObject', $obj->video->{'@type'});
+		$this->assertEquals('Question video', $obj->video->name);
 	}
 }
