@@ -15,7 +15,13 @@ describe("OpeningHoursSpecification", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new OpeningHoursSpecification({dayOfWeek: null, opens: null, closes: null, validFrom: null, validThrough: null});
+		const schema = new OpeningHoursSpecification({
+			dayOfWeek: null,
+			opens: null,
+			closes: null,
+			validFrom: null,
+			validThrough: null,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -27,7 +33,13 @@ describe("OpeningHoursSpecification", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new OpeningHoursSpecification({dayOfWeek: DayOfWeek.Monday, opens: "09:00", closes: "17:00", validFrom: "2026-01-01", validThrough: "2026-12-31"});
+		const schema = new OpeningHoursSpecification({
+			dayOfWeek: DayOfWeek.Monday,
+			opens: "09:00",
+			closes: "17:00",
+			validFrom: "2026-01-01",
+			validThrough: "2026-12-31",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

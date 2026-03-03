@@ -8,7 +8,7 @@ import { PostalAddress } from "../../src/schema/PostalAddress";
 
 describe("Place", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new Place({name: "Googleplex"});
+		const schema = new Place({ name: "Googleplex" });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -18,7 +18,7 @@ describe("Place", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new Place({name: "Googleplex", address: null, geo: null});
+		const schema = new Place({ name: "Googleplex", address: null, geo: null });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -27,7 +27,11 @@ describe("Place", () => {
 	});
 
 	it("supports geo as GeoCoordinates", () => {
-		const schema = new Place({name: "Googleplex", address: null, geo: new GeoCoordinates({ latitude: 37.422, longitude: -122.084 })});
+		const schema = new Place({
+			name: "Googleplex",
+			address: null,
+			geo: new GeoCoordinates({ latitude: 37.422, longitude: -122.084 }),
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const geo = obj.geo as Record<string, unknown>;
@@ -38,7 +42,13 @@ describe("Place", () => {
 	});
 
 	it("supports geo as GeoShape and includes address when set", () => {
-		const schema = new Place({name: "Googleplex", address: new PostalAddress({ streetAddress: "1600 Amphitheatre Parkway" }), geo: new GeoShape({ box: "37.42242 -122.08585 37.42242 -122.08585" })});
+		const schema = new Place({
+			name: "Googleplex",
+			address: new PostalAddress({
+				streetAddress: "1600 Amphitheatre Parkway",
+			}),
+			geo: new GeoShape({ box: "37.42242 -122.08585 37.42242 -122.08585" }),
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const address = obj.address as Record<string, unknown>;

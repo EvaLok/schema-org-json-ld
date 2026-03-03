@@ -8,7 +8,10 @@ import { UnitPriceSpecification } from "../../src/schema/UnitPriceSpecification"
 
 describe("UnitPriceSpecification", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new UnitPriceSpecification({price: 19.99, priceCurrency: "USD"});
+		const schema = new UnitPriceSpecification({
+			price: 19.99,
+			priceCurrency: "USD",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -19,7 +22,14 @@ describe("UnitPriceSpecification", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new UnitPriceSpecification({price: 19.99, priceCurrency: "USD", priceType: null, membershipPointsEarned: null, validForMemberTier: null, referenceQuantity: null});
+		const schema = new UnitPriceSpecification({
+			price: 19.99,
+			priceCurrency: "USD",
+			priceType: null,
+			membershipPointsEarned: null,
+			validForMemberTier: null,
+			referenceQuantity: null,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -30,10 +40,17 @@ describe("UnitPriceSpecification", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new UnitPriceSpecification({price: 14.5, priceCurrency: "USD", priceType: "https://schema.org/SalePrice", membershipPointsEarned: 150, validForMemberTier: new MemberProgramTier({
+		const schema = new UnitPriceSpecification({
+			price: 14.5,
+			priceCurrency: "USD",
+			priceType: "https://schema.org/SalePrice",
+			membershipPointsEarned: 150,
+			validForMemberTier: new MemberProgramTier({
 				name: "Gold",
 				hasTierBenefit: TierBenefitEnumeration.TierBenefitLoyaltyPoints,
-			}), referenceQuantity: new QuantitativeValue({value: 1, unitCode: "C62"})});
+			}),
+			referenceQuantity: new QuantitativeValue({ value: 1, unitCode: "C62" }),
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const validForMemberTier = obj.validForMemberTier as Record<

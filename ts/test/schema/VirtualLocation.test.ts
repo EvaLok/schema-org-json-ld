@@ -5,7 +5,7 @@ import { VirtualLocation } from "../../src/schema/VirtualLocation";
 
 describe("VirtualLocation", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new VirtualLocation({url: "https://example.com/live"});
+		const schema = new VirtualLocation({ url: "https://example.com/live" });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -15,7 +15,10 @@ describe("VirtualLocation", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new VirtualLocation({url: "https://example.com/live", name: null});
+		const schema = new VirtualLocation({
+			url: "https://example.com/live",
+			name: null,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -23,7 +26,10 @@ describe("VirtualLocation", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new VirtualLocation({url: "https://example.com/live", name: "Main Stage"});
+		const schema = new VirtualLocation({
+			url: "https://example.com/live",
+			name: "Main Stage",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

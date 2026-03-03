@@ -14,7 +14,10 @@ describe("ShippingRateSettings", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new ShippingRateSettings({orderPercentage: null, weightPercentage: null});
+		const schema = new ShippingRateSettings({
+			orderPercentage: null,
+			weightPercentage: null,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -23,7 +26,10 @@ describe("ShippingRateSettings", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new ShippingRateSettings({orderPercentage: 2.5, weightPercentage: 1.25});
+		const schema = new ShippingRateSettings({
+			orderPercentage: 2.5,
+			weightPercentage: 1.25,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

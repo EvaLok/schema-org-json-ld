@@ -14,7 +14,12 @@ describe("QuantitativeValue", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new QuantitativeValue({value: null, unitCode: null, minValue: null, maxValue: null});
+		const schema = new QuantitativeValue({
+			value: null,
+			unitCode: null,
+			minValue: null,
+			maxValue: null,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -25,7 +30,12 @@ describe("QuantitativeValue", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new QuantitativeValue({value: 10.5, unitCode: "KGM", minValue: 5, maxValue: 20});
+		const schema = new QuantitativeValue({
+			value: 10.5,
+			unitCode: "KGM",
+			minValue: 5,
+			maxValue: 20,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -36,7 +46,12 @@ describe("QuantitativeValue", () => {
 	});
 
 	it("matches PHP parity JSON-LD output", () => {
-		const schema = new QuantitativeValue({value: 10.5, unitCode: "KGM", minValue: 5, maxValue: 20});
+		const schema = new QuantitativeValue({
+			value: 10.5,
+			unitCode: "KGM",
+			minValue: 5,
+			maxValue: 20,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 
 		expect(json).toBe(

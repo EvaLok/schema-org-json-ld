@@ -9,7 +9,10 @@ import { Thing } from "../../src/schema/Thing";
 
 describe("Review", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new Review({author: "Jane Doe", reviewRating: new Rating({ratingValue: 5})});
+		const schema = new Review({
+			author: "Jane Doe",
+			reviewRating: new Rating({ ratingValue: 5 }),
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const reviewRating = obj.reviewRating as Record<string, unknown>;
@@ -21,7 +24,14 @@ describe("Review", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new Review({author: "Jane Doe", reviewRating: new Rating({ratingValue: 5}), reviewBody: null, datePublished: null, name: null, itemReviewed: null});
+		const schema = new Review({
+			author: "Jane Doe",
+			reviewRating: new Rating({ ratingValue: 5 }),
+			reviewBody: null,
+			datePublished: null,
+			name: null,
+			itemReviewed: null,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -32,14 +42,20 @@ describe("Review", () => {
 	});
 
 	it("supports author as Person and Organization", () => {
-		const personAuthorSchema = new Review({author: new Person({ name: "Jane Doe" }), reviewRating: new Rating({ratingValue: 4})});
+		const personAuthorSchema = new Review({
+			author: new Person({ name: "Jane Doe" }),
+			reviewRating: new Rating({ ratingValue: 4 }),
+		});
 		const personJson = JsonLdGenerator.schemaToJson(personAuthorSchema);
 		const personObj = JSON.parse(personJson) as Record<string, unknown>;
 		const personAuthor = personObj.author as Record<string, unknown>;
 
 		expect(personAuthor["@type"]).toBe("Person");
 
-		const organizationAuthorSchema = new Review({author: new Organization({ name: "Example Corp" }), reviewRating: new Rating({ratingValue: 4})});
+		const organizationAuthorSchema = new Review({
+			author: new Organization({ name: "Example Corp" }),
+			reviewRating: new Rating({ ratingValue: 4 }),
+		});
 		const organizationJson = JsonLdGenerator.schemaToJson(
 			organizationAuthorSchema,
 		);
@@ -56,7 +72,14 @@ describe("Review", () => {
 	});
 
 	it("includes all fields and itemReviewed TypedSchema when set", () => {
-		const schema = new Review({author: "Jane Doe", reviewRating: new Rating({ratingValue: 5}), reviewBody: "Excellent product.", datePublished: "2026-03-01", name: "Great review", itemReviewed: new Thing({name: "Example Thing"})});
+		const schema = new Review({
+			author: "Jane Doe",
+			reviewRating: new Rating({ ratingValue: 5 }),
+			reviewBody: "Excellent product.",
+			datePublished: "2026-03-01",
+			name: "Great review",
+			itemReviewed: new Thing({ name: "Example Thing" }),
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const itemReviewed = obj.itemReviewed as Record<string, unknown>;

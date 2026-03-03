@@ -9,7 +9,10 @@ describe("MathSolver", () => {
 		const schema = new MathSolver({
 			url: "https://example.com/math-solver",
 			usageInfo: "https://example.com/usage",
-			potentialAction: new SolveMathAction({target: "https://example.com/solve", mathExpressionInput: "x+1=2"}),
+			potentialAction: new SolveMathAction({
+				target: "https://example.com/solve",
+				mathExpressionInput: "x+1=2",
+			}),
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
@@ -26,7 +29,10 @@ describe("MathSolver", () => {
 		const schema = new MathSolver({
 			url: "https://example.com/math-solver",
 			usageInfo: "https://example.com/usage",
-			potentialAction: new SolveMathAction({target: "https://example.com/solve", mathExpressionInput: "x+1=2"}),
+			potentialAction: new SolveMathAction({
+				target: "https://example.com/solve",
+				mathExpressionInput: "x+1=2",
+			}),
 			name: null,
 			inLanguage: null,
 			learningResourceType: null,
@@ -46,8 +52,14 @@ describe("MathSolver", () => {
 			url: "https://example.com/math-solver",
 			usageInfo: "https://example.com/usage",
 			potentialAction: [
-				new SolveMathAction({target: "https://example.com/solve/algebra", mathExpressionInput: "x+1=2"}),
-				new SolveMathAction({target: "https://example.com/solve/geometry", mathExpressionInput: "a^2+b^2=c^2"}),
+				new SolveMathAction({
+					target: "https://example.com/solve/algebra",
+					mathExpressionInput: "x+1=2",
+				}),
+				new SolveMathAction({
+					target: "https://example.com/solve/geometry",
+					mathExpressionInput: "a^2+b^2=c^2",
+				}),
 			],
 			name: "Math Helper",
 			inLanguage: "en",

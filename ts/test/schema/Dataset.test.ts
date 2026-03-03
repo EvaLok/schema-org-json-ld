@@ -68,7 +68,7 @@ describe("Dataset", () => {
 			identifier: ["dataset-123", "doi:10.1234/example-dataset"],
 			isAccessibleForFree: true,
 			temporalCoverage: "2024-01-01/2026-01-01",
-			spatialCoverage: new Place({name: "Global"}),
+			spatialCoverage: new Place({ name: "Global" }),
 			includedInDataCatalog: new DataCatalog({ name: "Example Data Catalog" }),
 			distribution: [
 				new DataDownload({

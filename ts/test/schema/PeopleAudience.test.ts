@@ -14,7 +14,11 @@ describe("PeopleAudience", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new PeopleAudience({suggestedGender: null, suggestedMinAge: null, suggestedMaxAge: null});
+		const schema = new PeopleAudience({
+			suggestedGender: null,
+			suggestedMinAge: null,
+			suggestedMaxAge: null,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -24,7 +28,11 @@ describe("PeopleAudience", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new PeopleAudience({suggestedGender: "Female", suggestedMinAge: 18, suggestedMaxAge: 34});
+		const schema = new PeopleAudience({
+			suggestedGender: "Female",
+			suggestedMinAge: 18,
+			suggestedMaxAge: 34,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

@@ -69,7 +69,10 @@ describe("ProductGroup", () => {
 			hasVariant: product,
 			brand: new Brand({ name: "BrandCo" }),
 			aggregateRating: new AggregateRating({ ratingValue: 4.4 }),
-			review: new Review({author: "Jane", reviewRating: new Rating({ratingValue: 5})}),
+			review: new Review({
+				author: "Jane",
+				reviewRating: new Rating({ ratingValue: 5 }),
+			}),
 		});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
 			string,

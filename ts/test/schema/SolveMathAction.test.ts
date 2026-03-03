@@ -5,7 +5,10 @@ import { SolveMathAction } from "../../src/schema/SolveMathAction";
 
 describe("SolveMathAction", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new SolveMathAction({target: "https://example.com/solve", mathExpressionInput: "x^2 + 2x + 1 = 0"});
+		const schema = new SolveMathAction({
+			target: "https://example.com/solve",
+			mathExpressionInput: "x^2 + 2x + 1 = 0",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -17,7 +20,11 @@ describe("SolveMathAction", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new SolveMathAction({target: "https://example.com/solve", mathExpressionInput: "x^2 + 2x + 1 = 0", eduQuestionType: null});
+		const schema = new SolveMathAction({
+			target: "https://example.com/solve",
+			mathExpressionInput: "x^2 + 2x + 1 = 0",
+			eduQuestionType: null,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -25,7 +32,11 @@ describe("SolveMathAction", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new SolveMathAction({target: "https://example.com/solve", mathExpressionInput: "x^2 + 2x + 1 = 0", eduQuestionType: "algebra"});
+		const schema = new SolveMathAction({
+			target: "https://example.com/solve",
+			mathExpressionInput: "x^2 + 2x + 1 = 0",
+			eduQuestionType: "algebra",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -33,7 +44,11 @@ describe("SolveMathAction", () => {
 	});
 
 	it("supports eduQuestionType as string array", () => {
-		const schema = new SolveMathAction({target: "https://example.com/solve", mathExpressionInput: "x^2 + 2x + 1 = 0", eduQuestionType: ["algebra", "quadratic"]});
+		const schema = new SolveMathAction({
+			target: "https://example.com/solve",
+			mathExpressionInput: "x^2 + 2x + 1 = 0",
+			eduQuestionType: ["algebra", "quadratic"],
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

@@ -30,7 +30,7 @@ describe("CourseInstance", () => {
 		const schema = new CourseInstance({
 			courseMode: "online",
 			instructor: new Person({ name: "Jane Doe" }),
-			courseSchedule: new Schedule({repeatFrequency: "P1W"}),
+			courseSchedule: new Schedule({ repeatFrequency: "P1W" }),
 			courseWorkload: "PT5H",
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);
