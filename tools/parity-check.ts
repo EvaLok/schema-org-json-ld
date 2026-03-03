@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import phpParser from "php-parser";
+import ts from "typescript";
 
 type SchemaProperty = {
 name: string;
@@ -25,64 +27,15 @@ values: Record<string, string>;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, "..");
+const phpAstParser = new phpParser.Engine({
+	parser: { extractDoc: false },
+	ast: { withPositions: false },
+});
 
 function listFiles(directory: string, extension: string): string[] {
 return readdirSync(directory)
 .filter((file) => file.endsWith(extension))
 .map((file) => path.join(directory, file));
-}
-
-function splitTopLevel(input: string, separator: string): string[] {
-const parts: string[] = [];
-let current = "";
-let depthParen = 0;
-let depthAngle = 0;
-let depthSquare = 0;
-let quote: '"' | "'" | null = null;
-
-for (const char of input) {
-if (quote) {
-current += char;
-if (char === quote) {
-quote = null;
-}
-continue;
-}
-
-if (char === '"' || char === "'") {
-quote = char;
-current += char;
-continue;
-}
-
-if (char === "(") depthParen += 1;
-if (char === ")") depthParen -= 1;
-if (char === "<") depthAngle += 1;
-if (char === ">") depthAngle -= 1;
-if (char === "[") depthSquare += 1;
-if (char === "]") depthSquare -= 1;
-
-if (
-char === separator &&
-depthParen === 0 &&
-depthAngle === 0 &&
-depthSquare === 0
-) {
-if (current.trim().length > 0) {
-parts.push(current.trim());
-}
-current = "";
-continue;
-}
-
-current += char;
-}
-
-if (current.trim().length > 0) {
-parts.push(current.trim());
-}
-
-return parts;
 }
 
 function uniqueSorted(values: string[]): string[] {
@@ -117,197 +70,444 @@ return "null";
 return cleaned;
 }
 
-function parseSchemaType(rawValue: string): string[] {
-const trimmed = rawValue.trim();
+type PhpAstNode = {
+	kind?: string;
+	[key: string]: unknown;
+};
 
-if (trimmed.startsWith("[")) {
-return [...trimmed.matchAll(/["']([^"']+)["']/g)].map((match) => match[1]);
+function isPhpNode(value: unknown): value is PhpAstNode {
+	return typeof value === "object" && value !== null;
 }
 
-const single = trimmed.match(/["']([^"']+)["']/);
-if (!single) {
-return [];
+function forEachPhpNode(node: unknown, visitor: (currentNode: PhpAstNode) => void): void {
+	if (!node) {
+		return;
+	}
+
+	if (Array.isArray(node)) {
+		for (const child of node) {
+			forEachPhpNode(child, visitor);
+		}
+		return;
+	}
+
+	if (!isPhpNode(node)) {
+		return;
+	}
+
+	if (typeof node.kind === "string") {
+		visitor(node);
+	}
+
+	for (const value of Object.values(node)) {
+		forEachPhpNode(value, visitor);
+	}
 }
 
-return [single[1]];
+function parsePhpSchemaType(node: PhpAstNode | undefined): string[] {
+	if (!node) {
+		return [];
+	}
+
+	if (node.kind === "string" && typeof node.value === "string") {
+		return [node.value];
+	}
+
+	if (node.kind === "array" && Array.isArray(node.items)) {
+		return node.items
+			.map((item) => {
+				const value = isPhpNode(item) ? item.value : null;
+				if (isPhpNode(value) && value.kind === "string" && typeof value.value === "string") {
+					return value.value;
+				}
+				return null;
+			})
+			.filter((value): value is string => value !== null);
+	}
+
+	return [];
 }
 
-function parsePropertyMap(
-rawValue: string,
-assignmentOperator: "=>" | ":",
-): Record<string, string> {
-const map: Record<string, string> = {};
-const regex =
-assignmentOperator === "=>"
-? /["']([^"']+)["']\s*=>\s*["']([^"']+)["']/g
-: /([A-Za-z_][A-Za-z0-9_]*)\s*:\s*["']([^"']+)["']/g;
+function parsePhpPropertyMap(node: PhpAstNode | undefined): Record<string, string> {
+	const map: Record<string, string> = {};
+	if (!node || node.kind !== "array" || !Array.isArray(node.items)) {
+		return map;
+	}
 
-for (const match of rawValue.matchAll(regex)) {
-map[match[1]] = match[2];
+	for (const item of node.items) {
+		if (!isPhpNode(item) || item.kind !== "entry") {
+			continue;
+		}
+
+		const key = isPhpNode(item.key) ? item.key : null;
+		const value = isPhpNode(item.value) ? item.value : null;
+		if (
+			key?.kind === "string" &&
+			typeof key.value === "string" &&
+			value?.kind === "string" &&
+			typeof value.value === "string"
+		) {
+			map[key.value] = value.value;
+		}
+	}
+
+	return map;
 }
 
-return map;
+function extractPhpType(typeNode: unknown): { types: string[]; nullable: boolean } {
+	if (!isPhpNode(typeNode)) {
+		return { types: [], nullable: false };
+	}
+
+	if (typeNode.kind === "uniontype" && Array.isArray(typeNode.types)) {
+		const nested = typeNode.types.map((nestedType) => extractPhpType(nestedType));
+		return {
+			types: uniqueSorted(nested.flatMap((entry) => entry.types)),
+			nullable: nested.some((entry) => entry.nullable),
+		};
+	}
+
+	let rawType = "";
+	if (typeNode.kind === "typereference" && typeof typeNode.name === "string") {
+		rawType = typeNode.name;
+	}
+	if (typeNode.kind === "name" && typeof typeNode.name === "string") {
+		rawType = typeNode.name;
+	}
+
+	const nullable = rawType === "null" || typeNode.nullable === true;
+	const normalized = rawType ? normalizePhpType(rawType) : "";
+	return {
+		types: normalized && normalized !== "null" ? [normalized] : [],
+		nullable,
+	};
+}
+
+function getTsPropertyName(node: ts.PropertyName): string | null {
+	if (ts.isIdentifier(node) || ts.isStringLiteral(node) || ts.isNumericLiteral(node)) {
+		return node.text;
+	}
+	return null;
+}
+
+function parseTsSchemaType(node: ts.Expression | undefined): string[] {
+	if (!node) {
+		return [];
+	}
+
+	if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+		return [node.text];
+	}
+
+	if (ts.isArrayLiteralExpression(node)) {
+		return node.elements
+			.filter(
+				(element): element is ts.StringLiteral | ts.NoSubstitutionTemplateLiteral =>
+					ts.isStringLiteral(element) || ts.isNoSubstitutionTemplateLiteral(element),
+			)
+			.map((element) => element.text);
+	}
+
+	return [];
+}
+
+function parseTsPropertyMap(node: ts.Expression | undefined): Record<string, string> {
+	const map: Record<string, string> = {};
+	if (!node || !ts.isObjectLiteralExpression(node)) {
+		return map;
+	}
+
+	for (const property of node.properties) {
+		if (!ts.isPropertyAssignment(property)) {
+			continue;
+		}
+
+		const key = getTsPropertyName(property.name);
+		const value = property.initializer;
+		if (!key) {
+			continue;
+		}
+
+		if (ts.isStringLiteral(value) || ts.isNoSubstitutionTemplateLiteral(value)) {
+			map[key] = value.text;
+		}
+	}
+
+	return map;
+}
+
+/**
+ * Extracts the base class name from a TS extends clause.
+ * - Identifier: `extends TypedSchema`
+ * - Property access: `extends Schema.TypedSchema`
+ * - Fallback: complex expressions keep textual representation
+ */
+function getTsExtendsName(typeNode: ts.ExpressionWithTypeArguments, sourceFile: ts.SourceFile): string {
+	if (ts.isIdentifier(typeNode.expression)) {
+		return typeNode.expression.text;
+	}
+	if (ts.isPropertyAccessExpression(typeNode.expression)) {
+		return typeNode.expression.name.text;
+	}
+	return typeNode.expression.getText(sourceFile);
+}
+
+function extractTsTypes(typeNode: ts.TypeNode | undefined): { types: string[]; nullable: boolean } {
+	if (!typeNode) {
+		return { types: [], nullable: false };
+	}
+
+	if (ts.isUnionTypeNode(typeNode)) {
+		const nested = typeNode.types.map((nestedType) => extractTsTypes(nestedType));
+		return {
+			types: uniqueSorted(nested.flatMap((entry) => entry.types)),
+			nullable: nested.some((entry) => entry.nullable),
+		};
+	}
+
+	const normalized = normalizeTsType(typeNode.getText());
+	return {
+		types: normalized && normalized !== "null" ? [normalized] : [],
+		nullable: normalized === "null",
+	};
 }
 
 function parsePhpSchemaFile(filePath: string): SchemaDefinition | null {
-const content = readFileSync(filePath, "utf8");
-const classMatch = content.match(/class\s+(\w+)\s+extends\s+(\w+)/);
-if (!classMatch) {
-return null;
-}
+	const content = readFileSync(filePath, "utf8");
+	const ast = phpAstParser.parseCode(content, filePath);
+	let classNode: PhpAstNode | null = null;
 
-const [, name, parentClass] = classMatch;
-const schemaTypeMatch = content.match(/const\s+A_SCHEMA_TYPE\s*=\s*([^;]+);/);
-const propertyMapMatch = content.match(/const\s+PROPERTY_MAP\s*=\s*\[([\s\S]*?)\];/);
-const constructorMatch = content.match(/function\s+__construct\s*\(([\s\S]*?)\)\s*\{/);
+	forEachPhpNode(ast, (node) => {
+		if (!classNode && node.kind === "class") {
+			classNode = node;
+		}
+	});
 
-const propertyMap = propertyMapMatch
-? parsePropertyMap(propertyMapMatch[1], "=>")
-: {};
-const properties: SchemaProperty[] = [];
+	if (
+		!classNode ||
+		!isPhpNode(classNode.name) ||
+		typeof classNode.name.name !== "string"
+	) {
+		return null;
+	}
 
-if (constructorMatch) {
-const constructorBody = constructorMatch[1].replace(/\/\*\*[\s\S]*?\*\//g, "");
-const params = splitTopLevel(constructorBody, ",");
+	const name = classNode.name.name;
+	const parentClass =
+		isPhpNode(classNode.extends) && typeof classNode.extends.name === "string"
+			? classNode.extends.name
+			: "TypedSchema";
+	const propertyMap: Record<string, string> = {};
+	let schemaType: string[] = [];
+	const properties: SchemaProperty[] = [];
 
-for (const param of params) {
-const normalized = param.replace(/\s+/g, " ").trim();
-const paramMatch = normalized.match(
-/^public\s+([^$]+?)\s+\$(\w+)(?:\s*=\s*(.+))?$/,
-);
-if (!paramMatch) {
-continue;
-}
+	const body = Array.isArray(classNode.body) ? classNode.body : [];
+	for (const member of body) {
+		if (!isPhpNode(member)) {
+			continue;
+		}
 
-const [, rawType, propName, defaultValue] = paramMatch;
-const rawTypes = splitTopLevel(rawType, "|");
-const nullable = rawTypes.some((type) => type.trim() === "null");
-const types = uniqueSorted(
-rawTypes
-.map((type) => normalizePhpType(type))
-.filter((type) => type !== "null"),
-);
+		if (member.kind === "classconstant" && Array.isArray(member.constants)) {
+			for (const constant of member.constants) {
+				if (!isPhpNode(constant) || !isPhpNode(constant.name)) {
+					continue;
+				}
 
-properties.push({
-name: propName,
-types,
-nullable,
-hasDefault: defaultValue !== undefined,
-});
-}
-}
+				const constantName = constant.name.name;
+				if (constantName === "A_SCHEMA_TYPE") {
+					schemaType = parsePhpSchemaType(isPhpNode(constant.value) ? constant.value : undefined);
+				}
+				if (constantName === "PROPERTY_MAP") {
+					Object.assign(
+						propertyMap,
+						parsePhpPropertyMap(isPhpNode(constant.value) ? constant.value : undefined),
+					);
+				}
+			}
+		}
 
-return {
-name,
-parent: parentClass === "TypedSchema" ? null : parentClass,
-schemaType: schemaTypeMatch ? parseSchemaType(schemaTypeMatch[1]) : [],
-propertyMap,
-properties,
-};
+		if (
+			member.kind === "method" &&
+			isPhpNode(member.name) &&
+			member.name.name === "__construct" &&
+			Array.isArray(member.arguments)
+		) {
+			for (const argument of member.arguments) {
+				if (!isPhpNode(argument) || !isPhpNode(argument.name) || typeof argument.flags !== "number") {
+					continue;
+				}
+				if (argument.flags === 0) {
+					// php-parser uses flags=0 for non-promoted constructor parameters.
+					// Non-zero flags indicate promoted visibility (public/protected/private).
+					continue;
+				}
+
+				const parsedType = extractPhpType(argument.type);
+				properties.push({
+					name: argument.name.name,
+					types: uniqueSorted(parsedType.types),
+					nullable: parsedType.nullable,
+					hasDefault: argument.value !== null,
+				});
+			}
+		}
+	}
+
+	return {
+		name,
+		parent: parentClass === "TypedSchema" ? null : parentClass,
+		schemaType,
+		propertyMap,
+		properties,
+	};
 }
 
 function parseTsSchemaFile(filePath: string): SchemaDefinition | null {
-const content = readFileSync(filePath, "utf8");
-const classMatch = content.match(/export\s+class\s+(\w+)\s+extends\s+(\w+)/);
-if (!classMatch) {
-return null;
-}
+	const content = readFileSync(filePath, "utf8");
+	const sourceFile = ts.createSourceFile(
+		filePath,
+		content,
+		ts.ScriptTarget.Latest,
+		true,
+	);
+	let classNode: ts.ClassDeclaration | null = null;
+	const interfaces = new Map<string, ts.InterfaceDeclaration>();
 
-const [, name, parentClass] = classMatch;
-const schemaTypeMatch = content.match(
-/static\s+readonly\s+(?:schemaType|SCHEMA_TYPE)(?:\s*:[^=;]+)?\s*=\s*([^;]+);/,
-);
-const propertyMapMatch = content.match(
-/static\s+readonly\s+propertyMap[^=]*=\s*\{([\s\S]*?)\};/,
-);
-const optionsInterfaceRegex = new RegExp(
-`export\\s+interface\\s+${name}Options\\s*\\{([\\s\\S]*?)\\}`,
-"m",
-);
-const optionsInterfaceMatch = content.match(optionsInterfaceRegex);
+	for (const statement of sourceFile.statements) {
+		if (ts.isInterfaceDeclaration(statement)) {
+			interfaces.set(statement.name.text, statement);
+		}
+		if (ts.isClassDeclaration(statement) && statement.name && !classNode) {
+			classNode = statement;
+		}
+	}
 
-const propertyMap = propertyMapMatch
-? parsePropertyMap(propertyMapMatch[1], ":")
-: {};
-const properties: SchemaProperty[] = [];
+	if (!classNode?.name) {
+		return null;
+	}
 
-if (optionsInterfaceMatch) {
-const interfaceBody = optionsInterfaceMatch[1].replace(/\/\*\*[\s\S]*?\*\//g, "");
-const entries = interfaceBody
-.split(";")
-.map((entry) => entry.trim())
-.filter(Boolean);
+	const name = classNode.name.text;
+	const parentType = classNode.heritageClauses
+		?.find((clause) => clause.token === ts.SyntaxKind.ExtendsKeyword)
+		?.types.at(0);
+	const parentClass = parentType ? getTsExtendsName(parentType, sourceFile) : "TypedSchema";
+	let schemaType: string[] = [];
+	let propertyMap: Record<string, string> = {};
 
-for (const entry of entries) {
-const propMatch = entry.match(/^(\w+)(\?)?\s*:\s*([\s\S]+)$/);
-if (!propMatch) {
-continue;
-}
+	for (const member of classNode.members) {
+		if (
+			!ts.isPropertyDeclaration(member) ||
+			!member.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.StaticKeyword)
+		) {
+			continue;
+		}
 
-const [, propName, optionalMarker, rawType] = propMatch;
-const rawTypes = splitTopLevel(rawType, "|");
-const nullable =
-optionalMarker === "?" ||
-rawTypes.some((type) => {
-const normalized = type.trim();
-return normalized === "null" || normalized === "undefined";
-});
-const types = uniqueSorted(
-rawTypes
-.map((type) => normalizeTsType(type))
-.filter((type) => type !== "null"),
-);
+		const memberName = member.name && ts.isIdentifier(member.name) ? member.name.text : null;
+		if (!memberName) {
+			continue;
+		}
 
-properties.push({
-name: propName,
-types,
-nullable,
-hasDefault: optionalMarker === "?",
-});
-}
-}
+		if (memberName === "schemaType" || memberName === "SCHEMA_TYPE") {
+			schemaType = parseTsSchemaType(member.initializer);
+		}
+		if (memberName === "propertyMap") {
+			propertyMap = parseTsPropertyMap(member.initializer);
+		}
+	}
 
-return {
-name,
-parent: parentClass === "TypedSchema" ? null : parentClass,
-schemaType: schemaTypeMatch ? parseSchemaType(schemaTypeMatch[1]) : [],
-propertyMap,
-properties,
-};
+	const optionsInterface = interfaces.get(`${name}Options`);
+	const properties: SchemaProperty[] = [];
+	if (optionsInterface) {
+		for (const member of optionsInterface.members) {
+			if (!ts.isPropertySignature(member) || !member.name) {
+				continue;
+			}
+
+			const propName = getTsPropertyName(member.name);
+			if (!propName) {
+				continue;
+			}
+
+			const parsedType = extractTsTypes(member.type);
+			properties.push({
+				name: propName,
+				types: uniqueSorted(parsedType.types),
+				nullable: member.questionToken !== undefined || parsedType.nullable,
+				hasDefault: member.questionToken !== undefined,
+			});
+		}
+	}
+
+	return {
+		name,
+		parent: parentClass === "TypedSchema" ? null : parentClass,
+		schemaType,
+		propertyMap,
+		properties,
+	};
 }
 
 function parsePhpEnumFile(filePath: string): EnumDefinition | null {
-const content = readFileSync(filePath, "utf8");
-const enumMatch = content.match(/enum\s+(\w+)\s*:\s*string\s*\{([\s\S]*?)\}/);
-if (!enumMatch) {
-return null;
-}
+	const content = readFileSync(filePath, "utf8");
+	const ast = phpAstParser.parseCode(content, filePath);
+	let enumNode: PhpAstNode | null = null;
 
-const [, name, body] = enumMatch;
-const values: Record<string, string> = {};
+	forEachPhpNode(ast, (node) => {
+		if (!enumNode && node.kind === "enum") {
+			enumNode = node;
+		}
+	});
 
-for (const match of body.matchAll(/case\s+(\w+)\s*=\s*["']([^"']+)["']/g)) {
-values[match[1]] = match[2];
-}
+	if (!enumNode || !isPhpNode(enumNode.name) || typeof enumNode.name.name !== "string") {
+		return null;
+	}
 
-return { name, values };
+	const values: Record<string, string> = {};
+	const body = Array.isArray(enumNode.body) ? enumNode.body : [];
+	for (const member of body) {
+		if (!isPhpNode(member) || member.kind !== "enumcase" || !isPhpNode(member.name)) {
+			continue;
+		}
+
+		const value = isPhpNode(member.value) ? member.value : null;
+		if (value?.kind === "string" && typeof value.value === "string") {
+			values[member.name.name] = value.value;
+		}
+	}
+
+	return { name: enumNode.name.name, values };
 }
 
 function parseTsEnumFile(filePath: string): EnumDefinition | null {
-const content = readFileSync(filePath, "utf8");
-const enumMatch = content.match(/export\s+enum\s+(\w+)\s*\{([\s\S]*?)\}/);
-if (!enumMatch) {
-return null;
-}
+	const content = readFileSync(filePath, "utf8");
+	const sourceFile = ts.createSourceFile(
+		filePath,
+		content,
+		ts.ScriptTarget.Latest,
+		true,
+	);
+	const enumNode = sourceFile.statements.find((statement) =>
+		ts.isEnumDeclaration(statement),
+	);
 
-const [, name, body] = enumMatch;
-const values: Record<string, string> = {};
+	if (!enumNode || !ts.isEnumDeclaration(enumNode)) {
+		return null;
+	}
 
-for (const match of body.matchAll(/(\w+)\s*=\s*["']([^"']+)["']/g)) {
-values[match[1]] = match[2];
-}
+	const values: Record<string, string> = {};
+	for (const member of enumNode.members) {
+		if (!member.initializer) {
+			continue;
+		}
 
-return { name, values };
+		if (
+			ts.isStringLiteral(member.initializer) ||
+			ts.isNoSubstitutionTemplateLiteral(member.initializer)
+		) {
+			values[member.name.getText(sourceFile)] = member.initializer.text;
+		}
+	}
+
+	return { name: enumNode.name.text, values };
 }
 
 function parsePhpSchemas(directory: string): Map<string, SchemaDefinition> {
