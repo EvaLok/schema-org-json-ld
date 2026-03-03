@@ -101,5 +101,6 @@ Documenting anti-patterns is as valuable as documenting the correct approach. Us
 | `journal-entries` | How to write reflective journal entries | Reference only |
 | `writing-skills` | This skill — how to write skills | User + Claude |
 | `ts-schema-implementation` | Procedure for implementing a TS schema.org type | User + Claude |
+| `tool-creation-guidelines` | Best practices for tools that parse/analyze code (AST over regex) | Reference only |
 
 When adding a new skill, update this table.
