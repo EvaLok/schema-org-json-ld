@@ -318,3 +318,15 @@ Example:
 ```
 
 This ensures infrastructure changes are as visible and traceable as code changes.
+
+### Convention change sweep
+
+When a **coding convention** changes (e.g., constructor pattern, naming convention, file layout), ALL documentation of that convention must be updated in the same cycle. Files to sweep:
+
+- `AGENTS.md`
+- `AGENTS-ts.md`
+- All skills in `.claude/skills/` that reference the convention
+- `README.md` (user-facing examples)
+- Related ADRs in `doc/adr/`
+
+**Why:** In cycle 105, stale documentation was found across 5 files after the Phase 0 restructure and constructor pattern change. Agents reading outdated conventions produce incorrect code. A single sweep at convention-change time prevents multi-cycle accumulation of stale docs.
