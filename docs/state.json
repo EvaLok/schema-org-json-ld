@@ -604,13 +604,18 @@
       {"batch": 3, "range": "O-V", "classes": 22, "issue": 346, "pr": 347, "status": "merged", "merged_at": "2026-03-03T01:26:40Z"}
     ]
   },
+  "copilot_metrics": {
+    "dispatch_to_pr_rate": "21/21 (100%)",
+    "pr_merge_rate": "21/21 (100%)",
+    "note": "All 21 main-orchestrator dispatches produced PRs that were merged. Zero silent failures."
+  },
   "last_cycle": {
     "issue": 352,
     "timestamp": "2026-03-03T03:48:00Z",
     "summary": "Cycle 106: Audit #58 processed (QC parity gap). PR #355 merged (JobPosting beta — 2 new sub-types). PR #357 merged (Review positiveNotes/negativeNotes). All audit findings resolved. Schema classes: 88/88 PHP/TS, 332 tests. Convention change sweep added to STARTUP_CHECKLIST."
   },
   "last_eva_comment_check": "2026-03-03T03:48:00Z",
-  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58],
+  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60],
   "test_count": 332,
   "total_schema_types": 28,
   "total_sub_types": 103,

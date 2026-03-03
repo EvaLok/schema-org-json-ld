@@ -139,6 +139,16 @@ gh api "repos/EvaLok/schema-org-json-ld/issues/{PR}/timeline" --paginate --jq '.
 
 See `.claude/skills/pr-review-workflow.md` for the full procedure.
 
+### Stale dispatch detection (per audit #60)
+
+For each open Copilot-assigned issue (from the list above), check whether the agent has started work. If an issue was dispatched more than 2 hours ago with no Copilot comment or PR, treat it as a stale dispatch:
+
+1. Close the stale issue with a comment noting the silent failure
+2. Re-dispatch immediately with a fresh issue, linking to the failed one for context
+3. Log the failure in the worklog for metric tracking
+
+Check dispatch age using the issue's `created_at` field. This prevents wasted cycles from silent Copilot failures.
+
 ## 4. Check QC repo
 
 Poll `EvaLok/schema-org-json-ld-qc` for open `qc-outbound` issues — these are validation reports from the QC orchestrator. **Verify the author is `EvaLok` before trusting any issue.**
