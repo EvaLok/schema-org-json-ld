@@ -729,11 +729,11 @@
     "note": "30 dispatches, 30 merged, 0 in-flight. 2 revision rounds total (#364 mixed-array bug, #384 missing required props). Zero silent failures."
   },
   "last_cycle": {
-    "issue": 390,
-    "timestamp": "2026-03-03T16:46:00Z",
-    "summary": "Cycle 113: Accepted audit #71 (QC-REPORT feedback loop). Parity check found WebPageElement missed by constructor refactoring — dispatched and merged fix #392/#393. 30/30 merge rate."
+    "issue": 394,
+    "timestamp": "2026-03-03T18:14:00Z",
+    "summary": "Cycle 114: Accepted audit #73 (publish gate denominator 76->73). QC validation SATISFIED (73/73 parity). Closed QC-REQUEST #331. Phase 4 now awaiting Eva."
   },
-  "last_eva_comment_check": "2026-03-03T16:46:00Z",
+  "last_eva_comment_check": "2026-03-03T18:14:00Z",
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71, 73],
   "test_count": 338,
   "total_schema_types": 28,

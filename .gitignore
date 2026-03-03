@@ -12,3 +12,6 @@ composer.phar
 # node
 node_modules/
 dist/
+
+# orchestrator temp files
+docs/.tmp-*

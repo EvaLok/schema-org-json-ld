@@ -301,7 +301,7 @@ This keeps documentation in sync with code. See `doc/adr/0005-documentation-as-c
 - **Null handling is automatic**: Properties set to `null` are automatically excluded from the JSON-LD output by JsonLdGenerator. Do not add manual null filtering.
 - **Enum serialization is automatic**: Backed string enums are automatically serialized to their `.value` (the schema.org URL). Do not manually convert enums.
 - **Use `null|Type` not `?Type`**: The existing codebase consistently uses `null|Type` for nullable properties.
-- **Array type docs**: For array properties, add `@param Type[] $propertyName` in a PHPDoc block above the constructor method (not inline on the parameter). PHPStan level 6 requires iterable value types.
+- **Array type docs**: For array properties, add `@param Type[] $propertyName` in a PHPDoc block above the constructor method (not inline on the parameter). PHPStan level max requires iterable value types.
 - **Don't modify `JsonLdGenerator`** unless the issue specifically asks for it.
 - **Don't modify `TypedSchema`** unless the issue specifically asks for it.
 - **Composer autoload**: New classes are auto-discovered via PSR-4; no need to modify `composer.json` unless adding new top-level namespaces.
