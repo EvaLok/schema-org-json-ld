@@ -17,7 +17,9 @@ describe("SeekToAction", () => {
 		expect(obj.target).toBe(
 			"https://example.com/watch?v=abc&t={seek_to_second_number}",
 		);
-		expect(obj["startOffset-input"]).toBe("required name=seek_to_second_number");
+		expect(obj["startOffset-input"]).toBe(
+			"required name=seek_to_second_number",
+		);
 		expect(obj).not.toHaveProperty("startOffsetInput");
 	});
 });
