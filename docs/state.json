@@ -284,8 +284,8 @@
     ],
     "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
     "enum_namespace": "EvaLok\\SchemaOrgJsonLd\\v1\\Enum",
-    "in_progress": [],
-    "planned_next": [],
+    "in_progress": ["constructor-refactoring-batch-1"],
+    "planned_next": ["constructor-refactoring-batch-2", "constructor-refactoring-batch-3"],
     "google_rich_results_types": {
       "not_implemented": [],
       "note": "ALL 31 Google Search Gallery categories covered (26 original + 5 sub-categories: Merchant listing, Product variants, Loyalty program, Return policy, Shipping policy). Book actions excluded (DataFeed type, not Rich Results Test)."
@@ -463,6 +463,14 @@
       "merged_at": "2026-03-01T22:43:20Z",
       "audit_inbound": 315,
       "note": "Per audit #39. Validates npm pack tarball: ESM + CJS imports + JSON-LD output."
+    },
+    {
+      "issue": 342,
+      "title": "Refactor TS constructors to options-object pattern (batch 1: A-D)",
+      "dispatched_at": "2026-03-03T00:26:18Z",
+      "model": "gpt-5.3-codex",
+      "status": "dispatched",
+      "eva_directive": 340
     }
   ],
   "qc_processed": [8, 37, 57, 72, 165],
@@ -491,7 +499,7 @@
   "eva_input_issues": {
     "closed_this_cycle": [],
     "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225],
-    "remaining_open": [247, 304, 329]
+    "remaining_open": [247, 304, 329, 340]
   },
   "typescript_plan": {
     "status": "approved_executing",
@@ -516,7 +524,7 @@
       "phase_0_qc_checkpoint": "Accepted (audit #15). Phase 0 completion requires QC E2E validation before Phase 1.",
       "ts_guardrails_enumeration": "Accepted (audit #16). AGENTS-ts.md + TS skill complete.",
       "conditional_approval_reconciliation": "Accepted (audit #19). Step 1.5 added to STARTUP_CHECKLIST.",
-      "constructor_ergonomics": "Accepted (audit #20). Options object for >5 optional properties.",
+      "constructor_ergonomics": "Accepted (audit #20). SUPERSEDED by Eva directive #340: ALL classes use options object (no threshold). AGENTS-ts.md updated cycle 104.",
       "barrel_file_conflicts": "Accepted (audit #29). Sequential dispatch for Phase 2. STARTUP_CHECKLIST Step 8 updated.",
       "qc_exit_criteria": "Accepted (audit #35). Definition of Done posted on QC-REQUEST #299. STARTUP_CHECKLIST Step 4 updated.",
       "class_inventory_reconciliation": "Accepted (audit #37). Step 5.6 added to STARTUP_CHECKLIST. QAPage + Restaurant dispatch #311.",
@@ -539,14 +547,24 @@
       "release_url": "https://github.com/EvaLok/schema-org-json-ld/releases/tag/v1.0.0"
     }
   },
-  "last_cycle": {
-    "issue": 339,
-    "timestamp": "2026-03-02T22:42:00Z",
-    "summary": "Cycle 103: Idle cycle (1 consecutive). QC parity unchanged at 39/86. No new PRs, agent sessions, QC reports, audit issues, or Eva input."
+  "constructor_refactoring": {
+    "eva_directive": 340,
+    "status": "in_progress",
+    "total_classes_to_convert": 52,
+    "batches": [
+      {"batch": 1, "range": "A-D", "classes": 16, "issue": 342, "status": "dispatched", "dispatched_at": "2026-03-03T00:26:18Z"},
+      {"batch": 2, "range": "E-M", "classes": 15, "issue": null, "status": "planned"},
+      {"batch": 3, "range": "O-V", "classes": 21, "issue": null, "status": "planned"}
+    ]
   },
-  "consecutive_idle_cycles": 1,
-  "last_eva_comment_check": "2026-03-02T22:42:00Z",
-  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53],
+  "last_cycle": {
+    "issue": 341,
+    "timestamp": "2026-03-03T00:18:11Z",
+    "summary": "Cycle 104: Processing Eva directive #340 (uniform options-object constructors). AGENTS-ts.md updated. Batch 1 (#342, 16 classes A-D) dispatched. Audit #56 noted (QC-targeted)."
+  },
+  "consecutive_idle_cycles": 0,
+  "last_eva_comment_check": "2026-03-03T00:18:11Z",
+  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56],
   "test_count": 321,
   "total_schema_types": 28,
   "total_sub_types": 101,
