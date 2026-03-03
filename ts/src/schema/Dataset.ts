@@ -25,6 +25,8 @@ export interface DatasetOptions {
 	version?: string | null;
 	alternateName?: string | null;
 	citation?: string | null;
+	hasPart?: string | Dataset | readonly (string | Dataset)[] | null;
+	isPartOf?: string | Dataset | null;
 }
 
 export class Dataset extends TypedSchema {
@@ -49,6 +51,12 @@ export class Dataset extends TypedSchema {
 	public readonly version: string | null;
 	public readonly alternateName: string | null;
 	public readonly citation: string | null;
+	public readonly hasPart:
+		| string
+		| Dataset
+		| readonly (string | Dataset)[]
+		| null;
+	public readonly isPartOf: string | Dataset | null;
 
 	constructor(options: DatasetOptions) {
 		super();
@@ -71,5 +79,7 @@ export class Dataset extends TypedSchema {
 		this.version = options.version ?? null;
 		this.alternateName = options.alternateName ?? null;
 		this.citation = options.citation ?? null;
+		this.hasPart = options.hasPart ?? null;
+		this.isPartOf = options.isPartOf ?? null;
 	}
 }

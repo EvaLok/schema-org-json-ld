@@ -28,6 +28,12 @@ class Organization extends TypedSchema {
 		public null|string $vatID = null,
 		public null|string $naics = null,
 		public null|string $duns = null,
+		public null|string $identifier = null,
+		public null|string|ImageObject $image = null,
+		/** @var InteractionCounter[]|InteractionCounter $interactionStatistic */
+		public null|InteractionCounter|array $interactionStatistic = null,
+		/** @var InteractionCounter[]|InteractionCounter $agentInteractionStatistic */
+		public null|InteractionCounter|array $agentInteractionStatistic = null,
 		public null|string $leiCode = null,
 		public null|string $iso6523Code = null,
 		public null|string $globalLocationNumber = null,

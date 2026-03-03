@@ -44,6 +44,8 @@ describe("Dataset", () => {
 			version: null,
 			alternateName: null,
 			citation: null,
+			hasPart: null,
+			isPartOf: null,
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
@@ -53,6 +55,8 @@ describe("Dataset", () => {
 		expect(obj).not.toHaveProperty("keywords");
 		expect(obj).not.toHaveProperty("distribution");
 		expect(obj).not.toHaveProperty("citation");
+		expect(obj).not.toHaveProperty("hasPart");
+		expect(obj).not.toHaveProperty("isPartOf");
 	});
 
 	it("includes representative optional fields when set", () => {
@@ -120,5 +124,29 @@ describe("Dataset", () => {
 
 		expect(creator["@type"]).toBe("Organization");
 		expect(funder["@type"]).toBe("Person");
+	});
+
+	it("supports hasPart and isPartOf as schema/string unions", () => {
+		const schema = new Dataset({
+			name: "Parent Dataset",
+			description: "Dataset containing sub-datasets.",
+			hasPart: [
+				new Dataset({
+					name: "Child Dataset",
+					description: "Nested child dataset.",
+				}),
+				"https://example.com/datasets/child-2",
+			],
+			isPartOf: "https://example.com/datasets/root",
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+		const hasPart = obj.hasPart as Array<Record<string, unknown> | string>;
+
+		expect(Array.isArray(hasPart)).toBe(true);
+		expect((hasPart[0] as Record<string, unknown>)?.["@type"]).toBe("Dataset");
+		expect((hasPart[0] as Record<string, unknown>)?.name).toBe("Child Dataset");
+		expect(hasPart[1]).toBe("https://example.com/datasets/child-2");
+		expect(obj.isPartOf).toBe("https://example.com/datasets/root");
 	});
 });

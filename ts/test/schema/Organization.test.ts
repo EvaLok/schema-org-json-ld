@@ -4,6 +4,8 @@ import { JsonLdGenerator } from "../../src/JsonLdGenerator";
 import { MerchantReturnEnumeration } from "../../src/enum/MerchantReturnEnumeration";
 import { TierBenefitEnumeration } from "../../src/enum/TierBenefitEnumeration";
 import { ContactPoint } from "../../src/schema/ContactPoint";
+import { ImageObject } from "../../src/schema/ImageObject";
+import { InteractionCounter } from "../../src/schema/InteractionCounter";
 import { MemberProgram } from "../../src/schema/MemberProgram";
 import { MemberProgramTier } from "../../src/schema/MemberProgramTier";
 import { MerchantReturnPolicy } from "../../src/schema/MerchantReturnPolicy";
@@ -48,6 +50,10 @@ describe("Organization", () => {
 			hasMerchantReturnPolicy: null,
 			hasMemberProgram: null,
 			hasShippingService: null,
+			identifier: null,
+			image: null,
+			interactionStatistic: null,
+			agentInteractionStatistic: null,
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
@@ -57,6 +63,10 @@ describe("Organization", () => {
 		expect(obj).not.toHaveProperty("hasMerchantReturnPolicy");
 		expect(obj).not.toHaveProperty("hasMemberProgram");
 		expect(obj).not.toHaveProperty("hasShippingService");
+		expect(obj).not.toHaveProperty("identifier");
+		expect(obj).not.toHaveProperty("image");
+		expect(obj).not.toHaveProperty("interactionStatistic");
+		expect(obj).not.toHaveProperty("agentInteractionStatistic");
 	});
 
 	it("includes nested fields when set", () => {
@@ -147,5 +157,41 @@ describe("Organization", () => {
 		expect(Array.isArray(obj.hasMerchantReturnPolicy)).toBe(true);
 		expect(Array.isArray(obj.hasMemberProgram)).toBe(true);
 		expect(Array.isArray(obj.hasShippingService)).toBe(true);
+	});
+
+	it("supports profile page recommended organization properties", () => {
+		const schema = new Organization({
+			name: "Example Inc.",
+			identifier: "org-123",
+			image: new ImageObject({ contentUrl: "https://example.com/profile.png" }),
+			interactionStatistic: new InteractionCounter({
+				interactionType: "https://schema.org/FollowAction",
+				userInteractionCount: 1200,
+			}),
+			agentInteractionStatistic: [
+				new InteractionCounter({
+					interactionType: "https://schema.org/LikeAction",
+					userInteractionCount: 3000,
+				}),
+			],
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+		const image = obj.image as Record<string, unknown>;
+		const interactionStatistic = obj.interactionStatistic as Record<
+			string,
+			unknown
+		>;
+		const agentInteractionStatistic = obj.agentInteractionStatistic as Record<
+			string,
+			unknown
+		>[];
+
+		expect(obj.identifier).toBe("org-123");
+		expect(image["@type"]).toBe("ImageObject");
+		expect(image.contentUrl).toBe("https://example.com/profile.png");
+		expect(interactionStatistic["@type"]).toBe("InteractionCounter");
+		expect(Array.isArray(agentInteractionStatistic)).toBe(true);
+		expect(agentInteractionStatistic[0]?.["@type"]).toBe("InteractionCounter");
 	});
 });

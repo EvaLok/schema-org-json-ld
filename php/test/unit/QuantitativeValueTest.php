@@ -19,6 +19,7 @@ final class QuantitativeValueTest extends TestCase {
 		$this->assertEquals('QuantitativeValue', $obj->{'@type'});
 		$this->assertFalse(property_exists($obj, 'value'));
 		$this->assertFalse(property_exists($obj, 'unitCode'));
+		$this->assertFalse(property_exists($obj, 'unitText'));
 		$this->assertFalse(property_exists($obj, 'minValue'));
 		$this->assertFalse(property_exists($obj, 'maxValue'));
 	}
@@ -33,6 +34,18 @@ final class QuantitativeValueTest extends TestCase {
 
 		$this->assertEquals(1.5, $obj->value);
 		$this->assertEquals('KGM', $obj->unitCode);
+	}
+
+	public function testUnitTextOutput(): void {
+		$schema = new QuantitativeValue(
+			value: 40,
+			unitText: 'HOUR',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals(40, $obj->value);
+		$this->assertEquals('HOUR', $obj->unitText);
 	}
 
 	public function testMinMaxRange(): void {

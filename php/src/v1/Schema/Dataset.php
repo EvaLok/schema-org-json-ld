@@ -32,5 +32,8 @@ class Dataset extends TypedSchema {
 		public null|string $version = null,
 		public null|string $alternateName = null,
 		public null|string $citation = null,
+		/** @var string[]|Dataset[]|string|Dataset $hasPart */
+		public null|string|Dataset|array $hasPart = null,
+		public null|string|Dataset $isPartOf = null,
 	) {}
 }
