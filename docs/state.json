@@ -493,6 +493,14 @@
       "pr": 347,
       "merged_at": "2026-03-03T01:26:40Z",
       "eva_directive": 340
+    },
+    {
+      "issue": 350,
+      "title": "Fix 5 PHPStan level max errors in JsonLdGenerator.php",
+      "dispatched_at": "2026-03-03T02:25:00Z",
+      "model": "gpt-5.3-codex",
+      "status": "in_progress",
+      "pr": 351
     }
   ],
   "qc_processed": [8, 37, 57, 72, 165],
@@ -519,8 +527,8 @@
   ],
   "open_questions_for_eva": [304],
   "eva_input_issues": {
-    "closed_this_cycle": [],
-    "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225],
+    "closed_this_cycle": [348],
+    "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225, 340],
     "remaining_open": [247, 304, 329]
   },
   "typescript_plan": {
@@ -580,12 +588,11 @@
     ]
   },
   "last_cycle": {
-    "issue": 341,
-    "timestamp": "2026-03-03T01:26:40Z",
-    "summary": "Cycle 104: Eva directive #340 COMPLETE. Uniform options-object constructor pattern applied to all 53 TS schema classes across 3 batches. PRs #343 (A-D), #345 (E-M), #347 (O-V) all merged. AGENTS-ts.md updated. Issue #340 closed."
+    "issue": 349,
+    "timestamp": "2026-03-03T02:16:00Z",
+    "summary": "Cycle 105: Eva directive #348 processed (no idle cycles). Fixed AGENTS.md paths, 5 infrastructure files updated. Dispatched PHPStan level max fix (#350, PR #351). QC notified about constructor changes + type categorization posted. Audit-inbound #338 closed."
   },
-  "consecutive_idle_cycles": 0,
-  "last_eva_comment_check": "2026-03-03T00:18:11Z",
+  "last_eva_comment_check": "2026-03-03T02:16:00Z",
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56],
   "test_count": 321,
   "total_schema_types": 28,
