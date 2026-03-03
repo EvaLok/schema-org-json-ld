@@ -33,7 +33,10 @@ describe("Restaurant", () => {
 			menu: "https://example.com/menu",
 			acceptsReservations: true,
 			priceRange: "$$",
-			aggregateRating: new AggregateRating(4.7, null, null, 145),
+			aggregateRating: new AggregateRating({
+				ratingValue: 4.7,
+				ratingCount: 145,
+			}),
 		});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
 			string,

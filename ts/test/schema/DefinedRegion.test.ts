@@ -5,7 +5,7 @@ import { DefinedRegion } from "../../src/schema/DefinedRegion";
 
 describe("DefinedRegion", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new DefinedRegion("US");
+		const schema = new DefinedRegion({ addressCountry: "US" });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -15,7 +15,7 @@ describe("DefinedRegion", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new DefinedRegion("US", null, null);
+		const schema = new DefinedRegion({ addressCountry: "US" });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -24,7 +24,11 @@ describe("DefinedRegion", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new DefinedRegion("US", "NY", "10001");
+		const schema = new DefinedRegion({
+			addressCountry: "US",
+			addressRegion: "NY",
+			postalCode: "10001",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -33,7 +37,10 @@ describe("DefinedRegion", () => {
 	});
 
 	it("supports addressRegion as string array", () => {
-		const schema = new DefinedRegion("US", ["CA", "NV", "AZ"]);
+		const schema = new DefinedRegion({
+			addressCountry: "US",
+			addressRegion: ["CA", "NV", "AZ"],
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

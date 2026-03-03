@@ -7,7 +7,7 @@ import { Person } from "../../src/schema/Person";
 
 describe("Answer", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new Answer("Use semantic HTML where possible.");
+		const schema = new Answer({ text: "Use semantic HTML where possible." });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -17,14 +17,7 @@ describe("Answer", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new Answer(
-			"Use semantic HTML where possible.",
-			null,
-			null,
-			null,
-			null,
-			null,
-		);
+		const schema = new Answer({ text: "Use semantic HTML where possible." });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -36,14 +29,14 @@ describe("Answer", () => {
 	});
 
 	it("includes all fields with Person author", () => {
-		const schema = new Answer(
-			"Use semantic HTML where possible.",
-			new Person({ name: "Jane Doe" }),
-			"https://example.com/answers/1",
-			42,
-			"2026-03-01",
-			"2026-03-02",
-		);
+		const schema = new Answer({
+			text: "Use semantic HTML where possible.",
+			author: new Person({ name: "Jane Doe" }),
+			url: "https://example.com/answers/1",
+			upvoteCount: 42,
+			datePublished: "2026-03-01",
+			dateModified: "2026-03-02",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const author = obj.author as Record<string, unknown>;
@@ -56,10 +49,10 @@ describe("Answer", () => {
 	});
 
 	it("supports Organization author", () => {
-		const schema = new Answer(
-			"Use semantic HTML where possible.",
-			new Organization({ name: "Example Org" }),
-		);
+		const schema = new Answer({
+			text: "Use semantic HTML where possible.",
+			author: new Organization({ name: "Example Org" }),
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const author = obj.author as Record<string, unknown>;

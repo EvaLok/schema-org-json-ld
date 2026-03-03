@@ -7,10 +7,10 @@ import { Rating } from "../../src/schema/Rating";
 
 describe("Certification", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new Certification(
-			"AWS Certified Solutions Architect",
-			new Organization({ name: "AWS" }),
-		);
+		const schema = new Certification({
+			name: "AWS Certified Solutions Architect",
+			issuedBy: new Organization({ name: "AWS" }),
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -20,12 +20,10 @@ describe("Certification", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new Certification(
-			"AWS Certified Solutions Architect",
-			new Organization({ name: "AWS" }),
-			null,
-			null,
-		);
+		const schema = new Certification({
+			name: "AWS Certified Solutions Architect",
+			issuedBy: new Organization({ name: "AWS" }),
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -34,12 +32,12 @@ describe("Certification", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new Certification(
-			"AWS Certified Solutions Architect",
-			new Organization({ name: "AWS" }),
-			"CSA-12345",
-			new Rating(5),
-		);
+		const schema = new Certification({
+			name: "AWS Certified Solutions Architect",
+			issuedBy: new Organization({ name: "AWS" }),
+			certificationIdentification: "CSA-12345",
+			certificationRating: new Rating(5),
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const certificationRating = obj.certificationRating as Record<

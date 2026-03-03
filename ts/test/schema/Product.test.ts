@@ -88,18 +88,23 @@ describe("Product", () => {
 			image: ["https://example.com/image.jpg"],
 			description: "Blue shirt",
 			sku: "SKU-123",
-			offers: new AggregateOffer(10, "USD", 20, 5),
-			brand: new Brand("BrandCo"),
+			offers: new AggregateOffer({
+				lowPrice: 10,
+				priceCurrency: "USD",
+				highPrice: 20,
+				offerCount: 5,
+			}),
+			brand: new Brand({ name: "BrandCo" }),
 			weight: new QuantitativeValue(1, "KGM"),
-			aggregateRating: new AggregateRating(4.5),
+			aggregateRating: new AggregateRating({ ratingValue: 4.5 }),
 			review: new Review("Jane", new Rating(5)),
 			size: new SizeSpecification("M"),
 			isVariantOf: new ProductGroup({ name: "T-Shirt family" }),
 			audience: new PeopleAudience("unisex"),
-			hasCertification: new Certification(
-				"Eco Certified",
-				new Organization({ name: "Cert Org" }),
-			),
+			hasCertification: new Certification({
+				name: "Eco Certified",
+				issuedBy: new Organization({ name: "Cert Org" }),
+			}),
 		});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
 			string,
@@ -127,10 +132,10 @@ describe("Product", () => {
 			offers: [offer],
 			review: [new Review("Jane", new Rating(5))],
 			hasCertification: [
-				new Certification(
-					"Eco Certified",
-					new Organization({ name: "Cert Org" }),
-				),
+				new Certification({
+					name: "Eco Certified",
+					issuedBy: new Organization({ name: "Cert Org" }),
+				}),
 			],
 			size: "M",
 		});

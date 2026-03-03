@@ -75,8 +75,11 @@ describe("ShippingConditions", () => {
 			doesNotShip: false,
 			numItems: new QuantitativeValue(2, "C62"),
 			orderValue: new MonetaryAmount("USD", 50),
-			shippingDestination: new DefinedRegion("US"),
-			shippingOrigin: new DefinedRegion("US", "NY"),
+			shippingDestination: new DefinedRegion({ addressCountry: "US" }),
+			shippingOrigin: new DefinedRegion({
+				addressCountry: "US",
+				addressRegion: "NY",
+			}),
 			seasonalOverride: new OpeningHoursSpecification(
 				DayOfWeek.Friday,
 				"09:00",

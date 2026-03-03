@@ -5,7 +5,7 @@ import { BroadcastEvent } from "../../src/schema/BroadcastEvent";
 
 describe("BroadcastEvent", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new BroadcastEvent(true);
+		const schema = new BroadcastEvent({ isLiveBroadcast: true });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -15,7 +15,7 @@ describe("BroadcastEvent", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new BroadcastEvent(true, null, null);
+		const schema = new BroadcastEvent({ isLiveBroadcast: true });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -24,11 +24,11 @@ describe("BroadcastEvent", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new BroadcastEvent(
-			true,
-			"2026-01-01T12:00:00Z",
-			"2026-01-01T13:00:00Z",
-		);
+		const schema = new BroadcastEvent({
+			isLiveBroadcast: true,
+			startDate: "2026-01-01T12:00:00Z",
+			endDate: "2026-01-01T13:00:00Z",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

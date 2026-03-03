@@ -5,7 +5,9 @@ import { DataDownload } from "../../src/schema/DataDownload";
 
 describe("DataDownload", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new DataDownload("https://example.com/dataset.csv");
+		const schema = new DataDownload({
+			contentUrl: "https://example.com/dataset.csv",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -15,7 +17,9 @@ describe("DataDownload", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new DataDownload("https://example.com/dataset.csv", null);
+		const schema = new DataDownload({
+			contentUrl: "https://example.com/dataset.csv",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -23,10 +27,10 @@ describe("DataDownload", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new DataDownload(
-			"https://example.com/dataset.csv",
-			"text/csv",
-		);
+		const schema = new DataDownload({
+			contentUrl: "https://example.com/dataset.csv",
+			encodingFormat: "text/csv",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

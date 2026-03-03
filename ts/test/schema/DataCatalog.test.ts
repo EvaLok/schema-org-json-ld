@@ -5,7 +5,7 @@ import { DataCatalog } from "../../src/schema/DataCatalog";
 
 describe("DataCatalog", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new DataCatalog("Public Datasets");
+		const schema = new DataCatalog({ name: "Public Datasets" });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -15,7 +15,7 @@ describe("DataCatalog", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new DataCatalog("Public Datasets");
+		const schema = new DataCatalog({ name: "Public Datasets" });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -23,7 +23,7 @@ describe("DataCatalog", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new DataCatalog("Open Data");
+		const schema = new DataCatalog({ name: "Open Data" });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

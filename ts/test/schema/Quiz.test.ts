@@ -41,7 +41,10 @@ describe("Quiz", () => {
 		const schema = new Quiz(
 			[new Question({ name: "Question 1" })],
 			"Algebra",
-			new AlignmentObject("teaches", "Linear equations"),
+			new AlignmentObject({
+				alignmentType: "teaches",
+				targetName: "Linear equations",
+			}),
 			"Math quiz",
 			"A short math quiz",
 		);

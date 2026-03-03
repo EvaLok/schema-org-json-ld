@@ -45,7 +45,7 @@ describe("FAQPage", () => {
 		const schema = new FAQPage([
 			new Question({
 				name: "What is this?",
-				acceptedAnswer: new Answer("A FAQ entry."),
+				acceptedAnswer: new Answer({ text: "A FAQ entry." }),
 			}),
 		]);
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<

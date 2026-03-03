@@ -5,7 +5,7 @@ import { ContactPoint } from "../../src/schema/ContactPoint";
 
 describe("ContactPoint", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new ContactPoint();
+		const schema = new ContactPoint({});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -14,7 +14,7 @@ describe("ContactPoint", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new ContactPoint(null, null, null, null, null);
+		const schema = new ContactPoint({});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -26,13 +26,13 @@ describe("ContactPoint", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new ContactPoint(
-			"+1-800-123-4567",
-			"support@example.com",
-			"customer support",
-			"US",
-			"en",
-		);
+		const schema = new ContactPoint({
+			telephone: "+1-800-123-4567",
+			email: "support@example.com",
+			contactType: "customer support",
+			areaServed: "US",
+			availableLanguage: "en",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -44,13 +44,13 @@ describe("ContactPoint", () => {
 	});
 
 	it("matches PHP parity JSON-LD output", () => {
-		const schema = new ContactPoint(
-			"+1-800-123-4567",
-			"support@example.com",
-			"customer support",
-			"US",
-			"en",
-		);
+		const schema = new ContactPoint({
+			telephone: "+1-800-123-4567",
+			email: "support@example.com",
+			contactType: "customer support",
+			areaServed: "US",
+			availableLanguage: "en",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 
 		expect(json).toBe(

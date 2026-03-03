@@ -57,8 +57,8 @@ describe("Course", () => {
 					availability: ItemAvailability.InStock,
 				}),
 			],
-			hasCourseInstance: [new CourseInstance()],
-			aggregateRating: new AggregateRating(4.6),
+			hasCourseInstance: [new CourseInstance({})],
+			aggregateRating: new AggregateRating({ ratingValue: 4.6 }),
 			inLanguage: "en",
 		});
 		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<

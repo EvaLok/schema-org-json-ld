@@ -41,7 +41,12 @@ describe("ListItem", () => {
 	});
 
 	it("supports TypedSchema for item", () => {
-		const schema = new ListItem(2, "Brand item", new Brand("Acme"), null);
+		const schema = new ListItem(
+			2,
+			"Brand item",
+			new Brand({ name: "Acme" }),
+			null,
+		);
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const item = obj.item as Record<string, unknown>;

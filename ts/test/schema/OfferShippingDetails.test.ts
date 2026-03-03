@@ -9,7 +9,9 @@ import { ShippingDeliveryTime } from "../../src/schema/ShippingDeliveryTime";
 
 describe("OfferShippingDetails", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new OfferShippingDetails(new DefinedRegion("US"));
+		const schema = new OfferShippingDetails(
+			new DefinedRegion({ addressCountry: "US" }),
+		);
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const shippingDestination = obj.shippingDestination as Record<
@@ -25,7 +27,7 @@ describe("OfferShippingDetails", () => {
 
 	it("omits optional fields when null", () => {
 		const schema = new OfferShippingDetails(
-			new DefinedRegion("US"),
+			new DefinedRegion({ addressCountry: "US" }),
 			null,
 			null,
 			null,
@@ -40,7 +42,7 @@ describe("OfferShippingDetails", () => {
 
 	it("includes all fields when set", () => {
 		const schema = new OfferShippingDetails(
-			new DefinedRegion("US", "CA"),
+			new DefinedRegion({ addressCountry: "US", addressRegion: "CA" }),
 			new MonetaryAmount("USD", 4.99),
 			new ShippingDeliveryTime(
 				new QuantitativeValue(1, "DAY"),

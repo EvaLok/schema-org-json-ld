@@ -5,7 +5,7 @@ import { AggregateRating } from "../../src/schema/AggregateRating";
 
 describe("AggregateRating", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new AggregateRating(4.5);
+		const schema = new AggregateRating({ ratingValue: 4.5 });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -15,7 +15,7 @@ describe("AggregateRating", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new AggregateRating(4.5, null, null, null, null);
+		const schema = new AggregateRating({ ratingValue: 4.5 });
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -26,7 +26,13 @@ describe("AggregateRating", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new AggregateRating(4.5, 5, 1, 120, 50);
+		const schema = new AggregateRating({
+			ratingValue: 4.5,
+			bestRating: 5,
+			worstRating: 1,
+			ratingCount: 120,
+			reviewCount: 50,
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

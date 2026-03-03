@@ -94,7 +94,7 @@ describe("LocalBusiness", () => {
 			address,
 			geo: new GeoCoordinates(40.0, -73.0),
 			openingHoursSpecification: [new OpeningHoursSpecification()],
-			aggregateRating: new AggregateRating(4.2),
+			aggregateRating: new AggregateRating({ ratingValue: 4.2 }),
 			review: new Review("Jane", new Rating(5)),
 		});
 		const singleReviewObj = JSON.parse(

@@ -69,9 +69,19 @@ describe("VideoObject", () => {
 			expires: "2026-12-31",
 			regionsAllowed: "US",
 			interactionStatistic: new InteractionCounter("WatchAction", 123),
-			hasPart: [new Clip("Intro", 0, "https://example.com/video#t=0", 30)],
+			hasPart: [
+				new Clip({
+					name: "Intro",
+					startOffset: 0,
+					url: "https://example.com/video#t=0",
+					endOffset: 30,
+				}),
+			],
 			ineligibleRegion: "CA",
-			publication: new BroadcastEvent(true, "2026-02-28T10:00:00Z"),
+			publication: new BroadcastEvent({
+				isLiveBroadcast: true,
+				startDate: "2026-02-28T10:00:00Z",
+			}),
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;

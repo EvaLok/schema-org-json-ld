@@ -5,7 +5,10 @@ import { AlignmentObject } from "../../src/schema/AlignmentObject";
 
 describe("AlignmentObject", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new AlignmentObject("teaches", "Calculus");
+		const schema = new AlignmentObject({
+			alignmentType: "teaches",
+			targetName: "Calculus",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -16,7 +19,10 @@ describe("AlignmentObject", () => {
 	});
 
 	it("omits optional fields when null", () => {
-		const schema = new AlignmentObject("teaches", "Calculus", null, null);
+		const schema = new AlignmentObject({
+			alignmentType: "teaches",
+			targetName: "Calculus",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
@@ -25,12 +31,12 @@ describe("AlignmentObject", () => {
 	});
 
 	it("includes all fields when set", () => {
-		const schema = new AlignmentObject(
-			"teaches",
-			"Calculus",
-			"Common Core",
-			"https://example.com/targets/calculus",
-		);
+		const schema = new AlignmentObject({
+			alignmentType: "teaches",
+			targetName: "Calculus",
+			educationalFramework: "Common Core",
+			targetUrl: "https://example.com/targets/calculus",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
