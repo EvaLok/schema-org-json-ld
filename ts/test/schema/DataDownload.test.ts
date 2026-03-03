@@ -5,7 +5,9 @@ import { DataDownload } from "../../src/schema/DataDownload";
 
 describe("DataDownload", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new DataDownload({ contentUrl: "https://example.com/dataset.csv" });
+		const schema = new DataDownload({
+			contentUrl: "https://example.com/dataset.csv",
+		});
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 

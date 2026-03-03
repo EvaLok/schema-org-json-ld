@@ -9,7 +9,9 @@ import { ShippingDeliveryTime } from "../../src/schema/ShippingDeliveryTime";
 
 describe("OfferShippingDetails", () => {
 	it("produces minimal JSON-LD output with required fields only", () => {
-		const schema = new OfferShippingDetails(new DefinedRegion({ addressCountry: "US" }));
+		const schema = new OfferShippingDetails(
+			new DefinedRegion({ addressCountry: "US" }),
+		);
 		const json = JsonLdGenerator.schemaToJson(schema);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 		const shippingDestination = obj.shippingDestination as Record<

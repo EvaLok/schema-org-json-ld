@@ -60,7 +60,9 @@ describe("Offer", () => {
 			price: 19.99,
 			availability: ItemAvailability.InStock,
 			itemCondition: OfferItemCondition.NewCondition,
-			shippingDetails: [new OfferShippingDetails(new DefinedRegion({ addressCountry: "US" }))],
+			shippingDetails: [
+				new OfferShippingDetails(new DefinedRegion({ addressCountry: "US" })),
+			],
 			validFrom: "2026-02-01",
 			priceValidUntil: "2026-12-31",
 			priceSpecification: new UnitPriceSpecification(19.99, "USD"),

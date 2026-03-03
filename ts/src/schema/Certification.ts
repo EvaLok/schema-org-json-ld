@@ -21,7 +21,8 @@ export class Certification extends TypedSchema {
 		super();
 		this.name = options.name;
 		this.issuedBy = options.issuedBy;
-		this.certificationIdentification = options.certificationIdentification ?? null;
+		this.certificationIdentification =
+			options.certificationIdentification ?? null;
 		this.certificationRating = options.certificationRating ?? null;
 	}
 }

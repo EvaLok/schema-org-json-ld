@@ -68,7 +68,9 @@ describe("QAPage", () => {
 				acceptedAnswer: new Answer({
 					text: "Click the forgot password link on the login page.",
 				}),
-				suggestedAnswer: [new Answer({ text: "You can also contact support." })],
+				suggestedAnswer: [
+					new Answer({ text: "You can also contact support." }),
+				],
 				answerCount: 2,
 				text: "I cannot find the reset password option anywhere on the site.",
 				upvoteCount: 42,

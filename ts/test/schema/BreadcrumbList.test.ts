@@ -21,7 +21,7 @@ describe("BreadcrumbList", () => {
 		const schema = new BreadcrumbList({
 			itemListElement: [
 				new ListItem(1, "Home", "https://example.com"),
-			new ListItem(2, "Products", "https://example.com/products"),
+				new ListItem(2, "Products", "https://example.com/products"),
 			],
 		});
 		const json = JsonLdGenerator.schemaToJson(schema);
