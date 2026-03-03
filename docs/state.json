@@ -322,10 +322,11 @@
     "phpstan_level": 9,
     "phpstan_max_assessment": {
       "level_9_errors": 0,
-      "level_max_errors": 0,
-      "fix_pr": 351,
-      "fix_merged_at": "2026-03-03T02:37:51Z",
-      "note": "Level max achieved (0 errors). Fixed via 3 @var annotations in JsonLdGenerator.php."
+      "level_max_errors": 3,
+      "regression_pr": 364,
+      "fix_issue": 398,
+      "fix_status": "dispatched",
+      "note": "PR #364 (mixed-array serialization) introduced 3 'Cannot access an offset on mixed' errors at level max. Fix dispatched as #398. Config remains at level 9 until fix merges."
     },
     "directory_layout": {
       "php": "php/src/, php/test/",
@@ -636,6 +637,13 @@
       "pr": 393,
       "merged_at": "2026-03-03T17:06:00Z",
       "note": "Last remaining positional-param TS class. Missed during cycle 104 refactoring. 6 files updated, CI green on all 9 checks."
+    },
+    {
+      "issue": 398,
+      "title": "Upgrade PHPStan to level max: fix 3 mixed-offset errors in JsonLdGenerator",
+      "dispatched_at": "2026-03-03T19:49:00Z",
+      "model": "gpt-5.3-codex",
+      "status": "dispatched"
     }
   ],
   "qc_processed": [8, 37, 57, 72, 160, 165],
@@ -662,7 +670,7 @@
   ],
   "open_questions_for_eva": [304],
   "eva_input_issues": {
-    "closed_this_cycle": [],
+    "closed_this_cycle": [396],
     "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225, 340, 348, 372, 378],
     "remaining_open": [247, 304, 329]
   },
@@ -726,14 +734,15 @@
   "copilot_metrics": {
     "dispatch_to_pr_rate": "30/30 (100%)",
     "pr_merge_rate": "30/30 (100%)",
-    "note": "30 dispatches, 30 merged, 0 in-flight. 2 revision rounds total (#364 mixed-array bug, #384 missing required props). Zero silent failures."
+    "in_flight": 1,
+    "note": "30 dispatches, 30 merged, 1 in-flight (#398 PHPStan max). 2 revision rounds total (#364 mixed-array bug, #384 missing required props). Zero silent failures."
   },
   "last_cycle": {
-    "issue": 394,
-    "timestamp": "2026-03-03T18:14:00Z",
-    "summary": "Cycle 114: Accepted audit #73 (publish gate denominator 76->73). QC validation SATISFIED (73/73 parity). Closed QC-REQUEST #331. Phase 4 now awaiting Eva."
+    "issue": 397,
+    "timestamp": "2026-03-03T19:43:00Z",
+    "summary": "Cycle 115: Acknowledged Eva #396 (Node 22 CI). Dispatched #398 (PHPStan level max fix). Updated AGENTS-ts.md for Node 22. Proactive scan found no other urgent improvements."
   },
-  "last_eva_comment_check": "2026-03-03T18:14:00Z",
+  "last_eva_comment_check": "2026-03-03T19:43:00Z",
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71, 73],
   "test_count": 338,
   "total_schema_types": 28,

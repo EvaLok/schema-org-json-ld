@@ -35,7 +35,7 @@ ts/
 
 - **TypeScript**: strict mode (`"strict": true` in tsconfig.json)
 - **Target**: ES2022 (aligns with Node 20+ features)
-- **Node minimum**: 20 (also tested on 24)
+- **Node minimum**: 20 (also tested on 22 and 24)
 - **Linter/formatter**: Biome (not ESLint/Prettier)
 - **Test framework**: Vitest
 - **Build tool**: tsup (dual ESM/CJS output)
