@@ -70,16 +70,16 @@ return "null";
 return cleaned;
 }
 
-type PhpNode = {
+type PhpAstNode = {
 	kind?: string;
 	[key: string]: unknown;
 };
 
-function isPhpNode(value: unknown): value is PhpNode {
+function isPhpNode(value: unknown): value is PhpAstNode {
 	return typeof value === "object" && value !== null;
 }
 
-function forEachPhpNode(node: unknown, visitor: (currentNode: PhpNode) => void): void {
+function forEachPhpNode(node: unknown, visitor: (currentNode: PhpAstNode) => void): void {
 	if (!node) {
 		return;
 	}
@@ -104,7 +104,7 @@ function forEachPhpNode(node: unknown, visitor: (currentNode: PhpNode) => void):
 	}
 }
 
-function parsePhpSchemaType(node: PhpNode | undefined): string[] {
+function parsePhpSchemaType(node: PhpAstNode | undefined): string[] {
 	if (!node) {
 		return [];
 	}
@@ -128,7 +128,7 @@ function parsePhpSchemaType(node: PhpNode | undefined): string[] {
 	return [];
 }
 
-function parsePhpPropertyMap(node: PhpNode | undefined): Record<string, string> {
+function parsePhpPropertyMap(node: PhpAstNode | undefined): Record<string, string> {
 	const map: Record<string, string> = {};
 	if (!node || node.kind !== "array" || !Array.isArray(node.items)) {
 		return map;
@@ -236,6 +236,22 @@ function parseTsPropertyMap(node: ts.Expression | undefined): Record<string, str
 	return map;
 }
 
+/**
+ * Extracts the base class name from a TS extends clause.
+ * - Identifier: `extends TypedSchema`
+ * - Property access: `extends Schema.TypedSchema`
+ * - Fallback: complex expressions keep textual representation
+ */
+function getTsExtendsName(typeNode: ts.ExpressionWithTypeArguments, sourceFile: ts.SourceFile): string {
+	if (ts.isIdentifier(typeNode.expression)) {
+		return typeNode.expression.text;
+	}
+	if (ts.isPropertyAccessExpression(typeNode.expression)) {
+		return typeNode.expression.name.text;
+	}
+	return typeNode.expression.getText(sourceFile);
+}
+
 function extractTsTypes(typeNode: ts.TypeNode | undefined): { types: string[]; nullable: boolean } {
 	if (!typeNode) {
 		return { types: [], nullable: false };
@@ -259,7 +275,7 @@ function extractTsTypes(typeNode: ts.TypeNode | undefined): { types: string[]; n
 function parsePhpSchemaFile(filePath: string): SchemaDefinition | null {
 	const content = readFileSync(filePath, "utf8");
 	const ast = phpAstParser.parseCode(content, filePath);
-	let classNode: PhpNode | null = null;
+	let classNode: PhpAstNode | null = null;
 
 	forEachPhpNode(ast, (node) => {
 		if (!classNode && node.kind === "class") {
@@ -320,6 +336,8 @@ function parsePhpSchemaFile(filePath: string): SchemaDefinition | null {
 					continue;
 				}
 				if (argument.flags === 0) {
+					// php-parser uses flags=0 for non-promoted constructor parameters.
+					// Non-zero flags indicate promoted visibility (public/protected/private).
 					continue;
 				}
 
@@ -371,7 +389,7 @@ function parseTsSchemaFile(filePath: string): SchemaDefinition | null {
 	const parentType = classNode.heritageClauses
 		?.find((clause) => clause.token === ts.SyntaxKind.ExtendsKeyword)
 		?.types.at(0);
-	const parentClass = parentType ? parentType.expression.getText(sourceFile) : "TypedSchema";
+	const parentClass = parentType ? getTsExtendsName(parentType, sourceFile) : "TypedSchema";
 	let schemaType: string[] = [];
 	let propertyMap: Record<string, string> = {};
 
@@ -431,7 +449,7 @@ function parseTsSchemaFile(filePath: string): SchemaDefinition | null {
 function parsePhpEnumFile(filePath: string): EnumDefinition | null {
 	const content = readFileSync(filePath, "utf8");
 	const ast = phpAstParser.parseCode(content, filePath);
-	let enumNode: PhpNode | null = null;
+	let enumNode: PhpAstNode | null = null;
 
 	forEachPhpNode(ast, (node) => {
 		if (!enumNode && node.kind === "enum") {
