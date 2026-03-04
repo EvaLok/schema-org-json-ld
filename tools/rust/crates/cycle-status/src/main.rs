@@ -137,16 +137,16 @@ fn main() {
         dispatch_available: in_flight < MAX_CONCURRENCY,
     };
 
-	let action_items = build_action_items(
+    let action_items = build_action_items(
         &eva_input,
         &agent_status,
         &qc_status,
         &audit_status,
         &concurrency,
     );
-	let report = Report {
-		generated_at: current_timestamp_utc(),
-		last_cycle_timestamp,
+    let report = Report {
+        generated_at: current_timestamp_utc(),
+        last_cycle_timestamp,
         eva_input,
         agent_status,
         qc_status,
@@ -170,20 +170,21 @@ fn main() {
 }
 
 fn current_timestamp_utc() -> String {
-	let output = Command::new("date")
-		.args(["-u", "+%Y-%m-%dT%H:%M:%SZ"])
-		.output();
-	match output {
-		Ok(result) if result.status.success() => {
-			let timestamp = String::from_utf8_lossy(&result.stdout).trim().to_string();
-			if timestamp.is_empty() {
-				"unknown".to_string()
-			} else {
-				timestamp
-			}
-		}
-		_ => "unknown".to_string(),
-	}
+    const FALLBACK: &str = "1970-01-01T00:00:00Z";
+    let output = Command::new("date")
+        .args(["-u", "+%Y-%m-%dT%H:%M:%SZ"])
+        .output();
+    match output {
+        Ok(result) if result.status.success() => {
+            let timestamp = String::from_utf8_lossy(&result.stdout).trim().to_string();
+            if timestamp.is_empty() {
+                FALLBACK.to_string()
+            } else {
+                timestamp
+            }
+        }
+        _ => FALLBACK.to_string(),
+    }
 }
 
 fn read_state_json(path: &Path, errors: &mut Vec<String>) -> StateJson {
@@ -344,10 +345,9 @@ fn gather_agent_status(errors: &mut Vec<String>) -> AgentStatus {
         Err(e) => errors.push(format!("Open PR query failed: {}", e)),
     }
 
-    match gh_json(&[
-        "api",
-        "repos/EvaLok/schema-org-json-ld/issues?assignee=copilot-swe-agent[bot]&state=open",
-    ]) {
+    let copilot_issues_path =
+        format!("repos/{}/issues?assignee=copilot-swe-agent[bot]&state=open", MAIN_REPO);
+    match gh_json(&["api", &copilot_issues_path]) {
         Ok(value) => {
             if let Some(items) = value.as_array() {
                 section.open_copilot_issues = items
@@ -401,9 +401,9 @@ fn gather_qc_status(state: &StateJson, errors: &mut Vec<String>) -> ProcessingSt
         errors,
         "QC outbound query failed",
         &format!(
-			"repos/{}/issues?labels=qc-outbound&state=open&creator=EvaLok&sort=created&direction=asc",
-			QC_REPO
-		),
+            "repos/{}/issues?labels=qc-outbound&state=open&creator=EvaLok&sort=created&direction=asc",
+            QC_REPO
+        ),
         "QC inbound query failed",
         &[
             "issue",
@@ -427,9 +427,9 @@ fn gather_audit_status(state: &StateJson, errors: &mut Vec<String>) -> Processin
         errors,
         "Audit outbound query failed",
         &format!(
-			"repos/{}/issues?labels=audit-outbound&state=open&creator=EvaLok&sort=created&direction=asc",
-			AUDIT_REPO
-		),
+            "repos/{}/issues?labels=audit-outbound&state=open&creator=EvaLok&sort=created&direction=asc",
+            AUDIT_REPO
+        ),
         "Audit inbound query failed",
         &[
             "issue",
