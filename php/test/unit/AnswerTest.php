@@ -6,6 +6,7 @@ namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Answer;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Comment;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ImageObject;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Person;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\VideoObject;
@@ -68,6 +69,7 @@ final class AnswerTest extends TestCase {
 		$this->assertFalse(property_exists($obj, 'upvoteCount'));
 		$this->assertFalse(property_exists($obj, 'datePublished'));
 		$this->assertFalse(property_exists($obj, 'dateModified'));
+		$this->assertFalse(property_exists($obj, 'comment'));
 	}
 
 	public function testFullOutput(): void {
@@ -101,6 +103,18 @@ final class AnswerTest extends TestCase {
 
 		$this->assertEquals('https://example.com/answer.jpg', $obj->image);
 		$this->assertEquals('https://example.com/answer.mp4', $obj->video);
+	}
+
+	public function testCommentSerializesAsArray(): void {
+		$schema = new Answer(
+			text: 'You can return items within 30 days.',
+			comment: [new Comment(text: 'Thanks!')],
+		);
+		$obj = json_decode(JsonLdGenerator::SchemaToJson(schema: $schema));
+
+		$this->assertCount(1, $obj->comment);
+		$this->assertEquals('Comment', $obj->comment[0]->{'@type'});
+		$this->assertEquals('Thanks!', $obj->comment[0]->text);
 	}
 
 	public function testImageAndVideoSerializeAsObjects(): void {

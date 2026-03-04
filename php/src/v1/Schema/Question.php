@@ -22,6 +22,8 @@ class Question extends TypedSchema {
 		public null|Person|Organization $author = null,
 		public null|string $datePublished = null,
 		public null|string $dateModified = null,
+		/** @var Comment[]|null $comment */
+		public null|array $comment = null,
 		public null|string $eduQuestionType = null,
 	) {}
 }

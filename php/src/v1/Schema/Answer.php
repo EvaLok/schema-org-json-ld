@@ -18,5 +18,7 @@ class Answer extends TypedSchema {
 		public null|int $upvoteCount = null,
 		public null|string $datePublished = null,
 		public null|string $dateModified = null,
+		/** @var Comment[]|null $comment */
+		public null|array $comment = null,
 	) {}
 }

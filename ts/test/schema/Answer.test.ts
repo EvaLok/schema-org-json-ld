@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { JsonLdGenerator } from "../../src/JsonLdGenerator";
 import { Answer } from "../../src/schema/Answer";
+import { Comment } from "../../src/schema/Comment";
 import { ImageObject } from "../../src/schema/ImageObject";
 import { Organization } from "../../src/schema/Organization";
 import { Person } from "../../src/schema/Person";
@@ -141,6 +142,7 @@ describe("Answer", () => {
 		expect(obj).not.toHaveProperty("upvoteCount");
 		expect(obj).not.toHaveProperty("datePublished");
 		expect(obj).not.toHaveProperty("dateModified");
+		expect(obj).not.toHaveProperty("comment");
 	});
 
 	it("includes all fields with Person author", () => {
@@ -189,6 +191,22 @@ describe("Answer", () => {
 
 		expect(obj.image).toBe("https://example.com/answer.jpg");
 		expect(obj.video).toBe("https://example.com/answer.mp4");
+	});
+
+	it("serializes comment as an array of Comment", () => {
+		const schema = new Answer({
+			text: "Use semantic HTML where possible.",
+			comment: [new Comment({ text: "Thanks!" })],
+		});
+		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
+			string,
+			unknown
+		>;
+		const comment = obj.comment as Record<string, unknown>[];
+
+		expect(comment).toHaveLength(1);
+		expect(comment[0]?.["@type"]).toBe("Comment");
+		expect(comment[0]?.text).toBe("Thanks!");
 	});
 
 	it("serializes image and video as schema objects", () => {
