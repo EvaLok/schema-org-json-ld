@@ -7,7 +7,7 @@ use std::process::Command;
 
 const REPO: &str = "EvaLok/schema-org-json-ld";
 const AGENT_ISSUE_ASSIGNEE: &str = "copilot-swe-agent[bot]";
-const AGENT_PR_AUTHOR: &str = "app/copilot-swe-agent";
+const AGENT_PR_AUTHOR: &str = "copilot-swe-agent[bot]";
 
 #[derive(Parser)]
 #[command(name = "housekeeping-scan")]
@@ -61,7 +61,7 @@ fn main() {
         Ok(value) => value,
         Err(e) => exit_with_error(e),
     };
-    report.dead_branches = match scan_dead_branches() {
+    report.dead_branches = match scan_dead_branches(&cli.repo_root) {
         Ok(value) => value,
         Err(e) => exit_with_error(e),
     };
@@ -153,10 +153,7 @@ fn find_orphan_draft_prs(prs: &[Value], now: DateTime<Utc>) -> Result<Vec<Findin
     let mut findings = Vec::new();
 
     for pr in prs {
-        if !pr.get("isDraft").and_then(Value::as_bool).unwrap_or(false) {
-            continue;
-        }
-        if pr.pointer("/author/login").and_then(Value::as_str) != Some(AGENT_PR_AUTHOR) {
+        if !is_copilot_draft_pr(pr) {
             continue;
         }
 
@@ -195,6 +192,11 @@ fn find_orphan_draft_prs(prs: &[Value], now: DateTime<Utc>) -> Result<Vec<Findin
     Ok(findings)
 }
 
+fn is_copilot_draft_pr(pr: &Value) -> bool {
+    pr.get("isDraft").and_then(Value::as_bool).unwrap_or(false)
+        && pr.pointer("/author/login").and_then(Value::as_str) == Some(AGENT_PR_AUTHOR)
+}
+
 fn has_copilot_work_finished(value: &Value) -> bool {
     value
         .as_array()
@@ -210,9 +212,10 @@ fn has_copilot_work_finished(value: &Value) -> bool {
         .unwrap_or(false)
 }
 
-fn scan_dead_branches() -> Result<Vec<Finding>, String> {
+fn scan_dead_branches(repo_root: &Path) -> Result<Vec<Finding>, String> {
     let branches_output = Command::new("git")
         .args(["branch", "-r", "--list", "origin/*"])
+        .current_dir(repo_root)
         .output()
         .map_err(|e| format!("failed to execute git branch query: {}", e))?;
     if !branches_output.status.success() {
@@ -465,6 +468,20 @@ mod tests {
             {"event": "ready_for_review"}
         ]);
         assert!(!has_copilot_work_finished(&no_match));
+    }
+
+    #[test]
+    fn copilot_draft_pr_match_uses_bot_login() {
+        let copilot_draft = json!({
+            "isDraft": true,
+            "author": { "login": "copilot-swe-agent[bot]" }
+        });
+        let wrong_author = json!({
+            "isDraft": true,
+            "author": { "login": "app/copilot-swe-agent" }
+        });
+        assert!(is_copilot_draft_pr(&copilot_draft));
+        assert!(!is_copilot_draft_pr(&wrong_author));
     }
 
     #[test]
