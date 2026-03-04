@@ -859,7 +859,8 @@
       "schema_status.property_gap_audit": {"cadence": "after property gap fixes", "last_refreshed": "cycle 127"},
       "schema_status.phpstan_max_assessment": {"cadence": "after PHPStan config or fix changes", "last_refreshed": "cycle 126"},
       "typescript_plan.status": {"cadence": "after plan phase transitions", "last_refreshed": "cycle 126"},
-      "eva_input_issues.closed_this_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 130"}
+      "eva_input_issues.closed_this_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 130"},
+      "tool_pipeline": {"cadence": "after pipeline phase transitions", "last_refreshed": "cycle 130"}
     }
   }
 }
