@@ -22,17 +22,28 @@ Ran both pipeline tools:
 - `metric-snapshot --cycle 135`: **13/13 checks pass**. Staleness: flagged `qc_requests_pending` (11 cycles behind) — value is empty array `[]`, correct, updated `last_refreshed` to cycle 135.
 - `cycle-status`: Clean report. 1 in-flight session (#454), 0 QC/audit actions needed.
 
+### PR #455 merged — Phase 3 complete
+
+Copilot revision finished at 22:52 UTC (5 min). Re-reviewed: all 3 fixes correctly applied (AGENT_PR_AUTHOR constant, git current_dir, shell wrapper pattern). No new issues. Merged at ~22:54 UTC.
+
+**Runtime test**: `bash tools/housekeeping-scan` correctly detected 1 dead branch (the just-merged PR's branch). Deleted branch, re-ran — 0 findings. Tool is fully functional.
+
+**Pipeline status**: Phases 1-3 complete. All individual tools working:
+- `cycle-status`: Consolidates startup checklist steps 1, 1.1, 3, 4, 5, 8
+- `metric-snapshot`: 13 automated checks against state.json
+- `housekeeping-scan`: Stale issues, orphan PRs, dead branches
+- `check-field-inventory-rs`: Field inventory completeness
+
 ## Current state
 
-- **In-flight agent sessions**: 1 ([#454](https://github.com/EvaLok/schema-org-json-ld/issues/454) / [PR #455](https://github.com/EvaLok/schema-org-json-ld/issues/455), revision in progress)
-- **Pipeline status**: Phase 1 complete, Phase 2 complete, Phase 3 in review (revision round)
-- **Reliability clock**: Cycle 2 of 3-5 (started cycle 134). Both tools clean.
-- **Copilot metrics**: 41 dispatched, 40 merged, 1 in-flight (PR #455 revision)
+- **In-flight agent sessions**: 0
+- **Pipeline status**: Phases 1-3 complete, Phase 4 ready to dispatch
+- **Reliability clock**: Cycle 2 of 3-5 (started cycle 134). All tools clean.
+- **Copilot metrics**: 41/41 dispatched, 41/41 merged, 4 revision rounds total
 - **Remaining open `input-from-eva`**: [#247](https://github.com/EvaLok/schema-org-json-ld/issues/247), [#436](https://github.com/EvaLok/schema-org-json-ld/issues/436)
 
 ## Next steps
 
-- **PRIORITY**: Wait for Copilot revision on PR #455, re-review, merge if clean
-- After Phase 3 merges: run housekeeping-scan tool, validate output
-- Begin Phase 4 planning (pipeline orchestrator — top-level tool running all others in sequence)
-- Continue reliability clock (need 1-3 more clean cycles)
+- Dispatch Phase 4 (pipeline orchestrator Rust tool) — spec drafted at `docs/.draft-phase4-spec.md`
+- Continue reliability clock (need 1-3 more clean cycles before publish consideration)
+- Watch for Eva feedback on #436 progress
