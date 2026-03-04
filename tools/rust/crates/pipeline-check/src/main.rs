@@ -5,6 +5,10 @@ use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+const HOUSEKEEPING_FINDINGS_KEY: &str = "items_needing_attention";
+const CYCLE_STATUS_IN_FLIGHT_PATH: &str = "/concurrency/in_flight";
+const CYCLE_STATUS_DIRECTIVES_PATH: &str = "/eva_input/comments_since_last_cycle";
+
 #[derive(Parser)]
 #[command(name = "pipeline-check")]
 struct Cli {
@@ -100,7 +104,7 @@ fn main() {
         match serde_json::to_string_pretty(&report) {
             Ok(out) => println!("{}", out),
             Err(e) => {
-                eprintln!("Error: failed to serialize JSON output: {}", e);
+                eprintln!("Error: Failed to serialize pipeline report to JSON: {}", e);
                 std::process::exit(2);
             }
         }
@@ -185,7 +189,7 @@ fn run_step(repo_root: &Path, spec: &ToolSpec, runner: &dyn CommandRunner) -> St
             name: spec.display_name,
             status: StepStatus::Skip,
             exit_code: None,
-            detail: Some("binary not found".to_string()),
+            detail: Some(format!("binary not found at {}", binary_path.display())),
             findings: None,
             summary: None,
         };
@@ -199,7 +203,7 @@ fn run_step(repo_root: &Path, spec: &ToolSpec, runner: &dyn CommandRunner) -> St
                 name: spec.display_name,
                 status: StepStatus::Error,
                 exit_code: None,
-                detail: Some(err),
+                detail: Some(format!("Tool '{}' failed: {}", spec.display_name, err)),
                 findings: None,
                 summary: None,
             };
@@ -248,16 +252,14 @@ fn classify_step(name: &'static str, kind: &ToolKind, execution: ExecutionResult
                             .map(|checks| {
                                 let passing = checks
                                     .iter()
-                                    .filter(|check| {
-                                        check.get("pass").and_then(Value::as_bool).unwrap_or(false)
-                                    })
+                                    .filter(|check| is_check_passing(check))
                                     .count();
                                 format!("{}/{} checks", passing, checks.len())
                             })
                     });
             } else {
                 step.status = StepStatus::Error;
-                step.detail = Some("invalid JSON output".to_string());
+                step.detail = Some(format!("invalid JSON output from {}", name));
             }
         }
         ToolKind::HousekeepingScan => {
@@ -268,15 +270,15 @@ fn classify_step(name: &'static str, kind: &ToolKind, execution: ExecutionResult
                     _ => StepStatus::Error,
                 };
                 let findings = parsed
-                    .get("items_needing_attention")
+                    .get(HOUSEKEEPING_FINDINGS_KEY)
                     .and_then(Value::as_u64)
-                    .map(|v| v as usize)
+                    .and_then(|v| usize::try_from(v).ok())
                     .unwrap_or(0);
                 step.findings = Some(findings);
                 step.detail = Some(format!("{} findings", findings));
             } else {
                 step.status = StepStatus::Error;
-                step.detail = Some("invalid JSON output".to_string());
+                step.detail = Some(format!("invalid JSON output from {}", name));
             }
         }
         ToolKind::CycleStatus => {
@@ -287,11 +289,11 @@ fn classify_step(name: &'static str, kind: &ToolKind, execution: ExecutionResult
                     _ => StepStatus::Error,
                 };
                 let in_flight = parsed
-                    .pointer("/concurrency/in_flight")
+                    .pointer(CYCLE_STATUS_IN_FLIGHT_PATH)
                     .and_then(Value::as_u64)
                     .unwrap_or(0);
                 let directives = parsed
-                    .pointer("/eva_input/comments_since_last_cycle")
+                    .pointer(CYCLE_STATUS_DIRECTIVES_PATH)
                     .and_then(Value::as_array)
                     .map(Vec::len)
                     .unwrap_or(0);
@@ -301,7 +303,7 @@ fn classify_step(name: &'static str, kind: &ToolKind, execution: ExecutionResult
                 ));
             } else {
                 step.status = StepStatus::Error;
-                step.detail = Some("invalid JSON output".to_string());
+                step.detail = Some(format!("invalid JSON output from {}", name));
             }
         }
     }
@@ -311,6 +313,10 @@ fn classify_step(name: &'static str, kind: &ToolKind, execution: ExecutionResult
 
 fn parse_json(raw: &str) -> Option<Value> {
     serde_json::from_str(raw).ok()
+}
+
+fn is_check_passing(check: &Value) -> bool {
+    check.get("pass").and_then(Value::as_bool).unwrap_or(false)
 }
 
 fn pipeline_exit_code(steps: &[StepReport]) -> i32 {
