@@ -1,5 +1,5 @@
 use clap::Parser;
-use serde_json::Value;
+use state_schema::StateJson;
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::PathBuf;
@@ -19,6 +19,7 @@ struct Cli {
 
 /// Top-level keys excluded from tracking (append-only or static).
 const EXCLUDED_TOP_LEVEL: &[&str] = &[
+    "schema_version",
     "agent_sessions",
     "release",
     "field_inventory",
@@ -50,35 +51,18 @@ const EXCLUDED_TYPESCRIPT_PLAN: &[&str] = &[
 fn main() {
     let cli = Cli::parse();
 
-    let state_path = cli.repo_root.join("docs/state.json");
-    let content = match fs::read_to_string(&state_path) {
-        Ok(c) => c,
-        Err(e) => {
-            eprintln!("Error reading {}: {}", state_path.display(), e);
-            process::exit(1);
-        }
-    };
-
-    let state: Value = match serde_json::from_str(&content) {
-        Ok(v) => v,
-        Err(e) => {
-            eprintln!("Error parsing JSON: {}", e);
-            process::exit(1);
-        }
-    };
+    let state = read_state_file(&cli.repo_root.join("docs/state.json"));
 
     let inventoried = get_inventoried_fields(&state);
     let mut gaps: BTreeSet<String> = BTreeSet::new();
 
     // Mutable top-level fields (excluding append-only and static)
-    if let Some(obj) = state.as_object() {
-        for key in obj.keys() {
-            if EXCLUDED_TOP_LEVEL.contains(&key.as_str()) {
-                continue;
-            }
-            if !is_inventoried(key, &inventoried) {
-                gaps.insert(key.clone());
-            }
+    for key in state_top_level_keys(&state) {
+        if EXCLUDED_TOP_LEVEL.contains(&key.as_str()) {
+            continue;
+        }
+        if !is_inventoried(&key, &inventoried) {
+            gaps.insert(key);
         }
     }
 
@@ -86,28 +70,24 @@ fn main() {
     // Some sub-fields share names with top-level keys (e.g., phpstan_level,
     // type_classification, typescript_stats). The inventory may track them
     // under either the bare name or the schema_status.* prefix.
-    if let Some(schema_status) = state.get("schema_status").and_then(|v| v.as_object()) {
-        for key in schema_status.keys() {
-            if EXCLUDED_SCHEMA_STATUS.contains(&key.as_str()) {
-                continue;
-            }
-            let prefixed = format!("schema_status.{}", key);
-            if !inventoried.contains(&prefixed) && !inventoried.contains(key.as_str()) {
-                gaps.insert(prefixed);
-            }
+    for key in schema_status_keys(&state) {
+        if EXCLUDED_SCHEMA_STATUS.contains(&key.as_str()) {
+            continue;
+        }
+        let prefixed = format!("schema_status.{}", key);
+        if !inventoried.contains(&prefixed) && !inventoried.contains(key.as_str()) {
+            gaps.insert(prefixed);
         }
     }
 
     // Mutable typescript_plan sub-fields
-    if let Some(ts_plan) = state.get("typescript_plan").and_then(|v| v.as_object()) {
-        for key in ts_plan.keys() {
-            if EXCLUDED_TYPESCRIPT_PLAN.contains(&key.as_str()) {
-                continue;
-            }
-            let path = format!("typescript_plan.{}", key);
-            if !inventoried.contains(&path) {
-                gaps.insert(path);
-            }
+    for key in typescript_plan_keys(&state) {
+        if EXCLUDED_TYPESCRIPT_PLAN.contains(&key.as_str()) {
+            continue;
+        }
+        let path = format!("typescript_plan.{}", key);
+        if !inventoried.contains(&path) {
+            gaps.insert(path);
         }
     }
 
@@ -137,18 +117,26 @@ fn main() {
 }
 
 /// Extract the set of field paths from .field_inventory.fields keys.
-fn get_inventoried_fields(state: &Value) -> BTreeSet<String> {
-    let mut fields = BTreeSet::new();
-    if let Some(inventory) = state
-        .get("field_inventory")
-        .and_then(|v| v.get("fields"))
-        .and_then(|v| v.as_object())
-    {
-        for key in inventory.keys() {
-            fields.insert(key.clone());
+fn read_state_file(path: &PathBuf) -> StateJson {
+    let content = match fs::read_to_string(path) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Error reading {}: {}", path.display(), e);
+            process::exit(1);
+        }
+    };
+
+    match serde_json::from_str::<StateJson>(&content) {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("Error parsing JSON ({}): {}", path.display(), e);
+            process::exit(1);
         }
     }
-    fields
+}
+
+fn get_inventoried_fields(state: &StateJson) -> BTreeSet<String> {
+    state.field_inventory.fields.keys().cloned().collect()
 }
 
 /// Check if a top-level key is inventoried (exact match or has sub-field entries).
@@ -158,4 +146,88 @@ fn is_inventoried(key: &str, inventoried: &BTreeSet<String>) -> bool {
     }
     let prefix = format!("{}.", key);
     inventoried.iter().any(|f| f.starts_with(&prefix))
+}
+
+fn state_top_level_keys(state: &StateJson) -> BTreeSet<String> {
+    let mut keys: BTreeSet<String> = [
+        "schema_version",
+        "schema_status",
+        "agent_sessions",
+        "qc_processed",
+        "qc_requests_pending",
+        "qc_status",
+        "blockers",
+        "open_questions_for_eva",
+        "eva_input_issues",
+        "typescript_plan",
+        "release",
+        "constructor_refactoring",
+        "copilot_metrics",
+        "last_cycle",
+        "last_eva_comment_check",
+        "audit_processed",
+        "test_count",
+        "next_metric_verification",
+        "total_schema_types",
+        "total_sub_types",
+        "total_schema_classes",
+        "total_enums",
+        "total_testable_types",
+        "total_standalone_testable_types",
+        "total_testable_types_note",
+        "tool_pipeline",
+        "field_inventory",
+    ]
+    .into_iter()
+    .map(str::to_owned)
+    .collect();
+
+    keys.extend(state.extra.keys().cloned());
+    keys
+}
+
+fn schema_status_keys(state: &StateJson) -> BTreeSet<String> {
+    let mut keys: BTreeSet<String> = [
+        "implemented",
+        "quality_fixes",
+        "enums_implemented",
+        "enum_namespace",
+        "in_progress",
+        "planned_next",
+        "google_rich_results_types",
+        "remaining_audit_findings",
+        "property_gap_audit",
+        "type_classification",
+        "phpstan_level",
+        "phpstan_max_assessment",
+        "directory_layout",
+        "typescript_stats",
+    ]
+    .into_iter()
+    .map(str::to_owned)
+    .collect();
+
+    keys.extend(state.schema_status.extra.keys().cloned());
+    keys
+}
+
+fn typescript_plan_keys(state: &StateJson) -> BTreeSet<String> {
+    let mut keys: BTreeSet<String> = [
+        "status",
+        "issue",
+        "qc_coordination_issue",
+        "plan_version",
+        "approved_at",
+        "qc_validation_strategy",
+        "eva_decisions",
+        "preparatory_artifacts",
+        "audit_enhancements",
+        "phases",
+    ]
+    .into_iter()
+    .map(str::to_owned)
+    .collect();
+
+    keys.extend(state.typescript_plan.extra.keys().cloned());
+    keys
 }

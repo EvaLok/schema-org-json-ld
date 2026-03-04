@@ -1,5 +1,6 @@
 use clap::Parser;
-use serde_json::{json, Map, Value};
+use serde_json::{json, Value};
+use state_schema::{StateJson, TypescriptStats};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
@@ -28,7 +29,7 @@ struct CheckResult {
 fn main() {
     let cli = Cli::parse();
 
-    let state = read_json_file(&cli.repo_root.join("docs/state.json"));
+    let state = read_state_file(&cli.repo_root.join("docs/state.json"));
     let ts_stats = get_typescript_stats(&state);
 
     let php_schema_count = count_files(&cli.repo_root.join("php/src/v1/Schema"), "php");
@@ -39,12 +40,13 @@ fn main() {
     let ts_total_count = ts_schema_count + ts_enum_count + ts_core_count;
 
     let expected_ts_schema = get_i64_from_map(&ts_stats, "schema_types");
-    let expected_php_enums = get_i64_from_state(&state, "total_enums");
+    let expected_php_enums = get_i64_from_option(state.total_enums, "total_enums");
     let expected_ts_enums = get_i64_from_map(&ts_stats, "enums");
     let expected_ts_core = get_i64_from_map(&ts_stats, "core_modules");
     let expected_ts_total = get_i64_from_map(&ts_stats, "total_modules");
     let expected_phpstan_level = get_phpstan_level_from_state(&state);
-    let expected_total_schema_classes = get_i64_from_state(&state, "total_schema_classes");
+    let expected_total_schema_classes =
+        get_i64_from_option(state.total_schema_classes, "total_schema_classes");
     let actual_phpstan_level = read_phpstan_level(&cli.repo_root.join("phpstan.neon"));
     let ts_total_check_pass =
         ts_total_count == expected_ts_total && ts_total_count == expected_total_schema_classes;
@@ -58,11 +60,36 @@ fn main() {
     };
 
     let checks = vec![
-        check("php_schema_classes", "PHP schema classes", php_schema_count, expected_ts_schema),
-        check("php_enum_classes", "PHP enum classes", php_enum_count, expected_php_enums),
-        check("ts_schema_types", "TS schema types", ts_schema_count, expected_ts_schema),
-        check("ts_enum_types", "TS enum types", ts_enum_count, expected_ts_enums),
-        check("ts_core_modules", "TS core modules", ts_core_count, expected_ts_core),
+        check(
+            "php_schema_classes",
+            "PHP schema classes",
+            php_schema_count,
+            expected_ts_schema,
+        ),
+        check(
+            "php_enum_classes",
+            "PHP enum classes",
+            php_enum_count,
+            expected_php_enums,
+        ),
+        check(
+            "ts_schema_types",
+            "TS schema types",
+            ts_schema_count,
+            expected_ts_schema,
+        ),
+        check(
+            "ts_enum_types",
+            "TS enum types",
+            ts_enum_count,
+            expected_ts_enums,
+        ),
+        check(
+            "ts_core_modules",
+            "TS core modules",
+            ts_core_count,
+            expected_ts_core,
+        ),
         check_with_pass(
             "ts_total_modules",
             "TS total modules",
@@ -94,7 +121,7 @@ fn main() {
     emit_output(&cli, &checks);
 }
 
-fn read_json_file(path: &Path) -> Value {
+fn read_state_file(path: &Path) -> StateJson {
     let content = match fs::read_to_string(path) {
         Ok(c) => c,
         Err(e) => {
@@ -103,7 +130,7 @@ fn read_json_file(path: &Path) -> Value {
         }
     };
 
-    match serde_json::from_str(&content) {
+    match serde_json::from_str::<StateJson>(&content) {
         Ok(v) => v,
         Err(e) => {
             eprintln!("Error parsing JSON ({}): {}", path.display(), e);
@@ -112,23 +139,33 @@ fn read_json_file(path: &Path) -> Value {
     }
 }
 
-fn get_typescript_stats(state: &Value) -> Map<String, Value> {
-    let stats = state
+fn get_typescript_stats(state: &StateJson) -> TypescriptStats {
+    if let Some(stats) = state
+        .extra
         .get("typescript_stats")
-        .or_else(|| state.get("schema_status").and_then(|s| s.get("typescript_stats")))
-        .and_then(|v| v.as_object());
-
-    match stats {
-        Some(map) => map.clone(),
-        None => {
-            eprintln!("Missing object: typescript_stats (top-level or schema_status.typescript_stats)");
-            process::exit(1);
-        }
+        .and_then(|v| serde_json::from_value::<TypescriptStats>(v.clone()).ok())
+    {
+        return stats;
     }
+
+    if let Some(stats) = state.schema_status.typescript_stats.clone() {
+        return stats;
+    }
+
+    eprintln!("Missing object: typescript_stats (top-level or schema_status.typescript_stats)");
+    process::exit(1);
 }
 
-fn get_i64_from_map(obj: &Map<String, Value>, key: &str) -> i64 {
-    match obj.get(key).and_then(|v| v.as_i64()) {
+fn get_i64_from_map(obj: &TypescriptStats, key: &str) -> i64 {
+    let value = match key {
+        "schema_types" => obj.schema_types,
+        "enums" => obj.enums,
+        "core_modules" => obj.core_modules,
+        "total_modules" => obj.total_modules,
+        _ => None,
+    };
+
+    match value {
         Some(v) => v,
         None => {
             eprintln!("Missing or non-integer field: {}", key);
@@ -137,8 +174,8 @@ fn get_i64_from_map(obj: &Map<String, Value>, key: &str) -> i64 {
     }
 }
 
-fn get_i64_from_state(state: &Value, key: &str) -> i64 {
-    match state.get(key).and_then(|v| v.as_i64()) {
+fn get_i64_from_option(value: Option<i64>, key: &str) -> i64 {
+    match value {
         Some(v) => v,
         None => {
             eprintln!("Missing or non-integer field: {}", key);
@@ -147,16 +184,20 @@ fn get_i64_from_state(state: &Value, key: &str) -> i64 {
     }
 }
 
-fn get_phpstan_level_from_state(state: &Value) -> String {
+fn get_phpstan_level_from_state(state: &StateJson) -> String {
     let level = state
+        .extra
         .get("phpstan_level")
-        .or_else(|| state.get("schema_status").and_then(|s| s.get("phpstan_level")))
-        .and_then(|v| v.as_str());
+        .and_then(|v| v.as_str())
+        .map(str::to_owned)
+        .or_else(|| state.schema_status.phpstan_level.clone());
 
     match level {
-        Some(value) => value.to_string(),
+        Some(value) => value,
         None => {
-            eprintln!("Missing string field: phpstan_level (top-level or schema_status.phpstan_level)");
+            eprintln!(
+                "Missing string field: phpstan_level (top-level or schema_status.phpstan_level)"
+            );
             process::exit(1);
         }
     }
@@ -249,7 +290,12 @@ fn parity_check(name: &'static str, label: &'static str, left: i64, right: i64) 
     }
 }
 
-fn string_check(name: &'static str, label: &'static str, actual: String, expected: String) -> CheckResult {
+fn string_check(
+    name: &'static str,
+    label: &'static str,
+    actual: String,
+    expected: String,
+) -> CheckResult {
     let pass = actual == expected;
     CheckResult {
         name,
