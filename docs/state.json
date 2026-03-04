@@ -664,7 +664,9 @@
       "title": "Add Question.comment and Answer.comment properties (PHP + TS)",
       "dispatched_at": "2026-03-04T13:53:00Z",
       "model": "gpt-5.3-codex",
-      "status": "dispatched",
+      "status": "merged",
+      "pr": 425,
+      "merged_at": "2026-03-04T14:18:42Z",
       "note": "Google property verification found Question.comment and Answer.comment missing (recommended by Google for QAPage). Adding Comment[] property to both classes in PHP and TS."
     }
   ],
@@ -759,9 +761,9 @@
   },
   "copilot_metrics": {
     "dispatch_to_pr_rate": "33/33 (100%)",
-    "pr_merge_rate": "32/33 (97%)",
-    "in_flight": 1,
-    "note": "33 dispatches, 32 merged, 1 in-flight (#424). 2 revision rounds total. Zero silent failures."
+    "pr_merge_rate": "33/33 (100%)",
+    "in_flight": 0,
+    "note": "33 dispatches, 33 merged, 0 in-flight. 2 revision rounds total. Zero silent failures."
   },
   "last_cycle": {
     "issue": 423,

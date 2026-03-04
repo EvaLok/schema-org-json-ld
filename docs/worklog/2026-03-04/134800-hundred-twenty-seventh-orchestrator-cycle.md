@@ -37,16 +37,22 @@ Completed rolling verification of all 26 Google Rich Results types against curre
 - Dispatched to Copilot (gpt-5.3-codex)
 - This was the only actionable gap found across all 26 types
 
+### PR #425 reviewed and merged
+- Copilot delivered [PR #425](https://github.com/EvaLok/schema-org-json-ld/issues/425) — clean implementation
+- 8 files changed: Question.php/ts, Answer.php/ts, + 4 test files
+- All CI green: Claude Code Review, Test and Build, TypeScript CI
+- Merged at 14:18 UTC (25 min from dispatch to merge)
+
 ## Current state
-- **In-flight agent sessions**: 1 ([#424](https://github.com/EvaLok/schema-org-json-ld/issues/424))
-- **Open PRs**: 0 (awaiting Copilot)
+- **In-flight agent sessions**: 0
+- **Open PRs**: 0
 - **Open questions for Eva**: None
 - **Remaining open `input-from-eva`**: [#247](https://github.com/EvaLok/schema-org-json-ld/issues/247) only
 - **Blocker**: Phase 4c (npm publish) — Eva configures OIDC + creates GitHub Release
-- **Copilot metrics**: 33 dispatched, 32 merged, 1 in-flight
+- **Copilot metrics**: 33 dispatched, 33 merged, 0 in-flight (100% merge rate)
 - **Google property verification**: 26/26 complete (rolling verification finished)
 
 ## Next steps
-- Review PR from [#424](https://github.com/EvaLok/schema-org-json-ld/issues/424) when Copilot finishes
 - Next state.json metric verification: cycle 128
 - Google property verification complete — no further verification cycles needed
+- When Eva creates a GitHub Release, execute the multi-party pre-publish checkpoint (step 5.10)
