@@ -1,6 +1,7 @@
 use clap::Parser;
 use serde_json::{json, Value};
 use state_schema::{check_version, StateJson, TypescriptStats, SCHEMA_VERSION};
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
@@ -269,17 +270,17 @@ fn read_phpstan_level(path: &Path) -> String {
 }
 
 fn count_php_test_methods(path: &Path) -> i64 {
-    count_matching_lines_in_dir(path, is_php_file, is_php_test_method_line)
+    count_test_cases_in_dir(path, is_php_file, count_php_tests_in_content)
 }
 
 fn count_ts_test_methods(path: &Path) -> i64 {
-    count_matching_lines_in_dir(path, is_ts_test_file, is_ts_test_method_line)
+    count_test_cases_in_dir(path, is_ts_test_file, count_ts_tests_in_content)
 }
 
-fn count_matching_lines_in_dir(
+fn count_test_cases_in_dir(
     path: &Path,
     file_matcher: fn(&Path) -> bool,
-    line_matcher: fn(&str) -> bool,
+    content_counter: fn(&str) -> i64,
 ) -> i64 {
     let entries = match fs::read_dir(path) {
         Ok(e) => e,
@@ -301,7 +302,7 @@ fn count_matching_lines_in_dir(
 
         let entry_path = entry.path();
         if entry_path.is_dir() {
-            count += count_matching_lines_in_dir(&entry_path, file_matcher, line_matcher);
+            count += count_test_cases_in_dir(&entry_path, file_matcher, content_counter);
             continue;
         }
 
@@ -317,10 +318,411 @@ fn count_matching_lines_in_dir(
             }
         };
 
-        count += content.lines().filter(|line| line_matcher(line)).count() as i64;
+        count += content_counter(&content);
     }
 
     count
+}
+
+fn count_php_tests_in_content(content: &str) -> i64 {
+    let provider_case_counts = parse_php_data_provider_case_counts(content);
+    let lines: Vec<&str> = content.lines().collect();
+    let mut total = 0_i64;
+
+    for (index, line) in lines.iter().enumerate() {
+        if !is_php_test_method_line(line) {
+            continue;
+        }
+
+        if let Some(provider_name) = php_data_provider_for_test_method(&lines, index) {
+            if let Some(provider_cases) = provider_case_counts.get(&provider_name) {
+                total += *provider_cases;
+                continue;
+            }
+        }
+
+        total += 1;
+    }
+
+    total
+}
+
+fn parse_php_data_provider_case_counts(content: &str) -> HashMap<String, i64> {
+    let lines: Vec<&str> = content.lines().collect();
+    let mut counts = HashMap::new();
+
+    for (index, line) in lines.iter().enumerate() {
+        let Some(function_name) = php_function_name(line) else {
+            continue;
+        };
+        let Some(case_count) = php_data_provider_case_count(&lines, index + 1) else {
+            continue;
+        };
+
+        counts.insert(function_name, case_count);
+    }
+
+    counts
+}
+
+fn php_function_name(line: &str) -> Option<String> {
+    let mut tokens = line.trim_start().split_whitespace();
+    while let Some(token) = tokens.next() {
+        if token != "function" {
+            continue;
+        }
+
+        let name = tokens
+            .next()
+            .map(|candidate| candidate.trim_start_matches('&'))
+            .and_then(|candidate| candidate.split('(').next())
+            .unwrap_or_default();
+        if name.is_empty() {
+            return None;
+        }
+
+        return Some(name.to_string());
+    }
+
+    None
+}
+
+fn php_data_provider_case_count(lines: &[&str], start_index: usize) -> Option<i64> {
+    let mut in_return_array = false;
+    let mut count = 0_i64;
+
+    for line in lines.iter().skip(start_index) {
+        let trimmed = line.trim();
+
+        if !in_return_array {
+            if trimmed.contains(" function ") || trimmed.starts_with("function ") {
+                return None;
+            }
+            if trimmed.contains("return [") {
+                in_return_array = true;
+            }
+            continue;
+        }
+
+        if trimmed == "];" || trimmed.ends_with("];") {
+            return Some(count);
+        }
+
+        if trimmed.contains("=>") {
+            count += 1;
+        }
+    }
+
+    None
+}
+
+fn php_data_provider_for_test_method(lines: &[&str], method_line_index: usize) -> Option<String> {
+    if method_line_index == 0 {
+        return None;
+    }
+
+    for line in lines[..method_line_index].iter().rev() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        if let Some(provider_name) = parse_php_data_provider_annotation(trimmed) {
+            return Some(provider_name);
+        }
+
+        if trimmed.starts_with('*')
+            || trimmed.starts_with("/**")
+            || trimmed.starts_with("/*")
+            || trimmed.starts_with("*/")
+        {
+            continue;
+        }
+
+        break;
+    }
+
+    None
+}
+
+fn parse_php_data_provider_annotation(line: &str) -> Option<String> {
+    let mut tokens = line.split_whitespace();
+    while let Some(token) = tokens.next() {
+        if token != "@dataProvider" {
+            continue;
+        }
+
+        return tokens
+            .next()
+            .map(|provider| provider.trim().trim_matches('*').to_string())
+            .filter(|provider| !provider.is_empty());
+    }
+
+    None
+}
+
+fn count_ts_tests_in_content(content: &str) -> i64 {
+    let direct_tests = content
+        .lines()
+        .filter(|line| is_ts_test_method_line(line))
+        .count() as i64;
+    let each_array_case_counts = parse_ts_array_case_counts(content);
+    let each_tests = count_ts_each_tests(content, &each_array_case_counts);
+
+    direct_tests + each_tests
+}
+
+fn parse_ts_array_case_counts(content: &str) -> HashMap<String, i64> {
+    let mut counts = HashMap::new();
+    let mut start = 0_usize;
+
+    while let Some(relative_const_index) = content[start..].find("const ") {
+        let const_index = start + relative_const_index;
+        let mut cursor = const_index + "const ".len();
+        cursor = skip_ascii_whitespace(content, cursor);
+        let Some((name, after_name)) = parse_identifier_at(content, cursor) else {
+            start = const_index + "const ".len();
+            continue;
+        };
+
+        cursor = skip_ascii_whitespace(content, after_name);
+        if !content[cursor..].starts_with('=') {
+            start = const_index + "const ".len();
+            continue;
+        }
+        cursor += 1;
+        cursor = skip_ascii_whitespace(content, cursor);
+        if !content[cursor..].starts_with('[') {
+            start = const_index + "const ".len();
+            continue;
+        }
+
+        if let Some((count, end_index)) = count_top_level_array_items(content, cursor) {
+            counts.insert(name.to_string(), count);
+            start = end_index + 1;
+            continue;
+        }
+
+        start = const_index + "const ".len();
+    }
+
+    counts
+}
+
+fn count_ts_each_tests(content: &str, array_case_counts: &HashMap<String, i64>) -> i64 {
+    let mut count = 0_i64;
+    let mut start = 0_usize;
+
+    while start < content.len() {
+        let it_pos = content[start..].find("it.each");
+        let test_pos = content[start..].find("test.each");
+        let next_match = match (it_pos, test_pos) {
+            (Some(i), Some(t)) => Some(i.min(t)),
+            (Some(i), None) => Some(i),
+            (None, Some(t)) => Some(t),
+            (None, None) => None,
+        };
+        let Some(relative_match) = next_match else {
+            break;
+        };
+
+        let match_index = start + relative_match;
+        let mut cursor = match_index + if content[match_index..].starts_with("it.each") {
+            "it.each".len()
+        } else {
+            "test.each".len()
+        };
+        cursor = skip_ascii_whitespace(content, cursor);
+        if !content[cursor..].starts_with('(') {
+            start = match_index + 1;
+            continue;
+        }
+
+        let Some(close_index) = find_matching_delimiter(content, cursor, '(', ')') else {
+            start = match_index + 1;
+            continue;
+        };
+
+        let argument = content[cursor + 1..close_index].trim();
+        let case_count = if argument.starts_with('[') {
+            count_top_level_array_items(argument, 0)
+                .map(|(items, _)| items)
+                .unwrap_or(1)
+        } else if let Some((identifier, _)) = parse_identifier_at(argument, 0) {
+            array_case_counts.get(identifier).copied().unwrap_or(1)
+        } else {
+            1
+        };
+        count += case_count;
+        start = close_index + 1;
+    }
+
+    count
+}
+
+fn count_top_level_array_items(content: &str, open_index: usize) -> Option<(i64, usize)> {
+    if !content[open_index..].starts_with('[') {
+        return None;
+    }
+    let close_index = find_matching_delimiter(content, open_index, '[', ']')?;
+    let body = &content[open_index + 1..close_index];
+
+    let mut square_depth = 0_i32;
+    let mut paren_depth = 0_i32;
+    let mut brace_depth = 0_i32;
+    let mut in_string: Option<char> = None;
+    let mut escaped = false;
+    let mut has_token = false;
+    let mut count = 0_i64;
+
+    for ch in body.chars() {
+        if let Some(delimiter) = in_string {
+            if escaped {
+                escaped = false;
+                continue;
+            }
+            if ch == '\\' {
+                escaped = true;
+                continue;
+            }
+            if ch == delimiter {
+                in_string = None;
+            }
+            has_token = true;
+            continue;
+        }
+
+        match ch {
+            '"' | '\'' | '`' => {
+                in_string = Some(ch);
+                has_token = true;
+            }
+            '[' => {
+                square_depth += 1;
+                has_token = true;
+            }
+            ']' => {
+                square_depth -= 1;
+                has_token = true;
+            }
+            '(' => {
+                paren_depth += 1;
+                has_token = true;
+            }
+            ')' => {
+                paren_depth -= 1;
+                has_token = true;
+            }
+            '{' => {
+                brace_depth += 1;
+                has_token = true;
+            }
+            '}' => {
+                brace_depth -= 1;
+                has_token = true;
+            }
+            ',' if square_depth == 0 && paren_depth == 0 && brace_depth == 0 => {
+                if has_token {
+                    count += 1;
+                    has_token = false;
+                }
+            }
+            _ if !ch.is_whitespace() => {
+                has_token = true;
+            }
+            _ => {}
+        }
+    }
+
+    if has_token {
+        count += 1;
+    }
+
+    Some((count, close_index))
+}
+
+fn find_matching_delimiter(
+    content: &str,
+    open_index: usize,
+    open_delimiter: char,
+    close_delimiter: char,
+) -> Option<usize> {
+    let mut depth = 0_i32;
+    let mut in_string: Option<char> = None;
+    let mut escaped = false;
+
+    for (relative_index, ch) in content[open_index..].char_indices() {
+        if let Some(delimiter) = in_string {
+            if escaped {
+                escaped = false;
+                continue;
+            }
+            if ch == '\\' {
+                escaped = true;
+                continue;
+            }
+            if ch == delimiter {
+                in_string = None;
+            }
+            continue;
+        }
+
+        if ch == '"' || ch == '\'' || ch == '`' {
+            in_string = Some(ch);
+            continue;
+        }
+
+        if ch == open_delimiter {
+            depth += 1;
+            continue;
+        }
+        if ch == close_delimiter {
+            depth -= 1;
+            if depth == 0 {
+                return Some(open_index + relative_index);
+            }
+        }
+    }
+
+    None
+}
+
+fn parse_identifier_at(content: &str, start: usize) -> Option<(&str, usize)> {
+    if start >= content.len() {
+        return None;
+    }
+
+    let mut chars = content[start..].char_indices();
+    let (_, first_char) = chars.next()?;
+    if !(first_char == '_' || first_char == '$' || first_char.is_ascii_alphabetic()) {
+        return None;
+    }
+
+    let mut end = start + first_char.len_utf8();
+    for (offset, ch) in chars {
+        if ch == '_' || ch == '$' || ch.is_ascii_alphanumeric() {
+            end = start + offset + ch.len_utf8();
+            continue;
+        }
+        break;
+    }
+
+    Some((&content[start..end], end))
+}
+
+fn skip_ascii_whitespace(content: &str, mut index: usize) -> usize {
+    while index < content.len() {
+        let mut chars = content[index..].chars();
+        let Some(ch) = chars.next() else {
+            break;
+        };
+        if !ch.is_ascii_whitespace() {
+            break;
+        }
+        index += ch.len_utf8();
+    }
+
+    index
 }
 
 fn is_php_file(path: &Path) -> bool {
@@ -641,7 +1043,8 @@ fn value_to_display(value: &Value) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        is_php_test_method_line, is_ts_test_method_line, parse_cycle_number, staleness_threshold,
+        count_php_tests_in_content, count_ts_tests_in_content, is_php_test_method_line,
+        is_ts_test_method_line, parse_cycle_number, staleness_threshold,
     };
 
     #[test]
@@ -671,6 +1074,46 @@ mod tests {
         assert!(!is_ts_test_method_line("test.only(\"works\", () => {})"));
         assert!(!is_ts_test_method_line("it.concurrent(\"works\", () => {})"));
         assert!(!is_ts_test_method_line("expect(true).toBe(true)"));
+    }
+
+    #[test]
+    fn php_data_provider_cases_are_counted() {
+        let content = r#"
+final class ExampleTest extends TestCase {
+    public static function mediaUrlCases(): array {
+        return [
+            'first' => [null, null],
+            'second' => ['a', null],
+            'third' => [null, 'b'],
+        ];
+    }
+
+    /**
+     * @dataProvider mediaUrlCases
+     */
+    public function testMediaCases(?string $a, ?string $b): void {}
+
+    public function testDirectCase(): void {}
+}
+"#;
+
+        assert_eq!(4, count_php_tests_in_content(content));
+    }
+
+    #[test]
+    fn ts_each_cases_are_counted() {
+        let content = r#"
+const mediaUrlCases = [
+    ['a', null],
+    ['b', null],
+    ['c', null],
+] as const;
+
+it.each(mediaUrlCases)('works: %s', (_name, _image) => {});
+it('direct test', () => {});
+"#;
+
+        assert_eq!(4, count_ts_tests_in_content(content));
     }
 
     #[test]
