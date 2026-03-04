@@ -35,7 +35,7 @@ namespace EvaLok\SchemaOrgJsonLd\v1\Schema;
 use EvaLok\SchemaOrgJsonLd\v1\TypedSchema;
 
 class {TypeName} extends TypedSchema {
-    const A_SCHEMA_TYPE = '{TypeName}';
+    public const A_SCHEMA_TYPE = '{TypeName}';
 
     public function __construct(
         // Required properties first (no default value)
