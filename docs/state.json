@@ -314,10 +314,10 @@
     "type_classification": {
       "standalone_testable": 28,
       "standalone_parity_testable": 73,
-      "building_block_only": 3,
-      "building_block": 58,
+      "building_block_only": 4,
+      "building_block": 59,
       "enums": 12,
-      "note": "Per audit #73: 88 total - 12 enums - 3 building-block-only = 73 standalone-parity-testable. QC architecture maxes at 73 for parity (building-block types validated through parents). E2E denominator is ~28 standalone types."
+      "note": "89 schema classes - 12 enums - 4 building-block-only = 73 standalone-parity-testable. SeekToAction added as 4th building-block-only type (PR #362, always embedded in VideoObject.potentialAction). QC architecture maxes at 73 for parity. E2E denominator is ~28 standalone types."
     },
     "phpstan_level": "max",
     "phpstan_max_assessment": {
@@ -753,37 +753,37 @@
     "note": "32 dispatches, 32 merged, 0 in-flight. 2 revision rounds total. Zero silent failures."
   },
   "last_cycle": {
-    "issue": 415,
-    "timestamp": "2026-03-04T06:14:00Z",
-    "summary": "Cycle 122: Reviewed and merged PR #414 (TS JsonLdGenerator test expansion, 8 new tests, 7→15). TS tests now 417. Audit #82/#83 processed (QC-directed, no action). Google Rich Results gallery unchanged. Dual-language parity confirmed (88/88 schema, 12/12 enums). Awaiting Eva for npm publish."
+    "issue": 416,
+    "timestamp": "2026-03-04T07:43:00Z",
+    "summary": "Cycle 123: Metric verification (step 5.11). Fixed stale type_classification (88→89, building_block_only 3→4 after SeekToAction addition). PHP 423 tests, TS 417 tests confirmed. PHPStan max confirmed. Dual-language parity: 89/89 schema, 12/12 enums. Google Recipe/Event property check: no changes. Awaiting Eva for npm publish."
   },
-  "last_eva_comment_check": "2026-03-04T06:14:00Z",
+  "last_eva_comment_check": "2026-03-04T07:43:00Z",
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71, 73, 75, 76, 78, 80, 82, 83],
   "test_count": {"php": 423, "ts": 417, "total": 840, "last_verified": "cycle 122"},
-  "next_metric_verification": "cycle 123",
+  "next_metric_verification": "cycle 128",
   "total_schema_types": 28,
   "total_sub_types": 104,
   "total_schema_classes": 103,
   "total_enums": 12,
-  "total_testable_types": 76,
+  "total_testable_types": 77,
   "total_standalone_testable_types": 73,
-  "total_testable_types_note": "88 schema classes - 12 enums = 76 testable. Of those, 73 can be parity-tested standalone; 3 are building-block-only types validated through parent types. Per audits #62, #68, #73. Publish gate uses 73 (standalone-parity-testable).",
+  "total_testable_types_note": "89 schema classes - 12 enums = 77 testable. Of those, 73 can be parity-tested standalone; 4 are building-block-only types validated through parent types (including SeekToAction added in PR #362). Per audits #62, #68, #73. Publish gate uses 73 (standalone-parity-testable).",
   "field_inventory": {
     "description": "Self-describing inventory of mutable state.json fields with expected refresh cadence. During metric verification (step 5.11), any field not refreshed within its cadence should be flagged and corrected. This inverts the verification pattern from 'enumerate what to check' to 'flag what hasn't been checked.' Per audit #80.",
     "fields": {
-      "test_count": {"cadence": "every merge that adds/removes tests", "last_refreshed": "cycle 122"},
-      "typescript_stats": {"cadence": "every merge that adds/removes TS files", "last_refreshed": "cycle 118"},
-      "phpstan_level": {"cadence": "after PHPStan config changes", "last_refreshed": "cycle 118"},
-      "copilot_metrics.in_flight": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 122"},
-      "copilot_metrics.dispatch_to_pr_rate": {"cadence": "after new dispatches", "last_refreshed": "cycle 122"},
-      "copilot_metrics.pr_merge_rate": {"cadence": "after PR merges", "last_refreshed": "cycle 122"},
-      "last_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 122"},
-      "last_eva_comment_check": {"cadence": "every cycle", "last_refreshed": "cycle 122"},
-      "qc_status": {"cadence": "after QC interactions", "last_refreshed": "cycle 118"},
-      "blockers": {"cadence": "after blocker state changes", "last_refreshed": "cycle 119"},
-      "qc_processed": {"cadence": "after processing QC issues", "last_refreshed": "cycle 118"},
-      "audit_processed": {"cadence": "after processing audit issues", "last_refreshed": "cycle 122"},
-      "next_metric_verification": {"cadence": "after each verification run", "last_refreshed": "cycle 118"}
+      "test_count": {"cadence": "every merge that adds/removes tests", "last_refreshed": "cycle 123"},
+      "typescript_stats": {"cadence": "every merge that adds/removes TS files", "last_refreshed": "cycle 123"},
+      "phpstan_level": {"cadence": "after PHPStan config changes", "last_refreshed": "cycle 123"},
+      "copilot_metrics.in_flight": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 123"},
+      "copilot_metrics.dispatch_to_pr_rate": {"cadence": "after new dispatches", "last_refreshed": "cycle 123"},
+      "copilot_metrics.pr_merge_rate": {"cadence": "after PR merges", "last_refreshed": "cycle 123"},
+      "last_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 123"},
+      "last_eva_comment_check": {"cadence": "every cycle", "last_refreshed": "cycle 123"},
+      "qc_status": {"cadence": "after QC interactions", "last_refreshed": "cycle 123"},
+      "blockers": {"cadence": "after blocker state changes", "last_refreshed": "cycle 123"},
+      "qc_processed": {"cadence": "after processing QC issues", "last_refreshed": "cycle 123"},
+      "audit_processed": {"cadence": "after processing audit issues", "last_refreshed": "cycle 123"},
+      "next_metric_verification": {"cadence": "after each verification run", "last_refreshed": "cycle 123"}
     }
   }
 }
