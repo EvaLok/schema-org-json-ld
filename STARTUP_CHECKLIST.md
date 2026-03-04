@@ -304,13 +304,20 @@ After the enumerated checks, scan the `field_inventory` section of `docs/state.j
 
 **When adding new mutable fields to state.json**, always add a corresponding entry to `field_inventory.fields` with cadence and `last_refreshed`. This ensures new fields are automatically included in future verification sweeps.
 
-### Field inventory completeness check (per audit #85)
+### Field inventory completeness check (per audit #85, tool per audit #87)
 
-After the inventory sweep, verify that **every mutable field in state.json has a corresponding field_inventory entry**. Specifically:
+After the inventory sweep, verify that **every mutable field in state.json has a corresponding field_inventory entry** using the programmatic tool:
 
-1. Scan all top-level and nested fields in `docs/state.json` that are not append-only historical records (e.g., `agent_sessions` entries, `schema_status.implemented` entries are append-only and excluded)
-2. For each mutable/computed field, check that `field_inventory.fields` contains an entry for it
-3. If a mutable field has no inventory entry, add one with an appropriate cadence and set `last_refreshed` to the current cycle
+**Programmatic check** (CI or local): `jq -r -f tools/check-field-inventory.jq docs/state.json`
+
+**Manual check** (orchestrator sandbox — run these 3 commands, then compare):
+1. `jq -r 'keys[]' docs/state.json` — lists all top-level fields
+2. `jq -r '.schema_status | keys[]' docs/state.json` — lists schema_status sub-fields
+3. `jq -r '.field_inventory.fields | keys[]' docs/state.json` — lists inventoried fields
+
+Compare the first two lists against the third. Exclude append-only arrays (`agent_sessions`, `schema_status.implemented`, `schema_status.quality_fixes`, `schema_status.enums_implemented`, `release`), static config (`schema_status.enum_namespace`, `schema_status.directory_layout`), terminal-status objects (`constructor_refactoring`), and `field_inventory` itself. Any remaining field without an inventory entry is a gap — add it.
+
+If a mutable field has no inventory entry, add one with an appropriate cadence and set `last_refreshed` to the current cycle.
 
 This converts the "always add an inventory entry" convention from write-time knowledge into a verification step that runs every 5 cycles. It catches cases where fields are added or structurally changed without a corresponding inventory update — exactly what happened with `type_classification` (stale for 16 cycles before cycle 123 caught it).
 
