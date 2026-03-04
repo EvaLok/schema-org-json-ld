@@ -42,8 +42,12 @@ Copilot revision finished at 22:52 UTC (5 min). Re-reviewed: all 3 fixes correct
 - **Copilot metrics**: 41/41 dispatched, 41/41 merged, 4 revision rounds total
 - **Remaining open `input-from-eva`**: [#247](https://github.com/EvaLok/schema-org-json-ld/issues/247), [#436](https://github.com/EvaLok/schema-org-json-ld/issues/436)
 
+### Phase 4 dispatched
+
+[#457](https://github.com/EvaLok/schema-org-json-ld/issues/457) — pipeline-check Rust tool dispatched to Copilot. Runs all 4 sub-tools in sequence, produces unified pass/fail report with human-readable and JSON output modes. Agent session 42.
+
 ## Next steps
 
-- Dispatch Phase 4 (pipeline orchestrator Rust tool) — spec drafted at `docs/.draft-phase4-spec.md`
+- **PRIORITY**: Review PR from #457 when Copilot finishes (pipeline-check tool)
 - Continue reliability clock (need 1-3 more clean cycles before publish consideration)
 - Watch for Eva feedback on #436 progress
