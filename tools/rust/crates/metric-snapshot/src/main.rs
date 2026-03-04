@@ -1,6 +1,6 @@
 use clap::Parser;
 use serde_json::{json, Value};
-use state_schema::{StateJson, TypescriptStats};
+use state_schema::{check_version, StateJson, TypescriptStats, SCHEMA_VERSION};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
@@ -15,6 +15,10 @@ struct Cli {
     /// Output results as JSON
     #[arg(long)]
     json: bool,
+
+    /// Current cycle number for field staleness detection (advisory only)
+    #[arg(long)]
+    cycle: Option<i64>,
 }
 
 struct CheckResult {
@@ -47,7 +51,15 @@ fn main() {
     let expected_phpstan_level = get_phpstan_level_from_state(&state);
     let expected_total_schema_classes =
         get_i64_from_option(state.total_schema_classes, "total_schema_classes");
+    let expected_php_test_count = get_i64_from_option(state.test_count.php, "test_count.php");
+    let expected_ts_test_count = get_i64_from_option(state.test_count.ts, "test_count.ts");
+    let expected_total_test_count = get_i64_from_option(state.test_count.total, "test_count.total");
     let actual_phpstan_level = read_phpstan_level(&cli.repo_root.join("phpstan.neon"));
+    let actual_php_test_count = count_php_test_methods(&cli.repo_root.join("php/test/unit"));
+    let actual_ts_test_count = count_ts_test_methods(&cli.repo_root.join("ts/test"));
+    let actual_total_test_count = actual_php_test_count + actual_ts_test_count;
+    let schema_version_check_result = check_version(&state);
+    let actual_schema_version = json!(state.schema_version);
     let ts_total_check_pass =
         ts_total_count == expected_ts_total && ts_total_count == expected_total_schema_classes;
     let ts_total_note = if ts_total_count != expected_total_schema_classes {
@@ -110,15 +122,45 @@ fn main() {
             php_enum_count,
             ts_enum_count,
         ),
+        check(
+            "test_count_php",
+            "PHP test count",
+            actual_php_test_count,
+            expected_php_test_count,
+        ),
+        check(
+            "test_count_ts",
+            "TS test count",
+            actual_ts_test_count,
+            expected_ts_test_count,
+        ),
+        check(
+            "test_count_total",
+            "Total test count",
+            actual_total_test_count,
+            expected_total_test_count,
+        ),
         string_check(
             "phpstan_level",
             "PHPStan level",
             actual_phpstan_level,
             expected_phpstan_level,
         ),
+        value_check_with_pass(
+            "state_schema_version",
+            "State schema version",
+            actual_schema_version,
+            json!(SCHEMA_VERSION),
+            schema_version_check_result.is_ok(),
+            schema_version_check_result.err(),
+        ),
     ];
 
-    emit_output(&cli, &checks);
+    let staleness = cli
+        .cycle
+        .map(|current_cycle| build_staleness_report(&state, current_cycle));
+
+    emit_output(&cli, &checks, staleness);
 }
 
 fn read_state_file(path: &Path) -> StateJson {
@@ -226,6 +268,105 @@ fn read_phpstan_level(path: &Path) -> String {
     process::exit(1);
 }
 
+fn count_php_test_methods(path: &Path) -> i64 {
+    count_matching_lines_in_dir(path, is_php_file, is_php_test_method_line)
+}
+
+fn count_ts_test_methods(path: &Path) -> i64 {
+    count_matching_lines_in_dir(path, is_ts_test_file, is_ts_test_method_line)
+}
+
+fn count_matching_lines_in_dir(
+    path: &Path,
+    file_matcher: fn(&Path) -> bool,
+    line_matcher: fn(&str) -> bool,
+) -> i64 {
+    let entries = match fs::read_dir(path) {
+        Ok(e) => e,
+        Err(e) => {
+            eprintln!("Error reading {}: {}", path.display(), e);
+            process::exit(1);
+        }
+    };
+
+    let mut count = 0_i64;
+    for entry in entries {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(e) => {
+                eprintln!("Error reading entry in {}: {}", path.display(), e);
+                process::exit(1);
+            }
+        };
+
+        let entry_path = entry.path();
+        if entry_path.is_dir() {
+            count += count_matching_lines_in_dir(&entry_path, file_matcher, line_matcher);
+            continue;
+        }
+
+        if !entry_path.is_file() || !file_matcher(&entry_path) {
+            continue;
+        }
+
+        let content = match fs::read_to_string(&entry_path) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("Error reading {}: {}", entry_path.display(), e);
+                process::exit(1);
+            }
+        };
+
+        count += content.lines().filter(|line| line_matcher(line)).count() as i64;
+    }
+
+    count
+}
+
+fn is_php_file(path: &Path) -> bool {
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|ext| ext == "php")
+}
+
+fn is_ts_test_file(path: &Path) -> bool {
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|ext| ext == "ts")
+        && path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.ends_with(".test.ts"))
+}
+
+fn is_php_test_method_line(line: &str) -> bool {
+    let trimmed = line.trim_start();
+    let mut tokens = trimmed.split_whitespace();
+    if tokens.next() != Some("public") || tokens.next() != Some("function") {
+        return false;
+    }
+
+    let function_token = match tokens.next() {
+        Some(token) => token,
+        None => return false,
+    };
+    let function_name = function_token.split('(').next().unwrap_or(function_token);
+
+    function_name
+        .strip_prefix("test")
+        .and_then(|remaining| remaining.chars().next())
+        .is_some_and(|ch| ch.is_ascii_alphanumeric() || ch == '_')
+}
+
+fn is_ts_test_method_line(line: &str) -> bool {
+    let trimmed = line.trim_start();
+    ["it", "test"].iter().any(|keyword| {
+        trimmed
+            .strip_prefix(keyword)
+            .is_some_and(|remaining| remaining.trim_start().starts_with('('))
+    })
+}
+
 fn count_files(path: &Path, extension: &str) -> i64 {
     let entries = match fs::read_dir(path) {
         Ok(e) => e,
@@ -269,11 +410,22 @@ fn check_with_pass(
     pass: bool,
     note: Option<String>,
 ) -> CheckResult {
+    value_check_with_pass(name, label, json!(actual), json!(expected), pass, note)
+}
+
+fn value_check_with_pass(
+    name: &'static str,
+    label: &'static str,
+    actual: Value,
+    expected: Value,
+    pass: bool,
+    note: Option<String>,
+) -> CheckResult {
     CheckResult {
         name,
         label,
-        actual: json!(actual),
-        expected: json!(expected),
+        actual,
+        expected,
         pass,
         note,
     }
@@ -307,7 +459,54 @@ fn string_check(
     }
 }
 
-fn emit_output(cli: &Cli, checks: &[CheckResult]) {
+fn build_staleness_report(state: &StateJson, current_cycle: i64) -> Value {
+    let stale_fields: Vec<Value> = state
+        .field_inventory
+        .fields
+        .iter()
+        .filter_map(|(field_name, metadata)| {
+            let metadata_obj = metadata.as_object()?;
+            let cadence = metadata_obj.get("cadence")?.as_str()?;
+            let last_refreshed = metadata_obj.get("last_refreshed")?.as_str()?;
+            let threshold = staleness_threshold(cadence);
+            let last_cycle = parse_cycle_number(last_refreshed)?;
+            let cycles_behind = current_cycle.saturating_sub(last_cycle);
+            if cycles_behind > threshold {
+                Some(json!({
+                    "field": field_name,
+                    "cadence": cadence,
+                    "last_refreshed": last_refreshed,
+                    "last_cycle": last_cycle,
+                    "cycles_behind": cycles_behind,
+                    "threshold": threshold,
+                }))
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    json!({
+        "current_cycle": current_cycle,
+        "stale_fields": stale_fields,
+    })
+}
+
+fn staleness_threshold(cadence: &str) -> i64 {
+    if cadence.trim().eq_ignore_ascii_case("every cycle") {
+        2
+    } else {
+        10
+    }
+}
+
+fn parse_cycle_number(value: &str) -> Option<i64> {
+    value
+        .split_whitespace()
+        .find_map(|token| token.parse::<i64>().ok())
+}
+
+fn emit_output(cli: &Cli, checks: &[CheckResult], staleness: Option<Value>) {
     let failed_count = checks.iter().filter(|c| !c.pass).count();
     let pass = failed_count == 0;
     let summary = if pass {
@@ -333,6 +532,7 @@ fn emit_output(cli: &Cli, checks: &[CheckResult]) {
         let output = json!({
             "pass": pass,
             "checks": checks_json,
+            "staleness": staleness,
             "summary": summary,
         });
         println!("{}", output);
@@ -376,6 +576,45 @@ fn emit_output(cli: &Cli, checks: &[CheckResult]) {
                 );
             }
         }
+
+        if let Some(staleness_report) = &staleness {
+            let current_cycle = staleness_report
+                .get("current_cycle")
+                .and_then(Value::as_i64)
+                .expect("staleness current_cycle must be integer");
+            let stale_fields = staleness_report
+                .get("stale_fields")
+                .and_then(Value::as_array)
+                .expect("staleness stale_fields must be array");
+
+            println!();
+            println!("Staleness report (cycle {}):", current_cycle);
+            if stale_fields.is_empty() {
+                println!("  No stale fields detected.");
+            } else {
+                for stale in stale_fields {
+                    println!(
+                        "  - {}: {} ({} cycles behind; threshold {})",
+                        stale
+                            .get("field")
+                            .and_then(Value::as_str)
+                            .expect("stale field name must be string"),
+                        stale
+                            .get("last_refreshed")
+                            .and_then(Value::as_str)
+                            .expect("stale last_refreshed must be string"),
+                        stale
+                            .get("cycles_behind")
+                            .and_then(Value::as_i64)
+                            .expect("stale cycles_behind must be integer"),
+                        stale
+                            .get("threshold")
+                            .and_then(Value::as_i64)
+                            .expect("stale threshold must be integer")
+                    );
+                }
+            }
+        }
         println!();
         if pass {
             println!("PASS: {}", summary);
@@ -393,5 +632,49 @@ fn value_to_display(value: &Value) -> String {
     match value {
         Value::String(s) => s.clone(),
         _ => value.to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        is_php_test_method_line, is_ts_test_method_line, parse_cycle_number, staleness_threshold,
+    };
+
+    #[test]
+    fn php_test_method_matching_works() {
+        assert!(is_php_test_method_line(
+            "public function testMinimalOutput(): void {"
+        ));
+        assert!(is_php_test_method_line(
+            "\tpublic\tfunction\ttest_with_underscore() {"
+        ));
+        assert!(!is_php_test_method_line(
+            "private function testMinimalOutput(): void {"
+        ));
+        assert!(!is_php_test_method_line(
+            "public function helperMethod(): void {"
+        ));
+        assert!(!is_php_test_method_line("public function test(): void {"));
+    }
+
+    #[test]
+    fn ts_test_method_matching_works() {
+        assert!(is_ts_test_method_line("it(\"works\", () => {})"));
+        assert!(is_ts_test_method_line("  test (\"works\", () => {})"));
+        assert!(!is_ts_test_method_line("it.each([1,2])(...)"));
+        assert!(!is_ts_test_method_line("expect(true).toBe(true)"));
+    }
+
+    #[test]
+    fn cycle_parsing_and_thresholds_work() {
+        assert_eq!(Some(128), parse_cycle_number("cycle 128"));
+        assert_eq!(Some(131), parse_cycle_number("refreshed at cycle 131"));
+        assert_eq!(None, parse_cycle_number("n/a"));
+        assert_eq!(2, staleness_threshold("every cycle"));
+        assert_eq!(
+            10,
+            staleness_threshold("every merge that adds/removes tests")
+        );
     }
 }
