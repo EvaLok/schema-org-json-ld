@@ -1,0 +1,11 @@
+[package]
+name = "housekeeping-scan"
+version = "0.1.0"
+edition = "2021"
+description = "Scans repository housekeeping items (stale issues, orphan PRs, dead branches)"
+
+[dependencies]
+chrono = { version = "0.4", features = ["clock", "serde"] }
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
