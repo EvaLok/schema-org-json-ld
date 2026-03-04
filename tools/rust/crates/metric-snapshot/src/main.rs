@@ -527,12 +527,11 @@ fn count_ts_each_tests(content: &str, array_case_counts: &HashMap<String, i64>) 
         };
 
         let match_index = start + relative_match;
-        let mut cursor = match_index
-            + if content[match_index..].starts_with("it.each") {
-                "it.each".len()
-            } else {
-                "test.each".len()
-            };
+        let mut cursor = match_index + if content[match_index..].starts_with("it.each") {
+            "it.each".len()
+        } else {
+            "test.each".len()
+        };
         cursor = skip_ascii_whitespace(content, cursor);
         if !content[cursor..].starts_with('(') {
             start = match_index + 1;
@@ -1073,9 +1072,7 @@ mod tests {
         assert!(!is_ts_test_method_line("it.each([1,2])(...)"));
         assert!(!is_ts_test_method_line("it.skip(\"works\", () => {})"));
         assert!(!is_ts_test_method_line("test.only(\"works\", () => {})"));
-        assert!(!is_ts_test_method_line(
-            "it.concurrent(\"works\", () => {})"
-        ));
+        assert!(!is_ts_test_method_line("it.concurrent(\"works\", () => {})"));
         assert!(!is_ts_test_method_line("expect(true).toBe(true)"));
     }
 
