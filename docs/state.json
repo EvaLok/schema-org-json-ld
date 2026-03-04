@@ -696,10 +696,12 @@
       "title": "Build cycle-status Rust tool: consolidated startup checklist report",
       "dispatched_at": "2026-03-04T16:50:00Z",
       "model": "gpt-5.3-codex",
-      "status": "in_revision",
+      "status": "merged",
       "pr": 439,
+      "merged_at": "2026-03-04T17:38:53Z",
       "eva_directive": 436,
-      "note": "Phase 1 of Eva's Rust tool pipeline directive (#436). Consolidates 6+ gh api calls from startup checklist steps 1, 1.1, 3, 4, 5, 8 into a single tool. PR #439 reviewed cycle 131 — 4 fixes requested. Copilot now has api.github.com access (#440)."
+      "revision_rounds": 1,
+      "note": "Phase 1 of Eva's Rust tool pipeline directive (#436). Consolidates 6+ gh api calls from startup checklist steps 1, 1.1, 3, 4, 5, 8 into a single tool. Revision round fixed URL encoding, per_page, API URLs. Runtime tested with API access (#440)."
     },
     {
       "issue": 444,
@@ -802,9 +804,9 @@
   },
   "copilot_metrics": {
     "dispatch_to_pr_rate": "37/37 (100%)",
-    "pr_merge_rate": "35/37",
-    "in_flight": 2,
-    "note": "37 dispatches, 35 merged, 2 in-flight (#438 cycle-status revision, #444 state-schema). 3 revision rounds total (PR #439 revision cycle 131). Zero silent failures."
+    "pr_merge_rate": "36/37",
+    "in_flight": 1,
+    "note": "37 dispatches, 36 merged, 1 in-flight (#444 state-schema). 3 revision rounds total (PR #439 revised + merged cycle 131). Zero silent failures."
   },
   "last_cycle": {
     "issue": 442,
@@ -824,10 +826,10 @@
   "total_testable_types_note": "89 schema classes - 12 enums = 77 testable. Of those, 73 can be parity-tested standalone; 4 are building-block-only types validated through parent types (including SeekToAction added in PR #362). Per audits #62, #68, #73. Publish gate uses 73 (standalone-parity-testable).",
   "tool_pipeline": {
     "eva_directive": 436,
-    "status": "phase_1_in_progress",
+    "status": "phase_1_complete",
     "blocks_publish": true,
     "phases": [
-      {"phase": 1, "name": "cycle-status tool", "status": "in_revision", "issue": 438, "pr": 439, "description": "Consolidate steps 1, 1.1, 3, 4, 5, 8 into single report. PR #439 reviewed — 4 fixes requested, Copilot retesting with API access."},
+      {"phase": 1, "name": "cycle-status tool", "status": "complete", "issue": 438, "pr": 439, "merged_at": "2026-03-04T17:38:53Z", "description": "Consolidate steps 1, 1.1, 3, 4, 5, 8 into single report. Merged after revision round. Runtime tested successfully."},
       {"phase": 2, "name": "verify-metrics tool", "status": "planned", "description": "Extend metric-snapshot to cover test counts, file counts, parity, staleness comprehensively"},
       {"phase": 3, "name": "housekeeping-scan tool", "status": "planned", "description": "Stale issues, orphan PRs, dead branches, audit-inbound lifecycle"},
       {"phase": 4, "name": "pipeline orchestrator", "status": "planned", "description": "Top-level tool that runs all above in sequence, tracks step completion, produces unified report"},
