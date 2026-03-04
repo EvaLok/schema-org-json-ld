@@ -1,5 +1,6 @@
 use clap::Parser;
-use state_schema::StateJson;
+use serde_json::Value;
+use state_schema::{SchemaStatus, StateJson, TypescriptPlan};
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::PathBuf;
@@ -149,85 +150,37 @@ fn is_inventoried(key: &str, inventoried: &BTreeSet<String>) -> bool {
 }
 
 fn state_top_level_keys(state: &StateJson) -> BTreeSet<String> {
-    let mut keys: BTreeSet<String> = [
-        "schema_version",
-        "schema_status",
-        "agent_sessions",
-        "qc_processed",
-        "qc_requests_pending",
-        "qc_status",
-        "blockers",
-        "open_questions_for_eva",
-        "eva_input_issues",
-        "typescript_plan",
-        "release",
-        "constructor_refactoring",
-        "copilot_metrics",
-        "last_cycle",
-        "last_eva_comment_check",
-        "audit_processed",
-        "test_count",
-        "next_metric_verification",
-        "total_schema_types",
-        "total_sub_types",
-        "total_schema_classes",
-        "total_enums",
-        "total_testable_types",
-        "total_standalone_testable_types",
-        "total_testable_types_note",
-        "tool_pipeline",
-        "field_inventory",
-    ]
-    .into_iter()
-    .map(str::to_owned)
-    .collect();
-
+    let mut keys = object_keys_from_serialized(StateJson::default());
     keys.extend(state.extra.keys().cloned());
     keys
 }
 
 fn schema_status_keys(state: &StateJson) -> BTreeSet<String> {
-    let mut keys: BTreeSet<String> = [
-        "implemented",
-        "quality_fixes",
-        "enums_implemented",
-        "enum_namespace",
-        "in_progress",
-        "planned_next",
-        "google_rich_results_types",
-        "remaining_audit_findings",
-        "property_gap_audit",
-        "type_classification",
-        "phpstan_level",
-        "phpstan_max_assessment",
-        "directory_layout",
-        "typescript_stats",
-    ]
-    .into_iter()
-    .map(str::to_owned)
-    .collect();
-
+    let mut keys = object_keys_from_serialized(SchemaStatus::default());
     keys.extend(state.schema_status.extra.keys().cloned());
     keys
 }
 
 fn typescript_plan_keys(state: &StateJson) -> BTreeSet<String> {
-    let mut keys: BTreeSet<String> = [
-        "status",
-        "issue",
-        "qc_coordination_issue",
-        "plan_version",
-        "approved_at",
-        "qc_validation_strategy",
-        "eva_decisions",
-        "preparatory_artifacts",
-        "audit_enhancements",
-        "phases",
-    ]
-    .into_iter()
-    .map(str::to_owned)
-    .collect();
-
+    let mut keys = object_keys_from_serialized(TypescriptPlan::default());
     keys.extend(state.typescript_plan.extra.keys().cloned());
     keys
+}
+
+fn object_keys_from_serialized<T: serde::Serialize>(value: T) -> BTreeSet<String> {
+    let serialized = match serde_json::to_value(value) {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("Error serializing state schema defaults: {}", e);
+            process::exit(1);
+        }
+    };
+    object_keys_from_value(serialized)
+}
+
+fn object_keys_from_value(value: Value) -> BTreeSet<String> {
+    value
+        .as_object()
+        .map(|obj| obj.keys().cloned().collect())
+        .unwrap_or_default()
 }
