@@ -1,4 +1,5 @@
 import { TypedSchema } from "../TypedSchema.js";
+import type { Comment } from "./Comment.js";
 import type { ImageObject } from "./ImageObject.js";
 import type { Organization } from "./Organization.js";
 import type { Person } from "./Person.js";
@@ -13,6 +14,7 @@ export interface AnswerOptions {
 	upvoteCount?: number | null;
 	datePublished?: string | null;
 	dateModified?: string | null;
+	comment?: readonly Comment[] | null;
 }
 
 export class Answer extends TypedSchema {
@@ -26,6 +28,7 @@ export class Answer extends TypedSchema {
 	public readonly upvoteCount: number | null;
 	public readonly datePublished: string | null;
 	public readonly dateModified: string | null;
+	public readonly comment: readonly Comment[] | null;
 
 	constructor(options: AnswerOptions) {
 		super();
@@ -37,5 +40,6 @@ export class Answer extends TypedSchema {
 		this.upvoteCount = options.upvoteCount ?? null;
 		this.datePublished = options.datePublished ?? null;
 		this.dateModified = options.dateModified ?? null;
+		this.comment = options.comment ?? null;
 	}
 }

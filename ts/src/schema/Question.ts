@@ -1,5 +1,6 @@
 import { TypedSchema } from "../TypedSchema.js";
 import type { Answer } from "./Answer.js";
+import type { Comment } from "./Comment.js";
 import type { ImageObject } from "./ImageObject.js";
 import type { Organization } from "./Organization.js";
 import type { Person } from "./Person.js";
@@ -17,6 +18,7 @@ export interface QuestionOptions {
 	author?: Person | Organization | null;
 	datePublished?: string | null;
 	dateModified?: string | null;
+	comment?: readonly Comment[] | null;
 	eduQuestionType?: string | null;
 }
 
@@ -34,6 +36,7 @@ export class Question extends TypedSchema {
 	public readonly author: Person | Organization | null;
 	public readonly datePublished: string | null;
 	public readonly dateModified: string | null;
+	public readonly comment: readonly Comment[] | null;
 	public readonly eduQuestionType: string | null;
 
 	constructor(options: QuestionOptions) {
@@ -49,6 +52,7 @@ export class Question extends TypedSchema {
 		this.author = options.author ?? null;
 		this.datePublished = options.datePublished ?? null;
 		this.dateModified = options.dateModified ?? null;
+		this.comment = options.comment ?? null;
 		this.eduQuestionType = options.eduQuestionType ?? null;
 	}
 }

@@ -6,6 +6,7 @@ namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Answer;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Comment;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ImageObject;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Question;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\VideoObject;
@@ -76,6 +77,7 @@ final class QuestionTest extends TestCase {
 
 		$this->assertFalse(property_exists($obj, 'image'));
 		$this->assertFalse(property_exists($obj, 'video'));
+		$this->assertFalse(property_exists($obj, 'comment'));
 	}
 
 	public function testImageAndVideoSerializeAsUrls(): void {
@@ -88,6 +90,18 @@ final class QuestionTest extends TestCase {
 
 		$this->assertEquals('https://example.com/question.jpg', $obj->image);
 		$this->assertEquals('https://example.com/question.mp4', $obj->video);
+	}
+
+	public function testCommentSerializesAsArray(): void {
+		$schema = new Question(
+			name: 'What is 2 + 2?',
+			comment: [new Comment(text: 'Helpful question')],
+		);
+		$obj = json_decode(JsonLdGenerator::SchemaToJson(schema: $schema));
+
+		$this->assertCount(1, $obj->comment);
+		$this->assertEquals('Comment', $obj->comment[0]->{'@type'});
+		$this->assertEquals('Helpful question', $obj->comment[0]->text);
 	}
 
 	public function testImageAndVideoSerializeAsObjects(): void {

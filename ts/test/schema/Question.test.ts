@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { JsonLdGenerator } from "../../src/JsonLdGenerator";
 import { Answer } from "../../src/schema/Answer";
+import { Comment } from "../../src/schema/Comment";
 import { ImageObject } from "../../src/schema/ImageObject";
 import { Organization } from "../../src/schema/Organization";
 import { Person } from "../../src/schema/Person";
@@ -78,6 +79,7 @@ describe("Question", () => {
 		expect(obj).not.toHaveProperty("author");
 		expect(obj).not.toHaveProperty("image");
 		expect(obj).not.toHaveProperty("video");
+		expect(obj).not.toHaveProperty("comment");
 	});
 
 	it("supports author as Person and Organization", () => {
@@ -138,6 +140,22 @@ describe("Question", () => {
 
 		expect(obj.image).toBe("https://example.com/question.jpg");
 		expect(obj.video).toBe("https://example.com/question.mp4");
+	});
+
+	it("serializes comment as an array of Comment", () => {
+		const schema = new Question({
+			name: "What is TypeScript?",
+			comment: [new Comment({ text: "Helpful question" })],
+		});
+		const obj = JSON.parse(JsonLdGenerator.schemaToJson(schema)) as Record<
+			string,
+			unknown
+		>;
+		const comment = obj.comment as Record<string, unknown>[];
+
+		expect(comment).toHaveLength(1);
+		expect(comment[0]?.["@type"]).toBe("Comment");
+		expect(comment[0]?.text).toBe("Helpful question");
 	});
 
 	it("serializes image and video as schema objects", () => {
