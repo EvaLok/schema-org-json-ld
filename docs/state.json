@@ -753,12 +753,12 @@
     "note": "32 dispatches, 32 merged, 0 in-flight. 2 revision rounds total. Zero silent failures."
   },
   "last_cycle": {
-    "issue": 416,
-    "timestamp": "2026-03-04T07:43:00Z",
-    "summary": "Cycle 123: Metric verification (step 5.11). Fixed stale type_classification (88→89, building_block_only 3→4 after SeekToAction addition). PHP 423 tests, TS 417 tests confirmed. PHPStan max confirmed. Dual-language parity: 89/89 schema, 12/12 enums. Google Recipe/Event property check: no changes. Awaiting Eva for npm publish."
+    "issue": 417,
+    "timestamp": "2026-03-04T09:13:00Z",
+    "summary": "Cycle 124: Accepted audit #85 (field_inventory completeness enforcement). Added 9 missing mutable fields to field_inventory (13→22). Added completeness check sub-step to STARTUP_CHECKLIST step 5.11. Google LocalBusiness/JobPosting property verification: 100% coverage. CI green on master 1b7eb2d. Awaiting Eva for npm publish."
   },
-  "last_eva_comment_check": "2026-03-04T07:43:00Z",
-  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71, 73, 75, 76, 78, 80, 82, 83],
+  "last_eva_comment_check": "2026-03-04T09:13:00Z",
+  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71, 73, 75, 76, 78, 80, 82, 83, 85],
   "test_count": {"php": 423, "ts": 417, "total": 840, "last_verified": "cycle 122"},
   "next_metric_verification": "cycle 128",
   "total_schema_types": 28,
@@ -783,7 +783,15 @@
       "blockers": {"cadence": "after blocker state changes", "last_refreshed": "cycle 123"},
       "qc_processed": {"cadence": "after processing QC issues", "last_refreshed": "cycle 123"},
       "audit_processed": {"cadence": "after processing audit issues", "last_refreshed": "cycle 123"},
-      "next_metric_verification": {"cadence": "after each verification run", "last_refreshed": "cycle 123"}
+      "next_metric_verification": {"cadence": "after each verification run", "last_refreshed": "cycle 123"},
+      "type_classification": {"cadence": "after schema class additions/reclassifications", "last_refreshed": "cycle 123"},
+      "total_schema_classes": {"cadence": "after schema class additions", "last_refreshed": "cycle 123"},
+      "total_enums": {"cadence": "after enum additions", "last_refreshed": "cycle 123"},
+      "total_testable_types": {"cadence": "after schema class or enum additions", "last_refreshed": "cycle 123"},
+      "total_standalone_testable_types": {"cadence": "after building-block-only type changes (publish gate)", "last_refreshed": "cycle 123"},
+      "schema_status.in_progress": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 124"},
+      "eva_input_issues.remaining_open": {"cadence": "after Eva issue processing", "last_refreshed": "cycle 124"},
+      "qc_requests_pending": {"cadence": "after QC request creation or completion", "last_refreshed": "cycle 124"}
     }
   }
 }

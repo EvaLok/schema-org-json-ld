@@ -304,9 +304,19 @@ After the enumerated checks, scan the `field_inventory` section of `docs/state.j
 
 **When adding new mutable fields to state.json**, always add a corresponding entry to `field_inventory.fields` with cadence and `last_refreshed`. This ensures new fields are automatically included in future verification sweeps.
 
+### Field inventory completeness check (per audit #85)
+
+After the inventory sweep, verify that **every mutable field in state.json has a corresponding field_inventory entry**. Specifically:
+
+1. Scan all top-level and nested fields in `docs/state.json` that are not append-only historical records (e.g., `agent_sessions` entries, `schema_status.implemented` entries are append-only and excluded)
+2. For each mutable/computed field, check that `field_inventory.fields` contains an entry for it
+3. If a mutable field has no inventory entry, add one with an appropriate cadence and set `last_refreshed` to the current cycle
+
+This converts the "always add an inventory entry" convention from write-time knowledge into a verification step that runs every 5 cycles. It catches cases where fields are added or structurally changed without a corresponding inventory update — exactly what happened with `type_classification` (stale for 16 cycles before cycle 123 caught it).
+
 If a field is stale, fix it and update the `last_verified` / `last_refreshed` value. Track the last verification cycle in the worklog.
 
-**Why:** `test_count` was 147% wrong for ~10 cycles (audit #78). `phpstan_level` went stale for ~7 cycles (cycle 115). Audit #80 identified that enumerated checklist steps cannot catch fields they don't enumerate — every new field added to state.json would need to be independently added to the checklist. The field inventory inverts this pattern: any field in the inventory that hasn't been refreshed within its cadence is automatically flagged.
+**Why:** `test_count` was 147% wrong for ~10 cycles (audit #78). `phpstan_level` went stale for ~7 cycles (cycle 115). Audit #80 identified that enumerated checklist steps cannot catch fields they don't enumerate — every new field added to state.json would need to be independently added to the checklist. The field inventory inverts this pattern: any field in the inventory that hasn't been refreshed within its cadence is automatically flagged. Audit #85 identified that the convention "always add an inventory entry" is not self-enforcing — the QC repo violated it on first use. The completeness check makes the convention self-enforcing.
 
 ## 6. Re-examine assumptions
 
