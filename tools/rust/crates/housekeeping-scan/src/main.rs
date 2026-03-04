@@ -2,7 +2,7 @@ use chrono::{DateTime, Duration, Utc};
 use clap::Parser;
 use serde::Serialize;
 use serde_json::Value;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const REPO: &str = "EvaLok/schema-org-json-ld";
@@ -46,7 +46,9 @@ struct PrState {
 
 fn main() {
     let cli = Cli::parse();
-    let _ = cli.repo_root.join("docs/state.json");
+    if let Err(e) = validate_repo_root(&cli.repo_root) {
+        exit_with_error(e);
+    }
 
     let now = Utc::now();
     let mut report = Report::default();
@@ -222,16 +224,9 @@ fn scan_dead_branches() -> Result<Vec<Finding>, String> {
     let remote_branches = parse_remote_branches(&String::from_utf8_lossy(&branches_output.stdout));
 
     let pr_state_value = gh_json(&[
-        "pr",
-        "list",
-        "--repo",
-        REPO,
-        "--state",
-        "all",
-        "--limit",
-        "200",
-        "--json",
-        "headRefName,state",
+        "api",
+        &format!("repos/{}/pulls?state=all&per_page=100", REPO),
+        "--paginate",
     ])?;
     let pr_states = parse_pr_states(&pr_state_value);
     Ok(find_dead_branches(&remote_branches, &pr_states))
@@ -256,7 +251,7 @@ fn parse_pr_states(value: &Value) -> Vec<PrState> {
                 .iter()
                 .filter_map(|item| {
                     Some(PrState {
-                        branch: item.get("headRefName")?.as_str()?.to_string(),
+                        branch: item.pointer("/head/ref")?.as_str()?.to_string(),
                         state: item.get("state")?.as_str()?.to_string(),
                     })
                 })
@@ -271,10 +266,10 @@ fn find_dead_branches(remote_branches: &[String], pr_states: &[PrState]) -> Vec<
         .filter_map(|branch| {
             let has_open = pr_states
                 .iter()
-                .any(|pr| pr.branch == *branch && pr.state == "OPEN");
+                .any(|pr| pr.branch == *branch && pr.state == "open");
             let has_closed_or_merged = pr_states
                 .iter()
-                .any(|pr| pr.branch == *branch && pr.state != "OPEN");
+                .any(|pr| pr.branch == *branch && pr.state != "open");
             if has_open || !has_closed_or_merged {
                 return None;
             }
@@ -423,6 +418,17 @@ fn gh_json(args: &[&str]) -> Result<Value, String> {
     })
 }
 
+fn validate_repo_root(repo_root: &Path) -> Result<(), String> {
+    let state_path = repo_root.join("docs/state.json");
+    if !state_path.exists() {
+        return Err(format!(
+            "--repo-root must point to the repository root containing {}",
+            state_path.display()
+        ));
+    }
+    Ok(())
+}
+
 fn exit_with_error(message: String) -> ! {
     eprintln!("Error: {}", message);
     std::process::exit(1);
@@ -471,11 +477,11 @@ mod tests {
         let prs = vec![
             PrState {
                 branch: "feature/closed".to_string(),
-                state: "MERGED".to_string(),
+                state: "closed".to_string(),
             },
             PrState {
                 branch: "feature/open".to_string(),
-                state: "OPEN".to_string(),
+                state: "open".to_string(),
             },
         ];
         let findings = find_dead_branches(&branches, &prs);
