@@ -2,7 +2,7 @@
 
 Follow this checklist at the start of every orchestrator cycle. Do not skip steps.
 
-**Permission note**: The orchestrator workflow only allows specific Bash commands: `gh`, `git`, `jq`, `mkdir`, `ls`, `date`, `wc`, `sort`, `composer`. All other commands (bash, echo, cat, chmod, env, grep) will be blocked. Use dedicated tools (Read, Write, Edit, Grep, Glob) for file operations. See `.claude/skills/orchestrator-permissions.md` for the full list and workarounds.
+**Permission note**: The orchestrator workflow allows specific Bash commands: `gh`, `git`, `jq`, `mkdir`, `ls`, `date`, `wc`, `sort`, `composer`, `cargo`, `bash`. Use dedicated tools (Read, Write, Edit, Grep, Glob) for file operations. `cargo` enables building Rust tools in `tools/rust/`. `bash` enables running shell wrappers for those tools (e.g., `bash tools/check-field-inventory-rs`). See `.claude/skills/orchestrator-permissions/SKILL.md` for the full list and `.claude/skills/rust-tooling/SKILL.md` for the Rust tool workflow.
 
 **Critical**: NEVER use `${}` variable substitution, pipes (`|`), compound commands (`&&`), heredocs (`<<`), or command substitution (`$()`) in Bash tool calls. Each call must be a single, simple command. See `.claude/skills/orchestrator-permissions.md` for details.
 
@@ -306,16 +306,13 @@ After the enumerated checks, scan the `field_inventory` section of `docs/state.j
 
 ### Field inventory completeness check (per audit #85, tool per audit #87)
 
-After the inventory sweep, verify that **every mutable field in state.json has a corresponding field_inventory entry** using the programmatic tool:
+After the inventory sweep, verify that **every mutable field in state.json has a corresponding field_inventory entry** using the Rust tool:
 
-**Programmatic check** (CI or local): `jq -r -f tools/check-field-inventory.jq docs/state.json`
+```bash
+bash tools/check-field-inventory-rs
+```
 
-**Manual check** (orchestrator sandbox — run these 3 commands, then compare):
-1. `jq -r 'keys[]' docs/state.json` — lists all top-level fields
-2. `jq -r '.schema_status | keys[]' docs/state.json` — lists schema_status sub-fields
-3. `jq -r '.field_inventory.fields | keys[]' docs/state.json` — lists inventoried fields
-
-Compare the first two lists against the third. Exclude append-only arrays (`agent_sessions`, `schema_status.implemented`, `schema_status.quality_fixes`, `schema_status.enums_implemented`, `release`), static config (`schema_status.enum_namespace`, `schema_status.directory_layout`), terminal-status objects (`constructor_refactoring`), and `field_inventory` itself. Any remaining field without an inventory entry is a gap — add it.
+This replaces the jq-based `check-field-inventory.jq` which couldn't run in the orchestrator sandbox (`jq -f` was blocked). The Rust tool runs via `bash` (allowed) and produces the same output: `PASS` (exit 0) or a list of gaps (exit 1). See `.claude/skills/rust-tooling/SKILL.md` for the tool creation workflow if you need to build additional tools.
 
 If a mutable field has no inventory entry, add one with an appropriate cadence and set `last_refreshed` to the current cycle.
 
