@@ -22,6 +22,7 @@ struct CheckResult {
     actual: Value,
     expected: Value,
     pass: bool,
+    note: Option<String>,
 }
 
 fn main() {
@@ -45,7 +46,16 @@ fn main() {
     let expected_phpstan_level = get_phpstan_level_from_state(&state);
     let expected_total_schema_classes = get_i64_from_state(&state, "total_schema_classes");
     let actual_phpstan_level = read_phpstan_level(&cli.repo_root.join("phpstan.neon"));
-    let ts_total_check_pass = ts_total_count == expected_ts_total && ts_total_count == expected_total_schema_classes;
+    let ts_total_check_pass =
+        ts_total_count == expected_ts_total && ts_total_count == expected_total_schema_classes;
+    let ts_total_note = if ts_total_count != expected_total_schema_classes {
+        Some(format!(
+            "total_schema_classes in state.json is {}",
+            expected_total_schema_classes
+        ))
+    } else {
+        None
+    };
 
     let checks = vec![
         check("php_schema_classes", "PHP schema classes", php_schema_count, expected_ts_schema),
@@ -59,6 +69,7 @@ fn main() {
             ts_total_count,
             expected_ts_total,
             ts_total_check_pass,
+            ts_total_note,
         ),
         parity_check(
             "php_ts_schema_parity",
@@ -206,7 +217,7 @@ fn count_files(path: &Path, extension: &str) -> i64 {
 }
 
 fn check(name: &'static str, label: &'static str, actual: i64, expected: i64) -> CheckResult {
-    check_with_pass(name, label, actual, expected, actual == expected)
+    check_with_pass(name, label, actual, expected, actual == expected, None)
 }
 
 fn check_with_pass(
@@ -215,6 +226,7 @@ fn check_with_pass(
     actual: i64,
     expected: i64,
     pass: bool,
+    note: Option<String>,
 ) -> CheckResult {
     CheckResult {
         name,
@@ -222,6 +234,7 @@ fn check_with_pass(
         actual: json!(actual),
         expected: json!(expected),
         pass,
+        note,
     }
 }
 
@@ -232,6 +245,7 @@ fn parity_check(name: &'static str, label: &'static str, left: i64, right: i64) 
         actual: json!(left),
         expected: json!(right),
         pass: left == right,
+        note: None,
     }
 }
 
@@ -243,6 +257,7 @@ fn string_check(name: &'static str, label: &'static str, actual: String, expecte
         actual: json!(actual),
         expected: json!(expected),
         pass,
+        note: None,
     }
 }
 
@@ -264,6 +279,7 @@ fn emit_output(cli: &Cli, checks: &[CheckResult]) {
                     "actual": c.actual,
                     "expected": c.expected,
                     "pass": c.pass,
+                    "note": c.note,
                 })
             })
             .collect();
@@ -282,19 +298,35 @@ fn emit_output(cli: &Cli, checks: &[CheckResult]) {
             let marker = if check.pass { "✓" } else { "✗ MISMATCH" };
             if check.name.starts_with("php_ts_") {
                 println!(
-                    "  {:<22} {:>3} = {:<3} {}",
+                    "  {:<22} {:>3} = {:<3} {}{}",
                     format!("{}:", check.label),
-                    check.actual.as_i64().unwrap_or_default(),
-                    check.expected.as_i64().unwrap_or_default(),
-                    marker
+                    check
+                        .actual
+                        .as_i64()
+                        .expect("parity check actual value must be integer"),
+                    check
+                        .expected
+                        .as_i64()
+                        .expect("parity check expected value must be integer"),
+                    marker,
+                    check
+                        .note
+                        .as_ref()
+                        .map(|n| format!(" ({})", n))
+                        .unwrap_or_default()
                 );
             } else {
                 println!(
-                    "  {:<22} {:>3} (state.json: {}) {}",
+                    "  {:<22} {:>3} (state.json: {}) {}{}",
                     format!("{}:", check.label),
                     value_to_display(&check.actual),
                     value_to_display(&check.expected),
-                    marker
+                    marker,
+                    check
+                        .note
+                        .as_ref()
+                        .map(|n| format!(" ({})", n))
+                        .unwrap_or_default()
                 );
             }
         }
