@@ -285,6 +285,8 @@ Skip this step if `typescript_plan.status` is not `complete` — the TypeScript 
 
 **Permanent step.** Run every 5 cycles (or after any major merge that changes class counts, test counts, or tooling).
 
+### Enumerated field checks
+
 Verify these mutable `docs/state.json` fields match reality:
 
 1. **`test_count`**: Count PHP tests (`composer run test-unit` output) and TS tests (`npm test` output in `ts/`). Compare `php`, `ts`, `total`.
@@ -293,9 +295,18 @@ Verify these mutable `docs/state.json` fields match reality:
 4. **`copilot_metrics.in_flight`**: Verify against open Copilot-assigned issues and draft PRs.
 5. **PHP/TS parity**: Count `php/src/v1/Schema/*.php` vs `ts/src/schema/*.ts` and `php/src/v1/Enum/*.php` vs `ts/src/enum/*.ts`.
 
-If a field is stale, fix it and update the `last_verified` value. Track the last verification cycle in the worklog.
+### Field inventory sweep (per audit #80)
 
-**Why:** `test_count` was 147% wrong for ~10 cycles (audit #78). `phpstan_level` went stale for ~7 cycles (cycle 115). Periodic verification prevents mutable fields from silently drifting from reality.
+After the enumerated checks, scan the `field_inventory` section of `docs/state.json`. For every field listed in the inventory:
+1. Check `last_refreshed` against the current cycle number and the field's `cadence`
+2. If a field's `last_refreshed` is older than its cadence implies (e.g., a "every cycle" field that says "cycle 115"), verify the field's actual value and update both the field and `last_refreshed`
+3. This catches fields that enumerated checks above don't cover — the inventory is self-describing
+
+**When adding new mutable fields to state.json**, always add a corresponding entry to `field_inventory.fields` with cadence and `last_refreshed`. This ensures new fields are automatically included in future verification sweeps.
+
+If a field is stale, fix it and update the `last_verified` / `last_refreshed` value. Track the last verification cycle in the worklog.
+
+**Why:** `test_count` was 147% wrong for ~10 cycles (audit #78). `phpstan_level` went stale for ~7 cycles (cycle 115). Audit #80 identified that enumerated checklist steps cannot catch fields they don't enumerate — every new field added to state.json would need to be independently added to the checklist. The field inventory inverts this pattern: any field in the inventory that hasn't been refreshed within its cadence is automatically flagged.
 
 ## 6. Re-examine assumptions
 
