@@ -45,9 +45,7 @@ class MultiTypeSchema extends TypedSchema {
 class MixedArraySchema extends TypedSchema {
 	static readonly schemaType = "MixedArrayType";
 
-	constructor(
-		public readonly values: readonly (string | number | boolean)[],
-	) {
+	constructor(public readonly values: readonly (string | number | boolean)[]) {
 		super();
 	}
 }
@@ -165,15 +163,28 @@ describe("JsonLdGenerator", () => {
 
 		expect(obj["@graph"][0]["@type"]).toBe("Article");
 		expect(obj["@graph"][1]["@type"]).toBe("Organization");
-		expect((obj["@graph"][1].hasMerchantReturnPolicy as Array<Record<string, unknown>>)[0]["@type"]).toBe("MerchantReturnPolicy");
-		expect((((obj["@graph"][1].hasMerchantReturnPolicy as Array<Record<string, unknown>>)[0]
-			.returnPolicySeasonalOverride as Array<Record<string, unknown>>)[0]["@type"])).toBe(
-			"MerchantReturnPolicySeasonalOverride",
-		);
+		expect(
+			(
+				obj["@graph"][1].hasMerchantReturnPolicy as Array<
+					Record<string, unknown>
+				>
+			)[0]["@type"],
+		).toBe("MerchantReturnPolicy");
+		expect(
+			(
+				(
+					obj["@graph"][1].hasMerchantReturnPolicy as Array<
+						Record<string, unknown>
+					>
+				)[0].returnPolicySeasonalOverride as Array<Record<string, unknown>>
+			)[0]["@type"],
+		).toBe("MerchantReturnPolicySeasonalOverride");
 	});
 
 	it("supports array @type values", () => {
-		const json = JsonLdGenerator.schemaToJson(new MultiTypeSchema("Test Schema"));
+		const json = JsonLdGenerator.schemaToJson(
+			new MultiTypeSchema("Test Schema"),
+		);
 		const obj = JSON.parse(json) as Record<string, unknown>;
 
 		expect(obj["@type"]).toEqual(["Type1", "Type2"]);
