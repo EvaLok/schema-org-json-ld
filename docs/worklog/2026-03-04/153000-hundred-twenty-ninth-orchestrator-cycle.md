@@ -25,22 +25,32 @@
 - Dual-language consistency: 89/89 (verified cycle 128)
 - Field inventory completeness: PASS (32 tracked, `bash tools/check-field-inventory-rs`)
 
-## Self-modifications
+### PR reviews and merges
 
-None this cycle. Eva directives were operational (process/policy changes) rather than infrastructure changes.
+1. **PR #435 (TS consistency audit)** — Reviewed and merged. Found 6 inherited TS classes (BlogPosting, NewsArticle, MobileApplication, WebApplication, Restaurant, Store) missing `*Options` interfaces. Clean fix: 24 additions, 0 deletions. Claude-review CI passed.
+
+2. **PR #433 (metric-snapshot Rust tool)** — Reviewed and merged. 351-line Rust CLI tool with 9 metric checks. Correctly uses non-recursive `fs::read_dir()`. Shell wrapper follows existing convention.
+
+### metric-snapshot immediately caught staleness
+
+On first run, the tool reported:
+- `TS core modules: 3 (state.json: 2) ✗ MISMATCH` — state.json had `core_modules: 2` but `ts/src/` contains 3 files (JsonLdGenerator.ts, TypedSchema.ts, index.ts). The barrel export `index.ts` was never counted.
+- Corrected state.json: `core_modules: 2→3`, `total_modules: 103→104`, `total_schema_classes: 103→104`
+
+**The tool paid for itself on its first run.** It found a staleness that had been in state.json since the TypeScript plan was first created (cycles ~78-80). No human or audit had caught it because the "core_modules" count was always verified by manual enumeration of "JsonLdGenerator + TypedSchema = 2" — nobody thought to count index.ts.
 
 ## Current state
 
-- **In-flight agent sessions**: 2 (#432 metric-snapshot tool, #434 TS consistency audit)
-- **Open PRs**: 0 (waiting for Copilot to produce PRs)
+- **In-flight agent sessions**: 0
+- **Open PRs**: 0
 - **Open questions for Eva**: None
 - **Remaining open `input-from-eva`**: [#247](https://github.com/EvaLok/schema-org-json-ld/issues/247) only
 - **Blocker**: Phase 4c (npm publish) — Eva configures OIDC + creates GitHub Release
-- **Copilot metrics**: 35 dispatched (33 merged, 2 in-flight)
+- **Copilot metrics**: 35 dispatched, 35 merged, 0 in-flight (100% merge rate)
 
 ## Next steps
 
-- Review PRs from #432 and #434 when Copilot finishes (may be next cycle)
-- If metric-snapshot tool merges, update STARTUP_CHECKLIST step 5.11 to use it
+- Update STARTUP_CHECKLIST step 5.11 to use `bash tools/metric-snapshot`
 - Plan additional Rust tools or code audits for future cycles
 - Continue monitoring for Google docs updates and audit recommendations
+- Next metric verification: cycle 133 (can now be done with `bash tools/metric-snapshot`)

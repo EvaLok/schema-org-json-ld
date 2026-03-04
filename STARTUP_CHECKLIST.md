@@ -285,15 +285,22 @@ Skip this step if `typescript_plan.status` is not `complete` — the TypeScript 
 
 **Permanent step.** Run every 5 cycles (or after any major merge that changes class counts, test counts, or tooling).
 
-### Enumerated field checks
+### Automated metric snapshot (primary check)
 
-Verify these mutable `docs/state.json` fields match reality:
+Run the Rust metric-snapshot tool to verify all file counts, parity, and PHPStan level against state.json:
+
+```bash
+bash tools/metric-snapshot
+```
+
+This checks 9 metrics in one command: PHP schema classes, PHP enum classes, TS schema/enum/core/total modules, PHP/TS parity (schema + enum), and PHPStan level. Exit code 0 = all pass, 1 = mismatches found. Use `--json` for machine-readable output.
+
+If any check fails, update state.json to match reality and re-run to confirm.
+
+### Manual checks (not covered by metric-snapshot)
 
 1. **`test_count`**: Count PHP tests (`composer run test-unit` output) and TS tests (`npm test` output in `ts/`). Compare `php`, `ts`, `total`.
-2. **`typescript_stats`**: Count files in `ts/src/schema/`, `ts/src/enum/`, and core modules. Compare `schema_types`, `enums`, `core_modules`, `total_modules`.
-3. **`phpstan_level`**: Check `phpstan.neon` config value.
-4. **`copilot_metrics.in_flight`**: Verify against open Copilot-assigned issues and draft PRs.
-5. **PHP/TS parity**: Count `php/src/v1/Schema/*.php` vs `ts/src/schema/*.ts` and `php/src/v1/Enum/*.php` vs `ts/src/enum/*.ts`.
+2. **`copilot_metrics.in_flight`**: Verify against open Copilot-assigned issues and draft PRs.
 
 ### Field inventory sweep (per audit #80)
 
