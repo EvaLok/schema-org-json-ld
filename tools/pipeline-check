@@ -3,11 +3,11 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-BINARY="$SCRIPT_DIR/rust/target/release/metric-snapshot"
+BINARY="$SCRIPT_DIR/rust/target/release/pipeline-check"
 
 if [ ! -x "$BINARY" ]; then
 	echo "Pre-built binary not found, building..." >&2
-	cargo build --release --manifest-path "$SCRIPT_DIR/rust/Cargo.toml" >&2
+	cargo build --release -p pipeline-check --manifest-path "$SCRIPT_DIR/rust/Cargo.toml" >&2
 fi
 
 case " $* " in

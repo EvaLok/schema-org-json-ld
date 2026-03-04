@@ -20,4 +20,10 @@ if [ ! -x "$BINARY" ]; then
     cargo build --release --manifest-path "$SCRIPT_DIR/rust/Cargo.toml" >&2
 fi
 
+case " $* " in
+    *" --repo-root "*)
+        exec "$BINARY" "$@"
+        ;;
+esac
+
 exec "$BINARY" --repo-root "$REPO_ROOT" "$@"
