@@ -21,6 +21,8 @@ The orchestrator workflow only permits these Bash command prefixes:
 | `wc *` | `wc -l file` |
 | `sort *` | `sort file` |
 | `composer *` | `composer run test-unit` |
+| `cargo *` | `cargo build --release --manifest-path tools/rust/Cargo.toml` |
+| `bash *` | `bash tools/check-field-inventory-rs` |
 
 WebFetch is allowed for `schema.org`, `developers.google.com`, `search.google.com` domains only.
 
@@ -45,7 +47,7 @@ These shell constructs are **always blocked** by the prefix-based permission sys
 
 ## NOT allowed commands (will require user approval)
 
-- `bash`, `sh` — cannot run scripts directly
+- ~~`bash`, `sh`~~ — `bash` is now ALLOWED (for invoking Rust tool wrappers). `sh` remains blocked.
 - `echo`, `printf` — cannot produce text output
 - `cat`, `head`, `tail` — cannot read files (use Read tool instead)
 - `grep`, `rg` — cannot search (use Grep tool instead)

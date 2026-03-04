@@ -39,10 +39,21 @@ Regex is fine for:
 - Filtering file names or paths
 - Post-processing already-extracted string values (e.g., normalising type names)
 
+## Rust tools
+
+For tools that don't need source code parsing (JSON processing, state verification, report generation), **Rust is the preferred language**. Rust tools:
+- Run in the orchestrator sandbox (`bash tools/<name>` and `cargo *` are both allowed)
+- Avoid the sandbox restrictions that block tools like `jq -f`
+- Compile to fast, standalone binaries with no runtime dependencies
+- Live in the `tools/rust/` Cargo workspace
+
+See the **rust-tooling** skill for the full workflow (workspace structure, shell wrappers, conventions).
+
 ## General tool principles
 
 1. **Use existing dependencies first.** Check `package.json` and `composer.json` before adding new packages. TypeScript is already installed — its compiler API is available for free.
-2. **Ask Eva for help.** If you need new dependencies installed, workflow changes, or permissions — create an issue. Eva is part of the team.
-3. **Keep tools focused.** One tool, one purpose. Don't combine unrelated analyses into a single script.
-4. **CI-ready exit codes.** Tools should exit 0 on success, non-zero on failure. This enables CI integration.
-5. **Preserve output format.** When rewriting a tool's internals, keep the same output format unless there's a specific reason to change it.
+2. **Rust for non-AST tools.** For JSON processing, state verification, or report generation, prefer Rust (`tools/rust/crates/`) over jq or shell scripts. Rust tools can run in the orchestrator sandbox; `jq -f` and complex shell constructs cannot.
+3. **Ask Eva for help.** If you need new dependencies installed, workflow changes, or permissions — create an issue. Eva is part of the team.
+4. **Keep tools focused.** One tool, one purpose. Don't combine unrelated analyses into a single script.
+5. **CI-ready exit codes.** Tools should exit 0 on success, non-zero on failure. This enables CI integration.
+6. **Preserve output format.** When rewriting a tool's internals, keep the same output format unless there's a specific reason to change it.

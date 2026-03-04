@@ -13,5 +13,8 @@ composer.phar
 node_modules/
 dist/
 
+# rust build artifacts
+tools/rust/target/
+
 # orchestrator temp files
 docs/.tmp-*

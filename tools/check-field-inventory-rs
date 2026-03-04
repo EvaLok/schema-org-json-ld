@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Shell wrapper for the check-field-inventory Rust tool.
+# Usage: bash tools/check-field-inventory-rs [args...]
+#
+# Replaces the jq-based check-field-inventory.jq that couldn't run in the
+# orchestrator sandbox (jq -f was blocked). This Rust version can be invoked
+# as a simple bash command: bash tools/check-field-inventory-rs
+#
+# Looks for a pre-built release binary first (CI fast path),
+# then falls back to cargo build if not found.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+BINARY="$SCRIPT_DIR/rust/target/release/check-field-inventory"
+
+if [ ! -x "$BINARY" ]; then
+    echo "Pre-built binary not found, building..." >&2
+    cargo build --release --manifest-path "$SCRIPT_DIR/rust/Cargo.toml" >&2
+fi
+
+exec "$BINARY" --repo-root "$REPO_ROOT" "$@"
