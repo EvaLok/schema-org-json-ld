@@ -211,7 +211,7 @@ Before dispatching the **first agent session** for a new language (e.g., TypeScr
 3. **QC validation strategy confirmed** — the QC orchestrator must have a concrete plan for validating output in the new language
 4. **CI workflow exists** for the new language (tests, lint, build) — may require Eva to merge a workflow PR
 
-Do NOT dispatch agent sessions for a new language until these prerequisites are met. The PHP infrastructure (AGENTS.md, skills, QC pipeline) is what produced the 94%+ merge rate — new languages need equivalent guardrails.
+Do NOT dispatch agent sessions for a new language until these prerequisites are met. The PHP infrastructure (AGENTS.md, skills, QC pipeline) is what produced the 100% merge rate (31/31 dispatches) — new languages need equivalent guardrails.
 
 ## 5.6. Class inventory reconciliation (per audit #37)
 

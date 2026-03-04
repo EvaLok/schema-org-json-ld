@@ -668,15 +668,16 @@
       "qc_validation": "SATISFIED. 73/73 standalone parity (100%). Per audit #73, 73 is the correct denominator (88 - 12 enums - 3 building-block-only = 73).",
       "publish_workflow": "publish-npm.yml pushed by Eva (commit f59a531). Uses OIDC provenance, no NPM_TOKEN needed.",
       "pr_305_status": "CLOSED. Confirmed superseded by Eva (2026-03-03T20:04Z). Branch deleted.",
+      "verify_build_ci": "ADDED. Eva applied workflow change (commit 1b8ff8f, 2026-03-04T00:43Z). verify-build runs in ci-ts.yml on every push/PR. #403 closed.",
       "remaining_actions": ["Eva configures npm trusted publishing (OIDC link)", "Eva creates GitHub Release to trigger publish"],
-      "pre_publish_checkpoint": "NEW (per Eva #401, audit #75): Multi-party sign-off required. Main + QC + audit must all confirm before recommending publish."
+      "pre_publish_checkpoint": "Active (per Eva #401, audit #75): Multi-party sign-off required. Main + QC + audit must all confirm before recommending publish. Eva directives #329 and #401 closed cycle 119."
     }
   ],
-  "open_questions_for_eva": [403],
+  "open_questions_for_eva": [],
   "eva_input_issues": {
-    "closed_this_cycle": [],
+    "closed_this_cycle": [329, 401],
     "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225, 340, 348, 372, 378, 396],
-    "remaining_open": [247, 329, 401]
+    "remaining_open": [247]
   },
   "typescript_plan": {
     "status": "approved_executing",
@@ -742,11 +743,11 @@
     "note": "31 dispatches, 31 merged, 0 in-flight. 2 revision rounds total (#364 mixed-array bug, #384 missing required props). Zero silent failures."
   },
   "last_cycle": {
-    "issue": 407,
-    "timestamp": "2026-03-04T00:17:07Z",
-    "summary": "Cycle 118: Processed audit #78 (state.json metric verification step added to STARTUP_CHECKLIST). Documented class inheritance pattern across 4 agent instruction files (AGENTS.md, AGENTS-ts.md, PHP skill, TS skill). All mutable state.json fields verified accurate. Awaiting Eva for npm publish."
+    "issue": 409,
+    "timestamp": "2026-03-04T02:16:12Z",
+    "summary": "Cycle 119: Closed resolved input-from-eva issues #329 and #401 with detailed summaries. Noted Eva applied workflow change (commit 1b8ff8f) — verify-build now in TS CI. Closed question-for-eva #403. Proactive improvement scan. Awaiting Eva for npm publish."
   },
-  "last_eva_comment_check": "2026-03-04T00:17:07Z",
+  "last_eva_comment_check": "2026-03-04T02:16:12Z",
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71, 73, 75, 76, 78],
   "test_count": {"php": 423, "ts": 409, "total": 832, "last_verified": "cycle 118"},
   "next_metric_verification": "cycle 123",
