@@ -736,6 +736,15 @@
       "merged_at": "2026-03-04T21:14:00Z",
       "eva_directive": 436,
       "note": "Fix for Phase 2: data providers (PHP @dataProvider, TS it.each) cause test method count to be lower than test execution count. All 13 metric-snapshot checks now pass."
+    },
+    {
+      "issue": 454,
+      "title": "Build housekeeping-scan Rust tool",
+      "dispatched_at": "2026-03-04T21:20:00Z",
+      "model": "gpt-5.3-codex",
+      "status": "in_progress",
+      "eva_directive": 436,
+      "note": "Phase 3 of tool pipeline. Detects stale agent issues, orphan draft PRs, dead branches, stale audit/qc-inbound issues."
     }
   ],
   "qc_processed": [8, 37, 57, 72, 160, 165],
@@ -828,10 +837,10 @@
     ]
   },
   "copilot_metrics": {
-    "dispatch_to_pr_rate": "40/40 (100%)",
+    "dispatch_to_pr_rate": "40/41",
     "pr_merge_rate": "40/40",
-    "in_flight": 0,
-    "note": "40 dispatches, 40 merged, 0 in-flight. 3 revision rounds total. Zero silent failures."
+    "in_flight": 1,
+    "note": "41 dispatches, 40 merged, 1 in-flight (#454 housekeeping-scan Phase 3). 3 revision rounds total. Zero silent failures."
   },
   "last_cycle": {
     "issue": 452,
@@ -856,7 +865,7 @@
     "phases": [
       {"phase": 1, "name": "cycle-status tool", "status": "complete", "issue": 438, "pr": 439, "merged_at": "2026-03-04T17:38:53Z", "description": "Consolidate steps 1, 1.1, 3, 4, 5, 8 into single report. Merged after revision round. Runtime tested successfully."},
       {"phase": 2, "name": "verify-metrics tool", "status": "complete", "issue": 447, "pr": 448, "merged_at": "2026-03-04T19:49:00Z", "fix_issue": 450, "fix_pr": 451, "fix_merged_at": "2026-03-04T21:14:00Z", "description": "Extend metric-snapshot with test count verification, field inventory staleness detection, schema version validation. Data provider fix merged: all 13 checks pass."},
-      {"phase": 3, "name": "housekeeping-scan tool", "status": "planned", "description": "Stale issues, orphan PRs, dead branches, audit-inbound lifecycle"},
+      {"phase": 3, "name": "housekeeping-scan tool", "status": "dispatched", "issue": 454, "dispatched_at": "2026-03-04T21:20:00Z", "description": "Stale issues, orphan PRs, dead branches, audit-inbound lifecycle"},
       {"phase": 4, "name": "pipeline orchestrator", "status": "planned", "description": "Top-level tool that runs all above in sequence, tracks step completion, produces unified report"},
       {"phase": 5, "name": "ongoing evaluation", "status": "planned", "description": "Review what works, iterate, improve"}
     ],
