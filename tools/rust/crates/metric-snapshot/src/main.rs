@@ -350,7 +350,10 @@ fn is_php_test_method_line(line: &str) -> bool {
         Some(token) => token,
         None => return false,
     };
-    let function_name = function_token.split('(').next().unwrap_or(function_token);
+    let function_name = function_token
+        .split('(')
+        .next()
+        .expect("split always returns at least one segment");
 
     function_name
         .strip_prefix("test")
@@ -656,6 +659,7 @@ mod tests {
             "public function helperMethod(): void {"
         ));
         assert!(!is_php_test_method_line("public function test(): void {"));
+        assert!(!is_php_test_method_line("public function test() {"));
     }
 
     #[test]
@@ -663,6 +667,9 @@ mod tests {
         assert!(is_ts_test_method_line("it(\"works\", () => {})"));
         assert!(is_ts_test_method_line("  test (\"works\", () => {})"));
         assert!(!is_ts_test_method_line("it.each([1,2])(...)"));
+        assert!(!is_ts_test_method_line("it.skip(\"works\", () => {})"));
+        assert!(!is_ts_test_method_line("test.only(\"works\", () => {})"));
+        assert!(!is_ts_test_method_line("it.concurrent(\"works\", () => {})"));
         assert!(!is_ts_test_method_line("expect(true).toBe(true)"));
     }
 
