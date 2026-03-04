@@ -285,6 +285,44 @@ class SolveMathAction extends TypedSchema {
 
 `JsonLdGenerator` automatically checks for `PROPERTY_MAP` and remaps property names before serialization. Classes without `PROPERTY_MAP` are unaffected.
 
+### Class inheritance (extending schema types)
+
+Some schema.org types are subtypes of other types (e.g., `FoodEstablishment` is a subtype of `LocalBusiness`). When this is the case, extend the parent class instead of `TypedSchema`:
+
+```php
+class FoodEstablishment extends LocalBusiness {
+	public const A_SCHEMA_TYPE = 'FoodEstablishment';
+
+	public function __construct(
+		string $name,
+		PostalAddress $address,
+		// ... all parent params passed through ...
+		public null|bool|string $acceptsReservations = null,  // new param
+	) {
+		parent::__construct(
+			name: $name,
+			address: $address,
+			// ... pass all parent params via named arguments ...
+		);
+	}
+}
+```
+
+Key rules:
+- **Extend the parent class**, not `TypedSchema` — the parent's properties are inherited
+- **Override `A_SCHEMA_TYPE`** with the child's type name
+- **Pass all parent constructor params through** via `parent::__construct()` with named arguments
+- **Add child-specific params** as new promoted properties (with `public` keyword) at the end of the parameter list
+- Parent params are NOT promoted in the child (no `public` keyword) — they're passed to `parent::__construct()`
+
+Existing inheritance chains:
+- `LocalBusiness → FoodEstablishment → Restaurant`
+- `LocalBusiness → Store`
+- `Article → BlogPosting`
+- `Article → NewsArticle`
+- `SoftwareApplication → MobileApplication`
+- `SoftwareApplication → WebApplication`
+
 ## Documentation
 
 When adding significant new properties or sub-types to existing schema classes, update `README.md` as part of the same PR:

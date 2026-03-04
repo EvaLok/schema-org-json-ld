@@ -281,6 +281,22 @@ Skip this step if `typescript_plan.status` is not `complete` — the TypeScript 
 
 **Why:** Eva's [#401](https://github.com/EvaLok/schema-org-json-ld/issues/401) identified that the orchestrator recommended publishing while `verify-build.mjs` was broken (for 11 cycles). Multi-party verification provides redundancy — the QC tests the built package independently, and the audit confirms the process was followed. No single orchestrator's "all gates satisfied" assertion should be sufficient for a publish recommendation.
 
+## 5.11. State.json metric verification (per audit #78)
+
+**Permanent step.** Run every 5 cycles (or after any major merge that changes class counts, test counts, or tooling).
+
+Verify these mutable `docs/state.json` fields match reality:
+
+1. **`test_count`**: Count PHP tests (`composer run test-unit` output) and TS tests (`npm test` output in `ts/`). Compare `php`, `ts`, `total`.
+2. **`typescript_stats`**: Count files in `ts/src/schema/`, `ts/src/enum/`, and core modules. Compare `schema_types`, `enums`, `core_modules`, `total_modules`.
+3. **`phpstan_level`**: Check `phpstan.neon` config value.
+4. **`copilot_metrics.in_flight`**: Verify against open Copilot-assigned issues and draft PRs.
+5. **PHP/TS parity**: Count `php/src/v1/Schema/*.php` vs `ts/src/schema/*.ts` and `php/src/v1/Enum/*.php` vs `ts/src/enum/*.ts`.
+
+If a field is stale, fix it and update the `last_verified` value. Track the last verification cycle in the worklog.
+
+**Why:** `test_count` was 147% wrong for ~10 cycles (audit #78). `phpstan_level` went stale for ~7 cycles (cycle 115). Periodic verification prevents mutable fields from silently drifting from reality.
+
 ## 6. Re-examine assumptions
 
 Read your recent journal and worklog entries with fresh eyes:

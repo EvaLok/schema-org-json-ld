@@ -103,7 +103,7 @@ export class Recipe extends TypedSchema {
 The options interface is exported alongside the class for consumer use. Name it `{TypeName}Options`.
 
 Rules:
-- Extend `TypedSchema`
+- Extend `TypedSchema` (or a parent schema class if the type inherits — see **Class inheritance** below)
 - Set `static readonly schemaType` to the exact schema.org type name
 - Use `public readonly` for all properties (declared in the class body, NOT in constructor params)
 - **Always** use an options-object constructor with a `{TypeName}Options` interface — even for simple types with few properties
@@ -152,6 +152,45 @@ export class SolveMathAction extends TypedSchema {
   }
 }
 ```
+
+### Class inheritance (extending schema types)
+
+Some schema.org types inherit from other types. When this is the case, extend the parent class and its options interface:
+
+```typescript
+import { LocalBusiness } from "./LocalBusiness.js";
+import type { LocalBusinessOptions } from "./LocalBusiness.js";
+
+export interface FoodEstablishmentOptions extends LocalBusinessOptions {
+  acceptsReservations?: boolean | string | null;
+}
+
+export class FoodEstablishment extends LocalBusiness {
+  static readonly schemaType: string = "FoodEstablishment";
+
+  public readonly acceptsReservations: boolean | string | null;
+
+  constructor(options: FoodEstablishmentOptions) {
+    super(options);
+    this.acceptsReservations = options.acceptsReservations ?? null;
+  }
+}
+```
+
+Key rules:
+- **Extend the parent class**, not `TypedSchema` — parent properties are inherited
+- **Extend the parent's options interface** — child options include all parent options
+- **Override `schemaType`** with the child's type name
+- **Call `super(options)`** — passes the full options object to the parent constructor
+- **Only declare child-specific properties** in the class body — parent properties are handled by the parent constructor
+
+Existing inheritance chains:
+- `LocalBusiness → FoodEstablishment → Restaurant`
+- `LocalBusiness → Store`
+- `Article → BlogPosting`
+- `Article → NewsArticle`
+- `SoftwareApplication → MobileApplication`
+- `SoftwareApplication → WebApplication`
 
 ## Enum Conventions
 
@@ -232,9 +271,9 @@ const { Product } = require('./schema/Product');  // no require()
 ### Test pattern
 
 ```typescript
-import { describe, it, expect } from 'vitest';
-import { JsonLdGenerator } from '../../src/JsonLdGenerator';
-import { YourType } from '../../src/schema/YourType';
+import { describe, it, expect } from "vitest";
+import { JsonLdGenerator } from "../../src/JsonLdGenerator";
+import { YourType } from "../../src/schema/YourType";
 
 describe('YourType', () => {
   it('produces minimal JSON-LD output', () => {
@@ -274,7 +313,7 @@ Before marking your PR as ready:
 - [ ] Build succeeds (`npm run build`)
 - [ ] New tests added for all new/modified schema types
 - [ ] No `any` types — all types explicit
-- [ ] `readonly` constructor parameters used for all properties
+- [ ] `public readonly` properties declared in class body (not constructor params)
 - [ ] Optional parameters use `Type | null` union with `= null` default
 - [ ] `static readonly schemaType` set correctly
 - [ ] No serialization methods — JsonLdGenerator handles everything

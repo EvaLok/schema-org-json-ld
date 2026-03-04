@@ -48,13 +48,45 @@ class {TypeName} extends TypedSchema {
 ```
 
 Rules:
-- Extend `TypedSchema`
+- Extend `TypedSchema` (or a parent schema class if the type inherits — see below)
 - Set `A_SCHEMA_TYPE` to the exact schema.org type name
 - Use constructor promotion for ALL properties
 - Required properties have no default value
 - Optional properties default to `null` with `null|Type` syntax
 - For array properties, add `/** @var ElementType[] $propName */` doc comment
 - Do NOT add any methods — no toArray(), no serialize(), nothing
+
+### Class inheritance variant
+
+If the schema type extends another schema type (not `TypedSchema` directly), use the inheritance pattern:
+
+```php
+class FoodEstablishment extends LocalBusiness {
+	public const A_SCHEMA_TYPE = 'FoodEstablishment';
+
+	public function __construct(
+		string $name,
+		PostalAddress $address,
+		// ... all parent params passed through ...
+		public null|bool|string $acceptsReservations = null,  // new param
+	) {
+		parent::__construct(
+			name: $name,
+			address: $address,
+			// ... pass all parent params via named arguments ...
+		);
+	}
+}
+```
+
+Key rules:
+- Extend the parent class, not `TypedSchema`
+- Override `A_SCHEMA_TYPE` with the child's type name
+- Pass all parent params through via `parent::__construct()` with named arguments
+- Add child-specific params as promoted properties (with `public`) at the end
+- Parent params are NOT promoted in the child (no `public` keyword)
+
+Check the PHP codebase for existing inheritance: `FoodEstablishment extends LocalBusiness`, `Store extends LocalBusiness`, `BlogPosting extends Article`, `NewsArticle extends Article`, `MobileApplication extends SoftwareApplication`, `WebApplication extends SoftwareApplication`, `Restaurant extends FoodEstablishment`.
 
 ## Step 4: Create enum types (if needed)
 

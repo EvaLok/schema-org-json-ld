@@ -30,9 +30,9 @@ Write tests before the implementation. These tests will fail initially because t
 
 Template:
 ```typescript
-import { describe, it, expect } from 'vitest';
-import { JsonLdGenerator } from '../../src/JsonLdGenerator';
-import { TypeName } from '../../src/schema/TypeName';
+import { describe, it, expect } from "vitest";
+import { JsonLdGenerator } from "../../src/JsonLdGenerator";
+import { TypeName } from "../../src/schema/TypeName";
 
 describe('TypeName', () => {
   it('produces minimal JSON-LD output with required fields only', () => {
@@ -139,7 +139,7 @@ The options interface:
 - Optional fields default to `null` via `?? null` in the constructor body
 
 Rules:
-- Extend `TypedSchema`
+- Extend `TypedSchema` (or a parent schema class if the type inherits — see below)
 - Set `static readonly schemaType` to the exact schema.org type name
 - Use `public readonly` for all properties
 - Required properties have no default value, optional properties default to `null`
@@ -148,6 +148,36 @@ Rules:
 - Import paths must include `.js` extension (ESM convention)
 - Do NOT add serialization methods — `JsonLdGenerator` handles everything
 - Do NOT modify `JsonLdGenerator.ts` or `TypedSchema.ts` unless the issue specifically asks
+
+### Class inheritance variant
+
+If the schema type extends another schema type (not `TypedSchema` directly), use the inheritance pattern:
+
+```typescript
+import { ParentType } from "./ParentType.js";
+import type { ParentTypeOptions } from "./ParentType.js";
+
+export interface ChildTypeOptions extends ParentTypeOptions {
+  childSpecificProp?: string | null;
+}
+
+export class ChildType extends ParentType {
+  static readonly schemaType: string = "ChildType";
+
+  public readonly childSpecificProp: string | null;
+
+  constructor(options: ChildTypeOptions) {
+    super(options);
+    this.childSpecificProp = options.childSpecificProp ?? null;
+  }
+}
+```
+
+Check the PHP implementation to see if the type uses inheritance. Existing chains:
+- `LocalBusiness → FoodEstablishment → Restaurant`
+- `LocalBusiness → Store`
+- `Article → BlogPosting`, `Article → NewsArticle`
+- `SoftwareApplication → MobileApplication`, `SoftwareApplication → WebApplication`
 
 ## Step 5: Create enum types (if needed)
 
