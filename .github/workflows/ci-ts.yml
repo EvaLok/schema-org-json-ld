@@ -6,6 +6,7 @@ on:
       - master
     paths:
       - 'ts/**'
+      - 'scripts/**'
       - 'package.json'
       - 'package-lock.json'
       - 'tsconfig.json'
@@ -15,6 +16,7 @@ on:
       - master
     paths:
       - 'ts/**'
+      - 'scripts/**'
       - 'package.json'
       - 'package-lock.json'
       - 'tsconfig.json'
@@ -51,3 +53,6 @@ jobs:
 
       - name: Test
         run: npm run test
+
+      - name: Verify build
+        run: npm run verify-build
