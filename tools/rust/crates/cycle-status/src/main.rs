@@ -269,7 +269,7 @@ fn gather_eva_input(last_cycle_timestamp: &str, errors: &mut Vec<String>) -> Eva
                         if ignore {
                             return None;
                         }
-                        let issue_url = json_str(item, &["issue_url"])?.to_string();
+                        let issue_url = api_issue_url_to_web_url(json_str(item, &["issue_url"])?);
                         let first_line = body.lines().next().unwrap_or("").trim().to_string();
                         Some(EvaComment {
                             issue_url,
@@ -345,8 +345,10 @@ fn gather_agent_status(errors: &mut Vec<String>) -> AgentStatus {
         Err(e) => errors.push(format!("Open PR query failed: {}", e)),
     }
 
-    let copilot_issues_path =
-        format!("repos/{}/issues?assignee=copilot-swe-agent[bot]&state=open", MAIN_REPO);
+    let copilot_issues_path = format!(
+        "repos/{}/issues?assignee=copilot-swe-agent%5Bbot%5D&state=open",
+        MAIN_REPO
+    );
     match gh_json(&["api", &copilot_issues_path]) {
         Ok(value) => {
             if let Some(items) = value.as_array() {
@@ -401,7 +403,7 @@ fn gather_qc_status(state: &StateJson, errors: &mut Vec<String>) -> ProcessingSt
         errors,
         "QC outbound query failed",
         &format!(
-            "repos/{}/issues?labels=qc-outbound&state=open&creator=EvaLok&sort=created&direction=asc",
+            "repos/{}/issues?labels=qc-outbound&state=open&creator=EvaLok&sort=created&direction=asc&per_page=100",
             QC_REPO
         ),
         "QC inbound query failed",
@@ -427,7 +429,7 @@ fn gather_audit_status(state: &StateJson, errors: &mut Vec<String>) -> Processin
         errors,
         "Audit outbound query failed",
         &format!(
-            "repos/{}/issues?labels=audit-outbound&state=open&creator=EvaLok&sort=created&direction=asc",
+            "repos/{}/issues?labels=audit-outbound&state=open&creator=EvaLok&sort=created&direction=asc&per_page=100",
             AUDIT_REPO
         ),
         "Audit inbound query failed",
@@ -752,6 +754,12 @@ fn json_str<'a>(value: &'a Value, path: &[&str]) -> Option<&'a str> {
         current = current.get(*key)?;
     }
     current.as_str()
+}
+
+/// Convert GitHub API issue URLs to web issue URLs for human-friendly output.
+/// Example: `https://api.github.com/repos/owner/repo/issues/123` -> `https://github.com/owner/repo/issues/123`.
+fn api_issue_url_to_web_url(api_url: &str) -> String {
+    api_url.replace("https://api.github.com/repos/", "https://github.com/")
 }
 
 fn gh_json(args: &[&str]) -> Result<Value, String> {
