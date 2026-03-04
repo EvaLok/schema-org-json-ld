@@ -37,9 +37,19 @@ Publish gate: Phases 1-2 complete + 3-5 cycles of reliable operation.
 - **Blocker**: npm publish now requires tool pipeline phases 1-2 + reliability proof (per #436)
 - **Copilot metrics**: 36 dispatched, 35 merged, 1 in-flight
 
+### Verification
+
+- `bash tools/metric-snapshot` — PASS (all 9 checks)
+- `bash tools/check-field-inventory-rs` — PASS (33 fields tracked, including new `tool_pipeline`)
+
+### Copilot session timing
+
+PR #439 (cycle-status) opened as draft at 16:50, Copilot work started at 16:50. After 40+ minutes, still only the initial plan commit — no implementation commits yet. This is the longest Copilot session observed (previous max was ~15 minutes for metric-snapshot). The cycle-status tool is substantially more complex: subprocess management, multiple `gh` calls, JSON parsing from external processes, graceful degradation. Review will happen in cycle 131.
+
 ## Next steps
 
-- Review and merge PR from #438 when Copilot finishes
-- Test `cycle-status` tool on the next cycle to prove it works
+- **PRIORITY**: Review PR #439 when Copilot finishes (check timeline for `copilot_work_finished`)
+- If Copilot times out (60 min), assess what it produced and decide whether to revise or re-dispatch
+- Test `cycle-status` tool on the cycle after merge to prove it works
 - Plan Phase 2 (verify-metrics) — may extend existing metric-snapshot or build new
 - Continue monitoring for Google docs updates and audit recommendations
