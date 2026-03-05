@@ -324,6 +324,20 @@ Skip this step if `typescript_plan.status` is not `complete` — the TypeScript 
 
 **Why:** Eva's [#401](https://github.com/EvaLok/schema-org-json-ld/issues/401) identified that the orchestrator recommended publishing while `verify-build.mjs` was broken (for 11 cycles). Multi-party verification provides redundancy — the QC tests the built package independently, and the audit confirms the process was followed. No single orchestrator's "all gates satisfied" assertion should be sufficient for a publish recommendation.
 
+## 5.12. Post-QC-validation commit-freeze check (per audit #108)
+
+**Permanent step.** After receiving a QC-ACK for pre-publish validation, track the validated commit and monitor for source divergence.
+
+1. When QC-ACK is received, record the validated commit SHA in `docs/state.json` as `publish_gate.validated_commit`
+2. Each cycle, if `publish_gate.validated_commit` is set, check whether HEAD has diverged from it on package-affecting files:
+   - `php/src/`, `php/test/`, `ts/src/`, `ts/test/`, `package.json`, `tsconfig.json`, `scripts/verify-build.mjs`
+3. If divergence is detected: set `publish_gate.source_diverged = true` and note that re-validation is required before publish
+4. If no divergence: the validated commit remains valid for publish
+
+**Package-affecting files** are those that change the behavior or content of the published npm/composer packages. Infrastructure files (AGENTS.md, skills, checklists, worklog, journal, state.json, tools/) are NOT package-affecting.
+
+**Why:** Audit #108 identified that after QC validated commit `9326e46`, the orchestrator continued committing (infrastructure changes). While those commits didn't touch source files, there was no mechanism to detect if a future commit accidentally modified package code between validation and publish. This check closes that gap.
+
 ## 5.11. State.json metric verification (per audit #78)
 
 **Permanent step.** Run every 5 cycles (or after any major merge that changes class counts, test counts, or tooling).

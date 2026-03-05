@@ -762,7 +762,7 @@
     }
   ],
   "qc_processed": [8, 37, 57, 72, 160, 165],
-  "qc_requests_pending": [496],
+  "qc_requests_pending": [],
   "qc_status": {
     "request_165": "COMPLETE. QC issue #41 closed. 39/39 E2E pass, 0 errors, 158 warnings. @graph API also validated.",
     "report_57": "ALL FIXES MERGED AND VALIDATED. PRs #198, #199. QC-63 confirmed: 39/39 E2E pass, 0 errors, 19 warnings.",
@@ -772,7 +772,16 @@
     "request_234": "COMPLETE. QC repo #84 closed. 188 QC unit tests, 39/39 E2E pass, 0 errors, 15 warnings (all known false positives). Offer.hasMerchantReturnPolicy validated. Issue #234 closed.",
     "request_331": "PARITY COMPLETE. QC-ACK #138. Parity: 73/73 standalone types (100%). 0 E2E errors, 25 warnings (false positives). Class inventory: 88/88 PHP=TS. Per audit #73, 73 is the maximum achievable (3 building-block types validated through parents). Publish gate satisfied.",
     "request_265": "COMPLETE. QC repo #114 closed. 188 tests, 1133 assertions, ALL PASS. 39/39 E2E, 0 errors, 15 warnings (known false positives). Phase 0 gate cleared.",
-    "request_299": "COMPLETE. QC-ACK #122 closed (2026-03-01T16:37Z). 23/23 parity match, 0 E2E errors, 14 warnings (known false positives). All DoD criteria satisfied: top-level parity, propertyMap, inheritance chains, Adobe E2E. Issue #299 closed."
+    "request_299": "COMPLETE. QC-ACK #122 closed (2026-03-01T16:37Z). 23/23 parity match, 0 E2E errors, 14 warnings (known false positives). All DoD criteria satisfied: top-level parity, propertyMap, inheritance chains, Adobe E2E. Issue #299 closed.",
+    "request_496": "COMPLETE. QC-ACK #213 (2026-03-05T16:22Z). Pre-publish final validation: Parity 73/73 PASS, E2E 73/73 PASS (0 errors), Package build PASS, Class inventory 88/88 PASS. All 5 DoD criteria satisfied. Package cleared for npm publish."
+  },
+  "publish_gate": {
+    "validated_commit": "73d1b1b",
+    "validated_at": "2026-03-05T16:22Z",
+    "qc_ack": "EvaLok/schema-org-json-ld-qc#213",
+    "source_diverged": false,
+    "last_divergence_check": "cycle 147",
+    "note": "Per audit #108: Track validated commit SHA. If package-affecting files change after validation, set source_diverged=true and require re-validation."
   },
   "blockers": [
     {
@@ -783,8 +792,8 @@
       "publish_workflow": "publish-npm.yml pushed by Eva (commit f59a531). Uses OIDC provenance, no NPM_TOKEN needed.",
       "pr_305_status": "CLOSED. Confirmed superseded by Eva (2026-03-03T20:04Z). Branch deleted.",
       "verify_build_ci": "ADDED. Eva applied workflow change (commit 1b8ff8f, 2026-03-04T00:43Z). verify-build runs in ci-ts.yml on every push/PR. #403 closed.",
-      "remaining_actions": ["Pipeline reliability SATISFIED (13 consecutive clean cycles, started 134)", "QC final validation in progress (QC-REQUEST #496)", "Eva configures npm trusted publishing (OIDC link)", "Eva creates GitHub Release to trigger publish"],
-      "pre_publish_checkpoint": "INITIATED (cycle 146). QC-REQUEST #496 sent. Awaiting QC response. Pipeline reliability: 13 cycles. Per Eva #401, #436, audit #75: Multi-party sign-off required. Main + QC + audit must all confirm."
+      "remaining_actions": ["Pipeline reliability SATISFIED (14 consecutive clean cycles, started 134)", "QC final validation COMPLETE (QC-ACK #213, all 5 DoD criteria pass)", "Audit sign-off PENDING (audit #108 processed, awaiting confirmation)", "Eva configures npm trusted publishing (OIDC link)", "Eva creates GitHub Release to trigger publish"],
+      "pre_publish_checkpoint": "QC VALIDATED (cycle 147). QC-ACK #213 confirms: 73/73 parity, 73/73 E2E, package build OK, 88/88 class inventory. Validated commit: 73d1b1b. Source diverged: false. Audit sign-off still pending. Per Eva #401, #436, audit #75: Multi-party sign-off required."
     }
   ],
   "open_questions_for_eva": [],
@@ -870,7 +879,7 @@
     "summary": "Cycle 146: Consumed cycle 145 review (score 3/5, PR #493). Implemented audit #106 recurrence escalation rule. Initiated multi-party pre-publish checkpoint (QC-REQUEST #496). Metric verification: 13/13 PASS, 34/34 field inventory, 13th clean pipeline cycle."
   },
   "last_eva_comment_check": "2026-03-05T15:18:00Z",
-  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71, 73, 75, 76, 78, 80, 82, 83, 85, 87, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106],
+  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71, 73, 75, 76, 78, 80, 82, 83, 85, 87, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108],
   "test_count": {"php": 425, "ts": 419, "total": 844, "last_verified": "cycle 139", "last_verified_note": "last_verified = cycle when values were independently measured. field_inventory.last_refreshed = cycle when entry was checked (value confirmed unchanged or updated). These can diverge when a check confirms no change."},
   "next_metric_verification": "cycle 151",
   "total_schema_types": 28,
@@ -964,10 +973,10 @@
       "copilot_metrics.pr_merge_rate": {"cadence": "after PR merges", "last_refreshed": "cycle 146"},
       "last_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 146"},
       "last_eva_comment_check": {"cadence": "every cycle", "last_refreshed": "cycle 146"},
-      "qc_status": {"cadence": "after QC interactions", "last_refreshed": "cycle 134"},
-      "blockers": {"cadence": "after blocker state changes", "last_refreshed": "cycle 146"},
+      "qc_status": {"cadence": "after QC interactions", "last_refreshed": "cycle 147"},
+      "blockers": {"cadence": "after blocker state changes", "last_refreshed": "cycle 147"},
       "qc_processed": {"cadence": "after processing QC issues", "last_refreshed": "cycle 134"},
-      "audit_processed": {"cadence": "after processing audit issues", "last_refreshed": "cycle 146"},
+      "audit_processed": {"cadence": "after processing audit issues", "last_refreshed": "cycle 147"},
       "next_metric_verification": {"cadence": "after each verification run", "last_refreshed": "cycle 146"},
       "type_classification": {"cadence": "after schema class additions/reclassifications", "last_refreshed": "cycle 134"},
       "total_schema_classes": {"cadence": "after schema class additions", "last_refreshed": "cycle 142"},
@@ -976,7 +985,7 @@
       "total_standalone_testable_types": {"cadence": "after building-block-only type changes (publish gate)", "last_refreshed": "cycle 134"},
       "schema_status.in_progress": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 134"},
       "eva_input_issues.remaining_open": {"cadence": "after Eva issue processing", "last_refreshed": "cycle 144"},
-      "qc_requests_pending": {"cadence": "after QC request creation or completion", "last_refreshed": "cycle 146"},
+      "qc_requests_pending": {"cadence": "after QC request creation or completion", "last_refreshed": "cycle 147"},
       "total_schema_types": {"cadence": "after schema type additions", "last_refreshed": "cycle 126"},
       "total_sub_types": {"cadence": "after sub-type additions", "last_refreshed": "cycle 126"},
       "total_testable_types_note": {"cadence": "after classification changes", "last_refreshed": "cycle 126"},
@@ -989,7 +998,8 @@
       "typescript_plan.status": {"cadence": "after plan phase transitions", "last_refreshed": "cycle 126"},
       "eva_input_issues.closed_this_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 146"},
       "tool_pipeline": {"cadence": "after pipeline phase transitions", "last_refreshed": "cycle 146"},
-      "review_agent": {"cadence": "every cycle (updated when consuming review findings)", "last_refreshed": "cycle 146"}
+      "review_agent": {"cadence": "every cycle (updated when consuming review findings)", "last_refreshed": "cycle 146"},
+      "publish_gate": {"cadence": "every cycle when set (divergence check)", "last_refreshed": "cycle 147"}
     }
   }
 }
