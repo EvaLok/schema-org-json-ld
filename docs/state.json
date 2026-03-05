@@ -853,9 +853,9 @@
   "copilot_metrics": {
     "dispatch_to_pr_rate": "46/46",
     "pr_merge_rate": "45/46",
-    "in_flight": 0,
-    "note": "46 dispatches, 45 merged, 1 closed without merge (#467/PR #468). 0 in-flight. 4 revision rounds total. 97.8% merge rate.",
-    "dispatch_log_latest": "#476 cycle-141 review agent (cycle 141)"
+    "in_flight": 1,
+    "note": "47 dispatches, 45 merged, 1 closed without merge (#467/PR #468). 1 in-flight (#480 review agent). 4 revision rounds total. 97.8% merge rate.",
+    "dispatch_log_latest": "#480 cycle-142 review agent (cycle 142)"
   },
   "last_cycle": {
     "number": 142,
