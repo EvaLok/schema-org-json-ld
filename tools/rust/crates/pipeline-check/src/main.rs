@@ -165,10 +165,14 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
         .iter()
         .map(|spec| run_step(repo_root, spec, runner))
         .collect::<Vec<_>>();
-    let overall = if steps
+    let has_fail_or_error = steps
         .iter()
-        .any(|step| matches!(step.status, StepStatus::Fail | StepStatus::Error))
-    {
+        .any(|step| matches!(step.status, StepStatus::Fail | StepStatus::Error));
+    let all_skipped = !steps.is_empty()
+        && steps
+            .iter()
+            .all(|step| matches!(step.status, StepStatus::Skip));
+    let overall = if has_fail_or_error || all_skipped {
         StepStatus::Fail
     } else {
         StepStatus::Pass
@@ -324,6 +328,8 @@ fn pipeline_exit_code(steps: &[StepReport]) -> i32 {
         2
     } else if steps.iter().any(|step| step.status == StepStatus::Fail) {
         1
+    } else if !steps.is_empty() && steps.iter().all(|step| step.status == StepStatus::Skip) {
+        1
     } else {
         0
     }
@@ -360,6 +366,13 @@ fn print_human_report(report: &PipelineReport) {
 
     println!();
     println!("Overall: {}", step_status_label(report.overall));
+    if report
+        .steps
+        .iter()
+        .all(|step| matches!(step.status, StepStatus::Skip))
+    {
+        println!("Reason: no tools could run (all steps skipped)");
+    }
 }
 
 fn step_status_label(status: StepStatus) -> &'static str {
@@ -443,6 +456,19 @@ mod tests {
         let mut steps = report.steps;
         steps[1].status = StepStatus::Error;
         assert_eq!(pipeline_exit_code(&steps), 2);
+    }
+
+    #[test]
+    fn all_skipped_steps_return_failure_exit_code() {
+        let steps = vec![StepReport {
+            name: "metric-snapshot",
+            status: StepStatus::Skip,
+            exit_code: None,
+            detail: None,
+            findings: None,
+            summary: None,
+        }];
+        assert_eq!(pipeline_exit_code(&steps), 1);
     }
 
     #[test]
@@ -553,5 +579,33 @@ mod tests {
             report.steps[3].summary.as_deref(),
             Some("1 in-flight, 2 eva directives")
         );
+    }
+
+    #[test]
+    fn run_pipeline_fails_when_all_steps_are_skipped() {
+        struct NoopRunner;
+
+        impl CommandRunner for NoopRunner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("runner should not execute when all binaries are missing");
+            }
+        }
+
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!("pipeline-check-all-skipped-{}", run_id));
+        fs::create_dir_all(&root).unwrap();
+
+        let report = run_pipeline(&root, 140, &NoopRunner);
+        assert_eq!(report.overall, StepStatus::Fail);
+        assert_eq!(report.steps.len(), 4);
+        assert!(report
+            .steps
+            .iter()
+            .all(|step| matches!(step.status, StepStatus::Skip)));
     }
 }
