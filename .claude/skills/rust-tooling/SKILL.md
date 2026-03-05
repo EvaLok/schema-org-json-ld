@@ -101,6 +101,39 @@ bash tools/my-tool --help
 - **Keep dependencies minimal** — each tool should be focused and fast to compile
 - **`serde_json`** is the standard crate for JSON parsing (already in workspace)
 
+## Shared `state-schema` crate
+
+The workspace includes a shared library crate at `tools/rust/crates/state-schema/` that provides strongly-typed serde structs for `docs/state.json`. All tools that read or write the state file should depend on this crate instead of parsing JSON manually.
+
+### Adding it as a dependency
+
+In your tool's `Cargo.toml`:
+
+```toml
+[dependencies]
+state-schema = { path = "../state-schema" }
+```
+
+### Usage
+
+```rust
+use state_schema::StateJson;
+
+let content = std::fs::read_to_string("docs/state.json")?;
+let state: StateJson = serde_json::from_str(&content)?;
+// Access typed fields: state.copilot_metrics, state.test_count, state.field_inventory, etc.
+```
+
+Key features:
+- `#[serde(default)]` on all structs — tolerates missing fields
+- `#[serde(flatten)] extra: BTreeMap<String, Value>` — preserves unknown fields on round-trip
+- `SCHEMA_VERSION` constant for validation
+- All tools that need state.json (metric-snapshot, cycle-status, housekeeping-scan, pipeline-check, check-field-inventory) use this crate
+
+### When to update state-schema
+
+When you add a new top-level or nested field to `docs/state.json` that a Rust tool needs to read, add the corresponding struct field to `state-schema/src/lib.rs`. If no Rust tool needs it yet, the `#[serde(flatten)] extra` field will capture it automatically.
+
 ## When to create a tool
 
 Create a tool when you notice:
