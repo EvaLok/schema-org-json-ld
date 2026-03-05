@@ -232,6 +232,23 @@ Key style rules enforced by the fixer:
 - Short array syntax (`[]` not `array()`)
 - PER-CS2.0 base ruleset
 
+## Agent Environment
+
+Your session runs in a GitHub Actions runner with the following pre-installed (via `.github/copilot-setup-steps.yml`):
+
+- **PHP 8.3** + Composer + all dependencies (`composer install` already run)
+- **Node.js 22** + npm + all dependencies (`npm ci` already run in `ts/`)
+- **Bun** (latest)
+- **Rust stable** + all tools pre-compiled (`cargo build --release` already run in `tools/rust/`)
+
+**You are expected to verify your work locally before pushing.** Run the appropriate test and lint commands:
+
+- PHP: `composer run test-unit`, `composer run cs-fix`, `composer run phpstan`
+- TypeScript: `cd ts && npm test`, `cd ts && npm run lint`, `cd ts && npm run build`
+- Rust tools: `cargo test --manifest-path tools/rust/Cargo.toml`
+
+Do not push code that you haven't verified passes tests and lint. The CI pipeline will catch failures, but verifying locally first saves a round-trip.
+
 ## Quality Checklist
 
 Before marking your PR as ready:
