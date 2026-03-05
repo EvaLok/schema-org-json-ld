@@ -8,7 +8,7 @@ Accepted (validated across 22 orchestrator cycles)
 
 ## Context
 
-The 28 Google Rich Results types share many sub-types. For example:
+The 31 Google Rich Results types (as of March 2026) share many sub-types. For example:
 
 - `Organization` is used by Article, Event, LocalBusiness, JobPosting, Course, and others
 - `PostalAddress` is used by LocalBusiness, Event, JobPosting, Organization

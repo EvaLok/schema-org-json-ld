@@ -40,4 +40,4 @@ All serialization is handled by `JsonLdGenerator` via PHP reflection on public p
 
 ### Validated by scale
 
-This approach has scaled to 67+ schema classes and 243 tests without requiring any per-type serialization code. The `PROPERTY_MAP` extension (ADR pending) demonstrated that edge cases can be handled cleanly in the generator without breaking the zero-methods pattern.
+This approach has scaled to 89 schema classes and 180+ tests across both PHP and TypeScript without requiring any per-type serialization code. The `PROPERTY_MAP` extension (ADR pending) demonstrated that edge cases can be handled cleanly in the generator without breaking the zero-methods pattern.
