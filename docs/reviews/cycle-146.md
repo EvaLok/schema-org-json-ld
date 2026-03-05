@@ -21,7 +21,7 @@
    The six-score history is present (`2,3,2,2,3,3`) with `state-freshness` in each category set (`docs/state.json:899-950`). This directly matches the journal/worklog narrative and indicates recurrence detection was applied rather than ignored (`docs/worklog/2026-03-05/151800-hundred-forty-sixth-orchestrator-cycle.md:45`, `docs/journal/2026-03-05.md:110-114`).
 
 7. **Remaining process gap: the new “atomic invariant” language is stricter than the current field inventory granularity.**  
-   COMPLETION now says *every* state value/text edit must have a matching freshness marker (`COMPLETION_CHECKLIST.md:26`), but `field_inventory.fields` does not enumerate every mutable subfield (e.g., no dedicated entries for `copilot_metrics.note` / `copilot_metrics.dispatch_log_latest`; see `docs/state.json:863-864` vs tracked list at `docs/state.json:959-992`). This leaves a residual ambiguity in what “corresponding” means.
+   COMPLETION now says *every* state value/text edit must have a matching freshness marker (`COMPLETION_CHECKLIST.md:26`), but `field_inventory.fields` does not enumerate every mutable subfield (e.g., no dedicated entries for `copilot_metrics.note` / `copilot_metrics.dispatch_log_latest`; see `docs/state.json:863-864` vs tracked list at `docs/state.json:959-992`). This cycle therefore demonstrates the ambiguity directly: those fields changed, but there is no explicit per-field freshness key to update.
 
 ## Recommendations
 
