@@ -392,6 +392,14 @@ mod tests {
     }
 
     #[test]
+    fn review_agent_body_enforces_file_based_delivery_policy() {
+        let body = build_review_agent_body(139, 464, fixed_now());
+        assert!(body.contains("docs/reviews/cycle-"));
+        assert!(body.contains("Commit your findings"));
+        assert!(!body.contains("Post your findings as a comment"));
+    }
+
+    #[test]
     fn pipeline_validation_warns_when_not_verified() {
         let state = StateJson::default();
         let status = validate_pipeline_check(&state, 139);
