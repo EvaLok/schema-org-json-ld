@@ -21,9 +21,7 @@ Audit recommendation [#104](https://github.com/EvaLok/schema-org-json-ld-audit/i
 
 - [PR #486](https://github.com/EvaLok/schema-org-json-ld/issues/486): Cycle 143 review file (from [#485](https://github.com/EvaLok/schema-org-json-ld/issues/485)). CI passed.
 
-### PRs pending
-
-- [PR #484](https://github.com/EvaLok/schema-org-json-ld/issues/484): Regression tests from [#483](https://github.com/EvaLok/schema-org-json-ld/issues/483). CI (Claude Code Review) still running. Manually reviewed — code adds targeted regression tests for cycle-complete prompt policy and metric-snapshot independence.
+- [PR #484](https://github.com/EvaLok/schema-org-json-ld/issues/484): Regression tests from [#483](https://github.com/EvaLok/schema-org-json-ld/issues/483). CI passed. Two regression tests added: `review_agent_body_enforces_file_based_delivery_policy` and `total_schema_classes_and_ts_total_modules_are_checked_independently`.
 
 ### Dispatches
 
@@ -43,14 +41,14 @@ None this cycle. State.json semantics improvements are data changes, not infrast
 
 ## Current state
 
-- **In-flight agent sessions**: 2 (#483 regression tests PR #484 awaiting CI, #489 review agent)
+- **In-flight agent sessions**: 1 (#489 review agent)
 - **Pipeline status**: All phases complete. Reliability cycle 11 (started 134). 13/13 metrics pass. 34/34 field inventory.
-- **Copilot metrics**: 51 dispatches, 47 merged, 1 closed without merge, 2 in-flight
+- **Copilot metrics**: 51 dispatches, 48 merged, 1 closed without merge, 1 in-flight
 - **Review agent tracking**: 4 cycles of data (scores: 2, 3, 2, 2). Trend detection at 5+ data points.
 - **Remaining open `input-from-eva`**: [#247](https://github.com/EvaLok/schema-org-json-ld/issues/247) (npm publish), [#436](https://github.com/EvaLok/schema-org-json-ld/issues/436) (tool pipeline)
 
 ## Next steps
 
-1. **Merge PR #484** (regression tests) when CI passes — trigger: `claude-review: SUCCESS` on PR #484. Success: PR merged, issue #483 closed.
-2. **Consume #489 review findings** at cycle 145 start — artifact: `docs/reviews/cycle-144.md` from PR branch. Trigger: `copilot_work_finished` event on PR.
-3. **Evaluate audit #104 implementation scope** — decide whether to dispatch an agent task for automated freshness or rely on the manual COMPLETION_CHECKLIST step. The partial implementation in `cycle-complete` (2 fields) vs full automation (all fields) tradeoff needs assessment.
+1. **Consume #489 review findings** at cycle 145 start — artifact: `docs/reviews/cycle-144.md` from PR branch. Trigger: `copilot_work_finished` event on PR.
+2. **Evaluate audit #104 implementation scope** — decide whether to dispatch an agent task for automated freshness or rely on the manual COMPLETION_CHECKLIST step. The partial implementation in `cycle-complete` (2 fields) vs full automation (all fields) tradeoff needs assessment.
+3. **Consider dispatching new schema type or tool improvement** — with only 1 in-flight session, cycle 145 has capacity for a second dispatch alongside the review agent.
