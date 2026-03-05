@@ -39,6 +39,22 @@ This distinguishes orchestrator comments from Eva's (human) comments, since all 
 
 Identifiers: `[main-orchestrator]`, `[qc-orchestrator]`, `[audit-orchestrator]`.
 
+## 0.5. Check previous cycle's review agent (per #463)
+
+Check for completed review agent issues from the previous cycle. These contain critical feedback and recommendations that should be acted on.
+
+```bash
+gh issue list --label "cycle-review" --state open --json number,title,body,comments
+```
+
+For each open `cycle-review` issue:
+1. Read the agent's review comment (findings, recommendations, complacency score)
+2. Act on any priority items identified
+3. Close the review issue with a comment noting which recommendations were accepted/deferred
+4. Log the complacency score in the worklog
+
+If no review agent was dispatched last cycle (e.g., first cycle with this process), note it and move on.
+
 ## 1. Check for `input-from-eva` issues
 
 ```bash
@@ -382,6 +398,7 @@ GitHub auto-redirects `/issues/N` to `/pull/N` for PRs, so using `/issues/` for 
 When the orchestrator modifies any of its own infrastructure files, the worklog entry MUST include a **"Self-modifications"** section listing each change with brief rationale. Infrastructure files include:
 
 - `STARTUP_CHECKLIST.md`
+- `COMPLETION_CHECKLIST.md`
 - `AGENTS.md`
 - Permission model / workflow files
 - Skills (`.claude/skills/`)
