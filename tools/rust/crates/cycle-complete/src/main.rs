@@ -204,7 +204,7 @@ fn build_review_agent_body(cycle: u64, issue: u64, now: DateTime<Utc>) -> String
 
 You are a review agent dispatched at the end of orchestrator cycle {cycle} (issue [#{issue}](https://github.com/EvaLok/schema-org-json-ld/issues/{issue})).
 
-Your job is to review the cycle's work and provide honest, critical feedback. Post your findings as a comment on this issue.
+Your job is to review the cycle's work and provide honest, critical feedback. Commit your findings as a file at `docs/reviews/cycle-{cycle}.md`. Copilot coding agents CANNOT post issue comments — your only output mode is committing files in a PR.
 
 ### What to review
 
@@ -237,11 +237,13 @@ Your job is to review the cycle's work and provide honest, critical feedback. Po
 
 ### Output format
 
-Post a single comment on this issue with:
+Commit a file at `docs/reviews/cycle-{cycle}.md` containing:
 - **Findings**: Numbered list of specific observations (with file paths and line numbers where relevant)
 - **Recommendations**: Concrete actions for the next cycle
 - **Complacency score**: 1-5 scale (1 = actively improving, 5 = going through motions)
 - **Priority items**: Top 3 things the next cycle should address
+
+**IMPORTANT**: Do NOT attempt to post a comment on this issue. Your only output is the committed review file in your PR.
 "
     )
 }

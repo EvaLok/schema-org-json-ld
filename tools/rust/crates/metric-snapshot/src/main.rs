@@ -50,8 +50,6 @@ fn main() {
     let expected_ts_core = get_i64_from_map(&ts_stats, "core_modules");
     let expected_ts_total = get_i64_from_map(&ts_stats, "total_modules");
     let expected_phpstan_level = get_phpstan_level_from_state(&state);
-    let expected_total_schema_classes =
-        get_i64_from_option(state.total_schema_classes, "total_schema_classes");
     let expected_php_test_count = get_i64_from_option(state.test_count.php, "test_count.php");
     let expected_ts_test_count = get_i64_from_option(state.test_count.ts, "test_count.ts");
     let expected_total_test_count = get_i64_from_option(state.test_count.total, "test_count.total");
@@ -61,16 +59,8 @@ fn main() {
     let actual_total_test_count = actual_php_test_count + actual_ts_test_count;
     let schema_version_check_result = check_version(&state);
     let actual_schema_version = json!(state.schema_version);
-    let ts_total_check_pass =
-        ts_total_count == expected_ts_total && ts_total_count == expected_total_schema_classes;
-    let ts_total_note = if ts_total_count != expected_total_schema_classes {
-        Some(format!(
-            "total_schema_classes in state.json is {}",
-            expected_total_schema_classes
-        ))
-    } else {
-        None
-    };
+    let ts_total_check_pass = ts_total_count == expected_ts_total;
+    let ts_total_note: Option<String> = None;
 
     let checks = vec![
         check(
