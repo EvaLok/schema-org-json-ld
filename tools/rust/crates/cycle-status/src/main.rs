@@ -1,3 +1,4 @@
+use chrono::{DateTime, Duration, Utc};
 use clap::Parser;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -32,11 +33,17 @@ struct StateJson {
     last_cycle: Option<LastCycle>,
     qc_processed: Option<Vec<u64>>,
     audit_processed: Option<Vec<u64>>,
+    publish_gate: Option<PublishGate>,
 }
 
 #[derive(Deserialize)]
 struct LastCycle {
     timestamp: String,
+}
+
+#[derive(Deserialize)]
+struct PublishGate {
+    validated_commit: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -47,6 +54,7 @@ struct Report {
     agent_status: AgentStatus,
     qc_status: ProcessingStatus,
     audit_status: ProcessingStatus,
+    commit_freeze: Option<CommitFreezeStatus>,
     concurrency: Concurrency,
     action_items: Vec<String>,
     errors: Vec<String>,
@@ -62,6 +70,7 @@ struct EvaInput {
 struct AgentStatus {
     open_prs: Vec<OpenPr>,
     open_copilot_issues: Vec<SimpleIssue>,
+    stale_dispatches: Vec<StaleDispatch>,
     recently_merged: Vec<MergedPr>,
 }
 
@@ -114,6 +123,27 @@ struct ProcessedIssue {
     processed: bool,
 }
 
+#[derive(Serialize)]
+struct StaleDispatch {
+    number: u64,
+    title: String,
+    created_at: String,
+    age_hours: f64,
+}
+
+struct CopilotIssue {
+    number: u64,
+    title: String,
+    created_at: String,
+}
+
+#[derive(Serialize)]
+struct CommitFreezeStatus {
+    validated_commit: String,
+    diverged: bool,
+    changed_files: Vec<String>,
+}
+
 fn main() {
     let cli = Cli::parse();
     let mut errors = Vec::new();
@@ -124,6 +154,7 @@ fn main() {
     let agent_status = gather_agent_status(&mut errors);
     let qc_status = gather_qc_status(&state, &mut errors);
     let audit_status = gather_audit_status(&state, &mut errors);
+    let commit_freeze = check_commit_freeze(&cli.repo_root, &state, &mut errors);
 
     let draft_prs_by_copilot = agent_status
         .open_prs
@@ -142,6 +173,7 @@ fn main() {
         &agent_status,
         &qc_status,
         &audit_status,
+        commit_freeze.as_ref(),
         &concurrency,
     );
     let report = Report {
@@ -151,6 +183,7 @@ fn main() {
         agent_status,
         qc_status,
         audit_status,
+        commit_freeze,
         concurrency,
         action_items,
         errors,
@@ -352,11 +385,24 @@ fn gather_agent_status(errors: &mut Vec<String>) -> AgentStatus {
     match gh_json(&["api", &copilot_issues_path]) {
         Ok(value) => {
             if let Some(items) = value.as_array() {
-                section.open_copilot_issues = items
+                let copilot_issues = items
                     .iter()
                     .filter(|item| item.get("pull_request").is_none())
-                    .filter_map(to_simple_issue)
+                    .filter_map(to_copilot_issue)
+                    .collect::<Vec<_>>();
+                section.open_copilot_issues = copilot_issues
+                    .iter()
+                    .map(|issue| SimpleIssue {
+                        number: issue.number,
+                        title: issue.title.clone(),
+                    })
                     .collect();
+                section.stale_dispatches = collect_stale_dispatches(
+                    &copilot_issues,
+                    &section.open_prs,
+                    Utc::now(),
+                    errors,
+                );
             }
         }
         Err(e) => errors.push(format!("Open Copilot issues query failed: {}", e)),
@@ -395,6 +441,116 @@ fn gather_agent_status(errors: &mut Vec<String>) -> AgentStatus {
     }
 
     section
+}
+
+fn collect_stale_dispatches(
+    copilot_issues: &[CopilotIssue],
+    open_prs: &[OpenPr],
+    now: DateTime<Utc>,
+    errors: &mut Vec<String>,
+) -> Vec<StaleDispatch> {
+    copilot_issues
+        .iter()
+        .filter_map(|issue| {
+            let created_at = match DateTime::parse_from_rfc3339(&issue.created_at) {
+                Ok(value) => value.with_timezone(&Utc),
+                Err(e) => {
+                    errors.push(format!(
+                        "Failed to parse created_at for issue #{}: {}",
+                        issue.number, e
+                    ));
+                    return None;
+                }
+            };
+            let age = now.signed_duration_since(created_at);
+            let has_matching_pr = open_prs.iter().any(|pr| {
+                pr.author == "copilot-swe-agent[bot]"
+                    && pr.title.contains(&format!("#{}", issue.number))
+            });
+            if age > Duration::hours(2) && !has_matching_pr {
+                Some(StaleDispatch {
+                    number: issue.number,
+                    title: issue.title.clone(),
+                    created_at: issue.created_at.clone(),
+                    age_hours: age.num_minutes() as f64 / 60.0,
+                })
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+fn check_commit_freeze(
+    repo_root: &Path,
+    state: &StateJson,
+    errors: &mut Vec<String>,
+) -> Option<CommitFreezeStatus> {
+    let validated_commit = state
+        .publish_gate
+        .as_ref()
+        .and_then(|gate| gate.validated_commit.clone())?;
+    let range = format!("{}..HEAD", validated_commit);
+    let output = match Command::new("git")
+        .current_dir(repo_root)
+        .args([
+            "diff",
+            "--name-only",
+            &range,
+            "--",
+            "php/src/",
+            "php/test/",
+            "ts/src/",
+            "ts/test/",
+            "package.json",
+            "tsconfig.json",
+            "scripts/verify-build.mjs",
+        ])
+        .output()
+    {
+        Ok(output) => output,
+        Err(e) => {
+            errors.push(format!(
+                "Commit freeze check failed (unable to execute git diff): {}",
+                e
+            ));
+            return Some(CommitFreezeStatus {
+                validated_commit,
+                diverged: false,
+                changed_files: Vec::new(),
+            });
+        }
+    };
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        errors.push(format!(
+            "Commit freeze check failed (`git diff --name-only {} -- ...`): {}",
+            range,
+            if stderr.is_empty() {
+                "<no stderr>".to_string()
+            } else {
+                stderr
+            }
+        ));
+        return Some(CommitFreezeStatus {
+            validated_commit,
+            diverged: false,
+            changed_files: Vec::new(),
+        });
+    }
+
+    let changed_files = String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(|line| line.to_string())
+        .collect::<Vec<_>>();
+    let diverged = !changed_files.is_empty();
+    Some(CommitFreezeStatus {
+        validated_commit,
+        diverged,
+        changed_files,
+    })
 }
 
 fn gather_qc_status(state: &StateJson, errors: &mut Vec<String>) -> ProcessingStatus {
@@ -505,6 +661,7 @@ fn build_action_items(
     agent_status: &AgentStatus,
     qc_status: &ProcessingStatus,
     audit_status: &ProcessingStatus,
+    commit_freeze: Option<&CommitFreezeStatus>,
     concurrency: &Concurrency,
 ) -> Vec<String> {
     let mut items = Vec::new();
@@ -556,6 +713,22 @@ fn build_action_items(
             "{} Copilot PR(s) marked as work-finished and ready for review",
             ready_prs
         ));
+    }
+    if !agent_status.stale_dispatches.is_empty() {
+        items.push(format!(
+            "{} stale Copilot dispatch{} older than 2h without PR",
+            agent_status.stale_dispatches.len(),
+            if agent_status.stale_dispatches.len() == 1 {
+                ""
+            } else {
+                "es"
+            }
+        ));
+    }
+    if commit_freeze.is_some_and(|status| status.diverged) {
+        items.push(
+            "Source files changed since QC-validated commit — re-validation required".to_string(),
+        );
     }
     if !concurrency.dispatch_available {
         items.push(format!(
@@ -634,6 +807,16 @@ fn print_human_report(report: &Report) {
             merged_list
         }
     );
+    println!(
+        "Stale dispatches (>2h, no PR): {}",
+        report.agent_status.stale_dispatches.len()
+    );
+    for dispatch in &report.agent_status.stale_dispatches {
+        println!(
+            "  {}#{} {} (created {}; age {:.1}h)",
+            MAIN_REPO, dispatch.number, dispatch.title, dispatch.created_at, dispatch.age_hours
+        );
+    }
     println!();
 
     println!("--- QC Status ---");
@@ -717,6 +900,31 @@ fn print_human_report(report: &Report) {
     );
     println!();
 
+    println!("--- Commit Freeze ---");
+    match report.commit_freeze.as_ref() {
+        Some(status) => {
+            println!("Validated commit: {}", status.validated_commit);
+            println!(
+                "Source freeze: {}",
+                if status.diverged {
+                    "DIVERGED"
+                } else {
+                    "intact"
+                }
+            );
+            if status.changed_files.is_empty() {
+                println!("Changed files: none");
+            } else {
+                println!("Changed files:");
+                for file in &status.changed_files {
+                    println!("  {}", file);
+                }
+            }
+        }
+        None => println!("Validated commit: not set"),
+    }
+    println!();
+
     println!("--- Action Items ---");
     if report.action_items.is_empty() {
         println!("None");
@@ -745,6 +953,14 @@ fn to_simple_issue(value: &Value) -> Option<SimpleIssue> {
     Some(SimpleIssue {
         number: value.get("number")?.as_u64()?,
         title: value.get("title")?.as_str()?.to_string(),
+    })
+}
+
+fn to_copilot_issue(value: &Value) -> Option<CopilotIssue> {
+    Some(CopilotIssue {
+        number: value.get("number")?.as_u64()?,
+        title: value.get("title")?.as_str()?.to_string(),
+        created_at: value.get("created_at")?.as_str()?.to_string(),
     })
 }
 
@@ -792,4 +1008,66 @@ fn gh_json(args: &[&str]) -> Result<Value, String> {
             e
         )
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::{Duration, Utc};
+
+    #[test]
+    fn collects_stale_dispatches_without_matching_copilot_pr() {
+        let now = Utc::now();
+        let issues = vec![CopilotIssue {
+            number: 101,
+            title: "Fix stale dispatch".to_string(),
+            created_at: (now - Duration::hours(3)).to_rfc3339(),
+        }];
+        let open_prs = vec![OpenPr {
+            number: 10,
+            title: "Unrelated PR #999".to_string(),
+            author: "copilot-swe-agent[bot]".to_string(),
+            is_draft: true,
+            copilot_work_finished: None,
+        }];
+        let mut errors = Vec::new();
+
+        let stale = collect_stale_dispatches(&issues, &open_prs, now, &mut errors);
+
+        assert!(errors.is_empty());
+        assert_eq!(stale.len(), 1);
+        assert_eq!(stale[0].number, 101);
+        assert!((stale[0].age_hours - 3.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn build_action_items_includes_commit_freeze_divergence_warning() {
+        let eva_input = EvaInput::default();
+        let agent_status = AgentStatus::default();
+        let qc_status = ProcessingStatus::default();
+        let audit_status = ProcessingStatus::default();
+        let concurrency = Concurrency {
+            in_flight: 0,
+            max: 2,
+            dispatch_available: true,
+        };
+        let commit_freeze = Some(CommitFreezeStatus {
+            validated_commit: "abc1234".to_string(),
+            diverged: true,
+            changed_files: vec!["php/src/v1/Schema/Product.php".to_string()],
+        });
+
+        let action_items = build_action_items(
+            &eva_input,
+            &agent_status,
+            &qc_status,
+            &audit_status,
+            commit_freeze.as_ref(),
+            &concurrency,
+        );
+
+        assert!(action_items.iter().any(|item| {
+            item == "Source files changed since QC-validated commit — re-validation required"
+        }));
+    }
 }
