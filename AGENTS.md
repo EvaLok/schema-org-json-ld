@@ -267,6 +267,20 @@ Before marking your PR as ready:
 - [ ] No breaking changes to existing public API
 - [ ] Do NOT modify `JsonLdGenerator.php` or `TypedSchema.php` unless the issue specifically asks for it
 
+### Rust tool quality checklist (per Eva directive #516)
+
+When building or modifying Rust tools (`tools/rust/crates/`), also verify:
+
+- [ ] **Error paths fail-closed** — if a check cannot be performed, report failure, not success
+- [ ] **Input validation** — validate external data (state.json fields, CLI args, API responses) before using in commands
+- [ ] **No silent error swallowing** — errors are logged to `errors` vec or stderr, never silently ignored
+- [ ] **Unit tests for error paths** — test what happens with invalid input, missing data, and command failures
+- [ ] **Deprecation-free** — no warnings from `cargo build` or `cargo test`
+- [ ] **Action items distinguish error from failure** — if the tool generates action items, error states produce different messages from genuine failures
+- [ ] Tests pass: `cargo test -p <tool-name> --manifest-path tools/rust/Cargo.toml`
+
+See `.claude/skills/tool-creation-guidelines/SKILL.md` for the full tool quality assurance guidelines.
+
 ## Advanced Patterns
 
 ### Array `@type` (multiple types)

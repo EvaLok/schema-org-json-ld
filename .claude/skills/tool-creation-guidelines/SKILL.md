@@ -61,6 +61,62 @@ For tools that don't need source code parsing (JSON processing, state verificati
 
 See the **rust-tooling** skill for the full workflow (workspace structure, shell wrappers, conventions).
 
+## Tool quality assurance (per Eva directive #516)
+
+**Tools we rely on must be high quality.** PR #514 demonstrated that a fail-open bug in the `cycle-status` tool's commit-freeze check went undetected through initial development and review. If we rely on a tool to enforce a safety invariant, the tool itself must be built and reviewed to a higher standard than ad-hoc scripts.
+
+### Fail-safe by default
+
+Safety-critical tools (those that gate decisions like "is it safe to publish?" or "is the commit freeze intact?") MUST fail-closed:
+
+- **If a check cannot be performed, report failure** — not success. A tool that says "all clear" when it can't actually verify anything is worse than no tool at all.
+- **Distinguish "check passed" from "check could not run".** Use explicit status fields (e.g., `check_failed: bool`) or error states, not just `pass: true/false`.
+- **Validate inputs before using them.** If a tool reads a commit SHA from state.json and passes it to `git`, validate the format first. If a tool reads a file path, verify it exists.
+
+### Adversarial testing requirements
+
+Every tool issue spec MUST include error-path test cases. The happy path is easy; bugs hide in error paths.
+
+**Minimum test coverage for dispatched tool work:**
+
+1. **Happy path** — the tool works correctly with valid inputs
+2. **Invalid input** — malformed data, missing fields, empty strings, unexpected types
+3. **External command failure** — if the tool shells out to `git`, `gh`, etc., test what happens when those commands fail (non-zero exit, no output, timeout)
+4. **Edge cases** — boundary values, empty collections, single-element collections
+5. **Safety invariant** — for safety-critical tools, explicitly test that failure modes produce the conservative (fail-closed) result
+
+Include these in every agent issue spec:
+
+```markdown
+### Required test cases
+
+1. Happy path: [describe expected behavior]
+2. Invalid input: [describe what should happen with bad input]
+3. Command failure: [describe fail-closed behavior]
+4. Edge case: [describe boundary conditions]
+```
+
+### Tool review checklist
+
+When reviewing a tool PR (whether from the coding agent or self-authored), verify:
+
+- [ ] **Error paths fail-closed** — every `Err`, non-zero exit, or missing data case produces the conservative result
+- [ ] **No silent swallowing** — errors are logged/reported, not silently ignored
+- [ ] **Input validation** — external inputs (state.json values, CLI args, API responses) are validated before use
+- [ ] **Test coverage** — unit tests exist for both happy and error paths
+- [ ] **Output format** — both `--json` and human-readable output reflect the new behavior
+- [ ] **Action items** — if the tool produces action items, error states generate appropriate (different) action items from success states
+- [ ] **Deprecation warnings** — no use of deprecated APIs (e.g., `chrono::Duration::hours()` → `TimeDelta::try_hours()`)
+
+### Tool maintenance
+
+Existing tools accumulate debt as their environment changes. Every 10 cycles (during the tool audit):
+
+1. **Run each tool's test suite** — `cargo test -p <tool-name> --manifest-path tools/rust/Cargo.toml`
+2. **Check for deprecation warnings** — `cargo build 2>&1 | grep -i deprecat`
+3. **Review error paths** — are they still fail-closed? Has any refactoring introduced fail-open behavior?
+4. **Check for new edge cases** — has the data the tool processes changed in ways the tool doesn't handle?
+
 ## General tool principles
 
 1. **Use existing dependencies first.** Check `package.json` and `composer.json` before adding new packages. TypeScript is already installed — its compiler API is available for free.

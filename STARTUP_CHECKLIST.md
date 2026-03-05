@@ -321,8 +321,9 @@ Skip this step if `typescript_plan.status` is not `complete` — the TypeScript 
    - Request to run E2E tests against the built package from that SHA
 5. **Request audit sign-off**: Open a `qc-outbound`-style issue (or comment on existing audit coordination) asking the audit orchestrator to confirm that all pre-publish steps were followed. Include: which validation gates passed, which commit is being proposed, what has changed since last validation.
 6. **Wait for both QC and audit to respond** before recommending publish to Eva. Do NOT recommend publish based solely on main orchestrator's own checks.
+7. **Timeout/escalation** (per audit #110): If either the QC or audit orchestrator has not responded to a sign-off request within **3 cycles or 24 hours** (whichever is shorter), file a `question-for-eva` issue noting the unresponsive dependency and requesting Eva to either approve directly or trigger the relevant orchestrator cycle. The sign-off request should not block normal cycle operations — continue regular work while monitoring for the response.
 
-**Why:** Eva's [#401](https://github.com/EvaLok/schema-org-json-ld/issues/401) identified that the orchestrator recommended publishing while `verify-build.mjs` was broken (for 11 cycles). Multi-party verification provides redundancy — the QC tests the built package independently, and the audit confirms the process was followed. No single orchestrator's "all gates satisfied" assertion should be sufficient for a publish recommendation.
+**Why:** Eva's [#401](https://github.com/EvaLok/schema-org-json-ld/issues/401) identified that the orchestrator recommended publishing while `verify-build.mjs` was broken (for 11 cycles). Multi-party verification provides redundancy — the QC tests the built package independently, and the audit confirms the process was followed. No single orchestrator's "all gates satisfied" assertion should be sufficient for a publish recommendation. Audit #110 identified that without a timeout, the sign-off request creates a blocking dependency on the slowest participant with no escalation path.
 
 ## 5.12. Post-QC-validation commit-freeze check (per audit #108)
 
