@@ -783,14 +783,14 @@
       "publish_workflow": "publish-npm.yml pushed by Eva (commit f59a531). Uses OIDC provenance, no NPM_TOKEN needed.",
       "pr_305_status": "CLOSED. Confirmed superseded by Eva (2026-03-03T20:04Z). Branch deleted.",
       "verify_build_ci": "ADDED. Eva applied workflow change (commit 1b8ff8f, 2026-03-04T00:43Z). verify-build runs in ci-ts.yml on every push/PR. #403 closed.",
-      "remaining_actions": ["Pipeline proves reliable over 3-5 cycles (reliability clock started cycle 134, now at cycle 4)", "Eva configures npm trusted publishing (OIDC link)", "Eva creates GitHub Release to trigger publish"],
+      "remaining_actions": ["Pipeline reliability SATISFIED (12 consecutive clean cycles, started 134)", "Eva configures npm trusted publishing (OIDC link)", "Eva creates GitHub Release to trigger publish"],
       "pre_publish_checkpoint": "Active (per Eva #401, #436, audit #75): Multi-party sign-off required. Main + QC + audit must all confirm. Eva #436 adds requirement: automated tool pipeline must produce reliable end-to-end verification report before publish."
     }
   ],
   "open_questions_for_eva": [],
   "eva_input_issues": {
-    "closed_this_cycle": [463],
-    "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225, 329, 340, 348, 372, 378, 396, 401, 428, 429, 430, 440, 441],
+    "closed_this_cycle": [],
+    "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225, 329, 340, 348, 372, 378, 396, 401, 428, 429, 430, 440, 441, 463],
     "remaining_open": [247, 436]
   },
   "typescript_plan": {
@@ -864,12 +864,12 @@
     "dispatch_log_latest": "#489 cycle-144 review agent (cycle 144)"
   },
   "last_cycle": {
-    "number": 144,
-    "issue": 487,
-    "timestamp": "2026-03-05T12:11:00Z",
-    "summary": "Cycle 144: Consumed cycle 143 review (score 2/5, PR #486 merged). Fixed state.json freshness semantics and copilot_metrics rate denominator ambiguity. Responded to audit #104. Merged PR #484 (regression tests)."
+    "number": 145,
+    "issue": 491,
+    "timestamp": "2026-03-05T13:51:00Z",
+    "summary": "Cycle 145: Consumed cycle 144 review (score 3/5, PR #490). Fixed state narrative drift in publish_gate, clarified test_count scope."
   },
-  "last_eva_comment_check": "2026-03-05T12:11:00Z",
+  "last_eva_comment_check": "2026-03-05T13:51:00Z",
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71, 73, 75, 76, 78, 80, 82, 83, 85, 87, 88, 90, 92, 94, 96, 98, 100, 102, 104],
   "test_count": {"php": 425, "ts": 419, "total": 844, "last_verified": "cycle 139", "last_verified_note": "last_verified = cycle when values were independently measured. field_inventory.last_refreshed = cycle when entry was checked (value confirmed unchanged or updated). These can diverge when a check confirms no change."},
   "next_metric_verification": "cycle 146",
@@ -891,11 +891,11 @@
       {"phase": 4, "name": "pipeline orchestrator", "status": "complete", "issue": 457, "pr": 458, "merged_at": "2026-03-05T00:24:18Z", "description": "Top-level tool that runs all above in sequence, tracks step completion, produces unified report. Runtime verified: all 4 steps pass."},
       {"phase": 5, "name": "ongoing evaluation", "status": "planned", "description": "Review what works, iterate, improve"}
     ],
-    "publish_gate": "All phases complete. Reliability clock: cycle 10 (started 134). Minimum 3 cycles reached at cycle 136. 10 consecutive clean cycles as of cycle 143."
+    "publish_gate": "All phases complete. Reliability clock: cycle 12 (started 134). Minimum 3 cycles reached at cycle 136. 12 consecutive clean cycles as of cycle 145."
   },
   "review_agent": {
     "description": "Programmatic tracking of review agent findings for trend detection. Per audit #102.",
-    "last_review_cycle": 143,
+    "last_review_cycle": 144,
     "history": [
       {
         "cycle": 140,
@@ -932,22 +932,31 @@
         "actioned": 3,
         "deferred": 1,
         "ignored": 0
+      },
+      {
+        "cycle": 144,
+        "finding_count": 6,
+        "complacency_score": 3,
+        "categories": ["state-consistency", "process-improvement", "journal-quality", "state-freshness"],
+        "actioned": 4,
+        "deferred": 1,
+        "ignored": 1
       }
     ]
   },
   "field_inventory": {
     "description": "Self-describing inventory of mutable state.json fields with expected refresh cadence. During metric verification (step 5.11), any field not refreshed within its cadence should be flagged and corrected. This inverts the verification pattern from 'enumerate what to check' to 'flag what hasn't been checked.' Per audit #80. Semantics: last_refreshed = cycle when entry was last checked (value confirmed unchanged or updated). This differs from per-field last_verified which means 'cycle when value was independently measured.' A field can be refreshed (checked and confirmed unchanged) without being re-verified (re-measured).",
     "fields": {
-      "test_count": {"cadence": "every merge that adds/removes tests", "last_refreshed": "cycle 142"},
+      "test_count": {"cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)", "last_refreshed": "cycle 142"},
       "typescript_stats": {"cadence": "every merge that adds/removes TS files", "last_refreshed": "cycle 142"},
       "phpstan_level": {"cadence": "after PHPStan config changes", "last_refreshed": "cycle 142"},
       "copilot_metrics.in_flight": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 144"},
       "copilot_metrics.dispatch_to_pr_rate": {"cadence": "after new dispatches", "last_refreshed": "cycle 144"},
       "copilot_metrics.pr_merge_rate": {"cadence": "after PR merges", "last_refreshed": "cycle 144"},
-      "last_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 144"},
-      "last_eva_comment_check": {"cadence": "every cycle", "last_refreshed": "cycle 144"},
+      "last_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 145"},
+      "last_eva_comment_check": {"cadence": "every cycle", "last_refreshed": "cycle 145"},
       "qc_status": {"cadence": "after QC interactions", "last_refreshed": "cycle 134"},
-      "blockers": {"cadence": "after blocker state changes", "last_refreshed": "cycle 130"},
+      "blockers": {"cadence": "after blocker state changes", "last_refreshed": "cycle 145"},
       "qc_processed": {"cadence": "after processing QC issues", "last_refreshed": "cycle 134"},
       "audit_processed": {"cadence": "after processing audit issues", "last_refreshed": "cycle 144"},
       "next_metric_verification": {"cadence": "after each verification run", "last_refreshed": "cycle 143"},
@@ -969,9 +978,9 @@
       "schema_status.property_gap_audit": {"cadence": "after property gap fixes", "last_refreshed": "cycle 127"},
       "schema_status.phpstan_max_assessment": {"cadence": "after PHPStan config or fix changes", "last_refreshed": "cycle 126"},
       "typescript_plan.status": {"cadence": "after plan phase transitions", "last_refreshed": "cycle 126"},
-      "eva_input_issues.closed_this_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 144"},
-      "tool_pipeline": {"cadence": "after pipeline phase transitions", "last_refreshed": "cycle 144"},
-      "review_agent": {"cadence": "every cycle (updated when consuming review findings)", "last_refreshed": "cycle 144"}
+      "eva_input_issues.closed_this_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 145"},
+      "tool_pipeline": {"cadence": "after pipeline phase transitions", "last_refreshed": "cycle 145"},
+      "review_agent": {"cadence": "every cycle (updated when consuming review findings)", "last_refreshed": "cycle 145"}
     }
   }
 }
