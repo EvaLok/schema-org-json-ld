@@ -1033,9 +1033,12 @@ fn value_to_display(value: &Value) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
+        check, get_i64_from_map, get_i64_from_option, get_typescript_stats, read_state_file,
         count_php_tests_in_content, count_ts_tests_in_content, is_php_test_method_line,
         is_ts_test_method_line, parse_cycle_number, staleness_threshold,
     };
+    use std::fs;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn php_test_method_matching_works() {
@@ -1116,5 +1119,56 @@ it('direct test', () => {});
             10,
             staleness_threshold("every merge that adds/removes tests")
         );
+    }
+
+    #[test]
+    fn total_schema_classes_and_ts_total_modules_are_checked_independently() {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock must be after unix epoch")
+            .as_nanos();
+        let temp_dir = std::env::temp_dir().join(format!("metric-snapshot-{suffix}"));
+        fs::create_dir_all(&temp_dir).expect("temp dir should be created");
+
+        let state_path = temp_dir.join("state.json");
+        fs::write(
+            &state_path,
+            r#"{
+  "total_schema_classes": 89,
+  "typescript_stats": {
+    "schema_types": 89,
+    "enums": 0,
+    "core_modules": 15,
+    "total_modules": 104
+  }
+}"#,
+        )
+        .expect("state fixture should be written");
+
+        let state = read_state_file(&state_path);
+        let ts_stats = get_typescript_stats(&state);
+        let expected_php_schema = get_i64_from_option(state.total_schema_classes, "total_schema_classes");
+        let expected_ts_total = get_i64_from_map(&ts_stats, "total_modules");
+
+        let php_schema_check = check(
+            "php_schema_classes",
+            "PHP schema classes",
+            89,
+            expected_php_schema,
+        );
+        let ts_total_check = check(
+            "ts_total_modules",
+            "TS total modules",
+            104,
+            expected_ts_total,
+        );
+
+        assert_eq!(89, expected_php_schema);
+        assert_eq!(104, expected_ts_total);
+        assert_ne!(expected_php_schema, expected_ts_total);
+        assert!(php_schema_check.pass);
+        assert!(ts_total_check.pass);
+
+        fs::remove_dir_all(temp_dir).expect("temp dir should be removed");
     }
 }
