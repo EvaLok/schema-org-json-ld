@@ -55,18 +55,25 @@ Dispatch a 5.3-codex agent to perform an end-of-cycle review. This agent's findi
 
 ### How to dispatch
 
-Write the issue body to a temp file, then create using `gh api --input`:
+**CRITICAL**: Copilot coding agents CANNOT post issue comments. They always create PRs. The review agent must commit its findings as a markdown file.
+
+Write the issue body to a temp file, then create using `gh api --input`.
+
+The issue body MUST instruct the agent to:
+- **Commit findings as `docs/reviews/cycle-NNN.md`** — this is the only reliable output path
+- NOT attempt to post issue comments (this will silently fail)
+- The PR containing the review file is the deliverable
 
 The issue body should include:
 - Current cycle number and issue link
 - List of PRs merged this cycle (if any)
 - Paths to this cycle's worklog and journal entries
 - Specific areas of concern (if any)
-- Instructions to post findings as a comment on the NEXT cycle's issue (or on the review issue itself)
+- Output format: commit a structured markdown file at `docs/reviews/cycle-{N}.md`
 
 Label the issue `agent-task` and `cycle-review`.
 
-**Important**: The review agent's findings are for the NEXT cycle to consume. It should post its review as a comment on its own issue. The next cycle checks for completed review issues during startup.
+**Important**: The next cycle consumes review findings by reading the review file from the merged PR (or from the PR branch if not yet merged).
 
 ## 6. Commit and push all state
 
