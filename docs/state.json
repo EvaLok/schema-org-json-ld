@@ -792,7 +792,7 @@
       "publish_workflow": "publish-npm.yml pushed by Eva (commit f59a531). Uses OIDC provenance, no NPM_TOKEN needed.",
       "pr_305_status": "CLOSED. Confirmed superseded by Eva (2026-03-03T20:04Z). Branch deleted.",
       "verify_build_ci": "ADDED. Eva applied workflow change (commit 1b8ff8f, 2026-03-04T00:43Z). verify-build runs in ci-ts.yml on every push/PR. #403 closed.",
-      "remaining_actions": ["Pipeline reliability SATISFIED (14 consecutive clean cycles, started 134)", "QC final validation COMPLETE (QC-ACK #213, all 5 DoD criteria pass)", "Audit sign-off PENDING (audit #108 processed, awaiting confirmation)", "Eva configures npm trusted publishing (OIDC link)", "Eva creates GitHub Release to trigger publish"],
+      "remaining_actions": ["Pipeline reliability SATISFIED (15 consecutive clean cycles, started 134)", "QC final validation COMPLETE (QC-ACK #213, all 5 DoD criteria pass)", "Audit sign-off PENDING (audit #108 processed, awaiting confirmation)", "Eva configures npm trusted publishing (OIDC link)", "Eva creates GitHub Release to trigger publish"],
       "pre_publish_checkpoint": "QC VALIDATED (cycle 147). QC-ACK #213 confirms: 73/73 parity, 73/73 E2E, package build OK, 88/88 class inventory. Validated commit: 73d1b1b. Source diverged: false. Audit sign-off still pending. Per Eva #401, #436, audit #75: Multi-party sign-off required."
     }
   ],
@@ -900,11 +900,11 @@
       {"phase": 4, "name": "pipeline orchestrator", "status": "complete", "issue": 457, "pr": 458, "merged_at": "2026-03-05T00:24:18Z", "description": "Top-level tool that runs all above in sequence, tracks step completion, produces unified report. Runtime verified: all 4 steps pass."},
       {"phase": 5, "name": "ongoing evaluation", "status": "planned", "description": "Review what works, iterate, improve"}
     ],
-    "publish_gate": "All phases complete. Reliability clock: cycle 13 (started 134). Minimum 3 cycles reached at cycle 136. 13 consecutive clean cycles as of cycle 146. Multi-party pre-publish checkpoint initiated: QC-REQUEST #496."
+    "publish_gate": "All phases complete. Reliability clock: started cycle 134, now at cycle 148 (15 consecutive clean). Multi-party pre-publish checkpoint initiated: QC-REQUEST #496."
   },
   "review_agent": {
     "description": "Programmatic tracking of review agent findings for trend detection. Per audit #102.",
-    "last_review_cycle": 146,
+    "last_review_cycle": 147,
     "history": [
       {
         "cycle": 140,
@@ -968,6 +968,15 @@
         "actioned": 4,
         "deferred": 0,
         "ignored": 0
+      },
+      {
+        "cycle": 147,
+        "finding_count": 13,
+        "complacency_score": 2,
+        "categories": ["state-freshness", "state-consistency", "process-improvement", "verification-evidence"],
+        "actioned": 4,
+        "deferred": 0,
+        "ignored": 0
       }
     ]
   },
@@ -981,7 +990,7 @@
       "copilot_metrics.dispatch_to_pr_rate": {"cadence": "after new dispatches", "last_refreshed": "cycle 147"},
       "copilot_metrics.pr_merge_rate": {"cadence": "after PR merges", "last_refreshed": "cycle 147"},
       "last_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 147"},
-      "last_eva_comment_check": {"cadence": "every cycle", "last_refreshed": "cycle 146"},
+      "last_eva_comment_check": {"cadence": "every cycle", "last_refreshed": "cycle 148"},
       "qc_status": {"cadence": "after QC interactions", "last_refreshed": "cycle 147"},
       "blockers": {"cadence": "after blocker state changes", "last_refreshed": "cycle 147"},
       "qc_processed": {"cadence": "after processing QC issues", "last_refreshed": "cycle 134"},
@@ -1006,7 +1015,7 @@
       "schema_status.phpstan_max_assessment": {"cadence": "after PHPStan config or fix changes", "last_refreshed": "cycle 126"},
       "typescript_plan.status": {"cadence": "after plan phase transitions", "last_refreshed": "cycle 126"},
       "eva_input_issues.closed_this_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 147"},
-      "tool_pipeline": {"cadence": "after pipeline phase transitions", "last_refreshed": "cycle 146"},
+      "tool_pipeline": {"cadence": "after pipeline phase transitions", "last_refreshed": "cycle 148"},
       "review_agent": {"cadence": "every cycle (updated when consuming review findings)", "last_refreshed": "cycle 147"},
       "publish_gate": {"cadence": "every cycle when set (divergence check)", "last_refreshed": "cycle 147"}
     }
