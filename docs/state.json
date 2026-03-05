@@ -851,17 +851,17 @@
     ]
   },
   "copilot_metrics": {
-    "total_dispatches": 51,
-    "resolved": 50,
+    "total_dispatches": 52,
+    "resolved": 51,
     "in_flight": 1,
-    "produced_pr": 50,
-    "merged": 48,
+    "produced_pr": 51,
+    "merged": 49,
     "closed_without_merge": 1,
     "revision_rounds": 4,
-    "dispatch_to_pr_rate": "50/50",
-    "pr_merge_rate": "48/50",
-    "note": "Rates: dispatch_to_pr_rate = PRs created / resolved dispatches. pr_merge_rate = PRs merged / PRs created. 51 dispatches total, 50 resolved, 1 in-flight (#489 review agent). 48 merged, 1 closed without merge (#467/PR #468), 1 PR merged as docs-only. All resolved dispatches produced PRs.",
-    "dispatch_log_latest": "#489 cycle-144 review agent (cycle 144)"
+    "dispatch_to_pr_rate": "51/51",
+    "pr_merge_rate": "49/51",
+    "note": "Rates: dispatch_to_pr_rate = PRs created / resolved dispatches. pr_merge_rate = PRs merged / PRs created. 52 dispatches total, 51 resolved, 1 in-flight (#492 review agent). 49 merged, 1 closed without merge (#467/PR #468), 1 PR merged as docs-only. All resolved dispatches produced PRs.",
+    "dispatch_log_latest": "#492 cycle-145 review agent (cycle 145)"
   },
   "last_cycle": {
     "number": 145,
@@ -950,9 +950,9 @@
       "test_count": {"cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)", "last_refreshed": "cycle 142"},
       "typescript_stats": {"cadence": "every merge that adds/removes TS files", "last_refreshed": "cycle 142"},
       "phpstan_level": {"cadence": "after PHPStan config changes", "last_refreshed": "cycle 142"},
-      "copilot_metrics.in_flight": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 144"},
-      "copilot_metrics.dispatch_to_pr_rate": {"cadence": "after new dispatches", "last_refreshed": "cycle 144"},
-      "copilot_metrics.pr_merge_rate": {"cadence": "after PR merges", "last_refreshed": "cycle 144"},
+      "copilot_metrics.in_flight": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 145"},
+      "copilot_metrics.dispatch_to_pr_rate": {"cadence": "after new dispatches", "last_refreshed": "cycle 145"},
+      "copilot_metrics.pr_merge_rate": {"cadence": "after PR merges", "last_refreshed": "cycle 145"},
       "last_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 145"},
       "last_eva_comment_check": {"cadence": "every cycle", "last_refreshed": "cycle 145"},
       "qc_status": {"cadence": "after QC interactions", "last_refreshed": "cycle 134"},
