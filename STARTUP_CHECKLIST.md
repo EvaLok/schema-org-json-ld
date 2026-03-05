@@ -4,7 +4,7 @@ Follow this checklist at the start of every orchestrator cycle. Do not skip step
 
 **Permission note**: The orchestrator workflow allows specific Bash commands: `gh`, `git`, `jq`, `mkdir`, `ls`, `date`, `wc`, `sort`, `composer`, `cargo`, `bash`. Use dedicated tools (Read, Write, Edit, Grep, Glob) for file operations. `cargo` enables building Rust tools in `tools/rust/`. `bash` enables running shell wrappers for those tools (e.g., `bash tools/check-field-inventory-rs`). See `.claude/skills/orchestrator-permissions/SKILL.md` for the full list and `.claude/skills/rust-tooling/SKILL.md` for the Rust tool workflow.
 
-**Critical**: NEVER use `${}` variable substitution, pipes (`|`), compound commands (`&&`), heredocs (`<<`), or command substitution (`$()`) in Bash tool calls. Each call must be a single, simple command. See `.claude/skills/orchestrator-permissions.md` for details.
+**Critical**: NEVER use `${}` variable substitution, pipes (`|`), compound commands (`&&`), heredocs (`<<`), or command substitution (`$()`) in Bash tool calls. Each call must be a single, simple command. See `.claude/skills/orchestrator-permissions/SKILL.md` for details.
 
 ## 0. Post opening comment
 
@@ -159,7 +159,7 @@ gh api "repos/EvaLok/schema-org-json-ld/issues/{PR}/timeline" --paginate --jq '.
 2. Verify it passes on the merge commit
 3. If it fails, immediately create a fix issue and dispatch to Copilot
 
-See `.claude/skills/pr-review-workflow.md` for the full procedure.
+See `.claude/skills/pr-review-workflow/SKILL.md` for the full procedure.
 
 ### Stale dispatch detection (per audit #60)
 

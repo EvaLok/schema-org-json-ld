@@ -100,9 +100,9 @@ The summary should include:
 | Step | Status | Tool |
 |------|--------|------|
 | 1. Pipeline verification | Automated | `bash tools/pipeline-check` |
-| 2. State.json updates | Manual | (planned: `cycle-complete` tool) |
-| 3. Worklog entry | Manual | (planned: template generation) |
+| 2. State.json updates | Semi-automated | `bash tools/cycle-complete` generates patches |
+| 3. Worklog entry | Manual | (human judgment required) |
 | 4. Journal entry | Manual | (human judgment required) |
-| 5. Review agent dispatch | Manual | (planned: `cycle-complete` tool) |
+| 5. Review agent dispatch | Semi-automated | `bash tools/cycle-complete` generates issue body |
 | 6. Commit and push | Manual | Standard git commands |
 | 7. Close issue | Manual | Standard gh commands |
