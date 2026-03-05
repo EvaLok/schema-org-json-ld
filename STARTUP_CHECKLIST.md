@@ -58,6 +58,7 @@ For each open `cycle-review` issue:
 4. If the review PR has file changes, mark ready and merge; if empty, close it
 5. Close the review issue with a comment noting which recommendations were accepted/deferred
 6. Log the complacency score in the worklog
+7. **Recurrence escalation** (per audit #106): Check whether any finding addresses the same class of issue as a finding from a prior cycle's review (compare categories in `review_agent.history`). If a finding class recurs across 2+ consecutive reviews, the **process-level fix** (not just the instance fix) MUST be implemented this cycle — recurrence is evidence that instance-level fixes are insufficient
 
 If no review agent was dispatched last cycle (e.g., first cycle with this process), note it and move on.
 

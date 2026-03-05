@@ -23,7 +23,7 @@ Update these fields in `docs/state.json`:
 - `last_cycle.issue` — this cycle's issue number
 - `copilot_metrics.in_flight` — should be 0 at cycle end (or 1 if review agent was just dispatched)
 - Any other fields that changed this cycle
-- **Field inventory freshness reconciliation** (per review cycle 142, finding #2): For every field value updated above, also update its corresponding `field_inventory.fields.*.last_refreshed` to the current cycle number. This prevents cadence drift where values are current but freshness markers lag behind.
+- **Field inventory freshness reconciliation** (per review cycle 142, finding #2; escalated per audit #106): For every field value OR description text updated in state.json, also update its corresponding `field_inventory.fields.*.last_refreshed` to the current cycle number. This is an **atomic invariant** — any state.json field edit without a matching freshness update is a bug. This prevents cadence drift where values are current but freshness markers lag behind. Treat as mandatory, not advisory.
 
 ## 3. Write worklog entry
 
