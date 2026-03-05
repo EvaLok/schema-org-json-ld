@@ -1,4 +1,4 @@
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, TimeDelta, Utc};
 use clap::Parser;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -107,6 +107,8 @@ struct OpenPr {
     author: String,
     is_draft: bool,
     copilot_work_finished: Option<bool>,
+    #[serde(skip_serializing)]
+    body: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -141,6 +143,7 @@ struct CopilotIssue {
 struct CommitFreezeStatus {
     validated_commit: String,
     diverged: bool,
+    check_failed: bool,
     changed_files: Vec<String>,
 }
 
@@ -329,7 +332,7 @@ fn gather_agent_status(errors: &mut Vec<String>) -> AgentStatus {
         "--state",
         "open",
         "--json",
-        "number,title,author,isDraft",
+        "number,title,author,isDraft,body",
     ]) {
         Ok(value) => {
             if let Some(items) = value.as_array() {
@@ -340,12 +343,17 @@ fn gather_agent_status(errors: &mut Vec<String>) -> AgentStatus {
                         let title = item.get("title")?.as_str()?.to_string();
                         let author = json_str(item, &["author", "login"])?.to_string();
                         let is_draft = item.get("isDraft")?.as_bool()?;
+                        let body = item
+                            .get("body")
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string());
                         Some(OpenPr {
                             number,
                             title,
                             author,
                             is_draft,
                             copilot_work_finished: None,
+                            body,
                         })
                     })
                     .collect();
@@ -464,10 +472,32 @@ fn collect_stale_dispatches(
             };
             let age = now.signed_duration_since(created_at);
             let has_matching_pr = open_prs.iter().any(|pr| {
-                pr.author == "copilot-swe-agent[bot]"
-                    && pr.title.contains(&format!("#{}", issue.number))
+                if pr.author != "copilot-swe-agent[bot]" {
+                    return false;
+                }
+                let issue_tag = format!("#{}", issue.number);
+                // Word-boundary title match: `#N` must not be followed by a digit
+                // (avoids #1 matching inside #101).
+                let title_matches =
+                    contains_issue_tag_at_word_boundary(&pr.title, &issue_tag);
+                // Body match: Fixes/Closes/Resolves #N (case-insensitive)
+                let body_matches = pr.body.as_deref().is_some_and(|body| {
+                    let lower = body.to_lowercase();
+                    ["fixes ", "closes ", "resolves "].iter().any(|kw| {
+                        let mut search = lower.as_str();
+                        while let Some(pos) = search.find(kw) {
+                            let rest = &search[pos + kw.len()..];
+                            if contains_issue_tag_at_word_boundary(rest, &issue_tag) {
+                                return true;
+                            }
+                            search = &search[pos + kw.len()..];
+                        }
+                        false
+                    })
+                });
+                title_matches || body_matches
             });
-            if age > Duration::hours(2) && !has_matching_pr {
+            if age > TimeDelta::try_hours(2).unwrap() && !has_matching_pr {
                 Some(StaleDispatch {
                     number: issue.number,
                     title: issue.title.clone(),
@@ -481,6 +511,30 @@ fn collect_stale_dispatches(
         .collect()
 }
 
+/// Returns true if `text` contains `tag` at a position where the character
+/// immediately following the tag is not a digit — i.e. `#N` is not a prefix
+/// of a larger number like `#101`.
+fn contains_issue_tag_at_word_boundary(text: &str, tag: &str) -> bool {
+    let mut search = text;
+    while let Some(pos) = search.find(tag) {
+        let after = pos + tag.len();
+        let at_word_boundary = search
+            .as_bytes()
+            .get(after)
+            .map_or(true, |c| !c.is_ascii_digit());
+        if at_word_boundary {
+            return true;
+        }
+        search = &search[pos + 1..];
+    }
+    false
+}
+
+fn is_valid_commit_sha(sha: &str) -> bool {
+    let len = sha.len();
+    len >= 4 && len <= 40 && sha.chars().all(|c| c.is_ascii_hexdigit())
+}
+
 fn check_commit_freeze(
     repo_root: &Path,
     state: &StateJson,
@@ -490,6 +544,70 @@ fn check_commit_freeze(
         .publish_gate
         .as_ref()
         .and_then(|gate| gate.validated_commit.clone())?;
+
+    // Validate the commit SHA format before using it in a git command.
+    if !is_valid_commit_sha(&validated_commit) {
+        errors.push(format!(
+            "Commit freeze check failed: validated_commit {:?} is not a valid commit SHA (expected 4–40 hex characters)",
+            validated_commit
+        ));
+        return Some(CommitFreezeStatus {
+            validated_commit,
+            diverged: true,
+            check_failed: true,
+            changed_files: Vec::new(),
+        });
+    }
+
+    // Verify the commit is reachable in this repository.
+    let cat_file = Command::new("git")
+        .current_dir(repo_root)
+        .args(["cat-file", "-t", &validated_commit])
+        .output();
+    match cat_file {
+        Ok(output) if output.status.success() => {
+            let obj_type = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if obj_type != "commit" {
+                errors.push(format!(
+                    "Commit freeze check failed: validated commit {} is not a commit object (got {:?})",
+                    validated_commit, obj_type
+                ));
+                return Some(CommitFreezeStatus {
+                    validated_commit,
+                    diverged: true,
+                    check_failed: true,
+                    changed_files: Vec::new(),
+                });
+            }
+        }
+        Ok(output) => {
+            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+            errors.push(format!(
+                "Commit freeze check failed: validated commit {} is not reachable in this repository: {}",
+                validated_commit,
+                if stderr.is_empty() { "<no stderr>".to_string() } else { stderr }
+            ));
+            return Some(CommitFreezeStatus {
+                validated_commit,
+                diverged: true,
+                check_failed: true,
+                changed_files: Vec::new(),
+            });
+        }
+        Err(e) => {
+            errors.push(format!(
+                "Commit freeze check failed (unable to execute git cat-file): {}",
+                e
+            ));
+            return Some(CommitFreezeStatus {
+                validated_commit,
+                diverged: true,
+                check_failed: true,
+                changed_files: Vec::new(),
+            });
+        }
+    }
+
     let range = format!("{}..HEAD", validated_commit);
     let output = match Command::new("git")
         .current_dir(repo_root)
@@ -516,7 +634,8 @@ fn check_commit_freeze(
             ));
             return Some(CommitFreezeStatus {
                 validated_commit,
-                diverged: false,
+                diverged: true,
+                check_failed: true,
                 changed_files: Vec::new(),
             });
         }
@@ -534,7 +653,8 @@ fn check_commit_freeze(
         ));
         return Some(CommitFreezeStatus {
             validated_commit,
-            diverged: false,
+            diverged: true,
+            check_failed: true,
             changed_files: Vec::new(),
         });
     }
@@ -549,6 +669,7 @@ fn check_commit_freeze(
     Some(CommitFreezeStatus {
         validated_commit,
         diverged,
+        check_failed: false,
         changed_files,
     })
 }
@@ -726,9 +847,17 @@ fn build_action_items(
         ));
     }
     if commit_freeze.is_some_and(|status| status.diverged) {
-        items.push(
-            "Source files changed since QC-validated commit — re-validation required".to_string(),
-        );
+        if commit_freeze.is_some_and(|status| status.check_failed) {
+            items.push(
+                "Commit freeze check failed — could not verify QC-validated commit integrity"
+                    .to_string(),
+            );
+        } else {
+            items.push(
+                "Source files changed since QC-validated commit — re-validation required"
+                    .to_string(),
+            );
+        }
     }
     if !concurrency.dispatch_available {
         items.push(format!(
@@ -906,7 +1035,9 @@ fn print_human_report(report: &Report) {
             println!("Validated commit: {}", status.validated_commit);
             println!(
                 "Source freeze: {}",
-                if status.diverged {
+                if status.check_failed {
+                    "CHECK FAILED"
+                } else if status.diverged {
                     "DIVERGED"
                 } else {
                     "intact"
@@ -1013,7 +1144,7 @@ fn gh_json(args: &[&str]) -> Result<Value, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::{Duration, Utc};
+    use chrono::{TimeDelta, Utc};
 
     #[test]
     fn collects_stale_dispatches_without_matching_copilot_pr() {
@@ -1021,7 +1152,7 @@ mod tests {
         let issues = vec![CopilotIssue {
             number: 101,
             title: "Fix stale dispatch".to_string(),
-            created_at: (now - Duration::hours(3)).to_rfc3339(),
+            created_at: (now - TimeDelta::try_hours(3).unwrap()).to_rfc3339(),
         }];
         let open_prs = vec![OpenPr {
             number: 10,
@@ -1029,6 +1160,7 @@ mod tests {
             author: "copilot-swe-agent[bot]".to_string(),
             is_draft: true,
             copilot_work_finished: None,
+            body: None,
         }];
         let mut errors = Vec::new();
 
@@ -1054,6 +1186,7 @@ mod tests {
         let commit_freeze = Some(CommitFreezeStatus {
             validated_commit: "abc1234".to_string(),
             diverged: true,
+            check_failed: false,
             changed_files: vec!["php/src/v1/Schema/Product.php".to_string()],
         });
 
@@ -1069,5 +1202,206 @@ mod tests {
         assert!(action_items.iter().any(|item| {
             item == "Source files changed since QC-validated commit — re-validation required"
         }));
+    }
+
+    #[test]
+    fn issue_younger_than_2h_is_not_stale() {
+        let now = Utc::now();
+        let issues = vec![CopilotIssue {
+            number: 42,
+            title: "New issue".to_string(),
+            created_at: (now - TimeDelta::try_hours(1).unwrap()).to_rfc3339(),
+        }];
+        let open_prs: Vec<OpenPr> = vec![];
+        let mut errors = Vec::new();
+
+        let stale = collect_stale_dispatches(&issues, &open_prs, now, &mut errors);
+
+        assert!(errors.is_empty());
+        assert!(stale.is_empty(), "Issue younger than 2h should not be stale");
+    }
+
+    #[test]
+    fn issue_with_matching_copilot_pr_is_not_stale() {
+        let now = Utc::now();
+        let issues = vec![CopilotIssue {
+            number: 55,
+            title: "Issue with PR".to_string(),
+            created_at: (now - TimeDelta::try_hours(5).unwrap()).to_rfc3339(),
+        }];
+        let open_prs = vec![OpenPr {
+            number: 20,
+            title: "Implement feature #55".to_string(),
+            author: "copilot-swe-agent[bot]".to_string(),
+            is_draft: true,
+            copilot_work_finished: None,
+            body: None,
+        }];
+        let mut errors = Vec::new();
+
+        let stale = collect_stale_dispatches(&issues, &open_prs, now, &mut errors);
+
+        assert!(errors.is_empty());
+        assert!(
+            stale.is_empty(),
+            "Issue with a matching Copilot PR should not be stale"
+        );
+    }
+
+    #[test]
+    fn issue_with_matching_pr_in_body_closes_is_not_stale() {
+        let now = Utc::now();
+        let issues = vec![CopilotIssue {
+            number: 77,
+            title: "Issue linked in body".to_string(),
+            created_at: (now - TimeDelta::try_hours(4).unwrap()).to_rfc3339(),
+        }];
+        let open_prs = vec![OpenPr {
+            number: 30,
+            title: "Some unrelated title".to_string(),
+            author: "copilot-swe-agent[bot]".to_string(),
+            is_draft: false,
+            copilot_work_finished: Some(true),
+            body: Some("This PR closes #77 as requested.".to_string()),
+        }];
+        let mut errors = Vec::new();
+
+        let stale = collect_stale_dispatches(&issues, &open_prs, now, &mut errors);
+
+        assert!(errors.is_empty());
+        assert!(
+            stale.is_empty(),
+            "Issue linked with 'closes #N' in PR body should not be stale"
+        );
+    }
+
+    #[test]
+    fn false_positive_title_match_does_not_suppress_stale() {
+        // Issue #1 should NOT be suppressed by a PR mentioning #101
+        let now = Utc::now();
+        let issues = vec![CopilotIssue {
+            number: 1,
+            title: "Issue one".to_string(),
+            created_at: (now - TimeDelta::try_hours(3).unwrap()).to_rfc3339(),
+        }];
+        let open_prs = vec![OpenPr {
+            number: 40,
+            title: "Fix issue #101".to_string(),
+            author: "copilot-swe-agent[bot]".to_string(),
+            is_draft: true,
+            copilot_work_finished: None,
+            body: None,
+        }];
+        let mut errors = Vec::new();
+
+        let stale = collect_stale_dispatches(&issues, &open_prs, now, &mut errors);
+
+        assert!(errors.is_empty());
+        assert_eq!(
+            stale.len(),
+            1,
+            "PR mentioning #101 should not suppress issue #1 stale detection"
+        );
+    }
+
+    #[test]
+    fn diverged_false_does_not_produce_commit_freeze_action_item() {
+        let eva_input = EvaInput::default();
+        let agent_status = AgentStatus::default();
+        let qc_status = ProcessingStatus::default();
+        let audit_status = ProcessingStatus::default();
+        let concurrency = Concurrency {
+            in_flight: 0,
+            max: 2,
+            dispatch_available: true,
+        };
+        let commit_freeze = Some(CommitFreezeStatus {
+            validated_commit: "abc1234".to_string(),
+            diverged: false,
+            check_failed: false,
+            changed_files: vec![],
+        });
+
+        let action_items = build_action_items(
+            &eva_input,
+            &agent_status,
+            &qc_status,
+            &audit_status,
+            commit_freeze.as_ref(),
+            &concurrency,
+        );
+
+        assert!(
+            !action_items
+                .iter()
+                .any(|item| item.contains("re-validation required")),
+            "diverged=false should not produce a commit freeze action item"
+        );
+        assert!(
+            !action_items
+                .iter()
+                .any(|item| item.contains("check failed")),
+            "diverged=false/check_failed=false should not produce a check failed action item"
+        );
+    }
+
+    #[test]
+    fn invalid_sha_fails_validation() {
+        assert!(!is_valid_commit_sha(""));
+        assert!(!is_valid_commit_sha("xyz"));
+        assert!(!is_valid_commit_sha("abc")); // too short (< 4)
+        assert!(!is_valid_commit_sha("not-a-sha!"));
+        assert!(!is_valid_commit_sha(&"a".repeat(41))); // too long
+        assert!(!is_valid_commit_sha("deadbeef; rm -rf /"));
+    }
+
+    #[test]
+    fn valid_sha_passes_validation() {
+        assert!(is_valid_commit_sha("abcd"));
+        assert!(is_valid_commit_sha("abc1234"));
+        assert!(is_valid_commit_sha("deadbeef"));
+        assert!(is_valid_commit_sha(&"a".repeat(40)));
+        assert!(is_valid_commit_sha("0123456789abcdef"));
+    }
+
+    #[test]
+    fn check_failed_produces_check_failed_action_item() {
+        let eva_input = EvaInput::default();
+        let agent_status = AgentStatus::default();
+        let qc_status = ProcessingStatus::default();
+        let audit_status = ProcessingStatus::default();
+        let concurrency = Concurrency {
+            in_flight: 0,
+            max: 2,
+            dispatch_available: true,
+        };
+        let commit_freeze = Some(CommitFreezeStatus {
+            validated_commit: "abc1234".to_string(),
+            diverged: true,
+            check_failed: true,
+            changed_files: vec![],
+        });
+
+        let action_items = build_action_items(
+            &eva_input,
+            &agent_status,
+            &qc_status,
+            &audit_status,
+            commit_freeze.as_ref(),
+            &concurrency,
+        );
+
+        assert!(
+            action_items
+                .iter()
+                .any(|item| item.contains("Commit freeze check failed")),
+            "check_failed=true should produce a 'check failed' action item"
+        );
+        assert!(
+            !action_items
+                .iter()
+                .any(|item| item.contains("re-validation required")),
+            "check_failed=true should not produce the divergence message"
+        );
     }
 }
