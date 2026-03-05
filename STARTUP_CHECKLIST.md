@@ -105,7 +105,7 @@ This ensures no plan detail is lost between approval and execution, and creates 
 
 - Use the **Read** tool to read the latest entry in `docs/worklog/` (find it with `ls -t docs/worklog/*/`)
 - Use the **Read** tool to read the latest file in `docs/journal/` for recent reflections and patterns
-- Use the **Read** tool to read `docs/state.json` for machine-readable state
+- **Do NOT read `docs/state.json` directly.** It is ~800 lines / 38KB and will flood your context with data you mostly don't need. Instead, use tools that query specific fields (e.g., `bash tools/metric-snapshot`, `bash tools/check-field-inventory-rs`, or targeted `jq` queries for individual fields like `jq '.last_cycle' docs/state.json`). Only read the full file when designing a new tool or debugging.
 - Check open `question-for-eva` issues:
   ```bash
   gh issue list --label "question-for-eva" --state open --json number,title
@@ -118,13 +118,30 @@ This ensures no plan detail is lost between approval and execution, and creates 
 
 Scan for improvement opportunities in this priority order:
 
-1. **Cross-repo cooperation**: Are there open QC requests progressing? Can you help unblock the QC or audit orchestrators? Post useful context, update issue descriptions, or clarify requirements.
-2. **Infrastructure quality**: Are `AGENTS.md`, skills, or the startup checklist outdated or inconsistent with the codebase? Fix them.
-3. **Code quality**: Test coverage gaps, documentation accuracy, PHPStan/Biome issues, edge cases in existing implementations.
-4. **Process improvements**: Review patterns, issue templates, or workflows that could be smoother.
-5. **Forward planning**: Research upcoming schema types, design shared sub-type strategies, prepare issue specs.
+1. **Tool and pipeline development**: What manual work did you do last cycle that should be a tool? What tools could be composed into a pipeline? What existing tools need improvement? **This is the highest-priority improvement work** — every tool you build makes every future cycle more efficient.
+2. **Cross-repo cooperation**: Are there open QC requests progressing? Can you help unblock the QC or audit orchestrators? Post useful context, update issue descriptions, or clarify requirements.
+3. **Infrastructure quality**: Are `AGENTS.md`, skills, or the startup checklist outdated or inconsistent with the codebase? Fix them.
+4. **Code quality**: Test coverage gaps, documentation accuracy, PHPStan/Biome issues, edge cases in existing implementations.
+5. **Process improvements**: Review patterns, issue templates, or workflows that could be smoother.
+6. **Forward planning**: Research upcoming schema types, design shared sub-type strategies, prepare issue specs.
 
-If you genuinely cannot find any improvement work after checking all five categories, note this in the worklog with specific reasoning — but this should be rare. There is always something to reassess, explore, or refine.
+If you genuinely cannot find any improvement work after checking all six categories, note this in the worklog with specific reasoning — but this should be rare. There is always something to automate, build, or refine.
+
+### Pipeline status check
+
+Before running the manual steps below, run all available pipeline tools first:
+
+```bash
+bash tools/metric-snapshot
+```
+
+```bash
+bash tools/check-field-inventory-rs
+```
+
+Review their output. If all tools pass, the mechanical verification is done — focus your time on reasoning, decisions, and tool development. If any tool fails, investigate and fix.
+
+**Pipeline gap awareness**: As you execute the remaining manual steps in this checklist, note which ones are still raw `gh api` calls or manual Read/Grep operations. Each one is a candidate for a future tool. Periodically (every 10 cycles), review these gaps and dispatch tool-building work to the Copilot agent.
 
 ## 3. Check agent work status
 
@@ -327,10 +344,17 @@ If any check fails, update state.json to match reality and re-run to confirm.
 
 ### Field inventory sweep (per audit #80)
 
-After the enumerated checks, scan the `field_inventory` section of `docs/state.json`. For every field listed in the inventory:
-1. Check `last_refreshed` against the current cycle number and the field's `cadence`
-2. If a field's `last_refreshed` is older than its cadence implies (e.g., a "every cycle" field that says "cycle 115"), verify the field's actual value and update both the field and `last_refreshed`
-3. This catches fields that enumerated checks above don't cover — the inventory is self-describing
+Use the field inventory tool rather than reading state.json directly:
+
+```bash
+bash tools/check-field-inventory-rs
+```
+
+If this reports stale fields, use targeted `jq` queries to check and update individual fields — do not read the entire state.json into context. For example, to check a specific field's last_refreshed value:
+
+```bash
+jq '.field_inventory.fields["test_count"]' docs/state.json
+```
 
 **When adding new mutable fields to state.json**, always add a corresponding entry to `field_inventory.fields` with cadence and `last_refreshed`. This ensures new fields are automatically included in future verification sweeps.
 
@@ -390,6 +414,29 @@ Based on the above context:
 4. If in dual-language maintenance mode: does any new type need both PHP and TS implementations?
 
 Prioritise reviews over new dispatches — unreviewed PRs block progress.
+
+## 10. Cycle-end review dispatch
+
+At the end of a cycle where substantive work was done (tools built, PRs merged, process changes, significant decisions), consider dispatching a **cycle review issue** to the Copilot agent. This gives you a second opinion from a fresh perspective.
+
+**When to dispatch a cycle review:**
+- You built or modified a tool
+- You merged a complex or multi-file PR
+- You made a process or infrastructure change (AGENTS.md, skills, checklist)
+- You made a judgment call you're unsure about
+
+**When NOT to dispatch:**
+- Cycle was purely verification/metrics (no changes made)
+- Cycle only closed stale issues or did housekeeping
+- You're at the concurrency limit (2 agent slots full)
+
+**What to include in the review issue:**
+1. Summary of what was done this cycle
+2. Links to specific files changed, PRs merged, or tools built
+3. An explicit invitation for candid, open-ended feedback — not just "is this correct?" but "what would you do differently? what concerns you? what opportunities do you see?"
+4. Ask the agent to be direct and critical, not diplomatic
+
+This practice prevents the blind-spot accumulation that caused the maintenance plateau (cycles 115-128). A fresh pair of eyes, even from a coding agent, breaks the pattern of asking the same questions and getting the same answers.
 
 ## Writing conventions
 

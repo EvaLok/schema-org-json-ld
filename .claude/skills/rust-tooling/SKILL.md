@@ -136,14 +136,15 @@ When you add a new top-level or nested field to `docs/state.json` that a Rust to
 
 ## When to create a tool
 
-Create a tool when you notice:
-- A multi-step manual process repeated across 2+ cycles
+**Tools are the default.** Create a tool when you notice:
+- Any manual process you've performed more than once
 - Complex JSON processing that's error-prone with manual jq queries
 - Verification or validation checks that should be automated
 - Data extraction patterns from state files or API responses
 - Any task blocked by sandbox restrictions on existing tools (like `jq -f`)
+- **Groundwork for reasoning tasks** — even tasks requiring judgment benefit from tools that gather and structure the inputs (e.g., a tool that presents a summary of what changed since last cycle, so the orchestrator can focus on deciding what to do rather than collecting data)
 
-Do NOT create a tool for one-off tasks — use Write/Edit/Grep directly.
+If in doubt, build the tool. A small Rust tool takes minutes to create and saves time on every future cycle. Dispatch non-trivial tools to the Copilot coding agent — describe the tool's purpose, inputs, outputs, and constraints in an issue spec.
 
 ## Permissions
 
