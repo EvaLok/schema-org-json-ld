@@ -129,17 +129,20 @@ If you genuinely cannot find any improvement work after checking all six categor
 
 ### Pipeline status check
 
-Before running the manual steps below, run all available pipeline tools first:
+Before running the manual steps below, run the pipeline-check tool which orchestrates all verification tools:
 
 ```bash
-bash tools/metric-snapshot
+bash tools/pipeline-check --cycle {N}
 ```
 
-```bash
-bash tools/check-field-inventory-rs
-```
+This runs all 4 pipeline phases (pre-flight, metrics, field inventory, post-flight) and invokes the individual tools (`metric-snapshot`, `check-field-inventory-rs`, `cycle-status`, `housekeeping-scan`) as needed. If all phases pass, the mechanical verification is done — focus your time on reasoning, decisions, and tool development. If any phase fails, investigate and fix.
 
-Review their output. If all tools pass, the mechanical verification is done — focus your time on reasoning, decisions, and tool development. If any tool fails, investigate and fix.
+For targeted checks, you can also run individual tools directly:
+- `bash tools/metric-snapshot` — verify file counts and metrics against state.json
+- `bash tools/check-field-inventory-rs` — validate field inventory completeness
+- `bash tools/cycle-status` — check cycle state and readiness
+- `bash tools/housekeeping-scan` — detect stale issues, orphan PRs, dead branches
+- `bash tools/cycle-complete` — generate end-of-cycle state patches and review issue body
 
 **Pipeline gap awareness**: As you execute the remaining manual steps in this checklist, note which ones are still raw `gh api` calls or manual Read/Grep operations. Each one is a candidate for a future tool. Periodically (every 10 cycles), review these gaps and dispatch tool-building work to the Copilot agent.
 
@@ -415,28 +418,17 @@ Based on the above context:
 
 Prioritise reviews over new dispatches — unreviewed PRs block progress.
 
-## 10. Cycle-end review dispatch
+## 10. Cycle completion
 
-At the end of a cycle where substantive work was done (tools built, PRs merged, process changes, significant decisions), consider dispatching a **cycle review issue** to the Copilot agent. This gives you a second opinion from a fresh perspective.
+At cycle end, follow `COMPLETION_CHECKLIST.md` for the full close-out procedure. Key steps:
 
-**When to dispatch a cycle review:**
-- You built or modified a tool
-- You merged a complex or multi-file PR
-- You made a process or infrastructure change (AGENTS.md, skills, checklist)
-- You made a judgment call you're unsure about
+1. Run `bash tools/pipeline-check --cycle {N}` — all 4 phases must pass
+2. Update state.json (use `bash tools/cycle-complete` to generate patches)
+3. Write worklog and journal entries
+4. **Dispatch review agent (MANDATORY per Eva directive #463)** — every cycle must end with a review agent in-flight. See `COMPLETION_CHECKLIST.md` step 5 for the dispatch procedure and required issue body format.
+5. Commit, push, close the cycle issue
 
-**When NOT to dispatch:**
-- Cycle was purely verification/metrics (no changes made)
-- Cycle only closed stale issues or did housekeeping
-- You're at the concurrency limit (2 agent slots full)
-
-**What to include in the review issue:**
-1. Summary of what was done this cycle
-2. Links to specific files changed, PRs merged, or tools built
-3. An explicit invitation for candid, open-ended feedback — not just "is this correct?" but "what would you do differently? what concerns you? what opportunities do you see?"
-4. Ask the agent to be direct and critical, not diplomatic
-
-This practice prevents the blind-spot accumulation that caused the maintenance plateau (cycles 115-128). A fresh pair of eyes, even from a coding agent, breaks the pattern of asking the same questions and getting the same answers.
+The review agent dispatch is not optional. It is the primary mechanism for catching blind spots, complacency, and process drift. See `COMPLETION_CHECKLIST.md` for details.
 
 ## Writing conventions
 
