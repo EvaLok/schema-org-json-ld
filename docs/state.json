@@ -861,17 +861,17 @@
     ]
   },
   "copilot_metrics": {
-    "total_dispatches": 56,
+    "total_dispatches": 57,
     "resolved": 56,
-    "in_flight": 0,
+    "in_flight": 1,
     "produced_pr": 55,
     "merged": 54,
     "closed_without_merge": 1,
     "revision_rounds": 4,
     "dispatch_to_pr_rate": "55/56",
     "pr_merge_rate": "54/55",
-    "note": "56 dispatches, 56 resolved, 0 in-flight. 55 produced PRs (54 merged, 1 closed without merge). 1 dispatch resolved without PR (silent failure before review agent fix).",
-    "dispatch_log_latest": "#512 cycle-148 review agent (cycle 148)"
+    "note": "57 dispatches, 56 resolved, 1 in-flight (#519 cycle-149 review agent). 55 produced PRs (54 merged, 1 closed without merge).",
+    "dispatch_log_latest": "#519 cycle-149 review agent (cycle 149)"
   },
   "last_cycle": {
     "number": 149,
