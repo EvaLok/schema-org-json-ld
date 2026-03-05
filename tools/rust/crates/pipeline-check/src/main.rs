@@ -168,10 +168,7 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
     let has_fail_or_error = steps
         .iter()
         .any(|step| matches!(step.status, StepStatus::Fail | StepStatus::Error));
-    let all_skipped = !steps.is_empty()
-        && steps
-            .iter()
-            .all(|step| matches!(step.status, StepStatus::Skip));
+    let all_skipped = is_all_skipped(&steps);
     let overall = if has_fail_or_error || all_skipped {
         StepStatus::Fail
     } else {
@@ -319,6 +316,13 @@ fn parse_json(raw: &str) -> Option<Value> {
     serde_json::from_str(raw).ok()
 }
 
+fn is_all_skipped(steps: &[StepReport]) -> bool {
+    !steps.is_empty()
+        && steps
+            .iter()
+            .all(|step| matches!(step.status, StepStatus::Skip))
+}
+
 fn is_check_passing(check: &Value) -> bool {
     check.get("pass").and_then(Value::as_bool).unwrap_or(false)
 }
@@ -326,9 +330,7 @@ fn is_check_passing(check: &Value) -> bool {
 fn pipeline_exit_code(steps: &[StepReport]) -> i32 {
     if steps.iter().any(|step| step.status == StepStatus::Error) {
         2
-    } else if steps.iter().any(|step| step.status == StepStatus::Fail) {
-        1
-    } else if !steps.is_empty() && steps.iter().all(|step| step.status == StepStatus::Skip) {
+    } else if steps.iter().any(|step| step.status == StepStatus::Fail) || is_all_skipped(steps) {
         1
     } else {
         0
@@ -366,11 +368,7 @@ fn print_human_report(report: &PipelineReport) {
 
     println!();
     println!("Overall: {}", step_status_label(report.overall));
-    if report
-        .steps
-        .iter()
-        .all(|step| matches!(step.status, StepStatus::Skip))
-    {
+    if is_all_skipped(&report.steps) {
         println!("Reason: no tools could run (all steps skipped)");
     }
 }
@@ -460,14 +458,24 @@ mod tests {
 
     #[test]
     fn all_skipped_steps_return_failure_exit_code() {
-        let steps = vec![StepReport {
-            name: "metric-snapshot",
-            status: StepStatus::Skip,
-            exit_code: None,
-            detail: None,
-            findings: None,
-            summary: None,
-        }];
+        let steps = vec![
+            StepReport {
+                name: "metric-snapshot",
+                status: StepStatus::Skip,
+                exit_code: None,
+                detail: None,
+                findings: None,
+                summary: None,
+            },
+            StepReport {
+                name: "cycle-status",
+                status: StepStatus::Skip,
+                exit_code: None,
+                detail: None,
+                findings: None,
+                summary: None,
+            },
+        ];
         assert_eq!(pipeline_exit_code(&steps), 1);
     }
 
