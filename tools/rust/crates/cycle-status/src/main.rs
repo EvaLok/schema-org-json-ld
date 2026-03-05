@@ -1035,9 +1035,9 @@ mod tests {
         let stale = collect_stale_dispatches(&issues, &open_prs, now, &mut errors);
 
         assert!(errors.is_empty());
-        assert_eq!(1, stale.len());
-        assert_eq!(101, stale[0].number);
-        assert!(stale[0].age_hours >= 3.0);
+        assert_eq!(stale.len(), 1);
+        assert_eq!(stale[0].number, 101);
+        assert!((stale[0].age_hours - 3.0).abs() < 0.01);
     }
 
     #[test]
