@@ -109,7 +109,12 @@ fn check_review_agent_pointer(state: &StateJson) -> CheckResult {
 
     let history = match review_agent.get("history").and_then(Value::as_array) {
         Some(history) => history,
-        None => return warn("review_agent_pointer", "missing field: review_agent.history"),
+        None => {
+            return warn(
+                "review_agent_pointer",
+                "missing field: review_agent.history",
+            )
+        }
     };
 
     if history.is_empty() {
@@ -161,23 +166,48 @@ fn check_review_agent_pointer(state: &StateJson) -> CheckResult {
 fn check_copilot_metrics_math(state: &StateJson) -> CheckResult {
     let total_dispatches = match get_metric_i64(state, "total_dispatches") {
         Some(value) => value,
-        None => return warn("copilot_metrics_math", "missing field: copilot_metrics.total_dispatches"),
+        None => {
+            return warn(
+                "copilot_metrics_math",
+                "missing field: copilot_metrics.total_dispatches",
+            )
+        }
     };
     let resolved = match get_metric_i64(state, "resolved") {
         Some(value) => value,
-        None => return warn("copilot_metrics_math", "missing field: copilot_metrics.resolved"),
+        None => {
+            return warn(
+                "copilot_metrics_math",
+                "missing field: copilot_metrics.resolved",
+            )
+        }
     };
     let in_flight = match state.copilot_metrics.in_flight {
         Some(value) => value,
-        None => return warn("copilot_metrics_math", "missing field: copilot_metrics.in_flight"),
+        None => {
+            return warn(
+                "copilot_metrics_math",
+                "missing field: copilot_metrics.in_flight",
+            )
+        }
     };
     let produced_pr = match get_metric_i64(state, "produced_pr") {
         Some(value) => value,
-        None => return warn("copilot_metrics_math", "missing field: copilot_metrics.produced_pr"),
+        None => {
+            return warn(
+                "copilot_metrics_math",
+                "missing field: copilot_metrics.produced_pr",
+            )
+        }
     };
     let merged = match get_metric_i64(state, "merged") {
         Some(value) => value,
-        None => return warn("copilot_metrics_math", "missing field: copilot_metrics.merged"),
+        None => {
+            return warn(
+                "copilot_metrics_math",
+                "missing field: copilot_metrics.merged",
+            )
+        }
     };
     let closed_without_merge = match get_metric_i64(state, "closed_without_merge") {
         Some(value) => value,
@@ -199,10 +229,27 @@ fn check_copilot_metrics_math(state: &StateJson) -> CheckResult {
     };
     let pr_merge_rate = match state.copilot_metrics.pr_merge_rate.as_ref() {
         Some(value) => value,
-        None => return warn("copilot_metrics_math", "missing field: copilot_metrics.pr_merge_rate"),
+        None => {
+            return warn(
+                "copilot_metrics_math",
+                "missing field: copilot_metrics.pr_merge_rate",
+            )
+        }
     };
 
     let mut failures = Vec::new();
+    for (name, value) in [
+        ("total_dispatches", total_dispatches),
+        ("resolved", resolved),
+        ("in_flight", in_flight),
+        ("produced_pr", produced_pr),
+        ("merged", merged),
+        ("closed_without_merge", closed_without_merge),
+    ] {
+        if value < 0 {
+            failures.push(format!("{}({}) must be non-negative", name, value));
+        }
+    }
 
     if produced_pr != merged + closed_without_merge {
         failures.push(format!(
@@ -236,7 +283,10 @@ fn check_copilot_metrics_math(state: &StateJson) -> CheckResult {
             "pr_merge_rate({}/{}) != merged({})/produced_pr({})",
             n, m, merged, produced_pr
         )),
-        None => failures.push(format!("pr_merge_rate has invalid format: {}", pr_merge_rate)),
+        None => failures.push(format!(
+            "pr_merge_rate has invalid format: {}",
+            pr_merge_rate
+        )),
     }
 
     if failures.is_empty() {
@@ -252,9 +302,17 @@ fn check_blockers_narrative(state: &StateJson) -> CheckResult {
         None => return warn("blockers_narrative", "missing field: blockers[0]"),
     };
 
-    let checkpoint = match blockers0.get("pre_publish_checkpoint").and_then(Value::as_str) {
+    let checkpoint = match blockers0
+        .get("pre_publish_checkpoint")
+        .and_then(Value::as_str)
+    {
         Some(value) => value,
-        None => return warn("blockers_narrative", "missing field: blockers[0].pre_publish_checkpoint"),
+        None => {
+            return warn(
+                "blockers_narrative",
+                "missing field: blockers[0].pre_publish_checkpoint",
+            )
+        }
     };
 
     if !checkpoint.contains("ALL GATES SATISFIED") {
@@ -263,7 +321,12 @@ fn check_blockers_narrative(state: &StateJson) -> CheckResult {
 
     let remaining_actions = match blockers0.get("remaining_actions").and_then(Value::as_array) {
         Some(value) => value,
-        None => return warn("blockers_narrative", "missing field: blockers[0].remaining_actions"),
+        None => {
+            return warn(
+                "blockers_narrative",
+                "missing field: blockers[0].remaining_actions",
+            )
+        }
     };
 
     let has_pending = remaining_actions.iter().any(|item| {
@@ -291,7 +354,12 @@ fn check_publish_gate_consistency(state: &StateJson) -> CheckResult {
 
     let source_diverged = match publish_gate.get("source_diverged").and_then(Value::as_bool) {
         Some(value) => value,
-        None => return warn("publish_gate_consistency", "missing field: publish_gate.source_diverged"),
+        None => {
+            return warn(
+                "publish_gate_consistency",
+                "missing field: publish_gate.source_diverged",
+            )
+        }
     };
 
     if !source_diverged {
@@ -333,7 +401,10 @@ fn check_last_cycle_consistency(state: &StateJson) -> CheckResult {
     if last_cycle_number <= 0 {
         return fail(
             "last_cycle_consistency",
-            format!("last_cycle.number({}) is not a positive integer", last_cycle_number),
+            format!(
+                "last_cycle.number({}) is not a positive integer",
+                last_cycle_number
+            ),
         );
     }
 
@@ -409,11 +480,11 @@ fn warn(name: &'static str, details: impl Into<String>) -> CheckResult {
     }
 }
 
-fn fail(name: &'static str, details: String) -> CheckResult {
+fn fail(name: &'static str, details: impl Into<String>) -> CheckResult {
     CheckResult {
         name,
         status: CheckStatus::Fail,
-        details: Some(details),
+        details: Some(details.into()),
     }
 }
 
@@ -441,12 +512,7 @@ fn print_human_report(report: &Report) {
                     details
                 );
             } else {
-                println!(
-                    "  {}. {:<29} {}",
-                    index + 1,
-                    format!("{}:", label),
-                    status
-                );
+                println!("  {}. {:<29} {}", index + 1, format!("{}:", label), status);
             }
         }
     }
@@ -524,7 +590,7 @@ mod tests {
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let repo_root = std::env::temp_dir().join(format!("state-invariants-malformed-{}", run_id));
         fs::create_dir_all(repo_root.join("docs")).unwrap();
-        fs::write(repo_root.join("docs/state.json"), "{not-json").unwrap();
+        fs::write(repo_root.join("docs/state.json"), "not valid json").unwrap();
 
         let error = read_state_json(&repo_root).expect_err("malformed json should error");
         assert!(error.contains("failed to parse"));
