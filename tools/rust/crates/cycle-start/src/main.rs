@@ -178,10 +178,7 @@ fn format_timestamp_utc() -> String {
 }
 
 fn default_eva_directives() -> Vec<String> {
-    EVA_DIRECTIVES
-        .iter()
-        .map(|directive| directive.to_string())
-        .collect()
+    EVA_DIRECTIVES.iter().map(|directive| directive.to_string()).collect()
 }
 
 fn derive_cycle_from_state(state: &Value) -> Result<u64, String> {
@@ -472,12 +469,7 @@ fn gather_eva_comments_since(since: &str, warnings: &mut Vec<String>) -> Vec<Eva
 
 fn normalize_since_timestamp(timestamp: &str) -> Option<String> {
     let parsed = DateTime::parse_from_rfc3339(timestamp).ok()?;
-    Some(
-        parsed
-            .with_timezone(&Utc)
-            .format("%Y-%m-%dT%H:%M:%SZ")
-            .to_string(),
-    )
+    Some(parsed.with_timezone(&Utc).format("%Y-%m-%dT%H:%M:%SZ").to_string())
 }
 
 fn gather_review_summary(

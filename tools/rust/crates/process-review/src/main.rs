@@ -116,12 +116,8 @@ fn resolve_review_path(repo_root: &Path, review_file: &Path) -> PathBuf {
 }
 
 fn parse_review(review_path: &Path, content: &str) -> Result<ParsedReview, String> {
-    let cycle = extract_cycle_number(review_path).ok_or_else(|| {
-        format!(
-            "failed to derive cycle number from {}",
-            review_path.display()
-        )
-    })?;
+    let cycle = extract_cycle_number(review_path)
+        .ok_or_else(|| format!("failed to derive cycle number from {}", review_path.display()))?;
 
     let complacency_score = match extract_score(content) {
         Some(value) => value,

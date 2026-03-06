@@ -276,10 +276,7 @@ fn check_review_history_accounting(state: &StateJson) -> CheckResult {
             None => {
                 return warn(
                     "review_history_accounting",
-                    format!(
-                        "missing field: review_agent.history[{}].finding_count",
-                        index
-                    ),
+                    format!("missing field: review_agent.history[{}].finding_count", index),
                 )
             }
         };
@@ -714,7 +711,10 @@ fn check_chronic_categories(state: &StateJson) -> CheckResult {
     }
 
     // Find chronic categories (5+ in 6)
-    let chronic: Vec<(&String, &usize)> = counts.iter().filter(|(_, count)| **count >= 5).collect();
+    let chronic: Vec<(&String, &usize)> = counts
+        .iter()
+        .filter(|(_, count)| **count >= 5)
+        .collect();
 
     if chronic.is_empty() {
         return pass("chronic_categories");
