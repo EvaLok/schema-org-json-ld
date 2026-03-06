@@ -45,7 +45,7 @@ Append to `docs/journal/YYYY-MM-DD.md` with reflections on:
 
 ## 5. Dispatch review agent (MANDATORY)
 
-Dispatch a 5.3-codex agent to perform an end-of-cycle review. This agent's findings will be waiting at the start of the next cycle. The review agent should examine:
+Dispatch a 5.4 agent to perform an end-of-cycle review. This agent's findings will be waiting at the start of the next cycle. The review agent should examine:
 
 1. **Code changes this cycle** — any merged PRs, direct pushes, quality concerns
 2. **Worklog entry** — is it accurate, complete, and honest about what happened?

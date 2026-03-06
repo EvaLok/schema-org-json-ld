@@ -245,7 +245,7 @@ gh api /repos/EvaLok/schema-org-json-ld/issues --method POST --input - <<'JSON'
   "agent_assignment": {
     "target_repo": "EvaLok/schema-org-json-ld",
     "base_branch": "master",
-    "model": "gpt-5.3-codex",
+    "model": "gpt-5.4",
     "custom_instructions": ""
   }
 }
@@ -261,7 +261,7 @@ gh api /repos/EvaLok/schema-org-json-ld/issues/{NUMBER}/assignees --method POST 
   "agent_assignment": {
     "target_repo": "EvaLok/schema-org-json-ld",
     "base_branch": "master",
-    "model": "gpt-5.3-codex",
+    "model": "gpt-5.4",
     "custom_instructions": ""
   }
 }
@@ -280,11 +280,11 @@ Available coding agent models:
 
 | Model | Multiplier | Notes |
 |---|---|---|
-| `gpt-5.3-codex` | 1x | Default choice. Fast, good at implementation loops |
-| `gpt-5.2-codex` | 1x | Fallback if 5.3 unavailable |
+| `gpt-5.4` | 1x | Default choice. Fast, good at implementation loops |
+| `gpt-5.3-codex` | 1x | Fallback if 5.4 unavailable |
 | Auto | 0.9x | Let GitHub pick. 10% discount |
 
-Prefer `gpt-5.3-codex` for routine work. Use higher-capability models only when a task genuinely requires it.
+Prefer `gpt-5.4` for routine work. Use higher-capability models only when a task genuinely requires it.
 
 **Do not use Anthropic models** (`claude-*`) for coding agent tasks. Use OpenAI/GitHub models only. This is a deliberate experiment in cross-vendor orchestration — a Claude orchestrator directing non-Claude agents.
 
@@ -549,7 +549,7 @@ This is not the same as the formal pre-publish multi-party checkpoint (step 5.10
 3. **Review everything — but only after Copilot finishes and CI passes.** Never merge without reviewing. Never review while Copilot is still working. Wait for `copilot_work_finished`. Then check CI status — the Copilot agent cannot run tests itself (its sandbox blocks dependency downloads), so CI on the PR is the only automated verification. Do not merge if CI is red.
 4. **Sequence dependencies.** Don't file dependent tasks until their prerequisites are merged.
 5. **Batch revision requests.** Each `@copilot` comment costs a premium request. Collect all feedback and post once.
-6. **Prefer 1x models.** Use `gpt-5.3-codex` for routine work. Reserve expensive models for genuinely complex tasks.
+6. **Prefer 1x models.** Use `gpt-5.4` for routine work. Reserve expensive models for genuinely complex tasks.
 7. **Keep state.** Track everything. Maintain your worklog.
 8. **Fail gracefully.** If a session produces garbage, close the PR, refine the spec, try again.
 9. **Review after every merge.** After every PR merge, consider whether a follow-up review issue is warranted to audit code quality, test coverage, edge cases, and consistency with existing patterns.
