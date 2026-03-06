@@ -3,7 +3,7 @@
 ## Findings
 
 1. **Commit receipt verification succeeds, but the journal’s example stat is inaccurate.**  
-   `git show 2a72471 --stat` resolves to commit `state(cycle-complete): cycle 156 state updates...` and shows `docs/state.json | 53 ...` (31 insertions, 22 deletions), so the receipt mechanism worked as designed. However, the journal snippet claims `docs/state.json | 22 ...`, which does not match the actual commit stat (`docs/journal/2026-03-06.md:158-163`).
+   The journal snippet claims `docs/state.json | 22 ...`, while the actual output of `git show 2a72471 --stat` is `docs/state.json | 53 ...` (31 insertions, 22 deletions). The receipt mechanism worked as designed, but the journal cited only the deletion count (`22`) instead of the full file-change stat (`53`) (`docs/journal/2026-03-06.md:158-163`).
 
 2. **`state.json` copilot arithmetic is correct for the cycle-156 claim.**  
    The requested check passes: `produced_pr = 67`, `merged = 66`, `closed_without_merge = 1`, and the rate strings align (`67/68`, `66/67`) (`docs/state.json:950-961`).
@@ -16,7 +16,7 @@
 
 5. **`tools/write-entry` argument reordering fix solved the main regression, but edge cases are still broken.**  
    Inserting `--repo-root` after subcommand fixed normal usage (`tools/write-entry:26-29`; `bash tools/write-entry worklog --help` works). However:
-   - no args still crash with `line 27: $1: unbound variable` because `$1` is read unguarded under `set -u` (`tools/write-entry:27`)
+   - no arguments still crash with `line 27: $1: unbound variable` because `$1` is read unguarded under `set -u` (`tools/write-entry:27`)
    - `--repo-root` already provided *before* subcommand is passed through and fails clap parsing (`bash tools/write-entry --repo-root <path> worklog --help`)
 
 6. **Cycle-156 journal quality is mostly genuine (specific, self-critical), not boilerplate.**  
