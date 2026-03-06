@@ -199,12 +199,12 @@ fn apply_dispatch_patch(state: &mut Value, patch: &DispatchPatch) -> Result<(), 
     set_value_at_pointer(
         state,
         "/field_inventory/fields/copilot_metrics.in_flight/last_refreshed",
-        json!(cycle_marker),
+        json!(cycle_marker.clone()),
     )?;
     set_value_at_pointer(
         state,
         "/field_inventory/fields/copilot_metrics.dispatch_to_pr_rate/last_refreshed",
-        json!(format!("cycle {}", patch.current_cycle)),
+        json!(cycle_marker),
     )?;
 
     Ok(())
