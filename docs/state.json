@@ -1266,7 +1266,7 @@
         "note": "Findings 1,3,4 confirmatory (low sev). Finding 2 (freshness) actioned. Finding 5 (traceability) actioned via atomic cycle-close improvements."
       },
       {
-        "actioned": 0,
+        "actioned": 1,
         "categories": [
           "dispatch-risk-management",
           "metrics-taxonomy",
@@ -1276,9 +1276,10 @@
         ],
         "complacency_score": 3,
         "cycle": 165,
-        "deferred": 0,
+        "deferred": 2,
         "finding_count": 5,
-        "ignored": 0
+        "ignored": 2,
+        "note": "Finding 5 (state-traceability) actioned: open_questions_for_eva synced. Findings 1,2 (low sev) confirmatory. Findings 3,4 (dispatch canary, metrics taxonomy) deferred to future tool work."
       }
     ],
     "last_review_cycle": 165
