@@ -840,10 +840,10 @@
     }
   },
   "last_cycle": {
-    "issue": 605,
-    "number": 165,
-    "summary": "Cycle 165: Discovered gpt-5.4 ruleset violation (#602-#604 all failed). Filed #606 question-for-eva. Re-dispatched #607 (process-merge), #608 (record-dispatch), #611 (review agent) with gpt-5.3-codex. Fixed process-review finding count bug. Copilot metrics: 88 dispatches, 80 merged.",
-    "timestamp": "2026-03-06T21:08:00Z"
+    "issue": 613,
+    "number": 166,
+    "summary": "Cycle 166: Merged 3 PRs (#609 process-merge, #610 record-dispatch, #612 c165 review). Processed review findings (score 3/5, 5 findings). Fixed open_questions_for_eva traceability gap. Dispatched #614 (process-audit). Copilot metrics: 89 dispatches, 83 merged, 1 in-flight.",
+    "timestamp": "2026-03-06T22:43:00Z"
   },
   "last_eva_comment_check": "2026-03-06T22:43:00Z",
   "next_metric_verification": "cycle 151",
@@ -852,7 +852,7 @@
   ],
   "publish_gate": {
     "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z — all gates satisfied",
-    "last_divergence_check": "cycle 164",
+    "last_divergence_check": "cycle 166",
     "note": "QC-ACK #225 cleared v1.0.1 at ea8ffff for npm publish. 73/73 parity, E2E, build, tarball tests all pass. No package-affecting source divergence since validation. Audit sign-off confirmed via audit#125 (cycle 163).",
     "qc_ack": "EvaLok/schema-org-json-ld-qc#225",
     "source_diverged": false,
