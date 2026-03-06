@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+BINARY="$SCRIPT_DIR/rust/target/release/process-review"
+if [ ! -x "$BINARY" ]; then
+  cargo build --manifest-path "$SCRIPT_DIR/rust/Cargo.toml" --release --bin process-review 2>/dev/null
+fi
+exec "$BINARY" --repo-root "$SCRIPT_DIR/.." "$@"
