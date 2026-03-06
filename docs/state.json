@@ -743,7 +743,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 163"
+        "last_refreshed": "cycle 164"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -850,7 +850,7 @@
   "open_questions_for_eva": [],
   "publish_gate": {
     "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z — all gates satisfied",
-    "last_divergence_check": "cycle 163",
+    "last_divergence_check": "cycle 164",
     "note": "QC-ACK #225 cleared v1.0.1 at ea8ffff for npm publish. 73/73 parity, E2E, build, tarball tests all pass. No package-affecting source divergence since validation. Audit sign-off confirmed via audit#125 (cycle 163).",
     "qc_ack": "EvaLok/schema-org-json-ld-qc#225",
     "source_diverged": false,
@@ -1259,7 +1259,7 @@
         "complacency_score": 3,
         "cycle": 163,
         "deferred": 0,
-        "finding_count": 162,
+        "finding_count": 5,
         "ignored": 3,
         "note": "Findings 1,3,4 confirmatory (low sev). Finding 2 (freshness) actioned. Finding 5 (traceability) actioned via atomic cycle-close improvements."
       }
