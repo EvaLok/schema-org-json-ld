@@ -571,6 +571,7 @@ mod tests {
         .unwrap();
         fs::write(root.join("tools/rust/target/release/housekeeping-scan"), "").unwrap();
         fs::write(root.join("tools/rust/target/release/cycle-status"), "").unwrap();
+        fs::write(root.join("tools/rust/target/release/state-invariants"), "").unwrap();
 
         let runner = MockRunner {
             outputs: HashMap::from([
@@ -596,6 +597,13 @@ mod tests {
                     },
                 ),
                 (
+                    "state-invariants".to_string(),
+                    ExecutionResult {
+                        exit_code: Some(0),
+                        stdout: json!({"passed":5,"failed":0}).to_string(),
+                    },
+                ),
+                (
                     "cycle-status".to_string(),
                     ExecutionResult {
                         exit_code: Some(0),
@@ -611,7 +619,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 4);
+        assert_eq!(report.steps.len(), 5);
         assert_eq!(report.steps[0].status, StepStatus::Pass);
         assert_eq!(report.steps[1].status, StepStatus::Pass);
         assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -619,6 +627,11 @@ mod tests {
         assert_eq!(
             report.steps[3].summary.as_deref(),
             Some("1 in-flight, 2 eva directives")
+        );
+        assert_eq!(report.steps[4].status, StepStatus::Pass);
+        assert_eq!(
+            report.steps[4].detail.as_deref(),
+            Some("5/5 invariants pass")
         );
     }
 
@@ -643,7 +656,7 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &NoopRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 4);
+        assert_eq!(report.steps.len(), 5);
         assert!(report
             .steps
             .iter()

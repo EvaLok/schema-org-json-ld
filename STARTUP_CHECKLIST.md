@@ -437,7 +437,7 @@ Prioritise reviews over new dispatches — unreviewed PRs block progress.
 
 At cycle end, follow `COMPLETION_CHECKLIST.md` for the full close-out procedure. Key steps:
 
-1. Run `bash tools/pipeline-check --cycle {N}` — all 4 phases must pass
+1. Run `bash tools/pipeline-check --cycle {N}` — all 5 phases must pass
 2. Update state.json (use `bash tools/cycle-complete` to generate patches)
 3. Write worklog and journal entries
 4. **Dispatch review agent (MANDATORY per Eva directive #463)** — every cycle must end with a review agent in-flight. See `COMPLETION_CHECKLIST.md` step 5 for the dispatch procedure and required issue body format.
