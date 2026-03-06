@@ -631,16 +631,16 @@
   "copilot_metrics": {
     "closed_without_merge": 1,
     "closed_without_pr": 4,
-    "dispatch_log_latest": "#607 process-merge, #608 record-dispatch (cycle 165)",
+    "dispatch_log_latest": "#607 process-merge, #608 record-dispatch, #611 c165 review (cycle 165)",
     "dispatch_to_pr_rate": "81/85",
-    "in_flight": 2,
+    "in_flight": 3,
     "merged": 80,
-    "note": "87 dispatches, 85 resolved (80 merged, 1 closed-no-merge, 4 failed-no-PR), 2 in-flight (#607, #608). gpt-5.4 dispatches #602-#604 failed with ruleset violation (cycle 164). Re-dispatched #607, #608 with gpt-5.3-codex. Filed #606 question-for-eva.",
+    "note": "88 dispatches, 85 resolved (80 merged, 1 closed-no-merge, 4 failed-no-PR), 3 in-flight (#607, #608, #611). gpt-5.4 dispatches #602-#604 failed with ruleset violation. Re-dispatched with gpt-5.3-codex. Filed #606.",
     "pr_merge_rate": "80/81",
     "produced_pr": 81,
     "resolved": 85,
     "revision_rounds": 5,
-    "total_dispatches": 87
+    "total_dispatches": 88
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -842,7 +842,7 @@
   "last_cycle": {
     "issue": 605,
     "number": 165,
-    "summary": "Cycle 165: Discovered gpt-5.4 ruleset violation (#602-#604 all failed). Filed #606 question-for-eva. Re-dispatched #607 (process-merge), #608 (record-dispatch) with gpt-5.3-codex. Fixed process-review finding count bug. Copilot metrics: 87 dispatches, 80 merged.",
+    "summary": "Cycle 165: Discovered gpt-5.4 ruleset violation (#602-#604 all failed). Filed #606 question-for-eva. Re-dispatched #607 (process-merge), #608 (record-dispatch), #611 (review agent) with gpt-5.3-codex. Fixed process-review finding count bug. Copilot metrics: 88 dispatches, 80 merged.",
     "timestamp": "2026-03-06T21:08:00Z"
   },
   "last_eva_comment_check": "2026-03-06T21:08:00Z",
