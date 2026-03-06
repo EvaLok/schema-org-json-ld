@@ -922,7 +922,7 @@ mod tests {
     }
 
     #[test]
-    fn copilot_metrics_rates_detect_mismatch() {
+    fn copilot_metrics_rates_detects_mismatch() {
         let mut value = minimal_valid_state();
         value["copilot_metrics"]["dispatch_to_pr_rate"] = json!("3/3");
 
