@@ -1199,7 +1199,16 @@
     ],
     "chronic_category_responses": {
       "description": "Traceable artifacts for chronic category escalation (step 0.5.8). When a finding category appears in 5+ of the last 6 reviews, it must have a response entry here documenting root cause, chosen path, and verification. Per cycle 159/160 review recommendation.",
-      "entries": []
+      "entries": [
+        {
+          "category": "journal-quality",
+          "root_cause": "Review agent consistently evaluates journal quality each cycle. Findings are overwhelmingly positive (confirming reflective, causally-linked entries). The category recurs because journal evaluation is a standing review criterion, not because of a persistent deficiency.",
+          "chosen_path": "recalibrate",
+          "rationale": "journal-quality findings in cycles 155-160 were positive/confirmatory (5/5 positive). Recurrence reflects consistent verification of a healthy practice, not a chronic problem. No structural fix needed — the review agent should continue checking journal quality but the category is expected to appear regularly.",
+          "verification_cycle": 161,
+          "added_cycle": 161
+        }
+      ]
     }
   },
   "field_inventory": {

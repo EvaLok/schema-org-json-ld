@@ -2,7 +2,7 @@ use clap::Parser;
 use serde::Serialize;
 use serde_json::Value;
 use state_schema::StateJson;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -87,6 +87,7 @@ fn run_checks(state: &StateJson) -> Report {
         check_blockers_narrative(state),
         check_publish_gate_consistency(state),
         check_last_cycle_consistency(state),
+        check_chronic_categories(state),
     ];
 
     let passed = checks
@@ -674,6 +675,85 @@ fn parse_rate(value: &str) -> Option<(i64, i64)> {
     Some((n, m))
 }
 
+fn check_chronic_categories(state: &StateJson) -> CheckResult {
+    let review_agent = match state.extra.get("review_agent") {
+        Some(value) => value,
+        None => return warn("chronic_categories", "missing field: review_agent"),
+    };
+
+    let history = match review_agent.get("history").and_then(Value::as_array) {
+        Some(history) => history,
+        None => return warn("chronic_categories", "missing field: review_agent.history"),
+    };
+
+    // Take last 6 entries
+    let window_size = 6;
+    let window: Vec<&Value> = if history.len() > window_size {
+        history[history.len() - window_size..].iter().collect()
+    } else {
+        history.iter().collect()
+    };
+
+    if window.len() < window_size {
+        return pass("chronic_categories");
+    }
+
+    // Count category occurrences
+    let mut counts: HashMap<String, usize> = HashMap::new();
+    for entry in &window {
+        if let Some(categories) = entry.get("categories").and_then(Value::as_array) {
+            for cat in categories {
+                if let Some(name) = cat.as_str() {
+                    *counts.entry(name.to_string()).or_insert(0) += 1;
+                }
+            }
+        }
+    }
+
+    // Find chronic categories (5+ in 6)
+    let chronic: Vec<(&String, &usize)> = counts
+        .iter()
+        .filter(|(_, count)| **count >= 5)
+        .collect();
+
+    if chronic.is_empty() {
+        return pass("chronic_categories");
+    }
+
+    // Check if chronic categories have corresponding response entries
+    let responses = review_agent
+        .get("chronic_category_responses")
+        .and_then(|v| v.get("entries"))
+        .and_then(Value::as_array);
+
+    let response_categories: HashSet<String> = match responses {
+        Some(entries) => entries
+            .iter()
+            .filter_map(|e| e.get("category").and_then(Value::as_str).map(String::from))
+            .collect(),
+        None => HashSet::new(),
+    };
+
+    let mut untracked: Vec<String> = Vec::new();
+    for (cat, count) in &chronic {
+        if !response_categories.contains(cat.as_str()) {
+            untracked.push(format!("{} ({}x)", cat, count));
+        }
+    }
+
+    if untracked.is_empty() {
+        pass("chronic_categories")
+    } else {
+        fail(
+            "chronic_categories",
+            format!(
+                "chronic categories without response entries: {}",
+                untracked.join(", ")
+            ),
+        )
+    }
+}
+
 fn pass(name: &'static str) -> CheckResult {
     CheckResult {
         name,
@@ -711,6 +791,7 @@ fn print_human_report(report: &Report) {
         ("blockers_narrative", "blockers narrative"),
         ("publish_gate_consistency", "publish_gate consistency"),
         ("last_cycle_consistency", "last_cycle consistency"),
+        ("chronic_categories", "chronic categories"),
     ];
 
     for (index, (name, label)) in labels.iter().enumerate() {
@@ -970,5 +1051,71 @@ mod tests {
         let state = state_from_json(value);
         let check = check_publish_gate_consistency(&state);
         assert_eq!(check.status, CheckStatus::Fail);
+    }
+
+    #[test]
+    fn chronic_categories_passes_when_no_chronic() {
+        let state = state_from_json(minimal_valid_state());
+        let check = check_chronic_categories(&state);
+        // Only 2 history entries, so window < 6, should pass
+        assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn chronic_categories_detects_untracked_chronic() {
+        let mut value = minimal_valid_state();
+        // Build 6 history entries with the same category
+        let mut history = Vec::new();
+        for i in 1..=6 {
+            history.push(json!({
+                "cycle": i,
+                "finding_count": 2,
+                "actioned": 1,
+                "deferred": 0,
+                "ignored": 1,
+                "complacency_score": 3,
+                "categories": ["state-consistency", "journal-quality"]
+            }));
+        }
+        value["review_agent"]["history"] = json!(history);
+        value["review_agent"]["last_review_cycle"] = json!(6);
+        value["review_agent"]["chronic_category_responses"] = json!({
+            "entries": []
+        });
+
+        let state = state_from_json(value);
+        let check = check_chronic_categories(&state);
+        assert_eq!(check.status, CheckStatus::Fail);
+        assert!(check
+            .details
+            .as_deref()
+            .unwrap_or_default()
+            .contains("state-consistency"));
+    }
+
+    #[test]
+    fn chronic_categories_passes_when_tracked() {
+        let mut value = minimal_valid_state();
+        let mut history = Vec::new();
+        for i in 1..=6 {
+            history.push(json!({
+                "cycle": i,
+                "finding_count": 2,
+                "actioned": 1,
+                "deferred": 0,
+                "ignored": 1,
+                "complacency_score": 3,
+                "categories": ["state-consistency"]
+            }));
+        }
+        value["review_agent"]["history"] = json!(history);
+        value["review_agent"]["last_review_cycle"] = json!(6);
+        value["review_agent"]["chronic_category_responses"] = json!({
+            "entries": [{"category": "state-consistency", "root_cause": "test", "chosen_path": "fix"}]
+        });
+
+        let state = state_from_json(value);
+        let check = check_chronic_categories(&state);
+        assert_eq!(check.status, CheckStatus::Pass);
     }
 }
