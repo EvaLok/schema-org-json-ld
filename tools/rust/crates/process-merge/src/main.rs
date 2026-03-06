@@ -148,7 +148,7 @@ fn compute_update(state: &Value, prs: &[u64], note: Option<&str>) -> Result<Merg
 	let merged_prs = format_pr_list(prs);
 
 	let mut summary = format!(
-		"{} dispatches, {} resolved, {} in-flight. {} produced PRs ({} merged, {} closed without merge). {} resolved without PR (silent failure). {} merged cycle {}.",
+		"{} dispatches, {} resolved, {} in-flight. {} produced PRs ({} merged, {} closed without merge). {} resolved without PR (silent failure). {} merged in cycle {}.",
 		total_dispatches,
 		next_resolved,
 		next_in_flight,
@@ -253,22 +253,11 @@ fn commit_state_json(repo_root: &Path, prs: &[u64], current_cycle: u64) -> Resul
 		return Err(format!("git add docs/state.json failed: {}", stderr));
 	}
 
-	let commit_message = if prs.len() == 1 {
-		format!(
-			"state(process-merge): PR #{} merged [cycle {}]",
-			prs[0], current_cycle
-		)
-	} else {
-		let merged_list = prs
-			.iter()
-			.map(|pr| format!("#{}", pr))
-			.collect::<Vec<_>>()
-			.join(", ");
-		format!(
-			"state(process-merge): PRs {} merged [cycle {}]",
-			merged_list, current_cycle
-		)
-	};
+	let commit_message = format!(
+		"state(process-merge): {} merged [cycle {}]",
+		format_pr_list(prs),
+		current_cycle
+	);
 
 	let commit_output = Command::new("git")
 		.arg("-C")
@@ -353,7 +342,9 @@ mod tests {
 		assert_eq!(update.in_flight, 2);
 		assert_eq!(update.pr_merge_rate, "81/84");
 		assert_eq!(update.dispatch_to_pr_rate, "84/85");
-		assert!(update.note.contains("PR #595 merged cycle 164."));
+		assert!(update.note.contains("85 dispatches, 83 resolved, 2 in-flight."));
+		assert!(update.note.contains("84 produced PRs (81 merged, 1 closed without merge)."));
+		assert!(update.note.contains("PR #595 merged in cycle 164."));
 	}
 
 	#[test]
@@ -366,7 +357,9 @@ mod tests {
 		assert_eq!(update.in_flight, 0);
 		assert_eq!(update.pr_merge_rate, "83/84");
 		assert_eq!(update.dispatch_to_pr_rate, "84/85");
-		assert!(update.note.contains("PRs #595, #597, #599 merged cycle 164."));
+		assert!(update.note.contains("85 dispatches, 85 resolved, 0 in-flight."));
+		assert!(update.note.contains("84 produced PRs (83 merged, 1 closed without merge)."));
+		assert!(update.note.contains("PRs #595, #597, #599 merged in cycle 164."));
 		assert!(update.note.ends_with("Merged as planned."));
 	}
 
