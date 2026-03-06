@@ -1,5 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-CARGO_DIR="$SCRIPT_DIR/rust"
-cargo run --quiet --manifest-path "$CARGO_DIR/Cargo.toml" -p write-entry -- "$@"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+BINARY="$SCRIPT_DIR/rust/target/release/write-entry"
+
+if [ ! -x "$BINARY" ]; then
+	echo "Pre-built binary not found, building..." >&2
+	cargo build --release --manifest-path "$SCRIPT_DIR/rust/Cargo.toml" -p write-entry >&2
+fi
+
+for arg in "$@"; do
+	case "$arg" in
+		--repo-root|--repo-root=*)
+			exec "$BINARY" "$@"
+			;;
+	esac
+done
+
+exec "$BINARY" --repo-root "$REPO_ROOT" "$@"
