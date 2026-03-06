@@ -631,16 +631,16 @@
   "copilot_metrics": {
     "closed_without_merge": 1,
     "closed_without_pr": 4,
-    "dispatch_log_latest": "#607 process-merge, #608 record-dispatch, #611 c165 review (cycle 165)",
-    "dispatch_to_pr_rate": "81/85",
-    "in_flight": 3,
-    "merged": 80,
-    "note": "88 dispatches, 85 resolved (80 merged, 1 closed-no-merge, 4 failed-no-PR), 3 in-flight (#607, #608, #611). gpt-5.4 dispatches #602-#604 failed with ruleset violation. Re-dispatched with gpt-5.3-codex. Filed #606.",
-    "pr_merge_rate": "80/81",
-    "produced_pr": 81,
-    "resolved": 85,
+    "dispatch_log_latest": "#614 process-audit (cycle 166)",
+    "dispatch_to_pr_rate": "84/89",
+    "in_flight": 1,
+    "merged": 83,
+    "note": "89 dispatches, 88 resolved (83 merged, 1 closed-no-merge, 4 failed-no-PR), 1 in-flight (#614). Merged #612 (review), #610 (record-dispatch), #609 (process-merge). Dispatched #614 (process-audit).",
+    "pr_merge_rate": "83/84",
+    "produced_pr": 84,
+    "resolved": 88,
     "revision_rounds": 5,
-    "total_dispatches": 88
+    "total_dispatches": 89
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
