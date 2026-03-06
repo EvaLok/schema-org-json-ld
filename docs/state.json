@@ -956,9 +956,9 @@
     ]
   },
   "copilot_metrics": {
-    "total_dispatches": 73,
+    "total_dispatches": 74,
     "resolved": 72,
-    "in_flight": 2,
+    "in_flight": 3,
     "produced_pr": 71,
     "merged": 70,
     "closed_without_merge": 1,
@@ -966,8 +966,8 @@
     "revision_rounds": 5,
     "dispatch_to_pr_rate": "71/72",
     "pr_merge_rate": "70/71",
-    "note": "73 dispatches, 72 resolved, 2 in-flight (#572 state-invariants extension, #574 tiered field inventory). 71 produced PRs (70 merged, 1 closed without merge). 1 resolved without PR (silent failure).",
-    "dispatch_log_latest": "#572 state-invariants extension, #574 tiered field inventory (cycle 159)"
+    "note": "74 dispatches, 72 resolved, 3 in-flight (#572 state-invariants extension, #574 tiered field inventory, #576 cycle 159 review). 71 produced PRs (70 merged, 1 closed without merge). 1 resolved without PR (silent failure).",
+    "dispatch_log_latest": "#572 state-invariants, #574 tiered inventory, #576 cycle 159 review (cycle 159)"
   },
   "last_cycle": {
     "number": 159,
@@ -1165,6 +1165,16 @@
         "deferred": 1,
         "ignored": 0,
         "note": "Corrected from actioned=4 to actioned=3 per cycle 158 review finding 5. Three concrete actions: copilot_metrics fix, #566 dispatch, field inventory refresh. Remaining 3 findings were informational (verified correct, no change needed)."
+      },
+      {
+        "cycle": 158,
+        "finding_count": 7,
+        "complacency_score": 3,
+        "categories": ["receipt-accuracy", "field-sweep-evidence", "commit-verification", "copilot-metrics-consistency", "review-accounting", "journal-quality", "publish-gate-accuracy"],
+        "actioned": 3,
+        "deferred": 1,
+        "ignored": 0,
+        "note": "Three actions: corrected c157 actioned count, dispatched #572 (state-invariants per rec 3), dispatched #574 (tiered inventory per rec 2). Deferred: receipt wording precision (behavioral). 3 positive/informational findings."
       }
     ]
   },
@@ -1174,15 +1184,15 @@
       "test_count": {"cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)", "last_refreshed": "cycle 158"},
       "typescript_stats": {"cadence": "every merge that adds/removes TS files", "last_refreshed": "cycle 158"},
       "phpstan_level": {"cadence": "after PHPStan config changes", "last_refreshed": "cycle 158"},
-      "copilot_metrics.in_flight": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 157"},
-      "copilot_metrics.dispatch_to_pr_rate": {"cadence": "after new dispatches", "last_refreshed": "cycle 157"},
-      "copilot_metrics.pr_merge_rate": {"cadence": "after PR merges", "last_refreshed": "cycle 157"},
-      "last_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 157"},
-      "last_eva_comment_check": {"cadence": "every cycle (checked even when no comments found)", "last_refreshed": "cycle 157"},
+      "copilot_metrics.in_flight": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 159"},
+      "copilot_metrics.dispatch_to_pr_rate": {"cadence": "after new dispatches", "last_refreshed": "cycle 159"},
+      "copilot_metrics.pr_merge_rate": {"cadence": "after PR merges", "last_refreshed": "cycle 159"},
+      "last_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 159"},
+      "last_eva_comment_check": {"cadence": "every cycle (checked even when no comments found)", "last_refreshed": "cycle 159"},
       "qc_status": {"cadence": "after QC interactions", "last_refreshed": "cycle 158"},
       "blockers": {"cadence": "after blocker state changes", "last_refreshed": "cycle 158"},
       "qc_processed": {"cadence": "after processing QC issues", "last_refreshed": "cycle 158"},
-      "audit_processed": {"cadence": "after processing audit issues", "last_refreshed": "cycle 157"},
+      "audit_processed": {"cadence": "after processing audit issues", "last_refreshed": "cycle 159"},
       "next_metric_verification": {"cadence": "after each verification run", "last_refreshed": "cycle 158"},
       "type_classification": {"cadence": "after schema class additions/reclassifications", "last_refreshed": "cycle 158"},
       "total_schema_classes": {"cadence": "after schema class additions", "last_refreshed": "cycle 158"},
@@ -1202,10 +1212,10 @@
       "schema_status.property_gap_audit": {"cadence": "after property gap fixes", "last_refreshed": "cycle 158"},
       "schema_status.phpstan_max_assessment": {"cadence": "after PHPStan config or fix changes", "last_refreshed": "cycle 158"},
       "typescript_plan.status": {"cadence": "after plan phase transitions", "last_refreshed": "cycle 158"},
-      "eva_input_issues.closed_this_cycle": {"cadence": "every cycle (reset even when no closures)", "last_refreshed": "cycle 157"},
+      "eva_input_issues.closed_this_cycle": {"cadence": "every cycle (reset even when no closures)", "last_refreshed": "cycle 159"},
       "tool_pipeline": {"cadence": "after pipeline phase transitions", "last_refreshed": "cycle 158"},
-      "review_agent": {"cadence": "every cycle (updated when consuming review findings)", "last_refreshed": "cycle 157"},
-      "publish_gate": {"cadence": "every cycle when set (divergence check)", "last_refreshed": "cycle 157"}
+      "review_agent": {"cadence": "every cycle (updated when consuming review findings)", "last_refreshed": "cycle 159"},
+      "publish_gate": {"cadence": "every cycle when set (divergence check)", "last_refreshed": "cycle 159"}
     }
   }
 }
