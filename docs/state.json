@@ -920,17 +920,17 @@
     ]
   },
   "copilot_metrics": {
-    "total_dispatches": 65,
+    "total_dispatches": 66,
     "resolved": 64,
-    "in_flight": 1,
+    "in_flight": 2,
     "produced_pr": 63,
     "merged": 62,
     "closed_without_merge": 1,
     "revision_rounds": 5,
     "dispatch_to_pr_rate": "63/64",
     "pr_merge_rate": "62/63",
-    "note": "65 dispatches, 64 resolved, 1 in-flight (#548 write-entry tool). 63 produced PRs (62 merged, 1 closed without merge).",
-    "dispatch_log_latest": "#548 write-entry tool for Eva #546 (cycle 154)"
+    "note": "66 dispatches, 64 resolved, 2 in-flight (#548 write-entry tool, #550 cycle-154 review). 63 produced PRs (62 merged, 1 closed without merge).",
+    "dispatch_log_latest": "#550 cycle-154 review agent (cycle 154)"
   },
   "last_cycle": {
     "number": 154,
