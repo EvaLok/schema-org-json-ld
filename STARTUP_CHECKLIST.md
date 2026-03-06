@@ -245,6 +245,17 @@ For each unprocessed recommendation (check against `audit_processed` array in `d
 
 **Note**: The main orchestrator does NOT have write access to the audit repo. All responses go via `audit-inbound` issues on THIS repo. The audit orchestrator discovers responses by polling this repo's `audit-inbound` issues. See `.claude/skills/cross-repo-communication.md` for the full protocol.
 
+### Accepted-audit staleness enforcement (per review cycle 153)
+
+After processing new audit issues, check whether any previously **accepted** audit recommendations remain **undispatched for 5+ cycles**. Compare the cycle the audit was accepted (noted in the corresponding `audit-inbound` issue or worklog) against the current cycle number.
+
+If a recommendation has been accepted but not implemented after 5 cycles:
+1. **Escalate immediately**: either dispatch the implementation this cycle or create a `question-for-eva` issue explaining why it's blocked
+2. **Log the staleness** in the worklog with the audit issue number and accepted-cycle
+3. Do NOT silently defer — the 10-cycle gap on audit #104 (caught by audit #117) is the cautionary example
+
+This check is mechanical: scan `audit_processed` entries, cross-reference with `audit-inbound` issues that claim "accepted," and verify each has a corresponding dispatch or completed implementation.
+
 ## 5.5. New-language prerequisite gate
 
 Before dispatching the **first agent session** for a new language (e.g., TypeScript, Python), verify ALL of the following are in place:
