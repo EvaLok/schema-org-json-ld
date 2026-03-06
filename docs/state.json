@@ -964,7 +964,7 @@
   },
   "review_agent": {
     "description": "Programmatic tracking of review agent findings for trend detection. Per audit #102.",
-    "last_review_cycle": 152,
+    "last_review_cycle": 153,
     "history": [
       {
         "cycle": 140,
