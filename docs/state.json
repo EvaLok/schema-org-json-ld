@@ -875,7 +875,7 @@
     "validated_at": "2026-03-06T04:39Z",
     "qc_ack": "EvaLok/schema-org-json-ld-qc#225",
     "source_diverged": false,
-    "last_divergence_check": "cycle 159",
+    "last_divergence_check": "cycle 160",
     "note": "QC-ACK #225 cleared v1.0.1 at ea8ffff for npm publish. 73/73 parity, E2E, build, tarball tests all pass. No package-affecting source divergence since validation."
   },
   "blockers": [
@@ -956,24 +956,24 @@
     ]
   },
   "copilot_metrics": {
-    "total_dispatches": 74,
-    "resolved": 72,
-    "in_flight": 3,
-    "produced_pr": 71,
-    "merged": 70,
+    "total_dispatches": 75,
+    "resolved": 75,
+    "in_flight": 0,
+    "produced_pr": 74,
+    "merged": 73,
     "closed_without_merge": 1,
     "closed_without_pr": 1,
     "revision_rounds": 5,
-    "dispatch_to_pr_rate": "71/72",
-    "pr_merge_rate": "70/71",
-    "note": "74 dispatches, 72 resolved, 3 in-flight (#572 state-invariants extension, #574 tiered field inventory, #576 cycle 159 review). 71 produced PRs (70 merged, 1 closed without merge). 1 resolved without PR (silent failure).",
-    "dispatch_log_latest": "#572 state-invariants, #574 tiered inventory, #576 cycle 159 review (cycle 159)"
+    "dispatch_to_pr_rate": "74/75",
+    "pr_merge_rate": "73/74",
+    "note": "75 dispatches, 75 resolved, 0 in-flight. 74 produced PRs (73 merged, 1 closed without merge). 1 resolved without PR (silent failure). Cycle 160 merged #573 (state-invariants), #575 (tiered inventory), #577 (review report).",
+    "dispatch_log_latest": "#573 state-invariants merged, #575 tiered inventory merged, #577 review report merged (cycle 160)"
   },
   "last_cycle": {
-    "number": 159,
-    "issue": 570,
-    "timestamp": "2026-03-06T12:09:00Z",
-    "summary": "Cycle 159: Consumed cycle 158 review (3/5, 7 findings). Merged PRs #567 (write-entry fix) and #569 (review report). Accepted audit #122 (chronic category detection). Added STARTUP_CHECKLIST step 0.5.8. Corrected cycle 157 actioned count. Dispatched #572 (state-invariants extension) and #574 (tiered field inventory). Audit sign-off #562 pending (2/3 cycles)."
+    "number": 160,
+    "issue": 578,
+    "timestamp": "2026-03-06T13:48:00Z",
+    "summary": "Cycle 160: Merged 3 PRs (#573 state-invariants extension, #575 tiered field inventory, #577 cycle 159 review report). Fixed copilot_metrics arithmetic (total_dispatches 74->75). Fixed review_agent.history ignored counts for 14 entries. Escalated audit sign-off #562 timeout to Eva (#579). Pipeline 5/5, invariants 8/8."
   },
   "last_eva_comment_check": "2026-03-06T12:09:00Z",
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71, 73, 75, 76, 78, 80, 82, 83, 85, 87, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 110, 111, 113, 114, 116, 117, 120, 122],
@@ -1001,7 +1001,7 @@
   },
   "review_agent": {
     "description": "Programmatic tracking of review agent findings for trend detection. Per audit #102.",
-    "last_review_cycle": 158,
+    "last_review_cycle": 159,
     "history": [
       {
         "cycle": 140,
@@ -1037,7 +1037,7 @@
         "categories": ["process-improvement", "state-consistency", "state-freshness", "journal-quality"],
         "actioned": 3,
         "deferred": 1,
-        "ignored": 0
+        "ignored": 2
       },
       {
         "cycle": 144,
@@ -1064,7 +1064,7 @@
         "categories": ["code-quality", "state-consistency", "state-freshness", "process-improvement"],
         "actioned": 4,
         "deferred": 0,
-        "ignored": 0
+        "ignored": 3
       },
       {
         "cycle": 147,
@@ -1073,7 +1073,7 @@
         "categories": ["state-freshness", "state-consistency", "process-improvement", "verification-evidence"],
         "actioned": 4,
         "deferred": 0,
-        "ignored": 0
+        "ignored": 9
       },
       {
         "cycle": 148,
@@ -1082,7 +1082,7 @@
         "categories": ["state-freshness", "state-consistency", "tool-quality", "integration-quality"],
         "actioned": 3,
         "deferred": 0,
-        "ignored": 0
+        "ignored": 7
       },
       {
         "cycle": 149,
@@ -1091,7 +1091,7 @@
         "categories": ["state-consistency", "state-freshness", "tool-quality"],
         "actioned": 2,
         "deferred": 3,
-        "ignored": 0
+        "ignored": 5
       },
       {
         "cycle": 150,
@@ -1100,7 +1100,7 @@
         "categories": ["state-freshness", "state-consistency", "verification-evidence"],
         "actioned": 3,
         "deferred": 1,
-        "ignored": 0
+        "ignored": 5
       },
       {
         "cycle": 151,
@@ -1109,7 +1109,7 @@
         "categories": ["test-coverage", "documentation-drift", "state-consistency"],
         "actioned": 2,
         "deferred": 2,
-        "ignored": 0
+        "ignored": 4
       },
       {
         "cycle": 152,
@@ -1118,7 +1118,7 @@
         "categories": ["state-consistency", "process-improvement", "verification-evidence"],
         "actioned": 4,
         "deferred": 0,
-        "ignored": 0
+        "ignored": 6
       },
       {
         "cycle": 153,
@@ -1127,7 +1127,7 @@
         "categories": ["state-consistency", "process-follow-through", "field-freshness"],
         "actioned": 4,
         "deferred": 0,
-        "ignored": 0
+        "ignored": 6
       },
       {
         "cycle": 154,
@@ -1136,7 +1136,7 @@
         "categories": ["state-consistency", "process-follow-through", "timestamp-precision", "evidence-quality"],
         "actioned": 4,
         "deferred": 0,
-        "ignored": 0
+        "ignored": 6
       },
       {
         "cycle": 155,
@@ -1145,7 +1145,7 @@
         "categories": ["state-consistency", "pipeline-framing", "worklog-completeness", "journal-quality", "tool-usability", "process-evidence"],
         "actioned": 3,
         "deferred": 3,
-        "ignored": 0
+        "ignored": 3
       },
       {
         "cycle": 156,
@@ -1154,7 +1154,7 @@
         "categories": ["journal-accuracy", "tool-quality", "wrapper-testing", "verification-evidence"],
         "actioned": 3,
         "deferred": 1,
-        "ignored": 0
+        "ignored": 3
       },
       {
         "cycle": 157,
@@ -1163,7 +1163,7 @@
         "categories": ["publish-gate-accuracy", "copilot-metrics-transparency", "qc-ack-automation", "tool-quality", "journal-quality", "commit-receipts", "state-freshness"],
         "actioned": 3,
         "deferred": 1,
-        "ignored": 0,
+        "ignored": 3,
         "note": "Corrected from actioned=4 to actioned=3 per cycle 158 review finding 5. Three concrete actions: copilot_metrics fix, #566 dispatch, field inventory refresh. Remaining 3 findings were informational (verified correct, no change needed)."
       },
       {
@@ -1173,7 +1173,7 @@
         "categories": ["receipt-accuracy", "field-sweep-evidence", "commit-verification", "copilot-metrics-consistency", "review-accounting", "journal-quality", "publish-gate-accuracy"],
         "actioned": 3,
         "deferred": 1,
-        "ignored": 0,
+        "ignored": 3,
         "note": "Three actions: corrected c157 actioned count, dispatched #572 (state-invariants per rec 3), dispatched #574 (tiered inventory per rec 2). Deferred: receipt wording precision (behavioral). 3 positive/informational findings."
       }
     ]
@@ -1184,11 +1184,11 @@
       "test_count": {"cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)", "last_refreshed": "cycle 158"},
       "typescript_stats": {"cadence": "every merge that adds/removes TS files", "last_refreshed": "cycle 158"},
       "phpstan_level": {"cadence": "after PHPStan config changes", "last_refreshed": "cycle 158"},
-      "copilot_metrics.in_flight": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 159"},
-      "copilot_metrics.dispatch_to_pr_rate": {"cadence": "after new dispatches", "last_refreshed": "cycle 159"},
-      "copilot_metrics.pr_merge_rate": {"cadence": "after PR merges", "last_refreshed": "cycle 159"},
-      "last_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 159"},
-      "last_eva_comment_check": {"cadence": "every cycle (checked even when no comments found)", "last_refreshed": "cycle 159"},
+      "copilot_metrics.in_flight": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 160"},
+      "copilot_metrics.dispatch_to_pr_rate": {"cadence": "after new dispatches", "last_refreshed": "cycle 160"},
+      "copilot_metrics.pr_merge_rate": {"cadence": "after PR merges", "last_refreshed": "cycle 160"},
+      "last_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 160"},
+      "last_eva_comment_check": {"cadence": "every cycle (checked even when no comments found)", "last_refreshed": "cycle 160"},
       "qc_status": {"cadence": "after QC interactions", "last_refreshed": "cycle 158"},
       "blockers": {"cadence": "after blocker state changes", "last_refreshed": "cycle 158"},
       "qc_processed": {"cadence": "after processing QC issues", "last_refreshed": "cycle 158"},
@@ -1205,17 +1205,17 @@
       "total_schema_types": {"cadence": "after schema type additions", "last_refreshed": "cycle 158"},
       "total_sub_types": {"cadence": "after sub-type additions", "last_refreshed": "cycle 158"},
       "total_testable_types_note": {"cadence": "after classification changes", "last_refreshed": "cycle 158"},
-      "open_questions_for_eva": {"cadence": "after question creation or resolution", "last_refreshed": "cycle 158"},
+      "open_questions_for_eva": {"cadence": "after question creation or resolution", "last_refreshed": "cycle 160"},
       "schema_status.planned_next": {"cadence": "after planning or completing types", "last_refreshed": "cycle 158"},
       "schema_status.google_rich_results_types": {"cadence": "after Google gallery changes or new implementations", "last_refreshed": "cycle 158"},
       "schema_status.remaining_audit_findings": {"cadence": "after property gap fixes", "last_refreshed": "cycle 158"},
       "schema_status.property_gap_audit": {"cadence": "after property gap fixes", "last_refreshed": "cycle 158"},
       "schema_status.phpstan_max_assessment": {"cadence": "after PHPStan config or fix changes", "last_refreshed": "cycle 158"},
       "typescript_plan.status": {"cadence": "after plan phase transitions", "last_refreshed": "cycle 158"},
-      "eva_input_issues.closed_this_cycle": {"cadence": "every cycle (reset even when no closures)", "last_refreshed": "cycle 159"},
+      "eva_input_issues.closed_this_cycle": {"cadence": "every cycle (reset even when no closures)", "last_refreshed": "cycle 160"},
       "tool_pipeline": {"cadence": "after pipeline phase transitions", "last_refreshed": "cycle 158"},
-      "review_agent": {"cadence": "every cycle (updated when consuming review findings)", "last_refreshed": "cycle 159"},
-      "publish_gate": {"cadence": "every cycle when set (divergence check)", "last_refreshed": "cycle 159"}
+      "review_agent": {"cadence": "every cycle (updated when consuming review findings)", "last_refreshed": "cycle 160"},
+      "publish_gate": {"cadence": "every cycle when set (divergence check)", "last_refreshed": "cycle 160"}
     }
   }
 }
