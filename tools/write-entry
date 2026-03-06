@@ -10,12 +10,20 @@ if [ ! -x "$BINARY" ]; then
 	cargo build --release --manifest-path "$SCRIPT_DIR/rust/Cargo.toml" -p write-entry >&2
 fi
 
+has_repo_root=false
 for arg in "$@"; do
 	case "$arg" in
 		--repo-root|--repo-root=*)
-			exec "$BINARY" "$@"
+			has_repo_root=true
 			;;
 	esac
 done
 
-exec "$BINARY" --repo-root "$REPO_ROOT" "$@"
+if [ "$has_repo_root" = true ]; then
+	exec "$BINARY" "$@"
+fi
+
+# Insert --repo-root after the subcommand (first positional arg)
+subcommand="$1"
+shift
+exec "$BINARY" "$subcommand" --repo-root "$REPO_ROOT" "$@"
