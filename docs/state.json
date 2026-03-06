@@ -759,7 +759,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 164"
+        "last_refreshed": "cycle 165"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -847,7 +847,9 @@
   },
   "last_eva_comment_check": "2026-03-06T22:43:00Z",
   "next_metric_verification": "cycle 151",
-  "open_questions_for_eva": [606],
+  "open_questions_for_eva": [
+    606
+  ],
   "publish_gate": {
     "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z — all gates satisfied",
     "last_divergence_check": "cycle 164",
@@ -1262,9 +1264,24 @@
         "finding_count": 5,
         "ignored": 3,
         "note": "Findings 1,3,4 confirmatory (low sev). Finding 2 (freshness) actioned. Finding 5 (traceability) actioned via atomic cycle-close improvements."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "dispatch-risk-management",
+          "metrics-taxonomy",
+          "process-review-correctness",
+          "state-math-consistency",
+          "state-traceability"
+        ],
+        "complacency_score": 3,
+        "cycle": 165,
+        "deferred": 0,
+        "finding_count": 5,
+        "ignored": 0
       }
     ],
-    "last_review_cycle": 163
+    "last_review_cycle": 165
   },
   "schema_status": {
     "directory_layout": {
