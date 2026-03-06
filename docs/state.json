@@ -842,7 +842,7 @@
   "last_cycle": {
     "issue": 601,
     "number": 164,
-    "summary": "Cycle 164: In progress.",
+    "summary": "Cycle 164: Merged PRs #595 (cycle-start), #597 (process-review), #599 (c163 review, score 3/5). Closed Eva #600 (gpt-5.4 model update). Dispatched #602 (process-merge) and #603 (record-dispatch) — first gpt-5.4 dispatches. Copilot metrics: 84 dispatches, 80 merged.",
     "timestamp": "2026-03-06T19:43:00Z"
   },
   "last_eva_comment_check": "2026-03-06T19:43:00Z",
