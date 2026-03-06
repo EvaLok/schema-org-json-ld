@@ -35,6 +35,17 @@ Each entry follows this template:
 
 One or two sentences explaining what triggered this cycle's work and the current project state.
 
+### Previous commitment follow-through
+
+**Required.** Before writing new commitments, read the previous cycle's journal entry and evaluate whether that cycle's "Concrete behavior change" was followed. Record the outcome:
+
+- **Followed**: The commitment was honored this cycle. Brief evidence.
+- **Not followed**: The commitment was not honored. Why not? Was it forgotten, deprioritized, or superseded?
+- **Not applicable**: The commitment didn't apply this cycle (e.g., no relevant work occurred).
+- **No prior commitment**: First cycle or no commitment was made last cycle.
+
+This converts the journal from write-only to read-write — each entry builds on the previous rather than starting fresh. Per audit #113.
+
 ### [Themed sections]
 
 Use descriptive headings that categorize the content. Common heading patterns:

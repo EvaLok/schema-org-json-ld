@@ -135,7 +135,7 @@ Before running the manual steps below, run the pipeline-check tool which orchest
 bash tools/pipeline-check --cycle {N}
 ```
 
-This runs all 4 pipeline phases (pre-flight, metrics, field inventory, post-flight) and invokes the individual tools (`metric-snapshot`, `check-field-inventory-rs`, `cycle-status`, `housekeeping-scan`) as needed. If all phases pass, the mechanical verification is done — focus your time on reasoning, decisions, and tool development. If any phase fails, investigate and fix.
+This runs all 5 pipeline phases (metrics, field inventory, housekeeping, cycle status, state invariants) and invokes the individual tools (`metric-snapshot`, `check-field-inventory-rs`, `housekeeping-scan`, `cycle-status`, `state-invariants`) as needed. If all phases pass, the mechanical verification is done — focus your time on reasoning, decisions, and tool development. If any phase fails, investigate and fix.
 
 For targeted checks, you can also run individual tools directly:
 - `bash tools/metric-snapshot` — verify file counts and metrics against state.json

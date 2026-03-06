@@ -66,6 +66,7 @@ enum ToolKind {
     FieldInventory,
     HousekeepingScan,
     CycleStatus,
+    StateInvariants,
 }
 
 struct ExecutionResult {
@@ -158,6 +159,17 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
                 repo_root.display().to_string(),
             ],
             kind: ToolKind::CycleStatus,
+        },
+        ToolSpec {
+            display_name: "state-invariants",
+            wrapper_relative_path: "tools/state-invariants",
+            binary_relative_path: "tools/rust/target/release/state-invariants",
+            args: vec![
+                "--json".to_string(),
+                "--repo-root".to_string(),
+                repo_root.display().to_string(),
+            ],
+            kind: ToolKind::StateInvariants,
         },
     ];
 
@@ -277,6 +289,27 @@ fn classify_step(name: &'static str, kind: &ToolKind, execution: ExecutionResult
                     .unwrap_or(0);
                 step.findings = Some(findings);
                 step.detail = Some(format!("{} findings", findings));
+            } else {
+                step.status = StepStatus::Error;
+                step.detail = Some(format!("invalid JSON output from {}", name));
+            }
+        }
+        ToolKind::StateInvariants => {
+            if let Some(parsed) = parse_json(&execution.stdout) {
+                step.status = match execution.exit_code {
+                    Some(0) => StepStatus::Pass,
+                    Some(1) => StepStatus::Fail,
+                    _ => StepStatus::Error,
+                };
+                let passed = parsed
+                    .get("passed")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(0);
+                let failed = parsed
+                    .get("failed")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(0);
+                step.detail = Some(format!("{}/{} invariants pass", passed, passed + failed));
             } else {
                 step.status = StepStatus::Error;
                 step.detail = Some(format!("invalid JSON output from {}", name));
