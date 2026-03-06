@@ -2,6 +2,7 @@ use clap::Parser;
 use serde::Serialize;
 use serde_json::Value;
 use state_schema::StateJson;
+use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -80,6 +81,9 @@ fn run_checks(state: &StateJson) -> Report {
     let checks = vec![
         check_review_agent_pointer(state),
         check_copilot_metrics_math(state),
+        check_review_history_accounting(state),
+        check_review_history_categories(state),
+        check_copilot_metrics_rates(state),
         check_blockers_narrative(state),
         check_publish_gate_consistency(state),
         check_last_cycle_consistency(state),
@@ -218,25 +222,6 @@ fn check_copilot_metrics_math(state: &StateJson) -> CheckResult {
             )
         }
     };
-    let dispatch_to_pr_rate = match state.copilot_metrics.dispatch_to_pr_rate.as_ref() {
-        Some(value) => value,
-        None => {
-            return warn(
-                "copilot_metrics_math",
-                "missing field: copilot_metrics.dispatch_to_pr_rate",
-            )
-        }
-    };
-    let pr_merge_rate = match state.copilot_metrics.pr_merge_rate.as_ref() {
-        Some(value) => value,
-        None => {
-            return warn(
-                "copilot_metrics_math",
-                "missing field: copilot_metrics.pr_merge_rate",
-            )
-        }
-    };
-
     let mut failures = Vec::new();
     for (name, value) in [
         ("total_dispatches", total_dispatches),
@@ -265,6 +250,223 @@ fn check_copilot_metrics_math(state: &StateJson) -> CheckResult {
         ));
     }
 
+    if failures.is_empty() {
+        pass("copilot_metrics_math")
+    } else {
+        fail("copilot_metrics_math", failures.join("; "))
+    }
+}
+
+fn check_review_history_accounting(state: &StateJson) -> CheckResult {
+    let history = match get_review_history(state) {
+        Some(value) => value,
+        None => {
+            return warn(
+                "review_history_accounting",
+                "missing field: review_agent.history",
+            )
+        }
+    };
+
+    let mut failures = Vec::new();
+    for (index, entry) in history.iter().enumerate() {
+        let finding_count = match entry.get("finding_count").and_then(Value::as_i64) {
+            Some(value) => value,
+            None => {
+                return warn(
+                    "review_history_accounting",
+                    format!("missing field: review_agent.history[{}].finding_count", index),
+                )
+            }
+        };
+        let actioned = match entry.get("actioned").and_then(Value::as_i64) {
+            Some(value) => value,
+            None => {
+                return warn(
+                    "review_history_accounting",
+                    format!("missing field: review_agent.history[{}].actioned", index),
+                )
+            }
+        };
+        let deferred = match entry.get("deferred").and_then(Value::as_i64) {
+            Some(value) => value,
+            None => {
+                return warn(
+                    "review_history_accounting",
+                    format!("missing field: review_agent.history[{}].deferred", index),
+                )
+            }
+        };
+        let ignored = match entry.get("ignored").and_then(Value::as_i64) {
+            Some(value) => value,
+            None => {
+                return warn(
+                    "review_history_accounting",
+                    format!("missing field: review_agent.history[{}].ignored", index),
+                )
+            }
+        };
+        let complacency_score = match entry.get("complacency_score").and_then(Value::as_i64) {
+            Some(value) => value,
+            None => {
+                return warn(
+                    "review_history_accounting",
+                    format!(
+                        "missing field: review_agent.history[{}].complacency_score",
+                        index
+                    ),
+                )
+            }
+        };
+
+        if finding_count <= 0 {
+            failures.push(format!(
+                "review_agent.history[{}].finding_count({}) must be > 0",
+                index, finding_count
+            ));
+        }
+
+        let accounted = actioned + deferred + ignored;
+        if accounted != finding_count {
+            failures.push(format!(
+                "review_agent.history[{}] actioned({}) + deferred({}) + ignored({}) != finding_count({})",
+                index, actioned, deferred, ignored, finding_count
+            ));
+        }
+
+        if !(1..=5).contains(&complacency_score) {
+            failures.push(format!(
+                "review_agent.history[{}].complacency_score({}) must be between 1 and 5",
+                index, complacency_score
+            ));
+        }
+    }
+
+    if failures.is_empty() {
+        pass("review_history_accounting")
+    } else {
+        fail("review_history_accounting", failures.join("; "))
+    }
+}
+
+fn check_review_history_categories(state: &StateJson) -> CheckResult {
+    let history = match get_review_history(state) {
+        Some(value) => value,
+        None => {
+            return warn(
+                "review_history_categories",
+                "missing field: review_agent.history",
+            )
+        }
+    };
+
+    let mut failures = Vec::new();
+    for (entry_index, entry) in history.iter().enumerate() {
+        let categories = match entry.get("categories").and_then(Value::as_array) {
+            Some(value) => value,
+            None => {
+                failures.push(format!(
+                    "review_agent.history[{}].categories must be a non-empty array",
+                    entry_index
+                ));
+                continue;
+            }
+        };
+
+        if categories.is_empty() {
+            failures.push(format!(
+                "review_agent.history[{}].categories must be a non-empty array",
+                entry_index
+            ));
+            continue;
+        }
+
+        let mut seen = HashSet::new();
+        for (category_index, category) in categories.iter().enumerate() {
+            let category_text = match category.as_str() {
+                Some(value) => value.trim(),
+                None => {
+                    failures.push(format!(
+                        "review_agent.history[{}].categories[{}] must be a non-empty string",
+                        entry_index, category_index
+                    ));
+                    continue;
+                }
+            };
+
+            if category_text.is_empty() {
+                failures.push(format!(
+                    "review_agent.history[{}].categories[{}] must be a non-empty string",
+                    entry_index, category_index
+                ));
+                continue;
+            }
+
+            if !seen.insert(category_text.to_string()) {
+                failures.push(format!(
+                    "review_agent.history[{}].categories has duplicate value '{}'",
+                    entry_index, category_text
+                ));
+            }
+        }
+    }
+
+    if failures.is_empty() {
+        pass("review_history_categories")
+    } else {
+        fail("review_history_categories", failures.join("; "))
+    }
+}
+
+fn check_copilot_metrics_rates(state: &StateJson) -> CheckResult {
+    let resolved = match get_metric_i64(state, "resolved") {
+        Some(value) => value,
+        None => {
+            return warn(
+                "copilot_metrics_rates",
+                "missing field: copilot_metrics.resolved",
+            )
+        }
+    };
+    let produced_pr = match get_metric_i64(state, "produced_pr") {
+        Some(value) => value,
+        None => {
+            return warn(
+                "copilot_metrics_rates",
+                "missing field: copilot_metrics.produced_pr",
+            )
+        }
+    };
+    let merged = match get_metric_i64(state, "merged") {
+        Some(value) => value,
+        None => {
+            return warn(
+                "copilot_metrics_rates",
+                "missing field: copilot_metrics.merged",
+            )
+        }
+    };
+    let dispatch_to_pr_rate = match state.copilot_metrics.dispatch_to_pr_rate.as_ref() {
+        Some(value) => value,
+        None => {
+            return warn(
+                "copilot_metrics_rates",
+                "missing field: copilot_metrics.dispatch_to_pr_rate",
+            )
+        }
+    };
+    let pr_merge_rate = match state.copilot_metrics.pr_merge_rate.as_ref() {
+        Some(value) => value,
+        None => {
+            return warn(
+                "copilot_metrics_rates",
+                "missing field: copilot_metrics.pr_merge_rate",
+            )
+        }
+    };
+
+    let mut failures = Vec::new();
+
     match parse_rate(dispatch_to_pr_rate) {
         Some((n, m)) if n == produced_pr && m == resolved => {}
         Some((n, m)) => failures.push(format!(
@@ -290,9 +492,9 @@ fn check_copilot_metrics_math(state: &StateJson) -> CheckResult {
     }
 
     if failures.is_empty() {
-        pass("copilot_metrics_math")
+        pass("copilot_metrics_rates")
     } else {
-        fail("copilot_metrics_math", failures.join("; "))
+        fail("copilot_metrics_rates", failures.join("; "))
     }
 }
 
@@ -454,6 +656,14 @@ fn get_metric_i64(state: &StateJson, key: &str) -> Option<i64> {
     state.copilot_metrics.extra.get(key).and_then(Value::as_i64)
 }
 
+fn get_review_history(state: &StateJson) -> Option<&Vec<Value>> {
+    state
+        .extra
+        .get("review_agent")
+        .and_then(|value| value.get("history"))
+        .and_then(Value::as_array)
+}
+
 fn parse_rate(value: &str) -> Option<(i64, i64)> {
     let mut parts = value.split('/');
     let n = parts.next()?.parse::<i64>().ok()?;
@@ -495,6 +705,9 @@ fn print_human_report(report: &Report) {
     let labels = [
         ("review_agent_pointer", "review_agent pointer"),
         ("copilot_metrics_math", "copilot_metrics math"),
+        ("review_history_accounting", "review history accounting"),
+        ("review_history_categories", "review history categories"),
+        ("copilot_metrics_rates", "copilot_metrics rates"),
         ("blockers_narrative", "blockers narrative"),
         ("publish_gate_consistency", "publish_gate consistency"),
         ("last_cycle_consistency", "last_cycle consistency"),
@@ -576,7 +789,26 @@ mod tests {
             "field_inventory": {},
             "review_agent": {
                 "last_review_cycle": 10,
-                "history": [{"cycle": 9}, {"cycle": 10}]
+                "history": [
+                    {
+                        "cycle": 9,
+                        "finding_count": 3,
+                        "actioned": 1,
+                        "deferred": 1,
+                        "ignored": 1,
+                        "complacency_score": 3,
+                        "categories": ["state-consistency", "tooling"]
+                    },
+                    {
+                        "cycle": 10,
+                        "finding_count": 2,
+                        "actioned": 1,
+                        "deferred": 1,
+                        "ignored": 0,
+                        "complacency_score": 2,
+                        "categories": ["coverage"]
+                    }
+                ]
             },
             "publish_gate": {
                 "source_diverged": false
@@ -642,6 +874,66 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("produced_pr"));
+    }
+
+    #[test]
+    fn review_history_accounting_passes_for_valid_entries() {
+        let state = state_from_json(minimal_valid_state());
+        let check = check_review_history_accounting(&state);
+        assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn review_history_accounting_detects_totals_mismatch() {
+        let mut value = minimal_valid_state();
+        value["review_agent"]["history"][0]["actioned"] = json!(0);
+
+        let state = state_from_json(value);
+        let check = check_review_history_accounting(&state);
+        assert_eq!(check.status, CheckStatus::Fail);
+        assert!(check
+            .details
+            .as_deref()
+            .unwrap_or_default()
+            .contains("actioned"));
+    }
+
+    #[test]
+    fn review_history_categories_detects_duplicates() {
+        let mut value = minimal_valid_state();
+        value["review_agent"]["history"][0]["categories"] =
+            json!(["state-consistency", "state-consistency"]);
+
+        let state = state_from_json(value);
+        let check = check_review_history_categories(&state);
+        assert_eq!(check.status, CheckStatus::Fail);
+        assert!(check
+            .details
+            .as_deref()
+            .unwrap_or_default()
+            .contains("duplicate"));
+    }
+
+    #[test]
+    fn copilot_metrics_rates_passes_when_rates_match() {
+        let state = state_from_json(minimal_valid_state());
+        let check = check_copilot_metrics_rates(&state);
+        assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn copilot_metrics_rates_detects_mismatch() {
+        let mut value = minimal_valid_state();
+        value["copilot_metrics"]["dispatch_to_pr_rate"] = json!("3/3");
+
+        let state = state_from_json(value);
+        let check = check_copilot_metrics_rates(&state);
+        assert_eq!(check.status, CheckStatus::Fail);
+        assert!(check
+            .details
+            .as_deref()
+            .unwrap_or_default()
+            .contains("dispatch_to_pr_rate"));
     }
 
     #[test]
