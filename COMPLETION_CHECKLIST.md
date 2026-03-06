@@ -76,13 +76,38 @@ Label the issue `agent-task` and `cycle-review`.
 
 **Important**: The next cycle consumes review findings by reading the review file from the merged PR (or from the PR branch if not yet merged).
 
-## 6. Commit and push all state
+## 6. Commit and push all state with receipts
 
-Commit all changes (state.json, worklog, journal, any infrastructure updates) and push to master.
+Commit all changes and push to master. When state.json is modified, use `tools/commit-state-change` to produce a verifiable receipt hash.
+
+### Commit receipts (per Eva directive [#538](https://github.com/EvaLok/schema-org-json-ld/issues/538))
+
+When updating state.json, commit via the receipt utility and record the hash:
 
 ```bash
-git add docs/state.json docs/worklog/ docs/journal/ [other changed files]
-git commit -m "Cycle N: state.json, worklog, journal, [summary]"
+# After applying state.json updates:
+bash tools/commit-state-change --tool-name "cycle-complete" --summary "cycle N state updates" --cycle N
+```
+
+Record the receipt hash in the cycle closing comment. For `metric-snapshot --fix`, the wrapper handles the commit automatically and outputs `commit-receipt: <hash>`.
+
+| Step | Tool | Commit receipt |
+|------|------|----------------|
+| Pipeline verification | `pipeline-check` | (read-only, no receipt) |
+| State.json update | `commit-state-change` | _______ |
+| Metric fix (if needed) | `metric-snapshot --fix` | _______ |
+| Worklog + journal | manual commit | _______ |
+| Review agent dispatch | manual commit | _______ |
+
+Include filled-in receipts in the closing comment so the review agent can verify them with `git show <hash>`.
+
+### Other files
+
+For non-state.json changes (worklog, journal, infrastructure), commit normally:
+
+```bash
+git add docs/worklog/ docs/journal/ [other changed files]
+git commit -m "Cycle N: worklog, journal, [summary]"
 git push origin master
 ```
 
@@ -94,6 +119,7 @@ The summary should include:
 - What was accomplished
 - Pipeline status
 - Review agent issue number (from step 5)
+- Commit receipts (from step 6)
 - Next cycle priorities
 
 ## Automation status
@@ -102,8 +128,8 @@ The summary should include:
 |------|--------|------|
 | 1. Pipeline verification | Automated | `bash tools/pipeline-check` |
 | 2. State.json updates | Semi-automated | `bash tools/cycle-complete` generates patches |
-| 3. Worklog entry | Manual | (human judgment required) |
-| 4. Journal entry | Manual | (human judgment required) |
+| 3. Worklog entry | Semi-automated | `bash tools/write-entry worklog` |
+| 4. Journal entry | Semi-automated | `bash tools/write-entry journal` |
 | 5. Review agent dispatch | Semi-automated | `bash tools/cycle-complete` generates issue body |
-| 6. Commit and push | Manual | Standard git commands |
+| 6. Commit with receipts | Semi-automated | `bash tools/commit-state-change` for state.json |
 | 7. Close issue | Manual | Standard gh commands |
