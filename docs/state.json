@@ -956,9 +956,9 @@
     ]
   },
   "copilot_metrics": {
-    "total_dispatches": 75,
+    "total_dispatches": 76,
     "resolved": 75,
-    "in_flight": 0,
+    "in_flight": 1,
     "produced_pr": 74,
     "merged": 73,
     "closed_without_merge": 1,
@@ -966,8 +966,8 @@
     "revision_rounds": 5,
     "dispatch_to_pr_rate": "74/75",
     "pr_merge_rate": "73/74",
-    "note": "75 dispatches, 75 resolved, 0 in-flight. 74 produced PRs (73 merged, 1 closed without merge). 1 resolved without PR (silent failure). Cycle 160 merged #573 (state-invariants), #575 (tiered inventory), #577 (review report).",
-    "dispatch_log_latest": "#573 state-invariants merged, #575 tiered inventory merged, #577 review report merged (cycle 160)"
+    "note": "76 dispatches, 75 resolved, 1 in-flight (#580 cycle 160 review). 74 produced PRs (73 merged, 1 closed without merge). 1 resolved without PR (silent failure).",
+    "dispatch_log_latest": "#580 cycle 160 review (cycle 160)"
   },
   "last_cycle": {
     "number": 160,
