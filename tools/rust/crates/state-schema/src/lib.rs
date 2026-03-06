@@ -87,6 +87,28 @@ pub fn check_version(state: &StateJson) -> Result<(), String> {
     }
 }
 
+pub fn update_freshness(state: &mut Value, field_name: &str, cycle: u32) -> Result<(), String> {
+    let fields = state
+        .pointer_mut("/field_inventory/fields")
+        .and_then(Value::as_object_mut)
+        .ok_or_else(|| "missing object: field_inventory.fields".to_string())?;
+
+    let field_entry = fields
+        .get_mut(field_name)
+        .ok_or_else(|| format!("field_inventory entry not found: {}", field_name))?;
+
+    let field_obj = field_entry
+        .as_object_mut()
+        .ok_or_else(|| format!("field_inventory entry must be an object: {}", field_name))?;
+
+    field_obj.insert(
+        "last_refreshed".to_string(),
+        Value::String(format!("cycle {}", cycle)),
+    );
+
+    Ok(())
+}
+
 #[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(default, rename_all = "snake_case")]
 pub struct SchemaStatus {
@@ -267,4 +289,89 @@ pub struct QcStatus {
 pub struct Blockers {
     #[serde(flatten)]
     pub entries: BTreeMap<String, Value>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::update_freshness;
+    use serde_json::json;
+
+    #[test]
+    fn update_freshness_updates_existing_field() {
+        let mut state = json!({
+            "field_inventory": {
+                "fields": {
+                    "copilot_metrics": {
+                        "cadence": "every cycle",
+                        "last_refreshed": "cycle 120"
+                    }
+                }
+            }
+        });
+
+        update_freshness(&mut state, "copilot_metrics", 153).expect("update should succeed");
+        assert_eq!(
+            state
+                .pointer("/field_inventory/fields/copilot_metrics/last_refreshed")
+                .and_then(|value| value.as_str()),
+            Some("cycle 153")
+        );
+    }
+
+    #[test]
+    fn update_freshness_returns_error_for_missing_field() {
+        let mut state = json!({
+            "field_inventory": {
+                "fields": {}
+            }
+        });
+
+        let error = update_freshness(&mut state, "total_enums", 153).expect_err("must fail");
+        assert!(error.contains("field_inventory entry not found"));
+    }
+
+    #[test]
+    fn update_freshness_uses_cycle_marker_format() {
+        let mut state = json!({
+            "field_inventory": {
+                "fields": {
+                    "test_count": {
+                        "cadence": "every merge",
+                        "last_refreshed": "cycle 120"
+                    }
+                }
+            }
+        });
+
+        update_freshness(&mut state, "test_count", 153).expect("update should succeed");
+        assert_eq!(
+            state
+                .pointer("/field_inventory/fields/test_count/last_refreshed")
+                .and_then(|value| value.as_str()),
+            Some("cycle 153")
+        );
+    }
+
+    #[test]
+    fn update_freshness_supports_dotted_field_names() {
+        let mut state = json!({
+            "field_inventory": {
+                "fields": {
+                    "schema_status.typescript_stats": {
+                        "cadence": "every cycle",
+                        "last_refreshed": "cycle 120"
+                    }
+                }
+            }
+        });
+
+        update_freshness(&mut state, "schema_status.typescript_stats", 153)
+            .expect("update should succeed");
+        assert_eq!(
+            state
+                .pointer("/field_inventory/fields/schema_status.typescript_stats/last_refreshed")
+                .and_then(|value| value.as_str()),
+            Some("cycle 153")
+        );
+    }
 }

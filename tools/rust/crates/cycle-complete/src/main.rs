@@ -3,6 +3,7 @@ use clap::Parser;
 use serde::Serialize;
 use serde_json::{json, Value};
 use state_schema::StateJson;
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -113,7 +114,7 @@ fn assemble_report(
 ) -> CompletionReport {
     let timestamp = format_timestamp(now);
     let pipeline_check = validate_pipeline_check(state, cycle);
-    let state_json_patch = build_state_patch(cycle, issue, &timestamp);
+    let state_json_patch = build_state_patch(cycle, issue, &timestamp, state);
     let review_agent_body = build_review_agent_body(cycle, issue, now);
     let completion_steps = build_completion_steps(&pipeline_check, &state_json_patch);
 
@@ -164,36 +165,80 @@ fn text_mentions_cycle(text: &str, cycle: u64) -> bool {
         .any(|number| number == cycle)
 }
 
-fn build_state_patch(cycle: u64, issue: u64, timestamp: &str) -> StatePatch {
-    let cycle_marker = format!("cycle {}", cycle);
-    StatePatch {
-        updates: vec![
-            PatchUpdate {
-                path: "/last_cycle/issue".to_string(),
-                value: json!(issue),
-            },
-            PatchUpdate {
-                path: "/last_cycle/timestamp".to_string(),
-                value: json!(timestamp),
-            },
-            PatchUpdate {
-                path: "/last_cycle/summary".to_string(),
-                value: json!("TODO: Fill cycle summary."),
-            },
-            PatchUpdate {
-                path: "/last_eva_comment_check".to_string(),
-                value: json!(timestamp),
-            },
-            PatchUpdate {
-                path: "/field_inventory/fields/last_cycle/last_refreshed".to_string(),
-                value: json!(cycle_marker),
-            },
-            PatchUpdate {
-                path: "/field_inventory/fields/last_eva_comment_check/last_refreshed".to_string(),
-                value: json!(cycle_marker),
-            },
-        ],
+fn build_state_patch(cycle: u64, issue: u64, timestamp: &str, state: &StateJson) -> StatePatch {
+    let mut updates = vec![
+        PatchUpdate {
+            path: "/last_cycle/issue".to_string(),
+            value: json!(issue),
+        },
+        PatchUpdate {
+            path: "/last_cycle/timestamp".to_string(),
+            value: json!(timestamp),
+        },
+        PatchUpdate {
+            path: "/last_cycle/summary".to_string(),
+            value: json!("TODO: Fill cycle summary."),
+        },
+        PatchUpdate {
+            path: "/last_eva_comment_check".to_string(),
+            value: json!(timestamp),
+        },
+    ];
+
+    updates.extend(build_freshness_updates(cycle, &updates, state));
+    StatePatch { updates }
+}
+
+fn build_freshness_updates(
+    cycle: u64,
+    updates: &[PatchUpdate],
+    state: &StateJson,
+) -> Vec<PatchUpdate> {
+    let tracked_fields: BTreeSet<&str> = state
+        .field_inventory
+        .fields
+        .keys()
+        .map(String::as_str)
+        .collect();
+    let mut refreshed_fields = BTreeSet::new();
+
+    for update in updates {
+        if update.path.starts_with("/field_inventory/") {
+            continue;
+        }
+        if let Some(field_name) = inventory_field_for_patch_path(&update.path, &tracked_fields) {
+            refreshed_fields.insert(field_name.to_string());
+        }
     }
+
+    let cycle_marker = format!("cycle {}", cycle);
+    refreshed_fields
+        .into_iter()
+        .map(|field_name| PatchUpdate {
+            path: format!("/field_inventory/fields/{}/last_refreshed", field_name),
+            value: json!(cycle_marker),
+        })
+        .collect()
+}
+
+/// Matches a JSON pointer patch path to the best tracked field inventory key.
+///
+/// The matcher tries progressively shorter dotted prefixes from the full pointer path.
+/// Example: `/last_cycle/issue` tries `last_cycle.issue`, then `last_cycle`.
+fn inventory_field_for_patch_path(path: &str, tracked_fields: &BTreeSet<&str>) -> Option<String> {
+    let segments: Vec<&str> = path.trim_start_matches('/').split('/').collect();
+    if segments.is_empty() || segments[0].is_empty() {
+        return None;
+    }
+
+    for index in (1..=segments.len()).rev() {
+        let candidate = segments[..index].join(".");
+        if tracked_fields.contains(candidate.as_str()) {
+            return Some(candidate);
+        }
+    }
+
+    None
 }
 
 fn build_review_agent_body(cycle: u64, issue: u64, now: DateTime<Utc>) -> String {
@@ -360,7 +405,16 @@ mod tests {
 
     #[test]
     fn state_patch_contains_expected_updates() {
-        let patch = build_state_patch(139, 464, "2026-03-05T05:06:07Z");
+        let mut state = StateJson::default();
+        state.field_inventory.fields.insert(
+            "last_cycle".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "last_eva_comment_check".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        let patch = build_state_patch(139, 464, "2026-03-05T05:06:07Z", &state);
         assert_eq!(patch.updates.len(), 6);
         assert_eq!(patch.updates[0].path, "/last_cycle/issue");
         assert_eq!(patch.updates[0].value, json!(464));
@@ -376,6 +430,62 @@ mod tests {
             "/field_inventory/fields/last_eva_comment_check/last_refreshed"
         );
         assert_eq!(patch.updates[5].value, json!("cycle 139"));
+    }
+
+    #[test]
+    fn state_patch_generates_freshness_for_modified_fields() {
+        let mut state = StateJson::default();
+        state.field_inventory.fields.insert(
+            "last_cycle".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "last_eva_comment_check".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+
+        let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", &state);
+        let freshness_paths: Vec<&str> = patch
+            .updates
+            .iter()
+            .map(|update| update.path.as_str())
+            .filter(|path| path.starts_with("/field_inventory/fields/"))
+            .collect();
+
+        assert!(freshness_paths.contains(&"/field_inventory/fields/last_cycle/last_refreshed"));
+        assert!(freshness_paths
+            .contains(&"/field_inventory/fields/last_eva_comment_check/last_refreshed"));
+    }
+
+    #[test]
+    fn state_patch_deduplicates_freshness_for_repeated_field_updates() {
+        let mut state = StateJson::default();
+        state.field_inventory.fields.insert(
+            "last_cycle".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+
+        let updates = vec![
+            PatchUpdate {
+                path: "/last_cycle/issue".to_string(),
+                value: json!(1),
+            },
+            PatchUpdate {
+                path: "/last_cycle/timestamp".to_string(),
+                value: json!("2026-03-06T00:00:00Z"),
+            },
+            PatchUpdate {
+                path: "/last_cycle/summary".to_string(),
+                value: json!("summary"),
+            },
+        ];
+
+        let freshness_updates = build_freshness_updates(153, &updates, &state);
+        assert_eq!(freshness_updates.len(), 1);
+        assert_eq!(
+            freshness_updates[0].path,
+            "/field_inventory/fields/last_cycle/last_refreshed"
+        );
     }
 
     #[test]
@@ -412,6 +522,14 @@ mod tests {
         let mut state = StateJson::default();
         state.next_metric_verification = Some("cycle 139".to_string());
         state.extra = BTreeMap::new();
+        state.field_inventory.fields.insert(
+            "last_cycle".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "last_eva_comment_check".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
 
         let report = assemble_report(139, 464, fixed_now(), &state);
         let output = serde_json::to_string_pretty(&report).unwrap();
