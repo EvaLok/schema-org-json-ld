@@ -13,6 +13,9 @@ const JOURNAL_DESCRIPTION: &str = "Reflective log for the schema-org-json-ld orc
 #[derive(Parser)]
 #[command(name = "write-entry")]
 struct Cli {
+    /// Repository root path
+    #[arg(long, default_value = ".", global = true)]
+    repo_root: PathBuf,
     #[command(subcommand)]
     command: Command,
 }
@@ -33,9 +36,6 @@ struct WorklogArgs {
     /// Short descriptive name for heading and filename slug
     #[arg(long)]
     title: String,
-    /// Repository root path
-    #[arg(long, default_value = ".")]
-    repo_root: PathBuf,
 }
 
 #[derive(Parser)]
@@ -46,9 +46,6 @@ struct JournalArgs {
     /// Entry title
     #[arg(long)]
     title: String,
-    /// Repository root path
-    #[arg(long, default_value = ".")]
-    repo_root: PathBuf,
 }
 
 #[derive(Deserialize)]
@@ -93,6 +90,7 @@ struct JournalSection {
 
 fn main() {
     let cli = Cli::parse();
+    let repo_root = cli.repo_root;
     let now = Utc::now();
     let stdin = match read_stdin() {
         Ok(content) => content,
@@ -103,8 +101,8 @@ fn main() {
     };
 
     let result = match cli.command {
-        Command::Worklog(args) => execute_worklog(&args, now, &stdin),
-        Command::Journal(args) => execute_journal(&args, now, &stdin),
+        Command::Worklog(args) => execute_worklog(&args, &repo_root, now, &stdin),
+        Command::Journal(args) => execute_journal(&args, &repo_root, now, &stdin),
     };
 
     match result {
@@ -128,21 +126,31 @@ fn read_stdin() -> Result<String, String> {
     Ok(input)
 }
 
-fn execute_worklog(args: &WorklogArgs, now: DateTime<Utc>, stdin: &str) -> Result<PathBuf, String> {
+fn execute_worklog(
+    args: &WorklogArgs,
+    repo_root: &Path,
+    now: DateTime<Utc>,
+    stdin: &str,
+) -> Result<PathBuf, String> {
     let input: WorklogInput = serde_json::from_str(stdin)
         .map_err(|error| format!("invalid worklog JSON input: {}", error))?;
-    let path = worklog_path(&args.repo_root, now, &args.title);
+    let path = worklog_path(repo_root, now, &args.title);
     let content = render_worklog(args.cycle, now, &input);
     write_entry_file(&path, &content)?;
     Ok(path)
 }
 
-fn execute_journal(args: &JournalArgs, now: DateTime<Utc>, stdin: &str) -> Result<PathBuf, String> {
+fn execute_journal(
+    args: &JournalArgs,
+    repo_root: &Path,
+    now: DateTime<Utc>,
+    stdin: &str,
+) -> Result<PathBuf, String> {
     let input: JournalInput = serde_json::from_str(stdin)
         .map_err(|error| format!("invalid journal JSON input: {}", error))?;
     let status = parse_commitment_status(&input.previous_commitment_status)?;
-    let path = journal_path(&args.repo_root, now);
-    let previous = lookup_previous_concrete_behavior(&args.repo_root, now.date_naive())?;
+    let path = journal_path(repo_root, now);
+    let previous = lookup_previous_concrete_behavior(repo_root, now.date_naive())?;
     let entry = render_journal_entry(
         args.cycle,
         now,
@@ -776,7 +784,6 @@ mod tests {
         let args = JournalArgs {
             cycle: 154,
             title: "From convention to enforcement".to_string(),
-            repo_root: repo_root.path.clone(),
         };
         let payload = r#"{
 			"previous_commitment_status":"followed",
@@ -786,8 +793,8 @@ mod tests {
 			"open_questions":[]
 		}"#;
 
-        execute_journal(&args, now, payload).unwrap();
-        execute_journal(&args, now, payload).unwrap();
+        execute_journal(&args, &repo_root.path, now, payload).unwrap();
+        execute_journal(&args, &repo_root.path, now, payload).unwrap();
 
         let path = journal_path(&repo_root.path, now);
         let content = fs::read_to_string(path).unwrap();
@@ -825,7 +832,6 @@ When accepting recommendations, dispatch #546 in the same cycle.
         let args = JournalArgs {
             cycle: 154,
             title: "New title".to_string(),
-            repo_root: repo_root.path.clone(),
         };
         let payload = r#"{
 			"previous_commitment_status":"followed",
@@ -834,7 +840,7 @@ When accepting recommendations, dispatch #546 in the same cycle.
 			"concrete_behavior_change":"Keep going.",
 			"open_questions":[]
 		}"#;
-        execute_journal(&args, fixed_now(), payload).unwrap();
+        execute_journal(&args, &repo_root.path, fixed_now(), payload).unwrap();
 
         let content = fs::read_to_string(journal_path(&repo_root.path, fixed_now())).unwrap();
         assert!(content.contains("> Previous commitment: When accepting recommendations, dispatch [#546](https://github.com/EvaLok/schema-org-json-ld/issues/546) in the same cycle."));
@@ -846,7 +852,6 @@ When accepting recommendations, dispatch #546 in the same cycle.
         let args = JournalArgs {
             cycle: 154,
             title: "Invalid status".to_string(),
-            repo_root: repo_root.path.clone(),
         };
         let payload = r#"{
 			"previous_commitment_status":"unknown",
@@ -855,7 +860,37 @@ When accepting recommendations, dispatch #546 in the same cycle.
 			"concrete_behavior_change":"Keep going.",
 			"open_questions":[]
 		}"#;
-        let error = execute_journal(&args, fixed_now(), payload).unwrap_err();
+        let error = execute_journal(&args, &repo_root.path, fixed_now(), payload).unwrap_err();
         assert!(error.contains("invalid previous_commitment_status"));
+    }
+
+    #[test]
+    fn cli_accepts_repo_root_before_subcommand() {
+        let cli = Cli::try_parse_from([
+            "write-entry",
+            "--repo-root",
+            "/tmp/example",
+            "worklog",
+            "--cycle",
+            "1",
+            "--title",
+            "test",
+        ])
+        .unwrap();
+        assert_eq!(cli.repo_root, PathBuf::from("/tmp/example"));
+        match cli.command {
+            Command::Worklog(args) => {
+                assert_eq!(args.cycle, 1);
+                assert_eq!(args.title, "test");
+            }
+            Command::Journal(_) => panic!("expected worklog command"),
+        }
+    }
+
+    #[test]
+    fn cli_uses_default_repo_root_when_omitted() {
+        let cli = Cli::try_parse_from(["write-entry", "worklog", "--cycle", "1", "--title", "test"])
+            .unwrap();
+        assert_eq!(cli.repo_root, PathBuf::from("."));
     }
 }
