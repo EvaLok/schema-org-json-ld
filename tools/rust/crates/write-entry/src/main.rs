@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 const PRIMARY_ISSUES_URL: &str = "https://github.com/EvaLok/schema-org-json-ld/issues";
 const QC_ISSUES_URL: &str = "https://github.com/EvaLok/schema-org-json-ld-qc/issues";
 const AUDIT_ISSUES_URL: &str = "https://github.com/EvaLok/schema-org-json-ld-audit/issues";
+const JOURNAL_DESCRIPTION: &str = "Reflective log for the schema-org-json-ld orchestrator.";
 
 #[derive(Parser)]
 #[command(name = "write-entry")]
@@ -201,9 +202,7 @@ fn write_journal_file(path: &Path, date: NaiveDate, entry: &str) -> Result<(), S
         fs::write(path, existing)
             .map_err(|error| format!("failed to write {}: {}", path.display(), error))
     } else {
-        let header = format!(
-			"# Journal — {date}\n\nReflective log for the schema-org-json-ld orchestrator.\n\n---\n\n",
-		);
+        let header = format!("# Journal — {date}\n\n{JOURNAL_DESCRIPTION}\n\n---\n\n",);
         let content = format!("{header}{entry}");
         fs::write(path, content)
             .map_err(|error| format!("failed to write {}: {}", path.display(), error))
@@ -667,29 +666,41 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicU64, Ordering};
 
+    struct TempRepoDir {
+        path: PathBuf,
+    }
+
+    impl TempRepoDir {
+        fn new(prefix: &str) -> Self {
+            static COUNTER: AtomicU64 = AtomicU64::new(0);
+            let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+            let nanos = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+            let path = std::env::temp_dir().join(format!(
+                "write-entry-{}-{}-{}-{}",
+                prefix,
+                std::process::id(),
+                nanos,
+                run_id
+            ));
+            fs::create_dir_all(&path).unwrap();
+            Self { path }
+        }
+    }
+
+    impl Drop for TempRepoDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.path);
+        }
+    }
+
     fn fixed_now() -> DateTime<Utc> {
         DateTime::parse_from_rfc3339("2026-03-06T05:14:58Z")
             .unwrap()
             .with_timezone(&Utc)
     }
-
-	fn temp_repo_dir(prefix: &str) -> PathBuf {
-		static COUNTER: AtomicU64 = AtomicU64::new(0);
-		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-		let nanos = std::time::SystemTime::now()
-			.duration_since(std::time::UNIX_EPOCH)
-			.unwrap()
-			.as_nanos();
-		let path = std::env::temp_dir().join(format!(
-			"write-entry-{}-{}-{}-{}",
-			prefix,
-			std::process::id(),
-			nanos,
-			run_id
-		));
-		fs::create_dir_all(&path).unwrap();
-		path
-	}
 
     #[test]
     fn converts_issue_references_and_preserves_existing_links() {
@@ -760,12 +771,12 @@ mod tests {
 
     #[test]
     fn journal_create_and_append_use_separator() {
-        let repo_root = temp_repo_dir("append");
+        let repo_root = TempRepoDir::new("append");
         let now = fixed_now();
         let args = JournalArgs {
             cycle: 154,
             title: "From convention to enforcement".to_string(),
-            repo_root: repo_root.clone(),
+            repo_root: repo_root.path.clone(),
         };
         let payload = r#"{
 			"previous_commitment_status":"followed",
@@ -778,7 +789,7 @@ mod tests {
         execute_journal(&args, now, payload).unwrap();
         execute_journal(&args, now, payload).unwrap();
 
-        let path = journal_path(&repo_root, now);
+        let path = journal_path(&repo_root.path, now);
         let content = fs::read_to_string(path).unwrap();
         assert!(content.starts_with("# Journal — 2026-03-06"));
         assert!(
@@ -794,8 +805,8 @@ mod tests {
 
     #[test]
     fn journal_includes_previous_commitment_quote_from_last_entry() {
-        let repo_root = temp_repo_dir("previous");
-        let journal_dir = repo_root.join("docs").join("journal");
+        let repo_root = TempRepoDir::new("previous");
+        let journal_dir = repo_root.path.join("docs").join("journal");
         fs::create_dir_all(&journal_dir).unwrap();
         let existing = r#"# Journal — 2026-03-05
 
@@ -814,7 +825,7 @@ When accepting recommendations, dispatch #546 in the same cycle.
         let args = JournalArgs {
             cycle: 154,
             title: "New title".to_string(),
-            repo_root: repo_root.clone(),
+            repo_root: repo_root.path.clone(),
         };
         let payload = r#"{
 			"previous_commitment_status":"followed",
@@ -825,17 +836,17 @@ When accepting recommendations, dispatch #546 in the same cycle.
 		}"#;
         execute_journal(&args, fixed_now(), payload).unwrap();
 
-        let content = fs::read_to_string(journal_path(&repo_root, fixed_now())).unwrap();
+        let content = fs::read_to_string(journal_path(&repo_root.path, fixed_now())).unwrap();
         assert!(content.contains("> Previous commitment: When accepting recommendations, dispatch [#546](https://github.com/EvaLok/schema-org-json-ld/issues/546) in the same cycle."));
     }
 
     #[test]
     fn invalid_previous_commitment_status_is_rejected() {
-        let repo_root = temp_repo_dir("status");
+        let repo_root = TempRepoDir::new("status");
         let args = JournalArgs {
             cycle: 154,
             title: "Invalid status".to_string(),
-            repo_root,
+            repo_root: repo_root.path.clone(),
         };
         let payload = r#"{
 			"previous_commitment_status":"unknown",

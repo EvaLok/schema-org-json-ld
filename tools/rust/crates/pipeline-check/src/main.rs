@@ -301,14 +301,8 @@ fn classify_step(name: &'static str, kind: &ToolKind, execution: ExecutionResult
                     Some(1) => StepStatus::Fail,
                     _ => StepStatus::Error,
                 };
-                let passed = parsed
-                    .get("passed")
-                    .and_then(Value::as_u64)
-                    .unwrap_or(0);
-                let failed = parsed
-                    .get("failed")
-                    .and_then(Value::as_u64)
-                    .unwrap_or(0);
+                let passed = parsed.get("passed").and_then(Value::as_u64).unwrap_or(0);
+                let failed = parsed.get("failed").and_then(Value::as_u64).unwrap_or(0);
                 step.detail = Some(format!("{}/{} invariants pass", passed, passed + failed));
             } else {
                 step.status = StepStatus::Error;
