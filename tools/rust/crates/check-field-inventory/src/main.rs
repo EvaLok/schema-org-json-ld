@@ -16,6 +16,9 @@ struct Cli {
     /// Path to the repository root
     #[arg(long)]
     repo_root: PathBuf,
+    /// Current cycle number for cadence-based staleness checks
+    #[arg(long)]
+    cycle: Option<u64>,
 }
 
 /// Top-level keys excluded from tracking (append-only or static).
@@ -98,18 +101,45 @@ fn main() {
         gaps.insert(eva_check);
     }
 
-    if gaps.is_empty() {
+    let stale = cli
+        .cycle
+        .map(|current_cycle| detect_stale_fields(&state, current_cycle))
+        .unwrap_or_default();
+
+    if gaps.is_empty() && stale.is_empty() {
         println!(
             "PASS: All mutable fields have field_inventory entries ({} tracked)",
             inventoried.len()
         );
     } else {
-        println!(
-            "GAPS FOUND: {} mutable field(s) without inventory entries:",
-            gaps.len()
-        );
-        for gap in &gaps {
-            println!("  - {}", gap);
+        if !gaps.is_empty() {
+            println!(
+                "GAPS FOUND: {} mutable field(s) without inventory entries:",
+                gaps.len()
+            );
+            for gap in &gaps {
+                println!("  - {}", gap);
+            }
+        }
+        if !stale.is_empty() {
+            if !gaps.is_empty() {
+                println!();
+            }
+            println!(
+                "STALE FIELD INVENTORY: {} field(s) exceed cadence thresholds:",
+                stale.len()
+            );
+            for field in &stale {
+                println!(
+                    "  - STALE: {} (cadence: \"{}\", tier: {}, last_refreshed: cycle {}, gap: {} cycles, max allowed: {})",
+                    field.name,
+                    field.cadence,
+                    field.tier,
+                    field.last_refreshed_cycle,
+                    field.gap,
+                    field.max_allowed_gap
+                );
+            }
         }
         println!();
         println!("Currently inventoried: {} fields", inventoried.len());
@@ -183,4 +213,166 @@ fn object_keys_from_value(value: Value) -> BTreeSet<String> {
         .as_object()
         .map(|obj| obj.keys().cloned().collect())
         .unwrap_or_default()
+}
+
+#[derive(Debug)]
+struct StaleField {
+    name: String,
+    cadence: String,
+    tier: &'static str,
+    last_refreshed_cycle: u64,
+    gap: u64,
+    max_allowed_gap: u64,
+}
+
+fn detect_stale_fields(state: &StateJson, current_cycle: u64) -> Vec<StaleField> {
+    state
+        .field_inventory
+        .fields
+        .iter()
+        .filter_map(|(name, entry)| {
+            let cadence = entry
+                .get("cadence")
+                .and_then(Value::as_str)
+                .unwrap_or("default")
+                .to_string();
+            let (tier, max_allowed_gap) = cadence_threshold(&cadence);
+            let last_refreshed_cycle = entry
+                .get("last_refreshed")
+                .and_then(Value::as_str)
+                .and_then(first_number);
+            let gap = match last_refreshed_cycle {
+                Some(cycle) => current_cycle.saturating_sub(cycle),
+                None => max_allowed_gap + 1,
+            };
+            if gap > max_allowed_gap {
+                Some(StaleField {
+                    name: name.clone(),
+                    cadence,
+                    tier,
+                    last_refreshed_cycle: last_refreshed_cycle.unwrap_or(0),
+                    gap,
+                    max_allowed_gap,
+                })
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+fn cadence_threshold(cadence: &str) -> (&'static str, u64) {
+    let normalized = cadence.to_ascii_lowercase();
+    if normalized.contains("every cycle") || normalized.contains("per cycle") {
+        ("per-cycle", 2)
+    } else if let Some(number) = first_number(&normalized) {
+        ("periodic", number + 1)
+    } else if normalized.contains("after") {
+        ("after-change", 10)
+    } else {
+        ("default", 5)
+    }
+}
+
+/// Returns the first contiguous numeric segment in a string, if present.
+fn first_number(value: &str) -> Option<u64> {
+    let digits: String = value
+        .chars()
+        .skip_while(|c| !c.is_ascii_digit())
+        .take_while(|c| c.is_ascii_digit())
+        .collect();
+    if digits.is_empty() {
+        None
+    } else {
+        digits.parse::<u64>().ok()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn cadence_threshold_classifies_per_cycle() {
+        assert_eq!(cadence_threshold("every cycle"), ("per-cycle", 2));
+        assert_eq!(cadence_threshold("per cycle"), ("per-cycle", 2));
+    }
+
+    #[test]
+    fn cadence_threshold_classifies_periodic() {
+        assert_eq!(cadence_threshold("every 5 cycles"), ("periodic", 6));
+    }
+
+    #[test]
+    fn cadence_threshold_classifies_after_change() {
+        assert_eq!(cadence_threshold("after changes"), ("after-change", 10));
+        assert_eq!(
+            cadence_threshold("after schema class additions"),
+            ("after-change", 10)
+        );
+    }
+
+    #[test]
+    fn cadence_threshold_uses_default_for_unknown() {
+        assert_eq!(cadence_threshold("on demand"), ("default", 5));
+    }
+
+    #[test]
+    fn first_number_extracts_numeric_value() {
+        assert_eq!(first_number("cycle 158"), Some(158));
+        assert_eq!(first_number("every 12 cycles"), Some(12));
+        assert_eq!(first_number("no digits"), None);
+    }
+
+    #[test]
+    fn detect_stale_fields_respects_tier_thresholds() {
+        let mut state = StateJson::default();
+        state.field_inventory.fields.insert(
+            "after-ok".to_string(),
+            json!({"cadence": "after changes", "last_refreshed": "cycle 148"}),
+        );
+        state.field_inventory.fields.insert(
+            "after-stale".to_string(),
+            json!({"cadence": "after changes", "last_refreshed": "cycle 147"}),
+        );
+        state.field_inventory.fields.insert(
+            "per-cycle-ok".to_string(),
+            json!({"cadence": "every cycle", "last_refreshed": "cycle 156"}),
+        );
+        state.field_inventory.fields.insert(
+            "per-cycle-stale".to_string(),
+            json!({"cadence": "every cycle", "last_refreshed": "cycle 155"}),
+        );
+        state.field_inventory.fields.insert(
+            "periodic-ok".to_string(),
+            json!({"cadence": "every 5 cycles", "last_refreshed": "cycle 152"}),
+        );
+        state.field_inventory.fields.insert(
+            "periodic-stale".to_string(),
+            json!({"cadence": "every 5 cycles", "last_refreshed": "cycle 151"}),
+        );
+
+        let stale = detect_stale_fields(&state, 158);
+        let stale_names = stale.iter().map(|field| field.name.as_str()).collect::<Vec<_>>();
+
+        assert_eq!(
+            stale_names,
+            vec!["after-stale", "per-cycle-stale", "periodic-stale"]
+        );
+    }
+
+    #[test]
+    fn detect_stale_fields_marks_missing_last_refreshed_as_stale() {
+        let mut state = StateJson::default();
+        state.field_inventory
+            .fields
+            .insert("missing-last".to_string(), json!({"cadence": "after changes"}));
+
+        let stale = detect_stale_fields(&state, 158);
+        assert_eq!(stale.len(), 1);
+        assert_eq!(stale[0].name, "missing-last");
+        assert_eq!(stale[0].tier, "after-change");
+        assert_eq!(stale[0].gap, 11);
+    }
 }
