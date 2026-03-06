@@ -39,21 +39,21 @@ fn main() {
 fn run(cli: Cli) -> Result<(), String> {
     let state_path = cli.repo_root.join("docs/state.json");
     let mut state_value = read_state_value(&state_path)?;
-    let current_cycle = read_current_cycle(&state_value)?;
+    let next_cycle = read_next_cycle(&state_value)?;
 
-    if !apply_audit_processing(&mut state_value, cli.audit_id, current_cycle)? {
-        println!("Audit #{} already processed", cli.audit_id);
+    if !apply_audit_processing(&mut state_value, cli.audit_id, next_cycle)? {
+        println!("Audit #{} already processed (no changes made)", cli.audit_id);
         return Ok(());
     }
 
     write_state_value(&state_path, &state_value)?;
 
-    let receipt = commit_state_json(&cli.repo_root, cli.audit_id, cli.action, current_cycle)?;
+    let receipt = commit_state_json(&cli.repo_root, cli.audit_id, cli.action, next_cycle)?;
     println!(
         "Audit processed: audit#{} {} [cycle {}] (receipt: {})",
         cli.audit_id,
         cli.action.as_str(),
-        current_cycle,
+        next_cycle,
         receipt
     );
 
@@ -74,7 +74,7 @@ fn write_state_value(path: &Path, value: &Value) -> Result<(), String> {
         .map_err(|error| format!("failed to write {}: {}", path.display(), error))
 }
 
-fn read_current_cycle(state: &Value) -> Result<u64, String> {
+fn read_next_cycle(state: &Value) -> Result<u64, String> {
     let last_cycle = state
         .pointer("/last_cycle/number")
         .and_then(Value::as_u64)
@@ -85,7 +85,7 @@ fn read_current_cycle(state: &Value) -> Result<u64, String> {
         .ok_or_else(|| "cycle overflow while computing current cycle".to_string())
 }
 
-fn apply_audit_processing(state: &mut Value, audit_id: u64, current_cycle: u64) -> Result<bool, String> {
+fn apply_audit_processing(state: &mut Value, audit_id: u64, next_cycle: u64) -> Result<bool, String> {
     let audit_processed = state
         .pointer("/audit_processed")
         .and_then(Value::as_array)
@@ -102,7 +102,7 @@ fn apply_audit_processing(state: &mut Value, audit_id: u64, current_cycle: u64) 
     set_value_at_pointer(
         state,
         "/field_inventory/fields/audit_processed/last_refreshed",
-        json!(format!("cycle {}", current_cycle)),
+        json!(format!("cycle {}", next_cycle)),
     )?;
 
     Ok(true)
@@ -122,7 +122,7 @@ fn commit_state_json(
     repo_root: &Path,
     audit_id: u64,
     action: AuditAction,
-    current_cycle: u64,
+    next_cycle: u64,
 ) -> Result<String, String> {
     let add_output = Command::new("git")
         .arg("-C")
@@ -142,7 +142,7 @@ fn commit_state_json(
         "state(process-audit): audit#{} {} [cycle {}]",
         audit_id,
         action.as_str(),
-        current_cycle
+        next_cycle
     );
     let commit_output = Command::new("git")
         .arg("-C")
@@ -248,8 +248,8 @@ mod tests {
     }
 
     #[test]
-    fn current_cycle_is_derived_from_last_cycle_plus_one() {
+    fn next_cycle_is_derived_from_last_cycle_plus_one() {
         let state = sample_state();
-        assert_eq!(read_current_cycle(&state).unwrap(), 166);
+        assert_eq!(read_next_cycle(&state).unwrap(), 166);
     }
 }
