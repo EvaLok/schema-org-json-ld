@@ -900,17 +900,17 @@
     ]
   },
   "copilot_metrics": {
-    "total_dispatches": 63,
+    "total_dispatches": 64,
     "resolved": 62,
-    "in_flight": 1,
+    "in_flight": 2,
     "produced_pr": 61,
     "merged": 60,
     "closed_without_merge": 1,
     "revision_rounds": 4,
     "dispatch_to_pr_rate": "61/62",
     "pr_merge_rate": "60/61",
-    "note": "63 dispatches, 62 resolved, 1 in-flight (#542 freshness automation). 61 produced PRs (60 merged, 1 closed without merge).",
-    "dispatch_log_latest": "#542 freshness automation (cycle 153)"
+    "note": "64 dispatches, 62 resolved, 2 in-flight (#542 freshness automation, #544 cycle-153 review). 61 produced PRs (60 merged, 1 closed without merge).",
+    "dispatch_log_latest": "#544 cycle-153 review agent (cycle 153)"
   },
   "last_cycle": {
     "number": 153,
