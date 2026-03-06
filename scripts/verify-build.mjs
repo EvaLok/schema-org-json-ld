@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdtempSync, rmSync, unlinkSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, unlinkSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
@@ -57,18 +57,10 @@ function assertRequiredExports(pkg, kind) {
 
 let tempDir = null;
 let tarballPath = null;
-let copiedDist = false;
 
 try {
 	run("npm", ["run", "build"]);
 	pass("Build completed");
-
-	const packageDistPath = path.join(repoRoot, "dist");
-	const fallbackDistPath = path.resolve(repoRoot, "..", "dist");
-	if (!existsSync(packageDistPath) && existsSync(fallbackDistPath)) {
-		cpSync(fallbackDistPath, packageDistPath, { recursive: true });
-		copiedDist = true;
-	}
 
 	const packOutput = run("npm", ["pack"]);
 	const tarballName = packOutput
@@ -146,9 +138,5 @@ try {
 
 	if (tarballPath !== null && existsSync(tarballPath)) {
 		unlinkSync(tarballPath);
-	}
-
-	if (copiedDist) {
-		rmSync(path.join(repoRoot, "dist"), { recursive: true, force: true });
 	}
 }
