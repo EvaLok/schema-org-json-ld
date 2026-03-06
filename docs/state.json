@@ -845,9 +845,9 @@
     "summary": "Cycle 165: Discovered gpt-5.4 ruleset violation (#602-#604 all failed). Filed #606 question-for-eva. Re-dispatched #607 (process-merge), #608 (record-dispatch), #611 (review agent) with gpt-5.3-codex. Fixed process-review finding count bug. Copilot metrics: 88 dispatches, 80 merged.",
     "timestamp": "2026-03-06T21:08:00Z"
   },
-  "last_eva_comment_check": "2026-03-06T21:08:00Z",
+  "last_eva_comment_check": "2026-03-06T22:43:00Z",
   "next_metric_verification": "cycle 151",
-  "open_questions_for_eva": [],
+  "open_questions_for_eva": [606],
   "publish_gate": {
     "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z — all gates satisfied",
     "last_divergence_check": "cycle 164",
