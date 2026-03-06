@@ -838,6 +838,14 @@
       "model": "gpt-5.3-codex",
       "status": "in_flight",
       "note": "Eva directive #538 Phase 2. Shell utility for commit-hash receipts."
+    },
+    {
+      "issue": 555,
+      "title": "Cycle 155 end-of-cycle review",
+      "dispatched_at": "2026-03-06T06:27:00Z",
+      "model": "gpt-5.3-codex",
+      "status": "in_flight",
+      "note": "Review agent. Cycle 155 end-of-cycle review."
     }
   ],
   "qc_processed": [8, 37, 57, 72, 160, 165],
@@ -940,17 +948,17 @@
     ]
   },
   "copilot_metrics": {
-    "total_dispatches": 67,
+    "total_dispatches": 68,
     "resolved": 66,
-    "in_flight": 1,
+    "in_flight": 2,
     "produced_pr": 65,
     "merged": 64,
     "closed_without_merge": 1,
     "revision_rounds": 5,
     "dispatch_to_pr_rate": "65/66",
     "pr_merge_rate": "64/65",
-    "note": "67 dispatches, 66 resolved, 1 in-flight (#553 commit-state-change). 65 produced PRs (64 merged, 1 closed without merge).",
-    "dispatch_log_latest": "#553 commit-state-change (cycle 155)"
+    "note": "68 dispatches, 66 resolved, 2 in-flight (#553 commit-state-change, #555 cycle-155 review). 65 produced PRs (64 merged, 1 closed without merge).",
+    "dispatch_log_latest": "#555 cycle-155 review agent (cycle 155)"
   },
   "last_cycle": {
     "number": 155,
