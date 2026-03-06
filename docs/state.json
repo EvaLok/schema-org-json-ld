@@ -631,16 +631,16 @@
   "copilot_metrics": {
     "closed_without_merge": 1,
     "closed_without_pr": 1,
-    "dispatch_log_latest": "#603 record-dispatch tool (cycle 164)",
+    "dispatch_log_latest": "#604 cycle 164 review (cycle 164)",
     "dispatch_to_pr_rate": "81/82",
-    "in_flight": 2,
+    "in_flight": 3,
     "merged": 80,
-    "note": "84 dispatches, 82 resolved, 2 in-flight (#602 process-merge, #603 record-dispatch). 81 produced PRs (80 merged, 1 closed without merge). 1 resolved without PR (silent failure). PRs #595, #597, #599 merged cycle 164. Dispatched #602, #603 cycle 164.",
+    "note": "85 dispatches, 82 resolved, 3 in-flight (#602 process-merge, #603 record-dispatch, #604 c164 review). 81 produced PRs (80 merged, 1 closed without merge). 1 resolved without PR (silent failure). PRs #595, #597, #599 merged cycle 164. Dispatched #602, #603, #604 cycle 164.",
     "pr_merge_rate": "80/81",
     "produced_pr": 81,
     "resolved": 82,
     "revision_rounds": 5,
-    "total_dispatches": 84
+    "total_dispatches": 85
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -842,7 +842,7 @@
   "last_cycle": {
     "issue": 601,
     "number": 164,
-    "summary": "Cycle 164: Merged PRs #595 (cycle-start), #597 (process-review), #599 (c163 review, score 3/5). Closed Eva #600 (gpt-5.4 model update). Dispatched #602 (process-merge) and #603 (record-dispatch) — first gpt-5.4 dispatches. Copilot metrics: 84 dispatches, 80 merged.",
+    "summary": "Cycle 164: Merged PRs #595 (cycle-start), #597 (process-review), #599 (c163 review, score 3/5). Closed Eva #600 (gpt-5.4 model update). Dispatched #602 (process-merge), #603 (record-dispatch), #604 (review agent) — first gpt-5.4 dispatches. Copilot metrics: 85 dispatches, 80 merged.",
     "timestamp": "2026-03-06T19:43:00Z"
   },
   "last_eva_comment_check": "2026-03-06T19:43:00Z",
