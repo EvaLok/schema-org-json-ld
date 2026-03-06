@@ -1,7 +1,7 @@
 use clap::Parser;
 use serde_json::{json, Value};
-use state_schema::{check_version, StateJson, TypescriptStats, SCHEMA_VERSION};
-use std::collections::HashMap;
+use state_schema::{check_version, update_freshness, StateJson, TypescriptStats, SCHEMA_VERSION};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
@@ -20,6 +20,10 @@ struct Cli {
     /// Current cycle number for field staleness detection (advisory only)
     #[arg(long)]
     cycle: Option<i64>,
+
+    /// Apply auto-fixable state.json mismatches and update freshness markers
+    #[arg(long)]
+    fix: bool,
 }
 
 struct CheckResult {
@@ -33,15 +37,43 @@ struct CheckResult {
 
 fn main() {
     let cli = Cli::parse();
+    let state_path = cli.repo_root.join("docs/state.json");
 
-    let state = read_state_file(&cli.repo_root.join("docs/state.json"));
-    let ts_stats = get_typescript_stats(&state);
+    let mut state = read_state_file(&state_path);
+    let mut checks = build_checks(&cli.repo_root, &state);
 
-    let php_schema_count = count_files(&cli.repo_root.join("php/src/v1/Schema"), "php");
-    let php_enum_count = count_files(&cli.repo_root.join("php/src/v1/Enum"), "php");
-    let ts_schema_count = count_files(&cli.repo_root.join("ts/src/schema"), "ts");
-    let ts_enum_count = count_files(&cli.repo_root.join("ts/src/enum"), "ts");
-    let ts_core_count = count_files(&cli.repo_root.join("ts/src"), "ts");
+    if cli.fix {
+        let cycle = cli.cycle.unwrap_or_else(|| {
+            eprintln!("Error: --fix requires --cycle so freshness markers can be updated");
+            process::exit(2);
+        });
+        match apply_fixes(&state_path, &checks, cycle) {
+            Ok(updated) if updated > 0 => {
+                state = read_state_file(&state_path);
+                checks = build_checks(&cli.repo_root, &state);
+            }
+            Ok(_) => {}
+            Err(error) => {
+                eprintln!("Error applying fixes: {}", error);
+                process::exit(2);
+            }
+        }
+    }
+
+    let staleness = cli
+        .cycle
+        .map(|current_cycle| build_staleness_report(&state, current_cycle));
+
+    emit_output(&cli, &checks, staleness);
+}
+
+fn build_checks(repo_root: &Path, state: &StateJson) -> Vec<CheckResult> {
+    let ts_stats = get_typescript_stats(state);
+    let php_schema_count = count_files(&repo_root.join("php/src/v1/Schema"), "php");
+    let php_enum_count = count_files(&repo_root.join("php/src/v1/Enum"), "php");
+    let ts_schema_count = count_files(&repo_root.join("ts/src/schema"), "ts");
+    let ts_enum_count = count_files(&repo_root.join("ts/src/enum"), "ts");
+    let ts_core_count = count_files(&repo_root.join("ts/src"), "ts");
     let ts_total_count = ts_schema_count + ts_enum_count + ts_core_count;
 
     let expected_ts_schema = get_i64_from_map(&ts_stats, "schema_types");
@@ -49,20 +81,18 @@ fn main() {
     let expected_ts_enums = get_i64_from_map(&ts_stats, "enums");
     let expected_ts_core = get_i64_from_map(&ts_stats, "core_modules");
     let expected_ts_total = get_i64_from_map(&ts_stats, "total_modules");
-    let expected_phpstan_level = get_phpstan_level_from_state(&state);
+    let expected_phpstan_level = get_phpstan_level_from_state(state);
     let expected_php_test_count = get_i64_from_option(state.test_count.php, "test_count.php");
     let expected_ts_test_count = get_i64_from_option(state.test_count.ts, "test_count.ts");
     let expected_total_test_count = get_i64_from_option(state.test_count.total, "test_count.total");
-    let actual_phpstan_level = read_phpstan_level(&cli.repo_root.join("phpstan.neon"));
-    let actual_php_test_count = count_php_test_methods(&cli.repo_root.join("php/test/unit"));
-    let actual_ts_test_count = count_ts_test_methods(&cli.repo_root.join("ts/test"));
+    let actual_phpstan_level = read_phpstan_level(&repo_root.join("phpstan.neon"));
+    let actual_php_test_count = count_php_test_methods(&repo_root.join("php/test/unit"));
+    let actual_ts_test_count = count_ts_test_methods(&repo_root.join("ts/test"));
     let actual_total_test_count = actual_php_test_count + actual_ts_test_count;
-    let schema_version_check_result = check_version(&state);
+    let schema_version_check_result = check_version(state);
     let actual_schema_version = json!(state.schema_version);
-    let ts_total_check_pass = ts_total_count == expected_ts_total;
-    let ts_total_note: Option<String> = None;
 
-    let checks = vec![
+    vec![
         check(
             "php_schema_classes",
             "PHP schema classes",
@@ -98,8 +128,8 @@ fn main() {
             "TS total modules",
             ts_total_count,
             expected_ts_total,
-            ts_total_check_pass,
-            ts_total_note,
+            ts_total_count == expected_ts_total,
+            None,
         ),
         parity_check(
             "php_ts_schema_parity",
@@ -145,13 +175,147 @@ fn main() {
             schema_version_check_result.is_ok(),
             schema_version_check_result.err(),
         ),
-    ];
+    ]
+}
 
-    let staleness = cli
-        .cycle
-        .map(|current_cycle| build_staleness_report(&state, current_cycle));
+#[derive(Clone)]
+struct FixUpdate {
+    pointer: &'static str,
+    value: Value,
+    freshness_field: &'static str,
+}
 
-    emit_output(&cli, &checks, staleness);
+fn apply_fixes(state_path: &Path, checks: &[CheckResult], cycle: i64) -> Result<usize, String> {
+    let cycle = u32::try_from(cycle).map_err(|_| "cycle must be a non-negative u32".to_string())?;
+    let mut state_value = read_state_value(state_path)?;
+    let updates = collect_fix_updates(checks);
+    if updates.is_empty() {
+        return Ok(0);
+    }
+
+    let mut changed_fields = BTreeSet::new();
+    let mut changed_count = 0_usize;
+
+    for update in updates {
+        if set_value_at_pointer(&mut state_value, update.pointer, update.value)? {
+            changed_fields.insert(update.freshness_field);
+            changed_count += 1;
+        }
+    }
+
+    for field_name in changed_fields {
+        update_freshness(&mut state_value, field_name, cycle)?;
+    }
+
+    if changed_count > 0 {
+        let serialized = serde_json::to_string_pretty(&state_value)
+            .map_err(|error| format!("failed to serialize state.json: {}", error))?;
+        fs::write(state_path, format!("{}\n", serialized))
+            .map_err(|error| format!("failed to write {}: {}", state_path.display(), error))?;
+    }
+
+    Ok(changed_count)
+}
+
+fn read_state_value(path: &Path) -> Result<Value, String> {
+    let content = fs::read_to_string(path)
+        .map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
+    serde_json::from_str::<Value>(&content)
+        .map_err(|error| format!("failed to parse {}: {}", path.display(), error))
+}
+
+fn collect_fix_updates(checks: &[CheckResult]) -> Vec<FixUpdate> {
+    let mut deduped: BTreeMap<&'static str, FixUpdate> = BTreeMap::new();
+
+    for check in checks {
+        if check.pass {
+            continue;
+        }
+        let Some((pointer, freshness_field)) = fix_target_for_check(check.name) else {
+            continue;
+        };
+
+        deduped.insert(
+            pointer,
+            FixUpdate {
+                pointer,
+                value: check.actual.clone(),
+                freshness_field,
+            },
+        );
+    }
+
+    deduped.into_values().collect()
+}
+
+fn fix_target_for_check(check_name: &str) -> Option<(&'static str, &'static str)> {
+    match check_name {
+        "php_schema_classes" => Some(("/total_schema_classes", "total_schema_classes")),
+        "php_enum_classes" => Some(("/total_enums", "total_enums")),
+        "ts_schema_types" => Some((
+            "/schema_status/typescript_stats/schema_types",
+            "typescript_stats",
+        )),
+        "ts_enum_types" => Some(("/schema_status/typescript_stats/enums", "typescript_stats")),
+        "ts_core_modules" => Some((
+            "/schema_status/typescript_stats/core_modules",
+            "typescript_stats",
+        )),
+        "ts_total_modules" => Some((
+            "/schema_status/typescript_stats/total_modules",
+            "typescript_stats",
+        )),
+        "test_count_php" => Some(("/test_count/php", "test_count")),
+        "test_count_ts" => Some(("/test_count/ts", "test_count")),
+        "test_count_total" => Some(("/test_count/total", "test_count")),
+        "phpstan_level" => Some(("/schema_status/phpstan_level", "phpstan_level")),
+        _ => None,
+    }
+}
+
+fn set_value_at_pointer(root: &mut Value, pointer: &str, value: Value) -> Result<bool, String> {
+    let segments: Vec<String> = pointer
+        .split('/')
+        .skip(1)
+        .map(|segment| segment.replace("~1", "/").replace("~0", "~"))
+        .collect();
+
+    if segments.is_empty() {
+        return Err("json pointer must not be empty".to_string());
+    }
+
+    let mut cursor = root;
+    for segment in &segments[..segments.len() - 1] {
+        cursor = cursor
+            .as_object_mut()
+            .and_then(|object| object.get_mut(segment))
+            .ok_or_else(|| {
+                format!(
+                    "missing object path segment for pointer {}: {}",
+                    pointer, segment
+                )
+            })?;
+    }
+
+    let terminal = segments
+        .last()
+        .expect("segments is guaranteed to be non-empty");
+    let object = cursor
+        .as_object_mut()
+        .ok_or_else(|| format!("target parent is not an object for pointer {}", pointer))?;
+    let existing = object.get(terminal).ok_or_else(|| {
+        format!(
+            "missing target path segment for pointer {}: {}",
+            pointer, terminal
+        )
+    })?;
+
+    if existing == &value {
+        return Ok(false);
+    }
+
+    object.insert(terminal.clone(), value);
+    Ok(true)
 }
 
 fn read_state_file(path: &Path) -> StateJson {
@@ -517,11 +681,12 @@ fn count_ts_each_tests(content: &str, array_case_counts: &HashMap<String, i64>) 
         };
 
         let match_index = start + relative_match;
-        let mut cursor = match_index + if content[match_index..].starts_with("it.each") {
-            "it.each".len()
-        } else {
-            "test.each".len()
-        };
+        let mut cursor = match_index
+            + if content[match_index..].starts_with("it.each") {
+                "it.each".len()
+            } else {
+                "test.each".len()
+            };
         cursor = skip_ascii_whitespace(content, cursor);
         if !content[cursor..].starts_with('(') {
             start = match_index + 1;
@@ -1033,10 +1198,12 @@ fn value_to_display(value: &Value) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        check, get_i64_from_map, get_i64_from_option, get_typescript_stats, read_state_file,
-        count_php_tests_in_content, count_ts_tests_in_content, is_php_test_method_line,
-        is_ts_test_method_line, parse_cycle_number, staleness_threshold,
+        check, collect_fix_updates, count_php_tests_in_content, count_ts_tests_in_content,
+        get_i64_from_map, get_i64_from_option, get_typescript_stats, is_php_test_method_line,
+        is_ts_test_method_line, parse_cycle_number, read_state_file, set_value_at_pointer,
+        staleness_threshold, CheckResult,
     };
+    use serde_json::json;
     use std::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -1065,7 +1232,9 @@ mod tests {
         assert!(!is_ts_test_method_line("it.each([1,2])(...)"));
         assert!(!is_ts_test_method_line("it.skip(\"works\", () => {})"));
         assert!(!is_ts_test_method_line("test.only(\"works\", () => {})"));
-        assert!(!is_ts_test_method_line("it.concurrent(\"works\", () => {})"));
+        assert!(!is_ts_test_method_line(
+            "it.concurrent(\"works\", () => {})"
+        ));
         assert!(!is_ts_test_method_line("expect(true).toBe(true)"));
     }
 
@@ -1147,7 +1316,8 @@ it('direct test', () => {});
 
         let state = read_state_file(&state_path);
         let ts_stats = get_typescript_stats(&state);
-        let expected_php_schema = get_i64_from_option(state.total_schema_classes, "total_schema_classes");
+        let expected_php_schema =
+            get_i64_from_option(state.total_schema_classes, "total_schema_classes");
         let expected_ts_total = get_i64_from_map(&ts_stats, "total_modules");
 
         let php_schema_check = check(
@@ -1170,5 +1340,63 @@ it('direct test', () => {});
         assert!(ts_total_check.pass);
 
         fs::remove_dir_all(temp_dir).expect("temp dir should be removed");
+    }
+
+    #[test]
+    fn collect_fix_updates_maps_and_deduplicates_fixable_checks() {
+        let checks = vec![
+            CheckResult {
+                name: "test_count_php",
+                label: "PHP test count",
+                actual: json!(440),
+                expected: json!(425),
+                pass: false,
+                note: None,
+            },
+            CheckResult {
+                name: "test_count_php",
+                label: "PHP test count",
+                actual: json!(441),
+                expected: json!(425),
+                pass: false,
+                note: None,
+            },
+            CheckResult {
+                name: "php_ts_schema_parity",
+                label: "PHP/TS schema parity",
+                actual: json!(89),
+                expected: json!(88),
+                pass: false,
+                note: None,
+            },
+        ];
+
+        let updates = collect_fix_updates(&checks);
+        assert_eq!(updates.len(), 1);
+        assert_eq!(updates[0].pointer, "/test_count/php");
+        assert_eq!(updates[0].freshness_field, "test_count");
+        assert_eq!(updates[0].value, json!(441));
+    }
+
+    #[test]
+    fn set_value_at_pointer_requires_existing_path() {
+        let mut state = json!({
+            "test_count": {
+                "php": 425
+            }
+        });
+        let changed = set_value_at_pointer(&mut state, "/test_count/php", json!(430))
+            .expect("path should exist");
+        assert!(changed);
+        assert_eq!(
+            state
+                .pointer("/test_count/php")
+                .and_then(|value| value.as_i64()),
+            Some(430)
+        );
+
+        let error = set_value_at_pointer(&mut state, "/test_count/missing", json!(1))
+            .expect_err("missing path should fail");
+        assert!(error.contains("missing target path segment"));
     }
 }
