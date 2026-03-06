@@ -11,7 +11,7 @@
    Cycle 160 then merged `#573` (state-invariants extension) and `#575` (tiered field inventory), and corrected the metrics tuple to a consistent `75/75/0` state (`docs/worklog/2026-03-06/134800-hundred-sixtieth-orchestrator-cycle.md:19-26`, `docs/state.json:959-970`).
 
 3. **One prior recommendation was explicitly deferred again, and still lacks traceable completion artifacts.**  
-   Cycle 159 recommended making chronic-category handling evidence-based (`issue/pr link`, chosen path, verification cycle) (`docs/reviews/cycle-159.md:59-60`, `:70`).  
+   Cycle 159 recommended making chronic-category handling evidence-based by recording explicit fields (`issue_or_pr_link`, `chosen_path`, `verification_cycle`) (`docs/reviews/cycle-159.md:59-60`, `docs/reviews/cycle-159.md:70`).  
    Cycle 160 marks this as deferred without introducing a replacement artifact schema in state or checklist-driven outputs (`docs/worklog/2026-03-06/134800-hundred-sixtieth-orchestrator-cycle.md:8-10`, `:48-53`).
 
 4. **`review_agent` tracking has a consistency gap that weakens recurrence analysis inputs.**  
