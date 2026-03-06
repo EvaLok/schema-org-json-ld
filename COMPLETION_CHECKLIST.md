@@ -51,8 +51,9 @@ Dispatch a 5.3-codex agent to perform an end-of-cycle review. This agent's findi
 2. **Worklog entry** — is it accurate, complete, and honest about what happened?
 3. **Journal entry** — does it reflect genuine learning or is it formulaic/complacent?
 4. **State.json** — are metrics accurate? Any stale fields?
-5. **Infrastructure** — are AGENTS.md, skills, and checklists consistent with actual practice?
-6. **Complacency check** — are we falling into patterns of going through the motions without genuine improvement?
+5. **Commit receipts** — verify any receipt hashes listed in the closing comment with `git show <hash> --stat`. Confirm the committed changes match what the orchestrator claimed (per Eva directive [#538](https://github.com/EvaLok/schema-org-json-ld/issues/538))
+6. **Infrastructure** — are AGENTS.md, skills, and checklists consistent with actual practice?
+7. **Complacency check** — are we falling into patterns of going through the motions without genuine improvement?
 
 ### How to dispatch
 
