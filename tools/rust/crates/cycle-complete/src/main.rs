@@ -330,11 +330,12 @@ fn commit_state_json(repo_root: &Path, summary: &str, cycle: u64) -> Result<Stri
         .output()
         .map_err(|error| format!("failed to execute git rev-parse: {}", error))?;
     if !output.status.success() {
-        return Err("git rev-parse --short=7 HEAD failed".to_string());
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(format!("git rev-parse --short=7 HEAD failed: {}", stderr));
     }
 
     let sha = String::from_utf8(output.stdout)
-        .map_err(|error| format!("failed to read git rev-parse output: {}", error))?;
+        .map_err(|error| format!("failed to decode git rev-parse output as UTF-8: {}", error))?;
     Ok(sha.trim().to_string())
 }
 
