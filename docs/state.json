@@ -1,1276 +1,1972 @@
 {
-  "schema_version": 1,
+  "agent_sessions": [
+    {
+      "dispatched_at": "2026-03-01T05:08:00Z",
+      "issue": 269,
+      "merged_at": "2026-03-01T08:50:04Z",
+      "model": "gpt-5.3-codex",
+      "pr": 270,
+      "status": "merged",
+      "title": "Phase 1: TypeScript scaffold"
+    },
+    {
+      "dispatched_at": "2026-03-01T09:11:00Z",
+      "issue": 276,
+      "merged_at": "2026-03-01T09:17:42Z",
+      "model": "gpt-5.3-codex",
+      "pr": 277,
+      "status": "merged",
+      "title": "Phase 2a: Port all 12 enums to TypeScript"
+    },
+    {
+      "dispatched_at": "2026-03-01T09:18:00Z",
+      "issue": 278,
+      "merged_at": "2026-03-01T09:26:06Z",
+      "model": "gpt-5.3-codex",
+      "pr": 279,
+      "status": "merged",
+      "title": "Phase 2b: Port leaf sub-types batch 1 (9 types)"
+    },
+    {
+      "dispatched_at": "2026-03-01T09:27:00Z",
+      "issue": 280,
+      "merged_at": "2026-03-01T09:36:17Z",
+      "model": "gpt-5.3-codex",
+      "pr": 281,
+      "status": "merged",
+      "title": "Phase 2c: Port leaf sub-types batch 2 (9 types)"
+    },
+    {
+      "dispatched_at": "2026-03-01T09:39:00Z",
+      "issue": 282,
+      "merged_at": "2026-03-01T09:47:23Z",
+      "model": "gpt-5.3-codex",
+      "pr": 283,
+      "status": "merged",
+      "title": "Phase 3a: Port 12 Level-0 schema types (no schema deps)"
+    },
+    {
+      "dispatched_at": "2026-03-01T09:48:00Z",
+      "issue": 284,
+      "merged_at": "2026-03-01T10:49:00Z",
+      "model": "gpt-5.3-codex",
+      "pr": 285,
+      "status": "merged",
+      "title": "Phase 3b: Port 9 Level-1 schema types"
+    },
+    {
+      "dispatched_at": "2026-03-01T10:50:00Z",
+      "issue": 287,
+      "merged_at": "2026-03-01T11:07:00Z",
+      "model": "gpt-5.3-codex",
+      "pr": 288,
+      "status": "merged",
+      "title": "Phase 3c: Port 8 Level-2 schema types"
+    },
+    {
+      "dispatched_at": "2026-03-01T11:08:00Z",
+      "issue": 289,
+      "merged_at": "2026-03-01T11:19:35Z",
+      "model": "gpt-5.3-codex",
+      "pr": 290,
+      "status": "merged",
+      "title": "Phase 3d: Port 6 schema types (Level 3-5)"
+    },
+    {
+      "dispatched_at": "2026-03-01T11:20:00Z",
+      "issue": 291,
+      "merged_at": "2026-03-01T11:31:02Z",
+      "model": "gpt-5.3-codex",
+      "pr": 292,
+      "status": "merged",
+      "title": "Phase 3e: Port 9 schema types (Level 5-6)"
+    },
+    {
+      "dispatched_at": "2026-03-01T11:32:00Z",
+      "issue": 293,
+      "merged_at": "2026-03-01T11:46:07Z",
+      "model": "gpt-5.3-codex",
+      "pr": 294,
+      "status": "merged",
+      "title": "Phase 3f: Port 10 schema types (Level 7)"
+    },
+    {
+      "dispatched_at": "2026-03-01T11:47:00Z",
+      "issue": 295,
+      "merged_at": "2026-03-01T12:11:00Z",
+      "model": "gpt-5.3-codex",
+      "pr": 296,
+      "status": "merged",
+      "title": "Phase 3g: Port 11 schema types (Level 8+, final batch)"
+    },
+    {
+      "dispatched_at": "2026-03-01T12:14:00Z",
+      "issue": 300,
+      "merged_at": "2026-03-01T12:22:48Z",
+      "model": "gpt-5.3-codex",
+      "pr": 301,
+      "status": "merged",
+      "title": "Phase 4a: npm package polish (metadata, README, build verification)"
+    },
+    {
+      "dispatched_at": "2026-03-01T13:47:00Z",
+      "issue": 303,
+      "model": "gpt-5.3-codex",
+      "note": "Workflow file — Eva must merge. NPM_TOKEN secret also needed.",
+      "pr": 305,
+      "status": "reviewed_awaiting_eva",
+      "title": "Phase 4b: npm publish workflow"
+    },
+    {
+      "dispatched_at": "2026-03-01T18:08:00Z",
+      "issue": 311,
+      "merged_at": "2026-03-01T18:18:42Z",
+      "model": "gpt-5.3-codex",
+      "pr": 312,
+      "status": "merged",
+      "title": "Port QAPage + Restaurant to TypeScript (audit #37 fix)"
+    },
+    {
+      "audit_inbound": 315,
+      "dispatched_at": "2026-03-01T21:08:00Z",
+      "issue": 316,
+      "merged_at": "2026-03-01T22:43:20Z",
+      "model": "gpt-5.3-codex",
+      "note": "Per audit #39. Validates npm pack tarball: ESM + CJS imports + JSON-LD output.",
+      "pr": 317,
+      "status": "merged",
+      "title": "Add build-artifact smoke test (verify-build script)"
+    },
+    {
+      "dispatched_at": "2026-03-03T00:26:18Z",
+      "eva_directive": 340,
+      "issue": 342,
+      "merged_at": "2026-03-03T00:46:46Z",
+      "model": "gpt-5.3-codex",
+      "pr": 343,
+      "status": "merged",
+      "title": "Refactor TS constructors to options-object pattern (batch 1: A-D)"
+    },
+    {
+      "dispatched_at": "2026-03-03T00:47:54Z",
+      "eva_directive": 340,
+      "issue": 344,
+      "merged_at": "2026-03-03T01:07:51Z",
+      "model": "gpt-5.3-codex",
+      "pr": 345,
+      "status": "merged",
+      "title": "Refactor TS constructors to options-object pattern (batch 2: E-M)"
+    },
+    {
+      "dispatched_at": "2026-03-03T01:08:28Z",
+      "eva_directive": 340,
+      "issue": 346,
+      "merged_at": "2026-03-03T01:26:40Z",
+      "model": "gpt-5.3-codex",
+      "pr": 347,
+      "status": "merged",
+      "title": "Refactor TS constructors to options-object pattern (batch 3: O-V)"
+    },
+    {
+      "dispatched_at": "2026-03-03T02:25:00Z",
+      "issue": 350,
+      "merged_at": "2026-03-03T02:37:51Z",
+      "model": "gpt-5.3-codex",
+      "pr": 351,
+      "status": "merged",
+      "title": "Fix 5 PHPStan level max errors in JsonLdGenerator.php"
+    },
+    {
+      "dispatched_at": "2026-03-03T03:53:00Z",
+      "issue": 354,
+      "merged_at": "2026-03-03T04:15:00Z",
+      "model": "gpt-5.3-codex",
+      "pr": 355,
+      "status": "merged",
+      "title": "Add JobPosting beta properties (PHP + TS)"
+    },
+    {
+      "dispatched_at": "2026-03-03T04:16:00Z",
+      "issue": 356,
+      "merged_at": "2026-03-03T04:29:00Z",
+      "model": "gpt-5.3-codex",
+      "pr": 357,
+      "status": "merged",
+      "title": "Add Review.positiveNotes and Review.negativeNotes (PHP + TS)"
+    },
+    {
+      "dispatched_at": "2026-03-03T06:23:00Z",
+      "issue": 361,
+      "merged_at": "2026-03-03T06:50:00Z",
+      "model": "gpt-5.3-codex",
+      "pr": 362,
+      "status": "merged",
+      "title": "Add SeekToAction and VideoObject.potentialAction (PHP + TS)"
+    },
+    {
+      "dispatched_at": "2026-03-03T06:50:00Z",
+      "issue": 363,
+      "merged_at": "2026-03-03T09:31:21Z",
+      "model": "gpt-5.3-codex",
+      "note": "Revision required for mixed-array serialization bug in JsonLdGenerator. Fixed per-element type dispatch.",
+      "pr": 364,
+      "revision_rounds": 1,
+      "status": "merged",
+      "title": "Add missing recommended properties (QuantitativeValue.unitText, Dataset.hasPart/isPartOf, Org ProfilePage fields) + fix mixed-array serialization"
+    },
+    {
+      "dispatched_at": "2026-03-03T09:25:00Z",
+      "issue": 370,
+      "merged_at": "2026-03-03T09:39:10Z",
+      "model": "gpt-5.3-codex",
+      "pr": 371,
+      "qc_report": 160,
+      "status": "merged",
+      "title": "Add AggregateRating.itemReviewed (PHP + TS)"
+    },
+    {
+      "dispatched_at": "2026-03-03T10:51:00Z",
+      "eva_directive": 372,
+      "issue": 374,
+      "merged_at": "2026-03-03T11:10:00Z",
+      "model": "gpt-5.3-codex",
+      "note": "First high-complexity dispatch per Eva #372. Part 1 (Question/Answer image+video) and Part 3 (README) delivered. Part 2 (test expansion) underdelivered — only 2 types covered with data-provider padding. Follow-up needed for genuine edge-case test expansion.",
+      "pr": 376,
+      "status": "merged",
+      "title": "Comprehensive quality sweep: QAPage properties + edge-case tests + README"
+    },
+    {
+      "dispatched_at": "2026-03-03T10:51:00Z",
+      "eva_directive": 372,
+      "issue": 375,
+      "merged_at": "2026-03-03T11:08:00Z",
+      "model": "gpt-5.3-codex",
+      "note": "First auditing tool dispatch per Eva #372. Created tools/parity-check.ts. Known limitation: TS extends interface regex doesn't handle FoodEstablishmentOptions extends LocalBusinessOptions. Affects 1/88 classes.",
+      "pr": 377,
+      "status": "merged",
+      "title": "Cross-language parity verification tool"
+    },
+    {
+      "dispatched_at": "2026-03-03T12:15:00Z",
+      "eva_directive": 378,
+      "issue": 380,
+      "merged_at": "2026-03-03T12:31:45Z",
+      "model": "gpt-5.3-codex",
+      "note": "Rewrites tools/parity-check.ts to use TypeScript Compiler API + php-parser (glayzzle). Fixes FoodEstablishmentOptions extends bug. Per Eva directive: AST over regex.",
+      "pr": 381,
+      "status": "merged",
+      "title": "Rewrite parity-check tool to use AST parsing instead of regex"
+    },
+    {
+      "dispatched_at": "2026-03-03T13:57:00Z",
+      "issue": 383,
+      "merged_at": "2026-03-03T15:37:00Z",
+      "model": "gpt-5.3-codex",
+      "note": "README has 34 PHP examples but only 1 TS example. 6 examples had missing required constructor properties. Fixed in revision. Merged cycle 112.",
+      "pr": 384,
+      "revision_rounds": 1,
+      "status": "merged",
+      "title": "Add TypeScript examples to all README usage sections"
+    },
+    {
+      "dispatched_at": "2026-03-03T13:57:00Z",
+      "issue": 385,
+      "merged_at": "2026-03-03T15:27:00Z",
+      "model": "gpt-5.3-codex",
+      "note": "52 new tests across 10 types in both PHP and TS. Minor overlaps with existing tests but genuine edge cases. Merged cycle 112.",
+      "pr": 386,
+      "status": "merged",
+      "title": "Expand edge-case test coverage for 10 standalone schema types (PHP + TS)"
+    },
+    {
+      "dispatched_at": "2026-03-03T16:59:00Z",
+      "issue": 392,
+      "merged_at": "2026-03-03T17:06:00Z",
+      "model": "gpt-5.3-codex",
+      "note": "Last remaining positional-param TS class. Missed during cycle 104 refactoring. 6 files updated, CI green on all 9 checks.",
+      "pr": 393,
+      "status": "merged",
+      "title": "Convert WebPageElement to options-object constructor pattern"
+    },
+    {
+      "dispatched_at": "2026-03-03T19:49:00Z",
+      "issue": 398,
+      "merged_at": "2026-03-03T19:59:56Z",
+      "model": "gpt-5.3-codex",
+      "note": "Fixed mixed-offset access with local array accumulator. PHPStan config upgraded 9->max. CI green on all 7 checks.",
+      "pr": 399,
+      "status": "merged",
+      "title": "Upgrade PHPStan to level max: fix 3 mixed-offset errors in JsonLdGenerator"
+    },
+    {
+      "dispatched_at": "2026-03-04T05:05:00Z",
+      "issue": 413,
+      "merged_at": "2026-03-04T06:20:19Z",
+      "model": "gpt-5.3-codex",
+      "note": "8 new edge-case tests: special chars, deep nesting, array @type, schemasToJson, schemaToObject API, mixed scalars, array preservation, propertyMap regression. TS JsonLdGenerator tests: 7→15.",
+      "pr": 414,
+      "status": "merged",
+      "title": "Expand TS JsonLdGenerator test coverage to match PHP edge cases"
+    },
+    {
+      "dispatched_at": "2026-03-04T13:53:00Z",
+      "issue": 424,
+      "merged_at": "2026-03-04T14:18:42Z",
+      "model": "gpt-5.3-codex",
+      "note": "Google property verification found Question.comment and Answer.comment missing (recommended by Google for QAPage). Adding Comment[] property to both classes in PHP and TS.",
+      "pr": 425,
+      "status": "merged",
+      "title": "Add Question.comment and Answer.comment properties (PHP + TS)"
+    },
+    {
+      "dispatched_at": "2026-03-04T15:34:00Z",
+      "eva_directive": 428,
+      "issue": 432,
+      "merged_at": "2026-03-04T15:47:00Z",
+      "model": "gpt-5.3-codex",
+      "note": "First Rust tool build via Copilot. metric-snapshot automates step 5.11 metric verification. On first run, caught stale core_modules count (2→3).",
+      "pr": 433,
+      "status": "merged",
+      "title": "Build metric-snapshot Rust tool for automated state.json verification"
+    },
+    {
+      "dispatched_at": "2026-03-04T15:34:00Z",
+      "eva_directive": 429,
+      "issue": 434,
+      "merged_at": "2026-03-04T15:47:00Z",
+      "model": "gpt-5.3-codex",
+      "note": "First code quality audit dispatch. Found 6 inherited TS classes missing *Options interfaces. Added BlogPostingOptions, NewsArticleOptions, MobileApplicationOptions, WebApplicationOptions, RestaurantOptions, StoreOptions.",
+      "pr": 435,
+      "status": "merged",
+      "title": "Audit all 89 TypeScript schema classes for consistency"
+    },
+    {
+      "dispatched_at": "2026-03-04T16:50:00Z",
+      "eva_directive": 436,
+      "issue": 438,
+      "merged_at": "2026-03-04T17:38:53Z",
+      "model": "gpt-5.3-codex",
+      "note": "Phase 1 of Eva's Rust tool pipeline directive (#436). Consolidates 6+ gh api calls from startup checklist steps 1, 1.1, 3, 4, 5, 8 into a single tool. Revision round fixed URL encoding, per_page, API URLs. Runtime tested with API access (#440).",
+      "pr": 439,
+      "revision_rounds": 1,
+      "status": "merged",
+      "title": "Build cycle-status Rust tool: consolidated startup checklist report"
+    },
+    {
+      "dispatched_at": "2026-03-04T17:33:00Z",
+      "eva_directive": 441,
+      "issue": 444,
+      "merged_at": "2026-03-04T18:18:28Z",
+      "model": "gpt-5.3-codex",
+      "note": "State.json schema versioning per Eva #441. Creates shared state-schema crate, adds schema_version:1, refactors metric-snapshot and check-field-inventory to use shared types.",
+      "pr": 445,
+      "status": "merged",
+      "title": "Create state-schema shared Rust crate and version state.json"
+    },
+    {
+      "dispatched_at": "2026-03-04T18:22:00Z",
+      "eva_directive": 436,
+      "issue": 447,
+      "merged_at": "2026-03-04T19:49:00Z",
+      "model": "gpt-5.3-codex",
+      "note": "Phase 2 of tool pipeline. Test count, field staleness, schema version validation. KNOWN ISSUE: test counting doesn't account for data providers (counts methods not executions). Fix dispatched #450.",
+      "pr": 448,
+      "status": "merged",
+      "title": "Extend metric-snapshot with test counts, staleness detection, and schema version validation"
+    },
+    {
+      "dispatched_at": "2026-03-04T19:51:00Z",
+      "eva_directive": 436,
+      "issue": 450,
+      "merged_at": "2026-03-04T21:14:00Z",
+      "model": "gpt-5.3-codex",
+      "note": "Fix for Phase 2: data providers (PHP @dataProvider, TS it.each) cause test method count to be lower than test execution count. All 13 metric-snapshot checks now pass.",
+      "pr": 451,
+      "status": "merged",
+      "title": "Fix metric-snapshot test counting to handle data providers"
+    },
+    {
+      "dispatched_at": "2026-03-04T21:20:00Z",
+      "eva_directive": 436,
+      "issue": 454,
+      "merged_at": "2026-03-04T22:54:00Z",
+      "model": "gpt-5.3-codex",
+      "note": "Phase 3 of tool pipeline. Detects stale agent issues, orphan draft PRs, dead branches, stale audit/qc-inbound issues. Revision: AGENT_PR_AUTHOR bug, git cwd, wrapper pattern.",
+      "pr": 455,
+      "revision_rounds": 1,
+      "status": "merged",
+      "title": "Build housekeeping-scan Rust tool"
+    },
+    {
+      "dispatched_at": "2026-03-04T22:57:00Z",
+      "eva_directive": 436,
+      "issue": 457,
+      "merged_at": "2026-03-05T00:24:18Z",
+      "model": "gpt-5.3-codex",
+      "note": "Phase 4 of tool pipeline. Unified orchestrator that runs metric-snapshot, check-field-inventory, housekeeping-scan, and cycle-status in sequence with aggregated report. Runtime tested: all 4 steps pass, both JSON and human-readable output working.",
+      "pr": 458,
+      "status": "merged",
+      "title": "Build pipeline-check Rust tool (Phase 4)"
+    },
+    {
+      "dispatched_at": "2026-03-05T21:15:00Z",
+      "issue": 505,
+      "merged_at": "2026-03-06T00:29:42Z",
+      "model": "gpt-5.3-codex",
+      "note": "Phase 5 of tool pipeline. Enforces semantic consistency in state.json: copilot math (produced_pr = merged + closed), parity symmetry, type classification sum, field inventory cadence format, review agent history ordering. 5/5 invariants pass.",
+      "pr": 524,
+      "status": "merged",
+      "title": "Build state-invariants Rust tool"
+    },
+    {
+      "dispatched_at": "2026-03-06T00:35:00Z",
+      "eva_directive": 522,
+      "issue": 528,
+      "merged_at": "2026-03-06T02:22:37Z",
+      "model": "gpt-5.3-codex",
+      "note": "Per Eva #522. Fixed tsup outDir '../dist'->'dist', removed verify-build copy workaround, bumped version 1.0.0->1.0.1.",
+      "pr": 529,
+      "status": "merged",
+      "title": "Fix v1.0.1 release blockers (tsup outDir, verify-build workaround, version bump)"
+    },
+    {
+      "dispatched_at": "2026-03-06T02:29:00Z",
+      "issue": 536,
+      "merged_at": "2026-03-06T03:50:00Z",
+      "model": "gpt-5.3-codex",
+      "note": "Review agent. 10 findings, score 3/5. All 4 recommendations actioned.",
+      "pr": 537,
+      "status": "merged",
+      "title": "Cycle 152 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-06T03:53:00Z",
+      "issue": 542,
+      "merged_at": "2026-03-06T05:12:00Z",
+      "model": "gpt-5.3-codex",
+      "note": "Freshness automation per audit #104/#117. update_freshness helper, metric-snapshot --fix mode, cycle-complete auto-freshness.",
+      "pr": 543,
+      "status": "merged",
+      "title": "Add update_freshness helper to state-schema and integrate into tools"
+    },
+    {
+      "dispatched_at": "2026-03-06T03:58:00Z",
+      "issue": 544,
+      "merged_at": "2026-03-06T05:10:00Z",
+      "model": "gpt-5.3-codex",
+      "note": "Review agent. 10 findings, score 3/5. All 4 recommendations actioned.",
+      "pr": 545,
+      "status": "merged",
+      "title": "Cycle 153 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-06T05:14:00Z",
+      "issue": 548,
+      "merged_at": "2026-03-06T06:25:00Z",
+      "model": "gpt-5.3-codex",
+      "note": "Eva directive #546. Journal/worklog entry tool with auto-linking. 6 tests pass. Shell wrapper fixed post-merge.",
+      "pr": 549,
+      "status": "merged",
+      "title": "Build write-entry Rust tool for journal/worklog generation"
+    },
+    {
+      "dispatched_at": "2026-03-06T05:20:00Z",
+      "issue": 550,
+      "merged_at": "2026-03-06T06:24:00Z",
+      "model": "gpt-5.3-codex",
+      "note": "Review agent. 10 findings, score 3/5. Key finding: stale last_review_cycle (already fixed by state-invariants).",
+      "pr": 551,
+      "status": "merged",
+      "title": "Cycle 154 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-06T06:22:00Z",
+      "issue": 553,
+      "model": "gpt-5.3-codex",
+      "note": "Eva directive #538 Phase 2. Shell utility for commit-hash receipts. Merged cycle 156.",
+      "status": "merged",
+      "title": "Build commit-state-change shell utility (Eva #538 Phase 2)"
+    },
+    {
+      "dispatched_at": "2026-03-06T06:27:00Z",
+      "issue": 555,
+      "model": "gpt-5.3-codex",
+      "note": "Review agent. Cycle 155 end-of-cycle review. 9 findings, score 3/5. Merged cycle 156.",
+      "status": "merged",
+      "title": "Cycle 155 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-06T07:58:00Z",
+      "issue": 558,
+      "model": "gpt-5.3-codex",
+      "note": "Review agent. Cycle 156 end-of-cycle review.",
+      "status": "in_flight",
+      "title": "Cycle 156 end-of-cycle review"
+    }
+  ],
+  "audit_processed": [
+    2,
+    3,
+    4,
+    5,
+    7,
+    8,
+    9,
+    11,
+    12,
+    13,
+    15,
+    16,
+    18,
+    19,
+    20,
+    23,
+    24,
+    26,
+    29,
+    32,
+    35,
+    37,
+    39,
+    42,
+    44,
+    49,
+    53,
+    56,
+    58,
+    60,
+    62,
+    67,
+    68,
+    71,
+    73,
+    75,
+    76,
+    78,
+    80,
+    82,
+    83,
+    85,
+    87,
+    88,
+    90,
+    92,
+    94,
+    96,
+    98,
+    100,
+    102,
+    104,
+    106,
+    108,
+    110,
+    111,
+    113,
+    114,
+    116,
+    117,
+    120,
+    122,
+    125
+  ],
+  "blockers": [
+    {
+      "description": "Phase 4c: npm publish requires Eva to create a GitHub Release (triggers publish-npm.yml workflow)",
+      "eva_directive": 329,
+      "pr_305_status": "CLOSED. Confirmed superseded by Eva (2026-03-03T20:04Z). Branch deleted.",
+      "pre_publish_checkpoint": "RE-VALIDATION NEEDED (cycle 152). Previous validation: 73d1b1b (QC-ACK #213). Source diverged due to v1.0.1 release blockers fix (PR #529). New QC-REQUEST #535 filed for commit ea8ffff. Schema source unchanged — only build config and version bumped.",
+      "publish_workflow": "publish-npm.yml pushed by Eva (commit f59a531). Uses OIDC provenance, no NPM_TOKEN needed.",
+      "qc_request": 331,
+      "qc_validation": "SATISFIED. 73/73 standalone parity (100%). Per audit #73, 73 is the correct denominator (88 - 12 enums - 3 building-block-only = 73).",
+      "reliability_clock": {
+        "minimum_required": 3,
+        "start_cycle": 134,
+        "status": "SATISFIED"
+      },
+      "remaining_actions": [
+        "Pipeline reliability SATISFIED",
+        "QC final validation COMPLETE (QC-ACK #213, all 5 DoD criteria pass)",
+        "Audit sign-off CONFIRMED (audit #111, cycle 149)",
+        "Eva configures npm trusted publishing (OIDC link)",
+        "Eva creates GitHub Release to trigger publish"
+      ],
+      "verify_build_ci": "ADDED. Eva applied workflow change (commit 1b8ff8f, 2026-03-04T00:43Z). verify-build runs in ci-ts.yml on every push/PR. #403 closed."
+    }
+  ],
+  "constructor_refactoring": {
+    "batches": [
+      {
+        "batch": 1,
+        "classes": 16,
+        "issue": 342,
+        "merged_at": "2026-03-03T00:46:46Z",
+        "pr": 343,
+        "range": "A-D",
+        "status": "merged"
+      },
+      {
+        "batch": 2,
+        "classes": 15,
+        "issue": 344,
+        "merged_at": "2026-03-03T01:07:51Z",
+        "pr": 345,
+        "range": "E-M",
+        "status": "merged"
+      },
+      {
+        "batch": 3,
+        "classes": 22,
+        "issue": 346,
+        "merged_at": "2026-03-03T01:26:40Z",
+        "pr": 347,
+        "range": "O-V",
+        "status": "merged"
+      }
+    ],
+    "eva_directive": 340,
+    "missed_class_fixed": "WebPageElement (PR #393, merged cycle 113)",
+    "status": "complete",
+    "total_classes_converted": 54
+  },
+  "copilot_metrics": {
+    "closed_without_merge": 1,
+    "closed_without_pr": 1,
+    "dispatch_log_latest": "#598 cycle 163 review (cycle 163)",
+    "dispatch_to_pr_rate": "81/82",
+    "in_flight": 0,
+    "merged": 80,
+    "note": "82 dispatches, 82 resolved, 0 in-flight. 81 produced PRs (80 merged, 1 closed without merge). 1 resolved without PR (silent failure). PRs #595 (cycle-start), #597 (process-review), #599 (c163 review) merged cycle 164.",
+    "pr_merge_rate": "80/81",
+    "produced_pr": 81,
+    "resolved": 82,
+    "revision_rounds": 5,
+    "total_dispatches": 82
+  },
+  "eva_input_issues": {
+    "closed_prior_cycles": [
+      180,
+      181,
+      182,
+      183,
+      184,
+      185,
+      186,
+      187,
+      188,
+      201,
+      224,
+      225,
+      329,
+      340,
+      348,
+      372,
+      378,
+      396,
+      401,
+      428,
+      429,
+      430,
+      440,
+      441,
+      463,
+      499,
+      500,
+      501,
+      502,
+      503,
+      515,
+      516,
+      522,
+      538,
+      546
+    ],
+    "closed_this_cycle": [
+      600
+    ],
+    "remaining_open": [
+      247,
+      436,
+      586,
+      591
+    ]
+  },
+  "field_inventory": {
+    "description": "Self-describing inventory of mutable state.json fields with expected refresh cadence. During metric verification (step 5.11), any field not refreshed within its cadence should be flagged and corrected. This inverts the verification pattern from 'enumerate what to check' to 'flag what hasn't been checked.' Per audit #80. Semantics: last_refreshed = cycle when entry was last checked (value confirmed unchanged or updated). This differs from per-field last_verified which means 'cycle when value was independently measured.' A field can be refreshed (checked and confirmed unchanged) without being re-verified (re-measured).",
+    "fields": {
+      "audit_processed": {
+        "cadence": "after processing audit issues",
+        "last_refreshed": "cycle 163"
+      },
+      "blockers": {
+        "cadence": "after blocker state changes",
+        "last_refreshed": "cycle 158"
+      },
+      "copilot_metrics.dispatch_to_pr_rate": {
+        "cadence": "after new dispatches",
+        "last_refreshed": "cycle 164"
+      },
+      "copilot_metrics.in_flight": {
+        "cadence": "every dispatch or merge",
+        "last_refreshed": "cycle 164"
+      },
+      "copilot_metrics.pr_merge_rate": {
+        "cadence": "after PR merges",
+        "last_refreshed": "cycle 164"
+      },
+      "eva_input_issues.closed_this_cycle": {
+        "cadence": "every cycle (reset even when no closures)",
+        "last_refreshed": "cycle 164"
+      },
+      "eva_input_issues.remaining_open": {
+        "cadence": "after Eva issue processing",
+        "last_refreshed": "cycle 164"
+      },
+      "last_cycle": {
+        "cadence": "every cycle",
+        "last_refreshed": "cycle 164"
+      },
+      "last_eva_comment_check": {
+        "cadence": "every cycle (checked even when no comments found)",
+        "last_refreshed": "cycle 164"
+      },
+      "next_metric_verification": {
+        "cadence": "after each verification run",
+        "last_refreshed": "cycle 158"
+      },
+      "open_questions_for_eva": {
+        "cadence": "after question creation or resolution",
+        "last_refreshed": "cycle 160"
+      },
+      "phpstan_level": {
+        "cadence": "after PHPStan config changes",
+        "last_refreshed": "cycle 158"
+      },
+      "publish_gate": {
+        "cadence": "every cycle when set (divergence check)",
+        "last_refreshed": "cycle 163"
+      },
+      "qc_processed": {
+        "cadence": "after processing QC issues",
+        "last_refreshed": "cycle 158"
+      },
+      "qc_requests_pending": {
+        "cadence": "after QC request creation or completion",
+        "last_refreshed": "cycle 158"
+      },
+      "qc_status": {
+        "cadence": "after QC interactions",
+        "last_refreshed": "cycle 158"
+      },
+      "review_agent": {
+        "cadence": "every cycle (updated when consuming review findings)",
+        "last_refreshed": "cycle 164"
+      },
+      "review_agent.chronic_category_responses": {
+        "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
+        "last_refreshed": "cycle 161"
+      },
+      "schema_status.google_rich_results_types": {
+        "cadence": "after Google gallery changes or new implementations",
+        "last_refreshed": "cycle 158"
+      },
+      "schema_status.in_progress": {
+        "cadence": "every dispatch or merge",
+        "last_refreshed": "cycle 164"
+      },
+      "schema_status.phpstan_max_assessment": {
+        "cadence": "after PHPStan config or fix changes",
+        "last_refreshed": "cycle 158"
+      },
+      "schema_status.planned_next": {
+        "cadence": "after planning or completing types",
+        "last_refreshed": "cycle 158"
+      },
+      "schema_status.property_gap_audit": {
+        "cadence": "after property gap fixes",
+        "last_refreshed": "cycle 158"
+      },
+      "schema_status.remaining_audit_findings": {
+        "cadence": "after property gap fixes",
+        "last_refreshed": "cycle 158"
+      },
+      "test_count": {
+        "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
+        "last_refreshed": "cycle 164"
+      },
+      "tool_pipeline": {
+        "cadence": "after pipeline phase transitions",
+        "last_refreshed": "cycle 158"
+      },
+      "total_enums": {
+        "cadence": "after enum additions",
+        "last_refreshed": "cycle 158"
+      },
+      "total_schema_classes": {
+        "cadence": "after schema class additions",
+        "last_refreshed": "cycle 158"
+      },
+      "total_schema_types": {
+        "cadence": "after schema type additions",
+        "last_refreshed": "cycle 158"
+      },
+      "total_standalone_testable_types": {
+        "cadence": "after building-block-only type changes (publish gate)",
+        "last_refreshed": "cycle 158"
+      },
+      "total_sub_types": {
+        "cadence": "after sub-type additions",
+        "last_refreshed": "cycle 158"
+      },
+      "total_testable_types": {
+        "cadence": "after schema class or enum additions",
+        "last_refreshed": "cycle 158"
+      },
+      "total_testable_types_note": {
+        "cadence": "after classification changes",
+        "last_refreshed": "cycle 158"
+      },
+      "type_classification": {
+        "cadence": "after schema class additions/reclassifications",
+        "last_refreshed": "cycle 158"
+      },
+      "typescript_plan.status": {
+        "cadence": "after plan phase transitions",
+        "last_refreshed": "cycle 158"
+      },
+      "typescript_stats": {
+        "cadence": "every merge that adds/removes TS files",
+        "last_refreshed": "cycle 164"
+      }
+    }
+  },
+  "last_cycle": {
+    "issue": 601,
+    "number": 164,
+    "summary": "Cycle 164: In progress.",
+    "timestamp": "2026-03-06T19:43:00Z"
+  },
+  "last_eva_comment_check": "2026-03-06T19:43:00Z",
+  "next_metric_verification": "cycle 151",
+  "open_questions_for_eva": [],
+  "publish_gate": {
+    "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z — all gates satisfied",
+    "last_divergence_check": "cycle 163",
+    "note": "QC-ACK #225 cleared v1.0.1 at ea8ffff for npm publish. 73/73 parity, E2E, build, tarball tests all pass. No package-affecting source divergence since validation. Audit sign-off confirmed via audit#125 (cycle 163).",
+    "qc_ack": "EvaLok/schema-org-json-ld-qc#225",
+    "source_diverged": false,
+    "validated_at": "2026-03-06T04:39Z",
+    "validated_commit": "ea8ffff"
+  },
+  "qc_processed": [
+    8,
+    37,
+    57,
+    72,
+    160,
+    165
+  ],
+  "qc_requests_pending": [
+    535
+  ],
+  "qc_status": {
+    "report_57": "ALL FIXES MERGED AND VALIDATED. PRs #198, #199. QC-63 confirmed: 39/39 E2E pass, 0 errors, 19 warnings.",
+    "report_72": "FIXED. PR #214 merged. Added 5 optional Recipe properties (expires, hasPart, publication, ineligibleRegion, interactionStatistic). QC request #215 sent.",
+    "request_165": "COMPLETE. QC issue #41 closed. 39/39 E2E pass, 0 errors, 158 warnings. @graph API also validated.",
+    "request_200": "COMPLETE. QC-63 validated. 39/39 E2E pass, 0 errors, 19 warnings (down from 58, 67% reduction). Issues #195 and #200 closed.",
+    "request_215": "COMPLETE. QC repo #74 closed. QC PR #76 merged (10:16 UTC). 39/39 E2E pass, 0 errors. All 5 Recipe optional properties validated. Issue #215 closed.",
+    "request_234": "COMPLETE. QC repo #84 closed. 188 QC unit tests, 39/39 E2E pass, 0 errors, 15 warnings (all known false positives). Offer.hasMerchantReturnPolicy validated. Issue #234 closed.",
+    "request_265": "COMPLETE. QC repo #114 closed. 188 tests, 1133 assertions, ALL PASS. 39/39 E2E, 0 errors, 15 warnings (known false positives). Phase 0 gate cleared.",
+    "request_299": "COMPLETE. QC-ACK #122 closed (2026-03-01T16:37Z). 23/23 parity match, 0 E2E errors, 14 warnings (known false positives). All DoD criteria satisfied: top-level parity, propertyMap, inheritance chains, Adobe E2E. Issue #299 closed.",
+    "request_331": "PARITY COMPLETE. QC-ACK #138. Parity: 73/73 standalone types (100%). 0 E2E errors, 25 warnings (false positives). Class inventory: 88/88 PHP=TS. Per audit #73, 73 is the maximum achievable (3 building-block types validated through parents). Publish gate satisfied.",
+    "request_496": "COMPLETE. QC-ACK #213 (2026-03-05T16:22Z). Pre-publish final validation: Parity 73/73 PASS, E2E 73/73 PASS (0 errors), Package build PASS, Class inventory 88/88 PASS. All 5 DoD criteria satisfied. Package cleared for npm publish."
+  },
+  "release": {
+    "v1.0.0": {
+      "commit": "5836b38",
+      "release_url": "https://github.com/EvaLok/schema-org-json-ld/releases/tag/v1.0.0",
+      "tag": "v1.0.0",
+      "tagged_at": "2026-02-27T13:25:27Z"
+    }
+  },
+  "review_agent": {
+    "chronic_category_responses": {
+      "description": "Traceable artifacts for chronic category escalation (step 0.5.8). When a finding category appears in 5+ of the last 6 reviews, it must have a response entry here documenting root cause, chosen path, and verification. Per cycle 159/160 review recommendation.",
+      "entries": [
+        {
+          "added_cycle": 161,
+          "category": "journal-quality",
+          "chosen_path": "recalibrate",
+          "rationale": "journal-quality findings in cycles 155-160 were positive/confirmatory (5/5 positive). Recurrence reflects consistent verification of a healthy practice, not a chronic problem. No structural fix needed — the review agent should continue checking journal quality but the category is expected to appear regularly.",
+          "root_cause": "Review agent consistently evaluates journal quality each cycle. Findings are overwhelmingly positive (confirming reflective, causally-linked entries). The category recurs because journal evaluation is a standing review criterion, not because of a persistent deficiency.",
+          "verification_cycle": 161
+        }
+      ]
+    },
+    "description": "Programmatic tracking of review agent findings for trend detection. Per audit #102.",
+    "history": [
+      {
+        "actioned": 5,
+        "categories": [
+          "code-quality",
+          "documentation-drift",
+          "state-freshness",
+          "closure-discipline"
+        ],
+        "complacency_score": 2,
+        "cycle": 140,
+        "deferred": 0,
+        "finding_count": 6,
+        "ignored": 1
+      },
+      {
+        "actioned": 4,
+        "categories": [
+          "code-quality",
+          "state-consistency",
+          "state-freshness",
+          "journal-quality"
+        ],
+        "complacency_score": 3,
+        "cycle": 141,
+        "deferred": 1,
+        "finding_count": 5,
+        "ignored": 0
+      },
+      {
+        "actioned": 4,
+        "categories": [
+          "state-freshness",
+          "tool-quality",
+          "journal-quality"
+        ],
+        "complacency_score": 2,
+        "cycle": 142,
+        "deferred": 2,
+        "finding_count": 6,
+        "ignored": 0
+      },
+      {
+        "actioned": 3,
+        "categories": [
+          "process-improvement",
+          "state-consistency",
+          "state-freshness",
+          "journal-quality"
+        ],
+        "complacency_score": 2,
+        "cycle": 143,
+        "deferred": 1,
+        "finding_count": 6,
+        "ignored": 2
+      },
+      {
+        "actioned": 4,
+        "categories": [
+          "state-consistency",
+          "process-improvement",
+          "journal-quality",
+          "state-freshness"
+        ],
+        "complacency_score": 3,
+        "cycle": 144,
+        "deferred": 1,
+        "finding_count": 6,
+        "ignored": 1
+      },
+      {
+        "actioned": 5,
+        "categories": [
+          "code-quality",
+          "state-consistency",
+          "state-freshness",
+          "process-improvement",
+          "journal-quality"
+        ],
+        "complacency_score": 3,
+        "cycle": 145,
+        "deferred": 1,
+        "finding_count": 8,
+        "ignored": 2
+      },
+      {
+        "actioned": 4,
+        "categories": [
+          "code-quality",
+          "state-consistency",
+          "state-freshness",
+          "process-improvement"
+        ],
+        "complacency_score": 2,
+        "cycle": 146,
+        "deferred": 0,
+        "finding_count": 7,
+        "ignored": 3
+      },
+      {
+        "actioned": 4,
+        "categories": [
+          "state-freshness",
+          "state-consistency",
+          "process-improvement",
+          "verification-evidence"
+        ],
+        "complacency_score": 2,
+        "cycle": 147,
+        "deferred": 0,
+        "finding_count": 13,
+        "ignored": 9
+      },
+      {
+        "actioned": 3,
+        "categories": [
+          "state-freshness",
+          "state-consistency",
+          "tool-quality",
+          "integration-quality"
+        ],
+        "complacency_score": 3,
+        "cycle": 148,
+        "deferred": 0,
+        "finding_count": 10,
+        "ignored": 7
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "state-consistency",
+          "state-freshness",
+          "tool-quality"
+        ],
+        "complacency_score": 3,
+        "cycle": 149,
+        "deferred": 3,
+        "finding_count": 10,
+        "ignored": 5
+      },
+      {
+        "actioned": 3,
+        "categories": [
+          "state-freshness",
+          "state-consistency",
+          "verification-evidence"
+        ],
+        "complacency_score": 3,
+        "cycle": 150,
+        "deferred": 1,
+        "finding_count": 9,
+        "ignored": 5
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "test-coverage",
+          "documentation-drift",
+          "state-consistency"
+        ],
+        "complacency_score": 3,
+        "cycle": 151,
+        "deferred": 2,
+        "finding_count": 8,
+        "ignored": 4
+      },
+      {
+        "actioned": 4,
+        "categories": [
+          "state-consistency",
+          "process-improvement",
+          "verification-evidence"
+        ],
+        "complacency_score": 3,
+        "cycle": 152,
+        "deferred": 0,
+        "finding_count": 10,
+        "ignored": 6
+      },
+      {
+        "actioned": 4,
+        "categories": [
+          "state-consistency",
+          "process-follow-through",
+          "field-freshness"
+        ],
+        "complacency_score": 3,
+        "cycle": 153,
+        "deferred": 0,
+        "finding_count": 10,
+        "ignored": 6
+      },
+      {
+        "actioned": 4,
+        "categories": [
+          "state-consistency",
+          "process-follow-through",
+          "timestamp-precision",
+          "evidence-quality"
+        ],
+        "complacency_score": 3,
+        "cycle": 154,
+        "deferred": 0,
+        "finding_count": 10,
+        "ignored": 6
+      },
+      {
+        "actioned": 3,
+        "categories": [
+          "state-consistency",
+          "pipeline-framing",
+          "worklog-completeness",
+          "journal-quality",
+          "tool-usability",
+          "process-evidence"
+        ],
+        "complacency_score": 3,
+        "cycle": 155,
+        "deferred": 3,
+        "finding_count": 9,
+        "ignored": 3
+      },
+      {
+        "actioned": 3,
+        "categories": [
+          "journal-accuracy",
+          "tool-quality",
+          "wrapper-testing",
+          "verification-evidence"
+        ],
+        "complacency_score": 3,
+        "cycle": 156,
+        "deferred": 1,
+        "finding_count": 7,
+        "ignored": 3
+      },
+      {
+        "actioned": 3,
+        "categories": [
+          "publish-gate-accuracy",
+          "copilot-metrics-transparency",
+          "qc-ack-automation",
+          "tool-quality",
+          "journal-quality",
+          "commit-receipts",
+          "state-freshness"
+        ],
+        "complacency_score": 3,
+        "cycle": 157,
+        "deferred": 1,
+        "finding_count": 7,
+        "ignored": 3,
+        "note": "Corrected from actioned=4 to actioned=3 per cycle 158 review finding 5. Three concrete actions: copilot_metrics fix, #566 dispatch, field inventory refresh. Remaining 3 findings were informational (verified correct, no change needed)."
+      },
+      {
+        "actioned": 3,
+        "categories": [
+          "receipt-accuracy",
+          "field-sweep-evidence",
+          "commit-verification",
+          "copilot-metrics-consistency",
+          "review-accounting",
+          "journal-quality",
+          "publish-gate-accuracy"
+        ],
+        "complacency_score": 3,
+        "cycle": 158,
+        "deferred": 1,
+        "finding_count": 7,
+        "ignored": 3,
+        "note": "Three actions: corrected c157 actioned count, dispatched #572 (state-invariants per rec 3), dispatched #574 (tiered inventory per rec 2). Deferred: receipt wording precision (behavioral). 3 positive/informational findings."
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "receipt-accuracy",
+          "review-accounting",
+          "chronic-category-escalation",
+          "copilot-metrics-consistency",
+          "dispatch-quality",
+          "journal-quality",
+          "audit-processing",
+          "publish-gate-accuracy"
+        ],
+        "complacency_score": 3,
+        "cycle": 159,
+        "deferred": 1,
+        "finding_count": 9,
+        "ignored": 7,
+        "note": "Actioned: copilot metrics arithmetic fix (74->75). Deferred: chronic-category artifact schema. 7 positive/informational findings."
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "receipt-coherence",
+          "structural-follow-through",
+          "chronic-category-escalation",
+          "review-history-consistency",
+          "audit-signoff-latency",
+          "journal-quality"
+        ],
+        "complacency_score": 3,
+        "cycle": 160,
+        "deferred": 1,
+        "finding_count": 6,
+        "ignored": 3,
+        "note": "Actioned: review history consistency gap (added c159 entry + strengthened invariant to ==), chronic-category artifact schema (added chronic_category_responses to state.json). Deferred: audit sign-off latency (blocked on Eva #579). 3 positive/informational."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "review-history-completeness",
+          "invariant-correctness",
+          "chronic-category-robustness",
+          "journal-quality-recalibration",
+          "copilot-metrics-coherence",
+          "journal-quality",
+          "optimization-pressure"
+        ],
+        "complacency_score": 2,
+        "cycle": 161,
+        "deferred": 2,
+        "finding_count": 7,
+        "ignored": 5,
+        "note": "Score 2/5 — strong concrete follow-through. Deferred: chronic-category ordering validation (rec 1-2), sentiment-aware counting (rec 3). 5 positive/informational (history completeness verified, invariant correctness confirmed, journal quality genuine, metrics coherent, optimization pressure noted)."
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "data-integrity",
+          "process-integrity",
+          "verification-pass",
+          "documentation-roadmap",
+          "reflection-positive",
+          "execution-planning",
+          "improvement-assessment"
+        ],
+        "complacency_score": 2,
+        "cycle": 162,
+        "deferred": 1,
+        "finding_count": 7,
+        "ignored": 5,
+        "note": "Score 2/5 — genuine architectural progress on write-side pipeline. Actioned: will include full #586 roadmap in worklog (finding 4). Deferred: split cycle-complete commit orchestration (finding 6 — accepted shipping together). 5 positive/informational (copilot arithmetic PASS, journal quality POSITIVE, directive response well-structured, improvement trend confirmed)."
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "process-traceability",
+          "release-governance",
+          "review-accounting",
+          "state-consistency",
+          "state-freshness"
+        ],
+        "complacency_score": 3,
+        "cycle": 163,
+        "deferred": 0,
+        "finding_count": 162,
+        "ignored": 3,
+        "note": "Findings 1,3,4 confirmatory (low sev). Finding 2 (freshness) actioned. Finding 5 (traceability) actioned via atomic cycle-close improvements."
+      }
+    ],
+    "last_review_cycle": 163
+  },
   "schema_status": {
-    "implemented": [
-      {
-        "type": "Product",
-        "pr": 2,
-        "sub_types": ["Brand", "Offer", "OfferShippingDetails", "DefinedRegion", "ShippingDeliveryTime", "QuantitativeValue", "MonetaryAmount"]
-      },
-      {
-        "type": "BreadcrumbList",
-        "pr": 2,
-        "sub_types": ["ListItem"]
-      },
-      {
-        "type": "AggregateRating",
-        "pr": 16,
-        "issue": 15,
-        "merged_at": "2026-02-24T16:20:22Z"
-      },
-      {
-        "type": "Review",
-        "pr": 18,
-        "issue": 17,
-        "sub_types": ["Rating"],
-        "merged_at": "2026-02-24T16:18:13Z"
-      },
-      {
-        "type": "Organization",
-        "pr": 22,
-        "issue": 21,
-        "sub_types": ["PostalAddress", "ContactPoint"],
-        "merged_at": "2026-02-24T17:03:31Z"
-      },
-      {
-        "type": "FAQPage",
-        "pr": 24,
-        "issue": 23,
-        "sub_types": ["Question", "Answer"],
-        "merged_at": "2026-02-24T17:12:03Z"
-      },
-      {
-        "type": "ImageObject",
-        "pr": 26,
-        "issue": 25,
-        "merged_at": "2026-02-24T17:23:30Z"
-      },
-      {
-        "type": "Person",
-        "pr": 28,
-        "issue": 27,
-        "merged_at": "2026-02-24T17:28:06Z"
-      },
-      {
-        "type": "Event",
-        "pr": 35,
-        "issue": 33,
-        "sub_types": ["Place", "EventStatusType"],
-        "merged_at": "2026-02-24T18:01:00Z"
-      },
-      {
-        "type": "Article",
-        "pr": 34,
-        "issue": 32,
-        "sub_types": ["NewsArticle", "BlogPosting"],
-        "merged_at": "2026-02-24T18:02:00Z"
-      },
-      {
-        "type": "LocalBusiness",
-        "pr": 38,
-        "issue": 36,
-        "sub_types": ["GeoCoordinates", "OpeningHoursSpecification", "DayOfWeek"],
-        "merged_at": "2026-02-24T18:35:00Z"
-      },
-      {
-        "type": "Recipe",
-        "pr": 39,
-        "issue": 37,
-        "sub_types": ["NutritionInformation", "HowToStep"],
-        "merged_at": "2026-02-24T18:36:00Z"
-      },
-      {
-        "type": "VideoObject",
-        "pr": 45,
-        "issue": 44,
-        "merged_at": "2026-02-24T20:06:00Z",
-        "sub_types": ["SeekToAction"],
-        "potentialAction_pr": 362
-      },
-      {
-        "type": "SoftwareApplication",
-        "pr": 47,
-        "issue": 46,
-        "sub_types": ["MobileApplication", "WebApplication"],
-        "merged_at": "2026-02-24T20:07:00Z"
-      },
-      {
-        "type": "Movie",
-        "pr": 49,
-        "issue": 48,
-        "merged_at": "2026-02-24T20:18:00Z"
-      },
-      {
-        "type": "JobPosting",
-        "pr": 51,
-        "issue": 50,
-        "sub_types": ["AdministrativeArea", "EducationalOccupationalCredential", "OccupationalExperienceRequirements"],
-        "merged_at": "2026-02-24T20:18:00Z",
-        "beta_properties_pr": 355
-      },
-      {
-        "type": "Course",
-        "pr": 57,
-        "issue": 56,
-        "sub_types": ["CourseInstance", "Schedule"],
-        "merged_at": "2026-02-24T21:39:00Z"
-      },
-      {
-        "type": "Dataset",
-        "pr": 55,
-        "issue": 54,
-        "sub_types": ["DataDownload", "DataCatalog", "GeoShape"],
-        "merged_at": "2026-02-24T21:50:00Z"
-      },
-      {
-        "type": "EmployerAggregateRating",
-        "pr": 59,
-        "issue": 58,
-        "merged_at": "2026-02-24T22:10:00Z"
-      },
-      {
-        "type": "QAPage",
-        "pr": 61,
-        "issue": 60,
-        "sub_types": ["Comment"],
-        "merged_at": "2026-02-24T22:10:00Z"
-      },
-      {
-        "type": "ProfilePage",
-        "pr": 65,
-        "issue": 63,
-        "sub_types": ["InteractionCounter"],
-        "merged_at": "2026-02-24T23:00:00Z"
-      },
-      {
-        "type": "EducationQA",
-        "pr": 66,
-        "issue": 64,
-        "sub_types": ["Quiz", "AlignmentObject"],
-        "merged_at": "2026-02-24T23:00:00Z"
-      },
-      {
-        "type": "DiscussionForumPosting",
-        "pr": 68,
-        "issue": 67,
-        "merged_at": "2026-02-24T23:20:41Z"
-      },
-      {
-        "type": "Speakable",
-        "pr": 71,
-        "issue": 70,
-        "sub_types": ["SpeakableSpecification"],
-        "merged_at": "2026-02-25T00:36:00Z"
-      },
-      {
-        "type": "Carousel",
-        "pr": 73,
-        "issue": 72,
-        "sub_types": ["ItemList"],
-        "modifies": ["ListItem"],
-        "merged_at": "2026-02-25T00:37:00Z"
-      },
-      {
-        "type": "SubscriptionContent",
-        "pr": 75,
-        "issue": 74,
-        "sub_types": ["WebPageElement"],
-        "modifies": ["Article"],
-        "merged_at": "2026-02-25T00:49:00Z"
-      },
-      {
-        "type": "VacationRental",
-        "pr": 77,
-        "issue": 76,
-        "sub_types": ["Accommodation", "BedDetails", "LocationFeatureSpecification"],
-        "merged_at": "2026-02-25T00:50:00Z"
-      },
-      {
-        "type": "MathSolver",
-        "pr": 99,
-        "issue": 98,
-        "sub_types": ["SolveMathAction"],
-        "modifies": ["JsonLdGenerator"],
-        "merged_at": "2026-02-25T08:05:00Z"
-      }
-    ],
-    "quality_fixes": [
-      {
-        "description": "Handle json_encode() failure in JsonLdGenerator",
-        "pr": 190,
-        "issue": 183,
-        "merged_at": "2026-02-26T19:04:34Z"
-      },
-      {
-        "description": "Add declare(strict_types=1) to all PHP files",
-        "pr": 191,
-        "issue": 186,
-        "merged_at": "2026-02-26T19:04:41Z"
-      },
-      {
-        "description": "Consolidate all enums under src/v1/Enum namespace",
-        "pr": 192,
-        "issue": 184,
-        "merged_at": "2026-02-26T19:50:00Z"
-      },
-      {
-        "description": "Expand JsonLdGenerator edge-case test coverage",
-        "pr": 193,
-        "issue": 182,
-        "merged_at": "2026-02-26T19:52:00Z"
-      },
-      {
-        "description": "Add HowToStep video + itemListElement",
-        "pr": 198,
-        "issue": 196,
-        "merged_at": "2026-02-26T20:03:00Z"
-      },
-      {
-        "description": "Add datePublished, BroadcastEvent, subjectOf",
-        "pr": 199,
-        "issue": 197,
-        "merged_at": "2026-02-26T20:04:00Z"
-      },
-      {
-        "description": "Add PHPStan level 5 static analysis to CI",
-        "pr": 203,
-        "issue": 181,
-        "merged_at": "2026-02-26T22:26:10Z"
-      },
-      {
-        "description": "Upgrade PHPStan to level 6 — add missing array type annotations",
-        "pr": 206,
-        "issue": 205,
-        "merged_at": "2026-02-26T23:04:00Z"
-      },
-      {
-        "description": "Upgrade PHPStan to level 9 — add @var annotation for PROPERTY_MAP constant",
-        "pr": 209,
-        "issue": 208,
-        "merged_at": "2026-02-27T00:31:02Z"
-      },
-      {
-        "description": "Add 5 optional Recipe properties (expires, hasPart, publication, ineligibleRegion, interactionStatistic)",
-        "pr": 214,
-        "issue": 213,
-        "merged_at": "2026-02-27T05:22:08Z"
-      },
-      {
-        "description": "Add subjectOf to ProductGroup",
-        "pr": 218,
-        "issue": 217,
-        "merged_at": "2026-02-27T06:32:24Z"
-      },
-      {
-        "description": "Add hasMerchantReturnPolicy to Offer (per-product return policies)",
-        "pr": 232,
-        "issue": 231,
-        "merged_at": "2026-02-27T19:57:32Z"
-      },
-      {
-        "description": "Phase 0: Restructure PHP codebase under php/ prefix",
-        "pr": 263,
-        "issue": 262,
-        "merged_at": "2026-03-01T02:23:00Z"
-      },
-      {
-        "description": "Phase 1: TypeScript scaffold (core infrastructure + Brand)",
-        "pr": 270,
-        "issue": 269,
-        "merged_at": "2026-03-01T08:50:04Z"
-      },
-      {
-        "description": "Add verify-build artifact smoke test (audit #39)",
-        "pr": 317,
-        "issue": 316,
-        "merged_at": "2026-03-01T22:43:20Z"
-      },
-      {
-        "description": "Add QuantitativeValue.unitText, Dataset.hasPart/isPartOf, Organization ProfilePage fields + fix mixed-array serialization in JsonLdGenerator",
-        "pr": 364,
-        "issue": 363,
-        "merged_at": "2026-03-03T09:31:21Z"
-      }
-    ],
-    "enums_implemented": ["OfferItemCondition", "ItemAvailability", "EventStatusType", "DayOfWeek", "EventAttendanceModeEnumeration", "MerchantReturnEnumeration", "ReturnMethodEnumeration", "ReturnFeesEnumeration", "RefundTypeEnumeration", "ReturnLabelSourceEnumeration", "TierBenefitEnumeration", "FulfillmentTypeEnumeration"],
+    "directory_layout": {
+      "php": "php/src/, php/test/",
+      "pr": 263,
+      "restructured_at": "2026-03-01T02:23:00Z",
+      "ts": "ts/src/, ts/test/",
+      "ts_port_complete_at": "2026-03-01T12:11:00Z",
+      "ts_scaffold_at": "2026-03-01T08:50:04Z"
+    },
     "enum_namespace": "EvaLok\\SchemaOrgJsonLd\\v1\\Enum",
-    "in_progress": [],
-    "planned_next": [],
+    "enums_implemented": [
+      "OfferItemCondition",
+      "ItemAvailability",
+      "EventStatusType",
+      "DayOfWeek",
+      "EventAttendanceModeEnumeration",
+      "MerchantReturnEnumeration",
+      "ReturnMethodEnumeration",
+      "ReturnFeesEnumeration",
+      "RefundTypeEnumeration",
+      "ReturnLabelSourceEnumeration",
+      "TierBenefitEnumeration",
+      "FulfillmentTypeEnumeration"
+    ],
     "google_rich_results_types": {
       "not_implemented": [],
       "note": "ALL 31 Google Search Gallery categories covered (26 original + 5 sub-categories: Merchant listing, Product variants, Loyalty program, Return policy, Shipping policy). Book actions excluded (DataFeed type, not Rich Results Test)."
     },
+    "implemented": [
+      {
+        "pr": 2,
+        "sub_types": [
+          "Brand",
+          "Offer",
+          "OfferShippingDetails",
+          "DefinedRegion",
+          "ShippingDeliveryTime",
+          "QuantitativeValue",
+          "MonetaryAmount"
+        ],
+        "type": "Product"
+      },
+      {
+        "pr": 2,
+        "sub_types": [
+          "ListItem"
+        ],
+        "type": "BreadcrumbList"
+      },
+      {
+        "issue": 15,
+        "merged_at": "2026-02-24T16:20:22Z",
+        "pr": 16,
+        "type": "AggregateRating"
+      },
+      {
+        "issue": 17,
+        "merged_at": "2026-02-24T16:18:13Z",
+        "pr": 18,
+        "sub_types": [
+          "Rating"
+        ],
+        "type": "Review"
+      },
+      {
+        "issue": 21,
+        "merged_at": "2026-02-24T17:03:31Z",
+        "pr": 22,
+        "sub_types": [
+          "PostalAddress",
+          "ContactPoint"
+        ],
+        "type": "Organization"
+      },
+      {
+        "issue": 23,
+        "merged_at": "2026-02-24T17:12:03Z",
+        "pr": 24,
+        "sub_types": [
+          "Question",
+          "Answer"
+        ],
+        "type": "FAQPage"
+      },
+      {
+        "issue": 25,
+        "merged_at": "2026-02-24T17:23:30Z",
+        "pr": 26,
+        "type": "ImageObject"
+      },
+      {
+        "issue": 27,
+        "merged_at": "2026-02-24T17:28:06Z",
+        "pr": 28,
+        "type": "Person"
+      },
+      {
+        "issue": 33,
+        "merged_at": "2026-02-24T18:01:00Z",
+        "pr": 35,
+        "sub_types": [
+          "Place",
+          "EventStatusType"
+        ],
+        "type": "Event"
+      },
+      {
+        "issue": 32,
+        "merged_at": "2026-02-24T18:02:00Z",
+        "pr": 34,
+        "sub_types": [
+          "NewsArticle",
+          "BlogPosting"
+        ],
+        "type": "Article"
+      },
+      {
+        "issue": 36,
+        "merged_at": "2026-02-24T18:35:00Z",
+        "pr": 38,
+        "sub_types": [
+          "GeoCoordinates",
+          "OpeningHoursSpecification",
+          "DayOfWeek"
+        ],
+        "type": "LocalBusiness"
+      },
+      {
+        "issue": 37,
+        "merged_at": "2026-02-24T18:36:00Z",
+        "pr": 39,
+        "sub_types": [
+          "NutritionInformation",
+          "HowToStep"
+        ],
+        "type": "Recipe"
+      },
+      {
+        "issue": 44,
+        "merged_at": "2026-02-24T20:06:00Z",
+        "potentialAction_pr": 362,
+        "pr": 45,
+        "sub_types": [
+          "SeekToAction"
+        ],
+        "type": "VideoObject"
+      },
+      {
+        "issue": 46,
+        "merged_at": "2026-02-24T20:07:00Z",
+        "pr": 47,
+        "sub_types": [
+          "MobileApplication",
+          "WebApplication"
+        ],
+        "type": "SoftwareApplication"
+      },
+      {
+        "issue": 48,
+        "merged_at": "2026-02-24T20:18:00Z",
+        "pr": 49,
+        "type": "Movie"
+      },
+      {
+        "beta_properties_pr": 355,
+        "issue": 50,
+        "merged_at": "2026-02-24T20:18:00Z",
+        "pr": 51,
+        "sub_types": [
+          "AdministrativeArea",
+          "EducationalOccupationalCredential",
+          "OccupationalExperienceRequirements"
+        ],
+        "type": "JobPosting"
+      },
+      {
+        "issue": 56,
+        "merged_at": "2026-02-24T21:39:00Z",
+        "pr": 57,
+        "sub_types": [
+          "CourseInstance",
+          "Schedule"
+        ],
+        "type": "Course"
+      },
+      {
+        "issue": 54,
+        "merged_at": "2026-02-24T21:50:00Z",
+        "pr": 55,
+        "sub_types": [
+          "DataDownload",
+          "DataCatalog",
+          "GeoShape"
+        ],
+        "type": "Dataset"
+      },
+      {
+        "issue": 58,
+        "merged_at": "2026-02-24T22:10:00Z",
+        "pr": 59,
+        "type": "EmployerAggregateRating"
+      },
+      {
+        "issue": 60,
+        "merged_at": "2026-02-24T22:10:00Z",
+        "pr": 61,
+        "sub_types": [
+          "Comment"
+        ],
+        "type": "QAPage"
+      },
+      {
+        "issue": 63,
+        "merged_at": "2026-02-24T23:00:00Z",
+        "pr": 65,
+        "sub_types": [
+          "InteractionCounter"
+        ],
+        "type": "ProfilePage"
+      },
+      {
+        "issue": 64,
+        "merged_at": "2026-02-24T23:00:00Z",
+        "pr": 66,
+        "sub_types": [
+          "Quiz",
+          "AlignmentObject"
+        ],
+        "type": "EducationQA"
+      },
+      {
+        "issue": 67,
+        "merged_at": "2026-02-24T23:20:41Z",
+        "pr": 68,
+        "type": "DiscussionForumPosting"
+      },
+      {
+        "issue": 70,
+        "merged_at": "2026-02-25T00:36:00Z",
+        "pr": 71,
+        "sub_types": [
+          "SpeakableSpecification"
+        ],
+        "type": "Speakable"
+      },
+      {
+        "issue": 72,
+        "merged_at": "2026-02-25T00:37:00Z",
+        "modifies": [
+          "ListItem"
+        ],
+        "pr": 73,
+        "sub_types": [
+          "ItemList"
+        ],
+        "type": "Carousel"
+      },
+      {
+        "issue": 74,
+        "merged_at": "2026-02-25T00:49:00Z",
+        "modifies": [
+          "Article"
+        ],
+        "pr": 75,
+        "sub_types": [
+          "WebPageElement"
+        ],
+        "type": "SubscriptionContent"
+      },
+      {
+        "issue": 76,
+        "merged_at": "2026-02-25T00:50:00Z",
+        "pr": 77,
+        "sub_types": [
+          "Accommodation",
+          "BedDetails",
+          "LocationFeatureSpecification"
+        ],
+        "type": "VacationRental"
+      },
+      {
+        "issue": 98,
+        "merged_at": "2026-02-25T08:05:00Z",
+        "modifies": [
+          "JsonLdGenerator"
+        ],
+        "pr": 99,
+        "sub_types": [
+          "SolveMathAction"
+        ],
+        "type": "MathSolver"
+      }
+    ],
+    "in_progress": [],
+    "phpstan_level": "max",
+    "phpstan_max_assessment": {
+      "fix_merged_at": "2026-03-03T19:59:56Z",
+      "fix_pr": 399,
+      "level_max_errors": 0,
+      "note": "Level max achieved. Fixed 3 mixed-offset errors with local array accumulator in AddPropertiesToObject()."
+    },
+    "planned_next": [],
+    "property_gap_audit": {
+      "100_percent_coverage": [
+        "Article",
+        "Recipe",
+        "Event",
+        "Product",
+        "FAQPage",
+        "Organization",
+        "LocalBusiness",
+        "SoftwareApplication",
+        "Movie",
+        "ProfilePage",
+        "BreadcrumbList",
+        "EmployerAggregateRating",
+        "Quiz",
+        "Review",
+        "MathSolver",
+        "SpeakableSpecification",
+        "VideoObject",
+        "Carousel",
+        "DiscussionForumPosting",
+        "Subscription",
+        "VacationRental",
+        "JobPosting"
+      ],
+      "gaps_fixed": [
+        "QuantitativeValue.unitText (PR #364)",
+        "Dataset.hasPart/isPartOf (PR #364)",
+        "Organization ProfilePage fields (PR #364)",
+        "VideoObject.potentialAction/SeekToAction (PR #362)",
+        "JobPosting beta properties (PR #355)",
+        "Review.positiveNotes/negativeNotes (PR #357)",
+        "AggregateRating.itemReviewed (dispatched #370)",
+        "Question.comment + Answer.comment (dispatched #424)"
+      ],
+      "google_types_verified": 26,
+      "google_verification_complete": true,
+      "near_full_coverage": [
+        "MathSolver (learningResourceType optional, design choice)",
+        "EducationQA (shared Question class trade-offs)"
+      ],
+      "remaining_low_priority": [
+        "VacationRental: Review.contentReferenceTime (French only)"
+      ],
+      "types_audited": 23
+    },
+    "quality_fixes": [
+      {
+        "description": "Handle json_encode() failure in JsonLdGenerator",
+        "issue": 183,
+        "merged_at": "2026-02-26T19:04:34Z",
+        "pr": 190
+      },
+      {
+        "description": "Add declare(strict_types=1) to all PHP files",
+        "issue": 186,
+        "merged_at": "2026-02-26T19:04:41Z",
+        "pr": 191
+      },
+      {
+        "description": "Consolidate all enums under src/v1/Enum namespace",
+        "issue": 184,
+        "merged_at": "2026-02-26T19:50:00Z",
+        "pr": 192
+      },
+      {
+        "description": "Expand JsonLdGenerator edge-case test coverage",
+        "issue": 182,
+        "merged_at": "2026-02-26T19:52:00Z",
+        "pr": 193
+      },
+      {
+        "description": "Add HowToStep video + itemListElement",
+        "issue": 196,
+        "merged_at": "2026-02-26T20:03:00Z",
+        "pr": 198
+      },
+      {
+        "description": "Add datePublished, BroadcastEvent, subjectOf",
+        "issue": 197,
+        "merged_at": "2026-02-26T20:04:00Z",
+        "pr": 199
+      },
+      {
+        "description": "Add PHPStan level 5 static analysis to CI",
+        "issue": 181,
+        "merged_at": "2026-02-26T22:26:10Z",
+        "pr": 203
+      },
+      {
+        "description": "Upgrade PHPStan to level 6 — add missing array type annotations",
+        "issue": 205,
+        "merged_at": "2026-02-26T23:04:00Z",
+        "pr": 206
+      },
+      {
+        "description": "Upgrade PHPStan to level 9 — add @var annotation for PROPERTY_MAP constant",
+        "issue": 208,
+        "merged_at": "2026-02-27T00:31:02Z",
+        "pr": 209
+      },
+      {
+        "description": "Add 5 optional Recipe properties (expires, hasPart, publication, ineligibleRegion, interactionStatistic)",
+        "issue": 213,
+        "merged_at": "2026-02-27T05:22:08Z",
+        "pr": 214
+      },
+      {
+        "description": "Add subjectOf to ProductGroup",
+        "issue": 217,
+        "merged_at": "2026-02-27T06:32:24Z",
+        "pr": 218
+      },
+      {
+        "description": "Add hasMerchantReturnPolicy to Offer (per-product return policies)",
+        "issue": 231,
+        "merged_at": "2026-02-27T19:57:32Z",
+        "pr": 232
+      },
+      {
+        "description": "Phase 0: Restructure PHP codebase under php/ prefix",
+        "issue": 262,
+        "merged_at": "2026-03-01T02:23:00Z",
+        "pr": 263
+      },
+      {
+        "description": "Phase 1: TypeScript scaffold (core infrastructure + Brand)",
+        "issue": 269,
+        "merged_at": "2026-03-01T08:50:04Z",
+        "pr": 270
+      },
+      {
+        "description": "Add verify-build artifact smoke test (audit #39)",
+        "issue": 316,
+        "merged_at": "2026-03-01T22:43:20Z",
+        "pr": 317
+      },
+      {
+        "description": "Add QuantitativeValue.unitText, Dataset.hasPart/isPartOf, Organization ProfilePage fields + fix mixed-array serialization in JsonLdGenerator",
+        "issue": 363,
+        "merged_at": "2026-03-03T09:31:21Z",
+        "pr": 364
+      }
+    ],
     "remaining_audit_findings": {
       "low_priority": [
         "VacationRental: Review.contentReferenceTime (French listings only, very niche)"
       ],
       "note": "Property gap audit complete (all 23 standalone types). Google property verification complete (all 26 types). QAPage Question/Answer comment gap dispatched #424."
     },
-    "property_gap_audit": {
-      "types_audited": 23,
-      "google_verification_complete": true,
-      "google_types_verified": 26,
-      "100_percent_coverage": ["Article", "Recipe", "Event", "Product", "FAQPage", "Organization", "LocalBusiness", "SoftwareApplication", "Movie", "ProfilePage", "BreadcrumbList", "EmployerAggregateRating", "Quiz", "Review", "MathSolver", "SpeakableSpecification", "VideoObject", "Carousel", "DiscussionForumPosting", "Subscription", "VacationRental", "JobPosting"],
-      "near_full_coverage": ["MathSolver (learningResourceType optional, design choice)", "EducationQA (shared Question class trade-offs)"],
-      "gaps_fixed": ["QuantitativeValue.unitText (PR #364)", "Dataset.hasPart/isPartOf (PR #364)", "Organization ProfilePage fields (PR #364)", "VideoObject.potentialAction/SeekToAction (PR #362)", "JobPosting beta properties (PR #355)", "Review.positiveNotes/negativeNotes (PR #357)", "AggregateRating.itemReviewed (dispatched #370)", "Question.comment + Answer.comment (dispatched #424)"],
-      "remaining_low_priority": ["VacationRental: Review.contentReferenceTime (French only)"]
-    },
     "type_classification": {
-      "standalone_testable": 28,
-      "standalone_parity_testable": 73,
-      "building_block_only": 4,
       "building_block": 59,
+      "building_block_only": 4,
       "enums": 12,
-      "note": "89 schema classes - 12 enums - 4 building-block-only = 73 standalone-parity-testable. SeekToAction added as 4th building-block-only type (PR #362, always embedded in VideoObject.potentialAction). QC architecture maxes at 73 for parity. E2E denominator is ~28 standalone types."
-    },
-    "phpstan_level": "max",
-    "phpstan_max_assessment": {
-      "level_max_errors": 0,
-      "fix_pr": 399,
-      "fix_merged_at": "2026-03-03T19:59:56Z",
-      "note": "Level max achieved. Fixed 3 mixed-offset errors with local array accumulator in AddPropertiesToObject()."
-    },
-    "directory_layout": {
-      "php": "php/src/, php/test/",
-      "ts": "ts/src/, ts/test/",
-      "restructured_at": "2026-03-01T02:23:00Z",
-      "ts_scaffold_at": "2026-03-01T08:50:04Z",
-      "ts_port_complete_at": "2026-03-01T12:11:00Z",
-      "pr": 263
+      "note": "89 schema classes - 12 enums - 4 building-block-only = 73 standalone-parity-testable. SeekToAction added as 4th building-block-only type (PR #362, always embedded in VideoObject.potentialAction). QC architecture maxes at 73 for parity. E2E denominator is ~28 standalone types.",
+      "standalone_parity_testable": 73,
+      "standalone_testable": 28
     },
     "typescript_stats": {
-      "schema_types": 89,
-      "enums": 12,
+      "agent_sessions": 12,
+      "audit_37_fix": "QAPage + Restaurant ported via PR #312 (2026-03-01T18:18:42Z)",
       "core_modules": 3,
-      "total_modules": 104,
+      "enums": 12,
       "port_complete": true,
       "port_duration": "~3.5 hours (08:50-12:11 UTC) + 10 min fix (18:08-18:18 UTC)",
       "prs_merged": 12,
-      "agent_sessions": 12,
-      "zero_revision_rounds": true,
-      "audit_37_fix": "QAPage + Restaurant ported via PR #312 (2026-03-01T18:18:42Z)"
+      "schema_types": 89,
+      "total_modules": 104,
+      "zero_revision_rounds": true
     }
   },
-  "agent_sessions": [
-    {
-      "issue": 269,
-      "title": "Phase 1: TypeScript scaffold",
-      "dispatched_at": "2026-03-01T05:08:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 270,
-      "merged_at": "2026-03-01T08:50:04Z"
-    },
-    {
-      "issue": 276,
-      "title": "Phase 2a: Port all 12 enums to TypeScript",
-      "dispatched_at": "2026-03-01T09:11:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 277,
-      "merged_at": "2026-03-01T09:17:42Z"
-    },
-    {
-      "issue": 278,
-      "title": "Phase 2b: Port leaf sub-types batch 1 (9 types)",
-      "dispatched_at": "2026-03-01T09:18:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 279,
-      "merged_at": "2026-03-01T09:26:06Z"
-    },
-    {
-      "issue": 280,
-      "title": "Phase 2c: Port leaf sub-types batch 2 (9 types)",
-      "dispatched_at": "2026-03-01T09:27:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 281,
-      "merged_at": "2026-03-01T09:36:17Z"
-    },
-    {
-      "issue": 282,
-      "title": "Phase 3a: Port 12 Level-0 schema types (no schema deps)",
-      "dispatched_at": "2026-03-01T09:39:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 283,
-      "merged_at": "2026-03-01T09:47:23Z"
-    },
-    {
-      "issue": 284,
-      "title": "Phase 3b: Port 9 Level-1 schema types",
-      "dispatched_at": "2026-03-01T09:48:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 285,
-      "merged_at": "2026-03-01T10:49:00Z"
-    },
-    {
-      "issue": 287,
-      "title": "Phase 3c: Port 8 Level-2 schema types",
-      "dispatched_at": "2026-03-01T10:50:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 288,
-      "merged_at": "2026-03-01T11:07:00Z"
-    },
-    {
-      "issue": 289,
-      "title": "Phase 3d: Port 6 schema types (Level 3-5)",
-      "dispatched_at": "2026-03-01T11:08:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 290,
-      "merged_at": "2026-03-01T11:19:35Z"
-    },
-    {
-      "issue": 291,
-      "title": "Phase 3e: Port 9 schema types (Level 5-6)",
-      "dispatched_at": "2026-03-01T11:20:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 292,
-      "merged_at": "2026-03-01T11:31:02Z"
-    },
-    {
-      "issue": 293,
-      "title": "Phase 3f: Port 10 schema types (Level 7)",
-      "dispatched_at": "2026-03-01T11:32:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 294,
-      "merged_at": "2026-03-01T11:46:07Z"
-    },
-    {
-      "issue": 295,
-      "title": "Phase 3g: Port 11 schema types (Level 8+, final batch)",
-      "dispatched_at": "2026-03-01T11:47:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 296,
-      "merged_at": "2026-03-01T12:11:00Z"
-    },
-    {
-      "issue": 300,
-      "title": "Phase 4a: npm package polish (metadata, README, build verification)",
-      "dispatched_at": "2026-03-01T12:14:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 301,
-      "merged_at": "2026-03-01T12:22:48Z"
-    },
-    {
-      "issue": 303,
-      "title": "Phase 4b: npm publish workflow",
-      "dispatched_at": "2026-03-01T13:47:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "reviewed_awaiting_eva",
-      "pr": 305,
-      "note": "Workflow file — Eva must merge. NPM_TOKEN secret also needed."
-    },
-    {
-      "issue": 311,
-      "title": "Port QAPage + Restaurant to TypeScript (audit #37 fix)",
-      "dispatched_at": "2026-03-01T18:08:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 312,
-      "merged_at": "2026-03-01T18:18:42Z"
-    },
-    {
-      "issue": 316,
-      "title": "Add build-artifact smoke test (verify-build script)",
-      "dispatched_at": "2026-03-01T21:08:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 317,
-      "merged_at": "2026-03-01T22:43:20Z",
-      "audit_inbound": 315,
-      "note": "Per audit #39. Validates npm pack tarball: ESM + CJS imports + JSON-LD output."
-    },
-    {
-      "issue": 342,
-      "title": "Refactor TS constructors to options-object pattern (batch 1: A-D)",
-      "dispatched_at": "2026-03-03T00:26:18Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 343,
-      "merged_at": "2026-03-03T00:46:46Z",
-      "eva_directive": 340
-    },
-    {
-      "issue": 344,
-      "title": "Refactor TS constructors to options-object pattern (batch 2: E-M)",
-      "dispatched_at": "2026-03-03T00:47:54Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 345,
-      "merged_at": "2026-03-03T01:07:51Z",
-      "eva_directive": 340
-    },
-    {
-      "issue": 346,
-      "title": "Refactor TS constructors to options-object pattern (batch 3: O-V)",
-      "dispatched_at": "2026-03-03T01:08:28Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 347,
-      "merged_at": "2026-03-03T01:26:40Z",
-      "eva_directive": 340
-    },
-    {
-      "issue": 350,
-      "title": "Fix 5 PHPStan level max errors in JsonLdGenerator.php",
-      "dispatched_at": "2026-03-03T02:25:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 351,
-      "merged_at": "2026-03-03T02:37:51Z"
-    },
-    {
-      "issue": 354,
-      "title": "Add JobPosting beta properties (PHP + TS)",
-      "dispatched_at": "2026-03-03T03:53:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 355,
-      "merged_at": "2026-03-03T04:15:00Z"
-    },
-    {
-      "issue": 356,
-      "title": "Add Review.positiveNotes and Review.negativeNotes (PHP + TS)",
-      "dispatched_at": "2026-03-03T04:16:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 357,
-      "merged_at": "2026-03-03T04:29:00Z"
-    },
-    {
-      "issue": 361,
-      "title": "Add SeekToAction and VideoObject.potentialAction (PHP + TS)",
-      "dispatched_at": "2026-03-03T06:23:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 362,
-      "merged_at": "2026-03-03T06:50:00Z"
-    },
-    {
-      "issue": 363,
-      "title": "Add missing recommended properties (QuantitativeValue.unitText, Dataset.hasPart/isPartOf, Org ProfilePage fields) + fix mixed-array serialization",
-      "dispatched_at": "2026-03-03T06:50:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 364,
-      "merged_at": "2026-03-03T09:31:21Z",
-      "revision_rounds": 1,
-      "note": "Revision required for mixed-array serialization bug in JsonLdGenerator. Fixed per-element type dispatch."
-    },
-    {
-      "issue": 370,
-      "title": "Add AggregateRating.itemReviewed (PHP + TS)",
-      "dispatched_at": "2026-03-03T09:25:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 371,
-      "merged_at": "2026-03-03T09:39:10Z",
-      "qc_report": 160
-    },
-    {
-      "issue": 374,
-      "title": "Comprehensive quality sweep: QAPage properties + edge-case tests + README",
-      "dispatched_at": "2026-03-03T10:51:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 376,
-      "merged_at": "2026-03-03T11:10:00Z",
-      "eva_directive": 372,
-      "note": "First high-complexity dispatch per Eva #372. Part 1 (Question/Answer image+video) and Part 3 (README) delivered. Part 2 (test expansion) underdelivered — only 2 types covered with data-provider padding. Follow-up needed for genuine edge-case test expansion."
-    },
-    {
-      "issue": 375,
-      "title": "Cross-language parity verification tool",
-      "dispatched_at": "2026-03-03T10:51:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 377,
-      "merged_at": "2026-03-03T11:08:00Z",
-      "eva_directive": 372,
-      "note": "First auditing tool dispatch per Eva #372. Created tools/parity-check.ts. Known limitation: TS extends interface regex doesn't handle FoodEstablishmentOptions extends LocalBusinessOptions. Affects 1/88 classes."
-    },
-    {
-      "issue": 380,
-      "title": "Rewrite parity-check tool to use AST parsing instead of regex",
-      "dispatched_at": "2026-03-03T12:15:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 381,
-      "merged_at": "2026-03-03T12:31:45Z",
-      "eva_directive": 378,
-      "note": "Rewrites tools/parity-check.ts to use TypeScript Compiler API + php-parser (glayzzle). Fixes FoodEstablishmentOptions extends bug. Per Eva directive: AST over regex."
-    },
-    {
-      "issue": 383,
-      "title": "Add TypeScript examples to all README usage sections",
-      "dispatched_at": "2026-03-03T13:57:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 384,
-      "merged_at": "2026-03-03T15:37:00Z",
-      "revision_rounds": 1,
-      "note": "README has 34 PHP examples but only 1 TS example. 6 examples had missing required constructor properties. Fixed in revision. Merged cycle 112."
-    },
-    {
-      "issue": 385,
-      "title": "Expand edge-case test coverage for 10 standalone schema types (PHP + TS)",
-      "dispatched_at": "2026-03-03T13:57:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 386,
-      "merged_at": "2026-03-03T15:27:00Z",
-      "note": "52 new tests across 10 types in both PHP and TS. Minor overlaps with existing tests but genuine edge cases. Merged cycle 112."
-    },
-    {
-      "issue": 392,
-      "title": "Convert WebPageElement to options-object constructor pattern",
-      "dispatched_at": "2026-03-03T16:59:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 393,
-      "merged_at": "2026-03-03T17:06:00Z",
-      "note": "Last remaining positional-param TS class. Missed during cycle 104 refactoring. 6 files updated, CI green on all 9 checks."
-    },
-    {
-      "issue": 398,
-      "title": "Upgrade PHPStan to level max: fix 3 mixed-offset errors in JsonLdGenerator",
-      "dispatched_at": "2026-03-03T19:49:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 399,
-      "merged_at": "2026-03-03T19:59:56Z",
-      "note": "Fixed mixed-offset access with local array accumulator. PHPStan config upgraded 9->max. CI green on all 7 checks."
-    },
-    {
-      "issue": 413,
-      "title": "Expand TS JsonLdGenerator test coverage to match PHP edge cases",
-      "dispatched_at": "2026-03-04T05:05:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 414,
-      "merged_at": "2026-03-04T06:20:19Z",
-      "note": "8 new edge-case tests: special chars, deep nesting, array @type, schemasToJson, schemaToObject API, mixed scalars, array preservation, propertyMap regression. TS JsonLdGenerator tests: 7→15."
-    },
-    {
-      "issue": 424,
-      "title": "Add Question.comment and Answer.comment properties (PHP + TS)",
-      "dispatched_at": "2026-03-04T13:53:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 425,
-      "merged_at": "2026-03-04T14:18:42Z",
-      "note": "Google property verification found Question.comment and Answer.comment missing (recommended by Google for QAPage). Adding Comment[] property to both classes in PHP and TS."
-    },
-    {
-      "issue": 432,
-      "title": "Build metric-snapshot Rust tool for automated state.json verification",
-      "dispatched_at": "2026-03-04T15:34:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 433,
-      "merged_at": "2026-03-04T15:47:00Z",
-      "eva_directive": 428,
-      "note": "First Rust tool build via Copilot. metric-snapshot automates step 5.11 metric verification. On first run, caught stale core_modules count (2→3)."
-    },
-    {
-      "issue": 434,
-      "title": "Audit all 89 TypeScript schema classes for consistency",
-      "dispatched_at": "2026-03-04T15:34:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 435,
-      "merged_at": "2026-03-04T15:47:00Z",
-      "eva_directive": 429,
-      "note": "First code quality audit dispatch. Found 6 inherited TS classes missing *Options interfaces. Added BlogPostingOptions, NewsArticleOptions, MobileApplicationOptions, WebApplicationOptions, RestaurantOptions, StoreOptions."
-    },
-    {
-      "issue": 438,
-      "title": "Build cycle-status Rust tool: consolidated startup checklist report",
-      "dispatched_at": "2026-03-04T16:50:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 439,
-      "merged_at": "2026-03-04T17:38:53Z",
-      "eva_directive": 436,
-      "revision_rounds": 1,
-      "note": "Phase 1 of Eva's Rust tool pipeline directive (#436). Consolidates 6+ gh api calls from startup checklist steps 1, 1.1, 3, 4, 5, 8 into a single tool. Revision round fixed URL encoding, per_page, API URLs. Runtime tested with API access (#440)."
-    },
-    {
-      "issue": 444,
-      "title": "Create state-schema shared Rust crate and version state.json",
-      "dispatched_at": "2026-03-04T17:33:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 445,
-      "merged_at": "2026-03-04T18:18:28Z",
-      "eva_directive": 441,
-      "note": "State.json schema versioning per Eva #441. Creates shared state-schema crate, adds schema_version:1, refactors metric-snapshot and check-field-inventory to use shared types."
-    },
-    {
-      "issue": 447,
-      "title": "Extend metric-snapshot with test counts, staleness detection, and schema version validation",
-      "dispatched_at": "2026-03-04T18:22:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 448,
-      "merged_at": "2026-03-04T19:49:00Z",
-      "eva_directive": 436,
-      "note": "Phase 2 of tool pipeline. Test count, field staleness, schema version validation. KNOWN ISSUE: test counting doesn't account for data providers (counts methods not executions). Fix dispatched #450."
-    },
-    {
-      "issue": 450,
-      "title": "Fix metric-snapshot test counting to handle data providers",
-      "dispatched_at": "2026-03-04T19:51:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 451,
-      "merged_at": "2026-03-04T21:14:00Z",
-      "eva_directive": 436,
-      "note": "Fix for Phase 2: data providers (PHP @dataProvider, TS it.each) cause test method count to be lower than test execution count. All 13 metric-snapshot checks now pass."
-    },
-    {
-      "issue": 454,
-      "title": "Build housekeeping-scan Rust tool",
-      "dispatched_at": "2026-03-04T21:20:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 455,
-      "merged_at": "2026-03-04T22:54:00Z",
-      "revision_rounds": 1,
-      "eva_directive": 436,
-      "note": "Phase 3 of tool pipeline. Detects stale agent issues, orphan draft PRs, dead branches, stale audit/qc-inbound issues. Revision: AGENT_PR_AUTHOR bug, git cwd, wrapper pattern."
-    },
-    {
-      "issue": 457,
-      "title": "Build pipeline-check Rust tool (Phase 4)",
-      "dispatched_at": "2026-03-04T22:57:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 458,
-      "merged_at": "2026-03-05T00:24:18Z",
-      "eva_directive": 436,
-      "note": "Phase 4 of tool pipeline. Unified orchestrator that runs metric-snapshot, check-field-inventory, housekeeping-scan, and cycle-status in sequence with aggregated report. Runtime tested: all 4 steps pass, both JSON and human-readable output working."
-    },
-    {
-      "issue": 505,
-      "title": "Build state-invariants Rust tool",
-      "dispatched_at": "2026-03-05T21:15:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 524,
-      "merged_at": "2026-03-06T00:29:42Z",
-      "note": "Phase 5 of tool pipeline. Enforces semantic consistency in state.json: copilot math (produced_pr = merged + closed), parity symmetry, type classification sum, field inventory cadence format, review agent history ordering. 5/5 invariants pass."
-    },
-    {
-      "issue": 528,
-      "title": "Fix v1.0.1 release blockers (tsup outDir, verify-build workaround, version bump)",
-      "dispatched_at": "2026-03-06T00:35:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 529,
-      "merged_at": "2026-03-06T02:22:37Z",
-      "eva_directive": 522,
-      "note": "Per Eva #522. Fixed tsup outDir '../dist'->'dist', removed verify-build copy workaround, bumped version 1.0.0->1.0.1."
-    },
-    {
-      "issue": 536,
-      "title": "Cycle 152 end-of-cycle review",
-      "dispatched_at": "2026-03-06T02:29:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 537,
-      "merged_at": "2026-03-06T03:50:00Z",
-      "note": "Review agent. 10 findings, score 3/5. All 4 recommendations actioned."
-    },
-    {
-      "issue": 542,
-      "title": "Add update_freshness helper to state-schema and integrate into tools",
-      "dispatched_at": "2026-03-06T03:53:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 543,
-      "merged_at": "2026-03-06T05:12:00Z",
-      "note": "Freshness automation per audit #104/#117. update_freshness helper, metric-snapshot --fix mode, cycle-complete auto-freshness."
-    },
-    {
-      "issue": 544,
-      "title": "Cycle 153 end-of-cycle review",
-      "dispatched_at": "2026-03-06T03:58:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 545,
-      "merged_at": "2026-03-06T05:10:00Z",
-      "note": "Review agent. 10 findings, score 3/5. All 4 recommendations actioned."
-    },
-    {
-      "issue": 548,
-      "title": "Build write-entry Rust tool for journal/worklog generation",
-      "dispatched_at": "2026-03-06T05:14:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 549,
-      "merged_at": "2026-03-06T06:25:00Z",
-      "note": "Eva directive #546. Journal/worklog entry tool with auto-linking. 6 tests pass. Shell wrapper fixed post-merge."
-    },
-    {
-      "issue": 550,
-      "title": "Cycle 154 end-of-cycle review",
-      "dispatched_at": "2026-03-06T05:20:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "pr": 551,
-      "merged_at": "2026-03-06T06:24:00Z",
-      "note": "Review agent. 10 findings, score 3/5. Key finding: stale last_review_cycle (already fixed by state-invariants)."
-    },
-    {
-      "issue": 553,
-      "title": "Build commit-state-change shell utility (Eva #538 Phase 2)",
-      "dispatched_at": "2026-03-06T06:22:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "note": "Eva directive #538 Phase 2. Shell utility for commit-hash receipts. Merged cycle 156."
-    },
-    {
-      "issue": 555,
-      "title": "Cycle 155 end-of-cycle review",
-      "dispatched_at": "2026-03-06T06:27:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "merged",
-      "note": "Review agent. Cycle 155 end-of-cycle review. 9 findings, score 3/5. Merged cycle 156."
-    },
-    {
-      "issue": 558,
-      "title": "Cycle 156 end-of-cycle review",
-      "dispatched_at": "2026-03-06T07:58:00Z",
-      "model": "gpt-5.3-codex",
-      "status": "in_flight",
-      "note": "Review agent. Cycle 156 end-of-cycle review."
-    }
-  ],
-  "qc_processed": [8, 37, 57, 72, 160, 165],
-  "qc_requests_pending": [535],
-  "qc_status": {
-    "request_165": "COMPLETE. QC issue #41 closed. 39/39 E2E pass, 0 errors, 158 warnings. @graph API also validated.",
-    "report_57": "ALL FIXES MERGED AND VALIDATED. PRs #198, #199. QC-63 confirmed: 39/39 E2E pass, 0 errors, 19 warnings.",
-    "request_200": "COMPLETE. QC-63 validated. 39/39 E2E pass, 0 errors, 19 warnings (down from 58, 67% reduction). Issues #195 and #200 closed.",
-    "report_72": "FIXED. PR #214 merged. Added 5 optional Recipe properties (expires, hasPart, publication, ineligibleRegion, interactionStatistic). QC request #215 sent.",
-    "request_215": "COMPLETE. QC repo #74 closed. QC PR #76 merged (10:16 UTC). 39/39 E2E pass, 0 errors. All 5 Recipe optional properties validated. Issue #215 closed.",
-    "request_234": "COMPLETE. QC repo #84 closed. 188 QC unit tests, 39/39 E2E pass, 0 errors, 15 warnings (all known false positives). Offer.hasMerchantReturnPolicy validated. Issue #234 closed.",
-    "request_331": "PARITY COMPLETE. QC-ACK #138. Parity: 73/73 standalone types (100%). 0 E2E errors, 25 warnings (false positives). Class inventory: 88/88 PHP=TS. Per audit #73, 73 is the maximum achievable (3 building-block types validated through parents). Publish gate satisfied.",
-    "request_265": "COMPLETE. QC repo #114 closed. 188 tests, 1133 assertions, ALL PASS. 39/39 E2E, 0 errors, 15 warnings (known false positives). Phase 0 gate cleared.",
-    "request_299": "COMPLETE. QC-ACK #122 closed (2026-03-01T16:37Z). 23/23 parity match, 0 E2E errors, 14 warnings (known false positives). All DoD criteria satisfied: top-level parity, propertyMap, inheritance chains, Adobe E2E. Issue #299 closed.",
-    "request_496": "COMPLETE. QC-ACK #213 (2026-03-05T16:22Z). Pre-publish final validation: Parity 73/73 PASS, E2E 73/73 PASS (0 errors), Package build PASS, Class inventory 88/88 PASS. All 5 DoD criteria satisfied. Package cleared for npm publish."
+  "schema_version": 1,
+  "test_count": {
+    "last_verified": "cycle 139",
+    "last_verified_note": "last_verified = cycle when values were independently measured. field_inventory.last_refreshed = cycle when entry was checked (value confirmed unchanged or updated). These can diverge when a check confirms no change.",
+    "php": 425,
+    "total": 844,
+    "ts": 419
   },
-  "publish_gate": {
-    "validated_commit": "ea8ffff",
-    "validated_at": "2026-03-06T04:39Z",
-    "qc_ack": "EvaLok/schema-org-json-ld-qc#225",
-    "source_diverged": false,
-    "last_divergence_check": "cycle 163",
-    "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z — all gates satisfied",
-    "note": "QC-ACK #225 cleared v1.0.1 at ea8ffff for npm publish. 73/73 parity, E2E, build, tarball tests all pass. No package-affecting source divergence since validation. Audit sign-off confirmed via audit#125 (cycle 163)."
+  "tool_pipeline": {
+    "blocks_publish": true,
+    "eva_directive": 436,
+    "phases": [
+      {
+        "description": "Consolidate steps 1, 1.1, 3, 4, 5, 8 into single report. Merged after revision round. Runtime tested successfully.",
+        "issue": 438,
+        "merged_at": "2026-03-04T17:38:53Z",
+        "name": "cycle-status tool",
+        "phase": 1,
+        "pr": 439,
+        "status": "complete"
+      },
+      {
+        "description": "Extend metric-snapshot with test count verification, field inventory staleness detection, schema version validation. Data provider fix merged: all 13 checks pass.",
+        "fix_issue": 450,
+        "fix_merged_at": "2026-03-04T21:14:00Z",
+        "fix_pr": 451,
+        "issue": 447,
+        "merged_at": "2026-03-04T19:49:00Z",
+        "name": "verify-metrics tool",
+        "phase": 2,
+        "pr": 448,
+        "status": "complete"
+      },
+      {
+        "description": "Stale issues, orphan PRs, dead branches, audit-inbound lifecycle. Revision round fixed AGENT_PR_AUTHOR bug.",
+        "issue": 454,
+        "merged_at": "2026-03-04T22:54:00Z",
+        "name": "housekeeping-scan tool",
+        "phase": 3,
+        "pr": 455,
+        "status": "complete"
+      },
+      {
+        "description": "Top-level tool that runs all above in sequence, tracks step completion, produces unified report. Runtime verified: all 4 steps pass.",
+        "issue": 457,
+        "merged_at": "2026-03-05T00:24:18Z",
+        "name": "pipeline orchestrator",
+        "phase": 4,
+        "pr": 458,
+        "status": "complete"
+      },
+      {
+        "description": "Review what works, iterate, improve",
+        "name": "ongoing evaluation",
+        "phase": 5,
+        "status": "planned"
+      }
+    ],
+    "publish_gate": "All phases complete. Reliability count computed from blockers.reliability_clock.start_cycle. QC-REQUEST #496.",
+    "status": "phase_4_complete"
   },
-  "blockers": [
-    {
-      "description": "Phase 4c: npm publish requires Eva to create a GitHub Release (triggers publish-npm.yml workflow)",
-      "qc_request": 331,
-      "eva_directive": 329,
-      "qc_validation": "SATISFIED. 73/73 standalone parity (100%). Per audit #73, 73 is the correct denominator (88 - 12 enums - 3 building-block-only = 73).",
-      "publish_workflow": "publish-npm.yml pushed by Eva (commit f59a531). Uses OIDC provenance, no NPM_TOKEN needed.",
-      "pr_305_status": "CLOSED. Confirmed superseded by Eva (2026-03-03T20:04Z). Branch deleted.",
-      "verify_build_ci": "ADDED. Eva applied workflow change (commit 1b8ff8f, 2026-03-04T00:43Z). verify-build runs in ci-ts.yml on every push/PR. #403 closed.",
-      "reliability_clock": {"start_cycle": 134, "status": "SATISFIED", "minimum_required": 3},
-      "remaining_actions": ["Pipeline reliability SATISFIED", "QC final validation COMPLETE (QC-ACK #213, all 5 DoD criteria pass)", "Audit sign-off CONFIRMED (audit #111, cycle 149)", "Eva configures npm trusted publishing (OIDC link)", "Eva creates GitHub Release to trigger publish"],
-      "pre_publish_checkpoint": "RE-VALIDATION NEEDED (cycle 152). Previous validation: 73d1b1b (QC-ACK #213). Source diverged due to v1.0.1 release blockers fix (PR #529). New QC-REQUEST #535 filed for commit ea8ffff. Schema source unchanged — only build config and version bumped."
-    }
-  ],
-  "open_questions_for_eva": [],
-  "eva_input_issues": {
-    "closed_this_cycle": [600],
-    "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225, 329, 340, 348, 372, 378, 396, 401, 428, 429, 430, 440, 441, 463, 499, 500, 501, 502, 503, 515, 516, 522, 538, 546],
-    "remaining_open": [247, 436, 586, 591]
-  },
+  "total_enums": 12,
+  "total_schema_classes": 89,
+  "total_schema_types": 28,
+  "total_standalone_testable_types": 73,
+  "total_sub_types": 104,
+  "total_testable_types": 77,
+  "total_testable_types_note": "89 schema classes - 12 enums = 77 testable. Of those, 73 can be parity-tested standalone; 4 are building-block-only types validated through parent types (including SeekToAction added in PR #362). Per audits #62, #68, #73. Publish gate uses 73 (standalone-parity-testable).",
   "typescript_plan": {
-    "status": "approved_executing",
-    "issue": 247,
-    "qc_coordination_issue": 249,
-    "plan_version": 3,
     "approved_at": "2026-02-28T23:05:22Z",
-    "qc_validation_strategy": "Aligned. QC repo #98: ts-consumer/ dir, parity testing, begins after Phase 1 merge",
+    "audit_enhancements": {
+      "barrel_file_conflicts": "Accepted (audit #29). Sequential dispatch for Phase 2. STARTUP_CHECKLIST Step 8 updated.",
+      "build_artifact_validation": "COMPLETE (audit #39). PR #317 merged 22:43Z. verify-build script validates ESM+CJS+JSON-LD from packed tarball. Audit-inbound #315 closed.",
+      "class_inventory_reconciliation": "Accepted (audit #37). Step 5.6 added to STARTUP_CHECKLIST. QAPage + Restaurant dispatch #311.",
+      "conditional_approval_reconciliation": "Accepted (audit #19). Step 1.5 added to STARTUP_CHECKLIST.",
+      "constructor_ergonomics": "Accepted (audit #20). SUPERSEDED by Eva directive #340: ALL classes use options object (no threshold). AGENTS-ts.md updated cycle 104.",
+      "phase_0_qc_checkpoint": "Accepted (audit #15). Phase 0 completion requires QC E2E validation before Phase 1.",
+      "post_publish_transition": "Accepted (audit #44). STARTUP_CHECKLIST steps 5.7 (one-time transition) and 5.8 (dual-language consistency) added. Version coordination deferred to transition execution. Audit-inbound #322.",
+      "qc_exit_criteria": "Accepted (audit #35). Definition of Done posted on QC-REQUEST #299. STARTUP_CHECKLIST Step 4 updated.",
+      "ts_guardrails_enumeration": "Accepted (audit #16). AGENTS-ts.md + TS skill complete."
+    },
     "eva_decisions": {
+      "agents_md": "Extend with per-language sub-files (AGENTS-php.md, AGENTS-ts.md)",
+      "license": "MIT",
       "linter": "Biome",
       "node_minimum": "20 (also test on 24)",
-      "license": "MIT",
-      "agents_md": "Extend with per-language sub-files (AGENTS-php.md, AGENTS-ts.md)",
-      "version": "Stay v1.x (no v2.0.0 for restructure)",
-      "scope": "@evabee/schema-org-json-ld"
+      "scope": "@evabee/schema-org-json-ld",
+      "version": "Stay v1.x (no v2.0.0 for restructure)"
     },
+    "issue": 247,
+    "phases": [
+      {
+        "issue": 262,
+        "merged_at": "2026-03-01T02:23:00Z",
+        "name": "Restructure to polyglot dirs (v1.x)",
+        "phase": 0,
+        "pr": 263,
+        "qc_validation": "passed (QC #114, 2026-03-01T04:43Z)",
+        "status": "complete"
+      },
+      {
+        "ci_verified": "TypeScript CI success on master push (08:50:06Z)",
+        "issue": 269,
+        "merged_at": "2026-03-01T08:50:04Z",
+        "name": "TypeScript scaffold",
+        "phase": 1,
+        "pr": 270,
+        "status": "complete"
+      },
+      {
+        "decomposition": {
+          "2a": {
+            "description": "All 12 enums (1 session)",
+            "issue": 276,
+            "merged_at": "2026-03-01T09:17:42Z",
+            "pr": 277,
+            "status": "merged"
+          },
+          "2b": {
+            "description": "Leaf sub-types batch 1 (9 types)",
+            "issue": 278,
+            "merged_at": "2026-03-01T09:26:06Z",
+            "pr": 279,
+            "status": "merged"
+          },
+          "2c": {
+            "description": "Leaf sub-types batch 2 (9 types)",
+            "issue": 280,
+            "merged_at": "2026-03-01T09:36:17Z",
+            "pr": 281,
+            "status": "merged"
+          }
+        },
+        "dispatch_strategy": "sequential (per audit #29)",
+        "name": "Enum & shared sub-type port",
+        "phase": 2,
+        "status": "complete"
+      },
+      {
+        "decomposition": {
+          "3a": {
+            "description": "Level-0 types (12 types, no schema deps)",
+            "issue": 282,
+            "merged_at": "2026-03-01T09:47:23Z",
+            "pr": 283,
+            "status": "merged"
+          },
+          "3b": {
+            "description": "Level-1 types (9 types, deps on ported types)",
+            "issue": 284,
+            "merged_at": "2026-03-01T10:49:00Z",
+            "pr": 285,
+            "status": "merged"
+          },
+          "3c": {
+            "description": "Level-2 types (8 types, deps on L0/L1)",
+            "issue": 287,
+            "merged_at": "2026-03-01T11:07:00Z",
+            "pr": 288,
+            "status": "merged"
+          },
+          "3d": {
+            "description": "Level 3-5 types (6 types: VideoObject, MathSolver, ShippingService, Offer, Organization, Person)",
+            "issue": 289,
+            "merged_at": "2026-03-01T11:19:35Z",
+            "pr": 290,
+            "status": "merged"
+          },
+          "3e": {
+            "description": "Level 5-6 types (9 types: EmployerAggregateRating, JobPosting, Certification, ImageObject, Review, Answer, CourseInstance, ProfilePage, Dataset)",
+            "issue": 291,
+            "merged_at": "2026-03-01T11:31:02Z",
+            "pr": 292,
+            "status": "merged"
+          },
+          "3f": {
+            "description": "Level 7 types (10 types: Question, Comment, Article, Event, SoftwareApplication, Movie, LocalBusiness, Course, Recipe, VacationRental)",
+            "issue": 293,
+            "merged_at": "2026-03-01T11:46:07Z",
+            "pr": 294,
+            "status": "merged"
+          },
+          "3g": {
+            "description": "Level 8+ types (11 types with inheritance)",
+            "issue": 295,
+            "merged_at": "2026-03-01T12:11:00Z",
+            "pr": 296,
+            "status": "merged"
+          }
+        },
+        "dispatch_strategy": "sequential (per audit #29)",
+        "name": "Schema type port",
+        "phase": 3,
+        "status": "complete"
+      },
+      {
+        "decomposition": {
+          "4a": {
+            "description": "npm package polish (metadata, README, build verification)",
+            "issue": 300,
+            "merged_at": "2026-03-01T12:22:48Z",
+            "pr": 301,
+            "status": "merged"
+          },
+          "4b": {
+            "description": "npm publish workflow",
+            "note": "Eva pushed publish-npm.yml directly (commit f59a531, OIDC provenance). PR #305 closed per Eva confirmation (cycle 116). Branch deleted.",
+            "status": "complete_eva_pushed"
+          },
+          "4c": {
+            "description": "npm publish (Eva creates GitHub Release to trigger workflow)",
+            "eva_directive": "Test thoroughly first before releasing, always.",
+            "qc_gate": "SATISFIED. 73/73 standalone parity (100%). 0 E2E errors. Class inventory: 88/88.",
+            "status": "awaiting_eva"
+          }
+        },
+        "name": "Build, test, publish",
+        "phase": 4,
+        "status": "qc_gate_cleared_awaiting_eva"
+      }
+    ],
+    "plan_version": 3,
     "preparatory_artifacts": {
       "AGENTS-ts.md": "Created cycle 70, updated cycle 72 (options object pattern per audit #20)",
       "ts_implementation_skill": "Created cycle 71, updated cycle 72 (Pattern A/B per audit #20)"
     },
-    "audit_enhancements": {
-      "phase_0_qc_checkpoint": "Accepted (audit #15). Phase 0 completion requires QC E2E validation before Phase 1.",
-      "ts_guardrails_enumeration": "Accepted (audit #16). AGENTS-ts.md + TS skill complete.",
-      "conditional_approval_reconciliation": "Accepted (audit #19). Step 1.5 added to STARTUP_CHECKLIST.",
-      "constructor_ergonomics": "Accepted (audit #20). SUPERSEDED by Eva directive #340: ALL classes use options object (no threshold). AGENTS-ts.md updated cycle 104.",
-      "barrel_file_conflicts": "Accepted (audit #29). Sequential dispatch for Phase 2. STARTUP_CHECKLIST Step 8 updated.",
-      "qc_exit_criteria": "Accepted (audit #35). Definition of Done posted on QC-REQUEST #299. STARTUP_CHECKLIST Step 4 updated.",
-      "class_inventory_reconciliation": "Accepted (audit #37). Step 5.6 added to STARTUP_CHECKLIST. QAPage + Restaurant dispatch #311.",
-      "build_artifact_validation": "COMPLETE (audit #39). PR #317 merged 22:43Z. verify-build script validates ESM+CJS+JSON-LD from packed tarball. Audit-inbound #315 closed.",
-      "post_publish_transition": "Accepted (audit #44). STARTUP_CHECKLIST steps 5.7 (one-time transition) and 5.8 (dual-language consistency) added. Version coordination deferred to transition execution. Audit-inbound #322."
-    },
-    "phases": [
-      {"phase": 0, "name": "Restructure to polyglot dirs (v1.x)", "status": "complete", "issue": 262, "pr": 263, "merged_at": "2026-03-01T02:23:00Z", "qc_validation": "passed (QC #114, 2026-03-01T04:43Z)"},
-      {"phase": 1, "name": "TypeScript scaffold", "status": "complete", "issue": 269, "pr": 270, "merged_at": "2026-03-01T08:50:04Z", "ci_verified": "TypeScript CI success on master push (08:50:06Z)"},
-      {"phase": 2, "name": "Enum & shared sub-type port", "status": "complete", "dispatch_strategy": "sequential (per audit #29)", "decomposition": {"2a": {"description": "All 12 enums (1 session)", "status": "merged", "issue": 276, "pr": 277, "merged_at": "2026-03-01T09:17:42Z"}, "2b": {"description": "Leaf sub-types batch 1 (9 types)", "status": "merged", "issue": 278, "pr": 279, "merged_at": "2026-03-01T09:26:06Z"}, "2c": {"description": "Leaf sub-types batch 2 (9 types)", "status": "merged", "issue": 280, "pr": 281, "merged_at": "2026-03-01T09:36:17Z"}}},
-      {"phase": 3, "name": "Schema type port", "status": "complete", "dispatch_strategy": "sequential (per audit #29)", "decomposition": {"3a": {"description": "Level-0 types (12 types, no schema deps)", "status": "merged", "issue": 282, "pr": 283, "merged_at": "2026-03-01T09:47:23Z"}, "3b": {"description": "Level-1 types (9 types, deps on ported types)", "status": "merged", "issue": 284, "pr": 285, "merged_at": "2026-03-01T10:49:00Z"}, "3c": {"description": "Level-2 types (8 types, deps on L0/L1)", "status": "merged", "issue": 287, "pr": 288, "merged_at": "2026-03-01T11:07:00Z"}, "3d": {"description": "Level 3-5 types (6 types: VideoObject, MathSolver, ShippingService, Offer, Organization, Person)", "status": "merged", "issue": 289, "pr": 290, "merged_at": "2026-03-01T11:19:35Z"}, "3e": {"description": "Level 5-6 types (9 types: EmployerAggregateRating, JobPosting, Certification, ImageObject, Review, Answer, CourseInstance, ProfilePage, Dataset)", "status": "merged", "issue": 291, "pr": 292, "merged_at": "2026-03-01T11:31:02Z"}, "3f": {"description": "Level 7 types (10 types: Question, Comment, Article, Event, SoftwareApplication, Movie, LocalBusiness, Course, Recipe, VacationRental)", "status": "merged", "issue": 293, "pr": 294, "merged_at": "2026-03-01T11:46:07Z"}, "3g": {"description": "Level 8+ types (11 types with inheritance)", "status": "merged", "issue": 295, "pr": 296, "merged_at": "2026-03-01T12:11:00Z"}}},
-      {"phase": 4, "name": "Build, test, publish", "status": "qc_gate_cleared_awaiting_eva", "decomposition": {"4a": {"description": "npm package polish (metadata, README, build verification)", "status": "merged", "issue": 300, "pr": 301, "merged_at": "2026-03-01T12:22:48Z"}, "4b": {"description": "npm publish workflow", "status": "complete_eva_pushed", "note": "Eva pushed publish-npm.yml directly (commit f59a531, OIDC provenance). PR #305 closed per Eva confirmation (cycle 116). Branch deleted."}, "4c": {"description": "npm publish (Eva creates GitHub Release to trigger workflow)", "status": "awaiting_eva", "qc_gate": "SATISFIED. 73/73 standalone parity (100%). 0 E2E errors. Class inventory: 88/88.", "eva_directive": "Test thoroughly first before releasing, always."}}}
-    ]
-  },
-  "release": {
-    "v1.0.0": {
-      "tag": "v1.0.0",
-      "commit": "5836b38",
-      "tagged_at": "2026-02-27T13:25:27Z",
-      "release_url": "https://github.com/EvaLok/schema-org-json-ld/releases/tag/v1.0.0"
-    }
-  },
-  "constructor_refactoring": {
-    "eva_directive": 340,
-    "status": "complete",
-    "total_classes_converted": 54,
-    "missed_class_fixed": "WebPageElement (PR #393, merged cycle 113)",
-    "batches": [
-      {"batch": 1, "range": "A-D", "classes": 16, "issue": 342, "pr": 343, "status": "merged", "merged_at": "2026-03-03T00:46:46Z"},
-      {"batch": 2, "range": "E-M", "classes": 15, "issue": 344, "pr": 345, "status": "merged", "merged_at": "2026-03-03T01:07:51Z"},
-      {"batch": 3, "range": "O-V", "classes": 22, "issue": 346, "pr": 347, "status": "merged", "merged_at": "2026-03-03T01:26:40Z"}
-    ]
-  },
-  "copilot_metrics": {
-    "total_dispatches": 82,
-    "resolved": 82,
-    "in_flight": 0,
-    "produced_pr": 81,
-    "merged": 80,
-    "closed_without_merge": 1,
-    "closed_without_pr": 1,
-    "revision_rounds": 5,
-    "dispatch_to_pr_rate": "81/82",
-    "pr_merge_rate": "80/81",
-    "note": "82 dispatches, 82 resolved, 0 in-flight. 81 produced PRs (80 merged, 1 closed without merge). 1 resolved without PR (silent failure). PRs #595 (cycle-start), #597 (process-review), #599 (c163 review) merged cycle 164.",
-    "dispatch_log_latest": "#598 cycle 163 review (cycle 163)"
-  },
-  "last_cycle": {
-    "number": 164,
-    "issue": 601,
-    "timestamp": "2026-03-06T19:43:00Z",
-    "summary": "Cycle 164: In progress."
-  },
-  "last_eva_comment_check": "2026-03-06T19:43:00Z",
-  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71, 73, 75, 76, 78, 80, 82, 83, 85, 87, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 110, 111, 113, 114, 116, 117, 120, 122, 125],
-  "test_count": {"php": 425, "ts": 419, "total": 844, "last_verified": "cycle 139", "last_verified_note": "last_verified = cycle when values were independently measured. field_inventory.last_refreshed = cycle when entry was checked (value confirmed unchanged or updated). These can diverge when a check confirms no change."},
-  "next_metric_verification": "cycle 151",
-  "total_schema_types": 28,
-  "total_sub_types": 104,
-  "total_schema_classes": 89,
-  "total_enums": 12,
-  "total_testable_types": 77,
-  "total_standalone_testable_types": 73,
-  "total_testable_types_note": "89 schema classes - 12 enums = 77 testable. Of those, 73 can be parity-tested standalone; 4 are building-block-only types validated through parent types (including SeekToAction added in PR #362). Per audits #62, #68, #73. Publish gate uses 73 (standalone-parity-testable).",
-  "tool_pipeline": {
-    "eva_directive": 436,
-    "status": "phase_4_complete",
-    "blocks_publish": true,
-    "phases": [
-      {"phase": 1, "name": "cycle-status tool", "status": "complete", "issue": 438, "pr": 439, "merged_at": "2026-03-04T17:38:53Z", "description": "Consolidate steps 1, 1.1, 3, 4, 5, 8 into single report. Merged after revision round. Runtime tested successfully."},
-      {"phase": 2, "name": "verify-metrics tool", "status": "complete", "issue": 447, "pr": 448, "merged_at": "2026-03-04T19:49:00Z", "fix_issue": 450, "fix_pr": 451, "fix_merged_at": "2026-03-04T21:14:00Z", "description": "Extend metric-snapshot with test count verification, field inventory staleness detection, schema version validation. Data provider fix merged: all 13 checks pass."},
-      {"phase": 3, "name": "housekeeping-scan tool", "status": "complete", "issue": 454, "pr": 455, "merged_at": "2026-03-04T22:54:00Z", "description": "Stale issues, orphan PRs, dead branches, audit-inbound lifecycle. Revision round fixed AGENT_PR_AUTHOR bug."},
-      {"phase": 4, "name": "pipeline orchestrator", "status": "complete", "issue": 457, "pr": 458, "merged_at": "2026-03-05T00:24:18Z", "description": "Top-level tool that runs all above in sequence, tracks step completion, produces unified report. Runtime verified: all 4 steps pass."},
-      {"phase": 5, "name": "ongoing evaluation", "status": "planned", "description": "Review what works, iterate, improve"}
-    ],
-    "publish_gate": "All phases complete. Reliability count computed from blockers.reliability_clock.start_cycle. QC-REQUEST #496."
-  },
-  "review_agent": {
-    "description": "Programmatic tracking of review agent findings for trend detection. Per audit #102.",
-    "last_review_cycle": 162,
-    "history": [
-      {
-        "cycle": 140,
-        "finding_count": 6,
-        "complacency_score": 2,
-        "categories": ["code-quality", "documentation-drift", "state-freshness", "closure-discipline"],
-        "actioned": 5,
-        "deferred": 0,
-        "ignored": 1
-      },
-      {
-        "cycle": 141,
-        "finding_count": 5,
-        "complacency_score": 3,
-        "categories": ["code-quality", "state-consistency", "state-freshness", "journal-quality"],
-        "actioned": 4,
-        "deferred": 1,
-        "ignored": 0
-      },
-      {
-        "cycle": 142,
-        "finding_count": 6,
-        "complacency_score": 2,
-        "categories": ["state-freshness", "tool-quality", "journal-quality"],
-        "actioned": 4,
-        "deferred": 2,
-        "ignored": 0
-      },
-      {
-        "cycle": 143,
-        "finding_count": 6,
-        "complacency_score": 2,
-        "categories": ["process-improvement", "state-consistency", "state-freshness", "journal-quality"],
-        "actioned": 3,
-        "deferred": 1,
-        "ignored": 2
-      },
-      {
-        "cycle": 144,
-        "finding_count": 6,
-        "complacency_score": 3,
-        "categories": ["state-consistency", "process-improvement", "journal-quality", "state-freshness"],
-        "actioned": 4,
-        "deferred": 1,
-        "ignored": 1
-      },
-      {
-        "cycle": 145,
-        "finding_count": 8,
-        "complacency_score": 3,
-        "categories": ["code-quality", "state-consistency", "state-freshness", "process-improvement", "journal-quality"],
-        "actioned": 5,
-        "deferred": 1,
-        "ignored": 2
-      },
-      {
-        "cycle": 146,
-        "finding_count": 7,
-        "complacency_score": 2,
-        "categories": ["code-quality", "state-consistency", "state-freshness", "process-improvement"],
-        "actioned": 4,
-        "deferred": 0,
-        "ignored": 3
-      },
-      {
-        "cycle": 147,
-        "finding_count": 13,
-        "complacency_score": 2,
-        "categories": ["state-freshness", "state-consistency", "process-improvement", "verification-evidence"],
-        "actioned": 4,
-        "deferred": 0,
-        "ignored": 9
-      },
-      {
-        "cycle": 148,
-        "finding_count": 10,
-        "complacency_score": 3,
-        "categories": ["state-freshness", "state-consistency", "tool-quality", "integration-quality"],
-        "actioned": 3,
-        "deferred": 0,
-        "ignored": 7
-      },
-      {
-        "cycle": 149,
-        "finding_count": 10,
-        "complacency_score": 3,
-        "categories": ["state-consistency", "state-freshness", "tool-quality"],
-        "actioned": 2,
-        "deferred": 3,
-        "ignored": 5
-      },
-      {
-        "cycle": 150,
-        "finding_count": 9,
-        "complacency_score": 3,
-        "categories": ["state-freshness", "state-consistency", "verification-evidence"],
-        "actioned": 3,
-        "deferred": 1,
-        "ignored": 5
-      },
-      {
-        "cycle": 151,
-        "finding_count": 8,
-        "complacency_score": 3,
-        "categories": ["test-coverage", "documentation-drift", "state-consistency"],
-        "actioned": 2,
-        "deferred": 2,
-        "ignored": 4
-      },
-      {
-        "cycle": 152,
-        "finding_count": 10,
-        "complacency_score": 3,
-        "categories": ["state-consistency", "process-improvement", "verification-evidence"],
-        "actioned": 4,
-        "deferred": 0,
-        "ignored": 6
-      },
-      {
-        "cycle": 153,
-        "finding_count": 10,
-        "complacency_score": 3,
-        "categories": ["state-consistency", "process-follow-through", "field-freshness"],
-        "actioned": 4,
-        "deferred": 0,
-        "ignored": 6
-      },
-      {
-        "cycle": 154,
-        "finding_count": 10,
-        "complacency_score": 3,
-        "categories": ["state-consistency", "process-follow-through", "timestamp-precision", "evidence-quality"],
-        "actioned": 4,
-        "deferred": 0,
-        "ignored": 6
-      },
-      {
-        "cycle": 155,
-        "finding_count": 9,
-        "complacency_score": 3,
-        "categories": ["state-consistency", "pipeline-framing", "worklog-completeness", "journal-quality", "tool-usability", "process-evidence"],
-        "actioned": 3,
-        "deferred": 3,
-        "ignored": 3
-      },
-      {
-        "cycle": 156,
-        "finding_count": 7,
-        "complacency_score": 3,
-        "categories": ["journal-accuracy", "tool-quality", "wrapper-testing", "verification-evidence"],
-        "actioned": 3,
-        "deferred": 1,
-        "ignored": 3
-      },
-      {
-        "cycle": 157,
-        "finding_count": 7,
-        "complacency_score": 3,
-        "categories": ["publish-gate-accuracy", "copilot-metrics-transparency", "qc-ack-automation", "tool-quality", "journal-quality", "commit-receipts", "state-freshness"],
-        "actioned": 3,
-        "deferred": 1,
-        "ignored": 3,
-        "note": "Corrected from actioned=4 to actioned=3 per cycle 158 review finding 5. Three concrete actions: copilot_metrics fix, #566 dispatch, field inventory refresh. Remaining 3 findings were informational (verified correct, no change needed)."
-      },
-      {
-        "cycle": 158,
-        "finding_count": 7,
-        "complacency_score": 3,
-        "categories": ["receipt-accuracy", "field-sweep-evidence", "commit-verification", "copilot-metrics-consistency", "review-accounting", "journal-quality", "publish-gate-accuracy"],
-        "actioned": 3,
-        "deferred": 1,
-        "ignored": 3,
-        "note": "Three actions: corrected c157 actioned count, dispatched #572 (state-invariants per rec 3), dispatched #574 (tiered inventory per rec 2). Deferred: receipt wording precision (behavioral). 3 positive/informational findings."
-      },
-      {
-        "cycle": 159,
-        "finding_count": 9,
-        "complacency_score": 3,
-        "categories": ["receipt-accuracy", "review-accounting", "chronic-category-escalation", "copilot-metrics-consistency", "dispatch-quality", "journal-quality", "audit-processing", "publish-gate-accuracy"],
-        "actioned": 1,
-        "deferred": 1,
-        "ignored": 7,
-        "note": "Actioned: copilot metrics arithmetic fix (74->75). Deferred: chronic-category artifact schema. 7 positive/informational findings."
-      },
-      {
-        "cycle": 160,
-        "finding_count": 6,
-        "complacency_score": 3,
-        "categories": ["receipt-coherence", "structural-follow-through", "chronic-category-escalation", "review-history-consistency", "audit-signoff-latency", "journal-quality"],
-        "actioned": 2,
-        "deferred": 1,
-        "ignored": 3,
-        "note": "Actioned: review history consistency gap (added c159 entry + strengthened invariant to ==), chronic-category artifact schema (added chronic_category_responses to state.json). Deferred: audit sign-off latency (blocked on Eva #579). 3 positive/informational."
-      },
-      {
-        "cycle": 161,
-        "finding_count": 7,
-        "complacency_score": 2,
-        "categories": ["review-history-completeness", "invariant-correctness", "chronic-category-robustness", "journal-quality-recalibration", "copilot-metrics-coherence", "journal-quality", "optimization-pressure"],
-        "actioned": 0,
-        "deferred": 2,
-        "ignored": 5,
-        "note": "Score 2/5 — strong concrete follow-through. Deferred: chronic-category ordering validation (rec 1-2), sentiment-aware counting (rec 3). 5 positive/informational (history completeness verified, invariant correctness confirmed, journal quality genuine, metrics coherent, optimization pressure noted)."
-      },
-      {
-        "cycle": 162,
-        "finding_count": 7,
-        "complacency_score": 2,
-        "categories": ["data-integrity", "process-integrity", "verification-pass", "documentation-roadmap", "reflection-positive", "execution-planning", "improvement-assessment"],
-        "actioned": 1,
-        "deferred": 1,
-        "ignored": 5,
-        "note": "Score 2/5 — genuine architectural progress on write-side pipeline. Actioned: will include full #586 roadmap in worklog (finding 4). Deferred: split cycle-complete commit orchestration (finding 6 — accepted shipping together). 5 positive/informational (copilot arithmetic PASS, journal quality POSITIVE, directive response well-structured, improvement trend confirmed)."
-      }
-    ],
-    "chronic_category_responses": {
-      "description": "Traceable artifacts for chronic category escalation (step 0.5.8). When a finding category appears in 5+ of the last 6 reviews, it must have a response entry here documenting root cause, chosen path, and verification. Per cycle 159/160 review recommendation.",
-      "entries": [
-        {
-          "category": "journal-quality",
-          "root_cause": "Review agent consistently evaluates journal quality each cycle. Findings are overwhelmingly positive (confirming reflective, causally-linked entries). The category recurs because journal evaluation is a standing review criterion, not because of a persistent deficiency.",
-          "chosen_path": "recalibrate",
-          "rationale": "journal-quality findings in cycles 155-160 were positive/confirmatory (5/5 positive). Recurrence reflects consistent verification of a healthy practice, not a chronic problem. No structural fix needed — the review agent should continue checking journal quality but the category is expected to appear regularly.",
-          "verification_cycle": 161,
-          "added_cycle": 161
-        }
-      ]
-    }
-  },
-  "field_inventory": {
-    "description": "Self-describing inventory of mutable state.json fields with expected refresh cadence. During metric verification (step 5.11), any field not refreshed within its cadence should be flagged and corrected. This inverts the verification pattern from 'enumerate what to check' to 'flag what hasn't been checked.' Per audit #80. Semantics: last_refreshed = cycle when entry was last checked (value confirmed unchanged or updated). This differs from per-field last_verified which means 'cycle when value was independently measured.' A field can be refreshed (checked and confirmed unchanged) without being re-verified (re-measured).",
-    "fields": {
-      "test_count": {"cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)", "last_refreshed": "cycle 164"},
-      "typescript_stats": {"cadence": "every merge that adds/removes TS files", "last_refreshed": "cycle 164"},
-      "phpstan_level": {"cadence": "after PHPStan config changes", "last_refreshed": "cycle 158"},
-      "copilot_metrics.in_flight": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 164"},
-      "copilot_metrics.dispatch_to_pr_rate": {"cadence": "after new dispatches", "last_refreshed": "cycle 164"},
-      "copilot_metrics.pr_merge_rate": {"cadence": "after PR merges", "last_refreshed": "cycle 164"},
-      "last_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 164"},
-      "last_eva_comment_check": {"cadence": "every cycle (checked even when no comments found)", "last_refreshed": "cycle 164"},
-      "qc_status": {"cadence": "after QC interactions", "last_refreshed": "cycle 158"},
-      "blockers": {"cadence": "after blocker state changes", "last_refreshed": "cycle 158"},
-      "qc_processed": {"cadence": "after processing QC issues", "last_refreshed": "cycle 158"},
-      "audit_processed": {"cadence": "after processing audit issues", "last_refreshed": "cycle 163"},
-      "next_metric_verification": {"cadence": "after each verification run", "last_refreshed": "cycle 158"},
-      "type_classification": {"cadence": "after schema class additions/reclassifications", "last_refreshed": "cycle 158"},
-      "total_schema_classes": {"cadence": "after schema class additions", "last_refreshed": "cycle 158"},
-      "total_enums": {"cadence": "after enum additions", "last_refreshed": "cycle 158"},
-      "total_testable_types": {"cadence": "after schema class or enum additions", "last_refreshed": "cycle 158"},
-      "total_standalone_testable_types": {"cadence": "after building-block-only type changes (publish gate)", "last_refreshed": "cycle 158"},
-      "schema_status.in_progress": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 164"},
-      "eva_input_issues.remaining_open": {"cadence": "after Eva issue processing", "last_refreshed": "cycle 164"},
-      "qc_requests_pending": {"cadence": "after QC request creation or completion", "last_refreshed": "cycle 158"},
-      "total_schema_types": {"cadence": "after schema type additions", "last_refreshed": "cycle 158"},
-      "total_sub_types": {"cadence": "after sub-type additions", "last_refreshed": "cycle 158"},
-      "total_testable_types_note": {"cadence": "after classification changes", "last_refreshed": "cycle 158"},
-      "open_questions_for_eva": {"cadence": "after question creation or resolution", "last_refreshed": "cycle 160"},
-      "schema_status.planned_next": {"cadence": "after planning or completing types", "last_refreshed": "cycle 158"},
-      "schema_status.google_rich_results_types": {"cadence": "after Google gallery changes or new implementations", "last_refreshed": "cycle 158"},
-      "schema_status.remaining_audit_findings": {"cadence": "after property gap fixes", "last_refreshed": "cycle 158"},
-      "schema_status.property_gap_audit": {"cadence": "after property gap fixes", "last_refreshed": "cycle 158"},
-      "schema_status.phpstan_max_assessment": {"cadence": "after PHPStan config or fix changes", "last_refreshed": "cycle 158"},
-      "typescript_plan.status": {"cadence": "after plan phase transitions", "last_refreshed": "cycle 158"},
-      "eva_input_issues.closed_this_cycle": {"cadence": "every cycle (reset even when no closures)", "last_refreshed": "cycle 164"},
-      "tool_pipeline": {"cadence": "after pipeline phase transitions", "last_refreshed": "cycle 158"},
-      "review_agent": {"cadence": "every cycle (updated when consuming review findings)", "last_refreshed": "cycle 163"},
-      "review_agent.chronic_category_responses": {"cadence": "when chronic categories are detected (5+ in last 6 reviews)", "last_refreshed": "cycle 161"},
-      "publish_gate": {"cadence": "every cycle when set (divergence check)", "last_refreshed": "cycle 163"}
-    }
+    "qc_coordination_issue": 249,
+    "qc_validation_strategy": "Aligned. QC repo #98: ts-consumer/ dir, parity testing, begins after Phase 1 merge",
+    "status": "approved_executing"
   }
 }
