@@ -846,6 +846,14 @@
       "model": "gpt-5.3-codex",
       "status": "merged",
       "note": "Review agent. Cycle 155 end-of-cycle review. 9 findings, score 3/5. Merged cycle 156."
+    },
+    {
+      "issue": 558,
+      "title": "Cycle 156 end-of-cycle review",
+      "dispatched_at": "2026-03-06T07:58:00Z",
+      "model": "gpt-5.3-codex",
+      "status": "in_flight",
+      "note": "Review agent. Cycle 156 end-of-cycle review."
     }
   ],
   "qc_processed": [8, 37, 57, 72, 160, 165],
@@ -948,17 +956,17 @@
     ]
   },
   "copilot_metrics": {
-    "total_dispatches": 68,
+    "total_dispatches": 69,
     "resolved": 68,
-    "in_flight": 0,
+    "in_flight": 1,
     "produced_pr": 67,
     "merged": 66,
     "closed_without_merge": 1,
     "revision_rounds": 5,
     "dispatch_to_pr_rate": "67/68",
     "pr_merge_rate": "66/67",
-    "note": "68 dispatches, 68 resolved, 0 in-flight. 67 produced PRs (66 merged, 1 closed without merge).",
-    "dispatch_log_latest": "#555 cycle-155 review agent (cycle 155)"
+    "note": "69 dispatches, 68 resolved, 1 in-flight (#558 cycle-156 review). 67 produced PRs (66 merged, 1 closed without merge).",
+    "dispatch_log_latest": "#558 cycle-156 review agent (cycle 156)"
   },
   "last_cycle": {
     "number": 156,
