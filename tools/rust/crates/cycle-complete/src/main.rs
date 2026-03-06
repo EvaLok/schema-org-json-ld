@@ -221,6 +221,10 @@ fn build_freshness_updates(
         .collect()
 }
 
+/// Matches a JSON pointer patch path to the best tracked field inventory key.
+///
+/// The matcher tries progressively shorter dotted prefixes from the full pointer path.
+/// Example: `/last_cycle/issue` tries `last_cycle.issue`, then `last_cycle`.
 fn inventory_field_for_patch_path(path: &str, tracked_fields: &BTreeSet<&str>) -> Option<String> {
     let segments: Vec<&str> = path.trim_start_matches('/').split('/').collect();
     if segments.is_empty() || segments[0].is_empty() {

@@ -179,6 +179,11 @@ fn build_checks(repo_root: &Path, state: &StateJson) -> Vec<CheckResult> {
 }
 
 #[derive(Clone)]
+/// Auto-fix plan entry for a failed metric check.
+///
+/// `pointer` is the concrete JSON pointer path to mutate in `state.json`.
+/// `freshness_field` is the corresponding `field_inventory.fields.<name>` key
+/// whose `last_refreshed` marker should be updated when this pointer changes.
 struct FixUpdate {
     pointer: &'static str,
     value: Value,
@@ -186,7 +191,7 @@ struct FixUpdate {
 }
 
 fn apply_fixes(state_path: &Path, checks: &[CheckResult], cycle: i64) -> Result<usize, String> {
-    let cycle = u32::try_from(cycle).map_err(|_| "cycle must be a non-negative u32".to_string())?;
+    let cycle = u32::try_from(cycle).map_err(|_| "cycle must fit in u32 range".to_string())?;
     let mut state_value = read_state_value(state_path)?;
     let updates = collect_fix_updates(checks);
     if updates.is_empty() {
