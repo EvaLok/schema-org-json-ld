@@ -836,16 +836,16 @@
       "title": "Build commit-state-change shell utility (Eva #538 Phase 2)",
       "dispatched_at": "2026-03-06T06:22:00Z",
       "model": "gpt-5.3-codex",
-      "status": "in_flight",
-      "note": "Eva directive #538 Phase 2. Shell utility for commit-hash receipts."
+      "status": "merged",
+      "note": "Eva directive #538 Phase 2. Shell utility for commit-hash receipts. Merged cycle 156."
     },
     {
       "issue": 555,
       "title": "Cycle 155 end-of-cycle review",
       "dispatched_at": "2026-03-06T06:27:00Z",
       "model": "gpt-5.3-codex",
-      "status": "in_flight",
-      "note": "Review agent. Cycle 155 end-of-cycle review."
+      "status": "merged",
+      "note": "Review agent. Cycle 155 end-of-cycle review. 9 findings, score 3/5. Merged cycle 156."
     }
   ],
   "qc_processed": [8, 37, 57, 72, 160, 165],
@@ -949,24 +949,24 @@
   },
   "copilot_metrics": {
     "total_dispatches": 68,
-    "resolved": 66,
-    "in_flight": 2,
-    "produced_pr": 65,
-    "merged": 64,
+    "resolved": 68,
+    "in_flight": 0,
+    "produced_pr": 67,
+    "merged": 66,
     "closed_without_merge": 1,
     "revision_rounds": 5,
-    "dispatch_to_pr_rate": "65/66",
-    "pr_merge_rate": "64/65",
-    "note": "68 dispatches, 66 resolved, 2 in-flight (#553 commit-state-change, #555 cycle-155 review). 65 produced PRs (64 merged, 1 closed without merge).",
+    "dispatch_to_pr_rate": "67/68",
+    "pr_merge_rate": "66/67",
+    "note": "68 dispatches, 68 resolved, 0 in-flight. 67 produced PRs (66 merged, 1 closed without merge).",
     "dispatch_log_latest": "#555 cycle-155 review agent (cycle 155)"
   },
   "last_cycle": {
-    "number": 155,
-    "issue": 552,
-    "timestamp": "2026-03-06T06:15:00Z",
-    "summary": "Cycle 155: Consumed cycle 154 review (3/5). Merged PR #549 (write-entry tool per Eva #546) and PR #551 (cycle 154 review). Fixed write-entry shell wrapper. Dispatched #553 (commit-state-change per Eva #538 Phase 2)."
+    "number": 156,
+    "issue": 557,
+    "timestamp": "2026-03-06T07:44:00Z",
+    "summary": "Cycle 156: Consumed cycle 155 review (3/5). Merged PR #554 (commit-state-change) and PR #556 (cycle 155 review). Fixed write-entry wrapper. Implemented Eva #538 Phases 3-4 (metric-snapshot receipt integration, COMPLETION_CHECKLIST hash slots)."
   },
-  "last_eva_comment_check": "2026-03-06T06:15:00Z",
+  "last_eva_comment_check": "2026-03-06T07:44:00Z",
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71, 73, 75, 76, 78, 80, 82, 83, 85, 87, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 110, 111, 113, 114, 116, 117],
   "test_count": {"php": 425, "ts": 419, "total": 844, "last_verified": "cycle 139", "last_verified_note": "last_verified = cycle when values were independently measured. field_inventory.last_refreshed = cycle when entry was checked (value confirmed unchanged or updated). These can diverge when a check confirms no change."},
   "next_metric_verification": "cycle 151",
@@ -992,7 +992,7 @@
   },
   "review_agent": {
     "description": "Programmatic tracking of review agent findings for trend detection. Per audit #102.",
-    "last_review_cycle": 154,
+    "last_review_cycle": 155,
     "history": [
       {
         "cycle": 140,
@@ -1128,6 +1128,15 @@
         "actioned": 4,
         "deferred": 0,
         "ignored": 0
+      },
+      {
+        "cycle": 155,
+        "finding_count": 9,
+        "complacency_score": 3,
+        "categories": ["state-consistency", "pipeline-framing", "worklog-completeness", "journal-quality", "tool-usability", "process-evidence"],
+        "actioned": 3,
+        "deferred": 3,
+        "ignored": 0
       }
     ]
   },
@@ -1137,11 +1146,11 @@
       "test_count": {"cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)", "last_refreshed": "cycle 146"},
       "typescript_stats": {"cadence": "every merge that adds/removes TS files", "last_refreshed": "cycle 142"},
       "phpstan_level": {"cadence": "after PHPStan config changes", "last_refreshed": "cycle 142"},
-      "copilot_metrics.in_flight": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 155"},
-      "copilot_metrics.dispatch_to_pr_rate": {"cadence": "after new dispatches", "last_refreshed": "cycle 155"},
-      "copilot_metrics.pr_merge_rate": {"cadence": "after PR merges", "last_refreshed": "cycle 155"},
-      "last_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 155"},
-      "last_eva_comment_check": {"cadence": "every cycle (checked even when no comments found)", "last_refreshed": "cycle 155"},
+      "copilot_metrics.in_flight": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 156"},
+      "copilot_metrics.dispatch_to_pr_rate": {"cadence": "after new dispatches", "last_refreshed": "cycle 156"},
+      "copilot_metrics.pr_merge_rate": {"cadence": "after PR merges", "last_refreshed": "cycle 156"},
+      "last_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 156"},
+      "last_eva_comment_check": {"cadence": "every cycle (checked even when no comments found)", "last_refreshed": "cycle 156"},
       "qc_status": {"cadence": "after QC interactions", "last_refreshed": "cycle 147"},
       "blockers": {"cadence": "after blocker state changes", "last_refreshed": "cycle 152"},
       "qc_processed": {"cadence": "after processing QC issues", "last_refreshed": "cycle 134"},
