@@ -153,11 +153,11 @@ fn check_review_agent_pointer(state: &StateJson) -> CheckResult {
     };
 
     if let Some(max_cycle) = max_cycle {
-        if last_review_cycle < max_cycle {
+        if last_review_cycle != max_cycle {
             return fail(
                 "review_agent_pointer",
                 format!(
-                    "last_review_cycle({}) < max history cycle({})",
+                    "last_review_cycle({}) != max history cycle({}); pointer must match latest history entry",
                     last_review_cycle, max_cycle
                 ),
             );
@@ -844,6 +844,22 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("missing field"));
+    }
+
+    #[test]
+    fn review_pointer_ahead_of_history_fails() {
+        let mut value = minimal_valid_state();
+        // Set pointer to 11 but max history entry is cycle 10
+        value["review_agent"]["last_review_cycle"] = json!(11);
+
+        let state = state_from_json(value);
+        let check = check_review_agent_pointer(&state);
+        assert_eq!(check.status, CheckStatus::Fail);
+        assert!(check
+            .details
+            .as_deref()
+            .unwrap_or_default()
+            .contains("must match latest history entry"));
     }
 
     #[test]

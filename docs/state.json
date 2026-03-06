@@ -957,17 +957,17 @@
   },
   "copilot_metrics": {
     "total_dispatches": 76,
-    "resolved": 75,
-    "in_flight": 1,
-    "produced_pr": 74,
-    "merged": 73,
+    "resolved": 76,
+    "in_flight": 0,
+    "produced_pr": 75,
+    "merged": 74,
     "closed_without_merge": 1,
     "closed_without_pr": 1,
     "revision_rounds": 5,
-    "dispatch_to_pr_rate": "74/75",
-    "pr_merge_rate": "73/74",
-    "note": "76 dispatches, 75 resolved, 1 in-flight (#580 cycle 160 review). 74 produced PRs (73 merged, 1 closed without merge). 1 resolved without PR (silent failure).",
-    "dispatch_log_latest": "#580 cycle 160 review (cycle 160)"
+    "dispatch_to_pr_rate": "75/76",
+    "pr_merge_rate": "74/75",
+    "note": "76 dispatches, 76 resolved, 0 in-flight. 75 produced PRs (74 merged, 1 closed without merge). 1 resolved without PR (silent failure).",
+    "dispatch_log_latest": "#580 cycle 160 review (cycle 160, merged cycle 161)"
   },
   "last_cycle": {
     "number": 160,
@@ -1001,7 +1001,7 @@
   },
   "review_agent": {
     "description": "Programmatic tracking of review agent findings for trend detection. Per audit #102.",
-    "last_review_cycle": 159,
+    "last_review_cycle": 160,
     "history": [
       {
         "cycle": 140,
@@ -1175,8 +1175,32 @@
         "deferred": 1,
         "ignored": 3,
         "note": "Three actions: corrected c157 actioned count, dispatched #572 (state-invariants per rec 3), dispatched #574 (tiered inventory per rec 2). Deferred: receipt wording precision (behavioral). 3 positive/informational findings."
+      },
+      {
+        "cycle": 159,
+        "finding_count": 9,
+        "complacency_score": 3,
+        "categories": ["receipt-accuracy", "review-accounting", "chronic-category-escalation", "copilot-metrics-consistency", "dispatch-quality", "journal-quality", "audit-processing", "publish-gate-accuracy"],
+        "actioned": 1,
+        "deferred": 1,
+        "ignored": 7,
+        "note": "Actioned: copilot metrics arithmetic fix (74->75). Deferred: chronic-category artifact schema. 7 positive/informational findings."
+      },
+      {
+        "cycle": 160,
+        "finding_count": 6,
+        "complacency_score": 3,
+        "categories": ["receipt-coherence", "structural-follow-through", "chronic-category-escalation", "review-history-consistency", "audit-signoff-latency", "journal-quality"],
+        "actioned": 2,
+        "deferred": 1,
+        "ignored": 3,
+        "note": "Actioned: review history consistency gap (added c159 entry + strengthened invariant to ==), chronic-category artifact schema (added chronic_category_responses to state.json). Deferred: audit sign-off latency (blocked on Eva #579). 3 positive/informational."
       }
-    ]
+    ],
+    "chronic_category_responses": {
+      "description": "Traceable artifacts for chronic category escalation (step 0.5.8). When a finding category appears in 5+ of the last 6 reviews, it must have a response entry here documenting root cause, chosen path, and verification. Per cycle 159/160 review recommendation.",
+      "entries": []
+    }
   },
   "field_inventory": {
     "description": "Self-describing inventory of mutable state.json fields with expected refresh cadence. During metric verification (step 5.11), any field not refreshed within its cadence should be flagged and corrected. This inverts the verification pattern from 'enumerate what to check' to 'flag what hasn't been checked.' Per audit #80. Semantics: last_refreshed = cycle when entry was last checked (value confirmed unchanged or updated). This differs from per-field last_verified which means 'cycle when value was independently measured.' A field can be refreshed (checked and confirmed unchanged) without being re-verified (re-measured).",
@@ -1184,9 +1208,9 @@
       "test_count": {"cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)", "last_refreshed": "cycle 158"},
       "typescript_stats": {"cadence": "every merge that adds/removes TS files", "last_refreshed": "cycle 158"},
       "phpstan_level": {"cadence": "after PHPStan config changes", "last_refreshed": "cycle 158"},
-      "copilot_metrics.in_flight": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 160"},
-      "copilot_metrics.dispatch_to_pr_rate": {"cadence": "after new dispatches", "last_refreshed": "cycle 160"},
-      "copilot_metrics.pr_merge_rate": {"cadence": "after PR merges", "last_refreshed": "cycle 160"},
+      "copilot_metrics.in_flight": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 161"},
+      "copilot_metrics.dispatch_to_pr_rate": {"cadence": "after new dispatches", "last_refreshed": "cycle 161"},
+      "copilot_metrics.pr_merge_rate": {"cadence": "after PR merges", "last_refreshed": "cycle 161"},
       "last_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 160"},
       "last_eva_comment_check": {"cadence": "every cycle (checked even when no comments found)", "last_refreshed": "cycle 160"},
       "qc_status": {"cadence": "after QC interactions", "last_refreshed": "cycle 158"},
@@ -1214,7 +1238,8 @@
       "typescript_plan.status": {"cadence": "after plan phase transitions", "last_refreshed": "cycle 158"},
       "eva_input_issues.closed_this_cycle": {"cadence": "every cycle (reset even when no closures)", "last_refreshed": "cycle 160"},
       "tool_pipeline": {"cadence": "after pipeline phase transitions", "last_refreshed": "cycle 158"},
-      "review_agent": {"cadence": "every cycle (updated when consuming review findings)", "last_refreshed": "cycle 160"},
+      "review_agent": {"cadence": "every cycle (updated when consuming review findings)", "last_refreshed": "cycle 161"},
+      "review_agent.chronic_category_responses": {"cadence": "when chronic categories are detected (5+ in last 6 reviews)", "last_refreshed": "cycle 161"},
       "publish_gate": {"cadence": "every cycle when set (divergence check)", "last_refreshed": "cycle 160"}
     }
   }
