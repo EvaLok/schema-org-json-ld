@@ -12,7 +12,7 @@ Confirm the pipeline-check was run this cycle and passed:
 bash tools/pipeline-check --cycle {N}
 ```
 
-If not yet run, run it now. All 4 phases must pass before completing the cycle.
+If not yet run, run it now. All 5 phases must pass before completing the cycle.
 
 ## 2. Update state.json
 
