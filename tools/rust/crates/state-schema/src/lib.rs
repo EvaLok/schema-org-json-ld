@@ -109,6 +109,51 @@ pub fn update_freshness(state: &mut Value, field_name: &str, cycle: u32) -> Resu
     Ok(())
 }
 
+pub fn set_value_at_pointer(root: &mut Value, pointer: &str, value: Value) -> Result<bool, String> {
+    let segments: Vec<String> = pointer
+        .split('/')
+        .skip(1)
+        .map(|segment| segment.replace("~1", "/").replace("~0", "~"))
+        .collect();
+
+    if segments.is_empty() {
+        return Err("json pointer must not be empty".to_string());
+    }
+
+    let mut cursor = root;
+    for segment in &segments[..segments.len() - 1] {
+        cursor = cursor
+            .as_object_mut()
+            .and_then(|object| object.get_mut(segment))
+            .ok_or_else(|| {
+                format!(
+                    "missing object path segment for pointer {}: {}",
+                    pointer, segment
+                )
+            })?;
+    }
+
+    let terminal = segments
+        .last()
+        .expect("segments is guaranteed to be non-empty");
+    let object = cursor
+        .as_object_mut()
+        .ok_or_else(|| format!("target parent is not an object for pointer {}", pointer))?;
+    let existing = object.get(terminal).ok_or_else(|| {
+        format!(
+            "missing target path segment for pointer {}: {}",
+            pointer, terminal
+        )
+    })?;
+
+    if existing == &value {
+        return Ok(false);
+    }
+
+    object.insert(terminal.clone(), value);
+    Ok(true)
+}
+
 #[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(default, rename_all = "snake_case")]
 pub struct SchemaStatus {
@@ -293,7 +338,7 @@ pub struct Blockers {
 
 #[cfg(test)]
 mod tests {
-    use super::update_freshness;
+    use super::{set_value_at_pointer, update_freshness};
     use serde_json::json;
 
     #[test]
@@ -372,6 +417,71 @@ mod tests {
                 .pointer("/field_inventory/fields/schema_status.typescript_stats/last_refreshed")
                 .and_then(|value| value.as_str()),
             Some("cycle 153")
+        );
+    }
+
+    #[test]
+    fn set_value_at_pointer_updates_existing_nested_path() {
+        let mut state = json!({
+            "test_count": {
+                "php": 425
+            }
+        });
+
+        let changed = set_value_at_pointer(&mut state, "/test_count/php", json!(430))
+            .expect("path should exist");
+        assert!(changed);
+        assert_eq!(
+            state
+                .pointer("/test_count/php")
+                .and_then(|value| value.as_i64()),
+            Some(430)
+        );
+    }
+
+    #[test]
+    fn set_value_at_pointer_requires_existing_path() {
+        let mut state = json!({
+            "test_count": {
+                "php": 425
+            }
+        });
+
+        let error = set_value_at_pointer(&mut state, "/test_count/missing", json!(1))
+            .expect_err("missing path should fail");
+        assert!(error.contains("missing target path segment"));
+    }
+
+    #[test]
+    fn set_value_at_pointer_returns_false_when_value_is_unchanged() {
+        let mut state = json!({
+            "test_count": {
+                "php": 425
+            }
+        });
+
+        let changed = set_value_at_pointer(&mut state, "/test_count/php", json!(425))
+            .expect("path should exist");
+        assert!(!changed);
+    }
+
+    #[test]
+    fn set_value_at_pointer_supports_tilde_escapes() {
+        let mut state = json!({
+            "paths": {
+                "with~tilde/and/slash": "before"
+            }
+        });
+
+        let changed =
+            set_value_at_pointer(&mut state, "/paths/with~0tilde~1and~1slash", json!("after"))
+                .expect("escaped path should resolve");
+        assert!(changed);
+        assert_eq!(
+            state
+                .pointer("/paths/with~0tilde~1and~1slash")
+                .and_then(|value| value.as_str()),
+            Some("after")
         );
     }
 }

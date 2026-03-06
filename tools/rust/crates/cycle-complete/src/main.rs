@@ -2,10 +2,11 @@ use chrono::{DateTime, Utc};
 use clap::Parser;
 use serde::Serialize;
 use serde_json::{json, Value};
-use state_schema::StateJson;
+use state_schema::{set_value_at_pointer, StateJson};
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 #[derive(Parser)]
 #[command(name = "cycle-complete")]
@@ -25,6 +26,18 @@ struct Cli {
     /// Output report as JSON
     #[arg(long)]
     json: bool,
+
+    /// Apply computed state patch updates to docs/state.json
+    #[arg(long)]
+    apply: bool,
+
+    /// Cycle summary text for /last_cycle/summary
+    #[arg(long)]
+    summary: Option<String>,
+
+    /// Commit docs/state.json after applying changes
+    #[arg(long)]
+    commit: bool,
 }
 
 #[derive(Clone, Copy, Serialize, PartialEq, Eq, Debug)]
@@ -74,6 +87,11 @@ struct CompletionStep {
 
 fn main() {
     let cli = Cli::parse();
+    if let Err(error) = validate_cli_flags(&cli) {
+        eprintln!("Error: {}", error);
+        std::process::exit(1);
+    }
+
     let state = match read_state_json(&cli.repo_root) {
         Ok(state) => state,
         Err(error) => {
@@ -83,7 +101,33 @@ fn main() {
     };
 
     let now = Utc::now();
-    let report = assemble_report(cli.cycle, cli.issue, now, &state);
+    let summary = cli
+        .summary
+        .as_deref()
+        .unwrap_or("TODO: Fill cycle summary.");
+    let report = assemble_report(cli.cycle, cli.issue, now, &state, summary);
+
+    if cli.apply {
+        match apply_cycle_patch(&cli.repo_root, &report.state_json_patch) {
+            Ok(changed_paths) => {
+                print_patch_apply_summary(&changed_paths);
+                if cli.commit {
+                    match commit_state_json(&cli.repo_root, summary, cli.cycle) {
+                        Ok(sha) => println!("Committed: {}", sha),
+                        Err(error) => {
+                            eprintln!("Error: {}", error);
+                            std::process::exit(1);
+                        }
+                    }
+                }
+            }
+            Err(error) => {
+                eprintln!("Error: {}", error);
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
 
     if cli.json {
         match serde_json::to_string_pretty(&report) {
@@ -98,6 +142,14 @@ fn main() {
     }
 }
 
+fn validate_cli_flags(cli: &Cli) -> Result<(), String> {
+    if cli.commit && !cli.apply {
+        return Err("--commit requires --apply".to_string());
+    }
+
+    Ok(())
+}
+
 fn read_state_json(repo_root: &Path) -> Result<StateJson, String> {
     let state_path = repo_root.join("docs/state.json");
     let content = fs::read_to_string(&state_path)
@@ -106,15 +158,23 @@ fn read_state_json(repo_root: &Path) -> Result<StateJson, String> {
         .map_err(|error| format!("failed to parse {}: {}", state_path.display(), error))
 }
 
+fn read_state_value(path: &Path) -> Result<Value, String> {
+    let content = fs::read_to_string(path)
+        .map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
+    serde_json::from_str::<Value>(&content)
+        .map_err(|error| format!("failed to parse {}: {}", path.display(), error))
+}
+
 fn assemble_report(
     cycle: u64,
     issue: u64,
     now: DateTime<Utc>,
     state: &StateJson,
+    summary: &str,
 ) -> CompletionReport {
     let timestamp = format_timestamp(now);
     let pipeline_check = validate_pipeline_check(state, cycle);
-    let state_json_patch = build_state_patch(cycle, issue, &timestamp, state);
+    let state_json_patch = build_state_patch(cycle, issue, &timestamp, state, summary);
     let review_agent_body = build_review_agent_body(cycle, issue, now);
     let completion_steps = build_completion_steps(&pipeline_check, &state_json_patch);
 
@@ -165,7 +225,13 @@ fn text_mentions_cycle(text: &str, cycle: u64) -> bool {
         .any(|number| number == cycle)
 }
 
-fn build_state_patch(cycle: u64, issue: u64, timestamp: &str, state: &StateJson) -> StatePatch {
+fn build_state_patch(
+    cycle: u64,
+    issue: u64,
+    timestamp: &str,
+    state: &StateJson,
+    summary: &str,
+) -> StatePatch {
     let mut updates = vec![
         PatchUpdate {
             path: "/last_cycle/issue".to_string(),
@@ -177,7 +243,7 @@ fn build_state_patch(cycle: u64, issue: u64, timestamp: &str, state: &StateJson)
         },
         PatchUpdate {
             path: "/last_cycle/summary".to_string(),
-            value: json!("TODO: Fill cycle summary."),
+            value: json!(summary),
         },
         PatchUpdate {
             path: "/last_eva_comment_check".to_string(),
@@ -187,6 +253,89 @@ fn build_state_patch(cycle: u64, issue: u64, timestamp: &str, state: &StateJson)
 
     updates.extend(build_freshness_updates(cycle, &updates, state));
     StatePatch { updates }
+}
+
+fn apply_state_patch(state_value: &mut Value, patch: &StatePatch) -> Result<Vec<String>, String> {
+    let mut changed_paths = Vec::new();
+    for update in &patch.updates {
+        if set_value_at_pointer(state_value, &update.path, update.value.clone())? {
+            changed_paths.push(update.path.clone());
+        }
+    }
+
+    Ok(changed_paths)
+}
+
+fn apply_cycle_patch(repo_root: &Path, patch: &StatePatch) -> Result<Vec<String>, String> {
+    let state_path = repo_root.join("docs/state.json");
+    let mut state_value = read_state_value(&state_path)?;
+    let changed_paths = apply_state_patch(&mut state_value, patch)?;
+    let serialized = serde_json::to_string_pretty(&state_value)
+        .map_err(|error| format!("failed to serialize state.json: {}", error))?;
+    fs::write(&state_path, format!("{}\n", serialized))
+        .map_err(|error| format!("failed to write {}: {}", state_path.display(), error))?;
+
+    Ok(changed_paths)
+}
+
+fn print_patch_apply_summary(changed_paths: &[String]) {
+    println!("Applied {} state update(s).", changed_paths.len());
+    if changed_paths.is_empty() {
+        return;
+    }
+
+    println!("Updated paths:");
+    for path in changed_paths {
+        println!("- {}", path);
+    }
+}
+
+fn commit_state_json(repo_root: &Path, summary: &str, cycle: u64) -> Result<String, String> {
+    let add_output = Command::new("git")
+        .arg("-C")
+        .arg(repo_root)
+        .arg("add")
+        .arg("docs/state.json")
+        .output()
+        .map_err(|error| format!("failed to execute git add: {}", error))?;
+    if !add_output.status.success() {
+        let stderr = String::from_utf8_lossy(&add_output.stderr)
+            .trim()
+            .to_string();
+        return Err(format!("git add docs/state.json failed: {}", stderr));
+    }
+
+    let commit_message = format!("state(cycle-complete): {} [cycle {}]", summary, cycle);
+    let commit_output = Command::new("git")
+        .arg("-C")
+        .arg(repo_root)
+        .arg("commit")
+        .arg("-m")
+        .arg(&commit_message)
+        .output()
+        .map_err(|error| format!("failed to execute git commit: {}", error))?;
+    if !commit_output.status.success() {
+        let stderr = String::from_utf8_lossy(&commit_output.stderr)
+            .trim()
+            .to_string();
+        return Err(format!("git commit failed: {}", stderr));
+    }
+
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(repo_root)
+        .arg("rev-parse")
+        .arg("--short=7")
+        .arg("HEAD")
+        .output()
+        .map_err(|error| format!("failed to execute git rev-parse: {}", error))?;
+    if !output.status.success() {
+        return Err("git rev-parse --short=7 HEAD failed".to_string());
+    }
+
+    let sha = String::from_utf8(output.stdout)
+        .map_err(|error| format!("failed to read git rev-parse output: {}", error))?;
+    Ok(sha.trim().to_string())
 }
 
 fn build_freshness_updates(
@@ -401,6 +550,9 @@ mod tests {
         assert!(help.contains("--cycle"));
         assert!(help.contains("--issue"));
         assert!(help.contains("--json"));
+        assert!(help.contains("--apply"));
+        assert!(help.contains("--summary"));
+        assert!(help.contains("--commit"));
     }
 
     #[test]
@@ -414,12 +566,14 @@ mod tests {
             "last_eva_comment_check".to_string(),
             json!({"last_refreshed": "cycle 120"}),
         );
-        let patch = build_state_patch(139, 464, "2026-03-05T05:06:07Z", &state);
+        let patch = build_state_patch(139, 464, "2026-03-05T05:06:07Z", &state, "summary");
         assert_eq!(patch.updates.len(), 6);
         assert_eq!(patch.updates[0].path, "/last_cycle/issue");
         assert_eq!(patch.updates[0].value, json!(464));
         assert_eq!(patch.updates[1].path, "/last_cycle/timestamp");
         assert_eq!(patch.updates[1].value, json!("2026-03-05T05:06:07Z"));
+        assert_eq!(patch.updates[2].path, "/last_cycle/summary");
+        assert_eq!(patch.updates[2].value, json!("summary"));
         assert_eq!(
             patch.updates[4].path,
             "/field_inventory/fields/last_cycle/last_refreshed"
@@ -444,7 +598,7 @@ mod tests {
             json!({"last_refreshed": "cycle 120"}),
         );
 
-        let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", &state);
+        let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", &state, "summary");
         let freshness_paths: Vec<&str> = patch
             .updates
             .iter()
@@ -486,6 +640,102 @@ mod tests {
             freshness_updates[0].path,
             "/field_inventory/fields/last_cycle/last_refreshed"
         );
+    }
+
+    #[test]
+    fn summary_flag_overrides_placeholder_text_in_patch() {
+        let state = StateJson::default();
+        let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", &state, "custom summary");
+        assert_eq!(patch.updates[2].path, "/last_cycle/summary");
+        assert_eq!(patch.updates[2].value, json!("custom summary"));
+    }
+
+    #[test]
+    fn apply_state_patch_applies_all_updates_and_freshness_markers() {
+        let mut state = StateJson::default();
+        state.field_inventory.fields.insert(
+            "last_cycle".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "last_eva_comment_check".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+
+        let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", &state, "custom summary");
+        let mut raw_state = json!({
+            "last_cycle": {
+                "issue": 100,
+                "timestamp": "2026-02-01T00:00:00Z",
+                "summary": "old summary"
+            },
+            "last_eva_comment_check": "2026-02-01T00:00:00Z",
+            "field_inventory": {
+                "fields": {
+                    "last_cycle": {"last_refreshed": "cycle 120"},
+                    "last_eva_comment_check": {"last_refreshed": "cycle 120"}
+                }
+            }
+        });
+
+        let changed_paths =
+            apply_state_patch(&mut raw_state, &patch).expect("state patch should apply cleanly");
+        assert_eq!(changed_paths.len(), 6);
+        assert_eq!(
+            raw_state
+                .pointer("/last_cycle/issue")
+                .and_then(Value::as_u64),
+            Some(700)
+        );
+        assert_eq!(
+            raw_state
+                .pointer("/last_cycle/summary")
+                .and_then(Value::as_str),
+            Some("custom summary")
+        );
+        assert_eq!(
+            raw_state
+                .pointer("/field_inventory/fields/last_cycle/last_refreshed")
+                .and_then(Value::as_str),
+            Some("cycle 153")
+        );
+        assert_eq!(
+            raw_state
+                .pointer("/field_inventory/fields/last_eva_comment_check/last_refreshed")
+                .and_then(Value::as_str),
+            Some("cycle 153")
+        );
+    }
+
+    #[test]
+    fn commit_without_apply_produces_error() {
+        let cli = Cli::parse_from([
+            "cycle-complete",
+            "--repo-root",
+            ".",
+            "--cycle",
+            "162",
+            "--issue",
+            "585",
+            "--commit",
+        ]);
+        let error = validate_cli_flags(&cli).expect_err("commit without apply must fail");
+        assert_eq!(error, "--commit requires --apply");
+    }
+
+    #[test]
+    fn apply_flag_is_recognized_by_parser() {
+        let parsed = Cli::try_parse_from([
+            "cycle-complete",
+            "--repo-root",
+            ".",
+            "--cycle",
+            "162",
+            "--issue",
+            "585",
+            "--apply",
+        ]);
+        assert!(parsed.is_ok());
     }
 
     #[test]
@@ -531,7 +781,7 @@ mod tests {
             json!({"last_refreshed": "cycle 120"}),
         );
 
-        let report = assemble_report(139, 464, fixed_now(), &state);
+        let report = assemble_report(139, 464, fixed_now(), &state, "summary");
         let output = serde_json::to_string_pretty(&report).unwrap();
         let parsed: Value = serde_json::from_str(&output).unwrap();
 
