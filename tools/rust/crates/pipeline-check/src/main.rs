@@ -135,7 +135,12 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
             display_name: "field-inventory",
             wrapper_relative_path: "tools/check-field-inventory-rs",
             binary_relative_path: "tools/rust/target/release/check-field-inventory",
-            args: vec!["--repo-root".to_string(), repo_root.display().to_string()],
+            args: vec![
+                "--cycle".to_string(),
+                cycle.to_string(),
+                "--repo-root".to_string(),
+                repo_root.display().to_string(),
+            ],
             kind: ToolKind::FieldInventory,
         },
         ToolSpec {
