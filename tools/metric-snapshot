@@ -42,8 +42,10 @@ fi
 
 # After --fix, commit state.json changes and output the receipt hash
 if [ "$has_fix" = true ] && [ -n "$cycle_num" ]; then
-	RECEIPT=$(bash "$SCRIPT_DIR/commit-state-change" --tool-name "metric-snapshot" --summary "auto-fix metric mismatches" --cycle "$cycle_num" 2>/dev/null)
-	if [ -n "$RECEIPT" ]; then
+	RECEIPT=$(bash "$SCRIPT_DIR/commit-state-change" --tool-name "metric-snapshot" --summary "auto-fix metric mismatches" --cycle "$cycle_num" 2>&1) || true
+	if echo "$RECEIPT" | grep -qE '^[0-9a-f]{7}$'; then
 		echo "commit-receipt: $RECEIPT"
+	elif [ -n "$RECEIPT" ]; then
+		echo "commit-state-change: $RECEIPT" >&2
 	fi
 fi

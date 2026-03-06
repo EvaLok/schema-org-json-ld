@@ -218,6 +218,23 @@ Also check for open `qc-inbound` issues on this repo:
 gh issue list --label "qc-inbound" --state open --json number,title
 ```
 
+### QC-ACK polling for pending QC-REQUESTs (per audit #120)
+
+Check whether any open QC-REQUESTs from THIS repo have received a QC-ACK response on the QC repo. Poll recently closed `qc-inbound` issues on the QC repo:
+
+```bash
+gh api "repos/EvaLok/schema-org-json-ld-qc/issues?labels=qc-inbound&state=closed&sort=updated&direction=desc&per_page=5&creator=EvaLok" --paginate --jq '.[] | {number, title, updated_at}'
+```
+
+Cross-reference against `publish_gate.qc_ack` in `docs/state.json`. If a new QC-ACK is found that resolves a pending QC-REQUEST:
+
+1. Read the QC-ACK issue body and closing comment to confirm validation results
+2. Update `publish_gate` in state.json: set `validated_commit`, `validated_at`, `qc_ack`, `source_diverged: false`
+3. Check for source divergence between the validated commit and HEAD on package-affecting files
+4. Close the corresponding QC-REQUEST issue on this repo with a summary
+
+**Why this step exists**: Audit #120 identified that QC-ACK #225 cleared v1.0.1 for publish 4 cycles before the main orchestrator noticed. The checklist polled for QC-REPORTs (failures) but not for QC-ACK responses to its own requests.
+
 ### QC-REQUEST Definition of Done (per audit #35)
 
 When creating QC-REQUESTs, always include an explicit **"Definition of Done"** section with checkable criteria. Do not leave "validation complete" ambiguous. Include:

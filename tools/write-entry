@@ -23,6 +23,11 @@ if [ "$has_repo_root" = true ]; then
 	exec "$BINARY" "$@"
 fi
 
+# No args or --help: pass through directly (let clap show usage)
+if [ $# -eq 0 ]; then
+	exec "$BINARY" --help
+fi
+
 # Insert --repo-root after the subcommand (first positional arg)
 subcommand="$1"
 shift
