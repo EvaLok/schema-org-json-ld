@@ -895,7 +895,7 @@
   ],
   "open_questions_for_eva": [],
   "eva_input_issues": {
-    "closed_this_cycle": [],
+    "closed_this_cycle": [600],
     "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225, 329, 340, 348, 372, 378, 396, 401, 428, 429, 430, 440, 441, 463, 499, 500, 501, 502, 503, 515, 516, 522, 538, 546],
     "remaining_open": [247, 436, 586, 591]
   },
@@ -971,12 +971,12 @@
     "dispatch_log_latest": "#598 cycle 163 review (cycle 163)"
   },
   "last_cycle": {
-    "number": 163,
-    "issue": 592,
-    "timestamp": "2026-03-06T18:40:00Z",
-    "summary": "Cycle 163: Merged PRs #588 (cycle-complete --apply, step 1 of #586) and #590 (c162 review, score 2/5). Audit sign-off received (audit#125) — v1.0.1 fully cleared. New Eva directive #591 (cycle-start tool). Dispatched #594 (cycle-start) and #596 (process-review). Copilot metrics: 81 dispatches, 77 merged."
+    "number": 164,
+    "issue": 601,
+    "timestamp": "2026-03-06T19:43:00Z",
+    "summary": "Cycle 164: In progress."
   },
-  "last_eva_comment_check": "2026-03-06T18:12:00Z",
+  "last_eva_comment_check": "2026-03-06T19:43:00Z",
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71, 73, 75, 76, 78, 80, 82, 83, 85, 87, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 110, 111, 113, 114, 116, 117, 120, 122, 125],
   "test_count": {"php": 425, "ts": 419, "total": 844, "last_verified": "cycle 139", "last_verified_note": "last_verified = cycle when values were independently measured. field_inventory.last_refreshed = cycle when entry was checked (value confirmed unchanged or updated). These can diverge when a check confirms no change."},
   "next_metric_verification": "cycle 151",
@@ -1235,14 +1235,14 @@
   "field_inventory": {
     "description": "Self-describing inventory of mutable state.json fields with expected refresh cadence. During metric verification (step 5.11), any field not refreshed within its cadence should be flagged and corrected. This inverts the verification pattern from 'enumerate what to check' to 'flag what hasn't been checked.' Per audit #80. Semantics: last_refreshed = cycle when entry was last checked (value confirmed unchanged or updated). This differs from per-field last_verified which means 'cycle when value was independently measured.' A field can be refreshed (checked and confirmed unchanged) without being re-verified (re-measured).",
     "fields": {
-      "test_count": {"cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)", "last_refreshed": "cycle 158"},
-      "typescript_stats": {"cadence": "every merge that adds/removes TS files", "last_refreshed": "cycle 158"},
+      "test_count": {"cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)", "last_refreshed": "cycle 164"},
+      "typescript_stats": {"cadence": "every merge that adds/removes TS files", "last_refreshed": "cycle 164"},
       "phpstan_level": {"cadence": "after PHPStan config changes", "last_refreshed": "cycle 158"},
       "copilot_metrics.in_flight": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 163"},
-      "copilot_metrics.dispatch_to_pr_rate": {"cadence": "after new dispatches", "last_refreshed": "cycle 162"},
+      "copilot_metrics.dispatch_to_pr_rate": {"cadence": "after new dispatches", "last_refreshed": "cycle 164"},
       "copilot_metrics.pr_merge_rate": {"cadence": "after PR merges", "last_refreshed": "cycle 163"},
-      "last_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 163"},
-      "last_eva_comment_check": {"cadence": "every cycle (checked even when no comments found)", "last_refreshed": "cycle 163"},
+      "last_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 164"},
+      "last_eva_comment_check": {"cadence": "every cycle (checked even when no comments found)", "last_refreshed": "cycle 164"},
       "qc_status": {"cadence": "after QC interactions", "last_refreshed": "cycle 158"},
       "blockers": {"cadence": "after blocker state changes", "last_refreshed": "cycle 158"},
       "qc_processed": {"cadence": "after processing QC issues", "last_refreshed": "cycle 158"},
@@ -1253,8 +1253,8 @@
       "total_enums": {"cadence": "after enum additions", "last_refreshed": "cycle 158"},
       "total_testable_types": {"cadence": "after schema class or enum additions", "last_refreshed": "cycle 158"},
       "total_standalone_testable_types": {"cadence": "after building-block-only type changes (publish gate)", "last_refreshed": "cycle 158"},
-      "schema_status.in_progress": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 158"},
-      "eva_input_issues.remaining_open": {"cadence": "after Eva issue processing", "last_refreshed": "cycle 163"},
+      "schema_status.in_progress": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 164"},
+      "eva_input_issues.remaining_open": {"cadence": "after Eva issue processing", "last_refreshed": "cycle 164"},
       "qc_requests_pending": {"cadence": "after QC request creation or completion", "last_refreshed": "cycle 158"},
       "total_schema_types": {"cadence": "after schema type additions", "last_refreshed": "cycle 158"},
       "total_sub_types": {"cadence": "after sub-type additions", "last_refreshed": "cycle 158"},
@@ -1266,7 +1266,7 @@
       "schema_status.property_gap_audit": {"cadence": "after property gap fixes", "last_refreshed": "cycle 158"},
       "schema_status.phpstan_max_assessment": {"cadence": "after PHPStan config or fix changes", "last_refreshed": "cycle 158"},
       "typescript_plan.status": {"cadence": "after plan phase transitions", "last_refreshed": "cycle 158"},
-      "eva_input_issues.closed_this_cycle": {"cadence": "every cycle (reset even when no closures)", "last_refreshed": "cycle 163"},
+      "eva_input_issues.closed_this_cycle": {"cadence": "every cycle (reset even when no closures)", "last_refreshed": "cycle 164"},
       "tool_pipeline": {"cadence": "after pipeline phase transitions", "last_refreshed": "cycle 158"},
       "review_agent": {"cadence": "every cycle (updated when consuming review findings)", "last_refreshed": "cycle 163"},
       "review_agent.chronic_category_responses": {"cadence": "when chronic categories are detected (5+ in last 6 reviews)", "last_refreshed": "cycle 161"},
