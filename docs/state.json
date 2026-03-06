@@ -762,7 +762,7 @@
     }
   ],
   "qc_processed": [8, 37, 57, 72, 160, 165],
-  "qc_requests_pending": [],
+  "qc_requests_pending": [535],
   "qc_status": {
     "request_165": "COMPLETE. QC issue #41 closed. 39/39 E2E pass, 0 errors, 158 warnings. @graph API also validated.",
     "report_57": "ALL FIXES MERGED AND VALIDATED. PRs #198, #199. QC-63 confirmed: 39/39 E2E pass, 0 errors, 19 warnings.",
@@ -779,9 +779,9 @@
     "validated_commit": "73d1b1b",
     "validated_at": "2026-03-05T16:22Z",
     "qc_ack": "EvaLok/schema-org-json-ld-qc#213",
-    "source_diverged": false,
-    "last_divergence_check": "cycle 150",
-    "note": "Per audit #108: Track validated commit SHA. If package-affecting files change after validation, set source_diverged=true and require re-validation."
+    "source_diverged": true,
+    "last_divergence_check": "cycle 152",
+    "note": "Source diverged in cycle 152: PR #529 changed package.json (1.0.0->1.0.1), scripts/verify-build.mjs, ts/tsup.config.ts. Re-validation needed before publish."
   },
   "blockers": [
     {
@@ -794,13 +794,13 @@
       "verify_build_ci": "ADDED. Eva applied workflow change (commit 1b8ff8f, 2026-03-04T00:43Z). verify-build runs in ci-ts.yml on every push/PR. #403 closed.",
       "reliability_clock": {"start_cycle": 134, "status": "SATISFIED", "minimum_required": 3},
       "remaining_actions": ["Pipeline reliability SATISFIED", "QC final validation COMPLETE (QC-ACK #213, all 5 DoD criteria pass)", "Audit sign-off CONFIRMED (audit #111, cycle 149)", "Eva configures npm trusted publishing (OIDC link)", "Eva creates GitHub Release to trigger publish"],
-      "pre_publish_checkpoint": "ALL GATES SATISFIED (cycle 149). QC validated (73/73 parity, 73/73 E2E, package build OK, 88/88 class inventory). Audit sign-off confirmed (audit #111). Validated commit: 73d1b1b. Source diverged: false. Publish recommended to Eva on #247."
+      "pre_publish_checkpoint": "RE-VALIDATION NEEDED (cycle 152). Previous validation: 73d1b1b (QC-ACK #213). Source diverged due to v1.0.1 release blockers fix (PR #529). New QC-REQUEST #535 filed for commit ea8ffff. Schema source unchanged — only build config and version bumped."
     }
   ],
   "open_questions_for_eva": [],
   "eva_input_issues": {
-    "closed_this_cycle": [515, 516],
-    "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225, 329, 340, 348, 372, 378, 396, 401, 428, 429, 430, 440, 441, 463, 499, 500, 501, 502, 503],
+    "closed_this_cycle": [522],
+    "closed_prior_cycles": [180, 181, 182, 183, 184, 185, 186, 187, 188, 201, 224, 225, 329, 340, 348, 372, 378, 396, 401, 428, 429, 430, 440, 441, 463, 499, 500, 501, 502, 503, 515, 516],
     "remaining_open": [247, 436]
   },
   "typescript_plan": {
@@ -862,24 +862,24 @@
   },
   "copilot_metrics": {
     "total_dispatches": 61,
-    "resolved": 59,
-    "in_flight": 2,
-    "produced_pr": 58,
-    "merged": 57,
+    "resolved": 61,
+    "in_flight": 0,
+    "produced_pr": 60,
+    "merged": 59,
     "closed_without_merge": 1,
     "revision_rounds": 4,
-    "dispatch_to_pr_rate": "58/59",
-    "pr_merge_rate": "57/58",
-    "note": "61 dispatches, 59 resolved, 2 in-flight (#528 v1.0.1 release blockers, #532 cycle-151 review). 58 produced PRs (57 merged, 1 closed without merge).",
-    "dispatch_log_latest": "#532 cycle-151 review agent (cycle 151)"
+    "dispatch_to_pr_rate": "60/61",
+    "pr_merge_rate": "59/60",
+    "note": "61 dispatches, 61 resolved, 0 in-flight. 60 produced PRs (59 merged, 1 closed without merge).",
+    "dispatch_log_latest": "#533 cycle-151 review, #529 v1.0.1 release blockers (cycle 152)"
   },
   "last_cycle": {
-    "number": 151,
-    "issue": 527,
-    "timestamp": "2026-03-06T00:22:00Z",
-    "summary": "Cycle 151: Merged PR #526 (cycle 150 review, 3/5), merged PR #524 (state-invariants tool). Integrated state-invariants into pipeline-check as phase 5. Dispatched #528 (v1.0.1 release blockers per Eva #522). Processed audit #113 (journal commitment tracking) and #114 (QC rotation bias). Updated journal skill per audit #113."
+    "number": 152,
+    "issue": 534,
+    "timestamp": "2026-03-06T02:16:00Z",
+    "summary": "Cycle 152: Merged PR #533 (cycle 151 review, 3/5), merged PR #529 (v1.0.1 release blockers per Eva #522). Fixed pipeline-check tests for 5-step pipeline. Closed Eva directive #522. Source diverged from validated commit (re-validation needed)."
   },
-  "last_eva_comment_check": "2026-03-06T00:23:00Z",
+  "last_eva_comment_check": "2026-03-06T02:17:00Z",
   "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71, 73, 75, 76, 78, 80, 82, 83, 85, 87, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 110, 111, 113, 114],
   "test_count": {"php": 425, "ts": 419, "total": 844, "last_verified": "cycle 139", "last_verified_note": "last_verified = cycle when values were independently measured. field_inventory.last_refreshed = cycle when entry was checked (value confirmed unchanged or updated). These can diverge when a check confirms no change."},
   "next_metric_verification": "cycle 151",
@@ -905,7 +905,7 @@
   },
   "review_agent": {
     "description": "Programmatic tracking of review agent findings for trend detection. Per audit #102.",
-    "last_review_cycle": 150,
+    "last_review_cycle": 151,
     "history": [
       {
         "cycle": 140,
@@ -1005,6 +1005,15 @@
         "actioned": 3,
         "deferred": 1,
         "ignored": 0
+      },
+      {
+        "cycle": 151,
+        "finding_count": 8,
+        "complacency_score": 3,
+        "categories": ["test-coverage", "documentation-drift", "state-consistency"],
+        "actioned": 2,
+        "deferred": 2,
+        "ignored": 0
       }
     ]
   },
@@ -1014,13 +1023,13 @@
       "test_count": {"cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)", "last_refreshed": "cycle 146"},
       "typescript_stats": {"cadence": "every merge that adds/removes TS files", "last_refreshed": "cycle 142"},
       "phpstan_level": {"cadence": "after PHPStan config changes", "last_refreshed": "cycle 142"},
-      "copilot_metrics.in_flight": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 151"},
-      "copilot_metrics.dispatch_to_pr_rate": {"cadence": "after new dispatches", "last_refreshed": "cycle 151"},
-      "copilot_metrics.pr_merge_rate": {"cadence": "after PR merges", "last_refreshed": "cycle 151"},
-      "last_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 151"},
-      "last_eva_comment_check": {"cadence": "every cycle", "last_refreshed": "cycle 151"},
+      "copilot_metrics.in_flight": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 152"},
+      "copilot_metrics.dispatch_to_pr_rate": {"cadence": "after new dispatches", "last_refreshed": "cycle 152"},
+      "copilot_metrics.pr_merge_rate": {"cadence": "after PR merges", "last_refreshed": "cycle 152"},
+      "last_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 152"},
+      "last_eva_comment_check": {"cadence": "every cycle", "last_refreshed": "cycle 152"},
       "qc_status": {"cadence": "after QC interactions", "last_refreshed": "cycle 147"},
-      "blockers": {"cadence": "after blocker state changes", "last_refreshed": "cycle 150"},
+      "blockers": {"cadence": "after blocker state changes", "last_refreshed": "cycle 152"},
       "qc_processed": {"cadence": "after processing QC issues", "last_refreshed": "cycle 134"},
       "audit_processed": {"cadence": "after processing audit issues", "last_refreshed": "cycle 151"},
       "next_metric_verification": {"cadence": "after each verification run", "last_refreshed": "cycle 146"},
@@ -1030,8 +1039,8 @@
       "total_testable_types": {"cadence": "after schema class or enum additions", "last_refreshed": "cycle 134"},
       "total_standalone_testable_types": {"cadence": "after building-block-only type changes (publish gate)", "last_refreshed": "cycle 134"},
       "schema_status.in_progress": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 134"},
-      "eva_input_issues.remaining_open": {"cadence": "after Eva issue processing", "last_refreshed": "cycle 144"},
-      "qc_requests_pending": {"cadence": "after QC request creation or completion", "last_refreshed": "cycle 147"},
+      "eva_input_issues.remaining_open": {"cadence": "after Eva issue processing", "last_refreshed": "cycle 152"},
+      "qc_requests_pending": {"cadence": "after QC request creation or completion", "last_refreshed": "cycle 152"},
       "total_schema_types": {"cadence": "after schema type additions", "last_refreshed": "cycle 126"},
       "total_sub_types": {"cadence": "after sub-type additions", "last_refreshed": "cycle 126"},
       "total_testable_types_note": {"cadence": "after classification changes", "last_refreshed": "cycle 126"},
@@ -1042,10 +1051,10 @@
       "schema_status.property_gap_audit": {"cadence": "after property gap fixes", "last_refreshed": "cycle 127"},
       "schema_status.phpstan_max_assessment": {"cadence": "after PHPStan config or fix changes", "last_refreshed": "cycle 126"},
       "typescript_plan.status": {"cadence": "after plan phase transitions", "last_refreshed": "cycle 126"},
-      "eva_input_issues.closed_this_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 150"},
+      "eva_input_issues.closed_this_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 152"},
       "tool_pipeline": {"cadence": "after pipeline phase transitions", "last_refreshed": "cycle 150"},
-      "review_agent": {"cadence": "every cycle (updated when consuming review findings)", "last_refreshed": "cycle 151"},
-      "publish_gate": {"cadence": "every cycle when set (divergence check)", "last_refreshed": "cycle 150"}
+      "review_agent": {"cadence": "every cycle (updated when consuming review findings)", "last_refreshed": "cycle 152"},
+      "publish_gate": {"cadence": "every cycle when set (divergence check)", "last_refreshed": "cycle 152"}
     }
   }
 }
