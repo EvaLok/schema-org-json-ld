@@ -28,7 +28,7 @@
 4. **Category:** metrics-taxonomy  
    **Severity:** medium  
    **Description:** Using `closed_without_pr` to represent systemic dispatch startup failures is mathematically workable but semantically overloaded; it mixes "work intentionally closed without PR" with "agent failed before starting."  
-   **Evidence:** `docs/state.json:633` (`closed_without_pr: 4`) and `docs/state.json:638` note text (`4 failed-no-PR` from gpt-5.4 ruleset violation).
+   **Evidence:** `docs/state.json:632-633` (`closed_without_pr: 4`) and `docs/state.json:638` note text (`4 failed-no-PR` from gpt-5.4 ruleset violation).
 
 5. **Category:** state-traceability  
    **Severity:** medium  
