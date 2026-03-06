@@ -59,6 +59,7 @@ For each open `cycle-review` issue:
 5. Close the review issue with a comment noting which recommendations were accepted/deferred
 6. Log the complacency score in the worklog
 7. **Recurrence escalation** (per audit #106): Check whether any finding addresses the same class of issue as a finding from a prior cycle's review (compare categories in `review_agent.history`). If a finding class recurs across 2+ consecutive reviews, the **process-level fix** (not just the instance fix) MUST be implemented this cycle — recurrence is evidence that instance-level fixes are insufficient
+8. **Chronic category escalation** (per audit #122): Check `review_agent.history` for any finding category that has appeared in 5+ of the last 6 reviews. For each chronic category, perform a root cause analysis targeting the *pattern generator*, not the latest instance. Either: (a) implement a structural fix that permanently eliminates the category from future reviews (e.g., automate the check so it never fails, or extend `state-invariants` to cover it), or (b) recalibrate the review agent spec to exclude minor/expected variations of that category — and document the rationale in the worklog. If neither option is taken this cycle, file a `question-for-eva` issue explaining why the category persists despite 5+ cycles of fixes.
 
 If no review agent was dispatched last cycle (e.g., first cycle with this process), note it and move on.
 
