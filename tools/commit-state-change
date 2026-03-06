@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+	echo "Usage: $0 --tool-name <name> --summary <text> --cycle <N>" >&2
+}
+
+tool_name=""
+summary=""
+cycle=""
+
+while [ "$#" -gt 0 ]; do
+	case "$1" in
+		--tool-name)
+			[ "$#" -ge 2 ] || {
+				usage
+				exit 2
+			}
+			tool_name="$2"
+			shift 2
+			;;
+		--summary)
+			[ "$#" -ge 2 ] || {
+				usage
+				exit 2
+			}
+			summary="$2"
+			shift 2
+			;;
+		--cycle)
+			[ "$#" -ge 2 ] || {
+				usage
+				exit 2
+			}
+			cycle="$2"
+			shift 2
+			;;
+		*)
+			usage
+			exit 2
+			;;
+	esac
+done
+
+if [ -z "$tool_name" ] || [ -z "$summary" ] || [ -z "$cycle" ]; then
+	usage
+	exit 2
+fi
+
+git add docs/state.json
+
+if git diff --cached --quiet -- docs/state.json; then
+	echo "Warning: no changes to docs/state.json; nothing to commit" >&2
+	exit 0
+fi
+
+git commit -m "state($tool_name): $summary [cycle $cycle]" >/dev/null
+git rev-parse --short=7 HEAD
