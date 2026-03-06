@@ -875,7 +875,7 @@
     "validated_at": "2026-03-06T04:39Z",
     "qc_ack": "EvaLok/schema-org-json-ld-qc#225",
     "source_diverged": false,
-    "last_divergence_check": "cycle 158",
+    "last_divergence_check": "cycle 159",
     "note": "QC-ACK #225 cleared v1.0.1 at ea8ffff for npm publish. 73/73 parity, E2E, build, tarball tests all pass. No package-affecting source divergence since validation."
   },
   "blockers": [
@@ -956,27 +956,27 @@
     ]
   },
   "copilot_metrics": {
-    "total_dispatches": 71,
-    "resolved": 70,
-    "in_flight": 1,
-    "produced_pr": 69,
-    "merged": 68,
+    "total_dispatches": 73,
+    "resolved": 72,
+    "in_flight": 2,
+    "produced_pr": 71,
+    "merged": 70,
     "closed_without_merge": 1,
     "closed_without_pr": 1,
     "revision_rounds": 5,
-    "dispatch_to_pr_rate": "69/70",
-    "pr_merge_rate": "68/69",
-    "note": "71 dispatches, 70 resolved, 1 in-flight (#566 write-entry fix). 69 produced PRs (68 merged, 1 closed without merge). 1 resolved without PR (silent failure).",
-    "dispatch_log_latest": "#566 write-entry --repo-root global arg fix (cycle 158)"
+    "dispatch_to_pr_rate": "71/72",
+    "pr_merge_rate": "70/71",
+    "note": "73 dispatches, 72 resolved, 2 in-flight (#572 state-invariants extension, #574 tiered field inventory). 71 produced PRs (70 merged, 1 closed without merge). 1 resolved without PR (silent failure).",
+    "dispatch_log_latest": "#572 state-invariants extension, #574 tiered field inventory (cycle 159)"
   },
   "last_cycle": {
-    "number": 158,
-    "issue": 565,
-    "timestamp": "2026-03-06T10:45:00Z",
-    "summary": "Cycle 158: Consumed cycle 157 review (3/5, 7 findings). Merged review PR #564. Refreshed all 35 field_inventory entries to cycle 158. Added closed_without_pr to copilot_metrics. Dispatched #566 (write-entry --repo-root global arg fix). Audit sign-off #562 pending (1/3 cycles)."
+    "number": 159,
+    "issue": 570,
+    "timestamp": "2026-03-06T12:09:00Z",
+    "summary": "Cycle 159: Consumed cycle 158 review (3/5, 7 findings). Merged PRs #567 (write-entry fix) and #569 (review report). Accepted audit #122 (chronic category detection). Added STARTUP_CHECKLIST step 0.5.8. Corrected cycle 157 actioned count. Dispatched #572 (state-invariants extension) and #574 (tiered field inventory). Audit sign-off #562 pending (2/3 cycles)."
   },
-  "last_eva_comment_check": "2026-03-06T10:45:00Z",
-  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71, 73, 75, 76, 78, 80, 82, 83, 85, 87, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 110, 111, 113, 114, 116, 117, 120],
+  "last_eva_comment_check": "2026-03-06T12:09:00Z",
+  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71, 73, 75, 76, 78, 80, 82, 83, 85, 87, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 110, 111, 113, 114, 116, 117, 120, 122],
   "test_count": {"php": 425, "ts": 419, "total": 844, "last_verified": "cycle 139", "last_verified_note": "last_verified = cycle when values were independently measured. field_inventory.last_refreshed = cycle when entry was checked (value confirmed unchanged or updated). These can diverge when a check confirms no change."},
   "next_metric_verification": "cycle 151",
   "total_schema_types": 28,
@@ -1001,7 +1001,7 @@
   },
   "review_agent": {
     "description": "Programmatic tracking of review agent findings for trend detection. Per audit #102.",
-    "last_review_cycle": 157,
+    "last_review_cycle": 158,
     "history": [
       {
         "cycle": 140,
@@ -1161,9 +1161,10 @@
         "finding_count": 7,
         "complacency_score": 3,
         "categories": ["publish-gate-accuracy", "copilot-metrics-transparency", "qc-ack-automation", "tool-quality", "journal-quality", "commit-receipts", "state-freshness"],
-        "actioned": 4,
+        "actioned": 3,
         "deferred": 1,
-        "ignored": 0
+        "ignored": 0,
+        "note": "Corrected from actioned=4 to actioned=3 per cycle 158 review finding 5. Three concrete actions: copilot_metrics fix, #566 dispatch, field inventory refresh. Remaining 3 findings were informational (verified correct, no change needed)."
       }
     ]
   },
