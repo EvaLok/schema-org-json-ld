@@ -6,7 +6,7 @@
    The reported merges and dispatch align with tracked sessions: #548 → PR #549 merged, #550 → PR #551 merged, and #553 still in flight (`docs/worklog/2026-03-06/061500-hundred-fifty-fifth-orchestrator-cycle.md:15-16`, `docs/worklog/2026-03-06/061500-hundred-fifty-fifth-orchestrator-cycle.md:24`, `docs/state.json:815-840`). `last_cycle.summary` also matches the same actions (`docs/state.json:955-960`).
 
 2. **Worklog “pipeline 5/5 PASS” claim is directionally true but framed too strongly.**  
-   Pipeline can report pass once all release binaries exist, but this is environment-dependent; from a clean clone it fail-closes with SKIP steps until binaries are built. Also, current output contains `cycle-status` as `info`, not `pass`, so “5/5 PASS” overstates the exact status shape (`docs/worklog/2026-03-06/061500-hundred-fifty-fifth-orchestrator-cycle.md:33`).
+   Pipeline can report pass once all release binaries exist, but this is environment-dependent; from a clean clone it can fail-close with SKIP steps until binaries are built. Also, current output contains `cycle-status` as `info`, not `pass`, so “5/5 PASS” overstates the exact status shape (`docs/worklog/2026-03-06/061500-hundred-fifty-fifth-orchestrator-cycle.md:33`).
 
 3. **Worklog omits one cycle activity listed in issue narrative (dead branch cleanup), reducing auditability.**  
    The cycle issue summary says two stale remote branches were cleaned up, but that action is not recorded in the worklog’s “What was done” or “Self-modifications” sections (`docs/worklog/2026-03-06/061500-hundred-fifty-fifth-orchestrator-cycle.md:3-29`).
@@ -15,7 +15,7 @@
    The entry explicitly quotes the prior commitment and marks it “Not tested” with a concrete reason (no mixed-change PRs this cycle), which is better than claiming compliance without evidence (`docs/journal/2026-03-06.md:118-123`).
 
 5. **Journal recurrence math for `state-consistency` is incorrect versus tracked history.**  
-   The journal states “10 out of 15 review cycles,” but `review_agent.history` currently includes `state-consistency` in 13 of cycles 140–154 (all except 140 and 142), so the narrative understates recurrence (`docs/journal/2026-03-06.md:128`, `docs/state.json:1002`, `docs/state.json:1020`, `docs/state.json:1029`, `docs/state.json:1038`, `docs/state.json:1047`, `docs/state.json:1056`, `docs/state.json:1065`, `docs/state.json:1074`, `docs/state.json:1083`, `docs/state.json:1092`, `docs/state.json:1101`, `docs/state.json:1110`, `docs/state.json:1119`).
+   The journal states “10 out of 15 review cycles,” but `review_agent.history` currently includes `state-consistency` in 13 of cycles 140–154 (all except 140 and 142), so the narrative understates recurrence (`docs/journal/2026-03-06.md:128`, `docs/state.json:989-1123`).
 
 6. **`state.json` consistency checks requested in this review are currently satisfied.**  
    `copilot_metrics` arithmetic is correct: `67 = 66 + 1` and `65 = 64 + 1` (`docs/state.json:942-948`). `review_agent.last_review_cycle` is now aligned with latest history entry (154) (`docs/state.json:987`, `docs/state.json:1116-1123`). Freshness markers advanced on fields touched in cycle updates (`docs/state.json:1132-1136`, `docs/state.json:1160-1163`).
