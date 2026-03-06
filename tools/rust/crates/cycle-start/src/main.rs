@@ -1,4 +1,4 @@
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use clap::Parser;
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -14,6 +14,12 @@ const ORCHESTRATOR_SIGNATURES: [&str; 3] = [
     "[main-orchestrator]",
     "[qc-orchestrator]",
     "[audit-orchestrator]",
+];
+const EVA_DIRECTIVES: [&str; 4] = [
+    "EvaLok/schema-org-json-ld#586 (pipeline write-side)",
+    "EvaLok/schema-org-json-ld#591 (cycle-start tool)",
+    "EvaLok/schema-org-json-ld#247 (npm publish)",
+    "EvaLok/schema-org-json-ld#436 (tool pipeline)",
 ];
 
 #[derive(Parser)]
@@ -143,12 +149,7 @@ fn run(cli: Cli) -> Result<(), String> {
         cycle,
         issue: cli.issue,
         receipt,
-        eva_directives: vec![
-            "EvaLok/schema-org-json-ld#586 (pipeline write-side)".to_string(),
-            "EvaLok/schema-org-json-ld#591 (cycle-start tool)".to_string(),
-            "EvaLok/schema-org-json-ld#247 (npm publish)".to_string(),
-            "EvaLok/schema-org-json-ld#436 (tool pipeline)".to_string(),
-        ],
+        eva_directives: default_eva_directives(),
         input_from_eva,
         eva_comments_since_last_cycle: eva_comments,
         review_agent,
@@ -174,6 +175,10 @@ fn run(cli: Cli) -> Result<(), String> {
 
 fn format_timestamp_utc() -> String {
     Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string()
+}
+
+fn default_eva_directives() -> Vec<String> {
+    EVA_DIRECTIVES.iter().map(|directive| directive.to_string()).collect()
 }
 
 fn derive_cycle_from_state(state: &Value) -> Result<u64, String> {
@@ -434,9 +439,23 @@ fn gather_questions_for_eva(warnings: &mut Vec<String>) -> Vec<SimpleIssue> {
 }
 
 fn gather_eva_comments_since(since: &str, warnings: &mut Vec<String>) -> Vec<EvaComment> {
+    let normalized_since = match normalize_since_timestamp(since) {
+        Some(value) => value,
+        None => {
+            warn(
+                warnings,
+                format!(
+                    "invalid last cycle timestamp '{}', falling back to epoch",
+                    since
+                ),
+            );
+            "1970-01-01T00:00:00Z".to_string()
+        }
+    };
+
     let endpoint = format!(
         "repos/{}/issues/comments?sort=created&direction=desc&since={}&per_page=30",
-        MAIN_REPO, since
+        MAIN_REPO, normalized_since
     );
 
     match gh_json(&["api", &endpoint]) {
@@ -446,6 +465,11 @@ fn gather_eva_comments_since(since: &str, warnings: &mut Vec<String>) -> Vec<Eva
             Vec::new()
         }
     }
+}
+
+fn normalize_since_timestamp(timestamp: &str) -> Option<String> {
+    let parsed = DateTime::parse_from_rfc3339(timestamp).ok()?;
+    Some(parsed.with_timezone(&Utc).format("%Y-%m-%dT%H:%M:%SZ").to_string())
 }
 
 fn gather_review_summary(
@@ -936,7 +960,7 @@ mod tests {
             cycle: 163,
             issue: 592,
             receipt: "abc1234".to_string(),
-            eva_directives: vec!["EvaLok/schema-org-json-ld#591 (cycle-start tool)".to_string()],
+            eva_directives: default_eva_directives(),
             input_from_eva: vec![],
             eva_comments_since_last_cycle: vec![EvaComment {
                 issue_number: Some(591),
@@ -985,7 +1009,7 @@ mod tests {
             cycle: 163,
             issue: 592,
             receipt: "abc1234".to_string(),
-            eva_directives: vec!["EvaLok/schema-org-json-ld#586 (pipeline write-side)".to_string()],
+            eva_directives: default_eva_directives(),
             input_from_eva: vec![SimpleIssue {
                 number: 593,
                 title: "Input".to_string(),
