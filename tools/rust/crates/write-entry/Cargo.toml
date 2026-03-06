@@ -1,0 +1,11 @@
+[package]
+name = "write-entry"
+version = "0.1.0"
+edition = "2021"
+description = "Generates orchestrator worklog and journal markdown entries from structured JSON input"
+
+[dependencies]
+chrono = { version = "0.4", features = ["clock"] }
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
