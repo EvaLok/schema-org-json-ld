@@ -871,12 +871,12 @@
     "request_496": "COMPLETE. QC-ACK #213 (2026-03-05T16:22Z). Pre-publish final validation: Parity 73/73 PASS, E2E 73/73 PASS (0 errors), Package build PASS, Class inventory 88/88 PASS. All 5 DoD criteria satisfied. Package cleared for npm publish."
   },
   "publish_gate": {
-    "validated_commit": "73d1b1b",
-    "validated_at": "2026-03-05T16:22Z",
-    "qc_ack": "EvaLok/schema-org-json-ld-qc#213",
-    "source_diverged": true,
-    "last_divergence_check": "cycle 152",
-    "note": "Source diverged in cycle 152: PR #529 changed package.json (1.0.0->1.0.1), scripts/verify-build.mjs, ts/tsup.config.ts. Re-validation needed before publish."
+    "validated_commit": "ea8ffff",
+    "validated_at": "2026-03-06T04:39Z",
+    "qc_ack": "EvaLok/schema-org-json-ld-qc#225",
+    "source_diverged": false,
+    "last_divergence_check": "cycle 157",
+    "note": "QC-ACK #225 cleared v1.0.1 at ea8ffff for npm publish. 73/73 parity, E2E, build, tarball tests all pass. No package-affecting source divergence since validation."
   },
   "blockers": [
     {
@@ -975,7 +975,7 @@
     "summary": "Cycle 156: Consumed cycle 155 review (3/5). Merged PR #554 (commit-state-change) and PR #556 (cycle 155 review). Fixed write-entry wrapper. Implemented Eva #538 Phases 3-4 (metric-snapshot receipt integration, COMPLETION_CHECKLIST hash slots)."
   },
   "last_eva_comment_check": "2026-03-06T07:44:00Z",
-  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71, 73, 75, 76, 78, 80, 82, 83, 85, 87, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 110, 111, 113, 114, 116, 117],
+  "audit_processed": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23, 24, 26, 29, 32, 35, 37, 39, 42, 44, 49, 53, 56, 58, 60, 62, 67, 68, 71, 73, 75, 76, 78, 80, 82, 83, 85, 87, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 110, 111, 113, 114, 116, 117, 120],
   "test_count": {"php": 425, "ts": 419, "total": 844, "last_verified": "cycle 139", "last_verified_note": "last_verified = cycle when values were independently measured. field_inventory.last_refreshed = cycle when entry was checked (value confirmed unchanged or updated). These can diverge when a check confirms no change."},
   "next_metric_verification": "cycle 151",
   "total_schema_types": 28,
@@ -1162,7 +1162,7 @@
       "qc_status": {"cadence": "after QC interactions", "last_refreshed": "cycle 147"},
       "blockers": {"cadence": "after blocker state changes", "last_refreshed": "cycle 152"},
       "qc_processed": {"cadence": "after processing QC issues", "last_refreshed": "cycle 134"},
-      "audit_processed": {"cadence": "after processing audit issues", "last_refreshed": "cycle 153"},
+      "audit_processed": {"cadence": "after processing audit issues", "last_refreshed": "cycle 157"},
       "next_metric_verification": {"cadence": "after each verification run", "last_refreshed": "cycle 146"},
       "type_classification": {"cadence": "after schema class additions/reclassifications", "last_refreshed": "cycle 134"},
       "total_schema_classes": {"cadence": "after schema class additions", "last_refreshed": "cycle 142"},
@@ -1185,7 +1185,7 @@
       "eva_input_issues.closed_this_cycle": {"cadence": "every cycle (reset even when no closures)", "last_refreshed": "cycle 155"},
       "tool_pipeline": {"cadence": "after pipeline phase transitions", "last_refreshed": "cycle 150"},
       "review_agent": {"cadence": "every cycle (updated when consuming review findings)", "last_refreshed": "cycle 155"},
-      "publish_gate": {"cadence": "every cycle when set (divergence check)", "last_refreshed": "cycle 155"}
+      "publish_gate": {"cadence": "every cycle when set (divergence check)", "last_refreshed": "cycle 157"}
     }
   }
 }
