@@ -177,17 +177,39 @@ fn extract_score(content: &str) -> Option<u64> {
 }
 
 fn extract_finding_count(content: &str) -> Option<u64> {
-    for line in content.lines() {
+    // Priority 1: Look for explicit "## Number of findings" heading, take number from next line
+    let lines: Vec<&str> = content.lines().collect();
+    for (i, line) in lines.iter().enumerate() {
         let lower = line.to_ascii_lowercase();
-        if !lower.contains("finding") {
-            continue;
-        }
-
-        if let Some(number) = first_number_in_text(line) {
-            return Some(number);
+        if lower.trim().starts_with("## number of finding") {
+            // Check the next non-empty line for the count
+            for next_line in &lines[i + 1..] {
+                let trimmed = next_line.trim();
+                if trimmed.is_empty() {
+                    continue;
+                }
+                if let Some(number) = first_number_in_text(trimmed) {
+                    return Some(number);
+                }
+                break; // first non-empty line had no number, stop looking
+            }
         }
     }
 
+    // Priority 2: Look for "N findings" pattern (number immediately before "findings")
+    for line in content.lines() {
+        let lower = line.to_ascii_lowercase();
+        if let Some(idx) = lower.find("finding") {
+            // Look for a number immediately before "finding" (with optional whitespace)
+            let before = &line[..idx];
+            let trimmed_before = before.trim_end();
+            if let Some(number) = last_number_in_text(trimmed_before) {
+                return Some(number);
+            }
+        }
+    }
+
+    // Priority 3: Count finding headings
     let finding_heading_count = content
         .lines()
         .filter(|line| {
@@ -200,6 +222,7 @@ fn extract_finding_count(content: &str) -> Option<u64> {
         return Some(finding_heading_count as u64);
     }
 
+    // Priority 4: Count numbered list items in ## Findings section
     let list_count = count_numbered_findings_in_findings_section(content);
     if list_count > 0 {
         return Some(list_count as u64);
@@ -358,6 +381,23 @@ fn find_number_before_token(text: &str, token: &str) -> Option<(u64, usize)> {
 
     let value = text[start..end].parse::<u64>().ok()?;
     Some((value, start))
+}
+
+fn last_number_in_text(text: &str) -> Option<u64> {
+    let mut last_number: Option<u64> = None;
+    let mut current = String::new();
+    for ch in text.chars() {
+        if ch.is_ascii_digit() {
+            current.push(ch);
+        } else if !current.is_empty() {
+            last_number = current.parse::<u64>().ok();
+            current.clear();
+        }
+    }
+    if !current.is_empty() {
+        last_number = current.parse::<u64>().ok();
+    }
+    last_number
 }
 
 fn first_number_in_text(text: &str) -> Option<u64> {
@@ -557,6 +597,32 @@ mod tests {
     #[test]
     fn finding_count_extraction_reads_findings_line() {
         assert_eq!(extract_finding_count(SAMPLE_REVIEW), Some(7));
+    }
+
+    #[test]
+    fn finding_count_prefers_number_of_findings_heading() {
+        // This is the format that caused the bug: "## Number of findings" heading
+        // with the count on the next line, and a later line mentioning "cycle-162" + "findings"
+        let markdown = r#"# Cycle 163 Review
+
+## Complacency score
+
+**3/5**
+
+## Number of findings
+
+**5**
+
+## Findings
+
+1. **Category:** state-consistency
+   **Description:** The cycle-162 review history ingestion is accurate and reconciles with `docs/reviews/cycle-162.md` (7 findings, score 2/5).
+2. **Category:** state-freshness
+3. **Category:** review-accounting
+4. **Category:** release-governance
+5. **Category:** process-traceability
+"#;
+        assert_eq!(extract_finding_count(markdown), Some(5));
     }
 
     #[test]
