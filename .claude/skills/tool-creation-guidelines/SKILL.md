@@ -117,6 +117,20 @@ Existing tools accumulate debt as their environment changes. Every 10 cycles (du
 3. **Review error paths** — are they still fail-closed? Has any refactoring introduced fail-open behavior?
 4. **Check for new edge cases** — has the data the tool processes changed in ways the tool doesn't handle?
 
+## Verification anti-pattern: tools must not compensate for what they verify
+
+**Verification and validation tools must check outcomes, not create them.** A verification tool must never contain workarounds, fallbacks, or compensating logic for the conditions it is testing. If a verification tool needs a workaround to pass, the root cause must be fixed instead.
+
+This anti-pattern was discovered in `scripts/verify-build.mjs`, which contained logic to copy `../dist` into `dist` before checking the build output — masking a broken `tsup.config.ts` for 20+ cycles. The tool reported PASS despite the build configuration being incorrect.
+
+**When reviewing verification/validation tools, flag:**
+- File copy/move operations that "fix" the layout before checking it
+- Default values substituted for things being verified
+- Fallback paths that compensate for misconfiguration
+- Any logic that creates the conditions it then checks
+
+This applies to all tools in `scripts/` and `tools/` that perform verification, validation, or assertion.
+
 ## General tool principles
 
 1. **Use existing dependencies first.** Check `package.json` and `composer.json` before adding new packages. TypeScript is already installed — its compiler API is available for free.
