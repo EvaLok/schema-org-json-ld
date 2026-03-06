@@ -10,12 +10,40 @@ if [ ! -x "$BINARY" ]; then
 	cargo build --release --manifest-path "$SCRIPT_DIR/rust/Cargo.toml" >&2
 fi
 
+# Parse flags from args (non-destructive scan)
+has_repo_root=false
+has_fix=false
+cycle_num=""
+prev=""
 for arg in "$@"; do
 	case "$arg" in
 		--repo-root|--repo-root=*)
-			exec "$BINARY" "$@"
+			has_repo_root=true
+			;;
+		--fix)
+			has_fix=true
+			;;
+		--cycle=*)
+			cycle_num="${arg#--cycle=}"
 			;;
 	esac
+	if [ "$prev" = "--cycle" ]; then
+		cycle_num="$arg"
+	fi
+	prev="$arg"
 done
 
-exec "$BINARY" --repo-root "$REPO_ROOT" "$@"
+# Run the binary
+if [ "$has_repo_root" = true ]; then
+	"$BINARY" "$@"
+else
+	"$BINARY" --repo-root "$REPO_ROOT" "$@"
+fi
+
+# After --fix, commit state.json changes and output the receipt hash
+if [ "$has_fix" = true ] && [ -n "$cycle_num" ]; then
+	RECEIPT=$(bash "$SCRIPT_DIR/commit-state-change" --tool-name "metric-snapshot" --summary "auto-fix metric mismatches" --cycle "$cycle_num" 2>/dev/null)
+	if [ -n "$RECEIPT" ]; then
+		echo "commit-receipt: $RECEIPT"
+	fi
+fi
