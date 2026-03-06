@@ -1,6 +1,9 @@
 use clap::Parser;
 use serde_json::{json, Value};
-use state_schema::{check_version, update_freshness, StateJson, TypescriptStats, SCHEMA_VERSION};
+use state_schema::{
+    check_version, set_value_at_pointer, update_freshness, StateJson, TypescriptStats,
+    SCHEMA_VERSION,
+};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -276,51 +279,6 @@ fn fix_target_for_check(check_name: &str) -> Option<(&'static str, &'static str)
         "phpstan_level" => Some(("/schema_status/phpstan_level", "phpstan_level")),
         _ => None,
     }
-}
-
-fn set_value_at_pointer(root: &mut Value, pointer: &str, value: Value) -> Result<bool, String> {
-    let segments: Vec<String> = pointer
-        .split('/')
-        .skip(1)
-        .map(|segment| segment.replace("~1", "/").replace("~0", "~"))
-        .collect();
-
-    if segments.is_empty() {
-        return Err("json pointer must not be empty".to_string());
-    }
-
-    let mut cursor = root;
-    for segment in &segments[..segments.len() - 1] {
-        cursor = cursor
-            .as_object_mut()
-            .and_then(|object| object.get_mut(segment))
-            .ok_or_else(|| {
-                format!(
-                    "missing object path segment for pointer {}: {}",
-                    pointer, segment
-                )
-            })?;
-    }
-
-    let terminal = segments
-        .last()
-        .expect("segments is guaranteed to be non-empty");
-    let object = cursor
-        .as_object_mut()
-        .ok_or_else(|| format!("target parent is not an object for pointer {}", pointer))?;
-    let existing = object.get(terminal).ok_or_else(|| {
-        format!(
-            "missing target path segment for pointer {}: {}",
-            pointer, terminal
-        )
-    })?;
-
-    if existing == &value {
-        return Ok(false);
-    }
-
-    object.insert(terminal.clone(), value);
-    Ok(true)
 }
 
 fn read_state_file(path: &Path) -> StateJson {
