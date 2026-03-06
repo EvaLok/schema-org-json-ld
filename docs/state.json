@@ -816,8 +816,20 @@
       "title": "Build write-entry Rust tool for journal/worklog generation",
       "dispatched_at": "2026-03-06T05:14:00Z",
       "model": "gpt-5.3-codex",
-      "status": "in_flight",
-      "note": "Eva directive #546. Journal/worklog entry tool with auto-linking."
+      "status": "merged",
+      "pr": 549,
+      "merged_at": "2026-03-06T06:25:00Z",
+      "note": "Eva directive #546. Journal/worklog entry tool with auto-linking. 6 tests pass. Shell wrapper fixed post-merge."
+    },
+    {
+      "issue": 550,
+      "title": "Cycle 154 end-of-cycle review",
+      "dispatched_at": "2026-03-06T05:20:00Z",
+      "model": "gpt-5.3-codex",
+      "status": "merged",
+      "pr": 551,
+      "merged_at": "2026-03-06T06:24:00Z",
+      "note": "Review agent. 10 findings, score 3/5. Key finding: stale last_review_cycle (already fixed by state-invariants)."
     }
   ],
   "qc_processed": [8, 37, 57, 72, 160, 165],
@@ -921,15 +933,15 @@
   },
   "copilot_metrics": {
     "total_dispatches": 66,
-    "resolved": 64,
-    "in_flight": 2,
-    "produced_pr": 63,
-    "merged": 62,
+    "resolved": 66,
+    "in_flight": 0,
+    "produced_pr": 65,
+    "merged": 64,
     "closed_without_merge": 1,
     "revision_rounds": 5,
-    "dispatch_to_pr_rate": "63/64",
-    "pr_merge_rate": "62/63",
-    "note": "66 dispatches, 64 resolved, 2 in-flight (#548 write-entry tool, #550 cycle-154 review). 63 produced PRs (62 merged, 1 closed without merge).",
+    "dispatch_to_pr_rate": "65/66",
+    "pr_merge_rate": "64/65",
+    "note": "66 dispatches, 66 resolved, 0 in-flight. 65 produced PRs (64 merged, 1 closed without merge). Cycle 155 merged PRs #549 and #551.",
     "dispatch_log_latest": "#550 cycle-154 review agent (cycle 154)"
   },
   "last_cycle": {
@@ -964,7 +976,7 @@
   },
   "review_agent": {
     "description": "Programmatic tracking of review agent findings for trend detection. Per audit #102.",
-    "last_review_cycle": 153,
+    "last_review_cycle": 154,
     "history": [
       {
         "cycle": 140,
@@ -1091,6 +1103,15 @@
         "actioned": 4,
         "deferred": 0,
         "ignored": 0
+      },
+      {
+        "cycle": 154,
+        "finding_count": 10,
+        "complacency_score": 3,
+        "categories": ["state-consistency", "process-follow-through", "timestamp-precision", "evidence-quality"],
+        "actioned": 4,
+        "deferred": 0,
+        "ignored": 0
       }
     ]
   },
@@ -1100,9 +1121,9 @@
       "test_count": {"cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)", "last_refreshed": "cycle 146"},
       "typescript_stats": {"cadence": "every merge that adds/removes TS files", "last_refreshed": "cycle 142"},
       "phpstan_level": {"cadence": "after PHPStan config changes", "last_refreshed": "cycle 142"},
-      "copilot_metrics.in_flight": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 154"},
-      "copilot_metrics.dispatch_to_pr_rate": {"cadence": "after new dispatches", "last_refreshed": "cycle 154"},
-      "copilot_metrics.pr_merge_rate": {"cadence": "after PR merges", "last_refreshed": "cycle 154"},
+      "copilot_metrics.in_flight": {"cadence": "every dispatch or merge", "last_refreshed": "cycle 155"},
+      "copilot_metrics.dispatch_to_pr_rate": {"cadence": "after new dispatches", "last_refreshed": "cycle 155"},
+      "copilot_metrics.pr_merge_rate": {"cadence": "after PR merges", "last_refreshed": "cycle 155"},
       "last_cycle": {"cadence": "every cycle", "last_refreshed": "cycle 154"},
       "last_eva_comment_check": {"cadence": "every cycle (checked even when no comments found)", "last_refreshed": "cycle 154"},
       "qc_status": {"cadence": "after QC interactions", "last_refreshed": "cycle 147"},
