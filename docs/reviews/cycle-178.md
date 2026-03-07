@@ -8,7 +8,11 @@ I rechecked the requested areas against the live repository state, the specified
    Category: backfill-false-match
    The reconciliation work is real at the summary level: `agent_sessions` now has 185 rows and `copilot_metrics` matches that ledger (`docs/state.json:1845-1856`).
 
-   But row-level quality is not fully trustworthy yet. `docs/state.json:1141-1149` records issue `#505` as **"Build state-invariants Rust tool"** merged by PR `#524`, while live GitHub issue `#505` is actually the audit-inbound item **"[Audit-inbound] Accepted: commit-freeze mechanism for post-QC-validation (audit #108)"**. The real state-invariants agent-task is issue `#523`, which is separately recorded at `docs/state.json:1187-1194` and does match PR `#524`.
+   But row-level quality is not fully trustworthy yet.
+
+   `docs/state.json:1141-1149` records issue `#505` as **"Build state-invariants Rust tool"** merged by PR `#524`.
+   Live GitHub issue `#505` is actually the audit-inbound item **"[Audit-inbound] Accepted: commit-freeze mechanism for post-QC-validation (audit #108)"**.
+   The real state-invariants agent-task is issue `#523`, which is separately recorded at `docs/state.json:1187-1194` and does match PR `#524`.
 
    That means the worklog claim that the ledger now covers the "complete dispatch history" (`docs/worklog/2026-03-07/164200-hundred-seventy-eighth-orchestrator-cycle.md:21`) is too strong. The backfill is a meaningful improvement, but it still needs row-level audit/repair for false matches.
 
