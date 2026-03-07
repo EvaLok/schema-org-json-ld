@@ -87,6 +87,7 @@ fn run_checks(state: &StateJson) -> Report {
         check_blockers_narrative(state),
         check_publish_gate_consistency(state),
         check_last_cycle_consistency(state),
+        check_future_cycle_freshness(state),
         check_chronic_categories(state),
     ];
 
@@ -276,7 +277,10 @@ fn check_review_history_accounting(state: &StateJson) -> CheckResult {
             None => {
                 return warn(
                     "review_history_accounting",
-                    format!("missing field: review_agent.history[{}].finding_count", index),
+                    format!(
+                        "missing field: review_agent.history[{}].finding_count",
+                        index
+                    ),
                 )
             }
         };
@@ -653,6 +657,44 @@ fn check_last_cycle_consistency(state: &StateJson) -> CheckResult {
     pass("last_cycle_consistency")
 }
 
+fn check_future_cycle_freshness(state: &StateJson) -> CheckResult {
+    let last_cycle_number = match state.last_cycle.extra.get("number").and_then(Value::as_i64) {
+        Some(value) => value,
+        None => return warn("future_cycle_freshness", "missing field: last_cycle.number"),
+    };
+
+    let mut failures = Vec::new();
+    for (field_name, field_value) in &state.field_inventory.fields {
+        let Some(last_refreshed) = field_value.get("last_refreshed").and_then(Value::as_str) else {
+            continue;
+        };
+
+        let cycle = match parse_cycle_marker(last_refreshed) {
+            Some(value) => value,
+            None => {
+                failures.push(format!(
+                    "field_inventory.fields.{}.last_refreshed has invalid format '{}'",
+                    field_name, last_refreshed
+                ));
+                continue;
+            }
+        };
+
+        if cycle > last_cycle_number {
+            failures.push(format!(
+                "field_inventory.fields.{}.last_refreshed({}) exceeds last_cycle.number({})",
+                field_name, cycle, last_cycle_number
+            ));
+        }
+    }
+
+    if failures.is_empty() {
+        pass("future_cycle_freshness")
+    } else {
+        fail("future_cycle_freshness", failures.join("; "))
+    }
+}
+
 fn get_metric_i64(state: &StateJson, key: &str) -> Option<i64> {
     state.copilot_metrics.extra.get(key).and_then(Value::as_i64)
 }
@@ -673,6 +715,10 @@ fn parse_rate(value: &str) -> Option<(i64, i64)> {
         return None;
     }
     Some((n, m))
+}
+
+fn parse_cycle_marker(value: &str) -> Option<i64> {
+    value.strip_prefix("cycle ")?.parse::<i64>().ok()
 }
 
 fn check_chronic_categories(state: &StateJson) -> CheckResult {
@@ -711,10 +757,7 @@ fn check_chronic_categories(state: &StateJson) -> CheckResult {
     }
 
     // Find chronic categories (5+ in 6)
-    let chronic: Vec<(&String, &usize)> = counts
-        .iter()
-        .filter(|(_, count)| **count >= 5)
-        .collect();
+    let chronic: Vec<(&String, &usize)> = counts.iter().filter(|(_, count)| **count >= 5).collect();
 
     if chronic.is_empty() {
         return pass("chronic_categories");
@@ -791,6 +834,7 @@ fn print_human_report(report: &Report) {
         ("blockers_narrative", "blockers narrative"),
         ("publish_gate_consistency", "publish_gate consistency"),
         ("last_cycle_consistency", "last_cycle consistency"),
+        ("future_cycle_freshness", "future cycle freshness"),
         ("chronic_categories", "chronic categories"),
     ];
 
@@ -867,7 +911,13 @@ mod tests {
             "audit_processed": [],
             "test_count": {},
             "tool_pipeline": {},
-            "field_inventory": {},
+            "field_inventory": {
+                "fields": {
+                    "copilot_metrics": {
+                        "last_refreshed": "cycle 10"
+                    }
+                }
+            },
             "review_agent": {
                 "last_review_cycle": 10,
                 "history": [
@@ -1051,6 +1101,31 @@ mod tests {
         let state = state_from_json(value);
         let check = check_publish_gate_consistency(&state);
         assert_eq!(check.status, CheckStatus::Fail);
+    }
+
+    #[test]
+    fn future_cycle_freshness_fails_when_field_is_ahead_of_last_cycle() {
+        let mut value = minimal_valid_state();
+        value["field_inventory"]["fields"]["audit_processed"]["last_refreshed"] = json!("cycle 11");
+
+        let state = state_from_json(value);
+        let check = check_future_cycle_freshness(&state);
+        assert_eq!(check.status, CheckStatus::Fail);
+        assert!(check
+            .details
+            .as_deref()
+            .unwrap_or_default()
+            .contains("audit_processed"));
+    }
+
+    #[test]
+    fn future_cycle_freshness_passes_when_all_fields_are_at_or_before_last_cycle() {
+        let mut value = minimal_valid_state();
+        value["field_inventory"]["fields"]["audit_processed"]["last_refreshed"] = json!("cycle 9");
+
+        let state = state_from_json(value);
+        let check = check_future_cycle_freshness(&state);
+        assert_eq!(check.status, CheckStatus::Pass);
     }
 
     #[test]

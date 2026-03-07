@@ -478,8 +478,7 @@ fn collect_stale_dispatches(
                 let issue_tag = format!("#{}", issue.number);
                 // Word-boundary title match: `#N` must not be followed by a digit
                 // (avoids #1 matching inside #101).
-                let title_matches =
-                    contains_issue_tag_at_word_boundary(&pr.title, &issue_tag);
+                let title_matches = contains_issue_tag_at_word_boundary(&pr.title, &issue_tag);
                 // Body match: Fixes/Closes/Resolves #N (case-insensitive)
                 let body_matches = pr.body.as_deref().is_some_and(|body| {
                     let lower = body.to_lowercase();
@@ -1218,7 +1217,10 @@ mod tests {
         let stale = collect_stale_dispatches(&issues, &open_prs, now, &mut errors);
 
         assert!(errors.is_empty());
-        assert!(stale.is_empty(), "Issue younger than 2h should not be stale");
+        assert!(
+            stale.is_empty(),
+            "Issue younger than 2h should not be stale"
+        );
     }
 
     #[test]
