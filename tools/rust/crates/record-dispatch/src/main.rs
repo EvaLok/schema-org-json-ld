@@ -89,7 +89,7 @@ fn build_dispatch_patch(
     Ok(DispatchPatch {
         total_dispatches: next_total_dispatches,
         in_flight: next_in_flight,
-        dispatch_to_pr_rate: format_dispatch_to_pr_rate(produced_pr, next_total_dispatches),
+        dispatch_to_pr_rate: format_dispatch_to_pr_rate(produced_pr, resolved),
         dispatch_log_latest: format_dispatch_log(issue, title, current_cycle),
         note: format_dispatch_note(
             next_total_dispatches,
@@ -129,8 +129,8 @@ fn validate_dispatch_invariant(
     Ok(())
 }
 
-fn format_dispatch_to_pr_rate(produced_pr: i64, total_dispatches: i64) -> String {
-    format!("{}/{}", produced_pr, total_dispatches)
+fn format_dispatch_to_pr_rate(produced_pr: i64, resolved: i64) -> String {
+    format!("{}/{}", produced_pr, resolved)
 }
 
 fn format_dispatch_log(issue: u64, title: &str, current_cycle: i64) -> String {
@@ -243,11 +243,12 @@ mod tests {
             .expect("patch should build");
         assert_eq!(patch.total_dispatches, 86);
         assert_eq!(patch.in_flight, 3);
+        assert_eq!(patch.dispatch_to_pr_rate, "81/83");
     }
 
     #[test]
     fn rate_string_formatting_is_correct() {
-        assert_eq!(format_dispatch_to_pr_rate(81, 86), "81/86");
+        assert_eq!(format_dispatch_to_pr_rate(81, 83), "81/83");
     }
 
     #[test]
