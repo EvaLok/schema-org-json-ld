@@ -452,9 +452,9 @@ mod tests {
         }
 
         fn init_git(&self) {
-            run_git(self.path(), ["init"]);
-            run_git(self.path(), ["config", "user.name", "State Schema Tests"]);
-            run_git(
+            assert_git_success(self.path(), ["init"]);
+            assert_git_success(self.path(), ["config", "user.name", "State Schema Tests"]);
+            assert_git_success(
                 self.path(),
                 ["config", "user.email", "state-schema-tests@example.com"],
             );
@@ -467,20 +467,26 @@ mod tests {
         }
     }
 
-    fn run_git<I, S>(repo_root: &Path, args: I)
+    fn assert_git_success<I, S>(repo_root: &Path, args: I)
     where
         I: IntoIterator<Item = S>,
         S: AsRef<std::ffi::OsStr>,
     {
+        let rendered_args: Vec<String> = args
+            .into_iter()
+            .map(|argument| argument.as_ref().to_string_lossy().into_owned())
+            .collect();
         let output = Command::new("git")
             .arg("-C")
             .arg(repo_root)
-            .args(args)
+            .args(&rendered_args)
             .output()
             .expect("git command should execute");
         assert!(
             output.status.success(),
-            "git command failed: {}",
+            "git command failed (git -C {} {}): {}",
+            repo_root.display(),
+            rendered_args.join(" "),
             String::from_utf8_lossy(&output.stderr)
         );
     }

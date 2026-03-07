@@ -6,7 +6,6 @@ use state_schema::{
     commit_state_json, read_state_value, set_value_at_pointer, write_state_value, StateJson,
 };
 use std::collections::BTreeSet;
-use std::fs;
 use std::path::{Path, PathBuf};
 
 #[derive(Parser)]
@@ -155,9 +154,8 @@ fn validate_cli_flags(cli: &Cli) -> Result<(), String> {
 
 fn read_state_json(repo_root: &Path) -> Result<StateJson, String> {
     let state_path = repo_root.join("docs/state.json");
-    let content = fs::read_to_string(&state_path)
-        .map_err(|error| format!("failed to read {}: {}", state_path.display(), error))?;
-    serde_json::from_str(&content)
+    let state_value = read_state_value(repo_root)?;
+    serde_json::from_value(state_value)
         .map_err(|error| format!("failed to parse {}: {}", state_path.display(), error))
 }
 

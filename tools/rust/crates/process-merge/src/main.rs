@@ -144,17 +144,17 @@ fn compute_update(state: &Value, prs: &[u64], note: Option<&str>) -> Result<Merg
     let merged_prs = format_pr_list(prs);
 
     let mut summary = format!(
-		"{} dispatches, {} resolved, {} in-flight. {} produced PRs ({} merged, {} closed without merge). {} resolved without PR (silent failure). {} merged in cycle {}.",
-		total_dispatches,
-		next_resolved,
-		next_in_flight,
-		produced_pr,
-		next_merged,
-		closed_without_merge,
-		closed_without_pr,
-		merged_prs,
-		cycle
-	);
+        "{} dispatches, {} resolved, {} in-flight. {} produced PRs ({} merged, {} closed without merge). {} resolved without PR (silent failure). {} merged in cycle {}.",
+        total_dispatches,
+        next_resolved,
+        next_in_flight,
+        produced_pr,
+        next_merged,
+        closed_without_merge,
+        closed_without_pr,
+        merged_prs,
+        cycle
+    );
 
     if let Some(extra_note) = note.map(str::trim).filter(|value| !value.is_empty()) {
         summary.push(' ');
