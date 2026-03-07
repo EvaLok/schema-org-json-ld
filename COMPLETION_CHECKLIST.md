@@ -14,16 +14,29 @@ bash tools/pipeline-check --cycle {N}
 
 If not yet run, run it now. All 5 phases must pass before completing the cycle.
 
-## 2. Update state.json
+## 2. Update state.json via write-side tools
 
-Update these fields in `docs/state.json`:
+**Do NOT manually edit `docs/state.json`.** Use the write-side pipeline tools instead. Each tool atomically updates its owned section of state.json, bumps freshness markers, and commits with a receipt hash.
 
-- `last_cycle.number` — current cycle number
-- `last_cycle.timestamp` — current UTC timestamp
-- `last_cycle.issue` — this cycle's issue number
-- `copilot_metrics.in_flight` — should be 0 at cycle end (or 1 if review agent was just dispatched)
-- Any other fields that changed this cycle
-- **Field inventory freshness reconciliation** (per review cycle 142, finding #2; escalated per audit #106): For every **tracked field group** updated in state.json, also update its corresponding `field_inventory.fields.*.last_refreshed` to the current cycle number. This is an **atomic invariant** — any tracked field edit without a matching freshness update is a bug. Field inventory entries use **grouped coverage**: a single entry like `copilot_metrics` covers all subfields (`in_flight`, `note`, `dispatch_log_latest`, etc.). When any subfield within a group changes, update the group's `last_refreshed`. Not every leaf-level subfield needs its own inventory entry — only the top-level group key needs one. This prevents cadence drift while keeping the inventory manageable.
+### During the cycle (as events occur)
+
+| Event | Tool | Command |
+|-------|------|---------|
+| PR merged | `process-merge` | `bash tools/process-merge --prs 123,456` |
+| Review findings consumed | `process-review` | `bash tools/process-review --review-file docs/reviews/cycle-N.md --actioned A --deferred D --ignored I` |
+| Audit recommendation processed | `process-audit` | `bash tools/process-audit --audit-id N --action accepted` |
+| Eva directive processed | `process-eva` | `bash tools/process-eva --closed 123,456 --remaining-open 247,436` |
+
+### At cycle end
+
+| Step | Tool | Command |
+|------|------|---------|
+| Update `last_cycle` fields | `cycle-complete` | `bash tools/cycle-complete --apply --issue N --summary "..."` |
+| Record review agent dispatch | `record-dispatch` | `bash tools/record-dispatch --issue N --title "Cycle N review" --model gpt-5.4` |
+
+**Important**: Run `cycle-complete` BEFORE dispatching the review agent, so `last_cycle.number` is updated before `record-dispatch` reads it.
+
+Each tool handles its own freshness markers automatically — no manual freshness reconciliation needed.
 
 ## 3. Write worklog entry
 
@@ -79,38 +92,17 @@ Label the issue `agent-task` and `cycle-review`.
 
 ## 6. Commit and push all state with receipts
 
-Commit all changes and push to master. When state.json is modified, use `tools/commit-state-change` to produce a verifiable receipt hash.
-
-### Commit receipts (per Eva directive [#538](https://github.com/EvaLok/schema-org-json-ld/issues/538))
-
-When updating state.json, commit via the receipt utility and record the hash:
-
-```bash
-# After applying state.json updates:
-bash tools/commit-state-change --tool-name "cycle-complete" --summary "cycle N state updates" --cycle N
-```
-
-Record the receipt hash in the cycle closing comment. For `metric-snapshot --fix`, the wrapper handles the commit automatically and outputs `commit-receipt: <hash>`.
-
-| Step | Tool | Commit receipt |
-|------|------|----------------|
-| Pipeline verification | `pipeline-check` | (read-only, no receipt) |
-| State.json update | `commit-state-change` | _______ |
-| Metric fix (if needed) | `metric-snapshot --fix` | _______ |
-| Worklog + journal | manual commit | _______ |
-| Review agent dispatch | manual commit | _______ |
-
-Include filled-in receipts in the closing comment so the review agent can verify them with `git show <hash>`.
-
-### Other files
+Write-side tools (`process-merge`, `process-review`, `cycle-complete`, `record-dispatch`, etc.) commit state.json changes automatically with receipt hashes. Each tool outputs its receipt.
 
 For non-state.json changes (worklog, journal, infrastructure), commit normally:
 
 ```bash
 git add docs/worklog/ docs/journal/ [other changed files]
-git commit -m "Cycle N: worklog, journal, [summary]"
+git commit -m "state(cycle-complete): cycle N — worklog + journal [cycle N]"
 git push origin master
 ```
+
+Include tool receipt hashes in the closing comment so the review agent can verify them with `git show <hash>`.
 
 ## 7. Close the orchestrator issue
 
@@ -128,9 +120,9 @@ The summary should include:
 | Step | Status | Tool |
 |------|--------|------|
 | 1. Pipeline verification | Automated | `bash tools/pipeline-check` |
-| 2. State.json updates | Semi-automated | `bash tools/cycle-complete` generates patches |
-| 3. Worklog entry | Semi-automated | `bash tools/write-entry worklog` |
-| 4. Journal entry | Semi-automated | `bash tools/write-entry journal` |
-| 5. Review agent dispatch | Semi-automated | `bash tools/cycle-complete` generates issue body |
-| 6. Commit with receipts | Semi-automated | `bash tools/commit-state-change` for state.json |
+| 2. State.json updates | Automated | `process-merge`, `process-review`, `process-audit`, `process-eva`, `cycle-complete`, `record-dispatch` |
+| 3. Worklog entry | Manual | Write tool (orchestrator writes content) |
+| 4. Journal entry | Manual | Write tool (orchestrator writes content) |
+| 5. Review agent dispatch | Semi-automated | `cycle-complete` generates issue body, orchestrator creates issue |
+| 6. Commit with receipts | Automated | Each write-side tool commits with receipt |
 | 7. Close issue | Manual | Standard gh commands |
