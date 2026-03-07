@@ -1746,7 +1746,8 @@
       "dispatched_at": "2026-03-07T21:11:17Z",
       "issue": 705,
       "model": "gpt-5.3-codex",
-      "status": "in_flight",
+      "pr": 706,
+      "status": "closed_without_merge",
       "title": "Add session duration tracking to cycle-complete"
     },
     {
@@ -1897,15 +1898,15 @@
     "total_classes_converted": 54
   },
   "copilot_metrics": {
-    "closed_without_merge": 2,
+    "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#709 Cycle 180 end-of-cycle review (cycle 180)",
-    "dispatch_to_pr_rate": "189/191",
+    "dispatch_to_pr_rate": "188/191",
     "in_flight": 0,
-    "merged": 187,
-    "note": "191 dispatches, 191 resolved, 0 in-flight. 189 produced PRs (187 merged, 2 closed without merge). 3 resolved without PR (silent failure). PRs #710, #708 merged in cycle 181.",
-    "pr_merge_rate": "187/189",
-    "produced_pr": 189,
+    "merged": 185,
+    "note": "191 dispatches, 191 resolved, 0 in-flight. 188 produced PRs (185 merged, 3 closed without merge). PRs #710, #708 merged. PR #706 cherry-picked then closed (state.json conflict). Cycle 181.",
+    "pr_merge_rate": "185/188",
+    "produced_pr": 188,
     "resolved": 191,
     "revision_rounds": 5,
     "total_dispatches": 191
