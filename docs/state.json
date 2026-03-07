@@ -1282,7 +1282,7 @@
         "note": "Finding 5 (state-traceability) actioned: open_questions_for_eva synced. Findings 1,2 (low sev) confirmatory. Findings 3,4 (dispatch canary, metrics taxonomy) deferred to future tool work."
       },
       {
-        "actioned": 0,
+        "actioned": 1,
         "categories": [
           "metrics-accuracy",
           "review-accounting",
@@ -1291,9 +1291,10 @@
         ],
         "complacency_score": 2,
         "cycle": 166,
-        "deferred": 0,
+        "deferred": 1,
         "finding_count": 4,
-        "ignored": 0
+        "ignored": 2,
+        "note": "Finding 3 (state-freshness) actioned: refreshed 4 stale per-cycle markers. Finding 4 (tool-quality) deferred: I/O dedup will happen as part of #586 shared utility work. Findings 1,2 (low sev) confirmatory."
       }
     ],
     "last_review_cycle": 166
