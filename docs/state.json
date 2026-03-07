@@ -1767,6 +1767,13 @@
       "pr": 710,
       "status": "merged",
       "title": "Cycle 180 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-07T22:56:12Z",
+      "issue": 713,
+      "model": "gpt-5.3-codex",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 181 end-of-cycle review"
     }
   ],
   "audit_processed": [
@@ -1900,16 +1907,16 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#709 Cycle 180 end-of-cycle review (cycle 180)",
+    "dispatch_log_latest": "#713 [Cycle Review] Cycle 181 end-of-cycle review (cycle 181)",
     "dispatch_to_pr_rate": "187/191",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 185,
-    "note": "191 dispatches, 191 resolved, 0 in-flight. 187 produced PRs (185 merged, 2 closed without merge). PRs #710, #708 merged. PR #706 cherry-picked then closed (state.json conflict). Cycle 181.",
+    "note": "192 dispatches, 191 resolved, 1 in-flight. 187 produced PRs (185 merged, 2 closed without merge). Latest dispatch: #713 [Cycle Review] Cycle 181 end-of-cycle review (cycle 181, model gpt-5.3-codex).",
     "pr_merge_rate": "185/187",
     "produced_pr": 187,
     "resolved": 191,
     "revision_rounds": 5,
-    "total_dispatches": 191
+    "total_dispatches": 192
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
