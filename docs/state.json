@@ -721,11 +721,11 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 169"
+        "last_refreshed": "cycle 170"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 169"
+        "last_refreshed": "cycle 170"
       },
       "next_metric_verification": {
         "cadence": "after each verification run",
@@ -840,10 +840,10 @@
   "last_cycle": {
     "issue": 635,
     "number": 170,
-    "summary": "Merged 2 PRs (shared I/O + produced_pr fix, cycle-168 review), fixed 2 invariant failures + 21 stale field entries, processed 6 review findings, dispatched process-eva/process-review fix, updated COMPLETION_CHECKLIST to tool-driven workflow",
-    "timestamp": "2026-03-07T03:51:18Z"
+    "summary": "Merged 3 PRs (review artifact, process-eva I/O, tool fixes), processed 4 review findings at 4/5, dispatched --cycle removal (#638), fixed dispatch_to_pr_rate formula permanently",
+    "timestamp": "2026-03-07T05:09:38Z"
   },
-  "last_eva_comment_check": "2026-03-07T03:51:18Z",
+  "last_eva_comment_check": "2026-03-07T05:09:38Z",
   "next_metric_verification": "cycle 151",
   "open_questions_for_eva": [
     606
