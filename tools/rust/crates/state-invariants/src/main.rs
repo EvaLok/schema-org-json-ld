@@ -89,6 +89,7 @@ fn run_checks(state: &StateJson) -> Report {
         check_last_cycle_consistency(state),
         check_future_cycle_freshness(state),
         check_chronic_categories(state),
+        check_agent_sessions_reconciliation(state),
     ];
 
     let passed = checks
@@ -797,6 +798,133 @@ fn check_chronic_categories(state: &StateJson) -> CheckResult {
     }
 }
 
+fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
+    let total_dispatches = match get_metric_i64(state, "total_dispatches") {
+        Some(value) => value,
+        None => {
+            return warn(
+                "agent_sessions_reconciliation",
+                "missing field: copilot_metrics.total_dispatches",
+            )
+        }
+    };
+    let merged = match get_metric_i64(state, "merged") {
+        Some(value) => value,
+        None => {
+            return warn(
+                "agent_sessions_reconciliation",
+                "missing field: copilot_metrics.merged",
+            )
+        }
+    };
+    let in_flight = match state.copilot_metrics.in_flight {
+        Some(value) => value,
+        None => {
+            return warn(
+                "agent_sessions_reconciliation",
+                "missing field: copilot_metrics.in_flight",
+            )
+        }
+    };
+    let resolved = match get_metric_i64(state, "resolved") {
+        Some(value) => value,
+        None => {
+            return warn(
+                "agent_sessions_reconciliation",
+                "missing field: copilot_metrics.resolved",
+            )
+        }
+    };
+    let closed_without_merge = match get_metric_i64(state, "closed_without_merge") {
+        Some(value) => value,
+        None => {
+            return warn(
+                "agent_sessions_reconciliation",
+                "missing field: copilot_metrics.closed_without_merge",
+            )
+        }
+    };
+    let closed_without_pr = match get_metric_i64(state, "closed_without_pr") {
+        Some(value) => value,
+        None => {
+            return warn(
+                "agent_sessions_reconciliation",
+                "missing field: copilot_metrics.closed_without_pr",
+            )
+        }
+    };
+    let produced_pr = match get_metric_i64(state, "produced_pr") {
+        Some(value) => value,
+        None => {
+            return warn(
+                "agent_sessions_reconciliation",
+                "missing field: copilot_metrics.produced_pr",
+            )
+        }
+    };
+
+    let mut merged_expected = 0;
+    let mut in_flight_expected = 0;
+    let mut closed_without_merge_expected = 0;
+    let mut closed_without_pr_expected = 0;
+    let mut invalid_statuses = Vec::new();
+
+    for (index, session) in state.agent_sessions.iter().enumerate() {
+        match session.status.as_deref() {
+            Some("merged") => merged_expected += 1,
+            Some("in_flight") | Some("dispatched") => in_flight_expected += 1,
+            Some("closed") => closed_without_merge_expected += 1,
+            Some("failed") => closed_without_pr_expected += 1,
+            Some("reviewed_awaiting_eva") => {}
+            Some(status) => invalid_statuses.push(format!(
+                "agent_sessions[{}].status has unsupported value '{}'",
+                index, status
+            )),
+            None => invalid_statuses.push(format!("agent_sessions[{}].status is missing", index)),
+        }
+    }
+
+    if !invalid_statuses.is_empty() {
+        return fail(
+            "agent_sessions_reconciliation",
+            invalid_statuses.join("; "),
+        );
+    }
+
+    let total_dispatches_expected = i64::try_from(state.agent_sessions.len())
+        .expect("agent_sessions length should fit within i64");
+    let resolved_expected = total_dispatches_expected - in_flight_expected;
+    let produced_pr_expected = merged_expected + closed_without_merge_expected;
+
+    let mut failures = Vec::new();
+    for (field, expected, actual) in [
+        ("total_dispatches", total_dispatches_expected, total_dispatches),
+        ("merged", merged_expected, merged),
+        ("in_flight", in_flight_expected, in_flight),
+        ("resolved", resolved_expected, resolved),
+        (
+            "closed_without_merge",
+            closed_without_merge_expected,
+            closed_without_merge,
+        ),
+        ("closed_without_pr", closed_without_pr_expected, closed_without_pr),
+        ("produced_pr", produced_pr_expected, produced_pr),
+    ] {
+        if actual != expected {
+            failures.push(format!(
+                "{} expected {} from agent_sessions but actual {}",
+                field, expected, actual
+            ));
+        }
+    }
+
+    if failures.is_empty() {
+        pass("agent_sessions_reconciliation")
+    } else {
+        fail("agent_sessions_reconciliation", failures.join("; "))
+    }
+}
+
 fn pass(name: &'static str) -> CheckResult {
     CheckResult {
         name,
@@ -836,6 +964,10 @@ fn print_human_report(report: &Report) {
         ("last_cycle_consistency", "last_cycle consistency"),
         ("future_cycle_freshness", "future cycle freshness"),
         ("chronic_categories", "chronic categories"),
+        (
+            "agent_sessions_reconciliation",
+            "agent_sessions reconciliation",
+        ),
     ];
 
     for (index, (name, label)) in labels.iter().enumerate() {
@@ -883,7 +1015,22 @@ mod tests {
         json!({
             "schema_version": 1,
             "schema_status": {},
-            "agent_sessions": [],
+            "agent_sessions": [
+                {
+                    "issue": 101,
+                    "status": "merged",
+                    "pr": 201
+                },
+                {
+                    "issue": 102,
+                    "status": "closed",
+                    "pr": 202
+                },
+                {
+                    "issue": 103,
+                    "status": "failed"
+                }
+            ],
             "qc_processed": [],
             "qc_requests_pending": [],
             "qc_status": {},
@@ -903,7 +1050,8 @@ mod tests {
                 "resolved": 3,
                 "produced_pr": 2,
                 "merged": 1,
-                "closed_without_merge": 1
+                "closed_without_merge": 1,
+                "closed_without_pr": 1
             },
             "last_cycle": {
                 "number": 10
@@ -1203,6 +1351,58 @@ mod tests {
 
         let state = state_from_json(value);
         let check = check_chronic_categories(&state);
+        assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn agent_sessions_reconciliation_passes_for_matching_summary() {
+        let state = state_from_json(minimal_valid_state());
+        let check = check_agent_sessions_reconciliation(&state);
+        assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn agent_sessions_reconciliation_detects_mismatch() {
+        let mut value = minimal_valid_state();
+        value["copilot_metrics"]["merged"] = json!(0);
+        value["copilot_metrics"]["total_dispatches"] = json!(4);
+
+        let state = state_from_json(value);
+        let check = check_agent_sessions_reconciliation(&state);
+        assert_eq!(check.status, CheckStatus::Fail);
+
+        let details = check.details.as_deref().unwrap_or_default();
+        assert!(details.contains("total_dispatches"));
+        assert!(details.contains("expected 3"));
+        assert!(details.contains("actual 4"));
+        assert!(details.contains("merged"));
+        assert!(details.contains("expected 1"));
+        assert!(details.contains("actual 0"));
+    }
+
+    #[test]
+    fn run_checks_includes_agent_sessions_reconciliation_as_eleventh_check() {
+        let state = state_from_json(minimal_valid_state());
+        let report = run_checks(&state);
+
+        assert_eq!(report.checks.len(), 11);
+        assert_eq!(
+            report.checks.last().map(|check| check.name),
+            Some("agent_sessions_reconciliation")
+        );
+    }
+
+    #[test]
+    fn agent_sessions_reconciliation_allows_reviewed_awaiting_eva_without_counting_it_in_flight() {
+        let mut value = minimal_valid_state();
+        value["agent_sessions"][2]["status"] = json!("reviewed_awaiting_eva");
+        value["agent_sessions"][2]["pr"] = json!(203);
+        value["copilot_metrics"]["in_flight"] = json!(0);
+        value["copilot_metrics"]["resolved"] = json!(3);
+        value["copilot_metrics"]["closed_without_pr"] = json!(0);
+
+        let state = state_from_json(value);
+        let check = check_agent_sessions_reconciliation(&state);
         assert_eq!(check.status, CheckStatus::Pass);
     }
 }
