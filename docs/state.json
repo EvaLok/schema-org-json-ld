@@ -1355,9 +1355,21 @@
         "deferred": 1,
         "finding_count": 3,
         "ignored": 0
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "cycle-label-state-drift",
+          "review-parser-regression"
+        ],
+        "complacency_score": 3,
+        "cycle": 171,
+        "deferred": 0,
+        "finding_count": 3,
+        "ignored": 0
       }
     ],
-    "last_review_cycle": 170
+    "last_review_cycle": 171
   },
   "schema_status": {
     "directory_layout": {
