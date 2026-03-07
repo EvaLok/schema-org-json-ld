@@ -632,7 +632,7 @@
     "closed_without_merge": 1,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#631 process-eva shared I/O + process-review categories (cycle 168)",
-    "dispatch_to_pr_rate": "91/96",
+    "dispatch_to_pr_rate": "91/95",
     "in_flight": 1,
     "merged": 90,
     "note": "96 dispatches, 95 resolved, 1 in-flight. 91 produced PRs (90 merged, 1 closed without merge). Latest dispatch: #631 process-eva shared I/O + process-review categories (cycle 168, model gpt-5.4).",
@@ -1314,9 +1314,9 @@
       {
         "actioned": 4,
         "categories": [
+          "false-green-narrative",
           "state-consistency",
-          "state-consistency",
-          "state-consistency",
+          "review-history-accounting",
           "infrastructure-drift",
           "state-traceability",
           "documentation-drift"
