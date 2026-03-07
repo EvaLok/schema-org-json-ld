@@ -357,6 +357,8 @@ fn normalize_category(category: &str) -> Option<String> {
     let trimmed = normalized.trim_matches('-').to_string();
     if trimmed.is_empty() {
         None
+    } else if trimmed.len() > 40 {
+        None
     } else {
         Some(trimmed)
     }
@@ -644,11 +646,24 @@ mod tests {
             vec![
                 "arithmetic-checks-now-pass-for-metrics".to_string(),
                 "data-integrity".to_string(),
-                "field-freshness-gaps-continue-in-one-path".to_string(),
                 "process-integrity".to_string(),
                 "state-consistency-drift-remains-visible".to_string(),
             ]
         );
+    }
+
+    #[test]
+    fn category_extraction_discards_long_slugified_finding_titles() {
+        let markdown = r#"## Findings
+
+1. **Cycle 168 closes with a false all-green narrative: the repository currently fails 2 of the 9 state invariants.**
+
+## Complacency score
+
+**2/5**
+"#;
+
+        assert!(extract_categories(markdown).is_empty());
     }
 
     #[test]
