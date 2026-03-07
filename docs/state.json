@@ -631,16 +631,16 @@
   "copilot_metrics": {
     "closed_without_merge": 1,
     "closed_without_pr": 4,
-    "dispatch_log_latest": "#607 process-merge, #608 record-dispatch, #611 c165 review (cycle 165)",
-    "dispatch_to_pr_rate": "81/85",
-    "in_flight": 3,
-    "merged": 80,
-    "note": "88 dispatches, 85 resolved (80 merged, 1 closed-no-merge, 4 failed-no-PR), 3 in-flight (#607, #608, #611). gpt-5.4 dispatches #602-#604 failed with ruleset violation. Re-dispatched with gpt-5.3-codex. Filed #606.",
-    "pr_merge_rate": "80/81",
-    "produced_pr": 81,
-    "resolved": 85,
+    "dispatch_log_latest": "#614 process-audit, #616 c166 review (cycle 166)",
+    "dispatch_to_pr_rate": "84/90",
+    "in_flight": 2,
+    "merged": 83,
+    "note": "90 dispatches, 88 resolved (83 merged, 1 closed-no-merge, 4 failed-no-PR), 2 in-flight (#614, #616). Merged #612 (review), #610 (record-dispatch), #609 (process-merge). Dispatched #614 (process-audit), #616 (c166 review).",
+    "pr_merge_rate": "83/84",
+    "produced_pr": 84,
+    "resolved": 88,
     "revision_rounds": 5,
-    "total_dispatches": 88
+    "total_dispatches": 90
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -840,10 +840,10 @@
     }
   },
   "last_cycle": {
-    "issue": 605,
-    "number": 165,
-    "summary": "Cycle 165: Discovered gpt-5.4 ruleset violation (#602-#604 all failed). Filed #606 question-for-eva. Re-dispatched #607 (process-merge), #608 (record-dispatch), #611 (review agent) with gpt-5.3-codex. Fixed process-review finding count bug. Copilot metrics: 88 dispatches, 80 merged.",
-    "timestamp": "2026-03-06T21:08:00Z"
+    "issue": 613,
+    "number": 166,
+    "summary": "Cycle 166: Merged 3 PRs (#609 process-merge, #610 record-dispatch, #612 c165 review). Processed review findings (score 3/5, 5 findings). Fixed open_questions_for_eva traceability gap. Dispatched #614 (process-audit). Copilot metrics: 89 dispatches, 83 merged, 1 in-flight.",
+    "timestamp": "2026-03-06T22:43:00Z"
   },
   "last_eva_comment_check": "2026-03-06T22:43:00Z",
   "next_metric_verification": "cycle 151",
@@ -852,7 +852,7 @@
   ],
   "publish_gate": {
     "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z — all gates satisfied",
-    "last_divergence_check": "cycle 164",
+    "last_divergence_check": "cycle 166",
     "note": "QC-ACK #225 cleared v1.0.1 at ea8ffff for npm publish. 73/73 parity, E2E, build, tarball tests all pass. No package-affecting source divergence since validation. Audit sign-off confirmed via audit#125 (cycle 163).",
     "qc_ack": "EvaLok/schema-org-json-ld-qc#225",
     "source_diverged": false,
@@ -1266,7 +1266,7 @@
         "note": "Findings 1,3,4 confirmatory (low sev). Finding 2 (freshness) actioned. Finding 5 (traceability) actioned via atomic cycle-close improvements."
       },
       {
-        "actioned": 0,
+        "actioned": 1,
         "categories": [
           "dispatch-risk-management",
           "metrics-taxonomy",
@@ -1276,9 +1276,10 @@
         ],
         "complacency_score": 3,
         "cycle": 165,
-        "deferred": 0,
+        "deferred": 2,
         "finding_count": 5,
-        "ignored": 0
+        "ignored": 2,
+        "note": "Finding 5 (state-traceability) actioned: open_questions_for_eva synced. Findings 1,2 (low sev) confirmatory. Findings 3,4 (dispatch canary, metrics taxonomy) deferred to future tool work."
       }
     ],
     "last_review_cycle": 165
