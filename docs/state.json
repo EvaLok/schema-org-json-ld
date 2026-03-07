@@ -1871,6 +1871,7 @@
       201,
       224,
       225,
+      247,
       329,
       340,
       348,
@@ -1894,14 +1895,19 @@
       522,
       538,
       546,
+      562,
       586,
       591,
       606,
-      642
+      642,
+      689
     ],
-    "closed_this_cycle": [],
-    "remaining_open": [
+    "closed_this_cycle": [
       247,
+      562,
+      689
+    ],
+    "remaining_open": [
       436
     ]
   },
@@ -1930,11 +1936,11 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 177"
+        "last_refreshed": "cycle 178"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 174"
+        "last_refreshed": "cycle 178"
       },
       "last_cycle": {
         "cadence": "every cycle",
