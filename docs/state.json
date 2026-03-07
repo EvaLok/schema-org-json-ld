@@ -1943,15 +1943,15 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 177"
+        "last_refreshed": "cycle 178"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 177"
+        "last_refreshed": "cycle 178"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 177"
+        "last_refreshed": "cycle 178"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -2056,12 +2056,12 @@
     }
   },
   "last_cycle": {
-    "issue": 684,
-    "number": 177,
+    "issue": 690,
+    "number": 178,
     "summary": "merged 2 PRs (backfill tool, review artifact), ran backfill-sessions to reconcile 132 historical agent_sessions, reconciled copilot_metrics (114->184), dispatched reconciliation invariant",
-    "timestamp": "2026-03-07T16:53:31Z"
+    "timestamp": "2026-03-07T18:06:13Z"
   },
-  "last_eva_comment_check": "2026-03-07T16:53:31Z",
+  "last_eva_comment_check": "2026-03-07T18:06:13Z",
   "open_questions_for_eva": [],
   "publish_gate": {
     "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z — all gates satisfied",
