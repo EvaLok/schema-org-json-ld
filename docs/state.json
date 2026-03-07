@@ -1339,9 +1339,28 @@
         "deferred": 1,
         "finding_count": 4,
         "ignored": 0
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "annotations-tools",
+          "crates",
+          "cycle-complete",
+          "main-rs",
+          "publish-gate-evidence-reuse",
+          "reactive-manual-repair",
+          "review-agent-freshness-drift",
+          "rust",
+          "src"
+        ],
+        "complacency_score": 3,
+        "cycle": 170,
+        "deferred": 0,
+        "finding_count": 169,
+        "ignored": 0
       }
     ],
-    "last_review_cycle": 169
+    "last_review_cycle": 170
   },
   "schema_status": {
     "directory_layout": {
