@@ -1727,15 +1727,19 @@
     {
       "dispatched_at": "2026-03-07T19:49:53Z",
       "issue": 695,
+      "merged_at": "2026-03-07T21:11:46Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 696,
+      "status": "merged",
       "title": "Fix cycle-start: replace hardcoded Eva directives with dynamic state.json lookup"
     },
     {
       "dispatched_at": "2026-03-07T19:52:49Z",
       "issue": 697,
+      "merged_at": "2026-03-07T21:11:46Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 698,
+      "status": "merged",
       "title": "Cycle 179 end-of-cycle review"
     },
     {
@@ -1878,13 +1882,13 @@
     "closed_without_merge": 1,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#705 Add session duration tracking to cycle-complete (cycle 180)",
-    "dispatch_to_pr_rate": "182/186",
-    "in_flight": 3,
-    "merged": 181,
-    "note": "189 dispatches, 186 resolved, 3 in-flight. 182 produced PRs (181 merged, 1 closed without merge). Latest dispatch: #705 Add session duration tracking to cycle-complete (cycle 180, model gpt-5.3-codex).",
-    "pr_merge_rate": "181/182",
-    "produced_pr": 182,
-    "resolved": 186,
+    "dispatch_to_pr_rate": "184/188",
+    "in_flight": 1,
+    "merged": 183,
+    "note": "189 dispatches, 188 resolved, 1 in-flight. 184 produced PRs (183 merged, 1 closed without merge). 3 resolved without PR (silent failure). PRs #696, #698 merged in cycle 180.",
+    "pr_merge_rate": "183/184",
+    "produced_pr": 184,
+    "resolved": 188,
     "revision_rounds": 5,
     "total_dispatches": 189
   },
@@ -1964,7 +1968,7 @@
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 179"
+        "last_refreshed": "cycle 180"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
