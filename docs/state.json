@@ -767,7 +767,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 168"
+        "last_refreshed": "cycle 175"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -1394,9 +1394,21 @@
         "deferred": 1,
         "finding_count": 2,
         "ignored": 0
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "cycle-start-scope-drift",
+          "cycle-derivation-standardization"
+        ],
+        "complacency_score": 3,
+        "cycle": 174,
+        "deferred": 1,
+        "finding_count": 2,
+        "ignored": 0
       }
     ],
-    "last_review_cycle": 173
+    "last_review_cycle": 174
   },
   "schema_status": {
     "directory_layout": {

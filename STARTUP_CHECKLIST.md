@@ -17,7 +17,7 @@ bash tools/cycle-start --issue {NUMBER}
 This is the single entry point for cycle initialization. It:
 - Claims the cycle number and timestamp in `state.json`
 - Posts the signed opening comment on the cycle issue
-- Refreshes `open_questions_for_eva` and sets freshness markers
+- Gathers `open_questions_for_eva` for the situation report (does not write them back to state.json)
 - Produces a structured situation report (Eva directives, in-flight sessions, pipeline status)
 
 Do NOT post a separate manual opening comment — cycle-start handles it. Do NOT manually edit `state.json` for cycle initialization.
