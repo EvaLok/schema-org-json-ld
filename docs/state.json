@@ -632,16 +632,16 @@
   "copilot_metrics": {
     "closed_without_merge": 1,
     "closed_without_pr": 4,
-    "dispatch_log_latest": "#657 write-entry gap-days fix (cycle 173)",
+    "dispatch_log_latest": "#659 metric-snapshot --cycle removal (cycle 173)",
     "dispatch_to_pr_rate": "101/104",
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 100,
-    "note": "105 dispatches, 104 resolved, 1 in-flight. 101 produced PRs (100 merged, 1 closed without merge). Latest dispatch: #657 write-entry gap-days fix (cycle 173, model gpt-5.4).",
+    "note": "106 dispatches, 104 resolved, 2 in-flight. 101 produced PRs (100 merged, 1 closed without merge). Latest dispatch: #659 metric-snapshot --cycle removal (cycle 173, model gpt-5.4).",
     "pr_merge_rate": "100/101",
     "produced_pr": 101,
     "resolved": 104,
     "revision_rounds": 5,
-    "total_dispatches": 105
+    "total_dispatches": 106
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
