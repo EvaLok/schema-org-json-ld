@@ -1,6 +1,9 @@
 use clap::Parser;
 use serde_json::{json, Value};
-use state_schema::{commit_state_json, read_state_value, set_value_at_pointer, write_state_value};
+use state_schema::{
+    commit_state_json, current_cycle_from_state, read_state_value, set_value_at_pointer,
+    write_state_value,
+};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
@@ -43,8 +46,21 @@ fn main() {
 
 fn run(cli: Cli) -> Result<(), String> {
     let mut state_value = read_state_value(&cli.repo_root)?;
+    let current_cycle = current_cycle_from_state(&cli.repo_root).map_err(|error| {
+        if error == "missing /last_cycle/number in state.json" {
+            "missing numeric /last_cycle/number in docs/state.json".to_string()
+        } else {
+            error
+        }
+    })?;
 
-    let patch = build_dispatch_patch(&state_value, cli.issue, &cli.title, &cli.model)?;
+    let patch = build_dispatch_patch(
+        &state_value,
+        current_cycle,
+        cli.issue,
+        &cli.title,
+        &cli.model,
+    )?;
     apply_dispatch_patch(&mut state_value, &patch)?;
     write_state_value(&cli.repo_root, &state_value)?;
 
@@ -69,11 +85,11 @@ fn run(cli: Cli) -> Result<(), String> {
 
 fn build_dispatch_patch(
     state: &Value,
+    current_cycle: u64,
     issue: u64,
     title: &str,
     model: &str,
 ) -> Result<DispatchPatch, String> {
-    let current_cycle = read_required_i64(state, "/last_cycle/number")?;
     let total_dispatches = read_required_i64(state, "/copilot_metrics/total_dispatches")?;
     let in_flight = read_required_i64(state, "/copilot_metrics/in_flight")?;
     let produced_pr = read_required_i64(state, "/copilot_metrics/produced_pr")?;
@@ -85,6 +101,8 @@ fn build_dispatch_patch(
     let next_in_flight = in_flight + 1;
 
     validate_dispatch_invariant(next_total_dispatches, resolved, next_in_flight)?;
+    let current_cycle = i64::try_from(current_cycle)
+        .map_err(|_| "last_cycle.number exceeds supported range".to_string())?;
 
     Ok(DispatchPatch {
         total_dispatches: next_total_dispatches,
@@ -239,8 +257,9 @@ mod tests {
 
     #[test]
     fn metric_calculation_after_dispatch_is_correct() {
-        let patch = build_dispatch_patch(&sample_state(), 602, "Example dispatch", "gpt-5.3-codex")
-            .expect("patch should build");
+        let patch =
+            build_dispatch_patch(&sample_state(), 164, 602, "Example dispatch", "gpt-5.3-codex")
+                .expect("patch should build");
         assert_eq!(patch.total_dispatches, 86);
         assert_eq!(patch.in_flight, 3);
         assert_eq!(patch.dispatch_to_pr_rate, "81/83");
@@ -267,8 +286,9 @@ mod tests {
 
     #[test]
     fn concurrency_warning_threshold_is_triggered_at_three() {
-        let patch = build_dispatch_patch(&sample_state(), 602, "Example dispatch", "gpt-5.3-codex")
-            .expect("patch should build");
+        let patch =
+            build_dispatch_patch(&sample_state(), 164, 602, "Example dispatch", "gpt-5.3-codex")
+                .expect("patch should build");
         assert!(patch.in_flight >= 3);
     }
 }
