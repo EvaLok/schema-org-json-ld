@@ -632,7 +632,7 @@
     "closed_without_merge": 1,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#638 Remove redundant --cycle argument from pipeline-check, cycle-complete, write-entry (cycle 170)",
-    "dispatch_to_pr_rate": "93/99",
+    "dispatch_to_pr_rate": "93/97",
     "in_flight": 2,
     "merged": 92,
     "note": "99 dispatches, 97 resolved, 2 in-flight. 93 produced PRs (92 merged, 1 closed without merge). Latest dispatch: #638 Remove redundant --cycle argument from pipeline-check, cycle-complete, write-entry (cycle 170, model gpt-5.4).",
