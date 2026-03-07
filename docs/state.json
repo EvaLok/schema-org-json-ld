@@ -631,16 +631,16 @@
   "copilot_metrics": {
     "closed_without_merge": 1,
     "closed_without_pr": 4,
-    "dispatch_log_latest": "#621 state-schema shared I/O refactor (review finding #4) (cycle 166)",
-    "dispatch_to_pr_rate": "86/92",
-    "in_flight": 2,
+    "dispatch_log_latest": "#623 Cycle 167 review (cycle 167)",
+    "dispatch_to_pr_rate": "86/93",
+    "in_flight": 3,
     "merged": 85,
-    "note": "92 dispatches, 90 resolved, 2 in-flight. 86 produced PRs (85 merged, 1 closed without merge). Latest dispatch: #621 state-schema shared I/O refactor (review finding #4) (cycle 166, model gpt-5.4).",
+    "note": "93 dispatches, 90 resolved, 3 in-flight. 86 produced PRs (85 merged, 1 closed without merge). Latest dispatch: #623 Cycle 167 review (cycle 167, model gpt-5.4).",
     "pr_merge_rate": "85/86",
     "produced_pr": 86,
     "resolved": 90,
     "revision_rounds": 5,
-    "total_dispatches": 92
+    "total_dispatches": 93
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -703,11 +703,11 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 166"
+        "last_refreshed": "cycle 167"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 166"
+        "last_refreshed": "cycle 167"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
