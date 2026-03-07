@@ -733,7 +733,7 @@
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 160"
+        "last_refreshed": "cycle 171"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -838,12 +838,12 @@
     }
   },
   "last_cycle": {
-    "issue": 635,
-    "number": 170,
-    "summary": "Merged 3 PRs (review artifact, process-eva I/O, tool fixes), processed 4 review findings at 4/5, dispatched --cycle removal (#638), fixed dispatch_to_pr_rate formula permanently",
-    "timestamp": "2026-03-07T05:09:38Z"
+    "issue": 643,
+    "number": 171,
+    "summary": "in progress",
+    "timestamp": "2026-03-07T06:10:00Z"
   },
-  "last_eva_comment_check": "2026-03-07T05:09:38Z",
+  "last_eva_comment_check": "2026-03-07T06:10:00Z",
   "next_metric_verification": "cycle 151",
   "open_questions_for_eva": [
     606
