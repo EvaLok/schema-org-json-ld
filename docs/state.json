@@ -1434,9 +1434,23 @@
         "finding_count": 4,
         "ignored": 1,
         "note": "Finding 1 (review-processing): corrected review_agent.history entry for cycle 175 to mark as partially-actioned. Finding 2 (commit-receipts): noted for future receipt capture. Finding 3 (worklog-accuracy): acknowledged, agent_sessions backfill in PR #675. Finding 4 (journal-quality): positive finding, no action needed."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "commit-receipts",
+          "ledger-follow-through",
+          "worklog-accuracy",
+          "zombie-field-removal"
+        ],
+        "complacency_score": 3,
+        "cycle": 177,
+        "deferred": 0,
+        "finding_count": 4,
+        "ignored": 0
       }
     ],
-    "last_review_cycle": 176
+    "last_review_cycle": 177
   },
   "schema_status": {
     "directory_layout": {
