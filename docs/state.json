@@ -2642,7 +2642,9 @@
         "cycle": 177,
         "deferred": 0,
         "finding_count": 4,
-        "ignored": 0
+        "ignored": 1,
+        "actioned": 3,
+        "note": "Finding 1 (worklog-accuracy): ACTIONED — will derive from canonical state. Finding 2 (commit-receipts): ACTIONED — correct receipt c868ea5 noted. Finding 3 (zombie-field-removal): IGNORED — positive finding, no action needed. Finding 4 (ledger-follow-through): ACTIONED — backfill tool run, 132 entries reconciled."
       }
     ],
     "last_review_cycle": 177
