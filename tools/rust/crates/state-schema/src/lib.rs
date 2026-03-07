@@ -98,6 +98,16 @@ pub fn read_state_value(repo_root: &Path) -> Result<Value, String> {
         .map_err(|error| format!("failed to parse {}: {}", state_path.display(), error))
 }
 
+/// Read the current cycle number from state.json.
+/// Returns last_cycle.number from the state file.
+pub fn current_cycle_from_state(repo_root: &Path) -> Result<u64, String> {
+    let state = read_state_value(repo_root)?;
+    state
+        .pointer("/last_cycle/number")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| "missing /last_cycle/number in state.json".to_string())
+}
+
 pub fn write_state_value(repo_root: &Path, state: &Value) -> Result<(), String> {
     let state_path = state_json_path(repo_root);
     let serialized = serde_json::to_string_pretty(state)
@@ -410,8 +420,8 @@ pub struct Blockers {
 #[cfg(test)]
 mod tests {
     use super::{
-        commit_state_json, read_state_value, set_value_at_pointer, update_freshness,
-        write_state_value,
+        commit_state_json, current_cycle_from_state, read_state_value, set_value_at_pointer,
+        update_freshness, write_state_value,
     };
     use serde_json::{json, Value};
     use std::env;
@@ -658,6 +668,24 @@ mod tests {
         let error = read_state_value(repo.path()).expect_err("missing state file must fail");
         assert!(error.contains("failed to read"));
         assert!(error.contains("docs/state.json"));
+    }
+
+    #[test]
+    fn current_cycle_from_state_reads_last_cycle_number() {
+        let repo = TempRepo::new();
+        repo.write_state(&json!({"last_cycle": {"number": 166}}));
+
+        let cycle = current_cycle_from_state(repo.path()).expect("cycle should load from state");
+        assert_eq!(cycle, 166);
+    }
+
+    #[test]
+    fn current_cycle_from_state_requires_last_cycle_number() {
+        let repo = TempRepo::new();
+        repo.write_state(&json!({"last_cycle": {}}));
+
+        let error = current_cycle_from_state(repo.path()).expect_err("missing cycle must fail");
+        assert_eq!(error, "missing /last_cycle/number in state.json");
     }
 
     #[test]

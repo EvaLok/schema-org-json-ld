@@ -2,6 +2,7 @@ use chrono::Utc;
 use clap::Parser;
 use serde::Serialize;
 use serde_json::Value;
+use state_schema::current_cycle_from_state;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -16,7 +17,7 @@ struct Cli {
     repo_root: PathBuf,
 
     #[arg(long)]
-    cycle: u64,
+    cycle: Option<u64>,
 
     #[arg(long)]
     json: bool,
@@ -97,8 +98,18 @@ impl CommandRunner for ProcessRunner {
 
 fn main() {
     let cli = Cli::parse();
+    let cycle = match cli.cycle {
+        Some(cycle) => cycle,
+        None => match current_cycle_from_state(&cli.repo_root) {
+            Ok(cycle) => cycle,
+            Err(error) => {
+                eprintln!("Error: {}", error);
+                std::process::exit(1);
+            }
+        },
+    };
     let runner = ProcessRunner;
-    let report = run_pipeline(&cli.repo_root, cli.cycle, &runner);
+    let report = run_pipeline(&cli.repo_root, cycle, &runner);
     let exit_code = pipeline_exit_code(&report.steps);
 
     if cli.json {
@@ -545,15 +556,21 @@ mod tests {
     fn run_pipeline_aggregates_tool_results_with_mock_runner() {
         struct MockRunner {
             outputs: HashMap<String, ExecutionResult>,
+            expected_cycle: u64,
         }
 
         impl CommandRunner for MockRunner {
-            fn run(&self, script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+            fn run(&self, script_path: &Path, args: &[String]) -> Result<ExecutionResult, String> {
                 let key = script_path
                     .file_name()
                     .and_then(|name| name.to_str())
                     .unwrap_or_default()
                     .to_string();
+                if key == "metric-snapshot" || key == "check-field-inventory-rs" {
+                    assert!(args.windows(2).any(|window| {
+                        window[0] == "--cycle" && window[1] == self.expected_cycle.to_string()
+                    }));
+                }
                 self.outputs
                     .get(&key)
                     .map(|result| ExecutionResult {
@@ -579,6 +596,7 @@ mod tests {
         fs::write(root.join("tools/rust/target/release/state-invariants"), "").unwrap();
 
         let runner = MockRunner {
+            expected_cycle: 135,
             outputs: HashMap::from([
                 (
                     "metric-snapshot".to_string(),
@@ -638,6 +656,13 @@ mod tests {
             report.steps[4].detail.as_deref(),
             Some("5/5 invariants pass")
         );
+    }
+
+    #[test]
+    fn cli_accepts_missing_cycle_argument() {
+        let cli = Cli::try_parse_from(["pipeline-check", "--repo-root", "."]).unwrap();
+        assert_eq!(cli.repo_root, PathBuf::from("."));
+        assert_eq!(cli.cycle, None);
     }
 
     #[test]
