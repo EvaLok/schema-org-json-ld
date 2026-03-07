@@ -686,10 +686,7 @@
       606,
       642
     ],
-    "closed_this_cycle": [
-      586,
-      591
-    ],
+    "closed_this_cycle": [],
     "remaining_open": [
       247,
       436
@@ -720,7 +717,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 174"
+        "last_refreshed": "cycle 177"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -744,7 +741,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 174"
+        "last_refreshed": "cycle 177"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -850,7 +847,7 @@
   "open_questions_for_eva": [],
   "publish_gate": {
     "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z — all gates satisfied",
-    "last_divergence_check": "cycle 174",
+    "last_divergence_check": "cycle 177",
     "note": "QC-ACK #225 cleared v1.0.1 at ea8ffff for npm publish. 73/73 parity, E2E, build, tarball tests all pass. No package-affecting source divergence since validation. Audit sign-off confirmed via audit#125 (cycle 163).",
     "qc_ack": "EvaLok/schema-org-json-ld-qc#225",
     "source_diverged": false,
@@ -1426,8 +1423,8 @@
         "cycle": 176,
         "deferred": 0,
         "finding_count": 4,
-        "ignored": 0,
-        "note": "Finding 1 (review-processing): corrected review_agent.history entry for cycle 175 to mark as partially-actioned. Finding 2 (commit-receipts): noted for future receipt capture. Finding 3 (worklog-accuracy): acknowledged, agent_sessions backfill in PR #675."
+        "ignored": 1,
+        "note": "Finding 1 (review-processing): corrected review_agent.history entry for cycle 175 to mark as partially-actioned. Finding 2 (commit-receipts): noted for future receipt capture. Finding 3 (worklog-accuracy): acknowledged, agent_sessions backfill in PR #675. Finding 4 (journal-quality): positive finding, no action needed."
       }
     ],
     "last_review_cycle": 176
