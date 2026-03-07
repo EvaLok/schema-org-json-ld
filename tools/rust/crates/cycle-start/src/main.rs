@@ -2,7 +2,9 @@ use chrono::{DateTime, Utc};
 use clap::Parser;
 use serde::Serialize;
 use serde_json::{json, Value};
-use state_schema::{commit_state_json, read_state_value, set_value_at_pointer, write_state_value};
+use state_schema::{
+    commit_state_json, read_state_value, set_value_at_pointer, write_state_value, StateJson,
+};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -15,13 +17,6 @@ const ORCHESTRATOR_SIGNATURES: [&str; 3] = [
     "[qc-orchestrator]",
     "[audit-orchestrator]",
 ];
-const EVA_DIRECTIVES: [&str; 4] = [
-    "EvaLok/schema-org-json-ld#586 (pipeline write-side)",
-    "EvaLok/schema-org-json-ld#591 (cycle-start tool)",
-    "EvaLok/schema-org-json-ld#247 (npm publish)",
-    "EvaLok/schema-org-json-ld#436 (tool pipeline)",
-];
-
 #[derive(Parser)]
 #[command(name = "cycle-start")]
 struct Cli {
@@ -113,6 +108,7 @@ fn main() {
 
 fn run(cli: Cli) -> Result<(), String> {
     let mut state = read_state_value(&cli.repo_root)?;
+    let state_json = read_typed_state_json(&cli.repo_root)?;
 
     let previous_timestamp = state
         .pointer("/last_cycle/timestamp")
@@ -123,7 +119,8 @@ fn run(cli: Cli) -> Result<(), String> {
     let timestamp = format_timestamp_utc();
     let mut warnings = Vec::new();
     let questions_for_eva = gather_questions_for_eva(&mut warnings);
-    let open_question_numbers: Vec<u64> = questions_for_eva.iter().map(|issue| issue.number).collect();
+    let open_question_numbers: Vec<u64> =
+        questions_for_eva.iter().map(|issue| issue.number).collect();
 
     let patch = build_state_patch(cycle, cli.issue, &timestamp, &open_question_numbers);
     apply_state_patch(&mut state, &patch)?;
@@ -147,12 +144,13 @@ fn run(cli: Cli) -> Result<(), String> {
     let qc_outbound = gather_outbound_issue_numbers(QC_REPO, "qc-outbound", &mut warnings);
     let audit_outbound = gather_outbound_issue_numbers(AUDIT_REPO, "audit-outbound", &mut warnings);
     let publish_gate = summarize_publish_gate(&state);
+    let eva_directives = load_eva_directives(&state_json)?;
 
     let brief = StartupBrief {
         cycle,
         issue: cli.issue,
         receipt,
-        eva_directives: default_eva_directives(),
+        eva_directives,
         input_from_eva,
         eva_comments_since_last_cycle: eva_comments,
         review_agent,
@@ -180,11 +178,55 @@ fn format_timestamp_utc() -> String {
     Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string()
 }
 
-fn default_eva_directives() -> Vec<String> {
-    EVA_DIRECTIVES
+fn read_typed_state_json(repo_root: &Path) -> Result<StateJson, String> {
+    let state_path = repo_root.join("docs/state.json");
+    let content = fs::read_to_string(&state_path)
+        .map_err(|error| format!("failed to read {}: {}", state_path.display(), error))?;
+    serde_json::from_str(&content)
+        .map_err(|error| format!("failed to parse {} into schema: {}", state_path.display(), error))
+}
+
+fn load_eva_directives(state: &StateJson) -> Result<Vec<String>, String> {
+    load_eva_directives_with(state, fetch_issue_title)
+}
+
+fn load_eva_directives_with<F>(state: &StateJson, mut fetch_title: F) -> Result<Vec<String>, String>
+where
+    F: FnMut(u64) -> Result<String, String>,
+{
+    state
+        .eva_input_issues
+        .remaining_open
         .iter()
-        .map(|directive| directive.to_string())
+        .map(|raw_issue_number| {
+            let validated_issue_number = u64::try_from(*raw_issue_number).map_err(|_| {
+                format!(
+                    "docs/state.json contains invalid /eva_input_issues/remaining_open entry (negative values are not allowed): {}",
+                    raw_issue_number
+                )
+            })?;
+            let title = fetch_title(validated_issue_number)?;
+            Ok(format!(
+                "{}#{} ({})",
+                MAIN_REPO, validated_issue_number, title
+            ))
+        })
         .collect()
+}
+
+fn fetch_issue_title(issue_number: u64) -> Result<String, String> {
+    let issue_number_arg = issue_number.to_string();
+    gh_text(&[
+        "issue",
+        "view",
+        issue_number_arg.as_str(),
+        "--repo",
+        MAIN_REPO,
+        "--json",
+        "title",
+        "--jq",
+        ".title",
+    ])
 }
 
 fn derive_cycle_from_state(state: &Value) -> Result<u64, String> {
@@ -781,7 +823,11 @@ fn format_human_brief(brief: &StartupBrief) -> String {
     let mut lines = vec![
         format!("Cycle {} started (receipt: {})", brief.cycle, brief.receipt),
         String::new(),
-        format!("Eva directives: {}", brief.eva_directives.join(", ")),
+        if brief.eva_directives.is_empty() {
+            "Eva directives: none".to_string()
+        } else {
+            format!("Eva directives: {}", brief.eva_directives.join(", "))
+        },
         format!(
             "Eva comments since last cycle: {} ({})",
             brief.eva_comments_since_last_cycle.len(),
@@ -844,6 +890,24 @@ fn warn(warnings: &mut Vec<String>, message: String) {
 }
 
 fn gh_json(args: &[&str]) -> Result<Value, String> {
+    let stdout = gh_output(args)?;
+    serde_json::from_slice(&stdout).map_err(|error| {
+        format!(
+            "failed to parse JSON output from `gh {}`: {}",
+            args.join(" "),
+            error
+        )
+    })
+}
+
+fn gh_text(args: &[&str]) -> Result<String, String> {
+    let stdout = gh_output(args)?;
+    let text = String::from_utf8(stdout)
+        .map_err(|error| format!("gh {} returned non-UTF-8 output: {}", args.join(" "), error))?;
+    Ok(text.trim().to_string())
+}
+
+fn gh_output(args: &[&str]) -> Result<Vec<u8>, String> {
     let output = Command::new("gh")
         .args(args)
         .output()
@@ -856,13 +920,7 @@ fn gh_json(args: &[&str]) -> Result<Value, String> {
         ));
     }
 
-    serde_json::from_slice(&output.stdout).map_err(|error| {
-        format!(
-            "failed to parse JSON output from `gh {}`: {}",
-            args.join(" "),
-            error
-        )
-    })
+    Ok(output.stdout)
 }
 
 fn command_failure_message(command: &str, output: &std::process::Output) -> String {
@@ -932,7 +990,7 @@ mod tests {
             cycle: 163,
             issue: 592,
             receipt: "abc1234".to_string(),
-            eva_directives: default_eva_directives(),
+            eva_directives: vec!["EvaLok/schema-org-json-ld#11 (Directive A)".to_string()],
             input_from_eva: vec![],
             eva_comments_since_last_cycle: vec![EvaComment {
                 issue_number: Some(591),
@@ -965,6 +1023,7 @@ mod tests {
 
         let output = format_human_brief(&brief);
         assert!(output.contains("Cycle 163 started (receipt: abc1234)"));
+        assert!(output.contains("Eva directives: EvaLok/schema-org-json-ld#11 (Directive A)"));
         assert!(
             output.contains("Eva comments since last cycle: 1 (#591 Please prioritize this tool.)")
         );
@@ -981,7 +1040,7 @@ mod tests {
             cycle: 163,
             issue: 592,
             receipt: "abc1234".to_string(),
-            eva_directives: default_eva_directives(),
+            eva_directives: vec!["EvaLok/schema-org-json-ld#11 (Directive A)".to_string()],
             input_from_eva: vec![SimpleIssue {
                 number: 593,
                 title: "Input".to_string(),
@@ -1015,5 +1074,70 @@ mod tests {
             parsed.pointer("/warnings/0"),
             Some(&json!("pipeline-check command failed"))
         );
+    }
+
+    #[test]
+    fn load_eva_directives_uses_remaining_open_issue_titles() {
+        let mut state = StateJson::default();
+        state.eva_input_issues.remaining_open = vec![11, 12];
+
+        let directives = load_eva_directives_with(&state, |issue_number| match issue_number {
+            11 => Ok("Directive A".to_string()),
+            12 => Ok("Directive B".to_string()),
+            other => Err(format!("unexpected issue {}", other)),
+        })
+        .expect("eva directives should load");
+
+        assert_eq!(
+            directives,
+            vec![
+                "EvaLok/schema-org-json-ld#11 (Directive A)".to_string(),
+                "EvaLok/schema-org-json-ld#12 (Directive B)".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn load_eva_directives_rejects_negative_issue_numbers() {
+        let mut state = StateJson::default();
+        state.eva_input_issues.remaining_open = vec![-1];
+
+        let error = load_eva_directives_with(&state, |_| Ok("unused".to_string()))
+            .expect_err("negative directive numbers must fail");
+
+        assert_eq!(
+            error,
+            "docs/state.json contains invalid /eva_input_issues/remaining_open entry (negative values are not allowed): -1"
+        );
+    }
+
+    #[test]
+    fn human_brief_format_shows_none_when_no_eva_directives_exist() {
+        let brief = StartupBrief {
+            cycle: 163,
+            issue: 592,
+            receipt: "abc1234".to_string(),
+            eva_directives: vec![],
+            input_from_eva: vec![],
+            eva_comments_since_last_cycle: vec![],
+            review_agent: None,
+            pipeline: PipelineStatus {
+                status: "pass".to_string(),
+                detail: "5 steps".to_string(),
+            },
+            in_flight: InFlightSummary {
+                assigned_issues: vec![],
+                open_prs: vec![],
+                sessions: 0,
+            },
+            publish_gate: "open".to_string(),
+            qc_outbound: vec![],
+            audit_outbound: vec![],
+            questions_for_eva: vec![],
+            warnings: vec![],
+        };
+
+        let output = format_human_brief(&brief);
+        assert!(output.contains("Eva directives: none"));
     }
 }
