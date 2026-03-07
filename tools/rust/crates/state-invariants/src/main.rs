@@ -658,7 +658,7 @@ fn check_last_cycle_consistency(state: &StateJson) -> CheckResult {
 }
 
 fn check_future_cycle_freshness(state: &StateJson) -> CheckResult {
-    let last_cycle_number = match state.last_cycle.extra.get("number").and_then(Value::as_i64) {
+    let current_cycle_number = match state.last_cycle.extra.get("number").and_then(Value::as_i64) {
         Some(value) => value,
         None => return warn("future_cycle_freshness", "missing field: last_cycle.number"),
     };
@@ -680,10 +680,10 @@ fn check_future_cycle_freshness(state: &StateJson) -> CheckResult {
             }
         };
 
-        if cycle > last_cycle_number {
+        if cycle > current_cycle_number {
             failures.push(format!(
-                "field_inventory.fields.{}.last_refreshed({}) exceeds last_cycle.number({})",
-                field_name, cycle, last_cycle_number
+                "field_inventory.fields.{}.last_refreshed({}) exceeds current cycle ({})",
+                field_name, cycle, current_cycle_number
             ));
         }
     }
@@ -1126,6 +1126,18 @@ mod tests {
         let state = state_from_json(value);
         let check = check_future_cycle_freshness(&state);
         assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn parse_cycle_marker_accepts_cycle_prefix_with_integer() {
+        assert_eq!(parse_cycle_marker("cycle 10"), Some(10));
+    }
+
+    #[test]
+    fn parse_cycle_marker_rejects_invalid_formats() {
+        assert_eq!(parse_cycle_marker("10"), None);
+        assert_eq!(parse_cycle_marker("cycle"), None);
+        assert_eq!(parse_cycle_marker("cycle abc"), None);
     }
 
     #[test]

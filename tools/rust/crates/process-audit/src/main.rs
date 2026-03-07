@@ -126,7 +126,9 @@ impl AuditAction {
 mod tests {
     use super::*;
     use clap::CommandFactory;
+    use std::env;
     use std::fs;
+    use std::path::{Path, PathBuf};
     use std::sync::atomic::{AtomicU64, Ordering};
 
     fn sample_state() -> Value {
@@ -143,13 +145,29 @@ mod tests {
         })
     }
 
-    fn write_temp_state(state: &Value) -> PathBuf {
-        static COUNTER: AtomicU64 = AtomicU64::new(0);
-        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let repo_root = std::env::temp_dir().join(format!("process-audit-test-{}", run_id));
-        fs::create_dir_all(repo_root.join("docs")).expect("temp repo should be created");
-        write_state_value(&repo_root, state).expect("state should be written");
-        repo_root
+    struct TempRepo {
+        path: PathBuf,
+    }
+
+    impl TempRepo {
+        fn new(state: &Value) -> Self {
+            static COUNTER: AtomicU64 = AtomicU64::new(0);
+            let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+            let path = env::temp_dir().join(format!("process-audit-test-{}", run_id));
+            fs::create_dir_all(path.join("docs")).expect("temp repo should be created");
+            write_state_value(&path, state).expect("state should be written");
+            Self { path }
+        }
+
+        fn path(&self) -> &Path {
+            &self.path
+        }
+    }
+
+    impl Drop for TempRepo {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.path);
+        }
     }
 
     #[test]
@@ -205,8 +223,7 @@ mod tests {
 
     #[test]
     fn current_cycle_matches_last_cycle_number_from_state_file() {
-        let repo_root = write_temp_state(&sample_state());
-        assert_eq!(current_cycle(&repo_root).unwrap(), 165);
-        fs::remove_dir_all(repo_root).expect("temp repo should be removed");
+        let repo = TempRepo::new(&sample_state());
+        assert_eq!(current_cycle(repo.path()).unwrap(), 165);
     }
 }
