@@ -1730,6 +1730,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix cycle-start: replace hardcoded Eva directives with dynamic state.json lookup"
+    },
+    {
+      "dispatched_at": "2026-03-07T19:52:49Z",
+      "issue": 697,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 179 end-of-cycle review"
     }
   ],
   "audit_processed": [
@@ -1862,16 +1869,16 @@
   "copilot_metrics": {
     "closed_without_merge": 1,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#695 Fix cycle-start: replace hardcoded Eva directives with dynamic state.json lookup (cycle 179)",
+    "dispatch_log_latest": "#697 Cycle 179 end-of-cycle review (cycle 179)",
     "dispatch_to_pr_rate": "182/186",
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 181,
-    "note": "187 dispatches, 186 resolved, 1 in-flight. 182 produced PRs (181 merged, 1 closed without merge). Latest dispatch: #695 Fix cycle-start: replace hardcoded Eva directives with dynamic state.json lookup (cycle 179, model gpt-5.4).",
+    "note": "188 dispatches, 186 resolved, 2 in-flight. 182 produced PRs (181 merged, 1 closed without merge). Latest dispatch: #697 Cycle 179 end-of-cycle review (cycle 179, model gpt-5.4).",
     "pr_merge_rate": "181/182",
     "produced_pr": 182,
     "resolved": 186,
     "revision_rounds": 5,
-    "total_dispatches": 187
+    "total_dispatches": 188
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
