@@ -632,7 +632,7 @@
     "closed_without_merge": 1,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#633 Cycle 169 review (cycle 169)",
-    "dispatch_to_pr_rate": "91/97",
+    "dispatch_to_pr_rate": "91/95",
     "in_flight": 2,
     "merged": 90,
     "note": "97 dispatches, 95 resolved, 2 in-flight. 91 produced PRs (90 merged, 1 closed without merge). Latest dispatch: #633 Cycle 169 review (cycle 169, model gpt-5.4).",
