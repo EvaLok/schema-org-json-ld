@@ -2064,13 +2064,16 @@
   "last_eva_comment_check": "2026-03-07T18:06:13Z",
   "open_questions_for_eva": [],
   "publish_gate": {
-    "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z — all gates satisfied",
-    "last_divergence_check": "cycle 177",
-    "note": "QC-ACK #225 cleared v1.0.1 at ea8ffff for npm publish. 73/73 parity, E2E, build, tarball tests all pass. No package-affecting source divergence since validation. Audit sign-off confirmed via audit#125 (cycle 163).",
-    "qc_ack": "EvaLok/schema-org-json-ld-qc#225",
-    "source_diverged": false,
+    "status": "published",
+    "published_version": "1.0.2",
+    "published_at": "2026-03-07",
+    "published_by": "EvaLok",
+    "npm_url": "https://www.npmjs.com/package/@evabee/schema-org-json-ld",
+    "note": "v1.0.2 published by Eva. v1.0.1 failed due to CI workflow incompatibility with npm OIDC trusted publishing (Node 22 ships npm 10, OIDC requires npm 11.5+). Package contents identical to validated ea8ffff.",
+    "validated_commit": "ea8ffff",
     "validated_at": "2026-03-06T04:39Z",
-    "validated_commit": "ea8ffff"
+    "qc_ack": "EvaLok/schema-org-json-ld-qc#225",
+    "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z"
   },
   "qc_processed": [
     8,
@@ -3363,6 +3366,6 @@
     },
     "qc_coordination_issue": 249,
     "qc_validation_strategy": "Aligned. QC repo #98: ts-consumer/ dir, parity testing, begins after Phase 1 merge",
-    "status": "approved_executing"
+    "status": "complete"
   }
 }
