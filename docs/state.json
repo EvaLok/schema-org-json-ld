@@ -715,7 +715,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 164"
+        "last_refreshed": "cycle 167"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -723,11 +723,11 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 164"
+        "last_refreshed": "cycle 167"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 164"
+        "last_refreshed": "cycle 167"
       },
       "next_metric_verification": {
         "cadence": "after each verification run",
@@ -743,7 +743,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 164"
+        "last_refreshed": "cycle 167"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
