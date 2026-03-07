@@ -632,7 +632,7 @@
     "closed_without_merge": 1,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#623 Cycle 167 review (cycle 167)",
-    "dispatch_to_pr_rate": "86/93",
+    "dispatch_to_pr_rate": "86/90",
     "in_flight": 3,
     "merged": 85,
     "note": "93 dispatches, 90 resolved, 3 in-flight. 86 produced PRs (85 merged, 1 closed without merge). Latest dispatch: #623 Cycle 167 review (cycle 167, model gpt-5.4).",
@@ -763,7 +763,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 161"
+        "last_refreshed": "cycle 168"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
