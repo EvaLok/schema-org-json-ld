@@ -8,6 +8,22 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const REPO: &str = "EvaLok/schema-org-json-ld";
+const DEFAULT_MODEL: &str = "unknown";
+const MIN_BRANCH_CANDIDATE_LENGTH: usize = 8;
+const STATUS_RANK_OPEN: u8 = 0;
+const STATUS_RANK_CLOSED: u8 = 1;
+const STATUS_RANK_MERGED: u8 = 2;
+const CLOSING_KEYWORDS: [&str; 9] = [
+    "close ",
+    "closes ",
+    "closed ",
+    "fix ",
+    "fixes ",
+    "fixed ",
+    "resolve ",
+    "resolves ",
+    "resolved ",
+];
 
 #[derive(Parser, Debug)]
 #[command(name = "backfill-sessions")]
@@ -159,14 +175,20 @@ fn build_agent_session(
 
     let linked_pr = find_linked_pr(issue, prs);
     let (status, pr, merged_at) = match linked_pr {
-        Some(pr) if pr.merged_at.is_some() => (
-            "merged".to_string(),
-            Some(
-                i64::try_from(pr.number)
-                    .map_err(|_| format!("PR #{} does not fit in i64", pr.number))?,
-            ),
-            pr.merged_at.clone(),
-        ),
+        Some(pr) if pr.merged_at.is_some() => {
+            let merged_at = pr
+                .merged_at
+                .clone()
+                .ok_or_else(|| format!("PR #{} is missing merged_at", pr.number))?;
+            (
+                "merged".to_string(),
+                Some(
+                    i64::try_from(pr.number)
+                        .map_err(|_| format!("PR #{} does not fit in i64", pr.number))?,
+                ),
+                Some(merged_at),
+            )
+        }
         Some(pr) if pr.state == "closed" => (
             "closed".to_string(),
             Some(
@@ -182,7 +204,7 @@ fn build_agent_session(
         issue: Some(issue_number),
         title: Some(issue.title.clone()),
         dispatched_at: Some(issue.created_at.clone()),
-        model: Some("unknown".to_string()),
+        model: Some(DEFAULT_MODEL.to_string()),
         status: Some(status),
         pr,
         merged_at,
@@ -209,11 +231,11 @@ fn find_linked_pr<'a>(
             }?;
 
             let status_rank = if pr.merged_at.is_some() {
-                2_u8
+                STATUS_RANK_MERGED
             } else if pr.state == "closed" {
-                1_u8
+                STATUS_RANK_CLOSED
             } else {
-                0_u8
+                STATUS_RANK_OPEN
             };
 
             Some((match_strength, status_rank, proximity_to_issue(issue.number, pr.number), pr))
@@ -239,12 +261,7 @@ fn pr_body_closes_issue(body: &str, issue_number: u64) -> bool {
         format!("/issues/{}", issue_number),
     ];
 
-    [
-        "close ", "closes ", "closed ", "fix ", "fixes ", "fixed ", "resolve ", "resolves ",
-        "resolved ",
-    ]
-    .iter()
-    .any(|keyword| {
+    CLOSING_KEYWORDS.iter().any(|keyword| {
         let mut search = lower.as_str();
         while let Some(position) = search.find(keyword) {
             let rest = &search[position + keyword.len()..];
@@ -260,7 +277,7 @@ fn pr_body_closes_issue(body: &str, issue_number: u64) -> bool {
 fn branch_matches_issue(branch: &str, issue_title: &str) -> bool {
     let branch_slug = slugify(branch.rsplit('/').next().unwrap_or(branch));
     title_branch_candidates(issue_title).into_iter().any(|candidate| {
-        candidate.len() >= 8
+        candidate.len() >= MIN_BRANCH_CANDIDATE_LENGTH
             && (branch_slug.contains(&candidate) || candidate.contains(&branch_slug))
     })
 }
@@ -369,16 +386,16 @@ fn fetch_closed_agent_task_issues() -> Result<Vec<IssueRecord>, String> {
     let value = gh_json(&["api", &endpoint, "--paginate", "--slurp"])?;
     let items = flatten_paginated_items(value)?;
 
-    items.into_iter()
-        .map(|item| {
-            serde_json::from_value::<IssueRecord>(item)
-                .map_err(|error| format!("failed to parse issue response: {}", error))
-        })
-        .filter(|result| match result {
-            Ok(issue) => issue.pull_request.is_none(),
-            Err(_) => true,
-        })
-        .collect()
+    let mut issues = Vec::new();
+    for item in items {
+        let issue = serde_json::from_value::<IssueRecord>(item)
+            .map_err(|error| format!("failed to parse issue response: {}", error))?;
+        if issue.pull_request.is_none() {
+            issues.push(issue);
+        }
+    }
+
+    Ok(issues)
 }
 
 fn fetch_pull_requests() -> Result<Vec<PullRequestRecord>, String> {
@@ -596,7 +613,7 @@ mod tests {
         let workflow = &plan.new_sessions[0];
         assert_eq!(workflow.pr, Some(305));
         assert_eq!(workflow.status.as_deref(), Some("closed"));
-        assert_eq!(workflow.model.as_deref(), Some("unknown"));
+        assert_eq!(workflow.model.as_deref(), Some(DEFAULT_MODEL));
 
         let merge = &plan.new_sessions[1];
         assert_eq!(merge.pr, Some(675));
