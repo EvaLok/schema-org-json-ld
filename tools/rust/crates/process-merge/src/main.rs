@@ -22,6 +22,7 @@ struct Cli {
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct MergeUpdate {
     merged: i64,
+    produced_pr: i64,
     resolved: i64,
     in_flight: i64,
     pr_merge_rate: String,
@@ -123,12 +124,13 @@ fn compute_update(state: &Value, prs: &[u64], note: Option<&str>) -> Result<Merg
     }
 
     let next_merged = merged + merge_count;
+    let next_produced_pr = produced_pr + merge_count;
     let next_resolved = resolved + resolved_increment;
 
-    if next_merged + closed_without_merge > produced_pr {
+    if next_merged + closed_without_merge > next_produced_pr {
         return Err(format!(
             "invariant violated: merged({}) + closed_without_merge({}) > produced_pr({})",
-            next_merged, closed_without_merge, produced_pr
+            next_merged, closed_without_merge, next_produced_pr
         ));
     }
 
@@ -139,8 +141,8 @@ fn compute_update(state: &Value, prs: &[u64], note: Option<&str>) -> Result<Merg
         ));
     }
 
-    let pr_merge_rate = format!("{}/{}", next_merged, produced_pr);
-    let dispatch_to_pr_rate = format!("{}/{}", produced_pr, total_dispatches);
+    let pr_merge_rate = format!("{}/{}", next_merged, next_produced_pr);
+    let dispatch_to_pr_rate = format!("{}/{}", next_produced_pr, total_dispatches);
     let merged_prs = format_pr_list(prs);
 
     let mut summary = format!(
@@ -148,7 +150,7 @@ fn compute_update(state: &Value, prs: &[u64], note: Option<&str>) -> Result<Merg
         total_dispatches,
         next_resolved,
         next_in_flight,
-        produced_pr,
+        next_produced_pr,
         next_merged,
         closed_without_merge,
         closed_without_pr,
@@ -163,6 +165,7 @@ fn compute_update(state: &Value, prs: &[u64], note: Option<&str>) -> Result<Merg
 
     Ok(MergeUpdate {
         merged: next_merged,
+        produced_pr: next_produced_pr,
         resolved: next_resolved,
         in_flight: next_in_flight,
         pr_merge_rate,
@@ -198,6 +201,10 @@ fn build_patch(update: &MergeUpdate) -> Result<Vec<PatchUpdate>, String> {
         PatchUpdate {
             path: "/copilot_metrics/dispatch_to_pr_rate",
             value: json!(update.dispatch_to_pr_rate),
+        },
+        PatchUpdate {
+            path: "/copilot_metrics/produced_pr",
+            value: json!(update.produced_pr),
         },
         PatchUpdate {
             path: "/copilot_metrics/note",
@@ -281,16 +288,17 @@ mod tests {
         let state = sample_state();
         let update = compute_update(&state, &[595], None).expect("update should compute");
         assert_eq!(update.merged, 81);
+        assert_eq!(update.produced_pr, 85);
         assert_eq!(update.resolved, 83);
         assert_eq!(update.in_flight, 2);
-        assert_eq!(update.pr_merge_rate, "81/84");
-        assert_eq!(update.dispatch_to_pr_rate, "84/85");
+        assert_eq!(update.pr_merge_rate, "81/85");
+        assert_eq!(update.dispatch_to_pr_rate, "85/85");
         assert!(update
             .note
             .contains("85 dispatches, 83 resolved, 2 in-flight."));
         assert!(update
             .note
-            .contains("84 produced PRs (81 merged, 1 closed without merge)."));
+            .contains("85 produced PRs (81 merged, 1 closed without merge)."));
         assert!(update.note.contains("PR #595 merged in cycle 164."));
     }
 
@@ -300,16 +308,17 @@ mod tests {
         let update = compute_update(&state, &[595, 597, 599], Some("Merged as planned."))
             .expect("update should compute");
         assert_eq!(update.merged, 83);
+        assert_eq!(update.produced_pr, 87);
         assert_eq!(update.resolved, 85);
         assert_eq!(update.in_flight, 0);
-        assert_eq!(update.pr_merge_rate, "83/84");
-        assert_eq!(update.dispatch_to_pr_rate, "84/85");
+        assert_eq!(update.pr_merge_rate, "83/87");
+        assert_eq!(update.dispatch_to_pr_rate, "87/85");
         assert!(update
             .note
             .contains("85 dispatches, 85 resolved, 0 in-flight."));
         assert!(update
             .note
-            .contains("84 produced PRs (83 merged, 1 closed without merge)."));
+            .contains("87 produced PRs (83 merged, 1 closed without merge)."));
         assert!(update
             .note
             .contains("PRs #595, #597, #599 merged in cycle 164."));
@@ -323,6 +332,7 @@ mod tests {
         state["copilot_metrics"]["resolved"] = json!(84);
         let update = compute_update(&state, &[595, 597], None).expect("update should compute");
         assert_eq!(update.merged, 82);
+        assert_eq!(update.produced_pr, 86);
         assert_eq!(update.resolved, 85);
         assert_eq!(update.in_flight, 0);
         assert_eq!(update.resolved + update.in_flight, update.total_dispatches);
@@ -341,14 +351,25 @@ mod tests {
         let state = sample_state();
         let update = compute_update(&state, &[595], None).expect("update should compute");
         let patch = build_patch(&update).expect("patch should build");
-        assert_eq!(patch.len(), 9);
+        assert_eq!(patch.len(), 10);
         assert_eq!(patch[3].path, "/copilot_metrics/pr_merge_rate");
         assert_eq!(patch[4].path, "/copilot_metrics/dispatch_to_pr_rate");
+        assert_eq!(patch[5].path, "/copilot_metrics/produced_pr");
         assert_eq!(
-            patch[6].path,
+            patch[7].path,
             "/field_inventory/fields/copilot_metrics.in_flight/last_refreshed"
         );
-        assert_eq!(patch[6].value, json!("cycle 164"));
+        assert_eq!(patch[7].value, json!("cycle 164"));
+    }
+
+    #[test]
+    fn produced_pr_invariant_uses_incremented_value() {
+        let mut state = sample_state();
+        state["copilot_metrics"]["produced_pr"] = json!(81);
+        state["copilot_metrics"]["merged"] = json!(80);
+        let update = compute_update(&state, &[595], None).expect("update should compute");
+        assert_eq!(update.produced_pr, 82);
+        assert_eq!(update.pr_merge_rate, "81/82");
     }
 
     #[test]
