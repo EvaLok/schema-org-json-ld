@@ -2059,10 +2059,10 @@
   "last_cycle": {
     "issue": 690,
     "number": 178,
-    "summary": "merged 2 PRs (backfill tool, review artifact), ran backfill-sessions to reconcile 132 historical agent_sessions, reconciled copilot_metrics (114->184), dispatched reconciliation invariant",
-    "timestamp": "2026-03-07T18:06:13Z"
+    "summary": "v1.0.2 published: closed #247, #562, #689. Post-publish transition complete. Merged PRs #686 (reconciliation invariant), #688 (review artifact). Processed audit #136 (qc-outbound housekeeping). Fixed false backfill match #505. Pipeline 5/5, 11/11 invariants.",
+    "timestamp": "2026-03-07T18:20:58Z"
   },
-  "last_eva_comment_check": "2026-03-07T18:06:13Z",
+  "last_eva_comment_check": "2026-03-07T18:20:58Z",
   "open_questions_for_eva": [],
   "publish_gate": {
     "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z",
