@@ -6,26 +6,23 @@ Follow this checklist at the start of every orchestrator cycle. Do not skip step
 
 **Critical**: NEVER use `${}` variable substitution, pipes (`|`), compound commands (`&&`), heredocs (`<<`), or command substitution (`$()`) in Bash tool calls. Each call must be a single, simple command. See `.claude/skills/orchestrator-permissions/SKILL.md` for details.
 
-## 0. Post opening comment
+## 0. Initialize cycle and post opening comment
 
-Write the comment body to a file with the **Write** tool, then post it via `gh api` with `-F body=@file`:
+Run the cycle-start tool as the VERY FIRST action:
 
-1. Get the timestamp:
 ```bash
-date -u '+%Y-%m-%d %H:%M:%S UTC'
+bash tools/cycle-start --issue {NUMBER}
 ```
 
-2. Write comment body to a temp file using the **Write** tool (at e.g. `docs/.tmp-comment.md`)
+This is the single entry point for cycle initialization. It:
+- Claims the cycle number and timestamp in `state.json`
+- Posts the signed opening comment on the cycle issue
+- Refreshes `open_questions_for_eva` and sets freshness markers
+- Produces a structured situation report (Eva directives, in-flight sessions, pipeline status)
 
-3. Post the comment:
-```bash
-gh api "repos/EvaLok/schema-org-json-ld/issues/{NUMBER}/comments" -X POST -F body=@docs/.tmp-comment.md
-```
+Do NOT post a separate manual opening comment — cycle-start handles it. Do NOT manually edit `state.json` for cycle initialization.
 
-Alternatively, for short single-line comments without special characters:
-```bash
-gh api "repos/EvaLok/schema-org-json-ld/issues/{NUMBER}/comments" -X POST -f body="Short comment text here"
-```
+If `cycle-start` fails (e.g., tool not compiled), fall back to manual cycle initialization and log the failure.
 
 ### Comment signing convention (per audit #24)
 
@@ -38,18 +35,6 @@ All orchestrator comments MUST start with a standardized identity header:
 This distinguishes orchestrator comments from Eva's (human) comments, since all three orchestrators post under the same GitHub account. Unsigned comments = human (Eva).
 
 Identifiers: `[main-orchestrator]`, `[qc-orchestrator]`, `[audit-orchestrator]`.
-
-## 0.1. Initialize cycle state (per audit #131)
-
-Run the cycle-start tool as the FIRST action after posting the opening comment:
-
-```bash
-bash tools/cycle-start --issue {NUMBER}
-```
-
-This initializes `last_cycle` (number, timestamp, issue), refreshes `open_questions_for_eva`, and sets freshness markers. Do NOT manually edit `state.json` for cycle initialization — the tool handles it atomically. The tool also posts a structured acknowledgement comment on the cycle issue.
-
-If `cycle-start` fails (e.g., tool not compiled), fall back to manual cycle initialization and log the failure.
 
 ## 0.5. Check previous cycle's review agent (per #463, updated per audit #100)
 
