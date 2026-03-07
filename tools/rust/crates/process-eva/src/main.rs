@@ -68,16 +68,12 @@ fn run(cli: Cli) -> Result<(), String> {
 	)?;
 	write_state_value(&cli.repo_root, &state)?;
 
-	let commit_message = if cli.no_changes {
-		format!("state(process-eva): no changes [cycle {}]", next_cycle)
-	} else {
-		format!(
-			"state(process-eva): closed {}, remaining {} [cycle {}]",
-			format_issue_list(&closed),
-			format_issue_list(remaining_open.as_deref().unwrap_or(&[])),
-			next_cycle
-		)
-	};
+	let commit_message = build_commit_message(
+		&closed,
+		remaining_open.as_deref(),
+		cli.no_changes,
+		next_cycle,
+	);
 	let receipt = commit_state_json(&cli.repo_root, &commit_message)?;
 	if cli.no_changes {
 		println!(
@@ -213,6 +209,24 @@ fn format_issue_list(issues: &[u64]) -> String {
 		.collect::<Vec<_>>()
 		.join(",");
 	format!("[{}]", issue_list)
+}
+
+fn build_commit_message(
+	closed: &[u64],
+	remaining_open: Option<&[u64]>,
+	no_changes: bool,
+	next_cycle: u64,
+) -> String {
+	if no_changes {
+		format!("state(process-eva): no changes [cycle {}]", next_cycle)
+	} else {
+		format!(
+			"state(process-eva): closed {}, remaining {} [cycle {}]",
+			format_issue_list(closed),
+			format_issue_list(remaining_open.unwrap_or(&[])),
+			next_cycle
+		)
+	}
 }
 
 #[cfg(test)]
