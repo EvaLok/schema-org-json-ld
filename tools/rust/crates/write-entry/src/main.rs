@@ -167,7 +167,10 @@ fn execute_journal(
 }
 
 fn resolve_cycle(cycle: Option<u64>, repo_root: &Path) -> Result<u64, String> {
-    cycle.map_or_else(|| current_cycle_from_state(repo_root), Ok)
+    match cycle {
+        Some(cycle) => Ok(cycle),
+        None => current_cycle_from_state(repo_root),
+    }
 }
 
 fn worklog_path(repo_root: &Path, now: DateTime<Utc>, title: &str) -> PathBuf {

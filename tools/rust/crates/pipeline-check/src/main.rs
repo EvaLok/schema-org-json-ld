@@ -566,10 +566,15 @@ mod tests {
                     .and_then(|name| name.to_str())
                     .unwrap_or_default()
                     .to_string();
-                if key == "metric-snapshot" || key == "check-field-inventory-rs" {
-                    assert!(args.windows(2).any(|window| {
-                        window[0] == "--cycle" && window[1] == self.expected_cycle.to_string()
-                    }));
+                let passes_cycle = args
+                    .windows(2)
+                    .any(|window| window[0] == "--cycle" && window[1] == self.expected_cycle.to_string());
+                match key.as_str() {
+                    "metric-snapshot" | "check-field-inventory-rs" => assert!(passes_cycle),
+                    "housekeeping-scan" | "cycle-status" | "state-invariants" => {
+                        assert!(!passes_cycle)
+                    }
+                    _ => panic!("unexpected tool invocation: {}", key),
                 }
                 self.outputs
                     .get(&key)
