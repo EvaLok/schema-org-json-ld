@@ -2078,6 +2078,10 @@
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
         "last_refreshed": "cycle 176"
+      },
+      "last_cycle.duration_minutes": {
+        "cadence": "every cycle (set by cycle-complete)",
+        "last_refreshed": "cycle 180"
       }
     }
   },
@@ -2085,7 +2089,8 @@
     "issue": 702,
     "number": 180,
     "summary": "Merged PR #693 (review artifact). Processed review findings (2 actioned, 2 ignored). Post-publish cleanup: refreshed field inventory, removed step 5.7, updated typescript_plan phases. Removed deprecated check-field-inventory.jq. Dispatched #695 (cycle-start dynamic Eva directives). Pipeline 5/5, 11/11 invariants.",
-    "timestamp": "2026-03-07T21:05:16Z"
+    "timestamp": "2026-03-07T21:05:16Z",
+    "duration_minutes": 7
   },
   "last_eva_comment_check": "2026-03-07T21:05:16Z",
   "open_questions_for_eva": [],
