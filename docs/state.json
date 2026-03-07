@@ -506,8 +506,10 @@
     {
       "dispatched_at": "2026-03-07T15:16:42Z",
       "issue": 680,
+      "merged_at": "2026-03-07T16:46:34Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 681,
+      "status": "merged",
       "title": "Build agent_sessions backfill tool"
     }
   ],
@@ -641,13 +643,13 @@
     "closed_without_merge": 1,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#680 Build agent_sessions backfill tool (cycle 177)",
-    "dispatch_to_pr_rate": "109/112",
-    "in_flight": 2,
-    "merged": 108,
-    "note": "114 dispatches, 112 resolved, 2 in-flight. 109 produced PRs (108 merged, 1 closed without merge). Latest dispatch: #680 Build agent_sessions backfill tool (cycle 177, model gpt-5.4).",
-    "pr_merge_rate": "108/109",
-    "produced_pr": 109,
-    "resolved": 112,
+    "dispatch_to_pr_rate": "110/113",
+    "in_flight": 1,
+    "merged": 109,
+    "note": "114 dispatches, 113 resolved, 1 in-flight. 110 produced PRs (109 merged, 1 closed without merge). 4 resolved without PR (silent failure). PR #681 merged in cycle 177.",
+    "pr_merge_rate": "109/110",
+    "produced_pr": 110,
+    "resolved": 113,
     "revision_rounds": 5,
     "total_dispatches": 114
   },
