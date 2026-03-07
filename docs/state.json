@@ -2064,7 +2064,8 @@
     "validated_commit": "ea8ffff",
     "validated_at": "2026-03-06T04:39Z",
     "qc_ack": "EvaLok/schema-org-json-ld-qc#225",
-    "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z"
+    "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z",
+    "source_diverged": false
   },
   "qc_processed": [
     8,
