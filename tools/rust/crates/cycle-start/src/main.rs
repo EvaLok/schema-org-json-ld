@@ -108,7 +108,7 @@ fn main() {
 
 fn run(cli: Cli) -> Result<(), String> {
     let mut state = read_state_value(&cli.repo_root)?;
-    let state_json = parse_state_json(&state)?;
+    let state_json = read_typed_state_json(&cli.repo_root)?;
 
     let previous_timestamp = state
         .pointer("/last_cycle/timestamp")
@@ -178,9 +178,12 @@ fn format_timestamp_utc() -> String {
     Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string()
 }
 
-fn parse_state_json(state: &Value) -> Result<StateJson, String> {
-    serde_json::from_value(state.clone())
-        .map_err(|error| format!("failed to parse docs/state.json into schema: {}", error))
+fn read_typed_state_json(repo_root: &Path) -> Result<StateJson, String> {
+    let state_path = repo_root.join("docs/state.json");
+    let content = fs::read_to_string(&state_path)
+        .map_err(|error| format!("failed to read {}: {}", state_path.display(), error))?;
+    serde_json::from_str(&content)
+        .map_err(|error| format!("failed to parse {} into schema: {}", state_path.display(), error))
 }
 
 fn load_eva_directives(state: &StateJson) -> Result<Vec<String>, String> {
@@ -195,15 +198,18 @@ where
         .eva_input_issues
         .remaining_open
         .iter()
-        .map(|issue_number| {
-            let issue_number = u64::try_from(*issue_number).map_err(|_| {
+        .map(|raw_issue_number| {
+            let validated_issue_number = u64::try_from(*raw_issue_number).map_err(|_| {
                 format!(
-                    "docs/state.json contains invalid negative eva_input_issues.remaining_open entry: {}",
-                    issue_number
+                    "docs/state.json contains invalid /eva_input_issues/remaining_open entry (negative values are not allowed): {}",
+                    raw_issue_number
                 )
             })?;
-            let title = fetch_title(issue_number)?;
-            Ok(format!("{}#{} ({})", MAIN_REPO, issue_number, title))
+            let title = fetch_title(validated_issue_number)?;
+            Ok(format!(
+                "{}#{} ({})",
+                MAIN_REPO, validated_issue_number, title
+            ))
         })
         .collect()
 }
@@ -813,16 +819,15 @@ fn format_human_brief(brief: &StartupBrief) -> String {
     let qc_line = format_issue_list(&brief.qc_outbound);
     let audit_line = format_issue_list(&brief.audit_outbound);
     let question_line = format_simple_issue_numbers(&brief.questions_for_eva);
-    let eva_directives_line = if brief.eva_directives.is_empty() {
-        "none".to_string()
-    } else {
-        brief.eva_directives.join(", ")
-    };
 
     let mut lines = vec![
         format!("Cycle {} started (receipt: {})", brief.cycle, brief.receipt),
         String::new(),
-        format!("Eva directives: {}", eva_directives_line),
+        if brief.eva_directives.is_empty() {
+            "Eva directives: none".to_string()
+        } else {
+            format!("Eva directives: {}", brief.eva_directives.join(", "))
+        },
         format!(
             "Eva comments since last cycle: {} ({})",
             brief.eva_comments_since_last_cycle.len(),
@@ -1102,7 +1107,7 @@ mod tests {
 
         assert_eq!(
             error,
-            "docs/state.json contains invalid negative eva_input_issues.remaining_open entry: -1"
+            "docs/state.json contains invalid /eva_input_issues/remaining_open entry (negative values are not allowed): -1"
         );
     }
 
