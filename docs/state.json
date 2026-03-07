@@ -637,7 +637,7 @@
     "merged": 83,
     "note": "90 dispatches, 88 resolved (83 merged, 1 closed-no-merge, 4 failed-no-PR), 2 in-flight (#614, #616). Merged #612 (review), #610 (record-dispatch), #609 (process-merge). Dispatched #614 (process-audit), #616 (c166 review).",
     "pr_merge_rate": "83/84",
-    "produced_pr": 84,
+    "produced_pr": 86,
     "resolved": 88,
     "revision_rounds": 5,
     "total_dispatches": 90
