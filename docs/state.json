@@ -632,16 +632,16 @@
   "copilot_metrics": {
     "closed_without_merge": 1,
     "closed_without_pr": 4,
-    "dispatch_log_latest": "#669 Enhance cycle-start to refresh open_questions_for_eva in state.json (cycle 175)",
+    "dispatch_log_latest": "#671 Cycle 175 end-of-cycle review (cycle 175)",
     "dispatch_to_pr_rate": "104/107",
-    "in_flight": 3,
+    "in_flight": 4,
     "merged": 103,
-    "note": "110 dispatches, 107 resolved, 3 in-flight. 104 produced PRs (103 merged, 1 closed without merge). Latest dispatch: #669 Enhance cycle-start to refresh open_questions_for_eva in state.json (cycle 175, model gpt-5.3-codex).",
+    "note": "111 dispatches, 107 resolved, 4 in-flight. 104 produced PRs (103 merged, 1 closed without merge). Latest dispatch: #671 Cycle 175 end-of-cycle review (cycle 175, model gpt-5.3-codex).",
     "pr_merge_rate": "103/104",
     "produced_pr": 104,
     "resolved": 107,
     "revision_rounds": 5,
-    "total_dispatches": 110
+    "total_dispatches": 111
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
