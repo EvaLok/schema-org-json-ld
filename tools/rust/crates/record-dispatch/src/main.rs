@@ -1,3 +1,4 @@
+use chrono::Utc;
 use clap::Parser;
 use serde_json::{json, Value};
 use state_schema::{
@@ -33,6 +34,7 @@ struct DispatchPatch {
     dispatch_to_pr_rate: String,
     dispatch_log_latest: String,
     note: String,
+    agent_session: Value,
     current_cycle: u64,
 }
 
@@ -46,6 +48,7 @@ fn main() {
 
 fn run(cli: Cli) -> Result<(), String> {
     let mut state_value = read_state_value(&cli.repo_root)?;
+    let dispatched_at = current_utc_timestamp();
     let current_cycle = current_cycle_from_state(&cli.repo_root).map_err(|error| {
         if error == "missing /last_cycle/number in state.json" {
             "missing numeric /last_cycle/number in docs/state.json".to_string()
@@ -60,6 +63,7 @@ fn run(cli: Cli) -> Result<(), String> {
         cli.issue,
         &cli.title,
         &cli.model,
+        &dispatched_at,
     )?;
     apply_dispatch_patch(&mut state_value, &patch)?;
     write_state_value(&cli.repo_root, &state_value)?;
@@ -89,6 +93,7 @@ fn build_dispatch_patch(
     issue: u64,
     title: &str,
     model: &str,
+    dispatched_at: &str,
 ) -> Result<DispatchPatch, String> {
     let total_dispatches = read_required_i64(state, "/copilot_metrics/total_dispatches")?;
     let in_flight = read_required_i64(state, "/copilot_metrics/in_flight")?;
@@ -119,8 +124,19 @@ fn build_dispatch_patch(
             current_cycle,
             model,
         ),
+        agent_session: json!({
+            "issue": issue,
+            "title": title,
+            "dispatched_at": dispatched_at,
+            "model": model,
+            "status": "in_flight"
+        }),
         current_cycle,
     })
+}
+
+fn current_utc_timestamp() -> String {
+    Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string()
 }
 
 fn read_required_i64(state: &Value, pointer: &str) -> Result<i64, String> {
@@ -209,6 +225,11 @@ fn apply_dispatch_patch(state: &mut Value, patch: &DispatchPatch) -> Result<(), 
         "/field_inventory/fields/copilot_metrics.dispatch_to_pr_rate/last_refreshed",
         json!(cycle_marker),
     )?;
+    state
+        .pointer_mut("/agent_sessions")
+        .and_then(Value::as_array_mut)
+        .ok_or_else(|| "missing array /agent_sessions in docs/state.json".to_string())?
+        .push(patch.agent_session.clone());
 
     Ok(())
 }
@@ -220,6 +241,17 @@ mod tests {
 
     fn sample_state() -> Value {
         json!({
+            "agent_sessions": [
+                {
+                    "issue": 601,
+                    "title": "old dispatch",
+                    "dispatched_at": "2026-03-01T00:00:00Z",
+                    "model": "gpt-5.3-codex",
+                    "status": "merged",
+                    "pr": 700,
+                    "merged_at": "2026-03-02T00:00:00Z"
+                }
+            ],
             "last_cycle": { "number": 164 },
             "copilot_metrics": {
                 "total_dispatches": 85,
@@ -255,9 +287,15 @@ mod tests {
 
     #[test]
     fn metric_calculation_after_dispatch_is_correct() {
-        let patch =
-            build_dispatch_patch(&sample_state(), 164, 602, "Example dispatch", "gpt-5.3-codex")
-                .expect("patch should build");
+        let patch = build_dispatch_patch(
+            &sample_state(),
+            164,
+            602,
+            "Example dispatch",
+            "gpt-5.3-codex",
+            "2026-03-07T13:00:00Z",
+        )
+        .expect("patch should build");
         assert_eq!(patch.total_dispatches, 86);
         assert_eq!(patch.in_flight, 3);
         assert_eq!(patch.dispatch_to_pr_rate, "81/83");
@@ -284,9 +322,61 @@ mod tests {
 
     #[test]
     fn concurrency_warning_threshold_is_triggered_at_three() {
-        let patch =
-            build_dispatch_patch(&sample_state(), 164, 602, "Example dispatch", "gpt-5.3-codex")
-                .expect("patch should build");
+        let patch = build_dispatch_patch(
+            &sample_state(),
+            164,
+            602,
+            "Example dispatch",
+            "gpt-5.3-codex",
+            "2026-03-07T13:00:00Z",
+        )
+        .expect("patch should build");
         assert!(patch.in_flight >= 3);
+    }
+
+    #[test]
+    fn dispatch_patch_includes_agent_session_entry() {
+        let patch = build_dispatch_patch(
+            &sample_state(),
+            164,
+            602,
+            "Example dispatch",
+            "gpt-5.3-codex",
+            "2026-03-07T13:00:00Z",
+        )
+        .expect("patch should build");
+
+        assert_eq!(
+            patch.agent_session,
+            json!({
+                "issue": 602,
+                "title": "Example dispatch",
+                "dispatched_at": "2026-03-07T13:00:00Z",
+                "model": "gpt-5.3-codex",
+                "status": "in_flight"
+            })
+        );
+    }
+
+    #[test]
+    fn apply_dispatch_patch_appends_agent_session() {
+        let mut state = sample_state();
+        let patch = build_dispatch_patch(
+            &state,
+            164,
+            602,
+            "Example dispatch",
+            "gpt-5.3-codex",
+            "2026-03-07T13:00:00Z",
+        )
+        .expect("patch should build");
+
+        apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
+
+        let sessions = state["agent_sessions"].as_array().expect("agent_sessions array");
+        assert_eq!(sessions.len(), 2);
+        assert_eq!(sessions[1]["issue"], json!(602));
+        assert_eq!(sessions[1]["status"], json!("in_flight"));
+        assert_eq!(sessions[1]["dispatched_at"], json!("2026-03-07T13:00:00Z"));
     }
 }

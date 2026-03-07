@@ -1,3 +1,4 @@
+use chrono::Utc;
 use clap::Parser;
 use serde_json::{json, Value};
 use state_schema::{
@@ -12,6 +13,10 @@ struct Cli {
     /// Comma-separated list of merged PR numbers (e.g. "595,597,599")
     #[arg(long, value_delimiter = ',', num_args = 1..)]
     prs: Vec<u64>,
+
+    /// Optional comma-separated list of issue numbers matching --prs by position
+    #[arg(long, value_delimiter = ',', num_args = 1..)]
+    issues: Vec<u64>,
 
     /// Repository root path
     #[arg(long, default_value = ".")]
@@ -53,8 +58,12 @@ fn run(cli: Cli) -> Result<(), String> {
     if cli.prs.is_empty() {
         return Err("at least one PR number is required via --prs".to_string());
     }
+    if !cli.issues.is_empty() && cli.issues.len() != cli.prs.len() {
+        return Err("--issues must have the same number of values as --prs".to_string());
+    }
 
     let mut state = read_state_value(&cli.repo_root)?;
+    let merged_at = current_utc_timestamp();
     let current_cycle = current_cycle_from_state(&cli.repo_root).map_err(|error| {
         if error == "missing /last_cycle/number in state.json" {
             "missing numeric /last_cycle/number in docs/state.json".to_string()
@@ -65,6 +74,12 @@ fn run(cli: Cli) -> Result<(), String> {
     let update = compute_update(&state, current_cycle, &cli.prs, cli.note.as_deref())?;
     let patch = build_patch(&update)?;
     apply_patch(&mut state, &patch)?;
+    update_agent_sessions(
+        &mut state,
+        &cli.prs,
+        (!cli.issues.is_empty()).then_some(cli.issues.as_slice()),
+        &merged_at,
+    )?;
     write_state_value(&cli.repo_root, &state)?;
 
     let commit_message = format!(
@@ -94,6 +109,10 @@ fn get_metric_i64(state: &Value, field: &str) -> Result<i64, String> {
                 field
             )
         })
+}
+
+fn current_utc_timestamp() -> String {
+    Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string()
 }
 
 fn compute_update(
@@ -240,6 +259,57 @@ fn apply_patch(state: &mut Value, updates: &[PatchUpdate]) -> Result<(), String>
     Ok(())
 }
 
+fn update_agent_sessions(
+    state: &mut Value,
+    prs: &[u64],
+    issues: Option<&[u64]>,
+    merged_at: &str,
+) -> Result<(), String> {
+    let Some(sessions) = state
+        .pointer_mut("/agent_sessions")
+        .and_then(Value::as_array_mut)
+    else {
+        return Err("missing array /agent_sessions in docs/state.json".to_string());
+    };
+
+    let Some(issues) = issues else {
+        eprintln!(
+            "Warning: --issues not provided; skipping agent_sessions merge updates for {}",
+            format_pr_list(prs)
+        );
+        return Ok(());
+    };
+
+    for (pr, issue) in prs.iter().zip(issues.iter()) {
+        let mut matched = false;
+        for session in sessions.iter_mut() {
+            let Some(object) = session.as_object_mut() else {
+                continue;
+            };
+
+            let existing_pr = object.get("pr").and_then(Value::as_u64);
+            let existing_issue = object.get("issue").and_then(Value::as_u64);
+
+            if existing_pr == Some(*pr) || existing_issue == Some(*issue) {
+                object.insert("status".to_string(), json!("merged"));
+                object.insert("merged_at".to_string(), json!(merged_at));
+                object.insert("pr".to_string(), json!(pr));
+                matched = true;
+                break;
+            }
+        }
+
+        if !matched {
+            eprintln!(
+                "Warning: no agent_sessions entry found for PR #{} (issue #{})",
+                pr, issue
+            );
+        }
+    }
+
+    Ok(())
+}
+
 fn format_pr_list(prs: &[u64]) -> String {
     let formatted: Vec<String> = prs.iter().map(|pr| format!("#{}", pr)).collect();
     if formatted.len() == 1 {
@@ -256,6 +326,23 @@ mod tests {
 
     fn sample_state() -> Value {
         json!({
+            "agent_sessions": [
+                {
+                    "issue": 667,
+                    "title": "Dispatched issue 667",
+                    "dispatched_at": "2026-03-05T10:00:00Z",
+                    "model": "gpt-5.3-codex",
+                    "status": "in_flight"
+                },
+                {
+                    "issue": 668,
+                    "title": "Already linked",
+                    "dispatched_at": "2026-03-05T11:00:00Z",
+                    "model": "gpt-5.3-codex",
+                    "status": "in_flight",
+                    "pr": 669
+                }
+            ],
             "last_cycle": {"number": 164},
             "copilot_metrics": {
                 "closed_without_merge": 1,
@@ -286,6 +373,7 @@ mod tests {
         command.write_long_help(&mut output).unwrap();
         let help = String::from_utf8(output).unwrap();
         assert!(help.contains("--prs"));
+        assert!(help.contains("--issues"));
         assert!(help.contains("--repo-root"));
         assert!(help.contains("--note"));
     }
@@ -385,5 +473,64 @@ mod tests {
     fn format_pr_list_handles_single_and_multiple_values() {
         assert_eq!(format_pr_list(&[595]), "PR #595");
         assert_eq!(format_pr_list(&[595, 597]), "PRs #595, #597");
+    }
+
+    #[test]
+    fn update_agent_sessions_matches_issue_mapping_and_sets_merge_fields() {
+        let mut state = sample_state();
+
+        update_agent_sessions(
+            &mut state,
+            &[668],
+            Some(&[667]),
+            "2026-03-07T13:00:00Z",
+        )
+        .expect("agent sessions should update");
+
+        let sessions = state["agent_sessions"].as_array().expect("agent_sessions array");
+        assert_eq!(sessions[0]["issue"], json!(667));
+        assert_eq!(sessions[0]["status"], json!("merged"));
+        assert_eq!(sessions[0]["pr"], json!(668));
+        assert_eq!(sessions[0]["merged_at"], json!("2026-03-07T13:00:00Z"));
+    }
+
+    #[test]
+    fn update_agent_sessions_matches_existing_pr_without_issue_mapping() {
+        let mut state = sample_state();
+
+        update_agent_sessions(&mut state, &[669], Some(&[999]), "2026-03-07T13:00:00Z")
+            .expect("agent sessions should update");
+
+        let sessions = state["agent_sessions"].as_array().expect("agent_sessions array");
+        assert_eq!(sessions[1]["status"], json!("merged"));
+        assert_eq!(sessions[1]["pr"], json!(669));
+        assert_eq!(sessions[1]["merged_at"], json!("2026-03-07T13:00:00Z"));
+    }
+
+    #[test]
+    fn update_agent_sessions_skips_when_issues_not_provided() {
+        let mut state = sample_state();
+        let before = state["agent_sessions"].clone();
+
+        update_agent_sessions(&mut state, &[668], None, "2026-03-07T13:00:00Z")
+            .expect("missing issues should not fail");
+
+        assert_eq!(state["agent_sessions"], before);
+    }
+
+    #[test]
+    fn update_agent_sessions_warns_but_does_not_fail_when_mapping_is_missing() {
+        let mut state = sample_state();
+        let before = state["agent_sessions"].clone();
+
+        update_agent_sessions(
+            &mut state,
+            &[700],
+            Some(&[777]),
+            "2026-03-07T13:00:00Z",
+        )
+        .expect("missing session should not fail");
+
+        assert_eq!(state["agent_sessions"], before);
     }
 }
