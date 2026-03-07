@@ -1755,6 +1755,13 @@
       "model": "gpt-5.3-codex",
       "status": "in_flight",
       "title": "Language evaluation: next implementation target analysis"
+    },
+    {
+      "dispatched_at": "2026-03-07T21:18:37Z",
+      "issue": 709,
+      "model": "gpt-5.3-codex",
+      "status": "in_flight",
+      "title": "Cycle 180 end-of-cycle review"
     }
   ],
   "audit_processed": [
@@ -1888,16 +1895,16 @@
   "copilot_metrics": {
     "closed_without_merge": 1,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#707 Language evaluation: next implementation target analysis (cycle 180)",
+    "dispatch_log_latest": "#709 Cycle 180 end-of-cycle review (cycle 180)",
     "dispatch_to_pr_rate": "184/188",
-    "in_flight": 2,
+    "in_flight": 3,
     "merged": 183,
-    "note": "190 dispatches, 188 resolved, 2 in-flight. 184 produced PRs (183 merged, 1 closed without merge). Latest dispatch: #707 Language evaluation: next implementation target analysis (cycle 180, model gpt-5.3-codex).",
+    "note": "191 dispatches, 188 resolved, 3 in-flight. 184 produced PRs (183 merged, 1 closed without merge). Latest dispatch: #709 Cycle 180 end-of-cycle review (cycle 180, model gpt-5.3-codex).",
     "pr_merge_rate": "183/184",
     "produced_pr": 184,
     "resolved": 188,
     "revision_rounds": 5,
-    "total_dispatches": 190
+    "total_dispatches": 191
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
