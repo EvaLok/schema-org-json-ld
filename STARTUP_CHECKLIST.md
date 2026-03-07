@@ -434,6 +434,7 @@ Read your recent journal and worklog entries with fresh eyes:
 - Delete remote branches from merged/closed PRs (`git push origin --delete branch-name`)
 - Clean up any orphan files or incomplete work
 - **Audit-inbound lifecycle (stale sweep per audit #67)**: List ALL open `audit-inbound` issues (`gh issue list --label "audit-inbound" --state open`). For each one older than 1 cycle, verify it has been processed and close it with a brief comment confirming what was implemented. If a stale audit-inbound issue is found (open but already processed), log the lifecycle failure in the worklog.
+- **QC-outbound lifecycle (per audit #136)**: List ALL open `qc-outbound` issues (`gh issue list --label "qc-outbound" --state open`). For each, check whether the requested action has been completed (response received, QC-ACK filed, sign-off delivered, etc.). Close resolved `qc-outbound` issues with a summary comment. This prevents stale request issues from accumulating after responses have been received through other channels.
 
 ## 8. Check concurrency
 

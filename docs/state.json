@@ -1787,7 +1787,8 @@
     122,
     125,
     131,
-    134
+    134,
+    136
   ],
   "blockers": [
     {
@@ -2966,7 +2967,10 @@
       "level_max_errors": 0,
       "note": "Level max achieved. Fixed 3 mixed-offset errors with local array accumulator in AddPropertiesToObject()."
     },
-    "planned_next": [],
+    "planned_next": {
+      "note": "New schema types default to dual-language (PHP + TS). Implement both in paired issues.",
+      "queue": []
+    },
     "property_gap_audit": {
       "100_percent_coverage": [
         "Article",

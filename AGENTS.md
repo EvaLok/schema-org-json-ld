@@ -374,3 +374,12 @@ This keeps documentation in sync with code. See `doc/adr/0005-documentation-as-c
 - **Don't modify `JsonLdGenerator`** unless the issue specifically asks for it.
 - **Don't modify `TypedSchema`** unless the issue specifically asks for it.
 - **Composer autoload**: New classes are auto-discovered via PSR-4; no need to modify `composer.json` unless adding new top-level namespaces.
+
+## Version Coordination (PHP + TypeScript)
+
+The PHP (Composer) and TypeScript (npm) packages version **independently**. They share the same schema implementations but may be at different version numbers.
+
+- **PHP**: versioned via `composer.json` — published to Packagist
+- **TypeScript**: versioned via `package.json` — published to npm as `@evabee/schema-org-json-ld`
+
+When adding a new schema type, implement it in **both PHP and TypeScript** in the same issue or as paired issues. This keeps the two packages in feature parity. The QC orchestrator validates parity between the two implementations.
