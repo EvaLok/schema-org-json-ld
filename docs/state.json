@@ -723,11 +723,11 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 167"
+        "last_refreshed": "cycle 168"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 167"
+        "last_refreshed": "cycle 168"
       },
       "next_metric_verification": {
         "cadence": "after each verification run",
@@ -840,12 +840,12 @@
     }
   },
   "last_cycle": {
-    "issue": 618,
-    "number": 167,
-    "summary": "Merged #615 (process-audit) and #617 (c166 review, score 2/5). Actioned state-freshness finding, deferred tool-quality dedup. Dispatched #619 (process-eva) and #621 (state-schema shared I/O refactor). Pipeline 5/5 pass, 9/9 invariants. 92 total dispatches, 85 merged, 2 in-flight.",
-    "timestamp": "2026-03-07T00:27:57Z"
+    "issue": 625,
+    "number": 168,
+    "summary": "Merged 3 PRs (#620 process-eva, #622 state-schema refactor, #624 c167 review). All step 2 write-side tools now complete. Fixed produced_pr accounting and dispatch_to_pr_rate denominator. Dispatched #626 (tool fixes). Pipeline 5/5, 9/9 invariants.",
+    "timestamp": "2026-03-07T02:27:07Z"
   },
-  "last_eva_comment_check": "2026-03-07T00:27:57Z",
+  "last_eva_comment_check": "2026-03-07T02:27:07Z",
   "next_metric_verification": "cycle 151",
   "open_questions_for_eva": [
     606
