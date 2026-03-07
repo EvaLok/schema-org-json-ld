@@ -1843,13 +1843,13 @@
     "closed_without_merge": 1,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#687 Cycle 178 end-of-cycle review (cycle 177)",
-    "dispatch_to_pr_rate": "179/183",
-    "in_flight": 2,
-    "merged": 178,
-    "note": "185 dispatches, 183 resolved, 2 in-flight. 179 produced PRs (178 merged, 1 closed without merge). Removed false backfill match #505 (audit-inbound, not agent-task). Latest dispatch: #687.",
-    "pr_merge_rate": "178/179",
-    "produced_pr": 179,
-    "resolved": 183,
+    "dispatch_to_pr_rate": "181/185",
+    "in_flight": 0,
+    "merged": 180,
+    "note": "185 dispatches, 185 resolved, 0 in-flight. 181 produced PRs (180 merged, 1 closed without merge). 3 resolved without PR (silent failure). PRs #686, #688 merged in cycle 178.",
+    "pr_merge_rate": "180/181",
+    "produced_pr": 181,
+    "resolved": 185,
     "revision_rounds": 5,
     "total_dispatches": 185
   },
@@ -1914,15 +1914,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 177"
+        "last_refreshed": "cycle 178"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 177"
+        "last_refreshed": "cycle 178"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 177"
+        "last_refreshed": "cycle 178"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
@@ -2055,17 +2055,17 @@
   "last_eva_comment_check": "2026-03-07T18:06:13Z",
   "open_questions_for_eva": [],
   "publish_gate": {
-    "status": "published",
-    "published_version": "1.0.2",
+    "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z",
+    "note": "v1.0.2 published by Eva. v1.0.1 failed due to CI workflow incompatibility with npm OIDC trusted publishing (Node 22 ships npm 10, OIDC requires npm 11.5+). Package contents identical to validated ea8ffff.",
+    "npm_url": "https://www.npmjs.com/package/@evabee/schema-org-json-ld",
     "published_at": "2026-03-07",
     "published_by": "EvaLok",
-    "npm_url": "https://www.npmjs.com/package/@evabee/schema-org-json-ld",
-    "note": "v1.0.2 published by Eva. v1.0.1 failed due to CI workflow incompatibility with npm OIDC trusted publishing (Node 22 ships npm 10, OIDC requires npm 11.5+). Package contents identical to validated ea8ffff.",
-    "validated_commit": "ea8ffff",
-    "validated_at": "2026-03-06T04:39Z",
+    "published_version": "1.0.2",
     "qc_ack": "EvaLok/schema-org-json-ld-qc#225",
-    "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z",
-    "source_diverged": false
+    "source_diverged": false,
+    "status": "published",
+    "validated_at": "2026-03-06T04:39Z",
+    "validated_commit": "ea8ffff"
   },
   "qc_processed": [
     8,
