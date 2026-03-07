@@ -846,10 +846,10 @@
   "last_cycle": {
     "issue": 666,
     "number": 175,
-    "summary": "merged 3 PRs, closed Eva directives #586 and #591 (write-side pipeline and cycle-start complete), actioned review findings, consolidated startup checklist",
-    "timestamp": "2026-03-07T12:07:18Z"
+    "summary": "Processed cycle 174 review (3/5, 2 findings). Merged PR #665 (review artifact). Dispatched #667 (standardize cycle number access) and #669 (cycle-start open_questions refresh). Fixed stale fields. Pipeline 5/5 PASS.",
+    "timestamp": "2026-03-07T12:19:09Z"
   },
-  "last_eva_comment_check": "2026-03-07T12:07:18Z",
+  "last_eva_comment_check": "2026-03-07T12:19:09Z",
   "next_metric_verification": "cycle 151",
   "open_questions_for_eva": [],
   "publish_gate": {
