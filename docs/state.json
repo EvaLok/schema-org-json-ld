@@ -1384,14 +1384,14 @@
         "ignored": 0
       },
       {
-        "actioned": 0,
+        "actioned": 1,
         "categories": [
           "review-dispatch-accounting",
           "startup-comment-duplication"
         ],
         "complacency_score": 2,
         "cycle": 173,
-        "deferred": 0,
+        "deferred": 1,
         "finding_count": 2,
         "ignored": 0
       }
