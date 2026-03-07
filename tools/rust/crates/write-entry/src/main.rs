@@ -234,6 +234,12 @@ fn write_journal_file(path: &Path, date: NaiveDate, entry: &str) -> Result<bool,
 
 fn update_journal_index(repo_root: &Path, date: NaiveDate, cycle: u64) -> Result<(), String> {
     let journal_index_path = repo_root.join("JOURNAL.md");
+    if !journal_index_path.exists() {
+        return Err(format!(
+            "missing journal index file at {}",
+            journal_index_path.display()
+        ));
+    }
     let content = fs::read_to_string(&journal_index_path)
         .map_err(|error| format!("failed to read {}: {}", journal_index_path.display(), error))?;
     let date_slug = date.format("%Y-%m-%d").to_string();
@@ -955,12 +961,12 @@ mod tests {
             title: "New date".to_string(),
         };
         let payload = r#"{
-			"previous_commitment_status":"followed",
-			"previous_commitment_detail":"Done.",
-			"sections":[],
-			"concrete_behavior_change":"Keep going.",
-			"open_questions":[]
-		}"#;
+            "previous_commitment_status":"followed",
+            "previous_commitment_detail":"Done.",
+            "sections":[],
+            "concrete_behavior_change":"Keep going.",
+            "open_questions":[]
+        }"#;
 
         execute_journal(&args, &repo_root.path, fixed_now(), payload).unwrap();
 
@@ -997,12 +1003,12 @@ mod tests {
             title: "Append".to_string(),
         };
         let payload = r#"{
-			"previous_commitment_status":"followed",
-			"previous_commitment_detail":"Done.",
-			"sections":[],
-			"concrete_behavior_change":"Keep going.",
-			"open_questions":[]
-		}"#;
+            "previous_commitment_status":"followed",
+            "previous_commitment_detail":"Done.",
+            "sections":[],
+            "concrete_behavior_change":"Keep going.",
+            "open_questions":[]
+        }"#;
 
         execute_journal(&args, &repo_root.path, fixed_now(), payload).unwrap();
 
