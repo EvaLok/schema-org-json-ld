@@ -252,8 +252,7 @@ fn update_journal_index(repo_root: &Path, date: NaiveDate, cycle: u64) -> Result
     if let Some(previous_date) = lines
         .iter()
         .rev()
-        .find(|line| line.ends_with('+'))
-        .and_then(|line| journal_index_entry_date(line))
+        .find_map(|line| open_journal_index_entry_date(line))
     {
         finalize_previous_journal_index_entry(repo_root, &mut lines, previous_date)?;
     }
@@ -288,9 +287,14 @@ fn finalize_previous_journal_index_entry(
     Ok(())
 }
 
-fn journal_index_entry_date(line: &str) -> Option<NaiveDate> {
-    let date_slug = line.strip_prefix("- [")?.split_once("](")?.0;
-    NaiveDate::parse_from_str(date_slug, "%Y-%m-%d").ok()
+fn open_journal_index_entry_date(line: &str) -> Option<NaiveDate> {
+    let (date_part, rest) = line.strip_prefix("- [")?.split_once("](")?;
+    let (path_part, cycles_part) = rest.split_once(") — Cycles ")?;
+    let cycle_start = cycles_part.strip_suffix('+')?.parse::<u64>().ok()?;
+    if cycle_start == 0 || path_part != format!("docs/journal/{date_part}.md") {
+        return None;
+    }
+    NaiveDate::parse_from_str(date_part, "%Y-%m-%d").ok()
 }
 
 fn highest_cycle_in_journal_file(path: &Path) -> Result<u64, String> {
