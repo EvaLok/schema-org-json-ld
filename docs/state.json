@@ -1314,17 +1314,17 @@
       {
         "actioned": 4,
         "categories": [
-          "cycle-167-review-accounting-was-consumed-into-state-json-incorrectly-which-breaks-the-trend-data-the-orchestrator-is-now-relying-on",
-          "cycle-168-closes-with-a-false-all-green-narrative-the-repository-currently-fails-2-of-the-9-state-invariants",
-          "publish-gate-divergence-tracking-is-stale-even-though-the-worklog-says-cycle-168-revalidated-it",
-          "the-dispatch-to-pr-rate-fix-is-still-wrong-in-state-json-so-the-worklog-overstates-what-was-repaired",
-          "the-operator-checklist-is-still-materially-out-of-sync-with-the-tool-driven-workflow-that-cycle-168-says-is-now-the-norm",
-          "the-shared-i-o-dedup-story-is-ahead-of-the-code-process-eva-still-carries-private-state-read-write-commit-helpers"
+          "state-consistency",
+          "state-consistency",
+          "state-consistency",
+          "infrastructure-drift",
+          "state-traceability",
+          "documentation-drift"
         ],
-        "complacency_score": 5,
+        "complacency_score": 3,
         "cycle": 168,
         "deferred": 1,
-        "finding_count": 5,
+        "finding_count": 6,
         "ignored": 1,
         "note": "Findings: false-green-narrative, dispatch_to_pr_rate, review-history, process-eva-shared-io, publish-gate-divergence, completion-checklist-drift. Actioned 4 (narrative, rate, history, divergence), deferred 1 (process-eva shared I/O — dispatch next), ignored 1 (checklist update — not urgent)."
       }
