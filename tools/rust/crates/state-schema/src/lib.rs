@@ -301,6 +301,7 @@ pub struct CopilotMetrics {
 pub struct LastCycle {
     pub issue: Option<i64>,
     pub timestamp: Option<String>,
+    pub duration_minutes: Option<u64>,
     pub summary: Option<String>,
     #[serde(flatten)]
     pub extra: BTreeMap<String, Value>,
@@ -419,7 +420,7 @@ pub struct Blockers {
 mod tests {
     use super::{
         commit_state_json, current_cycle_from_state, read_state_value, set_value_at_pointer,
-        update_freshness, write_state_value,
+        update_freshness, write_state_value, StateJson,
     };
     use serde_json::{json, Value};
     use std::env;
@@ -684,6 +685,19 @@ mod tests {
 
         let error = current_cycle_from_state(repo.path()).expect_err("missing cycle must fail");
         assert_eq!(error, "missing /last_cycle/number in state.json");
+    }
+
+    #[test]
+    fn last_cycle_deserializes_duration_minutes_when_present() {
+        let state: StateJson = serde_json::from_value(json!({
+            "last_cycle": {
+                "timestamp": "2026-03-07T21:05:16Z",
+                "duration_minutes": 47
+            }
+        }))
+        .expect("state should deserialize");
+
+        assert_eq!(state.last_cycle.duration_minutes, Some(47));
     }
 
     #[test]

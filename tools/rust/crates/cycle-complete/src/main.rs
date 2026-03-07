@@ -55,6 +55,7 @@ struct CompletionReport {
     cycle: u64,
     issue: u64,
     timestamp: String,
+    session_duration_minutes: u64,
     pipeline_check: PipelineCheckStatus,
     state_json_patch: StatePatch,
     review_agent_body: String,
@@ -117,11 +118,21 @@ fn main() {
         .summary
         .as_deref()
         .unwrap_or("TODO: Fill cycle summary.");
-    let report = assemble_report(cycle, cli.issue, now, &state, summary);
+    let report = match assemble_report(cycle, cli.issue, now, &state, summary) {
+        Ok(report) => report,
+        Err(error) => {
+            eprintln!("Error: {}", error);
+            std::process::exit(1);
+        }
+    };
 
     if cli.apply {
         match apply_cycle_patch(&cli.repo_root, &report.state_json_patch) {
             Ok(changed_paths) => {
+                println!(
+                    "Session duration: {} minutes",
+                    report.session_duration_minutes
+                );
                 print_patch_apply_summary(&changed_paths);
                 if cli.commit {
                     let commit_message = format!("state(cycle-complete): {} [cycle {}]", summary, cycle);
@@ -176,26 +187,57 @@ fn assemble_report(
     now: DateTime<Utc>,
     state: &StateJson,
     summary: &str,
-) -> CompletionReport {
+) -> Result<CompletionReport, String> {
     let timestamp = format_timestamp(now);
+    let session_duration_minutes = compute_session_duration_minutes(state, now)?;
     let pipeline_check = validate_pipeline_check(state, cycle);
-    let state_json_patch = build_state_patch(cycle, issue, &timestamp, state, summary);
+    let state_json_patch = build_state_patch(
+        cycle,
+        issue,
+        &timestamp,
+        session_duration_minutes,
+        state,
+        summary,
+    );
     let review_agent_body = build_review_agent_body(cycle, issue, now);
     let completion_steps = build_completion_steps(&pipeline_check, &state_json_patch);
 
-    CompletionReport {
+    Ok(CompletionReport {
         cycle,
         issue,
         timestamp,
+        session_duration_minutes,
         pipeline_check,
         state_json_patch,
         review_agent_body,
         completion_steps,
-    }
+    })
 }
 
 fn format_timestamp(now: DateTime<Utc>) -> String {
     now.format("%Y-%m-%dT%H:%M:%SZ").to_string()
+}
+
+fn compute_session_duration_minutes(
+    state: &StateJson,
+    now: DateTime<Utc>,
+) -> Result<u64, String> {
+    let start_timestamp = state
+        .last_cycle
+        .timestamp
+        .as_deref()
+        .ok_or_else(|| "missing docs/state.json last_cycle.timestamp".to_string())?;
+    let start = DateTime::parse_from_rfc3339(start_timestamp)
+        .map_err(|error| format!("invalid docs/state.json last_cycle.timestamp: {}", error))?
+        .with_timezone(&Utc);
+
+    if start > now {
+        return Err("docs/state.json last_cycle.timestamp is in the future".to_string());
+    }
+
+    let elapsed_seconds = now.signed_duration_since(start).num_seconds();
+    let rounded_minutes = ((elapsed_seconds + 30) / 60) as u64;
+    Ok(rounded_minutes)
 }
 
 fn validate_pipeline_check(state: &StateJson, cycle: u64) -> PipelineCheckStatus {
@@ -223,6 +265,7 @@ fn build_state_patch(
     cycle: u64,
     issue: u64,
     timestamp: &str,
+    duration_minutes: u64,
     state: &StateJson,
     summary: &str,
 ) -> StatePatch {
@@ -238,6 +281,10 @@ fn build_state_patch(
         PatchUpdate {
             path: "/last_cycle/timestamp".to_string(),
             value: json!(timestamp),
+        },
+        PatchUpdate {
+            path: "/last_cycle/duration_minutes".to_string(),
+            value: json!(duration_minutes),
         },
         PatchUpdate {
             path: "/last_cycle/summary".to_string(),
@@ -448,6 +495,10 @@ fn build_completion_steps(
 
 fn print_human_report(report: &CompletionReport) {
     println!("Cycle Completion — Cycle {}", report.cycle);
+    println!(
+        "Session duration: {} minutes",
+        report.session_duration_minutes
+    );
     println!();
     for step in &report.completion_steps {
         println!(
@@ -517,29 +568,40 @@ mod tests {
             json!({"last_refreshed": "cycle 120"}),
         );
         state.field_inventory.fields.insert(
+            "last_cycle.duration_minutes".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
             "last_eva_comment_check".to_string(),
             json!({"last_refreshed": "cycle 120"}),
         );
-        let patch = build_state_patch(139, 464, "2026-03-05T05:06:07Z", &state, "summary");
-        assert_eq!(patch.updates.len(), 7);
+        let patch = build_state_patch(139, 464, "2026-03-05T05:06:07Z", 47, &state, "summary");
+        assert_eq!(patch.updates.len(), 9);
         assert_eq!(patch.updates[0].path, "/last_cycle/number");
         assert_eq!(patch.updates[0].value, json!(139));
         assert_eq!(patch.updates[1].path, "/last_cycle/issue");
         assert_eq!(patch.updates[1].value, json!(464));
         assert_eq!(patch.updates[2].path, "/last_cycle/timestamp");
         assert_eq!(patch.updates[2].value, json!("2026-03-05T05:06:07Z"));
-        assert_eq!(patch.updates[3].path, "/last_cycle/summary");
-        assert_eq!(patch.updates[3].value, json!("summary"));
-        assert_eq!(
-            patch.updates[5].path,
-            "/field_inventory/fields/last_cycle/last_refreshed"
-        );
-        assert_eq!(patch.updates[5].value, json!("cycle 139"));
+        assert_eq!(patch.updates[3].path, "/last_cycle/duration_minutes");
+        assert_eq!(patch.updates[3].value, json!(47));
+        assert_eq!(patch.updates[4].path, "/last_cycle/summary");
+        assert_eq!(patch.updates[4].value, json!("summary"));
         assert_eq!(
             patch.updates[6].path,
-            "/field_inventory/fields/last_eva_comment_check/last_refreshed"
+            "/field_inventory/fields/last_cycle/last_refreshed"
         );
         assert_eq!(patch.updates[6].value, json!("cycle 139"));
+        assert_eq!(
+            patch.updates[7].path,
+            "/field_inventory/fields/last_cycle.duration_minutes/last_refreshed"
+        );
+        assert_eq!(patch.updates[7].value, json!("cycle 139"));
+        assert_eq!(
+            patch.updates[8].path,
+            "/field_inventory/fields/last_eva_comment_check/last_refreshed"
+        );
+        assert_eq!(patch.updates[8].value, json!("cycle 139"));
     }
 
     #[test]
@@ -550,11 +612,15 @@ mod tests {
             json!({"last_refreshed": "cycle 120"}),
         );
         state.field_inventory.fields.insert(
+            "last_cycle.duration_minutes".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
             "last_eva_comment_check".to_string(),
             json!({"last_refreshed": "cycle 120"}),
         );
 
-        let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", &state, "summary");
+        let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", 47, &state, "summary");
         let freshness_paths: Vec<&str> = patch
             .updates
             .iter()
@@ -563,6 +629,9 @@ mod tests {
             .collect();
 
         assert!(freshness_paths.contains(&"/field_inventory/fields/last_cycle/last_refreshed"));
+        assert!(
+            freshness_paths.contains(&"/field_inventory/fields/last_cycle.duration_minutes/last_refreshed")
+        );
         assert!(freshness_paths
             .contains(&"/field_inventory/fields/last_eva_comment_check/last_refreshed"));
     }
@@ -585,6 +654,10 @@ mod tests {
                 value: json!("2026-03-06T00:00:00Z"),
             },
             PatchUpdate {
+                path: "/last_cycle/duration_minutes".to_string(),
+                value: json!(47),
+            },
+            PatchUpdate {
                 path: "/last_cycle/summary".to_string(),
                 value: json!("summary"),
             },
@@ -601,9 +674,9 @@ mod tests {
     #[test]
     fn summary_flag_overrides_placeholder_text_in_patch() {
         let state = StateJson::default();
-        let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", &state, "custom summary");
-        assert_eq!(patch.updates[3].path, "/last_cycle/summary");
-        assert_eq!(patch.updates[3].value, json!("custom summary"));
+        let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", 47, &state, "custom summary");
+        assert_eq!(patch.updates[4].path, "/last_cycle/summary");
+        assert_eq!(patch.updates[4].value, json!("custom summary"));
     }
 
     #[test]
@@ -614,22 +687,28 @@ mod tests {
             json!({"last_refreshed": "cycle 120"}),
         );
         state.field_inventory.fields.insert(
+            "last_cycle.duration_minutes".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
             "last_eva_comment_check".to_string(),
             json!({"last_refreshed": "cycle 120"}),
         );
 
-        let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", &state, "custom summary");
+        let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", 47, &state, "custom summary");
         let mut raw_state = json!({
             "last_cycle": {
                 "number": 120,
                 "issue": 100,
                 "timestamp": "2026-02-01T00:00:00Z",
+                "duration_minutes": 15,
                 "summary": "old summary"
             },
             "last_eva_comment_check": "2026-02-01T00:00:00Z",
             "field_inventory": {
                 "fields": {
                     "last_cycle": {"last_refreshed": "cycle 120"},
+                    "last_cycle.duration_minutes": {"last_refreshed": "cycle 120"},
                     "last_eva_comment_check": {"last_refreshed": "cycle 120"}
                 }
             }
@@ -637,7 +716,7 @@ mod tests {
 
         let changed_paths =
             apply_state_patch(&mut raw_state, &patch).expect("state patch should apply cleanly");
-        assert_eq!(changed_paths.len(), 7);
+        assert_eq!(changed_paths.len(), 9);
         assert_eq!(
             raw_state
                 .pointer("/last_cycle/number")
@@ -652,6 +731,12 @@ mod tests {
         );
         assert_eq!(
             raw_state
+                .pointer("/last_cycle/duration_minutes")
+                .and_then(Value::as_u64),
+            Some(47)
+        );
+        assert_eq!(
+            raw_state
                 .pointer("/last_cycle/summary")
                 .and_then(Value::as_str),
             Some("custom summary")
@@ -659,6 +744,12 @@ mod tests {
         assert_eq!(
             raw_state
                 .pointer("/field_inventory/fields/last_cycle/last_refreshed")
+                .and_then(Value::as_str),
+            Some("cycle 153")
+        );
+        assert_eq!(
+            raw_state
+                .pointer("/field_inventory/fields/last_cycle.duration_minutes/last_refreshed")
                 .and_then(Value::as_str),
             Some("cycle 153")
         );
@@ -761,17 +852,23 @@ mod tests {
             "last_cycle".to_string(),
             json!({"last_refreshed": "cycle 120"}),
         );
+        state.last_cycle.timestamp = Some("2026-03-05T04:19:37Z".to_string());
+        state.field_inventory.fields.insert(
+            "last_cycle.duration_minutes".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
         state.field_inventory.fields.insert(
             "last_eva_comment_check".to_string(),
             json!({"last_refreshed": "cycle 120"}),
         );
 
-        let report = assemble_report(139, 464, fixed_now(), &state, "summary");
+        let report = assemble_report(139, 464, fixed_now(), &state, "summary").unwrap();
         let output = serde_json::to_string_pretty(&report).unwrap();
         let parsed: Value = serde_json::from_str(&output).unwrap();
 
         assert_eq!(parsed.get("cycle"), Some(&json!(139)));
         assert_eq!(parsed.get("issue"), Some(&json!(464)));
+        assert_eq!(parsed.get("session_duration_minutes"), Some(&json!(47)));
         assert_eq!(
             parsed
                 .pointer("/pipeline_check/status")
@@ -782,7 +879,41 @@ mod tests {
             parsed
                 .pointer("/completion_steps/1/detail")
                 .and_then(Value::as_str),
-            Some("7 fields to update")
+            Some("9 fields to update")
         );
+    }
+
+    #[test]
+    fn compute_session_duration_minutes_rounds_to_nearest_minute() {
+        let mut state = StateJson::default();
+        state.last_cycle.timestamp = Some("2026-03-05T04:19:37Z".to_string());
+
+        let minutes = compute_session_duration_minutes(&state, fixed_now()).unwrap();
+
+        assert_eq!(minutes, 47);
+    }
+
+    #[test]
+    fn assemble_report_includes_session_duration_in_patch_and_output() {
+        let mut state = StateJson::default();
+        state.last_cycle.timestamp = Some("2026-03-05T04:19:37Z".to_string());
+        state.field_inventory.fields.insert(
+            "last_cycle".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "last_cycle.duration_minutes".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "last_eva_comment_check".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+
+        let report = assemble_report(139, 464, fixed_now(), &state, "summary").unwrap();
+
+        assert_eq!(report.session_duration_minutes, 47);
+        assert_eq!(report.state_json_patch.updates[3].path, "/last_cycle/duration_minutes");
+        assert_eq!(report.state_json_patch.updates[3].value, json!(47));
     }
 }

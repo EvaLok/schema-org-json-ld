@@ -2103,6 +2103,10 @@
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
         "last_refreshed": "cycle 176"
+      },
+      "last_cycle.duration_minutes": {
+        "cadence": "every cycle (set by cycle-complete)",
+        "last_refreshed": "cycle 181"
       }
     }
   },
@@ -2110,7 +2114,8 @@
     "issue": 711,
     "number": 181,
     "summary": "Merged PRs #696 (cycle-start dynamic Eva directives) and #698 (cycle 179 review artifact). Actioned 2/3 review findings (field-inventory-follow-through, checklist-cross-reference-drift). Processed Eva directives: closed #701 (behavioral directives ack), began #699 (next language) and #700 (session timing). Processed audit #138 (language choice analysis). Posted QC consultation #703. Dispatched #705 (session timing) and #707 (language evaluation). Refreshed 17 stale field-inventory markers. Pipeline 4.5/5 (metrics, inventory, invariants pass; housekeeping cleared).",
-    "timestamp": "2026-03-07T22:39:48Z"
+    "timestamp": "2026-03-07T22:39:48Z",
+    "duration_minutes": null
   },
   "last_eva_comment_check": "2026-03-07T22:39:48Z",
   "open_questions_for_eva": [],
