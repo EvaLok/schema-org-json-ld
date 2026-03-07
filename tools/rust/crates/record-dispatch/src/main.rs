@@ -1,9 +1,7 @@
 use clap::Parser;
 use serde_json::{json, Value};
-use state_schema::set_value_at_pointer;
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use state_schema::{commit_state_json, read_state_value, set_value_at_pointer, write_state_value};
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(name = "record-dispatch")]
@@ -44,14 +42,17 @@ fn main() {
 }
 
 fn run(cli: Cli) -> Result<(), String> {
-    let state_path = cli.repo_root.join("docs/state.json");
-    let mut state_value = read_state_value(&state_path)?;
+    let mut state_value = read_state_value(&cli.repo_root)?;
 
     let patch = build_dispatch_patch(&state_value, cli.issue, &cli.title, &cli.model)?;
     apply_dispatch_patch(&mut state_value, &patch)?;
-    write_state_value(&state_path, &state_value)?;
+    write_state_value(&cli.repo_root, &state_value)?;
 
-    let receipt = commit_state_json(&cli.repo_root, cli.issue, patch.current_cycle)?;
+    let commit_message = format!(
+        "state(record-dispatch): #{} dispatched [cycle {}]",
+        cli.issue, patch.current_cycle
+    );
+    let receipt = commit_state_json(&cli.repo_root, &commit_message)?;
     println!(
         "Dispatch recorded: #{} \"{}\" (model: {}). In-flight: {} (receipt: {})",
         cli.issue, cli.title, cli.model, patch.in_flight, receipt
@@ -64,20 +65,6 @@ fn run(cli: Cli) -> Result<(), String> {
     }
 
     Ok(())
-}
-
-fn read_state_value(path: &Path) -> Result<Value, String> {
-    let content = fs::read_to_string(path)
-        .map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
-    serde_json::from_str::<Value>(&content)
-        .map_err(|error| format!("failed to parse {}: {}", path.display(), error))
-}
-
-fn write_state_value(path: &Path, value: &Value) -> Result<(), String> {
-    let serialized = serde_json::to_string_pretty(value)
-        .map_err(|error| format!("failed to serialize state.json: {}", error))?;
-    fs::write(path, format!("{}\n", serialized))
-        .map_err(|error| format!("failed to write {}: {}", path.display(), error))
 }
 
 fn build_dispatch_patch(
@@ -208,58 +195,6 @@ fn apply_dispatch_patch(state: &mut Value, patch: &DispatchPatch) -> Result<(), 
     )?;
 
     Ok(())
-}
-
-fn commit_state_json(repo_root: &Path, issue: u64, current_cycle: i64) -> Result<String, String> {
-    let add_output = Command::new("git")
-        .arg("-C")
-        .arg(repo_root)
-        .arg("add")
-        .arg("docs/state.json")
-        .output()
-        .map_err(|error| format!("failed to execute git add: {}", error))?;
-    if !add_output.status.success() {
-        let stderr = String::from_utf8_lossy(&add_output.stderr)
-            .trim()
-            .to_string();
-        return Err(format!("git add docs/state.json failed: {}", stderr));
-    }
-
-    let commit_message = format!(
-        "state(record-dispatch): #{} dispatched [cycle {}]",
-        issue, current_cycle
-    );
-    let commit_output = Command::new("git")
-        .arg("-C")
-        .arg(repo_root)
-        .arg("commit")
-        .arg("-m")
-        .arg(&commit_message)
-        .output()
-        .map_err(|error| format!("failed to execute git commit: {}", error))?;
-    if !commit_output.status.success() {
-        let stderr = String::from_utf8_lossy(&commit_output.stderr)
-            .trim()
-            .to_string();
-        return Err(format!("git commit failed: {}", stderr));
-    }
-
-    let output = Command::new("git")
-        .arg("-C")
-        .arg(repo_root)
-        .arg("rev-parse")
-        .arg("--short=7")
-        .arg("HEAD")
-        .output()
-        .map_err(|error| format!("failed to execute git rev-parse: {}", error))?;
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-        return Err(format!("git rev-parse --short=7 HEAD failed: {}", stderr));
-    }
-
-    let sha = String::from_utf8(output.stdout)
-        .map_err(|error| format!("failed to decode git rev-parse output as UTF-8: {}", error))?;
-    Ok(sha.trim().to_string())
 }
 
 #[cfg(test)]

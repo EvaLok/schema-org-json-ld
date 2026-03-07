@@ -1,9 +1,7 @@
 use clap::{Parser, ValueEnum};
 use serde_json::{json, Value};
-use state_schema::set_value_at_pointer;
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use state_schema::{commit_state_json, read_state_value, set_value_at_pointer, write_state_value};
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(name = "process-audit")]
@@ -37,18 +35,26 @@ fn main() {
 }
 
 fn run(cli: Cli) -> Result<(), String> {
-    let state_path = cli.repo_root.join("docs/state.json");
-    let mut state_value = read_state_value(&state_path)?;
+    let mut state_value = read_state_value(&cli.repo_root)?;
     let next_cycle = read_next_cycle(&state_value)?;
 
     if !apply_audit_processing(&mut state_value, cli.audit_id, next_cycle)? {
-        println!("Audit #{} already processed (no changes made)", cli.audit_id);
+        println!(
+            "Audit #{} already processed (no changes made)",
+            cli.audit_id
+        );
         return Ok(());
     }
 
-    write_state_value(&state_path, &state_value)?;
+    write_state_value(&cli.repo_root, &state_value)?;
 
-    let receipt = commit_state_json(&cli.repo_root, cli.audit_id, cli.action, next_cycle)?;
+    let commit_message = format!(
+        "state(process-audit): audit#{} {} [cycle {}]",
+        cli.audit_id,
+        cli.action.as_str(),
+        next_cycle
+    );
+    let receipt = commit_state_json(&cli.repo_root, &commit_message)?;
     println!(
         "Audit processed: audit#{} {} [cycle {}] (receipt: {})",
         cli.audit_id,
@@ -58,20 +64,6 @@ fn run(cli: Cli) -> Result<(), String> {
     );
 
     Ok(())
-}
-
-fn read_state_value(path: &Path) -> Result<Value, String> {
-    let content = fs::read_to_string(path)
-        .map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
-    serde_json::from_str::<Value>(&content)
-        .map_err(|error| format!("failed to parse {}: {}", path.display(), error))
-}
-
-fn write_state_value(path: &Path, value: &Value) -> Result<(), String> {
-    let serialized = serde_json::to_string_pretty(value)
-        .map_err(|error| format!("failed to serialize state.json: {}", error))?;
-    fs::write(path, format!("{}\n", serialized))
-        .map_err(|error| format!("failed to write {}: {}", path.display(), error))
 }
 
 fn read_next_cycle(state: &Value) -> Result<u64, String> {
@@ -85,20 +77,31 @@ fn read_next_cycle(state: &Value) -> Result<u64, String> {
         .ok_or_else(|| "cycle overflow while computing current cycle".to_string())
 }
 
-fn apply_audit_processing(state: &mut Value, audit_id: u64, next_cycle: u64) -> Result<bool, String> {
+fn apply_audit_processing(
+    state: &mut Value,
+    audit_id: u64,
+    next_cycle: u64,
+) -> Result<bool, String> {
     let audit_processed = state
         .pointer("/audit_processed")
         .and_then(Value::as_array)
         .ok_or_else(|| "missing /audit_processed array in docs/state.json".to_string())?;
 
-    if audit_processed.iter().any(|value| value.as_u64() == Some(audit_id)) {
+    if audit_processed
+        .iter()
+        .any(|value| value.as_u64() == Some(audit_id))
+    {
         return Ok(false);
     }
 
     let mut next_audit_processed = audit_processed.clone();
     next_audit_processed.push(json!(audit_id));
 
-    set_value_at_pointer(state, "/audit_processed", Value::Array(next_audit_processed))?;
+    set_value_at_pointer(
+        state,
+        "/audit_processed",
+        Value::Array(next_audit_processed),
+    )?;
     set_value_at_pointer(
         state,
         "/field_inventory/fields/audit_processed/last_refreshed",
@@ -116,65 +119,6 @@ impl AuditAction {
             Self::Deferred => "deferred",
         }
     }
-}
-
-fn commit_state_json(
-    repo_root: &Path,
-    audit_id: u64,
-    action: AuditAction,
-    next_cycle: u64,
-) -> Result<String, String> {
-    let add_output = Command::new("git")
-        .arg("-C")
-        .arg(repo_root)
-        .arg("add")
-        .arg("docs/state.json")
-        .output()
-        .map_err(|error| format!("failed to execute git add: {}", error))?;
-    if !add_output.status.success() {
-        let stderr = String::from_utf8_lossy(&add_output.stderr)
-            .trim()
-            .to_string();
-        return Err(format!("git add docs/state.json failed: {}", stderr));
-    }
-
-    let commit_message = format!(
-        "state(process-audit): audit#{} {} [cycle {}]",
-        audit_id,
-        action.as_str(),
-        next_cycle
-    );
-    let commit_output = Command::new("git")
-        .arg("-C")
-        .arg(repo_root)
-        .arg("commit")
-        .arg("-m")
-        .arg(&commit_message)
-        .output()
-        .map_err(|error| format!("failed to execute git commit: {}", error))?;
-    if !commit_output.status.success() {
-        let stderr = String::from_utf8_lossy(&commit_output.stderr)
-            .trim()
-            .to_string();
-        return Err(format!("git commit failed: {}", stderr));
-    }
-
-    let output = Command::new("git")
-        .arg("-C")
-        .arg(repo_root)
-        .arg("rev-parse")
-        .arg("--short=7")
-        .arg("HEAD")
-        .output()
-        .map_err(|error| format!("failed to execute git rev-parse: {}", error))?;
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-        return Err(format!("git rev-parse --short=7 HEAD failed: {}", stderr));
-    }
-
-    let sha = String::from_utf8(output.stdout)
-        .map_err(|error| format!("failed to decode git rev-parse output as UTF-8: {}", error))?;
-    Ok(sha.trim().to_string())
 }
 
 #[cfg(test)]

@@ -889,8 +889,9 @@ When accepting recommendations, dispatch #546 in the same cycle.
 
     #[test]
     fn cli_uses_default_repo_root_when_omitted() {
-        let cli = Cli::try_parse_from(["write-entry", "worklog", "--cycle", "1", "--title", "test"])
-            .unwrap();
+        let cli =
+            Cli::try_parse_from(["write-entry", "worklog", "--cycle", "1", "--title", "test"])
+                .unwrap();
         assert_eq!(cli.repo_root, PathBuf::from("."));
     }
 }

@@ -2,11 +2,12 @@ use chrono::{DateTime, Utc};
 use clap::Parser;
 use serde::Serialize;
 use serde_json::{json, Value};
-use state_schema::{set_value_at_pointer, StateJson};
+use state_schema::{
+    commit_state_json, read_state_value, set_value_at_pointer, write_state_value, StateJson,
+};
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 #[derive(Parser)]
 #[command(name = "cycle-complete")]
@@ -112,7 +113,9 @@ fn main() {
             Ok(changed_paths) => {
                 print_patch_apply_summary(&changed_paths);
                 if cli.commit {
-                    match commit_state_json(&cli.repo_root, summary, cli.cycle) {
+                    let commit_message =
+                        format!("state(cycle-complete): {} [cycle {}]", summary, cli.cycle);
+                    match commit_state_json(&cli.repo_root, &commit_message) {
                         Ok(sha) => println!("Committed: {}", sha),
                         Err(error) => {
                             eprintln!("Error: {}", error);
@@ -156,13 +159,6 @@ fn read_state_json(repo_root: &Path) -> Result<StateJson, String> {
         .map_err(|error| format!("failed to read {}: {}", state_path.display(), error))?;
     serde_json::from_str(&content)
         .map_err(|error| format!("failed to parse {}: {}", state_path.display(), error))
-}
-
-fn read_state_value(path: &Path) -> Result<Value, String> {
-    let content = fs::read_to_string(path)
-        .map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
-    serde_json::from_str::<Value>(&content)
-        .map_err(|error| format!("failed to parse {}: {}", path.display(), error))
 }
 
 fn assemble_report(
@@ -267,13 +263,9 @@ fn apply_state_patch(state_value: &mut Value, patch: &StatePatch) -> Result<Vec<
 }
 
 fn apply_cycle_patch(repo_root: &Path, patch: &StatePatch) -> Result<Vec<String>, String> {
-    let state_path = repo_root.join("docs/state.json");
-    let mut state_value = read_state_value(&state_path)?;
+    let mut state_value = read_state_value(repo_root)?;
     let changed_paths = apply_state_patch(&mut state_value, patch)?;
-    let serialized = serde_json::to_string_pretty(&state_value)
-        .map_err(|error| format!("failed to serialize state.json: {}", error))?;
-    fs::write(&state_path, format!("{}\n", serialized))
-        .map_err(|error| format!("failed to write {}: {}", state_path.display(), error))?;
+    write_state_value(repo_root, &state_value)?;
 
     Ok(changed_paths)
 }
@@ -288,55 +280,6 @@ fn print_patch_apply_summary(changed_paths: &[String]) {
     for path in changed_paths {
         println!("- {}", path);
     }
-}
-
-fn commit_state_json(repo_root: &Path, summary: &str, cycle: u64) -> Result<String, String> {
-    let add_output = Command::new("git")
-        .arg("-C")
-        .arg(repo_root)
-        .arg("add")
-        .arg("docs/state.json")
-        .output()
-        .map_err(|error| format!("failed to execute git add: {}", error))?;
-    if !add_output.status.success() {
-        let stderr = String::from_utf8_lossy(&add_output.stderr)
-            .trim()
-            .to_string();
-        return Err(format!("git add docs/state.json failed: {}", stderr));
-    }
-
-    let commit_message = format!("state(cycle-complete): {} [cycle {}]", summary, cycle);
-    let commit_output = Command::new("git")
-        .arg("-C")
-        .arg(repo_root)
-        .arg("commit")
-        .arg("-m")
-        .arg(&commit_message)
-        .output()
-        .map_err(|error| format!("failed to execute git commit: {}", error))?;
-    if !commit_output.status.success() {
-        let stderr = String::from_utf8_lossy(&commit_output.stderr)
-            .trim()
-            .to_string();
-        return Err(format!("git commit failed: {}", stderr));
-    }
-
-    let output = Command::new("git")
-        .arg("-C")
-        .arg(repo_root)
-        .arg("rev-parse")
-        .arg("--short=7")
-        .arg("HEAD")
-        .output()
-        .map_err(|error| format!("failed to execute git rev-parse: {}", error))?;
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-        return Err(format!("git rev-parse --short=7 HEAD failed: {}", stderr));
-    }
-
-    let sha = String::from_utf8(output.stdout)
-        .map_err(|error| format!("failed to decode git rev-parse output as UTF-8: {}", error))?;
-    Ok(sha.trim().to_string())
 }
 
 fn build_freshness_updates(
