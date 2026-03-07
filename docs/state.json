@@ -1967,7 +1967,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 177"
+        "last_refreshed": "cycle 179"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -2003,7 +2003,7 @@
       },
       "schema_status.planned_next": {
         "cadence": "after planning or completing types",
-        "last_refreshed": "cycle 169"
+        "last_refreshed": "cycle 179"
       },
       "schema_status.property_gap_audit": {
         "cadence": "after property gap fixes",
@@ -2055,7 +2055,7 @@
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
-        "last_refreshed": "cycle 169"
+        "last_refreshed": "cycle 179"
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
@@ -3374,12 +3374,12 @@
             "description": "npm publish (Eva creates GitHub Release to trigger workflow)",
             "eva_directive": "Test thoroughly first before releasing, always.",
             "qc_gate": "SATISFIED. 73/73 standalone parity (100%). 0 E2E errors. Class inventory: 88/88.",
-            "status": "awaiting_eva"
+            "status": "published_v1.0.2"
           }
         },
         "name": "Build, test, publish",
         "phase": 4,
-        "status": "qc_gate_cleared_awaiting_eva"
+        "status": "complete"
       }
     ],
     "plan_version": 3,
