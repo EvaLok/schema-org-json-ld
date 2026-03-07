@@ -727,11 +727,11 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 174"
+        "last_refreshed": "cycle 175"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 174"
+        "last_refreshed": "cycle 175"
       },
       "next_metric_verification": {
         "cadence": "after each verification run",
@@ -844,12 +844,12 @@
     }
   },
   "last_cycle": {
-    "issue": 663,
-    "number": 174,
+    "issue": 666,
+    "number": 175,
     "summary": "merged 3 PRs, closed Eva directives #586 and #591 (write-side pipeline and cycle-start complete), actioned review findings, consolidated startup checklist",
-    "timestamp": "2026-03-07T10:56:49Z"
+    "timestamp": "2026-03-07T12:07:18Z"
   },
-  "last_eva_comment_check": "2026-03-07T10:56:49Z",
+  "last_eva_comment_check": "2026-03-07T12:07:18Z",
   "next_metric_verification": "cycle 151",
   "open_questions_for_eva": [
     606
