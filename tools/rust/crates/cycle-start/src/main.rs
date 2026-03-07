@@ -121,8 +121,11 @@ fn run(cli: Cli) -> Result<(), String> {
         .unwrap_or_else(|| "1970-01-01T00:00:00Z".to_string());
     let cycle = derive_cycle_from_state(&state)?;
     let timestamp = format_timestamp_utc();
+    let mut warnings = Vec::new();
+    let questions_for_eva = gather_questions_for_eva(&mut warnings);
+    let open_question_numbers: Vec<u64> = questions_for_eva.iter().map(|issue| issue.number).collect();
 
-    let patch = build_state_patch(cycle, cli.issue, &timestamp);
+    let patch = build_state_patch(cycle, cli.issue, &timestamp, &open_question_numbers);
     apply_state_patch(&mut state, &patch)?;
     write_state_value(&cli.repo_root, &state)?;
     let commit_message = format!(
@@ -130,8 +133,6 @@ fn run(cli: Cli) -> Result<(), String> {
         cycle, cli.issue, cycle
     );
     let receipt = commit_state_json(&cli.repo_root, &commit_message)?;
-
-    let mut warnings = Vec::new();
 
     if let Err(error) = post_opening_comment(cli.issue, cycle) {
         warn(&mut warnings, format!("opening comment failed: {}", error));
@@ -141,7 +142,6 @@ fn run(cli: Cli) -> Result<(), String> {
     let eva_comments = gather_eva_comments_since(&previous_timestamp, &mut warnings);
     let review_agent =
         gather_review_summary(&cli.repo_root, cycle.saturating_sub(1), &mut warnings);
-    let questions_for_eva = gather_questions_for_eva(&mut warnings);
     let in_flight = gather_in_flight_sessions(&mut warnings);
     let pipeline = gather_pipeline_status(&cli.repo_root, cycle, &mut warnings);
     let qc_outbound = gather_outbound_issue_numbers(QC_REPO, "qc-outbound", &mut warnings);
@@ -201,7 +201,12 @@ fn derive_cycle_number(last_cycle_number: u64) -> Result<u64, String> {
         .ok_or_else(|| "last_cycle.number overflow when deriving current cycle".to_string())
 }
 
-fn build_state_patch(cycle: u64, issue: u64, timestamp: &str) -> Vec<PatchUpdate> {
+fn build_state_patch(
+    cycle: u64,
+    issue: u64,
+    timestamp: &str,
+    open_question_numbers: &[u64],
+) -> Vec<PatchUpdate> {
     vec![
         PatchUpdate {
             path: "/last_cycle/number".to_string(),
@@ -220,11 +225,19 @@ fn build_state_patch(cycle: u64, issue: u64, timestamp: &str) -> Vec<PatchUpdate
             value: json!(timestamp),
         },
         PatchUpdate {
+            path: "/open_questions_for_eva".to_string(),
+            value: json!(open_question_numbers),
+        },
+        PatchUpdate {
             path: "/field_inventory/fields/last_cycle/last_refreshed".to_string(),
             value: json!(format!("cycle {}", cycle)),
         },
         PatchUpdate {
             path: "/field_inventory/fields/last_eva_comment_check/last_refreshed".to_string(),
+            value: json!(format!("cycle {}", cycle)),
+        },
+        PatchUpdate {
+            path: "/field_inventory/fields/open_questions_for_eva/last_refreshed".to_string(),
             value: json!(format!("cycle {}", cycle)),
         },
     ]
@@ -878,7 +891,7 @@ mod tests {
 
     #[test]
     fn state_patch_contains_required_pointer_paths() {
-        let patch = build_state_patch(163, 592, "2026-03-06T18:00:00Z");
+        let patch = build_state_patch(163, 592, "2026-03-06T18:00:00Z", &[600, 601]);
         let paths: Vec<&str> = patch.iter().map(|update| update.path.as_str()).collect();
 
         assert_eq!(
@@ -888,13 +901,29 @@ mod tests {
                 "/last_cycle/issue",
                 "/last_cycle/timestamp",
                 "/last_eva_comment_check",
+                "/open_questions_for_eva",
                 "/field_inventory/fields/last_cycle/last_refreshed",
                 "/field_inventory/fields/last_eva_comment_check/last_refreshed",
+                "/field_inventory/fields/open_questions_for_eva/last_refreshed",
             ]
         );
         assert_eq!(patch[0].value, json!(163));
         assert_eq!(patch[1].value, json!(592));
-        assert_eq!(patch[4].value, json!("cycle 163"));
+        assert_eq!(patch[4].value, json!([600, 601]));
+        assert_eq!(patch[5].value, json!("cycle 163"));
+        assert_eq!(patch[7].value, json!("cycle 163"));
+    }
+
+    #[test]
+    fn state_patch_uses_empty_array_when_no_open_questions_exist() {
+        let patch = build_state_patch(163, 592, "2026-03-06T18:00:00Z", &[]);
+
+        let open_questions = patch
+            .iter()
+            .find(|update| update.path == "/open_questions_for_eva")
+            .expect("open_questions_for_eva patch should exist");
+
+        assert_eq!(open_questions.value, json!([]));
     }
 
     #[test]
