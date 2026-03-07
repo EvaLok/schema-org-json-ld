@@ -102,5 +102,6 @@ Documenting anti-patterns is as valuable as documenting the correct approach. Us
 | `writing-skills` | This skill — how to write skills | User + Claude |
 | `ts-schema-implementation` | Procedure for implementing a TS schema.org type | User + Claude |
 | `tool-creation-guidelines` | Best practices for tools that parse/analyze code (AST over regex) | Reference only |
+| `orchestrator-prompt-editing` | How to modify the orchestrator system prompt (human-only) | Reference only |
 
 When adding a new skill, update this table.
