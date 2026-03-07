@@ -317,8 +317,14 @@ fn classify_step(name: &'static str, kind: &ToolKind, execution: ExecutionResult
                     Some(1) => StepStatus::Fail,
                     _ => StepStatus::Error,
                 };
-                let passed = parsed.get("passed").and_then(Value::as_u64).unwrap_or(0);
-                let failed = parsed.get("failed").and_then(Value::as_u64).unwrap_or(0);
+                let passed = parsed
+                    .get("passed")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(0);
+                let failed = parsed
+                    .get("failed")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(0);
                 step.detail = Some(format!("{}/{} invariants pass", passed, passed + failed));
             } else {
                 step.status = StepStatus::Error;
@@ -560,9 +566,9 @@ mod tests {
                     .and_then(|name| name.to_str())
                     .unwrap_or_default()
                     .to_string();
-                let has_cycle_arg = args.windows(2).any(|window| {
-                    window[0] == "--cycle" && window[1] == self.expected_cycle.to_string()
-                });
+                let has_cycle_arg = args
+                    .windows(2)
+                    .any(|window| window[0] == "--cycle" && window[1] == self.expected_cycle.to_string());
                 match key.as_str() {
                     "metric-snapshot" | "check-field-inventory-rs" => assert!(has_cycle_arg),
                     "housekeeping-scan" | "cycle-status" | "state-invariants" => {
