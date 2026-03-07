@@ -1297,9 +1297,9 @@
       "issue": 558,
       "merged_at": null,
       "model": "gpt-5.3-codex",
-      "note": "Review agent. Cycle 156 end-of-cycle review.",
+      "note": "Review agent. Cycle 156 end-of-cycle review. Silent failure — no Copilot work started.",
       "pr": null,
-      "status": "in_flight",
+      "status": "failed",
       "title": "Cycle 156 end-of-cycle review"
     },
     {
@@ -1836,17 +1836,17 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 1,
-    "closed_without_pr": 4,
+    "closed_without_pr": 3,
     "dispatch_log_latest": "#680 Build agent_sessions backfill tool (cycle 177)",
-    "dispatch_to_pr_rate": "111/114",
+    "dispatch_to_pr_rate": "180/184",
     "in_flight": 0,
-    "merged": 110,
-    "note": "114 dispatches, 114 resolved, 0 in-flight. 111 produced PRs (110 merged, 1 closed without merge). 4 resolved without PR (silent failure). PR #683 merged in cycle 177.",
-    "pr_merge_rate": "110/111",
-    "produced_pr": 111,
-    "resolved": 114,
+    "merged": 179,
+    "note": "Reconciled via backfill-sessions tool (cycle 178). 184 dispatches, 184 resolved, 0 in-flight. 180 produced PRs (179 merged, 1 closed without merge). 3 failed without PR. Some early dispatches had re-dispatch pairs mapping to the same PR.",
+    "pr_merge_rate": "179/180",
+    "produced_pr": 180,
+    "resolved": 184,
     "revision_rounds": 5,
-    "total_dispatches": 114
+    "total_dispatches": 184
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
