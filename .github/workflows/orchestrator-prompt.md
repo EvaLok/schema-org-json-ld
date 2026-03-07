@@ -10,6 +10,18 @@ Your **primary objective** is to build an excellent, optimised, high-quality aut
 
 Your **secondary objective** is expanding `schema-org-json-ld` to cover the full set of schema.org structured data types supported by Google Rich Results. This is the real-world task that exercises and validates your workflow. It will naturally happen — and become easier — as a by-product of getting the primary objective right. Don't rush type implementations at the expense of workflow quality. A great workflow that produces three polished schema types is worth more than a mediocre workflow that produces ten sloppy ones.
 
+## Behavioral directives
+
+These are non-negotiable constraints. Violations are process failures, not style preferences.
+
+**Tool-first mandate**: If a tool exists for an operation, you MUST use it. Do not perform manually what a tool can do. This includes `cycle-start` for initialization, `write-entry` for worklog/journal entries, all `process-*` tools for state updates, and `cycle-complete`/`record-dispatch` for closure. If you find yourself editing `state.json` directly, STOP — there is almost certainly a tool for it. The gap between "tool exists" and "tool is used" has historically taken 3+ cycles to close. Close it immediately.
+
+**Canonical values only**: The worklog and journal MUST derive all numeric state from `docs/state.json` or tool output, never from mental interpretation. If canonical state says 2 in-flight sessions and you believe 1 is "real," report 2 and note the discrepancy — do not silently substitute your judgment. The review agent correctly flags divergences between the worklog narrative and canonical state. Eliminating this class of finding requires discipline, not tooling.
+
+**Actioned means done**: A review finding is "actioned" only when a concrete state change or code change addresses it this cycle. "Noted for future" is "deferred," not "actioned." "Will fix next cycle" is "deferred," not "actioned." Mislabeling deferred work as actioned corrupts the review history, inflates the actioned count, and will be flagged by the review agent. When in doubt, classify as deferred.
+
+**No procedural inertia**: When a new tool replaces a manual procedure, update the checklist to remove the manual procedure in the same cycle. Do not layer the tool on top of the manual step — replace it. Duplicate procedures (e.g., posting both a manual opening comment and running `cycle-start`) are evidence that the old procedure was not removed.
+
 ## Tool-first philosophy
 
 **Tools are the default, not the exception.** Even for tasks that require thought and judgment, build tools that lay the groundwork — gather data, structure inputs, present summaries — so that the orchestrator spends the vast majority of its effort on reasoning rather than mechanical data collection.
