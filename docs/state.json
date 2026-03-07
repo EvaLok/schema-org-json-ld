@@ -634,13 +634,13 @@
     "closed_without_merge": 1,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#676 Cycle 176 end-of-cycle review (cycle 176)",
-    "dispatch_to_pr_rate": "107/110",
-    "in_flight": 3,
-    "merged": 106,
-    "note": "113 dispatches, 110 resolved, 3 in-flight. 107 produced PRs (106 merged, 1 closed without merge). Latest dispatch: #676 Cycle 176 end-of-cycle review (cycle 176, model gpt-5.4).",
-    "pr_merge_rate": "106/107",
-    "produced_pr": 107,
-    "resolved": 110,
+    "dispatch_to_pr_rate": "108/111",
+    "in_flight": 2,
+    "merged": 107,
+    "note": "113 dispatches, 111 resolved, 2 in-flight. 108 produced PRs (107 merged, 1 closed without merge). 4 resolved without PR (silent failure). PR #675 merged in cycle 177.",
+    "pr_merge_rate": "107/108",
+    "produced_pr": 108,
+    "resolved": 111,
     "revision_rounds": 5,
     "total_dispatches": 113
   },
@@ -708,15 +708,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 176"
+        "last_refreshed": "cycle 177"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 176"
+        "last_refreshed": "cycle 177"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 176"
+        "last_refreshed": "cycle 177"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
