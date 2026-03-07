@@ -760,7 +760,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 176"
+        "last_refreshed": "cycle 177"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -1413,9 +1413,24 @@
         "finding_count": 2,
         "ignored": 0,
         "note": "Actioned: (1) copilot_metrics drift — will dispatch tool improvement to sync agent_sessions array, (2) field-freshness-gap — refreshed review_agent field inventory entry."
+      },
+      {
+        "actioned": 3,
+        "categories": [
+          "commit-receipts",
+          "journal-quality",
+          "review-processing",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 3,
+        "cycle": 176,
+        "deferred": 0,
+        "finding_count": 4,
+        "ignored": 0,
+        "note": "Finding 1 (review-processing): corrected review_agent.history entry for cycle 175 to mark as partially-actioned. Finding 2 (commit-receipts): noted for future receipt capture. Finding 3 (worklog-accuracy): acknowledged, agent_sessions backfill in PR #675."
       }
     ],
-    "last_review_cycle": 175
+    "last_review_cycle": 176
   },
   "schema_status": {
     "directory_layout": {
