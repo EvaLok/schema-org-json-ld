@@ -1923,11 +1923,16 @@
       591,
       606,
       642,
-      689
+      689,
+      701
     ],
-    "closed_this_cycle": [],
+    "closed_this_cycle": [
+      701
+    ],
     "remaining_open": [
-      436
+      436,
+      699,
+      700
     ]
   },
   "field_inventory": {
@@ -1959,7 +1964,7 @@
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 178"
+        "last_refreshed": "cycle 180"
       },
       "last_cycle": {
         "cadence": "every cycle",
