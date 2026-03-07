@@ -1752,15 +1752,19 @@
     {
       "dispatched_at": "2026-03-07T21:12:16Z",
       "issue": 707,
+      "merged_at": "2026-03-07T22:51:35Z",
       "model": "gpt-5.3-codex",
-      "status": "in_flight",
+      "pr": 708,
+      "status": "merged",
       "title": "Language evaluation: next implementation target analysis"
     },
     {
       "dispatched_at": "2026-03-07T21:18:37Z",
       "issue": 709,
+      "merged_at": "2026-03-07T22:51:35Z",
       "model": "gpt-5.3-codex",
-      "status": "in_flight",
+      "pr": 710,
+      "status": "merged",
       "title": "Cycle 180 end-of-cycle review"
     }
   ],
@@ -1896,12 +1900,12 @@
     "closed_without_merge": 2,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#709 Cycle 180 end-of-cycle review (cycle 180)",
-    "dispatch_to_pr_rate": "187/191",
+    "dispatch_to_pr_rate": "189/191",
     "in_flight": 0,
-    "merged": 185,
-    "note": "191 dispatches, 191 resolved, 0 in-flight. 187 produced PRs (185 merged, 2 closed without merge). Latest merge: #710 cycle 180 review (cycle 181). PR #706 cherry-picked then closed (state.json conflict).",
-    "pr_merge_rate": "185/187",
-    "produced_pr": 187,
+    "merged": 187,
+    "note": "191 dispatches, 191 resolved, 0 in-flight. 189 produced PRs (187 merged, 2 closed without merge). 3 resolved without PR (silent failure). PRs #710, #708 merged in cycle 181.",
+    "pr_merge_rate": "187/189",
+    "produced_pr": 189,
     "resolved": 191,
     "revision_rounds": 5,
     "total_dispatches": 191
@@ -1974,15 +1978,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 180"
+        "last_refreshed": "cycle 181"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 180"
+        "last_refreshed": "cycle 181"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 180"
+        "last_refreshed": "cycle 181"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
@@ -1994,6 +1998,10 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
+        "last_refreshed": "cycle 181"
+      },
+      "last_cycle.duration_minutes": {
+        "cadence": "every cycle (set by cycle-complete)",
         "last_refreshed": "cycle 181"
       },
       "last_eva_comment_check": {
@@ -2103,19 +2111,15 @@
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
         "last_refreshed": "cycle 176"
-      },
-      "last_cycle.duration_minutes": {
-        "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 181"
       }
     }
   },
   "last_cycle": {
+    "duration_minutes": null,
     "issue": 711,
     "number": 181,
     "summary": "Merged PRs #696 (cycle-start dynamic Eva directives) and #698 (cycle 179 review artifact). Actioned 2/3 review findings (field-inventory-follow-through, checklist-cross-reference-drift). Processed Eva directives: closed #701 (behavioral directives ack), began #699 (next language) and #700 (session timing). Processed audit #138 (language choice analysis). Posted QC consultation #703. Dispatched #705 (session timing) and #707 (language evaluation). Refreshed 17 stale field-inventory markers. Pipeline 4.5/5 (metrics, inventory, invariants pass; housekeeping cleared).",
-    "timestamp": "2026-03-07T22:39:48Z",
-    "duration_minutes": null
+    "timestamp": "2026-03-07T22:39:48Z"
   },
   "last_eva_comment_check": "2026-03-07T22:39:48Z",
   "open_questions_for_eva": [],
@@ -2760,8 +2764,8 @@
         "cycle": 180,
         "deferred": 1,
         "finding_count": 5,
-        "ignored": 0,
-        "note": "formal-tool-audit-gap: ACTIONED (producing formal audit artifact this cycle). field-inventory-restamp-evidence: DEFERRED (need verification receipt mechanism). review-follow-through, eva-directive-handling, canonical-state-accuracy: confirmatory findings, no action needed."
+        "ignored": 3,
+        "note": "formal-tool-audit-gap: ACTIONED (producing formal audit artifact this cycle). field-inventory-restamp-evidence: DEFERRED (need verification receipt mechanism). review-follow-through, eva-directive-handling, canonical-state-accuracy: IGNORED (confirmatory findings, no action needed)."
       }
     ],
     "last_review_cycle": 180
