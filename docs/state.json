@@ -724,11 +724,11 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 170"
+        "last_refreshed": "cycle 171"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 170"
+        "last_refreshed": "cycle 171"
       },
       "next_metric_verification": {
         "cadence": "after each verification run",
@@ -843,10 +843,10 @@
   "last_cycle": {
     "issue": 643,
     "number": 171,
-    "summary": "in progress",
-    "timestamp": "2026-03-07T06:10:00Z"
+    "summary": "Merged 2 PRs (review artifact, --cycle removal), addressed Eva #642 (journal links), dispatched 2 tool fixes (#644 JOURNAL.md index, #645 process-review parsing)",
+    "timestamp": "2026-03-07T06:22:12Z"
   },
-  "last_eva_comment_check": "2026-03-07T06:10:00Z",
+  "last_eva_comment_check": "2026-03-07T06:22:12Z",
   "next_metric_verification": "cycle 151",
   "open_questions_for_eva": [
     606
