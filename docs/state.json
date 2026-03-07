@@ -1700,15 +1700,19 @@
     {
       "dispatched_at": "2026-03-07T16:52:42Z",
       "issue": 685,
+      "merged_at": "2026-03-07T18:20:04Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 686,
+      "status": "merged",
       "title": "Add agent_sessions reconciliation invariant to state-invariants"
     },
     {
       "dispatched_at": "2026-03-07T16:55:37Z",
       "issue": 687,
+      "merged_at": "2026-03-07T18:20:04Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 688,
+      "status": "merged",
       "title": "Cycle 178 end-of-cycle review"
     }
   ],
@@ -1843,12 +1847,12 @@
     "closed_without_merge": 1,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#687 Cycle 178 end-of-cycle review (cycle 177)",
-    "dispatch_to_pr_rate": "181/185",
+    "dispatch_to_pr_rate": "183/185",
     "in_flight": 0,
-    "merged": 180,
-    "note": "185 dispatches, 185 resolved, 0 in-flight. 181 produced PRs (180 merged, 1 closed without merge). 3 resolved without PR (silent failure). PRs #686, #688 merged in cycle 178.",
-    "pr_merge_rate": "180/181",
-    "produced_pr": 181,
+    "merged": 182,
+    "note": "185 dispatches, 185 resolved, 0 in-flight. 183 produced PRs (182 merged, 1 closed without merge). 3 resolved without PR (silent failure). PRs #686, #688 merged in cycle 178.",
+    "pr_merge_rate": "182/183",
+    "produced_pr": 183,
     "resolved": 185,
     "revision_rounds": 5,
     "total_dispatches": 185
