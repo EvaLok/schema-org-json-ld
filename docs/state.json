@@ -1847,12 +1847,12 @@
     "closed_without_merge": 1,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#687 Cycle 178 end-of-cycle review (cycle 177)",
-    "dispatch_to_pr_rate": "183/185",
+    "dispatch_to_pr_rate": "181/185",
     "in_flight": 0,
-    "merged": 182,
-    "note": "185 dispatches, 185 resolved, 0 in-flight. 183 produced PRs (182 merged, 1 closed without merge). 3 resolved without PR (silent failure). PRs #686, #688 merged in cycle 178.",
-    "pr_merge_rate": "182/183",
-    "produced_pr": 183,
+    "merged": 180,
+    "note": "185 dispatches, 185 resolved, 0 in-flight. 181 produced PRs (180 merged, 1 closed without merge). 3 resolved without PR (silent failure). PRs #686, #688 merged in cycle 178. Corrected: process-merge double-counted 2 merges.",
+    "pr_merge_rate": "180/181",
+    "produced_pr": 181,
     "resolved": 185,
     "revision_rounds": 5,
     "total_dispatches": 185
@@ -1970,7 +1970,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 177"
+        "last_refreshed": "cycle 178"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -2657,9 +2657,23 @@
         "finding_count": 4,
         "ignored": 1,
         "note": "Finding 1 (worklog-accuracy): ACTIONED — will derive from canonical state. Finding 2 (commit-receipts): ACTIONED — correct receipt c868ea5 noted. Finding 3 (zombie-field-removal): IGNORED — positive finding, no action needed. Finding 4 (ledger-follow-through): ACTIONED — backfill tool run, 132 entries reconciled."
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "accounting-verified",
+          "backfill-false-match",
+          "cycle-label-drift",
+          "premature-closure"
+        ],
+        "complacency_score": 3,
+        "cycle": 178,
+        "deferred": 0,
+        "finding_count": 4,
+        "ignored": 2
       }
     ],
-    "last_review_cycle": 177
+    "last_review_cycle": 178
   },
   "schema_status": {
     "directory_layout": {
