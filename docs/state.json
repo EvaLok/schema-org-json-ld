@@ -1706,6 +1706,13 @@
       "pr": 683,
       "status": "merged",
       "title": "[Cycle Review] Cycle 177 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-07T16:52:42Z",
+      "issue": 685,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add agent_sessions reconciliation invariant to state-invariants"
     }
   ],
   "audit_processed": [
@@ -1837,16 +1844,16 @@
   "copilot_metrics": {
     "closed_without_merge": 1,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#680 Build agent_sessions backfill tool (cycle 177)",
+    "dispatch_log_latest": "#685 Add agent_sessions reconciliation invariant to state-invariants (cycle 177)",
     "dispatch_to_pr_rate": "180/184",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 179,
-    "note": "Reconciled via backfill-sessions tool (cycle 178). 184 dispatches, 184 resolved, 0 in-flight. 180 produced PRs (179 merged, 1 closed without merge). 3 failed without PR. Some early dispatches had re-dispatch pairs mapping to the same PR.",
+    "note": "185 dispatches, 184 resolved, 1 in-flight. 180 produced PRs (179 merged, 1 closed without merge). Latest dispatch: #685 Add agent_sessions reconciliation invariant to state-invariants (cycle 177, model gpt-5.4).",
     "pr_merge_rate": "179/180",
     "produced_pr": 180,
     "resolved": 184,
     "revision_rounds": 5,
-    "total_dispatches": 184
+    "total_dispatches": 185
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -2631,7 +2638,7 @@
         "note": "Finding 1 (review-processing): corrected review_agent.history entry for cycle 175 to mark as partially-actioned. Finding 2 (commit-receipts): noted for future receipt capture. Finding 3 (worklog-accuracy): acknowledged, agent_sessions backfill in PR #675. Finding 4 (journal-quality): positive finding, no action needed."
       },
       {
-        "actioned": 0,
+        "actioned": 3,
         "categories": [
           "commit-receipts",
           "ledger-follow-through",
@@ -2643,7 +2650,6 @@
         "deferred": 0,
         "finding_count": 4,
         "ignored": 1,
-        "actioned": 3,
         "note": "Finding 1 (worklog-accuracy): ACTIONED — will derive from canonical state. Finding 2 (commit-receipts): ACTIONED — correct receipt c868ea5 noted. Finding 3 (zombie-field-removal): IGNORED — positive finding, no action needed. Finding 4 (ledger-follow-through): ACTIONED — backfill tool run, 132 entries reconciled."
       }
     ],
