@@ -631,16 +631,16 @@
   "copilot_metrics": {
     "closed_without_merge": 1,
     "closed_without_pr": 4,
-    "dispatch_log_latest": "#645 process-review finding count fix (cycle 171)",
+    "dispatch_log_latest": "#651 Fix cycle derivation in process-eva and process-audit (cycle 171)",
     "dispatch_to_pr_rate": "99/102",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 98,
-    "note": "102 dispatches, 102 resolved, 0 in-flight. 99 produced PRs (98 merged, 1 closed without merge). 4 resolved without PR (silent failure). PRs #649, #647, #646 merged in cycle 171.",
+    "note": "103 dispatches, 102 resolved, 1 in-flight. 99 produced PRs (98 merged, 1 closed without merge). Latest dispatch: #651 Fix cycle derivation in process-eva and process-audit (cycle 171, model gpt-5.3-codex).",
     "pr_merge_rate": "98/99",
     "produced_pr": 99,
     "resolved": 102,
     "revision_rounds": 5,
-    "total_dispatches": 102
+    "total_dispatches": 103
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
