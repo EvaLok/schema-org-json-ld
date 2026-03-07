@@ -7,6 +7,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+const MAX_CATEGORY_LENGTH: usize = 40;
+
 #[derive(Parser, Debug)]
 #[command(name = "process-review")]
 struct Cli {
@@ -357,6 +359,8 @@ fn normalize_category(category: &str) -> Option<String> {
     let trimmed = normalized.trim_matches('-').to_string();
     if trimmed.is_empty() {
         None
+    } else if trimmed.len() > MAX_CATEGORY_LENGTH {
+        None
     } else {
         Some(trimmed)
     }
@@ -644,9 +648,43 @@ mod tests {
             vec![
                 "arithmetic-checks-now-pass-for-metrics".to_string(),
                 "data-integrity".to_string(),
-                "field-freshness-gaps-continue-in-one-path".to_string(),
                 "process-integrity".to_string(),
                 "state-consistency-drift-remains-visible".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn category_extraction_discards_long_slugified_finding_titles() {
+        let markdown = r#"## Findings
+
+1. **Cycle 123 closes with a false all-green narrative: the repository currently fails 2 of the 9 state invariants.**
+
+## Complacency score
+
+**2/5**
+"#;
+
+        assert!(extract_categories(markdown).is_empty());
+    }
+
+    #[test]
+    fn category_extraction_deduplicates_short_categories() {
+        let markdown = r#"## Findings
+
+1. **State consistency remains visible across multiple validation surfaces.**
+   Category: Data Integrity
+2. **Data integrity remains the priority across all repository state accounting checks.**
+   Category: Data Integrity
+3. **Process integrity needs follow-up across several long-running workflow maintenance paths.**
+   Category: Process Integrity
+"#;
+
+        assert_eq!(
+            extract_categories(markdown),
+            vec![
+                "data-integrity".to_string(),
+                "process-integrity".to_string(),
             ]
         );
     }
