@@ -568,7 +568,8 @@
     120,
     122,
     125,
-    131
+    131,
+    134
   ],
   "blockers": [
     {
@@ -699,7 +700,7 @@
     "fields": {
       "audit_processed": {
         "cadence": "after processing audit issues",
-        "last_refreshed": "cycle 173"
+        "last_refreshed": "cycle 177"
       },
       "blockers": {
         "cadence": "after blocker state changes",
@@ -732,10 +733,6 @@
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
         "last_refreshed": "cycle 177"
-      },
-      "next_metric_verification": {
-        "cadence": "after each verification run",
-        "last_refreshed": "cycle 169"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
@@ -850,7 +847,6 @@
     "timestamp": "2026-03-07T15:05:13Z"
   },
   "last_eva_comment_check": "2026-03-07T15:05:13Z",
-  "next_metric_verification": "cycle 151",
   "open_questions_for_eva": [],
   "publish_gate": {
     "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z — all gates satisfied",
