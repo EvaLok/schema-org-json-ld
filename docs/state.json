@@ -680,10 +680,11 @@
       522,
       538,
       546,
+      606,
       642
     ],
     "closed_this_cycle": [
-      642
+      606
     ],
     "remaining_open": [
       247,
@@ -717,11 +718,11 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 172"
+        "last_refreshed": "cycle 173"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 172"
+        "last_refreshed": "cycle 173"
       },
       "last_cycle": {
         "cadence": "every cycle",
