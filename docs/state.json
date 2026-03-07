@@ -727,11 +727,11 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 175"
+        "last_refreshed": "cycle 176"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 175"
+        "last_refreshed": "cycle 176"
       },
       "next_metric_verification": {
         "cadence": "after each verification run",
@@ -844,12 +844,12 @@
     }
   },
   "last_cycle": {
-    "issue": 666,
-    "number": 175,
+    "issue": 673,
+    "number": 176,
     "summary": "Processed cycle 174 review (3/5, 2 findings). Merged PR #665 (review artifact). Dispatched #667 (standardize cycle number access) and #669 (cycle-start open_questions refresh). Fixed stale fields. Pipeline 5/5 PASS.",
-    "timestamp": "2026-03-07T12:19:09Z"
+    "timestamp": "2026-03-07T13:44:25Z"
   },
-  "last_eva_comment_check": "2026-03-07T12:19:09Z",
+  "last_eva_comment_check": "2026-03-07T13:44:25Z",
   "next_metric_verification": "cycle 151",
   "open_questions_for_eva": [],
   "publish_gate": {
