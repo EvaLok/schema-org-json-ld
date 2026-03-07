@@ -124,8 +124,7 @@ fn main() {
             Ok(changed_paths) => {
                 print_patch_apply_summary(&changed_paths);
                 if cli.commit {
-                    let commit_message =
-                        format!("state(cycle-complete): {} [cycle {}]", summary, cycle);
+                    let commit_message = format!("state(cycle-complete): {} [cycle {}]", summary, cycle);
                     match commit_state_json(&cli.repo_root, &commit_message) {
                         Ok(sha) => println!("Committed: {}", sha),
                         Err(error) => {
@@ -715,8 +714,14 @@ mod tests {
 
     #[test]
     fn cli_accepts_missing_cycle_argument() {
-        let cli =
-            Cli::try_parse_from(["cycle-complete", "--repo-root", ".", "--issue", "585"]).unwrap();
+        let cli = Cli::try_parse_from([
+            "cycle-complete",
+            "--repo-root",
+            ".",
+            "--issue",
+            "585",
+        ])
+        .unwrap();
         assert_eq!(cli.repo_root, PathBuf::from("."));
         assert_eq!(cli.cycle, None);
         assert_eq!(cli.issue, 585);
