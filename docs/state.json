@@ -632,13 +632,13 @@
     "closed_without_merge": 1,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#614 process-audit, #616 c166 review (cycle 166)",
-    "dispatch_to_pr_rate": "84/90",
-    "in_flight": 2,
-    "merged": 83,
-    "note": "90 dispatches, 88 resolved (83 merged, 1 closed-no-merge, 4 failed-no-PR), 2 in-flight (#614, #616). Merged #612 (review), #610 (record-dispatch), #609 (process-merge). Dispatched #614 (process-audit), #616 (c166 review).",
-    "pr_merge_rate": "83/84",
+    "dispatch_to_pr_rate": "86/90",
+    "in_flight": 0,
+    "merged": 85,
+    "note": "90 dispatches, 90 resolved, 0 in-flight. 86 produced PRs (85 merged, 1 closed without merge). 4 resolved without PR (silent failure). PRs #615, #617 merged in cycle 166.",
+    "pr_merge_rate": "85/86",
     "produced_pr": 86,
-    "resolved": 88,
+    "resolved": 90,
     "revision_rounds": 5,
     "total_dispatches": 90
   },
@@ -703,15 +703,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 165"
+        "last_refreshed": "cycle 166"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 165"
+        "last_refreshed": "cycle 166"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 164"
+        "last_refreshed": "cycle 166"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
