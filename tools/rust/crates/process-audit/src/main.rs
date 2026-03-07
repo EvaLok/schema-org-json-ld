@@ -1,7 +1,10 @@
 use clap::{Parser, ValueEnum};
 use serde_json::{json, Value};
-use state_schema::{commit_state_json, read_state_value, set_value_at_pointer, write_state_value};
-use std::path::PathBuf;
+use state_schema::{
+    commit_state_json, current_cycle_from_state, read_state_value, set_value_at_pointer,
+    write_state_value,
+};
+use std::path::{Path, PathBuf};
 
 #[derive(Parser, Debug)]
 #[command(name = "process-audit")]
@@ -36,9 +39,9 @@ fn main() {
 
 fn run(cli: Cli) -> Result<(), String> {
     let mut state_value = read_state_value(&cli.repo_root)?;
-    let next_cycle = read_next_cycle(&state_value)?;
+    let current_cycle = current_cycle(&cli.repo_root)?;
 
-    if !apply_audit_processing(&mut state_value, cli.audit_id, next_cycle)? {
+    if !apply_audit_processing(&mut state_value, cli.audit_id, current_cycle)? {
         println!(
             "Audit #{} already processed (no changes made)",
             cli.audit_id
@@ -52,35 +55,33 @@ fn run(cli: Cli) -> Result<(), String> {
         "state(process-audit): audit#{} {} [cycle {}]",
         cli.audit_id,
         cli.action.as_str(),
-        next_cycle
+        current_cycle
     );
     let receipt = commit_state_json(&cli.repo_root, &commit_message)?;
     println!(
         "Audit processed: audit#{} {} [cycle {}] (receipt: {})",
         cli.audit_id,
         cli.action.as_str(),
-        next_cycle,
+        current_cycle,
         receipt
     );
 
     Ok(())
 }
 
-fn read_next_cycle(state: &Value) -> Result<u64, String> {
-    let last_cycle = state
-        .pointer("/last_cycle/number")
-        .and_then(Value::as_u64)
-        .ok_or_else(|| "missing numeric /last_cycle/number in docs/state.json".to_string())?;
-
-    last_cycle
-        .checked_add(1)
-        .ok_or_else(|| "cycle overflow while computing current cycle".to_string())
+fn current_cycle(repo_root: &Path) -> Result<u64, String> {
+    current_cycle_from_state(repo_root).map_err(|error| {
+        format!(
+            "missing numeric /last_cycle/number in docs/state.json: {}",
+            error
+        )
+    })
 }
 
 fn apply_audit_processing(
     state: &mut Value,
     audit_id: u64,
-    next_cycle: u64,
+    current_cycle: u64,
 ) -> Result<bool, String> {
     let audit_processed = state
         .pointer("/audit_processed")
@@ -105,7 +106,7 @@ fn apply_audit_processing(
     set_value_at_pointer(
         state,
         "/field_inventory/fields/audit_processed/last_refreshed",
-        json!(format!("cycle {}", next_cycle)),
+        json!(format!("cycle {}", current_cycle)),
     )?;
 
     Ok(true)
@@ -125,6 +126,10 @@ impl AuditAction {
 mod tests {
     use super::*;
     use clap::CommandFactory;
+    use std::env;
+    use std::fs;
+    use std::path::{Path, PathBuf};
+    use std::sync::atomic::{AtomicU64, Ordering};
 
     fn sample_state() -> Value {
         json!({
@@ -138,6 +143,31 @@ mod tests {
                 }
             }
         })
+    }
+
+    struct TempRepo {
+        path: PathBuf,
+    }
+
+    impl TempRepo {
+        fn new(state: &Value) -> Self {
+            static COUNTER: AtomicU64 = AtomicU64::new(0);
+            let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+            let path = env::temp_dir().join(format!("process-audit-test-{}", run_id));
+            fs::create_dir_all(path.join("docs")).expect("temp repo should be created");
+            write_state_value(&path, state).expect("state should be written");
+            Self { path }
+        }
+
+        fn path(&self) -> &Path {
+            &self.path
+        }
+    }
+
+    impl Drop for TempRepo {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.path);
+        }
     }
 
     #[test]
@@ -192,8 +222,8 @@ mod tests {
     }
 
     #[test]
-    fn next_cycle_is_derived_from_last_cycle_plus_one() {
-        let state = sample_state();
-        assert_eq!(read_next_cycle(&state).unwrap(), 166);
+    fn current_cycle_matches_last_cycle_number_from_state_file() {
+        let repo = TempRepo::new(&sample_state());
+        assert_eq!(current_cycle(repo.path()).unwrap(), 165);
     }
 }
