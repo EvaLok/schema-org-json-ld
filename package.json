@@ -1,6 +1,6 @@
 {
 "name": "@evabee/schema-org-json-ld",
-"version": "1.0.1",
+"version": "1.0.2",
 "description": "TypeScript/JavaScript library for generating schema.org JSON-LD structured data for Google Rich Results",
 "keywords": [
 "schema.org",
