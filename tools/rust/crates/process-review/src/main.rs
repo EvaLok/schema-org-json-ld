@@ -179,52 +179,6 @@ fn extract_score(content: &str) -> Option<u64> {
 }
 
 fn extract_finding_count(content: &str) -> Option<u64> {
-    // Priority 1: Look for explicit "## Number of findings" heading, take number from next line
-    let lines: Vec<&str> = content.lines().collect();
-    for (i, line) in lines.iter().enumerate() {
-        let lower = line.to_ascii_lowercase();
-        if lower.trim().starts_with("## number of finding") {
-            // Check the next non-empty line for the count
-            for next_line in &lines[i + 1..] {
-                let trimmed = next_line.trim();
-                if trimmed.is_empty() {
-                    continue;
-                }
-                if let Some(number) = first_number_in_text(trimmed) {
-                    return Some(number);
-                }
-                break; // first non-empty line had no number, stop looking
-            }
-        }
-    }
-
-    // Priority 2: Look for "N findings" pattern (number immediately before "findings")
-    for line in content.lines() {
-        let lower = line.to_ascii_lowercase();
-        if let Some(idx) = lower.find("finding") {
-            // Look for a number immediately before "finding" (with optional whitespace)
-            let before = &line[..idx];
-            let trimmed_before = before.trim_end();
-            if let Some(number) = last_number_in_text(trimmed_before) {
-                return Some(number);
-            }
-        }
-    }
-
-    // Priority 3: Count finding headings
-    let finding_heading_count = content
-        .lines()
-        .filter(|line| {
-            let trimmed = line.trim();
-            let lower = trimmed.to_ascii_lowercase();
-            lower.starts_with("**finding ") || lower.starts_with("### finding ")
-        })
-        .count();
-    if finding_heading_count > 0 {
-        return Some(finding_heading_count as u64);
-    }
-
-    // Priority 4: Count numbered list items in ## Findings section
     let list_count = count_numbered_findings_in_findings_section(content);
     if list_count > 0 {
         return Some(list_count as u64);
@@ -235,6 +189,7 @@ fn extract_finding_count(content: &str) -> Option<u64> {
 
 fn count_numbered_findings_in_findings_section(content: &str) -> usize {
     let mut in_findings = false;
+    let mut in_code_block = false;
     let mut count = 0usize;
 
     for line in content.lines() {
@@ -254,7 +209,16 @@ fn count_numbered_findings_in_findings_section(content: &str) -> usize {
             continue;
         }
 
-        if is_numbered_list_item(trimmed) {
+        if trimmed.starts_with("```") {
+            in_code_block = !in_code_block;
+            continue;
+        }
+
+        if in_code_block {
+            continue;
+        }
+
+        if is_numbered_finding_heading(trimmed) {
             count += 1;
         }
     }
@@ -262,7 +226,7 @@ fn count_numbered_findings_in_findings_section(content: &str) -> usize {
     count
 }
 
-fn is_numbered_list_item(line: &str) -> bool {
+fn is_numbered_finding_heading(line: &str) -> bool {
     let mut chars = line.chars().peekable();
     let mut saw_digit = false;
     while let Some(ch) = chars.peek() {
@@ -278,68 +242,92 @@ fn is_numbered_list_item(line: &str) -> bool {
         return false;
     }
 
-    matches!(chars.next(), Some('.'))
+    if !matches!(chars.next(), Some('.')) {
+        return false;
+    }
+
+    let mut saw_whitespace = false;
+    while let Some(ch) = chars.peek() {
+        if ch.is_whitespace() {
+            saw_whitespace = true;
+            chars.next();
+        } else {
+            break;
+        }
+    }
+
+    saw_whitespace && chars.next() == Some('*') && chars.next() == Some('*')
 }
 
 fn extract_categories(content: &str) -> Vec<String> {
     let mut categories = BTreeSet::new();
+    let mut in_findings = false;
+    let mut in_code_block = false;
+    let mut awaiting_category = false;
 
     for line in content.lines() {
         let trimmed = line.trim();
         let lower = trimmed.to_ascii_lowercase();
 
-        if let Some(index) = lower.find("category:") {
-            let raw = trimmed[(index + "category:".len())..].trim();
-            for candidate in split_category_candidates(raw) {
-                if let Some(normalized) = normalize_category(candidate) {
-                    categories.insert(normalized);
-                }
-            }
+        if lower.starts_with("## findings") {
+            in_findings = true;
+            in_code_block = false;
+            awaiting_category = false;
             continue;
         }
 
-        if lower.starts_with("### ") || lower.starts_with("#### ") {
-            let heading = trimmed.trim_start_matches('#').trim();
-            let heading_lower = heading.to_ascii_lowercase();
-            if heading_lower.starts_with("finding ") {
-                continue;
-            }
-            if let Some(normalized) = normalize_category(heading) {
-                categories.insert(normalized);
-            }
+        if in_findings && lower.starts_with("## ") && !lower.starts_with("## findings") {
+            break;
         }
 
-        if let Some(title) = extract_bold_finding_title(trimmed) {
-            if let Some(normalized) = normalize_category(title) {
-                categories.insert(normalized);
+        if !in_findings {
+            continue;
+        }
+
+        if trimmed.starts_with("```") {
+            in_code_block = !in_code_block;
+            awaiting_category = false;
+            continue;
+        }
+
+        if in_code_block {
+            continue;
+        }
+
+        if is_numbered_finding_heading(trimmed) {
+            awaiting_category = true;
+            continue;
+        }
+
+        if awaiting_category && trimmed.is_empty() {
+            continue;
+        }
+
+        if awaiting_category {
+            if let Some(raw) = extract_category_line(line) {
+                if let Some(normalized) = normalize_category(raw) {
+                    categories.insert(normalized);
+                }
             }
+            awaiting_category = false;
         }
     }
 
     categories.into_iter().collect()
 }
 
-fn extract_bold_finding_title(line: &str) -> Option<&str> {
-    let trimmed = line.trim();
-    if !is_numbered_list_item(trimmed) {
+fn extract_category_line(line: &str) -> Option<&str> {
+    let trimmed_start = line.trim_start();
+    if trimmed_start.len() == line.len() {
         return None;
     }
 
-    let start = trimmed.find("**")?;
-    let rest = &trimmed[(start + 2)..];
-    let end = rest.find("**")?;
-    Some(rest[..end].trim())
-}
-
-fn split_category_candidates(raw: &str) -> Vec<&str> {
-    let mut head = raw;
-    for delimiter in [")", "—", " - ", ":"] {
-        if let Some(index) = head.find(delimiter) {
-            head = &head[..index];
-        }
+    let raw = trimmed_start.strip_prefix("Category:")?.trim();
+    if raw.is_empty() {
+        None
+    } else {
+        Some(raw)
     }
-
-    head.split(&[',', '/', ';'][..]).collect()
 }
 
 fn normalize_category(category: &str) -> Option<String> {
@@ -385,40 +373,6 @@ fn find_number_before_token(text: &str, token: &str) -> Option<(u64, usize)> {
 
     let value = text[start..end].parse::<u64>().ok()?;
     Some((value, start))
-}
-
-fn last_number_in_text(text: &str) -> Option<u64> {
-    let mut last_number: Option<u64> = None;
-    let mut current = String::new();
-    for ch in text.chars() {
-        if ch.is_ascii_digit() {
-            current.push(ch);
-        } else if !current.is_empty() {
-            last_number = current.parse::<u64>().ok();
-            current.clear();
-        }
-    }
-    if !current.is_empty() {
-        last_number = current.parse::<u64>().ok();
-    }
-    last_number
-}
-
-fn first_number_in_text(text: &str) -> Option<u64> {
-    let mut number = String::new();
-    for ch in text.chars() {
-        if ch.is_ascii_digit() {
-            number.push(ch);
-        } else if !number.is_empty() {
-            return number.parse::<u64>().ok();
-        }
-    }
-
-    if number.is_empty() {
-        None
-    } else {
-        number.parse::<u64>().ok()
-    }
 }
 
 fn build_history_entry(parsed_review: &ParsedReview, cli: &Cli) -> ReviewHistoryEntry {
@@ -562,7 +516,7 @@ mod tests {
 ## Findings
 
 1. **State consistency drift remains visible.**
-   (Category: Data Integrity)
+   Category: Data Integrity
 2. **Field freshness gaps continue in one path.**
    Category: Process Integrity
 3. **Arithmetic checks now pass for metrics.**
@@ -574,8 +528,31 @@ mod tests {
 ## Complacency score
 
 **Complacency Score: 2/5**
+"#;
 
-7 findings recorded in this review.
+    const CYCLE_170_REVIEW: &str = r#"# Cycle 170 Review
+
+## Findings
+
+1. **`review_agent` changed this cycle, but its freshness marker still says it did not.**  
+   Category: review-agent-freshness-drift  
+   The worklog says cycle 170 manually corrected the review history entry after `process-review` produced bad category output (`docs/worklog/2026-03-07/045200-hundred-seventieth-orchestrator-cycle.md:23-29`), and the current history entry for cycle 169 reflects that correction (`docs/state.json:1329-1344`).
+
+2. **The cycle fixed the rate bug in code, but only after two more rounds of manual state surgery.**  
+   Category: reactive-manual-repair  
+   The journal is candid that this was the third straight cycle with a manual `dispatch_to_pr_rate` repair (`docs/journal/2026-03-07.md:65-68`), and the worklog records two manual corrections in the same cycle before PR #637 merged (`docs/worklog/2026-03-07/045200-hundred-seventieth-orchestrator-cycle.md:23-29`).
+
+3. **The publish-gate status was refreshed as current-cycle state, but its divergence evidence still points at cycle 169.**  
+   Category: publish-gate-evidence-reuse  
+   The worklog's current-state section says the publish gate is "FULLY CLEARED" and that there is "No source divergence" (`docs/worklog/2026-03-07/045200-hundred-seventieth-orchestrator-cycle.md:37-41`).
+
+## Recommendations
+
+1. Whenever `docs/state.json` is edited manually, update the matching `field_inventory` freshness entry in the same change or route the change through a tool that does it automatically.
+
+## Complacency score
+
+3/5 — this cycle made real improvements and the journal is genuinely self-critical rather than formulaic, but it still normalized avoidable manual state repair and let some evidence/freshness bookkeeping lag behind the actual work.
 "#;
 
     #[test]
@@ -599,41 +576,21 @@ mod tests {
     }
 
     #[test]
-    fn finding_count_extraction_reads_findings_line() {
-        assert_eq!(extract_finding_count(SAMPLE_REVIEW), Some(7));
+    fn finding_count_counts_only_numbered_bold_findings() {
+        assert_eq!(extract_finding_count(SAMPLE_REVIEW), Some(3));
     }
 
     #[test]
-    fn finding_count_prefers_number_of_findings_heading() {
-        // This is the format that caused the bug: "## Number of findings" heading
-        // with the count on the next line, and a later line mentioning "cycle-162" + "findings"
-        let markdown = r#"# Cycle 163 Review
-
-## Complacency score
-
-**3/5**
-
-## Number of findings
-
-**5**
-
-## Findings
-
-1. **Category:** state-consistency
-   **Description:** The cycle-162 review history ingestion is accurate and reconciles with `docs/reviews/cycle-162.md` (7 findings, score 2/5).
-2. **Category:** state-freshness
-3. **Category:** review-accounting
-4. **Category:** release-governance
-5. **Category:** process-traceability
-"#;
-        assert_eq!(extract_finding_count(markdown), Some(5));
+    fn finding_count_uses_cycle_170_review_format() {
+        assert_eq!(extract_finding_count(CYCLE_170_REVIEW), Some(3));
+        assert_eq!(extract_score(CYCLE_170_REVIEW), Some(3));
     }
 
     #[test]
-    fn finding_count_extraction_falls_back_to_numbered_list() {
+    fn finding_count_requires_bold_numbered_findings() {
         let markdown = r#"## Findings
-1. One
-2. Two
+1. **One**
+2. **Two**
 ## Recommendations
 1. R
 "#;
@@ -642,20 +599,19 @@ mod tests {
 
     #[test]
     fn category_extraction_normalizes_values() {
-        let categories = extract_categories(SAMPLE_REVIEW);
+        let categories = extract_categories(CYCLE_170_REVIEW);
         assert_eq!(
             categories,
             vec![
-                "arithmetic-checks-now-pass-for-metrics".to_string(),
-                "data-integrity".to_string(),
-                "process-integrity".to_string(),
-                "state-consistency-drift-remains-visible".to_string(),
+                "publish-gate-evidence-reuse".to_string(),
+                "reactive-manual-repair".to_string(),
+                "review-agent-freshness-drift".to_string(),
             ]
         );
     }
 
     #[test]
-    fn category_extraction_discards_long_slugified_finding_titles() {
+    fn category_extraction_ignores_titles_without_category_lines() {
         let markdown = r#"## Findings
 
 1. **Cycle 123 closes with a false all-green narrative: the repository currently fails 2 of the 9 state invariants.**
@@ -686,6 +642,35 @@ mod tests {
                 "data-integrity".to_string(),
                 "process-integrity".to_string(),
             ]
+        );
+    }
+
+    #[test]
+    fn parsing_ignores_code_blocks_and_paths() {
+        let markdown = r#"## Findings
+
+1. **Real finding**
+   Category: First Category
+   Description with a real path: `docs/reviews/cycle-170.md`
+
+```text
+1. **Not a real finding**
+   Category: bogus-category
+/home/runner/work/schema-org-json-ld/schema-org-json-ld/tools/rust/crates/process-review/src/main.rs
+```
+
+2. **Second real finding**
+   Category: Second Category
+
+## Recommendations
+
+1. Leave the code block alone.
+"#;
+
+        assert_eq!(extract_finding_count(markdown), Some(2));
+        assert_eq!(
+            extract_categories(markdown),
+            vec!["first-category".to_string(), "second-category".to_string()]
         );
     }
 
@@ -775,6 +760,6 @@ mod tests {
         let parsed = parse_review(path, SAMPLE_REVIEW).expect("parse should succeed");
         assert_eq!(parsed.cycle, 162);
         assert_eq!(parsed.complacency_score, 2);
-        assert_eq!(parsed.finding_count, 7);
+        assert_eq!(parsed.finding_count, 3);
     }
 }
