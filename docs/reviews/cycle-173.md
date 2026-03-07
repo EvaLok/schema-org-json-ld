@@ -1,0 +1,29 @@
+# Cycle 173 Review
+
+I rechecked the concrete areas called out in the issue. The core cycle-start claim is verified: `5a27882` is a real `state(cycle-start)` commit, and it updated `docs/state.json` so `last_cycle.number` became 173 before the rest of the cycle work (`docs/state.json:845-852`). The final state is also internally consistent on the requested checks: `copilot_metrics` currently shows `106` dispatches, `104` resolved, `2` in flight, and `101` produced PRs split into `100` merged plus `1` closed without merge (`docs/state.json:632-644`); `audit_processed` includes `131` (`docs/state.json:507-576`); and the touched field-inventory markers for `audit_processed`, `copilot_metrics.*`, `eva_input_issues.*`, `last_cycle`, `last_eva_comment_check`, and `review_agent` all end at `cycle 173` (`docs/state.json:699-765`). I also reran the Rust workspace tests and `state-invariants`, and the new future-cycle freshness check passes in the current repository state (10/10 invariants).
+
+## Findings
+
+1. **The new startup step fixes the real adoption gap, but it still duplicates the old “announce startup” path instead of replacing it.**  
+   Category: startup-comment-duplication  
+   Step 0.1 is clear about the important behavioral change: run `bash tools/cycle-start --issue {NUMBER}` first after the opening comment, let it claim the cycle, and do not manually initialize `state.json` (`STARTUP_CHECKLIST.md:42-52`). That solved the specific problem from cycle 172: the git history now contains `state(cycle-start): begin cycle 173, issue #655`, and the commit diff shows that tool — not a manual edit — set `last_cycle.number` to 173 and refreshed the relevant markers. But the checklist still keeps the old manual startup comment as a required preceding step (`STARTUP_CHECKLIST.md:9-28`), even though step 0.1 says `cycle-start` “also posts a structured acknowledgement comment on the cycle issue” (`STARTUP_CHECKLIST.md:50`). In practice that produced two near-duplicate startup comments on issue #655 within about two minutes: the manual “Orchestrator session started” comment, which even left `${GITHUB_RUN_ID}` unresolved, and then the `cycle-start` acknowledgement comment saying “Cycle 173 started. Running startup checks...” (`https://github.com/EvaLok/schema-org-json-ld/issues/655#issuecomment-4016046060`, `https://github.com/EvaLok/schema-org-json-ld/issues/655#issuecomment-4016054906`). So the checklist change is directionally correct and effective, but it has not yet fully replaced the pre-tool startup path; it currently layers a new required comment on top of the old one.
+
+2. **The cycle-close narrative and the persisted state freeze before the mandatory review dispatch, so the final “current state” is already stale by the time the closing comment lands.**  
+   Category: review-dispatch-accounting  
+   The worklog and final `state.json` are self-consistent with each other: they report `106` total dispatches, `2` in-flight sessions, and list only `#657` and `#659` as still open (`docs/worklog/2026-03-07/091800-hundred-seventy-third-orchestrator-cycle.md:38-40`, `docs/state.json:632-644`). The closing cycle comment, however, claims three dispatched tasks — `#657`, `#659`, and the review task `#661` — and includes an additional `record-dispatch` receipt `fe23bb7` (`https://github.com/EvaLok/schema-org-json-ld/issues/655#issuecomment-4016074525`). That extra receipt is real: `fe23bb7` is a `state(record-dispatch): #661 dispatched [cycle 173]` commit, and its diff would raise totals to `107` dispatches and `3` in flight. This is not a math bug in the committed state; it is a sequencing problem in the end-of-cycle artifact trail. `cycle-complete` froze `last_cycle` at `53626c8`, the worklog/journal summarize only the pre-review-dispatch snapshot, and then the mandatory review dispatch from `COMPLETION_CHECKLIST.md:60-69` happened afterward. The result is a final cycle comment that mixes two different snapshots of reality: the persisted state before review dispatch and the receipt trail after review dispatch.
+
+## Recommendations
+
+1. Decide whether `cycle-start` replaces the manual opening comment or whether the manual comment becomes fallback-only; the current “post opening comment, then run a tool that also posts a comment” flow is redundant.
+2. Reconcile the end-of-cycle sequence so the mandatory review dispatch is either included in the persisted final state/worklog, or clearly separated as a post-close step that does not get blended into the cycle’s “current state” metrics.
+3. Keep using `state-invariants` as the backstop for future-cycle freshness; the cycle-174 audit stamp was caught and corrected quickly this time, which is exactly the behavior the new invariant should enforce going forward.
+
+## Complacency score
+
+2/5 — this cycle is materially less complacent than the recent baseline. The journal is genuinely reflective rather than formulaic: it names the three-cycle cycle-start adoption gap, credits audit #131 for diagnosing the behavioral-vs-checklist problem, and explicitly explains why the bad `cycle 174` stamp was visible this time instead of hand-waving it away (`docs/journal/2026-03-07.md:109-121`). The remaining risk is process polish, not self-deception: the startup flow still has duplicate ceremony, and the cycle-close artifacts still lag the final review-dispatch step.
+
+## Priority items
+
+1. Simplify startup so `cycle-start` is the single canonical startup path instead of one required comment plus one required tool comment.
+2. Fix the completion sequencing around review dispatch so worklog/state/comment all describe the same final snapshot.
+3. Keep monitoring a few more cycles to confirm that mandatory `cycle-start` plus the future-cycle freshness invariant actually eliminate cycle-label drift sustainably, rather than for just one cycle.
