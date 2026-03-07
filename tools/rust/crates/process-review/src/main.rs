@@ -1,7 +1,7 @@
 use clap::Parser;
 use serde::Serialize;
 use serde_json::{json, Value};
-use state_schema::set_value_at_pointer;
+use state_schema::{current_cycle_from_state, set_value_at_pointer};
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -82,7 +82,13 @@ fn run(cli: Cli) -> Result<(), String> {
 
     let state_path = cli.repo_root.join("docs/state.json");
     let mut state_value = read_state_value(&state_path)?;
-    let current_cycle = read_current_cycle(&state_value)?;
+    let current_cycle = current_cycle_from_state(&cli.repo_root).map_err(|error| {
+        if error == "missing /last_cycle/number in state.json" {
+            "missing numeric /last_cycle/number in docs/state.json".to_string()
+        } else {
+            error
+        }
+    })?;
 
     let patch = build_state_patch(&state_value, parsed_review.cycle, current_cycle, &entry)?;
     apply_patch(&mut state_value, &patch)?;
@@ -400,13 +406,6 @@ fn write_state_value(path: &Path, value: &Value) -> Result<(), String> {
         .map_err(|error| format!("failed to serialize state.json: {}", error))?;
     fs::write(path, format!("{}\n", serialized))
         .map_err(|error| format!("failed to write {}: {}", path.display(), error))
-}
-
-fn read_current_cycle(state: &Value) -> Result<u64, String> {
-    state
-        .pointer("/last_cycle/number")
-        .and_then(Value::as_u64)
-        .ok_or_else(|| "missing numeric /last_cycle/number in docs/state.json".to_string())
 }
 
 fn build_state_patch(

@@ -1,6 +1,9 @@
 use clap::Parser;
 use serde_json::{json, Value};
-use state_schema::{commit_state_json, read_state_value, set_value_at_pointer, write_state_value};
+use state_schema::{
+    commit_state_json, current_cycle_from_state, read_state_value, set_value_at_pointer,
+    write_state_value,
+};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
@@ -52,7 +55,14 @@ fn run(cli: Cli) -> Result<(), String> {
     }
 
     let mut state = read_state_value(&cli.repo_root)?;
-    let update = compute_update(&state, &cli.prs, cli.note.as_deref())?;
+    let current_cycle = current_cycle_from_state(&cli.repo_root).map_err(|error| {
+        if error == "missing /last_cycle/number in state.json" {
+            "missing numeric /last_cycle/number in docs/state.json".to_string()
+        } else {
+            error
+        }
+    })?;
+    let update = compute_update(&state, current_cycle, &cli.prs, cli.note.as_deref())?;
     let patch = build_patch(&update)?;
     apply_patch(&mut state, &patch)?;
     write_state_value(&cli.repo_root, &state)?;
@@ -86,14 +96,12 @@ fn get_metric_i64(state: &Value, field: &str) -> Result<i64, String> {
         })
 }
 
-fn get_cycle(state: &Value) -> Result<u64, String> {
-    state
-        .pointer("/last_cycle/number")
-        .and_then(Value::as_u64)
-        .ok_or_else(|| "missing numeric /last_cycle/number in docs/state.json".to_string())
-}
-
-fn compute_update(state: &Value, prs: &[u64], note: Option<&str>) -> Result<MergeUpdate, String> {
+fn compute_update(
+    state: &Value,
+    cycle: u64,
+    prs: &[u64],
+    note: Option<&str>,
+) -> Result<MergeUpdate, String> {
     let merged = get_metric_i64(state, "merged")?;
     let resolved = get_metric_i64(state, "resolved")?;
     let in_flight = get_metric_i64(state, "in_flight")?;
@@ -101,7 +109,6 @@ fn compute_update(state: &Value, prs: &[u64], note: Option<&str>) -> Result<Merg
     let total_dispatches = get_metric_i64(state, "total_dispatches")?;
     let closed_without_merge = get_metric_i64(state, "closed_without_merge")?;
     let closed_without_pr = get_metric_i64(state, "closed_without_pr")?;
-    let cycle = get_cycle(state)?;
 
     if in_flight < 0 {
         return Err(format!(
@@ -286,7 +293,7 @@ mod tests {
     #[test]
     fn metric_calculation_single_pr_merge() {
         let state = sample_state();
-        let update = compute_update(&state, &[595], None).expect("update should compute");
+        let update = compute_update(&state, 164, &[595], None).expect("update should compute");
         assert_eq!(update.merged, 81);
         assert_eq!(update.produced_pr, 85);
         assert_eq!(update.resolved, 83);
@@ -305,7 +312,7 @@ mod tests {
     #[test]
     fn metric_calculation_multiple_pr_merge() {
         let state = sample_state();
-        let update = compute_update(&state, &[595, 597, 599], Some("Merged as planned."))
+        let update = compute_update(&state, 164, &[595, 597, 599], Some("Merged as planned."))
             .expect("update should compute");
         assert_eq!(update.merged, 83);
         assert_eq!(update.produced_pr, 87);
@@ -330,7 +337,7 @@ mod tests {
         let mut state = sample_state();
         state["copilot_metrics"]["in_flight"] = json!(1);
         state["copilot_metrics"]["resolved"] = json!(84);
-        let update = compute_update(&state, &[595, 597], None).expect("update should compute");
+        let update = compute_update(&state, 164, &[595, 597], None).expect("update should compute");
         assert_eq!(update.merged, 82);
         assert_eq!(update.produced_pr, 86);
         assert_eq!(update.resolved, 85);
@@ -342,14 +349,15 @@ mod tests {
     fn invariant_validation_detects_mismatch() {
         let mut state = sample_state();
         state["copilot_metrics"]["total_dispatches"] = json!(84);
-        let error = compute_update(&state, &[595], None).expect_err("invariant should fail");
+        let error =
+            compute_update(&state, 164, &[595], None).expect_err("invariant should fail");
         assert!(error.contains("invariant violated"));
     }
 
     #[test]
     fn patch_updates_rates_and_freshness_markers() {
         let state = sample_state();
-        let update = compute_update(&state, &[595], None).expect("update should compute");
+        let update = compute_update(&state, 164, &[595], None).expect("update should compute");
         let patch = build_patch(&update).expect("patch should build");
         assert_eq!(patch.len(), 10);
         assert_eq!(patch[3].path, "/copilot_metrics/pr_merge_rate");
@@ -368,7 +376,7 @@ mod tests {
         let mut state = sample_state();
         state["copilot_metrics"]["produced_pr"] = json!(81);
         state["copilot_metrics"]["merged"] = json!(80);
-        let update = compute_update(&state, &[595], None).expect("update should compute");
+        let update = compute_update(&state, 164, &[595], None).expect("update should compute");
         assert_eq!(update.produced_pr, 82);
         assert_eq!(update.pr_merge_rate, "81/82");
     }
