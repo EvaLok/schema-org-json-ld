@@ -204,13 +204,9 @@ fn validate_pipeline_check(state: &StateJson, cycle: u64) -> PipelineCheckStatus
         .get("pipeline_reliability")
         .and_then(|value| value.get("last_clean_cycle"))
         .and_then(Value::as_u64);
-    let metric_verified = state
-        .next_metric_verification
-        .as_deref()
-        .is_some_and(|value| text_mentions_cycle(value, cycle));
     let clean_cycle_verified = last_clean_cycle.is_some_and(|value| value >= cycle);
 
-    if clean_cycle_verified || metric_verified {
+    if clean_cycle_verified {
         PipelineCheckStatus {
             status: StepStatus::Pass,
             detail: "verified this cycle".to_string(),
@@ -221,13 +217,6 @@ fn validate_pipeline_check(state: &StateJson, cycle: u64) -> PipelineCheckStatus
             detail: "not verified this cycle".to_string(),
         }
     }
-}
-
-fn text_mentions_cycle(text: &str, cycle: u64) -> bool {
-    text.split(|ch: char| !ch.is_ascii_digit())
-        .filter(|token| !token.is_empty())
-        .filter_map(|token| token.parse::<u64>().ok())
-        .any(|number| number == cycle)
 }
 
 fn build_state_patch(
@@ -762,8 +751,12 @@ mod tests {
     #[test]
     fn json_report_serializes_to_valid_json() {
         let mut state = StateJson::default();
-        state.next_metric_verification = Some("cycle 139".to_string());
-        state.extra = BTreeMap::new();
+        let mut extra = BTreeMap::new();
+        extra.insert(
+            "pipeline_reliability".to_string(),
+            json!({"last_clean_cycle": 139}),
+        );
+        state.extra = extra;
         state.field_inventory.fields.insert(
             "last_cycle".to_string(),
             json!({"last_refreshed": "cycle 120"}),
