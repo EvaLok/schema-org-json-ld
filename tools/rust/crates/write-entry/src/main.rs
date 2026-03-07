@@ -249,7 +249,11 @@ fn update_journal_index(repo_root: &Path, date: NaiveDate, cycle: u64) -> Result
     }
 
     let mut lines = content.lines().map(str::to_string).collect::<Vec<_>>();
-    if let Some(previous_date) = date.pred_opt() {
+    if let Some(previous_date) = lines
+        .iter()
+        .rev()
+        .find_map(|line| open_journal_index_entry_date(line))
+    {
         finalize_previous_journal_index_entry(repo_root, &mut lines, previous_date)?;
     }
     lines.push(format!("- [{date_slug}]({journal_relative_path}) — Cycles {cycle}+"));
@@ -281,6 +285,16 @@ fn finalize_previous_journal_index_entry(
     let highest_cycle = highest_cycle_in_journal_file(&previous_journal_path)?;
     lines[last_index] = replace_open_cycle_range(&lines[last_index], highest_cycle)?;
     Ok(())
+}
+
+fn open_journal_index_entry_date(line: &str) -> Option<NaiveDate> {
+    let (date_part, rest) = line.strip_prefix("- [")?.split_once("](")?;
+    let (path_part, cycles_part) = rest.split_once(") — Cycles ")?;
+    let cycle_start = cycles_part.strip_suffix('+')?.parse::<u64>().ok()?;
+    if cycle_start == 0 || path_part != format!("docs/journal/{date_part}.md") {
+        return None;
+    }
+    NaiveDate::parse_from_str(date_part, "%Y-%m-%d").ok()
 }
 
 fn highest_cycle_in_journal_file(path: &Path) -> Result<u64, String> {
@@ -837,6 +851,12 @@ mod tests {
             .with_timezone(&Utc)
     }
 
+    fn fixed_now_on(date: &str) -> DateTime<Utc> {
+        DateTime::parse_from_rfc3339(&format!("{date}T05:14:58Z"))
+            .unwrap()
+            .with_timezone(&Utc)
+    }
+
     #[test]
     fn converts_issue_references_and_preserves_existing_links() {
         let input = "Refs: #42, PR #10, QC #11, audit #12, [#13](https://github.com/EvaLok/schema-org-json-ld/issues/13)";
@@ -975,6 +995,136 @@ mod tests {
             "- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 151–153"
         ));
         assert!(journal_index.contains("- [2026-03-06](docs/journal/2026-03-06.md) — Cycles 154+"));
+    }
+
+    #[test]
+    fn new_journal_date_after_gap_finalizes_latest_open_range() {
+        let repo_root = TempRepoDir::new("journal-index-gap-day");
+        let journal_dir = repo_root.path.join("docs").join("journal");
+        fs::create_dir_all(&journal_dir).unwrap();
+        write_root_journal_index(&repo_root.path, "- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 151+\n");
+        fs::write(
+            journal_dir.join("2026-03-05.md"),
+            concat!(
+                "# Journal — 2026-03-05\n\n",
+                "Reflective log for the schema-org-json-ld orchestrator.\n\n",
+                "---\n\n",
+                "## 2026-03-05 — Cycle 151: First\n\n",
+                "## 2026-03-05 — Cycle 153: Last\n"
+            ),
+        )
+        .unwrap();
+
+        let args = JournalArgs {
+            cycle: Some(154),
+            title: "Gap day".to_string(),
+        };
+        let payload = r#"{
+            "previous_commitment_status":"followed",
+            "previous_commitment_detail":"Done.",
+            "sections":[],
+            "concrete_behavior_change":"Keep going.",
+            "open_questions":[]
+        }"#;
+
+        execute_journal(&args, &repo_root.path, fixed_now_on("2026-03-07"), payload).unwrap();
+
+        let journal_index = fs::read_to_string(repo_root.path.join("JOURNAL.md")).unwrap();
+        assert!(journal_index.contains(
+            "- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 151–153"
+        ));
+        assert!(journal_index.contains("- [2026-03-07](docs/journal/2026-03-07.md) — Cycles 154+"));
+    }
+
+    #[test]
+    fn new_journal_date_after_multiple_day_gap_finalizes_latest_open_range() {
+        let repo_root = TempRepoDir::new("journal-index-multi-day-gap");
+        let journal_dir = repo_root.path.join("docs").join("journal");
+        fs::create_dir_all(&journal_dir).unwrap();
+        write_root_journal_index(&repo_root.path, "- [2026-03-03](docs/journal/2026-03-03.md) — Cycles 151+\n");
+        fs::write(
+            journal_dir.join("2026-03-03.md"),
+            concat!(
+                "# Journal — 2026-03-03\n\n",
+                "Reflective log for the schema-org-json-ld orchestrator.\n\n",
+                "---\n\n",
+                "## 2026-03-03 — Cycle 151: First\n\n",
+                "## 2026-03-03 — Cycle 160: Last\n"
+            ),
+        )
+        .unwrap();
+
+        let args = JournalArgs {
+            cycle: Some(161),
+            title: "Multi day gap".to_string(),
+        };
+        let payload = r#"{
+            "previous_commitment_status":"followed",
+            "previous_commitment_detail":"Done.",
+            "sections":[],
+            "concrete_behavior_change":"Keep going.",
+            "open_questions":[]
+        }"#;
+
+        execute_journal(&args, &repo_root.path, fixed_now_on("2026-03-07"), payload).unwrap();
+
+        let journal_index = fs::read_to_string(repo_root.path.join("JOURNAL.md")).unwrap();
+        assert!(journal_index.contains(
+            "- [2026-03-03](docs/journal/2026-03-03.md) — Cycles 151–160"
+        ));
+        assert!(journal_index.contains("- [2026-03-07](docs/journal/2026-03-07.md) — Cycles 161+"));
+    }
+
+    #[test]
+    fn first_journal_date_appends_new_index_entry_without_crashing() {
+        let repo_root = TempRepoDir::new("journal-index-first-date");
+        let journal_dir = repo_root.path.join("docs").join("journal");
+        fs::create_dir_all(&journal_dir).unwrap();
+        write_root_journal_index(&repo_root.path, "");
+
+        let args = JournalArgs {
+            cycle: Some(154),
+            title: "First date".to_string(),
+        };
+        let payload = r#"{
+            "previous_commitment_status":"followed",
+            "previous_commitment_detail":"Done.",
+            "sections":[],
+            "concrete_behavior_change":"Keep going.",
+            "open_questions":[]
+        }"#;
+
+        execute_journal(&args, &repo_root.path, fixed_now(), payload).unwrap();
+
+        let journal_index = fs::read_to_string(repo_root.path.join("JOURNAL.md")).unwrap();
+        assert!(journal_index.contains("- [2026-03-06](docs/journal/2026-03-06.md) — Cycles 154+"));
+    }
+
+    #[test]
+    fn new_journal_date_leaves_closed_previous_index_entry_unchanged() {
+        let repo_root = TempRepoDir::new("journal-index-closed-previous-entry");
+        let journal_dir = repo_root.path.join("docs").join("journal");
+        fs::create_dir_all(&journal_dir).unwrap();
+        let initial_index = "- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 151–160\n";
+        write_root_journal_index(&repo_root.path, initial_index);
+
+        let args = JournalArgs {
+            cycle: Some(161),
+            title: "Closed previous".to_string(),
+        };
+        let payload = r#"{
+            "previous_commitment_status":"followed",
+            "previous_commitment_detail":"Done.",
+            "sections":[],
+            "concrete_behavior_change":"Keep going.",
+            "open_questions":[]
+        }"#;
+
+        execute_journal(&args, &repo_root.path, fixed_now_on("2026-03-07"), payload).unwrap();
+
+        let journal_index = fs::read_to_string(repo_root.path.join("JOURNAL.md")).unwrap();
+        assert!(journal_index.contains("- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 151–160"));
+        assert!(journal_index.contains("- [2026-03-07](docs/journal/2026-03-07.md) — Cycles 161+"));
     }
 
     #[test]
