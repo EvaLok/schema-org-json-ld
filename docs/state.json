@@ -1327,27 +1327,17 @@
         "note": "Findings: false-green-narrative, dispatch_to_pr_rate, review-history, process-eva-shared-io, publish-gate-divergence, completion-checklist-drift. Actioned 4 (narrative, rate, history, divergence), deferred 1 (process-eva shared I/O — dispatch next), ignored 1 (checklist update — not urgent)."
       },
       {
-        "actioned": 0,
+        "actioned": 3,
         "categories": [
-          "and-priority-items-tools",
-          "annotations",
-          "category-name",
-          "crates",
-          "cycle-complete",
-          "cycle-complete-state-gap",
-          "main-rs",
           "rate-formula-mismatch",
-          "recommendations",
           "review-category-contract",
-          "rust",
-          "score",
-          "src",
+          "cycle-complete-state-gap",
           "stale-release-binaries"
         ],
         "complacency_score": 4,
         "cycle": 169,
-        "deferred": 0,
-        "finding_count": 2,
+        "deferred": 1,
+        "finding_count": 4,
         "ignored": 0
       }
     ],
