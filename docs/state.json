@@ -841,7 +841,7 @@
   },
   "last_cycle": {
     "issue": 618,
-    "number": 166,
+    "number": 167,
     "summary": "Merged #615 (process-audit) and #617 (c166 review, score 2/5). Actioned state-freshness finding, deferred tool-quality dedup. Dispatched #619 (process-eva) and #621 (state-schema shared I/O refactor). Pipeline 5/5 pass, 9/9 invariants. 92 total dispatches, 85 merged, 2 in-flight.",
     "timestamp": "2026-03-07T00:27:57Z"
   },
