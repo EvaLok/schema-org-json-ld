@@ -142,7 +142,7 @@ fn compute_update(state: &Value, prs: &[u64], note: Option<&str>) -> Result<Merg
     }
 
     let pr_merge_rate = format!("{}/{}", next_merged, next_produced_pr);
-    let dispatch_to_pr_rate = format!("{}/{}", next_produced_pr, total_dispatches);
+    let dispatch_to_pr_rate = format!("{}/{}", next_produced_pr, next_resolved);
     let merged_prs = format_pr_list(prs);
 
     let mut summary = format!(
@@ -292,7 +292,7 @@ mod tests {
         assert_eq!(update.resolved, 83);
         assert_eq!(update.in_flight, 2);
         assert_eq!(update.pr_merge_rate, "81/85");
-        assert_eq!(update.dispatch_to_pr_rate, "85/85");
+        assert_eq!(update.dispatch_to_pr_rate, "85/83");
         assert!(update
             .note
             .contains("85 dispatches, 83 resolved, 2 in-flight."));
@@ -354,6 +354,7 @@ mod tests {
         assert_eq!(patch.len(), 10);
         assert_eq!(patch[3].path, "/copilot_metrics/pr_merge_rate");
         assert_eq!(patch[4].path, "/copilot_metrics/dispatch_to_pr_rate");
+        assert_eq!(patch[4].value, json!("85/83"));
         assert_eq!(patch[5].path, "/copilot_metrics/produced_pr");
         assert_eq!(
             patch[7].path,

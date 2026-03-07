@@ -228,6 +228,10 @@ fn build_state_patch(
 ) -> StatePatch {
     let mut updates = vec![
         PatchUpdate {
+            path: "/last_cycle/number".to_string(),
+            value: json!(cycle),
+        },
+        PatchUpdate {
             path: "/last_cycle/issue".to_string(),
             value: json!(issue),
         },
@@ -379,6 +383,14 @@ Commit a file at `docs/reviews/cycle-{cycle}.md` containing:
 - **Complacency score**: 1-5 scale (1 = actively improving, 5 = going through motions)
 - **Priority items**: Top 3 things the next cycle should address
 
+Each finding MUST include a `Category: <kebab-case-name>` line immediately after the finding title. Example:
+
+1. **Finding title here**
+   Category: descriptive-kebab-case-name
+   Description of the finding...
+
+Categories must be short kebab-case identifiers (max 40 characters). Do NOT omit the Category line.
+
 **IMPORTANT**: Do NOT attempt to post a comment on this issue. Your only output is the committed review file in your PR.
 "
     )
@@ -509,23 +521,25 @@ mod tests {
             json!({"last_refreshed": "cycle 120"}),
         );
         let patch = build_state_patch(139, 464, "2026-03-05T05:06:07Z", &state, "summary");
-        assert_eq!(patch.updates.len(), 6);
-        assert_eq!(patch.updates[0].path, "/last_cycle/issue");
-        assert_eq!(patch.updates[0].value, json!(464));
-        assert_eq!(patch.updates[1].path, "/last_cycle/timestamp");
-        assert_eq!(patch.updates[1].value, json!("2026-03-05T05:06:07Z"));
-        assert_eq!(patch.updates[2].path, "/last_cycle/summary");
-        assert_eq!(patch.updates[2].value, json!("summary"));
-        assert_eq!(
-            patch.updates[4].path,
-            "/field_inventory/fields/last_cycle/last_refreshed"
-        );
-        assert_eq!(patch.updates[4].value, json!("cycle 139"));
+        assert_eq!(patch.updates.len(), 7);
+        assert_eq!(patch.updates[0].path, "/last_cycle/number");
+        assert_eq!(patch.updates[0].value, json!(139));
+        assert_eq!(patch.updates[1].path, "/last_cycle/issue");
+        assert_eq!(patch.updates[1].value, json!(464));
+        assert_eq!(patch.updates[2].path, "/last_cycle/timestamp");
+        assert_eq!(patch.updates[2].value, json!("2026-03-05T05:06:07Z"));
+        assert_eq!(patch.updates[3].path, "/last_cycle/summary");
+        assert_eq!(patch.updates[3].value, json!("summary"));
         assert_eq!(
             patch.updates[5].path,
-            "/field_inventory/fields/last_eva_comment_check/last_refreshed"
+            "/field_inventory/fields/last_cycle/last_refreshed"
         );
         assert_eq!(patch.updates[5].value, json!("cycle 139"));
+        assert_eq!(
+            patch.updates[6].path,
+            "/field_inventory/fields/last_eva_comment_check/last_refreshed"
+        );
+        assert_eq!(patch.updates[6].value, json!("cycle 139"));
     }
 
     #[test]
@@ -588,8 +602,8 @@ mod tests {
     fn summary_flag_overrides_placeholder_text_in_patch() {
         let state = StateJson::default();
         let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", &state, "custom summary");
-        assert_eq!(patch.updates[2].path, "/last_cycle/summary");
-        assert_eq!(patch.updates[2].value, json!("custom summary"));
+        assert_eq!(patch.updates[3].path, "/last_cycle/summary");
+        assert_eq!(patch.updates[3].value, json!("custom summary"));
     }
 
     #[test]
@@ -607,6 +621,7 @@ mod tests {
         let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", &state, "custom summary");
         let mut raw_state = json!({
             "last_cycle": {
+                "number": 120,
                 "issue": 100,
                 "timestamp": "2026-02-01T00:00:00Z",
                 "summary": "old summary"
@@ -622,7 +637,13 @@ mod tests {
 
         let changed_paths =
             apply_state_patch(&mut raw_state, &patch).expect("state patch should apply cleanly");
-        assert_eq!(changed_paths.len(), 6);
+        assert_eq!(changed_paths.len(), 7);
+        assert_eq!(
+            raw_state
+                .pointer("/last_cycle/number")
+                .and_then(Value::as_u64),
+            Some(153)
+        );
         assert_eq!(
             raw_state
                 .pointer("/last_cycle/issue")
@@ -698,6 +719,9 @@ mod tests {
         let body = build_review_agent_body(139, 464, fixed_now());
         assert!(body.contains("docs/reviews/cycle-"));
         assert!(body.contains("Commit your findings"));
+        assert!(body.contains("Each finding MUST include a `Category: <kebab-case-name>` line"));
+        assert!(body.contains("Category: descriptive-kebab-case-name"));
+        assert!(body.contains("Do NOT omit the Category line."));
         assert!(!body.contains("Post your findings as a comment"));
     }
 
@@ -739,7 +763,7 @@ mod tests {
             parsed
                 .pointer("/completion_steps/1/detail")
                 .and_then(Value::as_str),
-            Some("6 fields to update")
+            Some("7 fields to update")
         );
     }
 }
