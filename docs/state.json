@@ -1955,15 +1955,15 @@
       606,
       642,
       689,
+      700,
       701
     ],
     "closed_this_cycle": [
-      701
+      700
     ],
     "remaining_open": [
       436,
-      699,
-      700
+      699
     ]
   },
   "field_inventory": {
@@ -1991,11 +1991,11 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 180"
+        "last_refreshed": "cycle 181"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 180"
+        "last_refreshed": "cycle 181"
       },
       "last_cycle": {
         "cadence": "every cycle",
