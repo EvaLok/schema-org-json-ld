@@ -632,7 +632,7 @@
     "closed_without_merge": 1,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#636 Tool fixes: dispatch_to_pr_rate formula, cycle-complete number gap, review category contract (cycle 169)",
-    "dispatch_to_pr_rate": "93/98",
+    "dispatch_to_pr_rate": "93/97",
     "in_flight": 1,
     "merged": 92,
     "note": "98 dispatches, 97 resolved, 1 in-flight. 93 produced PRs (92 merged, 1 closed without merge). Latest dispatch: #636 Tool fixes: dispatch_to_pr_rate formula, cycle-complete number gap, review category contract (cycle 169, model gpt-5.4).",
