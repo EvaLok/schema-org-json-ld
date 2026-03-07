@@ -296,7 +296,7 @@ This step applies to any multi-batch porting effort, not just PHP→TS.
 
 ## 5.8. Dual-language consistency check (per audit #44)
 
-**Permanent step.** Run on every cycle once the TypeScript port is published (i.e., after step 5.7 has been completed and removed).
+**Permanent step.** Run on every cycle now that the TypeScript port is published.
 
 Verify that `php/src/v1/` and `ts/src/` have matching schema class coverage:
 

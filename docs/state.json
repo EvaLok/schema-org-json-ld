@@ -1955,7 +1955,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 178"
+        "last_refreshed": "cycle 180"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -2031,7 +2031,7 @@
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
-        "last_refreshed": "cycle 169"
+        "last_refreshed": "cycle 180"
       },
       "total_enums": {
         "cadence": "after enum additions",
