@@ -1713,6 +1713,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add agent_sessions reconciliation invariant to state-invariants"
+    },
+    {
+      "dispatched_at": "2026-03-07T16:55:37Z",
+      "issue": 687,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 178 end-of-cycle review"
     }
   ],
   "audit_processed": [
@@ -1844,16 +1851,16 @@
   "copilot_metrics": {
     "closed_without_merge": 1,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#685 Add agent_sessions reconciliation invariant to state-invariants (cycle 177)",
+    "dispatch_log_latest": "#687 Cycle 178 end-of-cycle review (cycle 177)",
     "dispatch_to_pr_rate": "180/184",
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 179,
-    "note": "185 dispatches, 184 resolved, 1 in-flight. 180 produced PRs (179 merged, 1 closed without merge). Latest dispatch: #685 Add agent_sessions reconciliation invariant to state-invariants (cycle 177, model gpt-5.4).",
+    "note": "186 dispatches, 184 resolved, 2 in-flight. 180 produced PRs (179 merged, 1 closed without merge). Latest dispatch: #687 Cycle 178 end-of-cycle review (cycle 177, model gpt-5.4).",
     "pr_merge_rate": "179/180",
     "produced_pr": 180,
     "resolved": 184,
     "revision_rounds": 5,
-    "total_dispatches": 185
+    "total_dispatches": 186
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
