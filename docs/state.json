@@ -2071,10 +2071,10 @@
   "last_cycle": {
     "issue": 694,
     "number": 179,
-    "summary": "v1.0.2 published: closed #247, #562, #689. Post-publish transition complete. Merged PRs #686 (reconciliation invariant), #688 (review artifact). Processed audit #136 (qc-outbound housekeeping). Fixed false backfill match #505. Pipeline 5/5, 11/11 invariants.",
-    "timestamp": "2026-03-07T19:37:32Z"
+    "summary": "Merged PR #693 (review artifact). Processed review findings (2 actioned, 2 ignored). Post-publish cleanup: refreshed field inventory, removed step 5.7, updated typescript_plan phases. Removed deprecated check-field-inventory.jq. Dispatched #695 (cycle-start dynamic Eva directives). Pipeline 5/5, 11/11 invariants.",
+    "timestamp": "2026-03-07T19:50:44Z"
   },
-  "last_eva_comment_check": "2026-03-07T19:37:32Z",
+  "last_eva_comment_check": "2026-03-07T19:50:44Z",
   "open_questions_for_eva": [],
   "publish_gate": {
     "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z",
