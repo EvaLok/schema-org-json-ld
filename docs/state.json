@@ -1718,8 +1718,10 @@
     {
       "dispatched_at": "2026-03-07T18:22:41Z",
       "issue": 692,
+      "merged_at": "2026-03-07T19:48:23Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 693,
+      "status": "merged",
       "title": "Cycle 178 (continued) end-of-cycle review"
     }
   ],
@@ -1854,13 +1856,13 @@
     "closed_without_merge": 1,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#692 Cycle 178 (continued) end-of-cycle review (cycle 178)",
-    "dispatch_to_pr_rate": "181/185",
-    "in_flight": 1,
-    "merged": 180,
-    "note": "186 dispatches, 185 resolved, 1 in-flight. 181 produced PRs (180 merged, 1 closed without merge). Latest dispatch: #692 Cycle 178 (continued) end-of-cycle review (cycle 178, model gpt-5.4).",
-    "pr_merge_rate": "180/181",
-    "produced_pr": 181,
-    "resolved": 185,
+    "dispatch_to_pr_rate": "182/186",
+    "in_flight": 0,
+    "merged": 181,
+    "note": "186 dispatches, 186 resolved, 0 in-flight. 182 produced PRs (181 merged, 1 closed without merge). 3 resolved without PR (silent failure). PR #693 merged in cycle 179.",
+    "pr_merge_rate": "181/182",
+    "produced_pr": 182,
+    "resolved": 186,
     "revision_rounds": 5,
     "total_dispatches": 186
   },
@@ -1909,11 +1911,7 @@
       642,
       689
     ],
-    "closed_this_cycle": [
-      247,
-      562,
-      689
-    ],
+    "closed_this_cycle": [],
     "remaining_open": [
       436
     ]
@@ -1931,15 +1929,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 178"
+        "last_refreshed": "cycle 179"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 178"
+        "last_refreshed": "cycle 179"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 178"
+        "last_refreshed": "cycle 179"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
@@ -3170,7 +3168,7 @@
     "ts": 419
   },
   "tool_pipeline": {
-    "blocks_publish": true,
+    "blocks_publish": false,
     "eva_directive": 436,
     "phases": [
       {
