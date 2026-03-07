@@ -133,10 +133,10 @@ If you genuinely cannot find any improvement work after checking all six categor
 Before running the manual steps below, run the pipeline-check tool which orchestrates all verification tools:
 
 ```bash
-bash tools/pipeline-check --cycle {N}
+bash tools/pipeline-check
 ```
 
-This runs all 5 pipeline phases (metrics, field inventory, housekeeping, cycle status, state invariants) and invokes the individual tools (`metric-snapshot`, `check-field-inventory-rs`, `housekeeping-scan`, `cycle-status`, `state-invariants`) as needed. If all phases pass, the mechanical verification is done — focus your time on reasoning, decisions, and tool development. If any phase fails, investigate and fix.
+This runs all 5 pipeline phases (metrics, field inventory, housekeeping, cycle status, state invariants) and invokes the individual tools (`metric-snapshot`, `check-field-inventory-rs`, `housekeeping-scan`, `cycle-status`, `state-invariants`) as needed. The tool derives the current cycle from `docs/state.json`; keep `--cycle {N}` only as an override when needed. If all phases pass, the mechanical verification is done — focus your time on reasoning, decisions, and tool development. If any phase fails, investigate and fix.
 
 For targeted checks, you can also run individual tools directly:
 - `bash tools/metric-snapshot` — verify file counts and metrics against state.json
@@ -466,7 +466,7 @@ Prioritise reviews over new dispatches — unreviewed PRs block progress.
 
 At cycle end, follow `COMPLETION_CHECKLIST.md` for the full close-out procedure. Key steps:
 
-1. Run `bash tools/pipeline-check --cycle {N}` — all 5 phases must pass
+1. Run `bash tools/pipeline-check` — all 5 phases must pass
 2. Update state.json (use `bash tools/cycle-complete` to generate patches)
 3. Write worklog and journal entries
 4. **Dispatch review agent (MANDATORY per Eva directive #463)** — every cycle must end with a review agent in-flight. See `COMPLETION_CHECKLIST.md` step 5 for the dispatch procedure and required issue body format.

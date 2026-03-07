@@ -321,6 +321,7 @@ dependencies = [
  "clap",
  "serde",
  "serde_json",
+ "state-schema",
 ]
 
 [[package]]
@@ -614,6 +615,7 @@ dependencies = [
  "clap",
  "serde",
  "serde_json",
+ "state-schema",
 ]
 
 [[package]]

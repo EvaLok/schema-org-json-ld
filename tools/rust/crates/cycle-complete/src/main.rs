@@ -3,7 +3,8 @@ use clap::Parser;
 use serde::Serialize;
 use serde_json::{json, Value};
 use state_schema::{
-    commit_state_json, read_state_value, set_value_at_pointer, write_state_value, StateJson,
+    commit_state_json, current_cycle_from_state, read_state_value, set_value_at_pointer,
+    write_state_value, StateJson,
 };
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -17,7 +18,7 @@ struct Cli {
 
     /// Current cycle number
     #[arg(long)]
-    cycle: u64,
+    cycle: Option<u64>,
 
     /// Current cycle issue number
     #[arg(long)]
@@ -92,6 +93,17 @@ fn main() {
         std::process::exit(1);
     }
 
+    let cycle = match cli.cycle {
+        Some(cycle) => cycle,
+        None => match current_cycle_from_state(&cli.repo_root) {
+            Ok(cycle) => cycle,
+            Err(error) => {
+                eprintln!("Error: {}", error);
+                std::process::exit(1);
+            }
+        },
+    };
+
     let state = match read_state_json(&cli.repo_root) {
         Ok(state) => state,
         Err(error) => {
@@ -105,15 +117,14 @@ fn main() {
         .summary
         .as_deref()
         .unwrap_or("TODO: Fill cycle summary.");
-    let report = assemble_report(cli.cycle, cli.issue, now, &state, summary);
+    let report = assemble_report(cycle, cli.issue, now, &state, summary);
 
     if cli.apply {
         match apply_cycle_patch(&cli.repo_root, &report.state_json_patch) {
             Ok(changed_paths) => {
                 print_patch_apply_summary(&changed_paths);
                 if cli.commit {
-                    let commit_message =
-                        format!("state(cycle-complete): {} [cycle {}]", summary, cli.cycle);
+                    let commit_message = format!("state(cycle-complete): {} [cycle {}]", summary, cycle);
                     match commit_state_json(&cli.repo_root, &commit_message) {
                         Ok(sha) => println!("Committed: {}", sha),
                         Err(error) => {
@@ -699,6 +710,21 @@ mod tests {
             "--apply",
         ]);
         assert!(parsed.is_ok());
+    }
+
+    #[test]
+    fn cli_accepts_missing_cycle_argument() {
+        let cli = Cli::try_parse_from([
+            "cycle-complete",
+            "--repo-root",
+            ".",
+            "--issue",
+            "585",
+        ])
+        .unwrap();
+        assert_eq!(cli.repo_root, PathBuf::from("."));
+        assert_eq!(cli.cycle, None);
+        assert_eq!(cli.issue, 585);
     }
 
     #[test]

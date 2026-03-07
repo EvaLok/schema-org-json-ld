@@ -1,6 +1,7 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use clap::{Parser, Subcommand};
 use serde::Deserialize;
+use state_schema::current_cycle_from_state;
 use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -32,7 +33,7 @@ enum Command {
 struct WorklogArgs {
     /// Cycle number
     #[arg(long)]
-    cycle: u64,
+    cycle: Option<u64>,
     /// Short descriptive name for heading and filename slug
     #[arg(long)]
     title: String,
@@ -42,7 +43,7 @@ struct WorklogArgs {
 struct JournalArgs {
     /// Cycle number
     #[arg(long)]
-    cycle: u64,
+    cycle: Option<u64>,
     /// Entry title
     #[arg(long)]
     title: String,
@@ -132,10 +133,11 @@ fn execute_worklog(
     now: DateTime<Utc>,
     stdin: &str,
 ) -> Result<PathBuf, String> {
+    let cycle = resolve_cycle(args.cycle, repo_root)?;
     let input: WorklogInput = serde_json::from_str(stdin)
         .map_err(|error| format!("invalid worklog JSON input: {}", error))?;
     let path = worklog_path(repo_root, now, &args.title);
-    let content = render_worklog(args.cycle, now, &input);
+    let content = render_worklog(cycle, now, &input);
     write_entry_file(&path, &content)?;
     Ok(path)
 }
@@ -146,13 +148,14 @@ fn execute_journal(
     now: DateTime<Utc>,
     stdin: &str,
 ) -> Result<PathBuf, String> {
+    let cycle = resolve_cycle(args.cycle, repo_root)?;
     let input: JournalInput = serde_json::from_str(stdin)
         .map_err(|error| format!("invalid journal JSON input: {}", error))?;
     let status = parse_commitment_status(&input.previous_commitment_status)?;
     let path = journal_path(repo_root, now);
     let previous = lookup_previous_concrete_behavior(repo_root, now.date_naive())?;
     let entry = render_journal_entry(
-        args.cycle,
+        cycle,
         now,
         &args.title,
         &input,
@@ -161,6 +164,13 @@ fn execute_journal(
     );
     write_journal_file(&path, now.date_naive(), &entry)?;
     Ok(path)
+}
+
+fn resolve_cycle(cycle: Option<u64>, repo_root: &Path) -> Result<u64, String> {
+    match cycle {
+        Some(cycle) => Ok(cycle),
+        None => current_cycle_from_state(repo_root),
+    }
 }
 
 fn worklog_path(repo_root: &Path, now: DateTime<Utc>, title: &str) -> PathBuf {
@@ -782,7 +792,7 @@ mod tests {
         let repo_root = TempRepoDir::new("append");
         let now = fixed_now();
         let args = JournalArgs {
-            cycle: 154,
+            cycle: Some(154),
             title: "From convention to enforcement".to_string(),
         };
         let payload = r#"{
@@ -830,7 +840,7 @@ When accepting recommendations, dispatch #546 in the same cycle.
         fs::write(journal_dir.join("2026-03-05.md"), existing).unwrap();
 
         let args = JournalArgs {
-            cycle: 154,
+            cycle: Some(154),
             title: "New title".to_string(),
         };
         let payload = r#"{
@@ -850,7 +860,7 @@ When accepting recommendations, dispatch #546 in the same cycle.
     fn invalid_previous_commitment_status_is_rejected() {
         let repo_root = TempRepoDir::new("status");
         let args = JournalArgs {
-            cycle: 154,
+            cycle: Some(154),
             title: "Invalid status".to_string(),
         };
         let payload = r#"{
@@ -880,7 +890,7 @@ When accepting recommendations, dispatch #546 in the same cycle.
         assert_eq!(cli.repo_root, PathBuf::from("/tmp/example"));
         match cli.command {
             Command::Worklog(args) => {
-                assert_eq!(args.cycle, 1);
+                assert_eq!(args.cycle, Some(1));
                 assert_eq!(args.title, "test");
             }
             Command::Journal(_) => panic!("expected worklog command"),
@@ -889,8 +899,70 @@ When accepting recommendations, dispatch #546 in the same cycle.
 
     #[test]
     fn cli_uses_default_repo_root_when_omitted() {
-        let cli = Cli::try_parse_from(["write-entry", "worklog", "--cycle", "1", "--title", "test"])
-            .unwrap();
+        let cli = Cli::try_parse_from(["write-entry", "worklog", "--title", "test"]).unwrap();
         assert_eq!(cli.repo_root, PathBuf::from("."));
+        match cli.command {
+            Command::Worklog(args) => assert_eq!(args.cycle, None),
+            Command::Journal(_) => panic!("expected worklog command"),
+        }
+    }
+
+    #[test]
+    fn worklog_derives_cycle_from_state_when_omitted() {
+        let repo_root = TempRepoDir::new("worklog-derived-cycle");
+        fs::create_dir_all(repo_root.path.join("docs")).unwrap();
+        fs::write(
+            repo_root.path.join("docs/state.json"),
+            "{\n  \"last_cycle\": {\"number\": 168}\n}\n",
+        )
+        .unwrap();
+        let args = WorklogArgs {
+            cycle: None,
+            title: "Derived cycle".to_string(),
+        };
+        let payload = r#"{
+			"what_was_done":["Checked #42"],
+			"self_modifications":[],
+			"prs_merged":[],
+			"prs_reviewed":[],
+			"issues_processed":[],
+			"current_state":{
+				"in_flight_sessions":0,
+				"pipeline_status":"pass",
+				"copilot_metrics":"steady",
+				"publish_gate":"clear"
+			},
+			"next_steps":[]
+		}"#;
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now(), payload).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+        assert!(content.contains("# Cycle 168 — 2026-03-06 05:14 UTC"));
+    }
+
+    #[test]
+    fn journal_derives_cycle_from_state_when_omitted() {
+        let repo_root = TempRepoDir::new("journal-derived-cycle");
+        fs::create_dir_all(repo_root.path.join("docs")).unwrap();
+        fs::write(
+            repo_root.path.join("docs/state.json"),
+            "{\n  \"last_cycle\": {\"number\": 168}\n}\n",
+        )
+        .unwrap();
+        let args = JournalArgs {
+            cycle: None,
+            title: "Derived cycle".to_string(),
+        };
+        let payload = r#"{
+			"previous_commitment_status":"followed",
+			"previous_commitment_detail":"Done.",
+			"sections":[],
+			"concrete_behavior_change":"Keep going.",
+			"open_questions":[]
+		}"#;
+
+        let path = execute_journal(&args, &repo_root.path, fixed_now(), payload).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+        assert!(content.contains("## 2026-03-06 — Cycle 168: Derived cycle"));
     }
 }

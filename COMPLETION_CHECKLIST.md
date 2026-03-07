@@ -9,10 +9,10 @@ Follow this checklist at the end of every orchestrator cycle. Do not skip steps.
 Confirm the pipeline-check was run this cycle and passed:
 
 ```bash
-bash tools/pipeline-check --cycle {N}
+bash tools/pipeline-check
 ```
 
-If not yet run, run it now. All 5 phases must pass before completing the cycle.
+If not yet run, run it now. `pipeline-check` derives the current cycle from `docs/state.json`; use `--cycle {N}` only when you need to override it. All 5 phases must pass before completing the cycle.
 
 ## 2. Update state.json via write-side tools
 
