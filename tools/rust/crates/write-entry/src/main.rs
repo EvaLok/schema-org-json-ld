@@ -162,7 +162,10 @@ fn execute_journal(
         status,
         previous.as_deref(),
     );
-    write_journal_file(&path, now.date_naive(), &entry)?;
+    let created_new = write_journal_file(&path, now.date_naive(), &entry)?;
+    if created_new {
+        update_journal_index(repo_root, now.date_naive(), cycle)?;
+    }
     Ok(path)
 }
 
@@ -201,7 +204,7 @@ fn write_entry_file(path: &Path, content: &str) -> Result<(), String> {
         .map_err(|error| format!("failed to write {}: {}", path.display(), error))
 }
 
-fn write_journal_file(path: &Path, date: NaiveDate, entry: &str) -> Result<(), String> {
+fn write_journal_file(path: &Path, date: NaiveDate, entry: &str) -> Result<bool, String> {
     let parent = path
         .parent()
         .ok_or_else(|| format!("invalid output path {}", path.display()))?;
@@ -218,13 +221,110 @@ fn write_journal_file(path: &Path, date: NaiveDate, entry: &str) -> Result<(), S
         existing.push_str("---\n\n");
         existing.push_str(entry);
         fs::write(path, existing)
-            .map_err(|error| format!("failed to write {}: {}", path.display(), error))
+            .map_err(|error| format!("failed to write {}: {}", path.display(), error))?;
+        Ok(false)
     } else {
         let header = format!("# Journal — {date}\n\n{JOURNAL_DESCRIPTION}\n\n---\n\n",);
         let content = format!("{header}{entry}");
         fs::write(path, content)
-            .map_err(|error| format!("failed to write {}: {}", path.display(), error))
+            .map_err(|error| format!("failed to write {}: {}", path.display(), error))?;
+        Ok(true)
     }
+}
+
+fn update_journal_index(repo_root: &Path, date: NaiveDate, cycle: u64) -> Result<(), String> {
+    let journal_index_path = repo_root.join("JOURNAL.md");
+    let content = fs::read_to_string(&journal_index_path)
+        .map_err(|error| format!("failed to read {}: {}", journal_index_path.display(), error))?;
+    let date_slug = date.format("%Y-%m-%d").to_string();
+    let journal_relative_path = format!("docs/journal/{date_slug}.md");
+    if content.contains(&journal_relative_path) {
+        return Ok(());
+    }
+
+    let mut lines = content.lines().map(str::to_string).collect::<Vec<_>>();
+    if let Some(previous_date) = date.pred_opt() {
+        finalize_previous_journal_index_entry(repo_root, &mut lines, previous_date)?;
+    }
+    lines.push(format!("- [{date_slug}]({journal_relative_path}) — Cycles {cycle}+"));
+
+    let updated = format!("{}\n", lines.join("\n"));
+    fs::write(&journal_index_path, updated)
+        .map_err(|error| format!("failed to write {}: {}", journal_index_path.display(), error))
+}
+
+fn finalize_previous_journal_index_entry(
+    repo_root: &Path,
+    lines: &mut [String],
+    previous_date: NaiveDate,
+) -> Result<(), String> {
+    let Some(last_index) = lines.iter().rposition(|line| !line.trim().is_empty()) else {
+        return Ok(());
+    };
+
+    let previous_date_slug = previous_date.format("%Y-%m-%d").to_string();
+    let previous_relative_path = format!("docs/journal/{previous_date_slug}.md");
+    if !lines[last_index].contains(&previous_relative_path) || !lines[last_index].ends_with('+') {
+        return Ok(());
+    }
+
+    let previous_journal_path = repo_root
+        .join("docs")
+        .join("journal")
+        .join(format!("{previous_date_slug}.md"));
+    let highest_cycle = highest_cycle_in_journal_file(&previous_journal_path)?;
+    lines[last_index] = replace_open_cycle_range(&lines[last_index], highest_cycle)?;
+    Ok(())
+}
+
+fn highest_cycle_in_journal_file(path: &Path) -> Result<u64, String> {
+    let content =
+        fs::read_to_string(path).map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
+
+    content
+        .lines()
+        .filter_map(journal_header_cycle_number)
+        .max()
+        .ok_or_else(|| format!("failed to find cycle header in {}", path.display()))
+}
+
+fn journal_header_cycle_number(line: &str) -> Option<u64> {
+    if !line.trim_start().starts_with("## ") {
+        return None;
+    }
+
+    let cycle_start = line.find("Cycle ")? + "Cycle ".len();
+    let digits = line[cycle_start..]
+        .chars()
+        .take_while(|character| character.is_ascii_digit())
+        .collect::<String>();
+    if digits.is_empty() {
+        return None;
+    }
+
+    digits.parse().ok()
+}
+
+fn replace_open_cycle_range(line: &str, highest_cycle: u64) -> Result<String, String> {
+    let marker = " — Cycles ";
+    let marker_index = line
+        .find(marker)
+        .ok_or_else(|| format!("invalid journal index entry: {}", line))?;
+    let prefix = &line[..marker_index + marker.len()];
+    let open_range = line[marker_index + marker.len()..]
+        .strip_suffix('+')
+        .ok_or_else(|| format!("journal index entry is not open-ended: {}", line))?;
+    let start_cycle = open_range
+        .parse::<u64>()
+        .map_err(|error| format!("invalid cycle range start in '{}': {}", line, error))?;
+    if highest_cycle < start_cycle {
+        return Err(format!(
+            "highest cycle {} is lower than range start {} in '{}'",
+            highest_cycle, start_cycle, line
+        ));
+    }
+
+    Ok(format!("{prefix}{start_cycle}–{highest_cycle}"))
 }
 
 fn render_worklog(cycle: u64, now: DateTime<Utc>, input: &WorklogInput) -> String {
@@ -714,6 +814,17 @@ mod tests {
         }
     }
 
+    fn write_root_journal_index(repo_root: &Path, body: &str) {
+        fs::write(
+            repo_root.join("JOURNAL.md"),
+            format!(
+                "# Journal\n\nJournal entries have been split into per-date files in [`docs/journal/`](docs/journal/).\n\n{}",
+                body
+            ),
+        )
+        .unwrap();
+    }
+
     fn fixed_now() -> DateTime<Utc> {
         DateTime::parse_from_rfc3339("2026-03-06T05:14:58Z")
             .unwrap()
@@ -791,6 +902,7 @@ mod tests {
     fn journal_create_and_append_use_separator() {
         let repo_root = TempRepoDir::new("append");
         let now = fixed_now();
+        write_root_journal_index(&repo_root.path, "");
         let args = JournalArgs {
             cycle: Some(154),
             title: "From convention to enforcement".to_string(),
@@ -821,10 +933,95 @@ mod tests {
     }
 
     #[test]
+    fn new_journal_date_updates_index_and_finalizes_previous_range() {
+        let repo_root = TempRepoDir::new("journal-index-new-date");
+        let journal_dir = repo_root.path.join("docs").join("journal");
+        fs::create_dir_all(&journal_dir).unwrap();
+        write_root_journal_index(&repo_root.path, "- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 151+\n");
+        fs::write(
+            journal_dir.join("2026-03-05.md"),
+            concat!(
+                "# Journal — 2026-03-05\n\n",
+                "Reflective log for the schema-org-json-ld orchestrator.\n\n",
+                "---\n\n",
+                "## 2026-03-05 — Cycle 151: First\n\n",
+                "## 2026-03-05 — Cycle 153: Last\n"
+            ),
+        )
+        .unwrap();
+
+        let args = JournalArgs {
+            cycle: Some(154),
+            title: "New date".to_string(),
+        };
+        let payload = r#"{
+			"previous_commitment_status":"followed",
+			"previous_commitment_detail":"Done.",
+			"sections":[],
+			"concrete_behavior_change":"Keep going.",
+			"open_questions":[]
+		}"#;
+
+        execute_journal(&args, &repo_root.path, fixed_now(), payload).unwrap();
+
+        let journal_index = fs::read_to_string(repo_root.path.join("JOURNAL.md")).unwrap();
+        assert!(journal_index.contains(
+            "- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 151–153"
+        ));
+        assert!(journal_index.contains("- [2026-03-06](docs/journal/2026-03-06.md) — Cycles 154+"));
+    }
+
+    #[test]
+    fn appending_to_existing_journal_date_does_not_modify_index() {
+        let repo_root = TempRepoDir::new("journal-index-existing-date");
+        let journal_dir = repo_root.path.join("docs").join("journal");
+        fs::create_dir_all(&journal_dir).unwrap();
+        let initial_index = concat!(
+            "- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 151–153\n",
+            "- [2026-03-06](docs/journal/2026-03-06.md) — Cycles 154+\n"
+        );
+        write_root_journal_index(&repo_root.path, initial_index);
+        fs::write(
+            journal_dir.join("2026-03-06.md"),
+            concat!(
+                "# Journal — 2026-03-06\n\n",
+                "Reflective log for the schema-org-json-ld orchestrator.\n\n",
+                "---\n\n",
+                "## 2026-03-06 — Cycle 154: Existing\n"
+            ),
+        )
+        .unwrap();
+
+        let args = JournalArgs {
+            cycle: Some(155),
+            title: "Append".to_string(),
+        };
+        let payload = r#"{
+			"previous_commitment_status":"followed",
+			"previous_commitment_detail":"Done.",
+			"sections":[],
+			"concrete_behavior_change":"Keep going.",
+			"open_questions":[]
+		}"#;
+
+        execute_journal(&args, &repo_root.path, fixed_now(), payload).unwrap();
+
+        let journal_index = fs::read_to_string(repo_root.path.join("JOURNAL.md")).unwrap();
+        assert_eq!(
+            journal_index,
+            format!(
+                "# Journal\n\nJournal entries have been split into per-date files in [`docs/journal/`](docs/journal/).\n\n{}",
+                initial_index
+            )
+        );
+    }
+
+    #[test]
     fn journal_includes_previous_commitment_quote_from_last_entry() {
         let repo_root = TempRepoDir::new("previous");
         let journal_dir = repo_root.path.join("docs").join("journal");
         fs::create_dir_all(&journal_dir).unwrap();
+        write_root_journal_index(&repo_root.path, "- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 153+\n");
         let existing = r#"# Journal — 2026-03-05
 
 Reflective log for the schema-org-json-ld orchestrator.
@@ -944,6 +1141,7 @@ When accepting recommendations, dispatch #546 in the same cycle.
     fn journal_derives_cycle_from_state_when_omitted() {
         let repo_root = TempRepoDir::new("journal-derived-cycle");
         fs::create_dir_all(repo_root.path.join("docs")).unwrap();
+        write_root_journal_index(&repo_root.path, "");
         fs::write(
             repo_root.path.join("docs/state.json"),
             "{\n  \"last_cycle\": {\"number\": 168}\n}\n",
