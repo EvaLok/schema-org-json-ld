@@ -2119,10 +2119,10 @@
     "duration_minutes": null,
     "issue": 711,
     "number": 181,
-    "summary": "Merged PRs #696 (cycle-start dynamic Eva directives) and #698 (cycle 179 review artifact). Actioned 2/3 review findings (field-inventory-follow-through, checklist-cross-reference-drift). Processed Eva directives: closed #701 (behavioral directives ack), began #699 (next language) and #700 (session timing). Processed audit #138 (language choice analysis). Posted QC consultation #703. Dispatched #705 (session timing) and #707 (language evaluation). Refreshed 17 stale field-inventory markers. Pipeline 4.5/5 (metrics, inventory, invariants pass; housekeeping cleared).",
-    "timestamp": "2026-03-07T22:39:48Z"
+    "summary": "Merged PRs #710 (cycle 180 review), #708 (language evaluation). Cherry-picked PR #706 (session timing). Consumed cycle 180 review (score 3/5, 1 actioned, 1 deferred, 3 ignored). Produced formal tool audit artifact (10-cycle boundary). Consolidated language recommendation: Python (2/3 consensus). Posted on #699. Closed #700 (session timing implemented), #703 (QC consultation). Created audit-inbound #712. Pipeline 5/5, 11/11 invariants.",
+    "timestamp": "2026-03-07T22:55:32Z"
   },
-  "last_eva_comment_check": "2026-03-07T22:39:48Z",
+  "last_eva_comment_check": "2026-03-07T22:55:32Z",
   "open_questions_for_eva": [],
   "publish_gate": {
     "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z",
