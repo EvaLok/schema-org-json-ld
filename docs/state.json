@@ -697,7 +697,7 @@
     "fields": {
       "audit_processed": {
         "cadence": "after processing audit issues",
-        "last_refreshed": "cycle 174"
+        "last_refreshed": "cycle 173"
       },
       "blockers": {
         "cadence": "after blocker state changes",
