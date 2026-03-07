@@ -33,7 +33,7 @@ struct DispatchPatch {
     dispatch_to_pr_rate: String,
     dispatch_log_latest: String,
     note: String,
-    current_cycle: i64,
+    current_cycle: u64,
 }
 
 fn main() {
@@ -101,8 +101,6 @@ fn build_dispatch_patch(
     let next_in_flight = in_flight + 1;
 
     validate_dispatch_invariant(next_total_dispatches, resolved, next_in_flight)?;
-    let current_cycle = i64::try_from(current_cycle)
-        .map_err(|_| "last_cycle.number exceeds supported range".to_string())?;
 
     Ok(DispatchPatch {
         total_dispatches: next_total_dispatches,
@@ -151,7 +149,7 @@ fn format_dispatch_to_pr_rate(produced_pr: i64, resolved: i64) -> String {
     format!("{}/{}", produced_pr, resolved)
 }
 
-fn format_dispatch_log(issue: u64, title: &str, current_cycle: i64) -> String {
+fn format_dispatch_log(issue: u64, title: &str, current_cycle: u64) -> String {
     format!("#{} {} (cycle {})", issue, title, current_cycle)
 }
 
@@ -164,7 +162,7 @@ fn format_dispatch_note(
     closed_without_merge: i64,
     issue: u64,
     title: &str,
-    current_cycle: i64,
+    current_cycle: u64,
     model: &str,
 ) -> String {
     format!(
