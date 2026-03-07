@@ -1893,16 +1893,16 @@
     "total_classes_converted": 54
   },
   "copilot_metrics": {
-    "closed_without_merge": 1,
+    "closed_without_merge": 2,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#709 Cycle 180 end-of-cycle review (cycle 180)",
-    "dispatch_to_pr_rate": "184/188",
-    "in_flight": 3,
-    "merged": 183,
-    "note": "191 dispatches, 188 resolved, 3 in-flight. 184 produced PRs (183 merged, 1 closed without merge). Latest dispatch: #709 Cycle 180 end-of-cycle review (cycle 180, model gpt-5.3-codex).",
-    "pr_merge_rate": "183/184",
-    "produced_pr": 184,
-    "resolved": 188,
+    "dispatch_to_pr_rate": "187/191",
+    "in_flight": 0,
+    "merged": 185,
+    "note": "191 dispatches, 191 resolved, 0 in-flight. 187 produced PRs (185 merged, 2 closed without merge). Latest merge: #710 cycle 180 review (cycle 181). PR #706 cherry-picked then closed (state.json conflict).",
+    "pr_merge_rate": "185/187",
+    "produced_pr": 187,
+    "resolved": 191,
     "revision_rounds": 5,
     "total_dispatches": 191
   },
@@ -2746,9 +2746,25 @@
         "finding_count": 3,
         "ignored": 1,
         "note": "field-inventory-follow-through: ACTIONED (freshness markers fixed). checklist-cross-reference-drift: ACTIONED (step 5.8 updated). maturity-ceiling-overstatement: IGNORED (acknowledged, not actionable as a code change)."
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "review-follow-through",
+          "field-inventory-restamp-evidence",
+          "eva-directive-handling",
+          "canonical-state-accuracy",
+          "formal-tool-audit-gap"
+        ],
+        "complacency_score": 3,
+        "cycle": 180,
+        "deferred": 1,
+        "finding_count": 5,
+        "ignored": 0,
+        "note": "formal-tool-audit-gap: ACTIONED (producing formal audit artifact this cycle). field-inventory-restamp-evidence: DEFERRED (need verification receipt mechanism). review-follow-through, eva-directive-handling, canonical-state-accuracy: confirmatory findings, no action needed."
       }
     ],
-    "last_review_cycle": 179
+    "last_review_cycle": 180
   },
   "schema_status": {
     "directory_layout": {
