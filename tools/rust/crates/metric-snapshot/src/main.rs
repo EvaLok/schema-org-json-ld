@@ -1,8 +1,8 @@
 use clap::Parser;
 use serde_json::{json, Value};
 use state_schema::{
-    check_version, set_value_at_pointer, update_freshness, StateJson, TypescriptStats,
-    SCHEMA_VERSION,
+    check_version, current_cycle_from_state, set_value_at_pointer, update_freshness, StateJson,
+    TypescriptStats, SCHEMA_VERSION,
 };
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs;
@@ -20,7 +20,7 @@ struct Cli {
     #[arg(long)]
     json: bool,
 
-    /// Current cycle number for field staleness detection (advisory only)
+    /// Current cycle number for field staleness detection and fixes (defaults to state.json)
     #[arg(long)]
     cycle: Option<i64>,
 
@@ -46,8 +46,8 @@ fn main() {
     let mut checks = build_checks(&cli.repo_root, &state);
 
     if cli.fix {
-        let cycle = cli.cycle.unwrap_or_else(|| {
-            eprintln!("Error: --fix requires --cycle so freshness markers can be updated");
+        let cycle = resolve_fix_cycle(cli.cycle, &cli.repo_root).unwrap_or_else(|error| {
+            eprintln!("Error: {}", error);
             process::exit(2);
         });
         match apply_fixes(&state_path, &checks, cycle) {
@@ -68,6 +68,17 @@ fn main() {
         .map(|current_cycle| build_staleness_report(&state, current_cycle));
 
     emit_output(&cli, &checks, staleness);
+}
+
+fn resolve_fix_cycle(cli_cycle: Option<i64>, repo_root: &Path) -> Result<i64, String> {
+    match cli_cycle {
+        Some(cycle) => Ok(cycle),
+        None => {
+            let cycle = current_cycle_from_state(repo_root)?;
+            i64::try_from(cycle)
+                .map_err(|_| "cycle from state.json must fit in i64 range".to_string())
+        }
+    }
 }
 
 fn build_checks(repo_root: &Path, state: &StateJson) -> Vec<CheckResult> {
@@ -1361,5 +1372,56 @@ it('direct test', () => {});
         let error = set_value_at_pointer(&mut state, "/test_count/missing", json!(1))
             .expect_err("missing path should fail");
         assert!(error.contains("missing target path segment"));
+    }
+
+    #[test]
+    fn resolve_fix_cycle_derives_cycle_from_state_when_omitted() {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock must be after unix epoch")
+            .as_nanos();
+        let temp_dir = std::env::temp_dir().join(format!("metric-snapshot-cycle-{suffix}"));
+        fs::create_dir_all(temp_dir.join("docs")).expect("docs dir should be created");
+        fs::write(
+            temp_dir.join("docs/state.json"),
+            r#"{
+  "last_cycle": {
+    "number": 172
+  }
+}"#,
+        )
+        .expect("state fixture should be written");
+
+        let cycle =
+            super::resolve_fix_cycle(None, &temp_dir).expect("cycle should be derived from state");
+        assert_eq!(172, cycle);
+
+        fs::remove_dir_all(temp_dir).expect("temp dir should be removed");
+    }
+
+    #[test]
+    fn resolve_fix_cycle_prefers_explicit_cycle_override() {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock must be after unix epoch")
+            .as_nanos();
+        let temp_dir =
+            std::env::temp_dir().join(format!("metric-snapshot-cycle-override-{suffix}"));
+        fs::create_dir_all(temp_dir.join("docs")).expect("docs dir should be created");
+        fs::write(
+            temp_dir.join("docs/state.json"),
+            r#"{
+  "last_cycle": {
+    "number": 172
+  }
+}"#,
+        )
+        .expect("state fixture should be written");
+
+        let cycle =
+            super::resolve_fix_cycle(Some(199), &temp_dir).expect("explicit cycle should be used");
+        assert_eq!(199, cycle);
+
+        fs::remove_dir_all(temp_dir).expect("temp dir should be removed");
     }
 }
