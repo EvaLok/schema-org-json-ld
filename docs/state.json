@@ -727,11 +727,11 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 176"
+        "last_refreshed": "cycle 177"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 176"
+        "last_refreshed": "cycle 177"
       },
       "next_metric_verification": {
         "cadence": "after each verification run",
@@ -739,7 +739,7 @@
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 175"
+        "last_refreshed": "cycle 177"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -844,12 +844,12 @@
     }
   },
   "last_cycle": {
-    "issue": 673,
-    "number": 176,
+    "issue": 678,
+    "number": 177,
     "summary": "Processed cycle 175 review (3/5, 2 findings both actioned). Merged PRs #668 (standardize cycle lookup), #670 (cycle-start open_questions refresh), #672 (review artifact). Dispatched #674 (agent_sessions array sync). Cleaned 3 dead branches. Pipeline 5/5 PASS.",
-    "timestamp": "2026-03-07T13:55:32Z"
+    "timestamp": "2026-03-07T15:05:13Z"
   },
-  "last_eva_comment_check": "2026-03-07T13:55:32Z",
+  "last_eva_comment_check": "2026-03-07T15:05:13Z",
   "next_metric_verification": "cycle 151",
   "open_questions_for_eva": [],
   "publish_gate": {
