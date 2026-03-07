@@ -1139,16 +1139,6 @@
       "title": "[Cycle Review] Cycle 146 end-of-cycle review"
     },
     {
-      "dispatched_at": "2026-03-05T21:15:00Z",
-      "issue": 505,
-      "merged_at": "2026-03-06T00:29:42Z",
-      "model": "gpt-5.3-codex",
-      "note": "Phase 5 of tool pipeline. Enforces semantic consistency in state.json: copilot math (produced_pr = merged + closed), parity symmetry, type classification sum, field inventory cadence format, review agent history ordering. 5/5 invariants pass.",
-      "pr": 524,
-      "status": "merged",
-      "title": "Build state-invariants Rust tool"
-    },
-    {
       "dispatched_at": "2026-03-05T18:47:58Z",
       "issue": 507,
       "merged_at": "2026-03-05T19:59:58Z",
@@ -1853,15 +1843,15 @@
     "closed_without_merge": 1,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#687 Cycle 178 end-of-cycle review (cycle 177)",
-    "dispatch_to_pr_rate": "180/184",
+    "dispatch_to_pr_rate": "179/183",
     "in_flight": 2,
-    "merged": 179,
-    "note": "186 dispatches, 184 resolved, 2 in-flight. 180 produced PRs (179 merged, 1 closed without merge). Latest dispatch: #687 Cycle 178 end-of-cycle review (cycle 177, model gpt-5.4).",
-    "pr_merge_rate": "179/180",
-    "produced_pr": 180,
-    "resolved": 184,
+    "merged": 178,
+    "note": "185 dispatches, 183 resolved, 2 in-flight. 179 produced PRs (178 merged, 1 closed without merge). Removed false backfill match #505 (audit-inbound, not agent-task). Latest dispatch: #687.",
+    "pr_merge_rate": "178/179",
+    "produced_pr": 179,
+    "resolved": 183,
     "revision_rounds": 5,
-    "total_dispatches": 186
+    "total_dispatches": 185
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
