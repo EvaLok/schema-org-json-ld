@@ -437,8 +437,7 @@ mod tests {
     fn invariant_validation_detects_mismatch() {
         let mut state = sample_state();
         state["copilot_metrics"]["total_dispatches"] = json!(84);
-        let error =
-            compute_update(&state, 164, &[595], None).expect_err("invariant should fail");
+        let error = compute_update(&state, 164, &[595], None).expect_err("invariant should fail");
         assert!(error.contains("invariant violated"));
     }
 
@@ -479,15 +478,12 @@ mod tests {
     fn update_agent_sessions_matches_issue_mapping_and_sets_merge_fields() {
         let mut state = sample_state();
 
-        update_agent_sessions(
-            &mut state,
-            &[668],
-            Some(&[667]),
-            "2026-03-07T13:00:00Z",
-        )
-        .expect("agent sessions should update");
+        update_agent_sessions(&mut state, &[668], Some(&[667]), "2026-03-07T13:00:00Z")
+            .expect("agent sessions should update");
 
-        let sessions = state["agent_sessions"].as_array().expect("agent_sessions array");
+        let sessions = state["agent_sessions"]
+            .as_array()
+            .expect("agent_sessions array");
         assert_eq!(sessions[0]["issue"], json!(667));
         assert_eq!(sessions[0]["status"], json!("merged"));
         assert_eq!(sessions[0]["pr"], json!(668));
@@ -501,7 +497,9 @@ mod tests {
         update_agent_sessions(&mut state, &[669], Some(&[999]), "2026-03-07T13:00:00Z")
             .expect("agent sessions should update");
 
-        let sessions = state["agent_sessions"].as_array().expect("agent_sessions array");
+        let sessions = state["agent_sessions"]
+            .as_array()
+            .expect("agent_sessions array");
         assert_eq!(sessions[1]["status"], json!("merged"));
         assert_eq!(sessions[1]["pr"], json!(669));
         assert_eq!(sessions[1]["merged_at"], json!("2026-03-07T13:00:00Z"));
@@ -523,13 +521,8 @@ mod tests {
         let mut state = sample_state();
         let before = state["agent_sessions"].clone();
 
-        update_agent_sessions(
-            &mut state,
-            &[700],
-            Some(&[777]),
-            "2026-03-07T13:00:00Z",
-        )
-        .expect("missing session should not fail");
+        update_agent_sessions(&mut state, &[700], Some(&[777]), "2026-03-07T13:00:00Z")
+            .expect("missing session should not fail");
 
         assert_eq!(state["agent_sessions"], before);
     }
