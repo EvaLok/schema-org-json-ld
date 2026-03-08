@@ -2167,7 +2167,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 188"
+        "last_refreshed": "cycle 189"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -2175,11 +2175,11 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 188"
+        "last_refreshed": "cycle 189"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 188"
+        "last_refreshed": "cycle 189"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -2289,12 +2289,12 @@
   },
   "last_cycle": {
     "duration_minutes": 20,
-    "issue": 757,
-    "number": 188,
+    "issue": 765,
+    "number": 189,
     "summary": "Merged PRs #752, #754, #756, #760. Consumed cycle 187 review (4/5, 7 findings). Accepted audit #147. Dispatched #759 and #761. Clean cycle count stays at 0 (startup invariants failed).",
-    "timestamp": "2026-03-08T09:28:26Z"
+    "timestamp": "2026-03-08T10:42:04Z"
   },
-  "last_eva_comment_check": "2026-03-08T09:28:26Z",
+  "last_eva_comment_check": "2026-03-08T10:42:04Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
