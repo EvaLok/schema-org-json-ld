@@ -87,6 +87,16 @@ struct CompletionStep {
     detail: String,
 }
 
+const EVENT_DRIVEN_AUTO_REFRESH_FIELDS: &[&str] = &[
+    "test_count",
+    "typescript_stats",
+    "schema_status.in_progress",
+    "review_agent.chronic_category_responses",
+    "publish_gate",
+    "review_agent",
+    "pre_python_clean_cycles",
+];
+
 fn main() {
     let cli = Cli::parse();
     if let Err(error) = validate_cli_flags(&cli) {
@@ -353,6 +363,13 @@ fn build_freshness_updates(
         }
     }
 
+    refreshed_fields.extend(build_event_driven_auto_refresh_fields(
+        cycle,
+        state,
+        &tracked_fields,
+        &refreshed_fields,
+    ));
+
     let cycle_marker = format!("cycle {}", cycle);
     refreshed_fields
         .into_iter()
@@ -361,6 +378,52 @@ fn build_freshness_updates(
             value: json!(cycle_marker),
         })
         .collect()
+}
+
+fn build_event_driven_auto_refresh_fields(
+    cycle: u64,
+    state: &StateJson,
+    tracked_fields: &BTreeSet<&str>,
+    refreshed_fields: &BTreeSet<String>,
+) -> Vec<String> {
+    EVENT_DRIVEN_AUTO_REFRESH_FIELDS
+        .iter()
+        .filter(|field_name| tracked_fields.contains(**field_name))
+        .filter(|field_name| !refreshed_fields.contains(**field_name))
+        .filter(|field_name| {
+            state
+                .field_inventory
+                .fields
+                .get(**field_name)
+                .is_some_and(|entry| field_inventory_entry_needs_refresh(entry, cycle))
+        })
+        .map(|field_name| (*field_name).to_string())
+        .collect()
+}
+
+fn field_inventory_entry_needs_refresh(entry: &Value, cycle: u64) -> bool {
+    match entry
+        .get("last_refreshed")
+        .and_then(Value::as_str)
+        .and_then(first_number)
+    {
+        Some(last_refreshed_cycle) => last_refreshed_cycle < cycle,
+        None => true,
+    }
+}
+
+fn first_number(value: &str) -> Option<u64> {
+    let digits: String = value
+        .chars()
+        .skip_while(|c| !c.is_ascii_digit())
+        .take_while(|c| c.is_ascii_digit())
+        .collect();
+
+    if digits.is_empty() {
+        None
+    } else {
+        digits.parse::<u64>().ok()
+    }
 }
 
 /// Matches a JSON pointer patch path to the best tracked field inventory key.
@@ -672,6 +735,84 @@ mod tests {
     }
 
     #[test]
+    fn state_patch_auto_refreshes_stale_event_driven_fields() {
+        let mut state = StateJson::default();
+        state.field_inventory.fields.insert(
+            "last_cycle".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "last_cycle.duration_minutes".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "last_eva_comment_check".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+
+        for field_name in EVENT_DRIVEN_AUTO_REFRESH_FIELDS {
+            state.field_inventory.fields.insert(
+                (*field_name).to_string(),
+                json!({"last_refreshed": "cycle 120"}),
+            );
+        }
+
+        let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", 47, &state, "summary");
+        let freshness_paths: Vec<&str> = patch
+            .updates
+            .iter()
+            .map(|update| update.path.as_str())
+            .collect();
+
+        for field_name in EVENT_DRIVEN_AUTO_REFRESH_FIELDS {
+            let expected_path = format!("/field_inventory/fields/{}/last_refreshed", field_name);
+            assert!(
+                freshness_paths.contains(&expected_path.as_str()),
+                "missing auto-refresh for {}",
+                field_name
+            );
+        }
+    }
+
+    #[test]
+    fn state_patch_skips_current_or_missing_event_driven_fields() {
+        let mut state = StateJson::default();
+        state.field_inventory.fields.insert(
+            "last_cycle".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "last_cycle.duration_minutes".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "last_eva_comment_check".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "publish_gate".to_string(),
+            json!({"last_refreshed": "cycle 153"}),
+        );
+        state.field_inventory.fields.insert(
+            "review_agent".to_string(),
+            json!({"last_refreshed": "cycle 154"}),
+        );
+
+        let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", 47, &state, "summary");
+        let freshness_paths: Vec<&str> = patch
+            .updates
+            .iter()
+            .map(|update| update.path.as_str())
+            .collect();
+
+        assert!(!freshness_paths.contains(&"/field_inventory/fields/publish_gate/last_refreshed"));
+        assert!(!freshness_paths.contains(&"/field_inventory/fields/review_agent/last_refreshed"));
+        assert!(!freshness_paths.contains(
+            &"/field_inventory/fields/pre_python_clean_cycles/last_refreshed"
+        ));
+    }
+
+    #[test]
     fn summary_flag_overrides_placeholder_text_in_patch() {
         let state = StateJson::default();
         let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", 47, &state, "custom summary");
@@ -694,6 +835,14 @@ mod tests {
             "last_eva_comment_check".to_string(),
             json!({"last_refreshed": "cycle 120"}),
         );
+        state.field_inventory.fields.insert(
+            "publish_gate".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "review_agent".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
 
         let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", 47, &state, "custom summary");
         let mut raw_state = json!({
@@ -705,18 +854,26 @@ mod tests {
                 "summary": "old summary"
             },
             "last_eva_comment_check": "2026-02-01T00:00:00Z",
+            "publish_gate": {
+                "ready": true
+            },
+            "review_agent": {
+                "total_reviews_processed": 12
+            },
             "field_inventory": {
                 "fields": {
                     "last_cycle": {"last_refreshed": "cycle 120"},
                     "last_cycle.duration_minutes": {"last_refreshed": "cycle 120"},
-                    "last_eva_comment_check": {"last_refreshed": "cycle 120"}
+                    "last_eva_comment_check": {"last_refreshed": "cycle 120"},
+                    "publish_gate": {"last_refreshed": "cycle 120"},
+                    "review_agent": {"last_refreshed": "cycle 120"}
                 }
             }
         });
 
         let changed_paths =
             apply_state_patch(&mut raw_state, &patch).expect("state patch should apply cleanly");
-        assert_eq!(changed_paths.len(), 9);
+        assert_eq!(changed_paths.len(), 11);
         assert_eq!(
             raw_state
                 .pointer("/last_cycle/number")
@@ -756,6 +913,18 @@ mod tests {
         assert_eq!(
             raw_state
                 .pointer("/field_inventory/fields/last_eva_comment_check/last_refreshed")
+                .and_then(Value::as_str),
+            Some("cycle 153")
+        );
+        assert_eq!(
+            raw_state
+                .pointer("/field_inventory/fields/publish_gate/last_refreshed")
+                .and_then(Value::as_str),
+            Some("cycle 153")
+        );
+        assert_eq!(
+            raw_state
+                .pointer("/field_inventory/fields/review_agent/last_refreshed")
                 .and_then(Value::as_str),
             Some("cycle 153")
         );
