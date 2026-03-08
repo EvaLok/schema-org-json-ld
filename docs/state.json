@@ -2286,7 +2286,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 194"
+        "last_refreshed": "cycle 195"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -2294,11 +2294,11 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 194"
+        "last_refreshed": "cycle 195"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 194"
+        "last_refreshed": "cycle 195"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -2408,12 +2408,12 @@
   },
   "last_cycle": {
     "duration_minutes": 13,
-    "issue": 793,
-    "number": 194,
+    "issue": 801,
+    "number": 195,
     "summary": "Merged 2 PRs (state-invariants fix, cycle 193 review artifact). Processed audit #153 (final pipeline gate). Fixed process-merge produced_pr accounting. Dispatched 2 tasks (record-dispatch consolidation, derive-metrics pipeline phase).",
-    "timestamp": "2026-03-08T18:19:01Z"
+    "timestamp": "2026-03-08T19:38:10Z"
   },
-  "last_eva_comment_check": "2026-03-08T18:19:01Z",
+  "last_eva_comment_check": "2026-03-08T19:38:10Z",
   "open_questions_for_eva": [
     771
   ],
