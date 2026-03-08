@@ -2008,11 +2008,11 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 181"
+        "last_refreshed": "cycle 182"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 181"
+        "last_refreshed": "cycle 182"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -2137,13 +2137,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": null,
+    "duration_minutes": 12,
     "issue": 715,
     "number": 182,
-    "summary": "Merged PRs #710 (cycle 180 review), #708 (language evaluation). Cherry-picked PR #706 (session timing). Consumed cycle 180 review (score 3/5, 1 actioned, 1 deferred, 3 ignored). Produced formal tool audit artifact (10-cycle boundary). Consolidated language recommendation: Python (2/3 consensus). Posted on #699. Closed #700 (session timing implemented), #703 (QC consultation). Created audit-inbound #712. Pipeline 5/5, 11/11 invariants.",
-    "timestamp": "2026-03-08T00:18:13Z"
+    "summary": "Merged PR #714 (cycle 181 review). Consumed review (score 3/5, 2 actioned, 2 deferred). Fixed 6 stale field-inventory entries. Processed audit #140 (publish notification gap). Created audit-inbound #716, QC publish-notification #717. Added STARTUP_CHECKLIST step 5.13. Added pre_python_clean_cycles tracker. Dispatched #718 (cycle-complete auto-refresh enhancement). Pipeline 5/5, 11/11 invariants.",
+    "timestamp": "2026-03-08T00:29:55Z"
   },
-  "last_eva_comment_check": "2026-03-08T00:18:13Z",
+  "last_eva_comment_check": "2026-03-08T00:29:55Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
