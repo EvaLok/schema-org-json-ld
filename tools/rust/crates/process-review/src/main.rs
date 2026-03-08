@@ -356,7 +356,14 @@ fn extract_categories(content: &str) -> Vec<String> {
         }
 
         if is_numbered_finding_heading(trimmed) {
-            awaiting_category = true;
+            if let Some(raw) = extract_inline_category(trimmed) {
+                if let Some(normalized) = normalize_category(raw) {
+                    categories.insert(normalized);
+                }
+                awaiting_category = false;
+            } else {
+                awaiting_category = true;
+            }
             continue;
         }
 
@@ -375,6 +382,17 @@ fn extract_categories(content: &str) -> Vec<String> {
     }
 
     categories.into_iter().collect()
+}
+
+fn extract_inline_category(line: &str) -> Option<&str> {
+    let start = line.find("**[")? + 3;
+    let remainder = &line[start..];
+    let end = remainder.find(']')?;
+    if end == 0 {
+        None
+    } else {
+        Some(&remainder[..end])
+    }
 }
 
 fn extract_category_line(line: &str) -> Option<&str> {
@@ -607,6 +625,9 @@ mod tests {
 3/5 — this cycle made real improvements and the journal is genuinely self-critical rather than formulaic, but it still normalized avoidable manual state repair and let some evidence/freshness bookkeeping lag behind the actual work.
 "#;
 
+    const CYCLE_196_REVIEW: &str =
+        include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../docs/reviews/cycle-196.md"));
+
     #[test]
     fn help_contains_expected_flags() {
         let mut command = Cli::command();
@@ -695,6 +716,85 @@ mod tests {
 "#;
 
         assert!(extract_categories(markdown).is_empty());
+    }
+
+    #[test]
+    fn category_extraction_reads_inline_heading_category() {
+        let markdown = r#"## Findings
+
+1. **[metrics-ownership] Finding title**
+"#;
+
+        assert_eq!(
+            extract_categories(markdown),
+            vec!["metrics-ownership".to_string()]
+        );
+    }
+
+    #[test]
+    fn category_extraction_supports_mixed_inline_and_category_line_formats() {
+        let markdown = r#"## Findings
+
+1. **[metrics-ownership] Inline finding**
+
+2. **Separate category finding**
+   Category: Review Accounting
+"#;
+
+        assert_eq!(
+            extract_categories(markdown),
+            vec![
+                "metrics-ownership".to_string(),
+                "review-accounting".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn category_extraction_collects_multiple_inline_categories() {
+        let markdown = r#"## Findings
+
+1. **[metrics-ownership] First finding**
+
+2. **[tooling-contract] Second finding**
+
+3. **[review-accounting] Third finding**
+"#;
+
+        assert_eq!(
+            extract_categories(markdown),
+            vec![
+                "metrics-ownership".to_string(),
+                "review-accounting".to_string(),
+                "tooling-contract".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn category_extraction_uses_first_inline_bracket_pair_only() {
+        let markdown = r#"## Findings
+
+1. **[category-name] Title with [other] brackets**
+"#;
+
+        assert_eq!(
+            extract_categories(markdown),
+            vec!["category-name".to_string()]
+        );
+    }
+
+    #[test]
+    fn category_extraction_parses_cycle_196_inline_categories() {
+        assert_eq!(
+            extract_categories(CYCLE_196_REVIEW),
+            vec![
+                "metrics-ownership".to_string(),
+                "process-adherence".to_string(),
+                "review-accounting".to_string(),
+                "tooling-contract".to_string(),
+            ]
+        );
     }
 
     #[test]
