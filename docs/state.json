@@ -1854,6 +1854,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix housekeeping-scan false positives for agent issues with active draft PRs"
+    },
+    {
+      "dispatched_at": "2026-03-08T05:11:34Z",
+      "issue": 741,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 185 end-of-cycle review"
     }
   ],
   "audit_processed": [
@@ -1988,16 +1995,16 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#738 Fix housekeeping-scan false positives for agent issues with active draft PRs (cycle 185)",
+    "dispatch_log_latest": "#741 [Cycle Review] Cycle 185 end-of-cycle review (cycle 185)",
     "dispatch_to_pr_rate": "195/199",
-    "in_flight": 2,
+    "in_flight": 3,
     "merged": 193,
-    "note": "201 dispatches, 199 resolved, 2 in-flight. 195 produced PRs (193 merged, 2 closed without merge). Latest dispatch: #738 Fix housekeeping-scan false positives for agent issues with active draft PRs (cycle 185, model gpt-5.4).",
+    "note": "202 dispatches, 199 resolved, 3 in-flight. 195 produced PRs (193 merged, 2 closed without merge). Latest dispatch: #741 [Cycle Review] Cycle 185 end-of-cycle review (cycle 185, model gpt-5.4).",
     "pr_merge_rate": "193/195",
     "produced_pr": 195,
     "resolved": 199,
     "revision_rounds": 5,
-    "total_dispatches": 201
+    "total_dispatches": 202
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -2096,7 +2103,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 184"
+        "last_refreshed": "cycle 185"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -2112,11 +2119,11 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 184"
+        "last_refreshed": "cycle 185"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 184"
+        "last_refreshed": "cycle 185"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -2136,7 +2143,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 184"
+        "last_refreshed": "cycle 185"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -2144,7 +2151,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 184"
+        "last_refreshed": "cycle 185"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -2164,7 +2171,7 @@
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
-        "last_refreshed": "cycle 184"
+        "last_refreshed": "cycle 185"
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
@@ -2208,18 +2215,18 @@
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 184"
+        "last_refreshed": "cycle 185"
       }
     }
   },
   "last_cycle": {
-    "duration_minutes": 16,
+    "duration_minutes": 11,
     "issue": 736,
     "number": 185,
-    "summary": "Merged 3 PRs (730, 728, 727). Actioned review findings (stale-binary, ADR drift). Created _build-helper.sh. Dispatched 732.",
-    "timestamp": "2026-03-08T04:59:19Z"
+    "summary": "Consumed cycle 184 review (4/5, 3 findings, 2 actioned). Merged PRs #733 (score parsing) and #735 (review artifact). Fixed build-helper workspace scope. Dispatched #737 (pipeline-check auto-build) and #738 (housekeeping-scan false positives). Closed QC publish notification #717.",
+    "timestamp": "2026-03-08T05:10:13Z"
   },
-  "last_eva_comment_check": "2026-03-08T04:59:19Z",
+  "last_eva_comment_check": "2026-03-08T05:10:13Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
