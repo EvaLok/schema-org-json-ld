@@ -1840,6 +1840,13 @@
       "pr": 735,
       "status": "merged",
       "title": "[Cycle Review] Cycle 184 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-08T05:07:57Z",
+      "issue": 737,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix pipeline-check to auto-build missing tool binaries via wrappers"
     }
   ],
   "audit_processed": [
@@ -1974,16 +1981,16 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#734 [Cycle Review] Cycle 184 end-of-cycle review (cycle 184)",
+    "dispatch_log_latest": "#737 Fix pipeline-check to auto-build missing tool binaries via wrappers (cycle 185)",
     "dispatch_to_pr_rate": "195/199",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 193,
-    "note": "199 dispatches, 199 resolved, 0 in-flight. 195 produced PRs (193 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #735 merged in cycle 185.",
+    "note": "200 dispatches, 199 resolved, 1 in-flight. 195 produced PRs (193 merged, 2 closed without merge). Latest dispatch: #737 Fix pipeline-check to auto-build missing tool binaries via wrappers (cycle 185, model gpt-5.4).",
     "pr_merge_rate": "193/195",
     "produced_pr": 195,
     "resolved": 199,
     "revision_rounds": 5,
-    "total_dispatches": 199
+    "total_dispatches": 200
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
