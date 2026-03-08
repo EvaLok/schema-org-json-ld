@@ -171,12 +171,26 @@ fn extract_cycle_number(path: &Path) -> Option<u64> {
 }
 
 fn extract_score(content: &str) -> Option<u64> {
+    let mut in_complacency = false;
+
     for line in content.lines() {
-        if !line.contains("/5") {
+        let trimmed = line.trim();
+        let lower = trimmed.to_ascii_lowercase();
+
+        if lower.starts_with("## complacency") {
+            in_complacency = true;
             continue;
         }
 
-        if let Some((score, _)) = find_number_before_token(line, "/5") {
+        if in_complacency && lower.starts_with("## ") && !lower.starts_with("## complacency") {
+            break;
+        }
+
+        if !in_complacency || !trimmed.contains("/5") {
+            continue;
+        }
+
+        if let Some((score, _)) = find_number_before_token(trimmed, "/5") {
             return Some(score);
         }
     }
@@ -569,9 +583,29 @@ mod tests {
     }
 
     #[test]
-    fn score_extraction_finds_first_match() {
-        let markdown = "noise\nScore: 3/5\n**Complacency Score: 2/5**\n";
-        assert_eq!(extract_score(markdown), Some(3));
+    fn score_extraction_reads_complacency_section() {
+        let markdown = r#"## Recommendations
+
+1. Keep the previous 5/5 note out of the score parser.
+
+## Complacency
+
+2/5 — actual score
+"#;
+        assert_eq!(extract_score(markdown), Some(2));
+    }
+
+    #[test]
+    fn score_extraction_ignores_recommendation_scores_before_complacency_section() {
+        let markdown = r#"## Recommendations
+
+3. Stop recording pipeline status as a bare "5/5" unless the evidence is current.
+
+## Complacency score
+
+4/5 — cycle 183 did real work and still left follow-up behind.
+"#;
+        assert_eq!(extract_score(markdown), Some(4));
     }
 
     #[test]
