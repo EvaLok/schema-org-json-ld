@@ -203,6 +203,8 @@ fn main() {
     } else {
         print_human_report(&report);
     }
+
+    std::process::exit(report_exit_code(&report));
 }
 
 fn current_timestamp_utc() -> String {
@@ -521,7 +523,7 @@ fn contains_issue_tag_at_word_boundary(text: &str, tag: &str) -> bool {
         let at_word_boundary = search
             .as_bytes()
             .get(after)
-            .map_or(true, |c| !c.is_ascii_digit());
+            .is_none_or(|c| !c.is_ascii_digit());
         if at_word_boundary {
             return true;
         }
@@ -532,7 +534,19 @@ fn contains_issue_tag_at_word_boundary(text: &str, tag: &str) -> bool {
 
 fn is_valid_commit_sha(sha: &str) -> bool {
     let len = sha.len();
-    len >= 4 && len <= 40 && sha.chars().all(|c| c.is_ascii_hexdigit())
+    (4..=40).contains(&len) && sha.chars().all(|c| c.is_ascii_hexdigit())
+}
+
+fn report_exit_code(report: &Report) -> i32 {
+    if report
+        .commit_freeze
+        .as_ref()
+        .is_some_and(|status| status.check_failed || status.diverged)
+    {
+        1
+    } else {
+        0
+    }
 }
 
 fn check_commit_freeze(
@@ -1403,5 +1417,87 @@ mod tests {
                 .any(|item| item.contains("re-validation required")),
             "check_failed=true should not produce the divergence message"
         );
+    }
+
+    fn sample_report(commit_freeze: Option<CommitFreezeStatus>, action_items: Vec<String>) -> Report {
+        Report {
+            generated_at: "2026-03-08T00:00:00Z".to_string(),
+            last_cycle_timestamp: "2026-03-08T00:00:00Z".to_string(),
+            eva_input: EvaInput::default(),
+            agent_status: AgentStatus::default(),
+            qc_status: ProcessingStatus::default(),
+            audit_status: ProcessingStatus::default(),
+            commit_freeze,
+            concurrency: Concurrency {
+                in_flight: 0,
+                max: MAX_CONCURRENCY,
+                dispatch_available: true,
+            },
+            action_items,
+            errors: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn report_without_commit_freeze_issues_exits_zero() {
+        let report = sample_report(
+            Some(CommitFreezeStatus {
+                validated_commit: "abc1234".to_string(),
+                diverged: false,
+                check_failed: false,
+                changed_files: vec![],
+            }),
+            Vec::new(),
+        );
+
+        assert_eq!(report_exit_code(&report), 0);
+    }
+
+    #[test]
+    fn report_with_check_failed_commit_freeze_exits_one() {
+        let report = sample_report(
+            Some(CommitFreezeStatus {
+                validated_commit: "abc1234".to_string(),
+                diverged: true,
+                check_failed: true,
+                changed_files: vec![],
+            }),
+            vec!["Commit freeze check failed".to_string()],
+        );
+
+        assert_eq!(report_exit_code(&report), 1);
+    }
+
+    #[test]
+    fn report_with_diverged_commit_freeze_exits_one() {
+        let report = sample_report(
+            Some(CommitFreezeStatus {
+                validated_commit: "abc1234".to_string(),
+                diverged: true,
+                check_failed: false,
+                changed_files: vec!["ts/src/index.ts".to_string()],
+            }),
+            vec!["Source files changed since QC-validated commit".to_string()],
+        );
+
+        assert_eq!(report_exit_code(&report), 1);
+    }
+
+    #[test]
+    fn report_with_other_action_items_but_clean_commit_freeze_exits_zero() {
+        let report = sample_report(
+            Some(CommitFreezeStatus {
+                validated_commit: "abc1234".to_string(),
+                diverged: false,
+                check_failed: false,
+                changed_files: vec![],
+            }),
+            vec![
+                "Dispatch slots are full (2 / 2)".to_string(),
+                "1 open input-from-eva issue requires attention".to_string(),
+            ],
+        );
+
+        assert_eq!(report_exit_code(&report), 0);
     }
 }
