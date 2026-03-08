@@ -1844,8 +1844,10 @@
     {
       "dispatched_at": "2026-03-08T05:07:57Z",
       "issue": 737,
+      "merged_at": "2026-03-08T06:21:08Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 739,
+      "status": "merged",
       "title": "Fix pipeline-check to auto-build missing tool binaries via wrappers"
     },
     {
@@ -2002,13 +2004,13 @@
     "closed_without_merge": 2,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#741 [Cycle Review] Cycle 185 end-of-cycle review (cycle 185)",
-    "dispatch_to_pr_rate": "197/201",
-    "in_flight": 1,
-    "merged": 195,
-    "note": "202 dispatches, 201 resolved, 1 in-flight. 197 produced PRs (195 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #740 merged in cycle 186.",
-    "pr_merge_rate": "195/197",
-    "produced_pr": 197,
-    "resolved": 201,
+    "dispatch_to_pr_rate": "198/202",
+    "in_flight": 0,
+    "merged": 196,
+    "note": "202 dispatches, 202 resolved, 0 in-flight. 198 produced PRs (196 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #739 merged in cycle 186.",
+    "pr_merge_rate": "196/198",
+    "produced_pr": 198,
+    "resolved": 202,
     "revision_rounds": 5,
     "total_dispatches": 202
   },
