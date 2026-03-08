@@ -2121,7 +2121,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 186"
+        "last_refreshed": "cycle 187"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -2129,11 +2129,11 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 186"
+        "last_refreshed": "cycle 187"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 186"
+        "last_refreshed": "cycle 187"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -2243,12 +2243,12 @@
   },
   "last_cycle": {
     "duration_minutes": 10,
-    "issue": 743,
-    "number": 186,
+    "issue": 750,
+    "number": 187,
     "summary": "Merged 3 PRs (#739 pipeline-check fix, #740 housekeeping-scan fix, #742 cycle 185 review). Processed cycle 185 review (4/5, 3 findings: 2 actioned, 1 deferred). Processed audit #144 (accepted: severity tiers) and #145 (deferred: QC-directed). Dispatched #746 (pipeline-check severity tiers).",
-    "timestamp": "2026-03-08T06:24:00Z"
+    "timestamp": "2026-03-08T07:42:26Z"
   },
-  "last_eva_comment_check": "2026-03-08T06:24:00Z",
+  "last_eva_comment_check": "2026-03-08T07:42:26Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
