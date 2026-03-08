@@ -145,7 +145,8 @@ fn main() {
                 );
                 print_patch_apply_summary(&changed_paths);
                 if cli.commit {
-                    let commit_message = format!("state(cycle-complete): {} [cycle {}]", summary, cycle);
+                    let commit_message =
+                        format!("state(cycle-complete): {} [cycle {}]", summary, cycle);
                     match commit_state_json(&cli.repo_root, &commit_message) {
                         Ok(sha) => println!("Committed: {}", sha),
                         Err(error) => {
@@ -228,10 +229,7 @@ fn format_timestamp(now: DateTime<Utc>) -> String {
     now.format("%Y-%m-%dT%H:%M:%SZ").to_string()
 }
 
-fn compute_session_duration_minutes(
-    state: &StateJson,
-    now: DateTime<Utc>,
-) -> Result<u64, String> {
+fn compute_session_duration_minutes(state: &StateJson, now: DateTime<Utc>) -> Result<u64, String> {
     let start_timestamp = state
         .last_cycle
         .timestamp
@@ -692,9 +690,8 @@ mod tests {
             .collect();
 
         assert!(freshness_paths.contains(&"/field_inventory/fields/last_cycle/last_refreshed"));
-        assert!(
-            freshness_paths.contains(&"/field_inventory/fields/last_cycle.duration_minutes/last_refreshed")
-        );
+        assert!(freshness_paths
+            .contains(&"/field_inventory/fields/last_cycle.duration_minutes/last_refreshed"));
         assert!(freshness_paths
             .contains(&"/field_inventory/fields/last_eva_comment_check/last_refreshed"));
     }
@@ -807,15 +804,21 @@ mod tests {
 
         assert!(!freshness_paths.contains(&"/field_inventory/fields/publish_gate/last_refreshed"));
         assert!(!freshness_paths.contains(&"/field_inventory/fields/review_agent/last_refreshed"));
-        assert!(!freshness_paths.contains(
-            &"/field_inventory/fields/pre_python_clean_cycles/last_refreshed"
-        ));
+        assert!(!freshness_paths
+            .contains(&"/field_inventory/fields/pre_python_clean_cycles/last_refreshed"));
     }
 
     #[test]
     fn summary_flag_overrides_placeholder_text_in_patch() {
         let state = StateJson::default();
-        let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", 47, &state, "custom summary");
+        let patch = build_state_patch(
+            153,
+            700,
+            "2026-03-06T00:00:00Z",
+            47,
+            &state,
+            "custom summary",
+        );
         assert_eq!(patch.updates[4].path, "/last_cycle/summary");
         assert_eq!(patch.updates[4].value, json!("custom summary"));
     }
@@ -844,7 +847,14 @@ mod tests {
             json!({"last_refreshed": "cycle 120"}),
         );
 
-        let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", 47, &state, "custom summary");
+        let patch = build_state_patch(
+            153,
+            700,
+            "2026-03-06T00:00:00Z",
+            47,
+            &state,
+            "custom summary",
+        );
         let mut raw_state = json!({
             "last_cycle": {
                 "number": 120,
@@ -963,14 +973,8 @@ mod tests {
 
     #[test]
     fn cli_accepts_missing_cycle_argument() {
-        let cli = Cli::try_parse_from([
-            "cycle-complete",
-            "--repo-root",
-            ".",
-            "--issue",
-            "585",
-        ])
-        .unwrap();
+        let cli =
+            Cli::try_parse_from(["cycle-complete", "--repo-root", ".", "--issue", "585"]).unwrap();
         assert_eq!(cli.repo_root, PathBuf::from("."));
         assert_eq!(cli.cycle, None);
         assert_eq!(cli.issue, 585);
@@ -1082,7 +1086,10 @@ mod tests {
         let report = assemble_report(139, 464, fixed_now(), &state, "summary").unwrap();
 
         assert_eq!(report.session_duration_minutes, 47);
-        assert_eq!(report.state_json_patch.updates[3].path, "/last_cycle/duration_minutes");
+        assert_eq!(
+            report.state_json_patch.updates[3].path,
+            "/last_cycle/duration_minutes"
+        );
         assert_eq!(report.state_json_patch.updates[3].value, json!(47));
     }
 }

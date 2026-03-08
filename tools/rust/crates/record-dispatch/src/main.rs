@@ -373,7 +373,9 @@ mod tests {
 
         apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
 
-        let sessions = state["agent_sessions"].as_array().expect("agent_sessions array");
+        let sessions = state["agent_sessions"]
+            .as_array()
+            .expect("agent_sessions array");
         assert_eq!(sessions.len(), 2);
         assert_eq!(sessions[1]["issue"], json!(602));
         assert_eq!(sessions[1]["status"], json!("in_flight"));
