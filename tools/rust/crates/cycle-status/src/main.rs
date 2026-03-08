@@ -43,6 +43,7 @@ struct LastCycle {
 
 #[derive(Deserialize)]
 struct PublishGate {
+    status: Option<String>,
     validated_commit: Option<String>,
 }
 
@@ -158,6 +159,10 @@ fn main() {
     let qc_status = gather_qc_status(&state, &mut errors);
     let audit_status = gather_audit_status(&state, &mut errors);
     let commit_freeze = check_commit_freeze(&cli.repo_root, &state, &mut errors);
+    let publish_gate_status = state
+        .publish_gate
+        .as_ref()
+        .and_then(|gate| gate.status.as_deref());
 
     let draft_prs_by_copilot = agent_status
         .open_prs
@@ -177,6 +182,7 @@ fn main() {
         &qc_status,
         &audit_status,
         commit_freeze.as_ref(),
+        publish_gate_status,
         &concurrency,
     );
     let report = Report {
@@ -204,7 +210,7 @@ fn main() {
         print_human_report(&report);
     }
 
-    std::process::exit(report_exit_code(&report));
+    std::process::exit(report_exit_code(&report, publish_gate_status));
 }
 
 fn current_timestamp_utc() -> String {
@@ -537,11 +543,16 @@ fn is_valid_commit_sha(sha: &str) -> bool {
     (4..=40).contains(&len) && sha.chars().all(|c| c.is_ascii_hexdigit())
 }
 
-fn report_exit_code(report: &Report) -> i32 {
+fn is_pre_publish_gate_status(status: Option<&str>) -> bool {
+    matches!(status, Some("awaiting_validation" | "validated"))
+}
+
+fn report_exit_code(report: &Report, publish_gate_status: Option<&str>) -> i32 {
     if report
         .commit_freeze
         .as_ref()
         .is_some_and(|status| status.check_failed || status.diverged)
+        && is_pre_publish_gate_status(publish_gate_status)
     {
         1
     } else {
@@ -797,6 +808,7 @@ fn build_action_items(
     qc_status: &ProcessingStatus,
     audit_status: &ProcessingStatus,
     commit_freeze: Option<&CommitFreezeStatus>,
+    publish_gate_status: Option<&str>,
     concurrency: &Concurrency,
 ) -> Vec<String> {
     let mut items = Vec::new();
@@ -862,13 +874,25 @@ fn build_action_items(
     }
     if commit_freeze.is_some_and(|status| status.diverged) {
         if commit_freeze.is_some_and(|status| status.check_failed) {
+            if is_pre_publish_gate_status(publish_gate_status) {
+                items.push(
+                    "Commit freeze check failed — could not verify QC-validated commit integrity"
+                        .to_string(),
+                );
+            } else {
+                items.push(
+                    "Commit freeze check failed outside pre-publish gate — awareness only"
+                        .to_string(),
+                );
+            }
+        } else if is_pre_publish_gate_status(publish_gate_status) {
             items.push(
-                "Commit freeze check failed — could not verify QC-validated commit integrity"
+                "Source files changed since QC-validated commit — re-validation required"
                     .to_string(),
             );
         } else {
             items.push(
-                "Source files changed since QC-validated commit — re-validation required"
+                "Source files changed since QC-validated commit outside pre-publish gate — awareness only"
                     .to_string(),
             );
         }
@@ -1210,11 +1234,12 @@ mod tests {
             &qc_status,
             &audit_status,
             commit_freeze.as_ref(),
+            Some("published"),
             &concurrency,
         );
 
         assert!(action_items.iter().any(|item| {
-            item == "Source files changed since QC-validated commit — re-validation required"
+            item == "Source files changed since QC-validated commit outside pre-publish gate — awareness only"
         }));
     }
 
@@ -1342,6 +1367,7 @@ mod tests {
             &qc_status,
             &audit_status,
             commit_freeze.as_ref(),
+            Some("validated"),
             &concurrency,
         );
 
@@ -1402,6 +1428,7 @@ mod tests {
             &qc_status,
             &audit_status,
             commit_freeze.as_ref(),
+            Some("validated"),
             &concurrency,
         );
 
@@ -1450,7 +1477,7 @@ mod tests {
             Vec::new(),
         );
 
-        assert_eq!(report_exit_code(&report), 0);
+        assert_eq!(report_exit_code(&report, Some("validated")), 0);
     }
 
     #[test]
@@ -1465,7 +1492,7 @@ mod tests {
             vec!["Commit freeze check failed".to_string()],
         );
 
-        assert_eq!(report_exit_code(&report), 1);
+        assert_eq!(report_exit_code(&report, Some("validated")), 1);
     }
 
     #[test]
@@ -1480,7 +1507,25 @@ mod tests {
             vec!["Source files changed since QC-validated commit".to_string()],
         );
 
-        assert_eq!(report_exit_code(&report), 1);
+        assert_eq!(report_exit_code(&report, Some("validated")), 1);
+    }
+
+    #[test]
+    fn report_with_diverged_commit_freeze_post_publish_exits_zero() {
+        let report = sample_report(
+            Some(CommitFreezeStatus {
+                validated_commit: "abc1234".to_string(),
+                diverged: true,
+                check_failed: false,
+                changed_files: vec!["package.json".to_string()],
+            }),
+            vec![
+                "Source files changed since QC-validated commit outside pre-publish gate — awareness only"
+                    .to_string(),
+            ],
+        );
+
+        assert_eq!(report_exit_code(&report, Some("published")), 0);
     }
 
     #[test]
@@ -1498,6 +1543,6 @@ mod tests {
             ],
         );
 
-        assert_eq!(report_exit_code(&report), 0);
+        assert_eq!(report_exit_code(&report, Some("validated")), 0);
     }
 }
