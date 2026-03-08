@@ -2012,6 +2012,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Update state-invariants for derive-metrics format"
+    },
+    {
+      "dispatched_at": "2026-03-08T16:58:12Z",
+      "issue": 791,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 193 review"
     }
   ],
   "audit_processed": [
@@ -2151,17 +2158,17 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#789 Update state-invariants for derive-metrics format (cycle 193)",
+    "dispatch_log_latest": "#791 Cycle 193 review (cycle 193)",
     "dispatch_to_pr_rate": "213/218",
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 212,
-    "note": "219 dispatches, 218 resolved, 1 in-flight. 213 produced PRs (212 merged, 2 closed without merge). Latest dispatch: #789 Update state-invariants for derive-metrics format (cycle 193, model gpt-5.4).",
+    "note": "220 dispatches, 218 resolved, 2 in-flight. 213 produced PRs (212 merged, 2 closed without merge). Latest dispatch: #791 Cycle 193 review (cycle 193, model gpt-5.4).",
     "pr_merge_rate": "99.5%",
     "produced_pr": 213,
     "resolved": 218,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 219
+    "total_dispatches": 220
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
