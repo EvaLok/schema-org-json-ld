@@ -24,6 +24,10 @@ struct Cli {
     #[arg(long)]
     issue: u64,
 
+    /// Model name for the orchestrator session
+    #[arg(long)]
+    model: String,
+
     /// Path to the repository root
     #[arg(long, default_value = ".")]
     repo_root: PathBuf,
@@ -131,7 +135,7 @@ fn run(cli: Cli) -> Result<(), String> {
     );
     let receipt = commit_state_json(&cli.repo_root, &commit_message)?;
 
-    if let Err(error) = post_opening_comment(cli.issue, cycle) {
+    if let Err(error) = post_opening_comment(cli.issue, cycle, &timestamp, &cli.model) {
         warn(&mut warnings, format!("opening comment failed: {}", error));
     }
 
@@ -292,11 +296,13 @@ fn apply_state_patch(state: &mut Value, patch: &[PatchUpdate]) -> Result<(), Str
     Ok(())
 }
 
-fn post_opening_comment(issue: u64, cycle: u64) -> Result<(), String> {
-    let body = format!(
-        "> **[main-orchestrator]** | Cycle {}\n\nCycle {} started. Running startup checks...",
-        cycle, cycle
-    );
+fn post_opening_comment(
+    issue: u64,
+    cycle: u64,
+    timestamp: &str,
+    model: &str,
+) -> Result<(), String> {
+    let body = build_opening_comment(cycle, timestamp, model, &github_run_id());
 
     let output = Command::new("gh")
         .arg("api")
@@ -313,6 +319,23 @@ fn post_opening_comment(issue: u64, cycle: u64) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+fn build_opening_comment(cycle: u64, timestamp: &str, model: &str, run_id: &str) -> String {
+    format!(
+        "> **[main-orchestrator]** | Cycle {cycle}\n\n**Session start**: {timestamp} UTC\n**Model**: {model}\n**Run ID**: {run_id}\n**Cycle**: {cycle}\n\nBeginning startup checklist. Will post updates as work progresses."
+    )
+}
+
+fn github_run_id() -> String {
+    github_run_id_from(std::env::var("GITHUB_RUN_ID").ok().as_deref())
+}
+
+fn github_run_id_from(run_id: Option<&str>) -> String {
+    run_id
+        .filter(|value| !value.trim().is_empty())
+        .map(ToOwned::to_owned)
+        .unwrap_or_else(|| "local".to_string())
 }
 
 fn gather_pipeline_status(
@@ -940,6 +963,7 @@ fn command_failure_message(command: &str, output: &std::process::Output) -> Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+    use clap::CommandFactory;
 
     #[test]
     fn cycle_number_is_last_plus_one() {
@@ -982,6 +1006,38 @@ mod tests {
             .expect("open_questions_for_eva patch should exist");
 
         assert_eq!(open_questions.value, json!([]));
+    }
+
+    #[test]
+    fn opening_comment_format_includes_session_metadata() {
+        let body = build_opening_comment(182, "2026-03-05T23:12:00Z", "Claude Opus 4.6", "123456");
+
+        assert_eq!(
+            body,
+            "> **[main-orchestrator]** | Cycle 182\n\n**Session start**: 2026-03-05T23:12:00Z UTC\n**Model**: Claude Opus 4.6\n**Run ID**: 123456\n**Cycle**: 182\n\nBeginning startup checklist. Will post updates as work progresses."
+        );
+    }
+
+    #[test]
+    fn github_run_id_falls_back_to_local_when_unset() {
+        assert_eq!(github_run_id_from(None), "local");
+    }
+
+    #[test]
+    fn github_run_id_uses_environment_value_when_present() {
+        assert_eq!(github_run_id_from(Some("123456")), "123456");
+    }
+
+    #[test]
+    fn help_contains_expected_flags() {
+        let mut command = Cli::command();
+        let mut output = Vec::new();
+        command.write_long_help(&mut output).unwrap();
+        let help = String::from_utf8(output).unwrap();
+        assert!(help.contains("--issue"));
+        assert!(help.contains("--model"));
+        assert!(help.contains("--repo-root"));
+        assert!(help.contains("--json"));
     }
 
     #[test]

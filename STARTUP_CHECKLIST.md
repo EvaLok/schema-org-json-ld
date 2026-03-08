@@ -11,7 +11,7 @@ Follow this checklist at the start of every orchestrator cycle. Do not skip step
 Run the cycle-start tool as the VERY FIRST action:
 
 ```bash
-bash tools/cycle-start --issue {NUMBER}
+bash tools/cycle-start --issue {NUMBER} --model "{MODEL NAME}"
 ```
 
 This is the single entry point for cycle initialization. It:
