@@ -3340,7 +3340,12 @@
       },
       {
         "actioned": 2,
-        "categories": [],
+        "categories": [
+          "metrics-ownership",
+          "review-accounting",
+          "tooling-contract",
+          "process-adherence"
+        ],
         "complacency_score": 5,
         "cycle": 196,
         "deferred": 1,
