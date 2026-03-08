@@ -656,7 +656,7 @@ mod tests {
 
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir().join(format!("pipeline-check-all-errors-{}", run_id));
+        let root = std::env::temp_dir().join(format!("pipeline-check-fail-all-errors-{}", run_id));
         fs::create_dir_all(&root).unwrap();
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
