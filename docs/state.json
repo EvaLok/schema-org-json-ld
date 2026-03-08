@@ -1783,6 +1783,13 @@
       "model": "gpt-5.3-codex",
       "status": "in_flight",
       "title": "Enhance cycle-complete to auto-refresh event-driven field inventory entries"
+    },
+    {
+      "dispatched_at": "2026-03-08T00:33:04Z",
+      "issue": 721,
+      "model": "gpt-5.3-codex",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 182 end-of-cycle review"
     }
   ],
   "audit_processed": [
@@ -1917,16 +1924,16 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#718 Enhance cycle-complete to auto-refresh event-driven field inventory entries (cycle 182)",
+    "dispatch_log_latest": "#721 [Cycle Review] Cycle 182 end-of-cycle review (cycle 182)",
     "dispatch_to_pr_rate": "188/192",
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 186,
-    "note": "193 dispatches, 192 resolved, 1 in-flight. 188 produced PRs (186 merged, 2 closed without merge). Latest dispatch: #718 Enhance cycle-complete to auto-refresh event-driven field inventory entries (cycle 182, model gpt-5.3-codex).",
+    "note": "194 dispatches, 192 resolved, 2 in-flight. 188 produced PRs (186 merged, 2 closed without merge). Latest dispatch: #721 [Cycle Review] Cycle 182 end-of-cycle review (cycle 182, model gpt-5.3-codex).",
     "pr_merge_rate": "186/188",
     "produced_pr": 188,
     "resolved": 192,
     "revision_rounds": 5,
-    "total_dispatches": 193
+    "total_dispatches": 194
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
