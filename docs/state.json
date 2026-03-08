@@ -1780,8 +1780,10 @@
     {
       "dispatched_at": "2026-03-08T00:26:52Z",
       "issue": 718,
+      "merged_at": "2026-03-08T02:24:08Z",
       "model": "gpt-5.3-codex",
-      "status": "in_flight",
+      "pr": 719,
+      "status": "merged",
       "title": "Enhance cycle-complete to auto-refresh event-driven field inventory entries"
     },
     {
@@ -1925,13 +1927,13 @@
     "closed_without_merge": 2,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#721 [Cycle Review] Cycle 182 end-of-cycle review (cycle 182)",
-    "dispatch_to_pr_rate": "189/193",
-    "in_flight": 1,
-    "merged": 187,
-    "note": "194 dispatches, 193 resolved, 1 in-flight. 189 produced PRs (187 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #722 merged in cycle 183.",
-    "pr_merge_rate": "187/189",
-    "produced_pr": 189,
-    "resolved": 193,
+    "dispatch_to_pr_rate": "190/194",
+    "in_flight": 0,
+    "merged": 188,
+    "note": "194 dispatches, 194 resolved, 0 in-flight. 190 produced PRs (188 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #719 merged in cycle 183.",
+    "pr_merge_rate": "188/190",
+    "produced_pr": 190,
+    "resolved": 194,
     "revision_rounds": 5,
     "total_dispatches": 194
   },
