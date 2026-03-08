@@ -1991,8 +1991,10 @@
     {
       "dispatched_at": "2026-03-08T15:15:22Z",
       "issue": 784,
+      "merged_at": "2026-03-08T16:52:55Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 785,
+      "status": "merged",
       "title": "Add derive-metrics Rust tool"
     },
     {
@@ -2143,13 +2145,13 @@
     "closed_without_merge": 2,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#786 Cycle 192 review (cycle 192)",
-    "dispatch_to_pr_rate": "213/217",
-    "in_flight": 1,
-    "merged": 211,
-    "note": "218 dispatches, 217 resolved, 1 in-flight. 213 produced PRs (211 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #787 merged in cycle 193.",
-    "pr_merge_rate": "211/213",
-    "produced_pr": 213,
-    "resolved": 217,
+    "dispatch_to_pr_rate": "214/218",
+    "in_flight": 0,
+    "merged": 212,
+    "note": "218 dispatches, 218 resolved, 0 in-flight. 214 produced PRs (212 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #785 merged in cycle 193.",
+    "pr_merge_rate": "212/214",
+    "produced_pr": 214,
+    "resolved": 218,
     "revision_rounds": 5,
     "total_dispatches": 218
   },
