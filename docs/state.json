@@ -2197,7 +2197,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 190"
+        "last_refreshed": "cycle 191"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -2205,11 +2205,11 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 190"
+        "last_refreshed": "cycle 191"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 190"
+        "last_refreshed": "cycle 191"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -2319,13 +2319,15 @@
   },
   "last_cycle": {
     "duration_minutes": 11,
-    "issue": 770,
-    "number": 190,
+    "issue": 775,
+    "number": 191,
     "summary": "Cycle 190 complete. Merged PRs #767, #769. Processed audit #149. Filed question-for-eva #771. Fixed freshness-cadence structurally. Pipeline PASS.",
-    "timestamp": "2026-03-08T12:18:42Z"
+    "timestamp": "2026-03-08T13:45:35Z"
   },
-  "last_eva_comment_check": "2026-03-08T12:18:42Z",
-  "open_questions_for_eva": [],
+  "last_eva_comment_check": "2026-03-08T13:45:35Z",
+  "open_questions_for_eva": [
+    771
+  ],
   "pre_python_clean_cycles": {
     "count": 0,
     "description": "Per Eva directive on #699: 5 consecutive clean cycles (pipeline 5/5 at startup, no bugs, no problems) required before starting Python implementation. Count restarts on any problem.",
