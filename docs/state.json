@@ -2079,10 +2079,7 @@
       724,
       725
     ],
-    "closed_this_cycle": [
-      720,
-      723
-    ],
+    "closed_this_cycle": [],
     "remaining_open": [
       436,
       699
@@ -2113,7 +2110,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 184"
+        "last_refreshed": "cycle 187"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
