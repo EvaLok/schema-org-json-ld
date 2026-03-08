@@ -2164,7 +2164,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 187"
+        "last_refreshed": "cycle 188"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -2204,7 +2204,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 185"
+        "last_refreshed": "cycle 188"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -2212,7 +2212,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 185"
+        "last_refreshed": "cycle 188"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -2232,7 +2232,7 @@
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
-        "last_refreshed": "cycle 185"
+        "last_refreshed": "cycle 188"
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
@@ -2276,18 +2276,18 @@
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 185"
+        "last_refreshed": "cycle 188"
       }
     }
   },
   "last_cycle": {
-    "duration_minutes": 11,
+    "duration_minutes": 20,
     "issue": 757,
     "number": 188,
-    "summary": "Merged PRs #752 (cycle-status exit code), #754 (housekeeping-scan linkage), #756 (cycle 187 review). Consumed cycle 187 review (4/5, 7 findings: 5 actioned, 1 deferred, 1 ignored). Accepted audit #147 (journal commitment reconciliation). Dispatched #759 (pipeline-check severity) and #761 (cycle-complete reconciliation).",
-    "timestamp": "2026-03-08T09:08:00Z"
+    "summary": "Merged PRs #752, #754, #756, #760. Consumed cycle 187 review (4/5, 7 findings). Accepted audit #147. Dispatched #759 and #761. Clean cycle count stays at 0 (startup invariants failed).",
+    "timestamp": "2026-03-08T09:28:26Z"
   },
-  "last_eva_comment_check": "2026-03-08T09:08:00Z",
+  "last_eva_comment_check": "2026-03-08T09:28:26Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
