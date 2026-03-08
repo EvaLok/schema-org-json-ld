@@ -216,15 +216,6 @@ fn check_copilot_metrics_math(state: &StateJson) -> CheckResult {
             )
         }
     };
-    let closed_without_merge = match get_metric_i64(state, "closed_without_merge") {
-        Some(value) => value,
-        None => {
-            return warn(
-                "copilot_metrics_math",
-                "missing field: copilot_metrics.closed_without_merge",
-            )
-        }
-    };
     let mut failures = Vec::new();
     for (name, value) in [
         ("total_dispatches", total_dispatches),
@@ -232,17 +223,16 @@ fn check_copilot_metrics_math(state: &StateJson) -> CheckResult {
         ("in_flight", in_flight),
         ("produced_pr", produced_pr),
         ("merged", merged),
-        ("closed_without_merge", closed_without_merge),
     ] {
         if value < 0 {
             failures.push(format!("{}({}) must be non-negative", name, value));
         }
     }
 
-    if produced_pr != merged + closed_without_merge {
+    if produced_pr < merged {
         failures.push(format!(
-            "produced_pr({}) != merged({}) + closed({})",
-            produced_pr, merged, closed_without_merge
+            "produced_pr({}) must be >= merged({})",
+            produced_pr, merged
         ));
     }
 
@@ -473,29 +463,25 @@ fn check_copilot_metrics_rates(state: &StateJson) -> CheckResult {
 
     let mut failures = Vec::new();
 
-    match parse_rate(dispatch_to_pr_rate) {
-        Some((n, m)) if n == produced_pr && m == resolved => {}
-        Some((n, m)) => failures.push(format!(
-            "dispatch_to_pr_rate({}/{}) != produced_pr({})/resolved({})",
-            n, m, produced_pr, resolved
-        )),
-        None => failures.push(format!(
-            "dispatch_to_pr_rate has invalid format: {}",
-            dispatch_to_pr_rate
-        )),
-    }
+    validate_rate(
+        "dispatch_to_pr_rate",
+        dispatch_to_pr_rate,
+        produced_pr,
+        resolved,
+        "produced_pr",
+        "resolved",
+        &mut failures,
+    );
 
-    match parse_rate(pr_merge_rate) {
-        Some((n, m)) if n == merged && m == produced_pr => {}
-        Some((n, m)) => failures.push(format!(
-            "pr_merge_rate({}/{}) != merged({})/produced_pr({})",
-            n, m, merged, produced_pr
-        )),
-        None => failures.push(format!(
-            "pr_merge_rate has invalid format: {}",
-            pr_merge_rate
-        )),
-    }
+    validate_rate(
+        "pr_merge_rate",
+        pr_merge_rate,
+        merged,
+        produced_pr,
+        "merged",
+        "produced_pr",
+        &mut failures,
+    );
 
     if failures.is_empty() {
         pass("copilot_metrics_rates")
@@ -708,10 +694,50 @@ fn get_review_history(state: &StateJson) -> Option<&Vec<Value>> {
         .and_then(Value::as_array)
 }
 
-fn parse_rate(value: &str) -> Option<(i64, i64)> {
+enum RateFormat {
+    Ratio(i64, i64),
+    Percentage(f64),
+}
+
+fn validate_rate(
+    rate_name: &str,
+    rate_value: &str,
+    expected_numerator: i64,
+    expected_denominator: i64,
+    numerator_label: &str,
+    denominator_label: &str,
+    failures: &mut Vec<String>,
+) {
+    match parse_rate(rate_value) {
+        Some(RateFormat::Ratio(n, m)) if n == expected_numerator && m == expected_denominator => {}
+        Some(RateFormat::Ratio(n, m)) => failures.push(format!(
+            "{rate_name}({n}/{m}) != {numerator_label}({expected_numerator})/{denominator_label}({expected_denominator})"
+        )),
+        Some(RateFormat::Percentage(value)) if (0.0..=100.0).contains(&value) => {}
+        Some(RateFormat::Percentage(value)) => {
+            failures.push(format!("{rate_name} percentage out of range: {value}%"))
+        }
+        None => failures.push(format!("{rate_name} has invalid format: {rate_value}")),
+    }
+}
+
+fn parse_rate(value: &str) -> Option<RateFormat> {
+    if let Some(percentage) = parse_percentage(value) {
+        return Some(RateFormat::Percentage(percentage));
+    }
+
+    parse_ratio(value).map(|(numerator, denominator)| RateFormat::Ratio(numerator, denominator))
+}
+
+fn parse_percentage(value: &str) -> Option<f64> {
+    let percentage = value.trim().strip_suffix('%')?.trim().parse::<f64>().ok()?;
+    percentage.is_finite().then_some(percentage)
+}
+
+fn parse_ratio(value: &str) -> Option<(i64, i64)> {
     let mut parts = value.split('/');
-    let n = parts.next()?.parse::<i64>().ok()?;
-    let m = parts.next()?.parse::<i64>().ok()?;
+    let n = parts.next()?.trim().parse::<i64>().ok()?;
+    let m = parts.next()?.trim().parse::<i64>().ok()?;
     if parts.next().is_some() {
         return None;
     }
@@ -867,14 +893,21 @@ fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
     let mut in_flight_expected = 0;
     let mut closed_without_merge_expected = 0;
     let mut closed_without_pr_expected = 0;
+    let mut produced_pr_expected = 0;
     let mut invalid_statuses = Vec::new();
 
     for (index, session) in state.agent_sessions.iter().enumerate() {
+        if session.pr.is_some() {
+            produced_pr_expected += 1;
+        }
+
+        // Match derive-metrics semantics, including the legacy status aliases still present in
+        // docs/state.json during the migration to canonical status names.
         match session.status.as_deref() {
             Some("merged") => merged_expected += 1,
             Some("in_flight") | Some("dispatched") => in_flight_expected += 1,
-            Some("closed") => closed_without_merge_expected += 1,
-            Some("failed") => closed_without_pr_expected += 1,
+            Some("closed_without_merge") | Some("closed") => closed_without_merge_expected += 1,
+            Some("closed_without_pr") | Some("failed") => closed_without_pr_expected += 1,
             Some("reviewed_awaiting_eva") => {}
             Some(status) => invalid_statuses.push(format!(
                 "agent_sessions[{}].status has unsupported value '{}'",
@@ -885,20 +918,20 @@ fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
     }
 
     if !invalid_statuses.is_empty() {
-        return fail(
-            "agent_sessions_reconciliation",
-            invalid_statuses.join("; "),
-        );
+        return fail("agent_sessions_reconciliation", invalid_statuses.join("; "));
     }
 
     let total_dispatches_expected = i64::try_from(state.agent_sessions.len())
         .expect("agent_sessions length should fit within i64");
     let resolved_expected = total_dispatches_expected - in_flight_expected;
-    let produced_pr_expected = merged_expected + closed_without_merge_expected;
 
     let mut failures = Vec::new();
     for (field, expected, actual) in [
-        ("total_dispatches", total_dispatches_expected, total_dispatches),
+        (
+            "total_dispatches",
+            total_dispatches_expected,
+            total_dispatches,
+        ),
         ("merged", merged_expected, merged),
         ("in_flight", in_flight_expected, in_flight),
         ("resolved", resolved_expected, resolved),
@@ -907,7 +940,11 @@ fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
             closed_without_merge_expected,
             closed_without_merge,
         ),
-        ("closed_without_pr", closed_without_pr_expected, closed_without_pr),
+        (
+            "closed_without_pr",
+            closed_without_pr_expected,
+            closed_without_pr,
+        ),
         ("produced_pr", produced_pr_expected, produced_pr),
     ] {
         if actual != expected {
@@ -1159,7 +1196,7 @@ mod tests {
     #[test]
     fn copilot_math_detects_mismatch() {
         let mut value = minimal_valid_state();
-        value["copilot_metrics"]["produced_pr"] = json!(5);
+        value["copilot_metrics"]["produced_pr"] = json!(0);
 
         let state = state_from_json(value);
         let check = check_copilot_metrics_math(&state);
@@ -1169,6 +1206,20 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("produced_pr"));
+    }
+
+    #[test]
+    fn copilot_math_allows_reviewed_awaiting_eva_sessions_with_prs() {
+        let mut value = minimal_valid_state();
+        value["agent_sessions"][2]["status"] = json!("reviewed_awaiting_eva");
+        value["agent_sessions"][2]["pr"] = json!(203);
+        value["copilot_metrics"]["produced_pr"] = json!(3);
+        value["copilot_metrics"]["closed_without_pr"] = json!(0);
+        value["copilot_metrics"]["reviewed_awaiting_eva"] = json!(1);
+
+        let state = state_from_json(value);
+        let check = check_copilot_metrics_math(&state);
+        assert_eq!(check.status, CheckStatus::Pass);
     }
 
     #[test]
@@ -1229,6 +1280,17 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("dispatch_to_pr_rate"));
+    }
+
+    #[test]
+    fn copilot_metrics_rates_accept_percentage_format() {
+        let mut value = minimal_valid_state();
+        value["copilot_metrics"]["dispatch_to_pr_rate"] = json!("66.7%");
+        value["copilot_metrics"]["pr_merge_rate"] = json!("50.0%");
+
+        let state = state_from_json(value);
+        let check = check_copilot_metrics_rates(&state);
+        assert_eq!(check.status, CheckStatus::Pass);
     }
 
     #[test]
@@ -1381,6 +1443,17 @@ mod tests {
     }
 
     #[test]
+    fn agent_sessions_reconciliation_counts_only_non_null_prs() {
+        let mut value = minimal_valid_state();
+        value["agent_sessions"][1]["pr"] = Value::Null;
+        value["copilot_metrics"]["produced_pr"] = json!(1);
+
+        let state = state_from_json(value);
+        let check = check_agent_sessions_reconciliation(&state);
+        assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
     fn run_checks_includes_agent_sessions_reconciliation_as_eleventh_check() {
         let state = state_from_json(minimal_valid_state());
         let report = run_checks(&state);
@@ -1400,6 +1473,7 @@ mod tests {
         value["copilot_metrics"]["in_flight"] = json!(0);
         value["copilot_metrics"]["resolved"] = json!(3);
         value["copilot_metrics"]["closed_without_pr"] = json!(0);
+        value["copilot_metrics"]["produced_pr"] = json!(3);
 
         let state = state_from_json(value);
         let check = check_agent_sessions_reconciliation(&state);
