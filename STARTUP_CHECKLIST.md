@@ -351,6 +351,19 @@ Skip this step if `typescript_plan.status` is not `complete` — the TypeScript 
 
 **Why:** Audit #108 identified that after QC validated commit `9326e46`, the orchestrator continued committing (infrastructure changes). While those commits didn't touch source files, there was no mechanism to detect if a future commit accidentally modified package code between validation and publish. This check closes that gap.
 
+## 5.13. Post-publish QC notification (per audit #140)
+
+**One-time step after each npm publish.** After any npm publish event, file a `qc-outbound` issue with title prefix `[QC-REQUEST] Publish notification:` informing the QC orchestrator of:
+
+1. The published version number
+2. The validated commit SHA
+3. The npm URL
+4. Who published and when
+
+This allows the QC to update its `operational_mode` and any publish-dependent state. Without this notification, the QC has no way to discover that the package was published (it doesn't poll the main repo's state.json for publish status).
+
+**Why:** Audit #140 identified that the QC's `operational_mode` remained `dual_language_pre_publish` after v1.0.2 was published because no cross-repo notification was sent. The cross-repo protocol now includes publish-notification as a communication type alongside QC-REQUEST, QC-REPORT, and QC-ACK.
+
 ## 5.11. State.json metric verification (per audit #78)
 
 **Permanent step.** Run every 5 cycles (or after any major merge that changes class counts, test counts, or tooling).
