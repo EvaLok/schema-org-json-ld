@@ -1789,8 +1789,10 @@
     {
       "dispatched_at": "2026-03-08T00:33:04Z",
       "issue": 721,
+      "merged_at": "2026-03-08T02:21:00Z",
       "model": "gpt-5.3-codex",
-      "status": "in_flight",
+      "pr": 722,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 182 end-of-cycle review"
     },
     {
