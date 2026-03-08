@@ -1967,6 +1967,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Make cycle-status publish gate handling fail-closed"
+    },
+    {
+      "dispatched_at": "2026-03-08T14:01:10Z",
+      "issue": 778,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 191 end-of-cycle review"
     }
   ],
   "audit_processed": [
@@ -2105,16 +2112,16 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#776 Make cycle-status publish gate handling fail-closed (cycle 191)",
+    "dispatch_log_latest": "#778 Cycle 191 end-of-cycle review (cycle 191)",
     "dispatch_to_pr_rate": "209/213",
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 207,
-    "note": "214 dispatches, 213 resolved, 1 in-flight. 209 produced PRs (207 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #774 merged in cycle 191.",
+    "note": "215 dispatches, 213 resolved, 2 in-flight. 209 produced PRs (207 merged, 2 closed without merge). Latest dispatch: #778 Cycle 191 end-of-cycle review (cycle 191, model gpt-5.4).",
     "pr_merge_rate": "207/209",
     "produced_pr": 209,
     "resolved": 213,
     "revision_rounds": 5,
-    "total_dispatches": 214
+    "total_dispatches": 215
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
