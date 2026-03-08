@@ -1943,13 +1943,13 @@
     "closed_without_merge": 2,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#720 Extract default agent model into shared config (cycle 183)",
-    "dispatch_to_pr_rate": "190/194",
-    "in_flight": 2,
-    "merged": 188,
-    "note": "196 dispatches, 194 resolved, 2 in-flight. 190 produced PRs (188 merged, 2 closed without merge). Latest dispatch: #720 Extract default agent model into shared config (cycle 183, model gpt-5.4).",
-    "pr_merge_rate": "188/190",
-    "produced_pr": 190,
-    "resolved": 194,
+    "dispatch_to_pr_rate": "191/195",
+    "in_flight": 1,
+    "merged": 189,
+    "note": "196 dispatches, 195 resolved, 1 in-flight. 191 produced PRs (189 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #730 merged in cycle 184.",
+    "pr_merge_rate": "189/191",
+    "produced_pr": 191,
+    "resolved": 195,
     "revision_rounds": 5,
     "total_dispatches": 196
   },
@@ -2026,15 +2026,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 183"
+        "last_refreshed": "cycle 184"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 183"
+        "last_refreshed": "cycle 184"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 183"
+        "last_refreshed": "cycle 184"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
@@ -2856,16 +2856,16 @@
         "ignored": 0
       },
       {
-        "actioned": 0,
+        "actioned": 2,
         "categories": [
           "adr-factual-drift",
           "pipeline-fresh-clone-drift",
           "receipt-verification-gap",
           "stale-binary-cycle-complete"
         ],
-        "complacency_score": 5,
+        "complacency_score": 4,
         "cycle": 183,
-        "deferred": 0,
+        "deferred": 2,
         "finding_count": 4,
         "ignored": 0
       }
