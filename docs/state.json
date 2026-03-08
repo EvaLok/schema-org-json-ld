@@ -2046,7 +2046,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 183"
+        "last_refreshed": "cycle 184"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -2054,11 +2054,11 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 183"
+        "last_refreshed": "cycle 184"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 183"
+        "last_refreshed": "cycle 184"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -2168,12 +2168,12 @@
   },
   "last_cycle": {
     "duration_minutes": 12,
-    "issue": 726,
-    "number": 183,
+    "issue": 731,
+    "number": 184,
     "summary": "Merged PRs #722 (cycle 182 review) and #719 (cycle-complete auto-refresh). Consumed review findings (3 actioned, 2 deferred, score 3/5). Actioned Eva directives: #725 (adversarial reviews), #724 (ADR tracking, wrote ADRs 0006-0009). Dispatched #723 (cycle-start comment) and #720 (shared model config). Pipeline 5/5, 11/11 invariants.",
-    "timestamp": "2026-03-08T02:28:53Z"
+    "timestamp": "2026-03-08T03:48:02Z"
   },
-  "last_eva_comment_check": "2026-03-08T02:28:53Z",
+  "last_eva_comment_check": "2026-03-08T03:48:02Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
