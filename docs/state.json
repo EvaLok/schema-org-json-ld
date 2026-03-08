@@ -2077,6 +2077,13 @@
       "pr": 807,
       "status": "merged",
       "title": "Cycle 195 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-08T21:13:28Z",
+      "issue": 812,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Expand pipeline-check derive-metrics phase to validate rate fields"
     }
   ],
   "audit_processed": [
@@ -2218,9 +2225,9 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#806 Cycle 195 end-of-cycle review (cycle 195)",
+    "dispatch_log_latest": "#812 Expand pipeline-check derive-metrics phase to validate rate fields (cycle 196)",
     "dispatch_to_pr_rate": "219/224",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 220,
     "note": "226 dispatches, 224 resolved, 2 in-flight. 219 produced PRs (218 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #807 merged in cycle 196.",
     "pr_merge_rate": "218/219",
@@ -2228,7 +2235,7 @@
     "resolved": 226,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 226
+    "total_dispatches": 227
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
