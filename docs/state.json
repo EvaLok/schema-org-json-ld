@@ -1985,6 +1985,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Strengthen semantic freshness test"
+    },
+    {
+      "dispatched_at": "2026-03-08T15:15:22Z",
+      "issue": 784,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add derive-metrics Rust tool"
     }
   ],
   "audit_processed": [
@@ -2124,16 +2131,16 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#782 Strengthen semantic freshness test (cycle 192)",
+    "dispatch_log_latest": "#784 Add derive-metrics Rust tool (cycle 192)",
     "dispatch_to_pr_rate": "211/215",
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 209,
-    "note": "216 dispatches, 215 resolved, 1 in-flight. 211 produced PRs (209 merged, 2 closed without merge). Latest dispatch: #782 Strengthen semantic freshness test (cycle 192, model gpt-5.4).",
+    "note": "217 dispatches, 215 resolved, 2 in-flight. 211 produced PRs (209 merged, 2 closed without merge). Latest dispatch: #784 Add derive-metrics Rust tool (cycle 192, model gpt-5.4).",
     "pr_merge_rate": "209/211",
     "produced_pr": 211,
     "resolved": 215,
     "revision_rounds": 5,
-    "total_dispatches": 216
+    "total_dispatches": 217
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
