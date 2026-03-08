@@ -2036,8 +2036,10 @@
     {
       "dispatched_at": "2026-03-08T18:18:52Z",
       "issue": 797,
+      "merged_at": "2026-03-08T19:46:13Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 798,
+      "status": "merged",
       "title": "Add derive-metrics pipeline-check phase"
     },
     {
@@ -2189,13 +2191,13 @@
     "closed_without_merge": 2,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#799 Cycle 194 review (cycle 194)",
-    "dispatch_to_pr_rate": "217/222",
-    "in_flight": 1,
-    "merged": 216,
-    "note": "223 dispatches, 222 resolved, 1 in-flight. 217 produced PRs (216 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #796 merged in cycle 195.",
-    "pr_merge_rate": "216/217",
-    "produced_pr": 217,
-    "resolved": 222,
+    "dispatch_to_pr_rate": "218/223",
+    "in_flight": 0,
+    "merged": 217,
+    "note": "223 dispatches, 223 resolved, 0 in-flight. 218 produced PRs (217 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #798 merged in cycle 195.",
+    "pr_merge_rate": "217/218",
+    "produced_pr": 218,
+    "resolved": 223,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 223
