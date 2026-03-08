@@ -8,7 +8,7 @@ use std::process::Command;
 pub const SCHEMA_VERSION: u32 = 1;
 pub const TOOLS_CONFIG_RELATIVE_PATH: &str = "tools/config.json";
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(default, rename_all = "snake_case")]
 pub struct StateJson {
     pub schema_version: Option<u32>,
@@ -39,40 +39,6 @@ pub struct StateJson {
     pub field_inventory: FieldInventory,
     #[serde(flatten)]
     pub extra: BTreeMap<String, Value>,
-}
-
-impl Default for StateJson {
-    fn default() -> Self {
-        Self {
-            schema_version: None,
-            schema_status: SchemaStatus::default(),
-            agent_sessions: Vec::new(),
-            qc_processed: Vec::new(),
-            qc_requests_pending: Vec::new(),
-            qc_status: BTreeMap::new(),
-            blockers: Vec::new(),
-            open_questions_for_eva: Vec::new(),
-            eva_input_issues: EvaInputIssues::default(),
-            typescript_plan: TypescriptPlan::default(),
-            release: BTreeMap::new(),
-            constructor_refactoring: None,
-            copilot_metrics: CopilotMetrics::default(),
-            last_cycle: LastCycle::default(),
-            last_eva_comment_check: None,
-            audit_processed: Vec::new(),
-            test_count: TestCount::default(),
-            total_schema_types: None,
-            total_sub_types: None,
-            total_schema_classes: None,
-            total_enums: None,
-            total_testable_types: None,
-            total_standalone_testable_types: None,
-            total_testable_types_note: None,
-            tool_pipeline: ToolPipeline::default(),
-            field_inventory: FieldInventory::default(),
-            extra: BTreeMap::new(),
-        }
-    }
 }
 
 pub fn check_version(state: &StateJson) -> Result<(), String> {
