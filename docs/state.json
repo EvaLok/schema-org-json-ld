@@ -1998,8 +1998,10 @@
     {
       "dispatched_at": "2026-03-08T15:18:03Z",
       "issue": 786,
+      "merged_at": "2026-03-08T16:50:03Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 787,
+      "status": "merged",
       "title": "Cycle 192 review"
     }
   ],
@@ -2141,13 +2143,13 @@
     "closed_without_merge": 2,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#786 Cycle 192 review (cycle 192)",
-    "dispatch_to_pr_rate": "212/216",
-    "in_flight": 2,
-    "merged": 210,
-    "note": "218 dispatches, 216 resolved, 2 in-flight. 212 produced PRs (210 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #783 merged in cycle 193.",
-    "pr_merge_rate": "210/212",
-    "produced_pr": 212,
-    "resolved": 216,
+    "dispatch_to_pr_rate": "213/217",
+    "in_flight": 1,
+    "merged": 211,
+    "note": "218 dispatches, 217 resolved, 1 in-flight. 213 produced PRs (211 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #787 merged in cycle 193.",
+    "pr_merge_rate": "211/213",
+    "produced_pr": 213,
+    "resolved": 217,
     "revision_rounds": 5,
     "total_dispatches": 218
   },
