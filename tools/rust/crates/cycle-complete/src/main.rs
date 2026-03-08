@@ -142,6 +142,9 @@ const EVENT_DRIVEN_AUTO_REFRESH_FIELDS: &[&str] = &[
     "eva_input_issues.closed_this_cycle",
     "eva_input_issues.remaining_open",
     "typescript_plan.status",
+    "copilot_metrics.dispatch_to_pr_rate",
+    "copilot_metrics.in_flight",
+    "copilot_metrics.pr_merge_rate",
 ];
 
 fn parse_reconcile_arg(value: &str) -> Result<ReconcileArg, String> {
@@ -1044,6 +1047,35 @@ mod tests {
         assert!(!freshness_paths.contains(&"/field_inventory/fields/review_agent/last_refreshed"));
         assert!(!freshness_paths
             .contains(&"/field_inventory/fields/pre_python_clean_cycles/last_refreshed"));
+    }
+
+    #[test]
+    fn event_driven_auto_refresh_fields_includes_required_field_names() {
+        // Semantic test: asserts that specific fields are in EVENT_DRIVEN_AUTO_REFRESH_FIELDS.
+        // This catches omissions that the iteration-based tests cannot detect,
+        // since those tests only verify "whatever is in the constant gets refreshed."
+        let required_fields = [
+            "test_count",
+            "typescript_stats",
+            "schema_status.in_progress",
+            "schema_status.planned_next",
+            "publish_gate",
+            "review_agent",
+            "pre_python_clean_cycles",
+            "eva_input_issues.closed_this_cycle",
+            "eva_input_issues.remaining_open",
+            "typescript_plan.status",
+            "copilot_metrics.dispatch_to_pr_rate",
+            "copilot_metrics.in_flight",
+            "copilot_metrics.pr_merge_rate",
+        ];
+        for field in &required_fields {
+            assert!(
+                EVENT_DRIVEN_AUTO_REFRESH_FIELDS.contains(field),
+                "EVENT_DRIVEN_AUTO_REFRESH_FIELDS is missing required field: {}",
+                field
+            );
+        }
     }
 
     #[test]
