@@ -1937,8 +1937,10 @@
     {
       "dispatched_at": "2026-03-08T10:47:41Z",
       "issue": 766,
+      "merged_at": "2026-03-08T12:15:01Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 767,
+      "status": "merged",
       "title": "Fix cycle-status commit-freeze post-publish blocking"
     },
     {
@@ -2088,13 +2090,13 @@
     "closed_without_merge": 2,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#768 Cycle 189 end-of-cycle review (cycle 189)",
-    "dispatch_to_pr_rate": "207/211",
-    "in_flight": 1,
-    "merged": 205,
-    "note": "212 dispatches, 211 resolved, 1 in-flight. 207 produced PRs (205 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #769 merged in cycle 190.",
-    "pr_merge_rate": "205/207",
-    "produced_pr": 207,
-    "resolved": 211,
+    "dispatch_to_pr_rate": "208/212",
+    "in_flight": 0,
+    "merged": 206,
+    "note": "212 dispatches, 212 resolved, 0 in-flight. 208 produced PRs (206 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #767 merged in cycle 190.",
+    "pr_merge_rate": "206/208",
+    "produced_pr": 208,
+    "resolved": 212,
     "revision_rounds": 5,
     "total_dispatches": 212
   },
