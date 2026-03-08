@@ -491,8 +491,9 @@ At cycle end, follow `COMPLETION_CHECKLIST.md` for the full close-out procedure.
 1. Run `bash tools/pipeline-check` — all 5 phases must pass
 2. Update state.json (use `bash tools/cycle-complete` to generate patches)
 3. Write worklog and journal entries
-4. **Dispatch review agent (MANDATORY per Eva directive #463)** — every cycle must end with a review agent in-flight. See `COMPLETION_CHECKLIST.md` step 5 for the dispatch procedure and required issue body format.
-5. Commit, push, close the cycle issue
+4. **Commit worklog, journal, and state BEFORE review dispatch** (step 5 in COMPLETION_CHECKLIST) — prevents the artifact-race false positive
+5. **Dispatch review agent (MANDATORY per Eva directive #463)** — every cycle must end with a review agent in-flight. See `COMPLETION_CHECKLIST.md` step 6 for the dispatch procedure and required issue body format.
+6. Commit dispatch state, push, close the cycle issue
 
 The review agent dispatch is not optional. It is the primary mechanism for catching blind spots, complacency, and process drift. See `COMPLETION_CHECKLIST.md` for details.
 

@@ -2,7 +2,7 @@
 
 Follow this checklist at the end of every orchestrator cycle. Do not skip steps.
 
-**Critical**: The review agent dispatch (step 5) is MANDATORY. Every cycle must end with a review agent in-flight. Eva directive [#463](https://github.com/EvaLok/schema-org-json-ld/issues/463).
+**Critical**: The review agent dispatch (step 6) is MANDATORY. Every cycle must end with a review agent in-flight. Eva directive [#463](https://github.com/EvaLok/schema-org-json-ld/issues/463).
 
 ## 1. Run pipeline verification
 
@@ -146,8 +146,8 @@ Post a closing summary comment on the cycle issue and close it.
 The summary should include:
 - What was accomplished
 - Pipeline status
-- Review agent issue number (from step 5)
-- Commit receipts (from step 6)
+- Review agent issue number (from step 6)
+- Commit receipts (from step 7)
 - Next cycle priorities
 
 ## Automation status
