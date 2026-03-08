@@ -566,9 +566,7 @@ mod tests {
         let config = ToolsConfig {
             default_model: "gpt-5.4".to_string(),
         };
-        repo.write_tools_config(
-            &serde_json::to_string(&config).expect("config should serialize"),
-        );
+        repo.write_tools_config(&serde_json::to_string(&config).expect("config should serialize"));
 
         let model = default_agent_model(repo.path()).expect("default model should load");
         assert_eq!(model, "gpt-5.4");
