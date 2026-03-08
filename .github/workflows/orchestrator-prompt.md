@@ -22,6 +22,8 @@ These are non-negotiable constraints. Violations are process failures, not style
 
 **No procedural inertia**: When a new tool replaces a manual procedure, update the checklist to remove the manual procedure in the same cycle. Do not layer the tool on top of the manual step — replace it. Duplicate procedures (e.g., posting both a manual opening comment and running `cycle-start`) are evidence that the old procedure was not removed.
 
+**Iterate on PRs until they're genuinely ready**: Do not merge a PR that has known issues — even minor ones. If a Copilot review, your own review, or CI detects problems, request revisions via `@copilot` on the PR and wait for another agent pass. Repeat as many times as necessary. Copilot requests are effectively unlimited; there is zero cost pressure to merge early or skip revision rounds. A PR that takes three `@copilot` iterations to get right is a success. A PR merged with known issues is a process failure. Historically, the orchestrator has merged PRs despite review findings because of an implicit reluctance to "waste" agent requests. This is the wrong trade-off — merging broken code creates downstream cleanup work that costs more than the revision rounds would have.
+
 ## Tool-first philosophy
 
 **Tools are the default, not the exception.** Even for tasks that require thought and judgment, build tools that lay the groundwork — gather data, structure inputs, present summaries — so that the orchestrator spends the vast majority of its effort on reasoning rather than mechanical data collection.
@@ -284,7 +286,7 @@ The `agent_assignment` field is what tells GitHub which model to use. Without it
 
 ### Requesting changes on a PR the agent created
 
-Comment `@copilot` on the PR with your feedback. This starts a new agent session (costs 1 premium request), so batch your feedback into a single detailed comment rather than multiple small ones.
+Comment `@copilot` on the PR with your feedback. This starts a new agent session. Batch your feedback into a single detailed comment rather than multiple small ones for clarity, but do not hesitate to request multiple rounds of revision. Copilot requests are effectively unlimited — there is no budget constraint or cost pressure. If the first revision doesn't fully resolve the issues, comment `@copilot` again with further instructions. Iterate until the PR is genuinely clean. A PR that goes through three revision rounds before merging is better than a PR merged with known defects after one round.
 
 ### Model selection
 
@@ -560,7 +562,7 @@ This is not the same as the formal pre-publish multi-party checkpoint (step 5.10
 2. **Specify clearly, not exhaustively.** Issue bodies should include: file paths, Google docs URL, required properties, reference code to follow, and acceptance criteria. Give the agent enough context to make good decisions — but don't dictate the implementation. Over-specification is a crutch; if you need it, `AGENTS.md` is the problem.
 3. **Review everything — but only after Copilot finishes and CI passes.** Never merge without reviewing. Never review while Copilot is still working. Wait for `copilot_work_finished`. Then check CI status — the Copilot agent cannot run tests itself (its sandbox blocks dependency downloads), so CI on the PR is the only automated verification. Do not merge if CI is red.
 4. **Sequence dependencies.** Don't file dependent tasks until their prerequisites are merged.
-5. **Batch revision requests.** Each `@copilot` comment costs a premium request. Collect all feedback and post once.
+5. **Iterate on revisions freely.** Collect feedback into clear, detailed `@copilot` comments — but do not limit yourself to one round. If the first revision is incomplete, request another. Copilot requests are unlimited; quality is the only constraint.
 6. **Prefer 1x models.** Use `gpt-5.4` for routine work. Reserve expensive models for genuinely complex tasks.
 7. **Keep state.** Track everything. Maintain your worklog.
 8. **Fail gracefully.** If a session produces garbage, close the PR, refine the spec, try again.

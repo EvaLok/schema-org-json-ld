@@ -94,6 +94,8 @@ gh pr diff <PR_NUMBER> --repo EvaLok/schema-org-json-ld
 
 ## Step 5: Merge or request revisions
 
+**Only merge when the PR is genuinely clean.** Do not merge with known issues, even minor ones.
+
 **If everything passes:**
 
 ```bash
@@ -102,7 +104,7 @@ gh pr merge <PR_NUMBER> --repo EvaLok/schema-org-json-ld --squash --delete-branc
 
 **If revisions are needed:**
 
-Batch all feedback into a single `@copilot` comment (each comment costs 1 premium request):
+Batch feedback into a clear `@copilot` comment:
 
 ```bash
 gh pr comment <PR_NUMBER> --repo EvaLok/schema-org-json-ld \
@@ -113,6 +115,8 @@ gh pr comment <PR_NUMBER> --repo EvaLok/schema-org-json-ld \
 ```
 
 Then go back to Step 1 — wait for the agent to finish the revision before re-reviewing.
+
+**Iterate as many times as necessary.** Copilot requests are effectively unlimited — there is no cost pressure to merge early or limit revision rounds. If the first `@copilot` revision doesn't fully resolve all issues, comment again with further instructions. A PR that takes three rounds to get right is a success. A PR merged with known defects is a process failure.
 
 ## Using the review-pr tool
 
