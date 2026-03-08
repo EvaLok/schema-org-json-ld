@@ -1805,8 +1805,10 @@
     {
       "dispatched_at": "2026-03-08T02:24:36Z",
       "issue": 720,
+      "merged_at": "2026-03-08T03:55:19Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 728,
+      "status": "merged",
       "title": "Extract default agent model into shared config"
     }
   ],
@@ -1943,13 +1945,13 @@
     "closed_without_merge": 2,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#720 Extract default agent model into shared config (cycle 183)",
-    "dispatch_to_pr_rate": "191/195",
-    "in_flight": 1,
-    "merged": 189,
-    "note": "196 dispatches, 195 resolved, 1 in-flight. 191 produced PRs (189 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #730 merged in cycle 184.",
-    "pr_merge_rate": "189/191",
-    "produced_pr": 191,
-    "resolved": 195,
+    "dispatch_to_pr_rate": "192/196",
+    "in_flight": 0,
+    "merged": 190,
+    "note": "196 dispatches, 196 resolved, 0 in-flight. 192 produced PRs (190 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #728 merged in cycle 184.",
+    "pr_merge_rate": "190/192",
+    "produced_pr": 192,
+    "resolved": 196,
     "revision_rounds": 5,
     "total_dispatches": 196
   },
