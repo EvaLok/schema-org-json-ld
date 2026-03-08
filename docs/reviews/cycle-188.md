@@ -53,7 +53,7 @@
 5. Tighten the audit #147 response so repeated journal commitments require a concrete artifact (dispatch, checklist step, tracking issue, or explicit rescission) rather than only a note that the commitment was missed.
 6. Rewrite issue #761’s spec so it clearly chooses one design boundary: either the orchestrator supplies reconciliation facts, or `cycle-complete` derives them from local inputs — but not both.
 
-## Complacency score
+## Complacency score (1 = actively improving, 3 = mixed follow-through, 5 = going through motions)
 
 4/5 — Cycle 188 did some real follow-through: it reconciled stale state, merged four pending PRs, and responded to an audit finding with a checklist change. But the cycle still over-reported closure, let the final review artifacts drift behind the canonical state, and merged process/tooling changes whose real fresh-clone behavior was not re-checked before declaring success.
 
