@@ -22,6 +22,7 @@ const DERIVE_METRICS_FIELDS: [&str; 9] = [
 	"dispatch_to_pr_rate",
 	"pr_merge_rate",
 ];
+const DERIVE_METRICS_RATE_FIELDS: [&str; 2] = ["dispatch_to_pr_rate", "pr_merge_rate"];
 
 #[derive(Parser)]
 #[command(name = "pipeline-check")]
@@ -436,40 +437,39 @@ fn collect_derive_metrics_mismatches(repo_root: &Path, derived_metrics: &Value) 
 
 	let mut mismatches = Vec::new();
 	for field in DERIVE_METRICS_FIELDS {
-		match field {
-			"dispatch_to_pr_rate" | "pr_merge_rate" => {
-				let expected = derived_metrics.get(field).and_then(Value::as_str).ok_or_else(|| {
-					format!("derive-metrics output missing string field '{}'", field)
-				})?;
-				match current_metrics.get(field).and_then(Value::as_str) {
-					Some(actual) if actual == expected => {}
-					Some(actual) => mismatches.push(format!(
-						"copilot_metrics.{} expected {} but found {}",
-						field, expected, actual
-					)),
-					None => mismatches.push(format!(
-						"copilot_metrics.{} is missing or not a string",
-						field
-					)),
-				}
+		if DERIVE_METRICS_RATE_FIELDS.contains(&field) {
+			let expected = derived_metrics
+				.get(field)
+				.and_then(Value::as_str)
+				.ok_or_else(|| format!("derive-metrics output missing string field '{}'", field))?;
+			match current_metrics.get(field).and_then(Value::as_str) {
+				Some(actual) if actual == expected => {}
+				Some(actual) => mismatches.push(format!(
+					"copilot_metrics.{} expected {} but found {}",
+					field, expected, actual
+				)),
+				None => mismatches.push(format!(
+					"copilot_metrics.{} is missing or not a string",
+					field
+				)),
 			}
-			_ => {
-				let expected = derived_metrics
-					.get(field)
-					.and_then(Value::as_i64)
-					.ok_or_else(|| format!("derive-metrics output missing integer field '{}'", field))?;
-				match current_metrics.get(field).and_then(Value::as_i64) {
-					Some(actual) if actual == expected => {}
-					Some(actual) => mismatches.push(format!(
-						"copilot_metrics.{} expected {} but found {}",
-						field, expected, actual
-					)),
-					None => mismatches.push(format!(
-						"copilot_metrics.{} is missing or not an integer",
-						field
-					)),
-				}
-			}
+			continue;
+		}
+
+		let expected = derived_metrics
+			.get(field)
+			.and_then(Value::as_i64)
+			.ok_or_else(|| format!("derive-metrics output missing integer field '{}'", field))?;
+		match current_metrics.get(field).and_then(Value::as_i64) {
+			Some(actual) if actual == expected => {}
+			Some(actual) => mismatches.push(format!(
+				"copilot_metrics.{} expected {} but found {}",
+				field, expected, actual
+			)),
+			None => mismatches.push(format!(
+				"copilot_metrics.{} is missing or not an integer",
+				field
+			)),
 		}
 	}
 
@@ -819,6 +819,74 @@ mod tests {
 			.as_deref()
 			.unwrap_or_default()
 			.contains("pr_merge_rate"));
+	}
+
+	#[test]
+	fn derive_metrics_is_fail_when_pr_merge_rate_diverges() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root =
+			std::env::temp_dir().join(format!("pipeline-check-derive-pr-merge-rate-fail-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"copilot_metrics": {
+					"total_dispatches": 4,
+					"resolved": 3,
+					"merged": 1,
+					"in_flight": 1,
+					"produced_pr": 2,
+					"closed_without_pr": 1,
+					"reviewed_awaiting_eva": 1,
+					"dispatch_to_pr_rate": "50.0%",
+					"pr_merge_rate": "1/2"
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct DeriveMetricsRunner;
+
+		impl CommandRunner for DeriveMetricsRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				Ok(ExecutionResult {
+					exit_code: Some(0),
+					stdout: json!({
+						"total_dispatches": 4,
+						"resolved": 3,
+						"merged": 1,
+						"in_flight": 1,
+						"produced_pr": 2,
+						"closed_without_pr": 1,
+						"reviewed_awaiting_eva": 1,
+						"dispatch_to_pr_rate": "50.0%",
+						"pr_merge_rate": "50.0%"
+					})
+					.to_string(),
+				})
+			}
+		}
+
+		let spec = ToolSpec {
+			display_name: DERIVE_METRICS_TOOL_NAME,
+			wrapper_relative_path: DERIVE_METRICS_WRAPPER_PATH,
+			args: vec![],
+			kind: ToolKind::DeriveMetrics,
+		};
+		let step = run_step(&root, &spec, &DeriveMetricsRunner);
+		assert_eq!(step.status, StepStatus::Fail);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("pr_merge_rate"));
+		assert!(!step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("dispatch_to_pr_rate"));
 	}
 
     #[test]
