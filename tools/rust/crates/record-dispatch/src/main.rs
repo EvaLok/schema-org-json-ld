@@ -258,10 +258,7 @@ mod tests {
         .expect("patch should build");
         assert_eq!(patch.total_dispatches, 86);
         assert_eq!(patch.in_flight, 3);
-        assert_eq!(
-            patch.dispatch_log_latest,
-            "#602 Example dispatch (cycle 164)"
-        );
+        assert_eq!(patch.dispatch_log_latest, "#602 Example dispatch (cycle 164)");
     }
 
     #[test]
@@ -363,10 +360,7 @@ mod tests {
             state["copilot_metrics"]["dispatch_log_latest"],
             json!("#602 Example dispatch (cycle 164)")
         );
-        assert_eq!(
-            state["copilot_metrics"]["dispatch_to_pr_rate"],
-            json!("81/85")
-        );
+        assert_eq!(state["copilot_metrics"]["dispatch_to_pr_rate"], json!("81/85"));
         assert_eq!(state["copilot_metrics"]["note"], json!("old note"));
         assert_eq!(
             state["field_inventory"]["fields"]["copilot_metrics.in_flight"]["last_refreshed"],
