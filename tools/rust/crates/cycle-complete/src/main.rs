@@ -134,10 +134,14 @@ const EVENT_DRIVEN_AUTO_REFRESH_FIELDS: &[&str] = &[
     "test_count",
     "typescript_stats",
     "schema_status.in_progress",
+    "schema_status.planned_next",
     "review_agent.chronic_category_responses",
     "publish_gate",
     "review_agent",
     "pre_python_clean_cycles",
+    "eva_input_issues.closed_this_cycle",
+    "eva_input_issues.remaining_open",
+    "typescript_plan.status",
 ];
 
 fn parse_reconcile_arg(value: &str) -> Result<ReconcileArg, String> {
