@@ -2063,7 +2063,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 182"
+        "last_refreshed": "cycle 183"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -2816,9 +2816,24 @@
         "finding_count": 4,
         "ignored": 0,
         "note": "Actioned: worklog-state-contradiction (will derive from canonical state), field-inventory-cadence-drift (refreshed 6 entries). Deferred: tooling-operational-drift (CI pre-builds), reflection-without-commitment (behavioral)."
+      },
+      {
+        "actioned": 3,
+        "categories": [
+          "duration-freshness-gap",
+          "journal-followthrough-drift",
+          "next-steps-blurred",
+          "pipeline-fresh-clone-drift",
+          "stale-binary-model-upgrade"
+        ],
+        "complacency_score": 3,
+        "cycle": 182,
+        "deferred": 2,
+        "finding_count": 5,
+        "ignored": 0
       }
     ],
-    "last_review_cycle": 181
+    "last_review_cycle": 182
   },
   "schema_status": {
     "directory_layout": {
