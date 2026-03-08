@@ -1867,6 +1867,13 @@
       "pr": 742,
       "status": "merged",
       "title": "[Cycle Review] Cycle 185 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-08T06:21:26Z",
+      "issue": 746,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add severity tiers to pipeline-check"
     }
   ],
   "audit_processed": [
@@ -2003,16 +2010,16 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#741 [Cycle Review] Cycle 185 end-of-cycle review (cycle 185)",
+    "dispatch_log_latest": "#746 Add severity tiers to pipeline-check (cycle 186)",
     "dispatch_to_pr_rate": "198/202",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 196,
-    "note": "202 dispatches, 202 resolved, 0 in-flight. 198 produced PRs (196 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #739 merged in cycle 186.",
+    "note": "203 dispatches, 202 resolved, 1 in-flight. 198 produced PRs (196 merged, 2 closed without merge). Latest dispatch: #746 Add severity tiers to pipeline-check (cycle 186, model gpt-5.4).",
     "pr_merge_rate": "196/198",
     "produced_pr": 198,
     "resolved": 202,
     "revision_rounds": 5,
-    "total_dispatches": 202
+    "total_dispatches": 203
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
