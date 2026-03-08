@@ -2139,7 +2139,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 187"
+        "last_refreshed": "cycle 188"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -2147,11 +2147,11 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 187"
+        "last_refreshed": "cycle 188"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 187"
+        "last_refreshed": "cycle 188"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -2261,12 +2261,12 @@
   },
   "last_cycle": {
     "duration_minutes": 11,
-    "issue": 750,
-    "number": 187,
+    "issue": 757,
+    "number": 188,
     "summary": "Merged PR #747 (severity tiers) and PR #749 (cycle 186 review). Consumed cycle 186 review (4/5, 5 findings: 2 actioned, 3 deferred). Closed audit-inbound #744 and #745. Dispatched #751 (cycle-status exit code) and #753 (housekeeping-scan linkage).",
-    "timestamp": "2026-03-08T07:53:01Z"
+    "timestamp": "2026-03-08T09:08:00Z"
   },
-  "last_eva_comment_check": "2026-03-08T07:53:01Z",
+  "last_eva_comment_check": "2026-03-08T09:08:00Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
