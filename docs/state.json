@@ -2090,8 +2090,10 @@
     {
       "dispatched_at": "2026-03-08T21:17:51Z",
       "issue": 814,
+      "merged_at": "2026-03-08T22:46:34Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 815,
+      "status": "merged",
       "title": "Cycle 196 end-of-cycle review"
     }
   ],
@@ -2236,12 +2238,12 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#814 Cycle 196 end-of-cycle review (cycle 196)",
     "dispatch_to_pr_rate": "97.4%",
-    "in_flight": 1,
-    "merged": 221,
+    "in_flight": 0,
+    "merged": 222,
     "note": "DEPRECATED: This field is no longer maintained by any tool. Use the integer counters and rate fields directly. Will be removed in a future cycle.",
     "pr_merge_rate": "99.5%",
-    "produced_pr": 222,
-    "resolved": 227,
+    "produced_pr": 223,
+    "resolved": 228,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 228
