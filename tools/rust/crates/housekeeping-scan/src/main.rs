@@ -44,6 +44,7 @@ struct PrState {
     state: String,
 }
 
+/// Metadata for an open Copilot-authored draft PR used by both housekeeping checks.
 #[derive(Clone)]
 struct DraftPrInfo {
     number: u64,
@@ -132,8 +133,9 @@ fn find_stale_agent_issues(items: &[Value], draft_prs: &[DraftPrInfo], now: Date
             if age <= Duration::hours(2) {
                 return None;
             }
-            // Heuristic: a newer Copilot draft PR usually indicates the agent is actively
-            // working an older assigned issue, even without parsing issue references.
+            // Heuristic: a Copilot draft PR created after the issue usually indicates the
+            // agent is actively working that older assigned issue, even without parsing
+            // issue references or comparing later update timestamps.
             if draft_prs.iter().any(|pr| pr.created_at > created_at) {
                 return None;
             }
@@ -164,6 +166,7 @@ fn scan_open_copilot_draft_prs() -> Result<Vec<DraftPrInfo>, String> {
     parse_open_copilot_draft_prs(prs)
 }
 
+/// Parse open Copilot draft PR metadata and fail closed on missing critical fields.
 fn parse_open_copilot_draft_prs(prs: &[Value]) -> Result<Vec<DraftPrInfo>, String> {
     let mut draft_prs = Vec::new();
 
@@ -482,7 +485,7 @@ mod tests {
     }
 
     #[test]
-    fn stale_agent_issue_excluded_when_newer_draft_pr_exists() {
+    fn stale_agent_issue_excluded_when_any_newer_draft_pr_exists() {
         let now = parse_time("2026-03-04T12:00:00Z").unwrap();
         let issues = vec![json!({"number": 1, "created_at": "2026-03-04T09:00:00Z"})];
         let draft_prs = vec![DraftPrInfo {
