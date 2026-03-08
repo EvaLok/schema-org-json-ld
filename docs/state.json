@@ -2213,7 +2213,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 192"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -2221,11 +2221,11 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 192"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 192"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -2335,12 +2335,12 @@
   },
   "last_cycle": {
     "duration_minutes": 10,
-    "issue": 775,
-    "number": 191,
+    "issue": 780,
+    "number": 192,
     "summary": "Cycle 191 complete. Merged PR #774 (cycle 190 review). Actioned 3/4 review findings: added copilot_metrics to auto-refresh, dispatched fail-closed publish gate fix #776, rewrote #771 neutrally. First clean pipeline startup — count 1/5. Refreshed 18 stale field-inventory entries.",
-    "timestamp": "2026-03-08T13:56:01Z"
+    "timestamp": "2026-03-08T15:06:39Z"
   },
-  "last_eva_comment_check": "2026-03-08T13:56:01Z",
+  "last_eva_comment_check": "2026-03-08T15:06:39Z",
   "open_questions_for_eva": [
     771
   ],
