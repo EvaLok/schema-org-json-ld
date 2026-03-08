@@ -1895,6 +1895,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Improve housekeeping-scan stale-issue heuristic with issue-PR linkage"
+    },
+    {
+      "dispatched_at": "2026-03-08T07:53:54Z",
+      "issue": 755,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 187 end-of-cycle review"
     }
   ],
   "audit_processed": [
@@ -2031,16 +2038,16 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#753 Improve housekeeping-scan stale-issue heuristic with issue-PR linkage (cycle 187)",
+    "dispatch_log_latest": "#755 [Cycle Review] Cycle 187 end-of-cycle review (cycle 187)",
     "dispatch_to_pr_rate": "200/204",
-    "in_flight": 2,
+    "in_flight": 3,
     "merged": 198,
-    "note": "206 dispatches, 204 resolved, 2 in-flight. 200 produced PRs (198 merged, 2 closed without merge). Latest dispatch: #753 Improve housekeeping-scan stale-issue heuristic with issue-PR linkage (cycle 187, model gpt-5.4).",
+    "note": "207 dispatches, 204 resolved, 3 in-flight. 200 produced PRs (198 merged, 2 closed without merge). Latest dispatch: #755 [Cycle Review] Cycle 187 end-of-cycle review (cycle 187, model gpt-5.4).",
     "pr_merge_rate": "198/200",
     "produced_pr": 200,
     "resolved": 204,
     "revision_rounds": 5,
-    "total_dispatches": 206
+    "total_dispatches": 207
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -2136,7 +2143,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 186"
+        "last_refreshed": "cycle 187"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -2253,13 +2260,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 10,
+    "duration_minutes": 11,
     "issue": 750,
     "number": 187,
-    "summary": "Merged 3 PRs (#739 pipeline-check fix, #740 housekeeping-scan fix, #742 cycle 185 review). Processed cycle 185 review (4/5, 3 findings: 2 actioned, 1 deferred). Processed audit #144 (accepted: severity tiers) and #145 (deferred: QC-directed). Dispatched #746 (pipeline-check severity tiers).",
-    "timestamp": "2026-03-08T07:42:26Z"
+    "summary": "Merged PR #747 (severity tiers) and PR #749 (cycle 186 review). Consumed cycle 186 review (4/5, 5 findings: 2 actioned, 3 deferred). Closed audit-inbound #744 and #745. Dispatched #751 (cycle-status exit code) and #753 (housekeeping-scan linkage).",
+    "timestamp": "2026-03-08T07:53:01Z"
   },
-  "last_eva_comment_check": "2026-03-08T07:42:26Z",
+  "last_eva_comment_check": "2026-03-08T07:53:01Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
