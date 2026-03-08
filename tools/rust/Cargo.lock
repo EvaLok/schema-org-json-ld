@@ -208,6 +208,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "derive-metrics"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "serde",
+ "serde_json",
+ "state-schema",
+]
+
+[[package]]
 name = "find-msvc-tools"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
