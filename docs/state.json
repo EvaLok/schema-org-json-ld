@@ -1964,15 +1964,19 @@
     {
       "dispatched_at": "2026-03-08T13:54:06Z",
       "issue": 776,
+      "merged_at": "2026-03-08T15:12:59Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 777,
+      "status": "merged",
       "title": "Make cycle-status publish gate handling fail-closed"
     },
     {
       "dispatched_at": "2026-03-08T14:01:10Z",
       "issue": 778,
+      "merged_at": "2026-03-08T15:12:59Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 779,
+      "status": "merged",
       "title": "Cycle 191 end-of-cycle review"
     }
   ],
@@ -2114,13 +2118,13 @@
     "closed_without_merge": 2,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#778 Cycle 191 end-of-cycle review (cycle 191)",
-    "dispatch_to_pr_rate": "209/213",
-    "in_flight": 2,
-    "merged": 207,
-    "note": "215 dispatches, 213 resolved, 2 in-flight. 209 produced PRs (207 merged, 2 closed without merge). Latest dispatch: #778 Cycle 191 end-of-cycle review (cycle 191, model gpt-5.4).",
-    "pr_merge_rate": "207/209",
-    "produced_pr": 209,
-    "resolved": 213,
+    "dispatch_to_pr_rate": "211/215",
+    "in_flight": 0,
+    "merged": 209,
+    "note": "215 dispatches, 215 resolved, 0 in-flight. 211 produced PRs (209 merged, 2 closed without merge). 3 resolved without PR (silent failure). PRs #779, #777 merged in cycle 192.",
+    "pr_merge_rate": "209/211",
+    "produced_pr": 211,
+    "resolved": 215,
     "revision_rounds": 5,
     "total_dispatches": 215
   },
@@ -2194,15 +2198,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 192"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 192"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 192"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
@@ -3147,7 +3151,7 @@
         "note": "Actioned: copilot_metrics freshness (finding 2), fail-closed dispatch (finding 3), neutral rewrite #771 (finding 4). Deferred: review/artifact race fix (finding 1, structural change needed)."
       },
       {
-        "actioned": 0,
+        "actioned": 1,
         "categories": [
           "copilot-metrics-drift",
           "disposition-overstatement",
@@ -3158,7 +3162,8 @@
         "cycle": 191,
         "deferred": 3,
         "finding_count": 4,
-        "ignored": 0
+        "ignored": 0,
+        "note": "Finding 3 (performative-self-criticism) actioned: review/artifact race fixed by reordering COMPLETION_CHECKLIST per audit #151"
       }
     ],
     "last_review_cycle": 191
