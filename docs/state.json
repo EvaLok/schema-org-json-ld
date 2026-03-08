@@ -1982,8 +1982,10 @@
     {
       "dispatched_at": "2026-03-08T15:15:18Z",
       "issue": 782,
+      "merged_at": "2026-03-08T16:48:38Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 783,
+      "status": "merged",
       "title": "Strengthen semantic freshness test"
     },
     {
@@ -2139,13 +2141,13 @@
     "closed_without_merge": 2,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#786 Cycle 192 review (cycle 192)",
-    "dispatch_to_pr_rate": "211/215",
-    "in_flight": 3,
-    "merged": 209,
-    "note": "218 dispatches, 215 resolved, 3 in-flight. 211 produced PRs (209 merged, 2 closed without merge). Latest dispatch: #786 Cycle 192 review (cycle 192, model gpt-5.4).",
-    "pr_merge_rate": "209/211",
-    "produced_pr": 211,
-    "resolved": 215,
+    "dispatch_to_pr_rate": "212/216",
+    "in_flight": 2,
+    "merged": 210,
+    "note": "218 dispatches, 216 resolved, 2 in-flight. 212 produced PRs (210 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #783 merged in cycle 193.",
+    "pr_merge_rate": "210/212",
+    "produced_pr": 212,
+    "resolved": 216,
     "revision_rounds": 5,
     "total_dispatches": 218
   },
@@ -2219,15 +2221,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 192"
+        "last_refreshed": "cycle 193"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 192"
+        "last_refreshed": "cycle 193"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 192"
+        "last_refreshed": "cycle 193"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
