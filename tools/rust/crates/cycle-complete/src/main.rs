@@ -1051,14 +1051,15 @@ mod tests {
 
     #[test]
     fn event_driven_auto_refresh_fields_includes_required_field_names() {
-        // Semantic test: asserts that specific fields are in EVENT_DRIVEN_AUTO_REFRESH_FIELDS.
-        // This catches omissions that the iteration-based tests cannot detect,
+        // Semantic test: asserts the full expected field set, not a curated subset.
+        // This catches omissions and additions that the iteration-based tests cannot detect,
         // since those tests only verify "whatever is in the constant gets refreshed."
-        let required_fields = [
+        let expected_fields = BTreeSet::from([
             "test_count",
             "typescript_stats",
             "schema_status.in_progress",
             "schema_status.planned_next",
+            "review_agent.chronic_category_responses",
             "publish_gate",
             "review_agent",
             "pre_python_clean_cycles",
@@ -1068,14 +1069,11 @@ mod tests {
             "copilot_metrics.dispatch_to_pr_rate",
             "copilot_metrics.in_flight",
             "copilot_metrics.pr_merge_rate",
-        ];
-        for field in &required_fields {
-            assert!(
-                EVENT_DRIVEN_AUTO_REFRESH_FIELDS.contains(field),
-                "EVENT_DRIVEN_AUTO_REFRESH_FIELDS is missing required field: {}",
-                field
-            );
-        }
+        ]);
+
+        let actual_fields = EVENT_DRIVEN_AUTO_REFRESH_FIELDS.iter().copied().collect::<BTreeSet<_>>();
+
+        assert_eq!(actual_fields, expected_fields);
     }
 
     #[test]
