@@ -376,13 +376,17 @@ mod tests {
         let state = sample_state();
         let update = compute_update(&state, 164, &[595]).expect("update should compute");
         let patch = build_patch(&update).expect("patch should build");
-        assert_eq!(patch.len(), 5);
-        assert_eq!(patch[3].path, "/copilot_metrics/produced_pr");
-        assert_eq!(patch[3].value, json!(85));
         assert_eq!(
-            patch[4].path,
-            "/field_inventory/fields/copilot_metrics.in_flight/last_refreshed"
+            patch.iter().map(|update| update.path).collect::<Vec<_>>(),
+            vec![
+                "/copilot_metrics/merged",
+                "/copilot_metrics/resolved",
+                "/copilot_metrics/in_flight",
+                "/copilot_metrics/produced_pr",
+                "/field_inventory/fields/copilot_metrics.in_flight/last_refreshed",
+            ]
         );
+        assert_eq!(patch[3].value, json!(85));
         assert_eq!(patch[4].value, json!("cycle 164"));
     }
 
@@ -404,6 +408,10 @@ mod tests {
 
         apply_patch(&mut state, &patch).expect("patch should apply");
 
+        assert_eq!(state["copilot_metrics"]["merged"], json!(81));
+        assert_eq!(state["copilot_metrics"]["resolved"], json!(83));
+        assert_eq!(state["copilot_metrics"]["in_flight"], json!(2));
+        assert_eq!(state["copilot_metrics"]["produced_pr"], json!(85));
         assert_eq!(state["copilot_metrics"]["pr_merge_rate"], json!("80/84"));
         assert_eq!(state["copilot_metrics"]["dispatch_to_pr_rate"], json!("84/85"));
         assert_eq!(state["copilot_metrics"]["note"], json!("prior"));
