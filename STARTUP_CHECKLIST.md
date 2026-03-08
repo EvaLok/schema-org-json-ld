@@ -60,6 +60,19 @@ For each open `cycle-review` issue:
 
 If no review agent was dispatched last cycle (e.g., first cycle with this process), note it and move on.
 
+## 0.6. Journal commitment reconciliation (per audit #147)
+
+Read the previous cycle's journal entry and extract any commitment language ("should", "needs to", "must", "will", "plan to", numbered commitment lists). For each commitment found, verify one of:
+
+1. A checklist step was added
+2. A tracking issue was created
+3. A Copilot dispatch was filed
+4. The commitment was explicitly rescinded with rationale in a subsequent journal entry
+
+If a commitment has been repeated across 2+ cycles without any of the above actions, it must be either actioned this cycle or explicitly dropped with rationale in the journal. "Noted for future" does not count as actioning.
+
+**Why:** Audit #113 identified that journal observations are write-only — they get recorded but never converted to concrete actions. The skill-level fix (guidance at write time) was insufficient because the problem is at follow-through time. This step makes commitment tracking structural rather than behavioral.
+
 ## 1. Check for `input-from-eva` issues
 
 ```bash

@@ -1872,14 +1872,16 @@
       "dispatched_at": "2026-03-08T06:21:26Z",
       "issue": 746,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 747,
+      "status": "merged",
       "title": "Add severity tiers to pipeline-check"
     },
     {
       "dispatched_at": "2026-03-08T06:25:09Z",
       "issue": 748,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 749,
+      "status": "merged",
       "title": "Cycle 186 end-of-cycle review"
     },
     {
@@ -1974,7 +1976,8 @@
     138,
     140,
     144,
-    145
+    145,
+    147
   ],
   "blockers": [
     {
@@ -2111,7 +2114,7 @@
     "fields": {
       "audit_processed": {
         "cadence": "after processing audit issues",
-        "last_refreshed": "cycle 186"
+        "last_refreshed": "cycle 188"
       },
       "blockers": {
         "cadence": "after blocker state changes",
@@ -2159,11 +2162,11 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 185"
+        "last_refreshed": "cycle 188"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 185"
+        "last_refreshed": "cycle 188"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
