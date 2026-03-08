@@ -2018,8 +2018,10 @@
     {
       "dispatched_at": "2026-03-08T16:58:12Z",
       "issue": 791,
+      "merged_at": "2026-03-08T18:15:07Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 792,
+      "status": "merged",
       "title": "Cycle 193 review"
     }
   ],
@@ -2162,13 +2164,13 @@
     "closed_without_merge": 2,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#791 Cycle 193 review (cycle 193)",
-    "dispatch_to_pr_rate": "213/219",
-    "in_flight": 1,
-    "merged": 213,
-    "note": "220 dispatches, 219 resolved, 1 in-flight. 213 produced PRs (213 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #790 merged in cycle 194.",
-    "pr_merge_rate": "213/213",
-    "produced_pr": 213,
-    "resolved": 219,
+    "dispatch_to_pr_rate": "214/220",
+    "in_flight": 0,
+    "merged": 214,
+    "note": "220 dispatches, 220 resolved, 0 in-flight. 214 produced PRs (214 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #792 merged in cycle 194.",
+    "pr_merge_rate": "214/214",
+    "produced_pr": 214,
+    "resolved": 220,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 220
