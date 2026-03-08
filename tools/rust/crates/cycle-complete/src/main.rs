@@ -9,7 +9,7 @@ use state_schema::{
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
-#[derive(Parser)]
+#[derive(Debug, Parser)]
 #[command(name = "cycle-complete")]
 struct Cli {
     /// Path to the repository root
@@ -32,6 +32,10 @@ struct Cli {
     #[arg(long)]
     apply: bool,
 
+    /// Reconcile an in-flight agent session as ISSUE:PR:STATUS
+    #[arg(long = "reconcile", value_name = "ISSUE:PR:STATUS", value_parser = parse_reconcile_arg)]
+    reconcile: Vec<ReconcileArg>,
+
     /// Cycle summary text for /last_cycle/summary
     #[arg(long)]
     summary: Option<String>,
@@ -39,6 +43,26 @@ struct Cli {
     /// Commit docs/state.json after applying changes
     #[arg(long)]
     commit: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ReconcileStatus {
+    Merged,
+}
+
+impl ReconcileStatus {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Merged => "merged",
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct ReconcileArg {
+    issue: i64,
+    pr: i64,
+    status: ReconcileStatus,
 }
 
 #[derive(Clone, Copy, Serialize, PartialEq, Eq, Debug)]
@@ -58,6 +82,7 @@ struct CompletionReport {
     session_duration_minutes: u64,
     pipeline_check: PipelineCheckStatus,
     state_json_patch: StatePatch,
+    agent_session_reconciliation: AgentSessionReconciliationReport,
     review_agent_body: String,
     completion_steps: Vec<CompletionStep>,
 }
@@ -80,6 +105,24 @@ struct PatchUpdate {
 }
 
 #[derive(Serialize)]
+struct AgentSessionReconciliationReport {
+    requested: usize,
+    reconciled: Vec<ReconciledAgentSession>,
+}
+
+#[derive(Serialize)]
+struct ReconciledAgentSession {
+    issue: i64,
+    pr: i64,
+    status: String,
+}
+
+struct AgentSessionReconciliationPlan {
+    patch_value: Option<Value>,
+    report: AgentSessionReconciliationReport,
+}
+
+#[derive(Serialize)]
 struct CompletionStep {
     index: u8,
     name: &'static str,
@@ -96,6 +139,49 @@ const EVENT_DRIVEN_AUTO_REFRESH_FIELDS: &[&str] = &[
     "review_agent",
     "pre_python_clean_cycles",
 ];
+
+fn parse_reconcile_arg(value: &str) -> Result<ReconcileArg, String> {
+    let mut parts = value.split(':');
+    let issue = parts
+        .next()
+        .ok_or_else(|| "expected ISSUE:PR:STATUS".to_string())?;
+    let pr = parts
+        .next()
+        .ok_or_else(|| "expected ISSUE:PR:STATUS".to_string())?;
+    let status = parts
+        .next()
+        .ok_or_else(|| "expected ISSUE:PR:STATUS".to_string())?;
+
+    if parts.next().is_some() {
+        return Err("expected ISSUE:PR:STATUS".to_string());
+    }
+
+    let issue = issue
+        .parse::<i64>()
+        .map_err(|_| format!("invalid issue number '{}'", issue))?;
+    if issue <= 0 {
+        return Err(format!("invalid issue number '{}'", issue));
+    }
+
+    let pr = pr
+        .parse::<i64>()
+        .map_err(|_| format!("invalid PR number '{}'", pr))?;
+    if pr <= 0 {
+        return Err(format!("invalid PR number '{}'", pr));
+    }
+
+    let status = match status {
+        "merged" => ReconcileStatus::Merged,
+        other => {
+            return Err(format!(
+                "unsupported reconciliation status '{}' (expected merged)",
+                other
+            ))
+        }
+    };
+
+    Ok(ReconcileArg { issue, pr, status })
+}
 
 fn main() {
     let cli = Cli::parse();
@@ -128,7 +214,7 @@ fn main() {
         .summary
         .as_deref()
         .unwrap_or("TODO: Fill cycle summary.");
-    let report = match assemble_report(cycle, cli.issue, now, &state, summary) {
+    let report = match assemble_report(cycle, cli.issue, now, &state, summary, &cli.reconcile) {
         Ok(report) => report,
         Err(error) => {
             eprintln!("Error: {}", error);
@@ -143,9 +229,11 @@ fn main() {
                     "Session duration: {} minutes",
                     report.session_duration_minutes
                 );
+                print_agent_session_reconciliation(&report.agent_session_reconciliation);
                 print_patch_apply_summary(&changed_paths);
                 if cli.commit {
-                    let commit_message = format!("state(cycle-complete): {} [cycle {}]", summary, cycle);
+                    let commit_message =
+                        format!("state(cycle-complete): {} [cycle {}]", summary, cycle);
                     match commit_state_json(&cli.repo_root, &commit_message) {
                         Ok(sha) => println!("Committed: {}", sha),
                         Err(error) => {
@@ -197,10 +285,12 @@ fn assemble_report(
     now: DateTime<Utc>,
     state: &StateJson,
     summary: &str,
+    reconcile: &[ReconcileArg],
 ) -> Result<CompletionReport, String> {
     let timestamp = format_timestamp(now);
     let session_duration_minutes = compute_session_duration_minutes(state, now)?;
     let pipeline_check = validate_pipeline_check(state, cycle);
+    let agent_session_reconciliation = build_agent_session_reconciliation(state, reconcile)?;
     let state_json_patch = build_state_patch(
         cycle,
         issue,
@@ -208,6 +298,7 @@ fn assemble_report(
         session_duration_minutes,
         state,
         summary,
+        &agent_session_reconciliation,
     );
     let review_agent_body = build_review_agent_body(cycle, issue, now);
     let completion_steps = build_completion_steps(&pipeline_check, &state_json_patch);
@@ -219,6 +310,7 @@ fn assemble_report(
         session_duration_minutes,
         pipeline_check,
         state_json_patch,
+        agent_session_reconciliation: agent_session_reconciliation.report,
         review_agent_body,
         completion_steps,
     })
@@ -228,10 +320,7 @@ fn format_timestamp(now: DateTime<Utc>) -> String {
     now.format("%Y-%m-%dT%H:%M:%SZ").to_string()
 }
 
-fn compute_session_duration_minutes(
-    state: &StateJson,
-    now: DateTime<Utc>,
-) -> Result<u64, String> {
+fn compute_session_duration_minutes(state: &StateJson, now: DateTime<Utc>) -> Result<u64, String> {
     let start_timestamp = state
         .last_cycle
         .timestamp
@@ -278,6 +367,7 @@ fn build_state_patch(
     duration_minutes: u64,
     state: &StateJson,
     summary: &str,
+    agent_session_reconciliation: &AgentSessionReconciliationPlan,
 ) -> StatePatch {
     let mut updates = vec![
         PatchUpdate {
@@ -306,8 +396,91 @@ fn build_state_patch(
         },
     ];
 
+    if let Some(agent_sessions) = agent_session_reconciliation.patch_value.as_ref() {
+        updates.push(PatchUpdate {
+            path: "/agent_sessions".to_string(),
+            value: agent_sessions.clone(),
+        });
+    }
+
     updates.extend(build_freshness_updates(cycle, &updates, state));
     StatePatch { updates }
+}
+
+fn build_agent_session_reconciliation(
+    state: &StateJson,
+    reconcile: &[ReconcileArg],
+) -> Result<AgentSessionReconciliationPlan, String> {
+    if reconcile.is_empty() {
+        return Ok(AgentSessionReconciliationPlan {
+            patch_value: None,
+            report: AgentSessionReconciliationReport {
+                requested: 0,
+                reconciled: Vec::new(),
+            },
+        });
+    }
+
+    let mut sessions = serde_json::to_value(&state.agent_sessions)
+        .map_err(|error| format!("failed to serialize agent_sessions: {}", error))?;
+    prune_nulls(&mut sessions);
+    let session_entries = sessions
+        .as_array_mut()
+        .ok_or_else(|| "agent_sessions must serialize to an array".to_string())?;
+    let mut reconciled = Vec::new();
+
+    for item in reconcile {
+        let Some(session_value) = session_entries
+            .iter_mut()
+            .find(|entry| entry.get("issue").and_then(Value::as_i64) == Some(item.issue))
+        else {
+            continue;
+        };
+
+        if session_value.get("status").and_then(Value::as_str) != Some("in_flight") {
+            continue;
+        }
+
+        let session = session_value
+            .as_object_mut()
+            .ok_or_else(|| "agent_sessions entries must be objects".to_string())?;
+        session.insert("status".to_string(), json!(item.status.as_str()));
+        session.insert("pr".to_string(), json!(item.pr));
+        reconciled.push(ReconciledAgentSession {
+            issue: item.issue,
+            pr: item.pr,
+            status: item.status.as_str().to_string(),
+        });
+    }
+
+    Ok(AgentSessionReconciliationPlan {
+        patch_value: if reconciled.is_empty() {
+            None
+        } else {
+            Some(sessions)
+        },
+        report: AgentSessionReconciliationReport {
+            requested: reconcile.len(),
+            reconciled,
+        },
+    })
+}
+
+fn prune_nulls(value: &mut Value) {
+    match value {
+        Value::Array(values) => {
+            for item in values {
+                prune_nulls(item);
+            }
+        }
+        Value::Object(map) => {
+            map.retain(|_, entry| !entry.is_null());
+            for entry in map.values_mut() {
+                prune_nulls(entry);
+            }
+        }
+        _ => {}
+    }
 }
 
 fn apply_state_patch(state_value: &mut Value, patch: &StatePatch) -> Result<Vec<String>, String> {
@@ -338,6 +511,20 @@ fn print_patch_apply_summary(changed_paths: &[String]) {
     println!("Updated paths:");
     for path in changed_paths {
         println!("- {}", path);
+    }
+}
+
+fn print_agent_session_reconciliation(report: &AgentSessionReconciliationReport) {
+    println!(
+        "Agent session reconciliation: {} requested, {} reconciled",
+        report.requested,
+        report.reconciled.len()
+    );
+    for reconciled in &report.reconciled {
+        println!(
+            "- issue #{} -> PR #{} ({})",
+            reconciled.issue, reconciled.pr, reconciled.status
+        );
     }
 }
 
@@ -582,6 +769,8 @@ fn print_human_report(report: &CompletionReport) {
         }
     }
     println!();
+    print_agent_session_reconciliation(&report.agent_session_reconciliation);
+    println!();
     println!("Review Agent Issue Body:");
     println!("{}", report.review_agent_body);
 }
@@ -607,6 +796,16 @@ mod tests {
             .with_timezone(&Utc)
     }
 
+    fn no_reconciliation() -> AgentSessionReconciliationPlan {
+        AgentSessionReconciliationPlan {
+            patch_value: None,
+            report: AgentSessionReconciliationReport {
+                requested: 0,
+                reconciled: Vec::new(),
+            },
+        }
+    }
+
     #[test]
     fn help_contains_expected_flags() {
         let mut command = Cli::command();
@@ -619,6 +818,7 @@ mod tests {
         assert!(help.contains("--issue"));
         assert!(help.contains("--json"));
         assert!(help.contains("--apply"));
+        assert!(help.contains("--reconcile"));
         assert!(help.contains("--summary"));
         assert!(help.contains("--commit"));
     }
@@ -638,7 +838,15 @@ mod tests {
             "last_eva_comment_check".to_string(),
             json!({"last_refreshed": "cycle 120"}),
         );
-        let patch = build_state_patch(139, 464, "2026-03-05T05:06:07Z", 47, &state, "summary");
+        let patch = build_state_patch(
+            139,
+            464,
+            "2026-03-05T05:06:07Z",
+            47,
+            &state,
+            "summary",
+            &no_reconciliation(),
+        );
         assert_eq!(patch.updates.len(), 9);
         assert_eq!(patch.updates[0].path, "/last_cycle/number");
         assert_eq!(patch.updates[0].value, json!(139));
@@ -683,7 +891,15 @@ mod tests {
             json!({"last_refreshed": "cycle 120"}),
         );
 
-        let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", 47, &state, "summary");
+        let patch = build_state_patch(
+            153,
+            700,
+            "2026-03-06T00:00:00Z",
+            47,
+            &state,
+            "summary",
+            &no_reconciliation(),
+        );
         let freshness_paths: Vec<&str> = patch
             .updates
             .iter()
@@ -692,9 +908,8 @@ mod tests {
             .collect();
 
         assert!(freshness_paths.contains(&"/field_inventory/fields/last_cycle/last_refreshed"));
-        assert!(
-            freshness_paths.contains(&"/field_inventory/fields/last_cycle.duration_minutes/last_refreshed")
-        );
+        assert!(freshness_paths
+            .contains(&"/field_inventory/fields/last_cycle.duration_minutes/last_refreshed"));
         assert!(freshness_paths
             .contains(&"/field_inventory/fields/last_eva_comment_check/last_refreshed"));
     }
@@ -757,7 +972,15 @@ mod tests {
             );
         }
 
-        let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", 47, &state, "summary");
+        let patch = build_state_patch(
+            153,
+            700,
+            "2026-03-06T00:00:00Z",
+            47,
+            &state,
+            "summary",
+            &no_reconciliation(),
+        );
         let freshness_paths: Vec<&str> = patch
             .updates
             .iter()
@@ -798,7 +1021,15 @@ mod tests {
             json!({"last_refreshed": "cycle 154"}),
         );
 
-        let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", 47, &state, "summary");
+        let patch = build_state_patch(
+            153,
+            700,
+            "2026-03-06T00:00:00Z",
+            47,
+            &state,
+            "summary",
+            &no_reconciliation(),
+        );
         let freshness_paths: Vec<&str> = patch
             .updates
             .iter()
@@ -807,15 +1038,22 @@ mod tests {
 
         assert!(!freshness_paths.contains(&"/field_inventory/fields/publish_gate/last_refreshed"));
         assert!(!freshness_paths.contains(&"/field_inventory/fields/review_agent/last_refreshed"));
-        assert!(!freshness_paths.contains(
-            &"/field_inventory/fields/pre_python_clean_cycles/last_refreshed"
-        ));
+        assert!(!freshness_paths
+            .contains(&"/field_inventory/fields/pre_python_clean_cycles/last_refreshed"));
     }
 
     #[test]
     fn summary_flag_overrides_placeholder_text_in_patch() {
         let state = StateJson::default();
-        let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", 47, &state, "custom summary");
+        let patch = build_state_patch(
+            153,
+            700,
+            "2026-03-06T00:00:00Z",
+            47,
+            &state,
+            "custom summary",
+            &no_reconciliation(),
+        );
         assert_eq!(patch.updates[4].path, "/last_cycle/summary");
         assert_eq!(patch.updates[4].value, json!("custom summary"));
     }
@@ -844,7 +1082,15 @@ mod tests {
             json!({"last_refreshed": "cycle 120"}),
         );
 
-        let patch = build_state_patch(153, 700, "2026-03-06T00:00:00Z", 47, &state, "custom summary");
+        let patch = build_state_patch(
+            153,
+            700,
+            "2026-03-06T00:00:00Z",
+            47,
+            &state,
+            "custom summary",
+            &no_reconciliation(),
+        );
         let mut raw_state = json!({
             "last_cycle": {
                 "number": 120,
@@ -962,15 +1208,113 @@ mod tests {
     }
 
     #[test]
-    fn cli_accepts_missing_cycle_argument() {
-        let cli = Cli::try_parse_from([
+    fn reconcile_flag_updates_in_flight_agent_sessions() {
+        let mut state = StateJson::default();
+        state.last_cycle.timestamp = Some("2026-03-05T04:19:37Z".to_string());
+        state.agent_sessions = serde_json::from_value(json!([
+            {
+                "issue": 751,
+                "status": "in_flight",
+                "title": "example"
+            }
+        ]))
+        .unwrap();
+        state.field_inventory.fields.insert(
+            "last_cycle".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "last_cycle.duration_minutes".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "last_eva_comment_check".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "agent_sessions".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+
+        let report = assemble_report(
+            139,
+            464,
+            fixed_now(),
+            &state,
+            "summary",
+            &[ReconcileArg {
+                issue: 751,
+                pr: 752,
+                status: ReconcileStatus::Merged,
+            }],
+        )
+        .unwrap();
+
+        assert_eq!(report.agent_session_reconciliation.reconciled.len(), 1);
+        assert_eq!(report.agent_session_reconciliation.reconciled[0].issue, 751);
+        assert_eq!(report.agent_session_reconciliation.reconciled[0].pr, 752);
+        assert_eq!(
+            report
+                .state_json_patch
+                .updates
+                .iter()
+                .find(|update| update.path == "/agent_sessions")
+                .map(|update| update.value.clone()),
+            Some(json!([
+                {
+                    "issue": 751,
+                    "status": "merged",
+                    "title": "example",
+                    "pr": 752
+                }
+            ]))
+        );
+    }
+
+    #[test]
+    fn reconcile_defaults_to_noop_when_no_args_are_provided() {
+        let mut state = StateJson::default();
+        state.last_cycle.timestamp = Some("2026-03-05T04:19:37Z".to_string());
+        state.agent_sessions = serde_json::from_value(json!([
+            {
+                "issue": 751,
+                "status": "in_flight",
+                "title": "example"
+            }
+        ]))
+        .unwrap();
+
+        let report = assemble_report(139, 464, fixed_now(), &state, "summary", &[]).unwrap();
+
+        assert_eq!(report.agent_session_reconciliation.reconciled.len(), 0);
+        assert!(report
+            .state_json_patch
+            .updates
+            .iter()
+            .all(|update| update.path != "/agent_sessions"));
+    }
+
+    #[test]
+    fn reconcile_parser_rejects_invalid_issue_numbers() {
+        let parsed = Cli::try_parse_from([
             "cycle-complete",
             "--repo-root",
             ".",
             "--issue",
             "585",
-        ])
-        .unwrap();
+            "--reconcile",
+            "not-a-number:752:merged",
+        ]);
+        let error = parsed.expect_err("invalid issue number should fail");
+        let rendered = error.to_string();
+        assert!(rendered.contains("--reconcile"));
+        assert!(rendered.contains("issue"));
+    }
+
+    #[test]
+    fn cli_accepts_missing_cycle_argument() {
+        let cli =
+            Cli::try_parse_from(["cycle-complete", "--repo-root", ".", "--issue", "585"]).unwrap();
         assert_eq!(cli.repo_root, PathBuf::from("."));
         assert_eq!(cli.cycle, None);
         assert_eq!(cli.issue, 585);
@@ -1031,7 +1375,7 @@ mod tests {
             json!({"last_refreshed": "cycle 120"}),
         );
 
-        let report = assemble_report(139, 464, fixed_now(), &state, "summary").unwrap();
+        let report = assemble_report(139, 464, fixed_now(), &state, "summary", &[]).unwrap();
         let output = serde_json::to_string_pretty(&report).unwrap();
         let parsed: Value = serde_json::from_str(&output).unwrap();
 
@@ -1079,10 +1423,13 @@ mod tests {
             json!({"last_refreshed": "cycle 120"}),
         );
 
-        let report = assemble_report(139, 464, fixed_now(), &state, "summary").unwrap();
+        let report = assemble_report(139, 464, fixed_now(), &state, "summary", &[]).unwrap();
 
         assert_eq!(report.session_duration_minutes, 47);
-        assert_eq!(report.state_json_patch.updates[3].path, "/last_cycle/duration_minutes");
+        assert_eq!(
+            report.state_json_patch.updates[3].path,
+            "/last_cycle/duration_minutes"
+        );
         assert_eq!(report.state_json_patch.updates[3].value, json!(47));
     }
 }
