@@ -1799,6 +1799,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "cycle-start: restore descriptive opening comment"
+    },
+    {
+      "dispatched_at": "2026-03-08T02:24:36Z",
+      "issue": 720,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Extract default agent model into shared config"
     }
   ],
   "audit_processed": [
@@ -1933,16 +1940,16 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#723 cycle-start: restore descriptive opening comment (cycle 183)",
+    "dispatch_log_latest": "#720 Extract default agent model into shared config (cycle 183)",
     "dispatch_to_pr_rate": "190/194",
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 188,
-    "note": "195 dispatches, 194 resolved, 1 in-flight. 190 produced PRs (188 merged, 2 closed without merge). Latest dispatch: #723 cycle-start: restore descriptive opening comment (cycle 183, model gpt-5.4).",
+    "note": "196 dispatches, 194 resolved, 2 in-flight. 190 produced PRs (188 merged, 2 closed without merge). Latest dispatch: #720 Extract default agent model into shared config (cycle 183, model gpt-5.4).",
     "pr_merge_rate": "188/190",
     "produced_pr": 190,
     "resolved": 194,
     "revision_rounds": 5,
-    "total_dispatches": 195
+    "total_dispatches": 196
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
