@@ -1847,6 +1847,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix pipeline-check to auto-build missing tool binaries via wrappers"
+    },
+    {
+      "dispatched_at": "2026-03-08T05:08:00Z",
+      "issue": 738,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix housekeeping-scan false positives for agent issues with active draft PRs"
     }
   ],
   "audit_processed": [
@@ -1981,16 +1988,16 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#737 Fix pipeline-check to auto-build missing tool binaries via wrappers (cycle 185)",
+    "dispatch_log_latest": "#738 Fix housekeeping-scan false positives for agent issues with active draft PRs (cycle 185)",
     "dispatch_to_pr_rate": "195/199",
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 193,
-    "note": "200 dispatches, 199 resolved, 1 in-flight. 195 produced PRs (193 merged, 2 closed without merge). Latest dispatch: #737 Fix pipeline-check to auto-build missing tool binaries via wrappers (cycle 185, model gpt-5.4).",
+    "note": "201 dispatches, 199 resolved, 2 in-flight. 195 produced PRs (193 merged, 2 closed without merge). Latest dispatch: #738 Fix housekeeping-scan false positives for agent issues with active draft PRs (cycle 185, model gpt-5.4).",
     "pr_merge_rate": "193/195",
     "produced_pr": 195,
     "resolved": 199,
     "revision_rounds": 5,
-    "total_dispatches": 200
+    "total_dispatches": 201
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
