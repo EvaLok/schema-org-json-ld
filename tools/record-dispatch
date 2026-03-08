@@ -3,12 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-BINARY="$SCRIPT_DIR/rust/target/release/record-dispatch"
-
-if [ ! -x "$BINARY" ]; then
-    echo "Pre-built binary not found, building..." >&2
-    cargo build --release -p record-dispatch --manifest-path "$SCRIPT_DIR/rust/Cargo.toml" >&2
-fi
+source "$SCRIPT_DIR/_build-helper.sh"
+ensure_binary "record-dispatch"
 
 for arg in "$@"; do
     case "$arg" in

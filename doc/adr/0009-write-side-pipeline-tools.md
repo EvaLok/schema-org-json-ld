@@ -39,12 +39,13 @@ The orchestrator never directly edits state.json — it calls tools instead.
 
 ## Consequences
 
-- **Positive**: Eliminates manual state.json editing errors entirely
-- **Positive**: Each tool owns its freshness markers — no more stale fields
+- **Positive**: Dramatically reduces manual state.json editing errors (the main source of stale/wrong metrics)
+- **Positive**: Each tool owns its freshness markers, reducing (but not eliminating) stale fields — event-driven fields still require the binary to be current
 - **Positive**: Receipt hashes enable audit verification of state changes
 - **Positive**: Tools compose cleanly — `cycle-complete` runs after all event-driven tools
 - **Negative**: Adding a new state field requires updating the relevant tool(s)
-- **Trade-off**: More tools to maintain, but the error rate dropped from frequent to zero
+- **Negative**: Stale binaries (wrapper scripts not rebuilding after source changes) can silently run outdated logic — mitigated by source-freshness checks in wrappers
+- **Trade-off**: More tools to maintain, but the error rate dropped significantly from the manual-edit era
 
 ## Alternatives Considered
 

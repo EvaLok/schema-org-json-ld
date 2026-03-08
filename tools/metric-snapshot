@@ -3,12 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-BINARY="$SCRIPT_DIR/rust/target/release/metric-snapshot"
-
-if [ ! -x "$BINARY" ]; then
-	echo "Pre-built binary not found, building..." >&2
-	cargo build --release --manifest-path "$SCRIPT_DIR/rust/Cargo.toml" >&2
-fi
+source "$SCRIPT_DIR/_build-helper.sh"
+ensure_binary "metric-snapshot"
 
 # Parse flags from args (non-destructive scan)
 has_repo_root=false

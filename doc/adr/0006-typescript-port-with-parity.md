@@ -17,10 +17,10 @@ Google's Rich Results Test is the acceptance test for JSON-LD output. Any diverg
 Port every PHP schema class to TypeScript with 1:1 JSON-LD output parity. Specifically:
 
 1. **Same class names and property names** across both languages
-2. **Identical `toArray()` / `toJsonLd()` output** for the same inputs — verified by the QC orchestrator
+2. **Identical JSON-LD output** for the same inputs — schema classes produce identical `toArray()` output, and `JsonLdGenerator` produces identical JSON-LD in both languages. Verified by the QC orchestrator.
 3. **Same enum values and serialization** — enums produce identical string values
 4. **Language-idiomatic patterns** where they don't affect output — TypeScript uses `readonly` properties, builder-style setters, and native `Map` where PHP uses associative arrays
-5. **Separate npm package** (`@anthropic-ai/schema-org-json-ld`) alongside the existing Composer package
+5. **Separate npm package** (`@evabee/schema-org-json-ld`) alongside the existing Composer package
 
 Parity is validated by the QC orchestrator comparing JSON-LD output from both languages for all 73 standalone-testable types (88 total minus 12 enums minus 3 building-block types).
 

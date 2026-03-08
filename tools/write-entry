@@ -3,12 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-BINARY="$SCRIPT_DIR/rust/target/release/write-entry"
-
-if [ ! -x "$BINARY" ]; then
-	echo "Pre-built binary not found, building..." >&2
-	cargo build --release --manifest-path "$SCRIPT_DIR/rust/Cargo.toml" -p write-entry >&2
-fi
+source "$SCRIPT_DIR/_build-helper.sh"
+ensure_binary "write-entry"
 
 # No args: pass through help directly.
 if [ $# -eq 0 ]; then
