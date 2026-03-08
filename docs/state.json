@@ -2064,6 +2064,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add disposition validation to process-review"
+    },
+    {
+      "dispatched_at": "2026-03-08T19:54:31Z",
+      "issue": 806,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 195 end-of-cycle review"
     }
   ],
   "audit_processed": [
@@ -2204,9 +2211,9 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#804 Add disposition validation to process-review (cycle 195)",
+    "dispatch_log_latest": "#806 Cycle 195 end-of-cycle review (cycle 195)",
     "dispatch_to_pr_rate": "218/223",
-    "in_flight": 2,
+    "in_flight": 3,
     "merged": 217,
     "note": "223 dispatches, 223 resolved, 0 in-flight. 218 produced PRs (217 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #798 merged in cycle 195.",
     "pr_merge_rate": "217/218",
@@ -2214,7 +2221,7 @@
     "resolved": 223,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 225
+    "total_dispatches": 226
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
