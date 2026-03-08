@@ -3,7 +3,8 @@
 #
 # Sets BINARY to the path of the release binary, rebuilding if:
 #   1. The binary does not exist, OR
-#   2. Any Rust source file (.rs) or Cargo.toml under tools/rust/crates/
+#   2. Any Rust source file (.rs) or Cargo.toml under tools/rust/crates/,
+#      or the workspace Cargo.toml at tools/rust/Cargo.toml,
 #      is newer than the binary (source-freshness check).
 #
 # Usage:
@@ -20,7 +21,7 @@ ensure_binary() {
 	if [ -x "$BINARY" ]; then
 		# Rebuild if any source file is newer than the binary
 		local newer
-		newer=$(find "$tools_dir/rust/crates" \( -name "*.rs" -o -name "Cargo.toml" \) -newer "$BINARY" -print -quit 2>/dev/null || true)
+		newer=$(find "$tools_dir/rust/crates" "$tools_dir/rust/Cargo.toml" \( -name "*.rs" -o -name "Cargo.toml" \) -newer "$BINARY" -print -quit 2>/dev/null || true)
 		if [ -n "$newer" ]; then
 			echo "Source changed since $crate_name was built, rebuilding..." >&2
 			cargo build --release -p "$crate_name" --manifest-path "$tools_dir/rust/Cargo.toml" >&2
