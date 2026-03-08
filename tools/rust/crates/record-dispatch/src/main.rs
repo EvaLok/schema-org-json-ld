@@ -31,9 +31,7 @@ struct Cli {
 struct DispatchPatch {
     total_dispatches: i64,
     in_flight: i64,
-    dispatch_to_pr_rate: String,
     dispatch_log_latest: String,
-    note: String,
     agent_session: Value,
     current_cycle: u64,
 }
@@ -106,10 +104,7 @@ fn build_dispatch_patch(
 ) -> Result<DispatchPatch, String> {
     let total_dispatches = read_required_i64(state, "/copilot_metrics/total_dispatches")?;
     let in_flight = read_required_i64(state, "/copilot_metrics/in_flight")?;
-    let produced_pr = read_required_i64(state, "/copilot_metrics/produced_pr")?;
     let resolved = read_required_i64(state, "/copilot_metrics/resolved")?;
-    let merged = read_required_i64(state, "/copilot_metrics/merged")?;
-    let closed_without_merge = read_required_i64(state, "/copilot_metrics/closed_without_merge")?;
 
     let next_total_dispatches = total_dispatches + 1;
     let next_in_flight = in_flight + 1;
@@ -119,20 +114,7 @@ fn build_dispatch_patch(
     Ok(DispatchPatch {
         total_dispatches: next_total_dispatches,
         in_flight: next_in_flight,
-        dispatch_to_pr_rate: format_dispatch_to_pr_rate(produced_pr, resolved),
         dispatch_log_latest: format_dispatch_log(issue, title, current_cycle),
-        note: format_dispatch_note(
-            next_total_dispatches,
-            resolved,
-            next_in_flight,
-            produced_pr,
-            merged,
-            closed_without_merge,
-            issue,
-            title,
-            current_cycle,
-            model,
-        ),
         agent_session: json!({
             "issue": issue,
             "title": title,
@@ -170,39 +152,8 @@ fn validate_dispatch_invariant(
     Ok(())
 }
 
-fn format_dispatch_to_pr_rate(produced_pr: i64, resolved: i64) -> String {
-    format!("{}/{}", produced_pr, resolved)
-}
-
 fn format_dispatch_log(issue: u64, title: &str, current_cycle: u64) -> String {
     format!("#{} {} (cycle {})", issue, title, current_cycle)
-}
-
-fn format_dispatch_note(
-    total_dispatches: i64,
-    resolved: i64,
-    in_flight: i64,
-    produced_pr: i64,
-    merged: i64,
-    closed_without_merge: i64,
-    issue: u64,
-    title: &str,
-    current_cycle: u64,
-    model: &str,
-) -> String {
-    format!(
-		"{} dispatches, {} resolved, {} in-flight. {} produced PRs ({} merged, {} closed without merge). Latest dispatch: #{} {} (cycle {}, model {}).",
-		total_dispatches,
-		resolved,
-		in_flight,
-		produced_pr,
-		merged,
-		closed_without_merge,
-		issue,
-		title,
-		current_cycle,
-		model
-	)
 }
 
 fn apply_dispatch_patch(state: &mut Value, patch: &DispatchPatch) -> Result<(), String> {
@@ -215,24 +166,13 @@ fn apply_dispatch_patch(state: &mut Value, patch: &DispatchPatch) -> Result<(), 
     set_value_at_pointer(state, "/copilot_metrics/in_flight", json!(patch.in_flight))?;
     set_value_at_pointer(
         state,
-        "/copilot_metrics/dispatch_to_pr_rate",
-        json!(patch.dispatch_to_pr_rate),
-    )?;
-    set_value_at_pointer(
-        state,
         "/copilot_metrics/dispatch_log_latest",
         json!(patch.dispatch_log_latest),
     )?;
-    set_value_at_pointer(state, "/copilot_metrics/note", json!(patch.note))?;
     set_value_at_pointer(
         state,
         "/field_inventory/fields/copilot_metrics.in_flight/last_refreshed",
         json!(cycle_marker.clone()),
-    )?;
-    set_value_at_pointer(
-        state,
-        "/field_inventory/fields/copilot_metrics.dispatch_to_pr_rate/last_refreshed",
-        json!(cycle_marker),
     )?;
     state
         .pointer_mut("/agent_sessions")
@@ -318,12 +258,7 @@ mod tests {
         .expect("patch should build");
         assert_eq!(patch.total_dispatches, 86);
         assert_eq!(patch.in_flight, 3);
-        assert_eq!(patch.dispatch_to_pr_rate, "81/83");
-    }
-
-    #[test]
-    fn rate_string_formatting_is_correct() {
-        assert_eq!(format_dispatch_to_pr_rate(81, 83), "81/83");
+        assert_eq!(patch.dispatch_log_latest, "#602 Example dispatch (cycle 164)");
     }
 
     #[test]
@@ -419,6 +354,23 @@ mod tests {
             .as_array()
             .expect("agent_sessions array");
         assert_eq!(sessions.len(), 2);
+        assert_eq!(state["copilot_metrics"]["total_dispatches"], json!(86));
+        assert_eq!(state["copilot_metrics"]["in_flight"], json!(3));
+        assert_eq!(
+            state["copilot_metrics"]["dispatch_log_latest"],
+            json!("#602 Example dispatch (cycle 164)")
+        );
+        assert_eq!(state["copilot_metrics"]["dispatch_to_pr_rate"], json!("81/85"));
+        assert_eq!(state["copilot_metrics"]["note"], json!("old note"));
+        assert_eq!(
+            state["field_inventory"]["fields"]["copilot_metrics.in_flight"]["last_refreshed"],
+            json!("cycle 164")
+        );
+        assert_eq!(
+            state["field_inventory"]["fields"]["copilot_metrics.dispatch_to_pr_rate"]
+                ["last_refreshed"],
+            json!("cycle 164")
+        );
         assert_eq!(sessions[1]["issue"], json!(602));
         assert_eq!(sessions[1]["status"], json!("in_flight"));
         assert_eq!(sessions[1]["dispatched_at"], json!("2026-03-07T13:00:00Z"));
