@@ -448,6 +448,22 @@ mod tests {
 	}
 
 	#[test]
+	fn housekeeping_scan_is_warn_when_findings_are_reported() {
+		let execution = ExecutionResult {
+			exit_code: Some(1),
+			stdout: json!({
+				"items_needing_attention": 1
+			})
+			.to_string(),
+		};
+		let step = classify_step("housekeeping-scan", &ToolKind::HousekeepingScan, execution);
+		assert_eq!(severity_for_kind(&ToolKind::HousekeepingScan), Severity::Warning);
+		assert_eq!(step.status, StepStatus::Warn);
+		assert_eq!(step.findings, Some(1));
+		assert_eq!(step.detail.as_deref(), Some("1 findings"));
+	}
+
+	#[test]
 	fn cycle_status_is_pass_when_command_succeeds() {
 		let execution = ExecutionResult {
 			exit_code: Some(0),
