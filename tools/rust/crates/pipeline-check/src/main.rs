@@ -9,6 +9,8 @@ use std::process::Command;
 const HOUSEKEEPING_FINDINGS_KEY: &str = "items_needing_attention";
 const CYCLE_STATUS_IN_FLIGHT_PATH: &str = "/concurrency/in_flight";
 const CYCLE_STATUS_DIRECTIVES_PATH: &str = "/eva_input/comments_since_last_cycle";
+const DERIVE_METRICS_TOOL_NAME: &str = "derive-metrics";
+const DERIVE_METRICS_WRAPPER_PATH: &str = "tools/derive-metrics";
 const DERIVE_METRICS_FIELDS: [&str; 7] = [
 	"total_dispatches",
 	"resolved",
@@ -200,8 +202,8 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
 			kind: ToolKind::StateInvariants,
 		},
 		ToolSpec {
-			display_name: "derive-metrics",
-			wrapper_relative_path: "tools/derive-metrics",
+			display_name: DERIVE_METRICS_TOOL_NAME,
+			wrapper_relative_path: DERIVE_METRICS_WRAPPER_PATH,
 			args: vec![],
 			kind: ToolKind::DeriveMetrics,
 		},
@@ -623,7 +625,10 @@ mod tests {
 
 		impl CommandRunner for DeriveMetricsRunner {
 			fn run(&self, script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
-				assert_eq!(script_path.file_name().and_then(|name| name.to_str()), Some("derive-metrics"));
+				assert_eq!(
+					script_path.file_name().and_then(|name| name.to_str()),
+					Some(DERIVE_METRICS_TOOL_NAME)
+				);
 				Ok(ExecutionResult {
 					exit_code: Some(0),
 					stdout: json!({
@@ -641,8 +646,8 @@ mod tests {
 		}
 
 		let spec = ToolSpec {
-			display_name: "derive-metrics",
-			wrapper_relative_path: "tools/derive-metrics",
+			display_name: DERIVE_METRICS_TOOL_NAME,
+			wrapper_relative_path: DERIVE_METRICS_WRAPPER_PATH,
 			args: vec![],
 			kind: ToolKind::DeriveMetrics,
 		};
@@ -695,8 +700,8 @@ mod tests {
 		}
 
 		let spec = ToolSpec {
-			display_name: "derive-metrics",
-			wrapper_relative_path: "tools/derive-metrics",
+			display_name: DERIVE_METRICS_TOOL_NAME,
+			wrapper_relative_path: DERIVE_METRICS_WRAPPER_PATH,
 			args: vec![],
 			kind: ToolKind::DeriveMetrics,
 		};
