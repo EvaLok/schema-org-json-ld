@@ -2081,8 +2081,10 @@
     {
       "dispatched_at": "2026-03-08T21:13:28Z",
       "issue": 812,
+      "merged_at": "2026-03-08T22:46:31Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 813,
+      "status": "merged",
       "title": "Expand pipeline-check derive-metrics phase to validate rate fields"
     },
     {
@@ -2234,12 +2236,12 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#814 Cycle 196 end-of-cycle review (cycle 196)",
     "dispatch_to_pr_rate": "97.4%",
-    "in_flight": 2,
-    "merged": 220,
-    "note": "226 dispatches, 224 resolved, 2 in-flight. 219 produced PRs (218 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #807 merged in cycle 196.",
+    "in_flight": 1,
+    "merged": 221,
+    "note": "DEPRECATED: This field is no longer maintained by any tool. Use the integer counters and rate fields directly. Will be removed in a future cycle.",
     "pr_merge_rate": "99.5%",
-    "produced_pr": 221,
-    "resolved": 226,
+    "produced_pr": 222,
+    "resolved": 227,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 228
@@ -2318,7 +2320,7 @@
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 196"
+        "last_refreshed": "cycle 197"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
@@ -2354,7 +2356,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 196"
+        "last_refreshed": "cycle 197"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
@@ -2466,9 +2468,9 @@
     771
   ],
   "pre_python_clean_cycles": {
-    "count": 2,
+    "count": 3,
     "description": "Per Eva directive on #699: 5 consecutive clean cycles (pipeline 5/5 at startup, no bugs, no problems) required before starting Python implementation. Count restarts on any problem.",
-    "note": "Cycle 196: pipeline PASS at startup (6/6). Count moves to 2/5.",
+    "note": "Cycle 197: pipeline PASS at startup (6/6). Count moves to 3/5.",
     "started_at": "cycle 182"
   },
   "publish_gate": {
