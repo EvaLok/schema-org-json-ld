@@ -1914,6 +1914,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Make cycle-status blocking in pipeline-check"
+    },
+    {
+      "dispatched_at": "2026-03-08T09:23:39Z",
+      "issue": 761,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add agent_sessions reconciliation to cycle-complete"
     }
   ],
   "audit_processed": [
@@ -2053,14 +2060,14 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#759 Make cycle-status blocking in pipeline-check (cycle 188)",
     "dispatch_to_pr_rate": "203/207",
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 201,
-    "note": "208 dispatches, 207 resolved, 1 in-flight (#759). 203 produced PRs (201 merged, 2 closed without merge). 3 closed without PR (failed). 1 reviewed_awaiting_eva (#303, has PR, not counted in either bucket by invariant tool). Latest dispatch: #759.",
+    "note": "209 dispatches, 207 resolved, 2 in-flight (#759, #761). 203 produced PRs (201 merged, 2 closed without merge). 3 closed without PR (failed). 1 reviewed_awaiting_eva (#303, has PR, not counted in either bucket by invariant tool). Latest dispatch: #761.",
     "pr_merge_rate": "201/203",
     "produced_pr": 203,
     "resolved": 207,
     "revision_rounds": 5,
-    "total_dispatches": 208
+    "total_dispatches": 209
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -2284,7 +2291,7 @@
   "pre_python_clean_cycles": {
     "count": 0,
     "description": "Per Eva directive on #699: 5 consecutive clean cycles (pipeline 5/5 at startup, no bugs, no problems) required before starting Python implementation. Count restarts on any problem.",
-    "note": "Cycle 182 had 5 stale field-inventory entries at startup (pipeline FAIL). Count starts at 0. Target: 5 consecutive clean cycles.",
+    "note": "Cycle 188 had state-invariants FAIL at startup (agent_sessions #746/#748 not reconciled from cycle 187). Count stays at 0. Fixed during cycle but startup was not clean.",
     "started_at": "cycle 182"
   },
   "publish_gate": {
