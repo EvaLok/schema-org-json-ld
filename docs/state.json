@@ -3316,7 +3316,7 @@
       },
       {
         "actioned": 1,
-        "categories": [],
+        "categories": ["ownership-consolidation-gap", "pipeline-integrity", "process-adherence"],
         "complacency_score": 4,
         "cycle": 195,
         "deferred": 2,
