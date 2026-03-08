@@ -1997,17 +1997,18 @@
       689,
       700,
       701,
+      724,
       725
     ],
     "closed_this_cycle": [
+      724,
       725
     ],
     "remaining_open": [
       436,
       699,
       720,
-      723,
-      724
+      723
     ]
   },
   "field_inventory": {
