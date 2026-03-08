@@ -132,6 +132,8 @@ fn find_stale_agent_issues(items: &[Value], draft_prs: &[DraftPrInfo], now: Date
             if age <= Duration::hours(2) {
                 return None;
             }
+            // Heuristic: a newer Copilot draft PR usually indicates the agent is actively
+            // working an older assigned issue, even without parsing issue references.
             if draft_prs.iter().any(|pr| pr.created_at > created_at) {
                 return None;
             }
@@ -159,22 +161,28 @@ fn scan_open_copilot_draft_prs() -> Result<Vec<DraftPrInfo>, String> {
     let prs = value
         .as_array()
         .ok_or_else(|| "unexpected response for open PR list".to_string())?;
-    Ok(parse_open_copilot_draft_prs(prs))
+    parse_open_copilot_draft_prs(prs)
 }
 
-fn parse_open_copilot_draft_prs(prs: &[Value]) -> Vec<DraftPrInfo> {
-    prs.iter()
-        .filter(|pr| is_copilot_draft_pr(pr))
-        .filter_map(|pr| {
-            Some(DraftPrInfo {
-                number: pr.get("number").and_then(Value::as_u64)?,
-                created_at: pr
-                    .get("createdAt")
-                    .and_then(Value::as_str)
-                    .and_then(parse_time)?,
-            })
-        })
-        .collect()
+fn parse_open_copilot_draft_prs(prs: &[Value]) -> Result<Vec<DraftPrInfo>, String> {
+    let mut draft_prs = Vec::new();
+
+    for pr in prs.iter().filter(|pr| is_copilot_draft_pr(pr)) {
+        let number = pr
+            .get("number")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| "copilot draft PR missing number".to_string())?;
+        let created_at_raw = pr
+            .get("createdAt")
+            .and_then(Value::as_str)
+            .ok_or_else(|| format!("copilot draft PR #{} missing createdAt", number))?;
+        let created_at = parse_time(created_at_raw)
+            .ok_or_else(|| format!("copilot draft PR #{} has invalid createdAt", number))?;
+
+        draft_prs.push(DraftPrInfo { number, created_at });
+    }
+
+    Ok(draft_prs)
 }
 
 fn scan_orphan_draft_prs(now: DateTime<Utc>, draft_prs: &[DraftPrInfo]) -> Result<Vec<Finding>, String> {
@@ -474,7 +482,7 @@ mod tests {
     }
 
     #[test]
-    fn stale_agent_issue_excluded_when_draft_pr_exists() {
+    fn stale_agent_issue_excluded_when_newer_draft_pr_exists() {
         let now = parse_time("2026-03-04T12:00:00Z").unwrap();
         let issues = vec![json!({"number": 1, "created_at": "2026-03-04T09:00:00Z"})];
         let draft_prs = vec![DraftPrInfo {
