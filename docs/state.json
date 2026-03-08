@@ -2102,6 +2102,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Make process-review parse inline [category] from finding headings"
+    },
+    {
+      "dispatched_at": "2026-03-08T22:49:07Z",
+      "issue": 819,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Remove deprecated copilot_metrics.note field from all tools"
     }
   ],
   "audit_processed": [
@@ -2243,9 +2250,9 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#817 Make process-review parse inline [category] from finding headings (cycle 197)",
+    "dispatch_log_latest": "#819 Remove deprecated copilot_metrics.note field from all tools (cycle 197)",
     "dispatch_to_pr_rate": "97.4%",
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 222,
     "note": "DEPRECATED: This field is no longer maintained by any tool. Use the integer counters and rate fields directly. Will be removed in a future cycle.",
     "pr_merge_rate": "99.5%",
@@ -2253,7 +2260,7 @@
     "resolved": 228,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 229
+    "total_dispatches": 230
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
