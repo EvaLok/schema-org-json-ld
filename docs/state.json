@@ -2030,6 +2030,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Consolidate record-dispatch copilot_metrics"
+    },
+    {
+      "dispatched_at": "2026-03-08T18:18:52Z",
+      "issue": 797,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add derive-metrics pipeline-check phase"
     }
   ],
   "audit_processed": [
@@ -2170,17 +2177,17 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#795 Consolidate record-dispatch copilot_metrics (cycle 194)",
+    "dispatch_log_latest": "#797 Add derive-metrics pipeline-check phase (cycle 194)",
     "dispatch_to_pr_rate": "215/220",
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 214,
-    "note": "221 dispatches, 220 resolved, 1 in-flight. 215 produced PRs (214 merged, 2 closed without merge). Latest dispatch: #795 Consolidate record-dispatch copilot_metrics (cycle 194, model gpt-5.4).",
+    "note": "222 dispatches, 220 resolved, 2 in-flight. 215 produced PRs (214 merged, 2 closed without merge). Latest dispatch: #797 Add derive-metrics pipeline-check phase (cycle 194, model gpt-5.4).",
     "pr_merge_rate": "99.5%",
     "produced_pr": 215,
     "resolved": 220,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 221
+    "total_dispatches": 222
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
