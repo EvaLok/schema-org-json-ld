@@ -2023,6 +2023,13 @@
       "pr": 792,
       "status": "merged",
       "title": "Cycle 193 review"
+    },
+    {
+      "dispatched_at": "2026-03-08T18:18:26Z",
+      "issue": 795,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Consolidate record-dispatch copilot_metrics"
     }
   ],
   "audit_processed": [
@@ -2163,17 +2170,17 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#791 Cycle 193 review (cycle 193)",
-    "dispatch_to_pr_rate": "97.7%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#795 Consolidate record-dispatch copilot_metrics (cycle 194)",
+    "dispatch_to_pr_rate": "215/220",
+    "in_flight": 1,
     "merged": 214,
-    "note": "220 dispatches, 220 resolved, 0 in-flight. 214 produced PRs (214 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #792 merged in cycle 194.",
+    "note": "221 dispatches, 220 resolved, 1 in-flight. 215 produced PRs (214 merged, 2 closed without merge). Latest dispatch: #795 Consolidate record-dispatch copilot_metrics (cycle 194, model gpt-5.4).",
     "pr_merge_rate": "99.5%",
     "produced_pr": 215,
     "resolved": 220,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 220
+    "total_dispatches": 221
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -2285,7 +2292,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 193"
+        "last_refreshed": "cycle 194"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
@@ -2397,9 +2404,9 @@
     771
   ],
   "pre_python_clean_cycles": {
-    "count": 3,
+    "count": 0,
     "description": "Per Eva directive on #699: 5 consecutive clean cycles (pipeline 5/5 at startup, no bugs, no problems) required before starting Python implementation. Count restarts on any problem.",
-    "note": "Cycle 193: pipeline PASS at startup. Third consecutive clean cycle (191, 192, 193).",
+    "note": "Cycle 194: pipeline FAIL at startup (state-invariants 8/11 due to cycle 193 derive-metrics format change). Count reset from 3 to 0.",
     "started_at": "cycle 182"
   },
   "publish_gate": {
