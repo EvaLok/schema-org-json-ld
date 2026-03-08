@@ -1829,6 +1829,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix process-review complacency score parsing to be section-aware"
+    },
+    {
+      "dispatched_at": "2026-03-08T04:05:11Z",
+      "issue": 734,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 184 end-of-cycle review"
     }
   ],
   "audit_processed": [
@@ -1963,16 +1970,16 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#732 Fix process-review complacency score parsing to be section-aware (cycle 184)",
+    "dispatch_log_latest": "#734 [Cycle Review] Cycle 184 end-of-cycle review (cycle 184)",
     "dispatch_to_pr_rate": "193/197",
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 191,
-    "note": "198 dispatches, 197 resolved, 1 in-flight. 193 produced PRs (191 merged, 2 closed without merge). Latest dispatch: #732 Fix process-review complacency score parsing to be section-aware (cycle 184, model gpt-5.4).",
+    "note": "199 dispatches, 197 resolved, 2 in-flight. 193 produced PRs (191 merged, 2 closed without merge). Latest dispatch: #734 [Cycle Review] Cycle 184 end-of-cycle review (cycle 184, model gpt-5.4).",
     "pr_merge_rate": "191/193",
     "produced_pr": 193,
     "resolved": 197,
     "revision_rounds": 5,
-    "total_dispatches": 198
+    "total_dispatches": 199
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -2071,7 +2078,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 183"
+        "last_refreshed": "cycle 184"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -2087,11 +2094,11 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 182"
+        "last_refreshed": "cycle 184"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 182"
+        "last_refreshed": "cycle 184"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -2111,7 +2118,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 182"
+        "last_refreshed": "cycle 184"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -2119,7 +2126,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 182"
+        "last_refreshed": "cycle 184"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -2139,7 +2146,7 @@
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
-        "last_refreshed": "cycle 182"
+        "last_refreshed": "cycle 184"
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
@@ -2183,18 +2190,18 @@
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 182"
+        "last_refreshed": "cycle 184"
       }
     }
   },
   "last_cycle": {
-    "duration_minutes": 12,
+    "duration_minutes": 16,
     "issue": 731,
     "number": 184,
-    "summary": "Merged PRs #722 (cycle 182 review) and #719 (cycle-complete auto-refresh). Consumed review findings (3 actioned, 2 deferred, score 3/5). Actioned Eva directives: #725 (adversarial reviews), #724 (ADR tracking, wrote ADRs 0006-0009). Dispatched #723 (cycle-start comment) and #720 (shared model config). Pipeline 5/5, 11/11 invariants.",
-    "timestamp": "2026-03-08T03:48:02Z"
+    "summary": "Merged 3 PRs (730, 728, 727). Actioned review findings (stale-binary, ADR drift). Created _build-helper.sh. Dispatched 732.",
+    "timestamp": "2026-03-08T04:04:19Z"
   },
-  "last_eva_comment_check": "2026-03-08T03:48:02Z",
+  "last_eva_comment_check": "2026-03-08T04:04:19Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
