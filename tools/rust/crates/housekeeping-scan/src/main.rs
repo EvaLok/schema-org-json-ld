@@ -48,6 +48,7 @@ struct PrState {
 #[derive(Clone)]
 struct DraftPrInfo {
     number: u64,
+    branch: String,
     created_at: DateTime<Utc>,
 }
 
@@ -133,10 +134,7 @@ fn find_stale_agent_issues(items: &[Value], draft_prs: &[DraftPrInfo], now: Date
             if age <= Duration::hours(2) {
                 return None;
             }
-            // Heuristic: a Copilot draft PR created after the issue usually indicates the
-            // agent is actively working that older assigned issue, even without parsing
-            // issue references or comparing later update timestamps.
-            if draft_prs.iter().any(|pr| pr.created_at > created_at) {
+            if has_linked_draft_pr(number, draft_prs) {
                 return None;
             }
             Some(Finding {
@@ -158,7 +156,7 @@ fn scan_open_copilot_draft_prs() -> Result<Vec<DraftPrInfo>, String> {
         "--state",
         "open",
         "--json",
-        "number,title,isDraft,author,createdAt",
+        "number,title,isDraft,author,createdAt,headRefName",
     ])?;
     let prs = value
         .as_array()
@@ -175,6 +173,11 @@ fn parse_open_copilot_draft_prs(prs: &[Value]) -> Result<Vec<DraftPrInfo>, Strin
             .get("number")
             .and_then(Value::as_u64)
             .ok_or_else(|| "copilot draft PR missing number".to_string())?;
+        let branch = pr
+            .get("headRefName")
+            .and_then(Value::as_str)
+            .ok_or_else(|| format!("copilot draft PR #{} missing headRefName", number))?
+            .to_string();
         let created_at_raw = pr
             .get("createdAt")
             .and_then(Value::as_str)
@@ -182,7 +185,11 @@ fn parse_open_copilot_draft_prs(prs: &[Value]) -> Result<Vec<DraftPrInfo>, Strin
         let created_at = parse_time(created_at_raw)
             .ok_or_else(|| format!("copilot draft PR #{} has invalid createdAt", number))?;
 
-        draft_prs.push(DraftPrInfo { number, created_at });
+        draft_prs.push(DraftPrInfo {
+            number,
+            branch,
+            created_at,
+        });
     }
 
     Ok(draft_prs)
@@ -239,6 +246,20 @@ fn has_copilot_work_finished(value: &Value) -> bool {
             })
         })
         .unwrap_or(false)
+}
+
+fn has_linked_draft_pr(issue_number: u64, draft_prs: &[DraftPrInfo]) -> bool {
+    draft_prs
+        .iter()
+        .any(|pr| branch_contains_issue_number(&pr.branch, issue_number))
+}
+
+fn branch_contains_issue_number(branch: &str, issue_number: u64) -> bool {
+    branch
+        .split(|c: char| !c.is_ascii_digit())
+        .filter(|token| !token.is_empty())
+        .filter_map(|token| token.parse::<u64>().ok())
+        .any(|token| token == issue_number)
 }
 
 fn scan_dead_branches(repo_root: &Path) -> Result<Vec<Finding>, String> {
@@ -485,11 +506,12 @@ mod tests {
     }
 
     #[test]
-    fn stale_agent_issue_excluded_when_any_newer_draft_pr_exists() {
+    fn stale_agent_issue_excluded_when_matching_draft_pr_branch_exists() {
         let now = parse_time("2026-03-04T12:00:00Z").unwrap();
-        let issues = vec![json!({"number": 1, "created_at": "2026-03-04T09:00:00Z"})];
+        let issues = vec![json!({"number": 746, "created_at": "2026-03-04T09:00:00Z"})];
         let draft_prs = vec![DraftPrInfo {
             number: 10,
+            branch: "copilot/add-severity-tiers-746".to_string(),
             created_at: parse_time("2026-03-04T10:00:00Z").unwrap(),
         }];
 
@@ -507,6 +529,84 @@ mod tests {
 
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].identifier, "#1");
+    }
+
+    #[test]
+    fn stale_agent_issue_still_flagged_with_unrelated_draft_pr() {
+        let now = parse_time("2026-03-04T12:00:00Z").unwrap();
+        let issues = vec![json!({"number": 746, "created_at": "2026-03-04T09:00:00Z"})];
+        let draft_prs = vec![DraftPrInfo {
+            number: 10,
+            branch: "copilot/add-severity-tiers-745".to_string(),
+            created_at: parse_time("2026-03-04T10:00:00Z").unwrap(),
+        }];
+
+        let findings = find_stale_agent_issues(&issues, &draft_prs, now);
+
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].identifier, "#746");
+    }
+
+    #[test]
+    fn stale_agent_issue_requires_whole_number_branch_token_match() {
+        let now = parse_time("2026-03-04T12:00:00Z").unwrap();
+        let issues = vec![json!({"number": 746, "created_at": "2026-03-04T09:00:00Z"})];
+        let draft_prs = vec![DraftPrInfo {
+            number: 10,
+            branch: "copilot/add-severity-tiers-7460".to_string(),
+            created_at: parse_time("2026-03-04T10:00:00Z").unwrap(),
+        }];
+
+        let findings = find_stale_agent_issues(&issues, &draft_prs, now);
+
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].identifier, "#746");
+    }
+
+    #[test]
+    fn multiple_stale_issues_only_exclude_matching_linked_prs() {
+        let now = parse_time("2026-03-04T12:00:00Z").unwrap();
+        let issues = vec![
+            json!({"number": 746, "created_at": "2026-03-04T09:00:00Z"}),
+            json!({"number": 747, "created_at": "2026-03-04T09:00:00Z"}),
+            json!({"number": 748, "created_at": "2026-03-04T09:00:00Z"}),
+        ];
+        let draft_prs = vec![
+            DraftPrInfo {
+                number: 10,
+                branch: "copilot/add-severity-tiers-746".to_string(),
+                created_at: parse_time("2026-03-04T10:00:00Z").unwrap(),
+            },
+            DraftPrInfo {
+                number: 11,
+                branch: "copilot/fix-issue-900".to_string(),
+                created_at: parse_time("2026-03-04T10:30:00Z").unwrap(),
+            },
+        ];
+
+        let findings = find_stale_agent_issues(&issues, &draft_prs, now);
+
+        assert_eq!(findings.len(), 2);
+        assert_eq!(
+            findings.iter().map(|finding| finding.identifier.as_str()).collect::<Vec<_>>(),
+            vec!["#747", "#748"]
+        );
+    }
+
+    #[test]
+    fn parse_open_copilot_draft_prs_requires_head_ref_name() {
+        let prs = vec![json!({
+            "number": 10,
+            "isDraft": true,
+            "author": { "login": "copilot-swe-agent[bot]" },
+            "createdAt": "2026-03-04T10:00:00Z"
+        })];
+
+        let error = parse_open_copilot_draft_prs(&prs)
+            .err()
+            .expect("missing headRefName should fail");
+
+        assert_eq!(error, "copilot draft PR #10 missing headRefName");
     }
 
     #[test]
