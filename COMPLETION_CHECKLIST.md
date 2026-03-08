@@ -70,7 +70,19 @@ If a decision was made this cycle that meets these criteria, write the ADR now. 
 
 Number ADRs sequentially (check `ls doc/adr/` for the next number).
 
-## 5. Dispatch review agent (MANDATORY)
+## 5. Commit worklog, journal, and state before review dispatch
+
+**CRITICAL ORDERING**: The review agent reads the repo at dispatch time. If worklog and journal entries are not committed and pushed before the review dispatch, the review agent will flag them as "missing" — a false positive that has contaminated complacency scores since cycle 189. Per audit [#151](https://github.com/EvaLok/schema-org-json-ld-audit/issues/151).
+
+Before dispatching the review agent:
+1. Commit all worklog and journal entries
+2. Commit any state.json changes from `cycle-complete`
+3. Push to master
+4. **Verify** the push succeeded before proceeding to step 6
+
+This ensures the review agent sees the complete cycle state, eliminating the artifact-race false positive.
+
+## 6. Dispatch review agent (MANDATORY)
 
 Dispatch a 5.4 agent to perform an **adversarial** end-of-cycle review. This is our primary quality control mechanism. The review agent's job is to find problems, not confirm that everything is fine.
 
@@ -117,21 +129,17 @@ Label the issue `agent-task` and `cycle-review`.
 
 **Important**: The next cycle consumes review findings by reading the review file from the merged PR (or from the PR branch if not yet merged).
 
-## 6. Commit and push all state with receipts
+## 7. Commit review dispatch state and push
 
-Write-side tools (`process-merge`, `process-review`, `cycle-complete`, `record-dispatch`, etc.) commit state.json changes automatically with receipt hashes. Each tool outputs its receipt.
-
-For non-state.json changes (worklog, journal, infrastructure), commit normally:
+After dispatching the review agent (step 6), commit the `record-dispatch` state change and push:
 
 ```bash
-git add docs/worklog/ docs/journal/ [other changed files]
-git commit -m "state(cycle-complete): cycle N — worklog + journal [cycle N]"
 git push origin master
 ```
 
 Include tool receipt hashes in the closing comment so the review agent can verify them with `git show <hash>`.
 
-## 7. Close the orchestrator issue
+## 8. Close the orchestrator issue
 
 Post a closing summary comment on the cycle issue and close it.
 
@@ -150,6 +158,7 @@ The summary should include:
 | 2. State.json updates | Automated | `process-merge`, `process-review`, `process-audit`, `process-eva`, `cycle-complete`, `record-dispatch` |
 | 3. Worklog entry | Manual | Write tool (orchestrator writes content) |
 | 4. Journal entry | Manual | Write tool (orchestrator writes content) |
-| 5. Review agent dispatch | Semi-automated | `cycle-complete` generates issue body, orchestrator creates issue |
-| 6. Commit with receipts | Automated | Each write-side tool commits with receipt |
-| 7. Close issue | Manual | Standard gh commands |
+| 5. Commit worklog/journal/state | Manual | git commit + push (BEFORE review dispatch) |
+| 6. Review agent dispatch | Semi-automated | `cycle-complete` generates issue body, orchestrator creates issue |
+| 7. Commit dispatch state | Automated | `record-dispatch` commits, then push |
+| 8. Close issue | Manual | Standard gh commands |

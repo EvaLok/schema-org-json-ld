@@ -2048,7 +2048,8 @@
     144,
     145,
     147,
-    149
+    149,
+    151
   ],
   "blockers": [
     {
@@ -2185,7 +2186,7 @@
     "fields": {
       "audit_processed": {
         "cadence": "after processing audit issues",
-        "last_refreshed": "cycle 190"
+        "last_refreshed": "cycle 192"
       },
       "blockers": {
         "cadence": "after blocker state changes",
@@ -2345,9 +2346,9 @@
     771
   ],
   "pre_python_clean_cycles": {
-    "count": 1,
+    "count": 2,
     "description": "Per Eva directive on #699: 5 consecutive clean cycles (pipeline 5/5 at startup, no bugs, no problems) required before starting Python implementation. Count restarts on any problem.",
-    "note": "Cycle 191: pipeline PASS at startup (1 warning — field-inventory staleness, non-blocking). First clean startup since gate began at cycle 182.",
+    "note": "Cycle 192: pipeline PASS at startup. Second consecutive clean cycle (191, 192).",
     "started_at": "cycle 182"
   },
   "publish_gate": {

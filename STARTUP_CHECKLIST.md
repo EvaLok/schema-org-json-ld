@@ -71,7 +71,9 @@ Read the previous cycle's journal entry and extract any commitment language ("sh
 
 If a commitment has been repeated across 2+ cycles without any of the above actions, it must be either actioned this cycle or explicitly dropped with rationale in the journal. "Noted for future" does not count as actioning.
 
-**Why:** Audit #113 identified that journal observations are write-only — they get recorded but never converted to concrete actions. The skill-level fix (guidance at write time) was insufficient because the problem is at follow-through time. This step makes commitment tracking structural rather than behavioral.
+**Also check deferred review findings** (per audit [#151](https://github.com/EvaLok/schema-org-json-ld-audit/issues/151)): Read the `review_agent.history` entries from recent cycles. If a review finding has been classified as "deferred" for 3+ consecutive cycles, it triggers the same escalation as an unactioned journal commitment — it must be actioned this cycle or explicitly dropped with rationale. The review/artifact race condition (deferred cycles 189-191) is the cautionary example.
+
+**Why:** Audit #113 identified that journal observations are write-only — they get recorded but never converted to concrete actions. Audit #151 identified the same pattern for deferred review findings, which accumulate silently because step 0.6 originally only checked journal commitments. This step now covers both.
 
 ## 1. Check for `input-from-eva` issues
 
