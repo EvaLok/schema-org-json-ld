@@ -405,14 +405,14 @@ fn field_inventory_entry_needs_refresh(entry: &Value, cycle: u64) -> bool {
     match entry
         .get("last_refreshed")
         .and_then(Value::as_str)
-        .and_then(first_number)
+        .and_then(extract_cycle_number)
     {
         Some(last_refreshed_cycle) => last_refreshed_cycle < cycle,
         None => true,
     }
 }
 
-fn first_number(value: &str) -> Option<u64> {
+fn extract_cycle_number(value: &str) -> Option<u64> {
     let digits: String = value
         .chars()
         .skip_while(|c| !c.is_ascii_digit())
