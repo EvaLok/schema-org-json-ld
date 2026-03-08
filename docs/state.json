@@ -2260,7 +2260,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 193"
+        "last_refreshed": "cycle 194"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -2268,11 +2268,11 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 193"
+        "last_refreshed": "cycle 194"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 193"
+        "last_refreshed": "cycle 194"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -2382,12 +2382,12 @@
   },
   "last_cycle": {
     "duration_minutes": 12,
-    "issue": 788,
-    "number": 193,
+    "issue": 793,
+    "number": 194,
     "summary": "Merged 3 PRs (semantic test, derive-metrics tool, cycle 192 review), fixed checklist drift, applied derived metrics",
-    "timestamp": "2026-03-08T16:55:10Z"
+    "timestamp": "2026-03-08T18:06:24Z"
   },
-  "last_eva_comment_check": "2026-03-08T16:55:10Z",
+  "last_eva_comment_check": "2026-03-08T18:06:24Z",
   "open_questions_for_eva": [
     771
   ],
