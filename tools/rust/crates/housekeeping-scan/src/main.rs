@@ -44,6 +44,12 @@ struct PrState {
     state: String,
 }
 
+#[derive(Clone)]
+struct DraftPrInfo {
+    number: u64,
+    created_at: DateTime<Utc>,
+}
+
 fn main() {
     let cli = Cli::parse();
     if let Err(e) = validate_repo_root(&cli.repo_root) {
@@ -52,12 +58,16 @@ fn main() {
 
     let now = Utc::now();
     let mut report = Report::default();
-
-    report.stale_agent_issues = match scan_stale_agent_issues(now) {
+    let draft_prs = match scan_open_copilot_draft_prs() {
         Ok(value) => value,
         Err(e) => exit_with_error(e),
     };
-    report.orphan_draft_prs = match scan_orphan_draft_prs(now) {
+
+    report.stale_agent_issues = match scan_stale_agent_issues(now, &draft_prs) {
+        Ok(value) => value,
+        Err(e) => exit_with_error(e),
+    };
+    report.orphan_draft_prs = match scan_orphan_draft_prs(now, &draft_prs) {
         Ok(value) => value,
         Err(e) => exit_with_error(e),
     };
@@ -99,7 +109,7 @@ fn total_findings(report: &Report) -> usize {
         + report.stale_qc_inbound.len()
 }
 
-fn scan_stale_agent_issues(now: DateTime<Utc>) -> Result<Vec<Finding>, String> {
+fn scan_stale_agent_issues(now: DateTime<Utc>, draft_prs: &[DraftPrInfo]) -> Result<Vec<Finding>, String> {
     let path = format!(
         "repos/{}/issues?assignee={}&state=open",
         REPO, AGENT_ISSUE_ASSIGNEE
@@ -108,10 +118,10 @@ fn scan_stale_agent_issues(now: DateTime<Utc>) -> Result<Vec<Finding>, String> {
     let items = value
         .as_array()
         .ok_or_else(|| "unexpected response for stale agent issues query".to_string())?;
-    Ok(find_stale_agent_issues(items, now))
+    Ok(find_stale_agent_issues(items, draft_prs, now))
 }
 
-fn find_stale_agent_issues(items: &[Value], now: DateTime<Utc>) -> Vec<Finding> {
+fn find_stale_agent_issues(items: &[Value], draft_prs: &[DraftPrInfo], now: DateTime<Utc>) -> Vec<Finding> {
     items
         .iter()
         .filter(|issue| issue.get("pull_request").is_none())
@@ -120,6 +130,9 @@ fn find_stale_agent_issues(items: &[Value], now: DateTime<Utc>) -> Vec<Finding> 
             let created_at = parse_time(issue.get("created_at")?.as_str()?)?;
             let age = now.signed_duration_since(created_at);
             if age <= Duration::hours(2) {
+                return None;
+            }
+            if draft_prs.iter().any(|pr| pr.created_at > created_at) {
                 return None;
             }
             Some(Finding {
@@ -132,7 +145,7 @@ fn find_stale_agent_issues(items: &[Value], now: DateTime<Utc>) -> Vec<Finding> 
         .collect()
 }
 
-fn scan_orphan_draft_prs(now: DateTime<Utc>) -> Result<Vec<Finding>, String> {
+fn scan_open_copilot_draft_prs() -> Result<Vec<DraftPrInfo>, String> {
     let value = gh_json(&[
         "pr",
         "list",
@@ -146,29 +159,34 @@ fn scan_orphan_draft_prs(now: DateTime<Utc>) -> Result<Vec<Finding>, String> {
     let prs = value
         .as_array()
         .ok_or_else(|| "unexpected response for open PR list".to_string())?;
-    find_orphan_draft_prs(prs, now)
+    Ok(parse_open_copilot_draft_prs(prs))
 }
 
-fn find_orphan_draft_prs(prs: &[Value], now: DateTime<Utc>) -> Result<Vec<Finding>, String> {
+fn parse_open_copilot_draft_prs(prs: &[Value]) -> Vec<DraftPrInfo> {
+    prs.iter()
+        .filter(|pr| is_copilot_draft_pr(pr))
+        .filter_map(|pr| {
+            Some(DraftPrInfo {
+                number: pr.get("number").and_then(Value::as_u64)?,
+                created_at: pr
+                    .get("createdAt")
+                    .and_then(Value::as_str)
+                    .and_then(parse_time)?,
+            })
+        })
+        .collect()
+}
+
+fn scan_orphan_draft_prs(now: DateTime<Utc>, draft_prs: &[DraftPrInfo]) -> Result<Vec<Finding>, String> {
+    find_orphan_draft_prs(draft_prs, now)
+}
+
+fn find_orphan_draft_prs(draft_prs: &[DraftPrInfo], now: DateTime<Utc>) -> Result<Vec<Finding>, String> {
     let mut findings = Vec::new();
 
-    for pr in prs {
-        if !is_copilot_draft_pr(pr) {
-            continue;
-        }
-
-        let number = match pr.get("number").and_then(Value::as_u64) {
-            Some(v) => v,
-            None => continue,
-        };
-        let created_at = match pr
-            .get("createdAt")
-            .and_then(Value::as_str)
-            .and_then(parse_time)
-        {
-            Some(v) => v,
-            None => continue,
-        };
+    for pr in draft_prs {
+        let number = pr.number;
+        let created_at = pr.created_at;
         let age = now.signed_duration_since(created_at);
 
         let timeline_path = format!("repos/{}/issues/{}/timeline", REPO, number);
@@ -450,7 +468,32 @@ mod tests {
             json!({"number": 2, "created_at": "2026-03-04T11:30:00Z"}),
             json!({"number": 3, "created_at": "2026-03-04T09:00:00Z", "pull_request": {}}),
         ];
-        let findings = find_stale_agent_issues(&issues, now);
+        let findings = find_stale_agent_issues(&issues, &[], now);
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].identifier, "#1");
+    }
+
+    #[test]
+    fn stale_agent_issue_excluded_when_draft_pr_exists() {
+        let now = parse_time("2026-03-04T12:00:00Z").unwrap();
+        let issues = vec![json!({"number": 1, "created_at": "2026-03-04T09:00:00Z"})];
+        let draft_prs = vec![DraftPrInfo {
+            number: 10,
+            created_at: parse_time("2026-03-04T10:00:00Z").unwrap(),
+        }];
+
+        let findings = find_stale_agent_issues(&issues, &draft_prs, now);
+
+        assert!(findings.is_empty());
+    }
+
+    #[test]
+    fn stale_agent_issue_still_flagged_without_draft_pr() {
+        let now = parse_time("2026-03-04T12:00:00Z").unwrap();
+        let issues = vec![json!({"number": 1, "created_at": "2026-03-04T09:00:00Z"})];
+
+        let findings = find_stale_agent_issues(&issues, &[], now);
+
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].identifier, "#1");
     }
