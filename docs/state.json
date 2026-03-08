@@ -1771,8 +1771,10 @@
     {
       "dispatched_at": "2026-03-07T22:56:12Z",
       "issue": 713,
+      "merged_at": "2026-03-08T00:24:23Z",
       "model": "gpt-5.3-codex",
-      "status": "in_flight",
+      "pr": 714,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 181 end-of-cycle review"
     }
   ],
@@ -1909,13 +1911,13 @@
     "closed_without_merge": 2,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#713 [Cycle Review] Cycle 181 end-of-cycle review (cycle 181)",
-    "dispatch_to_pr_rate": "187/191",
-    "in_flight": 1,
-    "merged": 185,
-    "note": "192 dispatches, 191 resolved, 1 in-flight. 187 produced PRs (185 merged, 2 closed without merge). Latest dispatch: #713 [Cycle Review] Cycle 181 end-of-cycle review (cycle 181, model gpt-5.3-codex).",
-    "pr_merge_rate": "185/187",
-    "produced_pr": 187,
-    "resolved": 191,
+    "dispatch_to_pr_rate": "188/192",
+    "in_flight": 0,
+    "merged": 186,
+    "note": "192 dispatches, 192 resolved, 0 in-flight. 188 produced PRs (186 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #714 merged in cycle 182.",
+    "pr_merge_rate": "186/188",
+    "produced_pr": 188,
+    "resolved": 192,
     "revision_rounds": 5,
     "total_dispatches": 192
   },
@@ -1987,15 +1989,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 181"
+        "last_refreshed": "cycle 182"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 181"
+        "last_refreshed": "cycle 182"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 181"
+        "last_refreshed": "cycle 182"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
