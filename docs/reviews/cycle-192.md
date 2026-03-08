@@ -1,6 +1,6 @@
 # Cycle 192 Review
 
-I rechecked the specific targets from the issue. Two things did hold up: the two new dispatches are recorded as in-flight agent sessions (`docs/state.json:1983-1994`), and the requested freshness markers (`audit_processed`, the three `copilot_metrics.*` entries, `last_cycle`, `last_eva_comment_check`, `review_agent`, `review_agent.chronic_category_responses`, and `pre_python_clean_cycles`) are all refreshed to cycle 192 (`docs/state.json:2205-2280`).
+I rechecked the specific targets from the issue. Two things did hold up: the two improvement tasks dispatched during cycle 192 are recorded as in-flight agent sessions (`docs/state.json:1983-1994`), and the requested freshness markers (`audit_processed`, the three `copilot_metrics.*` entries, `last_cycle`, `last_eva_comment_check`, `review_agent`, `review_agent.chronic_category_responses`, and `pre_python_clean_cycles`) are all refreshed to cycle 192 (`docs/state.json:2205-2280`).
 
 The deeper problems are about classification, process completeness, and narrative drift.
 
@@ -27,7 +27,7 @@ The deeper problems are about classification, process completeness, and narrativ
 3. **`copilot_metrics` still does not reconcile cleanly with the ledger it claims is canonical**
    Category: copilot-metrics-drift
 
-   The cycle 192 worklog calls the `copilot_metrics` block “canonical from state.json” (`docs/worklog/2026-03-08/150600-hundred-ninety-second-orchestrator-cycle.md:31-36`), but that block is still hand-shaped enough to hide real ledger structure. The metrics say there have been 217 dispatches, 215 resolved, 2 in-flight, and 211 sessions that produced PRs, summarized as “209 merged, 2 closed without merge” (`docs/state.json:2131-2143`). The two new dispatches are recorded correctly as in-flight (`docs/state.json:1983-1994`), so the problem is not missing cycle-192 entries. The problem is the PR math:
+   The cycle 192 worklog calls the `copilot_metrics` block “canonical from state.json” (`docs/worklog/2026-03-08/150600-hundred-ninety-second-orchestrator-cycle.md:31-36`), but that block is still hand-shaped enough to hide real ledger structure. The metrics say there have been 217 dispatches, 215 resolved, 2 in-flight, and 211 sessions that produced PRs, summarized as “209 merged, 2 closed without merge” (`docs/state.json:2131-2143`). The two cycle-192 improvement dispatches are recorded correctly as in-flight (`docs/state.json:1983-1994`), so the problem is not missing cycle-192 entries. The problem is the PR math:
 
    - issue `#303` still has `pr: 305` and status `reviewed_awaiting_eva` (`docs/state.json:741-749`), which is a real PR-bearing state not reflected in the note’s “merged vs closed without merge” breakdown;
    - issues `#467` and `#705` are `closed` with PRs (`docs/state.json:1051-1058,1745-1752`);
