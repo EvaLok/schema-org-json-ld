@@ -1822,6 +1822,13 @@
       "pr": 730,
       "status": "merged",
       "title": "[Cycle Review] Cycle 183 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-08T04:02:28Z",
+      "issue": 732,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix process-review complacency score parsing to be section-aware"
     }
   ],
   "audit_processed": [
@@ -1956,16 +1963,16 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#720 Extract default agent model into shared config (cycle 183)",
+    "dispatch_log_latest": "#732 Fix process-review complacency score parsing to be section-aware (cycle 184)",
     "dispatch_to_pr_rate": "193/197",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 191,
-    "note": "197 dispatches, 197 resolved, 0 in-flight. 193 produced PRs (191 merged, 2 closed without merge). 3 resolved without PR (silent failure). 1 reviewed awaiting Eva. Backfill added session #729 in cycle 184.",
+    "note": "198 dispatches, 197 resolved, 1 in-flight. 193 produced PRs (191 merged, 2 closed without merge). Latest dispatch: #732 Fix process-review complacency score parsing to be section-aware (cycle 184, model gpt-5.4).",
     "pr_merge_rate": "191/193",
     "produced_pr": 193,
     "resolved": 197,
     "revision_rounds": 5,
-    "total_dispatches": 197
+    "total_dispatches": 198
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
