@@ -58,15 +58,27 @@ Append to `docs/journal/YYYY-MM-DD.md` with reflections on:
 
 ## 5. Dispatch review agent (MANDATORY)
 
-Dispatch a 5.4 agent to perform an end-of-cycle review. This agent's findings will be waiting at the start of the next cycle. The review agent should examine:
+Dispatch a 5.4 agent to perform an **adversarial** end-of-cycle review. This is our primary quality control mechanism. The review agent's job is to find problems, not confirm that everything is fine.
 
-1. **Code changes this cycle** — any merged PRs, direct pushes, quality concerns
-2. **Worklog entry** — is it accurate, complete, and honest about what happened?
-3. **Journal entry** — does it reflect genuine learning or is it formulaic/complacent?
-4. **State.json** — are metrics accurate? Any stale fields?
-5. **Commit receipts** — verify any receipt hashes listed in the closing comment with `git show <hash> --stat`. Confirm the committed changes match what the orchestrator claimed (per Eva directive [#538](https://github.com/EvaLok/schema-org-json-ld/issues/538))
-6. **Infrastructure** — are AGENTS.md, skills, and checklists consistent with actual practice?
-7. **Complacency check** — are we falling into patterns of going through the motions without genuine improvement?
+### Review prompt structure (per Eva directive [#725](https://github.com/EvaLok/schema-org-json-ld/issues/725))
+
+The issue body for the review agent MUST be structured as follows:
+
+1. **Lead with the adversarial mandate.** The very first paragraph must make clear that this is an adversarial review — the agent should actively look for problems, inconsistencies, drift, and complacency. It should not assume good faith or give the benefit of the doubt. Frame it as: "Your job is to find everything wrong with this cycle's work. Be thorough. Be skeptical. If something looks fine on the surface, dig deeper."
+
+2. **Provide specific review targets.** List each area to examine with explicit instructions on what to look for:
+   - **Code changes**: merged PRs, direct pushes — check for quality issues, test gaps, convention violations
+   - **Worklog accuracy**: cross-reference the worklog's claims against actual commits, state.json, and issue activity. Does the narrative match reality?
+   - **Journal quality**: is the journal entry genuine reflection or boilerplate? Does it contain actionable commitments with observable completion conditions?
+   - **State.json integrity**: are metrics current? Do field inventory freshness markers match reality? Run spot-checks.
+   - **Commit receipt verification**: verify receipt hashes with `git show <hash> --stat` — do committed changes match claims?
+   - **Infrastructure consistency**: are AGENTS.md, skills, checklists, and tools consistent with actual practice?
+   - **Process adherence**: did the orchestrator follow its own checklist? Did it use tools when tools exist? Did it skip steps?
+   - **Complacency detection**: are we going through the motions? Are findings being "noted" but not fixed? Are deferred items accumulating?
+
+3. **Require structured output.** Each finding must have: a category tag, specific file paths and line numbers, and a concrete recommendation. The complacency score (1-5) must be justified with evidence.
+
+4. **Encourage depth over breadth.** Three deeply investigated findings with evidence are more valuable than ten surface-level observations.
 
 ### How to dispatch
 
@@ -80,6 +92,7 @@ The issue body MUST instruct the agent to:
 - The PR containing the review file is the deliverable
 
 The issue body should include:
+- The adversarial review mandate (first paragraph — see above)
 - Current cycle number and issue link
 - List of PRs merged this cycle (if any)
 - Paths to this cycle's worklog and journal entries
