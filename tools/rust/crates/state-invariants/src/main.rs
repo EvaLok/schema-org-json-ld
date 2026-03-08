@@ -731,11 +731,7 @@ fn parse_rate(value: &str) -> Option<RateFormat> {
 
 fn parse_percentage(value: &str) -> Option<f64> {
     let percentage = value.trim().strip_suffix('%')?.trim().parse::<f64>().ok()?;
-    if percentage.is_finite() {
-        Some(percentage)
-    } else {
-        None
-    }
+    percentage.is_finite().then_some(percentage)
 }
 
 fn parse_ratio(value: &str) -> Option<(i64, i64)> {
@@ -905,6 +901,8 @@ fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
             produced_pr_expected += 1;
         }
 
+        // Match derive-metrics semantics, including the legacy status aliases still present in
+        // docs/state.json during the migration to canonical status names.
         match session.status.as_deref() {
             Some("merged") => merged_expected += 1,
             Some("in_flight") | Some("dispatched") => in_flight_expected += 1,
