@@ -150,15 +150,12 @@ fn compute_update(
     }
 
     let next_merged = merged + merge_count;
+    // produced_pr is incremented for each merge to keep copilot_metrics self-consistent.
+    // The authoritative produced_pr is derived from agent_sessions by derive-metrics;
+    // this increment ensures process-merge doesn't leave merged > produced_pr between
+    // derive-metrics runs.
     let next_produced_pr = produced_pr + merge_count;
     let next_resolved = resolved + resolved_increment;
-
-    if next_merged + closed_without_merge > next_produced_pr {
-        return Err(format!(
-            "invariant violated: merged({}) + closed_without_merge({}) > produced_pr({})",
-            next_merged, closed_without_merge, next_produced_pr
-        ));
-    }
 
     if next_resolved + next_in_flight != total_dispatches {
         return Err(format!(

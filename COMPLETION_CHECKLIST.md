@@ -4,15 +4,17 @@ Follow this checklist at the end of every orchestrator cycle. Do not skip steps.
 
 **Critical**: The review agent dispatch (step 6) is MANDATORY. Every cycle must end with a review agent in-flight. Eva directive [#463](https://github.com/EvaLok/schema-org-json-ld/issues/463).
 
-## 1. Run pipeline verification
+## 1. Run pipeline verification (early check)
 
-Confirm the pipeline-check was run this cycle and passed:
+Run the pipeline-check early to catch issues before they compound:
 
 ```bash
 bash tools/pipeline-check
 ```
 
-If not yet run, run it now. `pipeline-check` derives the current cycle from `docs/state.json`; use `--cycle {N}` only when you need to override it. All 5 phases must pass before completing the cycle.
+If not yet run, run it now. `pipeline-check` derives the current cycle from `docs/state.json`; use `--cycle {N}` only when you need to override it.
+
+**Note**: This is an early check, not the final gate. State-modifying tools in step 2 may change state.json after this check passes. The final pipeline gate is step 5.5, which re-runs after all modifications are committed.
 
 ## 2. Update state.json via write-side tools
 
@@ -81,6 +83,22 @@ Before dispatching the review agent:
 4. **Verify** the push succeeded before proceeding to step 6
 
 This ensures the review agent sees the complete cycle state, eliminating the artifact-race false positive.
+
+## 5.5. Final pipeline gate (per audit [#153](https://github.com/EvaLok/schema-org-json-ld-audit/issues/153))
+
+Re-run the pipeline-check after all state.json modifications are committed:
+
+```bash
+bash tools/pipeline-check
+```
+
+All 5 phases MUST pass before proceeding to the review dispatch. This catches regressions introduced by mid-cycle state modifications (e.g., format-changing tools like `derive-metrics --apply` that break downstream validators).
+
+If the pipeline fails at this point:
+1. **Fix the failure before closing the cycle.** Do not dispatch the review agent or close the cycle with a known pipeline regression.
+2. If the failure requires a Copilot dispatch that cannot merge this cycle, **do not apply the format-changing tool output** — revert the state.json changes and defer the tool application to the next cycle when the consumer tool is ready.
+
+**Coordination rule for format-changing tools:** When deploying a tool that changes state.json field formats, merge the downstream consumer tool update *before* applying the new tool's output. Sequence: (1) merge format-changing tool, (2) merge consumer tool update, (3) apply `--apply`. Never apply format changes without the consumer being ready.
 
 ## 6. Dispatch review agent (MANDATORY)
 
@@ -154,11 +172,12 @@ The summary should include:
 
 | Step | Status | Tool |
 |------|--------|------|
-| 1. Pipeline verification | Automated | `bash tools/pipeline-check` |
+| 1. Pipeline verification (early) | Automated | `bash tools/pipeline-check` |
 | 2. State.json updates | Automated | `process-merge`, `process-review`, `process-audit`, `process-eva`, `cycle-complete`, `record-dispatch` |
 | 3. Worklog entry | Manual | Write tool (orchestrator writes content) |
 | 4. Journal entry | Manual | Write tool (orchestrator writes content) |
 | 5. Commit worklog/journal/state | Manual | git commit + push (BEFORE review dispatch) |
+| 5.5. Final pipeline gate | Automated | `bash tools/pipeline-check` (re-run after all modifications) |
 | 6. Review agent dispatch | Semi-automated | `cycle-complete` generates issue body, orchestrator creates issue |
 | 7. Commit dispatch state | Automated | `record-dispatch` commits, then push |
 | 8. Close issue | Manual | Standard gh commands |
