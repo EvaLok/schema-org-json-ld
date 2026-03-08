@@ -385,13 +385,12 @@ fn extract_categories(content: &str) -> Vec<String> {
 }
 
 fn extract_inline_category(line: &str) -> Option<&str> {
-    let start = line.find("**[")? + 3;
-    let remainder = &line[start..];
-    let end = remainder.find(']')?;
-    if end == 0 {
+    let (_, remainder) = line.split_once("**[")?;
+    let (category, _) = remainder.split_once(']')?;
+    if category.is_empty() {
         None
     } else {
-        Some(&remainder[..end])
+        Some(category)
     }
 }
 
@@ -785,7 +784,7 @@ mod tests {
     }
 
     #[test]
-    fn category_extraction_parses_cycle_196_inline_categories() {
+    fn category_extraction_parses_cycle_196_artifact_with_inline_categories() {
         assert_eq!(
             extract_categories(CYCLE_196_REVIEW),
             vec![
