@@ -11,7 +11,7 @@ const CYCLE_STATUS_IN_FLIGHT_PATH: &str = "/concurrency/in_flight";
 const CYCLE_STATUS_DIRECTIVES_PATH: &str = "/eva_input/comments_since_last_cycle";
 const DERIVE_METRICS_TOOL_NAME: &str = "derive-metrics";
 const DERIVE_METRICS_WRAPPER_PATH: &str = "tools/derive-metrics";
-const DERIVE_METRICS_FIELDS: [&str; 7] = [
+const DERIVE_METRICS_FIELDS: [&str; 9] = [
 	"total_dispatches",
 	"resolved",
 	"merged",
@@ -19,7 +19,10 @@ const DERIVE_METRICS_FIELDS: [&str; 7] = [
 	"produced_pr",
 	"closed_without_pr",
 	"reviewed_awaiting_eva",
+	"dispatch_to_pr_rate",
+	"pr_merge_rate",
 ];
+const DERIVE_METRICS_RATE_FIELDS: [&str; 2] = ["dispatch_to_pr_rate", "pr_merge_rate"];
 
 #[derive(Parser)]
 #[command(name = "pipeline-check")]
@@ -342,10 +345,11 @@ fn classify_derive_metrics_step(
 	name: &'static str,
 	execution: ExecutionResult,
 ) -> StepReport {
+	let severity = severity_for_kind(&ToolKind::DeriveMetrics);
 	let mut step = StepReport {
 		name,
 		status: StepStatus::Pass,
-		severity: Severity::Warning,
+		severity,
 		exit_code: execution.exit_code,
 		detail: None,
 		findings: None,
@@ -369,7 +373,7 @@ fn classify_derive_metrics_step(
 			step.detail = Some("tracked copilot_metrics fields match".to_string());
 		}
 		Ok(mismatches) => {
-			step.status = StepStatus::Warn;
+			step.status = StepStatus::Fail;
 			step.detail = Some(mismatches.join("; "));
 		}
 		Err(error) => {
@@ -383,10 +387,13 @@ fn classify_derive_metrics_step(
 
 fn severity_for_kind(kind: &ToolKind) -> Severity {
 	match kind {
-		ToolKind::MetricSnapshot | ToolKind::StateInvariants | ToolKind::CycleStatus => {
+		ToolKind::MetricSnapshot
+		| ToolKind::StateInvariants
+		| ToolKind::CycleStatus
+		| ToolKind::DeriveMetrics => {
 			Severity::Blocking
 		}
-		ToolKind::FieldInventory | ToolKind::HousekeepingScan | ToolKind::DeriveMetrics => {
+		ToolKind::FieldInventory | ToolKind::HousekeepingScan => {
 			Severity::Warning
 		}
 	}
@@ -430,6 +437,25 @@ fn collect_derive_metrics_mismatches(repo_root: &Path, derived_metrics: &Value) 
 
 	let mut mismatches = Vec::new();
 	for field in DERIVE_METRICS_FIELDS {
+		if DERIVE_METRICS_RATE_FIELDS.contains(&field) {
+			let expected = derived_metrics
+				.get(field)
+				.and_then(Value::as_str)
+				.ok_or_else(|| format!("derive-metrics output missing string field '{}'", field))?;
+			match current_metrics.get(field).and_then(Value::as_str) {
+				Some(actual) if actual == expected => {}
+				Some(actual) => mismatches.push(format!(
+					"copilot_metrics.{} expected {} but found {}",
+					field, expected, actual
+				)),
+				None => mismatches.push(format!(
+					"copilot_metrics.{} is missing or not a string",
+					field
+				)),
+			}
+			continue;
+		}
+
 		let expected = derived_metrics
 			.get(field)
 			.and_then(Value::as_i64)
@@ -614,7 +640,9 @@ mod tests {
 					"in_flight": 1,
 					"produced_pr": 2,
 					"closed_without_pr": 1,
-					"reviewed_awaiting_eva": 1
+					"reviewed_awaiting_eva": 1,
+					"dispatch_to_pr_rate": "50.0%",
+					"pr_merge_rate": "50.0%"
 				}
 			})
 			.to_string(),
@@ -638,7 +666,9 @@ mod tests {
 						"in_flight": 1,
 						"produced_pr": 2,
 						"closed_without_pr": 1,
-						"reviewed_awaiting_eva": 1
+						"reviewed_awaiting_eva": 1,
+						"dispatch_to_pr_rate": "50.0%",
+						"pr_merge_rate": "50.0%"
 					})
 					.to_string(),
 				})
@@ -657,10 +687,10 @@ mod tests {
 	}
 
 	#[test]
-	fn derive_metrics_is_warn_when_tracked_fields_diverge() {
+	fn derive_metrics_is_fail_when_tracked_fields_diverge() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-		let root = std::env::temp_dir().join(format!("pipeline-check-derive-warn-{}", run_id));
+		let root = std::env::temp_dir().join(format!("pipeline-check-derive-fail-{}", run_id));
 		fs::create_dir_all(root.join("docs")).unwrap();
 		fs::write(
 			root.join("docs/state.json"),
@@ -672,7 +702,9 @@ mod tests {
 					"in_flight": 2,
 					"produced_pr": 1,
 					"closed_without_pr": 0,
-					"reviewed_awaiting_eva": 0
+					"reviewed_awaiting_eva": 0,
+					"dispatch_to_pr_rate": "25.0%",
+					"pr_merge_rate": "100.0%"
 				}
 			})
 			.to_string(),
@@ -692,7 +724,9 @@ mod tests {
 						"in_flight": 2,
 						"produced_pr": 2,
 						"closed_without_pr": 1,
-						"reviewed_awaiting_eva": 0
+						"reviewed_awaiting_eva": 0,
+						"dispatch_to_pr_rate": "40.0%",
+						"pr_merge_rate": "50.0%"
 					})
 					.to_string(),
 				})
@@ -706,8 +740,8 @@ mod tests {
 			kind: ToolKind::DeriveMetrics,
 		};
 		let step = run_step(&root, &spec, &DeriveMetricsRunner);
-		assert_eq!(severity_for_kind(&ToolKind::DeriveMetrics), Severity::Warning);
-		assert_eq!(step.status, StepStatus::Warn);
+		assert_eq!(severity_for_kind(&ToolKind::DeriveMetrics), Severity::Blocking);
+		assert_eq!(step.status, StepStatus::Fail);
 		assert!(step
 			.detail
 			.as_deref()
@@ -718,6 +752,141 @@ mod tests {
 			.as_deref()
 			.unwrap_or_default()
 			.contains("produced_pr"));
+	}
+
+	#[test]
+	fn derive_metrics_is_fail_when_rate_fields_diverge() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir().join(format!("pipeline-check-derive-rate-fail-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"copilot_metrics": {
+					"total_dispatches": 4,
+					"resolved": 3,
+					"merged": 1,
+					"in_flight": 1,
+					"produced_pr": 2,
+					"closed_without_pr": 1,
+					"reviewed_awaiting_eva": 1,
+					"dispatch_to_pr_rate": "2/4",
+					"pr_merge_rate": "50.0%"
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct DeriveMetricsRunner;
+
+		impl CommandRunner for DeriveMetricsRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				Ok(ExecutionResult {
+					exit_code: Some(0),
+					stdout: json!({
+						"total_dispatches": 4,
+						"resolved": 3,
+						"merged": 1,
+						"in_flight": 1,
+						"produced_pr": 2,
+						"closed_without_pr": 1,
+						"reviewed_awaiting_eva": 1,
+						"dispatch_to_pr_rate": "50.0%",
+						"pr_merge_rate": "50.0%"
+					})
+					.to_string(),
+				})
+			}
+		}
+
+		let spec = ToolSpec {
+			display_name: DERIVE_METRICS_TOOL_NAME,
+			wrapper_relative_path: DERIVE_METRICS_WRAPPER_PATH,
+			args: vec![],
+			kind: ToolKind::DeriveMetrics,
+		};
+		let step = run_step(&root, &spec, &DeriveMetricsRunner);
+		assert_eq!(step.status, StepStatus::Fail);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("dispatch_to_pr_rate"));
+		assert!(!step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("pr_merge_rate"));
+	}
+
+	#[test]
+	fn derive_metrics_is_fail_when_pr_merge_rate_diverges() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root =
+			std::env::temp_dir().join(format!("pipeline-check-derive-pr-merge-rate-fail-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"copilot_metrics": {
+					"total_dispatches": 4,
+					"resolved": 3,
+					"merged": 1,
+					"in_flight": 1,
+					"produced_pr": 2,
+					"closed_without_pr": 1,
+					"reviewed_awaiting_eva": 1,
+					"dispatch_to_pr_rate": "50.0%",
+					"pr_merge_rate": "1/2"
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct DeriveMetricsRunner;
+
+		impl CommandRunner for DeriveMetricsRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				Ok(ExecutionResult {
+					exit_code: Some(0),
+					stdout: json!({
+						"total_dispatches": 4,
+						"resolved": 3,
+						"merged": 1,
+						"in_flight": 1,
+						"produced_pr": 2,
+						"closed_without_pr": 1,
+						"reviewed_awaiting_eva": 1,
+						"dispatch_to_pr_rate": "50.0%",
+						"pr_merge_rate": "50.0%"
+					})
+					.to_string(),
+				})
+			}
+		}
+
+		let spec = ToolSpec {
+			display_name: DERIVE_METRICS_TOOL_NAME,
+			wrapper_relative_path: DERIVE_METRICS_WRAPPER_PATH,
+			args: vec![],
+			kind: ToolKind::DeriveMetrics,
+		};
+		let step = run_step(&root, &spec, &DeriveMetricsRunner);
+		assert_eq!(step.status, StepStatus::Fail);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("pr_merge_rate"));
+		assert!(!step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("dispatch_to_pr_rate"));
 	}
 
     #[test]
@@ -1074,7 +1243,9 @@ mod tests {
 					"in_flight": 1,
 					"produced_pr": 2,
 					"closed_without_pr": 0,
-					"reviewed_awaiting_eva": 1
+					"reviewed_awaiting_eva": 1,
+					"dispatch_to_pr_rate": "66.7%",
+					"pr_merge_rate": "50.0%"
 				}
 			})
 			.to_string(),
@@ -1130,12 +1301,14 @@ mod tests {
 						stdout: json!({
 							"total_dispatches": 3,
 							"resolved": 2,
-							"merged": 1,
-							"in_flight": 1,
-							"produced_pr": 2,
-							"closed_without_pr": 0,
-							"reviewed_awaiting_eva": 1
-						})
+						"merged": 1,
+						"in_flight": 1,
+						"produced_pr": 2,
+						"closed_without_pr": 0,
+						"reviewed_awaiting_eva": 1,
+						"dispatch_to_pr_rate": "66.7%",
+						"pr_merge_rate": "50.0%"
+					})
 						.to_string(),
 					},
 				),
