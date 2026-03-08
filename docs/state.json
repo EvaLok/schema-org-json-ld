@@ -1919,8 +1919,10 @@
     {
       "dispatched_at": "2026-03-08T09:23:39Z",
       "issue": 761,
+      "merged_at": "2026-03-08T10:50:47Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 762,
+      "status": "merged",
       "title": "Add agent_sessions reconciliation to cycle-complete"
     },
     {
@@ -2076,13 +2078,13 @@
     "closed_without_merge": 2,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#766 Fix cycle-status commit-freeze post-publish blocking (cycle 189)",
-    "dispatch_to_pr_rate": "205/209",
-    "in_flight": 2,
-    "merged": 203,
-    "note": "211 dispatches, 209 resolved, 2 in-flight. 205 produced PRs (203 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #764 merged in cycle 189.",
-    "pr_merge_rate": "203/205",
-    "produced_pr": 205,
-    "resolved": 209,
+    "dispatch_to_pr_rate": "206/210",
+    "in_flight": 1,
+    "merged": 204,
+    "note": "211 dispatches, 210 resolved, 1 in-flight. 206 produced PRs (204 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #762 merged in cycle 189.",
+    "pr_merge_rate": "204/206",
+    "produced_pr": 206,
+    "resolved": 210,
     "revision_rounds": 5,
     "total_dispatches": 211
   },
