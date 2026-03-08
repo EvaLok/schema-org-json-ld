@@ -2095,6 +2095,13 @@
       "pr": 815,
       "status": "merged",
       "title": "Cycle 196 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-08T22:48:30Z",
+      "issue": 817,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Make process-review parse inline [category] from finding headings"
     }
   ],
   "audit_processed": [
@@ -2236,9 +2243,9 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#814 Cycle 196 end-of-cycle review (cycle 196)",
+    "dispatch_log_latest": "#817 Make process-review parse inline [category] from finding headings (cycle 197)",
     "dispatch_to_pr_rate": "97.4%",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 222,
     "note": "DEPRECATED: This field is no longer maintained by any tool. Use the integer counters and rate fields directly. Will be removed in a future cycle.",
     "pr_merge_rate": "99.5%",
@@ -2246,7 +2253,7 @@
     "resolved": 228,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 228
+    "total_dispatches": 229
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
