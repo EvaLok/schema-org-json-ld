@@ -1992,6 +1992,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add derive-metrics Rust tool"
+    },
+    {
+      "dispatched_at": "2026-03-08T15:18:03Z",
+      "issue": 786,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 192 review"
     }
   ],
   "audit_processed": [
@@ -2131,16 +2138,16 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#784 Add derive-metrics Rust tool (cycle 192)",
+    "dispatch_log_latest": "#786 Cycle 192 review (cycle 192)",
     "dispatch_to_pr_rate": "211/215",
-    "in_flight": 2,
+    "in_flight": 3,
     "merged": 209,
-    "note": "217 dispatches, 215 resolved, 2 in-flight. 211 produced PRs (209 merged, 2 closed without merge). Latest dispatch: #784 Add derive-metrics Rust tool (cycle 192, model gpt-5.4).",
+    "note": "218 dispatches, 215 resolved, 3 in-flight. 211 produced PRs (209 merged, 2 closed without merge). Latest dispatch: #786 Cycle 192 review (cycle 192, model gpt-5.4).",
     "pr_merge_rate": "209/211",
     "produced_pr": 211,
     "resolved": 215,
     "revision_rounds": 5,
-    "total_dispatches": 217
+    "total_dispatches": 218
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
