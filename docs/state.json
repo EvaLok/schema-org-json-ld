@@ -2240,7 +2240,6 @@
     "dispatch_to_pr_rate": "97.4%",
     "in_flight": 0,
     "merged": 222,
-    "note": "DEPRECATED: This field is no longer maintained by any tool. Use the integer counters and rate fields directly. Will be removed in a future cycle.",
     "pr_merge_rate": "99.5%",
     "produced_pr": 223,
     "resolved": 228,
