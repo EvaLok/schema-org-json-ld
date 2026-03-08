@@ -157,6 +157,16 @@ For targeted checks, you can also run individual tools directly:
 
 **Pipeline gap awareness**: As you execute the remaining manual steps in this checklist, note which ones are still raw `gh api` calls or manual Read/Grep operations. Each one is a candidate for a future tool. Periodically (every 10 cycles), review these gaps and dispatch tool-building work to the Copilot agent.
 
+### Clean-cycle gate escalation (per audit #149)
+
+If a clean-cycle gate (e.g., pre-Python 5-clean-cycles from Eva directive #699) has been at 0 for **5+ consecutive cycles**, file a `question-for-eva` issue summarizing:
+
+1. The failure history (which cycle failed, why)
+2. Whether the failures are infrastructure noise vs genuine quality gaps
+3. Whether the gate definition should be adjusted
+
+This surfaces persistent gate frustration to Eva instead of letting it silently persist in journal entries. Do NOT silently continue trying — escalate so Eva can decide whether the gate needs recalibration or the infrastructure genuinely needs more hardening.
+
 ## 3. Check agent work status
 
 Run these `gh` commands directly — each as a separate Bash tool call:
