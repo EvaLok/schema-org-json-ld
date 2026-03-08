@@ -1912,7 +1912,8 @@
       "dispatched_at": "2026-03-08T09:16:26Z",
       "issue": 759,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 760,
+      "status": "merged",
       "title": "Make cycle-status blocking in pipeline-check"
     },
     {
@@ -2059,13 +2060,13 @@
     "closed_without_merge": 2,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#759 Make cycle-status blocking in pipeline-check (cycle 188)",
-    "dispatch_to_pr_rate": "203/207",
-    "in_flight": 2,
-    "merged": 201,
-    "note": "209 dispatches, 207 resolved, 2 in-flight (#759, #761). 203 produced PRs (201 merged, 2 closed without merge). 3 closed without PR (failed). 1 reviewed_awaiting_eva (#303, has PR, not counted in either bucket by invariant tool). Latest dispatch: #761.",
-    "pr_merge_rate": "201/203",
-    "produced_pr": 203,
-    "resolved": 207,
+    "dispatch_to_pr_rate": "204/208",
+    "in_flight": 1,
+    "merged": 202,
+    "note": "209 dispatches, 208 resolved, 1 in-flight (#761). 204 produced PRs (202 merged, 2 closed without merge). 3 closed without PR (failed). 1 reviewed_awaiting_eva (#303). Latest merge: PR #760 cycle-status blocking (cycle 188).",
+    "pr_merge_rate": "202/204",
+    "produced_pr": 204,
+    "resolved": 208,
     "revision_rounds": 5,
     "total_dispatches": 209
   },
@@ -2199,7 +2200,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 187"
+        "last_refreshed": "cycle 188"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -2283,7 +2284,7 @@
     "duration_minutes": 11,
     "issue": 757,
     "number": 188,
-    "summary": "Merged PR #747 (severity tiers) and PR #749 (cycle 186 review). Consumed cycle 186 review (4/5, 5 findings: 2 actioned, 3 deferred). Closed audit-inbound #744 and #745. Dispatched #751 (cycle-status exit code) and #753 (housekeeping-scan linkage).",
+    "summary": "Merged PRs #752 (cycle-status exit code), #754 (housekeeping-scan linkage), #756 (cycle 187 review). Consumed cycle 187 review (4/5, 7 findings: 5 actioned, 1 deferred, 1 ignored). Accepted audit #147 (journal commitment reconciliation). Dispatched #759 (pipeline-check severity) and #761 (cycle-complete reconciliation).",
     "timestamp": "2026-03-08T09:08:00Z"
   },
   "last_eva_comment_check": "2026-03-08T09:08:00Z",
