@@ -885,7 +885,10 @@ fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
     }
 
     if !invalid_statuses.is_empty() {
-        return fail("agent_sessions_reconciliation", invalid_statuses.join("; "));
+        return fail(
+            "agent_sessions_reconciliation",
+            invalid_statuses.join("; "),
+        );
     }
 
     let total_dispatches_expected = i64::try_from(state.agent_sessions.len())
@@ -895,11 +898,7 @@ fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
 
     let mut failures = Vec::new();
     for (field, expected, actual) in [
-        (
-            "total_dispatches",
-            total_dispatches_expected,
-            total_dispatches,
-        ),
+        ("total_dispatches", total_dispatches_expected, total_dispatches),
         ("merged", merged_expected, merged),
         ("in_flight", in_flight_expected, in_flight),
         ("resolved", resolved_expected, resolved),
@@ -908,11 +907,7 @@ fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
             closed_without_merge_expected,
             closed_without_merge,
         ),
-        (
-            "closed_without_pr",
-            closed_without_pr_expected,
-            closed_without_pr,
-        ),
+        ("closed_without_pr", closed_without_pr_expected, closed_without_pr),
         ("produced_pr", produced_pr_expected, produced_pr),
     ] {
         if actual != expected {
