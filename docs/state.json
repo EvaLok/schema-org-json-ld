@@ -2332,7 +2332,7 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 196"
+        "last_refreshed": "cycle 197"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
@@ -2340,15 +2340,15 @@
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 196"
+        "last_refreshed": "cycle 197"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 196"
+        "last_refreshed": "cycle 197"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 196"
+        "last_refreshed": "cycle 197"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -2356,7 +2356,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 196"
+        "last_refreshed": "cycle 197"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -2376,7 +2376,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 196"
+        "last_refreshed": "cycle 197"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -2396,7 +2396,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 196"
+        "last_refreshed": "cycle 197"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -2404,7 +2404,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 196"
+        "last_refreshed": "cycle 197"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -2412,7 +2412,7 @@
       },
       "schema_status.planned_next": {
         "cadence": "after planning or completing types",
-        "last_refreshed": "cycle 196"
+        "last_refreshed": "cycle 197"
       },
       "schema_status.property_gap_audit": {
         "cadence": "after property gap fixes",
@@ -2424,7 +2424,7 @@
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
-        "last_refreshed": "cycle 196"
+        "last_refreshed": "cycle 197"
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
@@ -2464,11 +2464,11 @@
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
-        "last_refreshed": "cycle 196"
+        "last_refreshed": "cycle 197"
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 196"
+        "last_refreshed": "cycle 197"
       }
     }
   },
@@ -2476,10 +2476,10 @@
     "duration_minutes": 11,
     "issue": 816,
     "number": 197,
-    "summary": "Merged 3 PRs (process-merge consolidation, disposition validation, review artifact). Processed audit #155. Dispatched #812 for rate field pipeline detection. Clean-cycle 2/5.",
-    "timestamp": "2026-03-08T22:40:43Z"
+    "summary": "Merged PRs #813 and #815. Processed cycle 196 review (5/5). Deprecated note field. Dispatched #817 (parser fix) and #819 (note removal). Clean-cycle 3/5.",
+    "timestamp": "2026-03-08T22:51:56Z"
   },
-  "last_eva_comment_check": "2026-03-08T22:40:43Z",
+  "last_eva_comment_check": "2026-03-08T22:51:56Z",
   "open_questions_for_eva": [
     771
   ],
