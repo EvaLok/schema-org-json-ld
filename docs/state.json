@@ -1881,6 +1881,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Cycle 186 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-08T07:50:01Z",
+      "issue": 751,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Make cycle-status exit 1 on commit-freeze failures"
     }
   ],
   "audit_processed": [
@@ -2017,16 +2024,16 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#748 Cycle 186 end-of-cycle review (cycle 186)",
+    "dispatch_log_latest": "#751 Make cycle-status exit 1 on commit-freeze failures (cycle 187)",
     "dispatch_to_pr_rate": "200/204",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 198,
-    "note": "204 dispatches, 204 resolved, 0 in-flight. 200 produced PRs (198 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #749 merged in cycle 187.",
+    "note": "205 dispatches, 204 resolved, 1 in-flight. 200 produced PRs (198 merged, 2 closed without merge). Latest dispatch: #751 Make cycle-status exit 1 on commit-freeze failures (cycle 187, model gpt-5.4).",
     "pr_merge_rate": "198/200",
     "produced_pr": 200,
     "resolved": 204,
     "revision_rounds": 5,
-    "total_dispatches": 204
+    "total_dispatches": 205
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
