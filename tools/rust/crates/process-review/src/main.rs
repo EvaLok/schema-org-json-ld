@@ -176,13 +176,15 @@ fn extract_score(content: &str) -> Option<u64> {
     for line in content.lines() {
         let trimmed = line.trim();
         let lower = trimmed.to_ascii_lowercase();
+        let is_complacency_heading = lower.starts_with("## complacency");
+        let is_level_two_heading = lower.starts_with("## ");
 
-        if lower.starts_with("## complacency") {
+        if is_complacency_heading {
             in_complacency = true;
             continue;
         }
 
-        if in_complacency && lower.starts_with("## ") && !lower.starts_with("## complacency") {
+        if in_complacency && is_level_two_heading {
             break;
         }
 
