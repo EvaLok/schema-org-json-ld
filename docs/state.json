@@ -1745,6 +1745,7 @@
     {
       "dispatched_at": "2026-03-07T21:11:17Z",
       "issue": 705,
+      "merged_at": null,
       "model": "gpt-5.3-codex",
       "pr": 706,
       "status": "closed",
@@ -1787,6 +1788,15 @@
       "title": "Enhance cycle-complete to auto-refresh event-driven field inventory entries"
     },
     {
+      "dispatched_at": "2026-03-08T02:24:36Z",
+      "issue": 720,
+      "merged_at": "2026-03-08T03:55:19Z",
+      "model": "gpt-5.4",
+      "pr": 728,
+      "status": "merged",
+      "title": "Extract default agent model into shared config"
+    },
+    {
       "dispatched_at": "2026-03-08T00:33:04Z",
       "issue": 721,
       "merged_at": "2026-03-08T02:21:00Z",
@@ -1805,13 +1815,13 @@
       "title": "cycle-start: restore descriptive opening comment"
     },
     {
-      "dispatched_at": "2026-03-08T02:24:36Z",
-      "issue": 720,
-      "merged_at": "2026-03-08T03:55:19Z",
-      "model": "gpt-5.4",
-      "pr": 728,
+      "dispatched_at": "2026-03-08T02:31:15Z",
+      "issue": 729,
+      "merged_at": "2026-03-08T03:53:09Z",
+      "model": "unknown",
+      "pr": 730,
       "status": "merged",
-      "title": "Extract default agent model into shared config"
+      "title": "[Cycle Review] Cycle 183 end-of-cycle review"
     }
   ],
   "audit_processed": [
