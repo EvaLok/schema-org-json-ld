@@ -225,8 +225,8 @@ mod tests {
             },
             "field_inventory": {
                 "fields": {
-                    "copilot_metrics.dispatch_to_pr_rate": { "last_refreshed": "cycle 164" },
-                    "copilot_metrics.in_flight": { "last_refreshed": "cycle 164" }
+                    "copilot_metrics.dispatch_to_pr_rate": { "last_refreshed": "cycle 163" },
+                    "copilot_metrics.in_flight": { "last_refreshed": "cycle 163" }
                 }
             }
         })
@@ -369,10 +369,45 @@ mod tests {
         assert_eq!(
             state["field_inventory"]["fields"]["copilot_metrics.dispatch_to_pr_rate"]
                 ["last_refreshed"],
-            json!("cycle 164")
+            json!("cycle 163")
         );
         assert_eq!(sessions[1]["issue"], json!(602));
         assert_eq!(sessions[1]["status"], json!("in_flight"));
         assert_eq!(sessions[1]["dispatched_at"], json!("2026-03-07T13:00:00Z"));
+    }
+
+    #[test]
+    fn apply_dispatch_patch_does_not_require_derived_metric_fields() {
+        let mut state = sample_state();
+        let model = default_test_model();
+        state["copilot_metrics"]
+            .as_object_mut()
+            .expect("copilot_metrics object")
+            .remove("dispatch_to_pr_rate");
+        state["copilot_metrics"]
+            .as_object_mut()
+            .expect("copilot_metrics object")
+            .remove("note");
+
+        let patch = build_dispatch_patch(
+            &state,
+            164,
+            602,
+            "Example dispatch",
+            &model,
+            "2026-03-07T13:00:00Z",
+        )
+        .expect("patch should build");
+
+        apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
+
+        assert!(state["copilot_metrics"]["dispatch_to_pr_rate"].is_null());
+        assert!(state["copilot_metrics"]["note"].is_null());
+        assert_eq!(state["copilot_metrics"]["total_dispatches"], json!(86));
+        assert_eq!(state["copilot_metrics"]["in_flight"], json!(3));
+        assert_eq!(
+            state["copilot_metrics"]["dispatch_log_latest"],
+            json!("#602 Example dispatch (cycle 164)")
+        );
     }
 }
