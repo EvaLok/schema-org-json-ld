@@ -1843,7 +1843,8 @@
     131,
     134,
     136,
-    138
+    138,
+    140
   ],
   "blockers": [
     {
@@ -1978,7 +1979,7 @@
     "fields": {
       "audit_processed": {
         "cadence": "after processing audit issues",
-        "last_refreshed": "cycle 180"
+        "last_refreshed": "cycle 182"
       },
       "blockers": {
         "cadence": "after blocker state changes",
@@ -2774,9 +2775,24 @@
         "finding_count": 5,
         "ignored": 3,
         "note": "formal-tool-audit-gap: ACTIONED (producing formal audit artifact this cycle). field-inventory-restamp-evidence: DEFERRED (need verification receipt mechanism). review-follow-through, eva-directive-handling, canonical-state-accuracy: IGNORED (confirmatory findings, no action needed)."
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "field-inventory-cadence-drift",
+          "reflection-without-commitment",
+          "tooling-operational-drift",
+          "worklog-state-contradiction"
+        ],
+        "complacency_score": 3,
+        "cycle": 181,
+        "deferred": 2,
+        "finding_count": 4,
+        "ignored": 0,
+        "note": "Actioned: worklog-state-contradiction (will derive from canonical state), field-inventory-cadence-drift (refreshed 6 entries). Deferred: tooling-operational-drift (CI pre-builds), reflection-without-commitment (behavioral)."
       }
     ],
-    "last_review_cycle": 180
+    "last_review_cycle": 181
   },
   "schema_status": {
     "directory_layout": {
