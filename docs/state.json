@@ -2054,8 +2054,10 @@
     {
       "dispatched_at": "2026-03-08T19:47:24Z",
       "issue": 802,
+      "merged_at": "2026-03-08T21:10:08Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 803,
+      "status": "merged",
       "title": "Consolidate process-merge: stop writing derive-metrics-owned fields"
     },
     {
@@ -2215,12 +2217,12 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#806 Cycle 195 end-of-cycle review (cycle 195)",
     "dispatch_to_pr_rate": "219/224",
-    "in_flight": 2,
-    "merged": 218,
+    "in_flight": 1,
+    "merged": 219,
     "note": "226 dispatches, 224 resolved, 2 in-flight. 219 produced PRs (218 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #807 merged in cycle 196.",
     "pr_merge_rate": "218/219",
-    "produced_pr": 219,
-    "resolved": 224,
+    "produced_pr": 220,
+    "resolved": 225,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 226
