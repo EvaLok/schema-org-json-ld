@@ -1926,8 +1926,10 @@
     {
       "dispatched_at": "2026-03-08T09:29:10Z",
       "issue": 763,
+      "merged_at": "2026-03-08T10:47:53Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 764,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 188 end-of-cycle review"
     },
     {
@@ -2074,13 +2076,13 @@
     "closed_without_merge": 2,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#766 Fix cycle-status commit-freeze post-publish blocking (cycle 189)",
-    "dispatch_to_pr_rate": "204/208",
-    "in_flight": 3,
-    "merged": 202,
-    "note": "211 dispatches, 208 resolved, 3 in-flight. 204 produced PRs (202 merged, 2 closed without merge). Latest dispatch: #766 Fix cycle-status commit-freeze post-publish blocking (cycle 189, model gpt-5.4).",
-    "pr_merge_rate": "202/204",
-    "produced_pr": 204,
-    "resolved": 208,
+    "dispatch_to_pr_rate": "205/209",
+    "in_flight": 2,
+    "merged": 203,
+    "note": "211 dispatches, 209 resolved, 2 in-flight. 205 produced PRs (203 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #764 merged in cycle 189.",
+    "pr_merge_rate": "203/205",
+    "produced_pr": 205,
+    "resolved": 209,
     "revision_rounds": 5,
     "total_dispatches": 211
   },
@@ -2162,7 +2164,7 @@
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 187"
+        "last_refreshed": "cycle 189"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
