@@ -842,10 +842,12 @@ fn format_human_brief(brief: &StartupBrief) -> String {
     let qc_line = format_issue_list(&brief.qc_outbound);
     let audit_line = format_issue_list(&brief.audit_outbound);
     let question_line = format_simple_issue_numbers(&brief.questions_for_eva);
+    let input_from_eva_line = format_simple_issue_numbers(&brief.input_from_eva);
 
     let mut lines = vec![
         format!("Cycle {} started (receipt: {})", brief.cycle, brief.receipt),
         String::new(),
+        format!("Input from Eva: {}", input_from_eva_line),
         if brief.eva_directives.is_empty() {
             "Eva directives: none".to_string()
         } else {
@@ -1079,6 +1081,7 @@ mod tests {
 
         let output = format_human_brief(&brief);
         assert!(output.contains("Cycle 163 started (receipt: abc1234)"));
+        assert!(output.contains("Input from Eva: none"));
         assert!(output.contains("Eva directives: EvaLok/schema-org-json-ld#11 (Directive A)"));
         assert!(
             output.contains("Eva comments since last cycle: 1 (#591 Please prioritize this tool.)")
@@ -1165,6 +1168,45 @@ mod tests {
             error,
             "docs/state.json contains invalid /eva_input_issues/remaining_open entry (negative values are not allowed): -1"
         );
+    }
+
+    #[test]
+    fn human_brief_format_shows_input_from_eva_issues() {
+        let brief = StartupBrief {
+            cycle: 198,
+            issue: 820,
+            receipt: "def5678".to_string(),
+            eva_directives: vec![],
+            input_from_eva: vec![
+                SimpleIssue {
+                    number: 808,
+                    title: "Pause language ports".to_string(),
+                },
+                SimpleIssue {
+                    number: 809,
+                    title: "Iterate on Copilot PRs".to_string(),
+                },
+            ],
+            eva_comments_since_last_cycle: vec![],
+            review_agent: None,
+            pipeline: PipelineStatus {
+                status: "pass".to_string(),
+                detail: "5 steps".to_string(),
+            },
+            in_flight: InFlightSummary {
+                assigned_issues: vec![],
+                open_prs: vec![],
+                sessions: 0,
+            },
+            publish_gate: "open".to_string(),
+            qc_outbound: vec![],
+            audit_outbound: vec![],
+            questions_for_eva: vec![],
+            warnings: vec![],
+        };
+
+        let output = format_human_brief(&brief);
+        assert!(output.contains("Input from Eva: #808, #809"));
     }
 
     #[test]
