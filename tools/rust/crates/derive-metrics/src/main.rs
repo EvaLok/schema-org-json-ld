@@ -137,6 +137,8 @@ fn derive_metrics(state: &StateJson) -> Result<DerivedMetrics, String> {
         }
     }
 
+    // `reviewed_awaiting_eva` and every other non in-flight status are treated as resolved for
+    // copilot_metrics, matching the existing state ledger semantics.
     let resolved = total_dispatches - in_flight;
 
     Ok(DerivedMetrics {
@@ -233,6 +235,8 @@ fn compare_i64(
     }
 }
 
+/// Accept both the new percentage display and the legacy `n/d` ratio format so `--check` can
+/// validate the current hand-maintained state block during the migration.
 fn compare_rate(
     metrics: &serde_json::Map<String, Value>,
     field: &str,
