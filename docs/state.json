@@ -1776,6 +1776,13 @@
       "pr": 714,
       "status": "merged",
       "title": "[Cycle Review] Cycle 181 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-08T00:26:52Z",
+      "issue": 718,
+      "model": "gpt-5.3-codex",
+      "status": "in_flight",
+      "title": "Enhance cycle-complete to auto-refresh event-driven field inventory entries"
     }
   ],
   "audit_processed": [
@@ -1910,16 +1917,16 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#713 [Cycle Review] Cycle 181 end-of-cycle review (cycle 181)",
+    "dispatch_log_latest": "#718 Enhance cycle-complete to auto-refresh event-driven field inventory entries (cycle 182)",
     "dispatch_to_pr_rate": "188/192",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 186,
-    "note": "192 dispatches, 192 resolved, 0 in-flight. 188 produced PRs (186 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #714 merged in cycle 182.",
+    "note": "193 dispatches, 192 resolved, 1 in-flight. 188 produced PRs (186 merged, 2 closed without merge). Latest dispatch: #718 Enhance cycle-complete to auto-refresh event-driven field inventory entries (cycle 182, model gpt-5.3-codex).",
     "pr_merge_rate": "186/188",
     "produced_pr": 188,
     "resolved": 192,
     "revision_rounds": 5,
-    "total_dispatches": 192
+    "total_dispatches": 193
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -2026,6 +2033,10 @@
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
         "last_refreshed": "cycle 180"
+      },
+      "pre_python_clean_cycles": {
+        "cadence": "every cycle (clean cycle gate check)",
+        "last_refreshed": "cycle 182"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
@@ -2134,6 +2145,12 @@
   },
   "last_eva_comment_check": "2026-03-08T00:18:13Z",
   "open_questions_for_eva": [],
+  "pre_python_clean_cycles": {
+    "count": 0,
+    "description": "Per Eva directive on #699: 5 consecutive clean cycles (pipeline 5/5 at startup, no bugs, no problems) required before starting Python implementation. Count restarts on any problem.",
+    "note": "Cycle 182 had 5 stale field-inventory entries at startup (pipeline FAIL). Count starts at 0. Target: 5 consecutive clean cycles.",
+    "started_at": "cycle 182"
+  },
   "publish_gate": {
     "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z",
     "note": "v1.0.2 published by Eva. v1.0.1 failed due to CI workflow incompatibility with npm OIDC trusted publishing (Node 22 ships npm 10, OIDC requires npm 11.5+). Package contents identical to validated ea8ffff.",
