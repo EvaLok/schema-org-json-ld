@@ -32,6 +32,10 @@ struct Cli {
     #[arg(long, default_value_t = 0)]
     ignored: u64,
 
+    /// Bypass validation that disposition counts match the parsed finding count
+    #[arg(long, default_value_t = false)]
+    skip_disposition_check: bool,
+
     /// Optional note for the review history entry
     #[arg(long)]
     note: Option<String>,
@@ -78,6 +82,7 @@ fn run(cli: Cli) -> Result<(), String> {
         .map_err(|error| format!("failed to read {}: {}", review_path.display(), error))?;
 
     let parsed_review = parse_review(&review_path, &review_content)?;
+    validate_dispositions(&cli, parsed_review.finding_count)?;
     let entry = build_history_entry(&parsed_review, &cli);
 
     let state_path = cli.repo_root.join("docs/state.json");
@@ -115,6 +120,36 @@ fn run(cli: Cli) -> Result<(), String> {
     Ok(())
 }
 
+fn validate_dispositions(cli: &Cli, finding_count: u64) -> Result<(), String> {
+    if cli.skip_disposition_check {
+        return Ok(());
+    }
+
+    let disposition_sum = cli
+        .actioned
+        .checked_add(cli.deferred)
+        .and_then(|value| value.checked_add(cli.ignored))
+        .ok_or_else(|| "disposition counts overflowed u64".to_string())?;
+
+    if disposition_sum == finding_count {
+        return Ok(());
+    }
+
+    let all_default = cli.actioned == 0 && cli.deferred == 0 && cli.ignored == 0;
+    if all_default && finding_count > 0 {
+        return Err(format!(
+			"review contains {} findings, but --actioned, --deferred, and --ignored were all left at 0; provide disposition flags or pass --skip-disposition-check to bypass this validation",
+			finding_count
+		));
+    }
+
+    eprintln!(
+        "Warning: disposition counts sum to {} but parsed finding_count is {}; proceeding anyway",
+        disposition_sum, finding_count
+    );
+    Ok(())
+}
+
 fn resolve_review_path(repo_root: &Path, review_file: &Path) -> PathBuf {
     if review_file.is_absolute() {
         review_file.to_path_buf()
@@ -124,8 +159,12 @@ fn resolve_review_path(repo_root: &Path, review_file: &Path) -> PathBuf {
 }
 
 fn parse_review(review_path: &Path, content: &str) -> Result<ParsedReview, String> {
-    let cycle = extract_cycle_number(review_path)
-        .ok_or_else(|| format!("failed to derive cycle number from {}", review_path.display()))?;
+    let cycle = extract_cycle_number(review_path).ok_or_else(|| {
+        format!(
+            "failed to derive cycle number from {}",
+            review_path.display()
+        )
+    })?;
 
     let complacency_score = match extract_score(content) {
         Some(value) => value,
@@ -367,9 +406,7 @@ fn normalize_category(category: &str) -> Option<String> {
     }
 
     let trimmed = normalized.trim_matches('-').to_string();
-    if trimmed.is_empty() {
-        None
-    } else if trimmed.len() > MAX_CATEGORY_LENGTH {
+    if trimmed.is_empty() || trimmed.len() > MAX_CATEGORY_LENGTH {
         None
     } else {
         Some(trimmed)
@@ -581,6 +618,7 @@ mod tests {
         assert!(help.contains("--actioned"));
         assert!(help.contains("--deferred"));
         assert!(help.contains("--ignored"));
+        assert!(help.contains("--skip-disposition-check"));
         assert!(help.contains("--note"));
     }
 
@@ -739,6 +777,70 @@ mod tests {
         assert_eq!(entry.deferred, 1);
         assert_eq!(entry.ignored, 5);
         assert_eq!(entry.note.as_deref(), Some("triaged"));
+    }
+
+    #[test]
+    fn disposition_validation_rejects_default_counts_when_findings_exist() {
+        let cli = Cli::parse_from([
+            "process-review",
+            "--review-file",
+            "docs/reviews/cycle-162.md",
+        ]);
+
+        let error = validate_dispositions(&cli, 3).expect_err("validation should fail");
+        assert!(error.contains("review contains 3 findings"));
+        assert!(error.contains("--skip-disposition-check"));
+    }
+
+    #[test]
+    fn disposition_validation_passes_when_counts_sum_correctly() {
+        let cli = Cli::parse_from([
+            "process-review",
+            "--review-file",
+            "docs/reviews/cycle-162.md",
+            "--actioned",
+            "2",
+            "--deferred",
+            "1",
+        ]);
+
+        assert_eq!(validate_dispositions(&cli, 3), Ok(()));
+    }
+
+    #[test]
+    fn disposition_validation_skip_flag_bypasses_check() {
+        let cli = Cli::parse_from([
+            "process-review",
+            "--review-file",
+            "docs/reviews/cycle-162.md",
+            "--skip-disposition-check",
+        ]);
+
+        assert_eq!(validate_dispositions(&cli, 3), Ok(()));
+    }
+
+    #[test]
+    fn disposition_validation_allows_zero_findings_with_zero_counts() {
+        let cli = Cli::parse_from([
+            "process-review",
+            "--review-file",
+            "docs/reviews/cycle-162.md",
+        ]);
+
+        assert_eq!(validate_dispositions(&cli, 0), Ok(()));
+    }
+
+    #[test]
+    fn disposition_validation_warns_but_allows_non_default_mismatch() {
+        let cli = Cli::parse_from([
+            "process-review",
+            "--review-file",
+            "docs/reviews/cycle-162.md",
+            "--actioned",
+            "1",
+        ]);
+
+        assert_eq!(validate_dispositions(&cli, 3), Ok(()));
     }
 
     #[test]
