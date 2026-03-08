@@ -29,7 +29,6 @@ enum StepStatus {
     Pass,
     Fail,
     Info,
-    Skip,
     Error,
 }
 
@@ -57,7 +56,6 @@ struct StepReport {
 struct ToolSpec {
     display_name: &'static str,
     wrapper_relative_path: &'static str,
-    binary_relative_path: &'static str,
     args: Vec<String>,
     kind: ToolKind,
 }
@@ -132,7 +130,6 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
         ToolSpec {
             display_name: "metric-snapshot",
             wrapper_relative_path: "tools/metric-snapshot",
-            binary_relative_path: "tools/rust/target/release/metric-snapshot",
             args: vec![
                 "--json".to_string(),
                 "--cycle".to_string(),
@@ -145,7 +142,6 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
         ToolSpec {
             display_name: "field-inventory",
             wrapper_relative_path: "tools/check-field-inventory-rs",
-            binary_relative_path: "tools/rust/target/release/check-field-inventory",
             args: vec![
                 "--cycle".to_string(),
                 cycle.to_string(),
@@ -157,7 +153,6 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
         ToolSpec {
             display_name: "housekeeping-scan",
             wrapper_relative_path: "tools/housekeeping-scan",
-            binary_relative_path: "tools/rust/target/release/housekeeping-scan",
             args: vec![
                 "--json".to_string(),
                 "--repo-root".to_string(),
@@ -168,7 +163,6 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
         ToolSpec {
             display_name: "cycle-status",
             wrapper_relative_path: "tools/cycle-status",
-            binary_relative_path: "tools/rust/target/release/cycle-status",
             args: vec![
                 "--json".to_string(),
                 "--repo-root".to_string(),
@@ -179,7 +173,6 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
         ToolSpec {
             display_name: "state-invariants",
             wrapper_relative_path: "tools/state-invariants",
-            binary_relative_path: "tools/rust/target/release/state-invariants",
             args: vec![
                 "--json".to_string(),
                 "--repo-root".to_string(),
@@ -196,8 +189,7 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
     let has_fail_or_error = steps
         .iter()
         .any(|step| matches!(step.status, StepStatus::Fail | StepStatus::Error));
-    let all_skipped = is_all_skipped(&steps);
-    let overall = if has_fail_or_error || all_skipped {
+    let overall = if has_fail_or_error {
         StepStatus::Fail
     } else {
         StepStatus::Pass
@@ -212,18 +204,6 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
 }
 
 fn run_step(repo_root: &Path, spec: &ToolSpec, runner: &dyn CommandRunner) -> StepReport {
-    let binary_path = repo_root.join(spec.binary_relative_path);
-    if !binary_path.exists() {
-        return StepReport {
-            name: spec.display_name,
-            status: StepStatus::Skip,
-            exit_code: None,
-            detail: Some(format!("binary not found at {}", binary_path.display())),
-            findings: None,
-            summary: None,
-        };
-    }
-
     let script_path = repo_root.join(spec.wrapper_relative_path);
     let execution = match runner.run(&script_path, &spec.args) {
         Ok(output) => output,
@@ -365,13 +345,6 @@ fn parse_json(raw: &str) -> Option<Value> {
     serde_json::from_str(raw).ok()
 }
 
-fn is_all_skipped(steps: &[StepReport]) -> bool {
-    !steps.is_empty()
-        && steps
-            .iter()
-            .all(|step| matches!(step.status, StepStatus::Skip))
-}
-
 fn is_check_passing(check: &Value) -> bool {
     check.get("pass").and_then(Value::as_bool).unwrap_or(false)
 }
@@ -379,7 +352,7 @@ fn is_check_passing(check: &Value) -> bool {
 fn pipeline_exit_code(steps: &[StepReport]) -> i32 {
     if steps.iter().any(|step| step.status == StepStatus::Error) {
         2
-    } else if steps.iter().any(|step| step.status == StepStatus::Fail) || is_all_skipped(steps) {
+    } else if steps.iter().any(|step| step.status == StepStatus::Fail) {
         1
     } else {
         0
@@ -417,9 +390,6 @@ fn print_human_report(report: &PipelineReport) {
 
     println!();
     println!("Overall: {}", step_status_label(report.overall));
-    if is_all_skipped(&report.steps) {
-        println!("Reason: no tools could run (all steps skipped)");
-    }
 }
 
 fn step_status_label(status: StepStatus) -> &'static str {
@@ -427,7 +397,6 @@ fn step_status_label(status: StepStatus) -> &'static str {
         StepStatus::Pass => "PASS",
         StepStatus::Fail => "FAIL",
         StepStatus::Info => "INFO",
-        StepStatus::Skip => "SKIP",
         StepStatus::Error => "ERROR",
     }
 }
@@ -438,6 +407,7 @@ mod tests {
     use serde_json::json;
     use std::collections::HashMap;
     use std::fs;
+    use std::sync::atomic::AtomicBool;
     use std::sync::atomic::{AtomicU64, Ordering};
 
     fn repo_root() -> PathBuf {
@@ -506,20 +476,20 @@ mod tests {
     }
 
     #[test]
-    fn all_skipped_steps_return_failure_exit_code() {
+    fn fail_steps_return_failure_exit_code() {
         let steps = vec![
             StepReport {
                 name: "metric-snapshot",
-                status: StepStatus::Skip,
-                exit_code: None,
+                status: StepStatus::Pass,
+                exit_code: Some(0),
                 detail: None,
                 findings: None,
                 summary: None,
             },
             StepReport {
                 name: "cycle-status",
-                status: StepStatus::Skip,
-                exit_code: None,
+                status: StepStatus::Fail,
+                exit_code: Some(1),
                 detail: None,
                 findings: None,
                 summary: None,
@@ -529,27 +499,37 @@ mod tests {
     }
 
     #[test]
-    fn run_step_skips_when_binary_is_missing() {
-        struct NoopRunner;
-        impl CommandRunner for NoopRunner {
+    fn run_step_reports_error_when_wrapper_fails() {
+        struct FailingRunner<'a> {
+            called: &'a AtomicBool,
+        }
+
+        impl CommandRunner for FailingRunner<'_> {
             fn run(
                 &self,
-                _script_path: &Path,
+                script_path: &Path,
                 _args: &[String],
             ) -> Result<ExecutionResult, String> {
-                panic!("runner should not execute for missing binaries");
+                self.called.store(true, Ordering::Relaxed);
+                assert_eq!(script_path, Path::new("/repo/tools/metric-snapshot"));
+                Err("wrapper exited with status 101".to_string())
             }
         }
 
+        let called = AtomicBool::new(false);
         let spec = ToolSpec {
             display_name: "metric-snapshot",
             wrapper_relative_path: "tools/metric-snapshot",
-            binary_relative_path: "tools/rust/target/release/metric-snapshot",
             args: vec![],
             kind: ToolKind::MetricSnapshot,
         };
-        let step = run_step(&repo_root(), &spec, &NoopRunner);
-        assert_eq!(step.status, StepStatus::Skip);
+        let step = run_step(&repo_root(), &spec, &FailingRunner { called: &called });
+        assert!(called.load(Ordering::Relaxed));
+        assert_eq!(step.status, StepStatus::Error);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("Tool 'metric-snapshot' failed: wrapper exited with status 101")
+        );
     }
 
     #[test]
@@ -589,16 +569,6 @@ mod tests {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root = std::env::temp_dir().join(format!("pipeline-check-test-{}", run_id));
-        fs::create_dir_all(root.join("tools/rust/target/release")).unwrap();
-        fs::write(root.join("tools/rust/target/release/metric-snapshot"), "").unwrap();
-        fs::write(
-            root.join("tools/rust/target/release/check-field-inventory"),
-            "",
-        )
-        .unwrap();
-        fs::write(root.join("tools/rust/target/release/housekeeping-scan"), "").unwrap();
-        fs::write(root.join("tools/rust/target/release/cycle-status"), "").unwrap();
-        fs::write(root.join("tools/rust/target/release/state-invariants"), "").unwrap();
 
         let runner = MockRunner {
             expected_cycle: 135,
@@ -671,30 +641,30 @@ mod tests {
     }
 
     #[test]
-    fn run_pipeline_fails_when_all_steps_are_skipped() {
-        struct NoopRunner;
+    fn run_pipeline_fails_when_all_steps_error() {
+        struct ErrorRunner;
 
-        impl CommandRunner for NoopRunner {
+        impl CommandRunner for ErrorRunner {
             fn run(
                 &self,
-                _script_path: &Path,
+                script_path: &Path,
                 _args: &[String],
             ) -> Result<ExecutionResult, String> {
-                panic!("runner should not execute when all binaries are missing");
+                Err(format!("failed to invoke {}", script_path.display()))
             }
         }
 
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir().join(format!("pipeline-check-all-skipped-{}", run_id));
+        let root = std::env::temp_dir().join(format!("pipeline-check-fail-all-errors-{}", run_id));
         fs::create_dir_all(&root).unwrap();
 
-        let report = run_pipeline(&root, 140, &NoopRunner);
+        let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
         assert_eq!(report.steps.len(), 5);
         assert!(report
             .steps
             .iter()
-            .all(|step| matches!(step.status, StepStatus::Skip)));
+            .all(|step| matches!(step.status, StepStatus::Error)));
     }
 }
