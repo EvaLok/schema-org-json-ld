@@ -1944,8 +1944,10 @@
     {
       "dispatched_at": "2026-03-08T10:52:16Z",
       "issue": 768,
+      "merged_at": "2026-03-08T12:13:48Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 769,
+      "status": "merged",
       "title": "Cycle 189 end-of-cycle review"
     }
   ],
@@ -2020,7 +2022,8 @@
     140,
     144,
     145,
-    147
+    147,
+    149
   ],
   "blockers": [
     {
@@ -2085,13 +2088,13 @@
     "closed_without_merge": 2,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#768 Cycle 189 end-of-cycle review (cycle 189)",
-    "dispatch_to_pr_rate": "206/210",
-    "in_flight": 2,
-    "merged": 204,
-    "note": "212 dispatches, 210 resolved, 2 in-flight. 206 produced PRs (204 merged, 2 closed without merge). Latest dispatch: #768 Cycle 189 end-of-cycle review (cycle 189, model gpt-5.4).",
-    "pr_merge_rate": "204/206",
-    "produced_pr": 206,
-    "resolved": 210,
+    "dispatch_to_pr_rate": "207/211",
+    "in_flight": 1,
+    "merged": 205,
+    "note": "212 dispatches, 211 resolved, 1 in-flight. 207 produced PRs (205 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #769 merged in cycle 190.",
+    "pr_merge_rate": "205/207",
+    "produced_pr": 207,
+    "resolved": 211,
     "revision_rounds": 5,
     "total_dispatches": 212
   },
@@ -2157,7 +2160,7 @@
     "fields": {
       "audit_processed": {
         "cadence": "after processing audit issues",
-        "last_refreshed": "cycle 188"
+        "last_refreshed": "cycle 190"
       },
       "blockers": {
         "cadence": "after blocker state changes",
@@ -2165,23 +2168,23 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 189"
+        "last_refreshed": "cycle 190"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 189"
+        "last_refreshed": "cycle 190"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 189"
+        "last_refreshed": "cycle 190"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 187"
+        "last_refreshed": "cycle 190"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 184"
+        "last_refreshed": "cycle 190"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -2245,7 +2248,7 @@
       },
       "schema_status.planned_next": {
         "cadence": "after planning or completing types",
-        "last_refreshed": "cycle 179"
+        "last_refreshed": "cycle 190"
       },
       "schema_status.property_gap_audit": {
         "cadence": "after property gap fixes",
@@ -2297,7 +2300,7 @@
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
-        "last_refreshed": "cycle 179"
+        "last_refreshed": "cycle 190"
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
