@@ -543,8 +543,8 @@ fn is_valid_commit_sha(sha: &str) -> bool {
     (4..=40).contains(&len) && sha.chars().all(|c| c.is_ascii_hexdigit())
 }
 
-fn is_pre_publish_gate_status(status: Option<&str>) -> bool {
-    matches!(status, Some("awaiting_validation" | "validated"))
+fn is_post_publish_gate_status(status: Option<&str>) -> bool {
+    matches!(status, Some("published"))
 }
 
 fn report_exit_code(report: &Report, publish_gate_status: Option<&str>) -> i32 {
@@ -552,7 +552,7 @@ fn report_exit_code(report: &Report, publish_gate_status: Option<&str>) -> i32 {
         .commit_freeze
         .as_ref()
         .is_some_and(|status| status.check_failed || status.diverged)
-        && is_pre_publish_gate_status(publish_gate_status)
+        && !is_post_publish_gate_status(publish_gate_status)
     {
         1
     } else {
@@ -874,7 +874,7 @@ fn build_action_items(
     }
     if commit_freeze.is_some_and(|status| status.diverged) {
         if commit_freeze.is_some_and(|status| status.check_failed) {
-            if is_pre_publish_gate_status(publish_gate_status) {
+            if !is_post_publish_gate_status(publish_gate_status) {
                 items.push(
                     "Commit freeze check failed — could not verify QC-validated commit integrity"
                         .to_string(),
@@ -885,7 +885,7 @@ fn build_action_items(
                         .to_string(),
                 );
             }
-        } else if is_pre_publish_gate_status(publish_gate_status) {
+        } else if !is_post_publish_gate_status(publish_gate_status) {
             items.push(
                 "Source files changed since QC-validated commit — re-validation required"
                     .to_string(),
@@ -1244,6 +1244,72 @@ mod tests {
     }
 
     #[test]
+    fn build_action_items_with_missing_publish_gate_status_requires_revalidation() {
+        let eva_input = EvaInput::default();
+        let agent_status = AgentStatus::default();
+        let qc_status = ProcessingStatus::default();
+        let audit_status = ProcessingStatus::default();
+        let concurrency = Concurrency {
+            in_flight: 0,
+            max: 2,
+            dispatch_available: true,
+        };
+        let commit_freeze = Some(CommitFreezeStatus {
+            validated_commit: "abc1234".to_string(),
+            diverged: true,
+            check_failed: false,
+            changed_files: vec!["php/src/v1/Schema/Product.php".to_string()],
+        });
+
+        let action_items = build_action_items(
+            &eva_input,
+            &agent_status,
+            &qc_status,
+            &audit_status,
+            commit_freeze.as_ref(),
+            None,
+            &concurrency,
+        );
+
+        assert!(action_items.iter().any(|item| {
+            item == "Source files changed since QC-validated commit — re-validation required"
+        }));
+    }
+
+    #[test]
+    fn build_action_items_with_unknown_publish_gate_status_blocks_check_failures() {
+        let eva_input = EvaInput::default();
+        let agent_status = AgentStatus::default();
+        let qc_status = ProcessingStatus::default();
+        let audit_status = ProcessingStatus::default();
+        let concurrency = Concurrency {
+            in_flight: 0,
+            max: 2,
+            dispatch_available: true,
+        };
+        let commit_freeze = Some(CommitFreezeStatus {
+            validated_commit: "abc1234".to_string(),
+            diverged: true,
+            check_failed: true,
+            changed_files: vec![],
+        });
+
+        let action_items = build_action_items(
+            &eva_input,
+            &agent_status,
+            &qc_status,
+            &audit_status,
+            commit_freeze.as_ref(),
+            Some("some_future_status"),
+            &concurrency,
+        );
+
+        assert!(action_items.iter().any(|item| {
+            item == "Commit freeze check failed — could not verify QC-validated commit integrity"
+        }));
+    }
+
+    #[test]
     fn issue_younger_than_2h_is_not_stale() {
         let now = Utc::now();
         let issues = vec![CopilotIssue {
@@ -1526,6 +1592,51 @@ mod tests {
         );
 
         assert_eq!(report_exit_code(&report, Some("published")), 0);
+    }
+
+    #[test]
+    fn report_with_diverged_commit_freeze_missing_publish_gate_status_exits_one() {
+        let report = sample_report(
+            Some(CommitFreezeStatus {
+                validated_commit: "abc1234".to_string(),
+                diverged: true,
+                check_failed: false,
+                changed_files: vec!["package.json".to_string()],
+            }),
+            vec!["Source files changed since QC-validated commit".to_string()],
+        );
+
+        assert_eq!(report_exit_code(&report, None), 1);
+    }
+
+    #[test]
+    fn report_with_diverged_commit_freeze_unknown_publish_gate_status_exits_one() {
+        let report = sample_report(
+            Some(CommitFreezeStatus {
+                validated_commit: "abc1234".to_string(),
+                diverged: true,
+                check_failed: false,
+                changed_files: vec!["package.json".to_string()],
+            }),
+            vec!["Source files changed since QC-validated commit".to_string()],
+        );
+
+        assert_eq!(report_exit_code(&report, Some("some_future_status")), 1);
+    }
+
+    #[test]
+    fn report_with_diverged_commit_freeze_awaiting_validation_exits_one() {
+        let report = sample_report(
+            Some(CommitFreezeStatus {
+                validated_commit: "abc1234".to_string(),
+                diverged: true,
+                check_failed: false,
+                changed_files: vec!["package.json".to_string()],
+            }),
+            vec!["Source files changed since QC-validated commit".to_string()],
+        );
+
+        assert_eq!(report_exit_code(&report, Some("awaiting_validation")), 1);
     }
 
     #[test]
