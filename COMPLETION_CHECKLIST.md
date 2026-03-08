@@ -56,6 +56,20 @@ Append to `docs/journal/YYYY-MM-DD.md` with reflections on:
 - Patterns observed
 - Open questions
 
+## 4.5. ADR check (per Eva directive [#724](https://github.com/EvaLok/schema-org-json-ld/issues/724))
+
+Before closing the cycle, check whether any decisions made this cycle warrant an Architecture Decision Record in `doc/adr/`.
+
+ADR-worthy decisions include:
+- New architectural patterns or significant refactors
+- Technology choices (new languages, tools, frameworks)
+- Process changes that affect how the system operates
+- Design trade-offs where alternatives were considered and rejected
+
+If a decision was made this cycle that meets these criteria, write the ADR now. Use the format established in existing ADRs: Status, Context, Decision, Consequences, Alternatives Considered.
+
+Number ADRs sequentially (check `ls doc/adr/` for the next number).
+
 ## 5. Dispatch review agent (MANDATORY)
 
 Dispatch a 5.4 agent to perform an **adversarial** end-of-cycle review. This is our primary quality control mechanism. The review agent's job is to find problems, not confirm that everything is fine.
