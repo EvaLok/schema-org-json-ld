@@ -2099,7 +2099,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 185"
+        "last_refreshed": "cycle 186"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -2107,11 +2107,11 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 185"
+        "last_refreshed": "cycle 186"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 185"
+        "last_refreshed": "cycle 186"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -2221,12 +2221,12 @@
   },
   "last_cycle": {
     "duration_minutes": 11,
-    "issue": 736,
-    "number": 185,
+    "issue": 743,
+    "number": 186,
     "summary": "Consumed cycle 184 review (4/5, 3 findings, 2 actioned). Merged PRs #733 (score parsing) and #735 (review artifact). Fixed build-helper workspace scope. Dispatched #737 (pipeline-check auto-build) and #738 (housekeeping-scan false positives). Closed QC publish notification #717.",
-    "timestamp": "2026-03-08T05:10:13Z"
+    "timestamp": "2026-03-08T06:13:57Z"
   },
-  "last_eva_comment_check": "2026-03-08T05:10:13Z",
+  "last_eva_comment_check": "2026-03-08T06:13:57Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
