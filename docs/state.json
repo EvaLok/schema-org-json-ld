@@ -2074,7 +2074,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 184"
+        "last_refreshed": "cycle 185"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -2082,11 +2082,11 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 184"
+        "last_refreshed": "cycle 185"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 184"
+        "last_refreshed": "cycle 185"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -2196,12 +2196,12 @@
   },
   "last_cycle": {
     "duration_minutes": 16,
-    "issue": 731,
-    "number": 184,
+    "issue": 736,
+    "number": 185,
     "summary": "Merged 3 PRs (730, 728, 727). Actioned review findings (stale-binary, ADR drift). Created _build-helper.sh. Dispatched 732.",
-    "timestamp": "2026-03-08T04:04:19Z"
+    "timestamp": "2026-03-08T04:59:19Z"
   },
-  "last_eva_comment_check": "2026-03-08T04:04:19Z",
+  "last_eva_comment_check": "2026-03-08T04:59:19Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
