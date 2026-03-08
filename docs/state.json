@@ -1888,22 +1888,32 @@
       "dispatched_at": "2026-03-08T07:50:01Z",
       "issue": 751,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 752,
+      "status": "merged",
       "title": "Make cycle-status exit 1 on commit-freeze failures"
     },
     {
       "dispatched_at": "2026-03-08T07:50:04Z",
       "issue": 753,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 754,
+      "status": "merged",
       "title": "Improve housekeeping-scan stale-issue heuristic with issue-PR linkage"
     },
     {
       "dispatched_at": "2026-03-08T07:53:54Z",
       "issue": 755,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 756,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 187 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-08T09:16:26Z",
+      "issue": 759,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Make cycle-status blocking in pipeline-check"
     }
   ],
   "audit_processed": [
@@ -2043,14 +2053,14 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#755 [Cycle Review] Cycle 187 end-of-cycle review (cycle 187)",
     "dispatch_to_pr_rate": "200/204",
-    "in_flight": 3,
-    "merged": 198,
-    "note": "207 dispatches, 204 resolved, 3 in-flight. 200 produced PRs (198 merged, 2 closed without merge). Latest dispatch: #755 [Cycle Review] Cycle 187 end-of-cycle review (cycle 187, model gpt-5.4).",
-    "pr_merge_rate": "198/200",
-    "produced_pr": 200,
-    "resolved": 204,
+    "in_flight": 1,
+    "merged": 201,
+    "note": "208 dispatches, 207 resolved, 1 in-flight (#759). 203 produced PRs (201 merged, 2 closed without merge). Latest dispatch: #759 cycle-status blocking in pipeline-check (cycle 188).",
+    "pr_merge_rate": "201/203",
+    "produced_pr": 203,
+    "resolved": 207,
     "revision_rounds": 5,
-    "total_dispatches": 207
+    "total_dispatches": 208
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -3006,9 +3016,27 @@
         "finding_count": 5,
         "ignored": 0,
         "note": "ACTIONED: freshness-cadence (fixed eva_input_issues.closed_this_cycle staleness), audit-handoff (closed #744 and #745). DEFERRED: cycle-close-drift (process ordering issue — need to dispatch review before final state write), stale-dispatch-heuristic (dispatched #753 for explicit issue-PR linkage), severity-tier-gap (dispatched #751 for cycle-status exit code on commit-freeze)."
+      },
+      {
+        "actioned": 5,
+        "categories": [
+          "cycle-close-drift",
+          "metric-label-drift",
+          "freshness-cadence",
+          "premature-clean-cycle-claim",
+          "severity-tier-gap",
+          "incomplete-issue-spec",
+          "linkage-spec-gap"
+        ],
+        "complacency_score": 4,
+        "cycle": 187,
+        "deferred": 1,
+        "finding_count": 7,
+        "ignored": 1,
+        "note": "ACTIONED: cycle-close-drift (reconciled agent_sessions #746/#748), metric-label-drift (fixed as part of reconciliation), freshness-cadence (refreshed pre_python_clean_cycles and publish_gate), premature-clean-cycle-claim (acknowledged — won't claim until pipeline passes), linkage-spec-gap (PR #754 merged with branch-name matching). DEFERRED: severity-tier-gap (PR #752 merged but pipeline-check consumer change needed). IGNORED: incomplete-issue-spec (addressed by successful merge)."
       }
     ],
-    "last_review_cycle": 186
+    "last_review_cycle": 187
   },
   "schema_status": {
     "directory_layout": {
