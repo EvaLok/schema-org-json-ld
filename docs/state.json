@@ -1955,8 +1955,10 @@
     {
       "dispatched_at": "2026-03-08T12:19:27Z",
       "issue": 773,
+      "merged_at": "2026-03-08T13:54:26Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 774,
+      "status": "merged",
       "title": "Cycle 190 end-of-cycle review"
     },
     {
@@ -2104,13 +2106,13 @@
     "closed_without_merge": 2,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#776 Make cycle-status publish gate handling fail-closed (cycle 191)",
-    "dispatch_to_pr_rate": "208/212",
-    "in_flight": 2,
-    "merged": 206,
-    "note": "214 dispatches, 212 resolved, 2 in-flight. 208 produced PRs (206 merged, 2 closed without merge). Latest dispatch: #776 Make cycle-status publish gate handling fail-closed (cycle 191, model gpt-5.4).",
-    "pr_merge_rate": "206/208",
-    "produced_pr": 208,
-    "resolved": 212,
+    "dispatch_to_pr_rate": "209/213",
+    "in_flight": 1,
+    "merged": 207,
+    "note": "214 dispatches, 213 resolved, 1 in-flight. 209 produced PRs (207 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #774 merged in cycle 191.",
+    "pr_merge_rate": "207/209",
+    "produced_pr": 209,
+    "resolved": 213,
     "revision_rounds": 5,
     "total_dispatches": 214
   },
@@ -2192,7 +2194,7 @@
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 190"
+        "last_refreshed": "cycle 191"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
