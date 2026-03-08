@@ -331,14 +331,14 @@ mod tests {
                     "issue": 667,
                     "title": "Dispatched issue 667",
                     "dispatched_at": "2026-03-05T10:00:00Z",
-                    "model": "gpt-5.3-codex",
+                    "model": "gpt-5.4",
                     "status": "in_flight"
                 },
                 {
                     "issue": 668,
                     "title": "Already linked",
                     "dispatched_at": "2026-03-05T11:00:00Z",
-                    "model": "gpt-5.3-codex",
+                    "model": "gpt-5.4",
                     "status": "in_flight",
                     "pr": 669
                 }

@@ -19,7 +19,7 @@ struct Cli {
     title: String,
 
     /// Model used for the dispatch
-    #[arg(long, default_value = "gpt-5.3-codex")]
+    #[arg(long, default_value = "gpt-5.4")]
     model: String,
 
     /// Repository root path
@@ -246,7 +246,7 @@ mod tests {
                     "issue": 601,
                     "title": "old dispatch",
                     "dispatched_at": "2026-03-01T00:00:00Z",
-                    "model": "gpt-5.3-codex",
+                    "model": "gpt-5.4",
                     "status": "merged",
                     "pr": 700,
                     "merged_at": "2026-03-02T00:00:00Z"
@@ -292,7 +292,7 @@ mod tests {
             164,
             602,
             "Example dispatch",
-            "gpt-5.3-codex",
+            "gpt-5.4",
             "2026-03-07T13:00:00Z",
         )
         .expect("patch should build");
@@ -327,7 +327,7 @@ mod tests {
             164,
             602,
             "Example dispatch",
-            "gpt-5.3-codex",
+            "gpt-5.4",
             "2026-03-07T13:00:00Z",
         )
         .expect("patch should build");
@@ -341,7 +341,7 @@ mod tests {
             164,
             602,
             "Example dispatch",
-            "gpt-5.3-codex",
+            "gpt-5.4",
             "2026-03-07T13:00:00Z",
         )
         .expect("patch should build");
@@ -352,7 +352,7 @@ mod tests {
                 "issue": 602,
                 "title": "Example dispatch",
                 "dispatched_at": "2026-03-07T13:00:00Z",
-                "model": "gpt-5.3-codex",
+                "model": "gpt-5.4",
                 "status": "in_flight"
             })
         );
@@ -366,7 +366,7 @@ mod tests {
             164,
             602,
             "Example dispatch",
-            "gpt-5.3-codex",
+            "gpt-5.4",
             "2026-03-07T13:00:00Z",
         )
         .expect("patch should build");
