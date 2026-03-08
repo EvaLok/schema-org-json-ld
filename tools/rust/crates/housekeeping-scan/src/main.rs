@@ -248,12 +248,16 @@ fn has_copilot_work_finished(value: &Value) -> bool {
         .unwrap_or(false)
 }
 
+/// Returns true when any open Copilot draft PR branch contains the issue number
+/// as a whole-number token, which the repository uses as the issue↔PR linkage.
 fn has_linked_draft_pr(issue_number: u64, draft_prs: &[DraftPrInfo]) -> bool {
     draft_prs
         .iter()
         .any(|pr| branch_contains_issue_number(&pr.branch, issue_number))
 }
 
+/// Splits the branch name on non-digit characters and matches exact numeric
+/// tokens, preventing partial matches like issue 746 matching branch 7460.
 fn branch_contains_issue_number(branch: &str, issue_number: u64) -> bool {
     branch
         .split(|c: char| !c.is_ascii_digit())
