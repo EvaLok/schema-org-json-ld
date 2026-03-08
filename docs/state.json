@@ -1792,6 +1792,13 @@
       "model": "gpt-5.3-codex",
       "status": "in_flight",
       "title": "[Cycle Review] Cycle 182 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-08T02:24:36Z",
+      "issue": 723,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "cycle-start: restore descriptive opening comment"
     }
   ],
   "audit_processed": [
@@ -1926,16 +1933,16 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#721 [Cycle Review] Cycle 182 end-of-cycle review (cycle 182)",
+    "dispatch_log_latest": "#723 cycle-start: restore descriptive opening comment (cycle 183)",
     "dispatch_to_pr_rate": "190/194",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 188,
-    "note": "194 dispatches, 194 resolved, 0 in-flight. 190 produced PRs (188 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #719 merged in cycle 183.",
+    "note": "195 dispatches, 194 resolved, 1 in-flight. 190 produced PRs (188 merged, 2 closed without merge). Latest dispatch: #723 cycle-start: restore descriptive opening comment (cycle 183, model gpt-5.4).",
     "pr_merge_rate": "188/190",
     "produced_pr": 190,
     "resolved": 194,
     "revision_rounds": 5,
-    "total_dispatches": 194
+    "total_dispatches": 195
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
