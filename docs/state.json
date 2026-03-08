@@ -2239,7 +2239,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 192"
+        "last_refreshed": "cycle 193"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -2247,11 +2247,11 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 192"
+        "last_refreshed": "cycle 193"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 192"
+        "last_refreshed": "cycle 193"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -2361,12 +2361,12 @@
   },
   "last_cycle": {
     "duration_minutes": 9,
-    "issue": 780,
-    "number": 192,
+    "issue": 788,
+    "number": 193,
     "summary": "Merged 2 PRs (fail-closed publish gate, review artifact). Accepted audit #151 (review dispatch reordering). Clean cycle 2/5. Dispatched 2 new tasks (semantic test, derive-metrics tool).",
-    "timestamp": "2026-03-08T15:15:56Z"
+    "timestamp": "2026-03-08T16:43:30Z"
   },
-  "last_eva_comment_check": "2026-03-08T15:15:56Z",
+  "last_eva_comment_check": "2026-03-08T16:43:30Z",
   "open_questions_for_eva": [
     771
   ],
