@@ -323,22 +323,33 @@ fn format_pr_list(prs: &[u64]) -> String {
 mod tests {
     use super::*;
     use clap::CommandFactory;
+    use state_schema::default_agent_model;
+    use std::path::PathBuf;
+
+    fn repo_root() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../..")
+    }
+
+    fn default_test_model() -> String {
+        default_agent_model(&repo_root()).expect("default model should load from config")
+    }
 
     fn sample_state() -> Value {
+        let model = default_test_model();
         json!({
             "agent_sessions": [
                 {
                     "issue": 667,
                     "title": "Dispatched issue 667",
                     "dispatched_at": "2026-03-05T10:00:00Z",
-                    "model": "gpt-5.4",
+                    "model": model.clone(),
                     "status": "in_flight"
                 },
                 {
                     "issue": 668,
                     "title": "Already linked",
                     "dispatched_at": "2026-03-05T11:00:00Z",
-                    "model": "gpt-5.4",
+                    "model": model,
                     "status": "in_flight",
                     "pr": 669
                 }

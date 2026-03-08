@@ -6,11 +6,17 @@ user-invocable: false
 
 # Changing the Default Copilot Agent Model
 
-When upgrading the default model used by the Copilot coding agent, multiple locations must be updated in sync. Missing any one of these causes the orchestrator to silently dispatch with the old model.
+The default model is now stored in `tools/config.json`, and Rust tools read it via the shared `state-schema` helper. For normal model upgrades, you should only need to update the shared config plus the human-facing documentation references.
 
 ## Locations to update
 
-### 1. System prompt — dispatch examples
+### 1. Shared config — executable default
+
+File: `tools/config.json`
+
+Update `"default_model"` to the new preferred model. This is the runtime source of truth used by `record-dispatch` when `--model` is omitted, and tests in `record-dispatch` / `process-merge` derive from it.
+
+### 2. System prompt — dispatch examples
 
 File: `.github/workflows/orchestrator-prompt.md`
 
@@ -18,33 +24,17 @@ The `agent_assignment` JSON blocks in the "How to dispatch agent tasks" section 
 
 Search for: `"model": "<old-model>"`
 
-### 2. System prompt — model selection table
+### 3. System prompt — model selection table
 
 Same file. The table under "Model selection" lists available models with descriptions. Update the table rows and the prose below it (`Prefer <model> for routine work...`).
 
-### 3. System prompt — operating principles
+### 4. System prompt — operating principles
 
 Same file. Operating principle #6 references the preferred model by name. Update it.
 
-### 4. `record-dispatch` tool — CLI default
+### 5. Verify the shared config is wired through the tools
 
-File: `tools/rust/crates/record-dispatch/src/main.rs`
-
-The `--model` CLI argument has a `default_value`. This is the most critical location — when the orchestrator calls `bash tools/record-dispatch` without `--model`, it gets whatever default is hardcoded here.
-
-Search for: `#[arg(long, default_value = `
-
-### 5. `record-dispatch` tool — test fixtures
-
-Same file, `#[cfg(test)]` section. Test fixtures use model strings in `sample_state()` and in `build_dispatch_patch()` calls. Update these to match the new default for consistency.
-
-### 6. `process-merge` tool — test fixtures
-
-File: `tools/rust/crates/process-merge/src/main.rs`
-
-The `sample_state()` function in the test module contains `"model"` fields in agent session objects. Update for consistency.
-
-### 7. Verify after changes
+No Rust source edits should be needed for the executable default itself. Instead, verify that `record-dispatch` still loads the configured default and that related tests pass.
 
 ```bash
 cd tools/rust && cargo test --quiet
@@ -58,12 +48,12 @@ All tests must pass after the update.
 - **`docs/state.json`** — Historical `agent_sessions` entries record the model that was actually used. Do not retroactively change them. Only new dispatches will use the new model.
 - **Worklog/journal entries** — These are historical records. Never alter them.
 
-## Quick grep to find all references
+## Quick grep to find remaining documentation references
 
 ```bash
-grep -rn '"<old-model>"' tools/rust/crates/ .github/workflows/orchestrator-prompt.md
+grep -rn '"<old-model>"' .github/workflows/orchestrator-prompt.md tools/config.json
 ```
 
 ## Common mistake
 
-Updating only the system prompt but not the `record-dispatch` default. The system prompt tells the orchestrator what model to prefer, but if `record-dispatch --model` has a stale default, the orchestrator may omit `--model` from the CLI call and silently use the old model.
+Updating only the system prompt but not `tools/config.json`. The system prompt tells the orchestrator what model to prefer, but `record-dispatch` uses the shared config when `--model` is omitted, so the config must stay in sync with the docs.

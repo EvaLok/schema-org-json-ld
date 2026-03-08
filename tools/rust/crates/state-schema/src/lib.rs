@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 pub const SCHEMA_VERSION: u32 = 1;
+pub const TOOLS_CONFIG_RELATIVE_PATH: &str = "tools/config.json";
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(default, rename_all = "snake_case")]
@@ -94,6 +95,32 @@ pub fn read_state_value(repo_root: &Path) -> Result<Value, String> {
         .map_err(|error| format!("failed to read {}: {}", state_path.display(), error))?;
     serde_json::from_str::<Value>(&content)
         .map_err(|error| format!("failed to parse {}: {}", state_path.display(), error))
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ToolsConfig {
+    pub default_model: String,
+}
+
+pub fn read_tools_config(repo_root: &Path) -> Result<ToolsConfig, String> {
+    let config_path = tools_config_path(repo_root);
+    let content = fs::read_to_string(&config_path)
+        .map_err(|error| format!("failed to read {}: {}", config_path.display(), error))?;
+    serde_json::from_str::<ToolsConfig>(&content)
+        .map_err(|error| format!("failed to parse {}: {}", config_path.display(), error))
+}
+
+pub fn default_agent_model(repo_root: &Path) -> Result<String, String> {
+    let config = read_tools_config(repo_root)?;
+    let model = config.default_model.trim();
+    if model.is_empty() {
+        return Err(format!(
+            "{} must define a non-empty default_model",
+            tools_config_path(repo_root).display()
+        ));
+    }
+
+    Ok(model.to_string())
 }
 
 /// Read the current cycle number from state.json.
@@ -231,6 +258,10 @@ pub fn set_value_at_pointer(root: &mut Value, pointer: &str, value: Value) -> Re
 
 fn state_json_path(repo_root: &Path) -> PathBuf {
     repo_root.join("docs/state.json")
+}
+
+fn tools_config_path(repo_root: &Path) -> PathBuf {
+    repo_root.join(TOOLS_CONFIG_RELATIVE_PATH)
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -419,8 +450,8 @@ pub struct Blockers {
 #[cfg(test)]
 mod tests {
     use super::{
-        commit_state_json, current_cycle_from_state, read_state_value, set_value_at_pointer,
-        update_freshness, write_state_value, StateJson,
+        commit_state_json, current_cycle_from_state, default_agent_model, read_state_value,
+        set_value_at_pointer, update_freshness, write_state_value, StateJson, ToolsConfig,
     };
     use serde_json::{json, Value};
     use std::env;
@@ -458,6 +489,13 @@ mod tests {
 
         fn read_state_file(&self) -> String {
             fs::read_to_string(self.path.join("docs/state.json")).expect("state.json should exist")
+        }
+
+        fn write_tools_config(&self, content: &str) {
+            let config_path = self.path.join("tools/config.json");
+            fs::create_dir_all(config_path.parent().expect("config parent should exist"))
+                .expect("tools dir should be created");
+            fs::write(config_path, content).expect("tools config should be written");
         }
 
         fn init_git(&self) {
@@ -520,6 +558,29 @@ mod tests {
                 .and_then(|value| value.as_str()),
             Some("cycle 153")
         );
+    }
+
+    #[test]
+    fn default_agent_model_reads_tools_config() {
+        let repo = TempRepo::new();
+        let config = ToolsConfig {
+            default_model: "gpt-5.4".to_string(),
+        };
+        repo.write_tools_config(
+            &serde_json::to_string(&config).expect("config should serialize"),
+        );
+
+        let model = default_agent_model(repo.path()).expect("default model should load");
+        assert_eq!(model, "gpt-5.4");
+    }
+
+    #[test]
+    fn default_agent_model_rejects_empty_config_value() {
+        let repo = TempRepo::new();
+        repo.write_tools_config(r#"{"default_model":"   "}"#);
+
+        let error = default_agent_model(repo.path()).expect_err("empty default should fail");
+        assert!(error.contains("must define a non-empty default_model"));
     }
 
     #[test]
