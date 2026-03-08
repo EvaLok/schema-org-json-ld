@@ -2,13 +2,22 @@ use chrono::Utc;
 use clap::Parser;
 use serde::Serialize;
 use serde_json::Value;
-use state_schema::current_cycle_from_state;
+use state_schema::{current_cycle_from_state, read_state_value};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const HOUSEKEEPING_FINDINGS_KEY: &str = "items_needing_attention";
 const CYCLE_STATUS_IN_FLIGHT_PATH: &str = "/concurrency/in_flight";
 const CYCLE_STATUS_DIRECTIVES_PATH: &str = "/eva_input/comments_since_last_cycle";
+const DERIVE_METRICS_FIELDS: [&str; 7] = [
+	"total_dispatches",
+	"resolved",
+	"merged",
+	"in_flight",
+	"produced_pr",
+	"closed_without_pr",
+	"reviewed_awaiting_eva",
+];
 
 #[derive(Parser)]
 #[command(name = "pipeline-check")]
@@ -75,6 +84,7 @@ enum ToolKind {
     HousekeepingScan,
     CycleStatus,
     StateInvariants,
+	DeriveMetrics,
 }
 
 struct ExecutionResult {
@@ -189,6 +199,12 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
 			],
 			kind: ToolKind::StateInvariants,
 		},
+		ToolSpec {
+			display_name: "derive-metrics",
+			wrapper_relative_path: "tools/derive-metrics",
+			args: vec![],
+			kind: ToolKind::DeriveMetrics,
+		},
 	];
 
 	let steps = specs
@@ -224,7 +240,10 @@ fn run_step(repo_root: &Path, spec: &ToolSpec, runner: &dyn CommandRunner) -> St
         }
     };
 
-    classify_step(spec.display_name, &spec.kind, execution)
+	match spec.kind {
+		ToolKind::DeriveMetrics => classify_derive_metrics_step(repo_root, spec.display_name, execution),
+		_ => classify_step(spec.display_name, &spec.kind, execution),
+	}
 }
 
 fn classify_step(name: &'static str, kind: &ToolKind, execution: ExecutionResult) -> StepReport {
@@ -310,6 +329,51 @@ fn classify_step(name: &'static str, kind: &ToolKind, execution: ExecutionResult
 				step.detail = Some(format!("invalid JSON output from {}", name));
 			}
 		}
+		ToolKind::DeriveMetrics => unreachable!("derive-metrics classification is handled separately"),
+	}
+
+	step
+}
+
+fn classify_derive_metrics_step(
+	repo_root: &Path,
+	name: &'static str,
+	execution: ExecutionResult,
+) -> StepReport {
+	let mut step = StepReport {
+		name,
+		status: StepStatus::Pass,
+		severity: Severity::Warning,
+		exit_code: execution.exit_code,
+		detail: None,
+		findings: None,
+		summary: None,
+	};
+
+	if execution.exit_code != Some(0) {
+		step.status = StepStatus::Error;
+		step.detail = Some(format!("{} exited with unexpected status {:?}", name, execution.exit_code));
+		return step;
+	}
+
+	let Some(derived_metrics) = parse_json(&execution.stdout) else {
+		step.status = StepStatus::Error;
+		step.detail = Some(format!("invalid JSON output from {}", name));
+		return step;
+	};
+
+	match collect_derive_metrics_mismatches(repo_root, &derived_metrics) {
+		Ok(mismatches) if mismatches.is_empty() => {
+			step.detail = Some("tracked copilot_metrics fields match".to_string());
+		}
+		Ok(mismatches) => {
+			step.status = StepStatus::Warn;
+			step.detail = Some(mismatches.join("; "));
+		}
+		Err(error) => {
+			step.status = StepStatus::Error;
+			step.detail = Some(error);
+		}
 	}
 
 	step
@@ -320,7 +384,9 @@ fn severity_for_kind(kind: &ToolKind) -> Severity {
 		ToolKind::MetricSnapshot | ToolKind::StateInvariants | ToolKind::CycleStatus => {
 			Severity::Blocking
 		}
-		ToolKind::FieldInventory | ToolKind::HousekeepingScan => Severity::Warning,
+		ToolKind::FieldInventory | ToolKind::HousekeepingScan | ToolKind::DeriveMetrics => {
+			Severity::Warning
+		}
 	}
 }
 
@@ -348,6 +414,38 @@ fn pipeline_overall_status(steps: &[StepReport]) -> StepStatus {
 
 fn parse_json(raw: &str) -> Option<Value> {
     serde_json::from_str(raw).ok()
+}
+
+fn collect_derive_metrics_mismatches(repo_root: &Path, derived_metrics: &Value) -> Result<Vec<String>, String> {
+	let state_value = read_state_value(repo_root)?;
+	let current_metrics = state_value
+		.pointer("/copilot_metrics")
+		.and_then(Value::as_object)
+		.ok_or_else(|| "missing object: /copilot_metrics".to_string())?;
+	let derived_metrics = derived_metrics
+		.as_object()
+		.ok_or_else(|| "derive-metrics output must be a JSON object".to_string())?;
+
+	let mut mismatches = Vec::new();
+	for field in DERIVE_METRICS_FIELDS {
+		let expected = derived_metrics
+			.get(field)
+			.and_then(Value::as_i64)
+			.ok_or_else(|| format!("derive-metrics output missing integer field '{}'", field))?;
+		match current_metrics.get(field).and_then(Value::as_i64) {
+			Some(actual) if actual == expected => {}
+			Some(actual) => mismatches.push(format!(
+				"copilot_metrics.{} expected {} but found {}",
+				field, expected, actual
+			)),
+			None => mismatches.push(format!(
+				"copilot_metrics.{} is missing or not an integer",
+				field
+			)),
+		}
+	}
+
+	Ok(mismatches)
 }
 
 fn is_check_passing(check: &Value) -> bool {
@@ -496,6 +594,125 @@ mod tests {
 		assert_eq!(step.status, StepStatus::Fail);
 		assert_eq!(step.exit_code, Some(1));
 		assert_eq!(step.summary.as_deref(), Some("0 in-flight, 0 eva directives"));
+	}
+
+	#[test]
+	fn derive_metrics_is_pass_when_tracked_fields_match() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir().join(format!("pipeline-check-derive-match-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"copilot_metrics": {
+					"total_dispatches": 4,
+					"resolved": 3,
+					"merged": 1,
+					"in_flight": 1,
+					"produced_pr": 2,
+					"closed_without_pr": 1,
+					"reviewed_awaiting_eva": 1
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct DeriveMetricsRunner;
+
+		impl CommandRunner for DeriveMetricsRunner {
+			fn run(&self, script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				assert_eq!(script_path.file_name().and_then(|name| name.to_str()), Some("derive-metrics"));
+				Ok(ExecutionResult {
+					exit_code: Some(0),
+					stdout: json!({
+						"total_dispatches": 4,
+						"resolved": 3,
+						"merged": 1,
+						"in_flight": 1,
+						"produced_pr": 2,
+						"closed_without_pr": 1,
+						"reviewed_awaiting_eva": 1
+					})
+					.to_string(),
+				})
+			}
+		}
+
+		let spec = ToolSpec {
+			display_name: "derive-metrics",
+			wrapper_relative_path: "tools/derive-metrics",
+			args: vec![],
+			kind: ToolKind::DeriveMetrics,
+		};
+		let step = run_step(&root, &spec, &DeriveMetricsRunner);
+		assert_eq!(step.status, StepStatus::Pass);
+		assert_eq!(step.detail.as_deref(), Some("tracked copilot_metrics fields match"));
+	}
+
+	#[test]
+	fn derive_metrics_is_warn_when_tracked_fields_diverge() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir().join(format!("pipeline-check-derive-warn-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"copilot_metrics": {
+					"total_dispatches": 4,
+					"resolved": 2,
+					"merged": 1,
+					"in_flight": 2,
+					"produced_pr": 1,
+					"closed_without_pr": 0,
+					"reviewed_awaiting_eva": 0
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct DeriveMetricsRunner;
+
+		impl CommandRunner for DeriveMetricsRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				Ok(ExecutionResult {
+					exit_code: Some(0),
+					stdout: json!({
+						"total_dispatches": 5,
+						"resolved": 3,
+						"merged": 1,
+						"in_flight": 2,
+						"produced_pr": 2,
+						"closed_without_pr": 1,
+						"reviewed_awaiting_eva": 0
+					})
+					.to_string(),
+				})
+			}
+		}
+
+		let spec = ToolSpec {
+			display_name: "derive-metrics",
+			wrapper_relative_path: "tools/derive-metrics",
+			args: vec![],
+			kind: ToolKind::DeriveMetrics,
+		};
+		let step = run_step(&root, &spec, &DeriveMetricsRunner);
+		assert_eq!(severity_for_kind(&ToolKind::DeriveMetrics), Severity::Warning);
+		assert_eq!(step.status, StepStatus::Warn);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("total_dispatches"));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("produced_pr"));
 	}
 
     #[test]
@@ -805,7 +1022,7 @@ mod tests {
     }
 
     #[test]
-    fn run_pipeline_aggregates_tool_results_with_mock_runner() {
+	fn run_pipeline_aggregates_tool_results_with_mock_runner() {
         struct MockRunner {
             outputs: HashMap<String, ExecutionResult>,
             expected_cycle: u64,
@@ -818,16 +1035,16 @@ mod tests {
                     .and_then(|name| name.to_str())
                     .unwrap_or_default()
                     .to_string();
-                let has_cycle_arg = args
-                    .windows(2)
-                    .any(|window| window[0] == "--cycle" && window[1] == self.expected_cycle.to_string());
-                match key.as_str() {
-                    "metric-snapshot" | "check-field-inventory-rs" => assert!(has_cycle_arg),
-                    "housekeeping-scan" | "cycle-status" | "state-invariants" => {
-                        assert!(!has_cycle_arg)
-                    }
-                    _ => panic!("unexpected tool invocation: {}", key),
-                }
+				let has_cycle_arg = args
+					.windows(2)
+					.any(|window| window[0] == "--cycle" && window[1] == self.expected_cycle.to_string());
+				match key.as_str() {
+					"metric-snapshot" | "check-field-inventory-rs" => assert!(has_cycle_arg),
+					"housekeeping-scan" | "cycle-status" | "state-invariants" | "derive-metrics" => {
+						assert!(!has_cycle_arg)
+					}
+					_ => panic!("unexpected tool invocation: {}", key),
+				}
                 self.outputs
                     .get(&key)
                     .map(|result| ExecutionResult {
@@ -838,9 +1055,26 @@ mod tests {
             }
         }
 
-        static COUNTER: AtomicU64 = AtomicU64::new(0);
-        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root = std::env::temp_dir().join(format!("pipeline-check-test-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"copilot_metrics": {
+					"total_dispatches": 3,
+					"resolved": 2,
+					"merged": 1,
+					"in_flight": 1,
+					"produced_pr": 2,
+					"closed_without_pr": 0,
+					"reviewed_awaiting_eva": 1
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
 
         let runner = MockRunner {
             expected_cycle: 135,
@@ -884,12 +1118,28 @@ mod tests {
                         .to_string(),
                     },
                 ),
+				(
+					"derive-metrics".to_string(),
+					ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({
+							"total_dispatches": 3,
+							"resolved": 2,
+							"merged": 1,
+							"in_flight": 1,
+							"produced_pr": 2,
+							"closed_without_pr": 0,
+							"reviewed_awaiting_eva": 1
+						})
+						.to_string(),
+					},
+				),
             ]),
         };
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-		assert_eq!(report.steps.len(), 5);
+		assert_eq!(report.steps.len(), 6);
 		assert_eq!(report.steps[0].status, StepStatus::Pass);
 		assert_eq!(report.steps[1].status, StepStatus::Pass);
 		assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -903,6 +1153,11 @@ mod tests {
             report.steps[4].detail.as_deref(),
             Some("5/5 invariants pass")
         );
+		assert_eq!(report.steps[5].status, StepStatus::Pass);
+		assert_eq!(
+			report.steps[5].detail.as_deref(),
+			Some("tracked copilot_metrics fields match")
+		);
     }
 
     #[test]
@@ -933,7 +1188,7 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 5);
+        assert_eq!(report.steps.len(), 6);
         assert!(report
             .steps
             .iter()
