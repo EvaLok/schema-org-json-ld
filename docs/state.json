@@ -3274,7 +3274,7 @@
         "ignored": 0
       },
       {
-        "actioned": 0,
+        "actioned": 2,
         "categories": [
           "copilot-metrics-drift",
           "disposition-overstatement",
@@ -3282,7 +3282,7 @@
         ],
         "complacency_score": 4,
         "cycle": 194,
-        "deferred": 0,
+        "deferred": 1,
         "finding_count": 3,
         "ignored": 0
       }
