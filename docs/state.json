@@ -1957,15 +1957,15 @@
     "closed_without_merge": 2,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#720 Extract default agent model into shared config (cycle 183)",
-    "dispatch_to_pr_rate": "193/196",
+    "dispatch_to_pr_rate": "193/197",
     "in_flight": 0,
     "merged": 191,
-    "note": "196 dispatches, 196 resolved, 0 in-flight. 193 produced PRs (191 merged, 2 closed without merge). 3 resolved without PR (silent failure). PR #727 merged in cycle 184.",
+    "note": "197 dispatches, 197 resolved, 0 in-flight. 193 produced PRs (191 merged, 2 closed without merge). 3 resolved without PR (silent failure). 1 reviewed awaiting Eva. Backfill added session #729 in cycle 184.",
     "pr_merge_rate": "191/193",
     "produced_pr": 193,
-    "resolved": 196,
+    "resolved": 197,
     "revision_rounds": 5,
-    "total_dispatches": 196
+    "total_dispatches": 197
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
