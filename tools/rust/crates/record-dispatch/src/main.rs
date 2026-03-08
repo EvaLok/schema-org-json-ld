@@ -2,8 +2,8 @@ use chrono::Utc;
 use clap::Parser;
 use serde_json::{json, Value};
 use state_schema::{
-    commit_state_json, current_cycle_from_state, read_state_value, set_value_at_pointer,
-    write_state_value,
+    commit_state_json, current_cycle_from_state, default_agent_model, read_state_value,
+    set_value_at_pointer, write_state_value,
 };
 use std::path::PathBuf;
 
@@ -19,8 +19,8 @@ struct Cli {
     title: String,
 
     /// Model used for the dispatch
-    #[arg(long, default_value = "gpt-5.4")]
-    model: String,
+    #[arg(long)]
+    model: Option<String>,
 
     /// Repository root path
     #[arg(long, default_value = ".")]
@@ -47,6 +47,7 @@ fn main() {
 }
 
 fn run(cli: Cli) -> Result<(), String> {
+    let model = resolve_model(cli.model.as_deref(), &cli.repo_root)?;
     let mut state_value = read_state_value(&cli.repo_root)?;
     let dispatched_at = current_utc_timestamp();
     let current_cycle = current_cycle_from_state(&cli.repo_root).map_err(|error| {
@@ -62,7 +63,7 @@ fn run(cli: Cli) -> Result<(), String> {
         current_cycle,
         cli.issue,
         &cli.title,
-        &cli.model,
+        &model,
         &dispatched_at,
     )?;
     apply_dispatch_patch(&mut state_value, &patch)?;
@@ -75,7 +76,7 @@ fn run(cli: Cli) -> Result<(), String> {
     let receipt = commit_state_json(&cli.repo_root, &commit_message)?;
     println!(
         "Dispatch recorded: #{} \"{}\" (model: {}). In-flight: {} (receipt: {})",
-        cli.issue, cli.title, cli.model, patch.in_flight, receipt
+        cli.issue, cli.title, model, patch.in_flight, receipt
     );
     if patch.in_flight >= 3 {
         eprintln!(
@@ -85,6 +86,14 @@ fn run(cli: Cli) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+fn resolve_model(cli_model: Option<&str>, repo_root: &std::path::Path) -> Result<String, String> {
+    match cli_model {
+        Some(model) if model.trim().is_empty() => Err("--model must not be empty".to_string()),
+        Some(model) => Ok(model.trim().to_string()),
+        None => default_agent_model(repo_root),
+    }
 }
 
 fn build_dispatch_patch(
@@ -238,15 +247,25 @@ fn apply_dispatch_patch(state: &mut Value, patch: &DispatchPatch) -> Result<(), 
 mod tests {
     use super::*;
     use clap::CommandFactory;
+    use std::path::PathBuf;
+
+    fn repo_root() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../..")
+    }
+
+    fn default_test_model() -> String {
+        default_agent_model(&repo_root()).expect("default model should load from config")
+    }
 
     fn sample_state() -> Value {
+        let model = default_test_model();
         json!({
             "agent_sessions": [
                 {
                     "issue": 601,
                     "title": "old dispatch",
                     "dispatched_at": "2026-03-01T00:00:00Z",
-                    "model": "gpt-5.4",
+                    "model": model,
                     "status": "merged",
                     "pr": 700,
                     "merged_at": "2026-03-02T00:00:00Z"
@@ -287,12 +306,13 @@ mod tests {
 
     #[test]
     fn metric_calculation_after_dispatch_is_correct() {
+        let model = default_test_model();
         let patch = build_dispatch_patch(
             &sample_state(),
             164,
             602,
             "Example dispatch",
-            "gpt-5.4",
+            &model,
             "2026-03-07T13:00:00Z",
         )
         .expect("patch should build");
@@ -321,13 +341,33 @@ mod tests {
     }
 
     #[test]
+    fn resolve_model_uses_shared_default_when_flag_is_omitted() {
+        let model = resolve_model(None, &repo_root()).expect("default model should resolve");
+        assert_eq!(model, default_test_model());
+    }
+
+    #[test]
+    fn resolve_model_prefers_cli_override() {
+        let model =
+            resolve_model(Some("custom-model"), &repo_root()).expect("override should resolve");
+        assert_eq!(model, "custom-model");
+    }
+
+    #[test]
+    fn resolve_model_rejects_empty_cli_override() {
+        let error = resolve_model(Some("   "), &repo_root()).expect_err("empty override must fail");
+        assert_eq!(error, "--model must not be empty");
+    }
+
+    #[test]
     fn concurrency_warning_threshold_is_triggered_at_three() {
+        let model = default_test_model();
         let patch = build_dispatch_patch(
             &sample_state(),
             164,
             602,
             "Example dispatch",
-            "gpt-5.4",
+            &model,
             "2026-03-07T13:00:00Z",
         )
         .expect("patch should build");
@@ -336,12 +376,13 @@ mod tests {
 
     #[test]
     fn dispatch_patch_includes_agent_session_entry() {
+        let model = default_test_model();
         let patch = build_dispatch_patch(
             &sample_state(),
             164,
             602,
             "Example dispatch",
-            "gpt-5.4",
+            &model,
             "2026-03-07T13:00:00Z",
         )
         .expect("patch should build");
@@ -352,7 +393,7 @@ mod tests {
                 "issue": 602,
                 "title": "Example dispatch",
                 "dispatched_at": "2026-03-07T13:00:00Z",
-                "model": "gpt-5.4",
+                "model": model,
                 "status": "in_flight"
             })
         );
@@ -361,19 +402,22 @@ mod tests {
     #[test]
     fn apply_dispatch_patch_appends_agent_session() {
         let mut state = sample_state();
+        let model = default_test_model();
         let patch = build_dispatch_patch(
             &state,
             164,
             602,
             "Example dispatch",
-            "gpt-5.4",
+            &model,
             "2026-03-07T13:00:00Z",
         )
         .expect("patch should build");
 
         apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
 
-        let sessions = state["agent_sessions"].as_array().expect("agent_sessions array");
+        let sessions = state["agent_sessions"]
+            .as_array()
+            .expect("agent_sessions array");
         assert_eq!(sessions.len(), 2);
         assert_eq!(sessions[1]["issue"], json!(602));
         assert_eq!(sessions[1]["status"], json!("in_flight"));
