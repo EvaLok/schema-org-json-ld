@@ -317,10 +317,10 @@ fn classify_step(name: &'static str, kind: &ToolKind, execution: ExecutionResult
 
 fn severity_for_kind(kind: &ToolKind) -> Severity {
 	match kind {
-		ToolKind::MetricSnapshot | ToolKind::StateInvariants => Severity::Blocking,
-		ToolKind::FieldInventory | ToolKind::HousekeepingScan | ToolKind::CycleStatus => {
-			Severity::Warning
+		ToolKind::MetricSnapshot | ToolKind::StateInvariants | ToolKind::CycleStatus => {
+			Severity::Blocking
 		}
+		ToolKind::FieldInventory | ToolKind::HousekeepingScan => Severity::Warning,
 	}
 }
 
@@ -465,6 +465,23 @@ mod tests {
 		);
 	}
 
+	#[test]
+	fn cycle_status_is_fail_when_commit_freeze_check_fails() {
+		let execution = ExecutionResult {
+			exit_code: Some(1),
+			stdout: json!({
+				"concurrency": { "in_flight": 0 },
+				"eva_input": { "comments_since_last_cycle": [] }
+			})
+			.to_string(),
+		};
+		let step = classify_step("cycle-status", &ToolKind::CycleStatus, execution);
+		assert_eq!(severity_for_kind(&ToolKind::CycleStatus), Severity::Blocking);
+		assert_eq!(step.status, StepStatus::Fail);
+		assert_eq!(step.exit_code, Some(1));
+		assert_eq!(step.summary.as_deref(), Some("0 in-flight, 0 eva directives"));
+	}
+
     #[test]
     fn metric_snapshot_detail_prefers_summary() {
         let execution = ExecutionResult {
@@ -526,7 +543,7 @@ mod tests {
 			StepReport {
 				name: "cycle-status",
 				status: StepStatus::Fail,
-				severity: Severity::Warning,
+				severity: Severity::Blocking,
 				exit_code: Some(1),
 				detail: None,
 				findings: None,
@@ -554,13 +571,13 @@ mod tests {
 					summary: None,
 				},
 				StepReport {
-					name: "cycle-status",
+					name: "housekeeping-scan",
 					status: StepStatus::Warn,
 					severity: Severity::Warning,
 					exit_code: Some(1),
-					detail: None,
-					findings: None,
-					summary: Some("1 in-flight, 1 eva directives".to_string()),
+					detail: Some("1 findings".to_string()),
+					findings: Some(1),
+					summary: None,
 				},
 			],
 		};
