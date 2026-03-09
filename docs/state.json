@@ -2386,6 +2386,13 @@
       "pr": 920,
       "status": "merged",
       "title": "Cycle 209 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-09T20:20:45Z",
+      "issue": 922,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix Phase 7 journal freshness check to use docs/journal/"
     }
   ],
   "audit_dropped": [
@@ -2544,16 +2551,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#919 Cycle 209 end-of-cycle review (cycle 209)",
+    "dispatch_log_latest": "#922 Fix Phase 7 journal freshness check to use docs/journal/ (cycle 210)",
     "dispatch_to_pr_rate": "97.7%",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 255,
     "pr_merge_rate": "99.2%",
     "produced_pr": 257,
     "resolved": 262,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 262
+    "total_dispatches": 263
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
