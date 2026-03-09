@@ -2108,11 +2108,12 @@
     {
       "dispatched_at": "2026-03-08T22:49:07Z",
       "issue": 819,
-      "merged_at": "2026-03-09T00:28:36Z",
+      "merged_at": null,
       "model": "gpt-5.4",
       "pr": 820,
-      "status": "merged",
-      "title": "Remove deprecated copilot_metrics.note field from all tools"
+      "status": "closed_without_merge",
+      "title": "Remove deprecated copilot_metrics.note field from all tools",
+      "note": "PR closed due to merge conflicts; changes applied directly to master (commit 5c7d2bb)"
     },
     {
       "dispatched_at": "2026-03-08T22:55:17Z",
@@ -2276,13 +2277,13 @@
     "total_classes_converted": 54
   },
   "copilot_metrics": {
-    "closed_without_merge": 2,
+    "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#838 Cycle 198 review (cycle 198)",
-    "dispatch_to_pr_rate": "97.4%",
+    "dispatch_to_pr_rate": "97.0%",
     "in_flight": 2,
-    "merged": 225,
-    "pr_merge_rate": "99.6%",
+    "merged": 224,
+    "pr_merge_rate": "99.1%",
     "produced_pr": 226,
     "resolved": 231,
     "reviewed_awaiting_eva": 1,
@@ -2518,10 +2519,10 @@
   "last_eva_comment_check": "2026-03-09T00:52:54Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
-    "count": 4,
+    "count": 0,
     "description": "Per Eva directive on #699: 5 consecutive clean cycles (pipeline 5/5 at startup, no bugs, no problems) required before starting Python implementation. Count restarts on any problem.",
-    "note": "Cycle 198: pipeline PASS at startup (6/6). Count moves to 4/5.",
-    "started_at": "cycle 182"
+    "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
+    "started_at": "cycle 199"
   },
   "publish_gate": {
     "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z",
