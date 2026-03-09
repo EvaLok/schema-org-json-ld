@@ -2220,6 +2220,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Improve write-entry: sandbox compatibility and ergonomic CLI"
+    },
+    {
+      "dispatched_at": "2026-03-09T05:24:44Z",
+      "issue": 869,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 201b end-of-cycle review"
     }
   ],
   "audit_processed": [
@@ -2363,16 +2370,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#867 Improve write-entry: sandbox compatibility and ergonomic CLI (cycle 201)",
+    "dispatch_log_latest": "#869 Cycle 201b end-of-cycle review (cycle 201)",
     "dispatch_to_pr_rate": "97.1%",
-    "in_flight": 2,
+    "in_flight": 3,
     "merged": 235,
     "pr_merge_rate": "99.2%",
     "produced_pr": 237,
     "resolved": 242,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 244
+    "total_dispatches": 245
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
