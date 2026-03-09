@@ -44,7 +44,11 @@ struct ExecutionResult {
 
 trait CommandRunner {
     fn git(&self, _repo_root: &Path, _args: &[String]) -> Result<ExecutionResult, String>;
-    fn gh(&self, _args: &[String], _input: Option<Vec<u8>>) -> Result<ExecutionResult, String>;
+    fn gh(
+        &self,
+        _args: &[String],
+        _input: Option<Vec<u8>>,
+    ) -> Result<ExecutionResult, String>;
 }
 
 struct ProcessRunner;
@@ -64,7 +68,11 @@ impl CommandRunner for ProcessRunner {
         })
     }
 
-    fn gh(&self, args: &[String], input: Option<Vec<u8>>) -> Result<ExecutionResult, String> {
+    fn gh(
+        &self,
+        args: &[String],
+        input: Option<Vec<u8>>,
+    ) -> Result<ExecutionResult, String> {
         if let Some(input) = input {
             let mut child = Command::new("gh")
                 .args(args)
@@ -143,36 +151,27 @@ fn execute(cli: &Cli, runner: &dyn CommandRunner) -> Result<String, String> {
         .as_deref()
         .map(str::trim)
         .filter(|value| !value.is_empty())
-        .or_else(|| {
-            cli.summary
-                .as_deref()
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-        })
+        .or_else(|| cli.summary.as_deref().map(str::trim).filter(|value| !value.is_empty()))
         .unwrap_or("N/A")
         .to_string();
     let summary = resolve_summary(cli.summary.as_deref(), state.last_cycle.summary.as_deref());
     let review_issue = extract_review_issue_number(&state);
     let comment = format_closing_comment(cycle, &pipeline_status, review_issue, &summary);
-    let commit_message = format!(
-        "docs(worklog,journal): cycle {} entries [cycle {}]",
-        cycle, cycle
-    );
+    let commit_message = format!("docs(worklog,journal): cycle {} entries [cycle {}]", cycle, cycle);
 
     if cli.dry_run {
-        let mut lines = vec![format!(
-            "Would stage and commit cycle artifacts with message: {}",
-            commit_message
-        )];
+        let mut lines = vec![
+            format!(
+                "Would stage and commit cycle artifacts with message: {}",
+                commit_message
+            ),
+        ];
         if cli.skip_push {
             lines.push("Would skip push due to --skip-push".to_string());
         } else {
             lines.push("Would run: git push origin master".to_string());
         }
-        lines.push(format!(
-            "Would post closing summary comment to issue #{}",
-            cli.issue
-        ));
+        lines.push(format!("Would post closing summary comment to issue #{}", cli.issue));
         if cli.skip_close {
             lines.push("Would skip closing issue due to --skip-close".to_string());
         } else {
@@ -232,11 +231,7 @@ fn format_closing_comment(
 
     lines.push(String::new());
     lines.push("Accomplished:".to_string());
-    lines.extend(
-        summary_items(summary)
-            .into_iter()
-            .map(|item| format!("- {}", item)),
-    );
+    lines.extend(summary_items(summary).into_iter().map(|item| format!("- {}", item)));
     lines.join("\n")
 }
 
@@ -250,11 +245,7 @@ fn resolve_summary(cli_summary: Option<&str>, state_summary: Option<&str>) -> St
     cli_summary
         .map(str::trim)
         .filter(|value| !value.is_empty())
-        .or_else(|| {
-            state_summary
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-        })
+        .or_else(|| state_summary.map(str::trim).filter(|value| !value.is_empty()))
         .unwrap_or("Cycle close completed.")
         .to_string()
 }
@@ -315,7 +306,10 @@ fn commit_cycle_artifacts(
     let artifact_paths = cycle_artifact_paths(repo_root)?;
     let mut add_args = vec!["add".to_string(), "--".to_string()];
     add_args.extend(artifact_paths.iter().cloned());
-    ensure_success("git add cycle artifacts", runner.git(repo_root, &add_args)?)?;
+    ensure_success(
+        "git add cycle artifacts",
+        runner.git(repo_root, &add_args)?,
+    )?;
 
     let mut diff_args = vec![
         "diff".to_string(),
@@ -347,11 +341,7 @@ fn commit_cycle_artifacts(
 
     let rev_parse_output = runner.git(
         repo_root,
-        &[
-            "rev-parse".to_string(),
-            "--short=7".to_string(),
-            "HEAD".to_string(),
-        ],
+        &["rev-parse".to_string(), "--short=7".to_string(), "HEAD".to_string()],
     )?;
     ensure_success("git rev-parse --short=7 HEAD", rev_parse_output.clone())?;
 
@@ -409,21 +399,14 @@ impl PathKind {
 }
 
 fn push_origin_master(repo_root: &Path, runner: &dyn CommandRunner) -> Result<(), String> {
-    let push_args = [
-        "push".to_string(),
-        "origin".to_string(),
-        "master".to_string(),
-    ];
+    let push_args = ["push".to_string(), "origin".to_string(), "master".to_string()];
     let push_output = runner.git(repo_root, &push_args)?;
     if matches!(push_output.exit_code, Some(0)) {
         return Ok(());
     }
 
     if !contains_fetch_first(&push_output) {
-        return Err(command_failure_message(
-            "git push origin master",
-            &push_output,
-        ));
+        return Err(command_failure_message("git push origin master", &push_output));
     }
 
     ensure_success(
@@ -561,7 +544,11 @@ mod tests {
                 .unwrap_or_else(|| panic!("unexpected git call: {:?}", args))
         }
 
-        fn gh(&self, args: &[String], input: Option<Vec<u8>>) -> Result<ExecutionResult, String> {
+        fn gh(
+            &self,
+            args: &[String],
+            input: Option<Vec<u8>>,
+        ) -> Result<ExecutionResult, String> {
             self.gh_calls.lock().unwrap().push((args.to_vec(), input));
             self.gh_results
                 .lock()
@@ -608,18 +595,10 @@ mod tests {
             );
             git_ok(self.path(), ["add", "."]);
             git_ok(self.path(), ["commit", "-m", "Initial state"]);
+            git_ok(self.path(), ["init", "--bare", self.remote_path.to_str().unwrap()]);
             git_ok(
                 self.path(),
-                ["init", "--bare", self.remote_path.to_str().unwrap()],
-            );
-            git_ok(
-                self.path(),
-                [
-                    "remote",
-                    "add",
-                    "origin",
-                    self.remote_path.to_str().unwrap(),
-                ],
+                ["remote", "add", "origin", self.remote_path.to_str().unwrap()],
             );
             git_ok(self.path(), ["push", "-u", "origin", "master"]);
         }
@@ -640,11 +619,7 @@ mod tests {
                 "Review entry\n",
             )
             .unwrap();
-            fs::write(
-                self.path.join("JOURNAL.md"),
-                "# Journal\n\nAppended entry\n",
-            )
-            .unwrap();
+            fs::write(self.path.join("JOURNAL.md"), "# Journal\n\nAppended entry\n").unwrap();
         }
     }
 
@@ -686,7 +661,11 @@ mod tests {
             })
         }
 
-        fn gh(&self, args: &[String], input: Option<Vec<u8>>) -> Result<ExecutionResult, String> {
+        fn gh(
+            &self,
+            args: &[String],
+            input: Option<Vec<u8>>,
+        ) -> Result<ExecutionResult, String> {
             self.gh_calls.lock().unwrap().push((args.to_vec(), input));
             Ok(ExecutionResult {
                 exit_code: Some(0),
@@ -875,9 +854,7 @@ mod tests {
             .args(["ls-remote", "origin", "refs/heads/master"])
             .output()
             .unwrap();
-        let local_sha = String::from_utf8_lossy(&local_head.stdout)
-            .trim()
-            .to_string();
+        let local_sha = String::from_utf8_lossy(&local_head.stdout).trim().to_string();
         let remote_sha = String::from_utf8_lossy(&remote_head.stdout)
             .split_whitespace()
             .next()
@@ -891,11 +868,7 @@ mod tests {
             .1
             .as_ref()
             .and_then(|payload| serde_json::from_slice::<serde_json::Value>(payload).ok())
-            .and_then(|json| {
-                json.get("body")
-                    .and_then(|value| value.as_str())
-                    .map(ToOwned::to_owned)
-            })
+            .and_then(|json| json.get("body").and_then(|value| value.as_str()).map(ToOwned::to_owned))
             .unwrap();
         assert!(comment_body.starts_with("> **[main-orchestrator]** | Cycle 202"));
         assert!(comment_body.contains("Review agent issue: #873"));
