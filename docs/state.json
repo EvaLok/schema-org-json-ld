@@ -2621,7 +2621,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 207"
+        "last_refreshed": "cycle 208"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -2629,11 +2629,11 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 207"
+        "last_refreshed": "cycle 208"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 207"
+        "last_refreshed": "cycle 208"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -2743,12 +2743,12 @@
   },
   "last_cycle": {
     "duration_minutes": 12,
-    "issue": 903,
-    "number": 207,
+    "issue": 908,
+    "number": 208,
     "summary": "Merged PRs #900 (cycle 206 review) and #898 code (process-review parser fix, applied directly due to merge conflict). Processed cycle 206 review (3 findings, 4/5: 1 actioned state-integrity, 2 deferred). Fixed chronic-category false freshness. Closed Eva issues #901 and #902. Dispatched #904 (write-entry partial-override bug fix).",
-    "timestamp": "2026-03-09T14:32:27Z"
+    "timestamp": "2026-03-09T16:21:03Z"
   },
-  "last_eva_comment_check": "2026-03-09T14:32:27Z",
+  "last_eva_comment_check": "2026-03-09T16:21:03Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
