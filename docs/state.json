@@ -2395,6 +2395,13 @@
       "pr": 923,
       "status": "merged",
       "title": "Fix Phase 7 journal freshness check to use docs/journal/"
+    },
+    {
+      "dispatched_at": "2026-03-09T22:13:31Z",
+      "issue": 927,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "write-entry coverage extension"
     }
   ],
   "audit_dropped": [
@@ -2553,16 +2560,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#922 Fix Phase 7 journal freshness check to use docs/journal/ (cycle 210)",
+    "dispatch_log_latest": "#927 write-entry coverage extension (cycle 211)",
     "dispatch_to_pr_rate": "97.7%",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 257,
     "pr_merge_rate": "99.2%",
     "produced_pr": 259,
     "resolved": 263,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 263
+    "total_dispatches": 264
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
