@@ -2206,6 +2206,13 @@
       "pr": 863,
       "status": "merged",
       "title": "Cycle 201 review"
+    },
+    {
+      "dispatched_at": "2026-03-09T05:19:28Z",
+      "issue": 865,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Refactor: consolidate duplicated code into state-schema crate"
     }
   ],
   "audit_processed": [
@@ -2349,16 +2356,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#862 Cycle 201 review (cycle 200)",
+    "dispatch_log_latest": "#865 Refactor: consolidate duplicated code into state-schema crate (cycle 201)",
     "dispatch_to_pr_rate": "96.7%",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 235,
     "pr_merge_rate": "99.1%",
     "produced_pr": 237,
     "resolved": 242,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 242
+    "total_dispatches": 243
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
