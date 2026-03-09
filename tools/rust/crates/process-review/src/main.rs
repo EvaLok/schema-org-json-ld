@@ -264,17 +264,11 @@ fn validate_review_format(content: &str) -> Vec<String> {
     }
 
     if !found_heading {
-        errors.push(
-            "review markdown must contain at least one numbered finding heading in the Findings section"
-                .to_string(),
-        );
+        errors.push("review markdown must contain at least one numbered finding heading in the Findings section".to_string());
     }
 
     if extract_score(content).is_none() {
-        errors.push(
-            "review markdown must contain a complacency score section with a parsable N/5 score"
-                .to_string(),
-        );
+        errors.push("review markdown must contain a complacency score section with a parsable N/5 score".to_string());
     }
 
     errors
