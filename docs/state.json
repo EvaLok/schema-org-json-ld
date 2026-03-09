@@ -2129,6 +2129,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add format validation to process-review"
+    },
+    {
+      "dispatched_at": "2026-03-09T00:32:34Z",
+      "issue": 838,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 198 review"
     }
   ],
   "audit_processed": [
@@ -2271,16 +2278,16 @@
   "copilot_metrics": {
     "closed_without_merge": 2,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#835 Add format validation to process-review (cycle 198)",
+    "dispatch_log_latest": "#838 Cycle 198 review (cycle 198)",
     "dispatch_to_pr_rate": "97.4%",
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 225,
     "pr_merge_rate": "99.6%",
     "produced_pr": 226,
     "resolved": 231,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 232
+    "total_dispatches": 233
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
