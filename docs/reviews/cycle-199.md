@@ -29,7 +29,7 @@
 5. **[worklog-accuracy]** The worklog says its metric block came from derive-metrics, but at least one of the numbers is not what derive-metrics reports
 
 **File**: /home/runner/work/schema-org-json-ld/schema-org-json-ld/docs/worklog/2026-03-09/010700-hundred-ninety-ninth-orchestrator-cycle.md:29-35
-**Evidence**: The worklog labels the section "Copilot metrics (from derive-metrics)" and claims `Total dispatches: 237`. The committed state for cycle 199 says `total_dispatches` is `235` (`/home/runner/work/schema-org-json-ld/schema-org-json-ld/docs/state.json:2281-2293`), and a direct `bash tools/derive-metrics --check` run on this snapshot also reports `total_dispatches: 235`. The number in the worklog therefore was not copied from the tool output it cites.
+**Evidence**: The worklog labels the section "Copilot metrics (from derive-metrics)" and claims `Total dispatches: 237`. The committed state for cycle 199 says `total_dispatches` is `235` (`/home/runner/work/schema-org-json-ld/schema-org-json-ld/docs/state.json:2293`), and a direct `bash tools/derive-metrics --check` run on this snapshot also reports `total_dispatches: 235`. The number in the worklog therefore was not copied from the tool output it cites.
 **Recommendation**: Populate the worklog metric block from the actual `derive-metrics` output, not manual arithmetic or a remembered number from a later state. If the worklog is meant to reflect post-close changes, update the state snapshot first and then regenerate the worklog from that snapshot.
 
 ## Complacency score
