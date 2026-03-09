@@ -2193,6 +2193,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "process-audit-inbound tool (per Eva #828)"
+    },
+    {
+      "dispatched_at": "2026-03-09T04:04:40Z",
+      "issue": 862,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 201 review"
     }
   ],
   "audit_processed": [
@@ -2336,16 +2343,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#859 process-audit-inbound tool (per Eva #828) (cycle 200)",
+    "dispatch_log_latest": "#862 Cycle 201 review (cycle 200)",
     "dispatch_to_pr_rate": "97.1%",
-    "in_flight": 2,
+    "in_flight": 3,
     "merged": 232,
     "pr_merge_rate": "99.1%",
     "produced_pr": 234,
     "resolved": 239,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 241
+    "total_dispatches": 242
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
