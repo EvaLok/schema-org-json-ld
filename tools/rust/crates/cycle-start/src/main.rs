@@ -186,13 +186,8 @@ fn read_typed_state_json(repo_root: &Path) -> Result<StateJson, String> {
     let state_path = repo_root.join("docs/state.json");
     let content = fs::read_to_string(&state_path)
         .map_err(|error| format!("failed to read {}: {}", state_path.display(), error))?;
-    serde_json::from_str(&content).map_err(|error| {
-        format!(
-            "failed to parse {} into schema: {}",
-            state_path.display(),
-            error
-        )
-    })
+    serde_json::from_str(&content)
+        .map_err(|error| format!("failed to parse {} into schema: {}", state_path.display(), error))
 }
 
 fn load_eva_directives(state: &StateJson) -> Result<Vec<String>, String> {

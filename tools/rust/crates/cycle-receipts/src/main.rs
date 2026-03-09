@@ -125,29 +125,25 @@ fn extract_step(subject: &str) -> Option<String> {
 }
 
 fn render_markdown(cycle: u64, entries: &[ReceiptEntry]) -> String {
-    let mut output = format!("## Commit receipts — Cycle {}\n\n", cycle);
-    output.push_str("| Step | Receipt | Commit |\n");
-    output.push_str("|------|---------|--------|\n");
-    for entry in entries {
+	let mut output = format!("## Commit receipts — Cycle {}\n\n", cycle);
+	output.push_str("| Step | Receipt | Commit |\n");
+	output.push_str("|------|---------|--------|\n");
+	for entry in entries {
         output.push_str(&format!(
             "| {} | [`{}`]({}) | {} |\n",
             escape_markdown_cell(&entry.step),
             entry.receipt,
             entry.url,
-            escape_markdown_cell(&entry.commit)
-        ));
-    }
-    let receipt_label = if entries.len() == 1 {
-        "receipt"
-    } else {
-        "receipts"
-    };
-    output.push_str(&format!(
-        "\n{} {} collected.\n",
-        entries.len(),
-        receipt_label
-    ));
-    output
+			escape_markdown_cell(&entry.commit)
+		));
+	}
+	let receipt_label = if entries.len() == 1 {
+		"receipt"
+	} else {
+		"receipts"
+	};
+	output.push_str(&format!("\n{} {} collected.\n", entries.len(), receipt_label));
+	output
 }
 
 fn resolve_cycle_window(
@@ -310,21 +306,21 @@ mod tests {
     }
 
     #[test]
-    fn render_markdown_includes_links_and_count() {
-        let markdown = render_markdown(
-            198,
-            &[ReceiptEntry {
-                step: "process-review".to_string(),
+	fn render_markdown_includes_links_and_count() {
+		let markdown = render_markdown(
+			198,
+			&[ReceiptEntry {
+				step: "process-review".to_string(),
                 receipt: "e4f5g6h".to_string(),
                 commit: "state(process-review): consumed cycle 197 review".to_string(),
                 url: format!("{}/commit/abcdef1234567890", REPO_URL),
             }],
         );
 
-        assert!(markdown.contains("## Commit receipts — Cycle 198"));
-        assert!(markdown.contains("| process-review | [`e4f5g6h`](https://github.com/EvaLok/schema-org-json-ld/commit/abcdef1234567890) | state(process-review): consumed cycle 197 review |"));
-        assert!(markdown.contains("1 receipt collected."));
-    }
+		assert!(markdown.contains("## Commit receipts — Cycle 198"));
+		assert!(markdown.contains("| process-review | [`e4f5g6h`](https://github.com/EvaLok/schema-org-json-ld/commit/abcdef1234567890) | state(process-review): consumed cycle 197 review |"));
+		assert!(markdown.contains("1 receipt collected."));
+	}
 
     #[test]
     fn collect_receipts_uses_state_timestamp_for_current_cycle() {
