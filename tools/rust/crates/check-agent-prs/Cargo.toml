@@ -1,0 +1,11 @@
+[package]
+name = "check-agent-prs"
+version = "0.1.0"
+edition = "2021"
+description = "Batch-checks open Copilot PRs for readiness and CI status"
+
+[dependencies]
+chrono = { version = "0.4", features = ["clock"] }
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
