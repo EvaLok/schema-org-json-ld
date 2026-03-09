@@ -2640,7 +2640,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 208"
+        "last_refreshed": "cycle 209"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -2648,11 +2648,11 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 208"
+        "last_refreshed": "cycle 209"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 208"
+        "last_refreshed": "cycle 209"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -2762,12 +2762,12 @@
   },
   "last_cycle": {
     "duration_minutes": 11,
-    "issue": 908,
-    "number": 208,
+    "issue": 914,
+    "number": 209,
     "summary": "Merged PRs #907 and #905. Processed cycle 207 review (4/5). Accepted audit #169. Dispatched #910 (artifact-verification). Housekeeping: deleted branch, closed audit-inbound #895/#896.",
-    "timestamp": "2026-03-09T16:32:13Z"
+    "timestamp": "2026-03-09T18:14:56Z"
   },
-  "last_eva_comment_check": "2026-03-09T16:32:13Z",
+  "last_eva_comment_check": "2026-03-09T18:14:56Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
