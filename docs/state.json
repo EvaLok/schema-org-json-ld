@@ -2179,6 +2179,13 @@
       "pr": 855,
       "status": "merged",
       "title": "Cycle 200 review (cycle 200)"
+    },
+    {
+      "dispatched_at": "2026-03-09T03:57:19Z",
+      "issue": 858,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "check-commitments tool (per Eva #827)"
     }
   ],
   "audit_processed": [
@@ -2322,16 +2329,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#854 Cycle 200 review (cycle 200) (cycle 200)",
+    "dispatch_log_latest": "#858 check-commitments tool (per Eva #827) (cycle 200)",
     "dispatch_to_pr_rate": "97.9%",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 232,
     "pr_merge_rate": "99.1%",
     "produced_pr": 234,
     "resolved": 239,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 239
+    "total_dispatches": 240
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
