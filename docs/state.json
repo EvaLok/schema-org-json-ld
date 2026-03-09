@@ -3,18 +3,14 @@
     {
       "dispatched_at": "2026-02-24T15:44:29Z",
       "issue": 10,
-      "merged_at": null,
       "model": "unknown",
-      "pr": null,
       "status": "failed",
       "title": "Implement AggregateRating schema type"
     },
     {
       "dispatched_at": "2026-02-24T15:44:45Z",
       "issue": 11,
-      "merged_at": null,
       "model": "unknown",
-      "pr": null,
       "status": "failed",
       "title": "Implement Review and Rating schema types"
     },
@@ -741,7 +737,6 @@
     {
       "dispatched_at": "2026-03-01T13:47:00Z",
       "issue": 303,
-      "merged_at": null,
       "model": "gpt-5.3-codex",
       "note": "Workflow file — Eva must merge. NPM_TOKEN secret also needed.",
       "pr": 305,
@@ -1051,7 +1046,6 @@
     {
       "dispatched_at": "2026-03-05T05:06:55Z",
       "issue": 467,
-      "merged_at": null,
       "model": "unknown",
       "pr": 468,
       "status": "closed",
@@ -1265,30 +1259,24 @@
     {
       "dispatched_at": "2026-03-06T06:22:00Z",
       "issue": 553,
-      "merged_at": null,
       "model": "gpt-5.3-codex",
       "note": "Eva directive #538 Phase 2. Shell utility for commit-hash receipts. Merged cycle 156.",
-      "pr": null,
       "status": "merged",
       "title": "Build commit-state-change shell utility (Eva #538 Phase 2)"
     },
     {
       "dispatched_at": "2026-03-06T06:27:00Z",
       "issue": 555,
-      "merged_at": null,
       "model": "gpt-5.3-codex",
       "note": "Review agent. Cycle 155 end-of-cycle review. 9 findings, score 3/5. Merged cycle 156.",
-      "pr": null,
       "status": "merged",
       "title": "Cycle 155 end-of-cycle review"
     },
     {
       "dispatched_at": "2026-03-06T07:58:00Z",
       "issue": 558,
-      "merged_at": null,
       "model": "gpt-5.3-codex",
       "note": "Review agent. Cycle 156 end-of-cycle review. Silent failure — no Copilot work started.",
-      "pr": null,
       "status": "failed",
       "title": "Cycle 156 end-of-cycle review"
     },
@@ -1745,7 +1733,6 @@
     {
       "dispatched_at": "2026-03-07T21:11:17Z",
       "issue": 705,
-      "merged_at": null,
       "model": "gpt-5.3-codex",
       "pr": 706,
       "status": "closed",
@@ -2108,7 +2095,6 @@
     {
       "dispatched_at": "2026-03-08T22:49:07Z",
       "issue": 819,
-      "merged_at": null,
       "model": "gpt-5.4",
       "note": "PR closed due to merge conflicts; changes applied directly to master (commit 5c7d2bb)",
       "pr": 820,
@@ -2128,14 +2114,16 @@
       "dispatched_at": "2026-03-09T00:24:43Z",
       "issue": 835,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 836,
+      "status": "merged",
       "title": "Add format validation to process-review"
     },
     {
       "dispatched_at": "2026-03-09T00:32:34Z",
       "issue": 838,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 839,
+      "status": "merged",
       "title": "Cycle 198 review"
     },
     {
@@ -2391,7 +2379,7 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 198"
+        "last_refreshed": "cycle 199"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
@@ -2399,7 +2387,7 @@
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 198"
+        "last_refreshed": "cycle 199"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
@@ -2415,7 +2403,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 198"
+        "last_refreshed": "cycle 199"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -2431,11 +2419,11 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 198"
+        "last_refreshed": "cycle 199"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 198"
+        "last_refreshed": "cycle 199"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -2455,7 +2443,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 198"
+        "last_refreshed": "cycle 199"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -2463,7 +2451,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 198"
+        "last_refreshed": "cycle 199"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -2471,7 +2459,7 @@
       },
       "schema_status.planned_next": {
         "cadence": "after planning or completing types",
-        "last_refreshed": "cycle 198"
+        "last_refreshed": "cycle 199"
       },
       "schema_status.property_gap_audit": {
         "cadence": "after property gap fixes",
@@ -2483,7 +2471,7 @@
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
-        "last_refreshed": "cycle 198"
+        "last_refreshed": "cycle 199"
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
@@ -2523,22 +2511,22 @@
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
-        "last_refreshed": "cycle 198"
+        "last_refreshed": "cycle 199"
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 198"
+        "last_refreshed": "cycle 199"
       }
     }
   },
   "last_cycle": {
-    "duration_minutes": 11,
+    "duration_minutes": 14,
     "issue": 842,
     "number": 199,
-    "summary": "Processed cycle 197 review (5/5), merged PR #822. Applied note field removal directly after PR #820 conflict. Closed 3 Eva directives (#831, #824, #823). Processed audit #157 (format contract for review agent). Dispatched #835 (process-review format validation). Clean-cycle count 4/5.",
-    "timestamp": "2026-03-09T00:52:54Z"
+    "summary": "Processed cycle 198 review (5/5 complacency, 5 findings). Fixed state integrity (PR #820 misrecorded as merged). Reset clean-cycle counter. Merged PR #839 (review artifact) and PR #836 (format validation). Dispatched #843 (cycle-receipts) and #844 (post-step). Closed Eva directive #834.",
+    "timestamp": "2026-03-09T01:07:10Z"
   },
-  "last_eva_comment_check": "2026-03-09T00:52:54Z",
+  "last_eva_comment_check": "2026-03-09T01:07:10Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
