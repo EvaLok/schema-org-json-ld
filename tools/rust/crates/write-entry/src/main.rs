@@ -308,7 +308,13 @@ fn resolve_journal_input(args: &JournalArgs) -> Result<JournalInput, String> {
     }
 
     if has_inline_journal_content(args) {
-        if args.previous_commitment_status.is_some() != args.previous_commitment_detail.is_some() {
+        if matches!(
+            (
+                args.previous_commitment_status.as_ref(),
+                args.previous_commitment_detail.as_ref(),
+            ),
+            (Some(_), None) | (None, Some(_))
+        ) {
             return Err(
                 "previous-commitment override requires both --previous-commitment-status and --previous-commitment-detail".to_string(),
             );
