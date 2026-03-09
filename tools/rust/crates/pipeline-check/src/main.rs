@@ -529,7 +529,7 @@ fn verify_journal_freshness(repo_root: &Path, today: &str) -> Result<(StepStatus
 	let Some(latest) = latest_journal_heading_date(&content) else {
 		return Ok((
 			StepStatus::Warn,
-			format!("JOURNAL.md has no dated headings in {}", journal_path.display()),
+			format!("JOURNAL.md at {} has no dated headings", journal_path.display()),
 		));
 	};
 	let latest_date = parse_iso_date(&latest)?;
@@ -1617,6 +1617,6 @@ Recent entry
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("JOURNAL.md has no dated headings"));
+			.contains("JOURNAL.md at"));
 	}
 }
