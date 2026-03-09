@@ -2495,7 +2495,7 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#904 Fix write-entry partial previous-commitment override (cycle 207)",
-    "dispatch_to_pr_rate": "97.3%",
+    "dispatch_to_pr_rate": "97.7%",
     "in_flight": 1,
     "merged": 249,
     "pr_merge_rate": "99.2%",
