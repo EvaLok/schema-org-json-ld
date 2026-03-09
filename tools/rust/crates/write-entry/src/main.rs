@@ -54,7 +54,7 @@ struct WorklogArgs {
     /// Short description of an issue processed this cycle
     #[arg(long = "issue-processed")]
     issue_processed: Vec<String>,
-    /// Short description of a self-modification made this cycle
+    /// Self-modification description, optionally in FILE:DESCRIPTION form
     #[arg(long = "self-modification")]
     self_modification: Vec<String>,
     /// Next step for the following cycle
@@ -470,6 +470,19 @@ fn parse_self_modifications(values: &[String]) -> Result<Vec<SelfModification>, 
             let trimmed = value.trim();
             if trimmed.is_empty() {
                 return Err("self-modification description cannot be empty".to_string());
+            }
+            if let Some((file, description)) = trimmed.split_once(':') {
+                let file = file.trim();
+                let description = description.trim();
+                if !file.is_empty() && !description.is_empty() {
+                    return Ok(SelfModification {
+                        file: file.to_string(),
+                        description: description.to_string(),
+                    });
+                }
+                return Err(
+                    "self-modification FILE:DESCRIPTION entries require both parts".to_string(),
+                );
             }
             Ok(SelfModification {
                 file: trimmed.to_string(),
@@ -1575,6 +1588,34 @@ mod tests {
     }
 
     #[test]
+    fn parse_self_modifications_supports_structured_entries() {
+        let modifications =
+            parse_self_modifications(&["AGENTS.md: Updated guidance".to_string()]).unwrap();
+
+        assert_eq!(modifications.len(), 1);
+        assert_eq!(modifications[0].file, "AGENTS.md");
+        assert_eq!(modifications[0].description, "Updated guidance");
+    }
+
+    #[test]
+    fn parse_self_modifications_rejects_incomplete_structured_entries() {
+        let error = parse_self_modifications(&["AGENTS.md:".to_string()]).unwrap_err();
+        assert!(error.contains("FILE:DESCRIPTION"));
+    }
+
+    #[test]
+    fn parse_issue_processed_rejects_empty_descriptions() {
+        let error = parse_issue_processed(&["   ".to_string()]).unwrap_err();
+        assert!(error.contains("issue-processed description cannot be empty"));
+    }
+
+    #[test]
+    fn parse_self_modifications_reject_empty_descriptions() {
+        let error = parse_self_modifications(&["   ".to_string()]).unwrap_err();
+        assert!(error.contains("self-modification description cannot be empty"));
+    }
+
+    #[test]
     fn worklog_reads_json_from_input_file() {
         let repo_root = TempRepoDir::new("worklog-input-file");
         let payload_path = repo_root.path.join("worklog.json");
@@ -1585,7 +1626,7 @@ mod tests {
                 "self_modifications":[],
                 "prs_merged":[123],
                 "prs_reviewed":[],
-                "issues_processed":[],
+                "issues_processed":[546, "Closed #924 (cycle review)"],
                 "current_state":{
                     "in_flight_sessions":1,
                     "pipeline_status":"PASS (6/6)",
@@ -1604,6 +1645,10 @@ mod tests {
         assert!(
             content.contains("[PR #123](https://github.com/EvaLok/schema-org-json-ld/issues/123)")
         );
+        assert!(content.contains("[#546](https://github.com/EvaLok/schema-org-json-ld/issues/546)"));
+        assert!(content.contains(
+            "Closed [#924](https://github.com/EvaLok/schema-org-json-ld/issues/924) (cycle review)"
+        ));
         assert!(content.contains(
             "1. Review [PR #124](https://github.com/EvaLok/schema-org-json-ld/issues/124)"
         ));
