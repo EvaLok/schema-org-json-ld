@@ -3753,6 +3753,20 @@
         "finding_count": 4,
         "ignored": 0,
         "note": "Findings: worklog-accuracy (stale current-state numbers and nonexistent receipt SHA), state-integrity (field-inventory fix claimed but markers stale), tooling-contract (cycle-close untested edge cases), complacency-audit (audit #162 drop was convenience-driven). Actioned 2: state-integrity (field inventory freshness corrected cycle 206), complacency-audit (audit #166 accepted, audit_dropped tracking added). Deferred 2: worklog-accuracy (mechanical receipt generation via cycle-close addresses this), tooling-contract (needs dispatch for edge case tests)."
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "complacency-audit",
+          "state-integrity",
+          "tooling-contract",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 4,
+        "cycle": 205,
+        "deferred": 2,
+        "finding_count": 4,
+        "ignored": 0
       }
     ],
     "last_review_cycle": 205
