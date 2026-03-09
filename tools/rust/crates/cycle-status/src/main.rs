@@ -268,8 +268,8 @@ fn resolve_last_cycle_timestamp(cli: &Cli, state: &StateJson, errors: &mut Vec<S
     if let Some(cli_timestamp) = &cli.last_cycle_timestamp {
         return cli_timestamp.clone();
     }
-    if let Some(state_timestamp) = state.last_cycle.timestamp.clone() {
-        return state_timestamp;
+    if let Some(state_timestamp) = state.last_cycle.timestamp.as_deref() {
+        return state_timestamp.to_string();
     }
     let fallback = "1970-01-01T00:00:00Z".to_string();
     errors.push(format!(
