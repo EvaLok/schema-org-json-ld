@@ -2292,6 +2292,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Cycle 204 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-09T10:58:52Z",
+      "issue": 889,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix write-entry inline journal mode"
     }
   ],
   "audit_processed": [
@@ -2437,16 +2444,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#886 Cycle 204 end-of-cycle review (cycle 204)",
+    "dispatch_log_latest": "#889 Fix write-entry inline journal mode (cycle 205)",
     "dispatch_to_pr_rate": "96.8%",
-    "in_flight": 2,
+    "in_flight": 3,
     "merged": 243,
     "pr_merge_rate": "99.2%",
     "produced_pr": 245,
     "resolved": 250,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 252
+    "total_dispatches": 253
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
