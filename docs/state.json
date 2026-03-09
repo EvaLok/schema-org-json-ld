@@ -2647,7 +2647,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 206"
+        "last_refreshed": "cycle 207"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -3767,9 +3767,23 @@
         "finding_count": 4,
         "ignored": 0,
         "note": "Findings: worklog-accuracy (stale current-state numbers and nonexistent receipt SHA), state-integrity (field-inventory fix claimed but markers stale), tooling-contract (cycle-close untested edge cases), complacency-audit (audit #162 drop was convenience-driven). Actioned 2: state-integrity (field inventory freshness corrected cycle 206), complacency-audit (audit #166 accepted, audit_dropped tracking added). Deferred 2: worklog-accuracy (mechanical receipt generation via cycle-close addresses this), tooling-contract (needs dispatch for edge case tests)."
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "code-quality",
+          "state-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 4,
+        "cycle": 206,
+        "deferred": 2,
+        "finding_count": 3,
+        "ignored": 0,
+        "note": "Findings: worklog-accuracy (placeholder data in worklog contradicts state.json), state-integrity (chronic-category marked refreshed while deferred — false freshness signal), code-quality (PR #890 partial override bug in write-entry). Actioned 1: state-integrity (performed chronic-category check cycle 207, no chronic categories found). Deferred 2: worklog-accuracy (same root cause as prior — needs mechanical generation), code-quality (write-entry partial override — dispatch to Copilot)."
       }
     ],
-    "last_review_cycle": 205
+    "last_review_cycle": 206
   },
   "schema_status": {
     "directory_layout": {
