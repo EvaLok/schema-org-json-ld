@@ -2407,7 +2407,7 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 199"
+        "last_refreshed": "cycle 200"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
@@ -2415,7 +2415,7 @@
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 199"
+        "last_refreshed": "cycle 200"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
@@ -2431,7 +2431,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 199"
+        "last_refreshed": "cycle 200"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -2447,11 +2447,11 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 199"
+        "last_refreshed": "cycle 200"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 199"
+        "last_refreshed": "cycle 200"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -2471,7 +2471,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 199"
+        "last_refreshed": "cycle 200"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -2479,7 +2479,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 199"
+        "last_refreshed": "cycle 200"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -2487,7 +2487,7 @@
       },
       "schema_status.planned_next": {
         "cadence": "after planning or completing types",
-        "last_refreshed": "cycle 199"
+        "last_refreshed": "cycle 200"
       },
       "schema_status.property_gap_audit": {
         "cadence": "after property gap fixes",
@@ -2499,7 +2499,7 @@
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
-        "last_refreshed": "cycle 199"
+        "last_refreshed": "cycle 200"
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
@@ -2539,22 +2539,22 @@
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
-        "last_refreshed": "cycle 199"
+        "last_refreshed": "cycle 200"
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 199"
+        "last_refreshed": "cycle 200"
       }
     }
   },
   "last_cycle": {
-    "duration_minutes": 14,
+    "duration_minutes": 15,
     "issue": 849,
     "number": 200,
-    "summary": "Processed cycle 198 review (5/5 complacency, 5 findings). Fixed state integrity (PR #820 misrecorded as merged). Reset clean-cycle counter. Merged PR #839 (review artifact) and PR #836 (format validation). Dispatched #843 (cycle-receipts) and #844 (post-step). Closed Eva directive #834.",
-    "timestamp": "2026-03-09T02:17:02Z"
+    "summary": "Merged 3 PRs (cycle-receipts #845, post-step #846, review artifact #848). Processed cycle 199 review (4/5, 5 findings). Fixed cycle-close-drift (4 cycles deferred). Dispatched 2 new tools (#850 dispatch-review, #851 check-agent-prs). Closed Eva directives #830, #837.",
+    "timestamp": "2026-03-09T02:32:08Z"
   },
-  "last_eva_comment_check": "2026-03-09T02:17:02Z",
+  "last_eva_comment_check": "2026-03-09T02:32:08Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
