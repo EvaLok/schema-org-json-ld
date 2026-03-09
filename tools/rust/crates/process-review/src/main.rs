@@ -229,7 +229,9 @@ fn validate_review_format(content: &str) -> Vec<String> {
             continue;
         }
 
-        if in_findings && lower.starts_with("## ") && !lower.starts_with("## findings") {
+        if in_findings && lower.starts_with("## ") && !lower.starts_with("## findings")
+            && !matches_numbered_finding_with_hash_prefix(trimmed)
+        {
             break;
         }
 
@@ -347,7 +349,9 @@ fn count_numbered_findings_in_findings_section(content: &str) -> usize {
             continue;
         }
 
-        if in_findings && lower.starts_with("## ") && !lower.starts_with("## findings") {
+        if in_findings && lower.starts_with("## ") && !lower.starts_with("## findings")
+            && !matches_numbered_finding_with_hash_prefix(trimmed)
+        {
             break;
         }
 
@@ -377,7 +381,7 @@ fn is_numbered_finding_heading(line: &str) -> bool {
 }
 
 fn numbered_finding_number(line: &str) -> Option<u64> {
-    let mut chars = line.chars().peekable();
+    let mut chars = strip_hash_heading_prefix(line).chars().peekable();
     let mut digits = String::new();
     while let Some(ch) = chars.peek() {
         if ch.is_ascii_digit() {
@@ -406,7 +410,14 @@ fn numbered_finding_number(line: &str) -> Option<u64> {
         }
     }
 
-    if !saw_whitespace || chars.next() != Some('*') || chars.next() != Some('*') {
+    if !saw_whitespace {
+        return None;
+    }
+
+    let remainder: String = chars.collect();
+    let remainder = remainder.trim_start();
+
+    if !(remainder.starts_with("**") || remainder.starts_with('[')) {
         return None;
     }
 
@@ -430,7 +441,9 @@ fn extract_categories(content: &str) -> Vec<String> {
             continue;
         }
 
-        if in_findings && lower.starts_with("## ") && !lower.starts_with("## findings") {
+        if in_findings && lower.starts_with("## ") && !lower.starts_with("## findings")
+            && !matches_numbered_finding_with_hash_prefix(trimmed)
+        {
             break;
         }
 
@@ -478,7 +491,10 @@ fn extract_categories(content: &str) -> Vec<String> {
 }
 
 fn extract_inline_category(line: &str) -> Option<&str> {
-    let (_, remainder) = line.split_once("**[")?;
+    let remainder = strip_hash_heading_prefix(line);
+    let (_, remainder) = remainder
+        .split_once("**[")
+        .or_else(|| remainder.split_once('['))?;
     let (category, _) = remainder.split_once(']')?;
     if category.is_empty() {
         None
@@ -521,6 +537,27 @@ fn normalize_category(category: &str) -> Option<String> {
     } else {
         Some(trimmed)
     }
+}
+
+fn strip_hash_heading_prefix(line: &str) -> &str {
+    match line.strip_prefix("## ") {
+        Some(remainder) if remainder
+            .chars()
+            .next()
+            .is_some_and(|ch| ch.is_ascii_digit()) => remainder,
+        _ => line,
+    }
+}
+
+fn matches_numbered_finding_with_hash_prefix(line: &str) -> bool {
+    matches!(
+        line.strip_prefix("## "),
+        Some(remainder) if remainder
+            .chars()
+            .next()
+            .is_some_and(|ch| ch.is_ascii_digit())
+            && numbered_finding_number(remainder).is_some()
+    )
 }
 
 fn find_number_before_token(text: &str, token: &str) -> Option<(u64, usize)> {
@@ -654,6 +691,10 @@ mod tests {
         env!("CARGO_MANIFEST_DIR"),
         "/../../../../docs/reviews/cycle-197.md"
     ));
+    const CYCLE_205_REVIEW: &str = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../../../docs/reviews/cycle-205.md"
+    ));
 
     #[test]
     fn help_contains_expected_flags() {
@@ -731,6 +772,14 @@ mod tests {
     }
 
     #[test]
+    fn numbered_finding_number_supports_hash_prefixed_findings() {
+        assert_eq!(
+            numbered_finding_number("## 1. [worklog-accuracy] Finding title"),
+            Some(1)
+        );
+    }
+
+    #[test]
     fn category_extraction_normalizes_values() {
         let categories = extract_categories(CYCLE_170_REVIEW);
         assert_eq!(
@@ -767,6 +816,24 @@ mod tests {
         assert_eq!(
             extract_categories(markdown),
             vec!["metrics-ownership".to_string()]
+        );
+    }
+
+    #[test]
+    fn category_extraction_reads_hash_prefixed_heading_category() {
+        let markdown = r#"## Findings
+
+## 1. [worklog-accuracy] First finding
+
+## 2. [tooling-contract] Second finding
+"#;
+
+        assert_eq!(
+            extract_categories(markdown),
+            vec![
+                "tooling-contract".to_string(),
+                "worklog-accuracy".to_string(),
+            ]
         );
     }
 
@@ -884,6 +951,24 @@ mod tests {
             extract_categories(markdown),
             vec!["first-category".to_string(), "second-category".to_string()]
         );
+    }
+
+    #[test]
+    fn finding_count_supports_mixed_hash_prefixed_findings() {
+        let markdown = r#"## Findings
+
+1. **[metrics-ownership] Legacy finding**
+
+## 2. [worklog-accuracy] Hash-prefixed finding
+
+## 3. [tooling-contract] Another hash-prefixed finding
+
+## Recommendations
+
+1. Leave the parser alone.
+"#;
+
+        assert_eq!(count_numbered_findings_in_findings_section(markdown), 3);
     }
 
     #[test]
@@ -1056,6 +1141,24 @@ mod tests {
     }
 
     #[test]
+    fn parse_review_accepts_cycle_205_artifact() {
+        let path = Path::new("docs/reviews/cycle-205.md");
+        let parsed = parse_review(path, CYCLE_205_REVIEW, false).expect("parse should succeed");
+        assert_eq!(parsed.cycle, 205);
+        assert_eq!(parsed.complacency_score, 4);
+        assert_eq!(parsed.finding_count, 4);
+        assert_eq!(
+            parsed.categories,
+            vec![
+                "complacency-audit".to_string(),
+                "state-integrity".to_string(),
+                "tooling-contract".to_string(),
+                "worklog-accuracy".to_string(),
+            ]
+        );
+    }
+
+    #[test]
     fn parse_review_lenient_mode_accepts_legacy_category_lines() {
         let path = Path::new("docs/reviews/cycle-162.md");
         let parsed = parse_review(path, SAMPLE_REVIEW, true).expect("parse should succeed");
@@ -1102,5 +1205,19 @@ No numbered findings here.
                     .to_string(),
             ]
         );
+    }
+
+    #[test]
+    fn review_format_validation_accepts_hash_prefixed_findings() {
+        let markdown = r#"## Findings
+
+## 1. [worklog-accuracy] Finding title
+
+## Complacency score
+
+4/5 — actual score
+"#;
+
+        assert!(validate_review_format(markdown).is_empty());
     }
 }
