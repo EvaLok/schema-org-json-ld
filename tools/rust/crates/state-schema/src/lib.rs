@@ -1,3 +1,4 @@
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -51,6 +52,16 @@ impl StateJson {
         serde_json::from_value(value)
             .map_err(|error| format!("failed to parse review_agent from state.json: {}", error))
     }
+
+    pub fn publish_gate(&self) -> Result<PublishGate, String> {
+        let value = self
+            .extra
+            .get("publish_gate")
+            .cloned()
+            .ok_or_else(|| "missing field: publish_gate".to_string())?;
+        serde_json::from_value(value)
+            .map_err(|error| format!("failed to parse publish_gate from state.json: {}", error))
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
@@ -78,6 +89,16 @@ pub struct ReviewHistoryEntry {
     pub extra: BTreeMap<String, Value>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+#[serde(default, rename_all = "snake_case")]
+pub struct PublishGate {
+    pub status: Option<String>,
+    pub validated_commit: Option<String>,
+    pub source_diverged: Option<bool>,
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, Value>,
+}
+
 pub fn check_version(state: &StateJson) -> Result<(), String> {
     match state.schema_version {
         Some(version) if version == SCHEMA_VERSION => Ok(()),
@@ -90,6 +111,10 @@ pub fn check_version(state: &StateJson) -> Result<(), String> {
             SCHEMA_VERSION
         )),
     }
+}
+
+pub fn current_utc_timestamp() -> String {
+    Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string()
 }
 
 pub fn read_state_value(repo_root: &Path) -> Result<Value, String> {
@@ -452,9 +477,11 @@ pub struct Blockers {
 #[cfg(test)]
 mod tests {
     use super::{
-        commit_state_json, current_cycle_from_state, default_agent_model, read_state_value,
-        set_value_at_pointer, update_freshness, write_state_value, StateJson, ToolsConfig,
+        commit_state_json, current_cycle_from_state, current_utc_timestamp, default_agent_model,
+        read_state_value, set_value_at_pointer, update_freshness, write_state_value, StateJson,
+        ToolsConfig,
     };
+    use chrono::DateTime;
     use serde_json::{json, Value};
     use std::env;
     use std::fs;
@@ -759,6 +786,32 @@ mod tests {
         .expect("state should deserialize");
 
         assert_eq!(state.last_cycle.duration_minutes, Some(47));
+    }
+
+    #[test]
+    fn publish_gate_deserializes_from_state_extra() {
+        let state: StateJson = serde_json::from_value(json!({
+            "publish_gate": {
+                "status": "published",
+                "validated_commit": "ea8ffff",
+                "source_diverged": false
+            }
+        }))
+        .expect("state should deserialize");
+
+        let publish_gate = state
+            .publish_gate()
+            .expect("publish gate should deserialize");
+        assert_eq!(publish_gate.status.as_deref(), Some("published"));
+        assert_eq!(publish_gate.validated_commit.as_deref(), Some("ea8ffff"));
+        assert_eq!(publish_gate.source_diverged, Some(false));
+    }
+
+    #[test]
+    fn current_utc_timestamp_returns_rfc3339_value() {
+        let timestamp = current_utc_timestamp();
+        assert!(DateTime::parse_from_rfc3339(&timestamp).is_ok());
+        assert!(timestamp.ends_with('Z'));
     }
 
     #[test]

@@ -1,4 +1,3 @@
-use chrono::Utc;
 use serde_json::{json, Value};
 use state_schema::{default_agent_model, set_value_at_pointer};
 
@@ -52,10 +51,6 @@ pub fn build_dispatch_patch(
         }),
         current_cycle,
     })
-}
-
-pub fn current_utc_timestamp() -> String {
-    Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string()
 }
 
 fn read_required_i64(state: &Value, pointer: &str) -> Result<i64, String> {

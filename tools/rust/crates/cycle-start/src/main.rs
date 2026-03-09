@@ -3,7 +3,8 @@ use clap::Parser;
 use serde::Serialize;
 use serde_json::{json, Value};
 use state_schema::{
-    commit_state_json, read_state_value, set_value_at_pointer, write_state_value, StateJson,
+    commit_state_json, current_utc_timestamp, read_state_value, set_value_at_pointer,
+    write_state_value, StateJson,
 };
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -120,7 +121,7 @@ fn run(cli: Cli) -> Result<(), String> {
         .map(ToOwned::to_owned)
         .unwrap_or_else(|| "1970-01-01T00:00:00Z".to_string());
     let cycle = derive_cycle_from_state(&state)?;
-    let timestamp = format_timestamp_utc();
+    let timestamp = current_utc_timestamp();
     let mut warnings = Vec::new();
     let questions_for_eva = gather_questions_for_eva(&mut warnings);
     let open_question_numbers: Vec<u64> =
@@ -178,16 +179,17 @@ fn run(cli: Cli) -> Result<(), String> {
     Ok(())
 }
 
-fn format_timestamp_utc() -> String {
-    Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string()
-}
-
 fn read_typed_state_json(repo_root: &Path) -> Result<StateJson, String> {
     let state_path = repo_root.join("docs/state.json");
     let content = fs::read_to_string(&state_path)
         .map_err(|error| format!("failed to read {}: {}", state_path.display(), error))?;
-    serde_json::from_str(&content)
-        .map_err(|error| format!("failed to parse {} into schema: {}", state_path.display(), error))
+    serde_json::from_str(&content).map_err(|error| {
+        format!(
+            "failed to parse {} into schema: {}",
+            state_path.display(),
+            error
+        )
+    })
 }
 
 fn load_eva_directives(state: &StateJson) -> Result<Vec<String>, String> {
