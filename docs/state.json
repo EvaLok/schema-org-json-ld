@@ -2422,7 +2422,7 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#884 Enhance cycle-close: receipt table, priorities, worklog summary (cycle 204)",
-    "dispatch_to_pr_rate": "97.2%",
+    "dispatch_to_pr_rate": "97.6%",
     "in_flight": 1,
     "merged": 242,
     "pr_merge_rate": "99.2%",
@@ -3636,6 +3636,12 @@
       },
       {
         "actioned": 2,
+        "categories": [
+          "receipt-integrity",
+          "process-adherence",
+          "code-quality",
+          "journal-quality"
+        ],
         "complacency_score": 4,
         "cycle": 202,
         "deferred": 2,
@@ -3645,6 +3651,12 @@
       },
       {
         "actioned": 4,
+        "categories": [
+          "tooling-contract",
+          "receipt-integrity",
+          "review-accounting",
+          "process-adherence"
+        ],
         "complacency_score": 5,
         "cycle": 203,
         "deferred": 0,
