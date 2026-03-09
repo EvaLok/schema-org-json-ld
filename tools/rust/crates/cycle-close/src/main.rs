@@ -1,11 +1,15 @@
+use chrono::{DateTime, Utc};
 use clap::Parser;
 use serde_json::json;
 use state_schema::{current_cycle_from_state, read_state_value, StateJson};
+use std::ffi::OsStr;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const ORCHESTRATOR_SIGNATURE: &str = "[main-orchestrator]";
+const RECEIPTS_TOOL_PATH: &str = "tools/cycle-receipts";
 
 #[derive(Debug, Parser)]
 #[command(name = "cycle-close")]
@@ -21,6 +25,10 @@ struct Cli {
     /// Short summary of cycle accomplishments
     #[arg(long)]
     summary: Option<String>,
+
+    /// Priorities for the next cycle
+    #[arg(long)]
+    priorities: Option<String>,
 
     /// Show planned actions without executing them
     #[arg(long)]
@@ -44,11 +52,8 @@ struct ExecutionResult {
 
 trait CommandRunner {
     fn git(&self, _repo_root: &Path, _args: &[String]) -> Result<ExecutionResult, String>;
-    fn gh(
-        &self,
-        _args: &[String],
-        _input: Option<Vec<u8>>,
-    ) -> Result<ExecutionResult, String>;
+    fn bash(&self, _repo_root: &Path, _args: &[String]) -> Result<ExecutionResult, String>;
+    fn gh(&self, _args: &[String], _input: Option<Vec<u8>>) -> Result<ExecutionResult, String>;
 }
 
 struct ProcessRunner;
@@ -68,11 +73,21 @@ impl CommandRunner for ProcessRunner {
         })
     }
 
-    fn gh(
-        &self,
-        args: &[String],
-        input: Option<Vec<u8>>,
-    ) -> Result<ExecutionResult, String> {
+    fn bash(&self, repo_root: &Path, args: &[String]) -> Result<ExecutionResult, String> {
+        let output = Command::new("bash")
+            .current_dir(repo_root)
+            .arg(RECEIPTS_TOOL_PATH)
+            .args(args)
+            .output()
+            .map_err(|error| format!("failed to execute bash {}: {}", RECEIPTS_TOOL_PATH, error))?;
+        Ok(ExecutionResult {
+            exit_code: output.status.code(),
+            stdout: String::from_utf8_lossy(&output.stdout).to_string(),
+            stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+        })
+    }
+
+    fn gh(&self, args: &[String], input: Option<Vec<u8>>) -> Result<ExecutionResult, String> {
         if let Some(input) = input {
             let mut child = Command::new("gh")
                 .args(args)
@@ -130,6 +145,10 @@ fn main() {
 }
 
 fn execute(cli: &Cli, runner: &dyn CommandRunner) -> Result<String, String> {
+    execute_at(cli, runner, Utc::now())
+}
+
+fn execute_at(cli: &Cli, runner: &dyn CommandRunner, now: DateTime<Utc>) -> Result<String, String> {
     let cycle = current_cycle_from_state(&cli.repo_root).map_err(|error| {
         if error == "missing /last_cycle/number in state.json" {
             "missing numeric /last_cycle/number in docs/state.json".to_string()
@@ -151,27 +170,49 @@ fn execute(cli: &Cli, runner: &dyn CommandRunner) -> Result<String, String> {
         .as_deref()
         .map(str::trim)
         .filter(|value| !value.is_empty())
-        .or_else(|| cli.summary.as_deref().map(str::trim).filter(|value| !value.is_empty()))
+        .or_else(|| {
+            cli.summary
+                .as_deref()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+        })
         .unwrap_or("N/A")
         .to_string();
-    let summary = resolve_summary(cli.summary.as_deref(), state.last_cycle.summary.as_deref());
+    let worklog_summary = current_cycle_worklog_summary(&cli.repo_root, cycle, now)?;
+    let summary = resolve_summary(
+        cli.summary.as_deref(),
+        worklog_summary.as_deref(),
+        state.last_cycle.summary.as_deref(),
+    );
     let review_issue = extract_review_issue_number(&state);
-    let comment = format_closing_comment(cycle, &pipeline_status, review_issue, &summary);
-    let commit_message = format!("docs(worklog,journal): cycle {} entries [cycle {}]", cycle, cycle);
+    let receipts = load_commit_receipts(&cli.repo_root, cycle, runner)?;
+    let comment = format_closing_comment(
+        cycle,
+        &pipeline_status,
+        review_issue,
+        &summary,
+        cli.priorities.as_deref(),
+        &receipts,
+    );
+    let commit_message = format!(
+        "docs(worklog,journal): cycle {} entries [cycle {}]",
+        cycle, cycle
+    );
 
     if cli.dry_run {
-        let mut lines = vec![
-            format!(
-                "Would stage and commit cycle artifacts with message: {}",
-                commit_message
-            ),
-        ];
+        let mut lines = vec![format!(
+            "Would stage and commit cycle artifacts with message: {}",
+            commit_message
+        )];
         if cli.skip_push {
             lines.push("Would skip push due to --skip-push".to_string());
         } else {
             lines.push("Would run: git push origin master".to_string());
         }
-        lines.push(format!("Would post closing summary comment to issue #{}", cli.issue));
+        lines.push(format!(
+            "Would post closing summary comment to issue #{}",
+            cli.issue
+        ));
         if cli.skip_close {
             lines.push("Would skip closing issue due to --skip-close".to_string());
         } else {
@@ -183,7 +224,8 @@ fn execute(cli: &Cli, runner: &dyn CommandRunner) -> Result<String, String> {
     }
 
     let mut lines = Vec::new();
-    let commit_result = commit_cycle_artifacts(&cli.repo_root, &commit_message, runner)?;
+    let commit_result =
+        commit_cycle_artifacts(&cli.repo_root, cycle, now, &commit_message, runner)?;
     match commit_result {
         CommitOutcome::Committed { sha } => {
             lines.push(format!("Committed cycle artifacts: {}", sha));
@@ -218,6 +260,8 @@ fn format_closing_comment(
     pipeline_status: &str,
     review_issue: Option<u64>,
     summary: &str,
+    priorities: Option<&str>,
+    receipts: &[ReceiptEntry],
 ) -> String {
     let mut lines = vec![
         format!("> **{ORCHESTRATOR_SIGNATURE}** | Cycle {cycle}"),
@@ -230,8 +274,41 @@ fn format_closing_comment(
     }
 
     lines.push(String::new());
-    lines.push("Accomplished:".to_string());
-    lines.extend(summary_items(summary).into_iter().map(|item| format!("- {}", item)));
+    lines.push("## Accomplishments".to_string());
+    lines.push(String::new());
+    lines.extend(
+        summary_items(summary)
+            .into_iter()
+            .map(|item| format!("- {}", item)),
+    );
+
+    if let Some(priorities) = priorities.map(str::trim).filter(|value| !value.is_empty()) {
+        lines.push(String::new());
+        lines.push("## Next cycle priorities".to_string());
+        lines.push(String::new());
+        lines.extend(
+            summary_items(priorities)
+                .into_iter()
+                .map(|item| format!("- {}", item)),
+        );
+    }
+
+    if !receipts.is_empty() {
+        lines.push(String::new());
+        lines.push("## Commit receipts".to_string());
+        lines.push(String::new());
+        lines.push("| Tool | Receipt | Link |".to_string());
+        lines.push("|------|---------|------|".to_string());
+        lines.extend(receipts.iter().map(|entry| {
+            format!(
+                "| {} | {} | [{}]({}) |",
+                escape_markdown_cell(&entry.tool),
+                escape_markdown_cell(&entry.receipt),
+                entry.receipt,
+                entry.url
+            )
+        }));
+    }
     lines.join("\n")
 }
 
@@ -241,11 +318,31 @@ enum CommitOutcome {
     NothingToCommit,
 }
 
-fn resolve_summary(cli_summary: Option<&str>, state_summary: Option<&str>) -> String {
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct ReceiptEntry {
+    tool: String,
+    receipt: String,
+    url: String,
+}
+
+fn resolve_summary(
+    cli_summary: Option<&str>,
+    worklog_summary: Option<&str>,
+    state_summary: Option<&str>,
+) -> String {
     cli_summary
         .map(str::trim)
         .filter(|value| !value.is_empty())
-        .or_else(|| state_summary.map(str::trim).filter(|value| !value.is_empty()))
+        .or_else(|| {
+            worklog_summary
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+        })
+        .or_else(|| {
+            state_summary
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+        })
         .unwrap_or("Cycle close completed.")
         .to_string()
 }
@@ -300,16 +397,24 @@ fn extract_issue_number_from_reference(value: &str) -> Option<u64> {
 
 fn commit_cycle_artifacts(
     repo_root: &Path,
+    cycle: u64,
+    now: DateTime<Utc>,
     commit_message: &str,
     runner: &dyn CommandRunner,
 ) -> Result<CommitOutcome, String> {
-    let artifact_paths = cycle_artifact_paths(repo_root)?;
-    let mut add_args = vec!["add".to_string(), "--".to_string()];
-    add_args.extend(artifact_paths.iter().cloned());
-    ensure_success(
-        "git add cycle artifacts",
-        runner.git(repo_root, &add_args)?,
-    )?;
+    let artifact_paths = cycle_artifact_paths(repo_root, cycle, now, runner)?;
+    if artifact_paths.is_empty() {
+        return Ok(CommitOutcome::NothingToCommit);
+    }
+    for artifact_path in &artifact_paths {
+        ensure_success(
+            "git add cycle artifact",
+            runner.git(
+                repo_root,
+                &["add".to_string(), "--".to_string(), artifact_path.clone()],
+            )?,
+        )?;
+    }
 
     let mut diff_args = vec![
         "diff".to_string(),
@@ -341,7 +446,11 @@ fn commit_cycle_artifacts(
 
     let rev_parse_output = runner.git(
         repo_root,
-        &["rev-parse".to_string(), "--short=7".to_string(), "HEAD".to_string()],
+        &[
+            "rev-parse".to_string(),
+            "--short=7".to_string(),
+            "HEAD".to_string(),
+        ],
     )?;
     ensure_success("git rev-parse --short=7 HEAD", rev_parse_output.clone())?;
 
@@ -350,63 +459,265 @@ fn commit_cycle_artifacts(
     })
 }
 
-fn cycle_artifact_paths(repo_root: &Path) -> Result<Vec<String>, String> {
-    let candidates = [
-        ("docs/worklog", PathKind::Directory),
-        ("docs/journal", PathKind::Directory),
-        ("JOURNAL.md", PathKind::File),
-        ("docs/state.json", PathKind::File),
-        ("docs/reviews", PathKind::Directory),
-    ];
+fn cycle_artifact_paths(
+    repo_root: &Path,
+    cycle: u64,
+    now: DateTime<Utc>,
+    runner: &dyn CommandRunner,
+) -> Result<Vec<String>, String> {
     let mut paths = Vec::new();
-    for (relative_path, expected_kind) in candidates {
-        let path = repo_root.join(relative_path);
-        let Ok(metadata) = std::fs::metadata(&path) else {
-            continue;
-        };
-        if !expected_kind.matches(&metadata) {
-            return Err(format!(
-                "expected {} to be a {}",
-                path.display(),
-                expected_kind.as_str()
-            ));
-        }
-        paths.push(relative_path.to_string());
+    if let Some(worklog_path) = find_current_cycle_worklog_relative_path(repo_root, cycle, now)? {
+        paths.push(worklog_path);
+    }
+    if let Some(journal_path) = existing_file_relative_path(
+        repo_root,
+        &format!("docs/journal/{}.md", now.format("%Y-%m-%d")),
+    )? {
+        paths.push(journal_path);
+    }
+    paths.push(required_file_relative_path(repo_root, "docs/state.json")?);
+    if journal_index_is_modified(repo_root, runner)? {
+        paths.push("JOURNAL.md".to_string());
+    }
+    if let Some(review_path) =
+        existing_file_relative_path(repo_root, &format!("docs/reviews/cycle-{}.md", cycle))?
+    {
+        paths.push(review_path);
     }
     Ok(paths)
 }
 
-#[derive(Clone, Copy)]
-enum PathKind {
-    File,
-    Directory,
+fn current_cycle_worklog_summary(
+    repo_root: &Path,
+    cycle: u64,
+    now: DateTime<Utc>,
+) -> Result<Option<String>, String> {
+    let Some(relative_path) = find_current_cycle_worklog_relative_path(repo_root, cycle, now)?
+    else {
+        return Ok(None);
+    };
+    let path = repo_root.join(&relative_path);
+    let content = fs::read_to_string(&path)
+        .map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
+    Ok(extract_markdown_section(&content, "What was done"))
 }
 
-impl PathKind {
-    fn matches(self, metadata: &std::fs::Metadata) -> bool {
-        match self {
-            Self::File => metadata.is_file(),
-            Self::Directory => metadata.is_dir(),
+fn find_current_cycle_worklog_relative_path(
+    repo_root: &Path,
+    cycle: u64,
+    now: DateTime<Utc>,
+) -> Result<Option<String>, String> {
+    let worklog_root = repo_root
+        .join("docs")
+        .join("worklog")
+        .join(now.format("%Y-%m-%d").to_string());
+    if !worklog_root.exists() {
+        return Ok(None);
+    }
+    let metadata = fs::metadata(&worklog_root)
+        .map_err(|error| format!("failed to read {}: {}", worklog_root.display(), error))?;
+    if !metadata.is_dir() {
+        return Err(format!(
+            "expected {} to be a directory",
+            worklog_root.display()
+        ));
+    }
+
+    let mut candidates = Vec::new();
+    for entry in fs::read_dir(&worklog_root)
+        .map_err(|error| format!("failed to read {}: {}", worklog_root.display(), error))?
+    {
+        let entry = entry.map_err(|error| {
+            format!(
+                "failed to read entry in {}: {}",
+                worklog_root.display(),
+                error
+            )
+        })?;
+        let path = entry.path();
+        if path.extension() != Some(OsStr::new("md")) {
+            continue;
+        }
+        let file_metadata = fs::metadata(&path)
+            .map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
+        if !file_metadata.is_file() {
+            return Err(format!("expected {} to be a file", path.display()));
+        }
+        let content = fs::read_to_string(&path)
+            .map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
+        if content
+            .lines()
+            .next()
+            .is_some_and(|line| matches_cycle_heading(line, cycle))
+        {
+            candidates.push(path);
         }
     }
 
-    fn as_str(self) -> &'static str {
-        match self {
-            Self::File => "file",
-            Self::Directory => "directory",
+    candidates.sort();
+    candidates
+        .into_iter()
+        .last()
+        .map(|path| {
+            path.strip_prefix(repo_root)
+                .map_err(|error| {
+                    format!(
+                        "failed to compute relative path for {}: {}",
+                        path.display(),
+                        error
+                    )
+                })
+                .map(|relative| relative.to_string_lossy().replace('\\', "/"))
+        })
+        .transpose()
+}
+
+fn matches_cycle_heading(line: &str, cycle: u64) -> bool {
+    let prefix = format!("# Cycle {}", cycle);
+    let Some(remainder) = line.trim_start().strip_prefix(&prefix) else {
+        return false;
+    };
+    remainder.is_empty()
+        || remainder
+            .chars()
+            .next()
+            .is_some_and(|character| character.is_whitespace() || matches!(character, '—' | '-'))
+}
+
+fn extract_markdown_section(content: &str, heading: &str) -> Option<String> {
+    let target_heading = format!("## {heading}");
+    let mut in_section = false;
+    let mut lines = Vec::new();
+
+    for line in content.lines() {
+        let trimmed = line.trim_end();
+        if in_section {
+            if trimmed.starts_with("## ") {
+                break;
+            }
+            lines.push(trimmed);
+        } else if trimmed == target_heading {
+            in_section = true;
         }
     }
+
+    let section = lines.join("\n").trim().to_string();
+    if section.is_empty() {
+        None
+    } else {
+        Some(section)
+    }
+}
+
+fn required_file_relative_path(repo_root: &Path, relative_path: &str) -> Result<String, String> {
+    let path = repo_root.join(relative_path);
+    let metadata = fs::metadata(&path)
+        .map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
+    if !metadata.is_file() {
+        return Err(format!("expected {} to be a file", path.display()));
+    }
+    Ok(relative_path.to_string())
+}
+
+fn existing_file_relative_path(
+    repo_root: &Path,
+    relative_path: &str,
+) -> Result<Option<String>, String> {
+    let path = repo_root.join(relative_path);
+    let Ok(metadata) = fs::metadata(&path) else {
+        return Ok(None);
+    };
+    if !metadata.is_file() {
+        return Err(format!("expected {} to be a file", path.display()));
+    }
+    Ok(Some(relative_path.to_string()))
+}
+
+fn journal_index_is_modified(repo_root: &Path, runner: &dyn CommandRunner) -> Result<bool, String> {
+    let output = runner.git(
+        repo_root,
+        &[
+            "status".to_string(),
+            "--short".to_string(),
+            "--".to_string(),
+            "JOURNAL.md".to_string(),
+        ],
+    )?;
+    ensure_success("git status --short -- JOURNAL.md", output.clone())?;
+    Ok(!output.stdout.trim().is_empty())
+}
+
+fn load_commit_receipts(
+    repo_root: &Path,
+    cycle: u64,
+    runner: &dyn CommandRunner,
+) -> Result<Vec<ReceiptEntry>, String> {
+    let output = runner.bash(
+        repo_root,
+        &[
+            "--cycle".to_string(),
+            cycle.to_string(),
+            "--json".to_string(),
+        ],
+    )?;
+    ensure_success("bash tools/cycle-receipts", output.clone())?;
+    let value: serde_json::Value = serde_json::from_str(&output.stdout).map_err(|error| {
+        format!(
+            "failed to parse cycle-receipts JSON output for cycle {}: {}",
+            cycle, error
+        )
+    })?;
+    let array = value.as_array().ok_or_else(|| {
+        format!(
+            "cycle-receipts output for cycle {} was not a JSON array",
+            cycle
+        )
+    })?;
+    array
+        .iter()
+        .map(|entry| {
+            Ok(ReceiptEntry {
+                tool: json_string_field(entry, "step")?,
+                receipt: json_string_field(entry, "receipt")?,
+                url: json_string_field(entry, "url")?,
+            })
+        })
+        .collect()
+}
+
+fn json_string_field(value: &serde_json::Value, field: &str) -> Result<String, String> {
+    value
+        .get(field)
+        .and_then(|inner| inner.as_str())
+        .map(ToOwned::to_owned)
+        .ok_or_else(|| {
+            format!(
+                "missing string field `{}` in cycle-receipts output: {}",
+                field, value
+            )
+        })
+}
+
+fn escape_markdown_cell(value: &str) -> String {
+    value.replace('|', "\\|")
 }
 
 fn push_origin_master(repo_root: &Path, runner: &dyn CommandRunner) -> Result<(), String> {
-    let push_args = ["push".to_string(), "origin".to_string(), "master".to_string()];
+    let push_args = [
+        "push".to_string(),
+        "origin".to_string(),
+        "master".to_string(),
+    ];
     let push_output = runner.git(repo_root, &push_args)?;
     if matches!(push_output.exit_code, Some(0)) {
         return Ok(());
     }
 
     if !contains_fetch_first(&push_output) {
-        return Err(command_failure_message("git push origin master", &push_output));
+        return Err(command_failure_message(
+            "git push origin master",
+            &push_output,
+        ));
     }
 
     ensure_success(
@@ -508,18 +819,22 @@ mod tests {
     #[derive(Default)]
     struct MockRunner {
         git_results: Mutex<VecDeque<Result<ExecutionResult, String>>>,
+        bash_results: Mutex<VecDeque<Result<ExecutionResult, String>>>,
         gh_results: Mutex<VecDeque<Result<ExecutionResult, String>>>,
         git_calls: Mutex<Vec<Vec<String>>>,
+        bash_calls: Mutex<Vec<Vec<String>>>,
         gh_calls: Mutex<Vec<(Vec<String>, Option<Vec<u8>>)>>,
     }
 
     impl MockRunner {
         fn with_results(
             git_results: Vec<Result<ExecutionResult, String>>,
+            bash_results: Vec<Result<ExecutionResult, String>>,
             gh_results: Vec<Result<ExecutionResult, String>>,
         ) -> Self {
             Self {
                 git_results: Mutex::new(VecDeque::from(git_results)),
+                bash_results: Mutex::new(VecDeque::from(bash_results)),
                 gh_results: Mutex::new(VecDeque::from(gh_results)),
                 ..Self::default()
             }
@@ -531,6 +846,10 @@ mod tests {
 
         fn gh_calls(&self) -> Vec<(Vec<String>, Option<Vec<u8>>)> {
             self.gh_calls.lock().unwrap().clone()
+        }
+
+        fn bash_calls(&self) -> Vec<Vec<String>> {
+            self.bash_calls.lock().unwrap().clone()
         }
     }
 
@@ -544,11 +863,16 @@ mod tests {
                 .unwrap_or_else(|| panic!("unexpected git call: {:?}", args))
         }
 
-        fn gh(
-            &self,
-            args: &[String],
-            input: Option<Vec<u8>>,
-        ) -> Result<ExecutionResult, String> {
+        fn bash(&self, _repo_root: &Path, args: &[String]) -> Result<ExecutionResult, String> {
+            self.bash_calls.lock().unwrap().push(args.to_vec());
+            self.bash_results
+                .lock()
+                .unwrap()
+                .pop_front()
+                .unwrap_or_else(|| panic!("unexpected bash call: {:?}", args))
+        }
+
+        fn gh(&self, args: &[String], input: Option<Vec<u8>>) -> Result<ExecutionResult, String> {
             self.gh_calls.lock().unwrap().push((args.to_vec(), input));
             self.gh_results
                 .lock()
@@ -569,7 +893,6 @@ mod tests {
             let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
             let root = std::env::temp_dir().join(format!("cycle-close-test-{}", run_id));
             let remote = std::env::temp_dir().join(format!("cycle-close-remote-{}", run_id));
-            fs::create_dir_all(root.join("docs/worklog")).unwrap();
             fs::create_dir_all(root.join("docs/journal")).unwrap();
             fs::create_dir_all(root.join("docs/reviews")).unwrap();
             fs::create_dir_all(&remote).unwrap();
@@ -595,22 +918,40 @@ mod tests {
             );
             git_ok(self.path(), ["add", "."]);
             git_ok(self.path(), ["commit", "-m", "Initial state"]);
-            git_ok(self.path(), ["init", "--bare", self.remote_path.to_str().unwrap()]);
             git_ok(
                 self.path(),
-                ["remote", "add", "origin", self.remote_path.to_str().unwrap()],
+                ["init", "--bare", self.remote_path.to_str().unwrap()],
+            );
+            git_ok(
+                self.path(),
+                [
+                    "remote",
+                    "add",
+                    "origin",
+                    self.remote_path.to_str().unwrap(),
+                ],
             );
             git_ok(self.path(), ["push", "-u", "origin", "master"]);
         }
 
-        fn write_cycle_artifacts(&self, cycle: u64) {
+        fn write_cycle_artifacts(&self, cycle: u64, now: DateTime<Utc>) {
+            let worklog_dir = self
+                .path
+                .join("docs/worklog")
+                .join(now.format("%Y-%m-%d").to_string());
+            fs::create_dir_all(&worklog_dir).unwrap();
             fs::write(
-                self.path.join(format!("docs/worklog/cycle-{}.md", cycle)),
-                "Worklog entry\n",
+                worklog_dir.join(format!("{}-cycle-{}-summary.md", now.format("%H%M%S"), cycle)),
+                format!(
+                    "# Cycle {} — {} UTC\n\n## What was done\n\n- Captured worklog accomplishments\n- Updated cycle-close contract\n\n## Next steps\n\n1. Review the next dispatched PR.\n",
+                    cycle,
+                    now.format("%Y-%m-%d %H:%M")
+                ),
             )
             .unwrap();
             fs::write(
-                self.path.join(format!("docs/journal/cycle-{}.md", cycle)),
+                self.path
+                    .join(format!("docs/journal/{}.md", now.format("%Y-%m-%d"))),
                 "Journal entry\n",
             )
             .unwrap();
@@ -619,7 +960,11 @@ mod tests {
                 "Review entry\n",
             )
             .unwrap();
-            fs::write(self.path.join("JOURNAL.md"), "# Journal\n\nAppended entry\n").unwrap();
+            fs::write(
+                self.path.join("JOURNAL.md"),
+                "# Journal\n\nAppended entry\n",
+            )
+            .unwrap();
         }
     }
 
@@ -631,18 +976,24 @@ mod tests {
     }
 
     struct HybridRunner {
+        bash_calls: Mutex<Vec<Vec<String>>>,
         gh_calls: Mutex<Vec<(Vec<String>, Option<Vec<u8>>)>>,
     }
 
     impl HybridRunner {
         fn new() -> Self {
             Self {
+                bash_calls: Mutex::new(Vec::new()),
                 gh_calls: Mutex::new(Vec::new()),
             }
         }
 
         fn gh_calls(&self) -> Vec<(Vec<String>, Option<Vec<u8>>)> {
             self.gh_calls.lock().unwrap().clone()
+        }
+
+        fn bash_calls(&self) -> Vec<Vec<String>> {
+            self.bash_calls.lock().unwrap().clone()
         }
     }
 
@@ -661,11 +1012,12 @@ mod tests {
             })
         }
 
-        fn gh(
-            &self,
-            args: &[String],
-            input: Option<Vec<u8>>,
-        ) -> Result<ExecutionResult, String> {
+        fn bash(&self, _repo_root: &Path, args: &[String]) -> Result<ExecutionResult, String> {
+            self.bash_calls.lock().unwrap().push(args.to_vec());
+            Ok(success_output(&sample_receipts_json()))
+        }
+
+        fn gh(&self, args: &[String], input: Option<Vec<u8>>) -> Result<ExecutionResult, String> {
             self.gh_calls.lock().unwrap().push((args.to_vec(), input));
             Ok(ExecutionResult {
                 exit_code: Some(0),
@@ -711,6 +1063,24 @@ mod tests {
         })
     }
 
+    fn fixed_now() -> DateTime<Utc> {
+        DateTime::parse_from_rfc3339("2026-03-09T08:06:02Z")
+            .unwrap()
+            .with_timezone(&Utc)
+    }
+
+    fn sample_receipts_json() -> String {
+        serde_json::to_string(&json!([
+            {
+                "step": "cycle-start",
+                "receipt": "abc1234",
+                "commit": "state(cycle-start): begin cycle 202 [cycle 202]",
+                "url": "https://github.com/EvaLok/schema-org-json-ld/commit/abc1234"
+            }
+        ]))
+        .unwrap()
+    }
+
     #[test]
     fn help_contains_expected_flags() {
         let mut command = Cli::command();
@@ -719,6 +1089,7 @@ mod tests {
         let help = String::from_utf8(output).unwrap();
         assert!(help.contains("--issue"));
         assert!(help.contains("--summary"));
+        assert!(help.contains("--priorities"));
         assert!(help.contains("--dry-run"));
         assert!(help.contains("--skip-push"));
         assert!(help.contains("--skip-close"));
@@ -729,24 +1100,126 @@ mod tests {
     fn dry_run_reports_planned_actions_without_running_commands() {
         let repo = TempRepo::new();
         repo.init(sample_state());
-        repo.write_cycle_artifacts(202);
+        repo.write_cycle_artifacts(202, fixed_now());
         let cli = Cli {
             repo_root: repo.path().to_path_buf(),
             issue: 871,
             summary: Some("Validated pipeline and captured review follow-up".to_string()),
+            priorities: None,
             dry_run: true,
             skip_push: false,
             skip_close: false,
         };
-        let runner = MockRunner::default();
+        let runner = MockRunner::with_results(
+            vec![],
+            vec![Ok(success_output(&sample_receipts_json()))],
+            vec![],
+        );
 
-        let output = execute(&cli, &runner).expect("dry-run should succeed");
+        let output = execute_at(&cli, &runner, fixed_now()).expect("dry-run should succeed");
 
         assert!(output.contains("Would stage and commit cycle artifacts"));
         assert!(output.contains("docs(worklog,journal): cycle 202 entries [cycle 202]"));
         assert!(output.contains("> **[main-orchestrator]** | Cycle 202"));
         assert!(runner.git_calls().is_empty());
         assert!(runner.gh_calls().is_empty());
+        assert_eq!(
+            runner.bash_calls(),
+            vec![vec![
+                "--cycle".to_string(),
+                "202".to_string(),
+                "--json".to_string()
+            ]]
+        );
+    }
+
+    #[test]
+    fn worklog_summary_is_used_when_cli_summary_is_omitted() {
+        let repo = TempRepo::new();
+        repo.init(sample_state());
+        repo.write_cycle_artifacts(202, fixed_now());
+        let cli = Cli {
+            repo_root: repo.path().to_path_buf(),
+            issue: 871,
+            summary: None,
+            priorities: None,
+            dry_run: true,
+            skip_push: false,
+            skip_close: false,
+        };
+        let runner = MockRunner::with_results(vec![], vec![Ok(success_output("[]"))], vec![]);
+
+        let output = execute_at(&cli, &runner, fixed_now()).expect("dry-run should succeed");
+
+        assert!(output.contains("- Captured worklog accomplishments"));
+        assert!(output.contains("- Updated cycle-close contract"));
+        assert!(!output.contains("- Pipeline check: PASS"));
+    }
+
+    #[test]
+    fn commit_stages_only_current_cycle_artifacts() {
+        let repo = TempRepo::new();
+        repo.init(sample_state());
+        repo.write_cycle_artifacts(202, fixed_now());
+        let older_dir = repo.path().join("docs/worklog/2026-03-08");
+        fs::create_dir_all(&older_dir).unwrap();
+        fs::write(
+            older_dir.join("225043-hundred-ninety-seventh-orchestrator-cycle.md"),
+            "# Cycle 197 — 2026-03-08 22:50 UTC\n\n## What was done\n\n- Older entry.\n",
+        )
+        .unwrap();
+
+        let cli = Cli {
+            repo_root: repo.path().to_path_buf(),
+            issue: 871,
+            summary: None,
+            priorities: None,
+            dry_run: false,
+            skip_push: true,
+            skip_close: true,
+        };
+        let runner = MockRunner::with_results(
+            vec![
+                Ok(success_output(" M JOURNAL.md\n")),
+                Ok(success_output("")),
+                Ok(success_output("")),
+                Ok(success_output("")),
+                Ok(success_output("")),
+                Ok(success_output("")),
+                Ok(exit_output(1, "", "")),
+                Ok(success_output("")),
+                Ok(success_output("abc1234\n")),
+            ],
+            vec![Ok(success_output("[]"))],
+            vec![Ok(success_output("{}"))],
+        );
+
+        execute_at(&cli, &runner, fixed_now()).expect("execution should succeed");
+
+        let expected_worklog = format!(
+            "docs/worklog/{}/{}-cycle-202-summary.md",
+            fixed_now().format("%Y-%m-%d"),
+            fixed_now().format("%H%M%S")
+        );
+        let expected_journal = format!("docs/journal/{}.md", fixed_now().format("%Y-%m-%d"));
+        let git_calls = runner.git_calls();
+        assert_eq!(
+            git_calls[1].as_slice(),
+            ["add", "--", expected_worklog.as_str()]
+        );
+        assert_eq!(
+            git_calls[2].as_slice(),
+            ["add", "--", expected_journal.as_str()]
+        );
+        assert_eq!(git_calls[3].as_slice(), ["add", "--", "docs/state.json"]);
+        assert_eq!(git_calls[4].as_slice(), ["add", "--", "JOURNAL.md"]);
+        assert_eq!(
+            git_calls[5].as_slice(),
+            ["add", "--", "docs/reviews/cycle-202.md"]
+        );
+        assert!(!git_calls.iter().flatten().any(|arg| arg == "docs/worklog"));
+        assert!(!git_calls.iter().flatten().any(|arg| arg == "docs/journal"));
+        assert!(!git_calls.iter().flatten().any(|arg| arg == "docs/reviews"));
     }
 
     #[test]
@@ -757,6 +1230,7 @@ mod tests {
             repo_root: repo.path().to_path_buf(),
             issue: 871,
             summary: None,
+            priorities: None,
             dry_run: false,
             skip_push: false,
             skip_close: false,
@@ -766,11 +1240,13 @@ mod tests {
                 Ok(success_output("")),
                 Ok(exit_output(0, "", "")),
                 Ok(success_output("")),
+                Ok(success_output("")),
             ],
+            vec![Ok(success_output("[]"))],
             vec![Ok(success_output("{}")), Ok(success_output("{}"))],
         );
 
-        let output = execute(&cli, &runner).expect("execution should succeed");
+        let output = execute_at(&cli, &runner, fixed_now()).expect("execution should succeed");
 
         assert!(output.contains("No cycle artifact changes to commit"));
     }
@@ -779,17 +1255,23 @@ mod tests {
     fn push_retries_once_after_fetch_first_failure() {
         let repo = TempRepo::new();
         repo.init(sample_state());
-        repo.write_cycle_artifacts(202);
+        repo.write_cycle_artifacts(202, fixed_now());
         let cli = Cli {
             repo_root: repo.path().to_path_buf(),
             issue: 871,
             summary: None,
+            priorities: None,
             dry_run: false,
             skip_push: false,
             skip_close: false,
         };
         let runner = MockRunner::with_results(
             vec![
+                Ok(success_output(" M JOURNAL.md\n")),
+                Ok(success_output("")),
+                Ok(success_output("")),
+                Ok(success_output("")),
+                Ok(success_output("")),
                 Ok(success_output("")),
                 Ok(exit_output(1, "", "")),
                 Ok(success_output("")),
@@ -798,10 +1280,11 @@ mod tests {
                 Ok(success_output("")),
                 Ok(success_output("")),
             ],
+            vec![Ok(success_output("[]"))],
             vec![Ok(success_output("{}")), Ok(success_output("{}"))],
         );
 
-        execute(&cli, &runner).expect("execution should succeed");
+        execute_at(&cli, &runner, fixed_now()).expect("execution should succeed");
 
         let git_calls = runner.git_calls();
         assert!(git_calls
@@ -816,18 +1299,20 @@ mod tests {
     fn end_to_end_commits_pushes_comments_and_is_idempotent() {
         let repo = TempRepo::new();
         repo.init(sample_state());
-        repo.write_cycle_artifacts(202);
+        repo.write_cycle_artifacts(202, fixed_now());
         let cli = Cli {
             repo_root: repo.path().to_path_buf(),
             issue: 871,
             summary: Some("Validated pipeline and captured review follow-up".to_string()),
+            priorities: Some("Review PR #878; Fix write-entry journal bug".to_string()),
             dry_run: false,
             skip_push: false,
             skip_close: false,
         };
         let runner = HybridRunner::new();
 
-        let first_output = execute(&cli, &runner).expect("first run should succeed");
+        let first_output =
+            execute_at(&cli, &runner, fixed_now()).expect("first run should succeed");
         assert!(first_output.contains("Committed cycle artifacts"));
 
         let log_output = std::process::Command::new("git")
@@ -854,7 +1339,9 @@ mod tests {
             .args(["ls-remote", "origin", "refs/heads/master"])
             .output()
             .unwrap();
-        let local_sha = String::from_utf8_lossy(&local_head.stdout).trim().to_string();
+        let local_sha = String::from_utf8_lossy(&local_head.stdout)
+            .trim()
+            .to_string();
         let remote_sha = String::from_utf8_lossy(&remote_head.stdout)
             .split_whitespace()
             .next()
@@ -868,13 +1355,23 @@ mod tests {
             .1
             .as_ref()
             .and_then(|payload| serde_json::from_slice::<serde_json::Value>(payload).ok())
-            .and_then(|json| json.get("body").and_then(|value| value.as_str()).map(ToOwned::to_owned))
+            .and_then(|json| {
+                json.get("body")
+                    .and_then(|value| value.as_str())
+                    .map(ToOwned::to_owned)
+            })
             .unwrap();
         assert!(comment_body.starts_with("> **[main-orchestrator]** | Cycle 202"));
         assert!(comment_body.contains("Review agent issue: #873"));
+        assert!(comment_body.contains("## Next cycle priorities"));
+        assert!(comment_body.contains("## Commit receipts"));
+        assert!(comment_body.contains("| cycle-start | abc1234 | [abc1234]("));
+        assert_eq!(runner.bash_calls().len(), 1);
 
-        let second_output = execute(&cli, &runner).expect("second run should also succeed");
+        let second_output =
+            execute_at(&cli, &runner, fixed_now()).expect("second run should also succeed");
         assert!(second_output.contains("No cycle artifact changes to commit"));
+        assert_eq!(runner.bash_calls().len(), 2);
     }
 
     #[test]
@@ -884,12 +1381,21 @@ mod tests {
             "Pipeline check: PASS; review findings recorded",
             Some(873),
             "Validated pipeline and captured review follow-up",
+            Some("Review PR #878; Fix write-entry journal bug"),
+            &[ReceiptEntry {
+                tool: "cycle-start".to_string(),
+                receipt: "abc1234".to_string(),
+                url: "https://github.com/EvaLok/schema-org-json-ld/commit/abc1234".to_string(),
+            }],
         );
 
         assert!(comment.starts_with("> **[main-orchestrator]** | Cycle 202"));
         assert!(comment.contains("Pipeline status: Pipeline check: PASS; review findings recorded"));
         assert!(comment.contains("Review agent issue: #873"));
         assert!(comment.contains("- Validated pipeline and captured review follow-up"));
+        assert!(comment.contains("## Next cycle priorities"));
+        assert!(comment.contains("## Commit receipts"));
+        assert!(comment.contains("| cycle-start | abc1234 | [abc1234]("));
     }
 
     fn success_output(stdout: &str) -> ExecutionResult {
