@@ -2713,7 +2713,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 210"
+        "last_refreshed": "cycle 211"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -3902,9 +3902,24 @@
         "finding_count": 4,
         "ignored": 0,
         "note": "Finding 1 (worklog-placeholders) actioned via PR #918 structural fix. Finding 3 (premature-verification) actioned via verification_cycle null fix. Finding 2 (artifact-verifier-drift) deferred. Finding 4 (field-inventory-cadence) deferred."
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "artifact-verifier-drift",
+          "ci-discipline-slip",
+          "journal-entry-duplication",
+          "worklog-coverage-gap"
+        ],
+        "complacency_score": 4,
+        "cycle": 210,
+        "deferred": 3,
+        "finding_count": 4,
+        "ignored": 0,
+        "note": "Finding 3 actioned (PR #923 merged). Findings 1,2,4 deferred."
       }
     ],
-    "last_review_cycle": 209
+    "last_review_cycle": 210
   },
   "schema_status": {
     "directory_layout": {
