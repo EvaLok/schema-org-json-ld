@@ -405,6 +405,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "process-audit-inbound"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "clap",
+ "serde",
+ "serde_json",
+ "state-schema",
+]
+
+[[package]]
 name = "process-eva"
 version = "0.1.0"
 dependencies = [
