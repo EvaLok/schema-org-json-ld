@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+source "$SCRIPT_DIR/_build-helper.sh"
+ensure_binary "post-step"
+
+for arg in "$@"; do
+case "$arg" in
+--repo-root|--repo-root=*)
+exec "$BINARY" "$@"
+;;
+esac
+done
+
+exec "$BINARY" --repo-root "$REPO_ROOT" "$@"
