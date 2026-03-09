@@ -2426,12 +2426,14 @@
       725,
       823,
       824,
+      827,
       830,
       831,
       834,
       837
     ],
     "closed_this_cycle": [
+      827,
       830,
       837
     ],
@@ -2440,9 +2442,6 @@
       699,
       808,
       809,
-      825,
-      826,
-      827,
       828,
       829,
       840,
@@ -2474,11 +2473,11 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 200"
+        "last_refreshed": "cycle 201"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 200"
+        "last_refreshed": "cycle 201"
       },
       "last_cycle": {
         "cadence": "every cycle",
