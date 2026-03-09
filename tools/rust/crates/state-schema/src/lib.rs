@@ -93,6 +93,7 @@ pub struct ReviewHistoryEntry {
 #[serde(default, rename_all = "snake_case")]
 pub struct PublishGate {
     pub status: Option<String>,
+    pub qc_ack: Option<String>,
     pub validated_commit: Option<String>,
     pub source_diverged: Option<bool>,
     #[serde(flatten)]
@@ -794,6 +795,7 @@ mod tests {
         let state: StateJson = serde_json::from_value(json!({
             "publish_gate": {
                 "status": "published",
+                "qc_ack": "EvaLok/schema-org-json-ld-qc#225",
                 "validated_commit": "ea8ffff",
                 "source_diverged": false
             }
@@ -804,6 +806,10 @@ mod tests {
             .publish_gate()
             .expect("publish gate should deserialize");
         assert_eq!(publish_gate.status.as_deref(), Some("published"));
+        assert_eq!(
+            publish_gate.qc_ack.as_deref(),
+            Some("EvaLok/schema-org-json-ld-qc#225")
+        );
         assert_eq!(publish_gate.validated_commit.as_deref(), Some("ea8ffff"));
         assert_eq!(publish_gate.source_diverged, Some(false));
     }
