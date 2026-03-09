@@ -2447,7 +2447,7 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#889 Fix write-entry inline journal mode (cycle 205)",
-    "dispatch_to_pr_rate": "96.8%",
+    "dispatch_to_pr_rate": "97.2%",
     "in_flight": 2,
     "merged": 244,
     "pr_merge_rate": "99.2%",
