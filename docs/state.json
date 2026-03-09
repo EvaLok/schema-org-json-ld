@@ -2388,8 +2388,18 @@
     155,
     157,
     160,
-    162,
-    164
+    164,
+    166,
+    167
+  ],
+  "audit_dropped": [
+    {
+      "issue": 162,
+      "originally_accepted_cycle": 202,
+      "dropped_cycle": 205,
+      "drop_rationale_issue": 891,
+      "reason": "Existing mechanisms (per-cycle counts + escalation rule) provide sufficient accountability without per-finding granularity"
+    }
   ],
   "blockers": [
     {
@@ -2539,9 +2549,13 @@
   "field_inventory": {
     "description": "Self-describing inventory of mutable state.json fields with expected refresh cadence. During metric verification (step 5.11), any field not refreshed within its cadence should be flagged and corrected. This inverts the verification pattern from 'enumerate what to check' to 'flag what hasn't been checked.' Per audit #80. Semantics: last_refreshed = cycle when entry was last checked (value confirmed unchanged or updated). This differs from per-field last_verified which means 'cycle when value was independently measured.' A field can be refreshed (checked and confirmed unchanged) without being re-verified (re-measured).",
     "fields": {
+      "audit_dropped": {
+        "cadence": "after dropping a previously accepted audit recommendation",
+        "last_refreshed": "cycle 206"
+      },
       "audit_processed": {
         "cadence": "after processing audit issues",
-        "last_refreshed": "cycle 204"
+        "last_refreshed": "cycle 206"
       },
       "blockers": {
         "cadence": "after blocker state changes",
