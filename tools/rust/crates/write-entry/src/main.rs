@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 const PRIMARY_ISSUES_URL: &str = "https://github.com/EvaLok/schema-org-json-ld/issues";
 const QC_ISSUES_URL: &str = "https://github.com/EvaLok/schema-org-json-ld-qc/issues";
 const AUDIT_ISSUES_URL: &str = "https://github.com/EvaLok/schema-org-json-ld-audit/issues";
+const PRIMARY_COMMITS_URL: &str = "https://github.com/EvaLok/schema-org-json-ld/commit";
 const JOURNAL_DESCRIPTION: &str = "Reflective log for the schema-org-json-ld orchestrator.";
 
 #[derive(Parser)]
@@ -52,6 +53,12 @@ struct WorklogArgs {
     /// Pipeline summary for the current state section
     #[arg(long)]
     pipeline: Option<String>,
+    /// Copilot metrics summary for the current state section
+    #[arg(long = "copilot-metrics")]
+    copilot_metrics: Option<String>,
+    /// Publish gate summary for the current state section
+    #[arg(long = "publish-gate")]
+    publish_gate: Option<String>,
     /// Number of in-flight agent sessions
     #[arg(long = "in-flight")]
     in_flight: Option<u64>,
@@ -255,8 +262,14 @@ fn resolve_worklog_input(args: &WorklogArgs) -> Result<WorklogInput, String> {
                     .pipeline
                     .clone()
                     .unwrap_or_else(|| "Not provided.".to_string()),
-                copilot_metrics: "Not provided.".to_string(),
-                publish_gate: "Not provided.".to_string(),
+                copilot_metrics: args
+                    .copilot_metrics
+                    .clone()
+                    .unwrap_or_else(|| "Not provided.".to_string()),
+                publish_gate: args
+                    .publish_gate
+                    .clone()
+                    .unwrap_or_else(|| "Not provided.".to_string()),
             },
             next_steps: args.next.clone(),
             receipts: parse_receipts(&args.receipt)?,
@@ -272,6 +285,8 @@ fn has_inline_worklog_content(args: &WorklogArgs) -> bool {
         || !args.pr_merged.is_empty()
         || !args.next.is_empty()
         || args.pipeline.is_some()
+        || args.copilot_metrics.is_some()
+        || args.publish_gate.is_some()
         || args.in_flight.is_some()
         || !args.receipt.is_empty()
 }
@@ -294,7 +309,7 @@ fn resolve_journal_input(args: &JournalArgs) -> Result<JournalInput, String> {
             previous_commitment_detail: default_previous_commitment_detail(),
             sections: parse_sections(&args.section)?,
             concrete_behavior_change: String::new(),
-            commitments: args.commitment.clone(),
+            commitments: parse_commitments(&args.commitment),
             open_questions: Vec::new(),
         });
     }
@@ -322,6 +337,12 @@ fn parse_receipts(values: &[String]) -> Result<Vec<CommitReceipt>, String> {
             if !receipt.chars().all(|ch| ch.is_ascii_hexdigit()) {
                 return Err(format!(
                     "invalid receipt '{}'; SHA must be hexadecimal",
+                    value
+                ));
+            }
+            if receipt.len() < 7 {
+                return Err(format!(
+                    "invalid receipt '{}'; SHA must be at least 7 hexadecimal characters",
                     value
                 ));
             }
@@ -356,6 +377,15 @@ fn parse_sections(values: &[String]) -> Result<Vec<JournalSection>, String> {
                 body: body.to_string(),
             })
         })
+        .collect()
+}
+
+fn parse_commitments(values: &[String]) -> Vec<String> {
+    values
+        .iter()
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
         .collect()
 }
 
@@ -432,7 +462,7 @@ fn find_worklog_relative_path(repo_root: &Path, cycle: u64) -> Result<Option<Str
     candidates.sort();
     candidates
         .into_iter()
-        .next_back()
+        .last()
         .map(|path| {
             path.strip_prefix(repo_root)
                 .map_err(|error| {
@@ -700,8 +730,12 @@ fn render_worklog(cycle: u64, now: DateTime<Utc>, input: &WorklogInput) -> Strin
         lines.push("|------|---------|------|".to_string());
         for receipt in &input.receipts {
             lines.push(format!(
-                "| {} | {} | [{}](https://github.com/EvaLok/schema-org-json-ld/commit/{}) |",
-                receipt.tool, receipt.receipt, receipt.receipt, receipt.receipt
+                "| {} | {} | [{}]({}/{}) |",
+                receipt.tool,
+                receipt.receipt,
+                receipt.receipt,
+                PRIMARY_COMMITS_URL,
+                receipt.receipt
             ));
         }
     }
@@ -1170,6 +1204,8 @@ mod tests {
             pr_merged: Vec::new(),
             next: Vec::new(),
             pipeline: None,
+            copilot_metrics: None,
+            publish_gate: None,
             in_flight: None,
             receipt: Vec::new(),
         }
@@ -1315,6 +1351,30 @@ mod tests {
     }
 
     #[test]
+    fn find_worklog_relative_path_matches_cycle_and_returns_none_when_missing() {
+        let repo_root = TempRepoDir::new("find-worklog");
+        let first = write_worklog_fixture(&repo_root.path, fixed_now(), 154, "Cycle one");
+        let second = write_worklog_fixture(
+            &repo_root.path,
+            fixed_now_on("2026-03-07"),
+            155,
+            "Cycle two",
+        );
+
+        let found = find_worklog_relative_path(&repo_root.path, 155).unwrap();
+        assert_eq!(
+            found,
+            Some("docs/worklog/2026-03-07/051458-cycle-two.md".to_string())
+        );
+        assert!(first.exists());
+        assert!(second.exists());
+        assert_eq!(
+            find_worklog_relative_path(&repo_root.path, 999).unwrap(),
+            None
+        );
+    }
+
+    #[test]
     fn worklog_inline_flags_render_receipts_table() {
         let repo_root = TempRepoDir::new("worklog-inline-flags");
         let mut args = worklog_args("Inline flags");
@@ -1322,6 +1382,8 @@ mod tests {
         args.pr_merged = vec![123, 456];
         args.next = vec!["Review PR #789".to_string()];
         args.pipeline = Some("PASS (6/6)".to_string());
+        args.copilot_metrics = Some("45 dispatched".to_string());
+        args.publish_gate = Some("open".to_string());
         args.in_flight = Some(1);
         args.receipt = vec![
             "cycle-start:abc1234".to_string(),
@@ -1334,6 +1396,8 @@ mod tests {
             "- Merged [PR #123](https://github.com/EvaLok/schema-org-json-ld/issues/123)"
         ));
         assert!(content.contains("- **Pipeline status**: PASS (6/6)"));
+        assert!(content.contains("- **Copilot metrics**: 45 dispatched"));
+        assert!(content.contains("- **Publish gate**: open"));
         assert!(content.contains("## Commit receipts"));
         assert!(content.contains("| cycle-start | abc1234 | [abc1234](https://github.com/EvaLok/schema-org-json-ld/commit/abc1234) |"));
         assert!(content.contains("| process-merge | def5678 | [def5678](https://github.com/EvaLok/schema-org-json-ld/commit/def5678) |"));
@@ -1346,6 +1410,15 @@ mod tests {
 
         let error = resolve_worklog_input(&args).unwrap_err();
         assert!(error.contains("invalid receipt"));
+    }
+
+    #[test]
+    fn receipt_sha_length_validation_accepts_seven_and_rejects_shorter() {
+        let receipts = parse_receipts(&["cycle-start:abc1234".to_string()]).unwrap();
+        assert_eq!(receipts.len(), 1);
+
+        let error = parse_receipts(&["cycle-start:abc123".to_string()]).unwrap_err();
+        assert!(error.contains("at least 7 hexadecimal characters"));
     }
 
     #[test]
@@ -1409,12 +1482,46 @@ mod tests {
     }
 
     #[test]
+    fn journal_json_fallback_renders_concrete_behavior_under_commitments_heading() {
+        let repo_root = TempRepoDir::new("journal-json-fallback");
+        write_root_journal_index(&repo_root.path, "");
+        write_worklog_fixture(&repo_root.path, fixed_now(), 154, "JSON fallback");
+        let payload = r#"{
+            "previous_commitment_status":"followed",
+            "previous_commitment_detail":"Done.",
+            "sections":[],
+            "concrete_behavior_change":"Keep going.",
+            "open_questions":[]
+        }"#;
+        let mut args = journal_args("JSON fallback");
+        args.input_file = Some(write_input_file(
+            &repo_root.path,
+            "journal-fallback.json",
+            payload,
+        ));
+
+        let path = execute_journal(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+        assert!(content.contains("### Concrete commitments for next cycle"));
+        assert!(content.contains("1. Keep going."));
+    }
+
+    #[test]
     fn invalid_section_flag_is_rejected() {
         let mut args = journal_args("Invalid section");
         args.section = vec!["Missing delimiter".to_string()];
 
         let error = resolve_journal_input(&args).unwrap_err();
         assert!(error.contains("invalid section"));
+    }
+
+    #[test]
+    fn invalid_section_flag_rejects_empty_heading_and_body() {
+        let empty_heading = parse_sections(&["  ::Body".to_string()]).unwrap_err();
+        assert!(empty_heading.contains("invalid section"));
+
+        let empty_body = parse_sections(&["Heading::   ".to_string()]).unwrap_err();
+        assert!(empty_body.contains("invalid section"));
     }
 
     #[test]
@@ -1700,6 +1807,51 @@ When accepting recommendations, dispatch #546 in the same cycle.
     }
 
     #[test]
+    fn journal_extracts_previous_commitment_from_new_heading_format() {
+        let repo_root = TempRepoDir::new("previous-new-heading");
+        let journal_dir = repo_root.path.join("docs").join("journal");
+        fs::create_dir_all(&journal_dir).unwrap();
+        write_root_journal_index(
+            &repo_root.path,
+            "- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 153+\n",
+        );
+        write_worklog_fixture(&repo_root.path, fixed_now(), 154, "New heading");
+        let existing = r#"# Journal — 2026-03-05
+
+Reflective log for the schema-org-json-ld orchestrator.
+
+---
+
+## 2026-03-05 — Cycle 153: Prior title
+
+### Concrete commitments for next cycle
+
+1. Dispatch #546 in the same cycle.
+"#;
+        fs::write(journal_dir.join("2026-03-05.md"), existing).unwrap();
+
+        let payload = r#"{
+			"previous_commitment_status":"followed",
+			"previous_commitment_detail":"Done.",
+			"sections":[],
+			"concrete_behavior_change":"Keep going.",
+			"open_questions":[]
+		}"#;
+        let mut args = journal_args("New heading");
+        args.input_file = Some(write_input_file(
+            &repo_root.path,
+            "journal-new-heading.json",
+            payload,
+        ));
+        execute_journal(&args, &repo_root.path, fixed_now()).unwrap();
+
+        let content = fs::read_to_string(journal_path(&repo_root.path, fixed_now())).unwrap();
+        assert!(content.contains(
+            "> Previous commitment: 1. Dispatch [#546](https://github.com/EvaLok/schema-org-json-ld/issues/546) in the same cycle."
+        ));
+    }
+
+    #[test]
     fn invalid_previous_commitment_status_is_rejected() {
         let repo_root = TempRepoDir::new("status");
         let mut args = journal_args("Invalid status");
@@ -1774,6 +1926,10 @@ When accepting recommendations, dispatch #546 in the same cycle.
             "Review PR #124",
             "--pipeline",
             "PASS (6/6)",
+            "--copilot-metrics",
+            "45 dispatched",
+            "--publish-gate",
+            "open",
             "--in-flight",
             "1",
             "--receipt",
@@ -1788,6 +1944,8 @@ When accepting recommendations, dispatch #546 in the same cycle.
                 assert_eq!(args.pr_merged, vec![123]);
                 assert_eq!(args.next, vec!["Review PR #124".to_string()]);
                 assert_eq!(args.pipeline.as_deref(), Some("PASS (6/6)"));
+                assert_eq!(args.copilot_metrics.as_deref(), Some("45 dispatched"));
+                assert_eq!(args.publish_gate.as_deref(), Some("open"));
                 assert_eq!(args.in_flight, Some(1));
                 assert_eq!(args.receipt, vec!["cycle-start:abc1234".to_string()]);
             }
