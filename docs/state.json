@@ -2255,8 +2255,10 @@
     {
       "dispatched_at": "2026-03-09T08:02:41Z",
       "issue": 878,
+      "merged_at": "2026-03-09T09:30:04Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 879,
+      "status": "merged",
       "title": "Cross-repo processing tool (Eva #828)"
     },
     {
@@ -2414,11 +2416,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#880 Cycle 203 end-of-cycle review (cycle 203)",
     "dispatch_to_pr_rate": "97.2%",
-    "in_flight": 1,
-    "merged": 241,
+    "in_flight": 0,
+    "merged": 242,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 243,
-    "resolved": 248,
+    "produced_pr": 244,
+    "resolved": 249,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 249
