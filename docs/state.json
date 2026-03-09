@@ -2576,13 +2576,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 15,
-    "issue": 849,
+    "duration_minutes": 89,
+    "issue": 856,
     "number": 200,
-    "summary": "Merged 3 PRs (cycle-receipts #845, post-step #846, review artifact #848). Processed cycle 199 review (4/5, 5 findings). Fixed cycle-close-drift (4 cycles deferred). Dispatched 2 new tools (#850 dispatch-review, #851 check-agent-prs). Closed Eva directives #830, #837.",
-    "timestamp": "2026-03-09T02:32:08Z"
+    "summary": "Reviewed and merged 3 PRs (dispatch-review, check-agent-prs, review artifact). Processed cycle 200 review (4/5). Accepted audit #160. Dispatched 2 new tools (#858, #859). Closed Eva directives #825, #826.",
+    "timestamp": "2026-03-09T04:00:53Z"
   },
-  "last_eva_comment_check": "2026-03-09T02:32:08Z",
+  "last_eva_comment_check": "2026-03-09T04:00:53Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
