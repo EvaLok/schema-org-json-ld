@@ -2210,15 +2210,19 @@
     {
       "dispatched_at": "2026-03-09T05:19:28Z",
       "issue": 865,
+      "merged_at": "2026-03-09T06:34:12Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 866,
+      "status": "merged",
       "title": "Refactor: consolidate duplicated code into state-schema crate"
     },
     {
       "dispatched_at": "2026-03-09T05:20:02Z",
       "issue": 867,
+      "merged_at": "2026-03-09T06:34:12Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 868,
+      "status": "merged",
       "title": "Improve write-entry: sandbox compatibility and ergonomic CLI"
     },
     {
@@ -2375,11 +2379,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#869 Cycle 201b end-of-cycle review (cycle 201)",
     "dispatch_to_pr_rate": "96.7%",
-    "in_flight": 2,
-    "merged": 236,
+    "in_flight": 0,
+    "merged": 238,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 238,
-    "resolved": 243,
+    "produced_pr": 240,
+    "resolved": 245,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 245
