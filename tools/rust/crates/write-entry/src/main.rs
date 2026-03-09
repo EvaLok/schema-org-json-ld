@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 const PRIMARY_ISSUES_URL: &str = "https://github.com/EvaLok/schema-org-json-ld/issues";
 const QC_ISSUES_URL: &str = "https://github.com/EvaLok/schema-org-json-ld-qc/issues";
 const AUDIT_ISSUES_URL: &str = "https://github.com/EvaLok/schema-org-json-ld-audit/issues";
+const PRIMARY_COMMITS_URL: &str = "https://github.com/EvaLok/schema-org-json-ld/commit";
 const JOURNAL_DESCRIPTION: &str = "Reflective log for the schema-org-json-ld orchestrator.";
 
 #[derive(Parser)]
@@ -37,6 +38,33 @@ struct WorklogArgs {
     /// Short descriptive name for heading and filename slug
     #[arg(long)]
     title: String,
+    /// Read JSON payload from file instead of stdin
+    #[arg(long)]
+    input_file: Option<PathBuf>,
+    /// What was done during the cycle
+    #[arg(long = "done")]
+    done: Vec<String>,
+    /// Merged PR number
+    #[arg(long = "pr-merged")]
+    pr_merged: Vec<u64>,
+    /// Next step for the following cycle
+    #[arg(long = "next")]
+    next: Vec<String>,
+    /// Pipeline summary for the current state section
+    #[arg(long)]
+    pipeline: Option<String>,
+    /// Copilot metrics summary for the current state section
+    #[arg(long = "copilot-metrics")]
+    copilot_metrics: Option<String>,
+    /// Publish gate summary for the current state section
+    #[arg(long = "publish-gate")]
+    publish_gate: Option<String>,
+    /// Number of in-flight agent sessions
+    #[arg(long = "in-flight")]
+    in_flight: Option<u64>,
+    /// Commit receipt in TOOL:SHA form
+    #[arg(long = "receipt")]
+    receipt: Vec<String>,
 }
 
 #[derive(Parser)]
@@ -47,63 +75,89 @@ struct JournalArgs {
     /// Entry title
     #[arg(long)]
     title: String,
+    /// Read JSON payload from file instead of stdin
+    #[arg(long)]
+    input_file: Option<PathBuf>,
+    /// Journal section in HEADING::BODY form
+    #[arg(long = "section")]
+    section: Vec<String>,
+    /// Commitment for the next cycle
+    #[arg(long = "commitment")]
+    commitment: Vec<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct WorklogInput {
+    #[serde(default)]
     what_was_done: Vec<String>,
+    #[serde(default)]
     self_modifications: Vec<SelfModification>,
+    #[serde(default)]
     prs_merged: Vec<u64>,
+    #[serde(default)]
     prs_reviewed: Vec<u64>,
+    #[serde(default)]
     issues_processed: Vec<u64>,
     current_state: CurrentState,
+    #[serde(default)]
     next_steps: Vec<String>,
+    #[serde(default)]
+    receipts: Vec<CommitReceipt>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct SelfModification {
     file: String,
     description: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct CurrentState {
+    #[serde(default)]
     in_flight_sessions: u64,
     pipeline_status: String,
+    #[serde(default)]
     copilot_metrics: String,
+    #[serde(default)]
     publish_gate: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct JournalInput {
+    #[serde(default = "default_previous_commitment_status")]
     previous_commitment_status: String,
+    #[serde(default = "default_previous_commitment_detail")]
     previous_commitment_detail: String,
+    #[serde(default)]
     sections: Vec<JournalSection>,
+    #[serde(default)]
     concrete_behavior_change: String,
+    #[serde(default)]
+    commitments: Vec<String>,
+    #[serde(default)]
     open_questions: Vec<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct JournalSection {
     heading: String,
     body: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct CommitReceipt {
+    tool: String,
+    receipt: String,
 }
 
 fn main() {
     let cli = Cli::parse();
     let repo_root = cli.repo_root;
     let now = Utc::now();
-    let stdin = match read_stdin() {
-        Ok(content) => content,
-        Err(error) => {
-            eprintln!("Error: {}", error);
-            std::process::exit(1);
-        }
-    };
 
     let result = match cli.command {
-        Command::Worklog(args) => execute_worklog(&args, &repo_root, now, &stdin),
-        Command::Journal(args) => execute_journal(&args, &repo_root, now, &stdin),
+        Command::Worklog(args) => execute_worklog(&args, &repo_root, now),
+        Command::Journal(args) => execute_journal(&args, &repo_root, now),
     };
 
     match result {
@@ -127,15 +181,22 @@ fn read_stdin() -> Result<String, String> {
     Ok(input)
 }
 
+fn read_input_file(path: &Path) -> Result<String, String> {
+    let input = fs::read_to_string(path)
+        .map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
+    if input.trim().is_empty() {
+        return Err(format!("input file {} is empty", path.display()));
+    }
+    Ok(input)
+}
+
 fn execute_worklog(
     args: &WorklogArgs,
     repo_root: &Path,
     now: DateTime<Utc>,
-    stdin: &str,
 ) -> Result<PathBuf, String> {
     let cycle = resolve_cycle(args.cycle, repo_root)?;
-    let input: WorklogInput = serde_json::from_str(stdin)
-        .map_err(|error| format!("invalid worklog JSON input: {}", error))?;
+    let input = resolve_worklog_input(args)?;
     let path = worklog_path(repo_root, now, &args.title);
     let content = render_worklog(cycle, now, &input);
     write_entry_file(&path, &content)?;
@@ -146,14 +207,13 @@ fn execute_journal(
     args: &JournalArgs,
     repo_root: &Path,
     now: DateTime<Utc>,
-    stdin: &str,
 ) -> Result<PathBuf, String> {
     let cycle = resolve_cycle(args.cycle, repo_root)?;
-    let input: JournalInput = serde_json::from_str(stdin)
-        .map_err(|error| format!("invalid journal JSON input: {}", error))?;
+    let input = resolve_journal_input(args)?;
     let status = parse_commitment_status(&input.previous_commitment_status)?;
     let path = journal_path(repo_root, now);
     let previous = lookup_previous_concrete_behavior(repo_root, now.date_naive())?;
+    let worklog_link = find_worklog_relative_path(repo_root, cycle)?;
     let entry = render_journal_entry(
         cycle,
         now,
@@ -161,6 +221,7 @@ fn execute_journal(
         &input,
         status,
         previous.as_deref(),
+        worklog_link.as_deref(),
     );
     let created_new = write_journal_file(&path, now.date_naive(), &entry)?;
     if created_new {
@@ -174,6 +235,166 @@ fn resolve_cycle(cycle: Option<u64>, repo_root: &Path) -> Result<u64, String> {
         Some(cycle) => Ok(cycle),
         None => current_cycle_from_state(repo_root),
     }
+}
+
+fn resolve_worklog_input(args: &WorklogArgs) -> Result<WorklogInput, String> {
+    if let Some(path) = &args.input_file {
+        if has_inline_worklog_content(args) {
+            return Err(
+                "cannot combine --input-file with inline worklog content flags".to_string(),
+            );
+        }
+        let payload = read_input_file(path)?;
+        return serde_json::from_str(&payload)
+            .map_err(|error| format!("invalid worklog JSON input: {}", error));
+    }
+
+    if has_inline_worklog_content(args) {
+        return Ok(WorklogInput {
+            what_was_done: args.done.clone(),
+            self_modifications: Vec::new(),
+            prs_merged: args.pr_merged.clone(),
+            prs_reviewed: Vec::new(),
+            issues_processed: Vec::new(),
+            current_state: CurrentState {
+                in_flight_sessions: args.in_flight.unwrap_or(0),
+                pipeline_status: args
+                    .pipeline
+                    .clone()
+                    .unwrap_or_else(|| "Not provided.".to_string()),
+                copilot_metrics: args
+                    .copilot_metrics
+                    .clone()
+                    .unwrap_or_else(|| "Not provided.".to_string()),
+                publish_gate: args
+                    .publish_gate
+                    .clone()
+                    .unwrap_or_else(|| "Not provided.".to_string()),
+            },
+            next_steps: args.next.clone(),
+            receipts: parse_receipts(&args.receipt)?,
+        });
+    }
+
+    let payload = read_stdin()?;
+    serde_json::from_str(&payload).map_err(|error| format!("invalid worklog JSON input: {}", error))
+}
+
+fn has_inline_worklog_content(args: &WorklogArgs) -> bool {
+    !args.done.is_empty()
+        || !args.pr_merged.is_empty()
+        || !args.next.is_empty()
+        || args.pipeline.is_some()
+        || args.copilot_metrics.is_some()
+        || args.publish_gate.is_some()
+        || args.in_flight.is_some()
+        || !args.receipt.is_empty()
+}
+
+fn resolve_journal_input(args: &JournalArgs) -> Result<JournalInput, String> {
+    if let Some(path) = &args.input_file {
+        if has_inline_journal_content(args) {
+            return Err(
+                "cannot combine --input-file with inline journal content flags".to_string(),
+            );
+        }
+        let payload = read_input_file(path)?;
+        return serde_json::from_str(&payload)
+            .map_err(|error| format!("invalid journal JSON input: {}", error));
+    }
+
+    if has_inline_journal_content(args) {
+        return Ok(JournalInput {
+            previous_commitment_status: default_previous_commitment_status(),
+            previous_commitment_detail: default_previous_commitment_detail(),
+            sections: parse_sections(&args.section)?,
+            concrete_behavior_change: String::new(),
+            commitments: parse_commitments(&args.commitment),
+            open_questions: Vec::new(),
+        });
+    }
+
+    let payload = read_stdin()?;
+    serde_json::from_str(&payload).map_err(|error| format!("invalid journal JSON input: {}", error))
+}
+
+fn has_inline_journal_content(args: &JournalArgs) -> bool {
+    !args.section.is_empty() || !args.commitment.is_empty()
+}
+
+fn parse_receipts(values: &[String]) -> Result<Vec<CommitReceipt>, String> {
+    values
+        .iter()
+        .map(|value| {
+            let Some((tool, receipt)) = value.split_once(':') else {
+                return Err(format!("invalid receipt '{}'; expected TOOL:SHA", value));
+            };
+            let tool = tool.trim();
+            let receipt = receipt.trim();
+            if tool.is_empty() || receipt.is_empty() {
+                return Err(format!("invalid receipt '{}'; expected TOOL:SHA", value));
+            }
+            if !receipt.chars().all(|ch| ch.is_ascii_hexdigit()) {
+                return Err(format!(
+                    "invalid receipt '{}'; SHA must be hexadecimal",
+                    value
+                ));
+            }
+            if receipt.len() < 7 {
+                return Err(format!(
+                    "invalid receipt '{}'; SHA must be at least 7 hexadecimal characters",
+                    value
+                ));
+            }
+            Ok(CommitReceipt {
+                tool: tool.to_string(),
+                receipt: receipt.to_string(),
+            })
+        })
+        .collect()
+}
+
+fn parse_sections(values: &[String]) -> Result<Vec<JournalSection>, String> {
+    values
+        .iter()
+        .map(|value| {
+            let Some((heading, body)) = value.split_once("::") else {
+                return Err(format!(
+                    "invalid section '{}'; expected HEADING::BODY",
+                    value
+                ));
+            };
+            let heading = heading.trim();
+            let body = body.trim();
+            if heading.is_empty() || body.is_empty() {
+                return Err(format!(
+                    "invalid section '{}'; expected HEADING::BODY",
+                    value
+                ));
+            }
+            Ok(JournalSection {
+                heading: heading.to_string(),
+                body: body.to_string(),
+            })
+        })
+        .collect()
+}
+
+fn parse_commitments(values: &[String]) -> Vec<String> {
+    values
+        .iter()
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+fn default_previous_commitment_status() -> String {
+    "no_prior_commitment".to_string()
+}
+
+fn default_previous_commitment_detail() -> String {
+    "No prior commitment recorded.".to_string()
 }
 
 fn worklog_path(repo_root: &Path, now: DateTime<Utc>, title: &str) -> PathBuf {
@@ -192,6 +413,68 @@ fn journal_path(repo_root: &Path, now: DateTime<Utc>) -> PathBuf {
         .join("docs")
         .join("journal")
         .join(format!("{}.md", now.format("%Y-%m-%d")))
+}
+
+fn find_worklog_relative_path(repo_root: &Path, cycle: u64) -> Result<Option<String>, String> {
+    let worklog_root = repo_root.join("docs").join("worklog");
+    if !worklog_root.exists() {
+        return Ok(None);
+    }
+
+    let mut candidates = Vec::new();
+    let date_entries = fs::read_dir(&worklog_root)
+        .map_err(|error| format!("failed to read {}: {}", worklog_root.display(), error))?;
+    for date_entry in date_entries {
+        let date_entry = date_entry.map_err(|error| {
+            format!(
+                "failed to read entry in {}: {}",
+                worklog_root.display(),
+                error
+            )
+        })?;
+        let date_path = date_entry.path();
+        if !date_path.is_dir() {
+            continue;
+        }
+
+        let file_entries = fs::read_dir(&date_path)
+            .map_err(|error| format!("failed to read {}: {}", date_path.display(), error))?;
+        for file_entry in file_entries {
+            let file_entry = file_entry.map_err(|error| {
+                format!("failed to read entry in {}: {}", date_path.display(), error)
+            })?;
+            let path = file_entry.path();
+            if path.extension() != Some(OsStr::new("md")) {
+                continue;
+            }
+            let content = fs::read_to_string(&path)
+                .map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
+            if content
+                .lines()
+                .next()
+                .is_some_and(|line| line.starts_with(&format!("# Cycle {} — ", cycle)))
+            {
+                candidates.push(path);
+            }
+        }
+    }
+
+    candidates.sort();
+    candidates
+        .into_iter()
+        .last()
+        .map(|path| {
+            path.strip_prefix(repo_root)
+                .map_err(|error| {
+                    format!(
+                        "failed to compute relative path for {}: {}",
+                        path.display(),
+                        error
+                    )
+                })
+                .map(|relative| relative.to_string_lossy().replace('\\', "/"))
+        })
+        .transpose()
 }
 
 fn write_entry_file(path: &Path, content: &str) -> Result<(), String> {
@@ -256,11 +539,18 @@ fn update_journal_index(repo_root: &Path, date: NaiveDate, cycle: u64) -> Result
     {
         finalize_previous_journal_index_entry(repo_root, &mut lines, previous_date)?;
     }
-    lines.push(format!("- [{date_slug}]({journal_relative_path}) — Cycles {cycle}+"));
+    lines.push(format!(
+        "- [{date_slug}]({journal_relative_path}) — Cycles {cycle}+"
+    ));
 
     let updated = format!("{}\n", lines.join("\n"));
-    fs::write(&journal_index_path, updated)
-        .map_err(|error| format!("failed to write {}: {}", journal_index_path.display(), error))
+    fs::write(&journal_index_path, updated).map_err(|error| {
+        format!(
+            "failed to write {}: {}",
+            journal_index_path.display(),
+            error
+        )
+    })
 }
 
 fn finalize_previous_journal_index_entry(
@@ -298,8 +588,8 @@ fn open_journal_index_entry_date(line: &str) -> Option<NaiveDate> {
 }
 
 fn highest_cycle_in_journal_file(path: &Path) -> Result<u64, String> {
-    let content =
-        fs::read_to_string(path).map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
+    let content = fs::read_to_string(path)
+        .map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
 
     content
         .lines()
@@ -432,6 +722,23 @@ fn render_worklog(cycle: u64, now: DateTime<Utc>, input: &WorklogInput) -> Strin
             lines.push(format!("{}. {}", index + 1, convert_references(step)));
         }
     }
+    if !input.receipts.is_empty() {
+        lines.push(String::new());
+        lines.push("## Commit receipts".to_string());
+        lines.push(String::new());
+        lines.push("| Tool | Receipt | Link |".to_string());
+        lines.push("|------|---------|------|".to_string());
+        for receipt in &input.receipts {
+            lines.push(format!(
+                "| {} | {} | [{}]({}/{}) |",
+                receipt.tool,
+                receipt.receipt,
+                receipt.receipt,
+                PRIMARY_COMMITS_URL,
+                receipt.receipt
+            ));
+        }
+    }
     lines.push(String::new());
     lines.join("\n")
 }
@@ -479,6 +786,7 @@ fn render_journal_entry(
     input: &JournalInput,
     status: CommitmentStatus,
     previous_commitment: Option<&str>,
+    worklog_relative_path: Option<&str>,
 ) -> String {
     let mut lines = Vec::new();
     lines.push(format!(
@@ -488,6 +796,10 @@ fn render_journal_entry(
         title
     ));
     lines.push(String::new());
+    if let Some(path) = worklog_relative_path {
+        lines.push(format!("Worklog: [cycle {}]({})", cycle, path));
+        lines.push(String::new());
+    }
     lines.push("### Context".to_string());
     lines.push(String::new());
     lines.push(format!(
@@ -517,9 +829,16 @@ fn render_journal_entry(
         lines.push(convert_references(&section.body));
         lines.push(String::new());
     }
-    lines.push("### Concrete behavior change this cycle".to_string());
+    lines.push("### Concrete commitments for next cycle".to_string());
     lines.push(String::new());
-    lines.push(convert_references(&input.concrete_behavior_change));
+    let commitments = journal_commitments(input);
+    if commitments.is_empty() {
+        lines.push("1. None.".to_string());
+    } else {
+        for (index, commitment) in commitments.iter().enumerate() {
+            lines.push(format!("{}. {}", index + 1, convert_references(commitment)));
+        }
+    }
     lines.push(String::new());
     lines.push("### Open questions".to_string());
     lines.push(String::new());
@@ -532,6 +851,23 @@ fn render_journal_entry(
     }
     lines.push(String::new());
     lines.join("\n")
+}
+
+fn journal_commitments(input: &JournalInput) -> Vec<&str> {
+    if !input.commitments.is_empty() {
+        return input
+            .commitments
+            .iter()
+            .map(String::as_str)
+            .filter(|value| !value.trim().is_empty())
+            .collect();
+    }
+
+    if input.concrete_behavior_change.trim().is_empty() {
+        Vec::new()
+    } else {
+        vec![input.concrete_behavior_change.as_str()]
+    }
 }
 
 fn commitment_status_label(status: CommitmentStatus) -> &'static str {
@@ -590,7 +926,6 @@ fn lookup_previous_concrete_behavior(
 }
 
 fn extract_last_concrete_behavior(content: &str) -> Option<String> {
-    const HEADING: &str = "### Concrete behavior change this cycle";
     let mut line_starts = vec![0usize];
     for (idx, ch) in content.char_indices() {
         if ch == '\n' {
@@ -601,7 +936,10 @@ fn extract_last_concrete_behavior(content: &str) -> Option<String> {
     let mut latest: Option<String> = None;
     for (line_index, start) in line_starts.iter().enumerate() {
         let line = line_text(content, *start);
-        if line.trim() != HEADING {
+        let trimmed_line = line.trim();
+        if trimmed_line != "### Concrete behavior change this cycle"
+            && trimmed_line != "### Concrete commitments for next cycle"
+        {
             continue;
         }
         let mut end = content.len();
@@ -857,6 +1195,58 @@ mod tests {
             .with_timezone(&Utc)
     }
 
+    fn worklog_args(title: &str) -> WorklogArgs {
+        WorklogArgs {
+            cycle: Some(154),
+            title: title.to_string(),
+            input_file: None,
+            done: Vec::new(),
+            pr_merged: Vec::new(),
+            next: Vec::new(),
+            pipeline: None,
+            copilot_metrics: None,
+            publish_gate: None,
+            in_flight: None,
+            receipt: Vec::new(),
+        }
+    }
+
+    fn journal_args(title: &str) -> JournalArgs {
+        JournalArgs {
+            cycle: Some(154),
+            title: title.to_string(),
+            input_file: None,
+            section: Vec::new(),
+            commitment: Vec::new(),
+        }
+    }
+
+    fn write_worklog_fixture(
+        repo_root: &Path,
+        now: DateTime<Utc>,
+        cycle: u64,
+        title: &str,
+    ) -> PathBuf {
+        let path = worklog_path(repo_root, now, title);
+        write_entry_file(
+            &path,
+            &format!(
+                "# Cycle {} — {} {} UTC\n",
+                cycle,
+                now.format("%Y-%m-%d"),
+                now.format("%H:%M")
+            ),
+        )
+        .unwrap();
+        path
+    }
+
+    fn write_input_file(repo_root: &Path, name: &str, payload: &str) -> PathBuf {
+        let path = repo_root.join(name);
+        fs::write(&path, payload).unwrap();
+        path
+    }
+
     #[test]
     fn converts_issue_references_and_preserves_existing_links() {
         let input = "Refs: #42, PR #10, QC #11, audit #12, [#13](https://github.com/EvaLok/schema-org-json-ld/issues/13)";
@@ -909,6 +1299,7 @@ mod tests {
                 publish_gate: "Source diverged".to_string(),
             },
             next_steps: vec!["Review PR #543".to_string()],
+            receipts: Vec::new(),
         };
         let rendered = render_worklog(154, fixed_now(), &input);
         let what_done = rendered.find("## What was done").unwrap();
@@ -925,14 +1316,117 @@ mod tests {
     }
 
     #[test]
+    fn worklog_reads_json_from_input_file() {
+        let repo_root = TempRepoDir::new("worklog-input-file");
+        let payload_path = repo_root.path.join("worklog.json");
+        fs::write(
+            &payload_path,
+            r#"{
+                "what_was_done":["Merged PR #123"],
+                "self_modifications":[],
+                "prs_merged":[123],
+                "prs_reviewed":[],
+                "issues_processed":[],
+                "current_state":{
+                    "in_flight_sessions":1,
+                    "pipeline_status":"PASS (6/6)",
+                    "copilot_metrics":"steady",
+                    "publish_gate":"clear"
+                },
+                "next_steps":["Review PR #124"]
+            }"#,
+        )
+        .unwrap();
+        let mut args = worklog_args("Input file");
+        args.input_file = Some(payload_path);
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+        assert!(
+            content.contains("[PR #123](https://github.com/EvaLok/schema-org-json-ld/issues/123)")
+        );
+        assert!(content.contains(
+            "1. Review [PR #124](https://github.com/EvaLok/schema-org-json-ld/issues/124)"
+        ));
+    }
+
+    #[test]
+    fn find_worklog_relative_path_matches_cycle_and_returns_none_when_missing() {
+        let repo_root = TempRepoDir::new("find-worklog");
+        let first = write_worklog_fixture(&repo_root.path, fixed_now(), 154, "Cycle one");
+        let second = write_worklog_fixture(
+            &repo_root.path,
+            fixed_now_on("2026-03-07"),
+            155,
+            "Cycle two",
+        );
+
+        let found = find_worklog_relative_path(&repo_root.path, 155).unwrap();
+        assert_eq!(
+            found,
+            Some("docs/worklog/2026-03-07/051458-cycle-two.md".to_string())
+        );
+        assert!(first.exists());
+        assert!(second.exists());
+        assert_eq!(
+            find_worklog_relative_path(&repo_root.path, 999).unwrap(),
+            None
+        );
+    }
+
+    #[test]
+    fn worklog_inline_flags_render_receipts_table() {
+        let repo_root = TempRepoDir::new("worklog-inline-flags");
+        let mut args = worklog_args("Inline flags");
+        args.done = vec!["Merged PR #123".to_string()];
+        args.pr_merged = vec![123, 456];
+        args.next = vec!["Review PR #789".to_string()];
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.copilot_metrics = Some("45 dispatched".to_string());
+        args.publish_gate = Some("open".to_string());
+        args.in_flight = Some(1);
+        args.receipt = vec![
+            "cycle-start:abc1234".to_string(),
+            "process-merge:def5678".to_string(),
+        ];
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+        assert!(content.contains(
+            "- Merged [PR #123](https://github.com/EvaLok/schema-org-json-ld/issues/123)"
+        ));
+        assert!(content.contains("- **Pipeline status**: PASS (6/6)"));
+        assert!(content.contains("- **Copilot metrics**: 45 dispatched"));
+        assert!(content.contains("- **Publish gate**: open"));
+        assert!(content.contains("## Commit receipts"));
+        assert!(content.contains("| cycle-start | abc1234 | [abc1234](https://github.com/EvaLok/schema-org-json-ld/commit/abc1234) |"));
+        assert!(content.contains("| process-merge | def5678 | [def5678](https://github.com/EvaLok/schema-org-json-ld/commit/def5678) |"));
+    }
+
+    #[test]
+    fn invalid_receipt_flag_is_rejected() {
+        let mut args = worklog_args("Invalid receipt");
+        args.receipt = vec!["cycle-start:not-a-sha".to_string()];
+
+        let error = resolve_worklog_input(&args).unwrap_err();
+        assert!(error.contains("invalid receipt"));
+    }
+
+    #[test]
+    fn receipt_sha_length_validation_accepts_seven_and_rejects_shorter() {
+        let receipts = parse_receipts(&["cycle-start:abc1234".to_string()]).unwrap();
+        assert_eq!(receipts.len(), 1);
+
+        let error = parse_receipts(&["cycle-start:abc123".to_string()]).unwrap_err();
+        assert!(error.contains("at least 7 hexadecimal characters"));
+    }
+
+    #[test]
     fn journal_create_and_append_use_separator() {
         let repo_root = TempRepoDir::new("append");
         let now = fixed_now();
         write_root_journal_index(&repo_root.path, "");
-        let args = JournalArgs {
-            cycle: Some(154),
-            title: "From convention to enforcement".to_string(),
-        };
+        write_worklog_fixture(&repo_root.path, now, 154, "From convention to enforcement");
         let payload = r#"{
 			"previous_commitment_status":"followed",
 			"previous_commitment_detail":"Ran cargo test after PR #543.",
@@ -941,8 +1435,11 @@ mod tests {
 			"open_questions":[]
 		}"#;
 
-        execute_journal(&args, &repo_root.path, now, payload).unwrap();
-        execute_journal(&args, &repo_root.path, now, payload).unwrap();
+        let mut file_args = journal_args("From convention to enforcement");
+        file_args.input_file = Some(write_input_file(&repo_root.path, "journal.json", payload));
+
+        execute_journal(&file_args, &repo_root.path, now).unwrap();
+        execute_journal(&file_args, &repo_root.path, now).unwrap();
 
         let path = journal_path(&repo_root.path, now);
         let content = fs::read_to_string(path).unwrap();
@@ -950,6 +1447,9 @@ mod tests {
         assert!(
             content.contains("\n---\n\n## 2026-03-06 — Cycle 154: From convention to enforcement")
         );
+        assert!(content.contains(
+            "Worklog: [cycle 154](docs/worklog/2026-03-06/051458-from-convention-to-enforcement.md)"
+        ));
         assert_eq!(
             content
                 .matches("\n## 2026-03-06 — Cycle 154: From convention to enforcement\n")
@@ -959,11 +1459,80 @@ mod tests {
     }
 
     #[test]
+    fn journal_inline_flags_render_worklog_link_and_commitments() {
+        let repo_root = TempRepoDir::new("journal-inline-flags");
+        write_root_journal_index(&repo_root.path, "");
+        write_worklog_fixture(&repo_root.path, fixed_now(), 154, "Cycle reflections");
+        let mut args = journal_args("Cycle reflections");
+        args.section = vec!["Decisions::Chose to defer #829".to_string()];
+        args.commitment = vec!["Will dispatch #830 next cycle".to_string()];
+
+        let path = execute_journal(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+        assert!(content
+            .contains("Worklog: [cycle 154](docs/worklog/2026-03-06/051458-cycle-reflections.md)"));
+        assert!(content.contains("### Decisions"));
+        assert!(content.contains(
+            "Chose to defer [#829](https://github.com/EvaLok/schema-org-json-ld/issues/829)"
+        ));
+        assert!(content.contains("### Concrete commitments for next cycle"));
+        assert!(content.contains(
+            "1. Will dispatch [#830](https://github.com/EvaLok/schema-org-json-ld/issues/830) next cycle"
+        ));
+    }
+
+    #[test]
+    fn journal_json_fallback_renders_concrete_behavior_under_commitments_heading() {
+        let repo_root = TempRepoDir::new("journal-json-fallback");
+        write_root_journal_index(&repo_root.path, "");
+        write_worklog_fixture(&repo_root.path, fixed_now(), 154, "JSON fallback");
+        let payload = r#"{
+            "previous_commitment_status":"followed",
+            "previous_commitment_detail":"Done.",
+            "sections":[],
+            "concrete_behavior_change":"Keep going.",
+            "open_questions":[]
+        }"#;
+        let mut args = journal_args("JSON fallback");
+        args.input_file = Some(write_input_file(
+            &repo_root.path,
+            "journal-fallback.json",
+            payload,
+        ));
+
+        let path = execute_journal(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+        assert!(content.contains("### Concrete commitments for next cycle"));
+        assert!(content.contains("1. Keep going."));
+    }
+
+    #[test]
+    fn invalid_section_flag_is_rejected() {
+        let mut args = journal_args("Invalid section");
+        args.section = vec!["Missing delimiter".to_string()];
+
+        let error = resolve_journal_input(&args).unwrap_err();
+        assert!(error.contains("invalid section"));
+    }
+
+    #[test]
+    fn invalid_section_flag_rejects_empty_heading_and_body() {
+        let empty_heading = parse_sections(&["  ::Body".to_string()]).unwrap_err();
+        assert!(empty_heading.contains("invalid section"));
+
+        let empty_body = parse_sections(&["Heading::   ".to_string()]).unwrap_err();
+        assert!(empty_body.contains("invalid section"));
+    }
+
+    #[test]
     fn new_journal_date_updates_index_and_finalizes_previous_range() {
         let repo_root = TempRepoDir::new("journal-index-new-date");
         let journal_dir = repo_root.path.join("docs").join("journal");
         fs::create_dir_all(&journal_dir).unwrap();
-        write_root_journal_index(&repo_root.path, "- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 151+\n");
+        write_root_journal_index(
+            &repo_root.path,
+            "- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 151+\n",
+        );
         fs::write(
             journal_dir.join("2026-03-05.md"),
             concat!(
@@ -976,10 +1545,6 @@ mod tests {
         )
         .unwrap();
 
-        let args = JournalArgs {
-            cycle: Some(154),
-            title: "New date".to_string(),
-        };
         let payload = r#"{
             "previous_commitment_status":"followed",
             "previous_commitment_detail":"Done.",
@@ -987,13 +1552,19 @@ mod tests {
             "concrete_behavior_change":"Keep going.",
             "open_questions":[]
         }"#;
+        let mut file_args = journal_args("New date");
+        file_args.input_file = Some(write_input_file(
+            &repo_root.path,
+            "journal-new-date.json",
+            payload,
+        ));
 
-        execute_journal(&args, &repo_root.path, fixed_now(), payload).unwrap();
+        execute_journal(&file_args, &repo_root.path, fixed_now()).unwrap();
 
         let journal_index = fs::read_to_string(repo_root.path.join("JOURNAL.md")).unwrap();
-        assert!(journal_index.contains(
-            "- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 151–153"
-        ));
+        assert!(
+            journal_index.contains("- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 151–153")
+        );
         assert!(journal_index.contains("- [2026-03-06](docs/journal/2026-03-06.md) — Cycles 154+"));
     }
 
@@ -1002,7 +1573,10 @@ mod tests {
         let repo_root = TempRepoDir::new("journal-index-gap-day");
         let journal_dir = repo_root.path.join("docs").join("journal");
         fs::create_dir_all(&journal_dir).unwrap();
-        write_root_journal_index(&repo_root.path, "- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 151+\n");
+        write_root_journal_index(
+            &repo_root.path,
+            "- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 151+\n",
+        );
         fs::write(
             journal_dir.join("2026-03-05.md"),
             concat!(
@@ -1015,10 +1589,7 @@ mod tests {
         )
         .unwrap();
 
-        let args = JournalArgs {
-            cycle: Some(154),
-            title: "Gap day".to_string(),
-        };
+        let mut args = journal_args("Gap day");
         let payload = r#"{
             "previous_commitment_status":"followed",
             "previous_commitment_detail":"Done.",
@@ -1026,13 +1597,18 @@ mod tests {
             "concrete_behavior_change":"Keep going.",
             "open_questions":[]
         }"#;
+        args.input_file = Some(write_input_file(
+            &repo_root.path,
+            "journal-gap-day.json",
+            payload,
+        ));
 
-        execute_journal(&args, &repo_root.path, fixed_now_on("2026-03-07"), payload).unwrap();
+        execute_journal(&args, &repo_root.path, fixed_now_on("2026-03-07")).unwrap();
 
         let journal_index = fs::read_to_string(repo_root.path.join("JOURNAL.md")).unwrap();
-        assert!(journal_index.contains(
-            "- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 151–153"
-        ));
+        assert!(
+            journal_index.contains("- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 151–153")
+        );
         assert!(journal_index.contains("- [2026-03-07](docs/journal/2026-03-07.md) — Cycles 154+"));
     }
 
@@ -1041,7 +1617,10 @@ mod tests {
         let repo_root = TempRepoDir::new("journal-index-multi-day-gap");
         let journal_dir = repo_root.path.join("docs").join("journal");
         fs::create_dir_all(&journal_dir).unwrap();
-        write_root_journal_index(&repo_root.path, "- [2026-03-03](docs/journal/2026-03-03.md) — Cycles 151+\n");
+        write_root_journal_index(
+            &repo_root.path,
+            "- [2026-03-03](docs/journal/2026-03-03.md) — Cycles 151+\n",
+        );
         fs::write(
             journal_dir.join("2026-03-03.md"),
             concat!(
@@ -1054,10 +1633,8 @@ mod tests {
         )
         .unwrap();
 
-        let args = JournalArgs {
-            cycle: Some(161),
-            title: "Multi day gap".to_string(),
-        };
+        let mut args = journal_args("Multi day gap");
+        args.cycle = Some(161);
         let payload = r#"{
             "previous_commitment_status":"followed",
             "previous_commitment_detail":"Done.",
@@ -1065,13 +1642,18 @@ mod tests {
             "concrete_behavior_change":"Keep going.",
             "open_questions":[]
         }"#;
+        args.input_file = Some(write_input_file(
+            &repo_root.path,
+            "journal-multi-gap.json",
+            payload,
+        ));
 
-        execute_journal(&args, &repo_root.path, fixed_now_on("2026-03-07"), payload).unwrap();
+        execute_journal(&args, &repo_root.path, fixed_now_on("2026-03-07")).unwrap();
 
         let journal_index = fs::read_to_string(repo_root.path.join("JOURNAL.md")).unwrap();
-        assert!(journal_index.contains(
-            "- [2026-03-03](docs/journal/2026-03-03.md) — Cycles 151–160"
-        ));
+        assert!(
+            journal_index.contains("- [2026-03-03](docs/journal/2026-03-03.md) — Cycles 151–160")
+        );
         assert!(journal_index.contains("- [2026-03-07](docs/journal/2026-03-07.md) — Cycles 161+"));
     }
 
@@ -1082,10 +1664,7 @@ mod tests {
         fs::create_dir_all(&journal_dir).unwrap();
         write_root_journal_index(&repo_root.path, "");
 
-        let args = JournalArgs {
-            cycle: Some(154),
-            title: "First date".to_string(),
-        };
+        let mut args = journal_args("First date");
         let payload = r#"{
             "previous_commitment_status":"followed",
             "previous_commitment_detail":"Done.",
@@ -1093,8 +1672,13 @@ mod tests {
             "concrete_behavior_change":"Keep going.",
             "open_questions":[]
         }"#;
+        args.input_file = Some(write_input_file(
+            &repo_root.path,
+            "journal-first-date.json",
+            payload,
+        ));
 
-        execute_journal(&args, &repo_root.path, fixed_now(), payload).unwrap();
+        execute_journal(&args, &repo_root.path, fixed_now()).unwrap();
 
         let journal_index = fs::read_to_string(repo_root.path.join("JOURNAL.md")).unwrap();
         assert!(journal_index.contains("- [2026-03-06](docs/journal/2026-03-06.md) — Cycles 154+"));
@@ -1108,10 +1692,8 @@ mod tests {
         let initial_index = "- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 151–160\n";
         write_root_journal_index(&repo_root.path, initial_index);
 
-        let args = JournalArgs {
-            cycle: Some(161),
-            title: "Closed previous".to_string(),
-        };
+        let mut args = journal_args("Closed previous");
+        args.cycle = Some(161);
         let payload = r#"{
             "previous_commitment_status":"followed",
             "previous_commitment_detail":"Done.",
@@ -1119,11 +1701,18 @@ mod tests {
             "concrete_behavior_change":"Keep going.",
             "open_questions":[]
         }"#;
+        args.input_file = Some(write_input_file(
+            &repo_root.path,
+            "journal-closed-previous.json",
+            payload,
+        ));
 
-        execute_journal(&args, &repo_root.path, fixed_now_on("2026-03-07"), payload).unwrap();
+        execute_journal(&args, &repo_root.path, fixed_now_on("2026-03-07")).unwrap();
 
         let journal_index = fs::read_to_string(repo_root.path.join("JOURNAL.md")).unwrap();
-        assert!(journal_index.contains("- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 151–160"));
+        assert!(
+            journal_index.contains("- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 151–160")
+        );
         assert!(journal_index.contains("- [2026-03-07](docs/journal/2026-03-07.md) — Cycles 161+"));
     }
 
@@ -1148,10 +1737,8 @@ mod tests {
         )
         .unwrap();
 
-        let args = JournalArgs {
-            cycle: Some(155),
-            title: "Append".to_string(),
-        };
+        let mut args = journal_args("Append");
+        args.cycle = Some(155);
         let payload = r#"{
             "previous_commitment_status":"followed",
             "previous_commitment_detail":"Done.",
@@ -1159,8 +1746,13 @@ mod tests {
             "concrete_behavior_change":"Keep going.",
             "open_questions":[]
         }"#;
+        args.input_file = Some(write_input_file(
+            &repo_root.path,
+            "journal-append.json",
+            payload,
+        ));
 
-        execute_journal(&args, &repo_root.path, fixed_now(), payload).unwrap();
+        execute_journal(&args, &repo_root.path, fixed_now()).unwrap();
 
         let journal_index = fs::read_to_string(repo_root.path.join("JOURNAL.md")).unwrap();
         assert_eq!(
@@ -1177,7 +1769,10 @@ mod tests {
         let repo_root = TempRepoDir::new("previous");
         let journal_dir = repo_root.path.join("docs").join("journal");
         fs::create_dir_all(&journal_dir).unwrap();
-        write_root_journal_index(&repo_root.path, "- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 153+\n");
+        write_root_journal_index(
+            &repo_root.path,
+            "- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 153+\n",
+        );
         let existing = r#"# Journal — 2026-03-05
 
 Reflective log for the schema-org-json-ld orchestrator.
@@ -1192,10 +1787,7 @@ When accepting recommendations, dispatch #546 in the same cycle.
 "#;
         fs::write(journal_dir.join("2026-03-05.md"), existing).unwrap();
 
-        let args = JournalArgs {
-            cycle: Some(154),
-            title: "New title".to_string(),
-        };
+        let mut args = journal_args("New title");
         let payload = r#"{
 			"previous_commitment_status":"followed",
 			"previous_commitment_detail":"Done.",
@@ -1203,19 +1795,66 @@ When accepting recommendations, dispatch #546 in the same cycle.
 			"concrete_behavior_change":"Keep going.",
 			"open_questions":[]
 		}"#;
-        execute_journal(&args, &repo_root.path, fixed_now(), payload).unwrap();
+        args.input_file = Some(write_input_file(
+            &repo_root.path,
+            "journal-previous.json",
+            payload,
+        ));
+        execute_journal(&args, &repo_root.path, fixed_now()).unwrap();
 
         let content = fs::read_to_string(journal_path(&repo_root.path, fixed_now())).unwrap();
         assert!(content.contains("> Previous commitment: When accepting recommendations, dispatch [#546](https://github.com/EvaLok/schema-org-json-ld/issues/546) in the same cycle."));
     }
 
     #[test]
+    fn journal_extracts_previous_commitment_from_new_heading_format() {
+        let repo_root = TempRepoDir::new("previous-new-heading");
+        let journal_dir = repo_root.path.join("docs").join("journal");
+        fs::create_dir_all(&journal_dir).unwrap();
+        write_root_journal_index(
+            &repo_root.path,
+            "- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 153+\n",
+        );
+        write_worklog_fixture(&repo_root.path, fixed_now(), 154, "New heading");
+        let existing = r#"# Journal — 2026-03-05
+
+Reflective log for the schema-org-json-ld orchestrator.
+
+---
+
+## 2026-03-05 — Cycle 153: Prior title
+
+### Concrete commitments for next cycle
+
+1. Dispatch #546 in the same cycle.
+"#;
+        fs::write(journal_dir.join("2026-03-05.md"), existing).unwrap();
+
+        let payload = r#"{
+			"previous_commitment_status":"followed",
+			"previous_commitment_detail":"Done.",
+			"sections":[],
+			"concrete_behavior_change":"Keep going.",
+			"open_questions":[]
+		}"#;
+        let mut args = journal_args("New heading");
+        args.input_file = Some(write_input_file(
+            &repo_root.path,
+            "journal-new-heading.json",
+            payload,
+        ));
+        execute_journal(&args, &repo_root.path, fixed_now()).unwrap();
+
+        let content = fs::read_to_string(journal_path(&repo_root.path, fixed_now())).unwrap();
+        assert!(content.contains(
+            "> Previous commitment: 1. Dispatch [#546](https://github.com/EvaLok/schema-org-json-ld/issues/546) in the same cycle."
+        ));
+    }
+
+    #[test]
     fn invalid_previous_commitment_status_is_rejected() {
         let repo_root = TempRepoDir::new("status");
-        let args = JournalArgs {
-            cycle: Some(154),
-            title: "Invalid status".to_string(),
-        };
+        let mut args = journal_args("Invalid status");
         let payload = r#"{
 			"previous_commitment_status":"unknown",
 			"previous_commitment_detail":"Done.",
@@ -1223,7 +1862,12 @@ When accepting recommendations, dispatch #546 in the same cycle.
 			"concrete_behavior_change":"Keep going.",
 			"open_questions":[]
 		}"#;
-        let error = execute_journal(&args, &repo_root.path, fixed_now(), payload).unwrap_err();
+        args.input_file = Some(write_input_file(
+            &repo_root.path,
+            "journal-invalid-status.json",
+            payload,
+        ));
+        let error = execute_journal(&args, &repo_root.path, fixed_now()).unwrap_err();
         assert!(error.contains("invalid previous_commitment_status"));
     }
 
@@ -1245,6 +1889,7 @@ When accepting recommendations, dispatch #546 in the same cycle.
             Command::Worklog(args) => {
                 assert_eq!(args.cycle, Some(1));
                 assert_eq!(args.title, "test");
+                assert!(args.input_file.is_none());
             }
             Command::Journal(_) => panic!("expected worklog command"),
         }
@@ -1255,8 +1900,85 @@ When accepting recommendations, dispatch #546 in the same cycle.
         let cli = Cli::try_parse_from(["write-entry", "worklog", "--title", "test"]).unwrap();
         assert_eq!(cli.repo_root, PathBuf::from("."));
         match cli.command {
-            Command::Worklog(args) => assert_eq!(args.cycle, None),
+            Command::Worklog(args) => {
+                assert_eq!(args.cycle, None);
+                assert!(args.done.is_empty());
+                assert!(args.receipt.is_empty());
+            }
             Command::Journal(_) => panic!("expected worklog command"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_worklog_input_file_and_inline_flags() {
+        let cli = Cli::try_parse_from([
+            "write-entry",
+            "worklog",
+            "--title",
+            "test",
+            "--input-file",
+            "/tmp/worklog.json",
+            "--done",
+            "Merged PR #123",
+            "--pr-merged",
+            "123",
+            "--next",
+            "Review PR #124",
+            "--pipeline",
+            "PASS (6/6)",
+            "--copilot-metrics",
+            "45 dispatched",
+            "--publish-gate",
+            "open",
+            "--in-flight",
+            "1",
+            "--receipt",
+            "cycle-start:abc1234",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::Worklog(args) => {
+                assert_eq!(args.input_file, Some(PathBuf::from("/tmp/worklog.json")));
+                assert_eq!(args.done, vec!["Merged PR #123".to_string()]);
+                assert_eq!(args.pr_merged, vec![123]);
+                assert_eq!(args.next, vec!["Review PR #124".to_string()]);
+                assert_eq!(args.pipeline.as_deref(), Some("PASS (6/6)"));
+                assert_eq!(args.copilot_metrics.as_deref(), Some("45 dispatched"));
+                assert_eq!(args.publish_gate.as_deref(), Some("open"));
+                assert_eq!(args.in_flight, Some(1));
+                assert_eq!(args.receipt, vec!["cycle-start:abc1234".to_string()]);
+            }
+            Command::Journal(_) => panic!("expected worklog command"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_journal_input_file_and_inline_flags() {
+        let cli = Cli::try_parse_from([
+            "write-entry",
+            "journal",
+            "--title",
+            "test",
+            "--input-file",
+            "/tmp/journal.json",
+            "--section",
+            "Decision::Defer #829",
+            "--commitment",
+            "Dispatch #830 next cycle",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::Journal(args) => {
+                assert_eq!(args.input_file, Some(PathBuf::from("/tmp/journal.json")));
+                assert_eq!(args.section, vec!["Decision::Defer #829".to_string()]);
+                assert_eq!(
+                    args.commitment,
+                    vec!["Dispatch #830 next cycle".to_string()]
+                );
+            }
+            Command::Worklog(_) => panic!("expected journal command"),
         }
     }
 
@@ -1269,10 +1991,8 @@ When accepting recommendations, dispatch #546 in the same cycle.
             "{\n  \"last_cycle\": {\"number\": 168}\n}\n",
         )
         .unwrap();
-        let args = WorklogArgs {
-            cycle: None,
-            title: "Derived cycle".to_string(),
-        };
+        let mut args = worklog_args("Derived cycle");
+        args.cycle = None;
         let payload = r#"{
 			"what_was_done":["Checked #42"],
 			"self_modifications":[],
@@ -1287,8 +2007,13 @@ When accepting recommendations, dispatch #546 in the same cycle.
 			},
 			"next_steps":[]
 		}"#;
+        args.input_file = Some(write_input_file(
+            &repo_root.path,
+            "worklog-derived-cycle.json",
+            payload,
+        ));
 
-        let path = execute_worklog(&args, &repo_root.path, fixed_now(), payload).unwrap();
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
         assert!(content.contains("# Cycle 168 — 2026-03-06 05:14 UTC"));
     }
@@ -1298,15 +2023,14 @@ When accepting recommendations, dispatch #546 in the same cycle.
         let repo_root = TempRepoDir::new("journal-derived-cycle");
         fs::create_dir_all(repo_root.path.join("docs")).unwrap();
         write_root_journal_index(&repo_root.path, "");
+        write_worklog_fixture(&repo_root.path, fixed_now(), 168, "Derived cycle");
         fs::write(
             repo_root.path.join("docs/state.json"),
             "{\n  \"last_cycle\": {\"number\": 168}\n}\n",
         )
         .unwrap();
-        let args = JournalArgs {
-            cycle: None,
-            title: "Derived cycle".to_string(),
-        };
+        let mut args = journal_args("Derived cycle");
+        args.cycle = None;
         let payload = r#"{
 			"previous_commitment_status":"followed",
 			"previous_commitment_detail":"Done.",
@@ -1314,8 +2038,13 @@ When accepting recommendations, dispatch #546 in the same cycle.
 			"concrete_behavior_change":"Keep going.",
 			"open_questions":[]
 		}"#;
+        args.input_file = Some(write_input_file(
+            &repo_root.path,
+            "journal-derived-cycle.json",
+            payload,
+        ));
 
-        let path = execute_journal(&args, &repo_root.path, fixed_now(), payload).unwrap();
+        let path = execute_journal(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
         assert!(content.contains("## 2026-03-06 — Cycle 168: Derived cycle"));
     }
