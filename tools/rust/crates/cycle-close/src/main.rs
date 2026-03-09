@@ -9,6 +9,7 @@ use std::process::{Command, Stdio};
 
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const ORCHESTRATOR_SIGNATURE: &str = "[main-orchestrator]";
+const RECEIPTS_TOOL_PATH: &str = "tools/cycle-receipts";
 
 #[derive(Debug, Parser)]
 #[command(name = "cycle-close")]
@@ -75,10 +76,10 @@ impl CommandRunner for ProcessRunner {
     fn bash(&self, repo_root: &Path, args: &[String]) -> Result<ExecutionResult, String> {
         let output = Command::new("bash")
             .current_dir(repo_root)
-            .arg("tools/cycle-receipts")
+            .arg(RECEIPTS_TOOL_PATH)
             .args(args)
             .output()
-            .map_err(|error| format!("failed to execute bash tools/cycle-receipts: {}", error))?;
+            .map_err(|error| format!("failed to execute bash {}: {}", RECEIPTS_TOOL_PATH, error))?;
         Ok(ExecutionResult {
             exit_code: output.status.code(),
             stdout: String::from_utf8_lossy(&output.stdout).to_string(),
@@ -547,7 +548,7 @@ fn find_current_cycle_worklog_relative_path(
         if content
             .lines()
             .next()
-            .is_some_and(|line| line.starts_with(&format!("# Cycle {} — ", cycle)))
+            .is_some_and(|line| matches_cycle_heading(line, cycle))
         {
             candidates.push(path);
         }
@@ -569,6 +570,18 @@ fn find_current_cycle_worklog_relative_path(
                 .map(|relative| relative.to_string_lossy().replace('\\', "/"))
         })
         .transpose()
+}
+
+fn matches_cycle_heading(line: &str, cycle: u64) -> bool {
+    let prefix = format!("# Cycle {}", cycle);
+    let Some(remainder) = line.trim_start().strip_prefix(&prefix) else {
+        return false;
+    };
+    remainder.is_empty()
+        || remainder
+            .chars()
+            .next()
+            .is_some_and(|character| character.is_whitespace() || matches!(character, '—' | '-'))
 }
 
 fn extract_markdown_section(content: &str, heading: &str) -> Option<String> {
@@ -677,7 +690,12 @@ fn json_string_field(value: &serde_json::Value, field: &str) -> Result<String, S
         .get(field)
         .and_then(|inner| inner.as_str())
         .map(ToOwned::to_owned)
-        .ok_or_else(|| format!("missing string field `{}` in cycle-receipts output", field))
+        .ok_or_else(|| {
+            format!(
+                "missing string field `{}` in cycle-receipts output: {}",
+                field, value
+            )
+        })
 }
 
 fn escape_markdown_cell(value: &str) -> String {
