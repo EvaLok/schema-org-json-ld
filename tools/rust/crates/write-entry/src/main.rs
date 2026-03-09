@@ -1398,8 +1398,8 @@ mod tests {
     }
 
     fn write_state_file(repo_root: &Path, payload: &str) {
-        fs::create_dir_all(repo_root.join("docs")).unwrap();
-        fs::write(repo_root.join("docs/state.json"), payload).unwrap();
+        fs::create_dir_all(repo_root.join("docs")).expect("failed to create docs directory");
+        fs::write(repo_root.join("docs/state.json"), payload).expect("failed to write test state.json");
     }
 
     #[test]
