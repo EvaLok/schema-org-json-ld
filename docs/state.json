@@ -2108,8 +2108,10 @@
     {
       "dispatched_at": "2026-03-08T22:49:07Z",
       "issue": 819,
+      "merged_at": "2026-03-09T00:28:36Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 820,
+      "status": "merged",
       "title": "Remove deprecated copilot_metrics.note field from all tools"
     },
     {
@@ -2271,11 +2273,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#835 Add format validation to process-review (cycle 198)",
     "dispatch_to_pr_rate": "97.0%",
-    "in_flight": 2,
-    "merged": 224,
+    "in_flight": 1,
+    "merged": 225,
     "pr_merge_rate": "99.6%",
-    "produced_pr": 225,
-    "resolved": 230,
+    "produced_pr": 226,
+    "resolved": 231,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 232
