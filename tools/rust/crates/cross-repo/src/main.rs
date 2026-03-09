@@ -14,6 +14,7 @@ const AUDIT_REPO: &str = "EvaLok/schema-org-json-ld-audit";
 const TRUSTED_AUTHOR: &str = "EvaLok";
 const BODY_PREVIEW_LIMIT: usize = 200;
 const STALE_CYCLE_THRESHOLD: u64 = 5;
+const NO_STDERR_PLACEHOLDER: &str = "<no stderr>";
 const PACKAGE_AFFECTING_PATHS: &[&str] = &[
     "php/src/",
     "php/test/",
@@ -601,9 +602,9 @@ fn detect_stale_accepted(
             .or_else(|| extract_cycle_number(&issue.body))
             .ok_or_else(|| {
                 format!(
-					"audit-inbound issue #{} claims accepted recommendations but does not mention a cycle",
-					issue.number
-				)
+                    "audit-inbound issue #{} claims accepted recommendations but does not mention a cycle number in title or body",
+                    issue.number
+                )
             })?;
 
         for audit_number in accepted_references {
@@ -707,8 +708,11 @@ fn extract_cycle_number(text: &str) -> Option<u64> {
 }
 
 fn extract_main_issue_number(text: &str) -> Option<u64> {
-    extract_number_after_marker(text, "https://github.com/evalok/schema-org-json-ld/issues/")
-        .or_else(|| extract_number_after_marker(text, "schema-org-json-ld/issues/"))
+    extract_number_after_marker(
+        text,
+        &format!("https://github.com/{}/issues/", MAIN_REPO).to_ascii_lowercase(),
+    )
+    .or_else(|| extract_number_after_marker(text, "schema-org-json-ld/issues/"))
 }
 
 fn extract_commit_sha(text: &str) -> Option<String> {
@@ -1008,7 +1012,7 @@ fn gh_json(repo_root: &Path, runner: &dyn CommandRunner, args: &[String]) -> Res
 fn trimmed_or_default(text: &str) -> String {
     let trimmed = text.trim();
     if trimmed.is_empty() {
-        "<no stderr>".to_string()
+        NO_STDERR_PLACEHOLDER.to_string()
     } else {
         trimmed.to_string()
     }
