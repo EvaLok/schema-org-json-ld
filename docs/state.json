@@ -2156,22 +2156,28 @@
     {
       "dispatched_at": "2026-03-09T02:28:59Z",
       "issue": 850,
+      "merged_at": "2026-03-09T03:54:58Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 852,
+      "status": "merged",
       "title": "dispatch-review tool (per Eva #825)"
     },
     {
       "dispatched_at": "2026-03-09T02:29:02Z",
       "issue": 851,
+      "merged_at": "2026-03-09T03:54:58Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 853,
+      "status": "merged",
       "title": "check-agent-prs tool (per Eva #826)"
     },
     {
       "dispatched_at": "2026-03-09T02:36:03Z",
       "issue": 854,
+      "merged_at": "2026-03-09T03:54:58Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 855,
+      "status": "merged",
       "title": "Cycle 200 review (cycle 200)"
     }
   ],
@@ -2317,11 +2323,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#854 Cycle 200 review (cycle 200) (cycle 200)",
     "dispatch_to_pr_rate": "97.1%",
-    "in_flight": 3,
-    "merged": 229,
+    "in_flight": 0,
+    "merged": 232,
     "pr_merge_rate": "99.1%",
-    "produced_pr": 231,
-    "resolved": 236,
+    "produced_pr": 234,
+    "resolved": 239,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 239
