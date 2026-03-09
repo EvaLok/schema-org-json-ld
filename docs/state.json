@@ -2735,6 +2735,14 @@
           "rationale": "process-adherence findings in cycles 195-200 consistently flagged missing per-step comments on cycle issues. The structural fix is the post-step tool (merged cycle 200, PR #846) plus the existing STARTUP_CHECKLIST mandate. Cycle 201 is the first cycle using post-step for every step. If the category persists after tool adoption, recalibrate.",
           "root_cause": "Orchestrator posted batched summary comments instead of individual per-step comments. The post-step tool did not exist until cycle 200, and was not used in its merge cycle due to the adoption gap pattern (audit #160).",
           "verification_cycle": 201
+        },
+        {
+          "added_cycle": 204,
+          "category": "receipt-integrity",
+          "chosen_path": "structural-fix",
+          "rationale": "receipt-integrity findings in cycles 197-203 consistently flagged nonexistent SHA hashes and stale metrics in hand-assembled worklog receipt tables. The structural fix has two layers: (1) cycle-receipts tool (merged cycle 200) generates receipts mechanically from git log, and (2) cycle-close enhancement (#884, dispatched cycle 204) will embed receipt tables in closing comments automatically. The root cause is manual assembly — the fix is automation.",
+          "root_cause": "Orchestrator hand-assembled receipt tables by copying SHAs from tool output, sometimes recording wrong or stale hashes. The cycle-receipts tool exists but was not consistently used to generate the worklog receipt table.",
+          "verification_cycle": 204
         }
       ]
     },
