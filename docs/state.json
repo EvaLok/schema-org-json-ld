@@ -2213,6 +2213,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Refactor: consolidate duplicated code into state-schema crate"
+    },
+    {
+      "dispatched_at": "2026-03-09T05:20:02Z",
+      "issue": 867,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Improve write-entry: sandbox compatibility and ergonomic CLI"
     }
   ],
   "audit_processed": [
@@ -2356,16 +2363,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#865 Refactor: consolidate duplicated code into state-schema crate (cycle 201)",
+    "dispatch_log_latest": "#867 Improve write-entry: sandbox compatibility and ergonomic CLI (cycle 201)",
     "dispatch_to_pr_rate": "96.7%",
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 235,
     "pr_merge_rate": "99.1%",
     "produced_pr": 237,
     "resolved": 242,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 243
+    "total_dispatches": 244
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
