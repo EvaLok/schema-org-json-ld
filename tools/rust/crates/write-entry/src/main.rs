@@ -229,10 +229,8 @@ fn execute_journal(
         previous.as_deref(),
         worklog_link.as_deref(),
     );
-    let created_new = write_journal_file(&path, now.date_naive(), &entry)?;
-    if created_new {
-        update_journal_index(repo_root, now.date_naive(), cycle)?;
-    }
+    write_journal_file(&path, now.date_naive(), &entry)?;
+    update_journal_index(repo_root, now.date_naive(), cycle)?;
     Ok(path)
 }
 
@@ -1835,6 +1833,51 @@ Reflective log for the schema-org-json-ld orchestrator.
                 "# Journal\n\nJournal entries have been split into per-date files in [`docs/journal/`](docs/journal/).\n\n{}",
                 initial_index
             )
+        );
+    }
+
+    #[test]
+    fn appending_to_existing_journal_date_adds_missing_index_entry() {
+        let repo_root = TempRepoDir::new("journal-index-missing-entry");
+        let journal_dir = repo_root.path.join("docs").join("journal");
+        fs::create_dir_all(&journal_dir).unwrap();
+        // Index only has 2026-03-05 — missing 2026-03-06 entry
+        let initial_index = "- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 151–153\n";
+        write_root_journal_index(&repo_root.path, initial_index);
+        // But the 2026-03-06 journal file already exists on disk
+        fs::write(
+            journal_dir.join("2026-03-06.md"),
+            concat!(
+                "# Journal — 2026-03-06\n\n",
+                "Reflective log for the schema-org-json-ld orchestrator.\n\n",
+                "---\n\n",
+                "## 2026-03-06 — Cycle 154: Existing\n"
+            ),
+        )
+        .unwrap();
+
+        let mut args = journal_args("Append to missing index");
+        args.cycle = Some(155);
+        let payload = r#"{
+            "previous_commitment_status":"followed",
+            "previous_commitment_detail":"Done.",
+            "sections":[],
+            "concrete_behavior_change":"Keep going.",
+            "open_questions":[]
+        }"#;
+        args.input_file = Some(write_input_file(
+            &repo_root.path,
+            "journal-missing-index.json",
+            payload,
+        ));
+
+        execute_journal(&args, &repo_root.path, fixed_now()).unwrap();
+
+        let journal_index = fs::read_to_string(repo_root.path.join("JOURNAL.md")).unwrap();
+        // The missing date should now appear in the index
+        assert!(
+            journal_index.contains("- [2026-03-06](docs/journal/2026-03-06.md) — Cycles 155+"),
+            "expected missing date to be added to index, got: {journal_index}"
         );
     }
 
