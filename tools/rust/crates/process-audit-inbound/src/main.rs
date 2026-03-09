@@ -130,7 +130,7 @@ fn fetch_audit_recommendations(repo_root: &Path) -> Result<Vec<AuditRecommendati
 		"repos/{}/issues?labels=audit-outbound&state=open&creator={}&sort=created&direction=asc&per_page=100",
 		AUDIT_REPO, AUDIT_AUTHOR
 	);
-    let value = gh_json(repo_root, &["api", &api_path])?;
+    let value = gh_json(repo_root, &["api", &api_path, "--paginate", "--slurp"])?;
     parse_outbound_recommendations(value)
 }
 
@@ -156,9 +156,7 @@ fn fetch_open_audit_inbound_issues(repo_root: &Path) -> Result<Vec<AuditInboundI
 }
 
 fn parse_outbound_recommendations(value: Value) -> Result<Vec<AuditRecommendation>, String> {
-    let issues = value
-        .as_array()
-        .ok_or_else(|| "unexpected response for audit recommendation query".to_string())?;
+    let issues = flatten_paginated_items(value)?;
 
     let mut recommendations = Vec::with_capacity(issues.len());
     for issue in issues {
@@ -180,7 +178,7 @@ fn parse_outbound_recommendations(value: Value) -> Result<Vec<AuditRecommendatio
         let body = issue
             .get("body")
             .and_then(Value::as_str)
-            .unwrap_or_default()
+            .ok_or_else(|| format!("audit recommendation #{} missing body", number))?
             .to_string();
         let author = issue
             .pointer("/user/login")
@@ -223,7 +221,7 @@ fn parse_inbound_issues(value: Value) -> Result<Vec<AuditInboundIssue>, String> 
         let body = issue
             .get("body")
             .and_then(Value::as_str)
-            .unwrap_or_default()
+            .ok_or_else(|| format!("audit-inbound issue #{} missing body", number))?
             .to_string();
         let created_at_raw = issue
             .get("createdAt")
@@ -275,7 +273,8 @@ fn detect_stale_accepted(
             continue;
         }
 
-        let accepted_cycle = extract_cycle_number(&format!("{}\n{}", issue.title, issue.body))
+        let accepted_cycle = extract_cycle_number(&issue.title)
+            .or_else(|| extract_cycle_number(&issue.body))
             .ok_or_else(|| {
                 format!(
 					"audit-inbound issue #{} claims accepted recommendations but does not mention a cycle",
@@ -383,15 +382,15 @@ fn extract_audit_heading_number(line: &str) -> Option<u64> {
 }
 
 fn extract_audit_number(text: &str) -> Option<u64> {
-    extract_number_after_keyword(text, "audit")
+    extract_number_after_keyword(text, "audit", true)
         .or_else(|| extract_number_after_marker(text, "schema-org-json-ld-audit/issues/"))
 }
 
 fn extract_cycle_number(text: &str) -> Option<u64> {
-    extract_number_after_keyword(text, "cycle")
+    extract_number_after_keyword(text, "cycle", false)
 }
 
-fn extract_number_after_keyword(text: &str, keyword: &str) -> Option<u64> {
+fn extract_number_after_keyword(text: &str, keyword: &str, allow_hash_prefix: bool) -> Option<u64> {
     let lower = text.to_ascii_lowercase();
     let bytes = lower.as_bytes();
     let keyword_bytes = keyword.as_bytes();
@@ -409,7 +408,8 @@ fn extract_number_after_keyword(text: &str, keyword: &str) -> Option<u64> {
         }
 
         let mut cursor = index + keyword_bytes.len();
-        while cursor < bytes.len() && (bytes[cursor].is_ascii_whitespace() || bytes[cursor] == b'#')
+        while cursor < bytes.len()
+            && (bytes[cursor].is_ascii_whitespace() || (allow_hash_prefix && bytes[cursor] == b'#'))
         {
             cursor += 1;
         }
@@ -445,9 +445,28 @@ fn extract_number_after_marker(text: &str, marker: &str) -> Option<u64> {
 }
 
 fn contains_word(text: &str, needle: &str) -> bool {
+    let needle = needle.to_ascii_lowercase();
     text.to_ascii_lowercase()
         .split(|character: char| !character.is_ascii_alphanumeric())
         .any(|word| word == needle)
+}
+
+fn flatten_paginated_items(value: Value) -> Result<Vec<Value>, String> {
+    match value {
+        Value::Array(items) => {
+            if items.iter().all(Value::is_object) {
+                return Ok(items);
+            }
+            if items.iter().all(Value::is_array) {
+                return Ok(items
+                    .into_iter()
+                    .flat_map(|page| page.as_array().cloned().unwrap_or_default())
+                    .collect());
+            }
+            Err("unexpected paginated response shape".to_string())
+        }
+        _ => Err("expected array response from GitHub CLI".to_string()),
+    }
 }
 
 fn build_preview(body: &str) -> String {
