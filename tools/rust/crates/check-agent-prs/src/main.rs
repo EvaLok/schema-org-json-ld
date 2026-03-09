@@ -466,6 +466,8 @@ mod tests {
     use super::*;
     use serde_json::json;
 
+    const TEST_PR_NUMBER: u64 = 813;
+
     #[test]
     fn classify_ready_when_last_event_is_finished() {
         let pr = sample_pr("2026-03-08T20:00:00Z");
@@ -538,7 +540,7 @@ mod tests {
                 {"bucket": "pass"},
                 {"bucket": "pass"}
             ]),
-            813,
+            TEST_PR_NUMBER,
         )
         .expect("ci status should parse");
 
@@ -552,7 +554,7 @@ mod tests {
                 {"bucket": "pass"},
                 {"bucket": "pending"}
             ]),
-            813,
+            TEST_PR_NUMBER,
         )
         .expect("ci status should parse");
 
@@ -566,7 +568,7 @@ mod tests {
                 {"bucket": "pass"},
                 {"bucket": "fail"}
             ]),
-            813,
+            TEST_PR_NUMBER,
         )
         .expect("ci status should parse");
 
@@ -575,7 +577,7 @@ mod tests {
 
     fn sample_pr(created_at: &str) -> PullRequestSummary {
         PullRequestSummary {
-            number: 813,
+            number: TEST_PR_NUMBER,
             title: "Add post-step tool".to_string(),
             is_draft: false,
             created_at: parse_utc(created_at),
