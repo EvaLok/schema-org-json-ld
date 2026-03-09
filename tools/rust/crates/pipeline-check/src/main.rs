@@ -534,7 +534,10 @@ fn verify_journal_freshness(repo_root: &Path, today: &str) -> Result<(StepStatus
 	let Some(latest) = latest_journal_file_date(&journal_dir)? else {
 		return Ok((
 			StepStatus::Warn,
-			format!("docs/journal/ has no dated journal files at {}", journal_dir.display()),
+			format!(
+				"docs/journal/ has no dated journal files in YYYY-MM-DD.md format at {}",
+				journal_dir.display()
+			),
 		));
 	};
 	let latest_date = parse_iso_date(&latest)?;
@@ -632,16 +635,17 @@ fn latest_journal_file_date(journal_dir: &Path) -> Result<Option<String>, String
 		if !is_iso_date(candidate) {
 			continue;
 		}
+		let candidate_date = parse_iso_date(candidate)?;
 
 		if latest
-			.as_deref()
-			.is_none_or(|current| candidate > current)
+			.as_ref()
+			.is_none_or(|(current_date, _)| candidate_date > *current_date)
 		{
-			latest = Some(candidate.to_string());
+			latest = Some((candidate_date, candidate.to_string()));
 		}
 	}
 
-	Ok(latest)
+	Ok(latest.map(|(_, candidate)| candidate))
 }
 
 fn is_iso_date(value: &str) -> bool {
