@@ -44,29 +44,23 @@ Each tool handles its own freshness markers automatically — no manual freshnes
 
 ## 3. Write worklog entry
 
-Use `write-entry` to generate the worklog. Write the JSON payload to a file with the Write tool, then invoke:
+Use `write-entry` to generate the worklog. The primary interface is the inline CLI flags:
+
+```bash
+bash tools/write-entry worklog \
+  --title "Cycle N summary" \
+  --done "Merged PR #123" --done "Processed audit #155" \
+  --pr-merged 123 --pr-merged 456 \
+  --next "Review PR from #825" \
+  --pipeline "PASS (6/6)" \
+  --in-flight 1 \
+  --receipt "cycle-start:abc1234"
+```
+
+For more complex payloads (self-modifications, reviewed PRs, processed issues), write JSON to a file with the Write tool and pass `--input-file`:
 
 ```bash
 bash tools/write-entry worklog --title "Cycle N summary" --input-file /tmp/worklog.json
-```
-
-The JSON payload structure:
-
-```json
-{
-  "what_was_done": ["Merged PR #123", "Processed audit #155"],
-  "self_modifications": [{"file": "STARTUP_CHECKLIST.md", "description": "Added step 5.5"}],
-  "prs_merged": [123, 456],
-  "prs_reviewed": [789],
-  "issues_processed": [808, 809],
-  "current_state": {
-    "in_flight_sessions": 1,
-    "pipeline_status": "PASS (6/6)",
-    "copilot_metrics": "45 dispatched, 42 resolved, 1 in-flight",
-    "publish_gate": "open"
-  },
-  "next_steps": ["Review PR from #825", "Track clean-cycle count"]
-}
 ```
 
 The tool auto-generates clickable GitHub links from bare `#N` references, creates the directory structure, and derives the cycle number from state.json.
@@ -77,13 +71,22 @@ The tool auto-generates clickable GitHub links from bare `#N` references, create
 
 ## 4. Write journal entry
 
-Use `write-entry` to generate the journal entry. Write the JSON payload to a file with the Write tool, then invoke:
+Use `write-entry` to generate the journal entry. The primary interface is the inline CLI flags:
+
+```bash
+bash tools/write-entry journal \
+  --title "Cycle N reflections" \
+  --section "Decision::Chose to defer #829" \
+  --commitment "Will dispatch #830 next cycle"
+```
+
+For more complex payloads, write JSON to a file with the Write tool and pass `--input-file`:
 
 ```bash
 bash tools/write-entry journal --title "Cycle N reflections" --input-file /tmp/journal.json
 ```
 
-The tool appends to `docs/journal/YYYY-MM-DD.md`, handles JOURNAL.md index updates when a new date file is created, and auto-links bare `#N` references.
+The tool appends to `docs/journal/YYYY-MM-DD.md`, handles JOURNAL.md index updates when a new date file is created, auto-links bare `#N` references, and automatically inserts the matching worklog link when the cycle worklog already exists.
 
 Every journal entry **must** include a link to the corresponding worklog entry:
 
