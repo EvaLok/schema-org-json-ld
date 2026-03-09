@@ -187,6 +187,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "cycle-receipts"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "clap",
+ "serde",
+ "serde_json",
+ "state-schema",
+]
+
+[[package]]
 name = "cycle-start"
 version = "0.1.0"
 dependencies = [

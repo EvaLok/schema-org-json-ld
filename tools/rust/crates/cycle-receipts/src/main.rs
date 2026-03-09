@@ -1,0 +1,518 @@
+use chrono::{DateTime, Utc};
+use clap::Parser;
+use serde::Serialize;
+use state_schema::{current_cycle_from_state, StateJson};
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+
+const REPO_URL: &str = "https://github.com/EvaLok/schema-org-json-ld";
+const FALLBACK_STEP: &str = "cycle-tagged";
+const RECEIPT_PREFIXES: [&str; 10] = [
+    "cycle-start",
+    "process-merge",
+    "process-review",
+    "process-audit",
+    "process-eva",
+    "cycle-complete",
+    "record-dispatch",
+    "commit-state-change",
+    "state-fix",
+    "review-format",
+];
+
+#[derive(Debug, Parser)]
+#[command(name = "cycle-receipts")]
+struct Cli {
+    /// Cycle number to collect receipts for
+    #[arg(long)]
+    cycle: u64,
+
+    /// Output receipts as JSON
+    #[arg(long)]
+    json: bool,
+
+    /// Path to the repository root
+    #[arg(long, default_value = ".")]
+    repo_root: PathBuf,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct GitCommit {
+    full_sha: String,
+    short_sha: String,
+    committed_at: DateTime<Utc>,
+    subject: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct CycleWindow {
+    start: DateTime<Utc>,
+    end: Option<DateTime<Utc>>,
+}
+
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+struct ReceiptEntry {
+    step: String,
+    receipt: String,
+    commit: String,
+    url: String,
+}
+
+fn main() {
+    let cli = Cli::parse();
+    match run(cli) {
+        Ok(output) => println!("{}", output),
+        Err(error) => {
+            eprintln!("Error: {}", error);
+            std::process::exit(1);
+        }
+    }
+}
+
+fn run(cli: Cli) -> Result<String, String> {
+    let entries = collect_receipts(&cli.repo_root, cli.cycle)?;
+    if cli.json {
+        return serde_json::to_string_pretty(&entries)
+            .map_err(|error| format!("failed to serialize JSON output: {}", error));
+    }
+
+    Ok(render_markdown(cli.cycle, &entries))
+}
+
+fn collect_receipts(repo_root: &Path, cycle: u64) -> Result<Vec<ReceiptEntry>, String> {
+    let current_cycle = current_cycle_from_state(repo_root)?;
+    let state = read_state_json(repo_root)?;
+    let commits = read_git_commits(repo_root)?;
+    let window = resolve_cycle_window(cycle, current_cycle, &state, &commits)?;
+
+    let mut matching_commits: Vec<&GitCommit> = commits
+        .iter()
+        .filter(|commit| commit.committed_at >= window.start)
+        .filter(|commit| window.end.is_none_or(|end| commit.committed_at < end))
+        .filter(|commit| matches_receipt_commit(&commit.subject, cycle))
+        .collect();
+    matching_commits.sort_by_key(|commit| commit.committed_at);
+
+    Ok(matching_commits
+        .into_iter()
+        .map(|commit| ReceiptEntry {
+            step: extract_step(&commit.subject).unwrap_or_else(|| FALLBACK_STEP.to_string()),
+            receipt: commit.short_sha.clone(),
+            commit: commit.subject.clone(),
+            url: format!("{}/commit/{}", REPO_URL, commit.full_sha),
+        })
+        .collect())
+}
+
+fn matches_receipt_commit(subject: &str, cycle: u64) -> bool {
+    extract_step(subject).is_some() || extract_cycle_tag(subject) == Some(cycle)
+}
+
+fn extract_step(subject: &str) -> Option<String> {
+    let prefix = "state(";
+    if !subject.starts_with(prefix) {
+        return None;
+    }
+
+    let remainder = subject.strip_prefix(prefix)?;
+    let (step, suffix) = remainder.split_once("):")?;
+    if suffix.trim().is_empty() || !RECEIPT_PREFIXES.contains(&step) {
+        return None;
+    }
+
+    Some(step.to_string())
+}
+
+fn render_markdown(cycle: u64, entries: &[ReceiptEntry]) -> String {
+    let mut output = format!("## Commit receipts — Cycle {}\n\n", cycle);
+    output.push_str("| Step | Receipt | Commit |\n");
+    output.push_str("|------|---------|--------|\n");
+    for entry in entries {
+        output.push_str(&format!(
+            "| {} | [`{}`]({}) | {} |\n",
+            escape_markdown_cell(&entry.step),
+            entry.receipt,
+            entry.url,
+            escape_markdown_cell(&entry.commit)
+        ));
+    }
+    output.push_str(&format!("\n{} receipts collected.\n", entries.len()));
+    output
+}
+
+fn resolve_cycle_window(
+    target_cycle: u64,
+    current_cycle: u64,
+    state: &StateJson,
+    commits: &[GitCommit],
+) -> Result<CycleWindow, String> {
+    if target_cycle == current_cycle {
+        let timestamp = state.last_cycle.timestamp.as_deref().ok_or_else(|| {
+            "missing docs/state.json last_cycle.timestamp for current cycle".to_string()
+        })?;
+        return Ok(CycleWindow {
+            start: parse_timestamp(timestamp, "docs/state.json last_cycle.timestamp")?,
+            end: None,
+        });
+    }
+
+    let start = find_cycle_start_timestamp(commits, target_cycle).ok_or_else(|| {
+        format!(
+			"could not find cycle-start commit for cycle {}; fetch more history if this is a shallow clone",
+			target_cycle
+		)
+    })?;
+    let end = find_cycle_start_timestamp(commits, target_cycle + 1);
+    Ok(CycleWindow { start, end })
+}
+
+fn read_state_json(repo_root: &Path) -> Result<StateJson, String> {
+    let path = repo_root.join("docs/state.json");
+    let content = fs::read_to_string(&path)
+        .map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
+    serde_json::from_str::<StateJson>(&content)
+        .map_err(|error| format!("failed to parse {}: {}", path.display(), error))
+}
+
+fn git_command(repo_root: &Path, args: &[&str]) -> Result<String, String> {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(repo_root)
+        .args(args)
+        .output()
+        .map_err(|error| format!("failed to execute git {}: {}", args.join(" "), error))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(format!("git {} failed: {}", args.join(" "), stderr));
+    }
+
+    String::from_utf8(output.stdout).map_err(|error| {
+        format!(
+            "failed to decode git {} output as UTF-8: {}",
+            args.join(" "),
+            error
+        )
+    })
+}
+
+fn read_git_commits(repo_root: &Path) -> Result<Vec<GitCommit>, String> {
+    let output = git_command(
+        repo_root,
+        &[
+            "log",
+            "--date=iso-strict",
+            "--pretty=format:%H%x09%cI%x09%s",
+        ],
+    )?;
+    output
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .map(parse_git_commit_line)
+        .collect()
+}
+
+fn parse_git_commit_line(line: &str) -> Result<GitCommit, String> {
+    let mut parts = line.splitn(3, '\t');
+    let full_sha = parts
+        .next()
+        .ok_or_else(|| format!("invalid git log line (missing sha): {}", line))?;
+    let committed_at = parts
+        .next()
+        .ok_or_else(|| format!("invalid git log line (missing timestamp): {}", line))?;
+    let subject = parts
+        .next()
+        .ok_or_else(|| format!("invalid git log line (missing subject): {}", line))?;
+    if full_sha.len() < 7 {
+        return Err(format!(
+            "git sha must be at least 7 characters: {}",
+            full_sha
+        ));
+    }
+
+    Ok(GitCommit {
+        full_sha: full_sha.to_string(),
+        short_sha: full_sha[..7].to_string(),
+        committed_at: parse_timestamp(committed_at, "git commit timestamp")?,
+        subject: subject.to_string(),
+    })
+}
+
+fn parse_timestamp(value: &str, label: &str) -> Result<DateTime<Utc>, String> {
+    DateTime::parse_from_rfc3339(value)
+        .map(|timestamp| timestamp.with_timezone(&Utc))
+        .map_err(|error| format!("invalid {}: {}", label, error))
+}
+
+fn find_cycle_start_timestamp(commits: &[GitCommit], cycle: u64) -> Option<DateTime<Utc>> {
+    commits.iter().find_map(|commit| {
+        if extract_step(&commit.subject).as_deref() == Some("cycle-start")
+            && extract_cycle_tag(&commit.subject) == Some(cycle)
+        {
+            return Some(commit.committed_at);
+        }
+        None
+    })
+}
+
+fn extract_cycle_tag(subject: &str) -> Option<u64> {
+    let marker = "[cycle ";
+    let start = subject.find(marker)?;
+    let remainder = &subject[start + marker.len()..];
+    let end = remainder.find(']')?;
+    remainder[..end].trim().parse::<u64>().ok()
+}
+
+fn escape_markdown_cell(value: &str) -> String {
+    value.replace('|', "\\|")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+    use std::env;
+    use std::ffi::OsStr;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn matches_known_state_prefixes() {
+        for step in RECEIPT_PREFIXES {
+            let subject = format!("state({}): committed change", step);
+            assert!(
+                matches_receipt_commit(&subject, 198),
+                "expected {subject} to match"
+            );
+            assert_eq!(extract_step(&subject), Some(step.to_string()));
+        }
+    }
+
+    #[test]
+    fn matches_cycle_tagged_commits_without_state_prefix() {
+        assert!(matches_receipt_commit(
+            "docs: update worklog [cycle 198]",
+            198
+        ));
+        assert!(!matches_receipt_commit(
+            "docs: update worklog [cycle 199]",
+            198
+        ));
+        assert_eq!(extract_step("docs: update worklog [cycle 198]"), None);
+    }
+
+    #[test]
+    fn render_markdown_includes_links_and_count() {
+        let markdown = render_markdown(
+            198,
+            &[ReceiptEntry {
+                step: "process-review".to_string(),
+                receipt: "e4f5g6h".to_string(),
+                commit: "state(process-review): consumed cycle 197 review".to_string(),
+                url: format!("{}/commit/abcdef1234567890", REPO_URL),
+            }],
+        );
+
+        assert!(markdown.contains("## Commit receipts — Cycle 198"));
+        assert!(markdown.contains("| process-review | [`e4f5g6h`](https://github.com/EvaLok/schema-org-json-ld/commit/abcdef1234567890) | state(process-review): consumed cycle 197 review |"));
+        assert!(markdown.contains("1 receipts collected."));
+    }
+
+    #[test]
+    fn collect_receipts_uses_state_timestamp_for_current_cycle() {
+        let repo = TempRepo::new();
+        repo.init_git();
+        repo.write_state(&json!({
+            "last_cycle": {
+                "number": 198,
+                "timestamp": "2026-03-09T01:00:00Z"
+            }
+        }));
+        repo.commit_file_at(
+            "notes.txt",
+            "older\n",
+            "state(process-review): old receipt",
+            "2026-03-09T00:30:00Z",
+        );
+        repo.commit_file_at(
+            "notes.txt",
+            "newer\n",
+            "state(process-review): current receipt",
+            "2026-03-09T01:10:00Z",
+        );
+        repo.commit_file_at(
+            "notes.txt",
+            "tagged\n",
+            "docs: worklog touch [cycle 198]",
+            "2026-03-09T01:20:00Z",
+        );
+
+        let receipts = collect_receipts(repo.path(), 198).expect("receipts should collect");
+        assert_eq!(receipts.len(), 2);
+        assert_eq!(receipts[0].step, "process-review");
+        assert_eq!(receipts[1].step, FALLBACK_STEP);
+        assert_eq!(receipts[0].commit, "state(process-review): current receipt");
+        assert_eq!(receipts[1].commit, "docs: worklog touch [cycle 198]");
+    }
+
+    #[test]
+    fn collect_receipts_for_historical_cycle_stops_at_next_cycle_start() {
+        let repo = TempRepo::new();
+        repo.init_git();
+        repo.write_state(&json!({
+            "last_cycle": {
+                "number": 199,
+                "timestamp": "2026-03-09T02:00:00Z"
+            }
+        }));
+        repo.commit_file_at(
+            "history.txt",
+            "cycle 198 start\n",
+            "state(cycle-start): begin cycle 198, issue #1 [cycle 198]",
+            "2026-03-09T01:00:00Z",
+        );
+        repo.commit_file_at(
+            "history.txt",
+            "review\n",
+            "state(process-review): consumed cycle 197 review",
+            "2026-03-09T01:10:00Z",
+        );
+        repo.commit_file_at(
+            "history.txt",
+            "tagged\n",
+            "docs: worklog touch [cycle 198]",
+            "2026-03-09T01:20:00Z",
+        );
+        repo.commit_file_at(
+            "history.txt",
+            "cycle 199 start\n",
+            "state(cycle-start): begin cycle 199, issue #2 [cycle 199]",
+            "2026-03-09T02:00:00Z",
+        );
+        repo.commit_file_at(
+            "history.txt",
+            "post-cycle\n",
+            "state(process-review): consumed cycle 198 review",
+            "2026-03-09T02:10:00Z",
+        );
+
+        let receipts = collect_receipts(repo.path(), 198).expect("receipts should collect");
+        let subjects: Vec<&str> = receipts
+            .iter()
+            .map(|receipt| receipt.commit.as_str())
+            .collect();
+        assert_eq!(
+            subjects,
+            vec![
+                "state(cycle-start): begin cycle 198, issue #1 [cycle 198]",
+                "state(process-review): consumed cycle 197 review",
+                "docs: worklog touch [cycle 198]",
+            ]
+        );
+    }
+
+    struct TempRepo {
+        path: PathBuf,
+    }
+
+    impl TempRepo {
+        fn new() -> Self {
+            let unique = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("system time should be after epoch")
+                .as_nanos();
+            let path = env::temp_dir().join(format!(
+                "cycle-receipts-test-{}-{}",
+                std::process::id(),
+                unique
+            ));
+            fs::create_dir_all(path.join("docs")).expect("temp repo should be created");
+            Self { path }
+        }
+
+        fn path(&self) -> &Path {
+            &self.path
+        }
+
+        fn write_state(&self, state: &serde_json::Value) {
+            let state_path = self.path.join("docs/state.json");
+            let serialized = serde_json::to_string_pretty(state).expect("state should serialize");
+            fs::write(state_path, format!("{}\n", serialized)).expect("state should be written");
+        }
+
+        fn init_git(&self) {
+            assert_git_success(self.path(), ["init"]);
+            assert_git_success(self.path(), ["config", "user.name", "Cycle Receipt Tests"]);
+            assert_git_success(
+                self.path(),
+                ["config", "user.email", "cycle-receipts-tests@example.com"],
+            );
+        }
+
+        fn commit_file_at(
+            &self,
+            relative_path: &str,
+            content: &str,
+            message: &str,
+            timestamp: &str,
+        ) {
+            let file_path = self.path.join(relative_path);
+            if let Some(parent) = file_path.parent() {
+                fs::create_dir_all(parent).expect("file parent should exist");
+            }
+            fs::write(&file_path, content).expect("file should be written");
+
+            let add_output = Command::new("git")
+                .arg("-C")
+                .arg(self.path())
+                .arg("add")
+                .arg(relative_path)
+                .output()
+                .expect("git add should execute");
+            assert!(
+                add_output.status.success(),
+                "git add failed: {}",
+                String::from_utf8_lossy(&add_output.stderr)
+            );
+
+            let commit_output = Command::new("git")
+                .arg("-C")
+                .arg(self.path())
+                .arg("commit")
+                .arg("-m")
+                .arg(message)
+                .env("GIT_AUTHOR_DATE", timestamp)
+                .env("GIT_COMMITTER_DATE", timestamp)
+                .output()
+                .expect("git commit should execute");
+            assert!(
+                commit_output.status.success(),
+                "git commit failed: {}",
+                String::from_utf8_lossy(&commit_output.stderr)
+            );
+        }
+    }
+
+    impl Drop for TempRepo {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.path);
+        }
+    }
+
+    fn assert_git_success<I, S>(repo_root: &Path, args: I)
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<OsStr>,
+    {
+        let output = Command::new("git")
+            .arg("-C")
+            .arg(repo_root)
+            .args(args)
+            .output()
+            .expect("git command should execute");
+        assert!(
+            output.status.success(),
+            "git command failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+}
