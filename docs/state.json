@@ -2298,8 +2298,10 @@
     {
       "dispatched_at": "2026-03-09T10:58:52Z",
       "issue": 889,
+      "merged_at": "2026-03-09T12:28:24Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 890,
+      "status": "merged",
       "title": "Fix write-entry inline journal mode"
     },
     {
@@ -2465,11 +2467,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#892 Cycle 205 end-of-cycle review (cycle 205)",
     "dispatch_to_pr_rate": "96.9%",
-    "in_flight": 2,
-    "merged": 245,
+    "in_flight": 1,
+    "merged": 246,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 247,
-    "resolved": 252,
+    "produced_pr": 248,
+    "resolved": 253,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 254
