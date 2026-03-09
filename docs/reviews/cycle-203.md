@@ -28,4 +28,4 @@
 
 ## Complacency score
 
-5/5 — cycle 203 did real work, but it handled evidence as optional and closed the feedback loop cosmetically instead of structurally. The cycle declared the cycle-close directive complete even though the shipped tool still misses major acceptance criteria, repeated the prior cycle’s receipt-integrity bug immediately after calling it actioned, claimed review consumption without the required `process-review` state update, and marked process-adherence fixed while batching step comments again in the very next cycle.
+5/5 — cycle 203 did real work, but it treated evidence as optional and closed the feedback loop cosmetically instead of structurally. The cycle declared the cycle-close directive complete even though the shipped tool still misses major acceptance criteria. It repeated the prior cycle’s receipt-integrity bug immediately after calling that finding actioned, claimed review consumption without the required `process-review` state update, and marked process-adherence fixed while batching step comments again in the very next cycle.
