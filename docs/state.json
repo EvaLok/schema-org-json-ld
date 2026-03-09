@@ -2336,15 +2336,19 @@
     {
       "dispatched_at": "2026-03-09T14:31:09Z",
       "issue": 904,
+      "merged_at": "2026-03-09T16:29:00Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 905,
+      "status": "merged",
       "title": "Fix write-entry partial previous-commitment override"
     },
     {
       "dispatched_at": "2026-03-09T14:34:44Z",
       "issue": 906,
+      "merged_at": "2026-03-09T16:25:00Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 907,
+      "status": "merged",
       "title": "Cycle 207 end-of-cycle review"
     },
     {
@@ -2510,7 +2514,7 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#910 Add artifact-verification phase to pipeline-check (audit #169) (cycle 208)",
-    "dispatch_to_pr_rate": "97.3%",
+    "dispatch_to_pr_rate": "97.7%",
     "in_flight": 1,
     "merged": 251,
     "pr_merge_rate": "99.2%",
