@@ -2,7 +2,7 @@
 
 ## Findings
 
-Step-commenting compliance check: issue `#882` has separate comments for steps `0`, `0.5`, `0.6`, `1`, `2`, `3`, `4`, `5`, `6`, `7`, `8`, and `9` (12 total), so audit #164's core requirement was actually followed this cycle.
+Step-commenting compliance check: issue `#882` has separate comments for the 12 checklist steps `0`, `0.5`, `0.6`, `1`, `2`, `3`, `4`, `5`, `6`, `7`, `8`, and `9`, so audit #164's core requirement was actually followed this cycle.
 
 ## 1. [worklog-accuracy] The worklog links “review finding #1” to repository issue #1
 **File**: /home/runner/work/schema-org-json-ld/schema-org-json-ld/docs/worklog/2026-03-09/093344-cycle-204-summary.md:5-10
@@ -26,4 +26,4 @@ Step-commenting compliance check: issue `#882` has separate comments for steps `
 
 ## Complacency score
 
-4/5 -- Cycle 204 did make one real process improvement: issue `#882` has separate comments for all 12 required startup steps, so the step-commenting regression was genuinely addressed. But the cycle still overclaimed closure in multiple places: a follow-up dispatch was counted as an actioned review finding, the write-entry bug reappeared in the cycle's own journal, and field-inventory freshness drift continued without tooling pressure. That is progress, but it is still too comfortable with papering over unresolved structural gaps.
+4/5 -- Cycle 204 did make one real process improvement: issue `#882` has separate comments for all 12 required checklist steps, so the step-commenting regression was genuinely addressed. But the cycle still overclaimed closure in multiple places: a follow-up dispatch was counted as an actioned review finding, the write-entry bug reappeared in the cycle's own journal, and field-inventory freshness drift continued without tooling pressure. That is progress, but it is still too comfortable with papering over unresolved structural gaps.
