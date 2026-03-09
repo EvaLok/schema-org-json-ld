@@ -2375,6 +2375,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "write-entry auto-populate worklog status (audit #171)"
+    },
+    {
+      "dispatched_at": "2026-03-09T18:27:13Z",
+      "issue": 919,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 209 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -2533,16 +2540,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#917 write-entry auto-populate worklog status (audit #171) (cycle 209)",
+    "dispatch_log_latest": "#919 Cycle 209 end-of-cycle review (cycle 209)",
     "dispatch_to_pr_rate": "97.7%",
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 253,
     "pr_merge_rate": "99.2%",
     "produced_pr": 255,
     "resolved": 260,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 261
+    "total_dispatches": 262
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
