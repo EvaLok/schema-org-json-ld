@@ -2397,6 +2397,15 @@
       "title": "Fix Phase 7 journal freshness check to use docs/journal/"
     },
     {
+      "dispatched_cycle": 210,
+      "issue": 924,
+      "merged_at": "2026-03-09T22:10:59Z",
+      "model": "gpt-5.4",
+      "pr": 925,
+      "status": "merged",
+      "title": "Cycle 210 review"
+    },
+    {
       "dispatched_at": "2026-03-09T22:13:31Z",
       "issue": 927,
       "model": "gpt-5.4",
@@ -2568,15 +2577,15 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#929 process-review format tolerance (cycle 211)",
-    "dispatch_to_pr_rate": "97.7%",
+    "dispatch_to_pr_rate": "97.4%",
     "in_flight": 2,
     "merged": 257,
     "pr_merge_rate": "99.2%",
     "produced_pr": 259,
-    "resolved": 263,
+    "resolved": 264,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 265
+    "total_dispatches": 266
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
