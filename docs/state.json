@@ -2246,8 +2246,10 @@
     {
       "dispatched_at": "2026-03-09T06:38:57Z",
       "issue": 875,
+      "merged_at": "2026-03-09T07:53:08Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 876,
+      "status": "merged",
       "title": "Cycle 202 end-of-cycle review"
     },
     {
@@ -2401,7 +2403,7 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#878 Cross-repo processing tool (Eva #828) (cycle 203)",
-    "dispatch_to_pr_rate": "97.2%",
+    "dispatch_to_pr_rate": "97.6%",
     "in_flight": 1,
     "merged": 240,
     "pr_merge_rate": "99.2%",
@@ -2637,13 +2639,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 13,
+    "duration_minutes": 17,
     "issue": 877,
     "number": 203,
-    "summary": "Merged 3 PRs (#870 review, #866 state-schema consolidation, #868 write-entry). Closed Eva #829, #840. Processed cycle 201 review (4/5). Accepted audit #162. Dispatched #873 (cycle-close tool, Eva #841).",
-    "timestamp": "2026-03-09T07:47:55Z"
+    "summary": "Merged 2 PRs (#876 review artifact, #874 cycle-close tool). Closed Eva #841. Processed cycle 202 review (4/5, 2 actioned, 2 deferred). Dispatched #878 (cross-repo processing, Eva #828).",
+    "timestamp": "2026-03-09T08:05:20Z"
   },
-  "last_eva_comment_check": "2026-03-09T07:47:55Z",
+  "last_eva_comment_check": "2026-03-09T08:05:20Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
