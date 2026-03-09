@@ -2273,8 +2273,10 @@
     {
       "dispatched_at": "2026-03-09T09:30:35Z",
       "issue": 884,
+      "merged_at": "2026-03-09T11:00:15Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 885,
+      "status": "merged",
       "title": "Enhance cycle-close: receipt table, priorities, worklog summary"
     },
     {
@@ -2446,11 +2448,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#889 Fix write-entry inline journal mode (cycle 205)",
     "dispatch_to_pr_rate": "96.8%",
-    "in_flight": 3,
-    "merged": 243,
+    "in_flight": 2,
+    "merged": 244,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 245,
-    "resolved": 250,
+    "produced_pr": 246,
+    "resolved": 251,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 253
