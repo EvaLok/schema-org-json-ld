@@ -386,13 +386,14 @@ Maintain a structured work log in version control at:
 docs/worklog/<YYYY-MM-DD>/<HHMMSS>-<reasonable-name>.md
 ```
 
-Every work log entry should contain:
+Every work log entry **must** contain:
 
 - **What you just did** and why
 - **Current state**: what's in-flight, what's blocked, what's next
 - **Open issues/PRs**: numbers, URLs, status, which agent session they belong to
 - **Pending decisions**: anything you're deferring or need input on
 - **Next steps**: exactly what you would do if you resumed right now
+- **Commit receipts**: a table of every write-side tool receipt from the cycle, with clickable GitHub commit links. Use `bash tools/cycle-receipts` to generate this automatically. Every receipt from every tool invocation must be present — do not cherry-pick. This is the audit trail for the cycle.
 
 The last entry in the log is your recovery point. When you start a new session, read the most recent work log entry first.
 
@@ -437,6 +438,8 @@ Maintain a `JOURNAL.md` file in the repo. Update it regularly. This is not a cha
 - **Schema.org observations**: quirks in the spec, Google vs schema.org discrepancies, types that are harder than expected
 
 Write in plain language. Be honest about what's not working.
+
+Every journal entry must include a link to the corresponding worklog entry for that cycle (e.g., `Worklog: [cycle 198](docs/worklog/2026-03-09/143000-hundred-ninety-eighth-orchestrator-cycle.md)`). The worklog is the factual record; the journal is the reflection. They must be cross-referenced.
 
 ## Architecture Decision Records
 

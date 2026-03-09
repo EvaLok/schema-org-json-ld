@@ -48,6 +48,7 @@ Create a worklog entry at `docs/worklog/YYYY-MM-DD/HHMMSS-cycle-name.md` with:
 - **Self-modifications**: Any changes to infrastructure files (AGENTS.md, skills, checklists, etc.)
 - **Current state**: In-flight sessions, pipeline status, metrics
 - **Next steps**: What the next cycle should prioritize
+- **Commit receipts**: Run `bash tools/cycle-receipts --cycle N` and include the full receipt table. Every write-side tool receipt must be present — this is the cycle's audit trail. Do not manually assemble receipts from memory; use the tool.
 
 ## 4. Write journal entry
 
@@ -57,6 +58,14 @@ Append to `docs/journal/YYYY-MM-DD.md` with reflections on:
 - Decisions made and their rationale
 - Patterns observed
 - Open questions
+
+Every journal entry **must** include a link to the corresponding worklog entry:
+
+```markdown
+Worklog: [cycle N](docs/worklog/YYYY-MM-DD/HHMMSS-cycle-name.md)
+```
+
+The worklog is the factual record (what happened, receipts, state). The journal is the reflection (why, lessons, questions). They must be cross-referenced so either can be traced to the other.
 
 ## 4.5. ADR check (per Eva directive [#724](https://github.com/EvaLok/schema-org-json-ld/issues/724))
 
