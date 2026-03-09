@@ -44,22 +44,44 @@ Each tool handles its own freshness markers automatically — no manual freshnes
 
 ## 3. Write worklog entry
 
-Create a worklog entry at `docs/worklog/YYYY-MM-DD/HHMMSS-cycle-name.md` with:
+Use `write-entry` to generate the worklog. Write the JSON payload to a file with the Write tool, then invoke:
 
-- **What was done**: Summary of cycle activities
-- **Self-modifications**: Any changes to infrastructure files (AGENTS.md, skills, checklists, etc.)
-- **Current state**: In-flight sessions, pipeline status, metrics
-- **Next steps**: What the next cycle should prioritize
-- **Commit receipts**: Run `bash tools/cycle-receipts --cycle N` and include the full receipt table. Every write-side tool receipt must be present — this is the cycle's audit trail. Do not manually assemble receipts from memory; use the tool.
+```bash
+bash tools/write-entry worklog --title "Cycle N summary" --input-file /tmp/worklog.json
+```
+
+The JSON payload structure:
+
+```json
+{
+  "what_was_done": ["Merged PR #123", "Processed audit #155"],
+  "self_modifications": [{"file": "STARTUP_CHECKLIST.md", "description": "Added step 5.5"}],
+  "prs_merged": [123, 456],
+  "prs_reviewed": [789],
+  "issues_processed": [808, 809],
+  "current_state": {
+    "in_flight_sessions": 1,
+    "pipeline_status": "PASS (6/6)",
+    "copilot_metrics": "45 dispatched, 42 resolved, 1 in-flight",
+    "publish_gate": "open"
+  },
+  "next_steps": ["Review PR from #825", "Track clean-cycle count"]
+}
+```
+
+The tool auto-generates clickable GitHub links from bare `#N` references, creates the directory structure, and derives the cycle number from state.json.
+
+**Commit receipts**: Also run `bash tools/cycle-receipts --cycle N` and include the full receipt table in the worklog. Every write-side tool receipt must be present — this is the cycle's audit trail. Do not manually assemble receipts from memory; use the tool.
 
 ## 4. Write journal entry
 
-Append to `docs/journal/YYYY-MM-DD.md` with reflections on:
+Use `write-entry` to generate the journal entry. Write the JSON payload to a file with the Write tool, then invoke:
 
-- Challenges encountered
-- Decisions made and their rationale
-- Patterns observed
-- Open questions
+```bash
+bash tools/write-entry journal --title "Cycle N reflections" --input-file /tmp/journal.json
+```
+
+The tool appends to `docs/journal/YYYY-MM-DD.md`, handles JOURNAL.md index updates when a new date file is created, and auto-links bare `#N` references.
 
 Every journal entry **must** include a link to the corresponding worklog entry:
 
@@ -195,8 +217,8 @@ The summary should include:
 |------|--------|------|
 | 1. Pipeline verification (early) | Automated | `bash tools/pipeline-check` |
 | 2. State.json updates | Automated | `process-merge`, `process-review`, `process-audit`, `process-eva`, `cycle-complete`, `record-dispatch` |
-| 3. Worklog entry | Manual | Write tool (orchestrator writes content) |
-| 4. Journal entry | Manual | Write tool (orchestrator writes content) |
+| 3. Worklog entry | Semi-automated | `write-entry worklog` (orchestrator provides structured input) |
+| 4. Journal entry | Semi-automated | `write-entry journal` (orchestrator provides structured input, auto-updates JOURNAL.md index) |
 | 5. Commit worklog/journal/state | Manual | git commit + push (BEFORE review dispatch) |
 | 5.5. Final pipeline gate | Automated | `bash tools/pipeline-check` (re-run after all modifications) |
 | 6. Review agent dispatch | Semi-automated | `cycle-complete` generates issue body, orchestrator creates issue |
