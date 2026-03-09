@@ -145,9 +145,18 @@ fn execute(cli: &Cli, runner: &dyn CommandRunner) -> Result<String, String> {
             error
         )
     })?;
+    let pipeline_status = state
+        .last_cycle
+        .summary
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .or_else(|| cli.summary.as_deref().map(str::trim).filter(|value| !value.is_empty()))
+        .unwrap_or("N/A")
+        .to_string();
     let summary = resolve_summary(cli.summary.as_deref(), state.last_cycle.summary.as_deref());
     let review_issue = extract_review_issue_number(&state);
-    let comment = format_closing_comment(cycle, &summary, review_issue, &summary);
+    let comment = format_closing_comment(cycle, &pipeline_status, review_issue, &summary);
     let commit_message = format!("docs(worklog,journal): cycle {} entries [cycle {}]", cycle, cycle);
 
     if cli.dry_run {
@@ -272,15 +281,11 @@ fn summary_items(summary: &str) -> Vec<String> {
 }
 
 fn extract_review_issue_number(state: &StateJson) -> Option<u64> {
-    let latest = state
-        .copilot_metrics
-        .extra
-        .get("dispatch_log_latest")
-        .and_then(|value| value.as_str())?;
-    parse_issue_number(latest)
+    let latest = state.copilot_metrics.dispatch_log_latest.as_deref()?;
+    extract_issue_number_from_reference(latest)
 }
 
-fn parse_issue_number(value: &str) -> Option<u64> {
+fn extract_issue_number_from_reference(value: &str) -> Option<u64> {
     let digits: String = value
         .trim()
         .strip_prefix('#')?
@@ -298,7 +303,7 @@ fn commit_cycle_artifacts(
     commit_message: &str,
     runner: &dyn CommandRunner,
 ) -> Result<CommitOutcome, String> {
-    let artifact_paths = cycle_artifact_paths(repo_root);
+    let artifact_paths = cycle_artifact_paths(repo_root)?;
     let mut add_args = vec!["add".to_string(), "--".to_string()];
     add_args.extend(artifact_paths.iter().cloned());
     ensure_success(
@@ -345,19 +350,52 @@ fn commit_cycle_artifacts(
     })
 }
 
-fn cycle_artifact_paths(repo_root: &Path) -> Vec<String> {
+fn cycle_artifact_paths(repo_root: &Path) -> Result<Vec<String>, String> {
     let candidates = [
-        "docs/worklog",
-        "docs/journal",
-        "JOURNAL.md",
-        "docs/state.json",
-        "docs/reviews",
+        ("docs/worklog", PathKind::Directory),
+        ("docs/journal", PathKind::Directory),
+        ("JOURNAL.md", PathKind::File),
+        ("docs/state.json", PathKind::File),
+        ("docs/reviews", PathKind::Directory),
     ];
-    candidates
-        .iter()
-        .filter(|path| repo_root.join(path).exists())
-        .map(|path| path.to_string())
-        .collect()
+    let mut paths = Vec::new();
+    for (relative_path, expected_kind) in candidates {
+        let path = repo_root.join(relative_path);
+        let Ok(metadata) = std::fs::metadata(&path) else {
+            continue;
+        };
+        if !expected_kind.matches(&metadata) {
+            return Err(format!(
+                "expected {} to be a {}",
+                path.display(),
+                expected_kind.as_str()
+            ));
+        }
+        paths.push(relative_path.to_string());
+    }
+    Ok(paths)
+}
+
+#[derive(Clone, Copy)]
+enum PathKind {
+    File,
+    Directory,
+}
+
+impl PathKind {
+    fn matches(self, metadata: &std::fs::Metadata) -> bool {
+        match self {
+            Self::File => metadata.is_file(),
+            Self::Directory => metadata.is_dir(),
+        }
+    }
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::File => "file",
+            Self::Directory => "directory",
+        }
+    }
 }
 
 fn push_origin_master(repo_root: &Path, runner: &dyn CommandRunner) -> Result<(), String> {
@@ -668,7 +706,7 @@ mod tests {
                 "summary": "Pipeline check: PASS; review findings recorded"
             },
             "copilot_metrics": {
-                "dispatch_log_latest": "#873 Review cycle findings (cycle 202)"
+                "dispatch_log_latest": "#873 Review findings follow-up (cycle 202)"
             }
         })
     }
@@ -766,8 +804,12 @@ mod tests {
         execute(&cli, &runner).expect("execution should succeed");
 
         let git_calls = runner.git_calls();
-        assert!(git_calls.iter().any(|call| call == &vec!["push".to_string(), "origin".to_string(), "master".to_string()]));
-        assert!(git_calls.iter().any(|call| call == &vec!["pull".to_string(), "--rebase".to_string(), "origin".to_string(), "master".to_string()]));
+        assert!(git_calls
+            .iter()
+            .any(|call| call.as_slice() == ["push", "origin", "master"]));
+        assert!(git_calls
+            .iter()
+            .any(|call| call.as_slice() == ["pull", "--rebase", "origin", "master"]));
     }
 
     #[test]

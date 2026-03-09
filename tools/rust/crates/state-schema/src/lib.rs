@@ -350,6 +350,7 @@ pub struct CopilotMetrics {
     pub dispatch_to_pr_rate: Option<String>,
     pub pr_merge_rate: Option<String>,
     pub in_flight: Option<i64>,
+    pub dispatch_log_latest: Option<String>,
     #[serde(flatten)]
     pub extra: BTreeMap<String, Value>,
 }
@@ -805,6 +806,21 @@ mod tests {
         assert_eq!(publish_gate.status.as_deref(), Some("published"));
         assert_eq!(publish_gate.validated_commit.as_deref(), Some("ea8ffff"));
         assert_eq!(publish_gate.source_diverged, Some(false));
+    }
+
+    #[test]
+    fn copilot_metrics_deserializes_dispatch_log_latest() {
+        let state: StateJson = serde_json::from_value(json!({
+            "copilot_metrics": {
+                "dispatch_log_latest": "#873 Review findings follow-up (cycle 202)"
+            }
+        }))
+        .expect("state should deserialize");
+
+        assert_eq!(
+            state.copilot_metrics.dispatch_log_latest.as_deref(),
+            Some("#873 Review findings follow-up (cycle 202)")
+        );
     }
 
     #[test]
