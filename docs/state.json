@@ -2332,6 +2332,13 @@
       "pr": 900,
       "status": "merged",
       "title": "Cycle 206 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-09T14:31:09Z",
+      "issue": 904,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix write-entry partial previous-commitment override"
     }
   ],
   "audit_dropped": [
@@ -2487,16 +2494,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#899 Cycle 206 end-of-cycle review (cycle 206)",
+    "dispatch_log_latest": "#904 Fix write-entry partial previous-commitment override (cycle 207)",
     "dispatch_to_pr_rate": "97.3%",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 249,
     "pr_merge_rate": "99.2%",
     "produced_pr": 251,
     "resolved": 256,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 256
+    "total_dispatches": 257
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
