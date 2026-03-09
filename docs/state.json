@@ -2623,7 +2623,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 205"
+        "last_refreshed": "cycle 206"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -3732,9 +3732,24 @@
         "finding_count": 4,
         "ignored": 0,
         "note": "Findings: worklog-accuracy (bare #N auto-links to wrong issue), review-accounting (dispatched counted as actioned), journal-quality (write-entry bug still producing contradictory output), field-inventory (every-cycle fields stale, tooling grace too permissive). Actioned 2 (review-accounting standard tightened, field-inventory entries refreshed). Deferred 2 (worklog-accuracy needs write-entry fix, journal-quality needs write-entry bug fix)."
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "worklog-accuracy",
+          "state-integrity",
+          "tooling-contract",
+          "complacency-audit"
+        ],
+        "complacency_score": 4,
+        "cycle": 205,
+        "deferred": 2,
+        "finding_count": 4,
+        "ignored": 0,
+        "note": "Findings: worklog-accuracy (stale current-state numbers and nonexistent receipt SHA), state-integrity (field-inventory fix claimed but markers stale), tooling-contract (cycle-close untested edge cases), complacency-audit (audit #162 drop was convenience-driven). Actioned 2: state-integrity (field inventory freshness corrected cycle 206), complacency-audit (audit #166 accepted, audit_dropped tracking added). Deferred 2: worklog-accuracy (mechanical receipt generation via cycle-close addresses this), tooling-contract (needs dispatch for edge case tests)."
       }
     ],
-    "last_review_cycle": 204
+    "last_review_cycle": 205
   },
   "schema_status": {
     "directory_layout": {
