@@ -2,6 +2,8 @@
 
 Follow this checklist at the start of every orchestrator cycle. Do not skip steps.
 
+**Step-level commenting**: Every checklist step must be posted as a **separate comment** on the orchestrator run issue before moving to the next step. Use `bash tools/post-step` (see below) to post each step's outcome. This creates an auditable, human-readable log of exactly what was executed and what was found. Do not batch multiple steps into a single comment. Do not summarize steps from memory at the end — post each one as you complete it.
+
 **Permission note**: The orchestrator workflow allows specific Bash commands: `gh`, `git`, `jq`, `mkdir`, `ls`, `date`, `wc`, `sort`, `composer`, `cargo`, `bash`. Use dedicated tools (Read, Write, Edit, Grep, Glob) for file operations. `cargo` enables building Rust tools in `tools/rust/`. `bash` enables running shell wrappers for those tools (e.g., `bash tools/check-field-inventory-rs`). See `.claude/skills/orchestrator-permissions/SKILL.md` for the full list and `.claude/skills/rust-tooling/SKILL.md` for the Rust tool workflow.
 
 **Critical**: NEVER use `${}` variable substitution, pipes (`|`), compound commands (`&&`), heredocs (`<<`), or command substitution (`$()`) in Bash tool calls. Each call must be a single, simple command. See `.claude/skills/orchestrator-permissions/SKILL.md` for details.

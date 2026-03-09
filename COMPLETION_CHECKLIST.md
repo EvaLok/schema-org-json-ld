@@ -2,6 +2,8 @@
 
 Follow this checklist at the end of every orchestrator cycle. Do not skip steps.
 
+**Step-level commenting**: As with the startup checklist, every step must be posted as a **separate comment** on the orchestrator run issue using `bash tools/post-step`. Post each step's outcome as you complete it — do not batch or summarize from memory.
+
 **Critical**: The review agent dispatch (step 6) is MANDATORY. Every cycle must end with a review agent in-flight. Eva directive [#463](https://github.com/EvaLok/schema-org-json-ld/issues/463).
 
 ## 1. Run pipeline verification (early check)
