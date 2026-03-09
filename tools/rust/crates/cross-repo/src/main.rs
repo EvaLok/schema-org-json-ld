@@ -450,7 +450,7 @@ fn parse_outbound_issues(value: Value, label: &str) -> Result<ParsedIssues<Sourc
         let body = issue
             .get("body")
             .and_then(Value::as_str)
-            .ok_or_else(|| format!("{} issue #{} missing body", label, number))?
+            .unwrap_or_default()
             .to_string();
         let author = issue
             .pointer("/user/login")
@@ -493,7 +493,7 @@ fn parse_closed_qc_ack_issues(value: Value) -> Result<ParsedIssues<QcAckIssue>, 
         let body = issue
             .get("body")
             .and_then(Value::as_str)
-            .ok_or_else(|| format!("qc-inbound issue #{} missing body", number))?
+            .unwrap_or_default()
             .to_string();
         let closed_at = issue
             .get("closed_at")
@@ -541,7 +541,7 @@ fn parse_audit_inbound_issues(value: Value) -> Result<ParsedIssues<AuditInboundI
         let body = issue
             .get("body")
             .and_then(Value::as_str)
-            .ok_or_else(|| format!("audit-inbound issue #{} missing body", number))?
+            .unwrap_or_default()
             .to_string();
         let author = issue
             .pointer("/user/login")
@@ -1469,6 +1469,23 @@ mod tests {
             divergence.error.as_deref(),
             Some("validated commit not found in QC acknowledgement")
         );
+    }
+
+    #[test]
+    fn closed_qc_ack_parser_allows_missing_body() {
+        let parsed = parse_closed_qc_ack_issues(json!([[
+            {
+                "number": 27,
+                "title": "Legacy QC issue",
+                "body": null,
+                "closed_at": "2026-03-01T00:00:00Z",
+                "user": { "login": TRUSTED_AUTHOR }
+            }
+        ]]))
+        .expect("missing body should default to empty text");
+
+        assert_eq!(parsed.trusted.len(), 1);
+        assert_eq!(parsed.trusted[0].body, "");
     }
 
     #[test]
