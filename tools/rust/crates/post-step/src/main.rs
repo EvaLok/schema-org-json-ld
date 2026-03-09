@@ -74,15 +74,16 @@ fn execute(cli: &Cli, runner: &dyn CommentPoster) -> Result<String, String> {
 }
 
 fn resolve_body(cli: &Cli) -> Result<String, String> {
+	// Clap enforces this for real CLI parsing, but direct struct construction in unit tests
+	// or future internal callers can bypass parser validation, so keep a fail-closed check here.
 	match (&cli.body, &cli.body_file) {
 		(Some(_), Some(_)) => Err("exactly one of --body or --body-file must be provided".to_string()),
 		(None, None) => Err("exactly one of --body or --body-file must be provided".to_string()),
-		(Some(body), None) => validate_required_text("body", body).map(str::to_string),
+		(Some(body), None) => normalize_body_text(body),
 		(None, Some(path)) => {
 			let content = fs::read_to_string(path)
 				.map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
-			let trimmed = content.trim_end_matches(['\r', '\n']);
-			validate_required_text("body", trimmed).map(str::to_string)
+			normalize_body_text(&content)
 		}
 	}
 }
@@ -93,6 +94,12 @@ fn validate_required_text<'a>(field_name: &str, value: &'a str) -> Result<&'a st
 	}
 
 	Ok(value)
+}
+
+fn normalize_body_text(body: &str) -> Result<String, String> {
+	let normalized = body.trim_end_matches(['\r', '\n']);
+	validate_required_text("body", normalized)?;
+	Ok(normalized.to_string())
 }
 
 fn format_comment(cycle: u64, step: &str, title: &str, body: &str) -> String {
@@ -151,7 +158,7 @@ fn command_failure_message(command: &str, output: &Output) -> String {
 		|| "terminated by signal".to_string(),
 		|value| value.to_string(),
 	);
-	let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+	let stderr = String::from_utf8_lossy(&output.stderr).trim().to_owned();
 
 	if stderr.is_empty() {
 		format!("{command} failed with status {code}")
