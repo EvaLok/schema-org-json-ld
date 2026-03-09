@@ -2183,8 +2183,10 @@
     {
       "dispatched_at": "2026-03-09T03:57:19Z",
       "issue": 858,
+      "merged_at": "2026-03-09T05:18:37Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 860,
+      "status": "merged",
       "title": "check-commitments tool (per Eva #827)"
     },
     {
@@ -2349,11 +2351,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#862 Cycle 201 review (cycle 200)",
     "dispatch_to_pr_rate": "96.7%",
-    "in_flight": 1,
-    "merged": 234,
+    "in_flight": 0,
+    "merged": 235,
     "pr_merge_rate": "99.1%",
-    "produced_pr": 236,
-    "resolved": 241,
+    "produced_pr": 237,
+    "resolved": 242,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 242
