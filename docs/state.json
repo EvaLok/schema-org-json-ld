@@ -3470,7 +3470,7 @@
         "note": "Findings: receipt-integrity, process-adherence, state-integrity, clean-cycle-accounting, cycle-close-drift. Actioned 4 (state fix 465f7e5, step comments this cycle, clean-cycle reset, receipt tool planned). Deferred 1 (cycle-close-drift)."
       },
       {
-        "actioned": 0,
+        "actioned": 2,
         "categories": [
           "cycle-close-drift",
           "disposition-accuracy",
@@ -3482,7 +3482,8 @@
         "cycle": 199,
         "deferred": 3,
         "finding_count": 5,
-        "ignored": 0
+        "ignored": 0,
+        "note": "Findings: disposition-accuracy, process-adherence, receipt-integrity, cycle-close-drift, worklog-accuracy. Actioned 2 (cycle-close-drift fixed in COMPLETION_CHECKLIST commit 365b1fc, worklog-accuracy fixed by using derive-metrics directly). Deferred 3 (disposition-accuracy, process-adherence awaiting post-step merge, receipt-integrity awaiting cycle-receipts merge)."
       }
     ],
     "last_review_cycle": 199
