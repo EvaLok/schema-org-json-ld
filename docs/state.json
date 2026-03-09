@@ -3785,19 +3785,6 @@
         "finding_count": 3,
         "ignored": 0,
         "note": "Findings: worklog-accuracy (placeholder data in worklog contradicts state.json), state-integrity (chronic-category marked refreshed while deferred — false freshness signal), code-quality (PR #890 partial override bug in write-entry). Actioned 1: state-integrity (performed chronic-category check cycle 207, no chronic categories found). Deferred 2: worklog-accuracy (same root cause as prior — needs mechanical generation), code-quality (write-entry partial override — dispatch to Copilot)."
-      },
-      {
-        "actioned": 1,
-        "categories": [
-          "code-quality",
-          "state-integrity",
-          "worklog-accuracy"
-        ],
-        "complacency_score": 4,
-        "cycle": 206,
-        "deferred": 2,
-        "finding_count": 3,
-        "ignored": 0
       }
     ],
     "last_review_cycle": 206
