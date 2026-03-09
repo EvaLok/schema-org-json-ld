@@ -2372,8 +2372,10 @@
     {
       "dispatched_at": "2026-03-09T18:22:01Z",
       "issue": 917,
+      "merged_at": "2026-03-09T20:20:10Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 918,
+      "status": "merged",
       "title": "write-entry auto-populate worklog status (audit #171)"
     },
     {
@@ -2544,11 +2546,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#919 Cycle 209 end-of-cycle review (cycle 209)",
     "dispatch_to_pr_rate": "97.7%",
-    "in_flight": 1,
-    "merged": 254,
+    "in_flight": 0,
+    "merged": 255,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 256,
-    "resolved": 261,
+    "produced_pr": 257,
+    "resolved": 262,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 262
