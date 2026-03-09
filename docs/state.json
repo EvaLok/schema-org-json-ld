@@ -2262,8 +2262,10 @@
     {
       "dispatched_at": "2026-03-09T08:07:10Z",
       "issue": 880,
+      "merged_at": "2026-03-09T09:27:37Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 881,
+      "status": "merged",
       "title": "Cycle 203 end-of-cycle review"
     }
   ],
@@ -2412,11 +2414,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#880 Cycle 203 end-of-cycle review (cycle 203)",
     "dispatch_to_pr_rate": "97.2%",
-    "in_flight": 2,
-    "merged": 240,
+    "in_flight": 1,
+    "merged": 241,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 242,
-    "resolved": 247,
+    "produced_pr": 243,
+    "resolved": 248,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 249
@@ -2510,7 +2512,7 @@
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 203"
+        "last_refreshed": "cycle 204"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
