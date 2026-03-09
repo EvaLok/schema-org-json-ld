@@ -232,14 +232,14 @@ fn extract_commitments(section: &str) -> Vec<String> {
             continue;
         }
 
-        for line in &subsection.lines {
-            if subsection.title.is_some_and(|title| {
-                title.eq_ignore_ascii_case("Concrete commitments for next cycle")
-            }) && extract_list_item(line).is_some()
-            {
-                continue;
-            }
+        if subsection
+            .title
+            .is_some_and(|title| title.eq_ignore_ascii_case("Concrete commitments for next cycle"))
+        {
+            continue;
+        }
 
+        for line in &subsection.lines {
             if contains_commitment_phrase(line) {
                 push_commitment(&mut commitments, &mut seen, line);
             }
@@ -315,7 +315,18 @@ fn contains_commitment_phrase(line: &str) -> bool {
         || lowered.contains(" plan to ")
         || lowered.contains(" needs to ")
         || lowered.contains(" commit to ")
-        || (lowered.contains(" should ") && !lowered.contains(" should be "))
+        || contains_should_commitment(&cleaned)
+}
+
+fn contains_should_commitment(cleaned: &str) -> bool {
+    let lowered = cleaned.to_ascii_lowercase();
+    let subjects = ["i", "we", "this", "that", "it", "they", "you"];
+
+    lowered.starts_with("should ")
+        || subjects.iter().any(|subject| {
+            lowered.starts_with(&format!("{subject} should "))
+                || lowered.starts_with(&format!("{subject} should be "))
+        })
 }
 
 fn push_commitment(commitments: &mut Vec<String>, seen: &mut BTreeSet<String>, text: &str) {
@@ -420,7 +431,8 @@ fn find_deferred_escalations(history: &[ReviewHistoryEntry]) -> Vec<Escalation> 
                         consecutive_cycles: streak.clone(),
                     });
                 }
-                streak = vec![cycle];
+                streak.clear();
+                streak.push(cycle);
             }
         }
 
