@@ -2390,8 +2390,10 @@
     {
       "dispatched_at": "2026-03-09T20:20:45Z",
       "issue": 922,
+      "merged_at": "2026-03-09T22:09:59Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 923,
+      "status": "merged",
       "title": "Fix Phase 7 journal freshness check to use docs/journal/"
     }
   ],
@@ -2553,11 +2555,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#922 Fix Phase 7 journal freshness check to use docs/journal/ (cycle 210)",
     "dispatch_to_pr_rate": "97.7%",
-    "in_flight": 1,
-    "merged": 255,
+    "in_flight": 0,
+    "merged": 256,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 257,
-    "resolved": 262,
+    "produced_pr": 258,
+    "resolved": 263,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 263
@@ -2655,7 +2657,7 @@
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 210"
+        "last_refreshed": "cycle 211"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
