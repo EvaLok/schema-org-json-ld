@@ -303,7 +303,6 @@ mod tests {
                 "dispatch_to_pr_rate": "84/85",
                 "in_flight": 3,
                 "merged": 80,
-                "note": "prior",
                 "pr_merge_rate": "80/84",
                 "produced_pr": 84,
                 "resolved": 82,
@@ -414,7 +413,6 @@ mod tests {
         assert_eq!(state["copilot_metrics"]["produced_pr"], json!(85));
         assert_eq!(state["copilot_metrics"]["pr_merge_rate"], json!("80/84"));
         assert_eq!(state["copilot_metrics"]["dispatch_to_pr_rate"], json!("84/85"));
-        assert_eq!(state["copilot_metrics"]["note"], json!("prior"));
         assert_eq!(
             state["field_inventory"]["fields"]["copilot_metrics.pr_merge_rate"]["last_refreshed"],
             json!("cycle 163")

@@ -220,8 +220,7 @@ mod tests {
                 "merged": 80,
                 "closed_without_merge": 1,
                 "dispatch_to_pr_rate": "81/85",
-                "dispatch_log_latest": "#601 old dispatch (cycle 164)",
-                "note": "old note"
+                "dispatch_log_latest": "#601 old dispatch (cycle 164)"
             },
             "field_inventory": {
                 "fields": {
@@ -361,7 +360,6 @@ mod tests {
             json!("#602 Example dispatch (cycle 164)")
         );
         assert_eq!(state["copilot_metrics"]["dispatch_to_pr_rate"], json!("81/85"));
-        assert_eq!(state["copilot_metrics"]["note"], json!("old note"));
         assert_eq!(
             state["field_inventory"]["fields"]["copilot_metrics.in_flight"]["last_refreshed"],
             json!("cycle 164")
@@ -384,11 +382,6 @@ mod tests {
             .as_object_mut()
             .expect("copilot_metrics object")
             .remove("dispatch_to_pr_rate");
-        state["copilot_metrics"]
-            .as_object_mut()
-            .expect("copilot_metrics object")
-            .remove("note");
-
         let patch = build_dispatch_patch(
             &state,
             164,
@@ -402,7 +395,6 @@ mod tests {
         apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
 
         assert!(state["copilot_metrics"]["dispatch_to_pr_rate"].is_null());
-        assert!(state["copilot_metrics"]["note"].is_null());
         assert_eq!(state["copilot_metrics"]["total_dispatches"], json!(86));
         assert_eq!(state["copilot_metrics"]["in_flight"], json!(3));
         assert_eq!(

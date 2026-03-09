@@ -448,7 +448,6 @@ mod tests {
                 "dispatch_to_pr_rate": "old",
                 "in_flight": 9,
                 "merged": 0,
-                "note": "keep",
                 "produced_pr": 0,
                 "pr_merge_rate": "old",
                 "resolved": 0,
@@ -475,7 +474,6 @@ mod tests {
             value["copilot_metrics"]["dispatch_log_latest"],
             json!("keep")
         );
-        assert_eq!(value["copilot_metrics"]["note"], json!("keep"));
     }
 
     #[test]

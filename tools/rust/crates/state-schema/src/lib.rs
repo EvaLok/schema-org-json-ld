@@ -288,7 +288,6 @@ pub struct CopilotMetrics {
     pub dispatch_to_pr_rate: Option<String>,
     pub pr_merge_rate: Option<String>,
     pub in_flight: Option<i64>,
-    pub note: Option<String>,
     #[serde(flatten)]
     pub extra: BTreeMap<String, Value>,
 }
