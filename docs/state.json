@@ -3622,9 +3622,27 @@
         "finding_count": 4,
         "ignored": 0,
         "note": "Findings: code-quality (check-commitments deferred escalation overstatement), worklog-accuracy (metrics block wrong at commit time), process-adherence (post-step still not covering all steps), merge-discipline (30+ min wait claim inflated to ~9 min). Actioned 1 (merge-discipline — will use actual timestamps). Deferred 3 (code-quality needs tool fix dispatch, worklog-accuracy needs tooling, process-adherence needs mechanical verification)."
+      },
+      {
+        "actioned": 2,
+        "complacency_score": 4,
+        "cycle": 202,
+        "deferred": 2,
+        "finding_count": 4,
+        "ignored": 0,
+        "note": "Findings: receipt-integrity (stale metrics, nonexistent SHA), process-adherence (step batching), code-quality (timestamp consolidation incomplete), journal-quality (write-entry contradictory output). Actioned 2 (receipt-integrity via cycle-receipts, process-adherence via audit #164). Deferred 2 (code-quality timestamp consolidation, journal-quality write-entry bug). Processed in cycle 204."
+      },
+      {
+        "actioned": 4,
+        "complacency_score": 5,
+        "cycle": 203,
+        "deferred": 0,
+        "finding_count": 4,
+        "ignored": 0,
+        "note": "Findings: tooling-contract (cycle-close missing acceptance criteria), receipt-integrity (nonexistent SHA repeated), review-accounting (process-review not run), process-adherence (step batching). All 4 actioned in cycle 204: tooling-contract (follow-up dispatch), receipt-integrity (mechanical receipts), review-accounting (state updated), process-adherence (audit #164 checklist fix)."
       }
     ],
-    "last_review_cycle": 201
+    "last_review_cycle": 203
   },
   "schema_status": {
     "directory_layout": {
