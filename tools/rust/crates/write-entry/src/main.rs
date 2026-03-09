@@ -84,6 +84,12 @@ struct JournalArgs {
     /// Commitment for the next cycle
     #[arg(long = "commitment")]
     commitment: Vec<String>,
+    /// Follow-through status for the previous cycle commitment
+    #[arg(long = "previous-commitment-status")]
+    previous_commitment_status: Option<String>,
+    /// Follow-through detail for the previous cycle commitment
+    #[arg(long = "previous-commitment-detail")]
+    previous_commitment_detail: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -305,8 +311,14 @@ fn resolve_journal_input(args: &JournalArgs) -> Result<JournalInput, String> {
 
     if has_inline_journal_content(args) {
         return Ok(JournalInput {
-            previous_commitment_status: default_previous_commitment_status(),
-            previous_commitment_detail: default_previous_commitment_detail(),
+            previous_commitment_status: args
+                .previous_commitment_status
+                .clone()
+                .unwrap_or_else(default_previous_commitment_status),
+            previous_commitment_detail: args
+                .previous_commitment_detail
+                .clone()
+                .unwrap_or_else(default_previous_commitment_detail),
             sections: parse_sections(&args.section)?,
             concrete_behavior_change: String::new(),
             commitments: parse_commitments(&args.commitment),
@@ -1079,7 +1091,7 @@ fn convert_segment(segment: &str) -> String {
         }
         if chars[i] == '#' {
             let prev = i.checked_sub(1).and_then(|idx| chars.get(idx)).copied();
-            if prev != Some('[') {
+            if prev != Some('[') && !is_embedded_reference_prefix(prev) {
                 let (digits, end) = parse_digits(&chars, i + 1);
                 if !digits.is_empty() {
                     let next_char = chars.get(end).copied();
@@ -1097,6 +1109,10 @@ fn convert_segment(segment: &str) -> String {
     }
 
     output
+}
+
+fn is_embedded_reference_prefix(ch: Option<char>) -> bool {
+    matches!(ch, Some(value) if value.is_ascii_alphanumeric() || matches!(value, '/' | '-' | '_'))
 }
 
 fn match_named_reference(
@@ -1218,6 +1234,8 @@ mod tests {
             input_file: None,
             section: Vec::new(),
             commitment: Vec::new(),
+            previous_commitment_status: None,
+            previous_commitment_detail: None,
         }
     }
 
@@ -1249,7 +1267,7 @@ mod tests {
 
     #[test]
     fn converts_issue_references_and_preserves_existing_links() {
-        let input = "Refs: #42, PR #10, QC #11, audit #12, [#13](https://github.com/EvaLok/schema-org-json-ld/issues/13)";
+        let input = "Refs: #42, PR #10, QC #11, audit #12, finding EvaLok/schema-org-json-ld#1, [#13](https://github.com/EvaLok/schema-org-json-ld/issues/13)";
         let output = convert_references(input);
         assert!(output.contains("[#42](https://github.com/EvaLok/schema-org-json-ld/issues/42)"));
         assert!(output.contains("[PR #10](https://github.com/EvaLok/schema-org-json-ld/issues/10)"));
@@ -1260,6 +1278,8 @@ mod tests {
             .contains("[audit #12](https://github.com/EvaLok/schema-org-json-ld-audit/issues/12)"));
         assert!(convert_references("Audit #14")
             .contains("[Audit #14](https://github.com/EvaLok/schema-org-json-ld-audit/issues/14)"));
+        assert!(output.contains("finding EvaLok/schema-org-json-ld#1"));
+        assert!(!output.contains("finding EvaLok/schema-org-json-ld[#1]"));
         assert!(output.contains("[#13](https://github.com/EvaLok/schema-org-json-ld/issues/13)"));
         assert_eq!(
             output
@@ -1479,6 +1499,60 @@ mod tests {
         assert!(content.contains(
             "1. Will dispatch [#830](https://github.com/EvaLok/schema-org-json-ld/issues/830) next cycle"
         ));
+    }
+
+    #[test]
+    fn journal_inline_flags_support_previous_commitment_override_and_default() {
+        let repo_root = TempRepoDir::new("journal-inline-previous-commitment");
+        let journal_dir = repo_root.path.join("docs").join("journal");
+        fs::create_dir_all(&journal_dir).unwrap();
+        write_root_journal_index(
+            &repo_root.path,
+            "- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 153+\n",
+        );
+        write_worklog_fixture(&repo_root.path, fixed_now(), 154, "Inline override");
+        fs::write(
+            journal_dir.join("2026-03-05.md"),
+            r#"# Journal — 2026-03-05
+
+Reflective log for the schema-org-json-ld orchestrator.
+
+---
+
+## 2026-03-05 — Cycle 153: Prior title
+
+### Concrete commitments for next cycle
+
+1. Dispatch #546 in the same cycle.
+"#,
+        )
+        .unwrap();
+
+        let mut explicit_args = journal_args("Inline override");
+        explicit_args.section = vec!["Decisions::Closed the loop.".to_string()];
+        explicit_args.commitment = vec!["Keep momentum.".to_string()];
+        explicit_args.previous_commitment_status = Some("followed".to_string());
+        explicit_args.previous_commitment_detail = Some("Done.".to_string());
+
+        let explicit_path = execute_journal(&explicit_args, &repo_root.path, fixed_now()).unwrap();
+        let explicit_content = fs::read_to_string(explicit_path).unwrap();
+        assert!(explicit_content.contains(
+            "> Previous commitment: 1. Dispatch [#546](https://github.com/EvaLok/schema-org-json-ld/issues/546) in the same cycle."
+        ));
+        assert!(explicit_content.contains("**Followed.** Done."));
+        assert!(!explicit_content.contains("**No prior commitment.** No prior commitment recorded."));
+
+        let mut default_args = journal_args("Inline default");
+        default_args.section = vec!["Notes::Keep notes minimal.".to_string()];
+        let default_input = resolve_journal_input(&default_args).unwrap();
+        assert_eq!(
+            default_input.previous_commitment_status,
+            "no_prior_commitment"
+        );
+        assert_eq!(
+            default_input.previous_commitment_detail,
+            "No prior commitment recorded."
+        );
     }
 
     #[test]
@@ -1966,6 +2040,10 @@ Reflective log for the schema-org-json-ld orchestrator.
             "Decision::Defer #829",
             "--commitment",
             "Dispatch #830 next cycle",
+            "--previous-commitment-status",
+            "followed",
+            "--previous-commitment-detail",
+            "Done.",
         ])
         .unwrap();
 
@@ -1977,6 +2055,8 @@ Reflective log for the schema-org-json-ld orchestrator.
                     args.commitment,
                     vec!["Dispatch #830 next cycle".to_string()]
                 );
+                assert_eq!(args.previous_commitment_status.as_deref(), Some("followed"));
+                assert_eq!(args.previous_commitment_detail.as_deref(), Some("Done."));
             }
             Command::Worklog(_) => panic!("expected journal command"),
         }
