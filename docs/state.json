@@ -2190,15 +2190,19 @@
     {
       "dispatched_at": "2026-03-09T03:57:23Z",
       "issue": 859,
+      "merged_at": "2026-03-09T05:15:29Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 861,
+      "status": "merged",
       "title": "process-audit-inbound tool (per Eva #828)"
     },
     {
       "dispatched_at": "2026-03-09T04:04:40Z",
       "issue": 862,
+      "merged_at": "2026-03-09T05:15:29Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 863,
+      "status": "merged",
       "title": "Cycle 201 review"
     }
   ],
@@ -2345,11 +2349,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#862 Cycle 201 review (cycle 200)",
     "dispatch_to_pr_rate": "96.7%",
-    "in_flight": 3,
-    "merged": 232,
+    "in_flight": 1,
+    "merged": 234,
     "pr_merge_rate": "99.1%",
-    "produced_pr": 234,
-    "resolved": 239,
+    "produced_pr": 236,
+    "resolved": 241,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 242
@@ -2446,7 +2450,7 @@
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 200"
+        "last_refreshed": "cycle 201"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
