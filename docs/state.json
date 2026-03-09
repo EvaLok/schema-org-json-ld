@@ -2153,6 +2153,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "dispatch-review tool (per Eva #825)"
+    },
+    {
+      "dispatched_at": "2026-03-09T02:29:02Z",
+      "issue": 851,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "check-agent-prs tool (per Eva #826)"
     }
   ],
   "audit_processed": [
@@ -2295,16 +2302,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#850 dispatch-review tool (per Eva #825) (cycle 200)",
+    "dispatch_log_latest": "#851 check-agent-prs tool (per Eva #826) (cycle 200)",
     "dispatch_to_pr_rate": "96.6%",
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 229,
     "pr_merge_rate": "99.1%",
     "produced_pr": 231,
     "resolved": 236,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 237
+    "total_dispatches": 238
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
