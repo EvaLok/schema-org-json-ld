@@ -2291,8 +2291,10 @@
     {
       "dispatched_at": "2026-03-09T09:35:42Z",
       "issue": 886,
+      "merged_at": "2026-03-09T10:48:00Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 887,
+      "status": "merged",
       "title": "Cycle 204 end-of-cycle review"
     },
     {
@@ -2307,8 +2309,10 @@
     {
       "dispatched_at": "2026-03-09T11:05:38Z",
       "issue": 892,
+      "merged_at": "2026-03-09T12:22:00Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 893,
+      "status": "merged",
       "title": "Cycle 205 end-of-cycle review"
     }
   ],
@@ -2466,12 +2470,12 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#892 Cycle 205 end-of-cycle review (cycle 205)",
-    "dispatch_to_pr_rate": "96.9%",
-    "in_flight": 1,
-    "merged": 246,
+    "dispatch_to_pr_rate": "98.0%",
+    "in_flight": 0,
+    "merged": 247,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 248,
-    "resolved": 253,
+    "produced_pr": 249,
+    "resolved": 254,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 254
