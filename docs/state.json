@@ -3491,9 +3491,25 @@
         "finding_count": 5,
         "ignored": 0,
         "note": "Findings: disposition-accuracy, process-adherence, receipt-integrity, cycle-close-drift, worklog-accuracy. Actioned 2 (cycle-close-drift fixed in COMPLETION_CHECKLIST commit 365b1fc, worklog-accuracy fixed by using derive-metrics directly). Deferred 3 (disposition-accuracy, process-adherence awaiting post-step merge, receipt-integrity awaiting cycle-receipts merge)."
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "disposition-accuracy",
+          "merge-discipline",
+          "process-adherence",
+          "receipt-integrity",
+          "tool-review-quality",
+          "tooling-contract"
+        ],
+        "complacency_score": 4,
+        "cycle": 200,
+        "deferred": 4,
+        "finding_count": 6,
+        "ignored": 0
       }
     ],
-    "last_review_cycle": 199
+    "last_review_cycle": 200
   },
   "schema_status": {
     "directory_layout": {
