@@ -2139,6 +2139,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "post-step tool (per Eva #837)"
+    },
+    {
+      "dispatched_at": "2026-03-09T01:09:57Z",
+      "issue": 847,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 199 review (cycle 199)"
     }
   ],
   "audit_processed": [
@@ -2281,16 +2288,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#844 post-step tool (per Eva #837) (cycle 199)",
+    "dispatch_log_latest": "#847 Cycle 199 review (cycle 199) (cycle 199)",
     "dispatch_to_pr_rate": "97.0%",
-    "in_flight": 2,
+    "in_flight": 3,
     "merged": 226,
     "pr_merge_rate": "99.1%",
     "produced_pr": 228,
     "resolved": 233,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 235
+    "total_dispatches": 236
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
