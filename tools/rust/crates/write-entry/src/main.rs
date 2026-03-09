@@ -1635,6 +1635,7 @@ mod tests {
         args.done = vec!["Merged PR #123".to_string()];
 
         let error = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap_err();
+        assert!(error.contains("failed to read"));
         assert!(error.contains("docs/state.json"));
     }
 
@@ -1659,11 +1660,11 @@ mod tests {
 
         let mut args = worklog_args("Placeholder rejected");
         args.done = vec!["Merged PR #123".to_string()];
-        args.copilot_metrics = Some("Not provided.".to_string());
+        args.copilot_metrics = Some(NOT_PROVIDED.to_string());
 
         let error = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap_err();
         assert!(error.contains("copilot metrics"));
-        assert!(error.contains("Not provided."));
+        assert!(error.contains(NOT_PROVIDED));
     }
 
     #[test]
