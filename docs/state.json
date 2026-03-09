@@ -2346,6 +2346,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Cycle 207 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-09T16:29:49Z",
+      "issue": 910,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add artifact-verification phase to pipeline-check (audit #169)"
     }
   ],
   "audit_dropped": [
@@ -2502,16 +2509,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#906 Cycle 207 end-of-cycle review (cycle 207)",
+    "dispatch_log_latest": "#910 Add artifact-verification phase to pipeline-check (audit #169) (cycle 208)",
     "dispatch_to_pr_rate": "97.3%",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 251,
     "pr_merge_rate": "99.2%",
     "produced_pr": 253,
     "resolved": 258,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 258
+    "total_dispatches": 259
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
