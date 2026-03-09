@@ -2314,6 +2314,13 @@
       "pr": 893,
       "status": "merged",
       "title": "Cycle 205 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-09T12:31:20Z",
+      "issue": 897,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix process-review parser"
     }
   ],
   "audit_dropped": [
@@ -2469,16 +2476,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#892 Cycle 205 end-of-cycle review (cycle 205)",
+    "dispatch_log_latest": "#897 Fix process-review parser (cycle 206)",
     "dispatch_to_pr_rate": "98.0%",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 247,
     "pr_merge_rate": "99.2%",
     "produced_pr": 249,
     "resolved": 254,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 254
+    "total_dispatches": 255
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
