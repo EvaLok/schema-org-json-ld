@@ -2233,6 +2233,13 @@
       "pr": 870,
       "status": "merged",
       "title": "Cycle 201b end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-09T06:35:04Z",
+      "issue": 873,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "cycle-close tool (per Eva #841)"
     }
   ],
   "audit_processed": [
@@ -2377,16 +2384,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#869 Cycle 201b end-of-cycle review (cycle 201)",
+    "dispatch_log_latest": "#873 cycle-close tool (per Eva #841) (cycle 202)",
     "dispatch_to_pr_rate": "96.7%",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 238,
     "pr_merge_rate": "99.2%",
     "produced_pr": 240,
     "resolved": 245,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 245
+    "total_dispatches": 246
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
