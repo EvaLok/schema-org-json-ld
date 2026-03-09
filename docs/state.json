@@ -2281,11 +2281,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#838 Cycle 198 review (cycle 198)",
     "dispatch_to_pr_rate": "97.0%",
-    "in_flight": 2,
-    "merged": 224,
+    "in_flight": 0,
+    "merged": 226,
     "pr_merge_rate": "99.1%",
-    "produced_pr": 226,
-    "resolved": 231,
+    "produced_pr": 228,
+    "resolved": 233,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 233
@@ -2381,7 +2381,7 @@
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 198"
+        "last_refreshed": "cycle 199"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
