@@ -41,6 +41,43 @@ pub struct StateJson {
     pub extra: BTreeMap<String, Value>,
 }
 
+impl StateJson {
+    pub fn review_agent(&self) -> Result<ReviewAgent, String> {
+        let value = self
+            .extra
+            .get("review_agent")
+            .cloned()
+            .ok_or_else(|| "missing field: review_agent".to_string())?;
+        serde_json::from_value(value)
+            .map_err(|error| format!("failed to parse review_agent from state.json: {}", error))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+#[serde(default, rename_all = "snake_case")]
+pub struct ReviewAgent {
+    pub description: Option<String>,
+    pub history: Vec<ReviewHistoryEntry>,
+    pub chronic_category_responses: Option<Value>,
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+#[serde(default, rename_all = "snake_case")]
+pub struct ReviewHistoryEntry {
+    pub cycle: u64,
+    pub categories: Vec<String>,
+    pub actioned: u64,
+    pub deferred: u64,
+    pub ignored: u64,
+    pub finding_count: u64,
+    pub complacency_score: u64,
+    pub note: Option<String>,
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, Value>,
+}
+
 pub fn check_version(state: &StateJson) -> Result<(), String> {
     match state.schema_version {
         Some(version) if version == SCHEMA_VERSION => Ok(()),
