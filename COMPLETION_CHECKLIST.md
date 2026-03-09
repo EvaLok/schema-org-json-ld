@@ -73,6 +73,8 @@ The tool auto-generates clickable GitHub links from bare `#N` references, create
 
 **Commit receipts**: Also run `bash tools/cycle-receipts --cycle N` and include the full receipt table in the worklog. Every write-side tool receipt must be present — this is the cycle's audit trail. Do not manually assemble receipts from memory; use the tool.
 
+**Note on review dispatch receipt**: The worklog is committed in step 5, BEFORE the review agent is dispatched in step 6. This means the worklog receipt table will NOT include the `record-dispatch` receipt for the review agent — that receipt is generated after the worklog is frozen. This is by design: the review agent must see the committed worklog at dispatch time (to avoid the artifact-race false positive from audit #151). The review dispatch receipt appears in `record-dispatch`'s own commit (step 7) and is captured by the next cycle's `cycle-receipts` run. Do NOT attempt to add the review dispatch receipt to the worklog after dispatch — that would create the exact drift this ordering prevents.
+
 ## 4. Write journal entry
 
 Use `write-entry` to generate the journal entry. Write the JSON payload to a file with the Write tool, then invoke:
@@ -192,13 +194,13 @@ Label the issue `agent-task` and `cycle-review`.
 
 ## 7. Commit review dispatch state and push
 
-After dispatching the review agent (step 6), commit the `record-dispatch` state change and push:
+After dispatching the review agent (step 6), `record-dispatch` has already committed the state change. Push immediately:
 
 ```bash
 git push origin master
 ```
 
-Include tool receipt hashes in the closing comment so the review agent can verify them with `git show <hash>`.
+The `record-dispatch` commit is the LAST commit of the cycle. Its receipt hash appears in the closing comment (step 8) but NOT in the worklog receipt table (which was frozen in step 5). This is the expected split: the worklog captures all receipts up to and including the `cycle-complete` commit; the `record-dispatch` receipt is captured by the next cycle's `cycle-receipts` tool.
 
 ## 8. Close the orchestrator issue
 
