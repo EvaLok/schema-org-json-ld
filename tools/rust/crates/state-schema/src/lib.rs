@@ -348,6 +348,8 @@ pub struct TypescriptPlan {
 #[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(default, rename_all = "snake_case")]
 pub struct CopilotMetrics {
+    pub total_dispatches: Option<i64>,
+    pub merged: Option<i64>,
     pub dispatch_to_pr_rate: Option<String>,
     pub pr_merge_rate: Option<String>,
     pub in_flight: Option<i64>,
@@ -827,6 +829,27 @@ mod tests {
             state.copilot_metrics.dispatch_log_latest.as_deref(),
             Some("#873 Review findings follow-up (cycle 202)")
         );
+    }
+
+    #[test]
+    fn copilot_metrics_deserializes_summary_fields() {
+        let state: StateJson = serde_json::from_value(json!({
+            "copilot_metrics": {
+                "total_dispatches": 45,
+                "merged": 40,
+                "pr_merge_rate": "88.9%",
+                "in_flight": 3
+            }
+        }))
+        .expect("state should deserialize");
+
+        assert_eq!(state.copilot_metrics.total_dispatches, Some(45));
+        assert_eq!(state.copilot_metrics.merged, Some(40));
+        assert_eq!(
+            state.copilot_metrics.pr_merge_rate.as_deref(),
+            Some("88.9%")
+        );
+        assert_eq!(state.copilot_metrics.in_flight, Some(3));
     }
 
     #[test]

@@ -1,7 +1,7 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use clap::{Parser, Subcommand};
 use serde::Deserialize;
-use state_schema::current_cycle_from_state;
+use state_schema::{current_cycle_from_state, read_state_value, StateJson};
 use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -11,6 +11,7 @@ const QC_ISSUES_URL: &str = "https://github.com/EvaLok/schema-org-json-ld-qc/iss
 const AUDIT_ISSUES_URL: &str = "https://github.com/EvaLok/schema-org-json-ld-audit/issues";
 const PRIMARY_COMMITS_URL: &str = "https://github.com/EvaLok/schema-org-json-ld/commit";
 const JOURNAL_DESCRIPTION: &str = "Reflective log for the schema-org-json-ld orchestrator.";
+const NOT_PROVIDED: &str = "Not provided.";
 
 #[derive(Parser)]
 #[command(name = "write-entry")]
@@ -202,7 +203,7 @@ fn execute_worklog(
     now: DateTime<Utc>,
 ) -> Result<PathBuf, String> {
     let cycle = resolve_cycle(args.cycle, repo_root)?;
-    let input = resolve_worklog_input(args)?;
+    let input = resolve_worklog_input(args, repo_root)?;
     let path = worklog_path(repo_root, now, &args.title);
     let content = render_worklog(cycle, now, &input);
     write_entry_file(&path, &content)?;
@@ -241,7 +242,7 @@ fn resolve_cycle(cycle: Option<u64>, repo_root: &Path) -> Result<u64, String> {
     }
 }
 
-fn resolve_worklog_input(args: &WorklogArgs) -> Result<WorklogInput, String> {
+fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<WorklogInput, String> {
     if let Some(path) = &args.input_file {
         if has_inline_worklog_content(args) {
             return Err(
@@ -254,34 +255,155 @@ fn resolve_worklog_input(args: &WorklogArgs) -> Result<WorklogInput, String> {
     }
 
     if has_inline_worklog_content(args) {
-        return Ok(WorklogInput {
+        let state = load_worklog_state(repo_root, requires_worklog_state(args))?;
+        let input = WorklogInput {
             what_was_done: args.done.clone(),
             self_modifications: Vec::new(),
             prs_merged: args.pr_merged.clone(),
             prs_reviewed: Vec::new(),
             issues_processed: Vec::new(),
             current_state: CurrentState {
-                in_flight_sessions: args.in_flight.unwrap_or(0),
+                in_flight_sessions: match args.in_flight {
+                    Some(value) => value,
+                    None => state_copilot_in_flight(state.as_ref())?,
+                },
                 pipeline_status: args
                     .pipeline
                     .clone()
-                    .unwrap_or_else(|| "Not provided.".to_string()),
-                copilot_metrics: args
-                    .copilot_metrics
-                    .clone()
-                    .unwrap_or_else(|| "Not provided.".to_string()),
-                publish_gate: args
-                    .publish_gate
-                    .clone()
-                    .unwrap_or_else(|| "Not provided.".to_string()),
+                    .unwrap_or_else(|| NOT_PROVIDED.to_string()),
+                copilot_metrics: match &args.copilot_metrics {
+                    Some(value) => value.clone(),
+                    None => format_state_copilot_metrics(state.as_ref())?,
+                },
+                publish_gate: match &args.publish_gate {
+                    Some(value) => value.clone(),
+                    None => state_publish_gate_status(state.as_ref())?,
+                },
             },
             next_steps: args.next.clone(),
             receipts: parse_receipts(&args.receipt)?,
-        });
+        };
+        validate_worklog_state_placeholders(&input, state.as_ref())?;
+        return Ok(input);
     }
 
     let payload = read_stdin()?;
     serde_json::from_str(&payload).map_err(|error| format!("invalid worklog JSON input: {}", error))
+}
+
+fn requires_worklog_state(args: &WorklogArgs) -> bool {
+    args.copilot_metrics.is_none() || args.publish_gate.is_none() || args.in_flight.is_none()
+}
+
+fn load_worklog_state(repo_root: &Path, required: bool) -> Result<Option<StateJson>, String> {
+    let value = match read_state_value(repo_root) {
+        Ok(value) => value,
+        Err(error) if required => return Err(error),
+        Err(_) => return Ok(None),
+    };
+    serde_json::from_value(value)
+        .map(Some)
+        .map_err(|error| format!("failed to parse docs/state.json: {}", error))
+}
+
+fn format_state_copilot_metrics(state: Option<&StateJson>) -> Result<String, String> {
+    let state = state
+        .ok_or_else(|| "docs/state.json is required to populate copilot metrics".to_string())?;
+    let total_dispatches = state
+        .copilot_metrics
+        .total_dispatches
+        .ok_or_else(|| "missing copilot_metrics.total_dispatches in state.json".to_string())?;
+    if total_dispatches < 0 {
+        return Err(
+            "copilot_metrics.total_dispatches must be non-negative in state.json".to_string(),
+        );
+    }
+    let merged = state
+        .copilot_metrics
+        .merged
+        .ok_or_else(|| "missing copilot_metrics.merged in state.json".to_string())?;
+    if merged < 0 {
+        return Err("copilot_metrics.merged must be non-negative in state.json".to_string());
+    }
+    let pr_merge_rate = state
+        .copilot_metrics
+        .pr_merge_rate
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "missing copilot_metrics.pr_merge_rate in state.json".to_string())?;
+
+    Ok(format!(
+        "{} dispatches, {} merged, {} merge rate",
+        total_dispatches, merged, pr_merge_rate
+    ))
+}
+
+fn state_publish_gate_status(state: Option<&StateJson>) -> Result<String, String> {
+    let state =
+        state.ok_or_else(|| "docs/state.json is required to populate publish gate".to_string())?;
+    state
+        .publish_gate()?
+        .status
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+        .ok_or_else(|| "missing publish_gate.status in state.json".to_string())
+}
+
+fn state_copilot_in_flight(state: Option<&StateJson>) -> Result<u64, String> {
+    let state = state.ok_or_else(|| {
+        "docs/state.json is required to populate in-flight agent sessions".to_string()
+    })?;
+    let in_flight = state
+        .copilot_metrics
+        .in_flight
+        .ok_or_else(|| "missing copilot_metrics.in_flight in state.json".to_string())?;
+    u64::try_from(in_flight)
+        .map_err(|_| "copilot_metrics.in_flight must be non-negative in state.json".to_string())
+}
+
+fn validate_worklog_state_placeholders(
+    input: &WorklogInput,
+    state: Option<&StateJson>,
+) -> Result<(), String> {
+    let Some(state) = state else {
+        return Ok(());
+    };
+
+    if input.current_state.copilot_metrics == NOT_PROVIDED
+        && state_has_copilot_metrics_summary(state)
+    {
+        return Err("copilot metrics cannot be 'Not provided.' when docs/state.json contains copilot_metrics data".to_string());
+    }
+
+    if input.current_state.publish_gate == NOT_PROVIDED && state_has_publish_gate_status(state) {
+        return Err("publish gate cannot be 'Not provided.' when docs/state.json contains publish_gate.status".to_string());
+    }
+
+    Ok(())
+}
+
+fn state_has_copilot_metrics_summary(state: &StateJson) -> bool {
+    state.copilot_metrics.total_dispatches.is_some()
+        || state.copilot_metrics.merged.is_some()
+        || state
+            .copilot_metrics
+            .pr_merge_rate
+            .as_deref()
+            .map(str::trim)
+            .is_some_and(|value| !value.is_empty())
+}
+
+fn state_has_publish_gate_status(state: &StateJson) -> bool {
+    state
+        .publish_gate()
+        .ok()
+        .and_then(|publish_gate| publish_gate.status)
+        .as_deref()
+        .map(str::trim)
+        .is_some_and(|value| !value.is_empty())
 }
 
 fn has_inline_worklog_content(args: &WorklogArgs) -> bool {
@@ -1275,6 +1397,11 @@ mod tests {
         path
     }
 
+    fn write_state_file(repo_root: &Path, payload: &str) {
+        fs::create_dir_all(repo_root.join("docs")).unwrap();
+        fs::write(repo_root.join("docs/state.json"), payload).unwrap();
+    }
+
     #[test]
     fn converts_issue_references_and_preserves_existing_links() {
         let input = "Refs: #42, PR #10, QC #11, audit #12, finding EvaLok/schema-org-json-ld#1, [#13](https://github.com/EvaLok/schema-org-json-ld/issues/13)";
@@ -1434,11 +1561,122 @@ mod tests {
     }
 
     #[test]
+    fn worklog_inline_flags_auto_populate_status_from_state() {
+        let repo_root = TempRepoDir::new("worklog-auto-populate");
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "copilot_metrics": {
+                    "total_dispatches": 45,
+                    "merged": 40,
+                    "pr_merge_rate": "88.9%",
+                    "in_flight": 3
+                },
+                "publish_gate": {
+                    "status": "published"
+                }
+            }"#,
+        );
+
+        let mut args = worklog_args("Auto populate");
+        args.done = vec!["Merged PR #123".to_string()];
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+        assert!(content.contains("- **Pipeline status**: Not provided."));
+        assert!(content.contains("- **In-flight agent sessions**: 3"));
+        assert!(
+            content.contains("- **Copilot metrics**: 45 dispatches, 40 merged, 88.9% merge rate")
+        );
+        assert!(content.contains("- **Publish gate**: published"));
+    }
+
+    #[test]
+    fn worklog_inline_flags_prefer_explicit_status_over_state() {
+        let repo_root = TempRepoDir::new("worklog-status-override");
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "copilot_metrics": {
+                    "total_dispatches": 45,
+                    "merged": 40,
+                    "pr_merge_rate": "88.9%",
+                    "in_flight": 3
+                },
+                "publish_gate": {
+                    "status": "published"
+                }
+            }"#,
+        );
+
+        let mut args = worklog_args("Override");
+        args.done = vec!["Merged PR #123".to_string()];
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.copilot_metrics = Some("custom metrics".to_string());
+        args.publish_gate = Some("pre-publish".to_string());
+        args.in_flight = Some(1);
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+        assert!(content.contains("- **Pipeline status**: PASS (6/6)"));
+        assert!(content.contains("- **In-flight agent sessions**: 1"));
+        assert!(content.contains("- **Copilot metrics**: custom metrics"));
+        assert!(content.contains("- **Publish gate**: pre-publish"));
+        assert!(!content.contains("45 dispatches, 40 merged, 88.9% merge rate"));
+        assert!(!content.contains("- **Publish gate**: published"));
+    }
+
+    #[test]
+    fn worklog_inline_flags_fail_closed_when_state_status_is_unavailable() {
+        let repo_root = TempRepoDir::new("worklog-status-missing");
+        let mut args = worklog_args("Missing status");
+        args.done = vec!["Merged PR #123".to_string()];
+
+        let error = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap_err();
+        assert!(error.contains("docs/state.json"));
+    }
+
+    #[test]
+    fn worklog_inline_flags_reject_placeholder_when_state_has_real_status() {
+        let repo_root = TempRepoDir::new("worklog-placeholder-rejected");
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "copilot_metrics": {
+                    "total_dispatches": 45,
+                    "merged": 40,
+                    "pr_merge_rate": "88.9%",
+                    "in_flight": 3
+                },
+                "publish_gate": {
+                    "status": "published"
+                }
+            }"#,
+        );
+
+        let mut args = worklog_args("Placeholder rejected");
+        args.done = vec!["Merged PR #123".to_string()];
+        args.copilot_metrics = Some("Not provided.".to_string());
+
+        let error = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap_err();
+        assert!(error.contains("copilot metrics"));
+        assert!(error.contains("Not provided."));
+    }
+
+    #[test]
     fn invalid_receipt_flag_is_rejected() {
+        let repo_root = TempRepoDir::new("invalid-receipt");
         let mut args = worklog_args("Invalid receipt");
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.copilot_metrics = Some("45 dispatches".to_string());
+        args.publish_gate = Some("published".to_string());
+        args.in_flight = Some(0);
         args.receipt = vec!["cycle-start:not-a-sha".to_string()];
 
-        let error = resolve_worklog_input(&args).unwrap_err();
+        let error = resolve_worklog_input(&args, &repo_root.path).unwrap_err();
         assert!(error.contains("invalid receipt"));
     }
 
@@ -1550,7 +1788,9 @@ Reflective log for the schema-org-json-ld orchestrator.
             "> Previous commitment: 1. Dispatch [#546](https://github.com/EvaLok/schema-org-json-ld/issues/546) in the same cycle."
         ));
         assert!(explicit_content.contains("**Followed.** Done."));
-        assert!(!explicit_content.contains("**No prior commitment.** No prior commitment recorded."));
+        assert!(
+            !explicit_content.contains("**No prior commitment.** No prior commitment recorded.")
+        );
 
         let mut default_args = journal_args("Inline default");
         default_args.section = vec!["Notes::Keep notes minimal.".to_string()];
