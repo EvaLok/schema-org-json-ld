@@ -2366,6 +2366,13 @@
       "pr": 913,
       "status": "merged",
       "title": "Cycle 208 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-09T18:22:01Z",
+      "issue": 917,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "write-entry auto-populate worklog status (audit #171)"
     }
   ],
   "audit_dropped": [
@@ -2524,16 +2531,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#912 Cycle 208 end-of-cycle review (cycle 208)",
+    "dispatch_log_latest": "#917 write-entry auto-populate worklog status (audit #171) (cycle 209)",
     "dispatch_to_pr_rate": "97.3%",
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 252,
     "pr_merge_rate": "99.2%",
     "produced_pr": 254,
     "resolved": 259,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 260
+    "total_dispatches": 261
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
