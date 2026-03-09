@@ -174,10 +174,7 @@ fn parse_review(review_path: &Path, content: &str, lenient: bool) -> Result<Pars
     if !validation_errors.is_empty() {
         if lenient {
             for error in &validation_errors {
-                eprintln!(
-                    "Warning: {} (continuing because --lenient was passed)",
-                    error
-                );
+                eprintln!("Warning: {} (continuing because --lenient was passed)", error);
             }
         } else {
             return Err(validation_errors.join("; "));
@@ -271,10 +268,7 @@ fn validate_review_format(content: &str) -> Vec<String> {
     }
 
     if extract_score(content).is_none() {
-        errors.push(
-            "review markdown must contain a complacency score section with a parsable N/5 score"
-                .to_string(),
-        );
+        errors.push("review markdown must contain a complacency score section with a parsable N/5 score".to_string());
     }
 
     errors
@@ -717,14 +711,10 @@ mod tests {
 3/5 — this cycle made real improvements and the journal is genuinely self-critical rather than formulaic, but it still normalized avoidable manual state repair and let some evidence/freshness bookkeeping lag behind the actual work.
 "#;
 
-    const CYCLE_196_REVIEW: &str = include_str!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../../../docs/reviews/cycle-196.md"
-    ));
-    const CYCLE_197_REVIEW: &str = include_str!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../../../docs/reviews/cycle-197.md"
-    ));
+    const CYCLE_196_REVIEW: &str =
+        include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../docs/reviews/cycle-196.md"));
+    const CYCLE_197_REVIEW: &str =
+        include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../docs/reviews/cycle-197.md"));
 
     #[test]
     fn help_contains_expected_flags() {
@@ -1132,10 +1122,7 @@ mod tests {
         let parsed = parse_review(path, SAMPLE_REVIEW, true).expect("parse should succeed");
         assert_eq!(
             parsed.categories,
-            vec![
-                "data-integrity".to_string(),
-                "process-integrity".to_string()
-            ]
+            vec!["data-integrity".to_string(), "process-integrity".to_string()]
         );
     }
 
