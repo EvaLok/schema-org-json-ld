@@ -2137,6 +2137,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Cycle 198 review"
+    },
+    {
+      "dispatched_at": "2026-03-09T01:05:58Z",
+      "issue": 843,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "cycle-receipts tool (per Eva #830)"
     }
   ],
   "audit_processed": [
@@ -2279,16 +2286,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#838 Cycle 198 review (cycle 198)",
+    "dispatch_log_latest": "#843 cycle-receipts tool (per Eva #830) (cycle 199)",
     "dispatch_to_pr_rate": "97.0%",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 226,
     "pr_merge_rate": "99.1%",
     "produced_pr": 228,
     "resolved": 233,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 233
+    "total_dispatches": 234
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
