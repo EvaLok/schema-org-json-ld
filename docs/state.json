@@ -2283,6 +2283,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "[Cycle Review] Cycle 204 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-09T09:35:42Z",
+      "issue": 886,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 204 end-of-cycle review"
     }
   ],
   "audit_processed": [
@@ -2428,16 +2435,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#886 [Cycle Review] Cycle 204 end-of-cycle review (cycle 204)",
+    "dispatch_log_latest": "#886 Cycle 204 end-of-cycle review (cycle 204)",
     "dispatch_to_pr_rate": "97.6%",
-    "in_flight": 2,
+    "in_flight": 3,
     "merged": 242,
     "pr_merge_rate": "99.2%",
     "produced_pr": 244,
     "resolved": 249,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 251
+    "total_dispatches": 252
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
