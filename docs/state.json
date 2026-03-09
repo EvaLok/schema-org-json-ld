@@ -2306,7 +2306,8 @@
     153,
     155,
     157,
-    160
+    160,
+    162
   ],
   "blockers": [
     {
@@ -2371,7 +2372,7 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#869 Cycle 201b end-of-cycle review (cycle 201)",
-    "dispatch_to_pr_rate": "97.1%",
+    "dispatch_to_pr_rate": "96.7%",
     "in_flight": 3,
     "merged": 235,
     "pr_merge_rate": "99.2%",
@@ -2464,7 +2465,7 @@
       },
       "blockers": {
         "cadence": "after blocker state changes",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 202"
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
@@ -2504,7 +2505,7 @@
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 202"
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
@@ -2516,15 +2517,15 @@
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 202"
       },
       "qc_requests_pending": {
         "cadence": "after QC request creation or completion",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 202"
       },
       "qc_status": {
         "cadence": "after QC interactions",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 202"
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
@@ -2536,7 +2537,7 @@
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 202"
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
@@ -2544,7 +2545,7 @@
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 202"
       },
       "schema_status.planned_next": {
         "cadence": "after planning or completing types",
@@ -2552,11 +2553,11 @@
       },
       "schema_status.property_gap_audit": {
         "cadence": "after property gap fixes",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 202"
       },
       "schema_status.remaining_audit_findings": {
         "cadence": "after property gap fixes",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 202"
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
@@ -2564,39 +2565,39 @@
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 202"
       },
       "total_enums": {
         "cadence": "after enum additions",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 202"
       },
       "total_schema_classes": {
         "cadence": "after schema class additions",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 202"
       },
       "total_schema_types": {
         "cadence": "after schema type additions",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 202"
       },
       "total_standalone_testable_types": {
         "cadence": "after building-block-only type changes (publish gate)",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 202"
       },
       "total_sub_types": {
         "cadence": "after sub-type additions",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 202"
       },
       "total_testable_types": {
         "cadence": "after schema class or enum additions",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 202"
       },
       "total_testable_types_note": {
         "cadence": "after classification changes",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 202"
       },
       "type_classification": {
         "cadence": "after schema class additions/reclassifications",
-        "last_refreshed": "cycle 191"
+        "last_refreshed": "cycle 202"
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
