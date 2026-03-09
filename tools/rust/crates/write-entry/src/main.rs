@@ -308,6 +308,12 @@ fn resolve_journal_input(args: &JournalArgs) -> Result<JournalInput, String> {
     }
 
     if has_inline_journal_content(args) {
+        if args.previous_commitment_status.is_some() != args.previous_commitment_detail.is_some() {
+            return Err(
+                "previous-commitment override requires both --previous-commitment-status and --previous-commitment-detail".to_string(),
+            );
+        }
+
         return Ok(JournalInput {
             previous_commitment_status: args
                 .previous_commitment_status
@@ -1550,6 +1556,32 @@ Reflective log for the schema-org-json-ld orchestrator.
         assert_eq!(
             default_input.previous_commitment_detail,
             "No prior commitment recorded."
+        );
+    }
+
+    #[test]
+    fn journal_inline_flags_reject_previous_commitment_status_without_detail() {
+        let mut args = journal_args("Partial override");
+        args.section = vec!["Decisions::Closed the loop.".to_string()];
+        args.previous_commitment_status = Some("followed".to_string());
+
+        let error = resolve_journal_input(&args).unwrap_err();
+        assert_eq!(
+            error,
+            "previous-commitment override requires both --previous-commitment-status and --previous-commitment-detail"
+        );
+    }
+
+    #[test]
+    fn journal_inline_flags_reject_previous_commitment_detail_without_status() {
+        let mut args = journal_args("Partial override");
+        args.section = vec!["Decisions::Closed the loop.".to_string()];
+        args.previous_commitment_detail = Some("Done.".to_string());
+
+        let error = resolve_journal_input(&args).unwrap_err();
+        assert_eq!(
+            error,
+            "previous-commitment override requires both --previous-commitment-status and --previous-commitment-detail"
         );
     }
 
