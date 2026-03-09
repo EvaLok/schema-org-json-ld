@@ -2873,7 +2873,7 @@
           "chosen_path": "structural-fix",
           "rationale": "worklog-accuracy findings in cycles 204-208 consistently flagged placeholder text (Not provided., None.) in worklog status sections that contradict committed state.json data. Dispatched #917 to enhance write-entry to auto-populate status sections from state.json and fail-closed on placeholder text. Per audit #171.",
           "root_cause": "write-entry defaults to 'Not provided.' for --copilot-metrics, --publish-gate when CLI flags are not passed, instead of reading from state.json. The orchestrator does not always pass these flags.",
-          "verification_cycle": 209
+          "verification_cycle": null
         }
       ]
     },
