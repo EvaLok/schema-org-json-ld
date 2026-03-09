@@ -2310,6 +2310,15 @@
       "title": "Cycle 205 end-of-cycle review"
     }
   ],
+  "audit_dropped": [
+    {
+      "drop_rationale_issue": 891,
+      "dropped_cycle": 205,
+      "issue": 162,
+      "originally_accepted_cycle": 202,
+      "reason": "Existing mechanisms (per-cycle counts + escalation rule) provide sufficient accountability without per-finding granularity"
+    }
+  ],
   "audit_processed": [
     2,
     3,
@@ -2392,15 +2401,6 @@
     166,
     167
   ],
-  "audit_dropped": [
-    {
-      "issue": 162,
-      "originally_accepted_cycle": 202,
-      "dropped_cycle": 205,
-      "drop_rationale_issue": 891,
-      "reason": "Existing mechanisms (per-cycle counts + escalation rule) provide sufficient accountability without per-finding granularity"
-    }
-  ],
   "blockers": [
     {
       "description": "Phase 4c: npm publish requires Eva to create a GitHub Release (triggers publish-npm.yml workflow)",
@@ -2465,11 +2465,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#892 Cycle 205 end-of-cycle review (cycle 205)",
     "dispatch_to_pr_rate": "96.9%",
-    "in_flight": 3,
-    "merged": 244,
+    "in_flight": 2,
+    "merged": 245,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 246,
-    "resolved": 251,
+    "produced_pr": 247,
+    "resolved": 252,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 254
@@ -2567,7 +2567,7 @@
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 205"
+        "last_refreshed": "cycle 206"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
