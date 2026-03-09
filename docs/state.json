@@ -2418,6 +2418,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "process-review format tolerance"
+    },
+    {
+      "dispatched_at": "2026-03-09T22:20:26Z",
+      "issue": 931,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 211 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -2576,16 +2583,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#929 process-review format tolerance (cycle 211)",
+    "dispatch_log_latest": "#931 [Cycle Review] Cycle 211 end-of-cycle review (cycle 211)",
     "dispatch_to_pr_rate": "97.4%",
-    "in_flight": 2,
+    "in_flight": 3,
     "merged": 257,
     "pr_merge_rate": "99.2%",
     "produced_pr": 259,
     "resolved": 264,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 266
+    "total_dispatches": 267
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
