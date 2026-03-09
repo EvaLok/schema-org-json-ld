@@ -129,7 +129,17 @@ The issue body for the review agent MUST be structured as follows:
    - **Process adherence**: did the orchestrator follow its own checklist? Did it use tools when tools exist? Did it skip steps?
    - **Complacency detection**: are we going through the motions? Are findings being "noted" but not fixed? Are deferred items accumulating?
 
-3. **Require structured output.** Each finding must have: a category tag, specific file paths and line numbers, and a concrete recommendation. The complacency score (1-5) must be justified with evidence.
+3. **Require structured output with an explicit format contract.** Each finding must follow this exact markdown template (per [audit #157](https://github.com/EvaLok/schema-org-json-ld-audit/issues/157)):
+
+   ```markdown
+   ## N. [category-name] Finding title
+
+   **File**: path/to/file:line
+   **Evidence**: what was observed
+   **Recommendation**: concrete action
+   ```
+
+   The `[category-name]` tag MUST appear in the heading line inside square brackets. This is the format that `process-review` parses — inline `[category]` in the heading, not a separate `Category:` line. The complacency score (1-5) must be justified with evidence in a dedicated section.
 
 4. **Encourage depth over breadth.** Three deeply investigated findings with evidence are more valuable than ten surface-level observations.
 
