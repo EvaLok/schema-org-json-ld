@@ -2269,6 +2269,13 @@
       "pr": 881,
       "status": "merged",
       "title": "Cycle 203 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-09T09:30:35Z",
+      "issue": 884,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Enhance cycle-close: receipt table, priorities, worklog summary"
     }
   ],
   "audit_processed": [
@@ -2414,16 +2421,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#880 Cycle 203 end-of-cycle review (cycle 203)",
+    "dispatch_log_latest": "#884 Enhance cycle-close: receipt table, priorities, worklog summary (cycle 204)",
     "dispatch_to_pr_rate": "97.2%",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 242,
     "pr_merge_rate": "99.2%",
     "produced_pr": 244,
     "resolved": 249,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 249
+    "total_dispatches": 250
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
