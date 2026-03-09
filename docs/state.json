@@ -3687,9 +3687,24 @@
         "finding_count": 4,
         "ignored": 0,
         "note": "Findings: tooling-contract (cycle-close missing acceptance criteria), receipt-integrity (nonexistent SHA repeated), review-accounting (process-review not run), process-adherence (step batching). All 4 actioned in cycle 204: tooling-contract (follow-up dispatch), receipt-integrity (mechanical receipts), review-accounting (state updated), process-adherence (audit #164 checklist fix)."
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "worklog-accuracy",
+          "review-accounting",
+          "journal-quality",
+          "field-inventory"
+        ],
+        "complacency_score": 4,
+        "cycle": 204,
+        "deferred": 2,
+        "finding_count": 4,
+        "ignored": 0,
+        "note": "Findings: worklog-accuracy (bare #N auto-links to wrong issue), review-accounting (dispatched counted as actioned), journal-quality (write-entry bug still producing contradictory output), field-inventory (every-cycle fields stale, tooling grace too permissive). Actioned 2 (review-accounting standard tightened, field-inventory entries refreshed). Deferred 2 (worklog-accuracy needs write-entry fix, journal-quality needs write-entry bug fix)."
       }
     ],
-    "last_review_cycle": 203
+    "last_review_cycle": 204
   },
   "schema_status": {
     "directory_layout": {
