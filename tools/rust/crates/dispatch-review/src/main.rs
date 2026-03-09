@@ -178,11 +178,11 @@ fn record_created_issue(
         title,
         model,
         &current_utc_timestamp(),
-    )?;
-    write_state_value(repo_root, &state)?;
-    let commit_message = dispatch_commit_message(issue, cycle);
-    let _ = commit_state_json(repo_root, &commit_message)?;
-    Ok(())
+	)?;
+	write_state_value(repo_root, &state)?;
+	let commit_message = dispatch_commit_message(issue, cycle);
+	commit_state_json(repo_root, &commit_message)?;
+	Ok(())
 }
 
 fn create_issue(payload: &ReviewIssuePayload) -> Result<CreatedIssue, String> {
