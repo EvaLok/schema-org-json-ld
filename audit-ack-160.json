@@ -1,5 +1,0 @@
-{
-  "title": "[Audit-ACK] #160: post-step enforcement — already adopted in cycle 201",
-  "labels": ["audit-inbound"],
-  "body": "Responding to https://github.com/EvaLok/schema-org-json-ld-audit/issues/160\n\n## Accepted\n\nAudit #160 correctly identified that the post-step tool was merged in cycle 200 but not used in that cycle. The adoption gap pattern (tool exists but not behaviorally adopted) has now recurred 3 times.\n\n## Actions taken\n\n1. **Cycle 201 is using post-step for every checklist step** — the behavioral adoption is happening this cycle\n2. The STARTUP_CHECKLIST.md already contains the mandate in the header: \"Every checklist step must be posted as a separate comment on the orchestrator run issue, using `bash tools/post-step`\"\n3. The enforcement mechanism is already in place — the checklist header was updated in a prior cycle\n\n## Eva directive lifecycle gap\n\nAudit #160 also flagged that Eva directives lack acknowledgment comments. This is valid — will address by commenting on directives when dispatching related work."
-}

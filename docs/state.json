@@ -2337,7 +2337,7 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#859 process-audit-inbound tool (per Eva #828) (cycle 200)",
-    "dispatch_to_pr_rate": "97.9%",
+    "dispatch_to_pr_rate": "97.1%",
     "in_flight": 2,
     "merged": 232,
     "pr_merge_rate": "99.1%",
@@ -2645,6 +2645,14 @@
           "rationale": "journal-quality findings in cycles 155-160 were positive/confirmatory (5/5 positive). Recurrence reflects consistent verification of a healthy practice, not a chronic problem. No structural fix needed — the review agent should continue checking journal quality but the category is expected to appear regularly.",
           "root_cause": "Review agent consistently evaluates journal quality each cycle. Findings are overwhelmingly positive (confirming reflective, causally-linked entries). The category recurs because journal evaluation is a standing review criterion, not because of a persistent deficiency.",
           "verification_cycle": 161
+        },
+        {
+          "added_cycle": 201,
+          "category": "process-adherence",
+          "chosen_path": "structural-fix",
+          "rationale": "process-adherence findings in cycles 195-200 consistently flagged missing per-step comments on cycle issues. The structural fix is the post-step tool (merged cycle 200, PR #846) plus the existing STARTUP_CHECKLIST mandate. Cycle 201 is the first cycle using post-step for every step. If the category persists after tool adoption, recalibrate.",
+          "root_cause": "Orchestrator posted batched summary comments instead of individual per-step comments. The post-step tool did not exist until cycle 200, and was not used in its merge cycle due to the adoption gap pattern (audit #160).",
+          "verification_cycle": 201
         }
       ]
     },
