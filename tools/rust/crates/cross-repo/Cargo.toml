@@ -1,0 +1,11 @@
+[package]
+name = "cross-repo"
+version = "0.1.0"
+edition = "2021"
+description = "Read-only cross-repo QC and audit polling for the orchestrator"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+state-schema = { path = "../state-schema" }
