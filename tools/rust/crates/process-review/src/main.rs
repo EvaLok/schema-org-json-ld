@@ -489,6 +489,10 @@ fn extract_category_line(line: &str) -> Option<&str> {
 }
 
 fn next_non_empty_line<'a>(lines: &[&'a str], start_index: usize) -> Option<&'a str> {
+    if start_index >= lines.len() {
+        return None;
+    }
+
     lines[start_index..]
         .iter()
         .copied()
@@ -1130,7 +1134,7 @@ Category: Review Accounting
     fn parse_review_rejects_missing_category_by_default() {
         let path = Path::new("docs/reviews/cycle-162.md");
         let error = parse_review(path, SAMPLE_REVIEW, false).expect_err("parse should fail");
-        assert!(error.contains("Finding 3"));
+        assert!(error.contains("Finding 3 has no category tag"));
     }
 
     #[test]
