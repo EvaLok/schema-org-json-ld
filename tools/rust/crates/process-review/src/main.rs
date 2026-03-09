@@ -36,6 +36,10 @@ struct Cli {
     #[arg(long, default_value_t = false)]
     skip_disposition_check: bool,
 
+    /// Warn on malformed review artifacts instead of failing before state updates
+    #[arg(long, default_value_t = false)]
+    lenient: bool,
+
     /// Optional note for the review history entry
     #[arg(long)]
     note: Option<String>,
@@ -81,7 +85,7 @@ fn run(cli: Cli) -> Result<(), String> {
     let review_content = fs::read_to_string(&review_path)
         .map_err(|error| format!("failed to read {}: {}", review_path.display(), error))?;
 
-    let parsed_review = parse_review(&review_path, &review_content)?;
+    let parsed_review = parse_review(&review_path, &review_content, cli.lenient)?;
     validate_dispositions(&cli, parsed_review.finding_count)?;
     let entry = build_history_entry(&parsed_review, &cli);
 
@@ -158,13 +162,24 @@ fn resolve_review_path(repo_root: &Path, review_file: &Path) -> PathBuf {
     }
 }
 
-fn parse_review(review_path: &Path, content: &str) -> Result<ParsedReview, String> {
+fn parse_review(review_path: &Path, content: &str, lenient: bool) -> Result<ParsedReview, String> {
     let cycle = extract_cycle_number(review_path).ok_or_else(|| {
         format!(
             "failed to derive cycle number from {}",
             review_path.display()
         )
     })?;
+
+    let validation_errors = validate_review_format(content);
+    if !validation_errors.is_empty() {
+        if lenient {
+            for error in &validation_errors {
+                eprintln!("Warning: {} (continuing because --lenient was passed)", error);
+            }
+        } else {
+            return Err(validation_errors.join("; "));
+        }
+    }
 
     let complacency_score = match extract_score(content) {
         Some(value) => value,
@@ -193,6 +208,76 @@ fn parse_review(review_path: &Path, content: &str) -> Result<ParsedReview, Strin
         complacency_score,
         categories,
     })
+}
+
+fn validate_review_format(content: &str) -> Vec<String> {
+    let mut errors = Vec::new();
+    let mut found_heading = false;
+    let mut in_findings = false;
+    let mut in_code_block = false;
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        let lower = trimmed.to_ascii_lowercase();
+
+        if lower.starts_with("## findings") {
+            in_findings = true;
+            in_code_block = false;
+            continue;
+        }
+
+        if in_findings && lower.starts_with("## ") && !lower.starts_with("## findings") {
+            break;
+        }
+
+        if !in_findings {
+            continue;
+        }
+
+        if trimmed.starts_with("```") {
+            in_code_block = !in_code_block;
+            continue;
+        }
+
+        if in_code_block {
+            continue;
+        }
+
+        if let Some(number) = numbered_finding_number(trimmed) {
+            found_heading = true;
+
+            match extract_inline_category(trimmed) {
+                Some(raw_category) => {
+                    if normalize_category(raw_category).is_none() {
+                        errors.push(format!(
+                            "Finding {} has an invalid [category] tag in heading",
+                            number
+                        ));
+                    }
+                }
+                None => errors.push(format!(
+                    "Finding {} has no [category] tag in heading",
+                    number
+                )),
+            }
+        }
+    }
+
+    if !found_heading {
+        errors.push(
+            "review markdown must contain at least one numbered finding heading in the Findings section"
+                .to_string(),
+        );
+    }
+
+    if extract_score(content).is_none() {
+        errors.push(
+            "review markdown must contain a complacency score section with a parsable N/5 score"
+                .to_string(),
+        );
+    }
+
+    errors
 }
 
 fn extract_cycle_number(path: &Path) -> Option<u64> {
@@ -288,23 +373,27 @@ fn count_numbered_findings_in_findings_section(content: &str) -> usize {
 }
 
 fn is_numbered_finding_heading(line: &str) -> bool {
+    numbered_finding_number(line).is_some()
+}
+
+fn numbered_finding_number(line: &str) -> Option<u64> {
     let mut chars = line.chars().peekable();
-    let mut saw_digit = false;
+    let mut digits = String::new();
     while let Some(ch) = chars.peek() {
         if ch.is_ascii_digit() {
-            saw_digit = true;
+            digits.push(*ch);
             chars.next();
         } else {
             break;
         }
     }
 
-    if !saw_digit {
-        return false;
+    if digits.is_empty() {
+        return None;
     }
 
     if !matches!(chars.next(), Some('.')) {
-        return false;
+        return None;
     }
 
     let mut saw_whitespace = false;
@@ -317,7 +406,11 @@ fn is_numbered_finding_heading(line: &str) -> bool {
         }
     }
 
-    saw_whitespace && chars.next() == Some('*') && chars.next() == Some('*')
+    if !saw_whitespace || chars.next() != Some('*') || chars.next() != Some('*') {
+        return None;
+    }
+
+    digits.parse::<u64>().ok()
 }
 
 fn extract_categories(content: &str) -> Vec<String> {
@@ -626,6 +719,8 @@ mod tests {
 
     const CYCLE_196_REVIEW: &str =
         include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../docs/reviews/cycle-196.md"));
+    const CYCLE_197_REVIEW: &str =
+        include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../docs/reviews/cycle-197.md"));
 
     #[test]
     fn help_contains_expected_flags() {
@@ -639,7 +734,19 @@ mod tests {
         assert!(help.contains("--deferred"));
         assert!(help.contains("--ignored"));
         assert!(help.contains("--skip-disposition-check"));
+        assert!(help.contains("--lenient"));
         assert!(help.contains("--note"));
+    }
+
+    #[test]
+    fn cli_accepts_lenient_flag() {
+        assert!(Cli::try_parse_from([
+            "process-review",
+            "--review-file",
+            "docs/reviews/cycle-162.md",
+            "--lenient",
+        ])
+        .is_ok());
     }
 
     #[test]
@@ -993,9 +1100,71 @@ mod tests {
     #[test]
     fn parse_review_extracts_cycle_from_filename() {
         let path = Path::new("docs/reviews/cycle-162.md");
-        let parsed = parse_review(path, SAMPLE_REVIEW).expect("parse should succeed");
+        let parsed = parse_review(path, SAMPLE_REVIEW, true).expect("parse should succeed");
         assert_eq!(parsed.cycle, 162);
         assert_eq!(parsed.complacency_score, 2);
         assert_eq!(parsed.finding_count, 3);
+    }
+
+    #[test]
+    fn parse_review_rejects_missing_inline_category_tags_by_default() {
+        let path = Path::new("docs/reviews/cycle-162.md");
+        let error = parse_review(path, SAMPLE_REVIEW, false).expect_err("parse should fail");
+        assert!(error.contains("Finding 1 has no [category] tag in heading"));
+    }
+
+    #[test]
+    fn parse_review_accepts_cycle_197_artifact() {
+        let path = Path::new("docs/reviews/cycle-197.md");
+        let parsed = parse_review(path, CYCLE_197_REVIEW, false).expect("parse should succeed");
+        assert_eq!(parsed.cycle, 197);
+        assert_eq!(parsed.complacency_score, 5);
+        assert_eq!(parsed.finding_count, 4);
+    }
+
+    #[test]
+    fn parse_review_lenient_mode_accepts_legacy_category_lines() {
+        let path = Path::new("docs/reviews/cycle-162.md");
+        let parsed = parse_review(path, SAMPLE_REVIEW, true).expect("parse should succeed");
+        assert_eq!(
+            parsed.categories,
+            vec!["data-integrity".to_string(), "process-integrity".to_string()]
+        );
+    }
+
+    #[test]
+    fn review_format_validation_rejects_missing_finding_headings() {
+        let markdown = r#"## Findings
+
+No numbered findings here.
+
+## Complacency score
+
+**2/5**
+"#;
+
+        assert_eq!(
+            validate_review_format(markdown),
+            vec![
+                "review markdown must contain at least one numbered finding heading in the Findings section"
+                    .to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn review_format_validation_rejects_missing_complacency_score_section() {
+        let markdown = r#"## Findings
+
+1. **[tooling-contract] Finding title**
+"#;
+
+        assert_eq!(
+            validate_review_format(markdown),
+            vec![
+                "review markdown must contain a complacency score section with a parsable N/5 score"
+                    .to_string(),
+            ]
+        );
     }
 }
