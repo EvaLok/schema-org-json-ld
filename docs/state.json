@@ -2462,19 +2462,18 @@
       831,
       834,
       837,
-      840
+      840,
+      841
     ],
     "closed_this_cycle": [
-      829,
-      840
+      841
     ],
     "remaining_open": [
       436,
       699,
       808,
       809,
-      828,
-      841
+      828
     ]
   },
   "field_inventory": {
@@ -2502,11 +2501,11 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 202"
+        "last_refreshed": "cycle 203"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 202"
+        "last_refreshed": "cycle 203"
       },
       "last_cycle": {
         "cadence": "every cycle",
