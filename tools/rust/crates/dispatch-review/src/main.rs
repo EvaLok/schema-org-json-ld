@@ -1,11 +1,10 @@
 use clap::Parser;
-use record_dispatch::{
-    apply_dispatch_patch, build_dispatch_patch, current_utc_timestamp, dispatch_commit_message,
-};
+use record_dispatch::{apply_dispatch_patch, build_dispatch_patch, dispatch_commit_message};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use state_schema::{
-    commit_state_json, current_cycle_from_state, read_state_value, write_state_value,
+    commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
+    write_state_value,
 };
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -178,11 +177,11 @@ fn record_created_issue(
         title,
         model,
         &current_utc_timestamp(),
-	)?;
-	write_state_value(repo_root, &state)?;
-	let commit_message = dispatch_commit_message(issue, cycle);
-	commit_state_json(repo_root, &commit_message)?;
-	Ok(())
+    )?;
+    write_state_value(repo_root, &state)?;
+    let commit_message = dispatch_commit_message(issue, cycle);
+    commit_state_json(repo_root, &commit_message)?;
+    Ok(())
 }
 
 fn create_issue(payload: &ReviewIssuePayload) -> Result<CreatedIssue, String> {

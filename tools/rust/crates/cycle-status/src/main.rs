@@ -1,7 +1,8 @@
 use chrono::{DateTime, TimeDelta, Utc};
 use clap::Parser;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use serde_json::Value;
+use state_schema::{PublishGate, StateJson};
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -26,25 +27,6 @@ struct Cli {
     /// Output report as JSON
     #[arg(long)]
     json: bool,
-}
-
-#[derive(Default, Deserialize)]
-struct StateJson {
-    last_cycle: Option<LastCycle>,
-    qc_processed: Option<Vec<u64>>,
-    audit_processed: Option<Vec<u64>>,
-    publish_gate: Option<PublishGate>,
-}
-
-#[derive(Deserialize)]
-struct LastCycle {
-    timestamp: String,
-}
-
-#[derive(Deserialize)]
-struct PublishGate {
-    status: Option<String>,
-    validated_commit: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -152,15 +134,15 @@ fn main() {
     let cli = Cli::parse();
     let mut errors = Vec::new();
     let state = read_state_json(&cli.repo_root.join("docs/state.json"), &mut errors);
+    let publish_gate = read_publish_gate(&state, &mut errors);
     let last_cycle_timestamp = resolve_last_cycle_timestamp(&cli, &state, &mut errors);
 
     let eva_input = gather_eva_input(&last_cycle_timestamp, &mut errors);
     let agent_status = gather_agent_status(&mut errors);
     let qc_status = gather_qc_status(&state, &mut errors);
     let audit_status = gather_audit_status(&state, &mut errors);
-    let commit_freeze = check_commit_freeze(&cli.repo_root, &state, &mut errors);
-    let publish_gate_status = state
-        .publish_gate
+    let commit_freeze = check_commit_freeze(&cli.repo_root, publish_gate.as_ref(), &mut errors);
+    let publish_gate_status = publish_gate
         .as_ref()
         .and_then(|gate| gate.status.as_deref());
 
@@ -241,10 +223,43 @@ fn read_state_json(path: &Path, errors: &mut Vec<String>) -> StateJson {
     };
 
     match serde_json::from_str::<StateJson>(&content) {
-        Ok(state) => state,
+        Ok(state) => {
+            if state.qc_processed.iter().any(|value| *value < 0) {
+                errors.push(format!(
+                    "Failed to parse {}: qc_processed must contain only non-negative integers",
+                    path.display()
+                ));
+                return StateJson::default();
+            }
+            if state.audit_processed.iter().any(|value| *value < 0) {
+                errors.push(format!(
+                    "Failed to parse {}: audit_processed must contain only non-negative integers",
+                    path.display()
+                ));
+                return StateJson::default();
+            }
+            if let Err(error) = state.publish_gate() {
+                if error != "missing field: publish_gate" {
+                    errors.push(format!("Failed to parse {}: {}", path.display(), error));
+                    return StateJson::default();
+                }
+            }
+            state
+        }
         Err(e) => {
             errors.push(format!("Failed to parse {}: {}", path.display(), e));
             StateJson::default()
+        }
+    }
+}
+
+fn read_publish_gate(state: &StateJson, errors: &mut Vec<String>) -> Option<PublishGate> {
+    match state.publish_gate() {
+        Ok(publish_gate) => Some(publish_gate),
+        Err(error) if error == "missing field: publish_gate" => None,
+        Err(error) => {
+            errors.push(error);
+            None
         }
     }
 }
@@ -253,7 +268,7 @@ fn resolve_last_cycle_timestamp(cli: &Cli, state: &StateJson, errors: &mut Vec<S
     if let Some(cli_timestamp) = &cli.last_cycle_timestamp {
         return cli_timestamp.clone();
     }
-    if let Some(state_timestamp) = state.last_cycle.as_ref().map(|c| c.timestamp.clone()) {
+    if let Some(state_timestamp) = state.last_cycle.timestamp.clone() {
         return state_timestamp;
     }
     let fallback = "1970-01-01T00:00:00Z".to_string();
@@ -486,8 +501,7 @@ fn collect_stale_dispatches(
                 let issue_tag = format!("#{}", issue.number);
                 // Word-boundary title match: `#N` must not be followed by a digit
                 // (avoids #1 matching inside #101).
-                let title_matches =
-                    contains_issue_tag_at_word_boundary(&pr.title, &issue_tag);
+                let title_matches = contains_issue_tag_at_word_boundary(&pr.title, &issue_tag);
                 // Body match: Fixes/Closes/Resolves #N (case-insensitive)
                 let body_matches = pr.body.as_deref().is_some_and(|body| {
                     let lower = body.to_lowercase();
@@ -562,13 +576,10 @@ fn report_exit_code(report: &Report, publish_gate_status: Option<&str>) -> i32 {
 
 fn check_commit_freeze(
     repo_root: &Path,
-    state: &StateJson,
+    publish_gate: Option<&PublishGate>,
     errors: &mut Vec<String>,
 ) -> Option<CommitFreezeStatus> {
-    let validated_commit = state
-        .publish_gate
-        .as_ref()
-        .and_then(|gate| gate.validated_commit.clone())?;
+    let validated_commit = publish_gate.and_then(|gate| gate.validated_commit.clone())?;
 
     // Validate the commit SHA format before using it in a git command.
     if !is_valid_commit_sha(&validated_commit) {
@@ -700,7 +711,7 @@ fn check_commit_freeze(
 }
 
 fn gather_qc_status(state: &StateJson, errors: &mut Vec<String>) -> ProcessingStatus {
-    let processed_set = to_set(state.qc_processed.as_ref());
+    let processed_set = to_set(&state.qc_processed);
     gather_processing_status(
         errors,
         "QC outbound query failed",
@@ -726,7 +737,7 @@ fn gather_qc_status(state: &StateJson, errors: &mut Vec<String>) -> ProcessingSt
 }
 
 fn gather_audit_status(state: &StateJson, errors: &mut Vec<String>) -> ProcessingStatus {
-    let processed_set = to_set(state.audit_processed.as_ref());
+    let processed_set = to_set(&state.audit_processed);
     gather_processing_status(
         errors,
         "Audit outbound query failed",
@@ -1111,11 +1122,11 @@ fn print_human_report(report: &Report) {
     }
 }
 
-fn to_set(values: Option<&Vec<u64>>) -> HashSet<u64> {
-    match values {
-        Some(numbers) => numbers.iter().copied().collect(),
-        None => HashSet::new(),
-    }
+fn to_set(values: &[i64]) -> HashSet<u64> {
+    values
+        .iter()
+        .filter_map(|value| u64::try_from(*value).ok())
+        .collect()
 }
 
 fn to_simple_issue(value: &Value) -> Option<SimpleIssue> {
@@ -1323,7 +1334,10 @@ mod tests {
         let stale = collect_stale_dispatches(&issues, &open_prs, now, &mut errors);
 
         assert!(errors.is_empty());
-        assert!(stale.is_empty(), "Issue younger than 2h should not be stale");
+        assert!(
+            stale.is_empty(),
+            "Issue younger than 2h should not be stale"
+        );
     }
 
     #[test]
@@ -1512,7 +1526,10 @@ mod tests {
         );
     }
 
-    fn sample_report(commit_freeze: Option<CommitFreezeStatus>, action_items: Vec<String>) -> Report {
+    fn sample_report(
+        commit_freeze: Option<CommitFreezeStatus>,
+        action_items: Vec<String>,
+    ) -> Report {
         Report {
             generated_at: "2026-03-08T00:00:00Z".to_string(),
             last_cycle_timestamp: "2026-03-08T00:00:00Z".to_string(),

@@ -1,9 +1,8 @@
-use chrono::Utc;
 use clap::Parser;
 use serde_json::{json, Value};
 use state_schema::{
-    commit_state_json, current_cycle_from_state, read_state_value, set_value_at_pointer,
-    write_state_value,
+    commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
+    set_value_at_pointer, write_state_value,
 };
 use std::path::PathBuf;
 
@@ -104,15 +103,7 @@ fn get_metric_i64(state: &Value, field: &str) -> Result<i64, String> {
         })
 }
 
-fn current_utc_timestamp() -> String {
-    Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string()
-}
-
-fn compute_update(
-    state: &Value,
-    cycle: u64,
-    prs: &[u64],
-) -> Result<MergeUpdate, String> {
+fn compute_update(state: &Value, cycle: u64, prs: &[u64]) -> Result<MergeUpdate, String> {
     let merged = get_metric_i64(state, "merged")?;
     let resolved = get_metric_i64(state, "resolved")?;
     let in_flight = get_metric_i64(state, "in_flight")?;
@@ -412,7 +403,10 @@ mod tests {
         assert_eq!(state["copilot_metrics"]["in_flight"], json!(2));
         assert_eq!(state["copilot_metrics"]["produced_pr"], json!(85));
         assert_eq!(state["copilot_metrics"]["pr_merge_rate"], json!("80/84"));
-        assert_eq!(state["copilot_metrics"]["dispatch_to_pr_rate"], json!("84/85"));
+        assert_eq!(
+            state["copilot_metrics"]["dispatch_to_pr_rate"],
+            json!("84/85")
+        );
         assert_eq!(
             state["field_inventory"]["fields"]["copilot_metrics.pr_merge_rate"]["last_refreshed"],
             json!("cycle 163")

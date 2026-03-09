@@ -1,10 +1,10 @@
 use clap::Parser;
 use record_dispatch::{
-    apply_dispatch_patch, build_dispatch_patch, current_utc_timestamp, dispatch_commit_message,
-    resolve_model,
+    apply_dispatch_patch, build_dispatch_patch, dispatch_commit_message, resolve_model,
 };
 use state_schema::{
-    commit_state_json, current_cycle_from_state, read_state_value, write_state_value,
+    commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
+    write_state_value,
 };
 use std::path::PathBuf;
 

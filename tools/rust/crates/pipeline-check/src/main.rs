@@ -1,8 +1,7 @@
-use chrono::Utc;
 use clap::Parser;
 use serde::Serialize;
 use serde_json::Value;
-use state_schema::{current_cycle_from_state, read_state_value};
+use state_schema::{current_cycle_from_state, current_utc_timestamp, read_state_value};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -223,7 +222,7 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
 		cycle,
 		overall,
 		has_blocking_findings,
-		timestamp: Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+		timestamp: current_utc_timestamp(),
 		steps,
 	}
 }

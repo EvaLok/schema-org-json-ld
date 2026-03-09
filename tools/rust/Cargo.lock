@@ -236,6 +236,7 @@ dependencies = [
  "clap",
  "serde",
  "serde_json",
+ "state-schema",
 ]
 
 [[package]]
@@ -379,7 +380,6 @@ checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
 name = "pipeline-check"
 version = "0.1.0"
 dependencies = [
- "chrono",
  "clap",
  "serde",
  "serde_json",
@@ -439,7 +439,6 @@ dependencies = [
 name = "process-merge"
 version = "0.1.0"
 dependencies = [
- "chrono",
  "clap",
  "serde",
  "serde_json",
@@ -469,7 +468,6 @@ dependencies = [
 name = "record-dispatch"
 version = "0.1.0"
 dependencies = [
- "chrono",
  "clap",
  "serde",
  "serde_json",
@@ -545,6 +543,7 @@ dependencies = [
 name = "state-schema"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "serde",
  "serde_json",
 ]
