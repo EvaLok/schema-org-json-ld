@@ -523,13 +523,18 @@ fn verify_artifacts_for_date(repo_root: &Path, today: &str) -> StepReport {
 }
 
 fn verify_journal_freshness(repo_root: &Path, today: &str) -> Result<(StepStatus, String), String> {
-	let journal_path = repo_root.join("JOURNAL.md");
-	let content = fs::read_to_string(&journal_path)
-		.map_err(|error| format!("failed to read {}: {}", journal_path.display(), error))?;
-	let Some(latest) = latest_journal_heading_date(&content) else {
+	let journal_dir = repo_root.join("docs/journal");
+	if !journal_dir.is_dir() {
 		return Ok((
 			StepStatus::Warn,
-			format!("JOURNAL.md at {} has no dated headings", journal_path.display()),
+			format!("docs/journal/ directory is missing at {}", journal_dir.display()),
+		));
+	}
+
+	let Some(latest) = latest_journal_file_date(&journal_dir)? else {
+		return Ok((
+			StepStatus::Warn,
+			format!("docs/journal/ has no dated journal files at {}", journal_dir.display()),
 		));
 	};
 	let latest_date = parse_iso_date(&latest)?;
@@ -539,12 +544,12 @@ fn verify_journal_freshness(repo_root: &Path, today: &str) -> Result<(StepStatus
 	if days_ago > 1 {
 		Ok((
 			StepStatus::Warn,
-			format!("JOURNAL.md last entry is from {}, {} days ago", latest, days_ago),
+			format!("Journal last entry is from {}, {} days ago", latest, days_ago),
 		))
 	} else {
 		Ok((
 			StepStatus::Pass,
-			format!("JOURNAL.md current (last entry {})", latest),
+			format!("Journal current (last entry {})", latest),
 		))
 	}
 }
@@ -601,14 +606,42 @@ fn verify_review_artifact_exists(repo_root: &Path) -> Result<(StepStatus, String
 	}
 }
 
-fn latest_journal_heading_date(content: &str) -> Option<String> {
-	content
-		.lines()
-		.filter_map(|line| line.strip_prefix("## "))
-		.map(str::trim)
-		.filter(|candidate| is_iso_date(candidate))
-		.map(str::to_string)
-		.next_back()
+fn latest_journal_file_date(journal_dir: &Path) -> Result<Option<String>, String> {
+	let entries = fs::read_dir(journal_dir)
+		.map_err(|error| format!("failed to read {}: {}", journal_dir.display(), error))?;
+	let mut latest = None;
+
+	for entry in entries {
+		let entry = entry
+			.map_err(|error| format!("failed to read {}: {}", journal_dir.display(), error))?;
+		if !entry
+			.file_type()
+			.map_err(|error| format!("failed to inspect {}: {}", entry.path().display(), error))?
+			.is_file()
+		{
+			continue;
+		}
+
+		let file_name = entry.file_name();
+		let Some(file_name) = file_name.to_str() else {
+			continue;
+		};
+		let Some(candidate) = file_name.strip_suffix(".md") else {
+			continue;
+		};
+		if !is_iso_date(candidate) {
+			continue;
+		}
+
+		if latest
+			.as_deref()
+			.is_none_or(|current| candidate > current)
+		{
+			latest = Some(candidate.to_string());
+		}
+	}
+
+	Ok(latest)
 }
 
 fn is_iso_date(value: &str) -> bool {
@@ -1402,7 +1435,8 @@ mod tests {
 		)
 		.unwrap();
 		let today = &current_utc_timestamp()[..10];
-		fs::write(root.join("JOURNAL.md"), format!("## {}\n\nEntry\n", today)).unwrap();
+		fs::create_dir_all(root.join("docs/journal")).unwrap();
+		fs::write(root.join("docs/journal").join(format!("{}.md", today)), "# Journal\n").unwrap();
 		fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
 		fs::write(root.join("docs/worklog").join(today).join("entry.md"), "worklog").unwrap();
 		fs::create_dir_all(root.join("docs/reviews")).unwrap();
@@ -1532,21 +1566,18 @@ mod tests {
 	}
 
 	#[test]
-	fn latest_journal_heading_date_returns_last_heading() {
-		let journal = "\
-# Journal
-
-## 2026-03-05
-
-Early entry
-
-## 2026-03-08
-
-Recent entry
-";
+	fn latest_journal_file_date_returns_most_recent_filename() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let journal_dir =
+			std::env::temp_dir().join(format!("pipeline-check-journal-files-{}", run_id));
+		fs::create_dir_all(&journal_dir).unwrap();
+		fs::write(journal_dir.join("2026-03-05.md"), "# Journal\n").unwrap();
+		fs::write(journal_dir.join("notes.md"), "# Notes\n").unwrap();
+		fs::write(journal_dir.join("2026-03-08.md"), "# Journal\n").unwrap();
 
 		assert_eq!(
-			latest_journal_heading_date(journal).as_deref(),
+			latest_journal_file_date(&journal_dir).unwrap().as_deref(),
 			Some("2026-03-08")
 		);
 	}
@@ -1556,8 +1587,8 @@ Recent entry
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
 		let root = std::env::temp_dir().join(format!("pipeline-check-artifacts-warn-{}", run_id));
-		fs::create_dir_all(root.join("docs")).unwrap();
-		fs::write(root.join("JOURNAL.md"), "## 2026-03-06\n\nEntry\n").unwrap();
+		fs::create_dir_all(root.join("docs/journal")).unwrap();
+		fs::write(root.join("docs/journal/2026-03-06.md"), "# Journal\n").unwrap();
 		fs::write(
 			root.join("docs/state.json"),
 			json!({
@@ -1576,7 +1607,7 @@ Recent entry
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("JOURNAL.md last entry is from 2026-03-06, 3 days ago"));
+			.contains("Journal last entry is from 2026-03-06, 3 days ago"));
 		assert!(step
 			.detail
 			.as_deref()
@@ -1590,14 +1621,45 @@ Recent entry
 	}
 
 	#[test]
-	fn artifact_verification_warns_when_journal_has_no_dated_headings() {
+	fn artifact_verification_passes_when_journal_exists_for_today() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-		let root =
-			std::env::temp_dir().join(format!("pipeline-check-artifacts-no-journal-date-{}", run_id));
+		let root = std::env::temp_dir()
+			.join(format!("pipeline-check-artifacts-current-journal-{}", run_id));
+		fs::create_dir_all(root.join("docs/journal")).unwrap();
 		fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
 		fs::create_dir_all(root.join("docs/reviews")).unwrap();
-		fs::write(root.join("JOURNAL.md"), "# Journal\n\nUndated entry\n").unwrap();
+		fs::write(root.join("docs/journal/2026-03-09.md"), "# Journal\n").unwrap();
+		fs::write(root.join("docs/worklog/2026-03-09/entry.md"), "worklog").unwrap();
+		fs::write(root.join("docs/reviews/cycle-208.md"), "review").unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"review_agent": {
+					"last_review_cycle": 208
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		let step = verify_artifacts_for_date(&root, "2026-03-09");
+		assert_eq!(step.status, StepStatus::Pass);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("Journal current (last entry 2026-03-09)"));
+	}
+
+	#[test]
+	fn artifact_verification_warns_when_journal_directory_is_missing() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir()
+			.join(format!("pipeline-check-artifacts-missing-journal-dir-{}", run_id));
+		fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+		fs::create_dir_all(root.join("docs/reviews")).unwrap();
 		fs::write(root.join("docs/worklog/2026-03-09/entry.md"), "worklog").unwrap();
 		fs::write(root.join("docs/reviews/cycle-208.md"), "review").unwrap();
 		fs::write(
@@ -1617,6 +1679,6 @@ Recent entry
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("JOURNAL.md at"));
+			.contains("docs/journal/ directory is missing"));
 	}
 }
