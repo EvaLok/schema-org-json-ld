@@ -2249,6 +2249,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Cycle 202 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-09T08:02:41Z",
+      "issue": 878,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cross-repo processing tool (Eva #828)"
     }
   ],
   "audit_processed": [
@@ -2393,16 +2400,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#875 Cycle 202 end-of-cycle review (cycle 202)",
+    "dispatch_log_latest": "#878 Cross-repo processing tool (Eva #828) (cycle 203)",
     "dispatch_to_pr_rate": "97.2%",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 240,
     "pr_merge_rate": "99.2%",
     "produced_pr": 242,
     "resolved": 247,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 247
+    "total_dispatches": 248
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
