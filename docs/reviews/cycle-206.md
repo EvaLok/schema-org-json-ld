@@ -1,0 +1,20 @@
+## Findings
+
+## 1. [worklog-accuracy] The cycle 206 worklog still records placeholder and contradictory status data
+**File**: docs/worklog/2026-03-09/123346-cycle-206-summary.md:17-34
+**Evidence**: The worklog says `PRs reviewed: None.` and `Issues processed: None.`, even though the same document says PRs `#893` and `#890` were merged and step 5 on issue `#894` explicitly processed audits `#166` and `#167`. Its `Current state` block is also stale/incomplete: it reports `Pipeline status: 5/6 PASS`, `Copilot metrics: Not provided.`, and `Publish gate: Not provided.`, while the cycle-closing issue comment for `#894` reports `PASS (6/6 phases)` and `docs/state.json:2476-2488` plus `docs/state.json:2621-2624` already contain concrete Copilot metrics and a populated `publish_gate`. This is not a missing nicety; it is the core summary artifact disagreeing with the cycle’s own state and issue activity.
+**Recommendation**: Stop allowing placeholder text in the worklog once `docs/state.json` already has the values. Generate the reviewed/processed/current-state sections mechanically from cycle actions and committed state, and fail worklog generation if any section would emit `None.` or `Not provided.` while contradictory evidence already exists.
+
+## 2. [state-integrity] Cycle 206 marked chronic-category tracking as refreshed even though the check was explicitly deferred
+**File**: docs/state.json:2641-2643,3758-3762
+**Evidence**: `field_inventory.fields.review_agent.chronic_category_responses.last_refreshed` was advanced to `cycle 206`, and the cycle 205 review-history note says `field inventory freshness corrected cycle 206`. But the cycle 206 journal still carries `Check chronic category recurrence in review history` as commitment 3 and records it as deferred (`docs/journal/2026-03-09.md:385-405`), and the cycle-closing issue comment on `#894` repeats the same item as a next-cycle priority. Separately, the actual last-six-review category counts do not show any chronic category at all, so there was nothing new to record under `review_agent.chronic_category_responses`. This is a false freshness signal: the state claims the check was refreshed, while the journal says it was postponed.
+**Recommendation**: Revert the freshness/accounting claim unless the chronic-category check was actually performed and documented in-cycle. More generally, do not advance `last_refreshed` for cadence-driven fields when the associated verification was deferred; either keep the previous marker or record an explicit deferred status.
+
+## 3. [code-quality] PR #890 fixed the happy path but still allows contradictory previous-commitment output
+**File**: tools/rust/crates/write-entry/src/main.rs:312-321,1504-1556
+**Evidence**: `resolve_journal_input()` now applies `--previous-commitment-status` and `--previous-commitment-detail` independently, defaulting whichever half was omitted. That means partial overrides still contradict themselves: a manual repro with only `--previous-commitment-detail 'Done.'` produced `**No prior commitment.** Done.`, and a repro with only `--previous-commitment-status followed` produced `**Followed.** No prior commitment recorded.` The new regression test only covers the two safe cases — both flags present and both absent — so this partial-override path remains untested and broken.
+**Recommendation**: Treat the previous-commitment override as a paired value. Either require both flags together, or if one is omitted derive the missing half from the prior entry instead of mixing explicit user input with the `no_prior_commitment` fallback. Add regression tests for `status-only` and `detail-only` invocations.
+
+## Complacency score
+
+4/5 — The cycle was better on visible checklist adherence: the receipts are real, the step comments were posted individually, and PR #890’s recorded CI check passed. But the accuracy discipline is still weak where it matters most. The worklog contradicts the issue activity and state from the same cycle, the field-inventory bookkeeping marks a deferred check as refreshed, and the merged code fix closed only the tested happy path while leaving an adjacent contradiction intact.
