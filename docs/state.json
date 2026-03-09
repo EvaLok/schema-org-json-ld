@@ -2237,8 +2237,10 @@
     {
       "dispatched_at": "2026-03-09T06:35:04Z",
       "issue": 873,
+      "merged_at": "2026-03-09T07:57:46Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 874,
+      "status": "merged",
       "title": "cycle-close tool (per Eva #841)"
     },
     {
@@ -2393,11 +2395,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#875 Cycle 202 end-of-cycle review (cycle 202)",
     "dispatch_to_pr_rate": "97.2%",
-    "in_flight": 1,
-    "merged": 239,
+    "in_flight": 0,
+    "merged": 240,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 241,
-    "resolved": 246,
+    "produced_pr": 242,
+    "resolved": 247,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 247
