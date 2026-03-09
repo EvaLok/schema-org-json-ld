@@ -1,7 +1,9 @@
+use chrono::NaiveDate;
 use clap::Parser;
 use serde::Serialize;
 use serde_json::Value;
 use state_schema::{current_cycle_from_state, current_utc_timestamp, read_state_value};
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -10,6 +12,8 @@ const CYCLE_STATUS_IN_FLIGHT_PATH: &str = "/concurrency/in_flight";
 const CYCLE_STATUS_DIRECTIVES_PATH: &str = "/eva_input/comments_since_last_cycle";
 const DERIVE_METRICS_TOOL_NAME: &str = "derive-metrics";
 const DERIVE_METRICS_WRAPPER_PATH: &str = "tools/derive-metrics";
+const ARTIFACT_VERIFY_STEP_NAME: &str = "artifact-verify";
+const REVIEW_LAST_CYCLE_PATH: &str = "/review_agent/last_review_cycle";
 const DERIVE_METRICS_FIELDS: [&str; 9] = [
 	"total_dispatches",
 	"resolved",
@@ -214,6 +218,7 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
 	let steps = specs
 		.iter()
 		.map(|spec| run_step(repo_root, spec, runner))
+		.chain(std::iter::once(verify_artifacts(repo_root)))
 		.collect::<Vec<_>>();
 	let overall = pipeline_overall_status(&steps);
 	let has_blocking_findings = steps.iter().any(|step| step.status == StepStatus::Fail);
@@ -477,6 +482,149 @@ fn collect_derive_metrics_mismatches(repo_root: &Path, derived_metrics: &Value) 
 
 fn is_check_passing(check: &Value) -> bool {
     check.get("pass").and_then(Value::as_bool).unwrap_or(false)
+}
+
+fn verify_artifacts(repo_root: &Path) -> StepReport {
+	verify_artifacts_for_date(repo_root, &current_utc_timestamp()[..10])
+}
+
+fn verify_artifacts_for_date(repo_root: &Path, today: &str) -> StepReport {
+	let mut status = StepStatus::Pass;
+	let mut details = Vec::with_capacity(3);
+
+	for result in [
+		verify_journal_freshness(repo_root, today),
+		verify_worklog_exists(repo_root, today),
+		verify_review_artifact_exists(repo_root),
+	] {
+		match result {
+			Ok((check_status, detail)) => {
+				if check_status == StepStatus::Warn {
+					status = StepStatus::Warn;
+				}
+				details.push(detail);
+			}
+			Err(error) => {
+				status = StepStatus::Error;
+				details.push(error);
+			}
+		}
+	}
+
+	StepReport {
+		name: ARTIFACT_VERIFY_STEP_NAME,
+		status,
+		severity: Severity::Warning,
+		exit_code: None,
+		detail: Some(details.join("; ")),
+		findings: None,
+		summary: None,
+	}
+}
+
+fn verify_journal_freshness(repo_root: &Path, today: &str) -> Result<(StepStatus, String), String> {
+	let journal_path = repo_root.join("JOURNAL.md");
+	let content = fs::read_to_string(&journal_path)
+		.map_err(|error| format!("failed to read {}: {}", journal_path.display(), error))?;
+	let Some(latest) = latest_journal_heading_date(&content) else {
+		return Ok((
+			StepStatus::Warn,
+			format!("JOURNAL.md at {} has no dated headings", journal_path.display()),
+		));
+	};
+	let latest_date = parse_iso_date(&latest)?;
+	let today_date = parse_iso_date(today)?;
+	let days_ago = today_date.signed_duration_since(latest_date).num_days();
+
+	if days_ago > 1 {
+		Ok((
+			StepStatus::Warn,
+			format!("JOURNAL.md last entry is from {}, {} days ago", latest, days_ago),
+		))
+	} else {
+		Ok((
+			StepStatus::Pass,
+			format!("JOURNAL.md current (last entry {})", latest),
+		))
+	}
+}
+
+fn verify_worklog_exists(repo_root: &Path, today: &str) -> Result<(StepStatus, String), String> {
+	let worklog_dir = repo_root.join("docs/worklog").join(today);
+	if !worklog_dir.is_dir() {
+		return Ok((
+			StepStatus::Warn,
+			format!("No worklog entry found for today ({})", today),
+		));
+	}
+
+	let mut entries = fs::read_dir(&worklog_dir)
+		.map_err(|error| format!("failed to read {}: {}", worklog_dir.display(), error))?;
+	let has_file = entries.any(|entry| {
+		entry
+			.ok()
+			.and_then(|entry| entry.file_type().ok())
+			.is_some_and(|file_type| file_type.is_file())
+	});
+
+	if has_file {
+		Ok((
+			StepStatus::Pass,
+			format!("Worklog entry found for today ({})", today),
+		))
+	} else {
+		Ok((
+			StepStatus::Warn,
+			format!("No worklog entry found for today ({})", today),
+		))
+	}
+}
+
+fn verify_review_artifact_exists(repo_root: &Path) -> Result<(StepStatus, String), String> {
+	let state = read_state_value(repo_root)?;
+	let cycle = state
+		.pointer(REVIEW_LAST_CYCLE_PATH)
+		.and_then(Value::as_u64)
+		.ok_or_else(|| format!("missing integer: {}", REVIEW_LAST_CYCLE_PATH))?;
+	let review_path = repo_root.join(format!("docs/reviews/cycle-{}.md", cycle));
+
+	if review_path.is_file() {
+		Ok((
+			StepStatus::Pass,
+			format!("Review artifact present for cycle {}", cycle),
+		))
+	} else {
+		Ok((
+			StepStatus::Warn,
+			format!("Review artifact missing for cycle {}", cycle),
+		))
+	}
+}
+
+fn latest_journal_heading_date(content: &str) -> Option<String> {
+	content
+		.lines()
+		.filter_map(|line| line.strip_prefix("## "))
+		.map(str::trim)
+		.filter(|candidate| is_iso_date(candidate))
+		.map(str::to_string)
+		.next_back()
+}
+
+fn is_iso_date(value: &str) -> bool {
+	value.len() == 10
+		&& value
+			.chars()
+			.enumerate()
+			.all(|(index, ch)| match index {
+				4 | 7 => ch == '-',
+				_ => ch.is_ascii_digit(),
+			})
+}
+
+fn parse_iso_date(value: &str) -> Result<NaiveDate, String> {
+	NaiveDate::parse_from_str(value, "%Y-%m-%d")
+		.map_err(|error| format!("invalid date '{}': {}", value, error))
 }
 
 fn pipeline_exit_code(steps: &[StepReport]) -> i32 {
@@ -1245,11 +1393,20 @@ mod tests {
 					"reviewed_awaiting_eva": 1,
 					"dispatch_to_pr_rate": "66.7%",
 					"pr_merge_rate": "50.0%"
+				},
+				"review_agent": {
+					"last_review_cycle": 135
 				}
 			})
 			.to_string(),
 		)
 		.unwrap();
+		let today = &current_utc_timestamp()[..10];
+		fs::write(root.join("JOURNAL.md"), format!("## {}\n\nEntry\n", today)).unwrap();
+		fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
+		fs::write(root.join("docs/worklog").join(today).join("entry.md"), "worklog").unwrap();
+		fs::create_dir_all(root.join("docs/reviews")).unwrap();
+		fs::write(root.join("docs/reviews/cycle-135.md"), "review").unwrap();
 
         let runner = MockRunner {
             expected_cycle: 135,
@@ -1316,7 +1473,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-		assert_eq!(report.steps.len(), 6);
+		assert_eq!(report.steps.len(), 7);
 		assert_eq!(report.steps[0].status, StepStatus::Pass);
 		assert_eq!(report.steps[1].status, StepStatus::Pass);
 		assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -1335,7 +1492,9 @@ mod tests {
 			report.steps[5].detail.as_deref(),
 			Some("tracked copilot_metrics fields match")
 		);
-    }
+		assert_eq!(report.steps[6].name, "artifact-verify");
+		assert_eq!(report.steps[6].status, StepStatus::Pass);
+	}
 
     #[test]
     fn cli_accepts_missing_cycle_argument() {
@@ -1365,10 +1524,99 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 6);
-        assert!(report
-            .steps
-            .iter()
-            .all(|step| matches!(step.status, StepStatus::Error)));
-    }
+		assert_eq!(report.steps.len(), 7);
+		assert!(report
+			.steps
+			.iter()
+			.all(|step| matches!(step.status, StepStatus::Error)));
+	}
+
+	#[test]
+	fn latest_journal_heading_date_returns_last_heading() {
+		let journal = "\
+# Journal
+
+## 2026-03-05
+
+Early entry
+
+## 2026-03-08
+
+Recent entry
+";
+
+		assert_eq!(
+			latest_journal_heading_date(journal).as_deref(),
+			Some("2026-03-08")
+		);
+	}
+
+	#[test]
+	fn artifact_verification_warns_for_stale_or_missing_artifacts() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir().join(format!("pipeline-check-artifacts-warn-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(root.join("JOURNAL.md"), "## 2026-03-06\n\nEntry\n").unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"review_agent": {
+					"last_review_cycle": 208
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		let step = verify_artifacts_for_date(&root, "2026-03-09");
+		assert_eq!(step.status, StepStatus::Warn);
+		assert_eq!(step.name, "artifact-verify");
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("JOURNAL.md last entry is from 2026-03-06, 3 days ago"));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("No worklog entry found for today (2026-03-09)"));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("Review artifact missing for cycle 208"));
+	}
+
+	#[test]
+	fn artifact_verification_warns_when_journal_has_no_dated_headings() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root =
+			std::env::temp_dir().join(format!("pipeline-check-artifacts-no-journal-date-{}", run_id));
+		fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+		fs::create_dir_all(root.join("docs/reviews")).unwrap();
+		fs::write(root.join("JOURNAL.md"), "# Journal\n\nUndated entry\n").unwrap();
+		fs::write(root.join("docs/worklog/2026-03-09/entry.md"), "worklog").unwrap();
+		fs::write(root.join("docs/reviews/cycle-208.md"), "review").unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"review_agent": {
+					"last_review_cycle": 208
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		let step = verify_artifacts_for_date(&root, "2026-03-09");
+		assert_eq!(step.status, StepStatus::Warn);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("JOURNAL.md at"));
+	}
 }
