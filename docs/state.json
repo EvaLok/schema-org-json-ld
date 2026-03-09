@@ -2534,7 +2534,7 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#917 write-entry auto-populate worklog status (audit #171) (cycle 209)",
-    "dispatch_to_pr_rate": "97.3%",
+    "dispatch_to_pr_rate": "97.7%",
     "in_flight": 1,
     "merged": 253,
     "pr_merge_rate": "99.2%",
@@ -2697,7 +2697,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 204"
+        "last_refreshed": "cycle 209"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -2859,6 +2859,14 @@
           "rationale": "receipt-integrity findings in cycles 197-203 consistently flagged nonexistent SHA hashes and stale metrics in hand-assembled worklog receipt tables. The structural fix has two layers: (1) cycle-receipts tool (merged cycle 200) generates receipts mechanically from git log, and (2) cycle-close enhancement (#884, dispatched cycle 204) will embed receipt tables in closing comments automatically. The root cause is manual assembly — the fix is automation.",
           "root_cause": "Orchestrator hand-assembled receipt tables by copying SHAs from tool output, sometimes recording wrong or stale hashes. The cycle-receipts tool exists but was not consistently used to generate the worklog receipt table.",
           "verification_cycle": 204
+        },
+        {
+          "added_cycle": 209,
+          "category": "worklog-accuracy",
+          "chosen_path": "structural-fix",
+          "rationale": "worklog-accuracy findings in cycles 204-208 consistently flagged placeholder text (Not provided., None.) in worklog status sections that contradict committed state.json data. Dispatched #917 to enhance write-entry to auto-populate status sections from state.json and fail-closed on placeholder text. Per audit #171.",
+          "root_cause": "write-entry defaults to 'Not provided.' for --copilot-metrics, --publish-gate when CLI flags are not passed, instead of reading from state.json. The orchestrator does not always pass these flags.",
+          "verification_cycle": 209
         }
       ]
     },
