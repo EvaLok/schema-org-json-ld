@@ -2406,7 +2406,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 199"
+        "last_refreshed": "cycle 200"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -2414,11 +2414,11 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 199"
+        "last_refreshed": "cycle 200"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 199"
+        "last_refreshed": "cycle 200"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -2528,12 +2528,12 @@
   },
   "last_cycle": {
     "duration_minutes": 14,
-    "issue": 842,
-    "number": 199,
+    "issue": 849,
+    "number": 200,
     "summary": "Processed cycle 198 review (5/5 complacency, 5 findings). Fixed state integrity (PR #820 misrecorded as merged). Reset clean-cycle counter. Merged PR #839 (review artifact) and PR #836 (format validation). Dispatched #843 (cycle-receipts) and #844 (post-step). Closed Eva directive #834.",
-    "timestamp": "2026-03-09T01:07:10Z"
+    "timestamp": "2026-03-09T02:17:02Z"
   },
-  "last_eva_comment_check": "2026-03-09T01:07:10Z",
+  "last_eva_comment_check": "2026-03-09T02:17:02Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
