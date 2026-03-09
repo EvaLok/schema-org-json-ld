@@ -2318,8 +2318,10 @@
     {
       "dispatched_at": "2026-03-09T12:31:20Z",
       "issue": 897,
+      "merged_at": "2026-03-09T14:29:12Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 898,
+      "status": "merged",
       "title": "Fix process-review parser"
     },
     {
@@ -2487,11 +2489,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#899 Cycle 206 end-of-cycle review (cycle 206)",
     "dispatch_to_pr_rate": "97.3%",
-    "in_flight": 1,
-    "merged": 248,
+    "in_flight": 0,
+    "merged": 249,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 250,
-    "resolved": 255,
+    "produced_pr": 251,
+    "resolved": 256,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 256
