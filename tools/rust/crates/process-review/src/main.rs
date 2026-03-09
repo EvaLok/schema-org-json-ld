@@ -214,12 +214,13 @@ fn parse_review(review_path: &Path, content: &str, lenient: bool) -> Result<Pars
 }
 
 fn validate_review_format(content: &str) -> Vec<String> {
+    let lines: Vec<&str> = content.lines().collect();
     let mut errors = Vec::new();
     let mut found_heading = false;
     let mut in_findings = false;
     let mut in_code_block = false;
 
-    for line in content.lines() {
+    for (index, line) in lines.iter().enumerate() {
         let trimmed = line.trim();
         let lower = trimmed.to_ascii_lowercase();
 
@@ -251,19 +252,13 @@ fn validate_review_format(content: &str) -> Vec<String> {
         if let Some(number) = numbered_finding_number(trimmed) {
             found_heading = true;
 
-            match extract_inline_category(trimmed) {
+            match resolve_finding_category(trimmed, next_non_empty_line(&lines, index + 1)) {
                 Some(raw_category) => {
                     if normalize_category(raw_category).is_none() {
-                        errors.push(format!(
-                            "Finding {} has an invalid [category] tag in heading",
-                            number
-                        ));
+                        errors.push(format!("Finding {} has an invalid category tag", number));
                     }
                 }
-                None => errors.push(format!(
-                    "Finding {} has no [category] tag in heading",
-                    number
-                )),
+                None => errors.push(format!("Finding {} has no category tag", number)),
             }
         }
     }
@@ -425,19 +420,18 @@ fn numbered_finding_number(line: &str) -> Option<u64> {
 }
 
 fn extract_categories(content: &str) -> Vec<String> {
+    let lines: Vec<&str> = content.lines().collect();
     let mut categories = BTreeSet::new();
     let mut in_findings = false;
     let mut in_code_block = false;
-    let mut awaiting_category = false;
 
-    for line in content.lines() {
+    for (index, line) in lines.iter().enumerate() {
         let trimmed = line.trim();
         let lower = trimmed.to_ascii_lowercase();
 
         if lower.starts_with("## findings") {
             in_findings = true;
             in_code_block = false;
-            awaiting_category = false;
             continue;
         }
 
@@ -453,7 +447,6 @@ fn extract_categories(content: &str) -> Vec<String> {
 
         if trimmed.starts_with("```") {
             in_code_block = !in_code_block;
-            awaiting_category = false;
             continue;
         }
 
@@ -462,28 +455,11 @@ fn extract_categories(content: &str) -> Vec<String> {
         }
 
         if is_numbered_finding_heading(trimmed) {
-            if let Some(raw) = extract_inline_category(trimmed) {
-                if let Some(normalized) = normalize_category(raw) {
-                    categories.insert(normalized);
-                }
-                awaiting_category = false;
-            } else {
-                awaiting_category = true;
-            }
-            continue;
-        }
-
-        if awaiting_category && trimmed.is_empty() {
-            continue;
-        }
-
-        if awaiting_category {
-            if let Some(raw) = extract_category_line(line) {
+            if let Some(raw) = resolve_finding_category(trimmed, next_non_empty_line(&lines, index + 1)) {
                 if let Some(normalized) = normalize_category(raw) {
                     categories.insert(normalized);
                 }
             }
-            awaiting_category = false;
         }
     }
 
@@ -504,17 +480,27 @@ fn extract_inline_category(line: &str) -> Option<&str> {
 }
 
 fn extract_category_line(line: &str) -> Option<&str> {
-    let trimmed_start = line.trim_start();
-    if trimmed_start.len() == line.len() {
-        return None;
-    }
-
-    let raw = trimmed_start.strip_prefix("Category:")?.trim();
+    let raw = line.trim_start().strip_prefix("Category:")?.trim();
     if raw.is_empty() {
         None
     } else {
         Some(raw)
     }
+}
+
+fn next_non_empty_line<'a>(lines: &[&'a str], start_index: usize) -> Option<&'a str> {
+    lines[start_index..]
+        .iter()
+        .copied()
+        .find(|line| !line.trim().is_empty())
+}
+
+fn resolve_finding_category<'a>(
+    heading_line: &'a str,
+    next_non_empty_line: Option<&'a str>,
+) -> Option<&'a str> {
+    extract_inline_category(heading_line)
+        .or_else(|| next_non_empty_line.and_then(extract_category_line))
 }
 
 fn normalize_category(category: &str) -> Option<String> {
@@ -1125,10 +1111,26 @@ mod tests {
     }
 
     #[test]
-    fn parse_review_rejects_missing_inline_category_tags_by_default() {
+    fn parse_review_accepts_category_line_tags_by_default() {
+        let path = Path::new("docs/reviews/cycle-162.md");
+        let markdown = r#"## Findings
+
+1. **Finding title**
+Category: Review Accounting
+
+## Complacency score
+
+**2/5**
+"#;
+        let parsed = parse_review(path, markdown, false).expect("parse should succeed");
+        assert_eq!(parsed.categories, vec!["review-accounting".to_string()]);
+    }
+
+    #[test]
+    fn parse_review_rejects_missing_category_by_default() {
         let path = Path::new("docs/reviews/cycle-162.md");
         let error = parse_review(path, SAMPLE_REVIEW, false).expect_err("parse should fail");
-        assert!(error.contains("Finding 1 has no [category] tag in heading"));
+        assert!(error.contains("Finding 3"));
     }
 
     #[test]
@@ -1212,6 +1214,21 @@ No numbered findings here.
         let markdown = r#"## Findings
 
 ## 1. [worklog-accuracy] Finding title
+
+## Complacency score
+
+4/5 — actual score
+"#;
+
+        assert!(validate_review_format(markdown).is_empty());
+    }
+
+    #[test]
+    fn review_format_validation_accepts_category_lines() {
+        let markdown = r#"## Findings
+
+1. **Finding title**
+Category: Review Accounting
 
 ## Complacency score
 
