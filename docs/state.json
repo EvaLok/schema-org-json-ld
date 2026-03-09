@@ -2110,10 +2110,10 @@
       "issue": 819,
       "merged_at": null,
       "model": "gpt-5.4",
+      "note": "PR closed due to merge conflicts; changes applied directly to master (commit 5c7d2bb)",
       "pr": 820,
       "status": "closed_without_merge",
-      "title": "Remove deprecated copilot_metrics.note field from all tools",
-      "note": "PR closed due to merge conflicts; changes applied directly to master (commit 5c7d2bb)"
+      "title": "Remove deprecated copilot_metrics.note field from all tools"
     },
     {
       "dispatched_at": "2026-03-08T22:55:17Z",
@@ -2342,18 +2342,26 @@
       725,
       823,
       824,
-      831
+      831,
+      834
     ],
     "closed_this_cycle": [
-      823,
-      824,
-      831
+      834
     ],
     "remaining_open": [
       436,
       699,
       808,
-      809
+      809,
+      825,
+      826,
+      827,
+      828,
+      829,
+      830,
+      837,
+      840,
+      841
     ]
   },
   "field_inventory": {
@@ -2381,11 +2389,11 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 198"
+        "last_refreshed": "cycle 199"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 198"
+        "last_refreshed": "cycle 199"
       },
       "last_cycle": {
         "cadence": "every cycle",
