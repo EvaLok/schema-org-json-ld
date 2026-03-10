@@ -38,6 +38,7 @@ pub struct StateJson {
     pub total_testable_types_note: Option<String>,
     pub tool_pipeline: ToolPipeline,
     pub field_inventory: FieldInventory,
+    pub cycle_phase: CyclePhase,
     #[serde(flatten)]
     pub extra: BTreeMap<String, Value>,
 }
@@ -240,6 +241,64 @@ pub fn update_freshness(state: &mut Value, field_name: &str, cycle: u32) -> Resu
     Ok(())
 }
 
+/// Valid cycle phase values for the state machine.
+pub const VALID_PHASES: &[&str] = &[
+    "work",
+    "doc_dispatched",
+    "doc_review",
+    "close_out",
+    "complete",
+];
+
+/// Transition `cycle_phase` to a new phase, updating `phase_entered_at` and
+/// bumping `field_inventory.fields.cycle_phase.last_refreshed`.
+///
+/// Returns an error if the target phase is not in `VALID_PHASES` or if the
+/// required JSON structure is missing.
+pub fn transition_cycle_phase(
+    state: &mut Value,
+    cycle: u64,
+    new_phase: &str,
+) -> Result<(), String> {
+    if !VALID_PHASES.contains(&new_phase) {
+        return Err(format!(
+            "invalid cycle phase '{}': must be one of {:?}",
+            new_phase, VALID_PHASES
+        ));
+    }
+
+    let timestamp = current_utc_timestamp();
+
+    let cycle_phase = state
+        .pointer_mut("/cycle_phase")
+        .and_then(Value::as_object_mut)
+        .ok_or_else(|| "missing object /cycle_phase in docs/state.json".to_string())?;
+
+    cycle_phase.insert("phase".to_string(), Value::String(new_phase.to_string()));
+    cycle_phase.insert(
+        "phase_entered_at".to_string(),
+        Value::String(timestamp),
+    );
+    cycle_phase.insert("cycle".to_string(), serde_json::json!(cycle));
+
+    // Bump field_inventory freshness
+    let cycle_marker = format!("cycle {}", cycle);
+    let fields = state
+        .pointer_mut("/field_inventory/fields")
+        .and_then(Value::as_object_mut);
+
+    if let Some(fields) = fields {
+        let entry = fields
+            .entry("cycle_phase".to_string())
+            .or_insert_with(|| serde_json::json!({"cadence": "every phase transition"}));
+        if let Some(obj) = entry.as_object_mut() {
+            obj.insert("last_refreshed".to_string(), Value::String(cycle_marker));
+        }
+    }
+
+    Ok(())
+}
+
 pub fn set_value_at_pointer(root: &mut Value, pointer: &str, value: Value) -> Result<bool, String> {
     let segments: Vec<String> = pointer
         .split('/')
@@ -417,6 +476,20 @@ pub struct FieldInventory {
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(default, rename_all = "snake_case")]
+pub struct CyclePhase {
+    pub cycle: Option<u64>,
+    pub phase: Option<String>,
+    pub doc_issue: Option<i64>,
+    pub doc_pr: Option<i64>,
+    pub review_iteration: Option<u64>,
+    pub review_max: Option<u64>,
+    pub phase_entered_at: Option<String>,
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, Value>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+#[serde(default, rename_all = "snake_case")]
 pub struct Release {
     pub release_date: Option<String>,
     pub php_version: Option<String>,
@@ -483,8 +556,8 @@ pub struct Blockers {
 mod tests {
     use super::{
         commit_state_json, current_cycle_from_state, current_utc_timestamp, default_agent_model,
-        read_state_value, set_value_at_pointer, update_freshness, write_state_value, StateJson,
-        ToolsConfig,
+        read_state_value, set_value_at_pointer, transition_cycle_phase, update_freshness,
+        write_state_value, StateJson, ToolsConfig, VALID_PHASES,
     };
     use chrono::DateTime;
     use serde_json::{json, Value};
@@ -815,6 +888,184 @@ mod tests {
         );
         assert_eq!(publish_gate.validated_commit.as_deref(), Some("ea8ffff"));
         assert_eq!(publish_gate.source_diverged, Some(false));
+    }
+
+    #[test]
+    fn cycle_phase_defaults_to_empty() {
+        let state: StateJson = serde_json::from_value(json!({})).expect("state should deserialize");
+        assert!(state.cycle_phase.cycle.is_none());
+        assert!(state.cycle_phase.phase.is_none());
+        assert!(state.cycle_phase.doc_issue.is_none());
+        assert!(state.cycle_phase.doc_pr.is_none());
+        assert!(state.cycle_phase.review_iteration.is_none());
+        assert!(state.cycle_phase.review_max.is_none());
+        assert!(state.cycle_phase.phase_entered_at.is_none());
+    }
+
+    #[test]
+    fn cycle_phase_deserializes_all_fields() {
+        let state: StateJson = serde_json::from_value(json!({
+            "cycle_phase": {
+                "cycle": 219,
+                "phase": "doc_dispatched",
+                "doc_issue": 980,
+                "doc_pr": 981,
+                "review_iteration": 1,
+                "review_max": 3,
+                "phase_entered_at": "2026-03-10T15:00:00Z"
+            }
+        }))
+        .expect("state should deserialize");
+
+        assert_eq!(state.cycle_phase.cycle, Some(219));
+        assert_eq!(state.cycle_phase.phase.as_deref(), Some("doc_dispatched"));
+        assert_eq!(state.cycle_phase.doc_issue, Some(980));
+        assert_eq!(state.cycle_phase.doc_pr, Some(981));
+        assert_eq!(state.cycle_phase.review_iteration, Some(1));
+        assert_eq!(state.cycle_phase.review_max, Some(3));
+        assert_eq!(
+            state.cycle_phase.phase_entered_at.as_deref(),
+            Some("2026-03-10T15:00:00Z")
+        );
+    }
+
+    #[test]
+    fn transition_cycle_phase_updates_phase_and_freshness() {
+        let mut state = json!({
+            "cycle_phase": {
+                "cycle": 219,
+                "phase": "work",
+                "phase_entered_at": "2026-03-10T12:00:00Z"
+            },
+            "field_inventory": {
+                "fields": {
+                    "cycle_phase": {
+                        "cadence": "every phase transition",
+                        "last_refreshed": "cycle 218"
+                    }
+                }
+            }
+        });
+
+        transition_cycle_phase(&mut state, 219, "doc_dispatched")
+            .expect("transition should succeed");
+
+        assert_eq!(
+            state.pointer("/cycle_phase/phase"),
+            Some(&json!("doc_dispatched"))
+        );
+        assert_eq!(state.pointer("/cycle_phase/cycle"), Some(&json!(219)));
+        // phase_entered_at should be updated (not the old value)
+        assert_ne!(
+            state
+                .pointer("/cycle_phase/phase_entered_at")
+                .and_then(Value::as_str),
+            Some("2026-03-10T12:00:00Z")
+        );
+        // freshness should be bumped
+        assert_eq!(
+            state
+                .pointer("/field_inventory/fields/cycle_phase/last_refreshed")
+                .and_then(Value::as_str),
+            Some("cycle 219")
+        );
+    }
+
+    #[test]
+    fn transition_cycle_phase_to_complete_succeeds() {
+        let mut state = json!({
+            "cycle_phase": {
+                "cycle": 219,
+                "phase": "close_out",
+                "phase_entered_at": "2026-03-10T13:00:00Z"
+            },
+            "field_inventory": {
+                "fields": {
+                    "cycle_phase": {
+                        "cadence": "every phase transition",
+                        "last_refreshed": "cycle 218"
+                    }
+                }
+            }
+        });
+
+        transition_cycle_phase(&mut state, 219, "complete").expect("transition should succeed");
+        assert_eq!(
+            state.pointer("/cycle_phase/phase"),
+            Some(&json!("complete"))
+        );
+        assert_eq!(
+            state
+                .pointer("/field_inventory/fields/cycle_phase/last_refreshed")
+                .and_then(Value::as_str),
+            Some("cycle 219")
+        );
+    }
+
+    #[test]
+    fn transition_cycle_phase_rejects_invalid_phase() {
+        let mut state = json!({
+            "cycle_phase": {
+                "cycle": 219,
+                "phase": "work"
+            },
+            "field_inventory": { "fields": {} }
+        });
+
+        let error = transition_cycle_phase(&mut state, 219, "bogus")
+            .expect_err("invalid phase should fail");
+        assert!(error.contains("invalid cycle phase"));
+        assert!(error.contains("bogus"));
+    }
+
+    #[test]
+    fn transition_cycle_phase_creates_freshness_entry_when_missing() {
+        let mut state = json!({
+            "cycle_phase": {
+                "cycle": 219,
+                "phase": "work"
+            },
+            "field_inventory": { "fields": {} }
+        });
+
+        transition_cycle_phase(&mut state, 219, "close_out")
+            .expect("transition should succeed even without pre-existing freshness entry");
+        assert_eq!(
+            state
+                .pointer("/field_inventory/fields/cycle_phase/last_refreshed")
+                .and_then(Value::as_str),
+            Some("cycle 219")
+        );
+    }
+
+    #[test]
+    fn valid_phases_contains_all_state_machine_values() {
+        let expected = vec!["work", "doc_dispatched", "doc_review", "close_out", "complete"];
+        assert_eq!(VALID_PHASES, expected.as_slice());
+    }
+
+    #[test]
+    fn cycle_phase_round_trips_through_serialization() {
+        let input = json!({
+            "cycle_phase": {
+                "cycle": 220,
+                "phase": "work",
+                "review_max": 3,
+                "phase_entered_at": "2026-03-10T16:00:00Z"
+            }
+        });
+        let state: StateJson =
+            serde_json::from_value(input).expect("state should deserialize");
+        let serialized = serde_json::to_value(&state).expect("state should serialize");
+        assert_eq!(serialized.pointer("/cycle_phase/cycle"), Some(&json!(220)));
+        assert_eq!(
+            serialized.pointer("/cycle_phase/phase"),
+            Some(&json!("work"))
+        );
+        assert_eq!(
+            serialized.pointer("/cycle_phase/review_max"),
+            Some(&json!(3))
+        );
     }
 
     #[test]

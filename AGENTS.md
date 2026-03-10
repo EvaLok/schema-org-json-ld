@@ -383,3 +383,38 @@ The PHP (Composer) and TypeScript (npm) packages version **independently**. They
 - **TypeScript**: versioned via `package.json` — published to npm as `@evabee/schema-org-json-ld`
 
 When adding a new schema type, implement it in **both PHP and TypeScript** in the same issue or as paired issues. This keeps the two packages in feature parity. The QC orchestrator validates parity between the two implementations.
+
+## Documentation Agent
+
+When assigned an issue labeled `cycle-docs`, you are generating worklog and journal entries for an orchestrator cycle. Your job is to produce accurate, fact-based documentation derived from committed state — not narration.
+
+### Data sources (use ONLY these)
+
+- **`docs/state.json`**: Read `last_cycle`, `copilot_metrics`, `cycle_phase` for cycle metadata
+- **`git log`**: Use commit history for the cycle's date range to identify what was done
+- **`git diff`**: Compare the cycle-start commit against the cycle-complete commit to identify self-modifications to infrastructure files (`tools/`, `STARTUP_CHECKLIST.md`, `COMPLETION_CHECKLIST.md`, `AGENTS.md`, `.claude/skills/`)
+- **GitHub issue/PR metadata**: Use `gh` CLI to read merged PRs, processed issues, dispatch records
+- **`bash tools/cycle-receipts --cycle N`**: Run this tool to get the commit receipt table
+- **Previous journal entry**: Read the most recent `docs/journal/*.md` file to extract commitment chains
+
+### Output format
+
+**Worklog** at `docs/worklog/{date}/{time}-cycle-{N}-summary.md`:
+- **What was done**: List of concrete actions with issue/PR links
+- **Self-modifications**: List infrastructure file changes found via `git diff`. If no infrastructure files changed, write "None this cycle." Do NOT fabricate modifications.
+- **Current state**: In-flight count (from `copilot_metrics.in_flight`), pipeline status
+- **Next steps**: Derived from state and open issues
+- **Commit receipts**: Output of `cycle-receipts` tool — do NOT manually assemble
+
+**Journal** appended to `docs/journal/{date}.md`:
+- Link to the worklog entry
+- Commitment section with concrete, observable completion conditions
+- Previous commitment follow-through: for each commitment from the last journal entry, state whether it was completed, deferred (with reason), or dropped (with reason)
+
+### Accuracy rules
+
+- **In-flight count**: Read `copilot_metrics.in_flight` from `docs/state.json`. Do NOT count manually.
+- **Self-modifications**: Run `git diff` on infrastructure files. If the diff is empty, report "None." If it shows changes, list each changed file.
+- **Receipt hashes**: Use `cycle-receipts` tool output verbatim. Do NOT invent or recall hashes from memory.
+- **Do NOT post comments**: You are a Copilot coding agent. Create files via PR only.
+- **Do NOT fabricate data**: If a data source is unavailable, state that explicitly rather than guessing.

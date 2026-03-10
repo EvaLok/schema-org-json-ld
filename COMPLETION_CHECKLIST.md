@@ -42,9 +42,29 @@ If not yet run, run it now. `pipeline-check` derives the current cycle from `doc
 
 Each tool handles its own freshness markers automatically — no manual freshness reconciliation needed.
 
-## 3. Write worklog entry
+## 3. Dispatch documentation agent (Phase A completion)
 
-Use `write-entry` to generate the worklog. The primary interface is the inline CLI flags:
+Instead of writing worklog and journal entries directly, dispatch a Copilot agent to generate them from committed state. This separates the work role from the documentation role, ensuring accuracy.
+
+1. Run cycle-complete as normal (Step 2)
+2. Commit and push all state.json changes
+3. Write the documentation body to a temp file. The body instructs the Copilot agent to:
+   - Derive everything from committed state (git log, state.json, issue comments, PR metadata)
+   - Check self-modifications via `git diff` on infrastructure files (`tools/`, `STARTUP_CHECKLIST.md`, `COMPLETION_CHECKLIST.md`, `AGENTS.md`, `.claude/skills/`)
+   - Read `copilot_metrics.in_flight` from state.json directly for the in-flight count
+   - Run `bash tools/cycle-receipts --cycle N` for commit receipts
+   - Read previous journal entry for commitment chain verification
+   - Output worklog at `docs/worklog/{date}/{time}-cycle-{N}-summary.md`
+   - Append journal to `docs/journal/{date}.md`
+   - Do NOT post comments (standard Copilot constraint)
+4. Dispatch: `bash tools/dispatch-docs --cycle N --issue ORCH_ISSUE --body-file /tmp/doc-body.md`
+5. The tool creates the issue, records the dispatch, and updates `cycle_phase`
+6. Push the state commit
+7. Phase A is done. End this session cleanly.
+
+### Fallback: direct documentation
+
+If the documentation dispatch path is unavailable (tool not compiled, dispatch fails), fall back to writing worklog and journal entries directly using `write-entry`:
 
 ```bash
 bash tools/write-entry worklog \
@@ -57,32 +77,6 @@ bash tools/write-entry worklog \
   --receipt "cycle-start:abc1234"
 ```
 
-For reviewed PRs, processed issues, and self-modifications, you can stay on the inline CLI path:
-
-```bash
-bash tools/write-entry worklog \
-  --title "Cycle N summary" \
-  --pr-reviewed 789 \
-  --issue-processed "Closed #924 (cycle review)" \
-  --self-modification "Updated AGENTS.md"
-```
-
-For richer structured payloads, write JSON to a file with the Write tool and pass `--input-file`:
-
-```bash
-bash tools/write-entry worklog --title "Cycle N summary" --input-file /tmp/worklog.json
-```
-
-The tool auto-generates clickable GitHub links from bare `#N` references, creates the directory structure, and derives the cycle number from state.json.
-
-**Commit receipts**: Also run `bash tools/cycle-receipts --cycle N` and include the full receipt table in the worklog. Every write-side tool receipt must be present — this is the cycle's audit trail. Do not manually assemble receipts from memory; use the tool.
-
-**Note on review dispatch receipt**: The worklog is committed in step 5, BEFORE the review agent is dispatched in step 6. This means the worklog receipt table will NOT include the `record-dispatch` receipt for the review agent — that receipt is generated after the worklog is frozen. This is by design: the review agent must see the committed worklog at dispatch time (to avoid the artifact-race false positive from audit #151). The review dispatch receipt appears in `record-dispatch`'s own commit (step 7) and is captured by the next cycle's `cycle-receipts` run. Do NOT attempt to add the review dispatch receipt to the worklog after dispatch — that would create the exact drift this ordering prevents.
-
-## 4. Write journal entry
-
-Use `write-entry` to generate the journal entry. The primary interface is the inline CLI flags:
-
 ```bash
 bash tools/write-entry journal \
   --title "Cycle N reflections" \
@@ -90,10 +84,22 @@ bash tools/write-entry journal \
   --commitment "Will dispatch #830 next cycle"
 ```
 
-For more complex payloads, write JSON to a file with the Write tool and pass `--input-file`:
+Log the fallback in the journal. Transition to close-out and proceed to Step 10.C:
+```bash
+bash tools/cycle-phase --cycle N --phase close_out
+```
+
+## 4. Write journal entry (fallback path only)
+
+This step applies only when using the direct documentation fallback (Step 3 fallback). When the documentation agent path is used, the agent writes both worklog and journal.
+
+Use `write-entry` to generate the journal entry:
 
 ```bash
-bash tools/write-entry journal --title "Cycle N reflections" --input-file /tmp/journal.json
+bash tools/write-entry journal \
+  --title "Cycle N reflections" \
+  --section "Decision::Chose to defer #829" \
+  --commitment "Will dispatch #830 next cycle"
 ```
 
 The tool appends to `docs/journal/YYYY-MM-DD.md`, handles JOURNAL.md index updates when a new date file is created, auto-links bare `#N` references, and automatically inserts the matching worklog link when the cycle worklog already exists.
@@ -226,6 +232,75 @@ The summary should include:
 - Commit receipts (from step 7)
 - Next cycle priorities
 
+## 10.B Documentation Review (Phase B)
+
+When resuming with `cycle_phase.phase = "doc_dispatched"` or `"doc_review"`:
+
+1. Check if the documentation PR is ready:
+   - Use `bash tools/check-agent-prs` or `gh api` timeline to detect `copilot_work_finished`
+   - If not ready and dispatch age < 2 hours: end session, try next cron
+   - If not ready and dispatch age >= 2 hours: stale dispatch, fall back (see fallback below)
+
+2. Read the PR number and record it:
+   ```bash
+   bash tools/cycle-phase --cycle N --phase doc_review --doc-pr PR_NUMBER
+   ```
+
+3. Mark PR ready for review: `gh pr ready N`
+
+4. Run validation: `bash tools/check-doc-pr --pr N --cycle N`
+
+5. If all checks pass:
+   - Merge the PR
+   - Run `process-merge` for the doc PR
+   - Transition to close-out:
+     ```bash
+     bash tools/cycle-phase --cycle N --phase close_out
+     ```
+   - Proceed to Step 10.C
+
+6. If checks fail and `review_iteration < review_max`:
+   - Post `@copilot` revision request listing specific failures
+   - Transition back to doc_dispatched with incremented review_iteration:
+     ```bash
+     bash tools/cycle-phase --cycle N --phase doc_dispatched --review-iteration NEXT
+     ```
+     (where NEXT = current review_iteration + 1)
+   - End session
+
+7. If checks fail and `review_iteration >= review_max`:
+   - Merge the PR as-is (partial docs better than none)
+   - Or fall back to `write-entry` (old path) to fix critical inaccuracies
+   - Transition to close-out:
+     ```bash
+     bash tools/cycle-phase --cycle N --phase close_out
+     ```
+
+### Fallback
+
+If documentation dispatch fails completely (stale, no PR, garbage output):
+- Use `write-entry` directly (the old path) to generate worklog and journal
+- Log the failure in the journal
+- Transition to close-out:
+     ```bash
+     bash tools/cycle-phase --cycle N --phase close_out
+     ```
+- Proceed to close-out
+
+## 10.C Close-out (Phase C)
+
+When `cycle_phase.phase = "close_out"`:
+
+1. Run final pipeline gate: `bash tools/pipeline-check`
+2. Dispatch adversarial review agent (same as today's Step 6)
+   - Note in the review body that worklog/journal were generated by a documentation agent (if applicable)
+3. Record dispatch, commit, push
+4. Mark cycle complete:
+   ```bash
+   bash tools/cycle-phase --cycle N --phase complete
+   ```
+5. Close the orchestrator issue
+
 ## Automation status
 
 | Step | Status | Tool |
@@ -239,3 +314,5 @@ The summary should include:
 | 6. Review agent dispatch | Semi-automated | `cycle-complete` generates issue body, orchestrator creates issue |
 | 7. Commit dispatch state | Automated | `record-dispatch` commits, then push |
 | 8. Close issue | Manual | Standard gh commands |
+| 10.B Phase transitions | Automated | `bash tools/cycle-phase --cycle N --phase PHASE` |
+| 10.C Mark complete | Automated | `bash tools/cycle-phase --cycle N --phase complete` |

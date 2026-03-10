@@ -263,7 +263,9 @@ fn detect_stale_fields(state: &StateJson, current_cycle: u64) -> Vec<StaleField>
 
 fn cadence_threshold(cadence: &str) -> (&'static str, u64) {
     let normalized = cadence.to_ascii_lowercase();
-    if normalized.contains("every cycle") || normalized.contains("per cycle") {
+    if normalized.contains("every phase transition") {
+        ("per-phase-transition", 2)
+    } else if normalized.contains("every cycle") || normalized.contains("per cycle") {
         ("per-cycle", 2)
     } else if let Some(number) = first_number(&normalized) {
         ("periodic", number + 1)
@@ -292,6 +294,14 @@ fn first_number(value: &str) -> Option<u64> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn cadence_threshold_classifies_per_phase_transition() {
+        assert_eq!(
+            cadence_threshold("every phase transition"),
+            ("per-phase-transition", 2)
+        );
+    }
 
     #[test]
     fn cadence_threshold_classifies_per_cycle() {
@@ -352,13 +362,21 @@ mod tests {
             "periodic-stale".to_string(),
             json!({"cadence": "every 5 cycles", "last_refreshed": "cycle 151"}),
         );
+        state.field_inventory.fields.insert(
+            "phase-ok".to_string(),
+            json!({"cadence": "every phase transition", "last_refreshed": "cycle 157"}),
+        );
+        state.field_inventory.fields.insert(
+            "phase-stale".to_string(),
+            json!({"cadence": "every phase transition", "last_refreshed": "cycle 155"}),
+        );
 
         let stale = detect_stale_fields(&state, 158);
         let stale_names = stale.iter().map(|field| field.name.as_str()).collect::<Vec<_>>();
 
         assert_eq!(
             stale_names,
-            vec!["after-stale", "per-cycle-stale", "periodic-stale"]
+            vec!["after-stale", "per-cycle-stale", "periodic-stale", "phase-stale"]
         );
     }
 

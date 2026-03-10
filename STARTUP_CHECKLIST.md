@@ -8,16 +8,34 @@ Follow this checklist at the start of every orchestrator cycle. Do not skip step
 
 **Critical**: NEVER use `${}` variable substitution, pipes (`|`), compound commands (`&&`), heredocs (`<<`), or command substitution (`$()`) in Bash tool calls. Each call must be a single, simple command. See `.claude/skills/orchestrator-permissions/SKILL.md` for details.
 
-## 0. Initialize cycle and post opening comment
+## 0. Check cycle phase and initialize
 
-Run the cycle-start tool as the VERY FIRST action:
+Read the current cycle phase:
+```bash
+jq '.cycle_phase.phase // "complete"' docs/state.json
+```
 
+**If "complete" or absent**: This is a new cycle. Run cycle-start as normal:
 ```bash
 bash tools/cycle-start --issue {NUMBER} --model "{MODEL NAME}"
 ```
+Then proceed to Step 0.5.
 
-This is the single entry point for cycle initialization. It:
+**If "doc_dispatched"**: Resume Phase B. Skip to Step 10.B (Documentation Review).
+
+**If "doc_review"**: Resume Phase B review. Skip to Step 10.B.
+
+**If "close_out"**: Resume close-out. Skip to Step 10.C (Close-out).
+
+**If "work"**: The previous session crashed during work. Resume the work phase.
+Read the cycle number from `jq '.cycle_phase.cycle' docs/state.json`.
+Do NOT run cycle-start. Proceed to Step 0.5 using the existing cycle.
+
+### cycle-start behavior
+
+The cycle-start tool now detects the active phase automatically. If a non-complete phase is active, it outputs a resume brief instead of creating a new cycle. This is the single entry point for cycle initialization. It:
 - Claims the cycle number and timestamp in `state.json`
+- Sets `cycle_phase.phase = "work"` for the new cycle
 - Posts the signed opening comment on the cycle issue
 - Gathers `open_questions_for_eva` for the situation report (does not write them back to state.json)
 - Produces a structured situation report (Eva directives, in-flight sessions, pipeline status)
@@ -486,18 +504,38 @@ Based on the above context:
 
 Prioritise reviews over new dispatches — unreviewed PRs block progress.
 
-## 10. Cycle completion
+## 10. Cycle completion (phased)
 
-At cycle end, follow `COMPLETION_CHECKLIST.md` for the full close-out procedure. Key steps:
+Cycles now use a multi-phase completion flow. See `COMPLETION_CHECKLIST.md` for the full procedure.
+
+### Phase A: Work completion and documentation dispatch
 
 1. Run `bash tools/pipeline-check` — all 5 phases must pass
 2. Update state.json (use `bash tools/cycle-complete` to generate patches)
-3. Write worklog and journal entries
-4. **Commit worklog, journal, and state BEFORE review dispatch** (step 5 in COMPLETION_CHECKLIST) — prevents the artifact-race false positive
-5. **Dispatch review agent (MANDATORY per Eva directive #463)** — every cycle must end with a review agent in-flight. See `COMPLETION_CHECKLIST.md` step 6 for the dispatch procedure and required issue body format.
-6. Commit dispatch state, push, close the cycle issue
+3. **Dispatch documentation agent** instead of writing worklog/journal directly:
+   - `bash tools/dispatch-docs --cycle N --issue ORCH_ISSUE --body-file /tmp/doc-body.md`
+   - This sets `cycle_phase.phase = "doc_dispatched"`
+4. Push state, end session. Phase A is done.
 
-The review agent dispatch is not optional. It is the primary mechanism for catching blind spots, complacency, and process drift. See `COMPLETION_CHECKLIST.md` for details.
+### Phase B: Documentation review (next cron invocation)
+
+When resuming with `cycle_phase.phase = "doc_dispatched"`:
+
+1. Check if the documentation PR is ready
+2. Run validation: `bash tools/check-doc-pr --pr N --cycle N`
+3. If checks pass: merge PR, set `cycle_phase.phase = "close_out"`
+4. If checks fail: request `@copilot` revision (up to `review_max` rounds)
+5. Fallback: write docs directly via `write-entry` if the agent fails
+
+### Phase C: Close-out
+
+When `cycle_phase.phase = "close_out"`:
+
+1. Final pipeline gate
+2. **Dispatch review agent (MANDATORY per Eva directive #463)** — every cycle must end with a review agent in-flight
+3. Set `cycle_phase.phase = "complete"`, close the orchestrator issue
+
+The review agent dispatch is not optional. It is the primary mechanism for catching blind spots, complacency, and process drift.
 
 ## Writing conventions
 

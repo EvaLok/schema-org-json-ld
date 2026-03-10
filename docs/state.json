@@ -2878,6 +2878,10 @@
         "cadence": "after new dispatches",
         "last_refreshed": "cycle 220"
       },
+      "cycle_phase": {
+        "cadence": "every phase transition",
+        "last_refreshed": "cycle 218"
+      },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
         "last_refreshed": "cycle 220"
@@ -3015,6 +3019,15 @@
         "last_refreshed": "cycle 220"
       }
     }
+  },
+  "cycle_phase": {
+    "cycle": null,
+    "phase": null,
+    "doc_issue": null,
+    "doc_pr": null,
+    "review_iteration": null,
+    "review_max": 3,
+    "phase_entered_at": null
   },
   "last_cycle": {
     "duration_minutes": 14,

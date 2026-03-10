@@ -1,10 +1,10 @@
 use clap::Parser;
-use record_dispatch::{apply_dispatch_patch, build_dispatch_patch, dispatch_commit_message};
+use record_dispatch::{apply_dispatch_patch, build_dispatch_patch};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use state_schema::{
     commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
-    write_state_value,
+    transition_cycle_phase, write_state_value,
 };
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -14,17 +14,17 @@ const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const BASE_BRANCH: &str = "master";
 
 #[derive(Parser, Debug)]
-#[command(name = "dispatch-review")]
+#[command(name = "dispatch-docs")]
 struct Cli {
     /// Current cycle number
     #[arg(long)]
     cycle: u64,
 
-    /// Orchestrator run issue number for context in the review body
+    /// Orchestrator run issue number for context in the docs body
     #[arg(long)]
     issue: u64,
 
-    /// Path to a file containing the review issue body
+    /// Path to a file containing the docs issue body
     #[arg(long)]
     body_file: PathBuf,
 
@@ -46,7 +46,7 @@ struct AgentAssignment {
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
-struct ReviewIssuePayload {
+struct DocsIssuePayload {
     title: String,
     body: String,
     labels: Vec<String>,
@@ -93,23 +93,23 @@ fn run(cli: Cli) -> Result<(), String> {
     );
     if let Err(error) = state_result {
         return Err(format!(
-            "created review issue #{} ({}) but failed to update docs/state.json: {}",
+            "created docs issue #{} ({}) but failed to update docs/state.json: {}",
             created_issue.number, created_issue.html_url, error
         ));
     }
 
     println!(
-        "Created review issue #{} from orchestrator issue #{}: {}",
+        "Created docs issue #{} from orchestrator issue #{}: {}",
         created_issue.number, cli.issue, created_issue.html_url
     );
     Ok(())
 }
 
-fn build_issue_payload(cycle: u64, body: &str, model: &str) -> ReviewIssuePayload {
-    ReviewIssuePayload {
-        title: format!("[Cycle Review] Cycle {} end-of-cycle review", cycle),
+fn build_issue_payload(cycle: u64, body: &str, model: &str) -> DocsIssuePayload {
+    DocsIssuePayload {
+        title: format!("[Cycle Docs] Cycle {} worklog and journal", cycle),
         body: body.to_string(),
-        labels: vec!["agent-task".to_string(), "cycle-review".to_string()],
+        labels: vec!["agent-task".to_string(), "cycle-docs".to_string()],
         assignees: vec!["copilot-swe-agent[bot]".to_string()],
         agent_assignment: AgentAssignment {
             target_repo: MAIN_REPO.to_string(),
@@ -130,6 +130,31 @@ fn apply_dispatch_record(
 ) -> Result<(), String> {
     let patch = build_dispatch_patch(state, cycle, issue, title, model, dispatched_at)?;
     apply_dispatch_patch(state, &patch)
+}
+
+fn apply_cycle_phase_update(
+    state: &mut Value,
+    cycle: u64,
+    issue: u64,
+) -> Result<(), String> {
+    // Use shared transition function for phase + freshness
+    transition_cycle_phase(state, cycle, "doc_dispatched")?;
+
+    // Set doc-specific fields on top of the phase transition
+    let cycle_phase = state
+        .pointer_mut("/cycle_phase")
+        .and_then(Value::as_object_mut)
+        .ok_or_else(|| "missing object /cycle_phase in docs/state.json".to_string())?;
+
+    cycle_phase.insert(
+        "doc_issue".to_string(),
+        serde_json::json!(issue as i64),
+    );
+    cycle_phase.insert("doc_pr".to_string(), Value::Null);
+    cycle_phase.insert("review_iteration".to_string(), serde_json::json!(0));
+    cycle_phase.insert("review_max".to_string(), serde_json::json!(3));
+
+    Ok(())
 }
 
 fn read_body_file(path: &Path) -> Result<String, String> {
@@ -170,21 +195,19 @@ fn record_created_issue(
     model: &str,
 ) -> Result<(), String> {
     let mut state = read_state_value(repo_root)?;
-    apply_dispatch_record(
-        &mut state,
-        cycle,
-        issue,
-        title,
-        model,
-        &current_utc_timestamp(),
-    )?;
+    let timestamp = current_utc_timestamp();
+    apply_dispatch_record(&mut state, cycle, issue, title, model, &timestamp)?;
+    apply_cycle_phase_update(&mut state, cycle, issue)?;
     write_state_value(repo_root, &state)?;
-    let commit_message = dispatch_commit_message(issue, cycle);
+    let commit_message = format!(
+        "state(dispatch-docs): #{} dispatched [cycle {}]",
+        issue, cycle
+    );
     commit_state_json(repo_root, &commit_message)?;
     Ok(())
 }
 
-fn create_issue(payload: &ReviewIssuePayload) -> Result<CreatedIssue, String> {
+fn create_issue(payload: &DocsIssuePayload) -> Result<CreatedIssue, String> {
     let body = serde_json::to_vec(payload)
         .map_err(|error| format!("failed to serialize issue payload: {}", error))?;
     let mut child = Command::new("gh")
@@ -249,27 +272,28 @@ mod tests {
                     "title": "old dispatch",
                     "dispatched_at": "2026-03-01T00:00:00Z",
                     "model": "gpt-5.4",
-                    "status": "merged",
-                    "pr": 700,
-                    "merged_at": "2026-03-02T00:00:00Z"
+                    "status": "merged"
                 }
             ],
             "copilot_metrics": {
-                "total_dispatches": 1,
-                "in_flight": 0,
-                "resolved": 1,
-                "merged": 1,
-                "produced_pr": 1,
-                "closed_without_pr": 0,
-                "reviewed_awaiting_eva": 0,
-                "pr_merge_rate": "100.0%",
-                "dispatch_to_pr_rate": "100.0%",
+                "total_dispatches": 85,
+                "in_flight": 2,
+                "resolved": 83,
                 "dispatch_log_latest": "#601 old dispatch (cycle 164)"
             },
             "field_inventory": {
                 "fields": {
                     "copilot_metrics.in_flight": { "last_refreshed": "cycle 163" }
                 }
+            },
+            "cycle_phase": {
+                "cycle": 218,
+                "phase": "work",
+                "doc_issue": null,
+                "doc_pr": null,
+                "review_iteration": 0,
+                "review_max": 3,
+                "phase_entered_at": "2026-03-09T00:00:00Z"
             }
         })
     }
@@ -288,14 +312,14 @@ mod tests {
     }
 
     #[test]
-    fn build_issue_payload_includes_labels_assignee_and_agent_assignment() {
-        let payload = build_issue_payload(200, "Review body", "gpt-5.4");
+    fn build_issue_payload_uses_cycle_docs_labels() {
+        let payload = build_issue_payload(219, "Docs body", "gpt-5.4");
 
         assert_eq!(
             payload.title,
-            "[Cycle Review] Cycle 200 end-of-cycle review"
+            "[Cycle Docs] Cycle 219 worklog and journal"
         );
-        assert_eq!(payload.labels, vec!["agent-task", "cycle-review"]);
+        assert_eq!(payload.labels, vec!["agent-task", "cycle-docs"]);
         assert_eq!(payload.assignees, vec!["copilot-swe-agent[bot]"]);
         assert_eq!(
             payload.agent_assignment,
@@ -309,35 +333,50 @@ mod tests {
     }
 
     #[test]
-    fn apply_dispatch_record_updates_metrics_and_appends_agent_session() {
+    fn apply_dispatch_and_phase_update_sets_all_cycle_phase_fields() {
         let mut state = sample_state();
+        let timestamp = "2026-03-10T12:00:00Z";
 
         apply_dispatch_record(
             &mut state,
-            200,
-            849,
-            "[Cycle Review] Cycle 200 end-of-cycle review",
+            219,
+            980,
+            "[Cycle Docs] Cycle 219 worklog and journal",
             "gpt-5.4",
-            "2026-03-09T02:00:00Z",
+            timestamp,
         )
         .expect("dispatch record should apply");
 
+        apply_cycle_phase_update(&mut state, 219, 980)
+            .expect("cycle phase update should apply");
+
+        // Verify dispatch record was applied
         let sessions = state["agent_sessions"]
             .as_array()
             .expect("agent_sessions should be an array");
-        assert_eq!(state["copilot_metrics"]["total_dispatches"], json!(2));
-        assert_eq!(state["copilot_metrics"]["in_flight"], json!(1));
-        assert_eq!(
-            state["copilot_metrics"]["dispatch_log_latest"],
-            json!("#849 [Cycle Review] Cycle 200 end-of-cycle review (cycle 200)")
-        );
-        assert_eq!(
-            state["field_inventory"]["fields"]["copilot_metrics.in_flight"]["last_refreshed"],
-            json!("cycle 200")
-        );
         assert_eq!(sessions.len(), 2);
-        assert_eq!(sessions[1]["issue"], json!(849));
+        assert_eq!(sessions[1]["issue"], json!(980));
         assert_eq!(sessions[1]["status"], json!("in_flight"));
-        assert_eq!(sessions[1]["model"], json!("gpt-5.4"));
+
+        // Verify all cycle_phase fields
+        assert_eq!(
+            state["cycle_phase"]["phase"],
+            json!("doc_dispatched")
+        );
+        assert_eq!(state["cycle_phase"]["doc_issue"], json!(980));
+        assert_eq!(state["cycle_phase"]["doc_pr"], json!(null));
+        assert_eq!(state["cycle_phase"]["review_iteration"], json!(0));
+        assert_eq!(state["cycle_phase"]["review_max"], json!(3));
+        assert_eq!(state["cycle_phase"]["cycle"], json!(219));
+        // phase_entered_at is set by transition_cycle_phase (not the hardcoded timestamp)
+        assert!(state["cycle_phase"]["phase_entered_at"].is_string());
+
+        // Verify freshness was bumped
+        assert_eq!(
+            state
+                .pointer("/field_inventory/fields/cycle_phase/last_refreshed")
+                .and_then(Value::as_str),
+            Some("cycle 219")
+        );
     }
 }

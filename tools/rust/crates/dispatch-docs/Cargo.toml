@@ -1,0 +1,12 @@
+[package]
+name = "dispatch-docs"
+version = "0.1.0"
+edition = "2021"
+description = "Create cycle documentation issues and record their dispatch in docs/state.json"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+record-dispatch = { path = "../record-dispatch" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+state-schema = { path = "../state-schema" }

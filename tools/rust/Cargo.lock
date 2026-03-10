@@ -120,6 +120,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "check-doc-pr"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "serde",
+ "serde_json",
+ "state-schema",
+]
+
+[[package]]
 name = "check-field-inventory"
 version = "0.1.0"
 dependencies = [
@@ -227,6 +237,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "cycle-phase"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "serde_json",
+ "state-schema",
+]
+
+[[package]]
 name = "cycle-receipts"
 version = "0.1.0"
 dependencies = [
@@ -264,6 +283,17 @@ name = "derive-metrics"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "serde",
+ "serde_json",
+ "state-schema",
+]
+
+[[package]]
+name = "dispatch-docs"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "record-dispatch",
  "serde",
  "serde_json",
  "state-schema",
