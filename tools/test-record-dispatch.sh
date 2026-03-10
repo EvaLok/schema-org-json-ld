@@ -116,7 +116,7 @@ PY
 
 bash "$DERIVE_METRICS_SCRIPT" --repo-root "$SUCCESS_REPO" --check >/dev/null 2>/dev/null || fail "expected derive-metrics --check to pass after wrapper update"
 
-# Test 2: Wrapper fails when derive-metrics fails after the dispatch mutation.
+# Test 2: Unsupported session status fails closed before mutating state.
 FAIL_REPO="$TMP_DIR/fail-repo"
 create_repo "$FAIL_REPO" "merged" "mystery_status"
 
@@ -128,8 +128,20 @@ else
 	FAIL_STATUS=$?
 fi
 
-[ "$FAIL_STATUS" -ne 0 ] || fail "expected derive-metrics failure to return non-zero exit code"
-grep -Fq "unsupported value 'mystery_status'" "$FAIL_STDERR" || fail "expected derive-metrics failure details on stderr"
+[ "$FAIL_STATUS" -ne 0 ] || fail "expected invalid status to return non-zero exit code"
+grep -Fq "unsupported value 'mystery_status'" "$FAIL_STDERR" || fail "expected invalid status details on stderr"
 [ ! -s "$FAIL_STDOUT" ] || fail "expected no stdout when wrapper fails after dispatch"
+
+python - <<'PY' "$FAIL_REPO/docs/state.json"
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    state = json.load(handle)
+
+assert len(state["agent_sessions"]) == 2, state["agent_sessions"]
+assert state["agent_sessions"][-1]["issue"] == 601, state["agent_sessions"]
+assert state["copilot_metrics"]["total_dispatches"] == 2, state["copilot_metrics"]
+PY
 
 echo "PASS"

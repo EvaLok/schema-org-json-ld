@@ -7,7 +7,6 @@ source "$SCRIPT_DIR/_build-helper.sh"
 ensure_binary "record-dispatch"
 
 FORWARD_ARGS=("$@")
-DISPATCH_REPO_ROOT="$REPO_ROOT"
 HAS_REPO_ROOT=false
 
 while [ "$#" -gt 0 ]; do
@@ -15,13 +14,11 @@ while [ "$#" -gt 0 ]; do
 		--repo-root)
 			shift
 			if [ "$#" -gt 0 ]; then
-				DISPATCH_REPO_ROOT="$1"
 				HAS_REPO_ROOT=true
 			fi
 			;;
 		--repo-root=*)
 			HAS_REPO_ROOT=true
-			DISPATCH_REPO_ROOT="${1#--repo-root=}"
 			;;
 	esac
 	shift
@@ -35,5 +32,4 @@ else
 	RECORD_DISPATCH_OUTPUT="$("$RECORD_DISPATCH_BINARY" --repo-root "$REPO_ROOT" "${FORWARD_ARGS[@]}")"
 fi
 
-bash "$SCRIPT_DIR/derive-metrics" --apply --repo-root "$DISPATCH_REPO_ROOT" >/dev/null
 printf '%s\n' "$RECORD_DISPATCH_OUTPUT"
