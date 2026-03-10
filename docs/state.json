@@ -2634,11 +2634,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#945 Fix write-entry Copilot metrics presentation to show correct denominators (cycle 213)",
     "dispatch_to_pr_rate": "97.4%",
-    "in_flight": 2,
-    "merged": 263,
+    "in_flight": 1,
+    "merged": 264,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 265,
-    "resolved": 270,
+    "produced_pr": 266,
+    "resolved": 271,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 272
@@ -2736,7 +2736,7 @@
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 213"
+        "last_refreshed": "cycle 214"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
