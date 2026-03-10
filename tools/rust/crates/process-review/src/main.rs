@@ -230,7 +230,9 @@ fn validate_review_format(content: &str) -> Vec<String> {
             continue;
         }
 
-        if in_findings && lower.starts_with("## ") && !lower.starts_with("## findings")
+        if in_findings
+            && lower.starts_with("## ")
+            && !lower.starts_with("## findings")
             && !matches_numbered_finding_with_hash_prefix(trimmed)
         {
             break;
@@ -344,7 +346,9 @@ fn count_numbered_findings_in_findings_section(content: &str) -> usize {
             continue;
         }
 
-        if in_findings && lower.starts_with("## ") && !lower.starts_with("## findings")
+        if in_findings
+            && lower.starts_with("## ")
+            && !lower.starts_with("## findings")
             && !matches_numbered_finding_with_hash_prefix(trimmed)
         {
             break;
@@ -435,7 +439,9 @@ fn extract_categories(content: &str) -> Vec<String> {
             continue;
         }
 
-        if in_findings && lower.starts_with("## ") && !lower.starts_with("## findings")
+        if in_findings
+            && lower.starts_with("## ")
+            && !lower.starts_with("## findings")
             && !matches_numbered_finding_with_hash_prefix(trimmed)
         {
             break;
@@ -455,7 +461,9 @@ fn extract_categories(content: &str) -> Vec<String> {
         }
 
         if is_numbered_finding_heading(trimmed) {
-            if let Some(raw) = resolve_finding_category(trimmed, next_non_empty_line(&lines, index + 1)) {
+            if let Some(raw) =
+                resolve_finding_category(trimmed, next_non_empty_line(&lines, index + 1))
+            {
                 if let Some(normalized) = normalize_category(raw) {
                     categories.insert(normalized);
                 }
@@ -531,10 +539,14 @@ fn normalize_category(category: &str) -> Option<String> {
 
 fn strip_hash_heading_prefix(line: &str) -> &str {
     match line.strip_prefix("## ") {
-        Some(remainder) if remainder
-            .chars()
-            .next()
-            .is_some_and(|ch| ch.is_ascii_digit()) => remainder,
+        Some(remainder)
+            if remainder
+                .chars()
+                .next()
+                .is_some_and(|ch| ch.is_ascii_digit()) =>
+        {
+            remainder
+        }
         _ => line,
     }
 }

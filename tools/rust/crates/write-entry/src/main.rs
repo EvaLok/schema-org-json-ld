@@ -1488,7 +1488,8 @@ mod tests {
 
     fn write_state_file(repo_root: &Path, payload: &str) {
         fs::create_dir_all(repo_root.join("docs")).expect("failed to create docs directory");
-        fs::write(repo_root.join("docs/state.json"), payload).expect("failed to write test state.json");
+        fs::write(repo_root.join("docs/state.json"), payload)
+            .expect("failed to write test state.json");
     }
 
     #[test]
@@ -1703,9 +1704,8 @@ mod tests {
         assert!(content.contains(
             "- Merged [PR #123](https://github.com/EvaLok/schema-org-json-ld/issues/123)"
         ));
-        assert!(content.contains(
-            "- [PR #789](https://github.com/EvaLok/schema-org-json-ld/issues/789)"
-        ));
+        assert!(content
+            .contains("- [PR #789](https://github.com/EvaLok/schema-org-json-ld/issues/789)"));
         assert!(content.contains("- Closed EvaLok/schema-org-json-ld#924 (cycle review)"));
         assert!(content.contains("- Updated AGENTS.md"));
         assert!(!content.contains("### PRs reviewed\n\n- None."));
@@ -2539,7 +2539,10 @@ Reflective log for the schema-org-json-ld orchestrator.
                     args.issue_processed,
                     vec!["Closed EvaLok/schema-org-json-ld#924 (cycle review)".to_string()]
                 );
-                assert_eq!(args.self_modification, vec!["Updated AGENTS.md".to_string()]);
+                assert_eq!(
+                    args.self_modification,
+                    vec!["Updated AGENTS.md".to_string()]
+                );
             }
             Command::Journal(_) => panic!("expected worklog command"),
         }
