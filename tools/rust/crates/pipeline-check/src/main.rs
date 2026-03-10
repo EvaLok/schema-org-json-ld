@@ -4,6 +4,7 @@ use serde::Serialize;
 use serde_json::Value;
 use state_schema::{current_cycle_from_state, current_utc_timestamp, read_state_value};
 use std::fs;
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -13,6 +14,14 @@ const CYCLE_STATUS_DIRECTIVES_PATH: &str = "/eva_input/comments_since_last_cycle
 const DERIVE_METRICS_TOOL_NAME: &str = "derive-metrics";
 const DERIVE_METRICS_WRAPPER_PATH: &str = "tools/derive-metrics";
 const ARTIFACT_VERIFY_STEP_NAME: &str = "artifact-verify";
+const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
+const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
+const STEP_COMMENT_THRESHOLD: usize = 10;
+const ORCHESTRATOR_SIGNATURE: &str = "> **[main-orchestrator]**";
+// Keep this list aligned with the orchestrator checklist steps that are expected to
+// produce post-step comments. The pass threshold stays lower because some steps are
+// conditional, but missing steps should still be surfaced in WARN output.
+const EXPECTED_STEP_IDS: [&str; 14] = ["0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
 const REVIEW_LAST_CYCLE_PATH: &str = "/review_agent/last_review_cycle";
 const DERIVE_METRICS_FIELDS: [&str; 9] = [
 	"total_dispatches",
@@ -102,6 +111,7 @@ struct ExecutionResult {
 
 trait CommandRunner {
     fn run(&self, script_path: &Path, args: &[String]) -> Result<ExecutionResult, String>;
+	fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String>;
 }
 
 struct ProcessRunner;
@@ -119,6 +129,23 @@ impl CommandRunner for ProcessRunner {
             stdout: String::from_utf8_lossy(&output.stdout).trim().to_string(),
         })
     }
+
+	fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+		let output = Command::new("gh")
+			.arg("api")
+			.arg(format!("repos/{MAIN_REPO}/issues/{issue}/comments"))
+			.arg("--paginate")
+			.arg("--jq")
+			.arg(".[] | .body")
+			.output()
+			.map_err(|error| format!("failed to execute gh api: {}", error))?;
+
+		if !output.status.success() {
+			return Err(command_failure_message("gh api", &output));
+		}
+
+		Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+	}
 }
 
 fn main() {
@@ -219,6 +246,7 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
 		.iter()
 		.map(|spec| run_step(repo_root, spec, runner))
 		.chain(std::iter::once(verify_artifacts(repo_root)))
+		.chain(std::iter::once(verify_step_comments(repo_root, runner)))
 		.collect::<Vec<_>>();
 	let overall = pipeline_overall_status(&steps);
 	let has_blocking_findings = steps.iter().any(|step| step.status == StepStatus::Fail);
@@ -429,6 +457,20 @@ fn parse_json(raw: &str) -> Option<Value> {
     serde_json::from_str(raw).ok()
 }
 
+fn command_failure_message(command: &str, output: &std::process::Output) -> String {
+	let code = output.status.code().map_or_else(
+		|| "terminated by signal".to_string(),
+		|value| value.to_string(),
+	);
+	let stderr = String::from_utf8_lossy(&output.stderr).trim().to_owned();
+
+	if stderr.is_empty() {
+		format!("{command} failed with status {code}")
+	} else {
+		format!("{command} failed with status {code}: {stderr}")
+	}
+}
+
 fn collect_derive_metrics_mismatches(repo_root: &Path, derived_metrics: &Value) -> Result<Vec<String>, String> {
 	let state_value = read_state_value(repo_root)?;
 	let current_metrics = state_value
@@ -486,6 +528,114 @@ fn is_check_passing(check: &Value) -> bool {
 
 fn verify_artifacts(repo_root: &Path) -> StepReport {
 	verify_artifacts_for_date(repo_root, &current_utc_timestamp()[..10])
+}
+
+fn verify_step_comments(repo_root: &Path, runner: &dyn CommandRunner) -> StepReport {
+	let issue = match read_state_value(repo_root).and_then(|state| {
+		state
+			.pointer("/last_cycle/issue")
+			.and_then(Value::as_u64)
+			.ok_or_else(|| "missing numeric /last_cycle/issue in docs/state.json".to_string())
+	}) {
+		Ok(issue) => issue,
+		Err(error) => {
+			return StepReport {
+				name: STEP_COMMENTS_STEP_NAME,
+				status: StepStatus::Error,
+				severity: Severity::Warning,
+				exit_code: None,
+				detail: Some(error),
+				findings: None,
+				summary: None,
+			};
+		}
+	};
+
+	let comment_bodies = match runner.fetch_issue_comment_bodies(issue) {
+		Ok(comment_bodies) => comment_bodies,
+		Err(error) => {
+			return StepReport {
+				name: STEP_COMMENTS_STEP_NAME,
+				status: StepStatus::Error,
+				severity: Severity::Warning,
+				exit_code: None,
+				detail: Some(error),
+				findings: None,
+				summary: None,
+			};
+		}
+	};
+
+	let found = collect_step_comment_ids(&comment_bodies);
+	let missing = EXPECTED_STEP_IDS
+		.iter()
+		.copied()
+		.filter(|step| !found.contains(step))
+		.collect::<Vec<_>>();
+	let status = if found.len() >= STEP_COMMENT_THRESHOLD {
+		StepStatus::Pass
+	} else {
+		StepStatus::Warn
+	};
+	let detail = if status == StepStatus::Pass {
+		format!("found {} unique step comments on issue #{}", found.len(), issue)
+	} else {
+		format!(
+			"found {} unique step comments on issue #{}; missing steps: {}",
+			found.len(),
+			issue,
+			missing.join(", ")
+		)
+	};
+
+	StepReport {
+		name: STEP_COMMENTS_STEP_NAME,
+		status,
+		severity: Severity::Warning,
+		exit_code: None,
+		detail: Some(detail),
+		findings: Some(found.len()),
+		summary: None,
+	}
+}
+
+/// Collect recognized orchestrator step identifiers from issue comment bodies.
+///
+/// Returned step IDs are references to the static `EXPECTED_STEP_IDS` list rather than
+/// slices of the input text. Unrecognized step tokens are ignored.
+fn collect_step_comment_ids(comment_bodies: &str) -> BTreeSet<&'static str> {
+	comment_bodies
+		.lines()
+		.filter_map(detect_step_comment_id)
+		.collect()
+}
+
+fn detect_step_comment_id(line: &str) -> Option<&'static str> {
+	let trimmed = line.trim();
+	if trimmed.starts_with(ORCHESTRATOR_SIGNATURE) {
+		extract_step_id_after_marker(trimmed, "Step ")
+	} else if trimmed.starts_with("## Step ") {
+		extract_step_id_after_marker(trimmed, "## Step ")
+	} else {
+		None
+	}
+}
+
+fn extract_step_id_after_marker(line: &str, marker: &str) -> Option<&'static str> {
+	// Callers only invoke this after confirming the line begins with the relevant marker.
+	let start = line.find(marker)? + marker.len();
+	let candidate = line[start..]
+		.split(|ch: char| ch == '|' || ch.is_whitespace())
+		.next()
+		.unwrap_or_default()
+		.trim_end_matches(':');
+	// This returns references from the static EXPECTED_STEP_IDS array, not slices of
+	// the input line, and returns None when the candidate does not match an expected
+	// step identifier, so the &'static str return type is safe here.
+	EXPECTED_STEP_IDS
+		.iter()
+		.copied()
+		.find(|step| *step == candidate)
 }
 
 fn verify_artifacts_for_date(repo_root: &Path, today: &str) -> StepReport {
@@ -867,6 +1017,10 @@ mod tests {
 					.to_string(),
 				})
 			}
+
+			fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+				Err("issue comments are not used in derive-metrics test".to_string())
+			}
 		}
 
 		let spec = ToolSpec {
@@ -924,6 +1078,10 @@ mod tests {
 					})
 					.to_string(),
 				})
+			}
+
+			fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+				Err("issue comments are not used in derive-metrics test".to_string())
 			}
 		}
 
@@ -993,6 +1151,10 @@ mod tests {
 					.to_string(),
 				})
 			}
+
+			fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+				Err("issue comments are not used in derive-metrics test".to_string())
+			}
 		}
 
 		let spec = ToolSpec {
@@ -1060,6 +1222,10 @@ mod tests {
 					})
 					.to_string(),
 				})
+			}
+
+			fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+				Err("issue comments are not used in derive-metrics test".to_string())
 			}
 		}
 
@@ -1371,6 +1537,10 @@ mod tests {
                 assert_eq!(script_path, Path::new("/repo/tools/metric-snapshot"));
                 Err("wrapper exited with status 101".to_string())
             }
+
+			fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+				Err("issue comments are not used in wrapper failure test".to_string())
+			}
         }
 
         let called = AtomicBool::new(false);
@@ -1420,7 +1590,24 @@ mod tests {
                         stdout: result.stdout.clone(),
                     })
                     .ok_or_else(|| format!("missing mock output for {}", key))
-            }
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 834, "aggregation test should read last_cycle.issue from state");
+				Ok(concat!(
+					"> **[main-orchestrator]** | Cycle 135 | Step 0\n",
+					"> **[main-orchestrator]** | Cycle 135 | Step 0.5\n",
+					"> **[main-orchestrator]** | Cycle 135 | Step 0.6\n",
+					"> **[main-orchestrator]** | Cycle 135 | Step 1\n",
+					"> **[main-orchestrator]** | Cycle 135 | Step 1.1\n",
+					"> **[main-orchestrator]** | Cycle 135 | Step 2\n",
+					"> **[main-orchestrator]** | Cycle 135 | Step 3\n",
+					"> **[main-orchestrator]** | Cycle 135 | Step 4\n",
+					"> **[main-orchestrator]** | Cycle 135 | Step 5\n",
+					"> **[main-orchestrator]** | Cycle 135 | Step 6\n"
+				)
+				.to_string())
+			}
         }
 
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -1430,6 +1617,9 @@ mod tests {
 		fs::write(
 			root.join("docs/state.json"),
 			json!({
+				"last_cycle": {
+					"issue": 834
+				},
 				"copilot_metrics": {
 					"total_dispatches": 3,
 					"resolved": 2,
@@ -1521,7 +1711,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-		assert_eq!(report.steps.len(), 7);
+		assert_eq!(report.steps.len(), 8);
 		assert_eq!(report.steps[0].status, StepStatus::Pass);
 		assert_eq!(report.steps[1].status, StepStatus::Pass);
 		assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -1542,6 +1732,8 @@ mod tests {
 		);
 		assert_eq!(report.steps[6].name, "artifact-verify");
 		assert_eq!(report.steps[6].status, StepStatus::Pass);
+		assert_eq!(report.steps[7].name, "step-comments");
+		assert_eq!(report.steps[7].status, StepStatus::Pass);
 	}
 
     #[test]
@@ -1563,6 +1755,10 @@ mod tests {
             ) -> Result<ExecutionResult, String> {
                 Err(format!("failed to invoke {}", script_path.display()))
             }
+
+			fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+				Err("failed to fetch issue comments".to_string())
+			}
         }
 
         static COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -1572,7 +1768,7 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-		assert_eq!(report.steps.len(), 7);
+		assert_eq!(report.steps.len(), 8);
 		assert!(report
 			.steps
 			.iter()
@@ -1673,6 +1869,208 @@ mod tests {
 			.as_deref()
 			.unwrap_or_default()
 			.contains("Review artifact missing for cycle 208"));
+	}
+
+	#[test]
+	fn step_comment_detection_supports_header_and_heading_formats() {
+		let bodies = concat!(
+			"> **[main-orchestrator]** | Cycle 212 | Step 0\n\n### Start\n\nBody\n",
+			"noise\n",
+			"## Step 0.5: Check workflow runs\n",
+			"## Step 1.1: Extra validation\n",
+			"> **[main-orchestrator]** | Cycle 212 | Step 10\n\n### Finish\n",
+			"> **[main-orchestrator]** | Cycle 212 | Step 10\n\n### Duplicate\n"
+		);
+
+		let detected = collect_step_comment_ids(bodies);
+
+		assert_eq!(detected.len(), 4);
+		assert!(detected.contains("0"));
+		assert!(detected.contains("0.5"));
+		assert!(detected.contains("1.1"));
+		assert!(detected.contains("10"));
+	}
+
+	#[test]
+	fn step_comment_verification_warns_when_fewer_than_ten_steps_are_found() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root =
+			std::env::temp_dir().join(format!("pipeline-check-step-comments-warn-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"last_cycle": {
+					"issue": 834
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct StepCommentRunner;
+
+		impl CommandRunner for StepCommentRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected in step comment verification test");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 834);
+				Ok(concat!(
+					"> **[main-orchestrator]** | Cycle 212 | Step 0\n",
+					"> **[main-orchestrator]** | Cycle 212 | Step 0.5\n",
+					"> **[main-orchestrator]** | Cycle 212 | Step 0.6\n",
+					"> **[main-orchestrator]** | Cycle 212 | Step 1\n",
+					"> **[main-orchestrator]** | Cycle 212 | Step 2\n",
+					"> **[main-orchestrator]** | Cycle 212 | Step 3\n",
+					"> **[main-orchestrator]** | Cycle 212 | Step 4\n",
+					"> **[main-orchestrator]** | Cycle 212 | Step 5\n",
+					"> **[main-orchestrator]** | Cycle 212 | Step 6\n"
+				)
+				.to_string())
+			}
+		}
+
+		let step = verify_step_comments(&root, &StepCommentRunner);
+		assert_eq!(step.name, "step-comments");
+		assert_eq!(step.status, StepStatus::Warn);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("found 9 unique step comments"));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("missing steps:"));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("7"));
+	}
+
+	#[test]
+	fn step_comment_verification_errors_when_issue_number_is_missing() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root =
+			std::env::temp_dir().join(format!("pipeline-check-step-comments-missing-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(root.join("docs/state.json"), json!({"last_cycle": {}}).to_string()).unwrap();
+
+		struct StepCommentRunner;
+
+		impl CommandRunner for StepCommentRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected in step comment verification test");
+			}
+
+			fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+				panic!("gh api should not run when issue number is missing");
+			}
+		}
+
+		let step = verify_step_comments(&root, &StepCommentRunner);
+		assert_eq!(step.status, StepStatus::Error);
+		assert_eq!(
+			step.detail.as_deref(),
+			Some("missing numeric /last_cycle/issue in docs/state.json")
+		);
+	}
+
+	#[test]
+	fn step_comment_verification_errors_when_gh_api_fails() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir()
+			.join(format!("pipeline-check-step-comments-gh-failure-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"last_cycle": {
+					"issue": 836
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct StepCommentRunner;
+
+		impl CommandRunner for StepCommentRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected in step comment verification test");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 836);
+				Err("gh api failed with status 1: rate limited".to_string())
+			}
+		}
+
+		let step = verify_step_comments(&root, &StepCommentRunner);
+		assert_eq!(step.status, StepStatus::Error);
+		assert_eq!(
+			step.detail.as_deref(),
+			Some("gh api failed with status 1: rate limited")
+		);
+	}
+
+	#[test]
+	fn step_comment_verification_passes_with_ten_unique_steps() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root =
+			std::env::temp_dir().join(format!("pipeline-check-step-comments-pass-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"last_cycle": {
+					"issue": 835
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct StepCommentRunner;
+
+		impl CommandRunner for StepCommentRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected in step comment verification test");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 835);
+				Ok(concat!(
+					"> **[main-orchestrator]** | Cycle 212 | Step 0\n",
+					"## Step 0.5: workflow check\n",
+					"> **[main-orchestrator]** | Cycle 212 | Step 0.6\n",
+					"> **[main-orchestrator]** | Cycle 212 | Step 1\n",
+					"## Step 1.1: extra\n",
+					"> **[main-orchestrator]** | Cycle 212 | Step 2\n",
+					"> **[main-orchestrator]** | Cycle 212 | Step 3\n",
+					"> **[main-orchestrator]** | Cycle 212 | Step 4\n",
+					"> **[main-orchestrator]** | Cycle 212 | Step 5\n",
+					"> **[main-orchestrator]** | Cycle 212 | Step 6\n"
+				)
+				.to_string())
+			}
+		}
+
+		let step = verify_step_comments(&root, &StepCommentRunner);
+		assert_eq!(step.status, StepStatus::Pass);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("found 10 unique step comments"));
 	}
 
 	#[test]
