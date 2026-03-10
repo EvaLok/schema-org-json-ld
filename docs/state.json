@@ -2606,8 +2606,10 @@
     {
       "dispatched_at": "2026-03-10T16:34:01Z",
       "issue": 987,
+      "merged_at": "2026-03-10T18:22:37Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 989,
+      "status": "merged",
       "title": "state-invariants: enforce chronic category verification deadlines"
     },
     {
@@ -2781,12 +2783,12 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#990 Cycle 220 end-of-cycle review (cycle 220)",
-    "dispatch_to_pr_rate": "97.9%",
-    "in_flight": 1,
-    "merged": 280,
+    "dispatch_to_pr_rate": "98.3%",
+    "in_flight": 0,
+    "merged": 281,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 282,
-    "resolved": 287,
+    "produced_pr": 283,
+    "resolved": 288,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 288
@@ -2927,16 +2929,16 @@
         "cadence": "after question creation or resolution",
         "last_refreshed": "cycle 221"
       },
-      "previous_cycle_issue": {
-        "cadence": "every cycle",
-        "last_refreshed": "cycle 220"
-      },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
         "last_refreshed": "cycle 213"
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
+        "last_refreshed": "cycle 220"
+      },
+      "previous_cycle_issue": {
+        "cadence": "every cycle",
         "last_refreshed": "cycle 220"
       },
       "publish_gate": {
@@ -3046,13 +3048,13 @@
   },
   "last_eva_comment_check": "2026-03-10T18:15:08Z",
   "open_questions_for_eva": [],
-  "previous_cycle_issue": 978,
   "pre_python_clean_cycles": {
     "count": 0,
     "description": "Per Eva directive on #699: 5 consecutive clean cycles (pipeline 5/5 at startup, no bugs, no problems) required before starting Python implementation. Count restarts on any problem.",
     "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
     "started_at": "cycle 199"
   },
+  "previous_cycle_issue": 978,
   "publish_gate": {
     "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z",
     "note": "v1.0.2 published by Eva. v1.0.1 failed due to CI workflow incompatibility with npm OIDC trusted publishing (Node 22 ships npm 10, OIDC requires npm 11.5+). Package contents identical to validated ea8ffff.",
