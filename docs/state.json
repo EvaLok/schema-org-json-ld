@@ -2462,8 +2462,10 @@
     {
       "dispatched_at": "2026-03-10T03:06:48Z",
       "issue": 943,
+      "merged_at": "2026-03-10T04:39:12Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 944,
+      "status": "merged",
       "title": "Add step-comment count verification phase to pipeline-check"
     },
     {
@@ -2634,11 +2636,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#945 Fix write-entry Copilot metrics presentation to show correct denominators (cycle 213)",
     "dispatch_to_pr_rate": "97.4%",
-    "in_flight": 1,
-    "merged": 264,
+    "in_flight": 0,
+    "merged": 265,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 266,
-    "resolved": 271,
+    "produced_pr": 267,
+    "resolved": 272,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 272
