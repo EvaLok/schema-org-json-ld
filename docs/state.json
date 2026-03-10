@@ -2535,6 +2535,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add receipt SHA validation to write-entry tool"
+    },
+    {
+      "dispatched_at": "2026-03-10T08:25:16Z",
+      "issue": 966,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 216 review"
     }
   ],
   "audit_dropped": [
@@ -2695,16 +2702,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#964 Add receipt SHA validation to write-entry tool (cycle 216)",
+    "dispatch_log_latest": "#966 Cycle 216 review (cycle 216)",
     "dispatch_to_pr_rate": "97.5%",
-    "in_flight": 2,
+    "in_flight": 3,
     "merged": 270,
     "pr_merge_rate": "99.3%",
     "produced_pr": 272,
     "resolved": 277,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 279
+    "total_dispatches": 280
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
