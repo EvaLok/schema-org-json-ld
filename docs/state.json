@@ -2579,8 +2579,10 @@
     {
       "dispatched_at": "2026-03-10T14:24:44Z",
       "issue": 979,
+      "merged_at": "2026-03-10T16:32:22Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 980,
+      "status": "merged",
       "title": "record-dispatch worklog in-flight fixup"
     },
     {
@@ -2752,12 +2754,12 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#981 Cycle 219 end-of-cycle review (cycle 219)",
-    "dispatch_to_pr_rate": "97.9%",
-    "in_flight": 1,
-    "merged": 277,
+    "dispatch_to_pr_rate": "98.2%",
+    "in_flight": 0,
+    "merged": 278,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 279,
-    "resolved": 284,
+    "produced_pr": 280,
+    "resolved": 285,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 285
