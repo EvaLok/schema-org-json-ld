@@ -20,8 +20,8 @@
    Category: state-metric-drift
 
    **Files**: `/home/runner/work/schema-org-json-ld/schema-org-json-ld/docs/state.json:3001-3003`; `/home/runner/work/schema-org-json-ld/schema-org-json-ld/docs/state.json:4791-4796`  
-   **Evidence**: `field_inventory.fields.test_count.last_refreshed` says `cycle 221`, but `test_count` still reports `php = 425`, `ts = 419`, `total = 844` with `last_verified = cycle 139`. Comparing against the repository’s actual test-file counts via `ls /home/runner/work/schema-org-json-ld/schema-org-json-ld/php/test/unit | wc -l` and `ls /home/runner/work/schema-org-json-ld/schema-org-json-ld/ts/test/schema | wc -l` yields `90` and `90`, not values anywhere near the numbers stored in state.  
-   **Why it matters**: If `test_count` is meant to count files, it is stale. If it is meant to count individual test cases, the field name and cadence text are misleading. Either way, cycle 221 refreshed the inventory marker without leaving a trustworthy metric behind.
+   **Evidence**: `field_inventory.fields.test_count.last_refreshed` says `cycle 221`, but `test_count` still reports `php = 425`, `ts = 419`, `total = 844` with `last_verified = cycle 139`. Comparing against the repository’s actual test-file counts via `ls /home/runner/work/schema-org-json-ld/schema-org-json-ld/php/test/unit | wc -l` and `ls /home/runner/work/schema-org-json-ld/schema-org-json-ld/ts/test/schema | wc -l` yields `90` and `90`. So either the state entry is stale if it is meant to track file counts, or the field name/cadence now obscures that it is actually tracking something else, such as individual test cases.  
+   **Why it matters**: Either interpretation is a state-quality problem. The metric is currently not self-describing enough to be checked against repository reality, yet cycle 221 still refreshed the inventory marker as if the value had been meaningfully re-verified.
 
 4. **The journal notices the missed verification step, but then narrates around it instead of extracting a guardrail**
    Category: reflection-gap
@@ -38,7 +38,7 @@
 
 ## Complacency score
 
-4/5 — cycle 221 did real work: it merged substantive tool changes, consumed the missing cycle-220 review, and actually used the new phased documentation flow. But it also repeated a core bad habit from prior reviews: treating architecture-level intent as proof, merging documentation that was already stale relative to the final state, and refreshing state metadata without re-establishing that the underlying numbers are trustworthy.
+4/5 (where 5 = “going through motions”) — cycle 221 did real work: it merged substantive tool changes, consumed the missing cycle-220 review, and actually used the new phased documentation flow. But it also repeated a core bad habit from prior reviews: treating architecture-level intent as proof, merging documentation that was already stale relative to the final state, and refreshing state metadata without re-establishing that the underlying numbers are trustworthy.
 
 ## Priority items
 
