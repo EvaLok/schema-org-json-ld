@@ -2397,13 +2397,13 @@
       "title": "Fix Phase 7 journal freshness check to use docs/journal/"
     },
     {
-      "dispatched_cycle": 210,
+      "dispatched_at": "2026-03-09T20:24:04Z",
       "issue": 924,
       "merged_at": "2026-03-09T22:10:59Z",
       "model": "gpt-5.4",
       "pr": 925,
       "status": "merged",
-      "title": "Cycle 210 review"
+      "title": "[Cycle Review] Cycle 210 end-of-cycle review"
     },
     {
       "dispatched_at": "2026-03-09T22:13:31Z",
@@ -2584,7 +2584,7 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#931 [Cycle Review] Cycle 211 end-of-cycle review (cycle 211)",
-    "dispatch_to_pr_rate": "97.4%",
+    "dispatch_to_pr_rate": "97.0%",
     "in_flight": 3,
     "merged": 257,
     "pr_merge_rate": "99.2%",
