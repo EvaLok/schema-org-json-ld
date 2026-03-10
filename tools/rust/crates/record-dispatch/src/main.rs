@@ -96,16 +96,21 @@ mod tests {
     fn concurrency_warning_threshold_is_triggered_at_three() {
         let patch = record_dispatch::build_dispatch_patch(
             &serde_json::json!({
-                "agent_sessions": [],
+                "agent_sessions": [
+                    { "status": "in_flight" },
+                    { "status": "dispatched" }
+                ],
                 "copilot_metrics": {
-                    "total_dispatches": 85,
+                    "total_dispatches": 2,
                     "in_flight": 2,
-                    "resolved": 83,
+                    "resolved": 0,
                     "dispatch_log_latest": "#601 old dispatch (cycle 164)"
                 },
                 "field_inventory": {
                     "fields": {
-                        "copilot_metrics.in_flight": { "last_refreshed": "cycle 163" }
+                        "copilot_metrics.in_flight": { "last_refreshed": "cycle 163" },
+                        "copilot_metrics.dispatch_to_pr_rate": { "last_refreshed": "cycle 163" },
+                        "copilot_metrics.pr_merge_rate": { "last_refreshed": "cycle 163" }
                     }
                 }
             }),
