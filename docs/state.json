@@ -2597,8 +2597,10 @@
     {
       "dispatched_at": "2026-03-10T16:33:52Z",
       "issue": 986,
+      "merged_at": "2026-03-10T18:22:07Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 988,
+      "status": "merged",
       "title": "pipeline-check: escalate step-comment verification from WARN to FAIL"
     },
     {
@@ -2779,12 +2781,12 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#990 Cycle 220 end-of-cycle review (cycle 220)",
-    "dispatch_to_pr_rate": "97.6%",
-    "in_flight": 2,
-    "merged": 279,
+    "dispatch_to_pr_rate": "97.9%",
+    "in_flight": 1,
+    "merged": 280,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 281,
-    "resolved": 286,
+    "produced_pr": 282,
+    "resolved": 287,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 288
