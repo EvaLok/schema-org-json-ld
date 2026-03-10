@@ -217,38 +217,7 @@ fn validate_review_format(content: &str) -> Vec<String> {
     let lines: Vec<&str> = content.lines().collect();
     let mut errors = Vec::new();
     let mut found_heading = false;
-    let mut in_findings = false;
-    let mut in_code_block = false;
-
-    for (index, line) in lines.iter().enumerate() {
-        let trimmed = line.trim();
-        let lower = trimmed.to_ascii_lowercase();
-
-        if lower.starts_with("## findings") {
-            in_findings = true;
-            in_code_block = false;
-            continue;
-        }
-
-        if in_findings && lower.starts_with("## ") && !lower.starts_with("## findings")
-            && !matches_numbered_finding_with_hash_prefix(trimmed)
-        {
-            break;
-        }
-
-        if !in_findings {
-            continue;
-        }
-
-        if trimmed.starts_with("```") {
-            in_code_block = !in_code_block;
-            continue;
-        }
-
-        if in_code_block {
-            continue;
-        }
-
+    for_each_finding_line(&lines, |index, trimmed| {
         if let Some(number) = numbered_finding_number(trimmed) {
             found_heading = true;
 
@@ -261,7 +230,7 @@ fn validate_review_format(content: &str) -> Vec<String> {
                 None => errors.push(format!("Finding {} has no category tag", number)),
             }
         }
-    }
+    });
 
     if !found_heading {
         errors.push("review markdown must contain at least one numbered finding heading in the Findings section".to_string());
@@ -322,7 +291,7 @@ fn extract_score(content: &str) -> Option<u64> {
 }
 
 fn extract_finding_count(content: &str) -> Option<u64> {
-    let list_count = count_numbered_findings_in_findings_section(content);
+    let list_count = count_numbered_findings(content);
     if list_count > 0 {
         return Some(list_count as u64);
     }
@@ -330,43 +299,15 @@ fn extract_finding_count(content: &str) -> Option<u64> {
     None
 }
 
-fn count_numbered_findings_in_findings_section(content: &str) -> usize {
-    let mut in_findings = false;
-    let mut in_code_block = false;
+fn count_numbered_findings(content: &str) -> usize {
+    let lines: Vec<&str> = content.lines().collect();
     let mut count = 0usize;
 
-    for line in content.lines() {
-        let trimmed = line.trim();
-        let lower = trimmed.to_ascii_lowercase();
-
-        if lower.starts_with("## findings") {
-            in_findings = true;
-            continue;
-        }
-
-        if in_findings && lower.starts_with("## ") && !lower.starts_with("## findings")
-            && !matches_numbered_finding_with_hash_prefix(trimmed)
-        {
-            break;
-        }
-
-        if !in_findings {
-            continue;
-        }
-
-        if trimmed.starts_with("```") {
-            in_code_block = !in_code_block;
-            continue;
-        }
-
-        if in_code_block {
-            continue;
-        }
-
+    for_each_finding_line(&lines, |_, trimmed| {
         if is_numbered_finding_heading(trimmed) {
             count += 1;
         }
-    }
+    });
 
     count
 }
@@ -422,48 +363,75 @@ fn numbered_finding_number(line: &str) -> Option<u64> {
 fn extract_categories(content: &str) -> Vec<String> {
     let lines: Vec<&str> = content.lines().collect();
     let mut categories = BTreeSet::new();
-    let mut in_findings = false;
-    let mut in_code_block = false;
-
-    for (index, line) in lines.iter().enumerate() {
-        let trimmed = line.trim();
-        let lower = trimmed.to_ascii_lowercase();
-
-        if lower.starts_with("## findings") {
-            in_findings = true;
-            in_code_block = false;
-            continue;
-        }
-
-        if in_findings && lower.starts_with("## ") && !lower.starts_with("## findings")
-            && !matches_numbered_finding_with_hash_prefix(trimmed)
-        {
-            break;
-        }
-
-        if !in_findings {
-            continue;
-        }
-
-        if trimmed.starts_with("```") {
-            in_code_block = !in_code_block;
-            continue;
-        }
-
-        if in_code_block {
-            continue;
-        }
-
+    for_each_finding_line(&lines, |index, trimmed| {
         if is_numbered_finding_heading(trimmed) {
-            if let Some(raw) = resolve_finding_category(trimmed, next_non_empty_line(&lines, index + 1)) {
+            if let Some(raw) =
+                resolve_finding_category(trimmed, next_non_empty_line(&lines, index + 1))
+            {
                 if let Some(normalized) = normalize_category(raw) {
                     categories.insert(normalized);
                 }
             }
         }
-    }
+    });
 
     categories.into_iter().collect()
+}
+
+fn for_each_finding_line(lines: &[&str], mut visitor: impl FnMut(usize, &str)) {
+    match findings_line_bounds(lines) {
+        Some((start, end)) => {
+            let mut in_code_block = false;
+            for (offset, line) in lines[start..end].iter().enumerate() {
+                let trimmed = line.trim();
+                if trimmed.starts_with("```") {
+                    in_code_block = !in_code_block;
+                    continue;
+                }
+
+                if in_code_block {
+                    continue;
+                }
+
+                visitor(start + offset, trimmed);
+            }
+        }
+        None => {
+            let mut in_code_block = false;
+            for (index, line) in lines.iter().enumerate() {
+                let trimmed = line.trim();
+                if trimmed.starts_with("```") {
+                    in_code_block = !in_code_block;
+                    continue;
+                }
+
+                if in_code_block {
+                    continue;
+                }
+
+                visitor(index, trimmed);
+            }
+        }
+    }
+}
+
+fn findings_line_bounds(lines: &[&str]) -> Option<(usize, usize)> {
+    let start = lines
+        .iter()
+        .position(|line| line.trim().to_ascii_lowercase().starts_with("## findings"))?;
+
+    for (offset, line) in lines[start + 1..].iter().enumerate() {
+        let trimmed = line.trim();
+        let lower = trimmed.to_ascii_lowercase();
+        if lower.starts_with("## ")
+            && !lower.starts_with("## findings")
+            && !matches_numbered_finding_with_hash_prefix(trimmed)
+        {
+            return Some((start + 1, start + 1 + offset));
+        }
+    }
+
+    Some((start + 1, lines.len()))
 }
 
 fn extract_inline_category(line: &str) -> Option<&str> {
@@ -531,10 +499,14 @@ fn normalize_category(category: &str) -> Option<String> {
 
 fn strip_hash_heading_prefix(line: &str) -> &str {
     match line.strip_prefix("## ") {
-        Some(remainder) if remainder
-            .chars()
-            .next()
-            .is_some_and(|ch| ch.is_ascii_digit()) => remainder,
+        Some(remainder)
+            if remainder
+                .chars()
+                .next()
+                .is_some_and(|ch| ch.is_ascii_digit()) =>
+        {
+            remainder
+        }
         _ => line,
     }
 }
@@ -958,7 +930,46 @@ mod tests {
 1. Leave the parser alone.
 "#;
 
-        assert_eq!(count_numbered_findings_in_findings_section(markdown), 3);
+        assert_eq!(count_numbered_findings(markdown), 3);
+    }
+
+    #[test]
+    fn finding_count_falls_back_without_findings_header() {
+        let markdown = r#"# Cycle 213 Review
+
+## 1. [review-evidence] First finding
+
+## 2. [tooling-contract] Second finding
+
+## Complacency score
+
+**4/5**
+"#;
+
+        assert_eq!(extract_finding_count(markdown), Some(2));
+        assert_eq!(extract_score(markdown), Some(4));
+    }
+
+    #[test]
+    fn category_extraction_falls_back_without_findings_header() {
+        let markdown = r#"# Cycle 213 Review
+
+## 1. [review-evidence] First finding
+
+## 2. [tooling-contract] Second finding
+
+## Complacency score
+
+**4/5**
+"#;
+
+        assert_eq!(
+            extract_categories(markdown),
+            vec![
+                "review-evidence".to_string(),
+                "tooling-contract".to_string(),
+            ]
+        );
     }
 
     #[test]
@@ -1131,6 +1142,33 @@ Category: Review Accounting
     }
 
     #[test]
+    fn parse_review_accepts_findings_without_findings_header() {
+        let path = Path::new("docs/reviews/cycle-213.md");
+        let markdown = r#"# Cycle 213 Review
+
+## 1. [review-evidence] First finding
+
+## 2. [tooling-contract] Second finding
+
+## Complacency score
+
+**4/5**
+"#;
+
+        let parsed = parse_review(path, markdown, false).expect("parse should succeed");
+        assert_eq!(parsed.cycle, 213);
+        assert_eq!(parsed.finding_count, 2);
+        assert_eq!(parsed.complacency_score, 4);
+        assert_eq!(
+            parsed.categories,
+            vec![
+                "review-evidence".to_string(),
+                "tooling-contract".to_string(),
+            ]
+        );
+    }
+
+    #[test]
     fn parse_review_rejects_missing_category_by_default() {
         let path = Path::new("docs/reviews/cycle-162.md");
         let error = parse_review(path, SAMPLE_REVIEW, false).expect_err("parse should fail");
@@ -1233,6 +1271,20 @@ No numbered findings here.
 
 1. **Finding title**
 Category: Review Accounting
+
+## Complacency score
+
+4/5 — actual score
+"#;
+
+        assert!(validate_review_format(markdown).is_empty());
+    }
+
+    #[test]
+    fn review_format_validation_accepts_findings_without_findings_header() {
+        let markdown = r#"# Cycle 213 Review
+
+## 1. [review-evidence] Finding title
 
 ## Complacency score
 
