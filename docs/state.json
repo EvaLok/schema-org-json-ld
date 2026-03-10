@@ -2752,7 +2752,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 213"
+        "last_refreshed": "cycle 214"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -2760,11 +2760,11 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 213"
+        "last_refreshed": "cycle 214"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 213"
+        "last_refreshed": "cycle 214"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -2874,12 +2874,12 @@
   },
   "last_cycle": {
     "duration_minutes": 13,
-    "issue": 941,
-    "number": 213,
+    "issue": 949,
+    "number": 214,
     "summary": "Merged 3 PRs (#937 process-merge --issues, #938 journal scanner, #940 cycle 212 review). Processed cycle 212 review (4/5, 2 actioned, 3 deferred). Accepted audit #177 (step-commenting structural enforcement). Fixed contract-drift in COMPLETION_CHECKLIST. Dispatched #943 (step-comment verification in pipeline-check) and #945 (write-entry metrics fix).",
-    "timestamp": "2026-03-10T03:07:30Z"
+    "timestamp": "2026-03-10T04:33:06Z"
   },
-  "last_eva_comment_check": "2026-03-10T03:07:30Z",
+  "last_eva_comment_check": "2026-03-10T04:33:06Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
