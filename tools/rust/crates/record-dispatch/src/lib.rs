@@ -1,5 +1,11 @@
 use serde_json::{json, Value};
 use state_schema::default_agent_model;
+use std::{
+    ffi::OsStr,
+    fs,
+    path::{Path, PathBuf},
+    time::SystemTime,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DispatchPatch {
@@ -257,9 +263,124 @@ pub fn dispatch_commit_message(issue: u64, current_cycle: u64) -> String {
     )
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum WorklogFixupOutcome {
+    Updated(PathBuf),
+    NotFound,
+}
+
+const IN_FLIGHT_WORKLOG_PREFIX: &str = "- **In-flight agent sessions**: ";
+
+pub fn fixup_latest_worklog_in_flight(
+    repo_root: &Path,
+    in_flight: i64,
+) -> Result<WorklogFixupOutcome, String> {
+    let Some(worklog_path) = find_latest_worklog_file(repo_root)? else {
+        return Ok(WorklogFixupOutcome::NotFound);
+    };
+
+    let content = fs::read_to_string(&worklog_path)
+        .map_err(|error| format!("failed to read {}: {}", worklog_path.display(), error))?;
+    let updated = replace_in_flight_line(&content, in_flight).ok_or_else(|| {
+        format!(
+            "missing '{}' line in {}",
+            IN_FLIGHT_WORKLOG_PREFIX.trim_end(),
+            worklog_path.display()
+        )
+    })?;
+    fs::write(&worklog_path, updated)
+        .map_err(|error| format!("failed to write {}: {}", worklog_path.display(), error))?;
+
+    Ok(WorklogFixupOutcome::Updated(worklog_path))
+}
+
+fn find_latest_worklog_file(repo_root: &Path) -> Result<Option<PathBuf>, String> {
+    let worklog_root = repo_root.join("docs/worklog");
+    if !worklog_root.exists() {
+        return Ok(None);
+    }
+    let metadata = fs::metadata(&worklog_root)
+        .map_err(|error| format!("failed to read {}: {}", worklog_root.display(), error))?;
+    if !metadata.is_dir() {
+        return Err(format!(
+            "expected {} to be a directory",
+            worklog_root.display()
+        ));
+    }
+
+    let mut latest: Option<(SystemTime, PathBuf)> = None;
+    let mut pending = vec![worklog_root];
+    while let Some(directory) = pending.pop() {
+        for entry in fs::read_dir(&directory)
+            .map_err(|error| format!("failed to read {}: {}", directory.display(), error))?
+        {
+            let entry = entry.map_err(|error| {
+                format!("failed to read entry in {}: {}", directory.display(), error)
+            })?;
+            let path = entry.path();
+            let file_type = entry.file_type().map_err(|error| {
+                format!("failed to read file type for {}: {}", path.display(), error)
+            })?;
+            if file_type.is_dir() {
+                pending.push(path);
+                continue;
+            }
+            if !file_type.is_file() || path.extension() != Some(OsStr::new("md")) {
+                continue;
+            }
+
+            let modified = entry
+                .metadata()
+                .map_err(|error| format!("failed to read {}: {}", path.display(), error))?
+                .modified()
+                .map_err(|error| {
+                    format!("failed to read modification time for {}: {}", path.display(), error)
+                })?;
+            let should_replace = latest
+                .as_ref()
+                .is_none_or(|(current_modified, current_path)| {
+                    modified > *current_modified
+                        || (modified == *current_modified && path > *current_path)
+                });
+            if should_replace {
+                latest = Some((modified, path));
+            }
+        }
+    }
+
+    Ok(latest.map(|(_, path)| path))
+}
+
+fn replace_in_flight_line(content: &str, in_flight: i64) -> Option<String> {
+    let replacement = format!("{IN_FLIGHT_WORKLOG_PREFIX}{in_flight}");
+    let mut replaced = false;
+    let mut updated_lines = Vec::new();
+    for line in content.lines() {
+        if !replaced && line.starts_with(IN_FLIGHT_WORKLOG_PREFIX) {
+            updated_lines.push(replacement.clone());
+            replaced = true;
+        } else {
+            updated_lines.push(line.to_string());
+        }
+    }
+    if !replaced {
+        return None;
+    }
+
+    let mut updated = updated_lines.join("\n");
+    if content.ends_with('\n') {
+        updated.push('\n');
+    }
+    Some(updated)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::{
+        fs,
+        time::{SystemTime, UNIX_EPOCH},
+    };
     use std::path::PathBuf;
 
     fn repo_root() -> PathBuf {
@@ -502,5 +623,48 @@ mod tests {
 
         assert!(error.contains("unsupported value"));
         assert!(error.contains("mystery_status"));
+    }
+
+    #[test]
+    fn fixup_latest_worklog_updates_in_flight_line() {
+        let repo_root = temp_repo_root("record-dispatch-worklog");
+        let worklog_dir = repo_root.join("docs/worklog/2026-03-10");
+        fs::create_dir_all(&worklog_dir).expect("worklog dir should exist");
+        let worklog_path = worklog_dir.join("142511-cycle.md");
+        fs::write(
+            &worklog_path,
+            concat!(
+                "## Current state\n\n",
+                "- **In-flight agent sessions**: 0\n",
+                "- **Pipeline status**: PASS (8/8)\n"
+            ),
+        )
+        .expect("worklog should be written");
+
+        let outcome =
+            fixup_latest_worklog_in_flight(&repo_root, 1).expect("worklog fixup should succeed");
+
+        assert_eq!(outcome, WorklogFixupOutcome::Updated(worklog_path.clone()));
+        let updated = fs::read_to_string(&worklog_path).expect("worklog should be readable");
+        assert!(updated.contains("- **In-flight agent sessions**: 1"));
+        assert!(!updated.contains("- **In-flight agent sessions**: 0"));
+    }
+
+    #[test]
+    fn fixup_latest_worklog_returns_not_found_when_worklog_is_missing() {
+        let repo_root = temp_repo_root("record-dispatch-no-worklog");
+        let outcome =
+            fixup_latest_worklog_in_flight(&repo_root, 1).expect("missing worklog is not fatal");
+        assert_eq!(outcome, WorklogFixupOutcome::NotFound);
+    }
+
+    fn temp_repo_root(prefix: &str) -> PathBuf {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system time should be after epoch")
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!("{prefix}-{unique}"));
+        fs::create_dir_all(path.join("docs")).expect("temp repo root should be created");
+        path
     }
 }
