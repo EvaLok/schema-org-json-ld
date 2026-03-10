@@ -404,7 +404,11 @@ fn findings_line_bounds(lines: &[&str]) -> Option<(usize, usize)> {
     Some((start + 1, lines.len()))
 }
 
-fn for_each_non_code_line(lines: &[&str], start_index: usize, visitor: &mut impl FnMut(usize, &str)) {
+fn for_each_non_code_line(
+    lines: &[&str],
+    start_index: usize,
+    visitor: &mut impl FnMut(usize, &str),
+) {
     let mut in_code_block = false;
     for (offset, line) in lines.iter().enumerate() {
         let trimmed = line.trim();
