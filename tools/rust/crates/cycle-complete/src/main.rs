@@ -1071,10 +1071,7 @@ mod tests {
             "copilot_metrics.pr_merge_rate",
         ]);
 
-        let actual_fields = EVENT_DRIVEN_AUTO_REFRESH_FIELDS
-            .iter()
-            .copied()
-            .collect::<BTreeSet<_>>();
+        let actual_fields = EVENT_DRIVEN_AUTO_REFRESH_FIELDS.iter().copied().collect::<BTreeSet<_>>();
 
         assert_eq!(actual_fields, expected_fields);
     }
