@@ -236,6 +236,15 @@ fn execute_journal(
     let status = parse_commitment_status(&input.previous_commitment_status)?;
     let path = journal_path(repo_root, now);
     let previous = lookup_previous_concrete_behavior(repo_root, now.date_naive())?;
+    if previous.is_some() && matches!(status, CommitmentStatus::NoPriorCommitment) {
+        return Err("previous commitment found in journal but --previous-commitment-status is 'no_prior_commitment'; specify an explicit status (followed, not_followed, not_applicable)".to_string());
+    }
+    if previous.is_none() && !matches!(status, CommitmentStatus::NoPriorCommitment) {
+        return Err(
+            "--previous-commitment-status is set but no previous commitment found in journal history"
+                .to_string(),
+        );
+    }
     let worklog_link = find_worklog_relative_path(repo_root, cycle)?;
     let entry = render_journal_entry(
         cycle,
@@ -1873,6 +1882,24 @@ mod tests {
         let repo_root = TempRepoDir::new("append");
         let now = fixed_now();
         write_root_journal_index(&repo_root.path, "");
+        let journal_dir = repo_root.path.join("docs").join("journal");
+        fs::create_dir_all(&journal_dir).unwrap();
+        fs::write(
+            journal_dir.join("2026-03-05.md"),
+            r#"# Journal — 2026-03-05
+
+Reflective log for the schema-org-json-ld orchestrator.
+
+---
+
+## 2026-03-05 — Cycle 153: Prior title
+
+### Concrete commitments for next cycle
+
+1. Dispatch #546 immediately after acceptance.
+"#,
+        )
+        .unwrap();
         write_worklog_fixture(&repo_root.path, now, 154, "From convention to enforcement");
         let payload = r#"{
 			"previous_commitment_status":"followed",
@@ -2016,8 +2043,8 @@ Reflective log for the schema-org-json-ld orchestrator.
         write_root_journal_index(&repo_root.path, "");
         write_worklog_fixture(&repo_root.path, fixed_now(), 154, "JSON fallback");
         let payload = r#"{
-            "previous_commitment_status":"followed",
-            "previous_commitment_detail":"Done.",
+            "previous_commitment_status":"no_prior_commitment",
+            "previous_commitment_detail":"No prior commitment recorded.",
             "sections":[],
             "concrete_behavior_change":"Keep going.",
             "open_questions":[]
@@ -2075,8 +2102,8 @@ Reflective log for the schema-org-json-ld orchestrator.
         .unwrap();
 
         let payload = r#"{
-            "previous_commitment_status":"followed",
-            "previous_commitment_detail":"Done.",
+            "previous_commitment_status":"no_prior_commitment",
+            "previous_commitment_detail":"No prior commitment recorded.",
             "sections":[],
             "concrete_behavior_change":"Keep going.",
             "open_questions":[]
@@ -2120,8 +2147,8 @@ Reflective log for the schema-org-json-ld orchestrator.
 
         let mut args = journal_args("Gap day");
         let payload = r#"{
-            "previous_commitment_status":"followed",
-            "previous_commitment_detail":"Done.",
+            "previous_commitment_status":"no_prior_commitment",
+            "previous_commitment_detail":"No prior commitment recorded.",
             "sections":[],
             "concrete_behavior_change":"Keep going.",
             "open_questions":[]
@@ -2165,8 +2192,8 @@ Reflective log for the schema-org-json-ld orchestrator.
         let mut args = journal_args("Multi day gap");
         args.cycle = Some(161);
         let payload = r#"{
-            "previous_commitment_status":"followed",
-            "previous_commitment_detail":"Done.",
+            "previous_commitment_status":"no_prior_commitment",
+            "previous_commitment_detail":"No prior commitment recorded.",
             "sections":[],
             "concrete_behavior_change":"Keep going.",
             "open_questions":[]
@@ -2195,8 +2222,8 @@ Reflective log for the schema-org-json-ld orchestrator.
 
         let mut args = journal_args("First date");
         let payload = r#"{
-            "previous_commitment_status":"followed",
-            "previous_commitment_detail":"Done.",
+            "previous_commitment_status":"no_prior_commitment",
+            "previous_commitment_detail":"No prior commitment recorded.",
             "sections":[],
             "concrete_behavior_change":"Keep going.",
             "open_questions":[]
@@ -2224,8 +2251,8 @@ Reflective log for the schema-org-json-ld orchestrator.
         let mut args = journal_args("Closed previous");
         args.cycle = Some(161);
         let payload = r#"{
-            "previous_commitment_status":"followed",
-            "previous_commitment_detail":"Done.",
+            "previous_commitment_status":"no_prior_commitment",
+            "previous_commitment_detail":"No prior commitment recorded.",
             "sections":[],
             "concrete_behavior_change":"Keep going.",
             "open_questions":[]
@@ -2269,8 +2296,8 @@ Reflective log for the schema-org-json-ld orchestrator.
         let mut args = journal_args("Append");
         args.cycle = Some(155);
         let payload = r#"{
-            "previous_commitment_status":"followed",
-            "previous_commitment_detail":"Done.",
+            "previous_commitment_status":"no_prior_commitment",
+            "previous_commitment_detail":"No prior commitment recorded.",
             "sections":[],
             "concrete_behavior_change":"Keep going.",
             "open_questions":[]
@@ -2316,8 +2343,8 @@ Reflective log for the schema-org-json-ld orchestrator.
         let mut args = journal_args("Append to missing index");
         args.cycle = Some(155);
         let payload = r#"{
-            "previous_commitment_status":"followed",
-            "previous_commitment_detail":"Done.",
+            "previous_commitment_status":"no_prior_commitment",
+            "previous_commitment_detail":"No prior commitment recorded.",
             "sections":[],
             "concrete_behavior_change":"Keep going.",
             "open_questions":[]
@@ -2363,8 +2390,8 @@ When accepting recommendations, dispatch #546 in the same cycle.
 
         let mut args = journal_args("New title");
         let payload = r#"{
-			"previous_commitment_status":"followed",
-			"previous_commitment_detail":"Done.",
+            "previous_commitment_status":"followed",
+            "previous_commitment_detail":"Done.",
 			"sections":[],
 			"concrete_behavior_change":"Keep going.",
 			"open_questions":[]
@@ -2443,6 +2470,77 @@ Reflective log for the schema-org-json-ld orchestrator.
         ));
         let error = execute_journal(&args, &repo_root.path, fixed_now()).unwrap_err();
         assert!(error.contains("invalid previous_commitment_status"));
+    }
+
+    #[test]
+    fn journal_rejects_default_no_prior_status_when_previous_commitment_exists() {
+        let repo_root = TempRepoDir::new("previous-contradiction");
+        let journal_dir = repo_root.path.join("docs").join("journal");
+        fs::create_dir_all(&journal_dir).unwrap();
+        write_root_journal_index(
+            &repo_root.path,
+            "- [2026-03-05](docs/journal/2026-03-05.md) — Cycles 153+\n",
+        );
+        fs::write(
+            journal_dir.join("2026-03-05.md"),
+            r#"# Journal — 2026-03-05
+
+Reflective log for the schema-org-json-ld orchestrator.
+
+---
+
+## 2026-03-05 — Cycle 153: Prior title
+
+### Concrete commitments for next cycle
+
+1. Dispatch #546 in the same cycle.
+"#,
+        )
+        .unwrap();
+
+        let mut args = journal_args("New title");
+        let payload = r#"{
+			"sections":[],
+			"concrete_behavior_change":"Keep going.",
+			"open_questions":[]
+		}"#;
+        args.input_file = Some(write_input_file(
+            &repo_root.path,
+            "journal-contradiction.json",
+            payload,
+        ));
+
+        let error = execute_journal(&args, &repo_root.path, fixed_now()).unwrap_err();
+        assert_eq!(
+            error,
+            "previous commitment found in journal but --previous-commitment-status is 'no_prior_commitment'; specify an explicit status (followed, not_followed, not_applicable)"
+        );
+    }
+
+    #[test]
+    fn journal_rejects_explicit_status_when_no_previous_commitment_exists() {
+        let repo_root = TempRepoDir::new("no-previous-history");
+        write_root_journal_index(&repo_root.path, "");
+
+        let mut args = journal_args("New title");
+        let payload = r#"{
+			"previous_commitment_status":"followed",
+			"previous_commitment_detail":"Done.",
+			"sections":[],
+			"concrete_behavior_change":"Keep going.",
+			"open_questions":[]
+		}"#;
+        args.input_file = Some(write_input_file(
+            &repo_root.path,
+            "journal-no-history.json",
+            payload,
+        ));
+
+        let error = execute_journal(&args, &repo_root.path, fixed_now()).unwrap_err();
+        assert_eq!(
+            error,
+            "--previous-commitment-status is set but no previous commitment found in journal history"
+        );
     }
 
     #[test]
@@ -2646,8 +2744,8 @@ Reflective log for the schema-org-json-ld orchestrator.
         let mut args = journal_args("Derived cycle");
         args.cycle = None;
         let payload = r#"{
-			"previous_commitment_status":"followed",
-			"previous_commitment_detail":"Done.",
+			"previous_commitment_status":"no_prior_commitment",
+			"previous_commitment_detail":"No prior commitment recorded.",
 			"sections":[],
 			"concrete_behavior_change":"Keep going.",
 			"open_questions":[]
