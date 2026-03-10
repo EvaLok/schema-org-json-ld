@@ -2840,7 +2840,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 217"
+        "last_refreshed": "cycle 218"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -2848,11 +2848,11 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 217"
+        "last_refreshed": "cycle 218"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 217"
+        "last_refreshed": "cycle 218"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -2962,12 +2962,12 @@
   },
   "last_cycle": {
     "duration_minutes": 15,
-    "issue": 968,
-    "number": 217,
+    "issue": 975,
+    "number": 218,
     "summary": "Reviewed and merged 3 PRs (#963 state-invariants, #965 receipt validation, #967 review artifact), dispatched #969 and #971 for derive-metrics atomicity",
-    "timestamp": "2026-03-10T10:28:03Z"
+    "timestamp": "2026-03-10T12:08:39Z"
   },
-  "last_eva_comment_check": "2026-03-10T10:28:03Z",
+  "last_eva_comment_check": "2026-03-10T12:08:39Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
