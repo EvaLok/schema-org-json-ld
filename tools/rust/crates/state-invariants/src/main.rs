@@ -684,10 +684,22 @@ fn check_future_cycle_freshness(state: &StateJson) -> CheckResult {
 
 fn get_metric_i64(state: &StateJson, key: &str) -> Option<i64> {
     match key {
-        "total_dispatches" => state.copilot_metrics.total_dispatches,
-        "produced_pr" => state.copilot_metrics.produced_pr,
-        "merged" => state.copilot_metrics.merged,
-        "in_flight" => state.copilot_metrics.in_flight,
+        "total_dispatches" => state
+            .copilot_metrics
+            .total_dispatches
+            .or_else(|| state.copilot_metrics.extra.get(key).and_then(Value::as_i64)),
+        "produced_pr" => state
+            .copilot_metrics
+            .produced_pr
+            .or_else(|| state.copilot_metrics.extra.get(key).and_then(Value::as_i64)),
+        "merged" => state
+            .copilot_metrics
+            .merged
+            .or_else(|| state.copilot_metrics.extra.get(key).and_then(Value::as_i64)),
+        "in_flight" => state
+            .copilot_metrics
+            .in_flight
+            .or_else(|| state.copilot_metrics.extra.get(key).and_then(Value::as_i64)),
         _ => state.copilot_metrics.extra.get(key).and_then(Value::as_i64),
     }
 }
@@ -901,7 +913,7 @@ fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
     let mut closed_without_pr_expected = 0;
     let mut produced_pr_expected = 0;
     let mut invalid_statuses = Vec::new();
-    let mut in_flight_issues: HashMap<i64, usize> = HashMap::new();
+    let mut in_flight_issue_counts: HashMap<i64, usize> = HashMap::new();
     let mut terminal_issues = HashSet::new();
 
     for (index, session) in state.agent_sessions.iter().enumerate() {
@@ -921,7 +933,7 @@ fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
             Some("in_flight") | Some("dispatched") => {
                 in_flight_expected += 1;
                 if let Some(issue) = session.issue {
-                    *in_flight_issues.entry(issue).or_insert(0) += 1;
+                    *in_flight_issue_counts.entry(issue).or_insert(0) += 1;
                 }
             }
             Some("closed_without_merge") | Some("closed") => {
@@ -954,7 +966,7 @@ fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
     let resolved_expected = total_dispatches_expected - in_flight_expected;
 
     let mut failures = Vec::new();
-    let mut duplicate_in_flight_issues: Vec<i64> = in_flight_issues
+    let mut duplicate_in_flight_issues: Vec<i64> = in_flight_issue_counts
         .iter()
         .filter_map(|(issue, count)| (*count > 1).then_some(*issue))
         .collect();
@@ -970,7 +982,7 @@ fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
         ));
     }
 
-    let mut stale_terminal_in_flight_issues: Vec<i64> = in_flight_issues
+    let mut stale_terminal_in_flight_issues: Vec<i64> = in_flight_issue_counts
         .keys()
         .copied()
         .filter(|issue| terminal_issues.contains(issue))
@@ -1356,16 +1368,28 @@ mod tests {
 
     #[test]
     fn get_metric_i64_prefers_promoted_fields_before_extra() {
-        let mut value = minimal_valid_state();
-        value["copilot_metrics"]["extra_total_dispatches"] = json!(99);
-        value["copilot_metrics"]["total_dispatches"] = json!(3);
-        value["copilot_metrics"]["merged"] = json!(1);
-
-        let state = state_from_json(value);
+        let mut state = state_from_json(minimal_valid_state());
+        state.copilot_metrics.total_dispatches = Some(3);
+        state
+            .copilot_metrics
+            .extra
+            .insert("total_dispatches".to_string(), json!(99));
+        state.copilot_metrics.merged = Some(1);
 
         assert_eq!(get_metric_i64(&state, "total_dispatches"), Some(3));
         assert_eq!(get_metric_i64(&state, "merged"), Some(1));
-        assert_eq!(get_metric_i64(&state, "extra_total_dispatches"), Some(99));
+    }
+
+    #[test]
+    fn get_metric_i64_falls_back_to_extra_when_promoted_field_is_none() {
+        let mut state = state_from_json(minimal_valid_state());
+        state.copilot_metrics.total_dispatches = None;
+        state
+            .copilot_metrics
+            .extra
+            .insert("total_dispatches".to_string(), json!(42));
+
+        assert_eq!(get_metric_i64(&state, "total_dispatches"), Some(42));
     }
 
     #[test]
