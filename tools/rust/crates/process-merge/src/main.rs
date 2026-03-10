@@ -167,9 +167,8 @@ fn compute_update(state: &Value, cycle: u64, prs: &[u64]) -> Result<MergeUpdate,
 
     let next_merged = merged + merge_count;
     // produced_pr is incremented for each merge to keep copilot_metrics self-consistent.
-    // The authoritative produced_pr is derived from agent_sessions by derive-metrics;
-    // this increment ensures process-merge doesn't leave merged > produced_pr between
-    // derive-metrics runs.
+    // process-merge updates counters arithmetically (not from the agent_sessions ledger);
+    // this increment ensures merged <= produced_pr after each merge operation.
     let next_produced_pr = produced_pr + merge_count;
     let next_resolved = resolved + resolved_increment;
 
