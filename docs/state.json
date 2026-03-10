@@ -2656,6 +2656,13 @@
       "pr": 1003,
       "status": "merged",
       "title": "Fix step-comments check for phased-cycle resumption issues"
+    },
+    {
+      "dispatched_at": "2026-03-10T22:35:12Z",
+      "issue": 1004,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Docs] Cycle 222 worklog and journal"
     }
   ],
   "audit_dropped": [
@@ -2818,24 +2825,24 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1002 Fix step-comments check for phased-cycle resumption issues (cycle 222)",
-    "dispatch_to_pr_rate": "98.3%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1004 [Cycle Docs] Cycle 222 worklog and journal (cycle 222)",
+    "dispatch_to_pr_rate": "98.0%",
+    "in_flight": 1,
     "merged": 285,
     "pr_merge_rate": "99.3%",
     "produced_pr": 287,
     "resolved": 292,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 292
+    "total_dispatches": 293
   },
   "cycle_phase": {
     "cycle": 222,
-    "doc_issue": null,
+    "doc_issue": 1004,
     "doc_pr": null,
-    "phase": "work",
-    "phase_entered_at": "2026-03-10T22:06:44Z",
-    "review_iteration": null,
+    "phase": "doc_dispatched",
+    "phase_entered_at": "2026-03-10T22:35:12Z",
+    "review_iteration": 0,
     "review_max": 3
   },
   "eva_input_issues": {
