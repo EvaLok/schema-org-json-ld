@@ -353,6 +353,7 @@ fn find_latest_worklog_file(repo_root: &Path) -> Result<Option<PathBuf>, String>
 
 fn replace_in_flight_line(content: &str, in_flight: i64) -> Option<String> {
     let replacement = format!("{IN_FLIGHT_WORKLOG_PREFIX}{in_flight}");
+    let trailing_newlines = &content[content.trim_end_matches('\n').len()..];
     let mut replaced = false;
     let mut updated_lines = Vec::new();
     for line in content.lines() {
@@ -368,9 +369,7 @@ fn replace_in_flight_line(content: &str, in_flight: i64) -> Option<String> {
     }
 
     let mut updated = updated_lines.join("\n");
-    if content.ends_with('\n') {
-        updated.push('\n');
-    }
+    updated.push_str(trailing_newlines);
     Some(updated)
 }
 
@@ -381,7 +380,6 @@ mod tests {
         fs,
         time::{SystemTime, UNIX_EPOCH},
     };
-    use std::path::PathBuf;
 
     fn repo_root() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../..")

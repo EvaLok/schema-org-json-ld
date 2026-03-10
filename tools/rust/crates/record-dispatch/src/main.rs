@@ -65,6 +65,7 @@ fn run(cli: Cli) -> Result<(), String> {
 
     let commit_message = dispatch_commit_message(cli.issue, patch.current_cycle);
     let mut receipt = commit_state_json(&cli.repo_root, &commit_message)?;
+    let worklog_root = cli.repo_root.join("docs/worklog");
     match fixup_latest_worklog_in_flight(&cli.repo_root, patch.in_flight)? {
         WorklogFixupOutcome::Updated(worklog_path) => {
             receipt = amend_commit_with_worklog(&cli.repo_root, &worklog_path)?;
@@ -72,7 +73,7 @@ fn run(cli: Cli) -> Result<(), String> {
         WorklogFixupOutcome::NotFound => {
             eprintln!(
                 "Warning: no worklog file found under {} to update in-flight count",
-                cli.repo_root.join("docs/worklog").display()
+                worklog_root.display()
             );
         }
     }
