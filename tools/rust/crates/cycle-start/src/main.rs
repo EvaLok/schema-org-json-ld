@@ -131,6 +131,7 @@ fn main() {
 fn run(cli: Cli) -> Result<(), String> {
     let mut state = read_state_value(&cli.repo_root)?;
     let state_json = read_typed_state_json(&cli.repo_root)?;
+    let previous_cycle_issue = state.pointer("/last_cycle/issue").and_then(Value::as_u64);
 
     // Phase-aware resume detection
     let current_phase = state_json
@@ -187,7 +188,13 @@ fn run(cli: Cli) -> Result<(), String> {
     let open_question_numbers: Vec<u64> =
         questions_for_eva.iter().map(|issue| issue.number).collect();
 
-    let patch = build_state_patch(cycle, cli.issue, &timestamp, &open_question_numbers);
+    let patch = build_state_patch(
+        cycle,
+        cli.issue,
+        previous_cycle_issue,
+        &timestamp,
+        &open_question_numbers,
+    );
     apply_state_patch(&mut state, &patch)?;
 
     // Set cycle_phase for the new work phase, clear doc-related fields
@@ -322,10 +329,11 @@ fn derive_cycle_number(last_cycle_number: u64) -> Result<u64, String> {
 fn build_state_patch(
     cycle: u64,
     issue: u64,
+    previous_cycle_issue: Option<u64>,
     timestamp: &str,
     open_question_numbers: &[u64],
 ) -> Vec<PatchUpdate> {
-    vec![
+    let mut patch = vec![
         PatchUpdate {
             path: "/last_cycle/number".to_string(),
             value: json!(cycle),
@@ -358,7 +366,24 @@ fn build_state_patch(
             path: "/field_inventory/fields/open_questions_for_eva/last_refreshed".to_string(),
             value: json!(format!("cycle {}", cycle)),
         },
-    ]
+    ];
+
+    if let Some(previous_cycle_issue) = previous_cycle_issue {
+        patch.push(PatchUpdate {
+            path: "/previous_cycle_issue".to_string(),
+            value: json!(previous_cycle_issue),
+        });
+    }
+
+    patch.push(PatchUpdate {
+        path: "/field_inventory/fields/previous_cycle_issue".to_string(),
+        value: json!({
+            "cadence": "every cycle",
+            "last_refreshed": format!("cycle {}", cycle),
+        }),
+    });
+
+    patch
 }
 
 fn apply_state_patch(state: &mut Value, patch: &[PatchUpdate]) -> Result<(), String> {
@@ -1047,7 +1072,7 @@ mod tests {
 
     #[test]
     fn state_patch_contains_required_pointer_paths() {
-        let patch = build_state_patch(163, 592, "2026-03-06T18:00:00Z", &[600, 601]);
+        let patch = build_state_patch(163, 592, Some(591), "2026-03-06T18:00:00Z", &[600, 601]);
         let paths: Vec<&str> = patch.iter().map(|update| update.path.as_str()).collect();
 
         assert_eq!(
@@ -1061,6 +1086,8 @@ mod tests {
                 "/field_inventory/fields/last_cycle/last_refreshed",
                 "/field_inventory/fields/last_eva_comment_check/last_refreshed",
                 "/field_inventory/fields/open_questions_for_eva/last_refreshed",
+                "/previous_cycle_issue",
+                "/field_inventory/fields/previous_cycle_issue",
             ]
         );
         assert_eq!(patch[0].value, json!(163));
@@ -1068,11 +1095,19 @@ mod tests {
         assert_eq!(patch[4].value, json!([600, 601]));
         assert_eq!(patch[5].value, json!("cycle 163"));
         assert_eq!(patch[7].value, json!("cycle 163"));
+        assert_eq!(patch[8].value, json!(591));
+        assert_eq!(
+            patch[9].value,
+            json!({
+                "cadence": "every cycle",
+                "last_refreshed": "cycle 163",
+            })
+        );
     }
 
     #[test]
     fn state_patch_uses_empty_array_when_no_open_questions_exist() {
-        let patch = build_state_patch(163, 592, "2026-03-06T18:00:00Z", &[]);
+        let patch = build_state_patch(163, 592, None, "2026-03-06T18:00:00Z", &[]);
 
         let open_questions = patch
             .iter()
@@ -1080,6 +1115,15 @@ mod tests {
             .expect("open_questions_for_eva patch should exist");
 
         assert_eq!(open_questions.value, json!([]));
+    }
+
+    #[test]
+    fn state_patch_omits_previous_cycle_issue_when_unavailable() {
+        let patch = build_state_patch(163, 592, None, "2026-03-06T18:00:00Z", &[600, 601]);
+        let paths: Vec<&str> = patch.iter().map(|update| update.path.as_str()).collect();
+
+        assert!(!paths.contains(&"/previous_cycle_issue"));
+        assert!(paths.contains(&"/field_inventory/fields/previous_cycle_issue"));
     }
 
     #[test]
