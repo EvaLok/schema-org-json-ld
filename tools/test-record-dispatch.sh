@@ -114,13 +114,7 @@ assert sessions[-1]["issue"] == 602, sessions[-1]
 assert sessions[-1]["status"] == "in_flight", sessions[-1]
 PY
 
-if bash "$DERIVE_METRICS_SCRIPT" --repo-root "$SUCCESS_REPO" --check >/dev/null 2>"$TMP_DIR/derive-check.stderr"; then
-	DERIVE_CHECK_STATUS=0
-else
-	DERIVE_CHECK_STATUS=$?
-fi
-
-[ "$DERIVE_CHECK_STATUS" -eq 0 ] || fail "expected derive-metrics --check to pass after wrapper update"
+bash "$DERIVE_METRICS_SCRIPT" --repo-root "$SUCCESS_REPO" --check >/dev/null 2>/dev/null || fail "expected derive-metrics --check to pass after wrapper update"
 
 # Test 2: Wrapper fails when derive-metrics fails after the dispatch mutation.
 FAIL_REPO="$TMP_DIR/fail-repo"
