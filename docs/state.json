@@ -2510,6 +2510,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Cycle 214 review"
+    },
+    {
+      "dispatched_at": "2026-03-10T06:25:04Z",
+      "issue": 957,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix metrics-drift: record-dispatch re-derive"
     }
   ],
   "audit_dropped": [
@@ -2670,16 +2677,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#954 Cycle 214 review (cycle 214)",
+    "dispatch_log_latest": "#957 Fix metrics-drift: record-dispatch re-derive (cycle 215)",
     "dispatch_to_pr_rate": "96.7%",
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 268,
     "pr_merge_rate": "99.3%",
     "produced_pr": 270,
     "resolved": 275,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 276
+    "total_dispatches": 277
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
