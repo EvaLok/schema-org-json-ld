@@ -2539,6 +2539,13 @@
       "pr": 967,
       "status": "merged",
       "title": "Cycle 216 review"
+    },
+    {
+      "dispatched_at": "2026-03-10T10:25:24Z",
+      "issue": 969,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Make record-dispatch atomic: integrate derive-metrics before commit"
     }
   ],
   "audit_dropped": [
@@ -2699,16 +2706,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#966 Cycle 216 review (cycle 216)",
+    "dispatch_log_latest": "#969 Make record-dispatch atomic: integrate derive-metrics before commit (cycle 217)",
     "dispatch_to_pr_rate": "98.2%",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 272,
     "pr_merge_rate": "99.3%",
     "produced_pr": 274,
     "resolved": 279,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 279
+    "total_dispatches": 280
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
