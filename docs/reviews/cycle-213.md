@@ -1,5 +1,7 @@
 # Cycle 213 Review
 
+## Findings
+
 ## 1. [review-evidence] The cycle claims reviewed, CI-green PRs without a visible review or test-CI trail
 
 **File**: docs/worklog/2026-03-10/030816-cycle-213-summary.md:22-26
