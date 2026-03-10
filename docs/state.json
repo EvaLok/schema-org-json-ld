@@ -2854,11 +2854,11 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 218"
+        "last_refreshed": "cycle 219"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 218"
+        "last_refreshed": "cycle 219"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -2866,7 +2866,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 218"
+        "last_refreshed": "cycle 219"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -2882,11 +2882,11 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 218"
+        "last_refreshed": "cycle 219"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 218"
+        "last_refreshed": "cycle 219"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -2906,7 +2906,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 218"
+        "last_refreshed": "cycle 219"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -2914,7 +2914,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 218"
+        "last_refreshed": "cycle 219"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -2922,7 +2922,7 @@
       },
       "schema_status.planned_next": {
         "cadence": "after planning or completing types",
-        "last_refreshed": "cycle 218"
+        "last_refreshed": "cycle 219"
       },
       "schema_status.property_gap_audit": {
         "cadence": "after property gap fixes",
@@ -2934,7 +2934,7 @@
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
-        "last_refreshed": "cycle 218"
+        "last_refreshed": "cycle 219"
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
@@ -2974,22 +2974,22 @@
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
-        "last_refreshed": "cycle 218"
+        "last_refreshed": "cycle 219"
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 218"
+        "last_refreshed": "cycle 219"
       }
     }
   },
   "last_cycle": {
-    "duration_minutes": 12,
+    "duration_minutes": 9,
     "issue": 978,
     "number": 219,
-    "summary": "Merged PR #970 (record-dispatch atomic metrics) and PR #972 (process-merge atomic metrics, with revision round for indentation fix). Processed cycle 217 review (4 findings, complacency 4/5). Fixed derive-metrics drift. Deleted 3 merged branches.",
-    "timestamp": "2026-03-10T14:17:29Z"
+    "summary": "Actioned all 5 cycle-218 review findings. Merged PR #977 (cycle 218 review artifact). Fixed process-merge stale comment (atomicity-narrative-drift). Dispatched #979 (record-dispatch worklog in-flight fixup) to structurally fix chronic worklog-accuracy finding. Processed stale merge records for issues #973 and #976.",
+    "timestamp": "2026-03-10T14:26:13Z"
   },
-  "last_eva_comment_check": "2026-03-10T14:17:29Z",
+  "last_eva_comment_check": "2026-03-10T14:26:13Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
