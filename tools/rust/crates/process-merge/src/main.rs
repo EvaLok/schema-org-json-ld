@@ -35,6 +35,8 @@ struct MergeUpdate {
     resolved: i64,
     in_flight: i64,
     total_dispatches: i64,
+    pr_merge_rate: String,
+    dispatch_to_pr_rate: String,
     cycle: u64,
 }
 
@@ -184,8 +186,25 @@ fn compute_update(state: &Value, cycle: u64, prs: &[u64]) -> Result<MergeUpdate,
         resolved: next_resolved,
         in_flight: next_in_flight,
         total_dispatches,
+        pr_merge_rate: format_percentage(next_merged, next_produced_pr),
+        dispatch_to_pr_rate: format_percentage(next_produced_pr, total_dispatches),
         cycle,
     })
+}
+
+fn format_percentage(numerator: i64, denominator: i64) -> String {
+    debug_assert!(numerator >= 0, "copilot metric numerators must be non-negative");
+    debug_assert!(
+        denominator >= 0,
+        "copilot metric denominators must be non-negative"
+    );
+
+    if denominator == 0 {
+        return "0.0%".to_string();
+    }
+
+    let percentage = (numerator as f64 / denominator as f64) * 100.0;
+    format!("{percentage:.1}%")
 }
 
 fn build_patch(update: &MergeUpdate) -> Result<Vec<PatchUpdate>, String> {
@@ -211,7 +230,23 @@ fn build_patch(update: &MergeUpdate) -> Result<Vec<PatchUpdate>, String> {
             value: json!(update.produced_pr),
         },
         PatchUpdate {
+            path: "/copilot_metrics/pr_merge_rate",
+            value: json!(update.pr_merge_rate),
+        },
+        PatchUpdate {
+            path: "/copilot_metrics/dispatch_to_pr_rate",
+            value: json!(update.dispatch_to_pr_rate),
+        },
+        PatchUpdate {
             path: "/field_inventory/fields/copilot_metrics.in_flight/last_refreshed",
+            value: json!(marker),
+        },
+        PatchUpdate {
+            path: "/field_inventory/fields/copilot_metrics.pr_merge_rate/last_refreshed",
+            value: json!(marker),
+        },
+        PatchUpdate {
+            path: "/field_inventory/fields/copilot_metrics.dispatch_to_pr_rate/last_refreshed",
             value: json!(marker),
         },
     ])
@@ -398,7 +433,7 @@ mod tests {
     }
 
     #[test]
-    fn patch_updates_counters_and_in_flight_freshness_marker() {
+    fn patch_updates_counters_rates_and_freshness_markers() {
         let state = sample_state();
         let update = compute_update(&state, 164, &[595]).expect("update should compute");
         let patch = build_patch(&update).expect("patch should build");
@@ -409,11 +444,19 @@ mod tests {
                 "/copilot_metrics/resolved",
                 "/copilot_metrics/in_flight",
                 "/copilot_metrics/produced_pr",
+                "/copilot_metrics/pr_merge_rate",
+                "/copilot_metrics/dispatch_to_pr_rate",
                 "/field_inventory/fields/copilot_metrics.in_flight/last_refreshed",
+                "/field_inventory/fields/copilot_metrics.pr_merge_rate/last_refreshed",
+                "/field_inventory/fields/copilot_metrics.dispatch_to_pr_rate/last_refreshed",
             ]
         );
         assert_eq!(patch[3].value, json!(85));
-        assert_eq!(patch[4].value, json!("cycle 164"));
+        assert_eq!(patch[4].value, json!("95.3%"));
+        assert_eq!(patch[5].value, json!("100.0%"));
+        assert_eq!(patch[6].value, json!("cycle 164"));
+        assert_eq!(patch[7].value, json!("cycle 164"));
+        assert_eq!(patch[8].value, json!("cycle 164"));
     }
 
     #[test]
@@ -427,7 +470,7 @@ mod tests {
     }
 
     #[test]
-    fn apply_patch_leaves_derived_metrics_unchanged() {
+    fn apply_patch_updates_derived_metrics_and_refreshes_field_inventory() {
         let mut state = sample_state();
         let update = compute_update(&state, 164, &[595]).expect("update should compute");
         let patch = build_patch(&update).expect("patch should build");
@@ -438,19 +481,19 @@ mod tests {
         assert_eq!(state["copilot_metrics"]["resolved"], json!(83));
         assert_eq!(state["copilot_metrics"]["in_flight"], json!(2));
         assert_eq!(state["copilot_metrics"]["produced_pr"], json!(85));
-        assert_eq!(state["copilot_metrics"]["pr_merge_rate"], json!("80/84"));
+        assert_eq!(state["copilot_metrics"]["pr_merge_rate"], json!("95.3%"));
         assert_eq!(
             state["copilot_metrics"]["dispatch_to_pr_rate"],
-            json!("84/85")
+            json!("100.0%")
         );
         assert_eq!(
             state["field_inventory"]["fields"]["copilot_metrics.pr_merge_rate"]["last_refreshed"],
-            json!("cycle 163")
+            json!("cycle 164")
         );
         assert_eq!(
             state["field_inventory"]["fields"]["copilot_metrics.dispatch_to_pr_rate"]
                 ["last_refreshed"],
-            json!("cycle 163")
+            json!("cycle 164")
         );
     }
 
