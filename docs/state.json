@@ -2732,7 +2732,7 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 211"
+        "last_refreshed": "cycle 213"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
@@ -2740,15 +2740,15 @@
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 211"
+        "last_refreshed": "cycle 213"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 211"
+        "last_refreshed": "cycle 213"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 211"
+        "last_refreshed": "cycle 213"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -2756,7 +2756,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 211"
+        "last_refreshed": "cycle 213"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -2772,11 +2772,11 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 211"
+        "last_refreshed": "cycle 213"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 211"
+        "last_refreshed": "cycle 213"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -2796,7 +2796,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 211"
+        "last_refreshed": "cycle 213"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -2804,7 +2804,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 211"
+        "last_refreshed": "cycle 213"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -2812,7 +2812,7 @@
       },
       "schema_status.planned_next": {
         "cadence": "after planning or completing types",
-        "last_refreshed": "cycle 211"
+        "last_refreshed": "cycle 213"
       },
       "schema_status.property_gap_audit": {
         "cadence": "after property gap fixes",
@@ -2824,7 +2824,7 @@
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
-        "last_refreshed": "cycle 211"
+        "last_refreshed": "cycle 213"
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
@@ -2864,22 +2864,22 @@
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
-        "last_refreshed": "cycle 211"
+        "last_refreshed": "cycle 213"
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 211"
+        "last_refreshed": "cycle 213"
       }
     }
   },
   "last_cycle": {
-    "duration_minutes": 22,
+    "duration_minutes": 13,
     "issue": 941,
     "number": 213,
-    "summary": "Merged PRs #932 (cycle 211 review), #928 (write-entry flags), #930 (process-review format). Processed cycle 211 review (4/5, 8 findings, 3 actioned). Fixed state.json metrics and #924 schema. Accepted audit #175. Dispatched #935 (process-merge --issues required) and #936 (journal scanner robustness).",
-    "timestamp": "2026-03-10T02:54:34Z"
+    "summary": "Merged 3 PRs (#937 process-merge --issues, #938 journal scanner, #940 cycle 212 review). Processed cycle 212 review (4/5, 2 actioned, 3 deferred). Accepted audit #177 (step-commenting structural enforcement). Fixed contract-drift in COMPLETION_CHECKLIST. Dispatched #943 (step-comment verification in pipeline-check) and #945 (write-entry metrics fix).",
+    "timestamp": "2026-03-10T03:07:30Z"
   },
-  "last_eva_comment_check": "2026-03-10T02:54:34Z",
+  "last_eva_comment_check": "2026-03-10T03:07:30Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
