@@ -6,6 +6,12 @@ use state_schema::{
 };
 use std::path::PathBuf;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum IssueValue {
+    None,
+    Number(u64),
+}
+
 #[derive(Parser, Debug)]
 #[command(name = "process-merge")]
 struct Cli {
@@ -13,9 +19,9 @@ struct Cli {
     #[arg(long, value_delimiter = ',', num_args = 1..)]
     prs: Vec<u64>,
 
-    /// Optional comma-separated list of issue numbers matching --prs by position
-    #[arg(long, value_delimiter = ',', num_args = 1..)]
-    issues: Vec<u64>,
+    /// Required comma-separated list of issue numbers matching --prs by position; use "none" when intentionally providing no issue links
+    #[arg(long, required = true, value_delimiter = ',', num_args = 1.., value_parser = parse_issue_value)]
+    issues: Vec<IssueValue>,
 
     /// Repository root path
     #[arg(long, default_value = ".")]
@@ -50,9 +56,7 @@ fn run(cli: Cli) -> Result<(), String> {
     if cli.prs.is_empty() {
         return Err("at least one PR number is required via --prs".to_string());
     }
-    if !cli.issues.is_empty() && cli.issues.len() != cli.prs.len() {
-        return Err("--issues must have the same number of values as --prs".to_string());
-    }
+    let issues = normalize_issues(&cli.issues, cli.prs.len())?;
 
     let mut state = read_state_value(&cli.repo_root)?;
     let merged_at = current_utc_timestamp();
@@ -66,12 +70,7 @@ fn run(cli: Cli) -> Result<(), String> {
     let update = compute_update(&state, current_cycle, &cli.prs)?;
     let patch = build_patch(&update)?;
     apply_patch(&mut state, &patch)?;
-    update_agent_sessions(
-        &mut state,
-        &cli.prs,
-        (!cli.issues.is_empty()).then_some(cli.issues.as_slice()),
-        &merged_at,
-    )?;
+    update_agent_sessions(&mut state, &cli.prs, &issues, &merged_at)?;
     write_state_value(&cli.repo_root, &state)?;
 
     let commit_message = format!(
@@ -89,6 +88,40 @@ fn run(cli: Cli) -> Result<(), String> {
     );
 
     Ok(())
+}
+
+fn parse_issue_value(raw: &str) -> Result<IssueValue, String> {
+    if raw == "none" {
+        return Ok(IssueValue::None);
+    }
+
+    raw.parse::<u64>()
+        .map(IssueValue::Number)
+        .map_err(|_| "issues must be numeric or the literal 'none'".to_string())
+}
+
+fn normalize_issues(issue_values: &[IssueValue], pr_count: usize) -> Result<Vec<u64>, String> {
+    if issue_values.len() == 1 && issue_values[0] == IssueValue::None {
+        return Ok(vec![]);
+    }
+
+    if issue_values.contains(&IssueValue::None) {
+        return Err("--issues none cannot be combined with numeric issue values".to_string());
+    }
+
+    if issue_values.len() != pr_count {
+        return Err("--issues must have the same number of values as --prs".to_string());
+    }
+
+    issue_values
+        .iter()
+        .map(|issue| match issue {
+            IssueValue::None => {
+                Err("internal error: none issue value should have been filtered".to_string())
+            }
+            IssueValue::Number(value) => Ok(*value),
+        })
+        .collect()
 }
 
 fn get_metric_i64(state: &Value, field: &str) -> Result<i64, String> {
@@ -195,7 +228,7 @@ fn apply_patch(state: &mut Value, updates: &[PatchUpdate]) -> Result<(), String>
 fn update_agent_sessions(
     state: &mut Value,
     prs: &[u64],
-    issues: Option<&[u64]>,
+    issues: &[u64],
     merged_at: &str,
 ) -> Result<(), String> {
     let Some(sessions) = state
@@ -205,15 +238,8 @@ fn update_agent_sessions(
         return Err("missing array /agent_sessions in docs/state.json".to_string());
     };
 
-    let Some(issues) = issues else {
-        eprintln!(
-            "Warning: --issues not provided; skipping agent_sessions merge updates for {}",
-            format_pr_list(prs)
-        );
-        return Ok(());
-    };
-
-    for (pr, issue) in prs.iter().zip(issues.iter()) {
+    for (index, pr) in prs.iter().enumerate() {
+        let issue = issues.get(index).copied();
         let mut matched = false;
         for session in sessions.iter_mut() {
             let Some(object) = session.as_object_mut() else {
@@ -223,7 +249,9 @@ fn update_agent_sessions(
             let existing_pr = object.get("pr").and_then(Value::as_u64);
             let existing_issue = object.get("issue").and_then(Value::as_u64);
 
-            if existing_pr == Some(*pr) || existing_issue == Some(*issue) {
+            if existing_pr == Some(*pr)
+                || issue.is_some_and(|issue_number| existing_issue == Some(issue_number))
+            {
                 object.insert("status".to_string(), json!("merged"));
                 object.insert("merged_at".to_string(), json!(merged_at));
                 object.insert("pr".to_string(), json!(pr));
@@ -233,10 +261,16 @@ fn update_agent_sessions(
         }
 
         if !matched {
-            eprintln!(
-                "Warning: no agent_sessions entry found for PR #{} (issue #{})",
-                pr, issue
-            );
+            match issue {
+                Some(issue_number) => eprintln!(
+                    "Warning: no agent_sessions entry found for PR #{} (issue #{})",
+                    pr, issue_number
+                ),
+                None => eprintln!(
+                    "Warning: no agent_sessions entry found for PR #{} (no associated issue)",
+                    pr
+                ),
+            }
         }
     }
 
@@ -255,6 +289,7 @@ fn format_pr_list(prs: &[u64]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use clap::error::ErrorKind;
     use clap::CommandFactory;
     use state_schema::default_agent_model;
     use std::path::PathBuf;
@@ -317,6 +352,7 @@ mod tests {
         let help = String::from_utf8(output).unwrap();
         assert!(help.contains("--prs"));
         assert!(help.contains("--issues"));
+        assert!(help.contains("none"));
         assert!(help.contains("--repo-root"));
     }
 
@@ -428,7 +464,7 @@ mod tests {
     fn update_agent_sessions_matches_issue_mapping_and_sets_merge_fields() {
         let mut state = sample_state();
 
-        update_agent_sessions(&mut state, &[668], Some(&[667]), "2026-03-07T13:00:00Z")
+        update_agent_sessions(&mut state, &[668], &[667], "2026-03-07T13:00:00Z")
             .expect("agent sessions should update");
 
         let sessions = state["agent_sessions"]
@@ -444,7 +480,7 @@ mod tests {
     fn update_agent_sessions_matches_existing_pr_without_issue_mapping() {
         let mut state = sample_state();
 
-        update_agent_sessions(&mut state, &[669], Some(&[999]), "2026-03-07T13:00:00Z")
+        update_agent_sessions(&mut state, &[669], &[999], "2026-03-07T13:00:00Z")
             .expect("agent sessions should update");
 
         let sessions = state["agent_sessions"]
@@ -456,24 +492,66 @@ mod tests {
     }
 
     #[test]
-    fn update_agent_sessions_skips_when_issues_not_provided() {
+    fn update_agent_sessions_warns_but_does_not_fail_when_mapping_is_missing() {
         let mut state = sample_state();
         let before = state["agent_sessions"].clone();
 
-        update_agent_sessions(&mut state, &[668], None, "2026-03-07T13:00:00Z")
-            .expect("missing issues should not fail");
+        update_agent_sessions(&mut state, &[700], &[777], "2026-03-07T13:00:00Z")
+            .expect("missing session should not fail");
 
         assert_eq!(state["agent_sessions"], before);
     }
 
     #[test]
-    fn update_agent_sessions_warns_but_does_not_fail_when_mapping_is_missing() {
+    fn cli_requires_issues_flag() {
+        let error = Cli::try_parse_from(["process-merge", "--prs", "595"])
+            .expect_err("--issues should be required");
+
+        assert_eq!(error.kind(), ErrorKind::MissingRequiredArgument);
+        assert!(error.to_string().contains("--issues"));
+    }
+
+    #[test]
+    fn cli_accepts_none_as_empty_issue_list_and_updates_pr_only_session() {
+        let cli = Cli::try_parse_from(["process-merge", "--prs", "669", "--issues", "none"])
+            .expect("--issues none should parse");
+        let issues = normalize_issues(&cli.issues, cli.prs.len()).expect("none should normalize");
+        assert!(issues.is_empty());
+
         let mut state = sample_state();
-        let before = state["agent_sessions"].clone();
+        update_agent_sessions(&mut state, &cli.prs, &issues, "2026-03-07T13:00:00Z")
+            .expect("empty issue mapping should still allow PR matches");
 
-        update_agent_sessions(&mut state, &[700], Some(&[777]), "2026-03-07T13:00:00Z")
-            .expect("missing session should not fail");
+        let sessions = state["agent_sessions"]
+            .as_array()
+            .expect("agent_sessions array");
+        let session = sessions[1].as_object().expect("session object");
+        assert_eq!(session.get("status"), Some(&json!("merged")));
+        assert_eq!(session.get("pr"), Some(&json!(669)));
+        assert_eq!(
+            session.get("merged_at"),
+            Some(&json!("2026-03-07T13:00:00Z"))
+        );
+    }
 
-        assert_eq!(state["agent_sessions"], before);
+    #[test]
+    fn cli_accepts_numeric_issue_values() {
+        let cli = Cli::try_parse_from(["process-merge", "--prs", "668", "--issues", "667"])
+            .expect("numeric issues should parse");
+        let issues =
+            normalize_issues(&cli.issues, cli.prs.len()).expect("numeric issues should normalize");
+        assert_eq!(issues, vec![667]);
+
+        let mut state = sample_state();
+        update_agent_sessions(&mut state, &cli.prs, &issues, "2026-03-07T13:00:00Z")
+            .expect("numeric issue mapping should update agent sessions");
+
+        let sessions = state["agent_sessions"]
+            .as_array()
+            .expect("agent_sessions array");
+        assert_eq!(sessions[0]["issue"], json!(667));
+        assert_eq!(sessions[0]["status"], json!("merged"));
+        assert_eq!(sessions[0]["pr"], json!(668));
+        assert_eq!(sessions[0]["merged_at"], json!("2026-03-07T13:00:00Z"));
     }
 }
