@@ -1,5 +1,6 @@
 use clap::Parser;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use state_schema::read_state_value;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -12,6 +13,13 @@ const INFRA_PATHS: &[&str] = &[
     "COMPLETION_CHECKLIST.md",
     "AGENTS.md",
     ".claude/skills/",
+];
+
+const STATE_SNAPSHOT_FIELDS: &[(&str, &str)] = &[
+    ("cycle_phase.phase", "/cycle_phase/phase"),
+    ("copilot_metrics.in_flight", "/copilot_metrics/in_flight"),
+    ("copilot_metrics.dispatched", "/copilot_metrics/dispatched"),
+    ("copilot_metrics.merged", "/copilot_metrics/merged"),
 ];
 
 #[derive(Debug, Parser)]
@@ -87,27 +95,30 @@ fn run(cli: Cli) -> Result<(), String> {
         worklog_content.as_deref(),
     ));
 
-    // 5. self_modifications_accurate
+    // 5. state_snapshot_freshness
+    results.push(check_state_snapshot_freshness(&cli.repo_root, &pr_branch));
+
+    // 6. self_modifications_accurate
     results.push(check_self_modifications_accurate(
         &cli.repo_root,
         cli.cycle,
         worklog_content.as_deref(),
     ));
 
-    // 6. receipts_valid
+    // 7. receipts_valid
     results.push(check_receipts_valid(
         &cli.repo_root,
         worklog_content.as_deref(),
     ));
 
-    // 7. journal_has_worklog_link
+    // 8. journal_has_worklog_link
     let journal_content = match &journal_file {
         Some(path) => fetch_file_content(&cli.repo_root, path, &pr_branch).ok(),
         None => None,
     };
     results.push(check_journal_has_worklog_link(journal_content.as_deref()));
 
-    // 8. no_duplicate_headers
+    // 9. no_duplicate_headers
     results.push(check_no_duplicate_headers(journal_content.as_deref()));
 
     let overall = if results.iter().all(|r| r.status == CheckStatus::Pass) {
@@ -406,6 +417,93 @@ fn read_in_flight_from_state(repo_root: &Path) -> Result<i64, String> {
         .ok_or_else(|| "missing /copilot_metrics/in_flight in state.json".to_string())
 }
 
+fn check_state_snapshot_freshness(repo_root: &Path, pr_branch: &str) -> CheckResult {
+    let check_name = "state_snapshot_freshness".to_string();
+
+    let master_state = match read_state_value(repo_root) {
+        Ok(state) => state,
+        Err(error) => {
+            return CheckResult {
+                check: check_name,
+                status: CheckStatus::Fail,
+                detail: format!("Cannot read master docs/state.json: {}", error),
+            };
+        }
+    };
+
+    let pr_state_content = match fetch_file_content(repo_root, "docs/state.json", pr_branch) {
+        Ok(content) => content,
+        Err(error) => {
+            return CheckResult {
+                check: check_name,
+                status: CheckStatus::Fail,
+                detail: format!("Cannot read PR docs/state.json: {}", error),
+            };
+        }
+    };
+
+    let pr_state: Value = match serde_json::from_str(&pr_state_content) {
+        Ok(state) => state,
+        Err(error) => {
+            return CheckResult {
+                check: check_name,
+                status: CheckStatus::Fail,
+                detail: format!("Cannot parse PR docs/state.json: {}", error),
+            };
+        }
+    };
+
+    evaluate_state_snapshot_freshness(&master_state, &pr_state)
+}
+
+fn evaluate_state_snapshot_freshness(master_state: &Value, pr_state: &Value) -> CheckResult {
+    let check_name = "state_snapshot_freshness".to_string();
+    let divergences = find_state_snapshot_divergences(master_state, pr_state);
+    if divergences.is_empty() {
+        CheckResult {
+            check: check_name,
+            status: CheckStatus::Pass,
+            detail: "Master and PR state snapshots match for monitored fields".to_string(),
+        }
+    } else {
+        CheckResult {
+            check: check_name,
+            status: CheckStatus::Fail,
+            detail: format!(
+                "State has advanced since documentation was generated. Consider regenerating docs or noting the divergence. Diverged fields: {}",
+                divergences.join("; ")
+            ),
+        }
+    }
+}
+
+fn find_state_snapshot_divergences(master_state: &Value, pr_state: &Value) -> Vec<String> {
+    let mut divergences = Vec::new();
+
+    for (label, pointer) in STATE_SNAPSHOT_FIELDS {
+        let master_value = master_state.pointer(pointer);
+        let pr_value = pr_state.pointer(pointer);
+        if master_value != pr_value {
+            divergences.push(format!(
+                "{}: master={}, pr={}",
+                label,
+                format_state_value(master_value),
+                format_state_value(pr_value)
+            ));
+        }
+    }
+
+    divergences
+}
+
+fn format_state_value(value: Option<&Value>) -> String {
+    match value {
+        Some(Value::String(text)) => format!("{:?}", text),
+        Some(other) => other.to_string(),
+        None => "missing".to_string(),
+    }
+}
+
 pub fn extract_in_flight_from_worklog(content: &str) -> Option<i64> {
     // Search for patterns like "in-flight: 3", "in_flight: 3", "In flight: 3"
     let lower = content.to_lowercase();
@@ -414,9 +512,8 @@ pub fn extract_in_flight_from_worklog(content: &str) -> Option<i64> {
         if let Some(pos) = line.find("in") {
             let rest = &line[pos + 2..];
             // Check for separator characters between "in" and "flight"
-            let rest_trimmed = rest.trim_start_matches(|c: char| c == '-' || c == '_' || c == ' ');
-            if rest_trimmed.starts_with("flight") {
-                let after_flight = &rest_trimmed[6..];
+            let rest_trimmed = rest.trim_start_matches(['-', '_', ' ']);
+            if let Some(after_flight) = rest_trimmed.strip_prefix("flight") {
                 // Find the first digit sequence after "flight"
                 if let Some(num) = extract_first_number(after_flight) {
                     return Some(num);
@@ -624,10 +721,11 @@ fn extract_hex_strings(line: &str, min_len: usize) -> Vec<String> {
         }
     }
     // Check trailing
-    if current.len() >= min_len && current.len() <= 40 {
-        if !current.chars().all(|ch| ch.is_ascii_digit()) {
-            results.push(current);
-        }
+    if current.len() >= min_len
+        && current.len() <= 40
+        && !current.chars().all(|ch| ch.is_ascii_digit())
+    {
+        results.push(current);
     }
 
     results
@@ -1048,5 +1146,64 @@ mod tests {
             CheckStatus::Fail
         };
         assert_eq!(overall, CheckStatus::Fail);
+    }
+
+    #[test]
+    fn state_snapshot_divergence_check_passes_when_monitored_fields_match() {
+        let master_state = json!({
+            "cycle_phase": { "phase": "close_out" },
+            "copilot_metrics": {
+                "in_flight": 0,
+                "dispatched": 10,
+                "merged": 8
+            }
+        });
+        let pr_state = json!({
+            "cycle_phase": { "phase": "close_out" },
+            "copilot_metrics": {
+                "in_flight": 0,
+                "dispatched": 10,
+                "merged": 8
+            }
+        });
+
+        let result = evaluate_state_snapshot_freshness(&master_state, &pr_state);
+
+        assert_eq!(result.check, "state_snapshot_freshness");
+        assert_eq!(result.status, CheckStatus::Pass);
+        assert_eq!(
+            result.detail,
+            "Master and PR state snapshots match for monitored fields"
+        );
+    }
+
+    #[test]
+    fn state_snapshot_divergence_check_lists_all_diverged_fields() {
+        let master_state = json!({
+            "cycle_phase": { "phase": "close_out" },
+            "copilot_metrics": {
+                "in_flight": 0,
+                "dispatched": 11,
+                "merged": 9
+            }
+        });
+        let pr_state = json!({
+            "cycle_phase": { "phase": "doc_dispatched" },
+            "copilot_metrics": {
+                "in_flight": 2,
+                "dispatched": 10,
+                "merged": 8
+            }
+        });
+
+        let result = evaluate_state_snapshot_freshness(&master_state, &pr_state);
+
+        assert_eq!(result.check, "state_snapshot_freshness");
+        assert_eq!(result.status, CheckStatus::Fail);
+        assert!(result.detail.contains("State has advanced since documentation was generated. Consider regenerating docs or noting the divergence."));
+        assert!(result.detail.contains("cycle_phase.phase: master=\"close_out\", pr=\"doc_dispatched\""));
+        assert!(result.detail.contains("copilot_metrics.in_flight: master=0, pr=2"));
+        assert!(result.detail.contains("copilot_metrics.dispatched: master=11, pr=10"));
+        assert!(result.detail.contains("copilot_metrics.merged: master=9, pr=8"));
     }
 }
