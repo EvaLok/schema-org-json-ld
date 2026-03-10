@@ -19,6 +19,7 @@ const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const STEP_COMMENT_THRESHOLD: usize = 10;
 const ORCHESTRATOR_SIGNATURE: &str = "> **[main-orchestrator]**";
 const PHASED_RESUMPTION_STEP_IDS: [&str; 4] = ["Opening", "10.B", "10.C", "Close"];
+const STARTUP_STEP_IDS: [&str; 13] = ["0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9"];
 // Keep this list aligned with the orchestrator checklist steps that are expected to
 // produce post-step comments. The pass threshold stays lower because some steps are
 // conditional, but missing steps should still be surfaced in WARN output.
@@ -583,6 +584,7 @@ fn verify_step_comments(repo_root: &Path, runner: &dyn CommandRunner) -> StepRep
 			};
 		}
 	};
+	let resumption_step_tokens = collect_step_comment_tokens(&comment_bodies);
 
 	if found.len() >= STEP_COMMENT_THRESHOLD {
 		return StepReport {
@@ -601,7 +603,7 @@ fn verify_step_comments(repo_root: &Path, runner: &dyn CommandRunner) -> StepRep
 	}
 
 	if let Some(work_issue) = work_issue {
-		let (_work_comment_bodies, work_found) = match fetch_step_comments_for_issue(runner, work_issue) {
+		let (_, work_found) = match fetch_step_comments_for_issue(runner, work_issue) {
 			Ok(result) => result,
 			Err(error) => {
 				return StepReport {
@@ -627,7 +629,7 @@ fn verify_step_comments(repo_root: &Path, runner: &dyn CommandRunner) -> StepRep
 					work_found.len(),
 					work_issue,
 					issue,
-					collect_step_comment_tokens(&comment_bodies).len()
+					resumption_step_tokens.len()
 				)),
 				findings: Some(work_found.len()),
 				summary: None,
@@ -652,7 +654,7 @@ fn verify_step_comments(repo_root: &Path, runner: &dyn CommandRunner) -> StepRep
 		};
 	}
 
-	if is_phased_resumption_issue(&comment_bodies, &found) {
+	if is_phased_resumption_issue(&resumption_step_tokens, &found) {
 		return StepReport {
 			name: STEP_COMMENTS_STEP_NAME,
 			status: StepStatus::Warn,
@@ -660,7 +662,7 @@ fn verify_step_comments(repo_root: &Path, runner: &dyn CommandRunner) -> StepRep
 			exit_code: None,
 			detail: Some(format!(
 				"Phased cycle detected — {} steps found on resumption issue #{} (full checklist expected on work-phase issue)",
-				collect_phased_resumption_step_ids(&comment_bodies).len(),
+				collect_phased_resumption_step_ids(&resumption_step_tokens).len(),
 				issue
 			)),
 			findings: Some(found.len()),
@@ -701,17 +703,24 @@ fn missing_expected_step_ids(found: &BTreeSet<&'static str>) -> Vec<&'static str
 		.collect()
 }
 
-fn is_phased_resumption_issue(comment_bodies: &str, found: &BTreeSet<&'static str>) -> bool {
-	let phase_steps = collect_phased_resumption_step_ids(comment_bodies);
-	let has_startup_step = found.iter().any(|step| *step != "10");
-	!phase_steps.is_empty() && !has_startup_step
+fn is_phased_resumption_issue(
+	resumption_step_tokens: &BTreeSet<&str>,
+	found: &BTreeSet<&'static str>,
+) -> bool {
+	let phase_steps = collect_phased_resumption_step_ids(resumption_step_tokens);
+	!phase_steps.is_empty() && !has_startup_step_comment(found)
 }
 
-fn collect_phased_resumption_step_ids(comment_bodies: &str) -> BTreeSet<&str> {
-	collect_step_comment_tokens(comment_bodies)
-		.into_iter()
+fn collect_phased_resumption_step_ids<'a>(step_tokens: &BTreeSet<&'a str>) -> BTreeSet<&'a str> {
+	step_tokens
+		.iter()
+		.copied()
 		.filter(|step| PHASED_RESUMPTION_STEP_IDS.contains(step))
 		.collect()
+}
+
+fn has_startup_step_comment(found: &BTreeSet<&'static str>) -> bool {
+	found.iter().any(|step| STARTUP_STEP_IDS.contains(step))
 }
 
 /// Collect recognized orchestrator step identifiers from issue comment bodies.
