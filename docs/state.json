@@ -2497,6 +2497,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "[Cycle Review] Cycle 214 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-10T04:45:28Z",
+      "issue": 954,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 214 review"
     }
   ],
   "audit_dropped": [
@@ -2657,16 +2664,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#954 [Cycle Review] Cycle 214 end-of-cycle review (cycle 214)",
+    "dispatch_log_latest": "#954 Cycle 214 review (cycle 214)",
     "dispatch_to_pr_rate": "97.4%",
-    "in_flight": 3,
+    "in_flight": 4,
     "merged": 265,
     "pr_merge_rate": "99.3%",
     "produced_pr": 267,
     "resolved": 272,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 275
+    "total_dispatches": 276
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
