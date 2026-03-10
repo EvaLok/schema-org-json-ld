@@ -18,6 +18,7 @@ const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const STEP_COMMENT_THRESHOLD: usize = 10;
 const ORCHESTRATOR_SIGNATURE: &str = "> **[main-orchestrator]**";
+const PHASED_RESUMPTION_STEP_IDS: [&str; 4] = ["Opening", "10.B", "10.C", "Close"];
 // Keep this list aligned with the orchestrator checklist steps that are expected to
 // produce post-step comments. The pass threshold stays lower because some steps are
 // conditional, but missing steps should still be surfaced in WARN output.
@@ -531,13 +532,24 @@ fn verify_artifacts(repo_root: &Path) -> StepReport {
 }
 
 fn verify_step_comments(repo_root: &Path, runner: &dyn CommandRunner) -> StepReport {
-	let issue = match read_state_value(repo_root).map(|state| {
-		state
-			.pointer("/previous_cycle_issue")
-			.and_then(Value::as_u64)
-	}) {
-		Ok(Some(issue)) => issue,
-		Ok(None) => {
+	let state = match read_state_value(repo_root) {
+		Ok(state) => state,
+		Err(error) => {
+			return StepReport {
+				name: STEP_COMMENTS_STEP_NAME,
+				status: StepStatus::Error,
+				severity: Severity::Blocking,
+				exit_code: None,
+				detail: Some(error),
+				findings: None,
+				summary: None,
+			};
+		}
+	};
+
+	let issue = match state.pointer("/previous_cycle_issue").and_then(Value::as_u64) {
+		Some(issue) => issue,
+		None => {
 			return StepReport {
 				name: STEP_COMMENTS_STEP_NAME,
 				status: StepStatus::Pass,
@@ -551,6 +563,14 @@ fn verify_step_comments(repo_root: &Path, runner: &dyn CommandRunner) -> StepRep
 				summary: None,
 			};
 		}
+	};
+	let work_issue = state
+		.pointer("/previous_cycle_work_issue")
+		.and_then(Value::as_u64)
+		.filter(|work_issue| *work_issue != issue);
+
+	let (comment_bodies, found) = match fetch_step_comments_for_issue(runner, issue) {
+		Ok(result) => result,
 		Err(error) => {
 			return StepReport {
 				name: STEP_COMMENTS_STEP_NAME,
@@ -564,52 +584,134 @@ fn verify_step_comments(repo_root: &Path, runner: &dyn CommandRunner) -> StepRep
 		}
 	};
 
-	let comment_bodies = match runner.fetch_issue_comment_bodies(issue) {
-		Ok(comment_bodies) => comment_bodies,
-		Err(error) => {
+	if found.len() >= STEP_COMMENT_THRESHOLD {
+		return StepReport {
+			name: STEP_COMMENTS_STEP_NAME,
+			status: StepStatus::Pass,
+			severity: Severity::Blocking,
+			exit_code: None,
+			detail: Some(format!(
+				"found {} unique step comments on issue #{}",
+				found.len(),
+				issue
+			)),
+			findings: Some(found.len()),
+			summary: None,
+		};
+	}
+
+	if let Some(work_issue) = work_issue {
+		let (_work_comment_bodies, work_found) = match fetch_step_comments_for_issue(runner, work_issue) {
+			Ok(result) => result,
+			Err(error) => {
+				return StepReport {
+					name: STEP_COMMENTS_STEP_NAME,
+					status: StepStatus::Error,
+					severity: Severity::Blocking,
+					exit_code: None,
+					detail: Some(error),
+					findings: None,
+					summary: None,
+				};
+			}
+		};
+
+		if work_found.len() >= STEP_COMMENT_THRESHOLD {
 			return StepReport {
 				name: STEP_COMMENTS_STEP_NAME,
-				status: StepStatus::Error,
+				status: StepStatus::Pass,
 				severity: Severity::Blocking,
 				exit_code: None,
-				detail: Some(error),
-				findings: None,
+				detail: Some(format!(
+					"found {} unique step comments on work-phase issue #{} after resumption issue #{} only had {}",
+					work_found.len(),
+					work_issue,
+					issue,
+					collect_step_comment_tokens(&comment_bodies).len()
+				)),
+				findings: Some(work_found.len()),
 				summary: None,
 			};
 		}
-	};
 
-	let found = collect_step_comment_ids(&comment_bodies);
-	let missing = EXPECTED_STEP_IDS
-		.iter()
-		.copied()
-		.filter(|step| !found.contains(step))
-		.collect::<Vec<_>>();
-	let status = if found.len() >= STEP_COMMENT_THRESHOLD {
-		StepStatus::Pass
-	} else {
-		StepStatus::Fail
-	};
-	let detail = if status == StepStatus::Pass {
-		format!("found {} unique step comments on issue #{}", found.len(), issue)
-	} else {
-		format!(
-			"found {} unique step comments on issue #{}; missing steps: {}",
-			found.len(),
-			issue,
-			missing.join(", ")
-		)
-	};
+		return StepReport {
+			name: STEP_COMMENTS_STEP_NAME,
+			status: StepStatus::Fail,
+			severity: Severity::Blocking,
+			exit_code: None,
+			detail: Some(format!(
+				"found {} unique step comments on issue #{} and {} unique step comments on work-phase issue #{}; missing steps: {}",
+				found.len(),
+				issue,
+				work_found.len(),
+				work_issue,
+				missing_expected_step_ids(&work_found).join(", ")
+			)),
+			findings: Some(work_found.len()),
+			summary: None,
+		};
+	}
+
+	if is_phased_resumption_issue(&comment_bodies, &found) {
+		return StepReport {
+			name: STEP_COMMENTS_STEP_NAME,
+			status: StepStatus::Warn,
+			severity: Severity::Warning,
+			exit_code: None,
+			detail: Some(format!(
+				"Phased cycle detected — {} steps found on resumption issue #{} (full checklist expected on work-phase issue)",
+				collect_phased_resumption_step_ids(&comment_bodies).len(),
+				issue
+			)),
+			findings: Some(found.len()),
+			summary: None,
+		};
+	}
 
 	StepReport {
 		name: STEP_COMMENTS_STEP_NAME,
-		status,
+		status: StepStatus::Fail,
 		severity: Severity::Blocking,
 		exit_code: None,
-		detail: Some(detail),
+		detail: Some(format!(
+			"found {} unique step comments on issue #{}; missing steps: {}",
+			found.len(),
+			issue,
+			missing_expected_step_ids(&found).join(", ")
+		)),
 		findings: Some(found.len()),
 		summary: None,
 	}
+}
+
+fn fetch_step_comments_for_issue(
+	runner: &dyn CommandRunner,
+	issue: u64,
+) -> Result<(String, BTreeSet<&'static str>), String> {
+	let comment_bodies = runner.fetch_issue_comment_bodies(issue)?;
+	let found = collect_step_comment_ids(&comment_bodies);
+	Ok((comment_bodies, found))
+}
+
+fn missing_expected_step_ids(found: &BTreeSet<&'static str>) -> Vec<&'static str> {
+	EXPECTED_STEP_IDS
+		.iter()
+		.copied()
+		.filter(|step| !found.contains(step))
+		.collect()
+}
+
+fn is_phased_resumption_issue(comment_bodies: &str, found: &BTreeSet<&'static str>) -> bool {
+	let phase_steps = collect_phased_resumption_step_ids(comment_bodies);
+	let has_startup_step = found.iter().any(|step| *step != "10");
+	!phase_steps.is_empty() && !has_startup_step
+}
+
+fn collect_phased_resumption_step_ids(comment_bodies: &str) -> BTreeSet<&str> {
+	collect_step_comment_tokens(comment_bodies)
+		.into_iter()
+		.filter(|step| PHASED_RESUMPTION_STEP_IDS.contains(step))
+		.collect()
 }
 
 /// Collect recognized orchestrator step identifiers from issue comment bodies.
@@ -623,18 +725,34 @@ fn collect_step_comment_ids(comment_bodies: &str) -> BTreeSet<&'static str> {
 		.collect()
 }
 
+fn collect_step_comment_tokens(comment_bodies: &str) -> BTreeSet<&str> {
+	comment_bodies
+		.lines()
+		.filter_map(detect_any_step_comment_token)
+		.collect()
+}
+
 fn detect_step_comment_id(line: &str) -> Option<&'static str> {
+	detect_any_step_comment_token(line).and_then(|candidate| {
+		EXPECTED_STEP_IDS
+			.iter()
+			.copied()
+			.find(|step| *step == candidate)
+	})
+}
+
+fn detect_any_step_comment_token(line: &str) -> Option<&str> {
 	let trimmed = line.trim();
 	if trimmed.starts_with(ORCHESTRATOR_SIGNATURE) {
-		extract_step_id_after_marker(trimmed, "Step ")
+		extract_step_token_after_marker(trimmed, "Step ")
 	} else if trimmed.starts_with("## Step ") {
-		extract_step_id_after_marker(trimmed, "## Step ")
+		extract_step_token_after_marker(trimmed, "## Step ")
 	} else {
 		None
 	}
 }
 
-fn extract_step_id_after_marker(line: &str, marker: &str) -> Option<&'static str> {
+fn extract_step_token_after_marker<'a>(line: &'a str, marker: &str) -> Option<&'a str> {
 	// Callers only invoke this after confirming the line begins with the relevant marker.
 	let start = line.find(marker)? + marker.len();
 	let candidate = line[start..]
@@ -642,13 +760,11 @@ fn extract_step_id_after_marker(line: &str, marker: &str) -> Option<&'static str
 		.next()
 		.unwrap_or_default()
 		.trim_end_matches(':');
-	// This returns references from the static EXPECTED_STEP_IDS array, not slices of
-	// the input line, and returns None when the candidate does not match an expected
-	// step identifier, so the &'static str return type is safe here.
-	EXPECTED_STEP_IDS
-		.iter()
-		.copied()
-		.find(|step| *step == candidate)
+	if candidate.is_empty() {
+		None
+	} else {
+		Some(candidate)
+	}
 }
 
 fn verify_artifacts_for_date(repo_root: &Path, today: &str) -> StepReport {
@@ -1964,6 +2080,122 @@ mod tests {
 			.as_deref()
 			.unwrap_or_default()
 			.contains("7"));
+	}
+
+	#[test]
+	fn step_comment_verification_warns_for_phased_resumption_issue_without_work_issue_fallback() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir()
+			.join(format!("pipeline-check-step-comments-phased-resumption-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 996,
+				"cycle_phase": {
+					"phase": "close_out"
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct StepCommentRunner;
+
+		impl CommandRunner for StepCommentRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected in step comment verification test");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 996);
+				Ok(concat!(
+					"> **[main-orchestrator]** | Cycle 221 | Step Opening\n",
+					"> **[main-orchestrator]** | Cycle 221 | Step 10.B\n",
+					"> **[main-orchestrator]** | Cycle 221 | Step 10.C\n",
+					"> **[main-orchestrator]** | Cycle 221 | Step Close\n"
+				)
+				.to_string())
+			}
+		}
+
+		let step = verify_step_comments(&root, &StepCommentRunner);
+		assert_eq!(step.status, StepStatus::Warn);
+		assert_eq!(step.severity, Severity::Warning);
+		assert_eq!(step.findings, Some(0));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("Phased cycle detected"));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("issue #996"));
+	}
+
+	#[test]
+	fn step_comment_verification_uses_previous_cycle_work_issue_when_present() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir()
+			.join(format!("pipeline-check-step-comments-work-issue-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 996,
+				"previous_cycle_work_issue": 995
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct StepCommentRunner;
+
+		impl CommandRunner for StepCommentRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected in step comment verification test");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				match issue {
+					996 => Ok(concat!(
+						"> **[main-orchestrator]** | Cycle 221 | Step Opening\n",
+						"> **[main-orchestrator]** | Cycle 221 | Step 10.B\n",
+						"> **[main-orchestrator]** | Cycle 221 | Step 10.C\n",
+						"> **[main-orchestrator]** | Cycle 221 | Step Close\n"
+					)
+					.to_string()),
+					995 => Ok(concat!(
+						"> **[main-orchestrator]** | Cycle 221 | Step 0\n",
+						"> **[main-orchestrator]** | Cycle 221 | Step 0.5\n",
+						"> **[main-orchestrator]** | Cycle 221 | Step 0.6\n",
+						"> **[main-orchestrator]** | Cycle 221 | Step 1\n",
+						"> **[main-orchestrator]** | Cycle 221 | Step 1.1\n",
+						"> **[main-orchestrator]** | Cycle 221 | Step 2\n",
+						"> **[main-orchestrator]** | Cycle 221 | Step 3\n",
+						"> **[main-orchestrator]** | Cycle 221 | Step 4\n",
+						"> **[main-orchestrator]** | Cycle 221 | Step 5\n",
+						"> **[main-orchestrator]** | Cycle 221 | Step 6\n"
+					)
+					.to_string()),
+					unexpected => panic!("unexpected issue lookup: {unexpected}"),
+				}
+			}
+		}
+
+		let step = verify_step_comments(&root, &StepCommentRunner);
+		assert_eq!(step.status, StepStatus::Pass);
+		assert_eq!(step.severity, Severity::Blocking);
+		assert_eq!(step.findings, Some(10));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("work-phase issue #995"));
 	}
 
 	#[test]
