@@ -2431,6 +2431,13 @@
       "pr": 932,
       "status": "merged",
       "title": "[Cycle Review] Cycle 211 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-10T00:26:56Z",
+      "issue": 935,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Make --issues required in process-merge (audit #175)"
     }
   ],
   "audit_dropped": [
@@ -2525,7 +2532,8 @@
     167,
     169,
     171,
-    172
+    172,
+    175
   ],
   "blockers": [
     {
@@ -2589,16 +2597,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#931 [Cycle Review] Cycle 211 end-of-cycle review (cycle 211)",
+    "dispatch_log_latest": "#935 Make --issues required in process-merge (audit #175) (cycle 212)",
     "dispatch_to_pr_rate": "97.0%",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 260,
     "pr_merge_rate": "99.2%",
     "produced_pr": 262,
     "resolved": 267,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 267
+    "total_dispatches": 268
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
