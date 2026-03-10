@@ -2651,8 +2651,10 @@
     {
       "dispatched_at": "2026-03-10T22:20:09Z",
       "issue": 1002,
+      "merged_at": "2026-03-10T22:31:15Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1003,
+      "status": "merged",
       "title": "Fix step-comments check for phased-cycle resumption issues"
     }
   ],
@@ -2817,12 +2819,12 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1002 Fix step-comments check for phased-cycle resumption issues (cycle 222)",
-    "dispatch_to_pr_rate": "97.9%",
-    "in_flight": 1,
-    "merged": 284,
+    "dispatch_to_pr_rate": "98.3%",
+    "in_flight": 0,
+    "merged": 285,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 286,
-    "resolved": 291,
+    "produced_pr": 287,
+    "resolved": 292,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 292
