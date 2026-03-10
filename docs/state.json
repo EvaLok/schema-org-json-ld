@@ -2552,8 +2552,10 @@
     {
       "dispatched_at": "2026-03-10T10:26:10Z",
       "issue": 971,
+      "merged_at": "2026-03-10T12:19:55Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 972,
+      "status": "merged",
       "title": "Make process-merge atomic: integrate derive-metrics before commit"
     },
     {
@@ -2723,12 +2725,12 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#973 [Cycle Review] Cycle 217 end-of-cycle review (cycle 217)",
-    "dispatch_to_pr_rate": "97.2%",
-    "in_flight": 2,
-    "merged": 273,
+    "dispatch_to_pr_rate": "97.9%",
+    "in_flight": 1,
+    "merged": 274,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 275,
-    "resolved": 280,
+    "produced_pr": 276,
+    "resolved": 281,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 282
@@ -2822,7 +2824,7 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 217"
+        "last_refreshed": "cycle 218"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
@@ -2830,7 +2832,7 @@
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 217"
+        "last_refreshed": "cycle 218"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
