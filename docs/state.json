@@ -2476,6 +2476,13 @@
       "pr": 946,
       "status": "merged",
       "title": "Fix write-entry Copilot metrics presentation to show correct denominators"
+    },
+    {
+      "dispatched_at": "2026-03-10T04:41:33Z",
+      "issue": 950,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix write-entry journal contradiction"
     }
   ],
   "audit_dropped": [
@@ -2636,16 +2643,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#945 Fix write-entry Copilot metrics presentation to show correct denominators (cycle 213)",
+    "dispatch_log_latest": "#950 Fix write-entry journal contradiction (cycle 214)",
     "dispatch_to_pr_rate": "97.4%",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 266,
     "pr_merge_rate": "99.2%",
     "produced_pr": 268,
     "resolved": 272,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 272
+    "total_dispatches": 273
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
