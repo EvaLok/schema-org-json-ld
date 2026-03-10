@@ -2784,7 +2784,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 214"
+        "last_refreshed": "cycle 215"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -2792,11 +2792,11 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 214"
+        "last_refreshed": "cycle 215"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 214"
+        "last_refreshed": "cycle 215"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -2906,12 +2906,12 @@
   },
   "last_cycle": {
     "duration_minutes": 10,
-    "issue": 949,
-    "number": 214,
+    "issue": 956,
+    "number": 215,
     "summary": "Review-heavy cycle: merged 3 PRs (#944, #946, #948), processed cycle 213 review (6 findings, 4/5 complacency), dispatched 2 tool fixes (#950, #952)",
-    "timestamp": "2026-03-10T04:42:54Z"
+    "timestamp": "2026-03-10T06:13:17Z"
   },
-  "last_eva_comment_check": "2026-03-10T04:42:54Z",
+  "last_eva_comment_check": "2026-03-10T06:13:17Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
