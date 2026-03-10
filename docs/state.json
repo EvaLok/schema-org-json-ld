@@ -2444,8 +2444,10 @@
     {
       "dispatched_at": "2026-03-10T00:27:00Z",
       "issue": 936,
+      "merged_at": "2026-03-10T03:03:56Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 938,
+      "status": "merged",
       "title": "Harden journal scanner against malformed filenames in pipeline-check"
     },
     {
@@ -2616,11 +2618,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#939 [Cycle Review] Cycle 212 end-of-cycle review (cycle 212)",
     "dispatch_to_pr_rate": "97.0%",
-    "in_flight": 2,
-    "merged": 261,
+    "in_flight": 1,
+    "merged": 262,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 263,
-    "resolved": 268,
+    "produced_pr": 264,
+    "resolved": 269,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 270
