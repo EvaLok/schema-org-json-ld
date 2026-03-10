@@ -2620,6 +2620,13 @@
       "pr": 991,
       "status": "merged",
       "title": "Cycle 220 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-10T18:27:15Z",
+      "issue": 994,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Docs] Cycle 221 worklog and journal"
     }
   ],
   "audit_dropped": [
@@ -2782,24 +2789,24 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#990 Cycle 220 end-of-cycle review (cycle 220)",
-    "dispatch_to_pr_rate": "98.3%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#994 [Cycle Docs] Cycle 221 worklog and journal (cycle 221)",
+    "dispatch_to_pr_rate": "97.9%",
+    "in_flight": 1,
     "merged": 281,
     "pr_merge_rate": "99.3%",
     "produced_pr": 283,
     "resolved": 288,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 288
+    "total_dispatches": 289
   },
   "cycle_phase": {
     "cycle": 221,
-    "doc_issue": null,
+    "doc_issue": 994,
     "doc_pr": null,
-    "phase": "work",
-    "phase_entered_at": "2026-03-10T18:15:09Z",
-    "review_iteration": null,
+    "phase": "doc_dispatched",
+    "phase_entered_at": "2026-03-10T18:27:15Z",
+    "review_iteration": 0,
     "review_max": 3
   },
   "eva_input_issues": {
