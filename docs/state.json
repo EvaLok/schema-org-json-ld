@@ -2678,7 +2678,7 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#957 Fix metrics-drift: record-dispatch re-derive (cycle 215)",
-    "dispatch_to_pr_rate": "96.7%",
+    "dispatch_to_pr_rate": "97.5%",
     "in_flight": 2,
     "merged": 268,
     "pr_merge_rate": "99.3%",
