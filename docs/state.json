@@ -2507,8 +2507,10 @@
     {
       "dispatched_at": "2026-03-10T06:25:04Z",
       "issue": 957,
+      "merged_at": "2026-03-10T08:16:36Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 958,
+      "status": "merged",
       "title": "Fix metrics-drift: record-dispatch re-derive"
     },
     {
@@ -2681,11 +2683,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#959 Cycle 215 review (cycle 215)",
     "dispatch_to_pr_rate": "97.8%",
-    "in_flight": 1,
-    "merged": 269,
+    "in_flight": 0,
+    "merged": 270,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 271,
-    "resolved": 276,
+    "produced_pr": 272,
+    "resolved": 277,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 277
