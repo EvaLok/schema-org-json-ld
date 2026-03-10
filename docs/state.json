@@ -2593,6 +2593,13 @@
       "pr": 982,
       "status": "merged",
       "title": "Cycle 219 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-10T16:33:52Z",
+      "issue": 986,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "pipeline-check: escalate step-comment verification from WARN to FAIL"
     }
   ],
   "audit_dropped": [
@@ -2753,16 +2760,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#981 Cycle 219 end-of-cycle review (cycle 219)",
-    "dispatch_to_pr_rate": "98.2%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#986 pipeline-check: escalate step-comment verification from WARN to FAIL (cycle 220)",
+    "dispatch_to_pr_rate": "97.9%",
+    "in_flight": 1,
     "merged": 278,
     "pr_merge_rate": "99.3%",
     "produced_pr": 280,
     "resolved": 285,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 285
+    "total_dispatches": 286
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
