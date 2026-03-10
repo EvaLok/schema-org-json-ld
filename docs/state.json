@@ -2869,7 +2869,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 219"
+        "last_refreshed": "cycle 220"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -2877,11 +2877,11 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 219"
+        "last_refreshed": "cycle 220"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 219"
+        "last_refreshed": "cycle 220"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -2991,12 +2991,12 @@
   },
   "last_cycle": {
     "duration_minutes": 9,
-    "issue": 978,
-    "number": 219,
+    "issue": 983,
+    "number": 220,
     "summary": "Actioned all 5 cycle-218 review findings. Merged PR #977 (cycle 218 review artifact). Fixed process-merge stale comment (atomicity-narrative-drift). Dispatched #979 (record-dispatch worklog in-flight fixup) to structurally fix chronic worklog-accuracy finding. Processed stale merge records for issues #973 and #976.",
-    "timestamp": "2026-03-10T14:26:13Z"
+    "timestamp": "2026-03-10T16:22:23Z"
   },
-  "last_eva_comment_check": "2026-03-10T14:26:13Z",
+  "last_eva_comment_check": "2026-03-10T16:22:23Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
