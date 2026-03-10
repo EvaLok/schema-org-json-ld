@@ -2787,6 +2787,15 @@
     "revision_rounds": 5,
     "total_dispatches": 288
   },
+  "cycle_phase": {
+    "cycle": 221,
+    "doc_issue": null,
+    "doc_pr": null,
+    "phase": "work",
+    "phase_entered_at": "2026-03-10T18:15:09Z",
+    "review_iteration": null,
+    "review_max": 3
+  },
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -2878,10 +2887,6 @@
         "cadence": "after new dispatches",
         "last_refreshed": "cycle 220"
       },
-      "cycle_phase": {
-        "cadence": "every phase transition",
-        "last_refreshed": "cycle 218"
-      },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
         "last_refreshed": "cycle 220"
@@ -2889,6 +2894,10 @@
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
         "last_refreshed": "cycle 220"
+      },
+      "cycle_phase": {
+        "cadence": "every phase transition",
+        "last_refreshed": "cycle 221"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
@@ -2900,7 +2909,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 220"
+        "last_refreshed": "cycle 221"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -2908,11 +2917,11 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 220"
+        "last_refreshed": "cycle 221"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 220"
+        "last_refreshed": "cycle 221"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -3020,23 +3029,14 @@
       }
     }
   },
-  "cycle_phase": {
-    "cycle": null,
-    "phase": null,
-    "doc_issue": null,
-    "doc_pr": null,
-    "review_iteration": null,
-    "review_max": 3,
-    "phase_entered_at": null
-  },
   "last_cycle": {
     "duration_minutes": 14,
-    "issue": 983,
-    "number": 220,
+    "issue": 993,
+    "number": 221,
     "summary": "Reviewed and merged PR #982 (cycle 219 review artifact, 3 findings, complacency 4/5). Reviewed and merged PR #980 (record-dispatch worklog in-flight fixup — structural fix for chronic worklog-accuracy). Processed 2 audit recommendations (#182 step-comment escalation, #183 chronic verification deadlines). Dispatched #986 and #987 to Copilot for audit fixes. Created audit-inbound issues #984 and #985.",
-    "timestamp": "2026-03-10T16:36:19Z"
+    "timestamp": "2026-03-10T18:15:08Z"
   },
-  "last_eva_comment_check": "2026-03-10T16:36:19Z",
+  "last_eva_comment_check": "2026-03-10T18:15:08Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
