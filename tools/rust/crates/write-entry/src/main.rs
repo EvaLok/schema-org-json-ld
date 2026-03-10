@@ -164,6 +164,8 @@ struct JournalSection {
 struct CommitReceipt {
     tool: String,
     receipt: String,
+    #[serde(default)]
+    unresolved: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -219,7 +221,8 @@ fn execute_worklog(
     now: DateTime<Utc>,
 ) -> Result<PathBuf, String> {
     let cycle = resolve_cycle(args.cycle, repo_root)?;
-    let input = resolve_worklog_input(args, repo_root)?;
+    let mut input = resolve_worklog_input(args, repo_root)?;
+    emit_unresolved_receipt_warnings(&mut input.receipts, repo_root)?;
     let path = worklog_path(repo_root, now, &args.title);
     let content = render_worklog(cycle, now, &input);
     write_entry_file(&path, &content)?;
@@ -585,9 +588,60 @@ fn parse_receipts(values: &[String]) -> Result<Vec<CommitReceipt>, String> {
             Ok(CommitReceipt {
                 tool: tool.to_string(),
                 receipt: receipt.to_string(),
+                unresolved: false,
             })
         })
         .collect()
+}
+
+fn emit_unresolved_receipt_warnings(
+    receipts: &mut [CommitReceipt],
+    repo_root: &Path,
+) -> Result<(), String> {
+    for warning in validate_receipt_shas(receipts, repo_root)? {
+        eprintln!("{}", warning);
+    }
+    Ok(())
+}
+
+fn validate_receipt_shas(
+    receipts: &mut [CommitReceipt],
+    repo_root: &Path,
+) -> Result<Vec<String>, String> {
+    let mut warnings = Vec::new();
+
+    for receipt in receipts {
+        if git_commit_exists(repo_root, &receipt.receipt)? {
+            continue;
+        }
+
+        receipt.unresolved = true;
+        warnings.push(format!(
+            "WARNING: unresolvable receipt SHA for {}: {}",
+            receipt.tool, receipt.receipt
+        ));
+    }
+
+    Ok(warnings)
+}
+
+fn git_commit_exists(repo_root: &Path, sha: &str) -> Result<bool, String> {
+    let output = std::process::Command::new("git")
+        .arg("rev-parse")
+        .arg("--verify")
+        .arg(format!("{sha}^{{commit}}"))
+        .current_dir(repo_root)
+        .output()
+        .map_err(|error| {
+            format!(
+                "failed to validate receipt SHA '{}' in {}: {}",
+                sha,
+                repo_root.display(),
+                error
+            )
+        })?;
+
+    Ok(output.status.success())
 }
 
 fn parse_sections(values: &[String]) -> Result<Vec<JournalSection>, String> {
@@ -965,18 +1019,33 @@ fn render_worklog(cycle: u64, now: DateTime<Utc>, input: &WorklogInput) -> Strin
         lines.push("| Tool | Receipt | Link |".to_string());
         lines.push("|------|---------|------|".to_string());
         for receipt in &input.receipts {
+            let receipt_display = format_receipt_display(receipt);
+            let link_display = if receipt.unresolved {
+                receipt_display.clone()
+            } else {
+                format!(
+                    "[{}]({}/{})",
+                    receipt.receipt, PRIMARY_COMMITS_URL, receipt.receipt
+                )
+            };
             lines.push(format!(
-                "| {} | {} | [{}]({}/{}) |",
+                "| {} | {} | {} |",
                 receipt.tool,
-                receipt.receipt,
-                receipt.receipt,
-                PRIMARY_COMMITS_URL,
-                receipt.receipt
+                receipt_display,
+                link_display
             ));
         }
     }
     lines.push(String::new());
     lines.join("\n")
+}
+
+fn format_receipt_display(receipt: &CommitReceipt) -> String {
+    if receipt.unresolved {
+        format!("{} [UNRESOLVED]", receipt.receipt)
+    } else {
+        receipt.receipt.clone()
+    }
 }
 
 fn render_numbered_refs(numbers: &[u64], kind: &str, issues_url: &str) -> Vec<String> {
@@ -1391,6 +1460,7 @@ fn parse_digits(chars: &[char], start: usize) -> (String, usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::process::Command as ProcessCommand;
     use std::sync::atomic::{AtomicU64, Ordering};
 
     struct TempRepoDir {
@@ -1475,6 +1545,37 @@ mod tests {
             previous_commitment_status: None,
             previous_commitment_detail: None,
         }
+    }
+
+    fn run_git(repo_root: &Path, args: &[&str]) -> String {
+        let output = ProcessCommand::new("git")
+            .args(args)
+            .current_dir(repo_root)
+            .env("GIT_AUTHOR_NAME", "Test User")
+            .env("GIT_AUTHOR_EMAIL", "test@example.com")
+            .env("GIT_COMMITTER_NAME", "Test User")
+            .env("GIT_COMMITTER_EMAIL", "test@example.com")
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "git {:?} failed: {}",
+            args,
+            String::from_utf8_lossy(&output.stderr)
+        );
+        String::from_utf8(output.stdout).unwrap().trim().to_string()
+    }
+
+    fn init_git_repo(repo_root: &Path) {
+        run_git(repo_root, &["init"]);
+        run_git(repo_root, &["branch", "-m", "master"]);
+    }
+
+    fn create_git_commit(repo_root: &Path, file_name: &str, content: &str) -> String {
+        fs::write(repo_root.join(file_name), content).unwrap();
+        run_git(repo_root, &["add", file_name]);
+        run_git(repo_root, &["commit", "-m", &format!("Add {}", file_name)]);
+        run_git(repo_root, &["rev-parse", "--short=7", "HEAD"])
     }
 
     fn write_worklog_fixture(
@@ -1698,6 +1799,9 @@ mod tests {
     #[test]
     fn worklog_inline_flags_render_receipts_table() {
         let repo_root = TempRepoDir::new("worklog-inline-flags");
+        init_git_repo(&repo_root.path);
+        let first_receipt = create_git_commit(&repo_root.path, "first.txt", "first");
+        let second_receipt = create_git_commit(&repo_root.path, "second.txt", "second");
         let mut args = worklog_args("Inline flags");
         args.done = vec!["Merged PR #123".to_string()];
         args.pr_merged = vec![123, 456];
@@ -1711,8 +1815,8 @@ mod tests {
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(1);
         args.receipt = vec![
-            "cycle-start:abc1234".to_string(),
-            "process-merge:def5678".to_string(),
+            format!("cycle-start:{first_receipt}"),
+            format!("process-merge:{second_receipt}"),
         ];
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
@@ -1732,8 +1836,50 @@ mod tests {
         assert!(content.contains("- **Copilot metrics**: 45 dispatched"));
         assert!(content.contains("- **Publish gate**: open"));
         assert!(content.contains("## Commit receipts"));
-        assert!(content.contains("| cycle-start | abc1234 | [abc1234](https://github.com/EvaLok/schema-org-json-ld/commit/abc1234) |"));
-        assert!(content.contains("| process-merge | def5678 | [def5678](https://github.com/EvaLok/schema-org-json-ld/commit/def5678) |"));
+        assert!(content.contains(&format!(
+            "| cycle-start | {} | [{}](https://github.com/EvaLok/schema-org-json-ld/commit/{}) |",
+            first_receipt, first_receipt, first_receipt
+        )));
+        assert!(content.contains(&format!(
+            "| process-merge | {} | [{}](https://github.com/EvaLok/schema-org-json-ld/commit/{}) |",
+            second_receipt, second_receipt, second_receipt
+        )));
+    }
+
+    #[test]
+    fn unresolved_receipt_sha_is_marked_in_worklog_output() {
+        let repo_root = TempRepoDir::new("worklog-unresolved-receipt");
+        let mut receipts = parse_receipts(&["cycle-start:deadbee".to_string()]).unwrap();
+
+        let warnings = validate_receipt_shas(&mut receipts, &repo_root.path).unwrap();
+
+        assert_eq!(
+            warnings,
+            vec!["WARNING: unresolvable receipt SHA for cycle-start: deadbee".to_string()]
+        );
+        let rendered = render_worklog(
+            154,
+            fixed_now(),
+            &WorklogInput {
+                what_was_done: Vec::new(),
+                self_modifications: Vec::new(),
+                prs_merged: Vec::new(),
+                prs_reviewed: Vec::new(),
+                issues_processed: Vec::new(),
+                current_state: CurrentState {
+                    in_flight_sessions: 0,
+                    pipeline_status: "PASS (6/6)".to_string(),
+                    copilot_metrics: "45 dispatched".to_string(),
+                    publish_gate: "open".to_string(),
+                },
+                next_steps: Vec::new(),
+                receipts,
+            },
+        );
+
+        assert!(rendered.contains(
+            "| cycle-start | deadbee [UNRESOLVED] | deadbee [UNRESOLVED] |"
+        ));
     }
 
     #[test]
