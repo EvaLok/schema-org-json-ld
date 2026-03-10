@@ -2643,6 +2643,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add state-divergence check to check-doc-pr tool"
+    },
+    {
+      "dispatched_at": "2026-03-10T22:20:09Z",
+      "issue": 1002,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix step-comments check for phased-cycle resumption issues"
     }
   ],
   "audit_dropped": [
@@ -2805,16 +2812,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1000 Add state-divergence check to check-doc-pr tool (cycle 222)",
-    "dispatch_to_pr_rate": "97.6%",
-    "in_flight": 2,
+    "dispatch_log_latest": "#1002 Fix step-comments check for phased-cycle resumption issues (cycle 222)",
+    "dispatch_to_pr_rate": "97.3%",
+    "in_flight": 3,
     "merged": 282,
     "pr_merge_rate": "99.3%",
     "produced_pr": 284,
     "resolved": 289,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 291
+    "total_dispatches": 292
   },
   "cycle_phase": {
     "cycle": 222,

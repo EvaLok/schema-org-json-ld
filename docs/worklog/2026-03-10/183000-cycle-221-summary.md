@@ -35,7 +35,7 @@
 
 ## Current state
 
-- **In-flight agent sessions**: 2
+- **In-flight agent sessions**: 3
 - **Pipeline status**: PASS (8/8 steps, 12/12 invariants)
 - **Copilot metrics**: 289 dispatches, 283 PRs produced, 281 merged, 288 resolved, 1 in flight, 1 reviewed awaiting Eva, 97.9% dispatch-to-PR rate, 99.3% PR merge rate, 5 revision rounds, 3 closed without PR, 3 closed without merge
 - **Publish gate**: published (v1.0.2, published 2026-03-07 by EvaLok; source_diverged=false; QC ack EvaLok/schema-org-json-ld-qc#225)
