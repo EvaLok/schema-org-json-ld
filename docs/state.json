@@ -2605,7 +2605,7 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#936 Harden journal scanner against malformed filenames in pipeline-check (cycle 212)",
-    "dispatch_to_pr_rate": "97.0%",
+    "dispatch_to_pr_rate": "97.4%",
     "in_flight": 2,
     "merged": 260,
     "pr_merge_rate": "99.2%",
@@ -2845,10 +2845,10 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 8,
+    "duration_minutes": 22,
     "issue": 933,
     "number": 212,
-    "summary": "Merged PRs #923 (Phase 7 journal fix) and #925 (cycle 210 review). Processed cycle 210 review (4/5, 4 findings, 1 actioned). Dispatched #927 (write-entry coverage) and #929 (process-review format tolerance).",
+    "summary": "Merged PRs #932 (cycle 211 review), #928 (write-entry flags), #930 (process-review format). Processed cycle 211 review (4/5, 8 findings, 3 actioned). Fixed state.json metrics and #924 schema. Accepted audit #175. Dispatched #935 (process-merge --issues required) and #936 (journal scanner robustness).",
     "timestamp": "2026-03-10T00:10:13Z"
   },
   "last_eva_comment_check": "2026-03-10T00:10:13Z",
