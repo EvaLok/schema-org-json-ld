@@ -4837,11 +4837,10 @@
   "schema_version": 1,
   "test_count": {
     "last_verified": "cycle 222",
-    "last_verified_note": "php = PHPUnit test count from composer run test-unit. ts = vitest test count (grep-estimated 365 it/test calls; 419 was last runner-reported value — needs vitest run to re-verify). last_verified = cycle when values were independently measured.",
+    "last_verified_note": "php = PHPUnit test count (composer run test-unit). ts = metric-snapshot tool count. Verified cycle 222 against both metric-snapshot and actual PHPUnit run.",
     "php": 425,
-    "total": 790,
-    "ts": 365,
-    "ts_note": "grep-estimated from it()/test() calls; actual vitest count may differ due to parameterized tests. Last runner-measured value was 419 at cycle 139."
+    "total": 844,
+    "ts": 419
   },
   "tool_pipeline": {
     "blocks_publish": false,
