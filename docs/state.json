@@ -2828,7 +2828,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 214"
+        "last_refreshed": "cycle 215"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -2864,7 +2864,7 @@
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
-        "last_refreshed": "cycle 213"
+        "last_refreshed": "cycle 215"
       },
       "total_enums": {
         "cadence": "after enum additions",
@@ -4081,9 +4081,25 @@
         "deferred": 4,
         "finding_count": 6,
         "ignored": 0
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "artifact-integrity",
+          "metrics-drift",
+          "review-evidence",
+          "review-triage",
+          "state-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 4,
+        "cycle": 214,
+        "deferred": 5,
+        "finding_count": 6,
+        "ignored": 0
       }
     ],
-    "last_review_cycle": 213
+    "last_review_cycle": 214
   },
   "schema_status": {
     "directory_layout": {
