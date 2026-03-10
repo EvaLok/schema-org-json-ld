@@ -2629,6 +2629,13 @@
       "pr": 995,
       "status": "merged",
       "title": "[Cycle Docs] Cycle 221 worklog and journal"
+    },
+    {
+      "dispatched_at": "2026-03-10T20:13:49Z",
+      "issue": 997,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 221 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -2791,16 +2798,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#994 [Cycle Docs] Cycle 221 worklog and journal (cycle 221)",
-    "dispatch_to_pr_rate": "98.3%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#997 [Cycle Review] Cycle 221 end-of-cycle review (cycle 221)",
+    "dispatch_to_pr_rate": "97.9%",
+    "in_flight": 1,
     "merged": 282,
     "pr_merge_rate": "99.3%",
     "produced_pr": 284,
     "resolved": 289,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 289
+    "total_dispatches": 290
   },
   "cycle_phase": {
     "cycle": 221,
@@ -3049,13 +3056,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 11,
-    "issue": 993,
+    "duration_minutes": 107,
+    "issue": 996,
     "number": 221,
-    "summary": "Review-heavy cycle: merged 3 PRs (#988, #989, #991), processed cycle 219+220 review findings, acknowledged Eva phased architecture directive #992, fixed chronic_verification_deadline invariant. First cycle to use phased documentation architecture.",
-    "timestamp": "2026-03-10T18:25:58Z"
+    "summary": "Phase B/C resume: merged doc PR #995 (8/8 checks pass), completed phased documentation flow for cycle 221. Dispatched review agent.",
+    "timestamp": "2026-03-10T20:13:00Z"
   },
-  "last_eva_comment_check": "2026-03-10T18:25:58Z",
+  "last_eva_comment_check": "2026-03-10T20:13:00Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
