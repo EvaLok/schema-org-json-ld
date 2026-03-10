@@ -635,7 +635,17 @@ fn latest_journal_file_date(journal_dir: &Path) -> Result<Option<String>, String
 		if !is_iso_date(candidate) {
 			continue;
 		}
-		let candidate_date = parse_iso_date(candidate)?;
+		let candidate_date = match parse_iso_date(candidate) {
+			Ok(candidate_date) => candidate_date,
+			Err(error) => {
+				eprintln!(
+					"Debug: skipping malformed journal filename {}: {}",
+					entry.path().display(),
+					error
+				);
+				continue;
+			}
+		};
 
 		if latest
 			.as_ref()
@@ -1587,6 +1597,47 @@ mod tests {
 	}
 
 	#[test]
+	fn latest_journal_file_date_returns_none_for_empty_directory() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let journal_dir =
+			std::env::temp_dir().join(format!("pipeline-check-empty-journal-files-{}", run_id));
+		fs::create_dir_all(&journal_dir).unwrap();
+
+		assert_eq!(latest_journal_file_date(&journal_dir).unwrap(), None);
+	}
+
+	#[test]
+	fn latest_journal_file_date_returns_none_for_non_dated_filenames() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let journal_dir = std::env::temp_dir()
+			.join(format!("pipeline-check-non-dated-journal-files-{}", run_id));
+		fs::create_dir_all(&journal_dir).unwrap();
+		fs::write(journal_dir.join("notes.md"), "# Notes\n").unwrap();
+		fs::write(journal_dir.join("readme.txt"), "notes").unwrap();
+
+		assert_eq!(latest_journal_file_date(&journal_dir).unwrap(), None);
+	}
+
+	#[test]
+	fn latest_journal_file_date_skips_malformed_date_filenames() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let journal_dir = std::env::temp_dir()
+			.join(format!("pipeline-check-malformed-journal-files-{}", run_id));
+		fs::create_dir_all(&journal_dir).unwrap();
+		fs::write(journal_dir.join("2026-13-40.md"), "# Invalid\n").unwrap();
+		fs::write(journal_dir.join("2026-00-01.md"), "# Invalid\n").unwrap();
+		fs::write(journal_dir.join("2026-03-08.md"), "# Valid\n").unwrap();
+
+		assert_eq!(
+			latest_journal_file_date(&journal_dir).unwrap().as_deref(),
+			Some("2026-03-08")
+		);
+	}
+
+	#[test]
 	fn artifact_verification_warns_for_stale_or_missing_artifacts() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -1684,5 +1735,103 @@ mod tests {
 			.as_deref()
 			.unwrap_or_default()
 			.contains("docs/journal/ directory is missing"));
+	}
+
+	#[test]
+	fn artifact_verification_warns_when_journal_directory_has_no_valid_dated_files() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root =
+			std::env::temp_dir().join(format!("pipeline-check-artifacts-empty-journal-{}", run_id));
+		fs::create_dir_all(root.join("docs/journal")).unwrap();
+		fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+		fs::create_dir_all(root.join("docs/reviews")).unwrap();
+		fs::write(root.join("docs/worklog/2026-03-09/entry.md"), "worklog").unwrap();
+		fs::write(root.join("docs/reviews/cycle-208.md"), "review").unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"review_agent": {
+					"last_review_cycle": 208
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		let step = verify_artifacts_for_date(&root, "2026-03-09");
+		assert_eq!(step.status, StepStatus::Warn);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("docs/journal/ has no dated journal files in YYYY-MM-DD.md format"));
+	}
+
+	#[test]
+	fn artifact_verification_warns_when_journal_directory_has_only_non_dated_files() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir()
+			.join(format!("pipeline-check-artifacts-non-dated-journal-{}", run_id));
+		fs::create_dir_all(root.join("docs/journal")).unwrap();
+		fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+		fs::create_dir_all(root.join("docs/reviews")).unwrap();
+		fs::write(root.join("docs/journal/notes.md"), "# Notes\n").unwrap();
+		fs::write(root.join("docs/worklog/2026-03-09/entry.md"), "worklog").unwrap();
+		fs::write(root.join("docs/reviews/cycle-208.md"), "review").unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"review_agent": {
+					"last_review_cycle": 208
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		let step = verify_artifacts_for_date(&root, "2026-03-09");
+		assert_eq!(step.status, StepStatus::Warn);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("docs/journal/ has no dated journal files in YYYY-MM-DD.md format"));
+	}
+
+	#[test]
+	fn artifact_verification_uses_newest_valid_journal_when_invalid_files_are_present() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir()
+			.join(format!("pipeline-check-artifacts-mixed-journal-files-{}", run_id));
+		fs::create_dir_all(root.join("docs/journal")).unwrap();
+		fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+		fs::create_dir_all(root.join("docs/reviews")).unwrap();
+		fs::write(root.join("docs/journal/2026-13-40.md"), "# Invalid\n").unwrap();
+		fs::write(root.join("docs/journal/2026-00-01.md"), "# Invalid\n").unwrap();
+		fs::write(root.join("docs/journal/2026-03-08.md"), "# Valid\n").unwrap();
+		fs::write(root.join("docs/journal/2026-03-09.md"), "# Valid\n").unwrap();
+		fs::write(root.join("docs/worklog/2026-03-09/entry.md"), "worklog").unwrap();
+		fs::write(root.join("docs/reviews/cycle-208.md"), "review").unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"review_agent": {
+					"last_review_cycle": 208
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		let step = verify_artifacts_for_date(&root, "2026-03-09");
+		assert_eq!(step.status, StepStatus::Pass);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("Journal current (last entry 2026-03-09)"));
 	}
 }
