@@ -2480,8 +2480,10 @@
     {
       "dispatched_at": "2026-03-10T04:41:33Z",
       "issue": 950,
+      "merged_at": "2026-03-10T06:19:30Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 951,
+      "status": "merged",
       "title": "Fix write-entry journal contradiction"
     },
     {
@@ -2666,11 +2668,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#954 Cycle 214 review (cycle 214)",
     "dispatch_to_pr_rate": "96.7%",
-    "in_flight": 4,
-    "merged": 265,
+    "in_flight": 3,
+    "merged": 266,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 267,
-    "resolved": 272,
+    "produced_pr": 268,
+    "resolved": 273,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 276
@@ -2768,7 +2770,7 @@
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 214"
+        "last_refreshed": "cycle 215"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
