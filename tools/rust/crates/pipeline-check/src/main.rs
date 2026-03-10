@@ -531,18 +531,31 @@ fn verify_artifacts(repo_root: &Path) -> StepReport {
 }
 
 fn verify_step_comments(repo_root: &Path, runner: &dyn CommandRunner) -> StepReport {
-	let issue = match read_state_value(repo_root).and_then(|state| {
+	let issue = match read_state_value(repo_root).map(|state| {
 		state
-			.pointer("/last_cycle/issue")
+			.pointer("/previous_cycle_issue")
 			.and_then(Value::as_u64)
-			.ok_or_else(|| "missing numeric /last_cycle/issue in docs/state.json".to_string())
 	}) {
-		Ok(issue) => issue,
+		Ok(Some(issue)) => issue,
+		Ok(None) => {
+			return StepReport {
+				name: STEP_COMMENTS_STEP_NAME,
+				status: StepStatus::Pass,
+				severity: Severity::Blocking,
+				exit_code: None,
+				detail: Some(
+					"skipping step comment verification: /previous_cycle_issue is not set in docs/state.json yet"
+						.to_string(),
+				),
+				findings: None,
+				summary: None,
+			};
+		}
 		Err(error) => {
 			return StepReport {
 				name: STEP_COMMENTS_STEP_NAME,
 				status: StepStatus::Error,
-				severity: Severity::Warning,
+				severity: Severity::Blocking,
 				exit_code: None,
 				detail: Some(error),
 				findings: None,
@@ -557,7 +570,7 @@ fn verify_step_comments(repo_root: &Path, runner: &dyn CommandRunner) -> StepRep
 			return StepReport {
 				name: STEP_COMMENTS_STEP_NAME,
 				status: StepStatus::Error,
-				severity: Severity::Warning,
+				severity: Severity::Blocking,
 				exit_code: None,
 				detail: Some(error),
 				findings: None,
@@ -575,7 +588,7 @@ fn verify_step_comments(repo_root: &Path, runner: &dyn CommandRunner) -> StepRep
 	let status = if found.len() >= STEP_COMMENT_THRESHOLD {
 		StepStatus::Pass
 	} else {
-		StepStatus::Warn
+		StepStatus::Fail
 	};
 	let detail = if status == StepStatus::Pass {
 		format!("found {} unique step comments on issue #{}", found.len(), issue)
@@ -591,7 +604,7 @@ fn verify_step_comments(repo_root: &Path, runner: &dyn CommandRunner) -> StepRep
 	StepReport {
 		name: STEP_COMMENTS_STEP_NAME,
 		status,
-		severity: Severity::Warning,
+		severity: Severity::Blocking,
 		exit_code: None,
 		detail: Some(detail),
 		findings: Some(found.len()),
@@ -1892,18 +1905,17 @@ mod tests {
 	}
 
 	#[test]
-	fn step_comment_verification_warns_when_fewer_than_ten_steps_are_found() {
+	fn step_comment_verification_fails_when_fewer_than_ten_steps_are_found_on_previous_cycle_issue() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
 		let root =
-			std::env::temp_dir().join(format!("pipeline-check-step-comments-warn-{}", run_id));
+			std::env::temp_dir().join(format!("pipeline-check-step-comments-fail-{}", run_id));
 		fs::create_dir_all(root.join("docs")).unwrap();
 		fs::write(
 			root.join("docs/state.json"),
 			json!({
-				"last_cycle": {
-					"issue": 834
-				}
+				"previous_cycle_issue": 834,
+				"last_cycle": { "issue": 999 }
 			})
 			.to_string(),
 		)
@@ -1935,7 +1947,8 @@ mod tests {
 
 		let step = verify_step_comments(&root, &StepCommentRunner);
 		assert_eq!(step.name, "step-comments");
-		assert_eq!(step.status, StepStatus::Warn);
+		assert_eq!(step.status, StepStatus::Fail);
+		assert_eq!(step.severity, Severity::Blocking);
 		assert!(step
 			.detail
 			.as_deref()
@@ -1954,13 +1967,14 @@ mod tests {
 	}
 
 	#[test]
-	fn step_comment_verification_errors_when_issue_number_is_missing() {
+	fn step_comment_verification_passes_when_previous_cycle_issue_is_missing() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
 		let root =
 			std::env::temp_dir().join(format!("pipeline-check-step-comments-missing-{}", run_id));
 		fs::create_dir_all(root.join("docs")).unwrap();
-		fs::write(root.join("docs/state.json"), json!({"last_cycle": {}}).to_string()).unwrap();
+		fs::write(root.join("docs/state.json"), json!({"last_cycle": {"issue": 834}}).to_string())
+			.unwrap();
 
 		struct StepCommentRunner;
 
@@ -1970,16 +1984,14 @@ mod tests {
 			}
 
 			fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
-				panic!("gh api should not run when issue number is missing");
+				panic!("gh api should not run when previous_cycle_issue is missing");
 			}
 		}
 
 		let step = verify_step_comments(&root, &StepCommentRunner);
-		assert_eq!(step.status, StepStatus::Error);
-		assert_eq!(
-			step.detail.as_deref(),
-			Some("missing numeric /last_cycle/issue in docs/state.json")
-		);
+		assert_eq!(step.status, StepStatus::Pass);
+		assert_eq!(step.severity, Severity::Blocking);
+		assert_eq!(step.detail.as_deref(), Some("skipping step comment verification: /previous_cycle_issue is not set in docs/state.json yet"));
 	}
 
 	#[test]
@@ -1992,9 +2004,7 @@ mod tests {
 		fs::write(
 			root.join("docs/state.json"),
 			json!({
-				"last_cycle": {
-					"issue": 836
-				}
+				"previous_cycle_issue": 836
 			})
 			.to_string(),
 		)
@@ -2015,6 +2025,7 @@ mod tests {
 
 		let step = verify_step_comments(&root, &StepCommentRunner);
 		assert_eq!(step.status, StepStatus::Error);
+		assert_eq!(step.severity, Severity::Blocking);
 		assert_eq!(
 			step.detail.as_deref(),
 			Some("gh api failed with status 1: rate limited")
@@ -2031,9 +2042,7 @@ mod tests {
 		fs::write(
 			root.join("docs/state.json"),
 			json!({
-				"last_cycle": {
-					"issue": 835
-				}
+				"previous_cycle_issue": 835
 			})
 			.to_string(),
 		)

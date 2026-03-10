@@ -2887,6 +2887,10 @@
         "cadence": "after question creation or resolution",
         "last_refreshed": "cycle 220"
       },
+      "previous_cycle_issue": {
+        "cadence": "every cycle",
+        "last_refreshed": "cycle 220"
+      },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
         "last_refreshed": "cycle 213"
@@ -3002,6 +3006,7 @@
   },
   "last_eva_comment_check": "2026-03-10T16:22:23Z",
   "open_questions_for_eva": [],
+  "previous_cycle_issue": 978,
   "pre_python_clean_cycles": {
     "count": 0,
     "description": "Per Eva directive on #699: 5 consecutive clean cycles (pipeline 5/5 at startup, no bugs, no problems) required before starting Python implementation. Count restarts on any problem.",
