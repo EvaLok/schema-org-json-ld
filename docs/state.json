@@ -2521,6 +2521,13 @@
       "pr": 960,
       "status": "merged",
       "title": "Cycle 215 review"
+    },
+    {
+      "dispatched_at": "2026-03-10T08:22:11Z",
+      "issue": 962,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix state-invariants: strongly-typed fields and duplicate detection"
     }
   ],
   "audit_dropped": [
@@ -2681,16 +2688,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#959 Cycle 215 review (cycle 215)",
+    "dispatch_log_latest": "#962 Fix state-invariants: strongly-typed fields and duplicate detection (cycle 216)",
     "dispatch_to_pr_rate": "97.8%",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 270,
     "pr_merge_rate": "99.3%",
     "produced_pr": 272,
     "resolved": 277,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 277
+    "total_dispatches": 278
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
