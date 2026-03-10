@@ -2289,15 +2289,6 @@
       "title": "[Cycle Review] Cycle 204 end-of-cycle review"
     },
     {
-      "dispatched_at": "2026-03-09T09:35:42Z",
-      "issue": 886,
-      "merged_at": "2026-03-09T10:48:00Z",
-      "model": "gpt-5.4",
-      "pr": 887,
-      "status": "merged",
-      "title": "Cycle 204 end-of-cycle review"
-    },
-    {
       "dispatched_at": "2026-03-09T10:58:52Z",
       "issue": 889,
       "merged_at": "2026-03-09T12:28:24Z",
@@ -2703,15 +2694,15 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#966 Cycle 216 review (cycle 216)",
-    "dispatch_to_pr_rate": "97.5%",
+    "dispatch_to_pr_rate": "97.1%",
     "in_flight": 3,
-    "merged": 270,
+    "merged": 269,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 272,
-    "resolved": 277,
+    "produced_pr": 271,
+    "resolved": 276,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 280
+    "total_dispatches": 279
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -2790,7 +2781,7 @@
     "fields": {
       "audit_dropped": {
         "cadence": "after dropping a previously accepted audit recommendation",
-        "last_refreshed": "cycle 206"
+        "last_refreshed": "cycle 217"
       },
       "audit_processed": {
         "cadence": "after processing audit issues",
