@@ -4348,21 +4348,6 @@
         "finding_count": 4,
         "ignored": 0,
         "note": "Finding 1 (stale-documentation-snapshot): actioned — will add state-divergence check to check-doc-pr tool. Finding 2 (premature-verification): actioned — reset worklog-accuracy verification_cycle to pending. Finding 3 (state-metric-drift): actioned — will recompute test_count from actual test runner output this cycle. Finding 4 (reflection-gap): deferred — behavioral pattern, journal entries need to extract guardrails from misses."
-      },
-      {
-        "actioned": 3,
-        "categories": [
-          "premature-verification",
-          "reflection-gap",
-          "stale-documentation-snapshot",
-          "state-metric-drift"
-        ],
-        "complacency_score": 4,
-        "cycle": 221,
-        "deferred": 1,
-        "finding_count": 4,
-        "ignored": 0,
-        "note": "stale-documentation-snapshot: actioned. premature-verification: actioned. state-metric-drift: actioned. reflection-gap: deferred."
       }
     ],
     "last_review_cycle": 221
