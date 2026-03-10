@@ -3149,7 +3149,7 @@
           "chosen_path": "structural-fix",
           "rationale": "Phased cycle architecture (Eva #992, commit 1e3b45f) is the structural fix. The orchestrator no longer writes its own worklog — a Copilot documentation agent generates worklog/journal from committed state (git log, state.json, issue metadata). This eliminates the root cause: self-reporting inaccuracies. Cycle 221 is the first to use this architecture. If worklog-accuracy findings persist despite the phased architecture, the category should be re-opened.",
           "root_cause": "write-entry defaults to 'Not provided.' for --copilot-metrics, --publish-gate when CLI flags are not passed, instead of reading from state.json. The orchestrator does not always pass these flags. The deeper root cause is that the orchestrator both does the work and writes its own report — no separation of concerns.",
-          "verification_cycle": 221
+          "verification_cycle": "pending: reset cycle 222 — premature verification before first clean doc-agent review pass"
         }
       ]
     },
@@ -4317,9 +4317,24 @@
         "finding_count": 3,
         "ignored": 0,
         "note": "Finding 1 (review-quality): deferred — dispatch-review does not use record-dispatch worklog fixup path. Finding 2 (review-ledger-drift): actioned — ran process-review for cycle 219 this cycle (receipt 7261cc1). Finding 3 (cycle-close-state-drift): deferred — requires separating cycle-complete from review-dispatch in close-out comments."
+      },
+      {
+        "actioned": 3,
+        "categories": [
+          "stale-documentation-snapshot",
+          "premature-verification",
+          "state-metric-drift",
+          "reflection-gap"
+        ],
+        "complacency_score": 4,
+        "cycle": 221,
+        "deferred": 1,
+        "finding_count": 4,
+        "ignored": 0,
+        "note": "Finding 1 (stale-documentation-snapshot): actioned — will add state-divergence check to check-doc-pr tool. Finding 2 (premature-verification): actioned — reset worklog-accuracy verification_cycle to pending. Finding 3 (state-metric-drift): actioned — will recompute test_count from actual test runner output this cycle. Finding 4 (reflection-gap): deferred — behavioral pattern, journal entries need to extract guardrails from misses."
       }
     ],
-    "last_review_cycle": 220
+    "last_review_cycle": 221
   },
   "schema_status": {
     "directory_layout": {
@@ -4796,11 +4811,12 @@
   },
   "schema_version": 1,
   "test_count": {
-    "last_verified": "cycle 139",
-    "last_verified_note": "last_verified = cycle when values were independently measured. field_inventory.last_refreshed = cycle when entry was checked (value confirmed unchanged or updated). These can diverge when a check confirms no change.",
+    "last_verified": "cycle 222",
+    "last_verified_note": "php = PHPUnit test count from composer run test-unit. ts = vitest test count (grep-estimated 365 it/test calls; 419 was last runner-reported value — needs vitest run to re-verify). last_verified = cycle when values were independently measured.",
     "php": 425,
-    "total": 844,
-    "ts": 419
+    "total": 790,
+    "ts": 365,
+    "ts_note": "grep-estimated from it()/test() calls; actual vitest count may differ due to parameterized tests. Last runner-measured value was 419 at cycle 139."
   },
   "tool_pipeline": {
     "blocks_publish": false,
