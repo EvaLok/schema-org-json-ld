@@ -2634,7 +2634,9 @@
       "dispatched_at": "2026-03-10T20:13:49Z",
       "issue": 997,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 998,
+      "resolved_at": "2026-03-10T22:08:14Z",
+      "status": "merged",
       "title": "[Cycle Review] Cycle 221 end-of-cycle review"
     },
     {
@@ -2813,12 +2815,12 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1002 Fix step-comments check for phased-cycle resumption issues (cycle 222)",
-    "dispatch_to_pr_rate": "97.3%",
-    "in_flight": 3,
-    "merged": 282,
+    "dispatch_to_pr_rate": "97.6%",
+    "in_flight": 2,
+    "merged": 283,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 284,
-    "resolved": 289,
+    "produced_pr": 285,
+    "resolved": 290,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 292
