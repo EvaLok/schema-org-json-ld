@@ -2731,7 +2731,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 212"
+        "last_refreshed": "cycle 213"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -2739,11 +2739,11 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 212"
+        "last_refreshed": "cycle 213"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 212"
+        "last_refreshed": "cycle 213"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -2853,12 +2853,12 @@
   },
   "last_cycle": {
     "duration_minutes": 22,
-    "issue": 933,
-    "number": 212,
+    "issue": 941,
+    "number": 213,
     "summary": "Merged PRs #932 (cycle 211 review), #928 (write-entry flags), #930 (process-review format). Processed cycle 211 review (4/5, 8 findings, 3 actioned). Fixed state.json metrics and #924 schema. Accepted audit #175. Dispatched #935 (process-merge --issues required) and #936 (journal scanner robustness).",
-    "timestamp": "2026-03-10T00:10:13Z"
+    "timestamp": "2026-03-10T02:54:34Z"
   },
-  "last_eva_comment_check": "2026-03-10T00:10:13Z",
+  "last_eva_comment_check": "2026-03-10T02:54:34Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
