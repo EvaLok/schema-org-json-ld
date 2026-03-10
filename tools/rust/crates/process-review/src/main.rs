@@ -379,40 +379,10 @@ fn extract_categories(content: &str) -> Vec<String> {
 }
 
 fn for_each_finding_line(lines: &[&str], mut visitor: impl FnMut(usize, &str)) {
-    match findings_line_bounds(lines) {
-        Some((start, end)) => {
-            let mut in_code_block = false;
-            for (offset, line) in lines[start..end].iter().enumerate() {
-                let trimmed = line.trim();
-                if trimmed.starts_with("```") {
-                    in_code_block = !in_code_block;
-                    continue;
-                }
-
-                if in_code_block {
-                    continue;
-                }
-
-                visitor(start + offset, trimmed);
-            }
-        }
-        None => {
-            let mut in_code_block = false;
-            for (index, line) in lines.iter().enumerate() {
-                let trimmed = line.trim();
-                if trimmed.starts_with("```") {
-                    in_code_block = !in_code_block;
-                    continue;
-                }
-
-                if in_code_block {
-                    continue;
-                }
-
-                visitor(index, trimmed);
-            }
-        }
-    }
+	match findings_line_bounds(lines) {
+		Some((start, end)) => for_each_non_code_line(&lines[start..end], start, &mut visitor),
+		None => for_each_non_code_line(lines, 0, &mut visitor),
+	}
 }
 
 fn findings_line_bounds(lines: &[&str]) -> Option<(usize, usize)> {
@@ -431,7 +401,24 @@ fn findings_line_bounds(lines: &[&str]) -> Option<(usize, usize)> {
         }
     }
 
-    Some((start + 1, lines.len()))
+	Some((start + 1, lines.len()))
+}
+
+fn for_each_non_code_line(lines: &[&str], start_index: usize, visitor: &mut impl FnMut(usize, &str)) {
+	let mut in_code_block = false;
+	for (offset, line) in lines.iter().enumerate() {
+		let trimmed = line.trim();
+		if trimmed.starts_with("```") {
+			in_code_block = !in_code_block;
+			continue;
+		}
+
+		if in_code_block {
+			continue;
+		}
+
+		visitor(start_index + offset, trimmed);
+	}
 }
 
 fn extract_inline_category(line: &str) -> Option<&str> {
