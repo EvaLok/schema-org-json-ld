@@ -113,13 +113,15 @@ fn normalize_issues(issue_values: &[IssueValue], pr_count: usize) -> Result<Vec<
         return Err("--issues must have the same number of values as --prs".to_string());
     }
 
-    Ok(issue_values
+    issue_values
         .iter()
         .map(|issue| match issue {
-            IssueValue::None => unreachable!("checked above"),
-            IssueValue::Number(value) => *value,
+            IssueValue::None => {
+                Err("internal error: none issue value should have been filtered".to_string())
+            }
+            IssueValue::Number(value) => Ok(*value),
         })
-        .collect())
+        .collect()
 }
 
 fn get_metric_i64(state: &Value, field: &str) -> Result<i64, String> {
