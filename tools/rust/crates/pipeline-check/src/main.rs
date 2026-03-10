@@ -639,7 +639,7 @@ fn latest_journal_file_date(journal_dir: &Path) -> Result<Option<String>, String
 			Ok(candidate_date) => candidate_date,
 			Err(error) => {
 				eprintln!(
-					"Debug: skipping malformed journal filename {}: {}",
+					"Skipping malformed journal filename {}: {}",
 					entry.path().display(),
 					error
 				);
