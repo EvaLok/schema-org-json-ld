@@ -57,7 +57,17 @@ bash tools/write-entry worklog \
   --receipt "cycle-start:abc1234"
 ```
 
-For more complex payloads (self-modifications, reviewed PRs, processed issues), write JSON to a file with the Write tool and pass `--input-file`:
+For reviewed PRs, processed issues, and self-modifications, you can stay on the inline CLI path:
+
+```bash
+bash tools/write-entry worklog \
+  --title "Cycle N summary" \
+  --pr-reviewed 789 \
+  --issue-processed "Closed #924 (cycle review)" \
+  --self-modification "Updated AGENTS.md"
+```
+
+For richer structured payloads, write JSON to a file with the Write tool and pass `--input-file`:
 
 ```bash
 bash tools/write-entry worklog --title "Cycle N summary" --input-file /tmp/worklog.json

@@ -1,6 +1,6 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use clap::{Parser, Subcommand};
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 use state_schema::{current_cycle_from_state, read_state_value, StateJson};
 use std::ffi::OsStr;
 use std::fs;
@@ -48,6 +48,15 @@ struct WorklogArgs {
     /// Merged PR number
     #[arg(long = "pr-merged")]
     pr_merged: Vec<u64>,
+    /// Reviewed PR number
+    #[arg(long = "pr-reviewed")]
+    pr_reviewed: Vec<u64>,
+    /// Short description of an issue processed this cycle
+    #[arg(long = "issue-processed")]
+    issue_processed: Vec<String>,
+    /// Self-modification description, optionally in FILE:DESCRIPTION form
+    #[arg(long = "self-modification")]
+    self_modification: Vec<String>,
     /// Next step for the following cycle
     #[arg(long = "next")]
     next: Vec<String>,
@@ -103,8 +112,8 @@ struct WorklogInput {
     prs_merged: Vec<u64>,
     #[serde(default)]
     prs_reviewed: Vec<u64>,
-    #[serde(default)]
-    issues_processed: Vec<u64>,
+    #[serde(default, deserialize_with = "deserialize_issues_processed")]
+    issues_processed: Vec<String>,
     current_state: CurrentState,
     #[serde(default)]
     next_steps: Vec<String>,
@@ -155,6 +164,13 @@ struct JournalSection {
 struct CommitReceipt {
     tool: String,
     receipt: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum IssueProcessedValue {
+    Number(u64),
+    Text(String),
 }
 
 fn main() {
@@ -258,10 +274,10 @@ fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<Worklog
         let state = load_worklog_state(repo_root, requires_worklog_state(args))?;
         let input = WorklogInput {
             what_was_done: args.done.clone(),
-            self_modifications: Vec::new(),
+            self_modifications: parse_self_modifications(&args.self_modification)?,
             prs_merged: args.pr_merged.clone(),
-            prs_reviewed: Vec::new(),
-            issues_processed: Vec::new(),
+            prs_reviewed: args.pr_reviewed.clone(),
+            issues_processed: parse_issue_processed(&args.issue_processed)?,
             current_state: CurrentState {
                 in_flight_sessions: match args.in_flight {
                     Some(value) => value,
@@ -409,12 +425,71 @@ fn state_has_publish_gate_status(state: &StateJson) -> bool {
 fn has_inline_worklog_content(args: &WorklogArgs) -> bool {
     !args.done.is_empty()
         || !args.pr_merged.is_empty()
+        || !args.pr_reviewed.is_empty()
+        || !args.issue_processed.is_empty()
+        || !args.self_modification.is_empty()
         || !args.next.is_empty()
         || args.pipeline.is_some()
         || args.copilot_metrics.is_some()
         || args.publish_gate.is_some()
         || args.in_flight.is_some()
         || !args.receipt.is_empty()
+}
+
+fn deserialize_issues_processed<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let values = Vec::<IssueProcessedValue>::deserialize(deserializer)?;
+    Ok(values
+        .into_iter()
+        .map(|value| match value {
+            IssueProcessedValue::Number(number) => format!("#{}", number),
+            IssueProcessedValue::Text(text) => text,
+        })
+        .collect())
+}
+
+fn parse_issue_processed(values: &[String]) -> Result<Vec<String>, String> {
+    values
+        .iter()
+        .map(|value| {
+            let trimmed = value.trim();
+            if trimmed.is_empty() {
+                return Err("issue-processed description cannot be empty".to_string());
+            }
+            Ok(trimmed.to_string())
+        })
+        .collect()
+}
+
+fn parse_self_modifications(values: &[String]) -> Result<Vec<SelfModification>, String> {
+    values
+        .iter()
+        .map(|value| {
+            let trimmed = value.trim();
+            if trimmed.is_empty() {
+                return Err("self-modification description cannot be empty".to_string());
+            }
+            if let Some((file, description)) = trimmed.split_once(':') {
+                let file = file.trim();
+                let description = description.trim();
+                if !file.is_empty() && !description.is_empty() {
+                    return Ok(SelfModification {
+                        file: file.to_string(),
+                        description: description.to_string(),
+                    });
+                }
+                return Err(
+                    "self-modification FILE:DESCRIPTION entries require both parts".to_string(),
+                );
+            }
+            Ok(SelfModification {
+                file: trimmed.to_string(),
+                description: String::new(),
+            })
+        })
+        .collect()
 }
 
 fn resolve_journal_input(args: &JournalArgs) -> Result<JournalInput, String> {
@@ -818,11 +893,7 @@ fn render_worklog(cycle: u64, now: DateTime<Utc>, input: &WorklogInput) -> Strin
     lines.push(String::new());
     lines.push("### Issues processed".to_string());
     lines.push(String::new());
-    lines.extend(render_numbered_refs(
-        &input.issues_processed,
-        "issue",
-        PRIMARY_ISSUES_URL,
-    ));
+    lines.extend(render_bullet_list(&input.issues_processed));
     lines.push(String::new());
     lines.push("## Self-modifications".to_string());
     lines.push(String::new());
@@ -830,11 +901,15 @@ fn render_worklog(cycle: u64, now: DateTime<Utc>, input: &WorklogInput) -> Strin
         lines.push("- None.".to_string());
     } else {
         for item in &input.self_modifications {
-            lines.push(format!(
-                "- **`{}`**: {}",
-                item.file,
-                convert_references(&item.description)
-            ));
+            if item.description.trim().is_empty() {
+                lines.push(format!("- {}", convert_references(&item.file)));
+            } else {
+                lines.push(format!(
+                    "- **`{}`**: {}",
+                    item.file,
+                    convert_references(&item.description)
+                ));
+            }
         }
     }
     lines.push(String::new());
@@ -899,6 +974,17 @@ fn render_numbered_refs(numbers: &[u64], kind: &str, issues_url: &str) -> Vec<St
             "issue" => format!("- [#{}]({}/{})", number, issues_url, number),
             _ => format!("- [{} #{}]({}/{})", kind, number, issues_url, number),
         })
+        .collect()
+}
+
+fn render_bullet_list(items: &[String]) -> Vec<String> {
+    if items.is_empty() {
+        return vec!["- None.".to_string()];
+    }
+
+    items
+        .iter()
+        .map(|item| format!("- {}", convert_references(item)))
         .collect()
 }
 
@@ -1350,6 +1436,9 @@ mod tests {
             input_file: None,
             done: Vec::new(),
             pr_merged: Vec::new(),
+            pr_reviewed: Vec::new(),
+            issue_processed: Vec::new(),
+            self_modification: Vec::new(),
             next: Vec::new(),
             pipeline: None,
             copilot_metrics: None,
@@ -1448,7 +1537,7 @@ mod tests {
             }],
             prs_merged: vec![537],
             prs_reviewed: vec![543],
-            issues_processed: vec![546],
+            issues_processed: vec!["Closed #546".to_string()],
             current_state: CurrentState {
                 in_flight_sessions: 2,
                 pipeline_status: "5/5 phases pass".to_string(),
@@ -1473,6 +1562,60 @@ mod tests {
     }
 
     #[test]
+    fn worklog_template_renders_plain_self_modification_when_description_empty() {
+        let input = WorklogInput {
+            what_was_done: Vec::new(),
+            self_modifications: vec![SelfModification {
+                file: "Updated AGENTS.md".to_string(),
+                description: String::new(),
+            }],
+            prs_merged: Vec::new(),
+            prs_reviewed: Vec::new(),
+            issues_processed: Vec::new(),
+            current_state: CurrentState {
+                in_flight_sessions: 0,
+                pipeline_status: NOT_PROVIDED.to_string(),
+                copilot_metrics: NOT_PROVIDED.to_string(),
+                publish_gate: NOT_PROVIDED.to_string(),
+            },
+            next_steps: Vec::new(),
+            receipts: Vec::new(),
+        };
+
+        let rendered = render_worklog(154, fixed_now(), &input);
+        assert!(rendered.contains("\n## Self-modifications\n\n- Updated AGENTS.md\n"));
+        assert!(!rendered.contains("**`Updated AGENTS.md`**:"));
+    }
+
+    #[test]
+    fn parse_self_modifications_supports_structured_entries() {
+        let modifications =
+            parse_self_modifications(&["AGENTS.md: Updated guidance".to_string()]).unwrap();
+
+        assert_eq!(modifications.len(), 1);
+        assert_eq!(modifications[0].file, "AGENTS.md");
+        assert_eq!(modifications[0].description, "Updated guidance");
+    }
+
+    #[test]
+    fn parse_self_modifications_rejects_incomplete_structured_entries() {
+        let error = parse_self_modifications(&["AGENTS.md:".to_string()]).unwrap_err();
+        assert!(error.contains("FILE:DESCRIPTION"));
+    }
+
+    #[test]
+    fn parse_issue_processed_rejects_empty_descriptions() {
+        let error = parse_issue_processed(&["   ".to_string()]).unwrap_err();
+        assert!(error.contains("issue-processed description cannot be empty"));
+    }
+
+    #[test]
+    fn parse_self_modifications_reject_empty_descriptions() {
+        let error = parse_self_modifications(&["   ".to_string()]).unwrap_err();
+        assert!(error.contains("self-modification description cannot be empty"));
+    }
+
+    #[test]
     fn worklog_reads_json_from_input_file() {
         let repo_root = TempRepoDir::new("worklog-input-file");
         let payload_path = repo_root.path.join("worklog.json");
@@ -1483,7 +1626,7 @@ mod tests {
                 "self_modifications":[],
                 "prs_merged":[123],
                 "prs_reviewed":[],
-                "issues_processed":[],
+                "issues_processed":[546, "Closed #924 (cycle review)"],
                 "current_state":{
                     "in_flight_sessions":1,
                     "pipeline_status":"PASS (6/6)",
@@ -1502,6 +1645,10 @@ mod tests {
         assert!(
             content.contains("[PR #123](https://github.com/EvaLok/schema-org-json-ld/issues/123)")
         );
+        assert!(content.contains("[#546](https://github.com/EvaLok/schema-org-json-ld/issues/546)"));
+        assert!(content.contains(
+            "Closed [#924](https://github.com/EvaLok/schema-org-json-ld/issues/924) (cycle review)"
+        ));
         assert!(content.contains(
             "1. Review [PR #124](https://github.com/EvaLok/schema-org-json-ld/issues/124)"
         ));
@@ -1537,6 +1684,10 @@ mod tests {
         let mut args = worklog_args("Inline flags");
         args.done = vec!["Merged PR #123".to_string()];
         args.pr_merged = vec![123, 456];
+        args.pr_reviewed = vec![789];
+        args.issue_processed =
+            vec!["Closed EvaLok/schema-org-json-ld#924 (cycle review)".to_string()];
+        args.self_modification = vec!["Updated AGENTS.md".to_string()];
         args.next = vec!["Review PR #789".to_string()];
         args.pipeline = Some("PASS (6/6)".to_string());
         args.copilot_metrics = Some("45 dispatched".to_string());
@@ -1552,6 +1703,14 @@ mod tests {
         assert!(content.contains(
             "- Merged [PR #123](https://github.com/EvaLok/schema-org-json-ld/issues/123)"
         ));
+        assert!(content.contains(
+            "- [PR #789](https://github.com/EvaLok/schema-org-json-ld/issues/789)"
+        ));
+        assert!(content.contains("- Closed EvaLok/schema-org-json-ld#924 (cycle review)"));
+        assert!(content.contains("- Updated AGENTS.md"));
+        assert!(!content.contains("### PRs reviewed\n\n- None."));
+        assert!(!content.contains("### Issues processed\n\n- None."));
+        assert!(!content.contains("## Self-modifications\n\n- None."));
         assert!(content.contains("- **Pipeline status**: PASS (6/6)"));
         assert!(content.contains("- **Copilot metrics**: 45 dispatched"));
         assert!(content.contains("- **Publish gate**: open"));
@@ -1584,6 +1743,9 @@ mod tests {
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
+        assert!(content.contains("### PRs reviewed\n\n- None."));
+        assert!(content.contains("### Issues processed\n\n- None."));
+        assert!(content.contains("## Self-modifications\n\n- None."));
         assert!(content.contains("- **Pipeline status**: Not provided."));
         assert!(content.contains("- **In-flight agent sessions**: 3"));
         assert!(
@@ -2338,12 +2500,46 @@ Reflective log for the schema-org-json-ld orchestrator.
                 assert_eq!(args.input_file, Some(PathBuf::from("/tmp/worklog.json")));
                 assert_eq!(args.done, vec!["Merged PR #123".to_string()]);
                 assert_eq!(args.pr_merged, vec![123]);
+                assert!(args.pr_reviewed.is_empty());
+                assert!(args.issue_processed.is_empty());
+                assert!(args.self_modification.is_empty());
                 assert_eq!(args.next, vec!["Review PR #124".to_string()]);
                 assert_eq!(args.pipeline.as_deref(), Some("PASS (6/6)"));
                 assert_eq!(args.copilot_metrics.as_deref(), Some("45 dispatched"));
                 assert_eq!(args.publish_gate.as_deref(), Some("open"));
                 assert_eq!(args.in_flight, Some(1));
                 assert_eq!(args.receipt, vec!["cycle-start:abc1234".to_string()]);
+            }
+            Command::Journal(_) => panic!("expected worklog command"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_new_worklog_tracking_flags() {
+        let cli = Cli::try_parse_from([
+            "write-entry",
+            "worklog",
+            "--title",
+            "test",
+            "--done",
+            "did stuff",
+            "--pr-reviewed",
+            "123",
+            "--issue-processed",
+            "Closed EvaLok/schema-org-json-ld#924 (cycle review)",
+            "--self-modification",
+            "Updated AGENTS.md",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::Worklog(args) => {
+                assert_eq!(args.pr_reviewed, vec![123]);
+                assert_eq!(
+                    args.issue_processed,
+                    vec!["Closed EvaLok/schema-org-json-ld#924 (cycle review)".to_string()]
+                );
+                assert_eq!(args.self_modification, vec!["Updated AGENTS.md".to_string()]);
             }
             Command::Journal(_) => panic!("expected worklog command"),
         }
