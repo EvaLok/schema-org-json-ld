@@ -2417,8 +2417,10 @@
     {
       "dispatched_at": "2026-03-09T22:14:13Z",
       "issue": 929,
+      "merged_at": "2026-03-10T00:24:38Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 930,
+      "status": "merged",
       "title": "process-review format tolerance"
     },
     {
@@ -2589,11 +2591,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#931 [Cycle Review] Cycle 211 end-of-cycle review (cycle 211)",
     "dispatch_to_pr_rate": "97.0%",
-    "in_flight": 1,
-    "merged": 259,
+    "in_flight": 0,
+    "merged": 260,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 261,
-    "resolved": 266,
+    "produced_pr": 262,
+    "resolved": 267,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 267
