@@ -2642,8 +2642,10 @@
     {
       "dispatched_at": "2026-03-10T22:20:04Z",
       "issue": 1000,
+      "merged_at": "2026-03-10T22:29:46Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1001,
+      "status": "merged",
       "title": "Add state-divergence check to check-doc-pr tool"
     },
     {
@@ -2815,12 +2817,12 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1002 Fix step-comments check for phased-cycle resumption issues (cycle 222)",
-    "dispatch_to_pr_rate": "97.6%",
-    "in_flight": 2,
-    "merged": 283,
+    "dispatch_to_pr_rate": "97.9%",
+    "in_flight": 1,
+    "merged": 284,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 285,
-    "resolved": 290,
+    "produced_pr": 286,
+    "resolved": 291,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 292
@@ -2957,6 +2959,10 @@
         "cadence": "every cycle (checked even when no comments found)",
         "last_refreshed": "cycle 222"
       },
+      "last_tool_audit_cycle": {
+        "cadence": "every 10 cycles",
+        "last_refreshed": "cycle 222"
+      },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
         "last_refreshed": "cycle 222"
@@ -3079,6 +3085,7 @@
     "timestamp": "2026-03-10T22:06:44Z"
   },
   "last_eva_comment_check": "2026-03-10T22:06:44Z",
+  "last_tool_audit_cycle": 222,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
