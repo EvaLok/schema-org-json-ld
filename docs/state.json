@@ -2465,6 +2465,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add step-comment count verification phase to pipeline-check"
+    },
+    {
+      "dispatched_at": "2026-03-10T03:06:52Z",
+      "issue": 945,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix write-entry Copilot metrics presentation to show correct denominators"
     }
   ],
   "audit_dropped": [
@@ -2625,16 +2632,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#943 Add step-comment count verification phase to pipeline-check (cycle 213)",
+    "dispatch_log_latest": "#945 Fix write-entry Copilot metrics presentation to show correct denominators (cycle 213)",
     "dispatch_to_pr_rate": "97.0%",
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 263,
     "pr_merge_rate": "99.2%",
     "produced_pr": 265,
     "resolved": 270,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 271
+    "total_dispatches": 272
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
