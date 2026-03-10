@@ -1019,21 +1019,23 @@ fn render_worklog(cycle: u64, now: DateTime<Utc>, input: &WorklogInput) -> Strin
         lines.push("| Tool | Receipt | Link |".to_string());
         lines.push("|------|---------|------|".to_string());
         for receipt in &input.receipts {
-            let receipt_display = format_receipt_display(receipt);
-            let link_display = if receipt.unresolved {
-                receipt_display.clone()
+            if receipt.unresolved {
+                let receipt_display = format_receipt_display(receipt);
+                lines.push(format!(
+                    "| {} | {} | {} |",
+                    receipt.tool, receipt_display, receipt_display
+                ));
             } else {
-                format!(
+                let receipt_display = format_receipt_display(receipt);
+                let link_display = format!(
                     "[{}]({}/{})",
                     receipt.receipt, PRIMARY_COMMITS_URL, receipt.receipt
-                )
-            };
-            lines.push(format!(
-                "| {} | {} | {} |",
-                receipt.tool,
-                receipt_display,
-                link_display
-            ));
+                );
+                lines.push(format!(
+                    "| {} | {} | {} |",
+                    receipt.tool, receipt_display, link_display
+                ));
+            }
         }
     }
     lines.push(String::new());
