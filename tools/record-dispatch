@@ -6,12 +6,34 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$SCRIPT_DIR/_build-helper.sh"
 ensure_binary "record-dispatch"
 
-for arg in "$@"; do
-    case "$arg" in
-        --repo-root|--repo-root=*)
-            exec "$BINARY" "$@"
-            ;;
-    esac
+FORWARD_ARGS=("$@")
+DISPATCH_REPO_ROOT="$REPO_ROOT"
+HAS_REPO_ROOT=false
+
+while [ "$#" -gt 0 ]; do
+	case "$1" in
+		--repo-root)
+			shift
+			if [ "$#" -gt 0 ]; then
+				DISPATCH_REPO_ROOT="$1"
+				HAS_REPO_ROOT=true
+			fi
+			;;
+		--repo-root=*)
+			HAS_REPO_ROOT=true
+			DISPATCH_REPO_ROOT="${1#--repo-root=}"
+			;;
+	esac
+	shift
 done
 
-exec "$BINARY" --repo-root "$REPO_ROOT" "$@"
+RECORD_DISPATCH_BINARY="$BINARY"
+
+if [ "$HAS_REPO_ROOT" = true ]; then
+	RECORD_DISPATCH_OUTPUT="$("$RECORD_DISPATCH_BINARY" "${FORWARD_ARGS[@]}")"
+else
+	RECORD_DISPATCH_OUTPUT="$("$RECORD_DISPATCH_BINARY" --repo-root "$REPO_ROOT" "${FORWARD_ARGS[@]}")"
+fi
+
+bash "$SCRIPT_DIR/derive-metrics" --apply --repo-root "$DISPATCH_REPO_ROOT" >/dev/null
+printf '%s\n' "$RECORD_DISPATCH_OUTPUT"
