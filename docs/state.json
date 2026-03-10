@@ -4278,9 +4278,23 @@
         "finding_count": 3,
         "ignored": 0,
         "note": "Cycle 219 review processed in cycle 221 (missed in cycle 220 per review-ledger-drift finding). All 3 findings deferred: worklog-accuracy chronic fix incomplete, review-disposition-drift is behavioral, startup-state-blindness needs mechanization."
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "cycle-close-state-drift",
+          "review-ledger-drift",
+          "review-quality"
+        ],
+        "complacency_score": 4,
+        "cycle": 220,
+        "deferred": 2,
+        "finding_count": 3,
+        "ignored": 0,
+        "note": "Finding 1 (review-quality): deferred — dispatch-review does not use record-dispatch worklog fixup path. Finding 2 (review-ledger-drift): actioned — ran process-review for cycle 219 this cycle (receipt 7261cc1). Finding 3 (cycle-close-state-drift): deferred — requires separating cycle-complete from review-dispatch in close-out comments."
       }
     ],
-    "last_review_cycle": 219
+    "last_review_cycle": 220
   },
   "schema_status": {
     "directory_layout": {
