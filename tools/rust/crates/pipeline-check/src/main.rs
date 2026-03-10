@@ -18,6 +18,9 @@ const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const STEP_COMMENT_THRESHOLD: usize = 10;
 const ORCHESTRATOR_SIGNATURE: &str = "> **[main-orchestrator]**";
+// Keep this list aligned with the orchestrator checklist steps that are expected to
+// produce post-step comments. The pass threshold stays lower because some steps are
+// conditional, but missing steps should still be surfaced in WARN output.
 const EXPECTED_STEP_IDS: [&str; 14] = ["0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
 const REVIEW_LAST_CYCLE_PATH: &str = "/review_agent/last_review_cycle";
 const DERIVE_METRICS_FIELDS: [&str; 9] = [
@@ -108,10 +111,7 @@ struct ExecutionResult {
 
 trait CommandRunner {
     fn run(&self, script_path: &Path, args: &[String]) -> Result<ExecutionResult, String>;
-
-	fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
-		Err("issue comment fetching not implemented".to_string())
-	}
+	fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String>;
 }
 
 struct ProcessRunner;
@@ -599,6 +599,10 @@ fn verify_step_comments(repo_root: &Path, runner: &dyn CommandRunner) -> StepRep
 	}
 }
 
+/// Collect recognized orchestrator step identifiers from issue comment bodies.
+///
+/// Returned step IDs are references to the static `EXPECTED_STEP_IDS` list rather than
+/// slices of the input text. Unrecognized step tokens are ignored.
 fn collect_step_comment_ids(comment_bodies: &str) -> BTreeSet<&'static str> {
 	comment_bodies
 		.lines()
@@ -618,11 +622,16 @@ fn detect_step_comment_id(line: &str) -> Option<&'static str> {
 }
 
 fn extract_step_id_after_marker(line: &str, marker: &str) -> Option<&'static str> {
+	// Callers only invoke this after confirming the line begins with the relevant marker.
 	let start = line.find(marker)? + marker.len();
 	let candidate = line[start..]
-		.split(|ch: char| ch == ':' || ch == '|' || ch.is_whitespace())
+		.split(|ch: char| ch == '|' || ch.is_whitespace())
 		.next()
-		.unwrap_or_default();
+		.unwrap_or_default()
+		.trim_end_matches(':');
+	// This returns references from the static EXPECTED_STEP_IDS array, not slices of
+	// the input line, and returns None when the candidate does not match an expected
+	// step identifier, so the &'static str return type is safe here.
 	EXPECTED_STEP_IDS
 		.iter()
 		.copied()
@@ -1008,6 +1017,10 @@ mod tests {
 					.to_string(),
 				})
 			}
+
+			fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+				Err("issue comments are not used in derive-metrics test".to_string())
+			}
 		}
 
 		let spec = ToolSpec {
@@ -1065,6 +1078,10 @@ mod tests {
 					})
 					.to_string(),
 				})
+			}
+
+			fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+				Err("issue comments are not used in derive-metrics test".to_string())
 			}
 		}
 
@@ -1134,6 +1151,10 @@ mod tests {
 					.to_string(),
 				})
 			}
+
+			fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+				Err("issue comments are not used in derive-metrics test".to_string())
+			}
 		}
 
 		let spec = ToolSpec {
@@ -1201,6 +1222,10 @@ mod tests {
 					})
 					.to_string(),
 				})
+			}
+
+			fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+				Err("issue comments are not used in derive-metrics test".to_string())
 			}
 		}
 
@@ -1512,6 +1537,10 @@ mod tests {
                 assert_eq!(script_path, Path::new("/repo/tools/metric-snapshot"));
                 Err("wrapper exited with status 101".to_string())
             }
+
+			fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+				Err("issue comments are not used in wrapper failure test".to_string())
+			}
         }
 
         let called = AtomicBool::new(false);
@@ -1561,10 +1590,10 @@ mod tests {
                         stdout: result.stdout.clone(),
                     })
                     .ok_or_else(|| format!("missing mock output for {}", key))
-            }
+			}
 
 			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
-				assert_eq!(issue, 834);
+				assert_eq!(issue, 834, "aggregation test should read last_cycle.issue from state");
 				Ok(concat!(
 					"> **[main-orchestrator]** | Cycle 135 | Step 0\n",
 					"> **[main-orchestrator]** | Cycle 135 | Step 0.5\n",
@@ -1726,6 +1755,10 @@ mod tests {
             ) -> Result<ExecutionResult, String> {
                 Err(format!("failed to invoke {}", script_path.display()))
             }
+
+			fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+				Err("failed to fetch issue comments".to_string())
+			}
         }
 
         static COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -1844,7 +1877,7 @@ mod tests {
 			"> **[main-orchestrator]** | Cycle 212 | Step 0\n\n### Start\n\nBody\n",
 			"noise\n",
 			"## Step 0.5: Check workflow runs\n",
-			"> **[main-orchestrator]** | Cycle 212\n\n## Step 1.1: Extra validation\n",
+			"## Step 1.1: Extra validation\n",
 			"> **[main-orchestrator]** | Cycle 212 | Step 10\n\n### Finish\n",
 			"> **[main-orchestrator]** | Cycle 212 | Step 10\n\n### Duplicate\n"
 		);
