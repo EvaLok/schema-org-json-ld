@@ -2636,6 +2636,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "[Cycle Review] Cycle 221 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-10T22:20:04Z",
+      "issue": 1000,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add state-divergence check to check-doc-pr tool"
     }
   ],
   "audit_dropped": [
@@ -2798,16 +2805,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#997 [Cycle Review] Cycle 221 end-of-cycle review (cycle 221)",
-    "dispatch_to_pr_rate": "97.9%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1000 Add state-divergence check to check-doc-pr tool (cycle 222)",
+    "dispatch_to_pr_rate": "97.6%",
+    "in_flight": 2,
     "merged": 282,
     "pr_merge_rate": "99.3%",
     "produced_pr": 284,
     "resolved": 289,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 290
+    "total_dispatches": 291
   },
   "cycle_phase": {
     "cycle": 222,
@@ -2907,15 +2914,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 221"
+        "last_refreshed": "cycle 222"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 221"
+        "last_refreshed": "cycle 222"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 221"
+        "last_refreshed": "cycle 222"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
