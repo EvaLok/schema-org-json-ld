@@ -2435,8 +2435,10 @@
     {
       "dispatched_at": "2026-03-10T00:26:56Z",
       "issue": 935,
+      "merged_at": "2026-03-10T03:01:48Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 937,
+      "status": "merged",
       "title": "Make --issues required in process-merge (audit #175)"
     },
     {
@@ -2547,7 +2549,8 @@
     169,
     171,
     172,
-    175
+    175,
+    177
   ],
   "blockers": [
     {
@@ -2613,11 +2616,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#939 [Cycle Review] Cycle 212 end-of-cycle review (cycle 212)",
     "dispatch_to_pr_rate": "97.0%",
-    "in_flight": 3,
-    "merged": 260,
+    "in_flight": 2,
+    "merged": 261,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 262,
-    "resolved": 267,
+    "produced_pr": 263,
+    "resolved": 268,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 270
@@ -2703,7 +2706,7 @@
       },
       "audit_processed": {
         "cadence": "after processing audit issues",
-        "last_refreshed": "cycle 209"
+        "last_refreshed": "cycle 213"
       },
       "blockers": {
         "cadence": "after blocker state changes",
@@ -2715,7 +2718,7 @@
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 212"
+        "last_refreshed": "cycle 213"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
