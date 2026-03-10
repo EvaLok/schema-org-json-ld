@@ -2483,6 +2483,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix write-entry journal contradiction"
+    },
+    {
+      "dispatched_at": "2026-03-10T04:42:29Z",
+      "issue": 952,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix process-review Findings header parsing"
     }
   ],
   "audit_dropped": [
@@ -2643,16 +2650,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#950 Fix write-entry journal contradiction (cycle 214)",
+    "dispatch_log_latest": "#952 Fix process-review Findings header parsing (cycle 214)",
     "dispatch_to_pr_rate": "97.4%",
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 266,
     "pr_merge_rate": "99.2%",
     "produced_pr": 268,
     "resolved": 272,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 273
+    "total_dispatches": 274
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
