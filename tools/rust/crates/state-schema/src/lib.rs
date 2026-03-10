@@ -349,6 +349,7 @@ pub struct TypescriptPlan {
 #[serde(default, rename_all = "snake_case")]
 pub struct CopilotMetrics {
     pub total_dispatches: Option<i64>,
+    pub produced_pr: Option<i64>,
     pub merged: Option<i64>,
     pub dispatch_to_pr_rate: Option<String>,
     pub pr_merge_rate: Option<String>,

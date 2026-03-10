@@ -334,6 +334,13 @@ fn format_state_copilot_metrics(state: Option<&StateJson>) -> Result<String, Str
             "copilot_metrics.total_dispatches must be non-negative in state.json".to_string(),
         );
     }
+    let produced_pr = state
+        .copilot_metrics
+        .produced_pr
+        .ok_or_else(|| "missing copilot_metrics.produced_pr in state.json".to_string())?;
+    if produced_pr < 0 {
+        return Err("copilot_metrics.produced_pr must be non-negative in state.json".to_string());
+    }
     let merged = state
         .copilot_metrics
         .merged
@@ -350,8 +357,8 @@ fn format_state_copilot_metrics(state: Option<&StateJson>) -> Result<String, Str
         .ok_or_else(|| "missing copilot_metrics.pr_merge_rate in state.json".to_string())?;
 
     Ok(format!(
-        "{} dispatches, {} merged, {} merge rate",
-        total_dispatches, merged, pr_merge_rate
+        "{} dispatches, {} PRs produced, {} merged, {} PR merge rate",
+        total_dispatches, produced_pr, merged, pr_merge_rate
     ))
 }
 
@@ -403,6 +410,7 @@ fn validate_worklog_state_placeholders(
 
 fn state_has_copilot_metrics_summary(state: &StateJson) -> bool {
     state.copilot_metrics.total_dispatches.is_some()
+        || state.copilot_metrics.produced_pr.is_some()
         || state.copilot_metrics.merged.is_some()
         || state
             .copilot_metrics
@@ -1728,6 +1736,7 @@ mod tests {
                 "last_cycle": {"number": 154},
                 "copilot_metrics": {
                     "total_dispatches": 45,
+                    "produced_pr": 42,
                     "merged": 40,
                     "pr_merge_rate": "88.9%",
                     "in_flight": 3
@@ -1749,7 +1758,9 @@ mod tests {
         assert!(content.contains("- **Pipeline status**: Not provided."));
         assert!(content.contains("- **In-flight agent sessions**: 3"));
         assert!(
-            content.contains("- **Copilot metrics**: 45 dispatches, 40 merged, 88.9% merge rate")
+            content.contains(
+                "- **Copilot metrics**: 45 dispatches, 42 PRs produced, 40 merged, 88.9% PR merge rate"
+            )
         );
         assert!(content.contains("- **Publish gate**: published"));
     }
@@ -1763,6 +1774,7 @@ mod tests {
                 "last_cycle": {"number": 154},
                 "copilot_metrics": {
                     "total_dispatches": 45,
+                    "produced_pr": 42,
                     "merged": 40,
                     "pr_merge_rate": "88.9%",
                     "in_flight": 3
@@ -1786,7 +1798,11 @@ mod tests {
         assert!(content.contains("- **In-flight agent sessions**: 1"));
         assert!(content.contains("- **Copilot metrics**: custom metrics"));
         assert!(content.contains("- **Publish gate**: pre-publish"));
-        assert!(!content.contains("45 dispatches, 40 merged, 88.9% merge rate"));
+        assert!(
+            !content.contains(
+                "45 dispatches, 42 PRs produced, 40 merged, 88.9% PR merge rate"
+            )
+        );
         assert!(!content.contains("- **Publish gate**: published"));
     }
 
