@@ -2804,7 +2804,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 215"
+        "last_refreshed": "cycle 216"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -2812,11 +2812,11 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 215"
+        "last_refreshed": "cycle 216"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 215"
+        "last_refreshed": "cycle 216"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -2926,12 +2926,12 @@
   },
   "last_cycle": {
     "duration_minutes": 13,
-    "issue": 956,
-    "number": 215,
+    "issue": 961,
+    "number": 216,
     "summary": "Reviewed and merged 3 PRs (journal contradiction fix, process-review format tolerance, cycle 214 review artifact). Processed cycle 214 review (4/5, 1 actioned, 5 deferred). Dispatched #957 to fix recurring metrics-drift issue. Fixed tool_pipeline field inventory freshness.",
-    "timestamp": "2026-03-10T06:26:09Z"
+    "timestamp": "2026-03-10T08:10:01Z"
   },
-  "last_eva_comment_check": "2026-03-10T06:26:09Z",
+  "last_eva_comment_check": "2026-03-10T08:10:01Z",
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
