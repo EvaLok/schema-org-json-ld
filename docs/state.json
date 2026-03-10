@@ -2471,8 +2471,10 @@
     {
       "dispatched_at": "2026-03-10T03:06:52Z",
       "issue": 945,
+      "merged_at": "2026-03-10T04:39:14Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 946,
+      "status": "merged",
       "title": "Fix write-entry Copilot metrics presentation to show correct denominators"
     }
   ],
@@ -2637,9 +2639,9 @@
     "dispatch_log_latest": "#945 Fix write-entry Copilot metrics presentation to show correct denominators (cycle 213)",
     "dispatch_to_pr_rate": "97.4%",
     "in_flight": 0,
-    "merged": 265,
+    "merged": 266,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 267,
+    "produced_pr": 268,
     "resolved": 272,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
