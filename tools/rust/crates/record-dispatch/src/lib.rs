@@ -79,6 +79,11 @@ pub fn build_dispatch_patch(
     })
 }
 
+/// Derive the next copilot_metrics values by simulating the addition of a new
+/// in-flight session before mutating docs/state.json.
+///
+/// Returns an error if `agent_sessions` is missing or if any session status is
+/// unsupported, so callers can fail closed before writing state.
 fn derive_metrics_with_new_session(
     state: &Value,
     new_session: &Value,
@@ -92,6 +97,8 @@ fn derive_metrics_with_new_session(
     derive_metrics_from_sessions(&sessions)
 }
 
+/// Recalculate the derived copilot_metrics block from the agent_sessions
+/// ledger, failing closed on missing or unsupported session statuses.
 fn derive_metrics_from_sessions(sessions: &[Value]) -> Result<DerivedMetrics, String> {
     let total_dispatches = i64::try_from(sessions.len())
         .map_err(|_| "agent_sessions length should fit within i64".to_string())?;
@@ -102,7 +109,7 @@ fn derive_metrics_from_sessions(sessions: &[Value]) -> Result<DerivedMetrics, St
     let mut produced_pr = 0_i64;
 
     for (index, session) in sessions.iter().enumerate() {
-        if session.get("pr").is_some_and(|value| !value.is_null()) {
+        if session.get("pr").and_then(Value::as_u64).is_some() {
             produced_pr += 1;
         }
 
@@ -137,13 +144,16 @@ fn derive_metrics_from_sessions(sessions: &[Value]) -> Result<DerivedMetrics, St
     })
 }
 
+/// Format a ratio as a percentage string with one decimal place.
+///
+/// Returns `0.0%` when the denominator is zero.
 fn format_percentage(numerator: i64, denominator: i64) -> String {
-    if denominator <= 0 {
+    if denominator == 0 {
         return "0.0%".to_string();
     }
 
     let percentage = (numerator as f64 / denominator as f64) * 100.0;
-    format!("{percentage:.1}%")
+    format!("{:.1}%", percentage)
 }
 
 pub fn validate_dispatch_invariant(
@@ -165,7 +175,12 @@ pub fn format_dispatch_log(issue: u64, title: &str, current_cycle: u64) -> Strin
     format!("#{} {} (cycle {})", issue, title, current_cycle)
 }
 
-fn update_last_refreshed(
+/// Update `field_inventory.fields[*].last_refreshed` for a metric rewritten in
+/// the current cycle.
+///
+/// Returns an error if `field_inventory.fields` is missing or if an existing
+/// entry is not an object.
+fn update_field_inventory_last_refreshed(
     state: &mut Value,
     field_name: &str,
     cycle_marker: &str,
@@ -215,9 +230,17 @@ pub fn apply_dispatch_patch(state: &mut Value, patch: &DispatchPatch) -> Result<
         "dispatch_log_latest".to_string(),
         json!(patch.dispatch_log_latest),
     );
-    update_last_refreshed(state, "copilot_metrics.in_flight", &cycle_marker)?;
-    update_last_refreshed(state, "copilot_metrics.pr_merge_rate", &cycle_marker)?;
-    update_last_refreshed(state, "copilot_metrics.dispatch_to_pr_rate", &cycle_marker)?;
+    update_field_inventory_last_refreshed(state, "copilot_metrics.in_flight", &cycle_marker)?;
+    update_field_inventory_last_refreshed(
+        state,
+        "copilot_metrics.pr_merge_rate",
+        &cycle_marker,
+    )?;
+    update_field_inventory_last_refreshed(
+        state,
+        "copilot_metrics.dispatch_to_pr_rate",
+        &cycle_marker,
+    )?;
     state
         .pointer_mut("/agent_sessions")
         .and_then(Value::as_array_mut)
