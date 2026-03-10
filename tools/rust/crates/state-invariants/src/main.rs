@@ -683,7 +683,13 @@ fn check_future_cycle_freshness(state: &StateJson) -> CheckResult {
 }
 
 fn get_metric_i64(state: &StateJson, key: &str) -> Option<i64> {
-    state.copilot_metrics.extra.get(key).and_then(Value::as_i64)
+    match key {
+        "total_dispatches" => state.copilot_metrics.total_dispatches,
+        "produced_pr" => state.copilot_metrics.produced_pr,
+        "merged" => state.copilot_metrics.merged,
+        "in_flight" => state.copilot_metrics.in_flight,
+        _ => state.copilot_metrics.extra.get(key).and_then(Value::as_i64),
+    }
 }
 
 fn get_review_history(state: &StateJson) -> Option<&Vec<Value>> {
@@ -895,6 +901,8 @@ fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
     let mut closed_without_pr_expected = 0;
     let mut produced_pr_expected = 0;
     let mut invalid_statuses = Vec::new();
+    let mut in_flight_issues: HashMap<i64, usize> = HashMap::new();
+    let mut terminal_issues = HashSet::new();
 
     for (index, session) in state.agent_sessions.iter().enumerate() {
         if session.pr.is_some() {
@@ -904,10 +912,30 @@ fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
         // Match derive-metrics semantics, including the legacy status aliases still present in
         // docs/state.json during the migration to canonical status names.
         match session.status.as_deref() {
-            Some("merged") => merged_expected += 1,
-            Some("in_flight") | Some("dispatched") => in_flight_expected += 1,
-            Some("closed_without_merge") | Some("closed") => closed_without_merge_expected += 1,
-            Some("closed_without_pr") | Some("failed") => closed_without_pr_expected += 1,
+            Some("merged") => {
+                merged_expected += 1;
+                if let Some(issue) = session.issue {
+                    terminal_issues.insert(issue);
+                }
+            }
+            Some("in_flight") | Some("dispatched") => {
+                in_flight_expected += 1;
+                if let Some(issue) = session.issue {
+                    *in_flight_issues.entry(issue).or_insert(0) += 1;
+                }
+            }
+            Some("closed_without_merge") | Some("closed") => {
+                closed_without_merge_expected += 1;
+                if let Some(issue) = session.issue {
+                    terminal_issues.insert(issue);
+                }
+            }
+            Some("closed_without_pr") | Some("failed") => {
+                closed_without_pr_expected += 1;
+                if let Some(issue) = session.issue {
+                    terminal_issues.insert(issue);
+                }
+            }
             Some("reviewed_awaiting_eva") => {}
             Some(status) => invalid_statuses.push(format!(
                 "agent_sessions[{}].status has unsupported value '{}'",
@@ -926,6 +954,39 @@ fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
     let resolved_expected = total_dispatches_expected - in_flight_expected;
 
     let mut failures = Vec::new();
+    let mut duplicate_in_flight_issues: Vec<i64> = in_flight_issues
+        .iter()
+        .filter_map(|(issue, count)| (*count > 1).then_some(*issue))
+        .collect();
+    duplicate_in_flight_issues.sort_unstable();
+    if !duplicate_in_flight_issues.is_empty() {
+        failures.push(format!(
+            "duplicate in_flight sessions for issue(s): {}",
+            duplicate_in_flight_issues
+                .iter()
+                .map(i64::to_string)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    }
+
+    let mut stale_terminal_in_flight_issues: Vec<i64> = in_flight_issues
+        .keys()
+        .copied()
+        .filter(|issue| terminal_issues.contains(issue))
+        .collect();
+    stale_terminal_in_flight_issues.sort_unstable();
+    if !stale_terminal_in_flight_issues.is_empty() {
+        failures.push(format!(
+            "issue(s) have both terminal and in_flight sessions: {}",
+            stale_terminal_in_flight_issues
+                .iter()
+                .map(i64::to_string)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    }
+
     for (field, expected, actual) in [
         (
             "total_dispatches",
@@ -1294,6 +1355,20 @@ mod tests {
     }
 
     #[test]
+    fn get_metric_i64_prefers_promoted_fields_before_extra() {
+        let mut value = minimal_valid_state();
+        value["copilot_metrics"]["extra_total_dispatches"] = json!(99);
+        value["copilot_metrics"]["total_dispatches"] = json!(3);
+        value["copilot_metrics"]["merged"] = json!(1);
+
+        let state = state_from_json(value);
+
+        assert_eq!(get_metric_i64(&state, "total_dispatches"), Some(3));
+        assert_eq!(get_metric_i64(&state, "merged"), Some(1));
+        assert_eq!(get_metric_i64(&state, "extra_total_dispatches"), Some(99));
+    }
+
+    #[test]
     fn blockers_pending_conflict_fails() {
         let mut value = minimal_valid_state();
         value["blockers"][0]["remaining_actions"] = json!(["PENDING: do later"]);
@@ -1451,6 +1526,47 @@ mod tests {
         let state = state_from_json(value);
         let check = check_agent_sessions_reconciliation(&state);
         assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn agent_sessions_reconciliation_detects_duplicate_in_flight_issues() {
+        let mut value = minimal_valid_state();
+        value["agent_sessions"][0]["issue"] = json!(999);
+        value["agent_sessions"][0]["status"] = json!("in_flight");
+        value["agent_sessions"][1]["issue"] = json!(999);
+        value["agent_sessions"][1]["status"] = json!("in_flight");
+        value["copilot_metrics"]["merged"] = json!(0);
+        value["copilot_metrics"]["in_flight"] = json!(2);
+        value["copilot_metrics"]["resolved"] = json!(1);
+        value["copilot_metrics"]["closed_without_merge"] = json!(0);
+        value["copilot_metrics"]["closed_without_pr"] = json!(1);
+
+        let state = state_from_json(value);
+        let check = check_agent_sessions_reconciliation(&state);
+        assert_eq!(check.status, CheckStatus::Fail);
+
+        let details = check.details.as_deref().unwrap_or_default();
+        assert!(details.contains("duplicate in_flight sessions"));
+        assert!(details.contains("999"));
+    }
+
+    #[test]
+    fn agent_sessions_reconciliation_detects_terminal_and_in_flight_overlap() {
+        let mut value = minimal_valid_state();
+        value["agent_sessions"][0]["issue"] = json!(777);
+        value["agent_sessions"][1]["issue"] = json!(777);
+        value["agent_sessions"][1]["status"] = json!("in_flight");
+        value["copilot_metrics"]["in_flight"] = json!(1);
+        value["copilot_metrics"]["resolved"] = json!(2);
+        value["copilot_metrics"]["closed_without_merge"] = json!(0);
+
+        let state = state_from_json(value);
+        let check = check_agent_sessions_reconciliation(&state);
+        assert_eq!(check.status, CheckStatus::Fail);
+
+        let details = check.details.as_deref().unwrap_or_default();
+        assert!(details.contains("both terminal and in_flight sessions"));
+        assert!(details.contains("777"));
     }
 
     #[test]
