@@ -178,7 +178,7 @@ The issue body for the review agent MUST be structured as follows:
    **Recommendation**: concrete action
    ```
 
-   The `[category-name]` tag MUST appear in the heading line inside square brackets. This is the format that `process-review` parses — inline `[category]` in the heading, not a separate `Category:` line. The complacency score (1-5) must be justified with evidence in a dedicated section.
+   The `[category-name]` tag MUST appear in the heading line inside square brackets. As a fallback, `process-review` also accepts a separate `Category: category-name` line within the finding body, but the inline `[category]` format is preferred. The complacency score (1-5) must be justified with evidence in a dedicated section.
 
 4. **Encourage depth over breadth.** Three deeply investigated findings with evidence are more valuable than ten surface-level observations.
 
