@@ -2532,8 +2532,10 @@
     {
       "dispatched_at": "2026-03-10T08:25:16Z",
       "issue": 966,
+      "merged_at": "2026-03-10T10:22:46Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 967,
+      "status": "merged",
       "title": "Cycle 216 review"
     }
   ],
@@ -2697,11 +2699,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#966 Cycle 216 review (cycle 216)",
     "dispatch_to_pr_rate": "97.1%",
-    "in_flight": 2,
-    "merged": 270,
+    "in_flight": 1,
+    "merged": 271,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 272,
-    "resolved": 277,
+    "produced_pr": 273,
+    "resolved": 278,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 279
