@@ -2679,6 +2679,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix check-doc-pr: wrong field path + add journal/worklog validation checks"
+    },
+    {
+      "dispatched_at": "2026-03-11T03:03:57Z",
+      "issue": 1013,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix pipeline-check: resumption Step 0 should not satisfy startup coverage"
     }
   ],
   "audit_dropped": [
@@ -2843,16 +2850,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1012 Fix check-doc-pr: wrong field path + add journal/worklog validation checks (cycle 223)",
-    "dispatch_to_pr_rate": "97.6%",
-    "in_flight": 2,
+    "dispatch_log_latest": "#1013 Fix pipeline-check: resumption Step 0 should not satisfy startup coverage (cycle 223)",
+    "dispatch_to_pr_rate": "97.3%",
+    "in_flight": 3,
     "merged": 286,
     "pr_merge_rate": "99.3%",
     "produced_pr": 288,
     "resolved": 293,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 295
+    "total_dispatches": 296
   },
   "cycle_phase": {
     "cycle": 223,
