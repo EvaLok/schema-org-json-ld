@@ -2704,6 +2704,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Cycle 223 adversarial review"
+    },
+    {
+      "dispatched_at": "2026-03-11T04:44:42Z",
+      "issue": 1020,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 223 adversarial review"
     }
   ],
   "audit_dropped": [
@@ -2870,15 +2877,15 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1020 Cycle 223 adversarial review (cycle 223)",
-    "dispatch_to_pr_rate": "98.3%",
-    "in_flight": 1,
+    "dispatch_to_pr_rate": "97.7%",
+    "in_flight": 2,
     "merged": 290,
     "pr_merge_rate": "99.3%",
     "produced_pr": 292,
     "resolved": 297,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 298
+    "total_dispatches": 299
   },
   "cycle_phase": {
     "cycle": 223,
