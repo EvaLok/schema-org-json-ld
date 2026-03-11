@@ -2,9 +2,11 @@ use chrono::{DateTime, NaiveDate, Utc};
 use clap::{Parser, Subcommand};
 use serde::{Deserialize, Deserializer};
 use state_schema::{current_cycle_from_state, read_state_value, StateJson};
+use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command as ProcessCommand;
 
 const PRIMARY_ISSUES_URL: &str = "https://github.com/EvaLok/schema-org-json-ld/issues";
 const QC_ISSUES_URL: &str = "https://github.com/EvaLok/schema-org-json-ld-qc/issues";
@@ -169,6 +171,21 @@ struct CommitReceipt {
 }
 
 #[derive(Debug, Deserialize)]
+struct CycleReceiptJsonEntry {
+    #[serde(alias = "step")]
+    tool: String,
+    #[serde(alias = "hash")]
+    receipt: String,
+}
+
+#[derive(Debug)]
+struct GitHistoryEntry {
+    full_sha: String,
+    committed_at: DateTime<Utc>,
+    subject: String,
+}
+
+#[derive(Debug, Deserialize)]
 #[serde(untagged)]
 enum IssueProcessedValue {
     Number(u64),
@@ -222,6 +239,9 @@ fn execute_worklog(
 ) -> Result<PathBuf, String> {
     let cycle = resolve_cycle(args.cycle, repo_root)?;
     let mut input = resolve_worklog_input(args, repo_root)?;
+    emit_worklog_auto_derivation_warnings(apply_worklog_auto_derivations(
+        args, repo_root, cycle, &mut input,
+    )?);
     emit_unresolved_receipt_warnings(&mut input.receipts, repo_root)?;
     let path = worklog_path(repo_root, now, &args.title);
     let content = render_worklog(cycle, now, &input);
@@ -481,6 +501,312 @@ fn parse_issue_processed(values: &[String]) -> Result<Vec<String>, String> {
             Ok(trimmed.to_string())
         })
         .collect()
+}
+
+fn emit_worklog_auto_derivation_warnings(warnings: Vec<String>) {
+    for warning in warnings {
+        eprintln!("{}", warning);
+    }
+}
+
+fn apply_worklog_auto_derivations(
+    args: &WorklogArgs,
+    repo_root: &Path,
+    cycle: u64,
+    input: &mut WorklogInput,
+) -> Result<Vec<String>, String> {
+    if args.cycle.is_none() {
+        return Ok(Vec::new());
+    }
+
+    let mut warnings = Vec::new();
+
+    if input.self_modifications.is_empty() {
+        match derive_self_modifications(repo_root, cycle) {
+            Ok(self_modifications) => input.self_modifications = self_modifications,
+            Err(error) => warnings.push(format!(
+                "WARNING: failed to auto-derive self-modifications for cycle {}: {}",
+                cycle, error
+            )),
+        }
+    }
+
+    if input.issues_processed.is_empty() {
+        input.issues_processed = derive_issue_processed_from_done(&input.what_was_done);
+    }
+
+    if input.receipts.is_empty() {
+        match derive_receipts_from_cycle(repo_root, cycle) {
+            Ok(receipts) => input.receipts = receipts,
+            Err(error) => warnings.push(format!(
+                "WARNING: failed to auto-derive commit receipts for cycle {}: {}",
+                cycle, error
+            )),
+        }
+    }
+
+    Ok(warnings)
+}
+
+fn derive_issue_processed_from_done(items: &[String]) -> Vec<String> {
+    let mut seen = HashSet::new();
+    let mut issues = Vec::new();
+
+    for item in items {
+        if !done_item_has_issue_action(item) {
+            continue;
+        }
+
+        for issue in extract_issue_references(item) {
+            if seen.insert(issue) {
+                issues.push(format!("#{}", issue));
+            }
+        }
+    }
+
+    issues
+}
+
+fn done_item_has_issue_action(item: &str) -> bool {
+    item.split(|character: char| !character.is_ascii_alphabetic())
+        .filter(|token| !token.is_empty())
+        .any(|token| {
+            matches!(
+                token.to_ascii_lowercase().as_str(),
+                "closed" | "processed" | "resolved" | "merged"
+            )
+        })
+}
+
+fn extract_issue_references(item: &str) -> Vec<u64> {
+    let mut issues = Vec::new();
+    let bytes = item.as_bytes();
+    let mut index = 0;
+
+    while index < bytes.len() {
+        if bytes[index] != b'#' {
+            index += 1;
+            continue;
+        }
+
+        let start = index + 1;
+        let mut end = start;
+        while end < bytes.len() && bytes[end].is_ascii_digit() {
+            end += 1;
+        }
+
+        if end > start && !issue_reference_looks_like_pr(item, index) {
+            if let Ok(issue) = item[start..end].parse::<u64>() {
+                issues.push(issue);
+            }
+        }
+
+        index = end.max(index + 1);
+    }
+
+    issues
+}
+
+fn issue_reference_looks_like_pr(item: &str, hash_index: usize) -> bool {
+    let prefix = item[..hash_index].trim_end();
+    let mut tokens = prefix.rsplit(|character: char| !character.is_ascii_alphabetic());
+    tokens
+        .find(|token| !token.is_empty())
+        .is_some_and(|token| token.eq_ignore_ascii_case("pr"))
+}
+
+fn derive_self_modifications(repo_root: &Path, cycle: u64) -> Result<Vec<SelfModification>, String> {
+    let start_commit = find_cycle_start_commit(repo_root, cycle)?;
+    let output = ProcessCommand::new("git")
+        .arg("diff")
+        .arg("--name-only")
+        .arg(format!("{start_commit}..HEAD"))
+        .arg("--")
+        .arg("tools")
+        .arg("STARTUP_CHECKLIST.md")
+        .arg("COMPLETION_CHECKLIST.md")
+        .arg("AGENTS.md")
+        .arg("AGENTS-ts.md")
+        .arg(".claude/skills")
+        .current_dir(repo_root)
+        .output()
+        .map_err(|error| {
+            format!(
+                "failed to run git diff for cycle {} in {}: {}",
+                cycle,
+                repo_root.display(),
+                error
+            )
+        })?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(format!("git diff failed: {}", stderr));
+    }
+
+    let diff = String::from_utf8(output.stdout)
+        .map_err(|error| format!("failed to decode git diff output as UTF-8: {}", error))?;
+    Ok(parse_infrastructure_self_modifications(&diff))
+}
+
+fn parse_infrastructure_self_modifications(diff_output: &str) -> Vec<SelfModification> {
+    diff_output
+        .lines()
+        .map(str::trim)
+        .filter(|path| !path.is_empty())
+        .filter(|path| is_infrastructure_path(path))
+        .map(|path| SelfModification {
+            file: path.to_string(),
+            description: "modified".to_string(),
+        })
+        .collect()
+}
+
+fn is_infrastructure_path(path: &str) -> bool {
+    matches!(
+        path,
+        "STARTUP_CHECKLIST.md" | "COMPLETION_CHECKLIST.md" | "AGENTS.md" | "AGENTS-ts.md"
+    ) || path == "tools"
+        || path.starts_with("tools/")
+        || path == ".claude/skills"
+        || path.starts_with(".claude/skills/")
+}
+
+fn find_cycle_start_commit(repo_root: &Path, cycle: u64) -> Result<String, String> {
+    let commits = read_git_history(repo_root)?;
+    if let Some(commit) = commits.iter().find(|commit| {
+        commit.subject.starts_with("state(cycle-start):") && extract_cycle_tag(&commit.subject) == Some(cycle)
+    }) {
+        return Ok(commit.full_sha.clone());
+    }
+
+    find_first_commit_after_cycle_timestamp(repo_root, cycle, &commits)?.ok_or_else(|| {
+        format!(
+            "could not determine a cycle start commit for cycle {}; ensure history is available",
+            cycle
+        )
+    })
+}
+
+fn read_git_history(repo_root: &Path) -> Result<Vec<GitHistoryEntry>, String> {
+    let output = ProcessCommand::new("git")
+        .arg("log")
+        .arg("--date=iso-strict")
+        .arg("--pretty=format:%H%x09%cI%x09%s")
+        .arg("--reverse")
+        .current_dir(repo_root)
+        .output()
+        .map_err(|error| format!("failed to read git history in {}: {}", repo_root.display(), error))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(format!("git log failed: {}", stderr));
+    }
+
+    let history = String::from_utf8(output.stdout)
+        .map_err(|error| format!("failed to decode git log output as UTF-8: {}", error))?;
+    history
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .map(parse_git_history_line)
+        .collect()
+}
+
+fn parse_git_history_line(line: &str) -> Result<GitHistoryEntry, String> {
+    let mut parts = line.splitn(3, '\t');
+    let full_sha = parts
+        .next()
+        .ok_or_else(|| format!("invalid git log line (missing sha): {}", line))?;
+    let committed_at = parts
+        .next()
+        .ok_or_else(|| format!("invalid git log line (missing timestamp): {}", line))?;
+    let subject = parts
+        .next()
+        .ok_or_else(|| format!("invalid git log line (missing subject): {}", line))?;
+
+    if full_sha.len() < 7 {
+        return Err(format!("git sha must be at least 7 characters: {}", full_sha));
+    }
+
+    Ok(GitHistoryEntry {
+        full_sha: full_sha.to_string(),
+        committed_at: parse_timestamp(committed_at, "git commit timestamp")?,
+        subject: subject.to_string(),
+    })
+}
+
+fn find_first_commit_after_cycle_timestamp(
+    repo_root: &Path,
+    cycle: u64,
+    commits: &[GitHistoryEntry],
+) -> Result<Option<String>, String> {
+    let current_cycle = current_cycle_from_state(repo_root)?;
+    if cycle != current_cycle {
+        return Ok(None);
+    }
+
+    let state = load_worklog_state(repo_root, true)?
+        .ok_or_else(|| "docs/state.json is required to resolve current cycle timestamp".to_string())?;
+    let timestamp = state
+        .last_cycle
+        .timestamp
+        .as_deref()
+        .ok_or_else(|| "missing docs/state.json last_cycle.timestamp for current cycle".to_string())?;
+    let cycle_start = parse_timestamp(timestamp, "docs/state.json last_cycle.timestamp")?;
+
+    Ok(commits
+        .iter()
+        .find(|commit| commit.committed_at >= cycle_start)
+        .map(|commit| commit.full_sha.clone()))
+}
+
+fn parse_timestamp(value: &str, label: &str) -> Result<DateTime<Utc>, String> {
+    DateTime::parse_from_rfc3339(value)
+        .map(|timestamp| timestamp.with_timezone(&Utc))
+        .map_err(|error| format!("invalid {}: {}", label, error))
+}
+
+fn extract_cycle_tag(subject: &str) -> Option<u64> {
+    let marker = "[cycle ";
+    let start = subject.find(marker)?;
+    let remainder = &subject[start + marker.len()..];
+    let end = remainder.find(']')?;
+    remainder[..end].trim().parse::<u64>().ok()
+}
+
+fn derive_receipts_from_cycle(repo_root: &Path, cycle: u64) -> Result<Vec<CommitReceipt>, String> {
+    let cycle = cycle.to_string();
+    let output = ProcessCommand::new("bash")
+        .arg("tools/cycle-receipts")
+        .arg("--cycle")
+        .arg(&cycle)
+        .arg("--json")
+        .current_dir(repo_root)
+        .output()
+        .map_err(|error| {
+            format!(
+                "failed to run bash tools/cycle-receipts --cycle {} --json in {}: {}",
+                cycle,
+                repo_root.display(),
+                error
+            )
+        })?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(format!("cycle-receipts command failed: {}", stderr));
+    }
+
+    let json = String::from_utf8(output.stdout)
+        .map_err(|error| format!("failed to decode cycle-receipts JSON as UTF-8: {}", error))?;
+    parse_cycle_receipts_output(&json)
+}
+
+fn parse_cycle_receipts_output(json: &str) -> Result<Vec<CommitReceipt>, String> {
+    let entries: Vec<CycleReceiptJsonEntry> = serde_json::from_str(json)
+        .map_err(|error| format!("invalid cycle-receipts JSON output: {}", error))?;
+    let receipts = entries
+        .into_iter()
+        .map(|entry| format!("{}:{}", entry.tool.trim(), entry.receipt.trim()))
+        .collect::<Vec<_>>();
+    parse_receipts(&receipts)
 }
 
 fn parse_self_modifications(values: &[String]) -> Result<Vec<SelfModification>, String> {
@@ -1574,10 +1900,71 @@ mod tests {
     }
 
     fn create_git_commit(repo_root: &Path, file_name: &str, content: &str) -> String {
+        create_git_commit_with_message(
+            repo_root,
+            file_name,
+            content,
+            &format!("Add {}", file_name),
+        )
+    }
+
+    fn create_git_commit_with_message(
+        repo_root: &Path,
+        file_name: &str,
+        content: &str,
+        message: &str,
+    ) -> String {
+        if let Some(parent) = repo_root.join(file_name).parent() {
+            fs::create_dir_all(parent).unwrap();
+        }
         fs::write(repo_root.join(file_name), content).unwrap();
         run_git(repo_root, &["add", file_name]);
-        run_git(repo_root, &["commit", "-m", &format!("Add {}", file_name)]);
+        run_git(repo_root, &["commit", "-m", message]);
         run_git(repo_root, &["rev-parse", "--short=7", "HEAD"])
+    }
+
+    fn create_git_commit_at(
+        repo_root: &Path,
+        file_name: &str,
+        content: &str,
+        message: &str,
+        timestamp: &str,
+    ) -> String {
+        if let Some(parent) = repo_root.join(file_name).parent() {
+            fs::create_dir_all(parent).unwrap();
+        }
+        fs::write(repo_root.join(file_name), content).unwrap();
+        run_git(repo_root, &["add", file_name]);
+        let output = ProcessCommand::new("git")
+            .args(["commit", "-m", message])
+            .current_dir(repo_root)
+            .env("GIT_AUTHOR_NAME", "Test User")
+            .env("GIT_AUTHOR_EMAIL", "test@example.com")
+            .env("GIT_COMMITTER_NAME", "Test User")
+            .env("GIT_COMMITTER_EMAIL", "test@example.com")
+            .env("GIT_AUTHOR_DATE", timestamp)
+            .env("GIT_COMMITTER_DATE", timestamp)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "git commit -m {:?} failed: {}",
+            message,
+            String::from_utf8_lossy(&output.stderr)
+        );
+        run_git(repo_root, &["rev-parse", "--short=7", "HEAD"])
+    }
+
+    fn write_cycle_receipts_script(repo_root: &Path, json: &str) {
+        let script_path = repo_root.join("tools").join("cycle-receipts");
+        fs::create_dir_all(script_path.parent().unwrap()).unwrap();
+        fs::write(
+            script_path,
+            format!(
+                "#!/usr/bin/env bash\nset -euo pipefail\ncat <<'JSON'\n{json}\nJSON\n"
+            ),
+        )
+        .unwrap();
     }
 
     fn write_worklog_fixture(
@@ -1730,9 +2117,53 @@ mod tests {
     }
 
     #[test]
+    fn derive_issue_processed_from_done_extracts_issue_references() {
+        let issues = derive_issue_processed_from_done(&[
+            "Closed EvaLok/schema-org-json-ld#1042".to_string(),
+            "Processed audit #198 and resolved #199".to_string(),
+            "Merged PR #200".to_string(),
+            "Checked #42".to_string(),
+            "Resolved #199 again".to_string(),
+        ]);
+
+        assert_eq!(issues, vec!["#1042", "#198", "#199"]);
+    }
+
+    #[test]
     fn parse_self_modifications_reject_empty_descriptions() {
         let error = parse_self_modifications(&["   ".to_string()]).unwrap_err();
         assert!(error.contains("self-modification description cannot be empty"));
+    }
+
+    #[test]
+    fn parse_infrastructure_self_modifications_filters_supported_paths() {
+        let modifications = parse_infrastructure_self_modifications(
+            "tools/rust/crates/write-entry/src/main.rs\nREADME.md\nSTARTUP_CHECKLIST.md\n.claude/skills/rust-tooling/SKILL.md\nAGENTS-ts.md\n",
+        );
+
+        assert_eq!(modifications.len(), 4);
+        assert_eq!(modifications[0].file, "tools/rust/crates/write-entry/src/main.rs");
+        assert_eq!(modifications[0].description, "modified");
+        assert_eq!(modifications[1].file, "STARTUP_CHECKLIST.md");
+        assert_eq!(modifications[2].file, ".claude/skills/rust-tooling/SKILL.md");
+        assert_eq!(modifications[3].file, "AGENTS-ts.md");
+    }
+
+    #[test]
+    fn parse_cycle_receipts_output_supports_current_and_legacy_json_fields() {
+        let receipts = parse_cycle_receipts_output(
+            r#"[
+                {"step":"cycle-start","receipt":"abc1234","commit":"start"},
+                {"tool":"process-merge","hash":"def5678","message":"merge"}
+            ]"#,
+        )
+        .unwrap();
+
+        assert_eq!(receipts.len(), 2);
+        assert_eq!(receipts[0].tool, "cycle-start");
+        assert_eq!(receipts[0].receipt, "abc1234");
+        assert_eq!(receipts[1].tool, "process-merge");
+        assert_eq!(receipts[1].receipt, "def5678");
     }
 
     #[test]
@@ -1920,6 +2351,161 @@ mod tests {
             )
         );
         assert!(content.contains("- **Publish gate**: published"));
+    }
+
+    #[test]
+    fn worklog_auto_derives_self_modifications_receipts_and_issues_processed() {
+        let repo_root = TempRepoDir::new("worklog-auto-derives");
+        init_git_repo(&repo_root.path);
+        let start_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154, issue #1 [cycle 154]",
+        );
+        let merge_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "tools/rust/crates/write-entry/src/main.rs",
+            "changed\n",
+            "state(process-merge): update worklog [cycle 154]",
+        );
+        create_git_commit_with_message(
+            &repo_root.path,
+            "AGENTS.md",
+            "agent guidance\n",
+            "docs: update agents [cycle 154]",
+        );
+        create_git_commit_with_message(
+            &repo_root.path,
+            "README.md",
+            "readme\n",
+            "docs: update readme [cycle 154]",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154, issue #1 [cycle 154]"}},
+                    {{"step":"process-merge","receipt":"{merge_receipt}","commit":"state(process-merge): update worklog [cycle 154]"}}
+                ]"#
+            ),
+        );
+
+        let mut args = worklog_args("Auto derive sections");
+        args.done = vec![
+            "Closed EvaLok/schema-org-json-ld#1042".to_string(),
+            "Merged PR #200".to_string(),
+        ];
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.copilot_metrics = Some("steady".to_string());
+        args.publish_gate = Some("open".to_string());
+        args.in_flight = Some(0);
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains("### Issues processed\n\n- [#1042]("));
+        assert!(!content.contains("### Issues processed\n\n- None."));
+        assert!(content.contains("- **`tools/rust/crates/write-entry/src/main.rs`**: modified"));
+        assert!(content.contains("- **`AGENTS.md`**: modified"));
+        assert!(!content.contains("README.md"));
+        assert!(content.contains("## Commit receipts"));
+        assert!(content.contains(&format!(
+            "| cycle-start | {} | [{}](https://github.com/EvaLok/schema-org-json-ld/commit/{}) |",
+            start_receipt, start_receipt, start_receipt
+        )));
+        assert!(content.contains(&format!(
+            "| process-merge | {} | [{}](https://github.com/EvaLok/schema-org-json-ld/commit/{}) |",
+            merge_receipt, merge_receipt, merge_receipt
+        )));
+    }
+
+    #[test]
+    fn worklog_auto_derivation_falls_back_to_empty_sections_on_command_failures() {
+        let repo_root = TempRepoDir::new("worklog-auto-derivation-fallback");
+        let mut args = worklog_args("Fallback");
+        args.done = vec!["Closed #42".to_string()];
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.copilot_metrics = Some("steady".to_string());
+        args.publish_gate = Some("open".to_string());
+        args.in_flight = Some(0);
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains("### Issues processed\n\n- [#42]("));
+        assert!(content.contains("## Self-modifications\n\n- None."));
+        assert!(!content.contains("## Commit receipts"));
+    }
+
+    #[test]
+    fn worklog_manual_overrides_take_precedence_over_auto_derivation() {
+        let repo_root = TempRepoDir::new("worklog-manual-overrides");
+        init_git_repo(&repo_root.path);
+        create_git_commit_with_message(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154, issue #1 [cycle 154]",
+        );
+        let manual_receipt = create_git_commit(
+            &repo_root.path,
+            "notes/manual.txt",
+            "manual\n",
+        );
+        create_git_commit_with_message(
+            &repo_root.path,
+            "AGENTS.md",
+            "agent guidance\n",
+            "docs: update agents [cycle 154]",
+        );
+
+        let mut args = worklog_args("Manual overrides");
+        args.done = vec!["Closed EvaLok/schema-org-json-ld#1042".to_string()];
+        args.issue_processed = vec!["Closed #999".to_string()];
+        args.self_modification = vec!["AGENTS.md: manual override".to_string()];
+        args.receipt = vec![format!("manual:{manual_receipt}")];
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.copilot_metrics = Some("steady".to_string());
+        args.publish_gate = Some("open".to_string());
+        args.in_flight = Some(0);
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains("- Closed [#999](https://github.com/EvaLok/schema-org-json-ld/issues/999)"));
+        assert!(!content.contains("[#1042]("));
+        assert!(content.contains("- **`AGENTS.md`**: manual override"));
+        assert!(!content.contains(": modified"));
+        assert!(content.contains(&format!(
+            "| manual | {} | [{}](https://github.com/EvaLok/schema-org-json-ld/commit/{}) |",
+            manual_receipt, manual_receipt, manual_receipt
+        )));
+    }
+
+    #[test]
+    fn find_cycle_start_commit_falls_back_to_current_cycle_timestamp() {
+        let repo_root = TempRepoDir::new("worklog-cycle-start-fallback");
+        init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {
+                    "number": 154,
+                    "timestamp": "2026-03-06T01:00:00Z"
+                }
+            }"#,
+        );
+        let first_commit = create_git_commit_at(
+            &repo_root.path,
+            "notes/first.txt",
+            "first\n",
+            "docs: first commit [cycle 154]",
+            "2026-03-06T01:05:00Z",
+        );
+
+        let start_commit = find_cycle_start_commit(&repo_root.path, 154).unwrap();
+        assert!(start_commit.starts_with(&first_commit));
     }
 
     #[test]
