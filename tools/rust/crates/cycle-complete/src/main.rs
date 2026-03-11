@@ -646,54 +646,74 @@ fn build_review_agent_body(cycle: u64, issue: u64, now: DateTime<Utc>) -> String
     format!(
         "## End-of-Cycle Review — Cycle {cycle}
 
-You are a review agent dispatched at the end of orchestrator cycle {cycle} (issue [#{issue}](https://github.com/EvaLok/schema-org-json-ld/issues/{issue})).
+Your job is to find everything wrong with cycle {cycle}'s work. Be thorough. Be skeptical. If something looks fine on the surface, dig deeper. This is an adversarial review — actively look for problems, inconsistencies, drift, and complacency. Do not assume good faith or give the benefit of the doubt.
 
-Your job is to review the cycle's work and provide honest, critical feedback. Commit your findings as a file at `docs/reviews/cycle-{cycle}.md`. Copilot coding agents CANNOT post issue comments — your only output mode is committing files in a PR.
+Your primary obligation is to find problems. Assume the orchestrator is trying to present its work favorably. Verify claims independently.
 
-### What to review
+**Orchestrator issue**: [#{issue}](https://github.com/EvaLok/schema-org-json-ld/issues/{issue})
 
-1. **Recent commits on master** since the last cycle — check for:
-   - Code quality issues
-   - Stale or inaccurate documentation
-   - Infrastructure drift (AGENTS.md, skills, checklists out of sync with practice)
+Commit your findings as `docs/reviews/cycle-{cycle}.md`. Do NOT attempt to post issue comments.
+
+### Review targets (ALL 8 required)
+
+1. **Code changes** — review all PRs merged this cycle for:
+   - Correctness and code quality
    - Test coverage gaps
+   - Infrastructure drift (AGENTS.md, skills, checklists out of sync with practice)
 
-2. **Worklog entry** at `docs/worklog/{date}/{time}-{{name}}.md` — check for:
-   - Accuracy and completeness
-   - Whether \"next steps\" are actionable
+2. **Worklog accuracy** at `docs/worklog/{date}/{time}-{{name}}.md` — check for:
+   - Cross-reference claims against actual commits (`git log`), state.json, and issue activity
+   - Whether the narrative matches reality — are any claims unsupported by evidence?
    - Whether self-modifications are properly documented
 
-3. **Journal entry** at `docs/journal/{date}.md` — check for:
+3. **Journal quality** at `docs/journal/{date}.md` — check for:
    - Genuine reflection vs formulaic/boilerplate entries
    - Complacency indicators (repeating the same observations without acting on them)
-   - Missing lessons from challenges encountered
+   - Actionable commitments with observable completion conditions
 
-4. **State.json** at `docs/state.json` — check for:
-   - Stale metrics (compare file counts against actual `ls` output)
+4. **State.json integrity** at `docs/state.json` — check for:
+   - Run `bash tools/metric-snapshot` and verify metrics are current
    - Field inventory cadence violations
    - Inconsistencies between state.json and reality
 
-5. **Complacency audit** — honestly assess:
+5. **Commit receipt verification** — for each receipt in the worklog:
+   - Verify each commit receipt SHA against `git show <sha> --stat`
+   - Confirm the committed changes match the worklog claims
+   - Check that `bash tools/cycle-receipts --cycle {cycle}` output matches the worklog receipt table
+
+6. **Infrastructure consistency** — check that:
+   - AGENTS.md, skills, and checklists are consistent with actual practice
+   - Tools match their documented behavior
+   - No stale references to removed or renamed features
+
+7. **Process adherence** — verify the orchestrator followed:
+   - Its own startup checklist (each step posted as a separate comment)
+   - The completion checklist for phased workflows
+   - Tool-first mandate (tools used when tools exist)
+
+8. **Complacency detection** — honestly assess:
    - Is the orchestrator genuinely improving, or going through motions?
    - Are there repeated patterns that should have been automated by now?
-   - Is the journal adding value or just filling space?
+   - Are findings being \"noted\" but not fixed? Are deferred items accumulating?
    - Are worklog \"next steps\" actually being followed through?
 
 ### Output format
 
-Commit a file at `docs/reviews/cycle-{cycle}.md` containing:
-- **Findings**: Numbered list of specific observations (with file paths and line numbers where relevant)
-- **Recommendations**: Concrete actions for the next cycle
-- **Complacency score**: 1-5 scale (1 = actively improving, 5 = going through motions)
-- **Priority items**: Top 3 things the next cycle should address
+Commit a file at `docs/reviews/cycle-{cycle}.md`. Each finding must follow this exact format:
 
-Each finding MUST include a `Category: <kebab-case-name>` line immediately after the finding title. Example:
+```
+## N. [category-name] Finding title
 
-1. **Finding title here**
-   Category: descriptive-kebab-case-name
-   Description of the finding...
+**File**: path/to/file:line
+**Evidence**: what was observed
+**Recommendation**: concrete action
+```
 
-Categories must be short kebab-case identifiers (max 40 characters). Do NOT omit the Category line.
+Categories must be short kebab-case identifiers (max 40 characters).
+
+Include a **Complacency score** section at the end (1-5 scale with evidence-based justification).
+
+Encourage depth over breadth. Three deeply investigated findings with evidence are more valuable than ten surface-level observations.
 
 **IMPORTANT**: Do NOT attempt to post a comment on this issue. Your only output is the committed review file in your PR.
 "
@@ -1372,10 +1392,26 @@ mod tests {
         let body = build_review_agent_body(139, 464, fixed_now());
         assert!(body.contains("docs/reviews/cycle-"));
         assert!(body.contains("Commit your findings"));
-        assert!(body.contains("Each finding MUST include a `Category: <kebab-case-name>` line"));
-        assert!(body.contains("Category: descriptive-kebab-case-name"));
-        assert!(body.contains("Do NOT omit the Category line."));
+        assert!(body.contains("[category-name] Finding title"));
+        assert!(body.contains("Categories must be short kebab-case identifiers"));
+        assert!(body.contains("Do NOT attempt to post a comment"));
         assert!(!body.contains("Post your findings as a comment"));
+    }
+
+    #[test]
+    fn review_agent_body_includes_all_eight_targets() {
+        let body = build_review_agent_body(222, 999, fixed_now());
+        assert!(body.contains("adversarial review"));
+        assert!(body.contains("Verify claims independently"));
+        assert!(body.contains("Code changes"));
+        assert!(body.contains("Worklog accuracy"));
+        assert!(body.contains("Journal quality"));
+        assert!(body.contains("State.json integrity"));
+        assert!(body.contains("Commit receipt verification"));
+        assert!(body.contains("Infrastructure consistency"));
+        assert!(body.contains("Process adherence"));
+        assert!(body.contains("Complacency detection"));
+        assert!(body.contains("cycle-receipts"));
     }
 
     #[test]
