@@ -15,7 +15,7 @@ const INFRA_PATHS: &[&str] = &[
     ".claude/skills/",
 ];
 
-const STATE_SNAPSHOT_FIELDS: &[(&str, &str)] = &[
+const TEMPORAL_STATE_SNAPSHOT_FIELDS: &[(&str, &str)] = &[
     ("cycle_phase.phase", "/cycle_phase/phase"),
     ("copilot_metrics.in_flight", "/copilot_metrics/in_flight"),
     (
@@ -23,7 +23,24 @@ const STATE_SNAPSHOT_FIELDS: &[(&str, &str)] = &[
         "/copilot_metrics/total_dispatches",
     ),
     ("copilot_metrics.merged", "/copilot_metrics/merged"),
+    (
+        "copilot_metrics.produced_pr",
+        "/copilot_metrics/produced_pr",
+    ),
+    ("copilot_metrics.resolved", "/copilot_metrics/resolved"),
+    (
+        "copilot_metrics.dispatch_to_pr_rate",
+        "/copilot_metrics/dispatch_to_pr_rate",
+    ),
+    (
+        "copilot_metrics.pr_merge_rate",
+        "/copilot_metrics/pr_merge_rate",
+    ),
 ];
+
+// Currently no quality fields are monitored in the master-vs-PR snapshot diff.
+// Add only fields here that should never diverge between doc dispatch and doc review.
+const QUALITY_STATE_SNAPSHOT_FIELDS: &[(&str, &str)] = &[];
 
 #[derive(Debug, Parser)]
 #[command(name = "check-doc-pr")]
@@ -397,9 +414,9 @@ fn check_in_flight_matches(repo_root: &Path, worklog_content: Option<&str>) -> C
             } else {
                 CheckResult {
                     check: check_name,
-                    status: CheckStatus::Fail,
+                    status: CheckStatus::Warn,
                     detail: format!(
-                        "Worklog says {}, state.json says {}",
+                        "Temporal divergence: worklog says {} (at doc dispatch time), state.json now says {} (state has advanced since documentation was generated).",
                         worklog_value, state_in_flight
                     ),
                 }
@@ -461,30 +478,68 @@ fn check_state_snapshot_freshness(repo_root: &Path, pr_branch: &str) -> CheckRes
 }
 
 fn evaluate_state_snapshot_freshness(master_state: &Value, pr_state: &Value) -> CheckResult {
+    evaluate_state_snapshot_freshness_with_fields(
+        master_state,
+        pr_state,
+        TEMPORAL_STATE_SNAPSHOT_FIELDS,
+        QUALITY_STATE_SNAPSHOT_FIELDS,
+    )
+}
+
+fn evaluate_state_snapshot_freshness_with_fields(
+    master_state: &Value,
+    pr_state: &Value,
+    temporal_fields: &[(&str, &str)],
+    quality_fields: &[(&str, &str)],
+) -> CheckResult {
     let check_name = "state_snapshot_freshness".to_string();
-    let divergences = find_state_snapshot_divergences(master_state, pr_state);
-    if divergences.is_empty() {
+    let temporal_divergences =
+        find_state_snapshot_divergences(master_state, pr_state, temporal_fields);
+    let quality_divergences =
+        find_state_snapshot_divergences(master_state, pr_state, quality_fields);
+
+    if temporal_divergences.is_empty() && quality_divergences.is_empty() {
         CheckResult {
             check: check_name,
             status: CheckStatus::Pass,
             detail: "Master and PR state snapshots match for monitored fields".to_string(),
+        }
+    } else if quality_divergences.is_empty() {
+        CheckResult {
+            check: check_name,
+            status: CheckStatus::Warn,
+            detail: format!(
+                "Temporal divergences (expected): {}",
+                temporal_divergences.join("; ")
+            ),
+        }
+    } else if temporal_divergences.is_empty() {
+        CheckResult {
+            check: check_name,
+            status: CheckStatus::Fail,
+            detail: format!("Quality divergences: {}", quality_divergences.join("; ")),
         }
     } else {
         CheckResult {
             check: check_name,
             status: CheckStatus::Fail,
             detail: format!(
-                "State has advanced since documentation was generated. Consider regenerating docs or noting the divergence. Diverged fields: {}",
-                divergences.join("; ")
+                "Quality divergences: {}. Temporal divergences (expected): {}",
+                quality_divergences.join("; "),
+                temporal_divergences.join("; ")
             ),
         }
     }
 }
 
-fn find_state_snapshot_divergences(master_state: &Value, pr_state: &Value) -> Vec<String> {
+fn find_state_snapshot_divergences(
+    master_state: &Value,
+    pr_state: &Value,
+    fields: &[(&str, &str)],
+) -> Vec<String> {
     let mut divergences = Vec::new();
 
-    for (label, pointer) in STATE_SNAPSHOT_FIELDS {
+    for (label, pointer) in fields {
         let master_value = master_state.pointer(pointer);
         let pr_value = pr_state.pointer(pointer);
         if master_value != pr_value {
@@ -1089,6 +1144,10 @@ fn validate_repo_root(repo_root: &Path) -> Result<(), String> {
 mod tests {
     use super::*;
     use serde_json::json;
+    use std::fs;
+    use std::path::PathBuf;
+    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn help_contains_expected_flags() {
@@ -1400,13 +1459,17 @@ mod tests {
     }
 
     #[test]
-    fn state_snapshot_divergence_check_lists_all_diverged_fields() {
+    fn state_snapshot_divergence_check_warns_for_temporal_divergences_only() {
         let master_state = json!({
             "cycle_phase": { "phase": "close_out" },
             "copilot_metrics": {
                 "in_flight": 0,
                 "total_dispatches": 11,
-                "merged": 9
+                "merged": 9,
+                "produced_pr": 10,
+                "resolved": 12,
+                "dispatch_to_pr_rate": "90.9%",
+                "pr_merge_rate": "90.0%"
             }
         });
         let pr_state = json!({
@@ -1414,15 +1477,19 @@ mod tests {
             "copilot_metrics": {
                 "in_flight": 2,
                 "total_dispatches": 10,
-                "merged": 8
+                "merged": 8,
+                "produced_pr": 9,
+                "resolved": 11,
+                "dispatch_to_pr_rate": "90.0%",
+                "pr_merge_rate": "88.9%"
             }
         });
 
         let result = evaluate_state_snapshot_freshness(&master_state, &pr_state);
 
         assert_eq!(result.check, "state_snapshot_freshness");
-        assert_eq!(result.status, CheckStatus::Fail);
-        assert!(result.detail.contains("State has advanced since documentation was generated. Consider regenerating docs or noting the divergence."));
+        assert_eq!(result.status, CheckStatus::Warn);
+        assert!(result.detail.contains("Temporal divergences (expected):"));
         assert!(result
             .detail
             .contains("cycle_phase.phase: master=\"close_out\", pr=\"doc_dispatched\""));
@@ -1435,57 +1502,104 @@ mod tests {
         assert!(result
             .detail
             .contains("copilot_metrics.merged: master=9, pr=8"));
+        assert!(result
+            .detail
+            .contains("copilot_metrics.produced_pr: master=10, pr=9"));
+        assert!(result
+            .detail
+            .contains("copilot_metrics.resolved: master=12, pr=11"));
+        assert!(result
+            .detail
+            .contains("copilot_metrics.dispatch_to_pr_rate: master=\"90.9%\", pr=\"90.0%\""));
+        assert!(result
+            .detail
+            .contains("copilot_metrics.pr_merge_rate: master=\"90.0%\", pr=\"88.9%\""));
     }
 
     #[test]
-    fn state_snapshot_divergence_check_uses_real_copilot_metrics_field_names() {
+    fn state_snapshot_divergence_check_fails_for_quality_divergences() {
         let master_state = json!({
-            "copilot_metrics": {
-                "closed_without_merge": 3,
-                "closed_without_pr": 3,
-                "dispatch_log_latest": "#1007 Cycle 222 review (cycle 222)",
-                "dispatch_to_pr_rate": "98.0%",
-                "in_flight": 1,
-                "merged": 286,
-                "pr_merge_rate": "99.3%",
-                "produced_pr": 288,
-                "resolved": 293,
-                "reviewed_awaiting_eva": 1,
-                "revision_rounds": 5,
-                "total_dispatches": 294
-            },
-            "cycle_phase": {
-                "cycle": 223,
-                "phase": "work"
-            }
+            "last_cycle": { "cycle": 223 }
         });
         let pr_state = json!({
-            "copilot_metrics": {
-                "closed_without_merge": 3,
-                "closed_without_pr": 3,
-                "dispatch_log_latest": "#1007 Cycle 222 review (cycle 222)",
-                "dispatch_to_pr_rate": "98.0%",
-                "in_flight": 1,
-                "merged": 286,
-                "pr_merge_rate": "99.3%",
-                "produced_pr": 288,
-                "resolved": 293,
-                "reviewed_awaiting_eva": 1,
-                "revision_rounds": 5,
-                "total_dispatches": 293
-            },
-            "cycle_phase": {
-                "cycle": 223,
-                "phase": "work"
-            }
+            "last_cycle": { "cycle": 222 }
         });
 
-        let result = evaluate_state_snapshot_freshness(&master_state, &pr_state);
+        let result = evaluate_state_snapshot_freshness_with_fields(
+            &master_state,
+            &pr_state,
+            &[],
+            &[("last_cycle.cycle", "/last_cycle/cycle")],
+        );
 
         assert_eq!(result.status, CheckStatus::Fail);
         assert!(result
             .detail
-            .contains("copilot_metrics.total_dispatches: master=294, pr=293"));
+            .contains("Quality divergences: last_cycle.cycle: master=223, pr=222"));
+    }
+
+    #[test]
+    fn state_snapshot_divergence_check_fails_for_mixed_temporal_and_quality_divergences() {
+        let master_state = json!({
+            "cycle_phase": { "phase": "close_out" },
+            "last_cycle": { "cycle": 223 }
+        });
+        let pr_state = json!({
+            "cycle_phase": { "phase": "doc_dispatched" },
+            "last_cycle": { "cycle": 222 }
+        });
+
+        let result = evaluate_state_snapshot_freshness_with_fields(
+            &master_state,
+            &pr_state,
+            &[("cycle_phase.phase", "/cycle_phase/phase")],
+            &[("last_cycle.cycle", "/last_cycle/cycle")],
+        );
+
+        assert_eq!(result.status, CheckStatus::Fail);
+        assert!(result
+            .detail
+            .contains("Quality divergences: last_cycle.cycle: master=223, pr=222"));
+        assert!(result.detail.contains(
+            "Temporal divergences (expected): cycle_phase.phase: master=\"close_out\", pr=\"doc_dispatched\""
+        ));
+    }
+
+    #[test]
+    fn in_flight_check_warns_when_state_has_advanced_since_dispatch() {
+        let repo_root = create_temp_repo_root_with_in_flight(2);
+        let result = check_in_flight_matches(&repo_root, Some("## Current state\nIn-flight: 1"));
+
+        assert_eq!(result.check, "in_flight_matches");
+        assert_eq!(result.status, CheckStatus::Warn);
+        assert_eq!(
+            result.detail,
+            "Temporal divergence: worklog says 1 (at doc dispatch time), state.json now says 2 (state has advanced since documentation was generated)."
+        );
+
+        fs::remove_dir_all(repo_root).expect("temp repo should be removed");
+    }
+
+    static TEST_REPO_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+    fn create_temp_repo_root_with_in_flight(in_flight: i64) -> PathBuf {
+        let unique = TEST_REPO_COUNTER.fetch_add(1, Ordering::Relaxed);
+        let repo_root = std::env::temp_dir().join(format!(
+            "check-doc-pr-test-{}-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("system time should be valid")
+                .as_nanos(),
+            unique
+        ));
+        fs::create_dir_all(repo_root.join("docs")).expect("docs directory should be created");
+        fs::write(
+            repo_root.join("docs/state.json"),
+            format!(r#"{{"copilot_metrics":{{"in_flight":{}}}}}"#, in_flight),
+        )
+        .expect("state.json should be written");
+        repo_root
     }
 
     #[test]
