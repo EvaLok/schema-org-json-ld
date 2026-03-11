@@ -18,7 +18,10 @@ const INFRA_PATHS: &[&str] = &[
 const STATE_SNAPSHOT_FIELDS: &[(&str, &str)] = &[
     ("cycle_phase.phase", "/cycle_phase/phase"),
     ("copilot_metrics.in_flight", "/copilot_metrics/in_flight"),
-    ("copilot_metrics.dispatched", "/copilot_metrics/dispatched"),
+    (
+        "copilot_metrics.total_dispatches",
+        "/copilot_metrics/total_dispatches",
+    ),
     ("copilot_metrics.merged", "/copilot_metrics/merged"),
 ];
 
@@ -50,6 +53,7 @@ pub struct CheckResult {
 pub enum CheckStatus {
     Pass,
     Fail,
+    Warn,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -118,13 +122,22 @@ fn run(cli: Cli) -> Result<(), String> {
     };
     results.push(check_journal_has_worklog_link(journal_content.as_deref()));
 
-    // 9. no_duplicate_headers
+    // 9. journal_entry_ordering
+    results.push(check_journal_entry_ordering(journal_content.as_deref()));
+
+    // 10. title_format
+    results.push(check_title_format(journal_content.as_deref()));
+
+    // 11. no_duplicate_headers
     results.push(check_no_duplicate_headers(journal_content.as_deref()));
 
-    let overall = if results.iter().all(|r| r.status == CheckStatus::Pass) {
-        CheckStatus::Pass
-    } else {
+    // 12. worklog_consistency
+    results.push(check_worklog_consistency(worklog_content.as_deref()));
+
+    let overall = if results.iter().any(|r| r.status == CheckStatus::Fail) {
         CheckStatus::Fail
+    } else {
+        CheckStatus::Pass
     };
 
     let report = CheckReport { overall, results };
@@ -146,14 +159,7 @@ fn run(cli: Cli) -> Result<(), String> {
 fn fetch_pr_files(repo_root: &Path, pr: u64) -> Result<Vec<String>, String> {
     let output = Command::new("gh")
         .current_dir(repo_root)
-        .args([
-            "pr",
-            "diff",
-            &pr.to_string(),
-            "--repo",
-            REPO,
-            "--name-only",
-        ])
+        .args(["pr", "diff", &pr.to_string(), "--repo", REPO, "--name-only"])
         .output()
         .map_err(|error| format!("failed to run gh pr diff: {}", error))?;
 
@@ -216,7 +222,8 @@ fn decode_base64(input: &str) -> Result<String, String> {
     // GitHub returns base64 with newlines; strip them before decoding.
     let cleaned: String = input.chars().filter(|c| !c.is_whitespace()).collect();
     let bytes = base64_decode(&cleaned)?;
-    String::from_utf8(bytes).map_err(|error| format!("base64 content is not valid UTF-8: {}", error))
+    String::from_utf8(bytes)
+        .map_err(|error| format!("base64 content is not valid UTF-8: {}", error))
 }
 
 /// Minimal base64 decoder (standard alphabet, no padding required).
@@ -313,17 +320,14 @@ pub fn has_required_sections(content: &str) -> Vec<&'static str> {
     let lower = content.to_lowercase();
 
     let section_groups: &[(&str, &[&str])] = &[
+        ("What was done", &["what was done", "## done", "## summary"]),
         (
-            "What was done",
-            &["what was done", "## done", "## summary"],
+            "Self-modifications",
+            &["self-modifications", "self-modification"],
         ),
-        ("Self-modifications", &["self-modifications", "self-modification"]),
         ("Current state", &["current state", "## state"]),
         ("Next steps", &["next steps", "## next"]),
-        (
-            "Commit receipts",
-            &["commit receipts", "## receipts"],
-        ),
+        ("Commit receipts", &["commit receipts", "## receipts"]),
     ];
 
     let mut missing = Vec::new();
@@ -865,6 +869,208 @@ fn check_no_duplicate_headers(journal_content: Option<&str>) -> CheckResult {
     }
 }
 
+fn check_journal_entry_ordering(journal_content: Option<&str>) -> CheckResult {
+    let check_name = "journal_entry_ordering".to_string();
+
+    let Some(content) = journal_content else {
+        return CheckResult {
+            check: check_name,
+            status: CheckStatus::Fail,
+            detail: "Cannot check: journal content not available".to_string(),
+        };
+    };
+
+    let cycle_headers = extract_journal_cycle_headers(content);
+    let mut previous_cycle = None;
+
+    for (_, cycle, line) in cycle_headers {
+        if let Some(previous) = previous_cycle {
+            if cycle < previous {
+                return CheckResult {
+                    check: check_name,
+                    status: CheckStatus::Fail,
+                    detail: format!(
+                        "Cycle {} appears after cycle {} in journal header order: {}",
+                        cycle, previous, line
+                    ),
+                };
+            }
+        }
+        previous_cycle = Some(cycle);
+    }
+
+    CheckResult {
+        check: check_name,
+        status: CheckStatus::Pass,
+        detail: "Journal cycle headers are in ascending order".to_string(),
+    }
+}
+
+fn check_title_format(journal_content: Option<&str>) -> CheckResult {
+    let check_name = "title_format".to_string();
+
+    let Some(content) = journal_content else {
+        return CheckResult {
+            check: check_name,
+            status: CheckStatus::Fail,
+            detail: "Cannot check: journal content not available".to_string(),
+        };
+    };
+
+    let mut stuttering_headers = Vec::new();
+    for (_, cycle, line) in extract_journal_cycle_headers(content) {
+        let needle = format!("Cycle {}: Cycle {}:", cycle, cycle);
+        if line.contains(&needle) {
+            stuttering_headers.push(line);
+        }
+    }
+
+    if stuttering_headers.is_empty() {
+        CheckResult {
+            check: check_name,
+            status: CheckStatus::Pass,
+            detail: "No stuttering journal titles detected".to_string(),
+        }
+    } else {
+        CheckResult {
+            check: check_name,
+            status: CheckStatus::Warn,
+            detail: format!(
+                "Detected stuttering journal titles: {}",
+                stuttering_headers.join(" | ")
+            ),
+        }
+    }
+}
+
+fn extract_journal_cycle_headers(content: &str) -> Vec<(usize, u64, String)> {
+    let mut headers = Vec::new();
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if !trimmed.starts_with("## ") {
+            continue;
+        }
+
+        let Some(marker_index) = trimmed.find("— Cycle ") else {
+            continue;
+        };
+        let after_marker = &trimmed[marker_index + "— Cycle ".len()..];
+        let digits: String = after_marker
+            .chars()
+            .take_while(|c| c.is_ascii_digit())
+            .collect();
+        if digits.is_empty() {
+            continue;
+        }
+
+        let cycle = match digits.parse::<u64>() {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
+
+        let remainder = &after_marker[digits.len()..];
+        if !remainder.starts_with(':') {
+            continue;
+        }
+
+        headers.push((marker_index, cycle, trimmed.to_string()));
+    }
+
+    headers
+}
+
+fn check_worklog_consistency(worklog_content: Option<&str>) -> CheckResult {
+    let check_name = "worklog_consistency".to_string();
+
+    let Some(content) = worklog_content else {
+        return CheckResult {
+            check: check_name,
+            status: CheckStatus::Fail,
+            detail: "Cannot check: worklog content not available".to_string(),
+        };
+    };
+
+    let Some(current_state_section) = extract_section_content(content, "current state") else {
+        return CheckResult {
+            check: check_name,
+            status: CheckStatus::Fail,
+            detail: "Cannot check: Current state section not available".to_string(),
+        };
+    };
+
+    let prose_in_flight = extract_current_state_in_flight_count(&current_state_section);
+    let metrics_in_flight = extract_copilot_metrics_in_flight_count(&current_state_section);
+
+    match (prose_in_flight, metrics_in_flight) {
+        (Some(prose), Some(metrics)) if prose != metrics => CheckResult {
+            check: check_name,
+            status: CheckStatus::Fail,
+            detail: format!(
+                "Current state says {}, Copilot metrics says {} in flight",
+                prose, metrics
+            ),
+        },
+        (Some(prose), Some(_)) => CheckResult {
+            check: check_name,
+            status: CheckStatus::Pass,
+            detail: format!("Current state in-flight counts are consistent at {}", prose),
+        },
+        _ => CheckResult {
+            check: check_name,
+            status: CheckStatus::Pass,
+            detail: "Could not find both in-flight counts; no inconsistency detected".to_string(),
+        },
+    }
+}
+
+fn extract_current_state_in_flight_count(section: &str) -> Option<i64> {
+    for line in section.lines() {
+        let lower = line.to_lowercase();
+        if lower.contains("in-flight agent sessions") || lower.contains("in flight agent sessions")
+        {
+            if let Some(value) = extract_first_number(&lower) {
+                return Some(value);
+            }
+        }
+    }
+
+    None
+}
+
+fn extract_copilot_metrics_in_flight_count(section: &str) -> Option<i64> {
+    for line in section.lines() {
+        let lower = line.to_lowercase();
+        if !lower.contains("copilot metrics") || !lower.contains("in flight") {
+            continue;
+        }
+
+        if let Some(prefix) = lower.split("in flight").next() {
+            if let Some(value) = extract_last_number(prefix) {
+                return Some(value);
+            }
+        }
+    }
+
+    None
+}
+
+fn extract_last_number(s: &str) -> Option<i64> {
+    let mut end = None;
+    for (i, c) in s.char_indices().rev() {
+        if c.is_ascii_digit() {
+            if end.is_none() {
+                end = Some(i + c.len_utf8());
+            }
+        } else if let Some(end_idx) = end {
+            let start_idx = i + c.len_utf8();
+            return s[start_idx..end_idx].parse().ok();
+        }
+    }
+
+    end.and_then(|end_idx| s[..end_idx].parse().ok())
+}
+
 fn validate_repo_root(repo_root: &Path) -> Result<(), String> {
     if !repo_root.exists() {
         return Err(format!(
@@ -1037,14 +1243,8 @@ mod tests {
 
     #[test]
     fn in_flight_extraction_from_worklog() {
-        assert_eq!(
-            extract_in_flight_from_worklog("In-flight: 3"),
-            Some(3)
-        );
-        assert_eq!(
-            extract_in_flight_from_worklog("in_flight: 2"),
-            Some(2)
-        );
+        assert_eq!(extract_in_flight_from_worklog("In-flight: 3"), Some(3));
+        assert_eq!(extract_in_flight_from_worklog("in_flight: 2"), Some(2));
         assert_eq!(
             extract_in_flight_from_worklog("In flight count: 5"),
             Some(5)
@@ -1149,12 +1349,34 @@ mod tests {
     }
 
     #[test]
+    fn check_report_overall_pass_when_warnings_are_present() {
+        let results = vec![
+            CheckResult {
+                check: "a".to_string(),
+                status: CheckStatus::Pass,
+                detail: "ok".to_string(),
+            },
+            CheckResult {
+                check: "b".to_string(),
+                status: CheckStatus::Warn,
+                detail: "warning".to_string(),
+            },
+        ];
+        let overall = if results.iter().any(|r| r.status == CheckStatus::Fail) {
+            CheckStatus::Fail
+        } else {
+            CheckStatus::Pass
+        };
+        assert_eq!(overall, CheckStatus::Pass);
+    }
+
+    #[test]
     fn state_snapshot_divergence_check_passes_when_monitored_fields_match() {
         let master_state = json!({
             "cycle_phase": { "phase": "close_out" },
             "copilot_metrics": {
                 "in_flight": 0,
-                "dispatched": 10,
+                "total_dispatches": 10,
                 "merged": 8
             }
         });
@@ -1162,7 +1384,7 @@ mod tests {
             "cycle_phase": { "phase": "close_out" },
             "copilot_metrics": {
                 "in_flight": 0,
-                "dispatched": 10,
+                "total_dispatches": 10,
                 "merged": 8
             }
         });
@@ -1183,7 +1405,7 @@ mod tests {
             "cycle_phase": { "phase": "close_out" },
             "copilot_metrics": {
                 "in_flight": 0,
-                "dispatched": 11,
+                "total_dispatches": 11,
                 "merged": 9
             }
         });
@@ -1191,7 +1413,7 @@ mod tests {
             "cycle_phase": { "phase": "doc_dispatched" },
             "copilot_metrics": {
                 "in_flight": 2,
-                "dispatched": 10,
+                "total_dispatches": 10,
                 "merged": 8
             }
         });
@@ -1201,9 +1423,161 @@ mod tests {
         assert_eq!(result.check, "state_snapshot_freshness");
         assert_eq!(result.status, CheckStatus::Fail);
         assert!(result.detail.contains("State has advanced since documentation was generated. Consider regenerating docs or noting the divergence."));
-        assert!(result.detail.contains("cycle_phase.phase: master=\"close_out\", pr=\"doc_dispatched\""));
-        assert!(result.detail.contains("copilot_metrics.in_flight: master=0, pr=2"));
-        assert!(result.detail.contains("copilot_metrics.dispatched: master=11, pr=10"));
-        assert!(result.detail.contains("copilot_metrics.merged: master=9, pr=8"));
+        assert!(result
+            .detail
+            .contains("cycle_phase.phase: master=\"close_out\", pr=\"doc_dispatched\""));
+        assert!(result
+            .detail
+            .contains("copilot_metrics.in_flight: master=0, pr=2"));
+        assert!(result
+            .detail
+            .contains("copilot_metrics.total_dispatches: master=11, pr=10"));
+        assert!(result
+            .detail
+            .contains("copilot_metrics.merged: master=9, pr=8"));
+    }
+
+    #[test]
+    fn state_snapshot_divergence_check_uses_real_copilot_metrics_field_names() {
+        let master_state = json!({
+            "copilot_metrics": {
+                "closed_without_merge": 3,
+                "closed_without_pr": 3,
+                "dispatch_log_latest": "#1007 Cycle 222 review (cycle 222)",
+                "dispatch_to_pr_rate": "98.0%",
+                "in_flight": 1,
+                "merged": 286,
+                "pr_merge_rate": "99.3%",
+                "produced_pr": 288,
+                "resolved": 293,
+                "reviewed_awaiting_eva": 1,
+                "revision_rounds": 5,
+                "total_dispatches": 294
+            },
+            "cycle_phase": {
+                "cycle": 223,
+                "phase": "work"
+            }
+        });
+        let pr_state = json!({
+            "copilot_metrics": {
+                "closed_without_merge": 3,
+                "closed_without_pr": 3,
+                "dispatch_log_latest": "#1007 Cycle 222 review (cycle 222)",
+                "dispatch_to_pr_rate": "98.0%",
+                "in_flight": 1,
+                "merged": 286,
+                "pr_merge_rate": "99.3%",
+                "produced_pr": 288,
+                "resolved": 293,
+                "reviewed_awaiting_eva": 1,
+                "revision_rounds": 5,
+                "total_dispatches": 293
+            },
+            "cycle_phase": {
+                "cycle": 223,
+                "phase": "work"
+            }
+        });
+
+        let result = evaluate_state_snapshot_freshness(&master_state, &pr_state);
+
+        assert_eq!(result.status, CheckStatus::Fail);
+        assert!(result
+            .detail
+            .contains("copilot_metrics.total_dispatches: master=294, pr=293"));
+    }
+
+    #[test]
+    fn journal_entry_ordering_passes_for_ascending_cycles() {
+        let content = "\
+## 2026-03-10 — Cycle 212: Review processing\n\
+\n\
+Worklog: [cycle 212](docs/worklog/2026-03-10/002904-cycle-212-summary.md)\n\
+\n\
+## 2026-03-10 — Cycle 213: Review heavy cycle\n\
+\n\
+Worklog: [cycle 213](docs/worklog/2026-03-10/030816-cycle-213-summary.md)\n\
+\n\
+## 2026-03-10 — Cycle 214: Tool improvement dispatches\n";
+
+        let result = check_journal_entry_ordering(Some(content));
+
+        assert_eq!(result.check, "journal_entry_ordering");
+        assert_eq!(result.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn journal_entry_ordering_fails_for_out_of_order_cycles() {
+        let content = "\
+## 2026-03-10 — Cycle 212: Review processing\n\
+\n\
+## 2026-03-10 — Cycle 222: Review fixes and tool-audit bookkeeping\n\
+\n\
+## 2026-03-10 — Cycle 214: Review-heavy cycle with tool improvement dispatches\n";
+
+        let result = check_journal_entry_ordering(Some(content));
+
+        assert_eq!(result.check, "journal_entry_ordering");
+        assert_eq!(result.status, CheckStatus::Fail);
+        assert!(result.detail.contains("Cycle 214 appears after cycle 222"));
+    }
+
+    #[test]
+    fn title_format_warns_on_stuttering_cycle_titles() {
+        let content = "\
+## 2026-03-10 — Cycle 213: Cycle 213: Review-heavy cycle with structural enforcement dispatch\n\
+\n\
+## 2026-03-10 — Cycle 214: Clean title\n";
+
+        let result = check_title_format(Some(content));
+
+        assert_eq!(result.check, "title_format");
+        assert_eq!(result.status, CheckStatus::Warn);
+        assert!(result.detail.contains("Cycle 213: Cycle 213:"));
+    }
+
+    #[test]
+    fn title_format_passes_without_stuttering_cycle_titles() {
+        let content = "\
+## 2026-03-10 — Cycle 213: Review-heavy cycle with structural enforcement dispatch\n\
+\n\
+## 2026-03-10 — Cycle 214: Clean title\n";
+
+        let result = check_title_format(Some(content));
+
+        assert_eq!(result.check, "title_format");
+        assert_eq!(result.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn worklog_consistency_passes_when_in_flight_counts_match() {
+        let content = "\
+## Current state\n\
+\n\
+- **In-flight agent sessions**: 1\n\
+- **Copilot metrics**: 292 dispatches, 287 PRs produced, 285 merged, 292 resolved, 1 in flight, 1 reviewed awaiting Eva\n";
+
+        let result = check_worklog_consistency(Some(content));
+
+        assert_eq!(result.check, "worklog_consistency");
+        assert_eq!(result.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn worklog_consistency_fails_when_in_flight_counts_differ() {
+        let content = "\
+## Current state\n\
+\n\
+- In-flight agent sessions: 1\n\
+- **Copilot metrics**: 292 dispatches, 287 PRs produced, 285 merged, 292 resolved, 0 in flight, 1 reviewed awaiting Eva\n";
+
+        let result = check_worklog_consistency(Some(content));
+
+        assert_eq!(result.check, "worklog_consistency");
+        assert_eq!(result.status, CheckStatus::Fail);
+        assert!(result
+            .detail
+            .contains("Current state says 1, Copilot metrics says 0"));
     }
 }
