@@ -2839,6 +2839,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix pipeline-check step-comment verifier completeness"
+    },
+    {
+      "dispatched_at": "2026-03-11T18:31:44Z",
+      "issue": 1064,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Docs] Cycle 229 worklog and journal"
     }
   ],
   "audit_dropped": [
@@ -3009,24 +3016,24 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1062 Fix pipeline-check step-comment verifier completeness (cycle 229)",
-    "dispatch_to_pr_rate": "98.1%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1064 [Cycle Docs] Cycle 229 worklog and journal (cycle 229)",
+    "dispatch_to_pr_rate": "97.8%",
+    "in_flight": 2,
     "merged": 305,
     "pr_merge_rate": "99.3%",
     "produced_pr": 307,
     "resolved": 312,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 313
+    "total_dispatches": 314
   },
   "cycle_phase": {
     "cycle": 229,
-    "doc_issue": null,
+    "doc_issue": 1064,
     "doc_pr": null,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-11T18:31:08Z",
-    "review_iteration": null,
+    "phase": "doc_dispatched",
+    "phase_entered_at": "2026-03-11T18:31:44Z",
+    "review_iteration": 0,
     "review_max": 3
   },
   "eva_input_issues": {
