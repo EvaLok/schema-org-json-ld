@@ -2810,6 +2810,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Build validate-docs tool for post-close-out artifact verification"
+    },
+    {
+      "dispatched_at": "2026-03-11T14:39:37Z",
+      "issue": 1055,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 227 adversarial review"
     }
   ],
   "audit_dropped": [
@@ -2979,23 +2986,23 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1053 Build validate-docs tool for post-close-out artifact verification (cycle 227)",
-    "dispatch_to_pr_rate": "97.7%",
-    "in_flight": 2,
+    "dispatch_log_latest": "#1055 Cycle 227 adversarial review (cycle 227)",
+    "dispatch_to_pr_rate": "97.4%",
+    "in_flight": 3,
     "merged": 301,
     "pr_merge_rate": "99.3%",
     "produced_pr": 303,
     "resolved": 308,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 310
+    "total_dispatches": 311
   },
   "cycle_phase": {
     "cycle": 227,
     "doc_issue": null,
     "doc_pr": null,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-11T14:37:08Z",
+    "phase": "complete",
+    "phase_entered_at": "2026-03-11T14:39:37Z",
     "review_iteration": null,
     "review_max": 3
   },
