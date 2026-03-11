@@ -2800,22 +2800,28 @@
     {
       "dispatched_at": "2026-03-11T14:28:00Z",
       "issue": 1051,
+      "merged_at": "2026-03-11T16:28:09Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1052,
+      "status": "merged",
       "title": "Fix write-entry journal template bugs and self-modification fallback"
     },
     {
       "dispatched_at": "2026-03-11T14:29:53Z",
       "issue": 1053,
+      "merged_at": "2026-03-11T16:28:09Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1054,
+      "status": "merged",
       "title": "Build validate-docs tool for post-close-out artifact verification"
     },
     {
       "dispatched_at": "2026-03-11T14:39:37Z",
       "issue": 1055,
+      "merged_at": "2026-03-11T16:28:09Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1056,
+      "status": "merged",
       "title": "Cycle 227 adversarial review"
     }
   ],
@@ -2987,12 +2993,12 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1055 Cycle 227 adversarial review (cycle 227)",
-    "dispatch_to_pr_rate": "97.4%",
-    "in_flight": 3,
-    "merged": 301,
+    "dispatch_to_pr_rate": "98.4%",
+    "in_flight": 0,
+    "merged": 304,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 303,
-    "resolved": 308,
+    "produced_pr": 306,
+    "resolved": 311,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 311
@@ -3095,15 +3101,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 227"
+        "last_refreshed": "cycle 228"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 227"
+        "last_refreshed": "cycle 228"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 227"
+        "last_refreshed": "cycle 228"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
