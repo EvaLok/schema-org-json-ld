@@ -114,10 +114,7 @@ struct ResumeBrief {
 }
 
 fn should_resume(phase: Option<&str>) -> bool {
-    match phase {
-        None | Some("complete") => false,
-        _ => true,
-    }
+    !matches!(phase, None | Some("complete"))
 }
 
 fn main() {
@@ -199,7 +196,10 @@ fn run(cli: Cli) -> Result<(), String> {
 
     // Set cycle_phase for the new work phase, clear doc-related fields
     transition_cycle_phase(&mut state, cycle, "work")?;
-    if let Some(cp) = state.pointer_mut("/cycle_phase").and_then(Value::as_object_mut) {
+    if let Some(cp) = state
+        .pointer_mut("/cycle_phase")
+        .and_then(Value::as_object_mut)
+    {
         cp.insert("doc_issue".to_string(), Value::Null);
         cp.insert("doc_pr".to_string(), Value::Null);
         cp.insert("review_iteration".to_string(), Value::Null);
@@ -1385,8 +1385,7 @@ mod tests {
             review_iteration: Some(1),
         };
 
-        let output =
-            serde_json::to_string_pretty(&brief).expect("resume brief should serialize");
+        let output = serde_json::to_string_pretty(&brief).expect("resume brief should serialize");
         let parsed: Value = serde_json::from_str(&output).expect("json should parse");
 
         assert_eq!(parsed.get("cycle"), Some(&json!(219)));
@@ -1406,8 +1405,7 @@ mod tests {
             review_iteration: None,
         };
 
-        let output =
-            serde_json::to_string_pretty(&brief).expect("resume brief should serialize");
+        let output = serde_json::to_string_pretty(&brief).expect("resume brief should serialize");
         let parsed: Value = serde_json::from_str(&output).expect("json should parse");
 
         assert_eq!(parsed.get("cycle"), Some(&json!(220)));

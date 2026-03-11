@@ -5,7 +5,7 @@ use record_dispatch::{
 };
 use state_schema::{
     commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
-    write_state_value,
+    transition_cycle_phase, write_state_value,
 };
 use std::{
     path::{Path, PathBuf},
@@ -61,6 +61,7 @@ fn run(cli: Cli) -> Result<(), String> {
         &dispatched_at,
     )?;
     apply_dispatch_patch(&mut state_value, &patch)?;
+    transition_cycle_phase(&mut state_value, current_cycle, "complete")?;
     write_state_value(&cli.repo_root, &state_value)?;
 
     let commit_message = dispatch_commit_message(cli.issue, patch.current_cycle);
@@ -239,6 +240,32 @@ mod tests {
         assert!(stdout.contains("state(record-dispatch): #602 dispatched [cycle 164]"));
         assert!(stdout.contains("docs/state.json"));
         assert!(stdout.contains("docs/worklog/2026-03-10/142511-current.md"));
+
+        let state: serde_json::Value = serde_json::from_str(
+            &fs::read_to_string(repo.path().join("docs/state.json"))
+                .expect("state file should be readable"),
+        )
+        .expect("state file should parse");
+        assert_eq!(
+            state.pointer("/cycle_phase/phase"),
+            Some(&serde_json::json!("complete"))
+        );
+        assert_eq!(
+            state.pointer("/cycle_phase/cycle"),
+            Some(&serde_json::json!(164))
+        );
+        assert_ne!(
+            state
+                .pointer("/cycle_phase/phase_entered_at")
+                .and_then(serde_json::Value::as_str),
+            Some("2026-03-07T12:00:00Z")
+        );
+        assert_eq!(
+            state
+                .pointer("/field_inventory/fields/cycle_phase/last_refreshed")
+                .and_then(serde_json::Value::as_str),
+            Some("cycle 164")
+        );
     }
 
     #[test]
@@ -293,7 +320,10 @@ mod tests {
         fn init(&self) {
             self.write_state();
             git_success(self.path(), ["init"]);
-            git_success(self.path(), ["config", "user.name", "Record Dispatch Tests"]);
+            git_success(
+                self.path(),
+                ["config", "user.name", "Record Dispatch Tests"],
+            );
             git_success(
                 self.path(),
                 ["config", "user.email", "record-dispatch-tests@example.com"],
@@ -327,6 +357,11 @@ mod tests {
   "last_cycle": {
     "number": 164
   },
+  "cycle_phase": {
+    "cycle": 164,
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-07T12:00:00Z"
+  },
   "copilot_metrics": {
     "total_dispatches": 2,
     "resolved": 2,
@@ -342,6 +377,9 @@ mod tests {
   "field_inventory": {
     "fields": {
       "copilot_metrics.in_flight": {
+        "last_refreshed": "cycle 163"
+      },
+      "cycle_phase": {
         "last_refreshed": "cycle 163"
       },
       "copilot_metrics.pr_merge_rate": {

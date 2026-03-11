@@ -494,7 +494,7 @@ fn parse_php_data_provider_case_counts(content: &str) -> HashMap<String, i64> {
 }
 
 fn php_function_name(line: &str) -> Option<String> {
-    let mut tokens = line.trim_start().split_whitespace();
+    let mut tokens = line.split_whitespace();
     while let Some(token) = tokens.next() {
         if token != "function" {
             continue;
