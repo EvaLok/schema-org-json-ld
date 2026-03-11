@@ -2850,6 +2850,13 @@
       "pr": 1065,
       "status": "merged",
       "title": "[Cycle Docs] Cycle 229 worklog and journal"
+    },
+    {
+      "dispatched_at": "2026-03-11T18:49:01Z",
+      "issue": 1066,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 229 adversarial review"
     }
   ],
   "audit_dropped": [
@@ -3020,23 +3027,23 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1064 [Cycle Docs] Cycle 229 worklog and journal (cycle 229)",
-    "dispatch_to_pr_rate": "98.4%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1066 Cycle 229 adversarial review (cycle 229)",
+    "dispatch_to_pr_rate": "98.1%",
+    "in_flight": 1,
     "merged": 307,
     "pr_merge_rate": "99.4%",
     "produced_pr": 309,
     "resolved": 314,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 314
+    "total_dispatches": 315
   },
   "cycle_phase": {
     "cycle": 229,
     "doc_issue": 1064,
     "doc_pr": null,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-11T18:44:58Z",
+    "phase": "complete",
+    "phase_entered_at": "2026-03-11T18:49:01Z",
     "review_iteration": 0,
     "review_max": 3
   },
