@@ -186,6 +186,8 @@ The issue body for the review agent MUST be structured as follows:
 
    The `[category-name]` tag MUST appear in the heading line inside square brackets. As a fallback, `process-review` also accepts a separate `Category: category-name` line within the finding body, but the inline `[category]` format is preferred. The complacency score (1-5) must be justified with evidence in a dedicated section.
 
+   **Complacency scoring cap** (per [audit #198](https://github.com/EvaLok/schema-org-json-ld-audit/issues/198)): If the cycle overrode any FAIL or blocking-level pipeline gate (including `check-doc-pr`, `pipeline-check`, or `state-invariants`), the maximum complacency score is **3/5** regardless of other factors. Gate overrides demonstrate that the orchestrator treated structural enforcement as optional — which is the definition of complacency, even if the override was "justified" at the time. Include this constraint verbatim in the review dispatch spec.
+
 4. **Encourage depth over breadth.** Three deeply investigated findings with evidence are more valuable than ten surface-level observations.
 
 ### How to dispatch
