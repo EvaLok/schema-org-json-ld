@@ -250,6 +250,8 @@ When resuming with `cycle_phase.phase = "doc_dispatched"` or `"doc_review"`:
 
 4. Run validation: `bash tools/check-doc-pr --pr N --cycle N`
 
+   - Temporal divergences (`Warn`) are expected and do not trigger the revision loop. Only quality failures (`Fail`) require revision.
+
 5. If no quality failures (Warn-only or Pass):
    - Merge the PR
    - Run `process-merge` for the doc PR
@@ -267,8 +269,6 @@ When resuming with `cycle_phase.phase = "doc_dispatched"` or `"doc_review"`:
       ```
       (where NEXT = current review_iteration + 1)
    - End session
-
-   - Temporal divergences (`Warn`) are expected and do not trigger the revision loop. Only quality failures (`Fail`) require revision.
 
 7. If quality failures exist and `review_iteration >= review_max`:
    - Merge the PR as-is (partial docs better than none)

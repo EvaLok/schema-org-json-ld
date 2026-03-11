@@ -38,6 +38,8 @@ const TEMPORAL_STATE_SNAPSHOT_FIELDS: &[(&str, &str)] = &[
     ),
 ];
 
+// Currently no quality fields are monitored in the master-vs-PR snapshot diff.
+// Add only fields here that should never diverge between doc dispatch and doc review.
 const QUALITY_STATE_SNAPSHOT_FIELDS: &[(&str, &str)] = &[];
 
 #[derive(Debug, Parser)]
