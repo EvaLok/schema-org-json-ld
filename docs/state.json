@@ -2914,8 +2914,8 @@
     "cycle": 224,
     "doc_issue": 1028,
     "doc_pr": null,
-    "phase": "doc_dispatched",
-    "phase_entered_at": "2026-03-11T06:30:06Z",
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-11T08:13:55Z",
     "review_iteration": 0,
     "review_max": 3
   },
