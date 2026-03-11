@@ -35,6 +35,151 @@ struct RefreshSummary {
     dry_run: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct RefreshOnlyField {
+    name: &'static str,
+    reason: &'static str,
+}
+
+const REFRESH_ONLY_FIELDS: &[RefreshOnlyField] = &[
+    RefreshOnlyField {
+        name: "audit_dropped",
+        reason: "Cycle audit metadata is updated by orchestrator workflow tools, not derived from repository contents here.",
+    },
+    RefreshOnlyField {
+        name: "audit_processed",
+        reason: "Cycle audit metadata is updated by orchestrator workflow tools, not derived from repository contents here.",
+    },
+    RefreshOnlyField {
+        name: "blockers",
+        reason: "Blocker tracking requires workflow state and human judgment, so this tool only refreshes freshness metadata.",
+    },
+    RefreshOnlyField {
+        name: "copilot_metrics.dispatch_to_pr_rate",
+        reason: "Copilot metrics are derived by other reporting tools rather than directly verified in this refresher.",
+    },
+    RefreshOnlyField {
+        name: "copilot_metrics.in_flight",
+        reason: "Copilot metrics are derived by other reporting tools rather than directly verified in this refresher.",
+    },
+    RefreshOnlyField {
+        name: "copilot_metrics.pr_merge_rate",
+        reason: "Copilot metrics are derived by other reporting tools rather than directly verified in this refresher.",
+    },
+    RefreshOnlyField {
+        name: "cycle_phase",
+        reason: "Cycle phase is state-machine metadata maintained by workflow transitions, not recomputed here.",
+    },
+    RefreshOnlyField {
+        name: "eva_input_issues.closed_this_cycle",
+        reason: "Eva input issue tracking is maintained by issue-processing workflows, not verified from local files here.",
+    },
+    RefreshOnlyField {
+        name: "eva_input_issues.remaining_open",
+        reason: "Eva input issue tracking is maintained by issue-processing workflows, not verified from local files here.",
+    },
+    RefreshOnlyField {
+        name: "last_cycle",
+        reason: "Last-cycle metadata is recorded from orchestrator execution history, not derived in this tool.",
+    },
+    RefreshOnlyField {
+        name: "last_cycle.duration_minutes",
+        reason: "Last-cycle metadata is recorded from orchestrator execution history, not derived in this tool.",
+    },
+    RefreshOnlyField {
+        name: "last_eva_comment_check",
+        reason: "External comment polling timestamps come from workflow activity, so they are refresh-only here.",
+    },
+    RefreshOnlyField {
+        name: "last_tool_audit_cycle",
+        reason: "Tool audit cadence metadata is maintained by separate audit workflows, not recalculated here.",
+    },
+    RefreshOnlyField {
+        name: "open_questions_for_eva",
+        reason: "Open questions depend on workflow state and human review, so this tool only refreshes freshness metadata.",
+    },
+    RefreshOnlyField {
+        name: "pre_python_clean_cycles",
+        reason: "Historical cycle metadata is maintained elsewhere and is not directly verifiable from repository contents.",
+    },
+    RefreshOnlyField {
+        name: "previous_cycle_issue",
+        reason: "Previous-cycle linkage is workflow metadata maintained by other automation, not recomputed here.",
+    },
+    RefreshOnlyField {
+        name: "publish_gate",
+        reason: "Publish gate status depends on review workflow decisions and acknowledgements, not local repository inspection alone.",
+    },
+    RefreshOnlyField {
+        name: "qc_processed",
+        reason: "QC processing history is maintained by queue-processing workflows, not recomputed here.",
+    },
+    RefreshOnlyField {
+        name: "qc_requests_pending",
+        reason: "QC queue contents are maintained by queue-processing workflows, not recomputed here.",
+    },
+    RefreshOnlyField {
+        name: "qc_status",
+        reason: "QC status is maintained by workflow execution state and not directly derived in this tool.",
+    },
+    RefreshOnlyField {
+        name: "review_agent",
+        reason: "Review agent status depends on human review outcomes and workflow context, so it is refresh-only here.",
+    },
+    RefreshOnlyField {
+        name: "review_agent.chronic_category_responses",
+        reason: "Review agent chronic-category responses require human judgment and are not auto-verified here.",
+    },
+    RefreshOnlyField {
+        name: "schema_status.google_rich_results_types",
+        reason: "Schema status planning/audit metadata is maintained by other workflows, not verified by this refresher.",
+    },
+    RefreshOnlyField {
+        name: "schema_status.in_progress",
+        reason: "Schema status planning/audit metadata is maintained by other workflows, not verified by this refresher.",
+    },
+    RefreshOnlyField {
+        name: "schema_status.phpstan_max_assessment",
+        reason: "Schema status planning/audit metadata is maintained by other workflows, not verified by this refresher.",
+    },
+    RefreshOnlyField {
+        name: "schema_status.planned_next",
+        reason: "Schema status planning/audit metadata is maintained by other workflows, not verified by this refresher.",
+    },
+    RefreshOnlyField {
+        name: "schema_status.property_gap_audit",
+        reason: "Schema status planning/audit metadata is maintained by other workflows, not verified by this refresher.",
+    },
+    RefreshOnlyField {
+        name: "schema_status.remaining_audit_findings",
+        reason: "Schema status planning/audit metadata is maintained by other workflows, not verified by this refresher.",
+    },
+    RefreshOnlyField {
+        name: "test_count",
+        reason: "Test count is maintained by dedicated reporting workflows and is not auto-verified in this tool yet.",
+    },
+    RefreshOnlyField {
+        name: "tool_pipeline",
+        reason: "Tool pipeline status reflects orchestrator workflow progress rather than a local deterministic check here.",
+    },
+    RefreshOnlyField {
+        name: "total_testable_types_note",
+        reason: "Explanatory notes are documentation metadata and do not have an automatic verifier in this tool.",
+    },
+    RefreshOnlyField {
+        name: "type_classification",
+        reason: "Type classification inventory is maintained by separate schema-status workflows and not recomputed here.",
+    },
+    RefreshOnlyField {
+        name: "typescript_plan.status",
+        reason: "TypeScript plan status is planning metadata maintained by other workflows, not verified here.",
+    },
+    RefreshOnlyField {
+        name: "typescript_stats",
+        reason: "TypeScript statistics are maintained by dedicated reporting workflows and are refresh-only in this tool.",
+    },
+];
+
 fn main() {
     let cli = Cli::parse();
     match refresh_field_inventory(&cli.repo_root, cli.cycle, cli.dry_run) {
@@ -232,8 +377,16 @@ fn verify_field(repo_root: &Path, state: &StateJson, field: &str) -> Result<(), 
             state_phpstan_level(state)?,
             read_phpstan_level(&repo_root.join("phpstan.neon"))?,
         ),
-        _ => Ok(()),
+        field if refresh_only_reason(field).is_some() => Ok(()),
+        _ => Err(format!("no verifier registered for field: {}", field)),
     }
+}
+
+fn refresh_only_reason(field: &str) -> Option<&'static str> {
+    REFRESH_ONLY_FIELDS
+        .iter()
+        .find(|entry| entry.name == field)
+        .map(|entry| entry.reason)
 }
 
 fn verify_i64_field(field: &str, state_value: Option<i64>, actual: i64) -> Result<(), String> {
@@ -264,13 +417,13 @@ fn required_i64(value: Option<i64>, field: &str) -> Result<i64, String> {
 }
 
 fn count_files(path: &Path, extension: &str) -> Result<i64, String> {
-    let entries =
-        fs::read_dir(path).map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
+    let entries = fs::read_dir(path)
+        .map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
     let mut count = 0_i64;
 
     for entry in entries {
-        let entry =
-            entry.map_err(|error| format!("failed to read entry in {}: {}", path.display(), error))?;
+        let entry = entry
+            .map_err(|error| format!("failed to read entry in {}: {}", path.display(), error))?;
         let entry_path = entry.path();
         if entry_path.is_file()
             && entry_path
@@ -308,14 +461,17 @@ fn derive_total_sub_types(state: &StateJson) -> Result<i64, String> {
 }
 
 fn derive_total_testable_types(state: &StateJson) -> Result<i64, String> {
-    Ok(required_i64(state.total_schema_classes, "total_schema_classes")?
-        - required_i64(state.total_enums, "total_enums")?)
+    Ok(
+        required_i64(state.total_schema_classes, "total_schema_classes")?
+            - required_i64(state.total_enums, "total_enums")?,
+    )
 }
 
 fn derive_total_standalone_testable_types(state: &StateJson) -> Result<i64, String> {
     Ok(derive_total_testable_types(state)?
         - required_i64(
-            state.schema_status
+            state
+                .schema_status
                 .type_classification
                 .as_ref()
                 .ok_or_else(|| "missing schema_status.type_classification".to_string())?
@@ -338,8 +494,8 @@ fn state_phpstan_level(state: &StateJson) -> Result<String, String> {
 }
 
 fn read_phpstan_level(path: &Path) -> Result<String, String> {
-    let content =
-        fs::read_to_string(path).map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
+    let content = fs::read_to_string(path)
+        .map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
     for line in content.lines() {
         let trimmed = line.trim();
         if trimmed.starts_with("level:") {
@@ -357,8 +513,226 @@ fn read_phpstan_level(path: &Path) -> Result<String, String> {
 mod tests {
     use super::*;
     use serde_json::{json, Value};
+    use std::collections::HashSet;
     use std::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn verify_field_checks_total_schema_classes_against_repo_files() {
+        let repo = create_repo_fixture("verify-total-schema-classes");
+        let matching = parse_state(json!({
+            "total_schema_classes": 4
+        }));
+        let mismatch = parse_state(json!({
+            "total_schema_classes": 3
+        }));
+
+        assert!(verify_field(repo.path(), &matching, "total_schema_classes").is_ok());
+        assert_eq!(
+            verify_field(repo.path(), &mismatch, "total_schema_classes"),
+            Err("state value mismatch: expected 3, actual 4".to_string())
+        );
+    }
+
+    #[test]
+    fn verify_field_checks_total_enums_against_repo_files() {
+        let repo = create_repo_fixture("verify-total-enums");
+        let matching = parse_state(json!({
+            "total_enums": 1
+        }));
+        let mismatch = parse_state(json!({
+            "total_enums": 2
+        }));
+
+        assert!(verify_field(repo.path(), &matching, "total_enums").is_ok());
+        assert_eq!(
+            verify_field(repo.path(), &mismatch, "total_enums"),
+            Err("state value mismatch: expected 2, actual 1".to_string())
+        );
+    }
+
+    #[test]
+    fn verify_field_checks_total_schema_types_against_total_schema_classes() {
+        let repo = create_repo_fixture("verify-total-schema-types");
+        let matching = parse_state(json!({
+            "total_schema_classes": 4,
+            "total_schema_types": 4
+        }));
+        let mismatch = parse_state(json!({
+            "total_schema_classes": 4,
+            "total_schema_types": 3
+        }));
+
+        assert!(verify_field(repo.path(), &matching, "total_schema_types").is_ok());
+        assert_eq!(
+            verify_field(repo.path(), &mismatch, "total_schema_types"),
+            Err("state value mismatch: expected 3, actual 4".to_string())
+        );
+    }
+
+    #[test]
+    fn verify_field_checks_total_sub_types_against_type_classification() {
+        let repo = create_repo_fixture("verify-total-sub-types");
+        let matching = parse_state(json!({
+            "schema_status": {
+                "type_classification": {
+                    "standalone_testable": 2,
+                    "building_block": 1,
+                    "building_block_only": 1,
+                    "enums": 1
+                }
+            },
+            "total_sub_types": 5
+        }));
+        let mismatch = parse_state(json!({
+            "schema_status": {
+                "type_classification": {
+                    "standalone_testable": 2,
+                    "building_block": 1,
+                    "building_block_only": 1,
+                    "enums": 1
+                }
+            },
+            "total_sub_types": 4
+        }));
+
+        assert!(verify_field(repo.path(), &matching, "total_sub_types").is_ok());
+        assert_eq!(
+            verify_field(repo.path(), &mismatch, "total_sub_types"),
+            Err("state value mismatch: expected 4, actual 5".to_string())
+        );
+    }
+
+    #[test]
+    fn verify_field_checks_total_testable_types_against_schema_and_enum_counts() {
+        let repo = create_repo_fixture("verify-total-testable-types");
+        let matching = parse_state(json!({
+            "total_schema_classes": 4,
+            "total_enums": 1,
+            "total_testable_types": 3
+        }));
+        let mismatch = parse_state(json!({
+            "total_schema_classes": 4,
+            "total_enums": 1,
+            "total_testable_types": 2
+        }));
+
+        assert!(verify_field(repo.path(), &matching, "total_testable_types").is_ok());
+        assert_eq!(
+            verify_field(repo.path(), &mismatch, "total_testable_types"),
+            Err("state value mismatch: expected 2, actual 3".to_string())
+        );
+    }
+
+    #[test]
+    fn verify_field_checks_total_standalone_testable_types_against_derived_counts() {
+        let repo = create_repo_fixture("verify-total-standalone-testable-types");
+        let matching = parse_state(json!({
+            "schema_status": {
+                "type_classification": {
+                    "building_block_only": 1
+                }
+            },
+            "total_schema_classes": 4,
+            "total_enums": 1,
+            "total_standalone_testable_types": 2
+        }));
+        let mismatch = parse_state(json!({
+            "schema_status": {
+                "type_classification": {
+                    "building_block_only": 1
+                }
+            },
+            "total_schema_classes": 4,
+            "total_enums": 1,
+            "total_standalone_testable_types": 1
+        }));
+
+        assert!(verify_field(repo.path(), &matching, "total_standalone_testable_types").is_ok());
+        assert_eq!(
+            verify_field(repo.path(), &mismatch, "total_standalone_testable_types"),
+            Err("state value mismatch: expected 1, actual 2".to_string())
+        );
+    }
+
+    #[test]
+    fn verify_field_checks_phpstan_level_against_phpstan_neon() {
+        let repo = create_repo_fixture("verify-phpstan-level");
+        let matching = parse_state(json!({
+            "phpstan_level": "8"
+        }));
+        let mismatch = parse_state(json!({
+            "phpstan_level": "7"
+        }));
+        let nested = parse_state(json!({
+            "schema_status": {
+                "phpstan_level": "8"
+            }
+        }));
+
+        assert!(verify_field(repo.path(), &matching, "phpstan_level").is_ok());
+        assert!(verify_field(repo.path(), &nested, "schema_status.phpstan_level").is_ok());
+        assert_eq!(
+            verify_field(repo.path(), &mismatch, "phpstan_level"),
+            Err("phpstan_level mismatch: expected '7', actual '8'".to_string())
+        );
+    }
+
+    #[test]
+    fn verify_field_allows_explicit_refresh_only_fields() {
+        let repo = create_repo_fixture("verify-refresh-only");
+        let state = parse_state(json!({}));
+
+        assert!(verify_field(repo.path(), &state, "review_agent").is_ok());
+    }
+
+    #[test]
+    fn verify_field_rejects_unknown_fields() {
+        let repo = create_repo_fixture("verify-unknown-field");
+        let state = parse_state(json!({}));
+
+        assert_eq!(
+            verify_field(repo.path(), &state, "unknown.field"),
+            Err("no verifier registered for field: unknown.field".to_string())
+        );
+    }
+
+    #[test]
+    fn refresh_only_fields_have_unique_names_and_documented_reasons() {
+        let mut names = HashSet::new();
+
+        for entry in REFRESH_ONLY_FIELDS {
+            assert!(!entry.name.trim().is_empty());
+            assert!(!entry.reason.trim().is_empty());
+            assert!(
+                names.insert(entry.name),
+                "duplicate refresh-only field: {}",
+                entry.name
+            );
+        }
+    }
+
+    #[test]
+    fn verify_i64_field_checks_matching_values_and_missing_state() {
+        assert!(verify_i64_field("total_enums", Some(1), 1).is_ok());
+        assert_eq!(
+            verify_i64_field("total_enums", Some(1), 2),
+            Err("state value mismatch: expected 1, actual 2".to_string())
+        );
+        assert_eq!(
+            verify_i64_field("total_enums", None, 2),
+            Err("missing numeric field: total_enums".to_string())
+        );
+    }
+
+    #[test]
+    fn verify_string_field_checks_matching_values() {
+        assert!(verify_string_field("phpstan_level", "8".to_string(), "8".to_string()).is_ok());
+        assert_eq!(
+            verify_string_field("phpstan_level", "7".to_string(), "8".to_string()),
+            Err("phpstan_level mismatch: expected '7', actual '8'".to_string())
+        );
+    }
 
     #[test]
     fn refreshes_stale_verified_and_refresh_only_fields_in_place() {
@@ -418,7 +792,8 @@ mod tests {
             Some("cycle 224")
         );
         assert_eq!(
-            state.pointer("/field_inventory/fields/blockers/last_refreshed")
+            state
+                .pointer("/field_inventory/fields/blockers/last_refreshed")
                 .and_then(Value::as_str),
             Some("cycle 224")
         );
@@ -452,7 +827,8 @@ mod tests {
 
         let state = read_state(repo.path());
         assert_eq!(
-            state.pointer("/field_inventory/fields/total_enums/last_refreshed")
+            state
+                .pointer("/field_inventory/fields/total_enums/last_refreshed")
                 .and_then(Value::as_str),
             Some("cycle 200")
         );
@@ -484,7 +860,8 @@ mod tests {
 
         let state = read_state(repo.path());
         assert_eq!(
-            state.pointer("/field_inventory/fields/blockers/last_refreshed")
+            state
+                .pointer("/field_inventory/fields/blockers/last_refreshed")
                 .and_then(Value::as_str),
             Some("cycle 200")
         );
@@ -590,5 +967,9 @@ mod tests {
         let content =
             fs::read_to_string(repo_root.join("docs/state.json")).expect("state file should exist");
         serde_json::from_str(&content).expect("state fixture should parse")
+    }
+
+    fn parse_state(value: Value) -> StateJson {
+        serde_json::from_value(value).expect("state fixture should parse")
     }
 }
