@@ -2737,8 +2737,10 @@
     {
       "dispatched_at": "2026-03-11T08:16:54Z",
       "issue": 1031,
+      "merged_at": "2026-03-11T14:28:49Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1032,
+      "status": "merged",
       "title": "Cycle 224 review"
     },
     {
@@ -2762,8 +2764,10 @@
     {
       "dispatched_at": "2026-03-11T10:34:16Z",
       "issue": 1039,
+      "merged_at": "2026-03-11T14:28:49Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1040,
+      "status": "merged",
       "title": "Cycle 225 adversarial review"
     },
     {
@@ -2787,8 +2791,10 @@
     {
       "dispatched_at": "2026-03-11T12:36:31Z",
       "issue": 1047,
+      "merged_at": "2026-03-11T14:28:49Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1048,
+      "status": "merged",
       "title": "Cycle 226 adversarial review"
     },
     {
@@ -2966,12 +2972,12 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1051 Fix write-entry journal template bugs and self-modification fallback (cycle 227)",
-    "dispatch_to_pr_rate": "97.1%",
-    "in_flight": 4,
-    "merged": 298,
+    "dispatch_to_pr_rate": "98.1%",
+    "in_flight": 1,
+    "merged": 301,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 300,
-    "resolved": 305,
+    "produced_pr": 303,
+    "resolved": 308,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 309
