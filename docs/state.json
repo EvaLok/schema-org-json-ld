@@ -2826,7 +2826,7 @@
     },
     {
       "dispatched_at": "2026-03-11T16:32:11Z",
-      "issue": 1057,
+      "issue": 1058,
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Cycle 228 adversarial review"
