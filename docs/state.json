@@ -2660,8 +2660,10 @@
     {
       "dispatched_at": "2026-03-10T22:35:12Z",
       "issue": 1004,
+      "merged_at": "2026-03-11T00:09:31Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1005,
+      "status": "merged",
       "title": "[Cycle Docs] Cycle 222 worklog and journal"
     }
   ],
@@ -2826,12 +2828,12 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1004 [Cycle Docs] Cycle 222 worklog and journal (cycle 222)",
-    "dispatch_to_pr_rate": "98.0%",
-    "in_flight": 1,
-    "merged": 285,
+    "dispatch_to_pr_rate": "98.3%",
+    "in_flight": 0,
+    "merged": 286,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 287,
-    "resolved": 292,
+    "produced_pr": 288,
+    "resolved": 293,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 293
