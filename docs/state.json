@@ -2893,6 +2893,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "dispatch-docs receipt injection + check-doc-pr receipt completeness"
+    },
+    {
+      "dispatched_at": "2026-03-11T22:16:45Z",
+      "issue": 1079,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Docs] Cycle 231 worklog and journal"
     }
   ],
   "audit_dropped": [
@@ -3064,24 +3071,24 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1077 dispatch-docs receipt injection + check-doc-pr receipt completeness (cycle 231)",
-    "dispatch_to_pr_rate": "98.1%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1079 [Cycle Docs] Cycle 231 worklog and journal (cycle 231)",
+    "dispatch_to_pr_rate": "97.8%",
+    "in_flight": 2,
     "merged": 311,
     "pr_merge_rate": "99.4%",
     "produced_pr": 313,
     "resolved": 318,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 319
+    "total_dispatches": 320
   },
   "cycle_phase": {
     "cycle": 231,
-    "doc_issue": null,
+    "doc_issue": 1079,
     "doc_pr": null,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-11T22:15:00Z",
-    "review_iteration": null,
+    "phase": "doc_dispatched",
+    "phase_entered_at": "2026-03-11T22:16:45Z",
+    "review_iteration": 0,
     "review_max": 3
   },
   "eva_input_issues": {
