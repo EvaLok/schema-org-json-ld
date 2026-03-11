@@ -2832,6 +2832,13 @@
       "pr": 1059,
       "status": "merged",
       "title": "Cycle 228 adversarial review"
+    },
+    {
+      "dispatched_at": "2026-03-11T18:28:27Z",
+      "issue": 1062,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix pipeline-check step-comment verifier completeness"
     }
   ],
   "audit_dropped": [
@@ -3002,23 +3009,23 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1057 Cycle 228 adversarial review (cycle 228)",
-    "dispatch_to_pr_rate": "98.4%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1062 Fix pipeline-check step-comment verifier completeness (cycle 229)",
+    "dispatch_to_pr_rate": "98.1%",
+    "in_flight": 1,
     "merged": 305,
     "pr_merge_rate": "99.3%",
     "produced_pr": 307,
     "resolved": 312,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 312
+    "total_dispatches": 313
   },
   "cycle_phase": {
     "cycle": 229,
     "doc_issue": null,
     "doc_pr": null,
-    "phase": "work",
-    "phase_entered_at": "2026-03-11T18:17:58Z",
+    "phase": "complete",
+    "phase_entered_at": "2026-03-11T18:28:27Z",
     "review_iteration": null,
     "review_max": 3
   },
