@@ -2679,7 +2679,7 @@
       "issue": 1012,
       "model": "gpt-5.4",
       "pr": 1014,
-      "status": "in_flight",
+      "status": "merged",
       "title": "Fix check-doc-pr: wrong field path + add journal/worklog validation checks"
     },
     {
@@ -2687,7 +2687,7 @@
       "issue": 1013,
       "model": "gpt-5.4",
       "pr": 1015,
-      "status": "in_flight",
+      "status": "merged",
       "title": "Fix pipeline-check: resumption Step 0 should not satisfy startup coverage"
     },
     {
@@ -2864,11 +2864,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1016 [Cycle Docs] Cycle 223 worklog and journal (cycle 223)",
     "dispatch_to_pr_rate": "98.3%",
-    "in_flight": 2,
-    "merged": 288,
-    "pr_merge_rate": "98.6%",
+    "in_flight": 0,
+    "merged": 290,
+    "pr_merge_rate": "99.3%",
     "produced_pr": 292,
-    "resolved": 295,
+    "resolved": 297,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 297
