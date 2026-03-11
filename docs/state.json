@@ -2697,6 +2697,13 @@
       "pr": 1017,
       "status": "merged",
       "title": "[Cycle Docs] Cycle 223 worklog and journal"
+    },
+    {
+      "dispatched_at": "2026-03-11T04:44:00Z",
+      "issue": 1020,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 223 adversarial review"
     }
   ],
   "audit_dropped": [
@@ -2862,23 +2869,23 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1016 [Cycle Docs] Cycle 223 worklog and journal (cycle 223)",
+    "dispatch_log_latest": "#1020 Cycle 223 adversarial review (cycle 223)",
     "dispatch_to_pr_rate": "98.3%",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 290,
     "pr_merge_rate": "99.3%",
     "produced_pr": 292,
     "resolved": 297,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 297
+    "total_dispatches": 298
   },
   "cycle_phase": {
     "cycle": 223,
     "doc_issue": 1016,
     "doc_pr": null,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-11T04:35:00Z",
+    "phase": "complete",
+    "phase_entered_at": "2026-03-11T04:44:00Z",
     "review_iteration": 0,
     "review_max": 3
   },
@@ -3124,13 +3131,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 12,
-    "issue": 1009,
+    "duration_minutes": 96,
+    "issue": 1018,
     "number": 223,
-    "summary": "Consumed cycle 222 review (complacency 5/5, 4 findings), processed audit #188/#189, dispatched #1012 (check-doc-pr field fix + journal validation) and #1013 (pipeline-check step-comments fix), strengthened review spec with adversarial framing and 8 review targets per audit #189",
-    "timestamp": "2026-03-11T03:07:00Z"
+    "summary": "Phase B/C resumption: merged doc PR #1017, reviewed and merged PRs #1014 (check-doc-pr field fix + journal validation) and #1015 (pipeline-check step-comments fix), processed audit #191 (pipeline FAIL override), closed audit-inbound #1010/#1011/#1019",
+    "timestamp": "2026-03-11T04:42:31Z"
   },
-  "last_eva_comment_check": "2026-03-11T03:07:00Z",
+  "last_eva_comment_check": "2026-03-11T04:42:31Z",
   "last_tool_audit_cycle": 222,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
@@ -3139,7 +3146,7 @@
     "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
     "started_at": "cycle 199"
   },
-  "previous_cycle_issue": 999,
+  "previous_cycle_issue": 1018,
   "publish_gate": {
     "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z",
     "note": "v1.0.2 published by Eva. v1.0.1 failed due to CI workflow incompatibility with npm OIDC trusted publishing (Node 22 ships npm 10, OIDC requires npm 11.5+). Package contents identical to validated ea8ffff.",
