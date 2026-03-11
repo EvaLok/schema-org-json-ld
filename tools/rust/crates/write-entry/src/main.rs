@@ -1092,9 +1092,11 @@ fn find_worklog_relative_path(repo_root: &Path, cycle: u64) -> Result<Option<Str
                 })
                 .map(|relative| {
                     let normalized_path = relative.to_string_lossy().replace('\\', "/");
-                    normalized_path
-                        .strip_prefix("docs/")
-                        .map_or(normalized_path.clone(), |path| format!("../{}", path))
+                    if let Some(path) = normalized_path.strip_prefix("docs/") {
+                        format!("../{}", path)
+                    } else {
+                        normalized_path
+                    }
                 })
         })
         .transpose()
