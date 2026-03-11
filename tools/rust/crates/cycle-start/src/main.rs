@@ -114,10 +114,7 @@ struct ResumeBrief {
 }
 
 fn should_resume(phase: Option<&str>) -> bool {
-    match phase {
-        None | Some("complete") => false,
-        _ => true,
-    }
+    !matches!(phase, None | Some("complete"))
 }
 
 fn main() {
