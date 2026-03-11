@@ -2783,6 +2783,13 @@
       "pr": 1046,
       "status": "merged",
       "title": "Improve write-entry auto-derivation"
+    },
+    {
+      "dispatched_at": "2026-03-11T12:36:31Z",
+      "issue": 1047,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 226 adversarial review"
     }
   ],
   "audit_dropped": [
@@ -2951,23 +2958,23 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1044 Improve write-entry auto-derivation (cycle 226)",
-    "dispatch_to_pr_rate": "97.7%",
-    "in_flight": 2,
+    "dispatch_log_latest": "#1047 Cycle 226 adversarial review (cycle 226)",
+    "dispatch_to_pr_rate": "97.4%",
+    "in_flight": 3,
     "merged": 298,
     "pr_merge_rate": "99.3%",
     "produced_pr": 300,
     "resolved": 305,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 307
+    "total_dispatches": 308
   },
   "cycle_phase": {
     "cycle": 226,
     "doc_issue": null,
     "doc_pr": null,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-11T12:34:36Z",
+    "phase": "complete",
+    "phase_entered_at": "2026-03-11T12:36:31Z",
     "review_iteration": null,
     "review_max": 3
   },
