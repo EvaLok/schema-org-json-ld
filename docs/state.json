@@ -2706,6 +2706,13 @@
       "pr": 1021,
       "status": "merged",
       "title": "Cycle 223 adversarial review"
+    },
+    {
+      "dispatched_at": "2026-03-11T06:26:31Z",
+      "issue": 1024,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "check-doc-pr temporal-divergence classification (audit #193)"
     }
   ],
   "audit_dropped": [
@@ -2872,16 +2879,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1020 Cycle 223 adversarial review (cycle 223)",
-    "dispatch_to_pr_rate": "98.3%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1024 check-doc-pr temporal-divergence classification (audit #193) (cycle 224)",
+    "dispatch_to_pr_rate": "98.0%",
+    "in_flight": 1,
     "merged": 291,
     "pr_merge_rate": "99.3%",
     "produced_pr": 293,
     "resolved": 298,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 298
+    "total_dispatches": 299
   },
   "cycle_phase": {
     "cycle": 224,
