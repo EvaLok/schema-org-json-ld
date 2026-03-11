@@ -36,6 +36,10 @@ const TEMPORAL_STATE_SNAPSHOT_FIELDS: &[(&str, &str)] = &[
         "copilot_metrics.pr_merge_rate",
         "/copilot_metrics/pr_merge_rate",
     ),
+    (
+        "copilot_metrics.dispatch_log_latest",
+        "/copilot_metrics/dispatch_log_latest",
+    ),
 ];
 
 // Currently no quality fields are monitored in the master-vs-PR snapshot diff.
@@ -45,10 +49,6 @@ const QUALITY_STATE_SNAPSHOT_FIELDS: &[(&str, &str)] = &[
     ("last_cycle.timestamp", "/last_cycle/timestamp"),
     ("last_cycle.number", "/last_cycle/number"),
     ("last_cycle.issue", "/last_cycle/issue"),
-    (
-        "copilot_metrics.dispatch_log_latest",
-        "/copilot_metrics/dispatch_log_latest",
-    ),
 ];
 
 #[derive(Debug, Parser)]
@@ -1686,13 +1686,17 @@ mod tests {
             ("last_cycle.timestamp", "/last_cycle/timestamp"),
             ("last_cycle.number", "/last_cycle/number"),
             ("last_cycle.issue", "/last_cycle/issue"),
-            (
-                "copilot_metrics.dispatch_log_latest",
-                "/copilot_metrics/dispatch_log_latest",
-            ),
         ] {
             assert!(QUALITY_STATE_SNAPSHOT_FIELDS.contains(&required_field));
         }
+    }
+
+    #[test]
+    fn temporal_state_snapshot_fields_include_dispatch_log_latest() {
+        assert!(TEMPORAL_STATE_SNAPSHOT_FIELDS.contains(&(
+            "copilot_metrics.dispatch_log_latest",
+            "/copilot_metrics/dispatch_log_latest",
+        )));
     }
 
     #[test]
