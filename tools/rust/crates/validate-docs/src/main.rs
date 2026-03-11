@@ -297,7 +297,7 @@ fn find_cycle_start_commit(repo_root: &Path, cycle: u64) -> Result<String, Strin
     let commit = output.trim();
     if commit.is_empty() {
         return Err(format!(
-			"could not find cycle-start commit for cycle {}; fetch more history if this is a shallow clone",
+			"could not find cycle-start commit for cycle {}; verify the cycle number is correct and that the cycle has started; fetch more history if this is a shallow clone",
 			cycle
 		));
     }
@@ -307,9 +307,7 @@ fn find_cycle_start_commit(repo_root: &Path, cycle: u64) -> Result<String, Strin
 
 fn validate_self_modifications_section(content: &str, changed_paths: &[String]) -> Option<String> {
     let section = extract_section_body(content, SELF_MODIFICATIONS_HEADING)?;
-    let reports_none = section
-        .lines()
-        .any(|line| normalize_line(line) == "- None." || normalize_line(line) == "None.");
+    let reports_none = section.lines().any(reports_no_self_modifications);
     if !reports_none || changed_paths.is_empty() {
         return None;
     }
@@ -525,6 +523,17 @@ fn normalize_line(line: &str) -> &str {
     line.trim_matches(['\r', '\n', ' '])
 }
 
+fn reports_no_self_modifications(line: &str) -> bool {
+    let trimmed = normalize_line(line);
+    let without_bullet = trimmed
+        .strip_prefix("- ")
+        .or_else(|| trimmed.strip_prefix("* "))
+        .unwrap_or(trimmed)
+        .trim();
+    let without_period = without_bullet.trim_end_matches('.');
+    without_period.eq_ignore_ascii_case("none")
+}
+
 fn run_wrapper(
     repo_root: &Path,
     wrapper_relative_path: &str,
@@ -683,6 +692,21 @@ mod tests {
         .expect("expected self-modification failure");
         assert!(failure.contains("says None"));
         assert!(failure.contains("tools/rust/crates/write-entry/src/main.rs"));
+    }
+
+    #[test]
+    fn accepts_alternate_none_format_in_self_modifications() {
+        let content = "\
+## Self-modifications
+
+* None
+";
+        let failure = validate_self_modifications_section(
+            content,
+            &["tools/rust/crates/write-entry/src/main.rs".to_string()],
+        )
+        .expect("expected self-modification failure");
+        assert!(failure.contains("says None"));
     }
 
     #[test]
