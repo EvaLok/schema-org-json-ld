@@ -2720,6 +2720,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "refresh-field-inventory Rust tool (pipeline automation)"
+    },
+    {
+      "dispatched_at": "2026-03-11T06:30:06Z",
+      "issue": 1028,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Docs] Cycle 224 worklog and journal"
     }
   ],
   "audit_dropped": [
@@ -2886,24 +2893,24 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1026 refresh-field-inventory Rust tool (pipeline automation) (cycle 224)",
-    "dispatch_to_pr_rate": "97.7%",
-    "in_flight": 2,
+    "dispatch_log_latest": "#1028 [Cycle Docs] Cycle 224 worklog and journal (cycle 224)",
+    "dispatch_to_pr_rate": "97.3%",
+    "in_flight": 3,
     "merged": 291,
     "pr_merge_rate": "99.3%",
     "produced_pr": 293,
     "resolved": 298,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 300
+    "total_dispatches": 301
   },
   "cycle_phase": {
     "cycle": 224,
-    "doc_issue": null,
+    "doc_issue": 1028,
     "doc_pr": null,
-    "phase": "work",
-    "phase_entered_at": "2026-03-11T06:15:02Z",
-    "review_iteration": null,
+    "phase": "doc_dispatched",
+    "phase_entered_at": "2026-03-11T06:30:06Z",
+    "review_iteration": 0,
     "review_max": 3
   },
   "eva_input_issues": {
