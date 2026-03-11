@@ -18,6 +18,9 @@ const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const STEP_COMMENT_THRESHOLD: usize = 10;
 const ORCHESTRATOR_SIGNATURE: &str = "> **[main-orchestrator]**";
+// These core checklist steps are expected on every non-phased cycle regardless of
+// conditional branches later in the workflow.
+const MANDATORY_STEP_IDS: [&str; 7] = ["0", "0.5", "1", "2", "6", "7", "9"];
 const PHASED_RESUMPTION_STEP_IDS: [&str; 4] = ["Opening", "10.B", "10.C", "Close"];
 const STARTUP_STEP_IDS: [&str; 13] = ["0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9"];
 // Keep this list aligned with the orchestrator checklist steps that are expected to
@@ -585,18 +588,15 @@ fn verify_step_comments(repo_root: &Path, runner: &dyn CommandRunner) -> StepRep
 		}
 	};
 	let resumption_step_tokens = collect_step_comment_tokens(&comment_bodies);
+	let issue_assessment = assess_step_comment_completeness(&found);
 
-	if found.len() >= STEP_COMMENT_THRESHOLD {
+	if issue_assessment.status == StepStatus::Pass {
 		return StepReport {
 			name: STEP_COMMENTS_STEP_NAME,
-			status: StepStatus::Pass,
-			severity: Severity::Blocking,
+			status: issue_assessment.status,
+			severity: issue_assessment.severity,
 			exit_code: None,
-			detail: Some(format!(
-				"found {} unique step comments on issue #{}",
-				found.len(),
-				issue
-			)),
+			detail: Some(format!("issue #{}: {}", issue, issue_assessment.detail)),
 			findings: Some(found.len()),
 			summary: None,
 		};
@@ -618,18 +618,18 @@ fn verify_step_comments(repo_root: &Path, runner: &dyn CommandRunner) -> StepRep
 			}
 		};
 
-		if work_found.len() >= STEP_COMMENT_THRESHOLD {
+		let work_assessment = assess_step_comment_completeness(&work_found);
+		if work_assessment.status == StepStatus::Pass {
 			return StepReport {
 				name: STEP_COMMENTS_STEP_NAME,
-				status: StepStatus::Pass,
-				severity: Severity::Blocking,
+				status: work_assessment.status,
+				severity: work_assessment.severity,
 				exit_code: None,
 				detail: Some(format!(
-					"found {} unique step comments on work-phase issue #{} after resumption issue #{} only had {}",
-					work_found.len(),
+					"work-phase issue #{} after resumption issue #{}: {}",
 					work_issue,
 					issue,
-					resumption_step_tokens.len()
+					work_assessment.detail
 				)),
 				findings: Some(work_found.len()),
 				summary: None,
@@ -638,16 +638,15 @@ fn verify_step_comments(repo_root: &Path, runner: &dyn CommandRunner) -> StepRep
 
 		return StepReport {
 			name: STEP_COMMENTS_STEP_NAME,
-			status: StepStatus::Fail,
-			severity: Severity::Blocking,
+			status: work_assessment.status,
+			severity: work_assessment.severity,
 			exit_code: None,
 			detail: Some(format!(
-				"found {} unique step comments on issue #{} and {} unique step comments on work-phase issue #{}; missing steps: {}",
-				found.len(),
+				"issue #{} found startup/resumption markers [{}]; work-phase issue #{}: {}",
 				issue,
-				work_found.len(),
+				ordered_found_step_ids(&found).join(", "),
 				work_issue,
-				missing_expected_step_ids(&work_found).join(", ")
+				work_assessment.detail
 			)),
 			findings: Some(work_found.len()),
 			summary: None,
@@ -672,15 +671,10 @@ fn verify_step_comments(repo_root: &Path, runner: &dyn CommandRunner) -> StepRep
 
 	StepReport {
 		name: STEP_COMMENTS_STEP_NAME,
-		status: StepStatus::Fail,
-		severity: Severity::Blocking,
+		status: issue_assessment.status,
+		severity: issue_assessment.severity,
 		exit_code: None,
-		detail: Some(format!(
-			"found {} unique step comments on issue #{}; missing steps: {}",
-			found.len(),
-			issue,
-			missing_expected_step_ids(&found).join(", ")
-		)),
+		detail: Some(format!("issue #{}: {}", issue, issue_assessment.detail)),
 		findings: Some(found.len()),
 		summary: None,
 	}
@@ -701,6 +695,81 @@ fn missing_expected_step_ids(found: &BTreeSet<&'static str>) -> Vec<&'static str
 		.copied()
 		.filter(|step| !found.contains(step))
 		.collect()
+}
+
+fn ordered_found_step_ids(found: &BTreeSet<&'static str>) -> Vec<&'static str> {
+	EXPECTED_STEP_IDS
+		.iter()
+		.copied()
+		.filter(|step| found.contains(step))
+		.collect()
+}
+
+fn format_step_id_list(step_ids: &[&str]) -> String {
+	if step_ids.is_empty() {
+		"none".to_string()
+	} else {
+		step_ids.join(", ")
+	}
+}
+
+fn assess_step_comment_completeness(found: &BTreeSet<&'static str>) -> StepCommentAssessment {
+	let found_ids = ordered_found_step_ids(found);
+	let missing = missing_expected_step_ids(found);
+	let (mandatory_missing, optional_missing): (Vec<_>, Vec<_>) = missing
+		.into_iter()
+		.partition(|step| MANDATORY_STEP_IDS.contains(step));
+	let detail = format!(
+		"found {} unique step comments [{}]; missing mandatory [{}]; missing optional [{}]",
+		found.len(),
+		format_step_id_list(&found_ids),
+		format_step_id_list(&mandatory_missing),
+		format_step_id_list(&optional_missing)
+	);
+
+	if found.len() < STEP_COMMENT_THRESHOLD {
+		return StepCommentAssessment {
+			status: StepStatus::Fail,
+			severity: Severity::Blocking,
+			detail: format!(
+				"{}; below backstop threshold {}",
+				detail, STEP_COMMENT_THRESHOLD
+			),
+		};
+	}
+
+	if !mandatory_missing.is_empty() {
+		return StepCommentAssessment {
+			status: StepStatus::Fail,
+			severity: Severity::Blocking,
+			detail,
+		};
+	}
+
+	if !optional_missing.is_empty() {
+		return StepCommentAssessment {
+			status: StepStatus::Warn,
+			severity: Severity::Warning,
+			detail,
+		};
+	}
+
+	StepCommentAssessment {
+		status: StepStatus::Pass,
+		severity: Severity::Blocking,
+		detail,
+	}
+}
+
+/// Completeness assessment for a collected set of step comments.
+///
+/// PASS means all expected steps were found, WARN means only optional steps are
+/// missing, and FAIL means either a mandatory step is missing or the threshold
+/// backstop was not met.
+struct StepCommentAssessment {
+	status: StepStatus,
+	severity: Severity,
+	detail: String,
 }
 
 fn is_phased_resumption_issue(
@@ -1044,6 +1113,14 @@ mod tests {
     fn repo_root() -> PathBuf {
         PathBuf::from("/repo")
     }
+
+	/// Build mock orchestrator step comment bodies for tests from a list of step IDs.
+	fn step_comment_bodies(cycle: u64, step_ids: &[&str]) -> String {
+		step_ids
+			.iter()
+			.map(|step| format!("> **[main-orchestrator]** | Cycle {cycle} | Step {step}\n"))
+			.collect()
+	}
 
 	#[test]
 	fn warning_steps_get_warn_status_not_fail() {
@@ -2032,6 +2109,18 @@ mod tests {
 	}
 
 	#[test]
+	fn missing_expected_step_ids_returns_missing_steps_in_expected_order() {
+		let found = ["0", "0.5", "1", "2", "6", "7", "9", "10"]
+			.into_iter()
+			.collect::<BTreeSet<_>>();
+
+		assert_eq!(
+			missing_expected_step_ids(&found),
+			vec!["0.6", "1.1", "3", "4", "5", "8"]
+		);
+	}
+
+	#[test]
 	fn step_comment_verification_fails_when_fewer_than_ten_steps_are_found_on_previous_cycle_issue() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -2085,12 +2174,12 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("missing steps:"));
+			.contains("below backstop threshold 10"));
 		assert!(step
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("7"));
+			.contains("missing mandatory [7, 9]"));
 	}
 
 	#[test]
@@ -2250,7 +2339,7 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("found 2 unique step comments on issue #996"));
+			.contains("issue #996: found 2 unique step comments [0, 0.5]"));
 	}
 
 	#[test]
@@ -2286,19 +2375,7 @@ mod tests {
 						"> **[main-orchestrator]** | Cycle 221 | Step Close\n"
 					)
 					.to_string()),
-					995 => Ok(concat!(
-						"> **[main-orchestrator]** | Cycle 221 | Step 0\n",
-						"> **[main-orchestrator]** | Cycle 221 | Step 0.5\n",
-						"> **[main-orchestrator]** | Cycle 221 | Step 0.6\n",
-						"> **[main-orchestrator]** | Cycle 221 | Step 1\n",
-						"> **[main-orchestrator]** | Cycle 221 | Step 1.1\n",
-						"> **[main-orchestrator]** | Cycle 221 | Step 2\n",
-						"> **[main-orchestrator]** | Cycle 221 | Step 3\n",
-						"> **[main-orchestrator]** | Cycle 221 | Step 4\n",
-						"> **[main-orchestrator]** | Cycle 221 | Step 5\n",
-						"> **[main-orchestrator]** | Cycle 221 | Step 6\n"
-					)
-					.to_string()),
+					995 => Ok(step_comment_bodies(221, &EXPECTED_STEP_IDS)),
 					unexpected => panic!("unexpected issue lookup: {unexpected}"),
 				}
 			}
@@ -2307,7 +2384,7 @@ mod tests {
 		let step = verify_step_comments(&root, &StepCommentRunner);
 		assert_eq!(step.status, StepStatus::Pass);
 		assert_eq!(step.severity, Severity::Blocking);
-		assert_eq!(step.findings, Some(10));
+		assert_eq!(step.findings, Some(14));
 		assert!(step
 			.detail
 			.as_deref()
@@ -2382,11 +2459,11 @@ mod tests {
 	}
 
 	#[test]
-	fn step_comment_verification_passes_with_ten_unique_steps() {
+	fn step_comment_verification_fails_when_mandatory_step_is_missing_even_above_threshold() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
 		let root =
-			std::env::temp_dir().join(format!("pipeline-check-step-comments-pass-{}", run_id));
+			std::env::temp_dir().join(format!("pipeline-check-step-comments-mandatory-{}", run_id));
 		fs::create_dir_all(root.join("docs")).unwrap();
 		fs::write(
 			root.join("docs/state.json"),
@@ -2406,29 +2483,131 @@ mod tests {
 
 			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
 				assert_eq!(issue, 835);
-				Ok(concat!(
-					"> **[main-orchestrator]** | Cycle 212 | Step 0\n",
-					"## Step 0.5: workflow check\n",
-					"> **[main-orchestrator]** | Cycle 212 | Step 0.6\n",
-					"> **[main-orchestrator]** | Cycle 212 | Step 1\n",
-					"## Step 1.1: extra\n",
-					"> **[main-orchestrator]** | Cycle 212 | Step 2\n",
-					"> **[main-orchestrator]** | Cycle 212 | Step 3\n",
-					"> **[main-orchestrator]** | Cycle 212 | Step 4\n",
-					"> **[main-orchestrator]** | Cycle 212 | Step 5\n",
-					"> **[main-orchestrator]** | Cycle 212 | Step 6\n"
-				)
-				.to_string())
+				let steps = EXPECTED_STEP_IDS
+					.iter()
+					.copied()
+					.filter(|step| *step != "6" && *step != "8")
+					.collect::<Vec<_>>();
+				Ok(step_comment_bodies(212, &steps))
+			}
+		}
+
+		let step = verify_step_comments(&root, &StepCommentRunner);
+		assert_eq!(step.status, StepStatus::Fail);
+		assert_eq!(step.severity, Severity::Blocking);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("found 12 unique step comments"));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("missing mandatory [6]"));
+	}
+
+	#[test]
+	fn step_comment_verification_warns_when_only_optional_step_is_missing() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root =
+			std::env::temp_dir().join(format!("pipeline-check-step-comments-optional-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 837
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct StepCommentRunner;
+
+		impl CommandRunner for StepCommentRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected in step comment verification test");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 837);
+				let steps = EXPECTED_STEP_IDS
+					.iter()
+					.copied()
+					.filter(|step| *step != "1.1")
+					.collect::<Vec<_>>();
+				Ok(step_comment_bodies(212, &steps))
+			}
+		}
+
+		let step = verify_step_comments(&root, &StepCommentRunner);
+		assert_eq!(step.status, StepStatus::Warn);
+		assert_eq!(step.severity, Severity::Warning);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("found 13 unique step comments"));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("missing mandatory [none]"));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("missing optional [1.1]"));
+	}
+
+	#[test]
+	fn step_comment_verification_passes_with_all_expected_steps() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root =
+			std::env::temp_dir().join(format!("pipeline-check-step-comments-pass-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 838
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct StepCommentRunner;
+
+		impl CommandRunner for StepCommentRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected in step comment verification test");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 838);
+				Ok(step_comment_bodies(212, &EXPECTED_STEP_IDS))
 			}
 		}
 
 		let step = verify_step_comments(&root, &StepCommentRunner);
 		assert_eq!(step.status, StepStatus::Pass);
+		assert_eq!(step.severity, Severity::Blocking);
 		assert!(step
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("found 10 unique step comments"));
+			.contains("found 14 unique step comments"));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("missing mandatory [none]"));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("missing optional [none]"));
 	}
 
 	#[test]
