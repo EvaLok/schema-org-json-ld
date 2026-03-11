@@ -132,7 +132,11 @@ fn apply_dispatch_record(
     apply_dispatch_patch(state, &patch)
 }
 
-fn apply_cycle_phase_update(state: &mut Value, cycle: u64, issue: u64) -> Result<(), String> {
+fn apply_cycle_phase_update(
+    state: &mut Value,
+    cycle: u64,
+    issue: u64,
+) -> Result<(), String> {
     // Use shared transition function for phase + freshness
     transition_cycle_phase(state, cycle, "doc_dispatched")?;
 
@@ -142,7 +146,10 @@ fn apply_cycle_phase_update(state: &mut Value, cycle: u64, issue: u64) -> Result
         .and_then(Value::as_object_mut)
         .ok_or_else(|| "missing object /cycle_phase in docs/state.json".to_string())?;
 
-    cycle_phase.insert("doc_issue".to_string(), serde_json::json!(issue as i64));
+    cycle_phase.insert(
+        "doc_issue".to_string(),
+        serde_json::json!(issue as i64),
+    );
     cycle_phase.insert("doc_pr".to_string(), Value::Null);
     cycle_phase.insert("review_iteration".to_string(), serde_json::json!(0));
     cycle_phase.insert("review_max".to_string(), serde_json::json!(3));
@@ -308,7 +315,10 @@ mod tests {
     fn build_issue_payload_uses_cycle_docs_labels() {
         let payload = build_issue_payload(219, "Docs body", "gpt-5.4");
 
-        assert_eq!(payload.title, "[Cycle Docs] Cycle 219 worklog and journal");
+        assert_eq!(
+            payload.title,
+            "[Cycle Docs] Cycle 219 worklog and journal"
+        );
         assert_eq!(payload.labels, vec!["agent-task", "cycle-docs"]);
         assert_eq!(payload.assignees, vec!["copilot-swe-agent[bot]"]);
         assert_eq!(
@@ -337,7 +347,8 @@ mod tests {
         )
         .expect("dispatch record should apply");
 
-        apply_cycle_phase_update(&mut state, 219, 980).expect("cycle phase update should apply");
+        apply_cycle_phase_update(&mut state, 219, 980)
+            .expect("cycle phase update should apply");
 
         // Verify dispatch record was applied
         let sessions = state["agent_sessions"]
@@ -348,7 +359,10 @@ mod tests {
         assert_eq!(sessions[1]["status"], json!("in_flight"));
 
         // Verify all cycle_phase fields
-        assert_eq!(state["cycle_phase"]["phase"], json!("doc_dispatched"));
+        assert_eq!(
+            state["cycle_phase"]["phase"],
+            json!("doc_dispatched")
+        );
         assert_eq!(state["cycle_phase"]["doc_issue"], json!(980));
         assert_eq!(state["cycle_phase"]["doc_pr"], json!(null));
         assert_eq!(state["cycle_phase"]["review_iteration"], json!(0));
