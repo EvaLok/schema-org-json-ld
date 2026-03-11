@@ -2769,8 +2769,10 @@
     {
       "dispatched_at": "2026-03-11T12:19:36Z",
       "issue": 1043,
+      "merged_at": "2026-03-11T12:29:48Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1045,
+      "status": "merged",
       "title": "Fix cycle-complete and record-dispatch phase transitions"
     },
     {
@@ -2948,12 +2950,12 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1044 Improve write-entry auto-derivation (cycle 226)",
-    "dispatch_to_pr_rate": "97.1%",
-    "in_flight": 4,
-    "merged": 296,
+    "dispatch_to_pr_rate": "97.4%",
+    "in_flight": 3,
+    "merged": 297,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 298,
-    "resolved": 303,
+    "produced_pr": 299,
+    "resolved": 304,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 307
