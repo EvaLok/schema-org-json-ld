@@ -2836,8 +2836,10 @@
     {
       "dispatched_at": "2026-03-11T18:28:27Z",
       "issue": 1062,
+      "merged_at": "2026-03-11T18:46:37Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1063,
+      "status": "merged",
       "title": "Fix pipeline-check step-comment verifier completeness"
     },
     {
@@ -3019,12 +3021,12 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1064 [Cycle Docs] Cycle 229 worklog and journal (cycle 229)",
-    "dispatch_to_pr_rate": "98.1%",
-    "in_flight": 1,
-    "merged": 306,
+    "dispatch_to_pr_rate": "98.4%",
+    "in_flight": 0,
+    "merged": 307,
     "pr_merge_rate": "99.4%",
-    "produced_pr": 308,
-    "resolved": 313,
+    "produced_pr": 309,
+    "resolved": 314,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 314
