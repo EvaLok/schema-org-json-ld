@@ -2886,6 +2886,13 @@
       "pr": 1074,
       "status": "merged",
       "title": "Cycle 230 adversarial review"
+    },
+    {
+      "dispatched_at": "2026-03-11T22:14:17Z",
+      "issue": 1077,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "dispatch-docs receipt injection + check-doc-pr receipt completeness"
     }
   ],
   "audit_dropped": [
@@ -3057,23 +3064,23 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1073 Cycle 230 adversarial review (cycle 230)",
-    "dispatch_to_pr_rate": "98.4%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1077 dispatch-docs receipt injection + check-doc-pr receipt completeness (cycle 231)",
+    "dispatch_to_pr_rate": "98.1%",
+    "in_flight": 1,
     "merged": 311,
     "pr_merge_rate": "99.4%",
     "produced_pr": 313,
     "resolved": 318,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 318
+    "total_dispatches": 319
   },
   "cycle_phase": {
     "cycle": 231,
     "doc_issue": null,
     "doc_pr": null,
-    "phase": "work",
-    "phase_entered_at": "2026-03-11T22:06:42Z",
+    "phase": "complete",
+    "phase_entered_at": "2026-03-11T22:14:17Z",
     "review_iteration": null,
     "review_max": 3
   },
