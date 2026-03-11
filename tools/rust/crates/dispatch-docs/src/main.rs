@@ -71,7 +71,7 @@ fn main() {
 fn run(cli: Cli) -> Result<(), String> {
     let current_cycle = resolve_cycle(cli.cycle, &cli.repo_root)?;
     let body = read_body_file(&cli.body_file)?;
-    let body = inject_cycle_receipts(&cli.repo_root, current_cycle, &body, &load_cycle_receipts);
+    let body = inject_cycle_receipts(&cli.repo_root, current_cycle, &body, load_cycle_receipts);
     let model = state_schema::default_agent_model(&cli.repo_root)?;
     let payload = build_issue_payload(current_cycle, &body, &model);
 
@@ -162,12 +162,10 @@ fn read_body_file(path: &Path) -> Result<String, String> {
     Ok(normalized.to_string())
 }
 
-fn inject_cycle_receipts(
-    repo_root: &Path,
-    cycle: u64,
-    body: &str,
-    loader: &dyn Fn(&Path, u64) -> Result<String, String>,
-) -> String {
+fn inject_cycle_receipts<F>(repo_root: &Path, cycle: u64, body: &str, loader: F) -> String
+where
+    F: Fn(&Path, u64) -> Result<String, String>,
+{
     match loader(repo_root, cycle) {
         Ok(receipts_output) => format!(
             "{body}\n\n## Cycle receipts (auto-generated)\n\n{}",
@@ -307,6 +305,17 @@ mod tests {
     use clap::CommandFactory;
     use serde_json::json;
 
+    fn successful_receipt_loader(_: &Path, cycle: u64) -> Result<String, String> {
+        Ok(format!(
+            "## Commit receipts — Cycle {}\n\n| Step | Receipt |",
+            cycle
+        ))
+    }
+
+    fn failing_receipt_loader(_: &Path, _: u64) -> Result<String, String> {
+        Err("cycle-receipts unavailable".to_string())
+    }
+
     fn sample_state() -> Value {
         json!({
             "agent_sessions": [
@@ -422,12 +431,7 @@ mod tests {
             Path::new("/tmp/repo"),
             219,
             "Existing docs body",
-            &|_, cycle| {
-                Ok(format!(
-                    "## Commit receipts — Cycle {}\n\n| Step | Receipt |",
-                    cycle
-                ))
-            },
+            successful_receipt_loader,
         );
 
         assert_eq!(
@@ -442,7 +446,7 @@ mod tests {
             Path::new("/tmp/repo"),
             219,
             "Existing docs body",
-            &|_, _| Err("cycle-receipts unavailable".to_string()),
+            failing_receipt_loader,
         );
 
         assert_eq!(body, "Existing docs body");

@@ -871,13 +871,15 @@ fn extract_present_receipts(content: &str) -> BTreeSet<String> {
     section
         .lines()
         .filter(|line| line.trim_start().starts_with('|'))
-        .filter(|line| !line.contains("------") && !line.contains("Receipt |"))
         .filter_map(|line| {
             let cells = line
                 .split('|')
                 .map(str::trim)
                 .filter(|cell| !cell.is_empty())
                 .collect::<Vec<_>>();
+            if cells.is_empty() || cells.iter().all(|cell| is_table_separator_cell(cell)) {
+                return None;
+            }
             cells
                 .get(1)
                 .and_then(|cell| extract_receipt_from_cell(cell))
@@ -892,8 +894,22 @@ fn extract_receipt_from_cell(cell: &str) -> Option<String> {
         return is_short_hex(receipt).then(|| receipt.to_string());
     }
 
-    let trimmed = cell.trim_matches(|character| matches!(character, '[' | ']'));
+    if let Some(bracket_end) = cell.find("](") {
+        let bracket_start = cell.find('[')?;
+        let receipt = cell[bracket_start + 1..bracket_end].trim_matches('`');
+        return is_short_hex(receipt).then(|| receipt.to_string());
+    }
+
+    let trimmed = cell.trim_matches(|character| matches!(character, '[' | ']' | '`'));
     is_short_hex(trimmed).then(|| trimmed.to_string())
+}
+
+fn is_table_separator_cell(cell: &str) -> bool {
+    let trimmed = cell.trim();
+    !trimmed.is_empty()
+        && trimmed
+            .chars()
+            .all(|character| matches!(character, '-' | ':' | ' '))
 }
 
 fn is_short_hex(value: &str) -> bool {
@@ -1462,6 +1478,14 @@ mod tests {
         assert!(
             !hashes.contains(&"1234567".to_string()),
             "should not extract pure numeric string"
+        );
+    }
+
+    #[test]
+    fn extract_receipt_from_cell_supports_plain_markdown_links() {
+        assert_eq!(
+            extract_receipt_from_cell("[abc1234](https://example.com/abc1234)"),
+            Some("abc1234".to_string())
         );
     }
 
