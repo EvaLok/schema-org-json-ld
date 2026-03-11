@@ -1700,6 +1700,28 @@ mod tests {
     }
 
     #[test]
+    fn state_snapshot_divergence_check_warns_for_dispatch_log_latest_temporal_drift() {
+        let master_state = json!({
+            "copilot_metrics": { "dispatch_log_latest": "2026-03-11T18:00:00Z" }
+        });
+        let pr_state = json!({
+            "copilot_metrics": { "dispatch_log_latest": "2026-03-11T17:00:00Z" }
+        });
+
+        let result = evaluate_state_snapshot_freshness_with_fields(
+            &master_state,
+            &pr_state,
+            TEMPORAL_STATE_SNAPSHOT_FIELDS,
+            QUALITY_STATE_SNAPSHOT_FIELDS,
+        );
+
+        assert_eq!(result.status, CheckStatus::Warn);
+        assert!(result.detail.contains(
+            "copilot_metrics.dispatch_log_latest: master=\"2026-03-11T18:00:00Z\", pr=\"2026-03-11T17:00:00Z\""
+        ));
+    }
+
+    #[test]
     fn in_flight_check_warns_when_state_has_advanced_since_dispatch() {
         let repo_root = create_temp_repo_root_with_in_flight(2);
         let result = check_in_flight_matches(&repo_root, Some("## Current state\nIn-flight: 1"));
