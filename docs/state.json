@@ -3024,8 +3024,8 @@
     "cycle": 229,
     "doc_issue": null,
     "doc_pr": null,
-    "phase": "complete",
-    "phase_entered_at": "2026-03-11T18:28:27Z",
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-11T18:31:08Z",
     "review_iteration": null,
     "review_max": 3
   },
@@ -3134,11 +3134,11 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 228"
+        "last_refreshed": "cycle 229"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 228"
+        "last_refreshed": "cycle 229"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -3146,7 +3146,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 228"
+        "last_refreshed": "cycle 229"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -3166,7 +3166,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 227"
+        "last_refreshed": "cycle 229"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -3174,7 +3174,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 227"
+        "last_refreshed": "cycle 229"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -3194,7 +3194,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 227"
+        "last_refreshed": "cycle 229"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -3202,7 +3202,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 227"
+        "last_refreshed": "cycle 229"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -3210,7 +3210,7 @@
       },
       "schema_status.planned_next": {
         "cadence": "after planning or completing types",
-        "last_refreshed": "cycle 227"
+        "last_refreshed": "cycle 229"
       },
       "schema_status.property_gap_audit": {
         "cadence": "after property gap fixes",
@@ -3222,7 +3222,7 @@
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
-        "last_refreshed": "cycle 227"
+        "last_refreshed": "cycle 229"
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
@@ -3262,22 +3262,22 @@
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
-        "last_refreshed": "cycle 227"
+        "last_refreshed": "cycle 229"
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 227"
+        "last_refreshed": "cycle 229"
       }
     }
   },
   "last_cycle": {
-    "duration_minutes": 15,
+    "duration_minutes": 13,
     "issue": 1060,
     "number": 229,
-    "summary": "Processed cycle 227 review (3 findings, 4/5, all accepted). Merged PRs #1052 (write-entry fixes), #1054 (validate-docs tool), #1056 (review artifact). Fixed older journal entries with broken links and duplicated headings. Cleaned 3 dead branches.",
-    "timestamp": "2026-03-11T18:17:57Z"
+    "summary": "Processed cycle 228 review (2/5). Merged review artifact PR #1059. Accepted audit #202 and dispatched pipeline-check fix #1062. Structural fix for chronic process-adherence: using dispatch-docs for documentation.",
+    "timestamp": "2026-03-11T18:31:08Z"
   },
-  "last_eva_comment_check": "2026-03-11T18:17:57Z",
+  "last_eva_comment_check": "2026-03-11T18:31:08Z",
   "last_tool_audit_cycle": 222,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
