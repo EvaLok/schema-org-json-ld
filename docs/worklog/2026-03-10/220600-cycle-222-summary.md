@@ -30,7 +30,7 @@
 
 ## Current state
 
-- **In-flight agent sessions**: 0
+- **In-flight agent sessions**: 1
 - **Pipeline status**: FAIL (`bash tools/pipeline-check --cycle 222` still reports `step-comments` failing on [#996](https://github.com/EvaLok/schema-org-json-ld/issues/996): found 1 unique step comment and missing startup steps 0.5, 0.6, 1, 1.1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
 - **Copilot metrics**: 292 dispatches, 287 PRs produced, 285 merged, 292 resolved, 0 in flight, 1 reviewed awaiting Eva, 98.3% dispatch-to-PR rate, 99.3% PR merge rate, 5 revision rounds, 3 closed without PR, 3 closed without merge
 - **Publish gate**: published (v1.0.2, published 2026-03-07 by EvaLok; source_diverged=false; QC ack EvaLok/schema-org-json-ld-qc#225)
