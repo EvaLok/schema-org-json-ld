@@ -4,7 +4,7 @@ use serde::Serialize;
 use serde_json::{json, Value};
 use state_schema::{
     commit_state_json, current_cycle_from_state, read_state_value, set_value_at_pointer,
-    write_state_value, StateJson,
+    transition_cycle_phase, write_state_value, StateJson,
 };
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -503,10 +503,29 @@ fn apply_state_patch(state_value: &mut Value, patch: &StatePatch) -> Result<Vec<
 
 fn apply_cycle_patch(repo_root: &Path, patch: &StatePatch) -> Result<Vec<String>, String> {
     let mut state_value = read_state_value(repo_root)?;
-    let changed_paths = apply_state_patch(&mut state_value, patch)?;
+    let mut changed_paths = apply_state_patch(&mut state_value, patch)?;
+    apply_close_out_phase_transition(&mut state_value)?;
+    for path in [
+        "/cycle_phase/phase",
+        "/cycle_phase/phase_entered_at",
+        "/cycle_phase/cycle",
+        "/field_inventory/fields/cycle_phase/last_refreshed",
+    ] {
+        if !changed_paths.iter().any(|existing| existing == path) {
+            changed_paths.push(path.to_string());
+        }
+    }
     write_state_value(repo_root, &state_value)?;
 
     Ok(changed_paths)
+}
+
+fn apply_close_out_phase_transition(state_value: &mut Value) -> Result<(), String> {
+    let cycle = state_value
+        .pointer("/cycle_phase/cycle")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| "missing numeric /cycle_phase/cycle in docs/state.json".to_string())?;
+    transition_cycle_phase(state_value, cycle, "close_out")
 }
 
 fn print_patch_apply_summary(changed_paths: &[String]) {
@@ -1091,7 +1110,10 @@ mod tests {
             "copilot_metrics.pr_merge_rate",
         ]);
 
-        let actual_fields = EVENT_DRIVEN_AUTO_REFRESH_FIELDS.iter().copied().collect::<BTreeSet<_>>();
+        let actual_fields = EVENT_DRIVEN_AUTO_REFRESH_FIELDS
+            .iter()
+            .copied()
+            .collect::<BTreeSet<_>>();
 
         assert_eq!(actual_fields, expected_fields);
     }
@@ -1225,6 +1247,53 @@ mod tests {
         assert_eq!(
             raw_state
                 .pointer("/field_inventory/fields/review_agent/last_refreshed")
+                .and_then(Value::as_str),
+            Some("cycle 153")
+        );
+    }
+
+    #[test]
+    fn close_out_transition_updates_cycle_phase_after_state_patch() {
+        let patch = StatePatch {
+            updates: vec![PatchUpdate {
+                path: "/last_cycle/summary".to_string(),
+                value: json!("custom summary"),
+            }],
+        };
+        let mut raw_state = json!({
+            "last_cycle": {
+                "summary": "old summary"
+            },
+            "cycle_phase": {
+                "cycle": 153,
+                "phase": "work",
+                "phase_entered_at": "2026-03-05T00:00:00Z"
+            },
+            "field_inventory": {
+                "fields": {
+                    "cycle_phase": {"last_refreshed": "cycle 152"}
+                }
+            }
+        });
+
+        apply_state_patch(&mut raw_state, &patch).expect("state patch should apply cleanly");
+        apply_close_out_phase_transition(&mut raw_state)
+            .expect("close out transition should apply cleanly");
+
+        assert_eq!(
+            raw_state.pointer("/cycle_phase/phase"),
+            Some(&json!("close_out"))
+        );
+        assert_eq!(raw_state.pointer("/cycle_phase/cycle"), Some(&json!(153)));
+        assert_ne!(
+            raw_state
+                .pointer("/cycle_phase/phase_entered_at")
+                .and_then(Value::as_str),
+            Some("2026-03-05T00:00:00Z")
+        );
+        assert_eq!(
+            raw_state
+                .pointer("/field_inventory/fields/cycle_phase/last_refreshed")
                 .and_then(Value::as_str),
             Some("cycle 153")
         );
