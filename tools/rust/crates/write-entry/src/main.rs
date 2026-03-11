@@ -14,6 +14,13 @@ const AUDIT_ISSUES_URL: &str = "https://github.com/EvaLok/schema-org-json-ld-aud
 const PRIMARY_COMMITS_URL: &str = "https://github.com/EvaLok/schema-org-json-ld/commit";
 const JOURNAL_DESCRIPTION: &str = "Reflective log for the schema-org-json-ld orchestrator.";
 const NOT_PROVIDED: &str = "Not provided.";
+const INFRASTRUCTURE_ROOTS: [&str; 2] = ["tools", ".claude/skills"];
+const INFRASTRUCTURE_FILES: [&str; 4] = [
+    "STARTUP_CHECKLIST.md",
+    "COMPLETION_CHECKLIST.md",
+    "AGENTS.md",
+    "AGENTS-ts.md",
+];
 
 #[derive(Parser)]
 #[command(name = "write-entry")]
@@ -601,7 +608,7 @@ fn extract_issue_references(item: &str) -> Vec<u64> {
             }
         }
 
-        index = end.max(index + 1);
+        index = if end > start { end } else { index + 1 };
     }
 
     issues
@@ -622,12 +629,8 @@ fn derive_self_modifications(repo_root: &Path, cycle: u64) -> Result<Vec<SelfMod
         .arg("--name-only")
         .arg(format!("{start_commit}..HEAD"))
         .arg("--")
-        .arg("tools")
-        .arg("STARTUP_CHECKLIST.md")
-        .arg("COMPLETION_CHECKLIST.md")
-        .arg("AGENTS.md")
-        .arg("AGENTS-ts.md")
-        .arg(".claude/skills")
+        .args(INFRASTRUCTURE_ROOTS)
+        .args(INFRASTRUCTURE_FILES)
         .current_dir(repo_root)
         .output()
         .map_err(|error| {
@@ -662,13 +665,10 @@ fn parse_infrastructure_self_modifications(diff_output: &str) -> Vec<SelfModific
 }
 
 fn is_infrastructure_path(path: &str) -> bool {
-    matches!(
-        path,
-        "STARTUP_CHECKLIST.md" | "COMPLETION_CHECKLIST.md" | "AGENTS.md" | "AGENTS-ts.md"
-    ) || path == "tools"
-        || path.starts_with("tools/")
-        || path == ".claude/skills"
-        || path.starts_with(".claude/skills/")
+    INFRASTRUCTURE_FILES.contains(&path)
+        || INFRASTRUCTURE_ROOTS
+            .iter()
+            .any(|root| path == *root || path.starts_with(&format!("{root}/")))
 }
 
 fn find_cycle_start_commit(repo_root: &Path, cycle: u64) -> Result<String, String> {
@@ -722,8 +722,8 @@ fn parse_git_history_line(line: &str) -> Result<GitHistoryEntry, String> {
         .next()
         .ok_or_else(|| format!("invalid git log line (missing subject): {}", line))?;
 
-    if full_sha.len() < 7 {
-        return Err(format!("git sha must be at least 7 characters: {}", full_sha));
+    if full_sha.len() != 40 {
+        return Err(format!("git sha must be 40 characters: {}", full_sha));
     }
 
     Ok(GitHistoryEntry {
@@ -2164,6 +2164,15 @@ mod tests {
         assert_eq!(receipts[0].receipt, "abc1234");
         assert_eq!(receipts[1].tool, "process-merge");
         assert_eq!(receipts[1].receipt, "def5678");
+    }
+
+    #[test]
+    fn parse_git_history_line_rejects_non_full_sha_values() {
+        let error =
+            parse_git_history_line("abc1234\t2026-03-06T01:05:00Z\tstate(cycle-start): start")
+                .unwrap_err();
+
+        assert!(error.contains("git sha must be 40 characters"));
     }
 
     #[test]
