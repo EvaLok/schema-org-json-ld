@@ -904,13 +904,15 @@ fn check_chronic_verification_deadline(state: &StateJson) -> CheckResult {
 
         let category = match entry.get("category").and_then(Value::as_str) {
             Some(value) => value,
-            None => return warn(
-                "chronic_verification_deadline",
-                format!(
+            None => {
+                return warn(
+                    "chronic_verification_deadline",
+                    format!(
                     "missing field: review_agent.chronic_category_responses.entries[{}].category",
                     entry_index
                 ),
-            ),
+                )
+            }
         };
 
         let added_cycle = match entry.get("added_cycle").and_then(Value::as_i64) {

@@ -192,7 +192,10 @@ fn compute_update(state: &Value, cycle: u64, prs: &[u64]) -> Result<MergeUpdate,
 }
 
 fn format_percentage(numerator: i64, denominator: i64) -> String {
-    debug_assert!(numerator >= 0, "copilot metric numerators must be non-negative");
+    debug_assert!(
+        numerator >= 0,
+        "copilot metric numerators must be non-negative"
+    );
     debug_assert!(
         denominator >= 0,
         "copilot metric denominators must be non-negative"

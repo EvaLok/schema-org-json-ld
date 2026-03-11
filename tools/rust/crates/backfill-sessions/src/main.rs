@@ -170,8 +170,8 @@ fn build_agent_session(
     issue: &IssueRecord,
     prs: &[PullRequestRecord],
 ) -> Result<AgentSession, String> {
-    let issue_number =
-        i64::try_from(issue.number).map_err(|_| format!("issue #{} does not fit in i64", issue.number))?;
+    let issue_number = i64::try_from(issue.number)
+        .map_err(|_| format!("issue #{} does not fit in i64", issue.number))?;
 
     let linked_pr = find_linked_pr(issue, prs);
     let (status, pr, merged_at) = match linked_pr {
@@ -238,7 +238,12 @@ fn find_linked_pr<'a>(
                 STATUS_RANK_OPEN
             };
 
-            Some((match_strength, status_rank, proximity_to_issue(issue.number, pr.number), pr))
+            Some((
+                match_strength,
+                status_rank,
+                proximity_to_issue(issue.number, pr.number),
+                pr,
+            ))
         })
         .max_by(|left, right| {
             left.0
@@ -265,7 +270,10 @@ fn pr_body_closes_issue(body: &str, issue_number: u64) -> bool {
         let mut search = lower.as_str();
         while let Some(position) = search.find(keyword) {
             let rest = &search[position + keyword.len()..];
-            if refs.iter().any(|value| contains_tag_at_word_boundary(rest, value)) {
+            if refs
+                .iter()
+                .any(|value| contains_tag_at_word_boundary(rest, value))
+            {
                 return true;
             }
             search = rest;
@@ -276,10 +284,12 @@ fn pr_body_closes_issue(body: &str, issue_number: u64) -> bool {
 
 fn branch_matches_issue(branch: &str, issue_title: &str) -> bool {
     let branch_slug = slugify(branch.rsplit('/').next().unwrap_or(branch));
-    title_branch_candidates(issue_title).into_iter().any(|candidate| {
-        candidate.len() >= MIN_BRANCH_CANDIDATE_LENGTH
-            && (branch_slug.contains(&candidate) || candidate.contains(&branch_slug))
-    })
+    title_branch_candidates(issue_title)
+        .into_iter()
+        .any(|candidate| {
+            candidate.len() >= MIN_BRANCH_CANDIDATE_LENGTH
+                && (branch_slug.contains(&candidate) || candidate.contains(&branch_slug))
+        })
 }
 
 fn title_branch_candidates(title: &str) -> Vec<String> {
@@ -317,8 +327,17 @@ fn strip_phase_prefix(slug: &str) -> Option<String> {
 
 fn trim_stop_word_prefix(slug: &str) -> Option<String> {
     let stop_words = [
-        "add", "build", "create", "extend", "fix", "implement", "keep", "port", "refactor",
-        "standardize", "update",
+        "add",
+        "build",
+        "create",
+        "extend",
+        "fix",
+        "implement",
+        "keep",
+        "port",
+        "refactor",
+        "standardize",
+        "update",
     ];
     for word in stop_words {
         let prefix = format!("{}-", word);
@@ -382,7 +401,10 @@ fn flatten_paginated_items(value: Value) -> Result<Vec<Value>, String> {
 }
 
 fn fetch_closed_agent_task_issues() -> Result<Vec<IssueRecord>, String> {
-    let endpoint = format!("repos/{}/issues?labels=agent-task&state=closed&per_page=100", REPO);
+    let endpoint = format!(
+        "repos/{}/issues?labels=agent-task&state=closed&per_page=100",
+        REPO
+    );
     let value = gh_json(&["api", &endpoint, "--paginate", "--slurp"])?;
     let items = flatten_paginated_items(value)?;
 
@@ -403,7 +425,8 @@ fn fetch_pull_requests() -> Result<Vec<PullRequestRecord>, String> {
     let value = gh_json(&["api", &endpoint, "--paginate", "--slurp"])?;
     let items = flatten_paginated_items(value)?;
 
-    items.into_iter()
+    items
+        .into_iter()
         .map(|item| {
             serde_json::from_value::<PullRequestRecord>(item)
                 .map_err(|error| format!("failed to parse pull request response: {}", error))
@@ -457,8 +480,8 @@ fn validate_repo_root(repo_root: &Path) -> Result<(), String> {
 
 fn read_state_json(repo_root: &Path) -> Result<StateJson, String> {
     let path = state_path(repo_root);
-    let content =
-        fs::read_to_string(&path).map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
+    let content = fs::read_to_string(&path)
+        .map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
     serde_json::from_str::<StateJson>(&content)
         .map_err(|error| format!("failed to parse {}: {}", path.display(), error))
 }
@@ -477,7 +500,10 @@ fn describe_session(session: &AgentSession) -> String {
 
     match (session.pr, session.merged_at.as_deref()) {
         (Some(pr), Some(merged_at)) => {
-            format!("{} [{}] {} -> PR #{} merged at {}", issue, status, title, pr, merged_at)
+            format!(
+                "{} [{}] {} -> PR #{} merged at {}",
+                issue, status, title, pr, merged_at
+            )
         }
         (Some(pr), None) => format!("{} [{}] {} -> PR #{}", issue, status, title, pr),
         (None, _) => format!("{} [{}] {}", issue, status, title),
@@ -514,7 +540,10 @@ mod tests {
             "Fixes EvaLok/schema-org-json-ld#303 as requested.",
             303
         ));
-        assert!(!pr_body_closes_issue("References #680 but does not close it.", 680));
+        assert!(!pr_body_closes_issue(
+            "References #680 but does not close it.",
+            680
+        ));
     }
 
     #[test]
@@ -579,7 +608,8 @@ mod tests {
         let prs = vec![
             PullRequestRecord {
                 number: 675,
-                title: "Keep `agent_sessions` in sync across dispatch and merge tooling".to_string(),
+                title: "Keep `agent_sessions` in sync across dispatch and merge tooling"
+                    .to_string(),
                 state: "closed".to_string(),
                 body: Some("Fixes EvaLok/schema-org-json-ld#674".to_string()),
                 merged_at: Some("2026-03-07T15:12:15Z".to_string()),
@@ -599,7 +629,8 @@ mod tests {
             },
         ];
 
-        let plan = build_backfill_plan(&existing_sessions, &issues, &prs).expect("plan should build");
+        let plan =
+            build_backfill_plan(&existing_sessions, &issues, &prs).expect("plan should build");
         assert_eq!(plan.already_tracked, 1);
         assert_eq!(plan.new_sessions.len(), 3);
 
