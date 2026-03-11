@@ -28,7 +28,7 @@
 
 ## Current state
 
-- **In-flight agent sessions**: 1
+- **In-flight agent sessions**: 2
 - **Pipeline status**: PASS (`bash tools/pipeline-check --cycle 223` reports one warning: housekeeping findings)
 - **Copilot metrics**: 296 dispatches, 288 PRs produced, 286 merged, 293 resolved, 3 in flight, 1 reviewed awaiting Eva, 97.3% dispatch-to-PR rate, 99.3% PR merge rate, 5 revision rounds, 3 closed without PR, 3 closed without merge
 - **Publish gate**: published (v1.0.2, published 2026-03-07 by EvaLok; source_diverged=false; [QC #225](https://github.com/EvaLok/schema-org-json-ld-qc/issues/225))
