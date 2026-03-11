@@ -2710,8 +2710,10 @@
     {
       "dispatched_at": "2026-03-11T06:26:31Z",
       "issue": 1024,
+      "merged_at": "2026-03-11T08:12:54Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1025,
+      "status": "merged",
       "title": "check-doc-pr temporal-divergence classification (audit #193)"
     },
     {
@@ -2894,12 +2896,12 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1028 [Cycle Docs] Cycle 224 worklog and journal (cycle 224)",
-    "dispatch_to_pr_rate": "97.3%",
-    "in_flight": 3,
-    "merged": 291,
+    "dispatch_to_pr_rate": "97.7%",
+    "in_flight": 2,
+    "merged": 292,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 293,
-    "resolved": 298,
+    "produced_pr": 294,
+    "resolved": 299,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 301
