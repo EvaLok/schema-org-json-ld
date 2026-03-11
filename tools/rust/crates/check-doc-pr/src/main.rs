@@ -1664,6 +1664,9 @@ mod tests {
     fn state_snapshot_monitored_field_constants_are_non_empty_and_use_json_pointers() {
         assert!(!TEMPORAL_STATE_SNAPSHOT_FIELDS.is_empty());
         assert!(!QUALITY_STATE_SNAPSHOT_FIELDS.is_empty());
+        assert!(QUALITY_STATE_SNAPSHOT_FIELDS
+            .iter()
+            .all(|field| !TEMPORAL_STATE_SNAPSHOT_FIELDS.contains(field)));
 
         for fields in [
             TEMPORAL_STATE_SNAPSHOT_FIELDS,
