@@ -2778,8 +2778,10 @@
     {
       "dispatched_at": "2026-03-11T12:19:39Z",
       "issue": 1044,
+      "merged_at": "2026-03-11T12:33:24Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1046,
+      "status": "merged",
       "title": "Improve write-entry auto-derivation"
     }
   ],
@@ -2950,12 +2952,12 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1044 Improve write-entry auto-derivation (cycle 226)",
-    "dispatch_to_pr_rate": "97.4%",
-    "in_flight": 3,
-    "merged": 297,
+    "dispatch_to_pr_rate": "97.7%",
+    "in_flight": 2,
+    "merged": 298,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 299,
-    "resolved": 304,
+    "produced_pr": 300,
+    "resolved": 305,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 307
