@@ -2765,6 +2765,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Cycle 225 adversarial review"
+    },
+    {
+      "dispatched_at": "2026-03-11T12:19:36Z",
+      "issue": 1043,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix cycle-complete and record-dispatch phase transitions"
     }
   ],
   "audit_dropped": [
@@ -2933,16 +2940,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1039 Cycle 225 adversarial review (cycle 225)",
-    "dispatch_to_pr_rate": "97.7%",
-    "in_flight": 2,
+    "dispatch_log_latest": "#1043 Fix cycle-complete and record-dispatch phase transitions (cycle 226)",
+    "dispatch_to_pr_rate": "97.4%",
+    "in_flight": 3,
     "merged": 296,
     "pr_merge_rate": "99.3%",
     "produced_pr": 298,
     "resolved": 303,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 305
+    "total_dispatches": 306
   },
   "cycle_phase": {
     "cycle": 226,
@@ -3042,15 +3049,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 225"
+        "last_refreshed": "cycle 226"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 225"
+        "last_refreshed": "cycle 226"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 225"
+        "last_refreshed": "cycle 226"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
