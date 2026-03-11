@@ -2747,6 +2747,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "check-doc-pr: populate quality fields and add unit tests"
+    },
+    {
+      "dispatched_at": "2026-03-11T10:21:14Z",
+      "issue": 1036,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "refresh-field-inventory: replace fail-open default with explicit handling and add tests"
     }
   ],
   "audit_dropped": [
@@ -2914,16 +2921,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1035 check-doc-pr: populate quality fields and add unit tests (cycle 225)",
-    "dispatch_to_pr_rate": "97.7%",
-    "in_flight": 2,
+    "dispatch_log_latest": "#1036 refresh-field-inventory: replace fail-open default with explicit handling and add tests (cycle 225)",
+    "dispatch_to_pr_rate": "97.4%",
+    "in_flight": 3,
     "merged": 294,
     "pr_merge_rate": "99.3%",
     "produced_pr": 296,
     "resolved": 301,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 303
+    "total_dispatches": 304
   },
   "cycle_phase": {
     "cycle": 225,

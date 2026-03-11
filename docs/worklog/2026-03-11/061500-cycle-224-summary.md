@@ -28,7 +28,7 @@
 
 ## Current state
 
-- **In-flight agent sessions**: 2
+- **In-flight agent sessions**: 3
 - **Pipeline status**: PASS (`bash tools/pipeline-check --cycle 224`) with 2 warnings: one housekeeping finding and one phased-resumption `step-comments` warning on [#1018](https://github.com/EvaLok/schema-org-json-ld/issues/1018)
 - **Copilot metrics**: 300 dispatches, 293 PRs produced, 291 merged, 298 resolved, 2 in flight, 1 reviewed awaiting Eva, 97.7% dispatch-to-PR rate, 99.3% PR merge rate, 5 revision rounds, 3 closed without PR, 3 closed without merge
 - **External activity**: No new QC or Eva work was processed this cycle beyond honoring standing directives; `open_questions_for_eva` remains empty, the QC backlog is unchanged, and both active dispatches are pipeline-excellence work under Eva directives [#808](https://github.com/EvaLok/schema-org-json-ld/issues/808) and [#436](https://github.com/EvaLok/schema-org-json-ld/issues/436)
