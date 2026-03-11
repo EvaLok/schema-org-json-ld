@@ -40,7 +40,16 @@ const TEMPORAL_STATE_SNAPSHOT_FIELDS: &[(&str, &str)] = &[
 
 // Currently no quality fields are monitored in the master-vs-PR snapshot diff.
 // Add only fields here that should never diverge between doc dispatch and doc review.
-const QUALITY_STATE_SNAPSHOT_FIELDS: &[(&str, &str)] = &[];
+const QUALITY_STATE_SNAPSHOT_FIELDS: &[(&str, &str)] = &[
+    ("last_cycle.summary", "/last_cycle/summary"),
+    ("last_cycle.timestamp", "/last_cycle/timestamp"),
+    ("last_cycle.number", "/last_cycle/number"),
+    ("last_cycle.issue", "/last_cycle/issue"),
+    (
+        "copilot_metrics.dispatch_log_latest",
+        "/copilot_metrics/dispatch_log_latest",
+    ),
+];
 
 #[derive(Debug, Parser)]
 #[command(name = "check-doc-pr")]
@@ -1459,6 +1468,36 @@ mod tests {
     }
 
     #[test]
+    fn state_snapshot_divergence_check_with_fields_passes_when_no_divergences_exist() {
+        let master_state = json!({
+            "last_cycle": {
+                "summary": "Cycle complete",
+                "number": 224
+            }
+        });
+        let pr_state = json!({
+            "last_cycle": {
+                "summary": "Cycle complete",
+                "number": 224
+            }
+        });
+
+        let result = evaluate_state_snapshot_freshness_with_fields(
+            &master_state,
+            &pr_state,
+            &[("last_cycle.summary", "/last_cycle/summary")],
+            &[("last_cycle.number", "/last_cycle/number")],
+        );
+
+        assert_eq!(result.check, "state_snapshot_freshness");
+        assert_eq!(result.status, CheckStatus::Pass);
+        assert_eq!(
+            result.detail,
+            "Master and PR state snapshots match for monitored fields"
+        );
+    }
+
+    #[test]
     fn state_snapshot_divergence_check_warns_for_temporal_divergences_only() {
         let master_state = json!({
             "cycle_phase": { "phase": "close_out" },
@@ -1517,6 +1556,29 @@ mod tests {
     }
 
     #[test]
+    fn state_snapshot_divergence_check_with_fields_warns_for_temporal_divergences_only() {
+        let master_state = json!({
+            "cycle_phase": { "phase": "close_out" }
+        });
+        let pr_state = json!({
+            "cycle_phase": { "phase": "doc_review" }
+        });
+
+        let result = evaluate_state_snapshot_freshness_with_fields(
+            &master_state,
+            &pr_state,
+            &[("cycle_phase.phase", "/cycle_phase/phase")],
+            &[],
+        );
+
+        assert_eq!(result.status, CheckStatus::Warn);
+        assert_eq!(
+            result.detail,
+            "Temporal divergences (expected): cycle_phase.phase: master=\"close_out\", pr=\"doc_review\""
+        );
+    }
+
+    #[test]
     fn state_snapshot_divergence_check_fails_for_quality_divergences() {
         let master_state = json!({
             "last_cycle": { "cycle": 223 }
@@ -1563,6 +1625,71 @@ mod tests {
         assert!(result.detail.contains(
             "Temporal divergences (expected): cycle_phase.phase: master=\"close_out\", pr=\"doc_dispatched\""
         ));
+    }
+
+    #[test]
+    fn find_state_snapshot_divergences_reports_pointer_value_differences() {
+        let master_state = json!({
+            "last_cycle": {
+                "summary": "Cycle 224 closed",
+                "timestamp": "2026-03-11T10:00:00Z"
+            }
+        });
+        let pr_state = json!({
+            "last_cycle": {
+                "summary": "Cycle 224 drafted"
+            }
+        });
+
+        let divergences = find_state_snapshot_divergences(
+            &master_state,
+            &pr_state,
+            &[
+                ("last_cycle.summary", "/last_cycle/summary"),
+                ("last_cycle.timestamp", "/last_cycle/timestamp"),
+            ],
+        );
+
+        assert_eq!(
+            divergences,
+            vec![
+                "last_cycle.summary: master=\"Cycle 224 closed\", pr=\"Cycle 224 drafted\""
+                    .to_string(),
+                "last_cycle.timestamp: master=\"2026-03-11T10:00:00Z\", pr=missing".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn state_snapshot_monitored_field_constants_are_non_empty_and_use_json_pointers() {
+        assert!(!TEMPORAL_STATE_SNAPSHOT_FIELDS.is_empty());
+        assert!(!QUALITY_STATE_SNAPSHOT_FIELDS.is_empty());
+
+        for fields in [
+            TEMPORAL_STATE_SNAPSHOT_FIELDS,
+            QUALITY_STATE_SNAPSHOT_FIELDS,
+        ] {
+            for (label, pointer) in fields {
+                assert!(!label.is_empty());
+                assert!(pointer.starts_with('/'));
+            }
+        }
+    }
+
+    #[test]
+    fn quality_state_snapshot_fields_include_cycle_defining_fields() {
+        for required_field in [
+            ("last_cycle.summary", "/last_cycle/summary"),
+            ("last_cycle.timestamp", "/last_cycle/timestamp"),
+            ("last_cycle.number", "/last_cycle/number"),
+            ("last_cycle.issue", "/last_cycle/issue"),
+            (
+                "copilot_metrics.dispatch_log_latest",
+                "/copilot_metrics/dispatch_log_latest",
+            ),
+        ] {
+            assert!(QUALITY_STATE_SNAPSHOT_FIELDS.contains(&required_field));
+        }
     }
 
     #[test]
