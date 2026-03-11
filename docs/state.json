@@ -2686,6 +2686,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix pipeline-check: resumption Step 0 should not satisfy startup coverage"
+    },
+    {
+      "dispatched_at": "2026-03-11T03:08:21Z",
+      "issue": 1016,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Docs] Cycle 223 worklog and journal"
     }
   ],
   "audit_dropped": [
@@ -2850,24 +2857,24 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1013 Fix pipeline-check: resumption Step 0 should not satisfy startup coverage (cycle 223)",
-    "dispatch_to_pr_rate": "97.3%",
-    "in_flight": 3,
+    "dispatch_log_latest": "#1016 [Cycle Docs] Cycle 223 worklog and journal (cycle 223)",
+    "dispatch_to_pr_rate": "97.0%",
+    "in_flight": 4,
     "merged": 286,
     "pr_merge_rate": "99.3%",
     "produced_pr": 288,
     "resolved": 293,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 296
+    "total_dispatches": 297
   },
   "cycle_phase": {
     "cycle": 223,
-    "doc_issue": null,
+    "doc_issue": 1016,
     "doc_pr": null,
-    "phase": "work",
-    "phase_entered_at": "2026-03-11T02:54:44Z",
-    "review_iteration": null,
+    "phase": "doc_dispatched",
+    "phase_entered_at": "2026-03-11T03:08:21Z",
+    "review_iteration": 0,
     "review_max": 3
   },
   "eva_input_issues": {
