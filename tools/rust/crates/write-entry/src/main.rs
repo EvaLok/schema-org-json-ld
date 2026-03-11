@@ -750,7 +750,7 @@ fn find_first_commit_after_cycle_timestamp(
         .phase_entered_at
         .as_deref()
         .ok_or_else(|| {
-            "missing docs/state.json cycle_phase.phase_entered_at for current cycle; cannot derive self-modifications without a cycle-start receipt".to_string()
+            "missing docs/state.json cycle_phase.phase_entered_at for current cycle; cannot derive self-modifications without a cycle-phase timestamp".to_string()
         })?;
     let cycle_start = parse_timestamp(timestamp, "docs/state.json cycle_phase.phase_entered_at")?;
 
