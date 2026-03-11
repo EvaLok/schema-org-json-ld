@@ -3089,7 +3089,7 @@
     "fields": {
       "audit_dropped": {
         "cadence": "after dropping a previously accepted audit recommendation",
-        "last_refreshed": "cycle 217"
+        "last_refreshed": "cycle 228"
       },
       "audit_processed": {
         "cadence": "after processing audit issues",
@@ -3117,11 +3117,11 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 227"
+        "last_refreshed": "cycle 228"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 227"
+        "last_refreshed": "cycle 228"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -3129,7 +3129,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 227"
+        "last_refreshed": "cycle 228"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -3254,11 +3254,11 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 18,
+    "duration_minutes": 15,
     "issue": 1057,
     "number": 228,
-    "summary": "Processed cycle 226 review (4 findings, 4/5, all accepted). Accepted audit #200 (journal template bugs). Dispatched #1051 (write-entry fixes) and #1053 (validate-docs tool). Fixed stale in-flight counter. Cleaned 3 dead branches.",
-    "timestamp": "2026-03-11T16:17:25Z"
+    "summary": "Processed cycle 227 review (3 findings, 4/5, all accepted). Merged PRs #1052 (write-entry fixes), #1054 (validate-docs tool), #1056 (review artifact). Fixed older journal entries with broken links and duplicated headings. Cleaned 3 dead branches.",
+    "timestamp": "2026-03-11T16:32:00Z"
   },
   "last_eva_comment_check": "2026-03-11T16:17:25Z",
   "last_tool_audit_cycle": 222,
