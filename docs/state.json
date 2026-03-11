@@ -4662,9 +4662,24 @@
         "deferred": 0,
         "finding_count": 3,
         "ignored": 0
+      },
+      {
+        "actioned": 4,
+        "categories": [
+          "worklog-accuracy",
+          "receipt-integrity",
+          "process-adherence",
+          "state-integrity",
+          "code-quality"
+        ],
+        "complacency_score": 3,
+        "cycle": 229,
+        "deferred": 1,
+        "finding_count": 5,
+        "ignored": 0
       }
     ],
-    "last_review_cycle": 228
+    "last_review_cycle": 229
   },
   "schema_status": {
     "directory_layout": {
