@@ -2733,6 +2733,13 @@
       "pr": 1029,
       "status": "merged",
       "title": "[Cycle Docs] Cycle 224 worklog and journal"
+    },
+    {
+      "dispatched_at": "2026-03-11T08:16:54Z",
+      "issue": 1031,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 224 review"
     }
   ],
   "audit_dropped": [
@@ -2899,16 +2906,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1028 [Cycle Docs] Cycle 224 worklog and journal (cycle 224)",
-    "dispatch_to_pr_rate": "98.3%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1031 Cycle 224 review (cycle 224)",
+    "dispatch_to_pr_rate": "98.0%",
+    "in_flight": 1,
     "merged": 294,
     "pr_merge_rate": "99.3%",
     "produced_pr": 296,
     "resolved": 301,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 301
+    "total_dispatches": 302
   },
   "cycle_phase": {
     "cycle": 224,
