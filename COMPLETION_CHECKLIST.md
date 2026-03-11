@@ -250,29 +250,31 @@ When resuming with `cycle_phase.phase = "doc_dispatched"` or `"doc_review"`:
 
 4. Run validation: `bash tools/check-doc-pr --pr N --cycle N`
 
-5. If all checks pass:
+5. If no quality failures (Warn-only or Pass):
    - Merge the PR
    - Run `process-merge` for the doc PR
    - Transition to close-out:
-     ```bash
-     bash tools/cycle-phase --cycle N --phase close_out
+      ```bash
+      bash tools/cycle-phase --cycle N --phase close_out
      ```
    - Proceed to Step 10.C
 
-6. If checks fail and `review_iteration < review_max`:
+6. If quality failures exist and `review_iteration < review_max`:
    - Post `@copilot` revision request listing specific failures
    - Transition back to doc_dispatched with incremented review_iteration:
-     ```bash
-     bash tools/cycle-phase --cycle N --phase doc_dispatched --review-iteration NEXT
-     ```
-     (where NEXT = current review_iteration + 1)
+      ```bash
+      bash tools/cycle-phase --cycle N --phase doc_dispatched --review-iteration NEXT
+      ```
+      (where NEXT = current review_iteration + 1)
    - End session
 
-7. If checks fail and `review_iteration >= review_max`:
+   - Temporal divergences (`Warn`) are expected and do not trigger the revision loop. Only quality failures (`Fail`) require revision.
+
+7. If quality failures exist and `review_iteration >= review_max`:
    - Merge the PR as-is (partial docs better than none)
    - Or fall back to `write-entry` (old path) to fix critical inaccuracies
    - Transition to close-out:
-     ```bash
+      ```bash
      bash tools/cycle-phase --cycle N --phase close_out
      ```
 
