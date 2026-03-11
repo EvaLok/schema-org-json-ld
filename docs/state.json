@@ -2863,8 +2863,10 @@
     {
       "dispatched_at": "2026-03-11T20:14:11Z",
       "issue": 1069,
+      "merged_at": "2026-03-11T20:23:27Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1070,
+      "status": "merged",
       "title": "Fix check-doc-pr: reclassify dispatch_log_latest as temporal field"
     }
   ],
@@ -3037,12 +3039,12 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1069 Fix check-doc-pr: reclassify dispatch_log_latest as temporal field (cycle 230)",
-    "dispatch_to_pr_rate": "98.1%",
-    "in_flight": 1,
-    "merged": 308,
+    "dispatch_to_pr_rate": "98.4%",
+    "in_flight": 0,
+    "merged": 309,
     "pr_merge_rate": "99.4%",
-    "produced_pr": 310,
-    "resolved": 315,
+    "produced_pr": 311,
+    "resolved": 316,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 316
