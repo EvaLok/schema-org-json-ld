@@ -2854,8 +2854,10 @@
     {
       "dispatched_at": "2026-03-11T18:49:01Z",
       "issue": 1066,
+      "merged_at": "2026-03-11T20:14:54Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1067,
+      "status": "merged",
       "title": "Cycle 229 adversarial review"
     },
     {
@@ -3035,12 +3037,12 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1069 Fix check-doc-pr: reclassify dispatch_log_latest as temporal field (cycle 230)",
-    "dispatch_to_pr_rate": "97.8%",
-    "in_flight": 2,
-    "merged": 307,
+    "dispatch_to_pr_rate": "98.1%",
+    "in_flight": 1,
+    "merged": 308,
     "pr_merge_rate": "99.4%",
-    "produced_pr": 309,
-    "resolved": 314,
+    "produced_pr": 310,
+    "resolved": 315,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 316
