@@ -2719,8 +2719,10 @@
     {
       "dispatched_at": "2026-03-11T06:28:57Z",
       "issue": 1026,
+      "merged_at": "2026-03-11T08:12:57Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1027,
+      "status": "merged",
       "title": "refresh-field-inventory Rust tool (pipeline automation)"
     },
     {
@@ -2896,12 +2898,12 @@
     "closed_without_merge": 3,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1028 [Cycle Docs] Cycle 224 worklog and journal (cycle 224)",
-    "dispatch_to_pr_rate": "97.7%",
-    "in_flight": 2,
-    "merged": 292,
+    "dispatch_to_pr_rate": "98.0%",
+    "in_flight": 1,
+    "merged": 293,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 294,
-    "resolved": 299,
+    "produced_pr": 295,
+    "resolved": 300,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 301
