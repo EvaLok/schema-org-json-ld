@@ -26,7 +26,7 @@
 
 ## Current state
 
-- **In-flight agent sessions**: 1
+- **In-flight agent sessions**: 2
 - **Pipeline status**: PASS (8/8)
 - **Cycle phase**: close_out
 - **Copilot metrics**: 313 dispatches, 307 produced PRs, 305 merged, 99.3% PR merge rate, 98.1% dispatch-to-PR rate, 312 resolved, 1 reviewed awaiting Eva, 5 revision rounds, 3 closed without merge, 3 closed without PR
