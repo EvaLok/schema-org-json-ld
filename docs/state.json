@@ -2672,6 +2672,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Cycle 222 review"
+    },
+    {
+      "dispatched_at": "2026-03-11T03:03:53Z",
+      "issue": 1012,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix check-doc-pr: wrong field path + add journal/worklog validation checks"
     }
   ],
   "audit_dropped": [
@@ -2836,16 +2843,16 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1007 Cycle 222 review (cycle 222)",
-    "dispatch_to_pr_rate": "98.0%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1012 Fix check-doc-pr: wrong field path + add journal/worklog validation checks (cycle 223)",
+    "dispatch_to_pr_rate": "97.6%",
+    "in_flight": 2,
     "merged": 286,
     "pr_merge_rate": "99.3%",
     "produced_pr": 288,
     "resolved": 293,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 294
+    "total_dispatches": 295
   },
   "cycle_phase": {
     "cycle": 223,
@@ -2945,15 +2952,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 222"
+        "last_refreshed": "cycle 223"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 222"
+        "last_refreshed": "cycle 223"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 222"
+        "last_refreshed": "cycle 223"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
