@@ -622,10 +622,7 @@ fn issue_reference_looks_like_pr(item: &str, hash_index: usize) -> bool {
         .is_some_and(|token| token.eq_ignore_ascii_case("pr"))
 }
 
-fn derive_self_modifications(
-    repo_root: &Path,
-    cycle: u64,
-) -> Result<Vec<SelfModification>, String> {
+fn derive_self_modifications(repo_root: &Path, cycle: u64) -> Result<Vec<SelfModification>, String> {
     let start_commit = find_cycle_start_commit(repo_root, cycle)?;
     let output = ProcessCommand::new("git")
         .arg("diff")
@@ -677,8 +674,7 @@ fn is_infrastructure_path(path: &str) -> bool {
 fn find_cycle_start_commit(repo_root: &Path, cycle: u64) -> Result<String, String> {
     let commits = read_git_history(repo_root)?;
     if let Some(commit) = commits.iter().find(|commit| {
-        commit.subject.starts_with("state(cycle-start):")
-            && extract_cycle_tag(&commit.subject) == Some(cycle)
+        commit.subject.starts_with("state(cycle-start):") && extract_cycle_tag(&commit.subject) == Some(cycle)
     }) {
         return Ok(commit.full_sha.clone());
     }
@@ -699,13 +695,7 @@ fn read_git_history(repo_root: &Path) -> Result<Vec<GitHistoryEntry>, String> {
         .arg("--reverse")
         .current_dir(repo_root)
         .output()
-        .map_err(|error| {
-            format!(
-                "failed to read git history in {}: {}",
-                repo_root.display(),
-                error
-            )
-        })?;
+        .map_err(|error| format!("failed to read git history in {}: {}", repo_root.display(), error))?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
         return Err(format!("git log failed: {}", stderr));
@@ -753,12 +743,13 @@ fn find_first_commit_after_cycle_timestamp(
         return Ok(None);
     }
 
-    let state = load_worklog_state(repo_root, true)?.ok_or_else(|| {
-        "docs/state.json is required to resolve current cycle timestamp".to_string()
-    })?;
-    let timestamp = state.last_cycle.timestamp.as_deref().ok_or_else(|| {
-        "missing docs/state.json last_cycle.timestamp for current cycle".to_string()
-    })?;
+    let state = load_worklog_state(repo_root, true)?
+        .ok_or_else(|| "docs/state.json is required to resolve current cycle timestamp".to_string())?;
+    let timestamp = state
+        .last_cycle
+        .timestamp
+        .as_deref()
+        .ok_or_else(|| "missing docs/state.json last_cycle.timestamp for current cycle".to_string())?;
     let cycle_start = parse_timestamp(timestamp, "docs/state.json last_cycle.timestamp")?;
 
     Ok(commits
@@ -1909,7 +1900,12 @@ mod tests {
     }
 
     fn create_git_commit(repo_root: &Path, file_name: &str, content: &str) -> String {
-        create_git_commit_with_message(repo_root, file_name, content, &format!("Add {}", file_name))
+        create_git_commit_with_message(
+            repo_root,
+            file_name,
+            content,
+            &format!("Add {}", file_name),
+        )
     }
 
     fn create_git_commit_with_message(
@@ -1964,7 +1960,9 @@ mod tests {
         fs::create_dir_all(script_path.parent().unwrap()).unwrap();
         fs::write(
             script_path,
-            format!("#!/usr/bin/env bash\nset -euo pipefail\ncat <<'JSON'\n{json}\nJSON\n"),
+            format!(
+                "#!/usr/bin/env bash\nset -euo pipefail\ncat <<'JSON'\n{json}\nJSON\n"
+            ),
         )
         .unwrap();
     }
@@ -1997,8 +1995,7 @@ mod tests {
 
     fn write_state_file(repo_root: &Path, payload: &str) {
         fs::create_dir_all(repo_root.join("docs")).expect("failed to create docs directory");
-        fs::write(repo_root.join("docs/state.json"), payload)
-            .expect("failed to write test state.json");
+        fs::write(repo_root.join("docs/state.json"), payload).expect("failed to write test state.json");
     }
 
     #[test]
@@ -2145,16 +2142,10 @@ mod tests {
         );
 
         assert_eq!(modifications.len(), 4);
-        assert_eq!(
-            modifications[0].file,
-            "tools/rust/crates/write-entry/src/main.rs"
-        );
+        assert_eq!(modifications[0].file, "tools/rust/crates/write-entry/src/main.rs");
         assert_eq!(modifications[0].description, "modified");
         assert_eq!(modifications[1].file, "STARTUP_CHECKLIST.md");
-        assert_eq!(
-            modifications[2].file,
-            ".claude/skills/rust-tooling/SKILL.md"
-        );
+        assert_eq!(modifications[2].file, ".claude/skills/rust-tooling/SKILL.md");
         assert_eq!(modifications[3].file, "AGENTS-ts.md");
     }
 
@@ -2275,8 +2266,9 @@ mod tests {
         assert!(content.contains(
             "- Merged [PR #123](https://github.com/EvaLok/schema-org-json-ld/issues/123)"
         ));
-        assert!(content
-            .contains("- [PR #789](https://github.com/EvaLok/schema-org-json-ld/issues/789)"));
+        assert!(content.contains(
+            "- [PR #789](https://github.com/EvaLok/schema-org-json-ld/issues/789)"
+        ));
         assert!(content.contains("- Closed EvaLok/schema-org-json-ld#924 (cycle review)"));
         assert!(content.contains("- Updated AGENTS.md"));
         assert!(!content.contains("### PRs reviewed\n\n- None."));
@@ -2327,7 +2319,9 @@ mod tests {
             },
         );
 
-        assert!(rendered.contains("| cycle-start | deadbee [UNRESOLVED] | deadbee [UNRESOLVED] |"));
+        assert!(rendered.contains(
+            "| cycle-start | deadbee [UNRESOLVED] | deadbee [UNRESOLVED] |"
+        ));
     }
 
     #[test]
@@ -2360,9 +2354,11 @@ mod tests {
         assert!(content.contains("## Self-modifications\n\n- None."));
         assert!(content.contains("- **Pipeline status**: Not provided."));
         assert!(content.contains("- **In-flight agent sessions**: 3"));
-        assert!(content.contains(
-            "- **Copilot metrics**: 45 dispatches, 42 PRs produced, 40 merged, 88.9% PR merge rate"
-        ));
+        assert!(
+            content.contains(
+                "- **Copilot metrics**: 45 dispatches, 42 PRs produced, 40 merged, 88.9% PR merge rate"
+            )
+        );
         assert!(content.contains("- **Publish gate**: published"));
     }
 
@@ -2461,7 +2457,11 @@ mod tests {
             "start\n",
             "state(cycle-start): begin cycle 154, issue #1 [cycle 154]",
         );
-        let manual_receipt = create_git_commit(&repo_root.path, "notes/manual.txt", "manual\n");
+        let manual_receipt = create_git_commit(
+            &repo_root.path,
+            "notes/manual.txt",
+            "manual\n",
+        );
         create_git_commit_with_message(
             &repo_root.path,
             "AGENTS.md",
@@ -2482,8 +2482,7 @@ mod tests {
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
 
-        assert!(content
-            .contains("- Closed [#999](https://github.com/EvaLok/schema-org-json-ld/issues/999)"));
+        assert!(content.contains("- Closed [#999](https://github.com/EvaLok/schema-org-json-ld/issues/999)"));
         assert!(!content.contains("[#1042]("));
         assert!(content.contains("- **`AGENTS.md`**: manual override"));
         assert!(!content.contains(": modified"));
@@ -2551,7 +2550,11 @@ mod tests {
         assert!(content.contains("- **In-flight agent sessions**: 1"));
         assert!(content.contains("- **Copilot metrics**: custom metrics"));
         assert!(content.contains("- **Publish gate**: pre-publish"));
-        assert!(!content.contains("45 dispatches, 42 PRs produced, 40 merged, 88.9% PR merge rate"));
+        assert!(
+            !content.contains(
+                "45 dispatches, 42 PRs produced, 40 merged, 88.9% PR merge rate"
+            )
+        );
         assert!(!content.contains("- **Publish gate**: published"));
     }
 
@@ -3393,10 +3396,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                     args.issue_processed,
                     vec!["Closed EvaLok/schema-org-json-ld#924 (cycle review)".to_string()]
                 );
-                assert_eq!(
-                    args.self_modification,
-                    vec!["Updated AGENTS.md".to_string()]
-                );
+                assert_eq!(args.self_modification, vec!["Updated AGENTS.md".to_string()]);
             }
             Command::Journal(_) => panic!("expected worklog command"),
         }
