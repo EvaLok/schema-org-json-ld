@@ -3139,7 +3139,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 226"
+        "last_refreshed": "cycle 227"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -4544,9 +4544,23 @@
         "finding_count": 10,
         "ignored": 0,
         "note": "Critical: cycle-complete phase bug (8), worklog accuracy (3/4/5). Actioning phase bug + close-out flow fixes. Deferred: publish-gate snapshot, refresh-inventory integration, test-debt injection."
+      },
+      {
+        "actioned": 4,
+        "categories": [
+          "code-quality",
+          "journal-quality",
+          "process-adherence",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 4,
+        "cycle": 226,
+        "deferred": 0,
+        "finding_count": 4,
+        "ignored": 0
       }
     ],
-    "last_review_cycle": 225
+    "last_review_cycle": 226
   },
   "schema_status": {
     "directory_layout": {
