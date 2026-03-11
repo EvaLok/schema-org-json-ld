@@ -2,6 +2,7 @@ use clap::Parser;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use state_schema::read_state_value;
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -88,6 +89,11 @@ pub struct CheckReport {
     pub results: Vec<CheckResult>,
 }
 
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+struct ReceiptEntry {
+    receipt: String,
+}
+
 fn main() {
     let cli = Cli::parse();
     if let Err(error) = run(cli) {
@@ -135,29 +141,36 @@ fn run(cli: Cli) -> Result<(), String> {
         worklog_content.as_deref(),
     ));
 
-    // 7. receipts_valid
+    // 7. receipt_completeness
+    results.push(check_receipt_completeness(
+        &cli.repo_root,
+        cli.cycle,
+        worklog_content.as_deref(),
+    ));
+
+    // 8. receipts_valid
     results.push(check_receipts_valid(
         &cli.repo_root,
         worklog_content.as_deref(),
     ));
 
-    // 8. journal_has_worklog_link
+    // 9. journal_has_worklog_link
     let journal_content = match &journal_file {
         Some(path) => fetch_file_content(&cli.repo_root, path, &pr_branch).ok(),
         None => None,
     };
     results.push(check_journal_has_worklog_link(journal_content.as_deref()));
 
-    // 9. journal_entry_ordering
+    // 10. journal_entry_ordering
     results.push(check_journal_entry_ordering(journal_content.as_deref()));
 
-    // 10. title_format
+    // 11. title_format
     results.push(check_title_format(journal_content.as_deref()));
 
-    // 11. no_duplicate_headers
+    // 12. no_duplicate_headers
     results.push(check_no_duplicate_headers(journal_content.as_deref()));
 
-    // 12. worklog_consistency
+    // 13. worklog_consistency
     results.push(check_worklog_consistency(worklog_content.as_deref()));
 
     let overall = if results.iter().any(|r| r.status == CheckStatus::Fail) {
@@ -744,6 +757,149 @@ fn extract_section_content(content: &str, section_name_lower: &str) -> Option<St
     }
 }
 
+fn fetch_cycle_receipts(repo_root: &Path, cycle: u64) -> Result<Vec<ReceiptEntry>, String> {
+    let output = Command::new("bash")
+        .current_dir(repo_root)
+        .arg("tools/cycle-receipts")
+        .arg("--cycle")
+        .arg(cycle.to_string())
+        .arg("--repo-root")
+        .arg(repo_root.display().to_string())
+        .arg("--json")
+        .output()
+        .map_err(|error| {
+            format!(
+                "failed to run bash tools/cycle-receipts --cycle {} --repo-root {} --json: {}",
+                cycle,
+                repo_root.display(),
+                error
+            )
+        })?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(if stderr.is_empty() {
+            format!("cycle-receipts command failed for cycle {}", cycle)
+        } else {
+            format!(
+                "cycle-receipts command failed for cycle {}: {}",
+                cycle, stderr
+            )
+        });
+    }
+
+    serde_json::from_slice::<Vec<ReceiptEntry>>(&output.stdout)
+        .map_err(|error| format!("failed to parse cycle-receipts JSON: {}", error))
+}
+
+fn check_receipt_completeness(
+    repo_root: &Path,
+    cycle: u64,
+    worklog_content: Option<&str>,
+) -> CheckResult {
+    let Some(content) = worklog_content else {
+        return CheckResult {
+            check: "receipt_completeness".to_string(),
+            status: CheckStatus::Fail,
+            detail: "Cannot check: worklog content not available".to_string(),
+        };
+    };
+
+    let expected = match fetch_cycle_receipts(repo_root, cycle) {
+        Ok(expected) => expected,
+        Err(error) => {
+            return CheckResult {
+                check: "receipt_completeness".to_string(),
+                status: CheckStatus::Fail,
+                detail: format!("Cannot load canonical cycle receipts: {}", error),
+            };
+        }
+    };
+
+    evaluate_receipt_completeness(Some(content), &expected)
+}
+
+fn evaluate_receipt_completeness(
+    worklog_content: Option<&str>,
+    expected: &[ReceiptEntry],
+) -> CheckResult {
+    let check_name = "receipt_completeness".to_string();
+
+    let Some(content) = worklog_content else {
+        return CheckResult {
+            check: check_name,
+            status: CheckStatus::Fail,
+            detail: "Cannot check: worklog content not available".to_string(),
+        };
+    };
+
+    let present = extract_present_receipts(content);
+    let missing = expected
+        .iter()
+        .filter_map(|entry| {
+            let receipt = entry.receipt.trim();
+            (!receipt.is_empty() && !present.contains(receipt)).then(|| receipt.to_string())
+        })
+        .collect::<Vec<_>>();
+
+    if missing.is_empty() {
+        CheckResult {
+            check: check_name,
+            status: CheckStatus::Pass,
+            detail: format!(
+                "All {} canonical receipt(s) are present in the worklog table",
+                expected.len()
+            ),
+        }
+    } else {
+        CheckResult {
+            check: check_name,
+            status: CheckStatus::Fail,
+            detail: format!(
+                "Worklog commit receipts table is missing canonical receipt(s): {}",
+                missing.join(", ")
+            ),
+        }
+    }
+}
+
+fn extract_present_receipts(content: &str) -> BTreeSet<String> {
+    let Some(section) = extract_section_content(content, "commit receipts") else {
+        return BTreeSet::new();
+    };
+
+    section
+        .lines()
+        .filter(|line| line.trim_start().starts_with('|'))
+        .filter(|line| !line.contains("------") && !line.contains("Receipt |"))
+        .filter_map(|line| {
+            let cells = line
+                .split('|')
+                .map(str::trim)
+                .filter(|cell| !cell.is_empty())
+                .collect::<Vec<_>>();
+            cells
+                .get(1)
+                .and_then(|cell| extract_receipt_from_cell(cell))
+        })
+        .collect()
+}
+
+fn extract_receipt_from_cell(cell: &str) -> Option<String> {
+    if let Some(start) = cell.find('`') {
+        let end = cell[start + 1..].find('`')?;
+        let receipt = &cell[start + 1..start + 1 + end];
+        return is_short_hex(receipt).then(|| receipt.to_string());
+    }
+
+    let trimmed = cell.trim_matches(|character| matches!(character, '[' | ']'));
+    is_short_hex(trimmed).then(|| trimmed.to_string())
+}
+
+fn is_short_hex(value: &str) -> bool {
+    value.len() >= 7 && value.chars().all(|character| character.is_ascii_hexdigit())
+}
+
 pub fn extract_receipt_hashes(content: &str) -> Vec<String> {
     let mut hashes = Vec::new();
     let lower = content.to_lowercase();
@@ -1321,6 +1477,66 @@ mod tests {
             extract_in_flight_from_worklog("No relevant info here"),
             None
         );
+    }
+
+    #[test]
+    fn receipt_completeness_passes_when_all_canonical_receipts_are_present() {
+        let worklog = r#"## Commit receipts
+| Step | Receipt | Commit |
+|------|---------|--------|
+| cycle-start | [`abc1234`](https://example.com/abc1234) | state(cycle-start): begin cycle 219 |
+| process-review | [`def5678`](https://example.com/def5678) | state(process-review): consumed review |
+"#;
+        let expected = vec![
+            ReceiptEntry {
+                receipt: "abc1234".to_string(),
+            },
+            ReceiptEntry {
+                receipt: "def5678".to_string(),
+            },
+        ];
+
+        let result = evaluate_receipt_completeness(Some(worklog), &expected);
+
+        assert_eq!(result.check, "receipt_completeness");
+        assert_eq!(result.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn receipt_completeness_fails_when_worklog_is_missing_canonical_receipts() {
+        let worklog = r#"## Commit receipts
+| Step | Receipt | Commit |
+|------|---------|--------|
+| cycle-start | [`abc1234`](https://example.com/abc1234) | state(cycle-start): begin cycle 219 |
+"#;
+        let expected = vec![
+            ReceiptEntry {
+                receipt: "abc1234".to_string(),
+            },
+            ReceiptEntry {
+                receipt: "def5678".to_string(),
+            },
+        ];
+
+        let result = evaluate_receipt_completeness(Some(worklog), &expected);
+
+        assert_eq!(result.check, "receipt_completeness");
+        assert_eq!(result.status, CheckStatus::Fail);
+        assert!(result.detail.contains("def5678"));
+    }
+
+    #[test]
+    fn receipt_completeness_fails_when_worklog_has_no_receipt_table() {
+        let expected = vec![ReceiptEntry {
+            receipt: "abc1234".to_string(),
+        }];
+
+        let result =
+            evaluate_receipt_completeness(Some("## Current state\nNo receipts here"), &expected);
+
+        assert_eq!(result.check, "receipt_completeness");
+        assert_eq!(result.status, CheckStatus::Fail);
+        assert!(result.detail.contains("abc1234"));
     }
 
     #[test]
