@@ -2670,13 +2670,15 @@
       "dispatched_at": "2026-03-11T00:12:34Z",
       "issue": 1007,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1008,
+      "status": "merged",
       "title": "Cycle 222 review"
     },
     {
       "dispatched_at": "2026-03-11T03:03:53Z",
       "issue": 1012,
       "model": "gpt-5.4",
+      "pr": 1014,
       "status": "in_flight",
       "title": "Fix check-doc-pr: wrong field path + add journal/worklog validation checks"
     },
@@ -2684,6 +2686,7 @@
       "dispatched_at": "2026-03-11T03:03:57Z",
       "issue": 1013,
       "model": "gpt-5.4",
+      "pr": 1015,
       "status": "in_flight",
       "title": "Fix pipeline-check: resumption Step 0 should not satisfy startup coverage"
     },
@@ -2691,7 +2694,8 @@
       "dispatched_at": "2026-03-11T03:08:21Z",
       "issue": 1016,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1017,
+      "status": "merged",
       "title": "[Cycle Docs] Cycle 223 worklog and journal"
     }
   ],
@@ -2793,7 +2797,8 @@
     182,
     183,
     188,
-    189
+    189,
+    191
   ],
   "blockers": [
     {
@@ -2859,11 +2864,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1016 [Cycle Docs] Cycle 223 worklog and journal (cycle 223)",
     "dispatch_to_pr_rate": "97.0%",
-    "in_flight": 4,
-    "merged": 286,
+    "in_flight": 2,
+    "merged": 288,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 288,
-    "resolved": 293,
+    "produced_pr": 290,
+    "resolved": 295,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 297
@@ -2872,8 +2877,8 @@
     "cycle": 223,
     "doc_issue": 1016,
     "doc_pr": null,
-    "phase": "doc_dispatched",
-    "phase_entered_at": "2026-03-11T03:08:21Z",
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-11T04:35:00Z",
     "review_iteration": 0,
     "review_max": 3
   },
