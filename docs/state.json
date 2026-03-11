@@ -3033,8 +3033,8 @@
     "cycle": 229,
     "doc_issue": 1064,
     "doc_pr": null,
-    "phase": "doc_dispatched",
-    "phase_entered_at": "2026-03-11T18:31:44Z",
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-11T18:44:58Z",
     "review_iteration": 0,
     "review_max": 3
   },
