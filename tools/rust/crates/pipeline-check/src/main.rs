@@ -18,6 +18,8 @@ const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const STEP_COMMENT_THRESHOLD: usize = 10;
 const ORCHESTRATOR_SIGNATURE: &str = "> **[main-orchestrator]**";
+// These core checklist steps are expected on every non-phased cycle regardless of
+// conditional branches later in the workflow.
 const MANDATORY_STEP_IDS: [&str; 7] = ["0", "0.5", "1", "2", "6", "7", "9"];
 const PHASED_RESUMPTION_STEP_IDS: [&str; 4] = ["Opening", "10.B", "10.C", "Close"];
 const STARTUP_STEP_IDS: [&str; 13] = ["0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9"];
@@ -759,6 +761,11 @@ fn assess_step_comment_completeness(found: &BTreeSet<&'static str>) -> StepComme
 	}
 }
 
+/// Completeness assessment for a collected set of step comments.
+///
+/// PASS means all expected steps were found, WARN means only optional steps are
+/// missing, and FAIL means either a mandatory step is missing or the threshold
+/// backstop was not met.
 struct StepCommentAssessment {
 	status: StepStatus,
 	severity: Severity,
@@ -1107,6 +1114,7 @@ mod tests {
         PathBuf::from("/repo")
     }
 
+	/// Build mock orchestrator step comment bodies for tests from a list of step IDs.
 	fn step_comment_bodies(cycle: u64, step_ids: &[&str]) -> String {
 		step_ids
 			.iter()
