@@ -746,11 +746,13 @@ fn find_first_commit_after_cycle_timestamp(
     let state = load_worklog_state(repo_root, true)?
         .ok_or_else(|| "docs/state.json is required to resolve current cycle timestamp".to_string())?;
     let timestamp = state
-        .last_cycle
-        .timestamp
+        .cycle_phase
+        .phase_entered_at
         .as_deref()
-        .ok_or_else(|| "missing docs/state.json last_cycle.timestamp for current cycle".to_string())?;
-    let cycle_start = parse_timestamp(timestamp, "docs/state.json last_cycle.timestamp")?;
+        .ok_or_else(|| {
+            "missing docs/state.json cycle_phase.phase_entered_at for current cycle; cannot derive self-modifications without a cycle-start receipt".to_string()
+        })?;
+    let cycle_start = parse_timestamp(timestamp, "docs/state.json cycle_phase.phase_entered_at")?;
 
     Ok(commits
         .iter()
@@ -1088,7 +1090,12 @@ fn find_worklog_relative_path(repo_root: &Path, cycle: u64) -> Result<Option<Str
                         error
                     )
                 })
-                .map(|relative| relative.to_string_lossy().replace('\\', "/"))
+                .map(|relative| {
+                    let relative = relative.to_string_lossy().replace('\\', "/");
+                    relative
+                        .strip_prefix("docs/")
+                        .map_or(relative.clone(), |path| format!("../{}", path))
+                })
         })
         .transpose()
 }
@@ -1432,6 +1439,7 @@ fn render_journal_entry(
     previous_commitment: Option<&str>,
     worklog_relative_path: Option<&str>,
 ) -> String {
+    let title = strip_cycle_prefix(title);
     let mut lines = Vec::new();
     lines.push(format!(
         "## {} — Cycle {}: {}",
@@ -1495,6 +1503,22 @@ fn render_journal_entry(
     }
     lines.push(String::new());
     lines.join("\n")
+}
+
+fn strip_cycle_prefix(title: &str) -> &str {
+    let trimmed = title.trim();
+    let Some(remainder) = trimmed.strip_prefix("Cycle ") else {
+        return title;
+    };
+    let digits_length = remainder
+        .chars()
+        .take_while(|character| character.is_ascii_digit())
+        .count();
+    if digits_length == 0 {
+        return title;
+    }
+    let suffix = &remainder[digits_length..];
+    suffix.strip_prefix(':').map_or(title, |rest| rest.trim_start())
 }
 
 fn journal_commitments(input: &JournalInput) -> Vec<&str> {
@@ -2228,7 +2252,7 @@ mod tests {
         let found = find_worklog_relative_path(&repo_root.path, 155).unwrap();
         assert_eq!(
             found,
-            Some("docs/worklog/2026-03-07/051458-cycle-two.md".to_string())
+            Some("../worklog/2026-03-07/051458-cycle-two.md".to_string())
         );
         assert!(first.exists());
         assert!(second.exists());
@@ -2493,7 +2517,7 @@ mod tests {
     }
 
     #[test]
-    fn find_cycle_start_commit_falls_back_to_current_cycle_timestamp() {
+    fn find_cycle_start_commit_prefers_cycle_phase_timestamp() {
         let repo_root = TempRepoDir::new("worklog-cycle-start-fallback");
         init_git_repo(&repo_root.path);
         write_state_file(
@@ -2502,19 +2526,107 @@ mod tests {
                 "last_cycle": {
                     "number": 154,
                     "timestamp": "2026-03-06T01:00:00Z"
+                },
+                "cycle_phase": {
+                    "cycle": 154,
+                    "phase": "work",
+                    "phase_entered_at": "2026-03-06T01:10:00Z"
                 }
             }"#,
         );
-        let first_commit = create_git_commit_at(
+        create_git_commit_at(
             &repo_root.path,
             "notes/first.txt",
             "first\n",
             "docs: first commit [cycle 154]",
             "2026-03-06T01:05:00Z",
         );
+        let second_commit = create_git_commit_at(
+            &repo_root.path,
+            "notes/second.txt",
+            "second\n",
+            "docs: second commit [cycle 154]",
+            "2026-03-06T01:15:00Z",
+        );
 
         let start_commit = find_cycle_start_commit(&repo_root.path, 154).unwrap();
-        assert!(start_commit.starts_with(&first_commit));
+        assert!(start_commit.starts_with(&second_commit));
+    }
+
+    #[test]
+    fn render_journal_entry_strips_cycle_prefix_from_title_and_context() {
+        let rendered = render_journal_entry(
+            226,
+            fixed_now_on("2026-03-11"),
+            "Cycle 226: Breaking the worklog-accuracy pattern",
+            &JournalInput {
+                previous_commitment_status: "no_prior_commitment".to_string(),
+                previous_commitment_detail: "No prior commitment recorded.".to_string(),
+                sections: Vec::new(),
+                concrete_behavior_change: String::new(),
+                commitments: Vec::new(),
+                open_questions: Vec::new(),
+            },
+            CommitmentStatus::NoPriorCommitment,
+            None,
+            Some("../worklog/2026-03-11/123451-cycle-226-summary.md"),
+        );
+
+        assert!(rendered.contains(
+            "## 2026-03-11 — Cycle 226: Breaking the worklog-accuracy pattern"
+        ));
+        assert!(!rendered.contains("Cycle 226: Cycle 226:"));
+        assert!(rendered.contains("Cycle 226 focused on Breaking the worklog-accuracy pattern."));
+        assert!(!rendered.contains("focused on Cycle 226:"));
+    }
+
+    #[test]
+    fn worklog_auto_derivation_warns_when_cycle_phase_timestamp_is_unavailable() {
+        let repo_root = TempRepoDir::new("worklog-missing-cycle-phase-timestamp");
+        init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {
+                    "number": 154
+                }
+            }"#,
+        );
+        create_git_commit_at(
+            &repo_root.path,
+            "notes/first.txt",
+            "first\n",
+            "docs: first commit [cycle 154]",
+            "2026-03-06T01:05:00Z",
+        );
+        let args = worklog_args("Fallback warning");
+        let mut input = WorklogInput {
+            what_was_done: vec!["Closed #42".to_string()],
+            self_modifications: Vec::new(),
+            prs_merged: Vec::new(),
+            prs_reviewed: Vec::new(),
+            issues_processed: Vec::new(),
+            current_state: CurrentState {
+                in_flight_sessions: 0,
+                pipeline_status: "PASS (6/6)".to_string(),
+                copilot_metrics: "steady".to_string(),
+                publish_gate: "open".to_string(),
+            },
+            next_steps: Vec::new(),
+            receipts: vec![CommitReceipt {
+                tool: "manual".to_string(),
+                receipt: "abc1234".to_string(),
+                unresolved: false,
+            }],
+        };
+
+        let warnings = apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
+
+        assert!(input.self_modifications.is_empty());
+        assert_eq!(input.issues_processed, vec!["#42"]);
+        assert_eq!(warnings.len(), 1);
+        assert!(warnings[0].contains("failed to auto-derive self-modifications for cycle 154"));
+        assert!(warnings[0].contains("cycle_phase.phase_entered_at"));
     }
 
     #[test]
@@ -2665,7 +2777,7 @@ Reflective log for the schema-org-json-ld orchestrator.
             content.contains("\n---\n\n## 2026-03-06 — Cycle 154: From convention to enforcement")
         );
         assert!(content.contains(
-            "Worklog: [cycle 154](docs/worklog/2026-03-06/051458-from-convention-to-enforcement.md)"
+            "Worklog: [cycle 154](../worklog/2026-03-06/051458-from-convention-to-enforcement.md)"
         ));
         assert_eq!(
             content
@@ -2687,7 +2799,7 @@ Reflective log for the schema-org-json-ld orchestrator.
         let path = execute_journal(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
         assert!(content
-            .contains("Worklog: [cycle 154](docs/worklog/2026-03-06/051458-cycle-reflections.md)"));
+            .contains("Worklog: [cycle 154](../worklog/2026-03-06/051458-cycle-reflections.md)"));
         assert!(content.contains("### Decisions"));
         assert!(content.contains(
             "Chose to defer [#829](https://github.com/EvaLok/schema-org-json-ld/issues/829)"
