@@ -12,9 +12,9 @@ The published worklog receipt table lists `21de539`, `ab71eac`, `e89f222`, `f88b
 `b6ffab1`, and `ddd5654`
 (`docs/worklog/2026-03-12/083033-cycle-234-review-consumption-3-merges-and-cycle-receipts-root-cause-dispatch.md:45-52`),
 but `git show --stat` cannot resolve any of those SHAs.
-The validator also rejects the table:
-`bash tools/validate-docs worklog --file docs/worklog/2026-03-12/083033-cycle-234-review-consumption-3-merges-and-cycle-receipts-root-cause-dispatch.md --cycle 234 --repo-root .`
-fails with `commit receipts section is missing required receipt(s): d2adcf5, 8e43d82`.
+The worklog validator also rejects the table.
+Running `bash tools/validate-docs worklog` against this file fails with
+`commit receipts section is missing required receipt(s): d2adcf5, 8e43d82`.
 The canonical `bash tools/cycle-receipts --cycle 234 --repo-root . --json` output
 currently returns only `d2adcf5` and `8e43d82`, so the fallback-generated table does
 not match the repository’s own receipt source of truth.
@@ -83,4 +83,4 @@ This was a numeric bump, not an audit.
 
 ## Complacency score
 
-**2/5** — cycle 234 merged useful work, but the quality-control layer still drifted in ways the previous reviews explicitly warned about. It published a receipt table that the repository cannot validate, counted unsupported review findings as “actioned,” skipped required checklist comments, mutated a supposedly frozen worklog after dispatch, and bumped the tool-audit cadence without performing the audit it claimed. That is not total theater — real work landed — but it is still evidence of an orchestrator that keeps smoothing over contradictions instead of forcing its artifacts to match observable reality.
+**2/5** — cycle 234 merged useful work, but the quality-control layer still drifted in ways the previous reviews explicitly warned about. It published a receipt table that the repository cannot validate, counted unsupported review findings as “actioned,” skipped required checklist comments, mutated a supposedly frozen worklog after dispatch, and bumped the tool-audit cadence without performing the audit it claimed. Real work landed, but the cycle artifacts still diverged from the repository evidence in multiple places that should have been mechanically enforced by now.
