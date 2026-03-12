@@ -707,7 +707,7 @@ Commit your findings as `docs/reviews/cycle-{cycle}.md`. Do NOT attempt to post 
 
 7. **Process adherence** — verify the orchestrator followed:
    - Its own startup checklist (each step posted as a separate comment)
-   - The completion checklist for phased workflows
+   - The standard completion checklist
    - Tool-first mandate (tools used when tools exist)
 
 8. **Complacency detection** — honestly assess:

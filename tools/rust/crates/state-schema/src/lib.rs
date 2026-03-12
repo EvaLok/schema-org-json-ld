@@ -470,8 +470,6 @@ pub struct FieldInventory {
 pub struct CyclePhase {
     pub cycle: Option<u64>,
     pub phase: Option<String>,
-    pub doc_issue: Option<i64>,
-    pub dispatched_at: Option<String>,
     pub phase_entered_at: Option<String>,
     #[serde(flatten)]
     pub extra: BTreeMap<String, Value>,
@@ -884,8 +882,6 @@ mod tests {
         let state: StateJson = serde_json::from_value(json!({})).expect("state should deserialize");
         assert!(state.cycle_phase.cycle.is_none());
         assert!(state.cycle_phase.phase.is_none());
-        assert!(state.cycle_phase.doc_issue.is_none());
-        assert!(state.cycle_phase.dispatched_at.is_none());
         assert!(state.cycle_phase.phase_entered_at.is_none());
     }
 
@@ -895,8 +891,6 @@ mod tests {
             "cycle_phase": {
                 "cycle": 219,
                 "phase": "close_out",
-                "doc_issue": 980,
-                "dispatched_at": "2026-03-10T14:30:00Z",
                 "phase_entered_at": "2026-03-10T15:00:00Z"
             }
         }))
@@ -904,11 +898,6 @@ mod tests {
 
         assert_eq!(state.cycle_phase.cycle, Some(219));
         assert_eq!(state.cycle_phase.phase.as_deref(), Some("close_out"));
-        assert_eq!(state.cycle_phase.doc_issue, Some(980));
-        assert_eq!(
-            state.cycle_phase.dispatched_at.as_deref(),
-            Some("2026-03-10T14:30:00Z")
-        );
         assert_eq!(
             state.cycle_phase.phase_entered_at.as_deref(),
             Some("2026-03-10T15:00:00Z")

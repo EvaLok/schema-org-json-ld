@@ -103,16 +103,16 @@ struct StartupBrief {
     warnings: Vec<String>,
 }
 
-#[cfg(test)]
-#[derive(Clone, Debug, Serialize)]
-struct ResumeBrief {
-    cycle: u64,
-    phase: String,
-    doc_issue: Option<i64>,
-}
-
 fn should_resume(phase: Option<&str>) -> bool {
     matches!(phase, Some("work" | "close_out"))
+}
+
+fn build_resume_json(cycle: u64, phase: &str) -> Value {
+    json!({
+        "resume": true,
+        "cycle": cycle,
+        "phase": phase,
+    })
 }
 
 fn main() {
@@ -128,7 +128,7 @@ fn run(cli: Cli) -> Result<(), String> {
     let state_json = read_typed_state_json(&cli.repo_root)?;
     let previous_cycle_issue = state.pointer("/last_cycle/issue").and_then(Value::as_u64);
 
-    // Phase-aware resume detection
+    // Resume detection for in-progress cycles.
     let current_phase = state_json
         .cycle_phase
         .phase
@@ -137,25 +137,15 @@ fn run(cli: Cli) -> Result<(), String> {
 
     if should_resume(Some(current_phase)) {
         let cycle = state_json.cycle_phase.cycle.unwrap_or(0);
-        let doc_issue = state_json.cycle_phase.doc_issue;
 
         if cli.json {
-            let brief = serde_json::json!({
-                "resume": true,
-                "cycle": cycle,
-                "phase": current_phase,
-                "doc_issue": doc_issue
-            });
             println!(
                 "{}",
-                serde_json::to_string_pretty(&brief)
+                serde_json::to_string_pretty(&build_resume_json(cycle, current_phase))
                     .map_err(|error| format!("failed to serialize resume JSON: {}", error))?
             );
         } else {
             println!("Resume: cycle {} phase {}", cycle, current_phase);
-            if let Some(issue) = doc_issue {
-                println!("  doc_issue: #{}", issue);
-            }
             println!("No new cycle created. Resume {} phase.", current_phase);
         }
         return Ok(());
@@ -184,12 +174,6 @@ fn run(cli: Cli) -> Result<(), String> {
 
     // Set cycle_phase for the new work phase
     transition_cycle_phase(&mut state, cycle, "work")?;
-    if let Some(cp) = state
-        .pointer_mut("/cycle_phase")
-        .and_then(Value::as_object_mut)
-    {
-        cp.insert("doc_issue".to_string(), Value::Null);
-    }
 
     write_state_value(&cli.repo_root, &state)?;
     let commit_message = format!(
@@ -1361,44 +1345,12 @@ mod tests {
     }
 
     #[test]
-    fn resume_brief_serializes_all_fields() {
-        let brief = ResumeBrief {
-            cycle: 219,
-            phase: "close_out".to_string(),
-            doc_issue: Some(980),
-        };
+    fn resume_json_includes_resume_flag_and_core_fields() {
+        let parsed = build_resume_json(219, "close_out");
 
-        let output = serde_json::to_string_pretty(&brief).expect("resume brief should serialize");
-        let parsed: Value = serde_json::from_str(&output).expect("json should parse");
-
+        assert_eq!(parsed.get("resume"), Some(&json!(true)));
         assert_eq!(parsed.get("cycle"), Some(&json!(219)));
         assert_eq!(parsed.get("phase"), Some(&json!("close_out")));
-        assert_eq!(parsed.get("doc_issue"), Some(&json!(980)));
-    }
-
-    #[test]
-    fn resume_brief_serializes_with_null_optional_fields() {
-        let brief = ResumeBrief {
-            cycle: 220,
-            phase: "work".to_string(),
-            doc_issue: None,
-        };
-
-        let output = serde_json::to_string_pretty(&brief).expect("resume brief should serialize");
-        let parsed: Value = serde_json::from_str(&output).expect("json should parse");
-
-        assert_eq!(parsed.get("cycle"), Some(&json!(220)));
-        assert_eq!(parsed.get("phase"), Some(&json!("work")));
-        assert_eq!(parsed.get("doc_issue"), Some(&json!(null)));
-    }
-
-    #[test]
-    fn should_resume_returns_false_for_doc_dispatched_phase() {
-        assert!(!should_resume(Some("doc_dispatched")));
-    }
-
-    #[test]
-    fn should_resume_returns_false_for_doc_review_phase() {
-        assert!(!should_resume(Some("doc_review")));
+        assert_eq!(parsed.as_object().map(|obj| obj.len()), Some(3));
     }
 }
