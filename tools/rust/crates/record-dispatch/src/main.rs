@@ -1,7 +1,6 @@
 use clap::Parser;
 use record_dispatch::{
-    apply_dispatch_patch, build_dispatch_patch, dispatch_commit_message,
-    fixup_latest_worklog_in_flight, resolve_model, WorklogFixupOutcome,
+    apply_dispatch_patch, build_dispatch_patch, dispatch_commit_message, resolve_model,
 };
 use state_schema::{
     commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
@@ -65,19 +64,7 @@ fn run(cli: Cli) -> Result<(), String> {
     write_state_value(&cli.repo_root, &state_value)?;
 
     let commit_message = dispatch_commit_message(cli.issue, patch.current_cycle);
-    let mut receipt = commit_state_json(&cli.repo_root, &commit_message)?;
-    let worklog_root = cli.repo_root.join("docs/worklog");
-    match fixup_latest_worklog_in_flight(&cli.repo_root, patch.in_flight)? {
-        WorklogFixupOutcome::Updated(worklog_path) => {
-            receipt = amend_commit_with_worklog(&cli.repo_root, &worklog_path)?;
-        }
-        WorklogFixupOutcome::NotFound => {
-            eprintln!(
-                "Warning: no worklog file found under {} to update in-flight count",
-                worklog_root.display()
-            );
-        }
-    }
+    let receipt = commit_state_json(&cli.repo_root, &commit_message)?;
     println!(
         "Dispatch recorded: #{} \"{}\" (model: {}). In-flight: {} (receipt: {})",
         cli.issue, cli.title, model, patch.in_flight, receipt
@@ -91,68 +78,6 @@ fn run(cli: Cli) -> Result<(), String> {
 
     Ok(())
 }
-
-fn amend_commit_with_worklog(repo_root: &Path, worklog_path: &Path) -> Result<String, String> {
-    let relative_path = worklog_path.strip_prefix(repo_root).map_err(|error| {
-        format!(
-            "failed to compute relative worklog path for {}: {}",
-            worklog_path.display(),
-            error
-        )
-    })?;
-
-    let add_output = Command::new("git")
-        .arg("-C")
-        .arg(repo_root)
-        .arg("add")
-        .arg("--")
-        .arg(relative_path)
-        .output()
-        .map_err(|error| format!("failed to execute git add: {}", error))?;
-    if !add_output.status.success() {
-        let stderr = String::from_utf8_lossy(&add_output.stderr)
-            .trim()
-            .to_string();
-        return Err(format!(
-            "git add {} failed: {}",
-            relative_path.display(),
-            stderr
-        ));
-    }
-
-    let commit_output = Command::new("git")
-        .arg("-C")
-        .arg(repo_root)
-        .args(["commit", "--amend", "--no-edit"])
-        .output()
-        .map_err(|error| format!("failed to execute git commit --amend: {}", error))?;
-    if !commit_output.status.success() {
-        let stderr = String::from_utf8_lossy(&commit_output.stderr)
-            .trim()
-            .to_string();
-        return Err(format!("git commit --amend failed: {}", stderr));
-    }
-
-    short_head_sha(repo_root)
-}
-
-fn short_head_sha(repo_root: &Path) -> Result<String, String> {
-    let output = Command::new("git")
-        .arg("-C")
-        .arg(repo_root)
-        .args(["rev-parse", "--short=7", "HEAD"])
-        .output()
-        .map_err(|error| format!("failed to execute git rev-parse: {}", error))?;
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-        return Err(format!("git rev-parse --short=7 HEAD failed: {}", stderr));
-    }
-
-    let sha = String::from_utf8(output.stdout)
-        .map_err(|error| format!("failed to decode git rev-parse output as UTF-8: {}", error))?;
-    Ok(sha.trim().to_string())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -207,7 +132,7 @@ mod tests {
     }
 
     #[test]
-    fn run_updates_latest_worklog_and_amends_dispatch_commit() {
+    fn run_leaves_worklog_unchanged_and_commits_only_state_json() {
         let repo = TempRepo::new();
         repo.init();
         let older_worklog = repo.write_worklog("2026-03-09", "235959-older.md", 0);
@@ -224,7 +149,7 @@ mod tests {
 
         let latest_content =
             fs::read_to_string(&latest_worklog).expect("latest worklog should be readable");
-        assert!(latest_content.contains("- **In-flight agent sessions**: 1"));
+        assert!(latest_content.contains("- **In-flight agent sessions**: 0"));
         let older_content =
             fs::read_to_string(&older_worklog).expect("older worklog should be readable");
         assert!(older_content.contains("- **In-flight agent sessions**: 0"));
@@ -239,7 +164,7 @@ mod tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("state(record-dispatch): #602 dispatched [cycle 164]"));
         assert!(stdout.contains("docs/state.json"));
-        assert!(stdout.contains("docs/worklog/2026-03-10/142511-current.md"));
+        assert!(!stdout.contains("docs/worklog/2026-03-10/142511-current.md"));
 
         let state: serde_json::Value = serde_json::from_str(
             &fs::read_to_string(repo.path().join("docs/state.json"))

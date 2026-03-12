@@ -54,7 +54,7 @@ struct JournalArgs {
     file: PathBuf,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 struct ReceiptEntry {
     receipt: String,
 }
@@ -62,6 +62,12 @@ struct ReceiptEntry {
 #[derive(Debug, Deserialize)]
 struct PipelineReport {
     overall: String,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum SelfModificationFinding {
+    Failure(String),
+    Warning(String),
 }
 
 fn main() {
@@ -99,16 +105,27 @@ fn validate_worklog(repo_root: &Path, file: &Path, cycle: u64) -> Result<Vec<Str
     }
 
     match fetch_cycle_receipts(repo_root, cycle) {
-        Ok(expected_receipts) => {
-            failures.extend(validate_receipt_completeness(&content, &expected_receipts))
-        }
+        Ok(expected_receipts) => match validate_receipt_completeness(
+            repo_root,
+            cycle,
+            &content,
+            &expected_receipts,
+        ) {
+            Ok(receipt_failures) => failures.extend(receipt_failures),
+            Err(error) => failures.push(format!("unable to validate commit receipts: {}", error)),
+        },
         Err(error) => failures.push(format!("unable to validate commit receipts: {}", error)),
     }
 
     match changed_infrastructure_paths(repo_root, cycle) {
         Ok(changed_paths) => {
-            if let Some(failure) = validate_self_modifications_section(&content, &changed_paths) {
-                failures.push(failure);
+            if let Some(finding) = validate_self_modifications_section(&content, &changed_paths) {
+                match finding {
+                    SelfModificationFinding::Failure(failure) => failures.push(failure),
+                    SelfModificationFinding::Warning(warning) => {
+                        eprintln!("Warning: {}", warning);
+                    }
+                }
             }
         }
         Err(error) => failures.push(format!("unable to validate self-modifications: {}", error)),
@@ -199,9 +216,15 @@ fn fetch_cycle_receipts(repo_root: &Path, cycle: u64) -> Result<Vec<ReceiptEntry
         .map_err(|error| format!("failed to parse cycle-receipts JSON: {}", error))
 }
 
-fn validate_receipt_completeness(content: &str, expected: &[ReceiptEntry]) -> Vec<String> {
+fn validate_receipt_completeness(
+    repo_root: &Path,
+    cycle: u64,
+    content: &str,
+    expected: &[ReceiptEntry],
+) -> Result<Vec<String>, String> {
+    let required_receipts = filter_receipts_through_cycle_complete(repo_root, cycle, expected)?;
     let present = extract_present_receipts(content);
-    let missing = expected
+    let missing = required_receipts
         .iter()
         .filter_map(|entry| {
             let receipt = entry.receipt.trim();
@@ -210,13 +233,34 @@ fn validate_receipt_completeness(content: &str, expected: &[ReceiptEntry]) -> Ve
         .collect::<Vec<_>>();
 
     if missing.is_empty() {
-        return Vec::new();
+        return Ok(Vec::new());
     }
 
-    vec![format!(
+    Ok(vec![format!(
         "commit receipts section is missing required receipt(s): {}",
         missing.join(", ")
-    )]
+    )])
+}
+
+fn filter_receipts_through_cycle_complete(
+    repo_root: &Path,
+    cycle: u64,
+    expected: &[ReceiptEntry],
+) -> Result<Vec<ReceiptEntry>, String> {
+    let cycle_complete_commit = find_cycle_complete_commit(repo_root, cycle)?;
+    let mut filtered = Vec::new();
+
+    for entry in expected {
+        let receipt = entry.receipt.trim();
+        if receipt.is_empty() {
+            continue;
+        }
+        if is_ancestor_commit(repo_root, receipt, &cycle_complete_commit)? {
+            filtered.push(entry.clone());
+        }
+    }
+
+    Ok(filtered)
 }
 
 fn extract_present_receipts(content: &str) -> BTreeSet<String> {
@@ -305,17 +349,108 @@ fn find_cycle_start_commit(repo_root: &Path, cycle: u64) -> Result<String, Strin
     Ok(commit.to_string())
 }
 
-fn validate_self_modifications_section(content: &str, changed_paths: &[String]) -> Option<String> {
+fn find_cycle_complete_commit(repo_root: &Path, cycle: u64) -> Result<String, String> {
+    let pattern = format!(r"\[cycle {}\]", cycle);
+    let output = run_git(
+        repo_root,
+        &[
+            "log".to_string(),
+            "-n".to_string(),
+            "1".to_string(),
+            "--format=%H".to_string(),
+            "--grep".to_string(),
+            "^state(cycle-complete):".to_string(),
+            "--grep".to_string(),
+            pattern,
+            "--all-match".to_string(),
+        ],
+    )?;
+    let commit = output.trim();
+    if commit.is_empty() {
+        return Err(format!(
+            "could not find cycle-complete commit for cycle {}; verify the cycle number is correct and that the cycle has completed; fetch more history if this is a shallow clone",
+            cycle
+        ));
+    }
+
+    Ok(commit.to_string())
+}
+
+fn is_ancestor_commit(repo_root: &Path, ancestor: &str, descendant: &str) -> Result<bool, String> {
+    let output = ProcessCommand::new("git")
+        .arg("-C")
+        .arg(repo_root)
+        .args(["merge-base", "--is-ancestor", ancestor, descendant])
+        .output()
+        .map_err(|error| {
+            format!(
+                "failed to execute git merge-base --is-ancestor {} {}: {}",
+                ancestor, descendant, error
+            )
+        })?;
+    match output.status.code() {
+        Some(0) => Ok(true),
+        Some(1) => Ok(false),
+        _ => {
+            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+            Err(format!(
+                "git merge-base --is-ancestor {} {} failed: {}",
+                ancestor, descendant, stderr
+            ))
+        }
+    }
+}
+
+fn validate_self_modifications_section(
+    content: &str,
+    changed_paths: &[String],
+) -> Option<SelfModificationFinding> {
     let section = extract_section_body(content, SELF_MODIFICATIONS_HEADING)?;
     let reports_none = section.lines().any(reports_no_self_modifications);
     if !reports_none || changed_paths.is_empty() {
-        return None;
+        let omitted = summarize_infrastructure_groups(changed_paths)
+            .into_iter()
+            .filter(|path| !section_mentions_path(section, path))
+            .collect::<Vec<_>>();
+        return (!omitted.is_empty()).then(|| {
+            SelfModificationFinding::Warning(format!(
+                "self-modifications section omits changed infrastructure path(s): {}",
+                omitted.join(", ")
+            ))
+        });
     }
 
-    Some(format!(
+    Some(SelfModificationFinding::Failure(format!(
         "self-modifications section says None, but infrastructure changes exist: {}",
         changed_paths.join(", ")
-    ))
+    )))
+}
+
+fn summarize_infrastructure_groups(changed_paths: &[String]) -> Vec<String> {
+    let mut groups = changed_paths
+        .iter()
+        .map(|path| summarize_infrastructure_path(path))
+        .collect::<Vec<_>>();
+    groups.sort();
+    groups.dedup();
+    groups
+}
+
+fn summarize_infrastructure_path(path: &str) -> String {
+    if path.starts_with("tools/") {
+        return "tools/".to_string();
+    }
+    if path.starts_with(".claude/skills/") {
+        return ".claude/skills/".to_string();
+    }
+    if INFRASTRUCTURE_PATHS.contains(&path) {
+        return path.to_string();
+    }
+    path.to_string()
+}
+
+fn section_mentions_path(section: &str, path: &str) -> bool {
+    section.to_ascii_lowercase().contains(&path.to_ascii_lowercase())
 }
 
 fn fetch_pipeline_report(repo_root: &Path, cycle: u64) -> Result<PipelineReport, String> {
@@ -656,26 +791,118 @@ mod tests {
 
     #[test]
     fn detects_missing_receipts() {
-        let content = "\
-## Commit receipts
-
-| Tool | Receipt | Link |
-|------|---------|------|
-| write-entry | [`abc1234`](https://example.test/abc1234) | [abc1234](https://example.test/abc1234) |
-";
+        let repo = TestRepo::new();
+        repo.init();
+        let first_receipt = repo.commit(
+            "notes/first.txt",
+            "first\n",
+            "state(process-merge): first merge [cycle 226]",
+        );
+        let missing_receipt = repo.commit(
+            "notes/second.txt",
+            "second\n",
+            "state(process-review): second review [cycle 226]",
+        );
+        let cycle_complete_receipt = repo.commit(
+            "notes/complete.txt",
+            "complete\n",
+            "state(cycle-complete): close cycle [cycle 226]",
+        );
+        let content = receipts_table(&[&first_receipt, &cycle_complete_receipt]);
         let failures = validate_receipt_completeness(
-            content,
+            repo.path(),
+            226,
+            &content,
             &[
                 ReceiptEntry {
-                    receipt: "abc1234".to_string(),
+                    receipt: first_receipt,
                 },
                 ReceiptEntry {
-                    receipt: "def5678".to_string(),
+                    receipt: missing_receipt.clone(),
+                },
+                ReceiptEntry {
+                    receipt: cycle_complete_receipt,
                 },
             ],
-        );
+        )
+        .expect("receipt validation should succeed");
         assert_eq!(failures.len(), 1);
-        assert!(failures[0].contains("def5678"));
+        assert!(failures[0].contains(&missing_receipt));
+    }
+
+    #[test]
+    fn ignores_receipts_after_cycle_complete() {
+        let repo = TestRepo::new();
+        repo.init();
+        let included_receipt = repo.commit("notes/merge.txt", "merged\n", "state(process-merge): merge work [cycle 226]");
+        let cycle_complete_receipt = repo.commit(
+            "notes/complete.txt",
+            "complete\n",
+            "state(cycle-complete): close cycle [cycle 226]",
+        );
+        let excluded_receipt = repo.commit(
+            "docs/state.json",
+            "{}\n",
+            "state(record-dispatch): #123 dispatched [cycle 226]",
+        );
+        let content = receipts_table(&[&included_receipt, &cycle_complete_receipt]);
+
+        let failures = validate_receipt_completeness(
+            repo.path(),
+            226,
+            &content,
+            &[
+                ReceiptEntry {
+                    receipt: included_receipt,
+                },
+                ReceiptEntry {
+                    receipt: cycle_complete_receipt,
+                },
+                ReceiptEntry {
+                    receipt: excluded_receipt,
+                },
+            ],
+        )
+        .expect("receipt validation should succeed");
+
+        assert!(failures.is_empty());
+    }
+
+    #[test]
+    fn still_requires_receipts_up_to_cycle_complete() {
+        let repo = TestRepo::new();
+        repo.init();
+        let required_receipt = repo.commit("notes/merge.txt", "merged\n", "state(process-merge): merge work [cycle 226]");
+        let cycle_complete_receipt = repo.commit(
+            "notes/complete.txt",
+            "complete\n",
+            "state(cycle-complete): close cycle [cycle 226]",
+        );
+        repo.commit(
+            "docs/state.json",
+            "{}\n",
+            "state(record-dispatch): #123 dispatched [cycle 226]",
+        );
+        let content = receipts_table(&[&cycle_complete_receipt]);
+
+        let failures = validate_receipt_completeness(
+            repo.path(),
+            226,
+            &content,
+            &[
+                ReceiptEntry {
+                    receipt: required_receipt.clone(),
+                },
+                ReceiptEntry {
+                    receipt: cycle_complete_receipt,
+                },
+            ],
+        )
+        .expect("receipt validation should succeed");
+
+        assert_eq!(failures.len(), 1);
+        assert!(failures[0].contains("required receipt(s)"));
+        assert!(failures[0].contains(&required_receipt));
     }
 
     #[test]
@@ -685,13 +912,20 @@ mod tests {
 
 - None.
 ";
-        let failure = validate_self_modifications_section(
+        let finding = validate_self_modifications_section(
             content,
             &["tools/rust/crates/write-entry/src/main.rs".to_string()],
         )
-        .expect("expected self-modification failure");
-        assert!(failure.contains("says None"));
-        assert!(failure.contains("tools/rust/crates/write-entry/src/main.rs"));
+        .expect("expected self-modification finding");
+        match finding {
+            SelfModificationFinding::Failure(failure) => {
+                assert!(failure.contains("says None"));
+                assert!(failure.contains("tools/rust/crates/write-entry/src/main.rs"));
+            }
+            SelfModificationFinding::Warning(warning) => {
+                panic!("expected failure, got warning: {warning}");
+            }
+        }
     }
 
     #[test]
@@ -701,12 +935,45 @@ mod tests {
 
 * None
 ";
-        let failure = validate_self_modifications_section(
+        let finding = validate_self_modifications_section(
             content,
             &["tools/rust/crates/write-entry/src/main.rs".to_string()],
         )
-        .expect("expected self-modification failure");
-        assert!(failure.contains("says None"));
+        .expect("expected self-modification finding");
+        match finding {
+            SelfModificationFinding::Failure(failure) => {
+                assert!(failure.contains("says None"));
+            }
+            SelfModificationFinding::Warning(warning) => {
+                panic!("expected failure, got warning: {warning}");
+            }
+        }
+    }
+
+    #[test]
+    fn warns_when_self_modifications_omit_infrastructure_group() {
+        let content = "\
+## Self-modifications
+
+- tools/: updated Rust validators.
+";
+        let finding = validate_self_modifications_section(
+            content,
+            &[
+                "tools/rust/crates/validate-docs/src/main.rs".to_string(),
+                "AGENTS.md".to_string(),
+            ],
+        )
+        .expect("expected self-modification warning");
+        match finding {
+            SelfModificationFinding::Warning(warning) => {
+                assert!(warning.contains("AGENTS.md"));
+                assert!(!warning.contains("tools/"));
+            }
+            SelfModificationFinding::Failure(failure) => {
+                panic!("expected warning, got failure: {failure}");
+            }
+        }
     }
 
     #[test]
@@ -775,5 +1042,123 @@ Observed something.
 ";
         let failure = validate_commitment_section(content).expect("expected failure");
         assert!(failure.contains("Concrete commitments for next cycle"));
+    }
+
+    struct TestRepo {
+        path: PathBuf,
+    }
+
+    impl TestRepo {
+        fn new() -> Self {
+            let temp = TestDir::new();
+            let path = temp.path().to_path_buf();
+            std::mem::forget(temp);
+            Self { path }
+        }
+
+        fn path(&self) -> &Path {
+            &self.path
+        }
+
+        fn init(&self) {
+            git_success(self.path(), ["init"]);
+            git_success(self.path(), ["config", "user.name", "Validate Docs Tests"]);
+            git_success(
+                self.path(),
+                ["config", "user.email", "validate-docs-tests@example.com"],
+            );
+            self.write_file("README.md", "test repo\n");
+            git_success(self.path(), ["add", "--", "README.md"]);
+            git_success(self.path(), ["commit", "-m", "initial commit"]);
+            self.commit(
+                "notes/start.txt",
+                "start\n",
+                "state(cycle-start): begin cycle [cycle 226]",
+            );
+        }
+
+        fn commit(&self, relative_path: &str, contents: &str, message: &str) -> String {
+            self.write_file(relative_path, contents);
+            git_success(self.path(), ["add", "--", relative_path]);
+            git_success(self.path(), ["commit", "-m", message]);
+            git_stdout(self.path(), ["rev-parse", "--short=7", "HEAD"])
+                .trim()
+                .to_string()
+        }
+
+        fn write_file(&self, relative_path: &str, contents: &str) {
+            let path = self.path().join(relative_path);
+            if let Some(parent) = path.parent() {
+                fs::create_dir_all(parent).expect("create parent directories");
+            }
+            fs::write(path, contents).expect("write test file");
+        }
+    }
+
+    impl Drop for TestRepo {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.path);
+        }
+    }
+
+    fn receipts_table(receipts: &[&str]) -> String {
+        let mut content = String::from(
+            "## Commit receipts\n\n| Tool | Receipt | Link |\n|------|---------|------|\n",
+        );
+        for receipt in receipts {
+            content.push_str(&format!(
+                "| step | [`{receipt}`](https://example.test/{receipt}) | [link](https://example.test/{receipt}) |\n"
+            ));
+        }
+        content
+    }
+
+    fn git_success<I, S>(repo_root: &Path, args: I)
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<std::ffi::OsStr>,
+    {
+        let rendered_args: Vec<String> = args
+            .into_iter()
+            .map(|argument| argument.as_ref().to_string_lossy().into_owned())
+            .collect();
+        let output = ProcessCommand::new("git")
+            .arg("-C")
+            .arg(repo_root)
+            .args(&rendered_args)
+            .output()
+            .expect("git command should execute");
+        assert!(
+            output.status.success(),
+            "git command failed (git -C {} {}): {}",
+            repo_root.display(),
+            rendered_args.join(" "),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    fn git_stdout<I, S>(repo_root: &Path, args: I) -> String
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<std::ffi::OsStr>,
+    {
+        let rendered_args: Vec<String> = args
+            .into_iter()
+            .map(|argument| argument.as_ref().to_string_lossy().into_owned())
+            .collect();
+        let output = ProcessCommand::new("git")
+            .arg("-C")
+            .arg(repo_root)
+            .args(&rendered_args)
+            .output()
+            .expect("git command should execute");
+        assert!(
+            output.status.success(),
+            "git command failed (git -C {} {}): {}",
+            repo_root.display(),
+            rendered_args.join(" "),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        String::from_utf8(output.stdout).expect("git output should be valid UTF-8")
     }
 }
