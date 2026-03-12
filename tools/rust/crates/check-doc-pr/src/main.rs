@@ -66,6 +66,10 @@ struct Cli {
     /// Path to the repository root
     #[arg(long, default_value = ".")]
     repo_root: PathBuf,
+
+    /// Freeze receipt completeness expectations to commits before this RFC3339 timestamp
+    #[arg(long)]
+    dispatched_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -107,6 +111,7 @@ fn run(cli: Cli) -> Result<(), String> {
 
     let pr_files = fetch_pr_files(&cli.repo_root, cli.pr)?;
     let pr_branch = fetch_pr_branch(&cli.repo_root, cli.pr)?;
+    let dispatched_at = resolve_dispatched_at(&cli.repo_root, cli.dispatched_at.as_deref())?;
 
     let mut results = Vec::new();
 
@@ -146,6 +151,7 @@ fn run(cli: Cli) -> Result<(), String> {
         &cli.repo_root,
         cli.cycle,
         worklog_content.as_deref(),
+        dispatched_at.as_deref(),
     ));
 
     // 8. receipts_valid
@@ -757,24 +763,32 @@ fn extract_section_content(content: &str, section_name_lower: &str) -> Option<St
     }
 }
 
-fn fetch_cycle_receipts(repo_root: &Path, cycle: u64) -> Result<Vec<ReceiptEntry>, String> {
-    let output = Command::new("bash")
+fn fetch_cycle_receipts(
+    repo_root: &Path,
+    cycle: u64,
+    before: Option<&str>,
+) -> Result<Vec<ReceiptEntry>, String> {
+    let mut command = Command::new("bash");
+    command
         .current_dir(repo_root)
         .arg("tools/cycle-receipts")
         .arg("--cycle")
         .arg(cycle.to_string())
         .arg("--repo-root")
         .arg(repo_root.display().to_string())
-        .arg("--json")
-        .output()
-        .map_err(|error| {
-            format!(
-                "failed to run bash tools/cycle-receipts --cycle {} --repo-root {} --json: {}",
-                cycle,
-                repo_root.display(),
-                error
-            )
-        })?;
+        .arg("--json");
+    if let Some(timestamp) = before {
+        command.arg("--before").arg(timestamp);
+    }
+    let output = command.output().map_err(|error| {
+        format!(
+            "failed to run bash tools/cycle-receipts --cycle {} --repo-root {} --json{}: {}",
+            cycle,
+            repo_root.display(),
+            before.map_or_else(String::new, |timestamp| format!(" --before {}", timestamp)),
+            error
+        )
+    })?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
@@ -796,7 +810,27 @@ fn check_receipt_completeness(
     repo_root: &Path,
     cycle: u64,
     worklog_content: Option<&str>,
+    dispatched_at: Option<&str>,
 ) -> CheckResult {
+    check_receipt_completeness_with_loader(
+        repo_root,
+        cycle,
+        worklog_content,
+        dispatched_at,
+        fetch_cycle_receipts,
+    )
+}
+
+fn check_receipt_completeness_with_loader<F>(
+    repo_root: &Path,
+    cycle: u64,
+    worklog_content: Option<&str>,
+    dispatched_at: Option<&str>,
+    receipt_loader: F,
+) -> CheckResult
+where
+    F: Fn(&Path, u64, Option<&str>) -> Result<Vec<ReceiptEntry>, String>,
+{
     let Some(content) = worklog_content else {
         return CheckResult {
             check: "receipt_completeness".to_string(),
@@ -805,7 +839,7 @@ fn check_receipt_completeness(
         };
     };
 
-    let expected = match fetch_cycle_receipts(repo_root, cycle) {
+    let expected = match receipt_loader(repo_root, cycle, dispatched_at) {
         Ok(expected) => expected,
         Err(error) => {
             return CheckResult {
@@ -817,6 +851,21 @@ fn check_receipt_completeness(
     };
 
     evaluate_receipt_completeness(Some(content), &expected)
+}
+
+fn resolve_dispatched_at(
+    repo_root: &Path,
+    cli_dispatched_at: Option<&str>,
+) -> Result<Option<String>, String> {
+    if let Some(timestamp) = cli_dispatched_at {
+        return Ok(Some(timestamp.to_string()));
+    }
+
+    let state = read_state_value(repo_root)?;
+    Ok(state
+        .pointer("/cycle_phase/dispatched_at")
+        .and_then(Value::as_str)
+        .map(str::to_string))
 }
 
 fn evaluate_receipt_completeness(
@@ -1345,6 +1394,10 @@ mod tests {
             help_text.contains("--repo-root"),
             "help should mention --repo-root flag"
         );
+        assert!(
+            help_text.contains("--dispatched-at"),
+            "help should mention --dispatched-at flag"
+        );
     }
 
     #[test]
@@ -1561,6 +1614,92 @@ mod tests {
         assert_eq!(result.check, "receipt_completeness");
         assert_eq!(result.status, CheckStatus::Fail);
         assert!(result.detail.contains("abc1234"));
+    }
+
+    #[test]
+    fn receipt_completeness_uses_dispatched_at_to_freeze_expected_set() {
+        let worklog = r#"## Commit receipts
+| Step | Receipt | Commit |
+|------|---------|--------|
+| cycle-start | [`abc1234`](https://example.com/abc1234) | state(cycle-start): begin cycle 219 |
+"#;
+
+        let result = check_receipt_completeness_with_loader(
+            Path::new("/tmp/repo"),
+            219,
+            Some(worklog),
+            Some("2026-03-10T12:00:00Z"),
+            |_, _, before| {
+                assert_eq!(before, Some("2026-03-10T12:00:00Z"));
+                Ok(vec![ReceiptEntry {
+                    receipt: "abc1234".to_string(),
+                }])
+            },
+        );
+
+        assert_eq!(result.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn receipt_completeness_without_dispatched_at_keeps_current_behavior() {
+        let worklog = r#"## Commit receipts
+| Step | Receipt | Commit |
+|------|---------|--------|
+| cycle-start | [`abc1234`](https://example.com/abc1234) | state(cycle-start): begin cycle 219 |
+"#;
+
+        let result = check_receipt_completeness_with_loader(
+            Path::new("/tmp/repo"),
+            219,
+            Some(worklog),
+            None,
+            |_, _, before| {
+                assert_eq!(before, None);
+                Ok(vec![
+                    ReceiptEntry {
+                        receipt: "abc1234".to_string(),
+                    },
+                    ReceiptEntry {
+                        receipt: "def5678".to_string(),
+                    },
+                ])
+            },
+        );
+
+        assert_eq!(result.status, CheckStatus::Fail);
+        assert!(result.detail.contains("def5678"));
+    }
+
+    #[test]
+    fn resolve_dispatched_at_reads_cycle_phase_timestamp_from_state() {
+        let repo_root = create_temp_repo_root_with_state(json!({
+            "cycle_phase": {
+                "dispatched_at": "2026-03-10T12:00:00Z"
+            }
+        }));
+
+        let dispatched_at =
+            resolve_dispatched_at(&repo_root, None).expect("state lookup should succeed");
+
+        assert_eq!(dispatched_at.as_deref(), Some("2026-03-10T12:00:00Z"));
+
+        fs::remove_dir_all(repo_root).expect("temp repo should be removed");
+    }
+
+    #[test]
+    fn resolve_dispatched_at_prefers_cli_flag_over_state() {
+        let repo_root = create_temp_repo_root_with_state(json!({
+            "cycle_phase": {
+                "dispatched_at": "2026-03-10T12:00:00Z"
+            }
+        }));
+
+        let dispatched_at = resolve_dispatched_at(&repo_root, Some("2026-03-10T11:00:00Z"))
+            .expect("cli value should be accepted");
+
+        assert_eq!(dispatched_at.as_deref(), Some("2026-03-10T11:00:00Z"));
+
+        fs::remove_dir_all(repo_root).expect("temp repo should be removed");
     }
 
     #[test]
@@ -1979,6 +2118,14 @@ mod tests {
     static TEST_REPO_COUNTER: AtomicU64 = AtomicU64::new(0);
 
     fn create_temp_repo_root_with_in_flight(in_flight: i64) -> PathBuf {
+        create_temp_repo_root_with_state(json!({
+            "copilot_metrics": {
+                "in_flight": in_flight
+            }
+        }))
+    }
+
+    fn create_temp_repo_root_with_state(state: Value) -> PathBuf {
         let unique = TEST_REPO_COUNTER.fetch_add(1, Ordering::Relaxed);
         let repo_root = std::env::temp_dir().join(format!(
             "check-doc-pr-test-{}-{}-{}",
@@ -1990,11 +2137,9 @@ mod tests {
             unique
         ));
         fs::create_dir_all(repo_root.join("docs")).expect("docs directory should be created");
-        fs::write(
-            repo_root.join("docs/state.json"),
-            format!(r#"{{"copilot_metrics":{{"in_flight":{}}}}}"#, in_flight),
-        )
-        .expect("state.json should be written");
+        let serialized = serde_json::to_string(&state).expect("state should serialize");
+        fs::write(repo_root.join("docs/state.json"), serialized)
+            .expect("state.json should be written");
         repo_root
     }
 

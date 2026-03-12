@@ -275,10 +275,7 @@ pub fn transition_cycle_phase(
         .ok_or_else(|| "missing object /cycle_phase in docs/state.json".to_string())?;
 
     cycle_phase.insert("phase".to_string(), Value::String(new_phase.to_string()));
-    cycle_phase.insert(
-        "phase_entered_at".to_string(),
-        Value::String(timestamp),
-    );
+    cycle_phase.insert("phase_entered_at".to_string(), Value::String(timestamp));
     cycle_phase.insert("cycle".to_string(), serde_json::json!(cycle));
 
     // Bump field_inventory freshness
@@ -481,6 +478,7 @@ pub struct CyclePhase {
     pub phase: Option<String>,
     pub doc_issue: Option<i64>,
     pub doc_pr: Option<i64>,
+    pub dispatched_at: Option<String>,
     pub review_iteration: Option<u64>,
     pub review_max: Option<u64>,
     pub phase_entered_at: Option<String>,
@@ -897,6 +895,7 @@ mod tests {
         assert!(state.cycle_phase.phase.is_none());
         assert!(state.cycle_phase.doc_issue.is_none());
         assert!(state.cycle_phase.doc_pr.is_none());
+        assert!(state.cycle_phase.dispatched_at.is_none());
         assert!(state.cycle_phase.review_iteration.is_none());
         assert!(state.cycle_phase.review_max.is_none());
         assert!(state.cycle_phase.phase_entered_at.is_none());
@@ -910,6 +909,7 @@ mod tests {
                 "phase": "doc_dispatched",
                 "doc_issue": 980,
                 "doc_pr": 981,
+                "dispatched_at": "2026-03-10T14:30:00Z",
                 "review_iteration": 1,
                 "review_max": 3,
                 "phase_entered_at": "2026-03-10T15:00:00Z"
@@ -921,6 +921,10 @@ mod tests {
         assert_eq!(state.cycle_phase.phase.as_deref(), Some("doc_dispatched"));
         assert_eq!(state.cycle_phase.doc_issue, Some(980));
         assert_eq!(state.cycle_phase.doc_pr, Some(981));
+        assert_eq!(
+            state.cycle_phase.dispatched_at.as_deref(),
+            Some("2026-03-10T14:30:00Z")
+        );
         assert_eq!(state.cycle_phase.review_iteration, Some(1));
         assert_eq!(state.cycle_phase.review_max, Some(3));
         assert_eq!(
@@ -1040,7 +1044,13 @@ mod tests {
 
     #[test]
     fn valid_phases_contains_all_state_machine_values() {
-        let expected = vec!["work", "doc_dispatched", "doc_review", "close_out", "complete"];
+        let expected = vec![
+            "work",
+            "doc_dispatched",
+            "doc_review",
+            "close_out",
+            "complete",
+        ];
         assert_eq!(VALID_PHASES, expected.as_slice());
     }
 
@@ -1054,8 +1064,7 @@ mod tests {
                 "phase_entered_at": "2026-03-10T16:00:00Z"
             }
         });
-        let state: StateJson =
-            serde_json::from_value(input).expect("state should deserialize");
+        let state: StateJson = serde_json::from_value(input).expect("state should deserialize");
         let serialized = serde_json::to_value(&state).expect("state should serialize");
         assert_eq!(serialized.pointer("/cycle_phase/cycle"), Some(&json!(220)));
         assert_eq!(
