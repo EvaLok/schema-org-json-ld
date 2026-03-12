@@ -6,10 +6,7 @@ use state_schema::{
     commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
     transition_cycle_phase, write_state_value,
 };
-use std::{
-    path::{Path, PathBuf},
-    process::Command,
-};
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(name = "record-dispatch")]
@@ -84,6 +81,8 @@ mod tests {
     use clap::CommandFactory;
     use std::{
         fs,
+        path::Path,
+        process::Command,
         time::{Duration, SystemTime, UNIX_EPOCH},
     };
 
