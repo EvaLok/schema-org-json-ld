@@ -2070,7 +2070,7 @@ mod tests {
 	}
 
 	#[test]
-	fn step_comment_verification_applies_standard_flow_to_unrecognized_step_tokens() {
+	fn step_comment_verification_fails_when_only_two_mandatory_steps_are_present() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
 		let root = std::env::temp_dir()

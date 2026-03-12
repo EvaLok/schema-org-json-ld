@@ -103,15 +103,16 @@ struct StartupBrief {
     warnings: Vec<String>,
 }
 
-#[cfg(test)]
-#[derive(Clone, Debug, Serialize)]
-struct ResumeBrief {
-    cycle: u64,
-    phase: String,
-}
-
 fn should_resume(phase: Option<&str>) -> bool {
     matches!(phase, Some("work" | "close_out"))
+}
+
+fn build_resume_json(cycle: u64, phase: &str) -> Value {
+    json!({
+        "resume": true,
+        "cycle": cycle,
+        "phase": phase,
+    })
 }
 
 fn main() {
@@ -138,14 +139,9 @@ fn run(cli: Cli) -> Result<(), String> {
         let cycle = state_json.cycle_phase.cycle.unwrap_or(0);
 
         if cli.json {
-            let brief = serde_json::json!({
-                "resume": true,
-                "cycle": cycle,
-                "phase": current_phase
-            });
             println!(
                 "{}",
-                serde_json::to_string_pretty(&brief)
+                serde_json::to_string_pretty(&build_resume_json(cycle, current_phase))
                     .map_err(|error| format!("failed to serialize resume JSON: {}", error))?
             );
         } else {
@@ -1349,17 +1345,12 @@ mod tests {
     }
 
     #[test]
-    fn resume_brief_serializes_core_fields() {
-        let brief = ResumeBrief {
-            cycle: 219,
-            phase: "close_out".to_string(),
-        };
+    fn resume_json_includes_resume_flag_and_core_fields() {
+        let parsed = build_resume_json(219, "close_out");
 
-        let output = serde_json::to_string_pretty(&brief).expect("resume brief should serialize");
-        let parsed: Value = serde_json::from_str(&output).expect("json should parse");
-
+        assert_eq!(parsed.get("resume"), Some(&json!(true)));
         assert_eq!(parsed.get("cycle"), Some(&json!(219)));
         assert_eq!(parsed.get("phase"), Some(&json!("close_out")));
-        assert_eq!(parsed.as_object().map(|obj| obj.len()), Some(2));
+        assert_eq!(parsed.as_object().map(|obj| obj.len()), Some(3));
     }
 }
