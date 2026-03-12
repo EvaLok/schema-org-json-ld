@@ -2971,8 +2971,10 @@
     {
       "dispatched_at": "2026-03-12T08:24:13Z",
       "issue": 1104,
+      "merged_at": "2026-03-12T10:40:00Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1105,
+      "status": "merged",
       "title": "Fix cycle-receipts immutable window"
     },
     {
@@ -3160,11 +3162,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1106 Cycle 234 adversarial review (cycle 234)",
     "dispatch_to_pr_rate": "97.3%",
-    "in_flight": 1,
-    "merged": 320,
+    "in_flight": 0,
+    "merged": 321,
     "pr_merge_rate": "99.1%",
     "produced_pr": 323,
-    "resolved": 328,
+    "resolved": 329,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 329
