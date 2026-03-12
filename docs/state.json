@@ -4962,7 +4962,7 @@
         "note": "F1 test-drift: actioned (932cb95). F2 worklog-accuracy: deferred (retrospective). F3 process-adherence: deferred (process lesson). F4 audit-evidence: actioned (1235a9d artifact). F5 deferred-remediation: deferred classification but underlying issue resolved via PR #1111 merge."
       },
       {
-        "actioned": 4,
+        "actioned": 1,
         "categories": [
           "worklog-accuracy",
           "process-adherence",
@@ -4973,13 +4973,13 @@
         ],
         "complacency_score": 2,
         "cycle": 236,
-        "deferred": 2,
+        "deferred": 5,
         "finding_count": 6,
         "findings": [
           {
             "category": "worklog-accuracy",
-            "disposition": "actioned",
-            "evidence": "cycle 237 uses cycle-receipts verbatim and runs validate-docs"
+            "disposition": "deferred",
+            "evidence": "reclassified cycle 238: cycle 237 worklog still failed validate-docs (missing receipts ce0ea32, 07cc183)"
           },
           {
             "category": "process-adherence",
@@ -4988,13 +4988,13 @@
           },
           {
             "category": "journal-quality",
-            "disposition": "actioned",
-            "evidence": "cycle 237 journal uses concrete language, verifiable commitments"
+            "disposition": "deferred",
+            "evidence": "reclassified cycle 238: no cycle 237 journal entry exists despite completion claim"
           },
           {
             "category": "audit-evidence",
-            "disposition": "actioned",
-            "evidence": "summary table double-counted state-schema; canonical count 31 correct"
+            "disposition": "deferred",
+            "evidence": "reclassified cycle 238: tool-audit artifact still internally contradictory (31 vs 29+1+1+1)"
           },
           {
             "category": "state-integrity",
@@ -5004,11 +5004,11 @@
           {
             "category": "tool-usage",
             "disposition": "deferred",
-            "evidence": "will use dispatch-docs as default path going forward"
+            "evidence": "dispatch-docs deprecated in same cycle (ADR 0010) — disposition moot"
           }
         ],
         "ignored": 0,
-        "note": "F1 worklog-accuracy: actioned. F2 process-adherence: deferred (needs tooling). F3 journal-quality: actioned. F4 audit-evidence: actioned (count fix). F5 state-integrity: actioned (56662de). F6 tool-usage: deferred (dispatch-docs default)."
+        "note": "Reclassified cycle 238: F1 worklog-accuracy deferred (worklog still invalid). F2 process-adherence deferred (needs tooling). F3 journal-quality deferred (no journal entry). F4 audit-evidence deferred (artifact unfixed). F5 state-integrity actioned (56662de). F6 tool-usage deferred (dispatch-docs deprecated). Original: 4 actioned, 2 deferred. Corrected: 1 actioned, 5 deferred."
       }
     ],
     "last_review_cycle": 236

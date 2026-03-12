@@ -18,7 +18,7 @@ The dispatch-docs path was designed to separate the "work" role from the "docume
 - **Maintenance burden**: Three Rust crates (dispatch-docs, check-doc-pr, cycle-phase doc phases), shell wrappers, Phase B checklist steps, and review_iteration tracking all maintained dead infrastructure
 - **False framing**: The "fallback" label obscured that dispatch-docs was never successfully used in recent cycles
 
-Meanwhile, `write-entry` was hardened (PR #1111, cycle 236) to validate receipts against canonical `cycle-receipts` output, auto-derive self-modifications from git history, and produce accurate documentation.
+Meanwhile, `write-entry` was hardened (PR #1111, cycle 236) to validate receipts against canonical `cycle-receipts` output and auto-derive self-modifications from git history. The hardened path has not yet been fully validated in production — cycle 237 (the first cycle after hardening) still produced a worklog that failed `validate-docs` due to receipt gaps from late commits. The strategic deprecation decision rests on write-entry being the *improvable* path, not on it being proven.
 
 ## Decision
 
@@ -36,7 +36,7 @@ Deprecate `dispatch-docs` (Option A from audit #216). Remove the following:
 - Tool count reduced by 2-3 (dispatch-docs, check-doc-pr, cycle-phase simplification)
 - COMPLETION_CHECKLIST.md reduced by ~113 lines
 - Eliminated a class of failure modes (Phase B resume logic, doc agent timeouts, receipt timing traps)
-- Documentation accuracy now depends entirely on write-entry's validation — the receipt hardening from PR #1111 is the quality gate
+- Documentation accuracy now depends entirely on write-entry's validation — the receipt hardening from PR #1111 is the intended quality gate, pending production validation
 - No more multi-session cycle completion — cycles complete in a single session
 
 ## Alternatives Considered
