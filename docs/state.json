@@ -3044,6 +3044,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Remove phased workflow code"
+    },
+    {
+      "dispatched_at": "2026-03-12T18:35:47Z",
+      "issue": 1131,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 239 review"
     }
   ],
   "audit_dropped": [
@@ -3222,21 +3229,21 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1129 Remove phased workflow code (cycle 239)",
-    "dispatch_to_pr_rate": "97.9%",
-    "in_flight": 2,
+    "dispatch_log_latest": "#1131 Cycle 239 review (cycle 239)",
+    "dispatch_to_pr_rate": "97.6%",
+    "in_flight": 3,
     "merged": 326,
     "pr_merge_rate": "99.1%",
     "produced_pr": 329,
     "resolved": 334,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 336
+    "total_dispatches": 337
   },
   "cycle_phase": {
     "cycle": 239,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-12T18:32:23Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-12T18:35:47Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
