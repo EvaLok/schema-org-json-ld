@@ -47,9 +47,10 @@
 | Step | Receipt | Commit |
 |------|---------|--------|
 | cycle-start | <a href="https://github.com/EvaLok/schema-org-json-ld/commit/b79ebb7ae60d311dfcbec392fd1c9f2289345206">`b79ebb7`</a> | state(cycle-start): begin cycle 232, issue #1085 [cycle 232] |
-| record-dispatch | <a href="https://github.com/EvaLok/schema-org-json-ld/commit/36034645798aa08ebefe8392d5f6317d7c126463">`3603464`</a> | state(record-dispatch): #1087 dispatched [cycle 232] |
-| process-merge | <a href="https://github.com/EvaLok/schema-org-json-ld/commit/a93eb5d570064567805205e868ec37d01a8c994c">`a93eb5d`</a> | state(process-merge): PR #1078 merged [cycle 232] |
-| process-review | <a href="https://github.com/EvaLok/schema-org-json-ld/commit/6305a82fca31eb3185675d596cd979d64e01f90c">`6305a82`</a> | state(process-review): cycle 231 review consumed, score 4/5 [cycle 232] |
-| process-merge | <a href="https://github.com/EvaLok/schema-org-json-ld/commit/5fd722118b748c7028643e8150e91d6146a9ab6c">`5fd7221`</a> | state(process-merge): PR #1084 merged [cycle 232] |
+| process-merge | <a href="https://github.com/EvaLok/schema-org-json-ld/commit/5385924418c38bf45208ea4af3fd6850a22ddf5b">`5385924`</a> | state(process-merge): PR #1084 merged [cycle 232] |
+| process-review | <a href="https://github.com/EvaLok/schema-org-json-ld/commit/b459eb8342cfffde43789d5ca5788b052797e689">`b459eb8`</a> | state(process-review): cycle 231 review consumed, score 4/5 [cycle 232] |
+| process-merge | <a href="https://github.com/EvaLok/schema-org-json-ld/commit/ca9d67007e5a5537e07b0661459ae3c3a24eba23">`ca9d670`</a> | state(process-merge): PR #1078 merged [cycle 232] |
+| record-dispatch | <a href="https://github.com/EvaLok/schema-org-json-ld/commit/020f6256c6d107740c06f4ec891f2250cf353a15">`020f625`</a> | state(record-dispatch): #1087 dispatched [cycle 232] |
+| dispatch-docs | <a href="https://github.com/EvaLok/schema-org-json-ld/commit/e08318dc2e539f4b0f54e1f7e94c0a66c6b0f5db">`e08318d`</a> | state(dispatch-docs): #1089 dispatched [cycle 232] |
 
-5 receipts collected.
+6 receipts collected.
