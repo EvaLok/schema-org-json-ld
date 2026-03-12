@@ -71,6 +71,7 @@ fn main() {
 fn run(cli: Cli) -> Result<(), String> {
     let current_cycle = resolve_cycle(cli.cycle, &cli.repo_root)?;
     let body = read_body_file(&cli.body_file)?;
+    let body = inject_cycle_receipts(&cli.repo_root, current_cycle, &body, load_cycle_receipts);
     let model = state_schema::default_agent_model(&cli.repo_root)?;
     let payload = build_issue_payload(current_cycle, &body, &model);
 
@@ -132,11 +133,7 @@ fn apply_dispatch_record(
     apply_dispatch_patch(state, &patch)
 }
 
-fn apply_cycle_phase_update(
-    state: &mut Value,
-    cycle: u64,
-    issue: u64,
-) -> Result<(), String> {
+fn apply_cycle_phase_update(state: &mut Value, cycle: u64, issue: u64) -> Result<(), String> {
     // Use shared transition function for phase + freshness
     transition_cycle_phase(state, cycle, "doc_dispatched")?;
 
@@ -146,10 +143,7 @@ fn apply_cycle_phase_update(
         .and_then(Value::as_object_mut)
         .ok_or_else(|| "missing object /cycle_phase in docs/state.json".to_string())?;
 
-    cycle_phase.insert(
-        "doc_issue".to_string(),
-        serde_json::json!(issue as i64),
-    );
+    cycle_phase.insert("doc_issue".to_string(), serde_json::json!(issue as i64));
     cycle_phase.insert("doc_pr".to_string(), Value::Null);
     cycle_phase.insert("review_iteration".to_string(), serde_json::json!(0));
     cycle_phase.insert("review_max".to_string(), serde_json::json!(3));
@@ -166,6 +160,53 @@ fn read_body_file(path: &Path) -> Result<String, String> {
     }
 
     Ok(normalized.to_string())
+}
+
+fn inject_cycle_receipts<F>(repo_root: &Path, cycle: u64, body: &str, loader: F) -> String
+where
+    F: Fn(&Path, u64) -> Result<String, String>,
+{
+    match loader(repo_root, cycle) {
+        Ok(receipts_output) => format!(
+            "{body}\n\n## Cycle receipts (auto-generated)\n\n{}",
+            receipts_output.trim_end_matches(['\r', '\n'])
+        ),
+        Err(error) => {
+            eprintln!(
+                "Warning: failed to generate cycle receipts for cycle {}: {}",
+                cycle, error
+            );
+            body.to_string()
+        }
+    }
+}
+
+fn load_cycle_receipts(repo_root: &Path, cycle: u64) -> Result<String, String> {
+    let output = Command::new("bash")
+        .arg("tools/cycle-receipts")
+        .arg("--cycle")
+        .arg(cycle.to_string())
+        .arg("--repo-root")
+        .arg(repo_root.display().to_string())
+        .current_dir(repo_root)
+        .output()
+        .map_err(|error| {
+            format!(
+                "failed to run bash tools/cycle-receipts --cycle {} --repo-root {}: {}",
+                cycle,
+                repo_root.display(),
+                error
+            )
+        })?;
+    if !output.status.success() {
+        return Err(command_failure_message(
+            "bash tools/cycle-receipts",
+            &output,
+        ));
+    }
+
+    String::from_utf8(output.stdout)
+        .map_err(|error| format!("failed to decode cycle-receipts output as UTF-8: {}", error))
 }
 
 fn resolve_cycle(cli_cycle: u64, repo_root: &Path) -> Result<u64, String> {
@@ -264,6 +305,17 @@ mod tests {
     use clap::CommandFactory;
     use serde_json::json;
 
+    fn successful_receipt_loader(_: &Path, cycle: u64) -> Result<String, String> {
+        Ok(format!(
+            "## Commit receipts — Cycle {}\n\n| Step | Receipt |",
+            cycle
+        ))
+    }
+
+    fn failing_receipt_loader(_: &Path, _: u64) -> Result<String, String> {
+        Err("cycle-receipts unavailable".to_string())
+    }
+
     fn sample_state() -> Value {
         json!({
             "agent_sessions": [
@@ -315,10 +367,7 @@ mod tests {
     fn build_issue_payload_uses_cycle_docs_labels() {
         let payload = build_issue_payload(219, "Docs body", "gpt-5.4");
 
-        assert_eq!(
-            payload.title,
-            "[Cycle Docs] Cycle 219 worklog and journal"
-        );
+        assert_eq!(payload.title, "[Cycle Docs] Cycle 219 worklog and journal");
         assert_eq!(payload.labels, vec!["agent-task", "cycle-docs"]);
         assert_eq!(payload.assignees, vec!["copilot-swe-agent[bot]"]);
         assert_eq!(
@@ -347,8 +396,7 @@ mod tests {
         )
         .expect("dispatch record should apply");
 
-        apply_cycle_phase_update(&mut state, 219, 980)
-            .expect("cycle phase update should apply");
+        apply_cycle_phase_update(&mut state, 219, 980).expect("cycle phase update should apply");
 
         // Verify dispatch record was applied
         let sessions = state["agent_sessions"]
@@ -359,10 +407,7 @@ mod tests {
         assert_eq!(sessions[1]["status"], json!("in_flight"));
 
         // Verify all cycle_phase fields
-        assert_eq!(
-            state["cycle_phase"]["phase"],
-            json!("doc_dispatched")
-        );
+        assert_eq!(state["cycle_phase"]["phase"], json!("doc_dispatched"));
         assert_eq!(state["cycle_phase"]["doc_issue"], json!(980));
         assert_eq!(state["cycle_phase"]["doc_pr"], json!(null));
         assert_eq!(state["cycle_phase"]["review_iteration"], json!(0));
@@ -378,5 +423,32 @@ mod tests {
                 .and_then(Value::as_str),
             Some("cycle 219")
         );
+    }
+
+    #[test]
+    fn inject_cycle_receipts_appends_generated_section() {
+        let body = inject_cycle_receipts(
+            Path::new("/tmp/repo"),
+            219,
+            "Existing docs body",
+            successful_receipt_loader,
+        );
+
+        assert_eq!(
+            body,
+            "Existing docs body\n\n## Cycle receipts (auto-generated)\n\n## Commit receipts — Cycle 219\n\n| Step | Receipt |"
+        );
+    }
+
+    #[test]
+    fn inject_cycle_receipts_falls_back_when_receipt_generation_fails() {
+        let body = inject_cycle_receipts(
+            Path::new("/tmp/repo"),
+            219,
+            "Existing docs body",
+            failing_receipt_loader,
+        );
+
+        assert_eq!(body, "Existing docs body");
     }
 }
