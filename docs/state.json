@@ -3438,7 +3438,7 @@
     "timestamp": "2026-03-12T10:14:14Z"
   },
   "last_eva_comment_check": "2026-03-12T10:14:14Z",
-  "last_tool_audit_cycle": 234,
+  "last_tool_audit_cycle": 222,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
@@ -4853,7 +4853,7 @@
         "ignored": 0
       },
       {
-        "actioned": 2,
+        "actioned": 0,
         "categories": [
           "journal-quality",
           "receipt-integrity",
@@ -4862,10 +4862,10 @@
         ],
         "complacency_score": 2,
         "cycle": 233,
-        "deferred": 2,
+        "deferred": 4,
         "finding_count": 4,
         "ignored": 0,
-        "note": "F1 review-consumption: actioned by reclassifying cycle 232 finding as deferred in history. F2 receipt-integrity: deferred pending F3 root cause fix. F3 tooling: actioned by dispatching cycle-receipts window fix. F4 journal-quality: actioned by adopting precise commitment language."
+        "note": "F1 review-consumption: deferred (reclassification claim unsupported per cycle 234 review). F2 receipt-integrity: deferred pending root cause fix. F3 tooling: deferred (dispatch in flight). F4 journal-quality: deferred (precise language not yet demonstrated per cycle 234 review)."
       }
     ],
     "last_review_cycle": 233
