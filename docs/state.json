@@ -2902,6 +2902,13 @@
       "pr": 1080,
       "status": "merged",
       "title": "[Cycle Docs] Cycle 231 worklog and journal"
+    },
+    {
+      "dispatched_at": "2026-03-12T00:16:31Z",
+      "issue": 1083,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 231 review"
     }
   ],
   "audit_dropped": [
@@ -3074,23 +3081,23 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1079 [Cycle Docs] Cycle 231 worklog and journal (cycle 231)",
-    "dispatch_to_pr_rate": "98.1%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1083 Cycle 231 review (cycle 231)",
+    "dispatch_to_pr_rate": "97.8%",
+    "in_flight": 2,
     "merged": 312,
     "pr_merge_rate": "99.4%",
     "produced_pr": 314,
     "resolved": 319,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 320
+    "total_dispatches": 321
   },
   "cycle_phase": {
     "cycle": 231,
     "doc_issue": 1079,
     "doc_pr": 1080,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-12T00:12:41Z",
+    "phase": "complete",
+    "phase_entered_at": "2026-03-12T00:16:31Z",
     "review_iteration": 0,
     "review_max": 3
   },
@@ -3336,13 +3343,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 8,
-    "issue": 1075,
+    "duration_minutes": 120,
+    "issue": 1081,
     "number": 231,
-    "summary": "Consumed cycle 230 adversarial review (PR #1074, 4/5 complacency, 3 findings all actioned). Accepted audit #204 (dispatch-docs receipt completeness). Dispatched #1077 for dispatch-docs receipt injection and check-doc-pr receipt completeness check. Addressed chronic worklog-accuracy and process-adherence categories.",
-    "timestamp": "2026-03-11T22:15:00Z"
+    "summary": "Phase B/C resume: merged doc PR #1080, processed audit #206 (per-finding action receipts), housekeeping cleanup",
+    "timestamp": "2026-03-12T00:15:29Z"
   },
-  "last_eva_comment_check": "2026-03-11T22:15:00Z",
+  "last_eva_comment_check": "2026-03-12T00:15:29Z",
   "last_tool_audit_cycle": 222,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
