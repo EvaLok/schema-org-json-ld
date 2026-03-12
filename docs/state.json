@@ -3010,6 +3010,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "[Cycle Review] Cycle 236 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-12T12:46:09Z",
+      "issue": 1116,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 236 adversarial review"
     }
   ],
   "audit_dropped": [
@@ -3186,23 +3193,23 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1116 [Cycle Review] Cycle 236 end-of-cycle review (cycle 236)",
-    "dispatch_to_pr_rate": "98.2%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1116 Cycle 236 adversarial review (cycle 236)",
+    "dispatch_to_pr_rate": "97.9%",
+    "in_flight": 2,
     "merged": 323,
     "pr_merge_rate": "99.1%",
     "produced_pr": 326,
     "resolved": 331,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 332
+    "total_dispatches": 333
   },
   "cycle_phase": {
     "cycle": 236,
     "doc_issue": null,
     "doc_pr": null,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-12T12:42:46Z",
+    "phase": "complete",
+    "phase_entered_at": "2026-03-12T12:46:09Z",
     "review_iteration": null,
     "review_max": 3
   },
