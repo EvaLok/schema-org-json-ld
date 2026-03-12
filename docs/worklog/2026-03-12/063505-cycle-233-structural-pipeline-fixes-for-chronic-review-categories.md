@@ -49,4 +49,7 @@
 | process-audit | 4fbff16 | [4fbff16](https://github.com/EvaLok/schema-org-json-ld/commit/4fbff16) |
 | record-dispatch | be83c5b | [be83c5b](https://github.com/EvaLok/schema-org-json-ld/commit/be83c5b) |
 | record-dispatch | 9c0971a | [9c0971a](https://github.com/EvaLok/schema-org-json-ld/commit/9c0971a) |
+| state-fix | 0d65946 | [0d65946](https://github.com/EvaLok/schema-org-json-ld/commit/0d65946) |
+| state-fix | 0d61941 | [0d61941](https://github.com/EvaLok/schema-org-json-ld/commit/0d61941) |
+| state-fix | e302c9d | [e302c9d](https://github.com/EvaLok/schema-org-json-ld/commit/e302c9d) |
 | cycle-complete | f2fe1cb | [f2fe1cb](https://github.com/EvaLok/schema-org-json-ld/commit/f2fe1cb) |
