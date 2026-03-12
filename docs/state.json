@@ -3252,8 +3252,8 @@
   "cycle_phase": {
     "cycle": 240,
     "doc_issue": null,
-    "phase": "complete",
-    "phase_entered_at": "2026-03-12T20:24:36Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-12T20:27:07Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -3360,11 +3360,11 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 239"
+        "last_refreshed": "cycle 240"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 239"
+        "last_refreshed": "cycle 240"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -3372,7 +3372,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 239"
+        "last_refreshed": "cycle 240"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -3392,7 +3392,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 239"
+        "last_refreshed": "cycle 240"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -3400,7 +3400,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 239"
+        "last_refreshed": "cycle 240"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -3420,7 +3420,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 239"
+        "last_refreshed": "cycle 240"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -3428,7 +3428,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 239"
+        "last_refreshed": "cycle 240"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -3436,7 +3436,7 @@
       },
       "schema_status.planned_next": {
         "cadence": "after planning or completing types",
-        "last_refreshed": "cycle 239"
+        "last_refreshed": "cycle 240"
       },
       "schema_status.property_gap_audit": {
         "cadence": "after property gap fixes",
@@ -3448,7 +3448,7 @@
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
-        "last_refreshed": "cycle 239"
+        "last_refreshed": "cycle 240"
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
@@ -3488,22 +3488,22 @@
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
-        "last_refreshed": "cycle 239"
+        "last_refreshed": "cycle 240"
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 239"
+        "last_refreshed": "cycle 240"
       }
     }
   },
   "last_cycle": {
-    "duration_minutes": 16,
+    "duration_minutes": 18,
     "issue": 1133,
     "number": 240,
-    "summary": "Consumed cycle 238 review (6 findings, complacency 2/5). Fixed STARTUP_CHECKLIST Phase B references (F3), cleaned state.json legacy keys (F4), fixed tool-audit artifact (journal commitment 2). Accepted audit #218 (journal validation). Dispatched #1129 for phased workflow code removal (F6). Closed audit-inbound #1119.",
-    "timestamp": "2026-03-12T20:09:05Z"
+    "summary": "Reviewed and merged PR #1130 (phased workflow removal, -676/+27 lines). Processed cycle 239 review (2/5). Added validate-docs gate to COMPLETION_CHECKLIST step 4.1. Dispatched #1134 (doc-validation pipeline phase). Closed audit-inbound #1128.",
+    "timestamp": "2026-03-12T20:27:07Z"
   },
-  "last_eva_comment_check": "2026-03-12T20:09:05Z",
+  "last_eva_comment_check": "2026-03-12T20:27:07Z",
   "last_tool_audit_cycle": 236,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
