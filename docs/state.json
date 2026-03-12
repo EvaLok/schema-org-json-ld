@@ -3012,6 +3012,13 @@
       "pr": 1117,
       "status": "merged",
       "title": "Cycle 236 adversarial review"
+    },
+    {
+      "dispatched_at": "2026-03-12T14:34:20Z",
+      "issue": 1120,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Remove dispatch-docs infrastructure"
     }
   ],
   "audit_dropped": [
@@ -3124,7 +3131,8 @@
     208,
     210,
     212,
-    214
+    214,
+    216
   ],
   "blockers": [
     {
@@ -3188,7 +3196,7 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1116 Cycle 236 adversarial review (cycle 236)",
+    "dispatch_log_latest": "#1120 Remove dispatch-docs infrastructure (cycle 237)",
     "dispatch_to_pr_rate": "98.2%",
     "in_flight": 1,
     "merged": 324,
@@ -3203,8 +3211,8 @@
     "cycle": 237,
     "doc_issue": null,
     "doc_pr": null,
-    "phase": "work",
-    "phase_entered_at": "2026-03-12T14:18:21Z",
+    "phase": "complete",
+    "phase_entered_at": "2026-03-12T14:34:20Z",
     "review_iteration": null,
     "review_max": 3
   },
@@ -4945,12 +4953,11 @@
         "note": "F1 test-drift: actioned (932cb95). F2 worklog-accuracy: deferred (retrospective). F3 process-adherence: deferred (process lesson). F4 audit-evidence: actioned (1235a9d artifact). F5 deferred-remediation: deferred classification but underlying issue resolved via PR #1111 merge."
       },
       {
-        "cycle": 236,
-        "complacency_score": "2/5",
-        "finding_count": 6,
         "actioned": 4,
+        "complacency_score": "2/5",
+        "cycle": 236,
         "deferred": 2,
-        "ignored": 0,
+        "finding_count": 6,
         "findings": [
           {
             "category": "worklog-accuracy",
@@ -4983,6 +4990,7 @@
             "evidence": "will use dispatch-docs as default path going forward"
           }
         ],
+        "ignored": 0,
         "note": "F1 worklog-accuracy: actioned. F2 process-adherence: deferred (needs tooling). F3 journal-quality: actioned. F4 audit-evidence: actioned (count fix). F5 state-integrity: actioned (56662de). F6 tool-usage: deferred (dispatch-docs default)."
       }
     ],
