@@ -2992,6 +2992,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Harden write-entry receipt validation"
+    },
+    {
+      "dispatched_at": "2026-03-12T10:36:45Z",
+      "issue": 1112,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 235 adversarial review"
     }
   ],
   "audit_dropped": [
@@ -3167,23 +3174,23 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1110 Harden write-entry receipt validation (cycle 235)",
-    "dispatch_to_pr_rate": "98.2%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1112 Cycle 235 adversarial review (cycle 235)",
+    "dispatch_to_pr_rate": "97.9%",
+    "in_flight": 2,
     "merged": 321,
     "pr_merge_rate": "99.1%",
     "produced_pr": 324,
     "resolved": 329,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 330
+    "total_dispatches": 331
   },
   "cycle_phase": {
     "cycle": 235,
     "doc_issue": null,
     "doc_pr": null,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-12T10:33:31Z",
+    "phase": "complete",
+    "phase_entered_at": "2026-03-12T10:36:45Z",
     "review_iteration": null,
     "review_max": 3
   },
