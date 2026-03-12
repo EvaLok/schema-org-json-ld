@@ -377,17 +377,7 @@ fn find_cycle_complete_commit(repo_root: &Path, cycle: u64) -> Result<String, St
 }
 
 fn is_ancestor_commit(repo_root: &Path, ancestor: &str, descendant: &str) -> Result<bool, String> {
-    let output = ProcessCommand::new("git")
-        .arg("-C")
-        .arg(repo_root)
-        .args(["merge-base", "--is-ancestor", ancestor, descendant])
-        .output()
-        .map_err(|error| {
-            format!(
-                "failed to execute git merge-base --is-ancestor {} {}: {}",
-                ancestor, descendant, error
-            )
-        })?;
+    let output = run_git_output(repo_root, &["merge-base", "--is-ancestor", ancestor, descendant])?;
     match output.status.code() {
         Some(0) => Ok(true),
         Some(1) => Ok(false),
@@ -694,12 +684,8 @@ fn run_wrapper(
 }
 
 fn run_git(repo_root: &Path, args: &[String]) -> Result<String, String> {
-    let output = ProcessCommand::new("git")
-        .arg("-C")
-        .arg(repo_root)
-        .args(args)
-        .output()
-        .map_err(|error| format!("failed to execute git {}: {}", args.join(" "), error))?;
+    let borrowed_args = args.iter().map(String::as_str).collect::<Vec<_>>();
+    let output = run_git_output(repo_root, &borrowed_args)?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
         return Err(format!("git {} failed: {}", args.join(" "), stderr));
@@ -712,6 +698,15 @@ fn run_git(repo_root: &Path, args: &[String]) -> Result<String, String> {
             error
         )
     })
+}
+
+fn run_git_output(repo_root: &Path, args: &[&str]) -> Result<std::process::Output, String> {
+    ProcessCommand::new("git")
+        .arg("-C")
+        .arg(repo_root)
+        .args(args)
+        .output()
+        .map_err(|error| format!("failed to execute git {}: {}", args.join(" "), error))
 }
 
 fn command_failure_message(script_path: &Path, output: &std::process::Output) -> String {
@@ -762,7 +757,13 @@ mod tests {
 
     impl Drop for TestDir {
         fn drop(&mut self) {
-            let _ = fs::remove_dir_all(&self.path);
+            if let Err(error) = fs::remove_dir_all(&self.path) {
+                eprintln!(
+                    "Warning: failed to remove test directory {}: {}",
+                    self.path.display(),
+                    error
+                );
+            }
         }
     }
 
@@ -1050,9 +1051,16 @@ Observed something.
 
     impl TestRepo {
         fn new() -> Self {
-            let temp = TestDir::new();
-            let path = temp.path().to_path_buf();
-            std::mem::forget(temp);
+            let unique = format!(
+                "validate-docs-repo-test-{}-{}",
+                std::process::id(),
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .expect("clock before epoch")
+                    .as_nanos()
+            );
+            let path = std::env::temp_dir().join(unique);
+            fs::create_dir_all(&path).expect("create temp repo dir");
             Self { path }
         }
 
@@ -1097,7 +1105,13 @@ Observed something.
 
     impl Drop for TestRepo {
         fn drop(&mut self) {
-            let _ = fs::remove_dir_all(&self.path);
+            if let Err(error) = fs::remove_dir_all(&self.path) {
+                eprintln!(
+                    "Warning: failed to remove test repo {}: {}",
+                    self.path.display(),
+                    error
+                );
+            }
         }
     }
 
@@ -1118,16 +1132,7 @@ Observed something.
         I: IntoIterator<Item = S>,
         S: AsRef<std::ffi::OsStr>,
     {
-        let rendered_args: Vec<String> = args
-            .into_iter()
-            .map(|argument| argument.as_ref().to_string_lossy().into_owned())
-            .collect();
-        let output = ProcessCommand::new("git")
-            .arg("-C")
-            .arg(repo_root)
-            .args(&rendered_args)
-            .output()
-            .expect("git command should execute");
+        let (rendered_args, output) = run_test_git(repo_root, args);
         assert!(
             output.status.success(),
             "git command failed (git -C {} {}): {}",
@@ -1142,6 +1147,22 @@ Observed something.
         I: IntoIterator<Item = S>,
         S: AsRef<std::ffi::OsStr>,
     {
+        let (rendered_args, output) = run_test_git(repo_root, args);
+        assert!(
+            output.status.success(),
+            "git command failed (git -C {} {}): {}",
+            repo_root.display(),
+            rendered_args.join(" "),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        String::from_utf8(output.stdout).expect("git output should be valid UTF-8")
+    }
+
+    fn run_test_git<I, S>(repo_root: &Path, args: I) -> (Vec<String>, std::process::Output)
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<std::ffi::OsStr>,
+    {
         let rendered_args: Vec<String> = args
             .into_iter()
             .map(|argument| argument.as_ref().to_string_lossy().into_owned())
@@ -1152,13 +1173,6 @@ Observed something.
             .args(&rendered_args)
             .output()
             .expect("git command should execute");
-        assert!(
-            output.status.success(),
-            "git command failed (git -C {} {}): {}",
-            repo_root.display(),
-            rendered_args.join(" "),
-            String::from_utf8_lossy(&output.stderr)
-        );
-        String::from_utf8(output.stdout).expect("git output should be valid UTF-8")
+        (rendered_args, output)
     }
 }
