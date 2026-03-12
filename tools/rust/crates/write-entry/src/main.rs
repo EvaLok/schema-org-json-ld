@@ -542,15 +542,12 @@ fn apply_worklog_auto_derivations(
         input.issues_processed = derive_issue_processed_from_done(&input.what_was_done);
     }
 
-    if input.receipts.is_empty() {
-        match derive_receipts_from_cycle(repo_root, cycle) {
-            Ok(receipts) => input.receipts = receipts,
-            Err(error) => warnings.push(format!(
-                "WARNING: failed to auto-derive commit receipts for cycle {}: {}",
-                cycle, error
-            )),
-        }
+    if !input.receipts.is_empty() {
+        warnings.push(
+            "WARNING: manual receipts are not supported for cycle worklogs; using canonical cycle-receipts output".to_string(),
+        );
     }
+    input.receipts = derive_receipts_from_cycle(repo_root, cycle)?;
 
     Ok(warnings)
 }
@@ -798,7 +795,14 @@ fn derive_receipts_from_cycle(repo_root: &Path, cycle: u64) -> Result<Vec<Commit
 
     let json = String::from_utf8(output.stdout)
         .map_err(|error| format!("failed to decode cycle-receipts JSON as UTF-8: {}", error))?;
-    parse_cycle_receipts_output(&json)
+    let receipts = parse_cycle_receipts_output(&json)?;
+    if receipts.is_empty() {
+        return Err(format!(
+            "cycle-receipts returned no receipts for cycle {}",
+            cycle
+        ));
+    }
+    Ok(receipts)
 }
 
 fn parse_cycle_receipts_output(json: &str) -> Result<Vec<CommitReceipt>, String> {
@@ -926,31 +930,25 @@ fn emit_unresolved_receipt_warnings(
     receipts: &mut [CommitReceipt],
     repo_root: &Path,
 ) -> Result<(), String> {
-    for warning in validate_receipt_shas(receipts, repo_root)? {
-        eprintln!("{}", warning);
-    }
-    Ok(())
+    validate_receipt_shas(receipts, repo_root)
 }
 
 fn validate_receipt_shas(
     receipts: &mut [CommitReceipt],
     repo_root: &Path,
-) -> Result<Vec<String>, String> {
-    let mut warnings = Vec::new();
-
+) -> Result<(), String> {
     for receipt in receipts {
         if git_commit_exists(repo_root, &receipt.receipt)? {
             continue;
         }
 
-        receipt.unresolved = true;
-        warnings.push(format!(
-            "WARNING: unresolvable receipt SHA for {}: {}",
+        return Err(format!(
+            "unresolvable receipt SHA for {}: {}",
             receipt.tool, receipt.receipt
         ));
     }
 
-    Ok(warnings)
+    Ok(())
 }
 
 fn git_commit_exists(repo_root: &Path, sha: &str) -> Result<bool, String> {
@@ -2204,6 +2202,12 @@ mod tests {
     #[test]
     fn worklog_reads_json_from_input_file() {
         let repo_root = TempRepoDir::new("worklog-input-file");
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154}
+            }"#,
+        );
         let payload_path = repo_root.path.join("worklog.json");
         fs::write(
             &payload_path,
@@ -2224,6 +2228,7 @@ mod tests {
         )
         .unwrap();
         let mut args = worklog_args("Input file");
+        args.cycle = None;
         args.input_file = Some(payload_path);
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
@@ -2268,9 +2273,16 @@ mod tests {
     fn worklog_inline_flags_render_receipts_table() {
         let repo_root = TempRepoDir::new("worklog-inline-flags");
         init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154}
+            }"#,
+        );
         let first_receipt = create_git_commit(&repo_root.path, "first.txt", "first");
         let second_receipt = create_git_commit(&repo_root.path, "second.txt", "second");
         let mut args = worklog_args("Inline flags");
+        args.cycle = None;
         args.done = vec!["Merged PR #123".to_string()];
         args.pr_merged = vec![123, 456];
         args.pr_reviewed = vec![789];
@@ -2315,39 +2327,12 @@ mod tests {
     }
 
     #[test]
-    fn unresolved_receipt_sha_is_marked_in_worklog_output() {
+    fn unresolved_receipt_sha_is_rejected() {
         let repo_root = TempRepoDir::new("worklog-unresolved-receipt");
         let mut receipts = parse_receipts(&["cycle-start:deadbee".to_string()]).unwrap();
 
-        let warnings = validate_receipt_shas(&mut receipts, &repo_root.path).unwrap();
-
-        assert_eq!(
-            warnings,
-            vec!["WARNING: unresolvable receipt SHA for cycle-start: deadbee".to_string()]
-        );
-        let rendered = render_worklog(
-            154,
-            fixed_now(),
-            &WorklogInput {
-                what_was_done: Vec::new(),
-                self_modifications: Vec::new(),
-                prs_merged: Vec::new(),
-                prs_reviewed: Vec::new(),
-                issues_processed: Vec::new(),
-                current_state: CurrentState {
-                    in_flight_sessions: 0,
-                    pipeline_status: "PASS (6/6)".to_string(),
-                    copilot_metrics: "45 dispatched".to_string(),
-                    publish_gate: "open".to_string(),
-                },
-                next_steps: Vec::new(),
-                receipts,
-            },
-        );
-
-        assert!(rendered.contains(
-            "| cycle-start | deadbee [UNRESOLVED] | deadbee [UNRESOLVED] |"
-        ));
+        let error = validate_receipt_shas(&mut receipts, &repo_root.path).unwrap_err();
+        assert_eq!(error, "unresolvable receipt SHA for cycle-start: deadbee");
     }
 
     #[test]
@@ -2371,6 +2356,7 @@ mod tests {
         );
 
         let mut args = worklog_args("Auto populate");
+        args.cycle = None;
         args.done = vec!["Merged PR #123".to_string()];
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
@@ -2456,7 +2442,7 @@ mod tests {
     }
 
     #[test]
-    fn worklog_auto_derivation_falls_back_to_empty_sections_on_command_failures() {
+    fn worklog_auto_derivation_fails_closed_when_cycle_receipts_command_fails() {
         let repo_root = TempRepoDir::new("worklog-auto-derivation-fallback");
         let mut args = worklog_args("Fallback");
         args.done = vec!["Closed #42".to_string()];
@@ -2465,19 +2451,33 @@ mod tests {
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
-        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
-        let content = fs::read_to_string(path).unwrap();
+        let error = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap_err();
 
-        assert!(content.contains("### Issues processed\n\n- [#42]("));
-        assert!(content.contains("## Self-modifications\n\n- None."));
-        assert!(!content.contains("## Commit receipts"));
+        assert!(error.contains("cycle-receipts command failed"));
     }
 
     #[test]
-    fn worklog_manual_overrides_take_precedence_over_auto_derivation() {
+    fn worklog_cycle_receipts_must_not_be_empty() {
+        let repo_root = TempRepoDir::new("worklog-empty-cycle-receipts");
+        init_git_repo(&repo_root.path);
+        write_cycle_receipts_script(&repo_root.path, "[]");
+        let mut args = worklog_args("Empty receipts");
+        args.done = vec!["Closed #42".to_string()];
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.copilot_metrics = Some("steady".to_string());
+        args.publish_gate = Some("open".to_string());
+        args.in_flight = Some(0);
+
+        let error = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap_err();
+
+        assert!(error.contains("cycle-receipts returned no receipts for cycle 154"));
+    }
+
+    #[test]
+    fn worklog_cycle_mode_ignores_manual_receipts_and_uses_canonical_output() {
         let repo_root = TempRepoDir::new("worklog-manual-overrides");
         init_git_repo(&repo_root.path);
-        create_git_commit_with_message(
+        let start_receipt = create_git_commit_with_message(
             &repo_root.path,
             "notes/start.txt",
             "start\n",
@@ -2488,11 +2488,20 @@ mod tests {
             "notes/manual.txt",
             "manual\n",
         );
-        create_git_commit_with_message(
+        let canonical_receipt = create_git_commit_with_message(
             &repo_root.path,
-            "AGENTS.md",
-            "agent guidance\n",
-            "docs: update agents [cycle 154]",
+            "tools/rust/crates/write-entry/src/main.rs",
+            "changed\n",
+            "state(process-merge): canonical receipt [cycle 154]",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154, issue #1 [cycle 154]"}},
+                    {{"step":"process-merge","receipt":"{canonical_receipt}","commit":"state(process-merge): canonical receipt [cycle 154]"}}
+                ]"#
+            ),
         );
 
         let mut args = worklog_args("Manual overrides");
@@ -2505,6 +2514,22 @@ mod tests {
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
+        let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+        let warnings = apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
+
+        assert_eq!(
+            warnings,
+            vec![
+                "WARNING: manual receipts are not supported for cycle worklogs; using canonical cycle-receipts output"
+                    .to_string()
+            ]
+        );
+        assert_eq!(input.receipts.len(), 2);
+        assert_eq!(input.receipts[0].tool, "cycle-start");
+        assert_eq!(input.receipts[0].receipt, start_receipt);
+        assert_eq!(input.receipts[1].tool, "process-merge");
+        assert_eq!(input.receipts[1].receipt, canonical_receipt);
+
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
 
@@ -2513,9 +2538,14 @@ mod tests {
         assert!(content.contains("- **`AGENTS.md`**: manual override"));
         assert!(!content.contains(": modified"));
         assert!(content.contains(&format!(
-            "| manual | {} | [{}](https://github.com/EvaLok/schema-org-json-ld/commit/{}) |",
-            manual_receipt, manual_receipt, manual_receipt
+            "| cycle-start | {} | [{}](https://github.com/EvaLok/schema-org-json-ld/commit/{}) |",
+            start_receipt, start_receipt, start_receipt
         )));
+        assert!(content.contains(&format!(
+            "| process-merge | {} | [{}](https://github.com/EvaLok/schema-org-json-ld/commit/{}) |",
+            canonical_receipt, canonical_receipt, canonical_receipt
+        )));
+        assert!(!content.contains(&format!("| manual | {} |", manual_receipt)));
     }
 
     #[test]
@@ -2594,12 +2624,20 @@ mod tests {
                 }
             }"#,
         );
-        create_git_commit_at(
+        let receipt = create_git_commit_at(
             &repo_root.path,
             "notes/first.txt",
             "first\n",
             "docs: first commit [cycle 154]",
             "2026-03-06T01:05:00Z",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{receipt}","commit":"docs: first commit [cycle 154]"}}
+                ]"#
+            ),
         );
         let args = worklog_args("Fallback warning");
         let mut input = WorklogInput {
@@ -2615,11 +2653,7 @@ mod tests {
                 publish_gate: "open".to_string(),
             },
             next_steps: Vec::new(),
-            receipts: vec![CommitReceipt {
-                tool: "manual".to_string(),
-                receipt: "abc1234".to_string(),
-                unresolved: false,
-            }],
+            receipts: Vec::new(),
         };
 
         let warnings = apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
@@ -2652,6 +2686,7 @@ mod tests {
         );
 
         let mut args = worklog_args("Override");
+        args.cycle = None;
         args.done = vec!["Merged PR #123".to_string()];
         args.pipeline = Some("PASS (6/6)".to_string());
         args.copilot_metrics = Some("custom metrics".to_string());
