@@ -4866,9 +4866,24 @@
         "finding_count": 4,
         "ignored": 0,
         "note": "F1 review-consumption: deferred (reclassification claim unsupported per cycle 234 review). F2 receipt-integrity: deferred pending root cause fix. F3 tooling: deferred (dispatch in flight). F4 journal-quality: deferred (precise language not yet demonstrated per cycle 234 review)."
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "receipt-tooling",
+          "review-consumption",
+          "process-adherence",
+          "audit-cadence"
+        ],
+        "complacency_score": 2,
+        "cycle": 234,
+        "deferred": 2,
+        "finding_count": 4,
+        "ignored": 0,
+        "note": "F1 receipt-tooling: deferred (write-entry fallback needs hardening). F2 review-consumption: actioned (c9fcacb reclassified cycle 233 actioned->deferred). F3 process-adherence: deferred (post-step discipline for completion steps). F4 audit-cadence: actioned (c9fcacb reverted last_tool_audit_cycle to 222)."
       }
     ],
-    "last_review_cycle": 233
+    "last_review_cycle": 234
   },
   "schema_status": {
     "directory_layout": {
