@@ -28,7 +28,7 @@ struct Cli {
     #[arg(long)]
     cycle: u64,
 
-    /// Only include commits made before this RFC3339 timestamp
+    /// Only include commits made strictly before this RFC3339 timestamp
     #[arg(long)]
     before: Option<String>,
 
@@ -89,6 +89,8 @@ fn run(cli: Cli) -> Result<String, String> {
     Ok(render_markdown(cli.cycle, &entries))
 }
 
+/// Collect receipt-bearing commits for the requested cycle, optionally capping
+/// the window to commits strictly before `before`.
 fn collect_receipts(
     repo_root: &Path,
     cycle: u64,

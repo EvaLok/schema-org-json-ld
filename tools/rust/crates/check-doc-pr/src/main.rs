@@ -67,7 +67,7 @@ struct Cli {
     #[arg(long, default_value = ".")]
     repo_root: PathBuf,
 
-    /// Freeze receipt completeness expectations to commits before this RFC3339 timestamp
+    /// Freeze receipt completeness expectations to commits strictly before this RFC3339 timestamp
     #[arg(long)]
     dispatched_at: Option<String>,
 }
@@ -821,6 +821,8 @@ fn check_receipt_completeness(
     )
 }
 
+/// Evaluate receipt completeness using an injected receipt loader with the
+/// signature `Fn(&Path, u64, Option<&str>) -> Result<Vec<ReceiptEntry>, String>`.
 fn check_receipt_completeness_with_loader<F>(
     repo_root: &Path,
     cycle: u64,
@@ -853,6 +855,8 @@ where
     evaluate_receipt_completeness(Some(content), &expected)
 }
 
+/// Resolve the dispatch timestamp by preferring the CLI override and otherwise
+/// falling back to `/cycle_phase/dispatched_at` in `docs/state.json`.
 fn resolve_dispatched_at(
     repo_root: &Path,
     cli_dispatched_at: Option<&str>,
