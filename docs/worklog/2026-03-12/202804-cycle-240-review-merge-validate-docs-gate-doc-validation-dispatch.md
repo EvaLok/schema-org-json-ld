@@ -29,7 +29,7 @@
 
 ## Current state
 
-- **In-flight agent sessions**: 3
+- **In-flight agent sessions**: 4
   - Note: canonical state reports 3, but only 1 Copilot issue is actually open (#1134). Session array contains stale entries.
 - **Pipeline status**: PASS (8/8, 1 warning)
 - **Copilot metrics**: 338 dispatches, 330 PRs produced, 327 merged, 99.1% PR merge rate

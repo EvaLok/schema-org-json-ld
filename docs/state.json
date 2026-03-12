@@ -3060,6 +3060,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add doc-validation phase to pipeline-check"
+    },
+    {
+      "dispatched_at": "2026-03-12T20:32:06Z",
+      "issue": 1136,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 240 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -3238,22 +3245,22 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1134 Add doc-validation phase to pipeline-check (cycle 240)",
-    "dispatch_to_pr_rate": "97.6%",
-    "in_flight": 3,
+    "dispatch_log_latest": "#1136 Cycle 240 end-of-cycle review (cycle 240)",
+    "dispatch_to_pr_rate": "97.3%",
+    "in_flight": 4,
     "merged": 327,
     "pr_merge_rate": "99.1%",
     "produced_pr": 330,
     "resolved": 335,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 338
+    "total_dispatches": 339
   },
   "cycle_phase": {
     "cycle": 240,
     "doc_issue": null,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-12T20:27:07Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-12T20:32:06Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
