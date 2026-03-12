@@ -2913,6 +2913,13 @@
       "pr": 1084,
       "status": "merged",
       "title": "Cycle 231 review"
+    },
+    {
+      "dispatched_at": "2026-03-12T03:06:50Z",
+      "issue": 1087,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add pipeline-check phased fallback regression tests"
     }
   ],
   "audit_dropped": [
@@ -3085,23 +3092,23 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1083 Cycle 231 review (cycle 231)",
-    "dispatch_to_pr_rate": "98.4%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1087 Add pipeline-check phased fallback regression tests (cycle 232)",
+    "dispatch_to_pr_rate": "98.1%",
+    "in_flight": 1,
     "merged": 314,
     "pr_merge_rate": "99.4%",
     "produced_pr": 316,
     "resolved": 321,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 321
+    "total_dispatches": 322
   },
   "cycle_phase": {
     "cycle": 232,
     "doc_issue": null,
     "doc_pr": null,
-    "phase": "work",
-    "phase_entered_at": "2026-03-12T02:57:47Z",
+    "phase": "complete",
+    "phase_entered_at": "2026-03-12T03:06:50Z",
     "review_iteration": null,
     "review_max": 3
   },
