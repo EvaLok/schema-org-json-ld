@@ -3005,16 +3005,10 @@
       "title": "Cycle 235 adversarial review"
     },
     {
-      "dispatched_at": "2026-03-12T12:46:00Z",
-      "issue": 1116,
-      "model": "gpt-5.4",
-      "status": "in_flight",
-      "title": "[Cycle Review] Cycle 236 end-of-cycle review"
-    },
-    {
       "dispatched_at": "2026-03-12T12:46:09Z",
       "issue": 1116,
       "model": "gpt-5.4",
+      "pr": 1117,
       "status": "in_flight",
       "title": "Cycle 236 adversarial review"
     }
@@ -3410,7 +3404,7 @@
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
-        "last_refreshed": "cycle 226"
+        "last_refreshed": "cycle 237"
       },
       "total_enums": {
         "cadence": "after enum additions",
