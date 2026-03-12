@@ -26,7 +26,7 @@
 
 ## 3. [state-integrity] Cycle 240 merged phased-workflow cleanup but still published canonical state with the legacy `doc_issue` key
 
-**File**: docs/state.json:3259
+**File**: docs/state.json:3254
 **Evidence**:
 
 - At the final cycle 240 commit (`49b70e5`), `docs/state.json` still records `"doc_issue": null` inside `cycle_phase` (lines 3259-3263).
