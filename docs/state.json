@@ -2989,15 +2989,19 @@
     {
       "dispatched_at": "2026-03-12T10:33:02Z",
       "issue": 1110,
+      "merged_at": "2026-03-12T12:40:11Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1111,
+      "status": "merged",
       "title": "Harden write-entry receipt validation"
     },
     {
       "dispatched_at": "2026-03-12T10:36:45Z",
       "issue": 1112,
+      "merged_at": "2026-03-12T12:40:11Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1113,
+      "status": "merged",
       "title": "Cycle 235 adversarial review"
     }
   ],
@@ -3176,12 +3180,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1112 Cycle 235 adversarial review (cycle 235)",
-    "dispatch_to_pr_rate": "97.9%",
-    "in_flight": 2,
-    "merged": 321,
+    "dispatch_to_pr_rate": "98.5%",
+    "in_flight": 0,
+    "merged": 323,
     "pr_merge_rate": "99.1%",
-    "produced_pr": 324,
-    "resolved": 329,
+    "produced_pr": 326,
+    "resolved": 331,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 331
@@ -3284,15 +3288,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 235"
+        "last_refreshed": "cycle 236"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 235"
+        "last_refreshed": "cycle 236"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 235"
+        "last_refreshed": "cycle 236"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
@@ -4887,9 +4891,45 @@
         "finding_count": 4,
         "ignored": 0,
         "note": "F1 receipt-tooling: deferred (write-entry fallback needs hardening). F2 review-consumption: actioned (c9fcacb reclassified cycle 233 actioned->deferred). F3 process-adherence: deferred (post-step discipline for completion steps). F4 audit-cadence: actioned (c9fcacb reverted last_tool_audit_cycle to 222)."
+      },
+      {
+        "actioned": 2,
+        "complacency_score": 3,
+        "cycle": 235,
+        "deferred": 3,
+        "finding_count": 5,
+        "findings": [
+          {
+            "category": "test-drift",
+            "disposition": "actioned",
+            "evidence": "932cb95 fixed 3 pipeline-check tests"
+          },
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred",
+            "evidence": "cycle 235 worklog already committed; ensure cycle 236 correct"
+          },
+          {
+            "category": "process-adherence",
+            "disposition": "deferred",
+            "evidence": "process lesson acknowledged; cycle 236 will not close with failing pipeline"
+          },
+          {
+            "category": "audit-evidence",
+            "disposition": "actioned",
+            "evidence": "1235a9d produced docs/reviews/tool-audit-cycle-236.md"
+          },
+          {
+            "category": "deferred-remediation",
+            "disposition": "deferred",
+            "evidence": "#1110 PR #1111 merged via b05b8d9; receipt-tooling finding resolved"
+          }
+        ],
+        "ignored": 0,
+        "note": "F1 test-drift: actioned (932cb95). F2 worklog-accuracy: deferred (retrospective). F3 process-adherence: deferred (process lesson). F4 audit-evidence: actioned (1235a9d artifact). F5 deferred-remediation: deferred classification but underlying issue resolved via PR #1111 merge."
       }
     ],
-    "last_review_cycle": 234
+    "last_review_cycle": 235
   },
   "schema_status": {
     "directory_layout": {
