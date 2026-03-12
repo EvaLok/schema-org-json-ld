@@ -2191,6 +2191,14 @@ mod tests {
     }
 
     #[test]
+    fn parse_cycle_receipts_output_rejects_invalid_json_shape() {
+        let error = parse_cycle_receipts_output(r#"{"step":"cycle-start","receipt":"abc1234"}"#)
+            .unwrap_err();
+
+        assert!(error.contains("invalid cycle-receipts JSON output"));
+    }
+
+    #[test]
     fn parse_git_history_line_rejects_non_full_sha_values() {
         let error =
             parse_git_history_line("abc1234\t2026-03-06T01:05:00Z\tstate(cycle-start): start")
@@ -2243,6 +2251,70 @@ mod tests {
         assert!(content.contains(
             "1. Review [PR #124](https://github.com/EvaLok/schema-org-json-ld/issues/124)"
         ));
+    }
+
+    #[test]
+    fn worklog_cycle_mode_replaces_input_file_receipts_with_canonical_output() {
+        let repo_root = TempRepoDir::new("worklog-input-file-cycle-receipts");
+        init_git_repo(&repo_root.path);
+        let start_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154 [cycle 154]",
+        );
+        let canonical_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "tools/rust/crates/write-entry/src/main.rs",
+            "changed\n",
+            "state(process-merge): canonical receipt [cycle 154]",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}},
+                    {{"step":"process-merge","receipt":"{canonical_receipt}","commit":"state(process-merge): canonical receipt [cycle 154]"}}
+                ]"#
+            ),
+        );
+        let payload_path = repo_root.path.join("worklog-cycle.json");
+        fs::write(
+            &payload_path,
+            format!(
+                r#"{{
+                    "what_was_done":["Checked #42"],
+                    "self_modifications":[],
+                    "prs_merged":[],
+                    "prs_reviewed":[],
+                    "issues_processed":[],
+                    "current_state":{{
+                        "in_flight_sessions":0,
+                        "pipeline_status":"PASS (6/6)",
+                        "copilot_metrics":"steady",
+                        "publish_gate":"open"
+                    }},
+                    "next_steps":[],
+                    "receipts":[{{"tool":"manual","receipt":"deadbee"}}]
+                }}"#
+            ),
+        )
+        .unwrap();
+        let mut args = worklog_args("Input file canonical receipts");
+        args.input_file = Some(payload_path);
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains(&format!(
+            "| cycle-start | {} | [{}](https://github.com/EvaLok/schema-org-json-ld/commit/{}) |",
+            start_receipt, start_receipt, start_receipt
+        )));
+        assert!(content.contains(&format!(
+            "| process-merge | {} | [{}](https://github.com/EvaLok/schema-org-json-ld/commit/{}) |",
+            canonical_receipt, canonical_receipt, canonical_receipt
+        )));
+        assert!(!content.contains("| manual | deadbee |"));
     }
 
     #[test]
@@ -2474,7 +2546,7 @@ mod tests {
     }
 
     #[test]
-    fn worklog_cycle_mode_ignores_manual_receipts_and_uses_canonical_output() {
+    fn worklog_cycle_mode_replaces_manual_receipts_with_canonical_output() {
         let repo_root = TempRepoDir::new("worklog-manual-overrides");
         init_git_repo(&repo_root.path);
         let start_receipt = create_git_commit_with_message(
