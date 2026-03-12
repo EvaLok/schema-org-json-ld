@@ -56,3 +56,4 @@
 | record-dispatch | 95bbab2 | [95bbab2](https://github.com/EvaLok/schema-org-json-ld/commit/95bbab2) |
 | checklist-simplify | 938c8f1 | [938c8f1](https://github.com/EvaLok/schema-org-json-ld/commit/938c8f1) |
 | adr-0010 | 7a8c612 | [7a8c612](https://github.com/EvaLok/schema-org-json-ld/commit/7a8c612) |
+| state-fix | 70c4122 | [70c4122](https://github.com/EvaLok/schema-org-json-ld/commit/70c4122) |
