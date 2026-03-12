@@ -29,7 +29,7 @@
 
 ## Current state
 
-- **In-flight agent sessions**: 2
+- **In-flight agent sessions**: 3
 - **Pipeline status**: PASS on metrics/inventory/invariants; step-comments FAIL is the Phase B/C issue being fixed by [#1097](https://github.com/EvaLok/schema-org-json-ld/issues/1097)
 - **Copilot metrics**: 326 dispatches, 319 PRs produced, 316 merged, 99.1% PR merge rate
 - **Publish gate**: published
