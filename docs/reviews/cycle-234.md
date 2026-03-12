@@ -18,7 +18,10 @@ Running `bash tools/validate-docs worklog` against this file fails with
 The canonical `bash tools/cycle-receipts --cycle 234 --repo-root . --json` output
 currently returns only `d2adcf5` and `8e43d82`, so the fallback-generated table does
 not match the repository’s own receipt source of truth.
-**Recommendation**: Make the fallback fail closed when manual `--receipt` values diverge from canonical `cycle-receipts` output, or remove manual receipt entry entirely for cycle worklogs. A warning-only path is too weak for a field the validators and review process treat as authoritative.
+**Recommendation**: Make the fallback abort instead of proceeding with warnings when
+manual `--receipt` values diverge from canonical `cycle-receipts` output, or remove
+manual receipt entry entirely for cycle worklogs. A warning-only path is too weak for
+a field the validators and review process treat as authoritative.
 
 ## 2. [review-consumption] The “2 actioned” review disposition is unsupported by the state changes and journal text
 
@@ -39,14 +42,19 @@ immediately qualifies the second item as `Pipeline-check PASS confirmed but Phas
 structural test deferred to natural occurrence`.
 That is not the “precise commitment language” the cycle 233 review called for; it is
 still a blanket success label wrapped around a partial deferral.
-**Recommendation**: Reclassify these two findings as deferred unless there is concrete evidence of the underlying fixes. If a finding is only being reframed in narrative text, record that explicitly instead of counting it as actioned.
+**Recommendation**: Reclassify these two findings as deferred unless there is concrete
+evidence of the underlying fixes, such as an actual history-field update, a journal
+entry with revised follow-through language, or a linked tool/change receipt. If a
+finding is only being reframed in narrative text, record that explicitly instead of
+counting it as actioned.
 
 ## 3. [process-adherence] Checklist discipline regressed again: required step comments were skipped, and the frozen worklog was mutated after dispatch
 
 **File**: STARTUP_CHECKLIST.md:5
-**Evidence**: The startup checklist requires separate comments for steps
+**Evidence**: The startup checklist requires separate comments for 12 startup steps:
 `0, 0.5, 0.6, 1, 2, 3, 4, 5, 6, 7, 8, 9`.
-Issue `#1103` has comments for every listed startup step except `4`
+Issue `#1103` has 11 matching startup-step comments, covering every listed step except
+`4`
 (`#issuecomment-4044802742`, `4044805853`, `4044808493`, `4044809020`,
 `4044812276`, `4044812344`, `4044812437`, `4044813152`, `4044813228`,
 `4044874055`, `4044886917`).
@@ -62,7 +70,10 @@ from `1` to `4`
 (`docs/worklog/2026-03-12/083033-cycle-234-review-consumption-3-merges-and-cycle-receipts-root-cause-dispatch.md:33`).
 That means the supposedly frozen pre-dispatch artifact was still being mutated after
 dispatch.
-**Recommendation**: Treat missing step comments and post-dispatch worklog edits as hard process failures, not minor housekeeping. Use `post-step` for the missing startup/completion steps, and stop letting `record-dispatch` amend worklog facts that are supposed to be frozen at step 5.
+**Recommendation**: Treat missing step comments and post-dispatch worklog edits as hard
+process failures, not minor housekeeping. Use `post-step` for the missing
+startup/completion steps, and stop letting `record-dispatch` amend worklog facts that
+are supposed to be frozen at completion checklist step 5.
 
 ## 4. [audit-cadence] `last_tool_audit_cycle` was refreshed without any actual tool audit evidence
 
@@ -79,7 +90,9 @@ The issue comment for step 7 even said “Will update after tool audit this cycl
 note in the worklog, and no infrastructure diff demonstrating that a real tool audit
 occurred.
 This was a numeric bump, not an audit.
-**Recommendation**: Do not advance cadence markers on assertion alone. Require a cited audit artifact — for example, a worklog subsection naming the tools checked, or an infrastructure diff / issue receipt — before refreshing `last_tool_audit_cycle`.
+**Recommendation**: Do not advance cadence markers on assertion alone. Require a cited
+audit artifact, for example a worklog subsection naming the tools checked or an
+infrastructure diff / issue receipt, before refreshing `last_tool_audit_cycle`.
 
 ## Complacency score
 
