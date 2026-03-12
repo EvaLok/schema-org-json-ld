@@ -3016,8 +3016,10 @@
     {
       "dispatched_at": "2026-03-12T14:34:20Z",
       "issue": 1120,
+      "merged_at": "2026-03-12T16:35:43Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1121,
+      "status": "merged",
       "title": "Remove dispatch-docs infrastructure"
     },
     {
@@ -3206,12 +3208,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1122 Cycle 237 adversarial review (cycle 237)",
-    "dispatch_to_pr_rate": "98.2%",
-    "in_flight": 1,
-    "merged": 325,
+    "dispatch_to_pr_rate": "98.5%",
+    "in_flight": 0,
+    "merged": 326,
     "pr_merge_rate": "99.1%",
-    "produced_pr": 328,
-    "resolved": 333,
+    "produced_pr": 329,
+    "resolved": 334,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 334
