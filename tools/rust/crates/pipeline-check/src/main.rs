@@ -2264,7 +2264,7 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("missing mandatory [7, 9]"));
+			.contains("missing mandatory [7, 8, 9]"));
 	}
 
 	#[test]
@@ -2582,7 +2582,7 @@ mod tests {
 	}
 
 	#[test]
-	fn step_comment_verification_warns_for_phased_resumption_with_optional_missing_on_work_issue()
+	fn step_comment_verification_fails_for_phased_resumption_with_mandatory_missing_on_work_issue_34()
 	{
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -2630,8 +2630,8 @@ mod tests {
 		}
 
 		let step = verify_step_comments(&root, &StepCommentRunner);
-		assert_eq!(step.status, StepStatus::Warn);
-		assert_eq!(step.severity, Severity::Warning);
+		assert_eq!(step.status, StepStatus::Fail);
+		assert_eq!(step.severity, Severity::Blocking);
 		assert_eq!(step.findings, Some(10));
 		assert!(step
 			.detail
@@ -2647,7 +2647,7 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("missing mandatory [none]; missing optional [0.6, 1.1, 3, 4]"));
+			.contains("missing mandatory [3, 4]; missing optional [0.6, 1.1]"));
 	}
 
 	#[test]
@@ -2831,7 +2831,7 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("missing mandatory [6]"));
+			.contains("missing mandatory [6, 8]"));
 	}
 
 	#[test]
