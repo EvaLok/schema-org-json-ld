@@ -14,6 +14,7 @@ const CYCLE_STATUS_DIRECTIVES_PATH: &str = "/eva_input/comments_since_last_cycle
 const DERIVE_METRICS_TOOL_NAME: &str = "derive-metrics";
 const DERIVE_METRICS_WRAPPER_PATH: &str = "tools/derive-metrics";
 const ARTIFACT_VERIFY_STEP_NAME: &str = "artifact-verify";
+const DOC_VALIDATION_STEP_NAME: &str = "doc-validation";
 const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const STEP_COMMENT_THRESHOLD: usize = 10;
@@ -247,6 +248,7 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
 		.iter()
 		.map(|spec| run_step(repo_root, spec, runner))
 		.chain(std::iter::once(verify_artifacts(repo_root)))
+		.chain(std::iter::once(verify_doc_validation(repo_root, runner)))
 		.chain(std::iter::once(verify_step_comments(repo_root, runner)))
 		.collect::<Vec<_>>();
 	let overall = pipeline_overall_status(&steps);
@@ -529,6 +531,183 @@ fn is_check_passing(check: &Value) -> bool {
 
 fn verify_artifacts(repo_root: &Path) -> StepReport {
 	verify_artifacts_for_date(repo_root, &current_utc_timestamp()[..10])
+}
+
+fn verify_doc_validation(repo_root: &Path, runner: &dyn CommandRunner) -> StepReport {
+	verify_doc_validation_for_date(repo_root, &current_utc_timestamp()[..10], runner)
+}
+
+fn verify_doc_validation_for_date(repo_root: &Path, today: &str, runner: &dyn CommandRunner) -> StepReport {
+	let state = match read_state_value(repo_root) {
+		Ok(state) => state,
+		Err(error) => {
+			return StepReport {
+				name: DOC_VALIDATION_STEP_NAME,
+				status: StepStatus::Error,
+				severity: Severity::Blocking,
+				exit_code: None,
+				detail: Some(error),
+				findings: None,
+				summary: None,
+			};
+		}
+	};
+
+	let phase = state.pointer("/cycle_phase/phase").and_then(Value::as_str);
+	if phase != Some("close_out") {
+		return StepReport {
+			name: DOC_VALIDATION_STEP_NAME,
+			status: StepStatus::Pass,
+			severity: Severity::Blocking,
+			exit_code: None,
+			detail: Some("skipped: no documentation entries to validate yet".to_string()),
+			findings: None,
+			summary: None,
+		};
+	}
+
+	let cycle = match current_cycle_from_state(repo_root) {
+		Ok(cycle) => cycle,
+		Err(error) => {
+			return StepReport {
+				name: DOC_VALIDATION_STEP_NAME,
+				status: StepStatus::Error,
+				severity: Severity::Blocking,
+				exit_code: None,
+				detail: Some(error),
+				findings: None,
+				summary: None,
+			};
+		}
+	};
+	let Some(worklog_path) = (match latest_worklog_entry_for_date(repo_root, today) {
+		Ok(path) => path,
+		Err(error) => {
+			return StepReport {
+				name: DOC_VALIDATION_STEP_NAME,
+				status: StepStatus::Error,
+				severity: Severity::Blocking,
+				exit_code: None,
+				detail: Some(error),
+				findings: None,
+				summary: None,
+			};
+		}
+	}) else {
+		return StepReport {
+			name: DOC_VALIDATION_STEP_NAME,
+			status: StepStatus::Pass,
+			severity: Severity::Blocking,
+			exit_code: None,
+			detail: Some("skipped: no documentation entries to validate yet".to_string()),
+			findings: None,
+			summary: None,
+		};
+	};
+	let journal_path = repo_root.join("docs/journal").join(format!("{today}.md"));
+	if !journal_path.is_file() {
+		return StepReport {
+			name: DOC_VALIDATION_STEP_NAME,
+			status: StepStatus::Pass,
+			severity: Severity::Blocking,
+			exit_code: None,
+			detail: Some("skipped: no documentation entries to validate yet".to_string()),
+			findings: None,
+			summary: None,
+		};
+	}
+
+	let script_path = repo_root.join("tools/validate-docs");
+	let validations = [
+		(
+			"worklog",
+			vec![
+				"worklog".to_string(),
+				"--file".to_string(),
+				worklog_path.display().to_string(),
+				"--cycle".to_string(),
+				cycle.to_string(),
+				"--repo-root".to_string(),
+				repo_root.display().to_string(),
+			],
+		),
+		(
+			"journal",
+			vec![
+				"journal".to_string(),
+				"--file".to_string(),
+				journal_path.display().to_string(),
+				"--repo-root".to_string(),
+				repo_root.display().to_string(),
+			],
+		),
+	];
+	let mut failures = Vec::new();
+
+	for (label, args) in validations {
+		let execution = match runner.run(&script_path, &args) {
+			Ok(execution) => execution,
+			Err(error) => {
+				return StepReport {
+					name: DOC_VALIDATION_STEP_NAME,
+					status: StepStatus::Error,
+					severity: Severity::Blocking,
+					exit_code: None,
+					detail: Some(format!("Tool 'validate-docs' failed while validating {}: {}", label, error)),
+					findings: None,
+					summary: None,
+				};
+			}
+		};
+
+		match execution.exit_code {
+			Some(0) => {}
+			Some(1) => {
+				if execution.stdout.is_empty() {
+					failures.push(format!("{} validation failed", label));
+				} else {
+					failures.push(format!("{} validation failed: {}", label, execution.stdout));
+				}
+			}
+			other => {
+				return StepReport {
+					name: DOC_VALIDATION_STEP_NAME,
+					status: StepStatus::Error,
+					severity: Severity::Blocking,
+					exit_code: other,
+					detail: Some(format!("{} validation exited with unexpected status {:?}", label, other)),
+					findings: None,
+					summary: None,
+				};
+			}
+		}
+	}
+
+	if failures.is_empty() {
+		StepReport {
+			name: DOC_VALIDATION_STEP_NAME,
+			status: StepStatus::Pass,
+			severity: Severity::Blocking,
+			exit_code: None,
+			detail: Some(format!(
+				"validated {} and {}",
+				worklog_path.display(),
+				journal_path.display()
+			)),
+			findings: None,
+			summary: None,
+		}
+	} else {
+		StepReport {
+			name: DOC_VALIDATION_STEP_NAME,
+			status: StepStatus::Fail,
+			severity: Severity::Blocking,
+			exit_code: Some(1),
+			detail: Some(failures.join("; ")),
+			findings: None,
+			summary: None,
+		}
+	}
 }
 
 fn verify_step_comments(repo_root: &Path, runner: &dyn CommandRunner) -> StepReport {
@@ -834,6 +1013,53 @@ fn verify_worklog_exists(repo_root: &Path, today: &str) -> Result<(StepStatus, S
 	}
 }
 
+fn latest_worklog_entry_for_date(repo_root: &Path, today: &str) -> Result<Option<PathBuf>, String> {
+	let worklog_dir = repo_root.join("docs/worklog").join(today);
+	if !worklog_dir.is_dir() {
+		return Ok(None);
+	}
+
+	let entries = fs::read_dir(&worklog_dir)
+		.map_err(|error| format!("failed to read {}: {}", worklog_dir.display(), error))?;
+	let mut latest = None;
+
+	for entry in entries {
+		let entry = entry
+			.map_err(|error| format!("failed to read {}: {}", worklog_dir.display(), error))?;
+		if !entry
+			.file_type()
+			.map_err(|error| format!("failed to inspect {}: {}", entry.path().display(), error))?
+			.is_file()
+		{
+			continue;
+		}
+
+		let file_name = entry.file_name();
+		let Some(file_name) = file_name.to_str() else {
+			continue;
+		};
+		if !is_worklog_entry_filename(file_name) {
+			continue;
+		}
+
+		if latest
+			.as_ref()
+			.is_none_or(|(current_file_name, _): &(String, PathBuf)| file_name > current_file_name)
+		{
+			latest = Some((file_name.to_string(), entry.path()));
+		}
+	}
+
+	Ok(latest.map(|(_, path)| path))
+}
+
+fn is_worklog_entry_filename(file_name: &str) -> bool {
+	file_name.ends_with(".md")
+		&& file_name.len() > 10
+		&& file_name.as_bytes()[..6].iter().all(u8::is_ascii_digit)
+		&& file_name.as_bytes()[6] == b'-'
+}
+
 fn verify_review_artifact_exists(repo_root: &Path) -> Result<(StepStatus, String), String> {
 	let state = read_state_value(repo_root)?;
 	let cycle = state
@@ -996,6 +1222,7 @@ mod tests {
     use std::fs;
     use std::sync::atomic::AtomicBool;
     use std::sync::atomic::{AtomicU64, Ordering};
+    use std::sync::Mutex;
 
     fn repo_root() -> PathBuf {
         PathBuf::from("/repo")
@@ -1664,7 +1891,7 @@ mod tests {
     }
 
     #[test]
-	fn run_pipeline_aggregates_tool_results_with_mock_runner() {
+    fn run_pipeline_aggregates_tool_results_with_mock_runner() {
         struct MockRunner {
             outputs: HashMap<String, ExecutionResult>,
             expected_cycle: u64,
@@ -1682,6 +1909,19 @@ mod tests {
 					.any(|window| window[0] == "--cycle" && window[1] == self.expected_cycle.to_string());
 				match key.as_str() {
 					"metric-snapshot" | "check-field-inventory-rs" => assert!(has_cycle_arg),
+					"validate-docs" => {
+						let mode = args.first().map(String::as_str).unwrap_or_default();
+						assert!(matches!(mode, "worklog" | "journal"));
+						if mode == "worklog" {
+							assert!(has_cycle_arg);
+						} else {
+							assert!(!has_cycle_arg);
+						}
+						return Ok(ExecutionResult {
+							exit_code: Some(0),
+							stdout: String::new(),
+						});
+					}
 					"housekeeping-scan" | "cycle-status" | "state-invariants" | "derive-metrics" => {
 						assert!(!has_cycle_arg)
 					}
@@ -1722,7 +1962,11 @@ mod tests {
 			root.join("docs/state.json"),
 			json!({
 				"last_cycle": {
+					"number": 135,
 					"issue": 834
+				},
+				"cycle_phase": {
+					"phase": "close_out"
 				},
 				"copilot_metrics": {
 					"total_dispatches": 3,
@@ -1815,7 +2059,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-		assert_eq!(report.steps.len(), 8);
+		assert_eq!(report.steps.len(), 9);
 		assert_eq!(report.steps[0].status, StepStatus::Pass);
 		assert_eq!(report.steps[1].status, StepStatus::Pass);
 		assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -1836,8 +2080,10 @@ mod tests {
 		);
 		assert_eq!(report.steps[6].name, "artifact-verify");
 		assert_eq!(report.steps[6].status, StepStatus::Pass);
-		assert_eq!(report.steps[7].name, "step-comments");
+		assert_eq!(report.steps[7].name, "doc-validation");
 		assert_eq!(report.steps[7].status, StepStatus::Pass);
+		assert_eq!(report.steps[8].name, "step-comments");
+		assert_eq!(report.steps[8].status, StepStatus::Pass);
 	}
 
     #[test]
@@ -1872,11 +2118,214 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-		assert_eq!(report.steps.len(), 8);
+		assert_eq!(report.steps.len(), 9);
 		assert!(report
 			.steps
 			.iter()
 			.all(|step| matches!(step.status, StepStatus::Error)));
+	}
+
+	#[test]
+	fn doc_validation_passes_when_close_out_docs_are_valid() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir().join(format!("pipeline-check-doc-validation-pass-{}", run_id));
+		fs::create_dir_all(root.join("docs/journal")).unwrap();
+		fs::create_dir_all(root.join("docs/worklog/2026-03-12")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"last_cycle": {"number": 239},
+				"cycle_phase": {"phase": "close_out"}
+			})
+			.to_string(),
+		)
+		.unwrap();
+		fs::write(
+			root.join("docs/worklog/2026-03-12/010203-cycle-239-summary.md"),
+			"older worklog",
+		)
+		.unwrap();
+		fs::write(
+			root.join("docs/worklog/2026-03-12/020304-cycle-239-summary.md"),
+			"latest worklog",
+		)
+		.unwrap();
+		fs::write(root.join("docs/journal/2026-03-12.md"), "# Journal\n").unwrap();
+
+		struct ValidateDocsRunner {
+			calls: Mutex<Vec<Vec<String>>>,
+		}
+
+		impl CommandRunner for ValidateDocsRunner {
+			fn run(&self, script_path: &Path, args: &[String]) -> Result<ExecutionResult, String> {
+				assert_eq!(script_path.file_name().and_then(|name| name.to_str()), Some("validate-docs"));
+				self.calls.lock().unwrap().push(args.to_vec());
+				Ok(ExecutionResult {
+					exit_code: Some(0),
+					stdout: String::new(),
+				})
+			}
+
+			fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+				panic!("issue comments are not used in doc validation test");
+			}
+		}
+
+		let runner = ValidateDocsRunner {
+			calls: Mutex::new(Vec::new()),
+		};
+
+		let step = verify_doc_validation_for_date(&root, "2026-03-12", &runner);
+		assert_eq!(step.name, "doc-validation");
+		assert_eq!(step.status, StepStatus::Pass);
+		assert_eq!(step.severity, Severity::Blocking);
+
+		let calls = runner.calls.lock().unwrap();
+		assert_eq!(calls.len(), 2);
+		assert_eq!(calls[0][0], "worklog");
+		assert_eq!(calls[0][1], "--file");
+		assert_eq!(calls[0][2], root.join("docs/worklog/2026-03-12/020304-cycle-239-summary.md").display().to_string());
+		assert_eq!(calls[0][3], "--cycle");
+		assert_eq!(calls[0][4], "239");
+		assert_eq!(calls[1][0], "journal");
+		assert_eq!(calls[1][1], "--file");
+		assert_eq!(calls[1][2], root.join("docs/journal/2026-03-12.md").display().to_string());
+	}
+
+	#[test]
+	fn doc_validation_skips_when_not_in_close_out_phase() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir().join(format!("pipeline-check-doc-validation-skip-phase-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"last_cycle": {"number": 239},
+				"cycle_phase": {"phase": "work"}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct NoRunRunner;
+
+		impl CommandRunner for NoRunRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("validate-docs should not run outside close-out");
+			}
+
+			fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+				panic!("issue comments are not used in doc validation test");
+			}
+		}
+
+		let step = verify_doc_validation_for_date(&root, "2026-03-12", &NoRunRunner);
+		assert_eq!(step.status, StepStatus::Pass);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("skipped"));
+	}
+
+	#[test]
+	fn doc_validation_fails_when_validate_docs_reports_errors() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir().join(format!("pipeline-check-doc-validation-fail-{}", run_id));
+		fs::create_dir_all(root.join("docs/journal")).unwrap();
+		fs::create_dir_all(root.join("docs/worklog/2026-03-12")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"last_cycle": {"number": 239},
+				"cycle_phase": {"phase": "close_out"}
+			})
+			.to_string(),
+		)
+		.unwrap();
+		fs::write(
+			root.join("docs/worklog/2026-03-12/020304-cycle-239-summary.md"),
+			"latest worklog",
+		)
+		.unwrap();
+		fs::write(root.join("docs/journal/2026-03-12.md"), "# Journal\n").unwrap();
+
+		struct FailingValidateDocsRunner;
+
+		impl CommandRunner for FailingValidateDocsRunner {
+			fn run(&self, _script_path: &Path, args: &[String]) -> Result<ExecutionResult, String> {
+				let command = args.first().map(String::as_str).unwrap_or_default();
+				if command == "worklog" {
+					return Ok(ExecutionResult {
+						exit_code: Some(1),
+						stdout: "missing receipts".to_string(),
+					});
+				}
+
+				Ok(ExecutionResult {
+					exit_code: Some(0),
+					stdout: String::new(),
+				})
+			}
+
+			fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+				panic!("issue comments are not used in doc validation test");
+			}
+		}
+
+		let step = verify_doc_validation_for_date(&root, "2026-03-12", &FailingValidateDocsRunner);
+		assert_eq!(step.status, StepStatus::Fail);
+		assert_eq!(step.severity, Severity::Blocking);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("worklog"));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("missing receipts"));
+	}
+
+	#[test]
+	fn doc_validation_handles_missing_worklog_or_journal_gracefully() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir().join(format!("pipeline-check-doc-validation-missing-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"last_cycle": {"number": 239},
+				"cycle_phase": {"phase": "close_out"}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct NoRunRunner;
+
+		impl CommandRunner for NoRunRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("validate-docs should not run when docs are missing");
+			}
+
+			fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+				panic!("issue comments are not used in doc validation test");
+			}
+		}
+
+		let step = verify_doc_validation_for_date(&root, "2026-03-12", &NoRunRunner);
+		assert_eq!(step.status, StepStatus::Pass);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("skipped"));
 	}
 
 	#[test]
