@@ -3228,12 +3228,8 @@
   },
   "cycle_phase": {
     "cycle": 239,
-    "doc_issue": null,
-    "doc_pr": null,
     "phase": "work",
-    "phase_entered_at": "2026-03-12T18:16:18Z",
-    "review_iteration": null,
-    "review_max": 3
+    "phase_entered_at": "2026-03-12T18:16:18Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -3312,7 +3308,7 @@
     "fields": {
       "audit_dropped": {
         "cadence": "after dropping a previously accepted audit recommendation",
-        "last_refreshed": "cycle 228"
+        "last_refreshed": "cycle 239"
       },
       "audit_processed": {
         "cadence": "after processing audit issues",

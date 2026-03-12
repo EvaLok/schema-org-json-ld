@@ -504,36 +504,17 @@ Based on the above context:
 
 Prioritise reviews over new dispatches — unreviewed PRs block progress.
 
-## 10. Cycle completion (phased)
+## 10. Cycle completion
 
-Cycles now use a multi-phase completion flow. See `COMPLETION_CHECKLIST.md` for the full procedure.
+Cycles use a single-session completion flow: `work -> close_out -> complete`. See `COMPLETION_CHECKLIST.md` for the full procedure.
 
-### Phase A: Work completion and documentation dispatch
-
-1. Run `bash tools/pipeline-check` — all 5 phases must pass
-2. Update state.json (use `bash tools/cycle-complete` to generate patches)
-3. **Dispatch documentation agent** instead of writing worklog/journal directly:
-   - `bash tools/dispatch-docs --cycle N --issue ORCH_ISSUE --body-file /tmp/doc-body.md`
-   - This sets `cycle_phase.phase = "doc_dispatched"`
-4. Push state, end session. Phase A is done.
-
-### Phase B: Documentation review (next cron invocation)
-
-When resuming with `cycle_phase.phase = "doc_dispatched"`:
-
-1. Check if the documentation PR is ready
-2. Run validation: `bash tools/check-doc-pr --pr N --cycle N`
-3. If checks pass: merge PR, set `cycle_phase.phase = "close_out"`
-4. If checks fail: request `@copilot` revision (up to `review_max` rounds)
-5. Fallback: write docs directly via `write-entry` if the agent fails
-
-### Phase C: Close-out
-
-When `cycle_phase.phase = "close_out"`:
-
-1. Final pipeline gate
-2. **Dispatch review agent (MANDATORY per Eva directive #463)** — every cycle must end with a review agent in-flight
-3. Set `cycle_phase.phase = "complete"`, close the orchestrator issue
+1. Run `bash tools/pipeline-check` — all phases must pass
+2. Update state.json via `bash tools/cycle-complete --apply --issue N --summary "..."`
+3. Write worklog and journal via `bash tools/write-entry`
+4. Commit and push documentation + state changes
+5. Re-run `bash tools/pipeline-check` (final gate)
+6. **Dispatch review agent (MANDATORY per Eva directive #463)** — every cycle must end with a review agent in-flight
+7. Record dispatch via `bash tools/record-dispatch`, push, close the orchestrator issue
 
 The review agent dispatch is not optional. It is the primary mechanism for catching blind spots, complacency, and process drift.
 
