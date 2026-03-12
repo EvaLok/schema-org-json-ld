@@ -2927,7 +2927,7 @@
       "dispatched_at": "2026-03-12T03:08:17Z",
       "issue": 1089,
       "model": "gpt-5.4",
-      "status": "closed_superseded",
+      "status": "closed",
       "title": "[Cycle Docs] Cycle 232 worklog and journal"
     },
     {
@@ -3110,7 +3110,7 @@
     "total_classes_converted": 54
   },
   "copilot_metrics": {
-    "closed_without_merge": 3,
+    "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1093 Cycle 232 adversarial review (cycle 232)",
     "dispatch_to_pr_rate": "98.1%",
@@ -3118,7 +3118,7 @@
     "merged": 316,
     "pr_merge_rate": "99.4%",
     "produced_pr": 318,
-    "resolved": 323,
+    "resolved": 324,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 324
