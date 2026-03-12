@@ -70,6 +70,25 @@ The `write-entry` tool auto-derives self-modifications from git history, validat
 
 Journal is written as part of Step 3 via `write-entry journal`. The tool appends to `docs/journal/YYYY-MM-DD.md`, handles JOURNAL.md index updates, auto-links bare `#N` references, and automatically inserts the matching worklog link.
 
+## 4.1. Validate documentation entries (per review finding: worklog-accuracy chronic)
+
+After writing worklog and journal entries, validate them before committing. This is a **blocking gate** — do not proceed to step 5 if validation fails.
+
+```bash
+bash tools/validate-docs worklog --file docs/worklog/YYYY-MM-DD/HHMMSS-title.md --cycle N --repo-root .
+```
+
+```bash
+bash tools/validate-docs journal --file docs/journal/YYYY-MM-DD.md --repo-root .
+```
+
+If either validation fails:
+1. Fix the issue (missing receipts, stale self-modifications, etc.)
+2. Re-run validation until it passes
+3. Only then proceed to step 5
+
+**Why:** The `worklog-accuracy` category appeared in 4+ consecutive review cycles (235-239). The root cause is that worklogs were committed without running the validator that exists specifically to catch these errors. This step closes the gap by making validation mandatory before commit.
+
 ## 4.5. ADR check (per Eva directive [#724](https://github.com/EvaLok/schema-org-json-ld/issues/724))
 
 Before closing the cycle, check whether any decisions made this cycle warrant an Architecture Decision Record in `doc/adr/`.
@@ -144,7 +163,7 @@ The issue body for the review agent MUST be structured as follows:
 
    The `[category-name]` tag MUST appear in the heading line inside square brackets. As a fallback, `process-review` also accepts a separate `Category: category-name` line within the finding body, but the inline `[category]` format is preferred. The complacency score (1-5) must be justified with evidence in a dedicated section.
 
-   **Complacency scoring cap** (per [audit #198](https://github.com/EvaLok/schema-org-json-ld-audit/issues/198)): If the cycle overrode any FAIL or blocking-level pipeline gate (including `check-doc-pr`, `pipeline-check`, or `state-invariants`), the maximum complacency score is **3/5** regardless of other factors. Gate overrides demonstrate that the orchestrator treated structural enforcement as optional — which is the definition of complacency, even if the override was "justified" at the time. Include this constraint verbatim in the review dispatch spec.
+   **Complacency scoring cap** (per [audit #198](https://github.com/EvaLok/schema-org-json-ld-audit/issues/198)): If the cycle overrode any FAIL or blocking-level pipeline gate (including `pipeline-check` or `state-invariants`), the maximum complacency score is **3/5** regardless of other factors. Gate overrides demonstrate that the orchestrator treated structural enforcement as optional — which is the definition of complacency, even if the override was "justified" at the time. Include this constraint verbatim in the review dispatch spec.
 
 4. **Encourage depth over breadth.** Three deeply investigated findings with evidence are more valuable than ten surface-level observations.
 
@@ -208,6 +227,7 @@ No manual `cycle-phase` calls are needed for the standard flow (since cycle 226)
 | 1. Pipeline verification (early) | Automated | `bash tools/pipeline-check` |
 | 2. State.json updates | Automated | `process-merge`, `process-review`, `process-audit`, `process-eva`, `cycle-complete`, `record-dispatch` |
 | 3. Worklog + Journal | Semi-automated | `write-entry worklog` + `write-entry journal` (orchestrator provides structured input) |
+| 4.1. Validate docs | Automated | `validate-docs worklog` + `validate-docs journal` (blocking gate) |
 | 5. Commit worklog/journal/state | Manual | git commit + push (BEFORE review dispatch) |
 | 5.5. Final pipeline gate | Automated | `bash tools/pipeline-check` (re-run after all modifications) |
 | 6. Review agent dispatch | Semi-automated | `cycle-complete` generates issue body, orchestrator creates issue |
