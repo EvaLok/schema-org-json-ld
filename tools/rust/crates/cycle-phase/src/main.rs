@@ -21,14 +21,6 @@ struct Cli {
     #[arg(long, default_value = ".")]
     repo_root: PathBuf,
 
-    /// Also set doc_pr on the cycle_phase object
-    #[arg(long)]
-    doc_pr: Option<i64>,
-
-    /// Set review_iteration on the cycle_phase object
-    #[arg(long)]
-    review_iteration: Option<u64>,
-
     /// Print the resulting cycle_phase without writing
     #[arg(long)]
     dry_run: bool,
@@ -54,21 +46,6 @@ fn run(cli: Cli) -> Result<(), String> {
     let mut state = read_state_value(&cli.repo_root)?;
     transition_cycle_phase(&mut state, cli.cycle, &cli.phase)?;
 
-    if let Some(cp) = state
-        .pointer_mut("/cycle_phase")
-        .and_then(Value::as_object_mut)
-    {
-        if let Some(pr) = cli.doc_pr {
-            cp.insert("doc_pr".to_string(), serde_json::json!(pr));
-        }
-        if let Some(iter) = cli.review_iteration {
-            cp.insert(
-                "review_iteration".to_string(),
-                serde_json::json!(iter),
-            );
-        }
-    }
-
     if cli.dry_run {
         let phase_value = state
             .pointer("/cycle_phase")
@@ -83,16 +60,10 @@ fn run(cli: Cli) -> Result<(), String> {
     }
 
     write_state_value(&cli.repo_root, &state)?;
-    let commit_message = format!(
-        "state(cycle-phase): {} [cycle {}]",
-        cli.phase, cli.cycle
-    );
+    let commit_message = format!("state(cycle-phase): {} [cycle {}]", cli.phase, cli.cycle);
     commit_state_json(&cli.repo_root, &commit_message)?;
 
-    println!(
-        "Transitioned cycle {} to phase '{}'",
-        cli.cycle, cli.phase
-    );
+    println!("Transitioned cycle {} to phase '{}'", cli.cycle, cli.phase);
     Ok(())
 }
 
@@ -108,11 +79,8 @@ mod tests {
             "last_cycle": { "number": 218 },
             "cycle_phase": {
                 "cycle": 218,
-                "phase": "doc_dispatched",
+                "phase": "work",
                 "doc_issue": 980,
-                "doc_pr": null,
-                "review_iteration": 0,
-                "review_max": 3,
                 "phase_entered_at": "2026-03-10T00:00:00Z"
             },
             "field_inventory": {
@@ -135,18 +103,17 @@ mod tests {
         assert!(help.contains("--phase"));
         assert!(help.contains("--cycle"));
         assert!(help.contains("--repo-root"));
-        assert!(help.contains("--doc-pr"));
-        assert!(help.contains("--review-iteration"));
+        assert!(!help.contains("--doc-pr"));
+        assert!(!help.contains("--review-iteration"));
         assert!(help.contains("--dry-run"));
     }
 
     #[test]
-    fn transition_to_doc_review_sets_phase_and_bumps_freshness() {
+    fn transition_to_work_sets_phase_and_bumps_freshness() {
         let mut state = sample_state();
-        transition_cycle_phase(&mut state, 218, "doc_review")
-            .expect("transition should succeed");
+        transition_cycle_phase(&mut state, 218, "work").expect("transition should succeed");
 
-        assert_eq!(state["cycle_phase"]["phase"], json!("doc_review"));
+        assert_eq!(state["cycle_phase"]["phase"], json!("work"));
         assert_eq!(state["cycle_phase"]["cycle"], json!(218));
         assert!(state["cycle_phase"]["phase_entered_at"].is_string());
         assert_eq!(
@@ -160,16 +127,14 @@ mod tests {
     #[test]
     fn transition_to_close_out_succeeds() {
         let mut state = sample_state();
-        transition_cycle_phase(&mut state, 218, "close_out")
-            .expect("transition should succeed");
+        transition_cycle_phase(&mut state, 218, "close_out").expect("transition should succeed");
         assert_eq!(state["cycle_phase"]["phase"], json!("close_out"));
     }
 
     #[test]
     fn transition_to_complete_succeeds() {
         let mut state = sample_state();
-        transition_cycle_phase(&mut state, 218, "complete")
-            .expect("transition should succeed");
+        transition_cycle_phase(&mut state, 218, "complete").expect("transition should succeed");
         assert_eq!(state["cycle_phase"]["phase"], json!("complete"));
     }
 
@@ -182,72 +147,10 @@ mod tests {
     }
 
     #[test]
-    fn doc_pr_can_be_set_on_cycle_phase() {
-        let mut state = sample_state();
-        transition_cycle_phase(&mut state, 218, "doc_review")
-            .expect("transition should succeed");
-
-        if let Some(cp) = state
-            .pointer_mut("/cycle_phase")
-            .and_then(Value::as_object_mut)
-        {
-            cp.insert("doc_pr".to_string(), json!(985));
-        }
-
-        assert_eq!(state["cycle_phase"]["doc_pr"], json!(985));
-        assert_eq!(state["cycle_phase"]["phase"], json!("doc_review"));
-    }
-
-    #[test]
-    fn review_iteration_can_be_set_on_cycle_phase() {
-        let mut state = sample_state();
-        transition_cycle_phase(&mut state, 218, "doc_dispatched")
-            .expect("transition should succeed");
-
-        if let Some(cp) = state
-            .pointer_mut("/cycle_phase")
-            .and_then(Value::as_object_mut)
-        {
-            cp.insert("review_iteration".to_string(), json!(1));
-        }
-
-        assert_eq!(state["cycle_phase"]["review_iteration"], json!(1));
-        assert_eq!(state["cycle_phase"]["phase"], json!("doc_dispatched"));
-    }
-
-    #[test]
-    fn review_iteration_increment_makes_retry_cap_reachable() {
-        let mut state = sample_state();
-        // Start at iteration 0, max 3
-        assert_eq!(state["cycle_phase"]["review_iteration"], json!(0));
-        assert_eq!(state["cycle_phase"]["review_max"], json!(3));
-
-        // Simulate 3 failed review rounds
-        for i in 1..=3 {
-            transition_cycle_phase(&mut state, 218, "doc_dispatched")
-                .expect("transition should succeed");
-            if let Some(cp) = state
-                .pointer_mut("/cycle_phase")
-                .and_then(Value::as_object_mut)
-            {
-                cp.insert("review_iteration".to_string(), json!(i));
-            }
-        }
-
-        let iter = state["cycle_phase"]["review_iteration"]
-            .as_u64()
-            .unwrap();
-        let max = state["cycle_phase"]["review_max"].as_u64().unwrap();
-        assert!(iter >= max, "review_iteration ({}) should reach review_max ({})", iter, max);
-    }
-
-    #[test]
     fn valid_phases_constant_is_complete() {
         assert!(VALID_PHASES.contains(&"work"));
-        assert!(VALID_PHASES.contains(&"doc_dispatched"));
-        assert!(VALID_PHASES.contains(&"doc_review"));
         assert!(VALID_PHASES.contains(&"close_out"));
         assert!(VALID_PHASES.contains(&"complete"));
-        assert_eq!(VALID_PHASES.len(), 5);
+        assert_eq!(VALID_PHASES.len(), 3);
     }
 }
