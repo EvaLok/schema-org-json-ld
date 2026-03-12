@@ -2166,6 +2166,43 @@ mod tests {
 	}
 
 	#[test]
+	fn has_phase_a_step_comment_detects_phase_a_only_markers() {
+		let phase_a_only = ["0.5", "10"].into_iter().collect::<BTreeSet<_>>();
+		let phase_bc_only = ["0", "5", "10"].into_iter().collect::<BTreeSet<_>>();
+
+		assert!(has_phase_a_step_comment(&phase_a_only));
+		assert!(!has_phase_a_step_comment(&phase_bc_only));
+	}
+
+	#[test]
+	fn assess_phase_bc_step_comment_completeness_covers_pass_warn_and_fail() {
+		let pass_found = ["0", "5"].into_iter().collect::<BTreeSet<_>>();
+		let pass_tokens = ["0", "5", "10.B", "10.C"]
+			.into_iter()
+			.collect::<BTreeSet<_>>();
+		let pass = assess_phase_bc_step_comment_completeness(&pass_found, &pass_tokens);
+		assert_eq!(pass.status, StepStatus::Pass);
+		assert_eq!(pass.severity, Severity::Blocking);
+		assert_eq!(pass.findings, 4);
+
+		let warn_found = ["0", "5"].into_iter().collect::<BTreeSet<_>>();
+		let warn_tokens = ["0", "5"].into_iter().collect::<BTreeSet<_>>();
+		let warn = assess_phase_bc_step_comment_completeness(&warn_found, &warn_tokens);
+		assert_eq!(warn.status, StepStatus::Warn);
+		assert_eq!(warn.severity, Severity::Warning);
+		assert_eq!(warn.findings, 2);
+		assert!(warn.detail.contains("below backstop threshold 3"));
+
+		let fail_found = ["0"].into_iter().collect::<BTreeSet<_>>();
+		let fail_tokens = ["0", "10.B", "10.C"].into_iter().collect::<BTreeSet<_>>();
+		let fail = assess_phase_bc_step_comment_completeness(&fail_found, &fail_tokens);
+		assert_eq!(fail.status, StepStatus::Fail);
+		assert_eq!(fail.severity, Severity::Blocking);
+		assert_eq!(fail.findings, 3);
+		assert!(fail.detail.contains("missing mandatory [5]"));
+	}
+
+	#[test]
 	fn step_comment_verification_fails_when_fewer_than_ten_steps_are_found_on_previous_cycle_issue() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
