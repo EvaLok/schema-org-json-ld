@@ -31,7 +31,7 @@
 
 ## Current state
 
-- **In-flight agent sessions**: 1
+- **In-flight agent sessions**: 2
 - **Pipeline status**: FAIL (6/8 pass; step-comments FAIL is known phased-resumption limitation on [#1081](https://github.com/EvaLok/schema-org-json-ld/issues/1081))
 - **Copilot metrics**: 323 dispatches, 316 PRs produced, 314 merged, 99.4% PR merge rate
 - **Publish gate**: published

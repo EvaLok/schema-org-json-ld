@@ -2947,6 +2947,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix pipeline-check step-comment verifier for Phase B/C cycles"
+    },
+    {
+      "dispatched_at": "2026-03-12T06:32:33Z",
+      "issue": 1098,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix check-doc-pr receipt completeness to freeze expected set at dispatch time"
     }
   ],
   "audit_dropped": [
@@ -3121,23 +3128,23 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1097 Fix pipeline-check step-comment verifier for Phase B/C cycles (cycle 233)",
-    "dispatch_to_pr_rate": "98.2%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1098 Fix check-doc-pr receipt completeness to freeze expected set at dispatch time (cycle 233)",
+    "dispatch_to_pr_rate": "97.9%",
+    "in_flight": 2,
     "merged": 316,
     "pr_merge_rate": "99.1%",
     "produced_pr": 319,
     "resolved": 324,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 325
+    "total_dispatches": 326
   },
   "cycle_phase": {
     "cycle": 233,
     "doc_issue": null,
     "doc_pr": null,
     "phase": "complete",
-    "phase_entered_at": "2026-03-12T06:32:30Z",
+    "phase_entered_at": "2026-03-12T06:32:33Z",
     "review_iteration": null,
     "review_max": 3
   },
