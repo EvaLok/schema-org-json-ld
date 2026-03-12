@@ -3041,8 +3041,10 @@
     {
       "dispatched_at": "2026-03-12T18:30:53Z",
       "issue": 1129,
+      "merged_at": "2026-03-12T20:22:09Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1130,
+      "status": "merged",
       "title": "Remove phased workflow code"
     },
     {
@@ -3230,12 +3232,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1131 Cycle 239 review (cycle 239)",
-    "dispatch_to_pr_rate": "97.6%",
-    "in_flight": 3,
-    "merged": 326,
+    "dispatch_to_pr_rate": "97.9%",
+    "in_flight": 2,
+    "merged": 327,
     "pr_merge_rate": "99.1%",
-    "produced_pr": 329,
-    "resolved": 334,
+    "produced_pr": 330,
+    "resolved": 335,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 337
@@ -3335,15 +3337,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 239"
+        "last_refreshed": "cycle 240"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 239"
+        "last_refreshed": "cycle 240"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 239"
+        "last_refreshed": "cycle 240"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
