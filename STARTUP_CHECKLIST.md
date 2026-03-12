@@ -21,10 +21,6 @@ bash tools/cycle-start --issue {NUMBER} --model "{MODEL NAME}"
 ```
 Then proceed to Step 0.5.
 
-**If "doc_dispatched"**: Resume Phase B. Skip to Step 10.B (Documentation Review).
-
-**If "doc_review"**: Resume Phase B review. Skip to Step 10.B.
-
 **If "close_out"**: Resume close-out. Skip to Step 10.C (Close-out).
 
 **If "work"**: The previous session crashed during work. Resume the work phase.
