@@ -5009,9 +5009,57 @@
         ],
         "ignored": 0,
         "note": "Reclassified cycle 238: F1 worklog-accuracy deferred (worklog still invalid). F2 process-adherence deferred (needs tooling). F3 journal-quality deferred (no journal entry). F4 audit-evidence deferred (artifact unfixed). F5 state-integrity actioned (56662de). F6 tool-usage deferred (dispatch-docs deprecated). Original: 4 actioned, 2 deferred. Corrected: 1 actioned, 5 deferred."
+      },
+      {
+        "actioned": 3,
+        "categories": [
+          "worklog-accuracy",
+          "journal-quality",
+          "state-integrity",
+          "audit-evidence",
+          "adr-quality"
+        ],
+        "complacency_score": 2,
+        "cycle": 237,
+        "deferred": 3,
+        "finding_count": 6,
+        "findings": [
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred",
+            "evidence": "retrospective — cycle 237 worklog is immutable; write-entry hardening (PR #1111) should prevent recurrence"
+          },
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred",
+            "evidence": "retrospective — receipt table missing ce0ea32, 07cc183; same root cause as F1"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "actioned",
+            "evidence": "retroactive cycle 237 journal entry written in cycle 238"
+          },
+          {
+            "category": "state-integrity",
+            "disposition": "actioned",
+            "evidence": "5443365 reclassified cycle 236 history from 4-actioned/2-deferred to 1-actioned/5-deferred"
+          },
+          {
+            "category": "audit-evidence",
+            "disposition": "deferred",
+            "evidence": "tool-audit artifact at docs/reviews/tool-audit-cycle-236.md still contradictory"
+          },
+          {
+            "category": "adr-quality",
+            "disposition": "actioned",
+            "evidence": "5443365 amended ADR 0010 to separate strategic decision from unproven operational claim"
+          }
+        ],
+        "ignored": 0,
+        "note": "F1-2 worklog-accuracy: deferred (retrospective, immutable). F3 journal-quality: actioned (retroactive entry). F4 state-integrity: actioned (5443365 reclassification). F5 audit-evidence: deferred (artifact unfixed). F6 adr-quality: actioned (5443365 ADR amendment)."
       }
     ],
-    "last_review_cycle": 236
+    "last_review_cycle": 237
   },
   "schema_status": {
     "directory_layout": {
