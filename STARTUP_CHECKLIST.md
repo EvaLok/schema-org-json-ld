@@ -80,6 +80,8 @@ For each open `cycle-review` issue:
 
 9. **Test-debt gating** (per audit [#195](https://github.com/EvaLok/schema-org-json-ld-audit/issues/195)): If any review finding identifies missing tests for a tool crate, all Copilot dispatch specs touching that crate in this cycle MUST include a test-writing requirement. If the finding targets a crate that will receive new code this cycle, the dispatch spec must explicitly include: "Add unit/integration tests for the new functionality and any pre-existing untested paths." This ensures review findings about test debt produce dispatch-level enforcement, not just acknowledgment.
 
+10. **Per-finding action receipt** (per audit [#206](https://github.com/EvaLok/schema-org-json-ld-audit/issues/206)): When closing a review issue (sub-step 5), every finding classified as "actioned" MUST cite concrete evidence: a commit SHA, a dispatched issue/PR number, a specific state.json field or checklist step that was updated, or an explicit rationale for why no concrete change is needed. Findings that cannot cite evidence MUST be classified as "deferred" (not "actioned"), which triggers the existing deferral tracking and escalation mechanisms. This prevents disposition overstatement — claiming findings are "actioned" without substantive resolution.
+
 If no review agent was dispatched last cycle (e.g., first cycle with this process), note it and move on.
 
 ## 0.6. Journal commitment reconciliation (per audit #147)
