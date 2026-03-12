@@ -19,12 +19,13 @@ const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const STEP_COMMENT_THRESHOLD: usize = 10;
 const PHASE_BC_STEP_THRESHOLD: usize = 3;
 const ORCHESTRATOR_SIGNATURE: &str = "> **[main-orchestrator]**";
-// These core checklist steps are expected on every non-phased cycle regardless of
-// conditional branches later in the workflow.
+// These core checklist steps are mandatory for full non-phased cycles. Phase B/C
+// resumption issues use the reduced PHASE_BC_MANDATORY_STEP_IDS set, while
+// PHASE_A_MARKER_STEP_IDS keep early startup-only markers from being misclassified as phased.
 const MANDATORY_STEP_IDS: [&str; 7] = ["0", "0.5", "1", "2", "6", "7", "9"];
 const PHASE_BC_MANDATORY_STEP_IDS: [&str; 2] = ["0", "5"];
 const PHASED_RESUMPTION_STEP_IDS: [&str; 4] = ["Opening", "10.B", "10.C", "Close"];
-const PHASE_A_STEP_IDS: [&str; 2] = ["0.5", "0.6"];
+const PHASE_A_MARKER_STEP_IDS: [&str; 2] = ["0.5", "0.6"];
 // Keep this list aligned with the orchestrator checklist steps that are expected to
 // produce post-step comments. The pass threshold stays lower because some steps are
 // conditional, but missing steps should still be surfaced in WARN output.
@@ -769,10 +770,10 @@ fn assess_phase_bc_step_comment_completeness(
 		.copied()
 		.filter(|step| !found.contains(step))
 		.collect::<Vec<_>>();
-	let findings = resumption_step_tokens.len();
+	let phase_bc_step_count = resumption_step_tokens.len();
 	let detail = format!(
-		"found {} unique step comments [{}]; phased resumption markers [{}]; missing mandatory [{}]",
-		findings,
+		"found {} step comment tokens; recognized step ids [{}]; phased resumption markers [{}]; missing mandatory [{}]",
+		phase_bc_step_count,
 		format_step_id_list(&found_ids),
 		format_step_id_list(&phased_resumption_markers),
 		format_step_id_list(&mandatory_missing)
@@ -783,11 +784,11 @@ fn assess_phase_bc_step_comment_completeness(
 			status: StepStatus::Fail,
 			severity: Severity::Blocking,
 			detail,
-			findings,
+			findings: phase_bc_step_count,
 		};
 	}
 
-	if findings < PHASE_BC_STEP_THRESHOLD {
+	if phase_bc_step_count < PHASE_BC_STEP_THRESHOLD {
 		return StepCommentAssessment {
 			status: StepStatus::Warn,
 			severity: Severity::Warning,
@@ -795,7 +796,7 @@ fn assess_phase_bc_step_comment_completeness(
 				"{}; below backstop threshold {}",
 				detail, PHASE_BC_STEP_THRESHOLD
 			),
-			findings,
+			findings: phase_bc_step_count,
 		};
 	}
 
@@ -803,7 +804,7 @@ fn assess_phase_bc_step_comment_completeness(
 		status: StepStatus::Pass,
 		severity: Severity::Blocking,
 		detail,
-		findings,
+		findings: phase_bc_step_count,
 	}
 }
 
@@ -836,7 +837,9 @@ fn collect_phased_resumption_step_ids<'a>(step_tokens: &BTreeSet<&'a str>) -> BT
 }
 
 fn has_phase_a_step_comment(found: &BTreeSet<&'static str>) -> bool {
-	found.iter().any(|step| PHASE_A_STEP_IDS.contains(step))
+	found
+		.iter()
+		.any(|step| PHASE_A_MARKER_STEP_IDS.contains(step))
 }
 
 /// Collect recognized orchestrator step identifiers from issue comment bodies.
@@ -2312,7 +2315,7 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("found 6 unique step comments [0, 5]"));
+			.contains("found 6 step comment tokens; recognized step ids [0, 5]"));
 		assert!(step
 			.detail
 			.as_deref()
@@ -2365,7 +2368,7 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("found 3 unique step comments [0]"));
+			.contains("found 3 step comment tokens; recognized step ids [0]"));
 		assert!(step
 			.detail
 			.as_deref()
@@ -2469,7 +2472,7 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("found 6 unique step comments [0, 1, 3, 5]"));
+			.contains("found 6 step comment tokens; recognized step ids [0, 1, 3, 5]"));
 		assert!(step
 			.detail
 			.as_deref()
