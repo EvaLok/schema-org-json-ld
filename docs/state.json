@@ -3088,8 +3088,8 @@
     "cycle": 231,
     "doc_issue": 1079,
     "doc_pr": 1080,
-    "phase": "doc_review",
-    "phase_entered_at": "2026-03-12T00:11:58Z",
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-12T00:12:41Z",
     "review_iteration": 0,
     "review_max": 3
   },
