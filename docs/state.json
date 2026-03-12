@@ -2929,6 +2929,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "[Cycle Docs] Cycle 232 worklog and journal"
+    },
+    {
+      "dispatched_at": "2026-03-12T04:49:24Z",
+      "issue": 1093,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 232 adversarial review"
     }
   ],
   "audit_dropped": [
@@ -3102,23 +3109,23 @@
   "copilot_metrics": {
     "closed_without_merge": 3,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1089 [Cycle Docs] Cycle 232 worklog and journal (cycle 232)",
-    "dispatch_to_pr_rate": "98.1%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1093 Cycle 232 adversarial review (cycle 232)",
+    "dispatch_to_pr_rate": "97.8%",
+    "in_flight": 2,
     "merged": 315,
     "pr_merge_rate": "99.4%",
     "produced_pr": 317,
     "resolved": 322,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 323
+    "total_dispatches": 324
   },
   "cycle_phase": {
     "cycle": 232,
     "doc_issue": 1089,
     "doc_pr": null,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-12T04:44:04Z",
+    "phase": "complete",
+    "phase_entered_at": "2026-03-12T04:49:24Z",
     "review_iteration": 1,
     "review_max": 3
   },
@@ -3227,11 +3234,11 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 231"
+        "last_refreshed": "cycle 232"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 231"
+        "last_refreshed": "cycle 232"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -3239,7 +3246,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 231"
+        "last_refreshed": "cycle 232"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -3259,7 +3266,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 231"
+        "last_refreshed": "cycle 232"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -3267,7 +3274,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 231"
+        "last_refreshed": "cycle 232"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -3287,7 +3294,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 231"
+        "last_refreshed": "cycle 232"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -3295,7 +3302,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 231"
+        "last_refreshed": "cycle 232"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -3303,7 +3310,7 @@
       },
       "schema_status.planned_next": {
         "cadence": "after planning or completing types",
-        "last_refreshed": "cycle 231"
+        "last_refreshed": "cycle 232"
       },
       "schema_status.property_gap_audit": {
         "cadence": "after property gap fixes",
@@ -3315,7 +3322,7 @@
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
-        "last_refreshed": "cycle 231"
+        "last_refreshed": "cycle 232"
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
@@ -3355,22 +3362,22 @@
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
-        "last_refreshed": "cycle 231"
+        "last_refreshed": "cycle 232"
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 231"
+        "last_refreshed": "cycle 232"
       }
     }
   },
   "last_cycle": {
-    "duration_minutes": 120,
-    "issue": 1085,
+    "duration_minutes": 108,
+    "issue": 1091,
     "number": 232,
-    "summary": "Phase B/C resume: merged doc PR #1080, processed audit #206 (per-finding action receipts), housekeeping cleanup",
-    "timestamp": "2026-03-12T02:57:46Z"
+    "summary": "Phase B/C resumption: reviewed doc PR, requested revision, fell back to write-entry due to structural receipt timing. Merged PR #1088 (pipeline-check regression tests). Processed audit #208. Cleaned up 4 dead branches.",
+    "timestamp": "2026-03-12T04:46:05Z"
   },
-  "last_eva_comment_check": "2026-03-12T02:57:46Z",
+  "last_eva_comment_check": "2026-03-12T04:46:05Z",
   "last_tool_audit_cycle": 222,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
