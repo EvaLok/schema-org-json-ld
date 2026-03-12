@@ -109,12 +109,10 @@ struct ResumeBrief {
     cycle: u64,
     phase: String,
     doc_issue: Option<i64>,
-    doc_pr: Option<i64>,
-    review_iteration: Option<u64>,
 }
 
 fn should_resume(phase: Option<&str>) -> bool {
-    !matches!(phase, None | Some("complete"))
+    matches!(phase, Some("work" | "close_out"))
 }
 
 fn main() {
@@ -140,17 +138,13 @@ fn run(cli: Cli) -> Result<(), String> {
     if should_resume(Some(current_phase)) {
         let cycle = state_json.cycle_phase.cycle.unwrap_or(0);
         let doc_issue = state_json.cycle_phase.doc_issue;
-        let doc_pr = state_json.cycle_phase.doc_pr;
-        let review_iter = state_json.cycle_phase.review_iteration;
 
         if cli.json {
             let brief = serde_json::json!({
                 "resume": true,
                 "cycle": cycle,
                 "phase": current_phase,
-                "doc_issue": doc_issue,
-                "doc_pr": doc_pr,
-                "review_iteration": review_iter
+                "doc_issue": doc_issue
             });
             println!(
                 "{}",
@@ -161,12 +155,6 @@ fn run(cli: Cli) -> Result<(), String> {
             println!("Resume: cycle {} phase {}", cycle, current_phase);
             if let Some(issue) = doc_issue {
                 println!("  doc_issue: #{}", issue);
-            }
-            if let Some(pr) = doc_pr {
-                println!("  doc_pr: #{}", pr);
-            }
-            if let Some(iter) = review_iter {
-                println!("  review_iteration: {}", iter);
             }
             println!("No new cycle created. Resume {} phase.", current_phase);
         }
@@ -194,16 +182,13 @@ fn run(cli: Cli) -> Result<(), String> {
     );
     apply_state_patch(&mut state, &patch)?;
 
-    // Set cycle_phase for the new work phase, clear doc-related fields
+    // Set cycle_phase for the new work phase
     transition_cycle_phase(&mut state, cycle, "work")?;
     if let Some(cp) = state
         .pointer_mut("/cycle_phase")
         .and_then(Value::as_object_mut)
     {
         cp.insert("doc_issue".to_string(), Value::Null);
-        cp.insert("doc_pr".to_string(), Value::Null);
-        cp.insert("review_iteration".to_string(), Value::Null);
-        cp.insert("review_max".to_string(), json!(3));
     }
 
     write_state_value(&cli.repo_root, &state)?;
@@ -1361,8 +1346,8 @@ mod tests {
     }
 
     #[test]
-    fn resume_detects_doc_dispatched_phase() {
-        assert!(should_resume(Some("doc_dispatched")));
+    fn resume_detects_close_out_phase() {
+        assert!(should_resume(Some("close_out")));
     }
 
     #[test]
@@ -1379,20 +1364,16 @@ mod tests {
     fn resume_brief_serializes_all_fields() {
         let brief = ResumeBrief {
             cycle: 219,
-            phase: "doc_dispatched".to_string(),
+            phase: "close_out".to_string(),
             doc_issue: Some(980),
-            doc_pr: Some(981),
-            review_iteration: Some(1),
         };
 
         let output = serde_json::to_string_pretty(&brief).expect("resume brief should serialize");
         let parsed: Value = serde_json::from_str(&output).expect("json should parse");
 
         assert_eq!(parsed.get("cycle"), Some(&json!(219)));
-        assert_eq!(parsed.get("phase"), Some(&json!("doc_dispatched")));
+        assert_eq!(parsed.get("phase"), Some(&json!("close_out")));
         assert_eq!(parsed.get("doc_issue"), Some(&json!(980)));
-        assert_eq!(parsed.get("doc_pr"), Some(&json!(981)));
-        assert_eq!(parsed.get("review_iteration"), Some(&json!(1)));
     }
 
     #[test]
@@ -1401,8 +1382,6 @@ mod tests {
             cycle: 220,
             phase: "work".to_string(),
             doc_issue: None,
-            doc_pr: None,
-            review_iteration: None,
         };
 
         let output = serde_json::to_string_pretty(&brief).expect("resume brief should serialize");
@@ -1414,12 +1393,12 @@ mod tests {
     }
 
     #[test]
-    fn should_resume_returns_true_for_doc_review_phase() {
-        assert!(should_resume(Some("doc_review")));
+    fn should_resume_returns_false_for_doc_dispatched_phase() {
+        assert!(!should_resume(Some("doc_dispatched")));
     }
 
     #[test]
-    fn should_resume_returns_true_for_close_out_phase() {
-        assert!(should_resume(Some("close_out")));
+    fn should_resume_returns_false_for_doc_review_phase() {
+        assert!(!should_resume(Some("doc_review")));
     }
 }

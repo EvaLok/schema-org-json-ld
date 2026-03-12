@@ -242,13 +242,7 @@ pub fn update_freshness(state: &mut Value, field_name: &str, cycle: u32) -> Resu
 }
 
 /// Valid cycle phase values for the state machine.
-pub const VALID_PHASES: &[&str] = &[
-    "work",
-    "doc_dispatched",
-    "doc_review",
-    "close_out",
-    "complete",
-];
+pub const VALID_PHASES: &[&str] = &["work", "close_out", "complete"];
 
 /// Transition `cycle_phase` to a new phase, updating `phase_entered_at` and
 /// bumping `field_inventory.fields.cycle_phase.last_refreshed`.
@@ -477,10 +471,7 @@ pub struct CyclePhase {
     pub cycle: Option<u64>,
     pub phase: Option<String>,
     pub doc_issue: Option<i64>,
-    pub doc_pr: Option<i64>,
     pub dispatched_at: Option<String>,
-    pub review_iteration: Option<u64>,
-    pub review_max: Option<u64>,
     pub phase_entered_at: Option<String>,
     #[serde(flatten)]
     pub extra: BTreeMap<String, Value>,
@@ -894,39 +885,30 @@ mod tests {
         assert!(state.cycle_phase.cycle.is_none());
         assert!(state.cycle_phase.phase.is_none());
         assert!(state.cycle_phase.doc_issue.is_none());
-        assert!(state.cycle_phase.doc_pr.is_none());
         assert!(state.cycle_phase.dispatched_at.is_none());
-        assert!(state.cycle_phase.review_iteration.is_none());
-        assert!(state.cycle_phase.review_max.is_none());
         assert!(state.cycle_phase.phase_entered_at.is_none());
     }
 
     #[test]
-    fn cycle_phase_deserializes_all_fields() {
+    fn cycle_phase_deserializes_supported_fields() {
         let state: StateJson = serde_json::from_value(json!({
             "cycle_phase": {
                 "cycle": 219,
-                "phase": "doc_dispatched",
+                "phase": "close_out",
                 "doc_issue": 980,
-                "doc_pr": 981,
                 "dispatched_at": "2026-03-10T14:30:00Z",
-                "review_iteration": 1,
-                "review_max": 3,
                 "phase_entered_at": "2026-03-10T15:00:00Z"
             }
         }))
         .expect("state should deserialize");
 
         assert_eq!(state.cycle_phase.cycle, Some(219));
-        assert_eq!(state.cycle_phase.phase.as_deref(), Some("doc_dispatched"));
+        assert_eq!(state.cycle_phase.phase.as_deref(), Some("close_out"));
         assert_eq!(state.cycle_phase.doc_issue, Some(980));
-        assert_eq!(state.cycle_phase.doc_pr, Some(981));
         assert_eq!(
             state.cycle_phase.dispatched_at.as_deref(),
             Some("2026-03-10T14:30:00Z")
         );
-        assert_eq!(state.cycle_phase.review_iteration, Some(1));
-        assert_eq!(state.cycle_phase.review_max, Some(3));
         assert_eq!(
             state.cycle_phase.phase_entered_at.as_deref(),
             Some("2026-03-10T15:00:00Z")
@@ -951,12 +933,11 @@ mod tests {
             }
         });
 
-        transition_cycle_phase(&mut state, 219, "doc_dispatched")
-            .expect("transition should succeed");
+        transition_cycle_phase(&mut state, 219, "close_out").expect("transition should succeed");
 
         assert_eq!(
             state.pointer("/cycle_phase/phase"),
-            Some(&json!("doc_dispatched"))
+            Some(&json!("close_out"))
         );
         assert_eq!(state.pointer("/cycle_phase/cycle"), Some(&json!(219)));
         // phase_entered_at should be updated (not the old value)
@@ -1044,13 +1025,7 @@ mod tests {
 
     #[test]
     fn valid_phases_contains_all_state_machine_values() {
-        let expected = vec![
-            "work",
-            "doc_dispatched",
-            "doc_review",
-            "close_out",
-            "complete",
-        ];
+        let expected = vec!["work", "close_out", "complete"];
         assert_eq!(VALID_PHASES, expected.as_slice());
     }
 
@@ -1060,7 +1035,6 @@ mod tests {
             "cycle_phase": {
                 "cycle": 220,
                 "phase": "work",
-                "review_max": 3,
                 "phase_entered_at": "2026-03-10T16:00:00Z"
             }
         });
@@ -1072,8 +1046,8 @@ mod tests {
             Some(&json!("work"))
         );
         assert_eq!(
-            serialized.pointer("/cycle_phase/review_max"),
-            Some(&json!(3))
+            serialized.pointer("/cycle_phase/phase_entered_at"),
+            Some(&json!("2026-03-10T16:00:00Z"))
         );
     }
 
