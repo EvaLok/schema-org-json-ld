@@ -80,7 +80,6 @@ mod tests {
             "cycle_phase": {
                 "cycle": 218,
                 "phase": "work",
-                "doc_issue": 980,
                 "phase_entered_at": "2026-03-10T00:00:00Z"
             },
             "field_inventory": {
