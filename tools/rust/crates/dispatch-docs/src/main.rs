@@ -133,7 +133,12 @@ fn apply_dispatch_record(
     apply_dispatch_patch(state, &patch)
 }
 
-fn apply_cycle_phase_update(state: &mut Value, cycle: u64, issue: u64) -> Result<(), String> {
+fn apply_cycle_phase_update(
+    state: &mut Value,
+    cycle: u64,
+    issue: u64,
+    dispatched_at: &str,
+) -> Result<(), String> {
     // Use shared transition function for phase + freshness
     transition_cycle_phase(state, cycle, "doc_dispatched")?;
 
@@ -145,6 +150,10 @@ fn apply_cycle_phase_update(state: &mut Value, cycle: u64, issue: u64) -> Result
 
     cycle_phase.insert("doc_issue".to_string(), serde_json::json!(issue as i64));
     cycle_phase.insert("doc_pr".to_string(), Value::Null);
+    cycle_phase.insert(
+        "dispatched_at".to_string(),
+        serde_json::json!(dispatched_at),
+    );
     cycle_phase.insert("review_iteration".to_string(), serde_json::json!(0));
     cycle_phase.insert("review_max".to_string(), serde_json::json!(3));
 
@@ -238,7 +247,7 @@ fn record_created_issue(
     let mut state = read_state_value(repo_root)?;
     let timestamp = current_utc_timestamp();
     apply_dispatch_record(&mut state, cycle, issue, title, model, &timestamp)?;
-    apply_cycle_phase_update(&mut state, cycle, issue)?;
+    apply_cycle_phase_update(&mut state, cycle, issue, &timestamp)?;
     write_state_value(repo_root, &state)?;
     let commit_message = format!(
         "state(dispatch-docs): #{} dispatched [cycle {}]",
@@ -396,7 +405,8 @@ mod tests {
         )
         .expect("dispatch record should apply");
 
-        apply_cycle_phase_update(&mut state, 219, 980).expect("cycle phase update should apply");
+        apply_cycle_phase_update(&mut state, 219, 980, timestamp)
+            .expect("cycle phase update should apply");
 
         // Verify dispatch record was applied
         let sessions = state["agent_sessions"]
@@ -410,6 +420,7 @@ mod tests {
         assert_eq!(state["cycle_phase"]["phase"], json!("doc_dispatched"));
         assert_eq!(state["cycle_phase"]["doc_issue"], json!(980));
         assert_eq!(state["cycle_phase"]["doc_pr"], json!(null));
+        assert_eq!(state["cycle_phase"]["dispatched_at"], json!(timestamp));
         assert_eq!(state["cycle_phase"]["review_iteration"], json!(0));
         assert_eq!(state["cycle_phase"]["review_max"], json!(3));
         assert_eq!(state["cycle_phase"]["cycle"], json!(219));

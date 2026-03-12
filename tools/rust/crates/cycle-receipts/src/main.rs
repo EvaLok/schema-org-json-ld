@@ -28,6 +28,10 @@ struct Cli {
     #[arg(long)]
     cycle: u64,
 
+    /// Only include commits made strictly before this RFC3339 timestamp
+    #[arg(long)]
+    before: Option<String>,
+
     /// Output receipts as JSON
     #[arg(long)]
     json: bool,
@@ -71,7 +75,12 @@ fn main() {
 }
 
 fn run(cli: Cli) -> Result<String, String> {
-    let entries = collect_receipts(&cli.repo_root, cli.cycle)?;
+    let before = cli
+        .before
+        .as_deref()
+        .map(|value| parse_timestamp(value, "--before"))
+        .transpose()?;
+    let entries = collect_receipts(&cli.repo_root, cli.cycle, before)?;
     if cli.json {
         return serde_json::to_string_pretty(&entries)
             .map_err(|error| format!("failed to serialize JSON output: {}", error));
@@ -80,7 +89,13 @@ fn run(cli: Cli) -> Result<String, String> {
     Ok(render_markdown(cli.cycle, &entries))
 }
 
-fn collect_receipts(repo_root: &Path, cycle: u64) -> Result<Vec<ReceiptEntry>, String> {
+/// Collect receipt-bearing commits for the requested cycle, optionally capping
+/// the window to commits strictly before `before`.
+fn collect_receipts(
+    repo_root: &Path,
+    cycle: u64,
+    before: Option<DateTime<Utc>>,
+) -> Result<Vec<ReceiptEntry>, String> {
     let current_cycle = current_cycle_from_state(repo_root)?;
     let state = read_state_json(repo_root)?;
     let commits = read_git_commits(repo_root)?;
@@ -90,6 +105,7 @@ fn collect_receipts(repo_root: &Path, cycle: u64) -> Result<Vec<ReceiptEntry>, S
         .iter()
         .filter(|commit| commit.committed_at >= window.start)
         .filter(|commit| window.end.is_none_or(|end| commit.committed_at < end))
+        .filter(|commit| before.is_none_or(|timestamp| commit.committed_at < timestamp))
         .filter(|commit| matches_receipt_commit(&commit.subject, cycle))
         .collect();
     matching_commits.sort_by_key(|commit| commit.committed_at);
@@ -125,25 +141,29 @@ fn extract_step(subject: &str) -> Option<String> {
 }
 
 fn render_markdown(cycle: u64, entries: &[ReceiptEntry]) -> String {
-	let mut output = format!("## Commit receipts — Cycle {}\n\n", cycle);
-	output.push_str("| Step | Receipt | Commit |\n");
-	output.push_str("|------|---------|--------|\n");
-	for entry in entries {
+    let mut output = format!("## Commit receipts — Cycle {}\n\n", cycle);
+    output.push_str("| Step | Receipt | Commit |\n");
+    output.push_str("|------|---------|--------|\n");
+    for entry in entries {
         output.push_str(&format!(
             "| {} | [`{}`]({}) | {} |\n",
             escape_markdown_cell(&entry.step),
             entry.receipt,
             entry.url,
-			escape_markdown_cell(&entry.commit)
-		));
-	}
-	let receipt_label = if entries.len() == 1 {
-		"receipt"
-	} else {
-		"receipts"
-	};
-	output.push_str(&format!("\n{} {} collected.\n", entries.len(), receipt_label));
-	output
+            escape_markdown_cell(&entry.commit)
+        ));
+    }
+    let receipt_label = if entries.len() == 1 {
+        "receipt"
+    } else {
+        "receipts"
+    };
+    output.push_str(&format!(
+        "\n{} {} collected.\n",
+        entries.len(),
+        receipt_label
+    ));
+    output
 }
 
 fn resolve_cycle_window(
@@ -306,21 +326,21 @@ mod tests {
     }
 
     #[test]
-	fn render_markdown_includes_links_and_count() {
-		let markdown = render_markdown(
-			198,
-			&[ReceiptEntry {
-				step: "process-review".to_string(),
+    fn render_markdown_includes_links_and_count() {
+        let markdown = render_markdown(
+            198,
+            &[ReceiptEntry {
+                step: "process-review".to_string(),
                 receipt: "e4f5g6h".to_string(),
                 commit: "state(process-review): consumed cycle 197 review".to_string(),
                 url: format!("{}/commit/abcdef1234567890", REPO_URL),
             }],
         );
 
-		assert!(markdown.contains("## Commit receipts — Cycle 198"));
-		assert!(markdown.contains("| process-review | [`e4f5g6h`](https://github.com/EvaLok/schema-org-json-ld/commit/abcdef1234567890) | state(process-review): consumed cycle 197 review |"));
-		assert!(markdown.contains("1 receipt collected."));
-	}
+        assert!(markdown.contains("## Commit receipts — Cycle 198"));
+        assert!(markdown.contains("| process-review | [`e4f5g6h`](https://github.com/EvaLok/schema-org-json-ld/commit/abcdef1234567890) | state(process-review): consumed cycle 197 review |"));
+        assert!(markdown.contains("1 receipt collected."));
+    }
 
     #[test]
     fn collect_receipts_uses_state_timestamp_for_current_cycle() {
@@ -351,7 +371,7 @@ mod tests {
             "2026-03-09T01:20:00Z",
         );
 
-        let receipts = collect_receipts(repo.path(), 198).expect("receipts should collect");
+        let receipts = collect_receipts(repo.path(), 198, None).expect("receipts should collect");
         assert_eq!(receipts.len(), 2);
         assert_eq!(receipts[0].step, "process-review");
         assert_eq!(receipts[1].step, FALLBACK_STEP);
@@ -400,7 +420,7 @@ mod tests {
             "2026-03-09T02:10:00Z",
         );
 
-        let receipts = collect_receipts(repo.path(), 198).expect("receipts should collect");
+        let receipts = collect_receipts(repo.path(), 198, None).expect("receipts should collect");
         let subjects: Vec<&str> = receipts
             .iter()
             .map(|receipt| receipt.commit.as_str())
@@ -413,6 +433,46 @@ mod tests {
                 "docs: worklog touch [cycle 198]",
             ]
         );
+    }
+
+    #[test]
+    fn collect_receipts_before_caps_cycle_window() {
+        let repo = TempRepo::new();
+        repo.init_git();
+        repo.write_state(&json!({
+            "last_cycle": {
+                "number": 198,
+                "timestamp": "2026-03-09T01:00:00Z"
+            }
+        }));
+        repo.commit_file_at(
+            "notes.txt",
+            "older\n",
+            "state(process-review): current receipt",
+            "2026-03-09T01:10:00Z",
+        );
+        repo.commit_file_at(
+            "notes.txt",
+            "tagged\n",
+            "docs: worklog touch [cycle 198]",
+            "2026-03-09T01:20:00Z",
+        );
+        repo.commit_file_at(
+            "notes.txt",
+            "later\n",
+            "state(cycle-complete): cycle 198 close out [cycle 198]",
+            "2026-03-09T01:30:00Z",
+        );
+
+        let before = parse_timestamp("2026-03-09T01:20:00Z", "test timestamp")
+            .expect("timestamp should parse");
+        let receipts =
+            collect_receipts(repo.path(), 198, Some(before)).expect("receipts should collect");
+        let subjects: Vec<&str> = receipts
+            .iter()
+            .map(|receipt| receipt.commit.as_str())
+            .collect();
+        assert_eq!(subjects, vec!["state(process-review): current receipt"]);
     }
 
     struct TempRepo {
