@@ -4943,9 +4943,50 @@
         ],
         "ignored": 0,
         "note": "F1 test-drift: actioned (932cb95). F2 worklog-accuracy: deferred (retrospective). F3 process-adherence: deferred (process lesson). F4 audit-evidence: actioned (1235a9d artifact). F5 deferred-remediation: deferred classification but underlying issue resolved via PR #1111 merge."
+      },
+      {
+        "cycle": 236,
+        "complacency_score": "2/5",
+        "finding_count": 6,
+        "actioned": 4,
+        "deferred": 2,
+        "ignored": 0,
+        "findings": [
+          {
+            "category": "worklog-accuracy",
+            "disposition": "actioned",
+            "evidence": "cycle 237 uses cycle-receipts verbatim and runs validate-docs"
+          },
+          {
+            "category": "process-adherence",
+            "disposition": "deferred",
+            "evidence": "requires tooling to derive self-modifications from git diff"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "actioned",
+            "evidence": "cycle 237 journal uses concrete language, verifiable commitments"
+          },
+          {
+            "category": "audit-evidence",
+            "disposition": "actioned",
+            "evidence": "summary table double-counted state-schema; canonical count 31 correct"
+          },
+          {
+            "category": "state-integrity",
+            "disposition": "actioned",
+            "evidence": "56662de deduplicated #1116 session entries"
+          },
+          {
+            "category": "tool-usage",
+            "disposition": "deferred",
+            "evidence": "will use dispatch-docs as default path going forward"
+          }
+        ],
+        "note": "F1 worklog-accuracy: actioned. F2 process-adherence: deferred (needs tooling). F3 journal-quality: actioned. F4 audit-evidence: actioned (count fix). F5 state-integrity: actioned (56662de). F6 tool-usage: deferred (dispatch-docs default)."
       }
     ],
-    "last_review_cycle": 235
+    "last_review_cycle": 236
   },
   "schema_status": {
     "directory_layout": {
