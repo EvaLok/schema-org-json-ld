@@ -3003,6 +3003,13 @@
       "pr": 1113,
       "status": "merged",
       "title": "Cycle 235 adversarial review"
+    },
+    {
+      "dispatched_at": "2026-03-12T12:46:00Z",
+      "issue": 1116,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 236 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -3179,16 +3186,16 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1112 Cycle 235 adversarial review (cycle 235)",
-    "dispatch_to_pr_rate": "98.5%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1116 [Cycle Review] Cycle 236 end-of-cycle review (cycle 236)",
+    "dispatch_to_pr_rate": "98.2%",
+    "in_flight": 1,
     "merged": 323,
     "pr_merge_rate": "99.1%",
     "produced_pr": 326,
     "resolved": 331,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 331
+    "total_dispatches": 332
   },
   "cycle_phase": {
     "cycle": 236,
