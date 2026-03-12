@@ -2393,6 +2393,144 @@ mod tests {
 	}
 
 	#[test]
+	fn step_comment_verification_warns_for_phased_resumption_with_optional_missing_on_work_issue()
+	{
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir().join(format!(
+			"pipeline-check-step-comments-work-issue-optional-missing-{}",
+			run_id
+		));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 996,
+				"previous_cycle_work_issue": 995,
+				"cycle_phase": {
+					"phase": "close_out"
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct StepCommentRunner;
+
+		impl CommandRunner for StepCommentRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected in step comment verification test");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				match issue {
+					996 => Ok(concat!(
+						"> **[main-orchestrator]** | Cycle 221 | Step Opening\n",
+						"> **[main-orchestrator]** | Cycle 221 | Step 10.B\n",
+						"> **[main-orchestrator]** | Cycle 221 | Step 10.C\n",
+						"> **[main-orchestrator]** | Cycle 221 | Step Close\n"
+					)
+					.to_string()),
+					995 => Ok(step_comment_bodies(
+						221,
+						&["0", "0.5", "1", "2", "5", "6", "7", "8", "9", "10"],
+					)),
+					unexpected => panic!("unexpected issue lookup: {unexpected}"),
+				}
+			}
+		}
+
+		let step = verify_step_comments(&root, &StepCommentRunner);
+		assert_eq!(step.status, StepStatus::Warn);
+		assert_eq!(step.severity, Severity::Warning);
+		assert_eq!(step.findings, Some(10));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("issue #996 found startup/resumption markers ["));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("work-phase issue #995: found 10 unique step comments [0, 0.5, 1, 2, 5, 6, 7, 8, 9, 10]"));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("missing mandatory [none]; missing optional [0.6, 1.1, 3, 4]"));
+	}
+
+	#[test]
+	fn step_comment_verification_fails_for_phased_resumption_with_mandatory_missing_on_work_issue()
+	{
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir().join(format!(
+			"pipeline-check-step-comments-work-issue-mandatory-missing-{}",
+			run_id
+		));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 996,
+				"previous_cycle_work_issue": 995,
+				"cycle_phase": {
+					"phase": "close_out"
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct StepCommentRunner;
+
+		impl CommandRunner for StepCommentRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected in step comment verification test");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				match issue {
+					996 => Ok(concat!(
+						"> **[main-orchestrator]** | Cycle 221 | Step Opening\n",
+						"> **[main-orchestrator]** | Cycle 221 | Step 10.B\n",
+						"> **[main-orchestrator]** | Cycle 221 | Step 10.C\n",
+						"> **[main-orchestrator]** | Cycle 221 | Step Close\n"
+					)
+					.to_string()),
+					995 => Ok(step_comment_bodies(
+						221,
+						&["0", "0.6", "2", "3", "4", "5", "6", "7", "8", "9"],
+					)),
+					unexpected => panic!("unexpected issue lookup: {unexpected}"),
+				}
+			}
+		}
+
+		let step = verify_step_comments(&root, &StepCommentRunner);
+		assert_eq!(step.status, StepStatus::Fail);
+		assert_eq!(step.severity, Severity::Blocking);
+		assert_eq!(step.findings, Some(10));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("issue #996 found startup/resumption markers ["));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("work-phase issue #995: found 10 unique step comments [0, 0.6, 2, 3, 4, 5, 6, 7, 8, 9]"));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("missing mandatory [0.5, 1]; missing optional [1.1, 10]"));
+	}
+
+	#[test]
 	fn step_comment_verification_passes_when_previous_cycle_issue_is_missing() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
