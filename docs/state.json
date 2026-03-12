@@ -2974,6 +2974,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix cycle-receipts immutable window"
+    },
+    {
+      "dispatched_at": "2026-03-12T08:33:13Z",
+      "issue": 1106,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 234 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -3148,16 +3155,16 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1104 Fix cycle-receipts immutable window (cycle 234)",
-    "dispatch_to_pr_rate": "98.2%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1106 [Cycle Review] Cycle 234 end-of-cycle review (cycle 234)",
+    "dispatch_to_pr_rate": "97.9%",
+    "in_flight": 2,
     "merged": 319,
     "pr_merge_rate": "99.1%",
     "produced_pr": 322,
     "resolved": 327,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 328
+    "total_dispatches": 329
   },
   "cycle_phase": {
     "cycle": 234,
