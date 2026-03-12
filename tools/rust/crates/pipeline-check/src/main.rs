@@ -22,7 +22,7 @@ const ORCHESTRATOR_SIGNATURE: &str = "> **[main-orchestrator]**";
 // These core checklist steps are mandatory for full non-phased cycles. Phase B/C
 // resumption issues use the reduced PHASE_BC_MANDATORY_STEP_IDS set, while
 // PHASE_A_MARKER_STEP_IDS keep early startup-only markers from being misclassified as phased.
-const MANDATORY_STEP_IDS: [&str; 7] = ["0", "0.5", "1", "2", "6", "7", "9"];
+const MANDATORY_STEP_IDS: [&str; 11] = ["0", "0.5", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const PHASE_BC_MANDATORY_STEP_IDS: [&str; 2] = ["0", "5"];
 const PHASED_RESUMPTION_STEP_IDS: [&str; 4] = ["Opening", "10.B", "10.C", "Close"];
 const PHASE_A_MARKER_STEP_IDS: [&str; 2] = ["0.5", "0.6"];
