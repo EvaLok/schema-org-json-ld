@@ -169,26 +169,20 @@ fn render_markdown(cycle: u64, entries: &[ReceiptEntry]) -> String {
 fn resolve_cycle_window(
     target_cycle: u64,
     current_cycle: u64,
-    state: &StateJson,
+    _state: &StateJson,
     commits: &[GitCommit],
 ) -> Result<CycleWindow, String> {
-    if target_cycle == current_cycle {
-        let timestamp = state.last_cycle.timestamp.as_deref().ok_or_else(|| {
-            "missing docs/state.json last_cycle.timestamp for current cycle".to_string()
-        })?;
-        return Ok(CycleWindow {
-            start: parse_timestamp(timestamp, "docs/state.json last_cycle.timestamp")?,
-            end: None,
-        });
-    }
-
     let start = find_cycle_start_timestamp(commits, target_cycle).ok_or_else(|| {
         format!(
 			"could not find cycle-start commit for cycle {}; fetch more history if this is a shallow clone",
 			target_cycle
 		)
     })?;
-    let end = find_cycle_start_timestamp(commits, target_cycle + 1);
+    let end = if target_cycle == current_cycle {
+        None
+    } else {
+        find_cycle_start_timestamp(commits, target_cycle + 1)
+    };
     Ok(CycleWindow { start, end })
 }
 
@@ -343,7 +337,7 @@ mod tests {
     }
 
     #[test]
-    fn collect_receipts_uses_state_timestamp_for_current_cycle() {
+    fn collect_receipts_uses_cycle_start_commit_for_current_cycle() {
         let repo = TempRepo::new();
         repo.init_git();
         repo.write_state(&json!({
@@ -360,7 +354,57 @@ mod tests {
         );
         repo.commit_file_at(
             "notes.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 198, issue #1 [cycle 198]",
+            "2026-03-09T00:45:00Z",
+        );
+        repo.commit_file_at(
+            "notes.txt",
             "newer\n",
+            "state(process-review): current receipt",
+            "2026-03-09T00:50:00Z",
+        );
+        repo.commit_file_at(
+            "notes.txt",
+            "tagged\n",
+            "docs: worklog touch [cycle 198]",
+            "2026-03-09T01:20:00Z",
+        );
+
+        let receipts = collect_receipts(repo.path(), 198, None).expect("receipts should collect");
+        let subjects: Vec<&str> = receipts
+            .iter()
+            .map(|receipt| receipt.commit.as_str())
+            .collect();
+        assert_eq!(
+            subjects,
+            vec![
+                "state(cycle-start): begin cycle 198, issue #1 [cycle 198]",
+                "state(process-review): current receipt",
+                "docs: worklog touch [cycle 198]",
+            ]
+        );
+    }
+
+    #[test]
+    fn collect_receipts_ignores_mutated_state_timestamp_for_current_cycle() {
+        let repo = TempRepo::new();
+        repo.init_git();
+        repo.write_state(&json!({
+            "last_cycle": {
+                "number": 198,
+                "timestamp": "2026-03-09T01:30:00Z"
+            }
+        }));
+        repo.commit_file_at(
+            "notes.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 198, issue #1 [cycle 198]",
+            "2026-03-09T01:00:00Z",
+        );
+        repo.commit_file_at(
+            "notes.txt",
+            "review\n",
             "state(process-review): current receipt",
             "2026-03-09T01:10:00Z",
         );
@@ -372,11 +416,18 @@ mod tests {
         );
 
         let receipts = collect_receipts(repo.path(), 198, None).expect("receipts should collect");
-        assert_eq!(receipts.len(), 2);
-        assert_eq!(receipts[0].step, "process-review");
-        assert_eq!(receipts[1].step, FALLBACK_STEP);
-        assert_eq!(receipts[0].commit, "state(process-review): current receipt");
-        assert_eq!(receipts[1].commit, "docs: worklog touch [cycle 198]");
+        let subjects: Vec<&str> = receipts
+            .iter()
+            .map(|receipt| receipt.commit.as_str())
+            .collect();
+        assert_eq!(
+            subjects,
+            vec![
+                "state(cycle-start): begin cycle 198, issue #1 [cycle 198]",
+                "state(process-review): current receipt",
+                "docs: worklog touch [cycle 198]",
+            ]
+        );
     }
 
     #[test]
@@ -447,6 +498,12 @@ mod tests {
         }));
         repo.commit_file_at(
             "notes.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 198, issue #1 [cycle 198]",
+            "2026-03-09T01:00:00Z",
+        );
+        repo.commit_file_at(
+            "notes.txt",
             "older\n",
             "state(process-review): current receipt",
             "2026-03-09T01:10:00Z",
@@ -472,7 +529,13 @@ mod tests {
             .iter()
             .map(|receipt| receipt.commit.as_str())
             .collect();
-        assert_eq!(subjects, vec!["state(process-review): current receipt"]);
+        assert_eq!(
+            subjects,
+            vec![
+                "state(cycle-start): begin cycle 198, issue #1 [cycle 198]",
+                "state(process-review): current receipt",
+            ]
+        );
     }
 
     struct TempRepo {
