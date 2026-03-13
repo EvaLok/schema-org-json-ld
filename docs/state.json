@@ -3389,7 +3389,7 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1182 Cycle 247 end-of-cycle review (cycle 247)",
     "dispatch_to_pr_rate": "98.6%",
-    "in_flight": 0,
+    "in_flight": 2,
     "merged": 345,
     "pr_merge_rate": "99.1%",
     "produced_pr": 348,
