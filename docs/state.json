@@ -3178,15 +3178,19 @@
     {
       "dispatched_at": "2026-03-13T16:20:29Z",
       "issue": 1176,
+      "merged_at": "2026-03-13T18:20:00Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1177,
+      "status": "merged",
       "title": "fix(write-entry): gate auto-derivation on resolved cycle, not CLI flag presence"
     },
     {
       "dispatched_at": "2026-03-13T16:26:23Z",
       "issue": 1178,
+      "merged_at": "2026-03-13T18:20:00Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1179,
+      "status": "merged",
       "title": "Cycle 246 end-of-cycle review"
     }
   ],
@@ -3308,7 +3312,8 @@
     224,
     226,
     229,
-    233
+    233,
+    235
   ],
   "blockers": [
     {
@@ -3373,12 +3378,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1178 Cycle 246 end-of-cycle review (cycle 246)",
-    "dispatch_to_pr_rate": "98.0%",
-    "in_flight": 2,
-    "merged": 342,
+    "dispatch_to_pr_rate": "98.6%",
+    "in_flight": 0,
+    "merged": 344,
     "pr_merge_rate": "99.1%",
-    "produced_pr": 345,
-    "resolved": 350,
+    "produced_pr": 347,
+    "resolved": 352,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 352
@@ -3467,7 +3472,7 @@
       },
       "audit_processed": {
         "cadence": "after processing audit issues",
-        "last_refreshed": "cycle 245"
+        "last_refreshed": "cycle 247"
       },
       "blockers": {
         "cadence": "after blocker state changes",
@@ -3475,15 +3480,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 246"
+        "last_refreshed": "cycle 247"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 246"
+        "last_refreshed": "cycle 247"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 246"
+        "last_refreshed": "cycle 247"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
@@ -5326,7 +5331,7 @@
         "note": "F1 code-quality deferred (non-trivial refactor), F2 worklog-accuracy deferred (#1167 pending), F3 receipt-integrity deferred (#1167 pending), F4 review-disposition actioned (behavioral change: only mark actioned when defect stops reproducing)"
       },
       {
-        "actioned": 2,
+        "actioned": 0,
         "categories": [
           "code-quality",
           "journal-quality",
@@ -5334,10 +5339,10 @@
         ],
         "complacency_score": 3,
         "cycle": 245,
-        "deferred": 1,
+        "deferred": 3,
         "finding_count": 3,
         "ignored": 0,
-        "note": "F1 code-quality: dispatching fix for auto-derivation gating. F2 test-coverage: included in fix dispatch. F3 journal-quality: deferred, will improve this cycle."
+        "note": "F1 code-quality: deferred (dispatch_created #1176 for auto-derivation fix, PR #1177 pending merge). F2 test-coverage: deferred (dispatch_created, included in #1176). F3 journal-quality: deferred. Reclassified per audit #235 — dispatching a fix is a tracked deferral, not actioned, until the fix merges and the defect stops reproducing."
       }
     ],
     "last_review_cycle": 245
