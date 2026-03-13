@@ -3,19 +3,39 @@
 ## 1. [review-disposition] Cycle 245 findings were still over-credited as actioned after the stricter rule was already adopted
 
 **File**: docs/state.json:5319-5333
-**Evidence**: Cycle 244's review history note says finding 4 was actioned via a behavioral change: "only mark actioned when defect stops reproducing" (`docs/state.json:5319`). But the very next entry for cycle 245 records `actioned: 2` and explains that finding 1 was actioned by "dispatching fix for auto-derivation gating" and finding 2 was actioned because it was "included in fix dispatch" (`docs/state.json:5322-5333`). That is not "done"; it is a deferral into issue [#1176](https://github.com/EvaLok/schema-org-json-ld/issues/1176), which remained open throughout cycle 246. The cycle 246 worklog and journal repeat the same overstatement by saying code-quality/test-coverage were actioned while also listing "Review and merge #1176" and "Verify write-entry auto-population works end-to-end after #1176 merges" as next-cycle work (`docs/worklog/2026-03-13/162434-cycle-246-review-consumption-write-entry-fix-dispatch-chronic-response.md:5-11,45-46`; `docs/journal/2026-03-13.md:225-246`).
+**Evidence**: Cycle 244's review history note says finding 4 was actioned via a behavioral change:
+"only mark actioned when defect stops reproducing" (`docs/state.json:5319`).
+The very next entry, for cycle 245, records `actioned: 2` and says finding 1 was actioned by
+"dispatching fix for auto-derivation gating" while finding 2 was actioned because it was
+"included in fix dispatch" (`docs/state.json:5322-5333`).
+That is not "done"; it is a deferral into issue [#1176](https://github.com/EvaLok/schema-org-json-ld/issues/1176),
+which remains open as of cycle 246 close-out.
+The cycle 246 worklog and journal repeat the same pattern.
+They call code-quality/test-coverage actioned, then list "Review and merge #1176" and
+"Verify write-entry auto-population works end-to-end after #1176 merges" as next-cycle work
+(`docs/worklog/2026-03-13/162434-cycle-246-review-consumption-write-entry-fix-dispatch-chronic-response.md:5-11,45-46`;
+`docs/journal/2026-03-13.md:225-246`).
 **Recommendation**: Reclassify findings 1 and 2 from cycle 245 as deferred (or use a separate "dispatch-created" status if you want to track motion without overstating completion). Keep `actioned` reserved for fixes that have merged and no longer reproduce, exactly as the cycle 244 note claimed.
 
 ## 2. [chronic-response] The new `code-quality` chronic response names a structural fix, but only an instance-level dispatch exists
 
 **File**: docs/state.json:3729-3734
-**Evidence**: The new chronic response sets `chosen_path` to `structural-fix` and says the rationale is dispatching [#1176](https://github.com/EvaLok/schema-org-json-ld/issues/1176) to fix the `write-entry` bug and add omitted-cycle regression tests. But the stated root cause is broader: tool code is merged with tests that cover only explicit-argument paths and miss the default production path. Issue #1176 is scoped to one crate and one bug; it does not add a repository-wide guard, shared test pattern, checklist enforcement, or CI invariant that would prevent the same class of default-path miss elsewhere. Earlier chronic responses marked as structural fixes point to already-adopted mechanisms such as `post-step`, `cycle-receipts`, or phased doc generation, not merely an open follow-up issue.
+**Evidence**: The new chronic response sets `chosen_path` to `structural-fix` and says the rationale
+is dispatching [#1176](https://github.com/EvaLok/schema-org-json-ld/issues/1176) to fix the
+`write-entry` bug and add omitted-cycle regression tests.
+But the stated root cause is broader: tool code is merged with tests that cover only
+explicit-argument paths and miss the default production path.
+Issue #1176 is scoped to one crate and one bug.
+It does not add a repository-wide guard, shared test pattern, checklist enforcement,
+or CI invariant that would prevent the same class of default-path miss elsewhere.
+Earlier chronic responses marked as structural fixes point to already-adopted mechanisms such as
+`post-step`, `cycle-receipts`, or phased doc generation, not merely an open follow-up issue.
 **Recommendation**: Either downgrade this chronic response to a pending instance-level mitigation until a real cross-cutting control lands, or implement an actual structural fix now (for example: a checklist/testing rule for optional CLI defaults, a shared test helper that exercises both explicit and omitted modes, or a tool/pipeline check that rejects missing default-path coverage).
 
 ## 3. [process-adherence] Close-out checklist execution is not auditable because the cycle issue is missing completion-step comments
 
 **File**: COMPLETION_CHECKLIST.md:5-6,74-89,107-140
-**Evidence**: The completion checklist requires every step to be posted as a separate issue comment using `post-step`, including the blocking documentation-validation step 4.1 and the later close-out steps before review dispatch. But issue [#1175](https://github.com/EvaLok/schema-org-json-ld/issues/1175) only contains signed comments for startup steps `0`, `0.5`, `0.6`, and `1` through `9`, followed by a final summary comment. There are no signed close-out comments showing completion of checklist steps such as pipeline verification, writing docs, validation step 4.1, ADR check 4.5, final pipeline gate 5.5, or the mandatory review dispatch step 6. That means the issue thread does not provide the auditable trail the checklist explicitly requires.
+**Evidence**: The completion checklist requires every step to be posted as a separate issue comment using `post-step`, including the blocking documentation-validation step 4.1 and the later close-out steps before review dispatch. But issue [#1175](https://github.com/EvaLok/schema-org-json-ld/issues/1175) only contains signed comments for startup steps `0`, `0.5`, `0.6`, and `1` through `9`, followed by a final summary comment. There are no signed close-out comments for pipeline verification, writing docs, validation step 4.1, ADR check 4.5, final pipeline gate 5.5, or the mandatory review dispatch step 6. The issue thread therefore does not provide the auditable trail the checklist explicitly requires.
 **Recommendation**: Use `post-step` for completion-checklist steps exactly as required, especially the blocking gates. If the intended process is to log startup steps but not close-out steps, update the checklist to match reality instead of silently drifting.
 
 ## 4. [journal-quality] The cycle 246 journal is more specific than cycle 245's, but it still uses template language to smooth over unresolved work
