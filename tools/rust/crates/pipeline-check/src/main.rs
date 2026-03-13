@@ -244,11 +244,9 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
 		},
 	];
 
-	let mut steps = specs
-		.iter()
-		.map(|spec| run_step(repo_root, spec, runner))
-		.chain(std::iter::once(verify_artifacts(repo_root)))
-		.collect::<Vec<_>>();
+	let mut steps = Vec::new();
+	steps.extend(specs.iter().map(|spec| run_step(repo_root, spec, runner)));
+	steps.push(verify_artifacts(repo_root));
 	let pipeline_status = pipeline_overall_status(&steps);
 	steps.push(verify_doc_validation(repo_root, pipeline_status, runner));
 	steps.push(verify_step_comments(repo_root, runner));

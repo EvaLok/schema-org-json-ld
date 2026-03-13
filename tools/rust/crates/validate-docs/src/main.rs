@@ -821,12 +821,18 @@ mod tests {
 
     #[test]
     fn provided_pipeline_status_skips_fetching_pipeline_report() {
-        let status = resolve_pipeline_status(Path::new("."), 226, Some("pass"), |_repo_root, _cycle| {
-            panic!("pipeline-check should not be invoked when --pipeline-status is provided");
+        let fetch_called = std::cell::Cell::new(false);
+        let status = resolve_pipeline_status(Path::new("."), 226, Some("pass"), |_repo_root, cycle| {
+            fetch_called.set(true);
+            assert_eq!(cycle, 226);
+            Ok(PipelineReport {
+                overall: "fail".to_string(),
+            })
         })
         .expect("pipeline status should resolve");
 
         assert_eq!(status, "pass");
+        assert!(!fetch_called.get(), "pipeline-check should not be invoked when --pipeline-status is provided");
     }
 
     #[test]
