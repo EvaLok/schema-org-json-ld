@@ -45,6 +45,10 @@ struct WorklogArgs {
     /// Cycle number the worklog belongs to
     #[arg(long)]
     cycle: u64,
+
+    /// Pipeline status to validate against instead of invoking pipeline-check
+    #[arg(long)]
+    pipeline_status: Option<String>,
 }
 
 #[derive(Debug, Parser)]
@@ -74,7 +78,12 @@ fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
-        Command::Worklog(args) => validate_worklog(&cli.repo_root, &args.file, args.cycle),
+        Command::Worklog(args) => validate_worklog(
+            &cli.repo_root,
+            &args.file,
+            args.cycle,
+            args.pipeline_status.as_deref(),
+        ),
         Command::Journal(args) => validate_journal(&args.file),
     };
 
@@ -93,7 +102,12 @@ fn main() {
     }
 }
 
-fn validate_worklog(repo_root: &Path, file: &Path, cycle: u64) -> Result<Vec<String>, String> {
+fn validate_worklog(
+    repo_root: &Path,
+    file: &Path,
+    cycle: u64,
+    pipeline_status: Option<&str>,
+) -> Result<Vec<String>, String> {
     let content = fs::read_to_string(file)
         .map_err(|error| format!("failed to read {}: {}", file.display(), error))?;
     let state = read_state_json(repo_root)?;
@@ -131,9 +145,9 @@ fn validate_worklog(repo_root: &Path, file: &Path, cycle: u64) -> Result<Vec<Str
         Err(error) => failures.push(format!("unable to validate self-modifications: {}", error)),
     }
 
-    match fetch_pipeline_report(repo_root, cycle) {
-        Ok(report) => {
-            if let Some(failure) = validate_pipeline_status(&content, &report.overall) {
+    match resolve_pipeline_status(repo_root, cycle, pipeline_status, fetch_pipeline_report) {
+        Ok(overall) => {
+            if let Some(failure) = validate_pipeline_status(&content, &overall) {
                 failures.push(failure);
             }
         }
@@ -457,6 +471,21 @@ fn fetch_pipeline_report(repo_root: &Path, cycle: u64) -> Result<PipelineReport,
     )?;
     serde_json::from_str::<PipelineReport>(&output)
         .map_err(|error| format!("failed to parse pipeline-check JSON: {}", error))
+}
+
+fn resolve_pipeline_status<F>(
+    repo_root: &Path,
+    cycle: u64,
+    pipeline_status: Option<&str>,
+    fetch_report: F,
+) -> Result<String, String>
+where
+    F: FnOnce(&Path, u64) -> Result<PipelineReport, String>,
+{
+    match pipeline_status {
+        Some(status) => Ok(status.to_string()),
+        None => fetch_report(repo_root, cycle).map(|report| report.overall),
+    }
 }
 
 fn validate_pipeline_status(content: &str, overall: &str) -> Option<String> {
@@ -788,6 +817,29 @@ mod tests {
 ";
         let failure = validate_pipeline_status(content, "warn").expect("expected mismatch");
         assert!(failure.contains("pipeline status mismatch"));
+    }
+
+    #[test]
+    fn provided_pipeline_status_skips_fetching_pipeline_report() {
+        let status = resolve_pipeline_status(Path::new("."), 226, Some("pass"), |_repo_root, _cycle| {
+            panic!("pipeline-check should not be invoked when --pipeline-status is provided");
+        })
+        .expect("pipeline status should resolve");
+
+        assert_eq!(status, "pass");
+    }
+
+    #[test]
+    fn missing_pipeline_status_fetches_pipeline_report() {
+        let status = resolve_pipeline_status(Path::new("."), 226, None, |_repo_root, cycle| {
+            assert_eq!(cycle, 226);
+            Ok(PipelineReport {
+                overall: "fail".to_string(),
+            })
+        })
+        .expect("pipeline status should resolve");
+
+        assert_eq!(status, "fail");
     }
 
     #[test]
