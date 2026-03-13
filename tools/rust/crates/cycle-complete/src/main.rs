@@ -8,6 +8,7 @@ use state_schema::{
 };
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 #[derive(Debug, Parser)]
 #[command(name = "cycle-complete")]
@@ -122,6 +123,11 @@ struct AgentSessionReconciliationPlan {
     report: AgentSessionReconciliationReport,
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+struct CycleChanges {
+    changed_paths: BTreeSet<String>,
+}
+
 #[derive(Serialize)]
 struct CompletionStep {
     index: u8,
@@ -129,23 +135,6 @@ struct CompletionStep {
     status: StepStatus,
     detail: String,
 }
-
-const EVENT_DRIVEN_AUTO_REFRESH_FIELDS: &[&str] = &[
-    "test_count",
-    "typescript_stats",
-    "schema_status.in_progress",
-    "schema_status.planned_next",
-    "review_agent.chronic_category_responses",
-    "publish_gate",
-    "review_agent",
-    "pre_python_clean_cycles",
-    "eva_input_issues.closed_this_cycle",
-    "eva_input_issues.remaining_open",
-    "typescript_plan.status",
-    "copilot_metrics.dispatch_to_pr_rate",
-    "copilot_metrics.in_flight",
-    "copilot_metrics.pr_merge_rate",
-];
 
 fn parse_reconcile_arg(value: &str) -> Result<ReconcileArg, String> {
     let mut parts = value.split(':');
@@ -215,13 +204,28 @@ fn main() {
             std::process::exit(1);
         }
     };
+    let cycle_changes = match collect_cycle_changes(&cli.repo_root, cycle) {
+        Ok(changes) => changes,
+        Err(error) => {
+            eprintln!("Error: {}", error);
+            std::process::exit(1);
+        }
+    };
 
     let now = Utc::now();
     let summary = cli
         .summary
         .as_deref()
         .unwrap_or("TODO: Fill cycle summary.");
-    let report = match assemble_report(cycle, cli.issue, now, &state, summary, &cli.reconcile) {
+    let report = match assemble_report(
+        cycle,
+        cli.issue,
+        now,
+        &state,
+        &cycle_changes,
+        summary,
+        &cli.reconcile,
+    ) {
         Ok(report) => report,
         Err(error) => {
             eprintln!("Error: {}", error);
@@ -291,6 +295,7 @@ fn assemble_report(
     issue: u64,
     now: DateTime<Utc>,
     state: &StateJson,
+    cycle_changes: &CycleChanges,
     summary: &str,
     reconcile: &[ReconcileArg],
 ) -> Result<CompletionReport, String> {
@@ -304,6 +309,7 @@ fn assemble_report(
         &timestamp,
         session_duration_minutes,
         state,
+        cycle_changes,
         summary,
         &agent_session_reconciliation,
     );
@@ -373,6 +379,7 @@ fn build_state_patch(
     timestamp: &str,
     duration_minutes: u64,
     state: &StateJson,
+    cycle_changes: &CycleChanges,
     summary: &str,
     agent_session_reconciliation: &AgentSessionReconciliationPlan,
 ) -> StatePatch {
@@ -410,8 +417,80 @@ fn build_state_patch(
         });
     }
 
-    updates.extend(build_freshness_updates(cycle, &updates, state));
+    updates.extend(build_freshness_updates(cycle, &updates, state, cycle_changes));
     StatePatch { updates }
+}
+
+fn collect_cycle_changes(repo_root: &Path, cycle: u64) -> Result<CycleChanges, String> {
+    let start_commit = find_cycle_start_commit(repo_root, cycle)?;
+    let output = run_git(
+        repo_root,
+        &[
+            "diff".to_string(),
+            "--name-only".to_string(),
+            start_commit,
+            "HEAD".to_string(),
+        ],
+    )?;
+    let changed_paths = output
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(str::to_string)
+        .collect();
+    Ok(CycleChanges { changed_paths })
+}
+
+fn find_cycle_start_commit(repo_root: &Path, cycle: u64) -> Result<String, String> {
+    let pattern = format!(r"\[cycle {}\]", cycle);
+    let output = run_git(
+        repo_root,
+        &[
+            "log".to_string(),
+            "-n".to_string(),
+            "1".to_string(),
+            "--format=%H".to_string(),
+            "--grep".to_string(),
+            "^state(cycle-start):".to_string(),
+            "--grep".to_string(),
+            pattern,
+            "--all-match".to_string(),
+        ],
+    )?;
+    let commit = output.trim();
+    if commit.is_empty() {
+        return Err(format!(
+            "could not find cycle-start commit for cycle {}; verify the cycle number is correct and that the cycle has started; fetch more history if this is a shallow clone",
+            cycle
+        ));
+    }
+
+    Ok(commit.to_string())
+}
+
+fn run_git(repo_root: &Path, args: &[String]) -> Result<String, String> {
+    let output = Command::new("git")
+        .current_dir(repo_root)
+        .args(args)
+        .output()
+        .map_err(|error| format!("failed to run git {}: {}", args.join(" "), error))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(format!(
+            "git {} failed with status {}{}",
+            args.join(" "),
+            output.status,
+            if stderr.is_empty() {
+                String::new()
+            } else {
+                format!(": {}", stderr)
+            }
+        ));
+    }
+
+    String::from_utf8(output.stdout)
+        .map_err(|error| format!("git {} produced non-UTF-8 output: {}", args.join(" "), error))
 }
 
 fn build_agent_session_reconciliation(
@@ -558,6 +637,7 @@ fn build_freshness_updates(
     cycle: u64,
     updates: &[PatchUpdate],
     state: &StateJson,
+    cycle_changes: &CycleChanges,
 ) -> Vec<PatchUpdate> {
     let tracked_fields: BTreeSet<&str> = state
         .field_inventory
@@ -576,11 +656,12 @@ fn build_freshness_updates(
         }
     }
 
-    refreshed_fields.extend(build_event_driven_auto_refresh_fields(
+    refreshed_fields.extend(build_auto_refresh_fields(
         cycle,
         state,
         &tracked_fields,
         &refreshed_fields,
+        cycle_changes,
     ));
 
     let cycle_marker = format!("cycle {}", cycle);
@@ -593,25 +674,100 @@ fn build_freshness_updates(
         .collect()
 }
 
-fn build_event_driven_auto_refresh_fields(
+fn build_auto_refresh_fields(
     cycle: u64,
     state: &StateJson,
     tracked_fields: &BTreeSet<&str>,
     refreshed_fields: &BTreeSet<String>,
+    cycle_changes: &CycleChanges,
 ) -> Vec<String> {
-    EVENT_DRIVEN_AUTO_REFRESH_FIELDS
+    tracked_fields
         .iter()
-        .filter(|field_name| tracked_fields.contains(**field_name))
         .filter(|field_name| !refreshed_fields.contains(**field_name))
-        .filter(|field_name| {
+        .filter_map(|field_name| {
             state
                 .field_inventory
                 .fields
-                .get(**field_name)
-                .is_some_and(|entry| field_inventory_entry_needs_refresh(entry, cycle))
+                .get(*field_name)
+                .filter(|entry| {
+                    field_inventory_entry_due_for_auto_refresh(
+                        field_name,
+                        entry,
+                        cycle,
+                        cycle_changes,
+                    )
+                })
+                .map(|_| (*field_name).to_string())
         })
-        .map(|field_name| (*field_name).to_string())
         .collect()
+}
+
+fn field_inventory_entry_due_for_auto_refresh(
+    field_name: &str,
+    entry: &Value,
+    cycle: u64,
+    cycle_changes: &CycleChanges,
+) -> bool {
+    let cadence = entry
+        .get("cadence")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+
+    if cadence.contains("every cycle") {
+        return field_inventory_entry_needs_refresh(entry, cycle);
+    }
+
+    if let Some(interval) = cadence_cycle_interval(&cadence) {
+        return field_inventory_entry_is_due(entry, cycle, interval);
+    }
+
+    if field_name.starts_with("copilot_metrics.") {
+        return field_inventory_entry_needs_refresh(entry, cycle);
+    }
+
+    if field_name == "test_count" || cadence.contains("php or ts tests") {
+        return cycle_changes.tests_changed() && field_inventory_entry_needs_refresh(entry, cycle);
+    }
+
+    if field_name == "typescript_stats" || cadence.contains("ts files") {
+        return cycle_changes.ts_source_changed() && field_inventory_entry_needs_refresh(entry, cycle);
+    }
+
+    if field_name == "typescript_plan.status" || cadence.contains("plan phase transitions") {
+        return cycle_changes.ts_files_changed() && field_inventory_entry_needs_refresh(entry, cycle);
+    }
+
+    if cadence.contains("dispatch or merge") || cadence.contains("pr merges") {
+        return cycle_changes.any_changes() && field_inventory_entry_needs_refresh(entry, cycle);
+    }
+
+    if cadence.contains("after planning or completing types") {
+        return cycle_changes.schema_source_changed()
+            && field_inventory_entry_needs_refresh(entry, cycle);
+    }
+
+    false
+}
+
+fn cadence_cycle_interval(cadence: &str) -> Option<u64> {
+    if cadence.contains("every phase transition") || cadence.contains("every cycle") {
+        return None;
+    }
+
+    cadence.contains("every").then_some(())?;
+    extract_cycle_number(cadence)
+}
+
+fn field_inventory_entry_is_due(entry: &Value, cycle: u64, interval: u64) -> bool {
+    match entry
+        .get("last_refreshed")
+        .and_then(Value::as_str)
+        .and_then(extract_cycle_number)
+    {
+        Some(last_refreshed_cycle) => cycle.saturating_sub(last_refreshed_cycle) >= interval,
+        None => true,
+    }
 }
 
 fn field_inventory_entry_needs_refresh(entry: &Value, cycle: u64) -> bool {
@@ -657,6 +813,36 @@ fn inventory_field_for_patch_path(path: &str, tracked_fields: &BTreeSet<&str>) -
     }
 
     None
+}
+
+impl CycleChanges {
+    fn any_changes(&self) -> bool {
+        !self.changed_paths.is_empty()
+    }
+
+    fn tests_changed(&self) -> bool {
+        self.changed_paths
+            .iter()
+            .any(|path| path.starts_with("php/test/") || path.starts_with("ts/test/"))
+    }
+
+    fn ts_files_changed(&self) -> bool {
+        self.changed_paths
+            .iter()
+            .any(|path| path.starts_with("ts/"))
+    }
+
+    fn ts_source_changed(&self) -> bool {
+        self.changed_paths
+            .iter()
+            .any(|path| path.starts_with("ts/src/"))
+    }
+
+    fn schema_source_changed(&self) -> bool {
+        self.changed_paths
+            .iter()
+            .any(|path| path.starts_with("php/src/") || path.starts_with("ts/src/"))
+    }
 }
 
 fn build_review_agent_body(cycle: u64, issue: u64, now: DateTime<Utc>) -> String {
@@ -852,6 +1038,16 @@ mod tests {
         }
     }
 
+    fn no_cycle_changes() -> CycleChanges {
+        CycleChanges::default()
+    }
+
+    fn cycle_changes(paths: &[&str]) -> CycleChanges {
+        CycleChanges {
+            changed_paths: paths.iter().map(|path| (*path).to_string()).collect(),
+        }
+    }
+
     #[test]
     fn help_contains_expected_flags() {
         let mut command = Cli::command();
@@ -890,6 +1086,7 @@ mod tests {
             "2026-03-05T05:06:07Z",
             47,
             &state,
+            &no_cycle_changes(),
             "summary",
             &no_reconciliation(),
         );
@@ -943,6 +1140,7 @@ mod tests {
             "2026-03-06T00:00:00Z",
             47,
             &state,
+            &no_cycle_changes(),
             "summary",
             &no_reconciliation(),
         );
@@ -987,7 +1185,7 @@ mod tests {
             },
         ];
 
-        let freshness_updates = build_freshness_updates(153, &updates, &state);
+        let freshness_updates = build_freshness_updates(153, &updates, &state, &no_cycle_changes());
         assert_eq!(freshness_updates.len(), 1);
         assert_eq!(
             freshness_updates[0].path,
@@ -996,7 +1194,7 @@ mod tests {
     }
 
     #[test]
-    fn state_patch_auto_refreshes_stale_event_driven_fields() {
+    fn state_patch_refreshes_file_driven_fields_when_relevant_changes_exist() {
         let mut state = StateJson::default();
         state.field_inventory.fields.insert(
             "last_cycle".to_string(),
@@ -1007,16 +1205,17 @@ mod tests {
             json!({"last_refreshed": "cycle 120"}),
         );
         state.field_inventory.fields.insert(
-            "last_eva_comment_check".to_string(),
+            "test_count".to_string(),
             json!({"last_refreshed": "cycle 120"}),
         );
-
-        for field_name in EVENT_DRIVEN_AUTO_REFRESH_FIELDS {
-            state.field_inventory.fields.insert(
-                (*field_name).to_string(),
-                json!({"last_refreshed": "cycle 120"}),
-            );
-        }
+        state.field_inventory.fields.insert(
+            "typescript_stats".to_string(),
+            json!({"last_refreshed": "cycle 120", "cadence": "every merge that adds/removes TS files"}),
+        );
+        state.field_inventory.fields.insert(
+            "typescript_plan.status".to_string(),
+            json!({"last_refreshed": "cycle 120", "cadence": "after plan phase transitions"}),
+        );
 
         let patch = build_state_patch(
             153,
@@ -1024,6 +1223,11 @@ mod tests {
             "2026-03-06T00:00:00Z",
             47,
             &state,
+            &cycle_changes(&[
+                "php/test/unit/ProductTest.php",
+                "ts/src/schema/Product.ts",
+                "ts/test/schema/Product.test.ts",
+            ]),
             "summary",
             &no_reconciliation(),
         );
@@ -1033,18 +1237,14 @@ mod tests {
             .map(|update| update.path.as_str())
             .collect();
 
-        for field_name in EVENT_DRIVEN_AUTO_REFRESH_FIELDS {
-            let expected_path = format!("/field_inventory/fields/{}/last_refreshed", field_name);
-            assert!(
-                freshness_paths.contains(&expected_path.as_str()),
-                "missing auto-refresh for {}",
-                field_name
-            );
-        }
+        assert!(freshness_paths.contains(&"/field_inventory/fields/test_count/last_refreshed"));
+        assert!(freshness_paths.contains(&"/field_inventory/fields/typescript_stats/last_refreshed"));
+        assert!(freshness_paths
+            .contains(&"/field_inventory/fields/typescript_plan.status/last_refreshed"));
     }
 
     #[test]
-    fn state_patch_skips_current_or_missing_event_driven_fields() {
+    fn state_patch_skips_file_driven_fields_without_relevant_changes() {
         let mut state = StateJson::default();
         state.field_inventory.fields.insert(
             "last_cycle".to_string(),
@@ -1055,16 +1255,20 @@ mod tests {
             json!({"last_refreshed": "cycle 120"}),
         );
         state.field_inventory.fields.insert(
-            "last_eva_comment_check".to_string(),
+            "test_count".to_string(),
             json!({"last_refreshed": "cycle 120"}),
         );
         state.field_inventory.fields.insert(
-            "publish_gate".to_string(),
-            json!({"last_refreshed": "cycle 153"}),
+            "typescript_stats".to_string(),
+            json!({"last_refreshed": "cycle 120", "cadence": "every merge that adds/removes TS files"}),
         );
         state.field_inventory.fields.insert(
-            "review_agent".to_string(),
-            json!({"last_refreshed": "cycle 154"}),
+            "typescript_plan.status".to_string(),
+            json!({"last_refreshed": "cycle 120", "cadence": "after plan phase transitions"}),
+        );
+        state.field_inventory.fields.insert(
+            "copilot_metrics.in_flight".to_string(),
+            json!({"last_refreshed": "cycle 120", "cadence": "every dispatch or merge"}),
         );
 
         let patch = build_state_patch(
@@ -1073,6 +1277,7 @@ mod tests {
             "2026-03-06T00:00:00Z",
             47,
             &state,
+            &no_cycle_changes(),
             "summary",
             &no_reconciliation(),
         );
@@ -1082,40 +1287,33 @@ mod tests {
             .map(|update| update.path.as_str())
             .collect();
 
-        assert!(!freshness_paths.contains(&"/field_inventory/fields/publish_gate/last_refreshed"));
-        assert!(!freshness_paths.contains(&"/field_inventory/fields/review_agent/last_refreshed"));
+        assert!(!freshness_paths.contains(&"/field_inventory/fields/test_count/last_refreshed"));
+        assert!(!freshness_paths.contains(&"/field_inventory/fields/typescript_stats/last_refreshed"));
         assert!(!freshness_paths
-            .contains(&"/field_inventory/fields/pre_python_clean_cycles/last_refreshed"));
+            .contains(&"/field_inventory/fields/typescript_plan.status/last_refreshed"));
+        assert!(freshness_paths
+            .contains(&"/field_inventory/fields/copilot_metrics.in_flight/last_refreshed"));
     }
 
     #[test]
-    fn event_driven_auto_refresh_fields_includes_required_field_names() {
-        // Semantic test: asserts the full expected field set, not a curated subset.
-        // This catches omissions and additions that the iteration-based tests cannot detect,
-        // since those tests only verify "whatever is in the constant gets refreshed."
-        let expected_fields = BTreeSet::from([
-            "test_count",
-            "typescript_stats",
-            "schema_status.in_progress",
-            "schema_status.planned_next",
-            "review_agent.chronic_category_responses",
-            "publish_gate",
-            "review_agent",
-            "pre_python_clean_cycles",
-            "eva_input_issues.closed_this_cycle",
-            "eva_input_issues.remaining_open",
-            "typescript_plan.status",
-            "copilot_metrics.dispatch_to_pr_rate",
-            "copilot_metrics.in_flight",
-            "copilot_metrics.pr_merge_rate",
-        ]);
+    fn periodic_cadence_refreshes_only_when_due() {
+        let entry = json!({
+            "cadence": "every 10 cycles",
+            "last_refreshed": "cycle 144"
+        });
 
-        let actual_fields = EVENT_DRIVEN_AUTO_REFRESH_FIELDS
-            .iter()
-            .copied()
-            .collect::<BTreeSet<_>>();
-
-        assert_eq!(actual_fields, expected_fields);
+        assert!(!field_inventory_entry_due_for_auto_refresh(
+            "last_tool_audit_cycle",
+            &entry,
+            153,
+            &no_cycle_changes(),
+        ));
+        assert!(field_inventory_entry_due_for_auto_refresh(
+            "last_tool_audit_cycle",
+            &entry,
+            154,
+            &no_cycle_changes(),
+        ));
     }
 
     #[test]
@@ -1127,6 +1325,7 @@ mod tests {
             "2026-03-06T00:00:00Z",
             47,
             &state,
+            &no_cycle_changes(),
             "custom summary",
             &no_reconciliation(),
         );
@@ -1164,6 +1363,7 @@ mod tests {
             "2026-03-06T00:00:00Z",
             47,
             &state,
+            &no_cycle_changes(),
             "custom summary",
             &no_reconciliation(),
         );
@@ -1364,6 +1564,7 @@ mod tests {
             464,
             fixed_now(),
             &state,
+            &no_cycle_changes(),
             "summary",
             &[ReconcileArg {
                 issue: 751,
@@ -1407,7 +1608,16 @@ mod tests {
         ]))
         .unwrap();
 
-        let report = assemble_report(139, 464, fixed_now(), &state, "summary", &[]).unwrap();
+        let report = assemble_report(
+            139,
+            464,
+            fixed_now(),
+            &state,
+            &no_cycle_changes(),
+            "summary",
+            &[],
+        )
+        .unwrap();
 
         assert_eq!(report.agent_session_reconciliation.reconciled.len(), 0);
         assert!(report
@@ -1514,7 +1724,16 @@ mod tests {
             json!({"last_refreshed": "cycle 120"}),
         );
 
-        let report = assemble_report(139, 464, fixed_now(), &state, "summary", &[]).unwrap();
+        let report = assemble_report(
+            139,
+            464,
+            fixed_now(),
+            &state,
+            &no_cycle_changes(),
+            "summary",
+            &[],
+        )
+        .unwrap();
         let output = serde_json::to_string_pretty(&report).unwrap();
         let parsed: Value = serde_json::from_str(&output).unwrap();
 
@@ -1531,7 +1750,7 @@ mod tests {
             parsed
                 .pointer("/completion_steps/1/detail")
                 .and_then(Value::as_str),
-            Some("9 fields to update")
+            Some("6 fields to update")
         );
     }
 
@@ -1562,7 +1781,16 @@ mod tests {
             json!({"last_refreshed": "cycle 120"}),
         );
 
-        let report = assemble_report(139, 464, fixed_now(), &state, "summary", &[]).unwrap();
+        let report = assemble_report(
+            139,
+            464,
+            fixed_now(),
+            &state,
+            &no_cycle_changes(),
+            "summary",
+            &[],
+        )
+        .unwrap();
 
         assert_eq!(report.session_duration_minutes, 47);
         assert_eq!(
