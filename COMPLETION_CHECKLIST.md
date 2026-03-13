@@ -4,9 +4,9 @@ Follow this checklist at the end of every orchestrator cycle. Do not skip steps.
 
 **Step-level commenting**: As with the startup checklist, every step must be posted as a **separate comment** on the orchestrator run issue using `bash tools/post-step`. Post each step's outcome as you complete it — do not batch or summarize from memory.
 
-**Critical**: The review agent dispatch (step 6) is MANDATORY. Every cycle must end with a review agent in-flight. Eva directive [#463](https://github.com/EvaLok/schema-org-json-ld/issues/463).
+**Critical**: The review agent dispatch (step C6) is MANDATORY. Every cycle must end with a review agent in-flight. Eva directive [#463](https://github.com/EvaLok/schema-org-json-ld/issues/463).
 
-## 1. Run pipeline verification (early check)
+## C1. Run pipeline verification (early check)
 
 Run the pipeline-check early to catch issues before they compound:
 
@@ -16,9 +16,11 @@ bash tools/pipeline-check
 
 If not yet run, run it now. `pipeline-check` derives the current cycle from `docs/state.json`; use `--cycle {N}` only when you need to override it.
 
-**Note**: This is an early check, not the final gate. State-modifying tools in step 2 may change state.json after this check passes. The final pipeline gate is step 5.5, which re-runs after all modifications are committed.
+**Note**: This is an early check, not the final gate. State-modifying tools in step C2 may change state.json after this check passes. The final pipeline gate is step C5.5, which re-runs after all modifications are committed.
 
-## 2. Update state.json via write-side tools
+Post this step: `bash tools/post-step --issue {N} --step "C1" --title "Pipeline early check" --body "..."`
+
+## C2. Update state.json via write-side tools
 
 **Do NOT manually edit `docs/state.json`.** Use the write-side pipeline tools instead. Each tool atomically updates its owned section of state.json, bumps freshness markers, and commits with a receipt hash.
 
@@ -43,7 +45,9 @@ If not yet run, run it now. `pipeline-check` derives the current cycle from `doc
 
 Each tool handles its own freshness markers automatically — no manual freshness reconciliation needed.
 
-## 3. Write documentation entries
+Post this step: `bash tools/post-step --issue {N} --step "C2" --title "State updates" --body "..."`
+
+## C3. Write documentation entries
 
 Write worklog and journal entries using `write-entry`:
 
@@ -67,13 +71,15 @@ bash tools/write-entry journal \
 
 The `write-entry` tool auto-derives self-modifications from git history, validates receipts against `cycle-receipts` output, and handles JOURNAL.md index updates.
 
+Post this step: `bash tools/post-step --issue {N} --step "C3" --title "Documentation entries" --body "..."`
+
 ## 4. (Removed — journal now part of Step 3)
 
-Journal is written as part of Step 3 via `write-entry journal`. The tool appends to `docs/journal/YYYY-MM-DD.md`, handles JOURNAL.md index updates, auto-links bare `#N` references, and automatically inserts the matching worklog link.
+Journal is written as part of Step C3 via `write-entry journal`. The tool appends to `docs/journal/YYYY-MM-DD.md`, handles JOURNAL.md index updates, auto-links bare `#N` references, and automatically inserts the matching worklog link.
 
-## 4.1. Validate documentation entries (per review finding: worklog-accuracy chronic)
+## C4.1. Validate documentation entries (per review finding: worklog-accuracy chronic)
 
-After writing worklog and journal entries, validate them before committing. This is a **blocking gate** — do not proceed to step 5 if validation fails.
+After writing worklog and journal entries, validate them before committing. This is a **blocking gate** — do not proceed to step C5 if validation fails.
 
 ```bash
 bash tools/validate-docs worklog --file docs/worklog/YYYY-MM-DD/HHMMSS-title.md --cycle N --repo-root .
@@ -86,11 +92,13 @@ bash tools/validate-docs journal --file docs/journal/YYYY-MM-DD.md --repo-root .
 If either validation fails:
 1. Fix the issue (missing receipts, stale self-modifications, etc.)
 2. Re-run validation until it passes
-3. Only then proceed to step 5
+3. Only then proceed to step C5
 
 **Why:** The `worklog-accuracy` category appeared in 4+ consecutive review cycles (235-239). The root cause is that worklogs were committed without running the validator that exists specifically to catch these errors. This step closes the gap by making validation mandatory before commit.
 
-## 4.5. ADR check (per Eva directive [#724](https://github.com/EvaLok/schema-org-json-ld/issues/724))
+Post this step: `bash tools/post-step --issue {N} --step "C4.1" --title "Documentation validation" --body "..."`
+
+## C4.5. ADR check (per Eva directive [#724](https://github.com/EvaLok/schema-org-json-ld/issues/724))
 
 Before closing the cycle, check whether any decisions made this cycle warrant an Architecture Decision Record in `doc/adr/`.
 
@@ -104,7 +112,9 @@ If a decision was made this cycle that meets these criteria, write the ADR now. 
 
 Number ADRs sequentially (check `ls doc/adr/` for the next number).
 
-## 5. Commit worklog, journal, and state before review dispatch
+Post this step: `bash tools/post-step --issue {N} --step "C4.5" --title "ADR check" --body "..."`
+
+## C5. Commit worklog, journal, and state before review dispatch
 
 **CRITICAL ORDERING**: The review agent reads the repo at dispatch time. If worklog and journal entries are not committed and pushed before the review dispatch, the review agent will flag them as "missing" — a false positive that has contaminated complacency scores since cycle 189. Per audit [#151](https://github.com/EvaLok/schema-org-json-ld-audit/issues/151).
 
@@ -112,11 +122,13 @@ Before dispatching the review agent:
 1. Commit all worklog and journal entries
 2. Commit any state.json changes from `cycle-complete`
 3. Push to master
-4. **Verify** the push succeeded before proceeding to step 6
+4. **Verify** the push succeeded before proceeding to step C6
 
 This ensures the review agent sees the complete cycle state, eliminating the artifact-race false positive.
 
-## 5.5. Final pipeline gate (per audit [#153](https://github.com/EvaLok/schema-org-json-ld-audit/issues/153))
+Post this step: `bash tools/post-step --issue {N} --step "C5" --title "Pre-dispatch commit and push" --body "..."`
+
+## C5.5. Final pipeline gate (per audit [#153](https://github.com/EvaLok/schema-org-json-ld-audit/issues/153))
 
 Re-run the pipeline-check after all state.json modifications are committed:
 
@@ -132,7 +144,9 @@ If the pipeline fails at this point:
 
 **Coordination rule for format-changing tools:** When deploying a tool that changes state.json field formats, merge the downstream consumer tool update *before* applying the new tool's output. Sequence: (1) merge format-changing tool, (2) merge consumer tool update, (3) apply `--apply`. Never apply format changes without the consumer being ready.
 
-## 6. Dispatch review agent (MANDATORY)
+Post this step: `bash tools/post-step --issue {N} --step "C5.5" --title "Final pipeline gate" --body "..."`
+
+## C6. Dispatch review agent (MANDATORY)
 
 Dispatch a 5.4 agent to perform an **adversarial** end-of-cycle review. This is our primary quality control mechanism. The review agent's job is to find problems, not confirm that everything is fine.
 
@@ -191,26 +205,32 @@ Label the issue `agent-task` and `cycle-review`.
 
 **Important**: The next cycle consumes review findings by reading the review file from the merged PR (or from the PR branch if not yet merged).
 
-## 7. Commit review dispatch state and push
+Post this step: `bash tools/post-step --issue {N} --step "C6" --title "Review dispatch" --body "..."`
 
-After dispatching the review agent (step 6), `record-dispatch` has already committed the state change. Push immediately:
+## C7. Commit review dispatch state and push
+
+After dispatching the review agent (step C6), `record-dispatch` has already committed the state change. Push immediately:
 
 ```bash
 git push origin master
 ```
 
-The `record-dispatch` commit is the LAST commit of the cycle. Its receipt hash appears in the closing comment (step 8) but NOT in the worklog receipt table (which was frozen in step 5). This is the expected split: the worklog captures all receipts up to and including the `cycle-complete` commit; the `record-dispatch` receipt is captured by the next cycle's `cycle-receipts` tool.
+The `record-dispatch` commit is the LAST commit of the cycle. Its receipt hash appears in the closing comment (step C8) but NOT in the worklog receipt table (which was frozen in step C5). This is the expected split: the worklog captures all receipts up to and including the `cycle-complete` commit; the `record-dispatch` receipt is captured by the next cycle's `cycle-receipts` tool.
 
-## 8. Close the orchestrator issue
+Post this step: `bash tools/post-step --issue {N} --step "C7" --title "Dispatch state push" --body "..."`
+
+## C8. Close the orchestrator issue
 
 Post a closing summary comment on the cycle issue and close it.
 
 The summary should include:
 - What was accomplished
 - Pipeline status
-- Review agent issue number (from step 6)
-- Commit receipts (from step 7)
+- Review agent issue number (from step C6)
+- Commit receipts (from step C7)
 - Next cycle priorities
+
+Post this step: `bash tools/post-step --issue {N} --step "C8" --title "Cycle close-out" --body "..."`
 
 ## Phase transitions
 
@@ -225,13 +245,13 @@ No manual `cycle-phase` calls are needed for the standard flow (since cycle 226)
 
 | Step | Status | Tool |
 |------|--------|------|
-| 1. Pipeline verification (early) | Automated | `bash tools/pipeline-check` |
-| 2. State.json updates | Automated | `process-merge`, `process-review`, `process-audit`, `process-eva`, `cycle-complete`, `record-dispatch` |
-| 3. Worklog + Journal | Semi-automated | `write-entry worklog` + `write-entry journal` (orchestrator provides structured input) |
-| 4.1. Validate docs | Automated | `validate-docs worklog` + `validate-docs journal` (blocking gate) |
-| 5. Commit worklog/journal/state | Manual | git commit + push (BEFORE review dispatch) |
-| 5.5. Final pipeline gate | Automated | `bash tools/pipeline-check` (re-run after all modifications) |
-| 6. Review agent dispatch | Semi-automated | `cycle-complete` generates issue body, orchestrator creates issue |
-| 7. Commit dispatch state | Automated | `record-dispatch` commits, then push |
-| 8. Close issue | Manual | Standard gh commands |
-| 10.C Mark complete | Automated | `cycle-complete` → close_out, `record-dispatch` → complete (auto, since cycle 226) |
+| C1. Pipeline verification (early) | Automated | `bash tools/pipeline-check` |
+| C2. State.json updates | Automated | `process-merge`, `process-review`, `process-audit`, `process-eva`, `cycle-complete`, `record-dispatch` |
+| C3. Worklog + Journal | Semi-automated | `write-entry worklog` + `write-entry journal` (orchestrator provides structured input) |
+| C4.1. Validate docs | Automated | `validate-docs worklog` + `validate-docs journal` (blocking gate) |
+| C5. Commit worklog/journal/state | Manual | git commit + push (BEFORE review dispatch) |
+| C5.5. Final pipeline gate | Automated | `bash tools/pipeline-check` (re-run after all modifications) |
+| C6. Review agent dispatch | Semi-automated | `cycle-complete` generates issue body, orchestrator creates issue |
+| C7. Commit dispatch state | Automated | `record-dispatch` commits, then push |
+| C8. Close issue | Manual | Standard gh commands |
+| Phase transition to complete | Automated | `cycle-complete` → close_out, `record-dispatch` → complete (auto, since cycle 226) |

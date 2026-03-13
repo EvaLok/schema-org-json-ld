@@ -17,13 +17,19 @@ const ARTIFACT_VERIFY_STEP_NAME: &str = "artifact-verify";
 const DOC_VALIDATION_STEP_NAME: &str = "doc-validation";
 const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
-const STEP_COMMENT_THRESHOLD: usize = 10;
+const STEP_COMMENT_THRESHOLD: usize = 17;
 const ORCHESTRATOR_SIGNATURE: &str = "> **[main-orchestrator]**";
-const MANDATORY_STEP_IDS: [&str; 11] = ["0", "0.5", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+const MANDATORY_STEP_IDS: [&str; 19] = [
+	"0", "0.5", "1", "2", "3", "4", "5", "6", "7", "8", "9", "C1", "C3", "C4.1", "C5",
+	"C5.5", "C6", "C7", "C8",
+];
 // Keep this list aligned with the orchestrator checklist steps that are expected to
 // produce post-step comments. The pass threshold stays lower because some steps are
 // conditional, but missing steps should still be surfaced in WARN output.
-const EXPECTED_STEP_IDS: [&str; 14] = ["0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
+const EXPECTED_STEP_IDS: [&str; 24] = [
+	"0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "C1",
+	"C2", "C3", "C4.1", "C4.5", "C5", "C5.5", "C6", "C7", "C8",
+];
 const REVIEW_LAST_CYCLE_PATH: &str = "/review_agent/last_review_cycle";
 const DERIVE_METRICS_FIELDS: [&str; 9] = [
 	"total_dispatches",
@@ -2442,16 +2448,18 @@ mod tests {
 			"noise\n",
 			"## Step 0.5: Check workflow runs\n",
 			"## Step 1.1: Extra validation\n",
+			"## Step C1: Pipeline early check\n",
 			"> **[main-orchestrator]** | Cycle 212 | Step 10\n\n### Finish\n",
 			"> **[main-orchestrator]** | Cycle 212 | Step 10\n\n### Duplicate\n"
 		);
 
 		let detected = collect_step_comment_ids(bodies);
 
-		assert_eq!(detected.len(), 4);
+		assert_eq!(detected.len(), 5);
 		assert!(detected.contains("0"));
 		assert!(detected.contains("0.5"));
 		assert!(detected.contains("1.1"));
+		assert!(detected.contains("C1"));
 		assert!(detected.contains("10"));
 	}
 
@@ -2463,12 +2471,16 @@ mod tests {
 
 		assert_eq!(
 			missing_expected_step_ids(&found),
-			vec!["0.6", "1.1", "3", "4", "5", "8"]
+			vec![
+				"0.6", "1.1", "3", "4", "5", "8", "C1", "C2", "C3", "C4.1", "C4.5", "C5",
+				"C5.5", "C6", "C7", "C8",
+			]
 		);
 	}
 
 	#[test]
-	fn step_comment_verification_fails_when_fewer_than_ten_steps_are_found_on_previous_cycle_issue() {
+	fn step_comment_verification_fails_when_fewer_than_threshold_steps_are_found_on_previous_cycle_issue(
+	) {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
 		let root =
@@ -2521,12 +2533,12 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("below backstop threshold 10"));
+			.contains("below backstop threshold 17"));
 		assert!(step
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("missing mandatory [7, 8, 9]"));
+			.contains("missing mandatory [7, 8, 9, C1, C3, C4.1, C5, C5.5, C6, C7, C8]"));
 	}
 
 	#[test]
@@ -2582,12 +2594,12 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("missing mandatory [0.5, 1, 2, 3, 4, 6, 7, 8, 9]"));
+			.contains("missing mandatory [0.5, 1, 2, 3, 4, 6, 7, 8, 9, C1, C3, C4.1, C5, C5.5, C6, C7, C8]"));
 		assert!(step
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("below backstop threshold 10"));
+			.contains("below backstop threshold 17"));
 	}
 
 	#[test]
@@ -2684,7 +2696,7 @@ mod tests {
 				let steps = EXPECTED_STEP_IDS
 					.iter()
 					.copied()
-					.filter(|step| *step != "6" && *step != "8")
+					.filter(|step| *step != "C1" && *step != "C8")
 					.collect::<Vec<_>>();
 				Ok(step_comment_bodies(212, &steps))
 			}
@@ -2697,12 +2709,12 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("found 12 unique step comments"));
+			.contains("found 22 unique step comments"));
 		assert!(step
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("missing mandatory [6, 8]"));
+			.contains("missing mandatory [C1, C8]"));
 	}
 
 	#[test]
@@ -2733,7 +2745,7 @@ mod tests {
 				let steps = EXPECTED_STEP_IDS
 					.iter()
 					.copied()
-					.filter(|step| *step != "1.1")
+					.filter(|step| *step != "C4.5")
 					.collect::<Vec<_>>();
 				Ok(step_comment_bodies(212, &steps))
 			}
@@ -2746,7 +2758,7 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("found 13 unique step comments"));
+			.contains("found 23 unique step comments"));
 		assert!(step
 			.detail
 			.as_deref()
@@ -2756,11 +2768,11 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("missing optional [1.1]"));
+			.contains("missing optional [C4.5]"));
 	}
 
 	#[test]
-	fn step_comment_verification_passes_with_all_expected_steps() {
+	fn step_comment_verification_passes_with_all_mandatory_including_closeout() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
 		let root =
@@ -2795,7 +2807,7 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("found 14 unique step comments"));
+			.contains("found 24 unique step comments"));
 		assert!(step
 			.detail
 			.as_deref()
