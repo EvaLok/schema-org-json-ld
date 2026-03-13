@@ -42,7 +42,7 @@
 
 ## Candid observations
 
-- The orchestrator did better on startup-comment discipline this cycle: the step comments on issue `#1159` were posted separately instead of batched into one summary. That said, the Step 0 comment cited cycle-start receipt `4938bed`, which does not exist in git; even the bookkeeping comments are not yet trustworthy enough to treat as source of truth.
+- The orchestrator did better on startup-comment discipline this cycle: the step comments on issue `#1159` were posted separately instead of batched into one summary. That said, the Step 0 comment cited cycle-start receipt `4938bed`, and `git rev-parse --verify 4938bed` fails in the full repository history; even the bookkeeping comments are not yet trustworthy enough to treat as source of truth.
 - The pattern that concerns me most is premature closure by relabeling. Findings are being marked `actioned` once a dispatch exists or a partial mitigation lands, even when the next cycle’s artifacts still reproduce the same defect class.
 - I would stop publishing close-out docs from live working state and instead validate the exact frozen commit in a temp worktree before calling the cycle complete. If the frozen commit fails `pipeline-check`, the worklog should say so plainly and the cycle should stay open.
 - The project already has the right direction of travel — `cycle-receipts`, `validate-docs`, `state-invariants`, `derive-metrics` — but the human-written narrative is still outrunning the tool outputs. The next improvement should be stricter mechanical generation, not more prose about why a failure is acceptable.
