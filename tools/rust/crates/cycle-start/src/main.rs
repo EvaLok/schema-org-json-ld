@@ -284,6 +284,26 @@ fn recover_stale_close_out(
     stale_issue: Option<u64>,
     entered_at: &str,
 ) -> Result<(), String> {
+    recover_stale_close_out_with(repo_root, state, cycle, stale_issue, entered_at, |issue, cycle, entered_at| {
+        close_stale_cycle_issue(issue, cycle, entered_at)
+    })
+}
+
+fn recover_stale_close_out_with<F>(
+    repo_root: &Path,
+    state: &mut Value,
+    cycle: u64,
+    stale_issue: Option<u64>,
+    entered_at: &str,
+    close_issue: F,
+) -> Result<(), String>
+where
+    F: FnOnce(u64, u64, &str) -> Result<(), String>,
+{
+    let stale_issue = stale_issue
+        .ok_or_else(|| "missing /last_cycle/issue for stale close-out recovery".to_string())?;
+    close_issue(stale_issue, cycle, entered_at)?;
+
     transition_cycle_phase(state, cycle, "complete")?;
     write_state_value(repo_root, state)?;
     let commit_message = format!(
@@ -291,10 +311,6 @@ fn recover_stale_close_out(
         cycle, cycle
     );
     commit_state_json(repo_root, &commit_message)?;
-
-    let stale_issue = stale_issue
-        .ok_or_else(|| "missing /last_cycle/issue for stale close-out recovery".to_string())?;
-    close_stale_cycle_issue(stale_issue, cycle, entered_at)?;
     Ok(())
 }
 
@@ -1137,6 +1153,116 @@ fn command_failure_message(command: &str, output: &std::process::Output) -> Stri
 mod tests {
     use super::*;
     use clap::CommandFactory;
+    use std::cell::Cell;
+    use std::path::PathBuf;
+    use std::process::Command;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    struct TempGitRepo {
+        path: PathBuf,
+    }
+
+    impl TempGitRepo {
+        fn new() -> Self {
+            let unique = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("failed to get duration since UNIX epoch")
+                .as_nanos();
+            let path = std::env::temp_dir().join(format!(
+                "cycle-start-stale-close-out-{}-{}",
+                std::process::id(),
+                unique
+            ));
+            fs::create_dir_all(path.join("docs")).expect("failed to create temp repo docs directory");
+            fs::write(path.join("docs/state.json"), format!("{}\n", minimal_state_json()))
+                .expect("failed to write state.json");
+
+            run_git(&path, &["init"]);
+            run_git(&path, &["config", "user.name", "Cycle Start Tests"]);
+            run_git(
+                &path,
+                &["config", "user.email", "cycle-start-tests@example.com"],
+            );
+            run_git(&path, &["add", "docs/state.json"]);
+            run_git(&path, &["commit", "-m", "initial state"]);
+
+            Self { path }
+        }
+
+        fn path(&self) -> &Path {
+            &self.path
+        }
+    }
+
+    impl Drop for TempGitRepo {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.path);
+        }
+    }
+
+    fn minimal_state_json() -> String {
+        json!({
+            "last_cycle": {
+                "number": 242,
+                "issue": 991,
+                "timestamp": "2026-03-13T02:00:00Z"
+            },
+            "cycle_phase": {
+                "phase": "close_out",
+                "phase_entered_at": "2026-03-13T04:00:00Z",
+                "cycle": 242
+            },
+            "field_inventory": {
+                "fields": {
+                    "cycle_phase": {
+                        "cadence": "every phase transition",
+                        "last_refreshed": "cycle 242"
+                    }
+                }
+            }
+        })
+        .to_string()
+    }
+
+    fn run_git(repo_root: &Path, args: &[&str]) -> String {
+        let output = Command::new("git")
+            .arg("-C")
+            .arg(repo_root)
+            .args(args)
+            .output()
+            .expect("failed to execute git command");
+        if !output.status.success() {
+            panic!(
+                "git {:?} failed: {}",
+                args,
+                String::from_utf8_lossy(&output.stderr).trim()
+            );
+        }
+
+        String::from_utf8(output.stdout)
+            .expect("git stdout is not valid UTF-8")
+            .trim()
+            .to_string()
+    }
+
+    fn read_phase(repo_root: &Path) -> String {
+        read_state_value(repo_root)
+            .expect("failed to read state.json")
+            .pointer("/cycle_phase/phase")
+            .and_then(Value::as_str)
+            .expect("cycle_phase/phase field missing from state.json")
+            .to_string()
+    }
+
+    fn git_commit_count(repo_root: &Path) -> usize {
+        run_git(repo_root, &["rev-list", "--count", "HEAD"])
+            .parse::<usize>()
+            .expect("failed to parse git commit count as integer")
+    }
+
+    fn git_head_subject(repo_root: &Path) -> String {
+        run_git(repo_root, &["log", "-1", "--pretty=%s"])
+    }
 
     #[test]
     fn cycle_number_is_last_plus_one() {
@@ -1502,5 +1628,78 @@ mod tests {
         assert!(comment.contains("terminated during close-out"));
         assert!(comment.contains("2026-03-13T01:15:00Z"));
         assert!(comment.contains("Recovery auto-completed the stale close-out"));
+    }
+
+    #[test]
+    fn stale_close_out_recovery_closes_issue_before_committing_state() {
+        let repo = TempGitRepo::new();
+        let mut state = read_state_value(repo.path()).expect("state should load");
+
+        recover_stale_close_out_with(
+            repo.path(),
+            &mut state,
+            242,
+            Some(991),
+            "2026-03-13T04:00:00Z",
+            |issue, cycle, entered_at| {
+                assert_eq!(issue, 991);
+                assert_eq!(cycle, 242);
+                assert_eq!(entered_at, "2026-03-13T04:00:00Z");
+                assert_eq!(read_phase(repo.path()), "close_out");
+                assert_eq!(git_commit_count(repo.path()), 1);
+                Ok(())
+            },
+        )
+        .expect("recovery should succeed");
+
+        assert_eq!(read_phase(repo.path()), "complete");
+        assert_eq!(git_commit_count(repo.path()), 2);
+        assert_eq!(
+            git_head_subject(repo.path()),
+            "state(cycle-start): recover stale close-out for cycle 242 [cycle 242]"
+        );
+    }
+
+    #[test]
+    fn stale_close_out_recovery_retries_when_issue_closure_fails() {
+        let repo = TempGitRepo::new();
+        let attempts = Cell::new(0);
+        let mut state = read_state_value(repo.path()).expect("state should load");
+
+        let error = recover_stale_close_out_with(
+            repo.path(),
+            &mut state,
+            242,
+            Some(991),
+            "2026-03-13T04:00:00Z",
+            |_, _, _| {
+                attempts.set(attempts.get() + 1);
+                Err("simulated close failure".to_string())
+            },
+        )
+        .expect_err("recovery should fail when issue closure fails");
+
+        assert_eq!(error, "simulated close failure");
+        assert_eq!(attempts.get(), 1);
+        assert_eq!(read_phase(repo.path()), "close_out");
+        assert_eq!(git_commit_count(repo.path()), 1);
+
+        let mut retry_state = read_state_value(repo.path()).expect("state should reload");
+        recover_stale_close_out_with(
+            repo.path(),
+            &mut retry_state,
+            242,
+            Some(991),
+            "2026-03-13T04:00:00Z",
+            |_, _, _| {
+                attempts.set(attempts.get() + 1);
+                Ok(())
+            },
+        )
+        .expect("recovery retry should succeed");
+
+        assert_eq!(attempts.get(), 2);
+        assert_eq!(read_phase(repo.path()), "complete");
+        assert_eq!(git_commit_count(repo.path()), 2);
     }
 }
