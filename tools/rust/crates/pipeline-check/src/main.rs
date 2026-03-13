@@ -244,13 +244,12 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
 		},
 	];
 
-	let steps = specs
-		.iter()
-		.map(|spec| run_step(repo_root, spec, runner))
-		.chain(std::iter::once(verify_artifacts(repo_root)))
-		.chain(std::iter::once(verify_doc_validation(repo_root, runner)))
-		.chain(std::iter::once(verify_step_comments(repo_root, runner)))
-		.collect::<Vec<_>>();
+	let mut steps = Vec::new();
+	steps.extend(specs.iter().map(|spec| run_step(repo_root, spec, runner)));
+	steps.push(verify_artifacts(repo_root));
+	let pipeline_status = pipeline_overall_status(&steps);
+	steps.push(verify_doc_validation(repo_root, pipeline_status, runner));
+	steps.push(verify_step_comments(repo_root, runner));
 	let overall = pipeline_overall_status(&steps);
 	let has_blocking_findings = steps.iter().any(|step| step.status == StepStatus::Fail);
 
@@ -533,11 +532,16 @@ fn verify_artifacts(repo_root: &Path) -> StepReport {
 	verify_artifacts_for_date(repo_root, &current_utc_timestamp()[..10])
 }
 
-fn verify_doc_validation(repo_root: &Path, runner: &dyn CommandRunner) -> StepReport {
-	verify_doc_validation_for_date(repo_root, &current_utc_timestamp()[..10], runner)
+fn verify_doc_validation(repo_root: &Path, pipeline_status: StepStatus, runner: &dyn CommandRunner) -> StepReport {
+	verify_doc_validation_for_date(repo_root, &current_utc_timestamp()[..10], pipeline_status, runner)
 }
 
-fn verify_doc_validation_for_date(repo_root: &Path, today: &str, runner: &dyn CommandRunner) -> StepReport {
+fn verify_doc_validation_for_date(
+	repo_root: &Path,
+	today: &str,
+	pipeline_status: StepStatus,
+	runner: &dyn CommandRunner,
+) -> StepReport {
 	let state = match read_state_value(repo_root) {
 		Ok(state) => state,
 		Err(error) => {
@@ -627,6 +631,8 @@ fn verify_doc_validation_for_date(repo_root: &Path, today: &str, runner: &dyn Co
 				worklog_path.display().to_string(),
 				"--cycle".to_string(),
 				cycle.to_string(),
+				"--pipeline-status".to_string(),
+				step_status_label(pipeline_status).to_string(),
 				"--repo-root".to_string(),
 				repo_root.display().to_string(),
 			],
@@ -2176,7 +2182,7 @@ mod tests {
 			calls: Mutex::new(Vec::new()),
 		};
 
-		let step = verify_doc_validation_for_date(&root, "2026-03-12", &runner);
+		let step = verify_doc_validation_for_date(&root, "2026-03-12", StepStatus::Pass, &runner);
 		assert_eq!(step.name, "doc-validation");
 		assert_eq!(step.status, StepStatus::Pass);
 		assert_eq!(step.severity, Severity::Blocking);
@@ -2188,6 +2194,10 @@ mod tests {
 		assert_eq!(calls[0][2], root.join("docs/worklog/2026-03-12/020304-cycle-239-summary.md").display().to_string());
 		assert_eq!(calls[0][3], "--cycle");
 		assert_eq!(calls[0][4], "239");
+		assert_eq!(calls[0][5], "--pipeline-status");
+		assert_eq!(calls[0][6], "PASS");
+		assert_eq!(calls[0][7], "--repo-root");
+		assert_eq!(calls[0][8], root.display().to_string());
 		assert_eq!(calls[1][0], "journal");
 		assert_eq!(calls[1][1], "--file");
 		assert_eq!(calls[1][2], root.join("docs/journal/2026-03-12.md").display().to_string());
@@ -2221,7 +2231,7 @@ mod tests {
 			}
 		}
 
-		let step = verify_doc_validation_for_date(&root, "2026-03-12", &NoRunRunner);
+		let step = verify_doc_validation_for_date(&root, "2026-03-12", StepStatus::Pass, &NoRunRunner);
 		assert_eq!(step.status, StepStatus::Pass);
 		assert!(step
 			.detail
@@ -2276,7 +2286,8 @@ mod tests {
 			}
 		}
 
-		let step = verify_doc_validation_for_date(&root, "2026-03-12", &FailingValidateDocsRunner);
+		let step =
+			verify_doc_validation_for_date(&root, "2026-03-12", StepStatus::Fail, &FailingValidateDocsRunner);
 		assert_eq!(step.status, StepStatus::Fail);
 		assert_eq!(step.severity, Severity::Blocking);
 		assert!(step
@@ -2319,7 +2330,7 @@ mod tests {
 			}
 		}
 
-		let step = verify_doc_validation_for_date(&root, "2026-03-12", &NoRunRunner);
+		let step = verify_doc_validation_for_date(&root, "2026-03-12", StepStatus::Pass, &NoRunRunner);
 		assert_eq!(step.status, StepStatus::Pass);
 		assert!(step
 			.detail
