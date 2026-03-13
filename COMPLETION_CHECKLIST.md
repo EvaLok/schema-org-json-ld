@@ -27,6 +27,7 @@ If not yet run, run it now. `pipeline-check` derives the current cycle from `doc
 | Event | Tool | Command |
 |-------|------|---------|
 | PR merged | `process-merge` | `bash tools/process-merge --prs 123,456 --issues 789,790` (`--issues none` when there are intentionally no linked issues) |
+| Copilot task dispatched | `record-dispatch` | `bash tools/record-dispatch --issue N --title "..." --model gpt-5.4` |
 | Review findings consumed | `process-review` | `bash tools/process-review --review-file docs/reviews/cycle-N.md --actioned A --deferred D --ignored I` |
 | Audit recommendation processed | `process-audit` | `bash tools/process-audit --audit-id N --action accepted` |
 | Eva directive processed | `process-eva` | `bash tools/process-eva --closed 123,456 --remaining-open 247,436` |
