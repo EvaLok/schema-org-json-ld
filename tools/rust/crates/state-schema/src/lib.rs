@@ -154,13 +154,15 @@ pub fn default_agent_model(repo_root: &Path) -> Result<String, String> {
 }
 
 /// Read the current cycle number from state.json.
-/// Returns last_cycle.number from the state file.
+/// Prefers the active cycle at /cycle_phase/cycle and falls back to
+/// /last_cycle/number for older state snapshots.
 pub fn current_cycle_from_state(repo_root: &Path) -> Result<u64, String> {
     let state = read_state_value(repo_root)?;
     state
-        .pointer("/last_cycle/number")
+        .pointer("/cycle_phase/cycle")
         .and_then(Value::as_u64)
-        .ok_or_else(|| "missing /last_cycle/number in state.json".to_string())
+        .or_else(|| state.pointer("/last_cycle/number").and_then(Value::as_u64))
+        .ok_or_else(|| "missing /cycle_phase/cycle or /last_cycle/number in state.json".to_string())
 }
 
 pub fn write_state_value(repo_root: &Path, state: &Value) -> Result<(), String> {
@@ -823,7 +825,19 @@ mod tests {
     }
 
     #[test]
-    fn current_cycle_from_state_reads_last_cycle_number() {
+    fn current_cycle_from_state_prefers_cycle_phase_cycle() {
+        let repo = TempRepo::new();
+        repo.write_state(&json!({
+            "last_cycle": {"number": 166},
+            "cycle_phase": {"cycle": 167}
+        }));
+
+        let cycle = current_cycle_from_state(repo.path()).expect("cycle should load from state");
+        assert_eq!(cycle, 167);
+    }
+
+    #[test]
+    fn current_cycle_from_state_falls_back_to_last_cycle_number() {
         let repo = TempRepo::new();
         repo.write_state(&json!({"last_cycle": {"number": 166}}));
 
@@ -837,7 +851,10 @@ mod tests {
         repo.write_state(&json!({"last_cycle": {}}));
 
         let error = current_cycle_from_state(repo.path()).expect_err("missing cycle must fail");
-        assert_eq!(error, "missing /last_cycle/number in state.json");
+        assert_eq!(
+            error,
+            "missing /cycle_phase/cycle or /last_cycle/number in state.json"
+        );
     }
 
     #[test]

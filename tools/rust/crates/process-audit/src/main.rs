@@ -72,7 +72,7 @@ fn run(cli: Cli) -> Result<(), String> {
 fn current_cycle(repo_root: &Path) -> Result<u64, String> {
     current_cycle_from_state(repo_root).map_err(|error| {
         format!(
-            "missing numeric /last_cycle/number in docs/state.json: {}",
+            "missing numeric /cycle_phase/cycle or /last_cycle/number in docs/state.json: {}",
             error
         )
     })

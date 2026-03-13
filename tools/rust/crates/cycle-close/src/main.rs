@@ -150,8 +150,9 @@ fn execute(cli: &Cli, runner: &dyn CommandRunner) -> Result<String, String> {
 
 fn execute_at(cli: &Cli, runner: &dyn CommandRunner, now: DateTime<Utc>) -> Result<String, String> {
     let cycle = current_cycle_from_state(&cli.repo_root).map_err(|error| {
-        if error == "missing /last_cycle/number in state.json" {
-            "missing numeric /last_cycle/number in docs/state.json".to_string()
+        if error == "missing /cycle_phase/cycle or /last_cycle/number in state.json" {
+            "missing numeric /cycle_phase/cycle or /last_cycle/number in docs/state.json"
+                .to_string()
         } else {
             error
         }
