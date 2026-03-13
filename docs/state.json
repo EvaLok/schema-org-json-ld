@@ -3360,8 +3360,8 @@
   },
   "cycle_phase": {
     "cycle": 245,
-    "phase": "complete",
-    "phase_entered_at": "2026-03-13T14:25:23Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-13T14:35:58Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -3466,7 +3466,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 244"
+        "last_refreshed": "cycle 245"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -3478,7 +3478,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 244"
+        "last_refreshed": "cycle 245"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -3498,7 +3498,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 244"
+        "last_refreshed": "cycle 245"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -3506,7 +3506,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 244"
+        "last_refreshed": "cycle 245"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -3534,7 +3534,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 244"
+        "last_refreshed": "cycle 245"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -3603,13 +3603,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 8,
+    "duration_minutes": 20,
     "issue": 1171,
     "number": 245,
-    "summary": "Merged 3 PRs (cycle-start fix #1161, cycle-complete field inventory fix #1163, review artifact #1165). Consumed cycle 243 review (6 findings, 2/5, 3 actioned/3 deferred). Dispatched write-entry auto-population enhancement #1167 targeting worklog-accuracy chronic category.",
-    "timestamp": "2026-03-13T14:16:25Z"
+    "summary": "Consumed cycle 244 review (2/5, 4 findings). Processed audit #233 (record-dispatch for work-phase dispatches). Merged PR #1168 (write-entry auto-population). Updated COMPLETION_CHECKLIST.",
+    "timestamp": "2026-03-13T14:35:58Z"
   },
-  "last_eva_comment_check": "2026-03-13T14:16:25Z",
+  "last_eva_comment_check": "2026-03-13T14:35:58Z",
   "last_tool_audit_cycle": 236,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
