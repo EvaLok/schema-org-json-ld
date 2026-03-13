@@ -3205,8 +3205,10 @@
     {
       "dispatched_at": "2026-03-13T20:19:58Z",
       "issue": 1185,
+      "merged_at": "2026-03-13T22:17:38Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1186,
+      "status": "merged",
       "title": "Extend pipeline-check close-out step enforcement"
     },
     {
@@ -3411,12 +3413,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1190 Cycle 248 end-of-cycle review (cycle 248)",
-    "dispatch_to_pr_rate": "98.0%",
-    "in_flight": 2,
-    "merged": 346,
+    "dispatch_to_pr_rate": "98.3%",
+    "in_flight": 1,
+    "merged": 347,
     "pr_merge_rate": "99.1%",
-    "produced_pr": 349,
-    "resolved": 354,
+    "produced_pr": 350,
+    "resolved": 355,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 356
