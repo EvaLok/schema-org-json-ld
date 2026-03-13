@@ -1,8 +1,8 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use clap::{Parser, Subcommand};
 use serde::{Deserialize, Deserializer};
-use state_schema::{current_cycle_from_state, read_state_value, StateJson};
-use std::collections::HashSet;
+use state_schema::{current_cycle_from_state, read_state_value, AgentSession, StateJson};
+use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -128,6 +128,8 @@ struct WorklogInput {
     next_steps: Vec<String>,
     #[serde(default)]
     receipts: Vec<CommitReceipt>,
+    #[serde(default)]
+    receipt_note: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -169,7 +171,7 @@ struct JournalSection {
     body: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 struct CommitReceipt {
     tool: String,
     receipt: String,
@@ -337,13 +339,31 @@ fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<Worklog
             },
             next_steps: args.next.clone(),
             receipts: parse_receipts(&args.receipt)?,
+            receipt_note: None,
         };
         validate_worklog_state_placeholders(&input, state.as_ref())?;
         return Ok(input);
     }
 
-    let payload = read_stdin()?;
-    serde_json::from_str(&payload).map_err(|error| format!("invalid worklog JSON input: {}", error))
+    let state = load_worklog_state(repo_root, true)?;
+    let input = WorklogInput {
+        what_was_done: Vec::new(),
+        self_modifications: Vec::new(),
+        prs_merged: Vec::new(),
+        prs_reviewed: Vec::new(),
+        issues_processed: Vec::new(),
+        current_state: CurrentState {
+            in_flight_sessions: state_copilot_in_flight(state.as_ref())?,
+            pipeline_status: state_pipeline_status(state.as_ref()),
+            copilot_metrics: format_state_copilot_metrics(state.as_ref())?,
+            publish_gate: state_publish_gate_status(state.as_ref())?,
+        },
+        next_steps: Vec::new(),
+        receipts: Vec::new(),
+        receipt_note: None,
+    };
+    validate_worklog_state_placeholders(&input, state.as_ref())?;
+    Ok(input)
 }
 
 fn requires_worklog_state(args: &WorklogArgs) -> bool {
@@ -412,6 +432,15 @@ fn state_publish_gate_status(state: Option<&StateJson>) -> Result<String, String
         .filter(|value| !value.is_empty())
         .map(ToOwned::to_owned)
         .ok_or_else(|| "missing publish_gate.status in state.json".to_string())
+}
+
+fn state_pipeline_status(state: Option<&StateJson>) -> String {
+    state
+        .and_then(|state| state.tool_pipeline.status.as_deref())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+        .unwrap_or_else(|| NOT_PROVIDED.to_string())
 }
 
 fn state_copilot_in_flight(state: Option<&StateJson>) -> Result<u64, String> {
@@ -538,18 +567,76 @@ fn apply_worklog_auto_derivations(
         }
     }
 
-    if input.issues_processed.is_empty() {
-        input.issues_processed = derive_issue_processed_from_done(&input.what_was_done);
+    let mut auto_issues = derive_issue_processed_from_done(&input.what_was_done);
+    let derived_issues_from_done = !auto_issues.is_empty();
+    match derive_issue_processed_from_git_history(repo_root, cycle) {
+        Ok(issues) => auto_issues = merge_issue_processed(&auto_issues, &issues),
+        Err(error) if !derived_issues_from_done => warnings.push(format!(
+            "WARNING: failed to auto-derive issues processed from git history for cycle {}: {}",
+            cycle, error
+        )),
+        Err(_) => {}
     }
+    match load_worklog_state(repo_root, false) {
+        Ok(Some(state)) => match derive_issue_processed_from_state(repo_root, cycle, &state) {
+            Ok(issues) => auto_issues = merge_issue_processed(&auto_issues, &issues),
+            Err(error) if !derived_issues_from_done => warnings.push(format!(
+                "WARNING: failed to auto-derive issues processed from docs/state.json for cycle {}: {}",
+                cycle, error
+            )),
+            Err(_) => {}
+        },
+        Ok(None) => {}
+        Err(error) if !derived_issues_from_done => warnings.push(format!(
+            "WARNING: failed to read docs/state.json for issues processed auto-derivation in cycle {}: {}",
+            cycle, error
+        )),
+        Err(_) => {}
+    }
+    input.issues_processed = merge_issue_processed(&input.issues_processed, &auto_issues);
 
-    if !input.receipts.is_empty() {
-        warnings.push(
-            "WARNING: manual receipts are not supported for cycle worklogs; using canonical cycle-receipts output".to_string(),
-        );
+    let manual_receipts = parse_receipts(&args.receipt)?;
+    input.receipt_note = None;
+    match derive_receipts_from_cycle(repo_root, cycle) {
+        Ok(receipts) => input.receipts = merge_receipts(receipts, &manual_receipts),
+        Err(error) if !manual_receipts.is_empty() => {
+            warnings.push(format!(
+                "WARNING: failed to auto-derive receipts for cycle {}: {}; using provided manual receipts instead",
+                cycle, error
+            ));
+            input.receipt_note = Some(
+                "Automatic receipt collection via `tools/cycle-receipts` failed; using provided manual receipts instead."
+                    .to_string(),
+            );
+            input.receipts = manual_receipts;
+        }
+        Err(error) => return Err(error),
     }
-    input.receipts = derive_receipts_from_cycle(repo_root, cycle)?;
 
     Ok(warnings)
+}
+
+fn merge_issue_processed(existing: &[String], derived: &[String]) -> Vec<String> {
+    let mut seen = HashSet::new();
+    let mut merged = Vec::new();
+
+    for item in existing.iter().chain(derived.iter()) {
+        let key = issue_processed_key(item);
+        if seen.insert(key) {
+            merged.push(item.clone());
+        }
+    }
+
+    merged
+}
+
+fn issue_processed_key(item: &str) -> String {
+    let references = extract_issue_references(item);
+    if references.len() == 1 {
+        format!("#{}", references[0])
+    } else {
+        item.trim().to_ascii_lowercase()
+    }
 }
 
 fn derive_issue_processed_from_done(items: &[String]) -> Vec<String> {
@@ -569,6 +656,99 @@ fn derive_issue_processed_from_done(items: &[String]) -> Vec<String> {
     }
 
     issues
+}
+
+fn derive_issue_processed_from_git_history(repo_root: &Path, cycle: u64) -> Result<Vec<String>, String> {
+    let commits = read_git_history(repo_root)?;
+    let (start, end) = cycle_history_window(repo_root, cycle, &commits)?;
+    let mut seen = HashSet::new();
+    let mut issues = Vec::new();
+
+    for commit in commits.iter().filter(|commit| commit.committed_at >= start) {
+        if end.is_some_and(|timestamp| commit.committed_at >= timestamp) {
+            continue;
+        }
+        if !done_item_has_issue_action(&commit.subject) {
+            continue;
+        }
+        for issue in extract_issue_references(&commit.subject) {
+            let issue_ref = format!("#{}", issue);
+            if seen.insert(issue_ref.clone()) {
+                issues.push(issue_ref);
+            }
+        }
+    }
+
+    Ok(issues)
+}
+
+fn derive_issue_processed_from_state(
+    repo_root: &Path,
+    cycle: u64,
+    state: &StateJson,
+) -> Result<Vec<String>, String> {
+    let commits = read_git_history(repo_root)?;
+    let (start, end) = cycle_history_window(repo_root, cycle, &commits)?;
+    let mut seen = HashSet::new();
+    let mut issues = Vec::new();
+
+    for session in &state.agent_sessions {
+        if !agent_session_status_looks_processed(session) {
+            continue;
+        }
+        let Some(issue) = session.issue.and_then(|value| u64::try_from(value).ok()) else {
+            continue;
+        };
+        let Some(changed_at) = agent_session_status_changed_at(session) else {
+            continue;
+        };
+        if changed_at < start || end.is_some_and(|timestamp| changed_at >= timestamp) {
+            continue;
+        }
+        let issue_ref = format!("#{}", issue);
+        if seen.insert(issue_ref.clone()) {
+            issues.push(issue_ref);
+        }
+    }
+
+    Ok(issues)
+}
+
+fn agent_session_status_looks_processed(session: &AgentSession) -> bool {
+    session.status.as_deref().is_some_and(|status| {
+        matches!(
+            status.trim().to_ascii_lowercase().as_str(),
+            "merged" | "closed" | "resolved" | "completed"
+        )
+    })
+}
+
+fn agent_session_status_changed_at(session: &AgentSession) -> Option<DateTime<Utc>> {
+    session
+        .merged_at
+        .as_deref()
+        .and_then(parse_optional_timestamp)
+        .or_else(|| {
+            [
+                "closed_at",
+                "resolved_at",
+                "completed_at",
+                "status_changed_at",
+                "updated_at",
+            ]
+            .into_iter()
+            .find_map(|key| {
+                session
+                    .extra
+                    .get(key)
+                    .and_then(|value| value.as_str())
+                    .and_then(parse_optional_timestamp)
+            })
+        })
+}
+
+fn parse_optional_timestamp(value: &str) -> Option<DateTime<Utc>> {
+    parse_timestamp(value, "status change timestamp").ok()
 }
 
 fn done_item_has_issue_action(item: &str) -> bool {
@@ -682,6 +862,55 @@ fn find_cycle_start_commit(repo_root: &Path, cycle: u64) -> Result<String, Strin
             cycle
         )
     })
+}
+
+fn cycle_history_window(
+    repo_root: &Path,
+    cycle: u64,
+    commits: &[GitHistoryEntry],
+) -> Result<(DateTime<Utc>, Option<DateTime<Utc>>), String> {
+    let start = find_cycle_start_timestamp(repo_root, cycle, commits)?;
+    let end = find_explicit_cycle_start_timestamp(cycle + 1, commits);
+    Ok((start, end))
+}
+
+fn find_cycle_start_timestamp(
+    repo_root: &Path,
+    cycle: u64,
+    commits: &[GitHistoryEntry],
+) -> Result<DateTime<Utc>, String> {
+    if let Some(timestamp) = find_explicit_cycle_start_timestamp(cycle, commits) {
+        return Ok(timestamp);
+    }
+
+    let current_cycle = current_cycle_from_state(repo_root)?;
+    if cycle != current_cycle {
+        return Err(format!(
+            "could not determine a cycle start timestamp for cycle {}; ensure history is available",
+            cycle
+        ));
+    }
+
+    let state = load_worklog_state(repo_root, true)?
+        .ok_or_else(|| "docs/state.json is required to resolve current cycle timestamp".to_string())?;
+    let timestamp = state
+        .cycle_phase
+        .phase_entered_at
+        .as_deref()
+        .ok_or_else(|| {
+            "missing docs/state.json cycle_phase.phase_entered_at for current cycle".to_string()
+        })?;
+    parse_timestamp(timestamp, "docs/state.json cycle_phase.phase_entered_at")
+}
+
+fn find_explicit_cycle_start_timestamp(cycle: u64, commits: &[GitHistoryEntry]) -> Option<DateTime<Utc>> {
+    commits
+        .iter()
+        .find(|commit| {
+            commit.subject.starts_with("state(cycle-start):")
+                && extract_cycle_tag(&commit.subject) == Some(cycle)
+        })
+        .map(|commit| commit.committed_at)
 }
 
 fn read_git_history(repo_root: &Path) -> Result<Vec<GitHistoryEntry>, String> {
@@ -813,6 +1042,33 @@ fn parse_cycle_receipts_output(json: &str) -> Result<Vec<CommitReceipt>, String>
         .map(|entry| format!("{}:{}", entry.tool.trim(), entry.receipt.trim()))
         .collect::<Vec<_>>();
     parse_receipts(&receipts)
+}
+
+fn merge_receipts(auto_receipts: Vec<CommitReceipt>, manual_receipts: &[CommitReceipt]) -> Vec<CommitReceipt> {
+    let mut manual_by_tool = HashMap::new();
+    let mut auto_tools = HashSet::new();
+    for receipt in manual_receipts {
+        manual_by_tool.insert(receipt.tool.to_ascii_lowercase(), receipt.clone());
+    }
+
+    let mut merged = Vec::new();
+    for receipt in auto_receipts {
+        let tool_key = receipt.tool.to_ascii_lowercase();
+        auto_tools.insert(tool_key.clone());
+        if let Some(manual) = manual_by_tool.get(&tool_key) {
+            merged.push(manual.clone());
+        } else {
+            merged.push(receipt);
+        }
+    }
+
+    for receipt in manual_receipts {
+        if !auto_tools.contains(&receipt.tool.to_ascii_lowercase()) {
+            merged.push(receipt.clone());
+        }
+    }
+
+    merged
 }
 
 fn parse_self_modifications(values: &[String]) -> Result<Vec<SelfModification>, String> {
@@ -1349,6 +1605,10 @@ fn render_worklog(cycle: u64, now: DateTime<Utc>, input: &WorklogInput) -> Strin
         lines.push(String::new());
         lines.push("## Commit receipts".to_string());
         lines.push(String::new());
+        if let Some(note) = &input.receipt_note {
+            lines.push(format!("> Note: {}", note));
+            lines.push(String::new());
+        }
         lines.push("| Tool | Receipt | Link |".to_string());
         lines.push("|------|---------|------|".to_string());
         for receipt in &input.receipts {
@@ -2077,6 +2337,7 @@ mod tests {
             },
             next_steps: vec!["Review PR #543".to_string()],
             receipts: Vec::new(),
+            receipt_note: None,
         };
         let rendered = render_worklog(154, fixed_now(), &input);
         let what_done = rendered.find("## What was done").unwrap();
@@ -2111,6 +2372,7 @@ mod tests {
             },
             next_steps: Vec::new(),
             receipts: Vec::new(),
+            receipt_note: None,
         };
 
         let rendered = render_worklog(154, fixed_now(), &input);
@@ -2514,18 +2776,30 @@ mod tests {
     }
 
     #[test]
-    fn worklog_auto_derivation_fails_closed_when_cycle_receipts_command_fails() {
+    fn worklog_auto_derivation_falls_back_to_manual_receipts_when_cycle_receipts_command_fails() {
         let repo_root = TempRepoDir::new("worklog-auto-derivation-fallback");
+        init_git_repo(&repo_root.path);
+        let manual_receipt = create_git_commit(
+            &repo_root.path,
+            "notes/manual.txt",
+            "manual\n",
+        );
         let mut args = worklog_args("Fallback");
         args.done = vec!["Closed #42".to_string()];
+        args.receipt = vec![format!("manual:{manual_receipt}")];
         args.pipeline = Some("PASS (6/6)".to_string());
         args.copilot_metrics = Some("steady".to_string());
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
-        let error = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap_err();
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
 
-        assert!(error.contains("cycle-receipts command failed"));
+        assert!(content.contains("> Note: Automatic receipt collection via `tools/cycle-receipts` failed; using provided manual receipts instead."));
+        assert!(content.contains(&format!(
+            "| manual | {} | [{}](https://github.com/EvaLok/schema-org-json-ld/commit/{}) |",
+            manual_receipt, manual_receipt, manual_receipt
+        )));
     }
 
     #[test]
@@ -2546,7 +2820,7 @@ mod tests {
     }
 
     #[test]
-    fn worklog_cycle_mode_replaces_manual_receipts_with_canonical_output() {
+    fn worklog_cycle_mode_merges_manual_receipts_with_canonical_output() {
         let repo_root = TempRepoDir::new("worklog-manual-overrides");
         init_git_repo(&repo_root.path);
         let start_receipt = create_git_commit_with_message(
@@ -2555,10 +2829,15 @@ mod tests {
             "start\n",
             "state(cycle-start): begin cycle 154, issue #1 [cycle 154]",
         );
-        let manual_receipt = create_git_commit(
+        let manual_only_receipt = create_git_commit(
             &repo_root.path,
             "notes/manual.txt",
             "manual\n",
+        );
+        let manual_override_receipt = create_git_commit(
+            &repo_root.path,
+            "notes/manual-override.txt",
+            "manual override\n",
         );
         let canonical_receipt = create_git_commit_with_message(
             &repo_root.path,
@@ -2580,7 +2859,10 @@ mod tests {
         args.done = vec!["Closed EvaLok/schema-org-json-ld#1042".to_string()];
         args.issue_processed = vec!["Closed #999".to_string()];
         args.self_modification = vec!["AGENTS.md: manual override".to_string()];
-        args.receipt = vec![format!("manual:{manual_receipt}")];
+        args.receipt = vec![
+            format!("manual:{manual_only_receipt}"),
+            format!("process-merge:{manual_override_receipt}"),
+        ];
         args.pipeline = Some("PASS (6/6)".to_string());
         args.copilot_metrics = Some("steady".to_string());
         args.publish_gate = Some("open".to_string());
@@ -2589,24 +2871,21 @@ mod tests {
         let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
         let warnings = apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
 
-        assert_eq!(
-            warnings,
-            vec![
-                "WARNING: manual receipts are not supported for cycle worklogs; using canonical cycle-receipts output"
-                    .to_string()
-            ]
-        );
-        assert_eq!(input.receipts.len(), 2);
+        assert!(warnings.is_empty());
+        assert_eq!(input.receipts.len(), 3);
         assert_eq!(input.receipts[0].tool, "cycle-start");
         assert_eq!(input.receipts[0].receipt, start_receipt);
         assert_eq!(input.receipts[1].tool, "process-merge");
-        assert_eq!(input.receipts[1].receipt, canonical_receipt);
+        assert_eq!(input.receipts[1].receipt, manual_override_receipt);
+        assert_eq!(input.receipts[2].tool, "manual");
+        assert_eq!(input.receipts[2].receipt, manual_only_receipt);
+        assert_eq!(input.issues_processed, vec!["Closed #999", "#1042"]);
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
 
         assert!(content.contains("- Closed [#999](https://github.com/EvaLok/schema-org-json-ld/issues/999)"));
-        assert!(!content.contains("[#1042]("));
+        assert!(content.contains("- [#1042](https://github.com/EvaLok/schema-org-json-ld/issues/1042)"));
         assert!(content.contains("- **`AGENTS.md`**: manual override"));
         assert!(!content.contains(": modified"));
         assert!(content.contains(&format!(
@@ -2615,9 +2894,143 @@ mod tests {
         )));
         assert!(content.contains(&format!(
             "| process-merge | {} | [{}](https://github.com/EvaLok/schema-org-json-ld/commit/{}) |",
-            canonical_receipt, canonical_receipt, canonical_receipt
+            manual_override_receipt, manual_override_receipt, manual_override_receipt
         )));
-        assert!(!content.contains(&format!("| manual | {} |", manual_receipt)));
+        assert!(content.contains(&format!(
+            "| manual | {} | [{}](https://github.com/EvaLok/schema-org-json-ld/commit/{}) |",
+            manual_only_receipt, manual_only_receipt, manual_only_receipt
+        )));
+    }
+
+    #[test]
+    fn worklog_auto_derives_issues_processed_from_state_agent_sessions() {
+        let repo_root = TempRepoDir::new("worklog-state-issues");
+        init_git_repo(&repo_root.path);
+        create_git_commit_at(
+            &repo_root.path,
+            "notes/prior.txt",
+            "prior\n",
+            "docs: prior cycle [cycle 153]",
+            "2026-03-05T23:59:00Z",
+        );
+        let start_receipt = create_git_commit_at(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154 [cycle 154]",
+            "2026-03-06T01:00:00Z",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}}
+                ]"#
+            ),
+        );
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "phase": "work",
+                    "phase_entered_at": "2026-03-06T01:00:00Z",
+                    "cycle": 154
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 42,
+                        "pr": 100,
+                        "status": "merged",
+                        "merged_at": "2026-03-06T02:00:00Z",
+                        "title": "Merged this cycle"
+                    },
+                    {
+                        "issue": 41,
+                        "pr": 99,
+                        "status": "merged",
+                        "merged_at": "2026-03-05T22:00:00Z",
+                        "title": "Merged prior cycle"
+                    }
+                ]
+            }"#,
+        );
+
+        let mut args = worklog_args("State-derived issues");
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.copilot_metrics = Some("steady".to_string());
+        args.publish_gate = Some("open".to_string());
+        args.in_flight = Some(0);
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains("### Issues processed\n\n- [#42]("));
+        assert!(!content.contains("[#41]("));
+    }
+
+    #[test]
+    fn worklog_cycle_only_arguments_render_auto_populated_sections() {
+        let repo_root = TempRepoDir::new("worklog-cycle-only");
+        init_git_repo(&repo_root.path);
+        let start_receipt = create_git_commit_at(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154 [cycle 154]",
+            "2026-03-06T01:00:00Z",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}}
+                ]"#
+            ),
+        );
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "copilot_metrics": {
+                    "total_dispatches": 45,
+                    "produced_pr": 42,
+                    "merged": 40,
+                    "pr_merge_rate": "88.9%",
+                    "in_flight": 3
+                },
+                "tool_pipeline": {
+                    "status": "PASS (6/6)"
+                },
+                "publish_gate": {
+                    "status": "published"
+                },
+                "cycle_phase": {
+                    "phase": "work",
+                    "phase_entered_at": "2026-03-06T01:00:00Z",
+                    "cycle": 154
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 42,
+                        "pr": 100,
+                        "status": "merged",
+                        "merged_at": "2026-03-06T02:00:00Z",
+                        "title": "Merged this cycle"
+                    }
+                ]
+            }"#,
+        );
+
+        let args = worklog_args("Cycle only");
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains("### Issues processed\n\n- [#42]("));
+        assert!(content.contains("| cycle-start |"));
+        assert!(content.contains("- **In-flight agent sessions**: 3"));
+        assert!(content.contains("- **Pipeline status**: PASS (6/6)"));
+        assert!(content.contains("- **Publish gate**: published"));
     }
 
     #[test]
@@ -2726,6 +3139,7 @@ mod tests {
             },
             next_steps: Vec::new(),
             receipts: Vec::new(),
+            receipt_note: None,
         };
 
         let warnings = apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
