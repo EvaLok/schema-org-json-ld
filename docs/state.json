@@ -3212,8 +3212,10 @@
     {
       "dispatched_at": "2026-03-13T20:20:33Z",
       "issue": 1187,
+      "merged_at": "2026-03-13T22:17:19Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1188,
+      "status": "merged",
       "title": "Add default-path integration tests for auto-derivation tool crates"
     },
     {
@@ -3409,12 +3411,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1190 Cycle 248 end-of-cycle review (cycle 248)",
-    "dispatch_to_pr_rate": "97.8%",
-    "in_flight": 3,
-    "merged": 345,
+    "dispatch_to_pr_rate": "98.0%",
+    "in_flight": 2,
+    "merged": 346,
     "pr_merge_rate": "99.1%",
-    "produced_pr": 348,
-    "resolved": 353,
+    "produced_pr": 349,
+    "resolved": 354,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 356
@@ -3511,15 +3513,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 248"
+        "last_refreshed": "cycle 249"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 248"
+        "last_refreshed": "cycle 249"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 248"
+        "last_refreshed": "cycle 249"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
