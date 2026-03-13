@@ -3298,8 +3298,8 @@
   },
   "cycle_phase": {
     "cycle": 242,
-    "phase": "work",
-    "phase_entered_at": "2026-03-13T06:26:42Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-13T08:28:17Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -3416,7 +3416,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 241"
+        "last_refreshed": "cycle 242"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -3436,7 +3436,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 241"
+        "last_refreshed": "cycle 242"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -3444,7 +3444,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 241"
+        "last_refreshed": "cycle 242"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -3464,7 +3464,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 241"
+        "last_refreshed": "cycle 242"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -3472,7 +3472,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 241"
+        "last_refreshed": "cycle 242"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -3480,7 +3480,7 @@
       },
       "schema_status.planned_next": {
         "cadence": "after planning or completing types",
-        "last_refreshed": "cycle 241"
+        "last_refreshed": "cycle 242"
       },
       "schema_status.property_gap_audit": {
         "cadence": "after property gap fixes",
@@ -3492,7 +3492,7 @@
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
-        "last_refreshed": "cycle 241"
+        "last_refreshed": "cycle 242"
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
@@ -3532,22 +3532,22 @@
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
-        "last_refreshed": "cycle 241"
+        "last_refreshed": "cycle 242"
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 241"
+        "last_refreshed": "cycle 242"
       }
     }
   },
   "last_cycle": {
-    "duration_minutes": 17,
+    "duration_minutes": 122,
     "issue": 1146,
     "number": 242,
-    "summary": "Merged PR #1137 (review artifact) and PR #1135 (doc-validation pipeline phase). Processed audit #221 and #222. Cleaned up legacy doc_issue key. Dispatched #1141 for worklog-accuracy root cause fix.",
-    "timestamp": "2026-03-13T06:26:42Z"
+    "summary": "Consumed cycle 241 review (3 findings, 2 actioned, 1 deferred). Merged PR #1148 (review artifact) and PR #1153 (stale close-out recovery). Reconciled stale agent sessions. Dispatched #1155 (deadlock fix). Housekeeping: 3 branches deleted, audit-inbound #1139 closed.",
+    "timestamp": "2026-03-13T08:28:17Z"
   },
-  "last_eva_comment_check": "2026-03-13T06:26:42Z",
+  "last_eva_comment_check": "2026-03-13T08:28:17Z",
   "last_tool_audit_cycle": 236,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
