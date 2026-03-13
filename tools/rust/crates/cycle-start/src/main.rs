@@ -1166,16 +1166,16 @@ mod tests {
         fn new() -> Self {
             let unique = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .expect("system time should be after unix epoch")
+                .expect("failed to get duration since UNIX epoch")
                 .as_nanos();
             let path = std::env::temp_dir().join(format!(
                 "cycle-start-stale-close-out-{}-{}",
                 std::process::id(),
                 unique
             ));
-            fs::create_dir_all(path.join("docs")).expect("temp repo docs directory should exist");
+            fs::create_dir_all(path.join("docs")).expect("failed to create temp repo docs directory");
             fs::write(path.join("docs/state.json"), format!("{}\n", minimal_state_json()))
-                .expect("state.json should be written");
+                .expect("failed to write state.json");
 
             run_git(&path, &["init"]);
             run_git(&path, &["config", "user.name", "Cycle Start Tests"]);
@@ -1230,7 +1230,7 @@ mod tests {
             .arg(repo_root)
             .args(args)
             .output()
-            .expect("git command should execute");
+            .expect("failed to execute git command");
         if !output.status.success() {
             panic!(
                 "git {:?} failed: {}",
@@ -1240,24 +1240,24 @@ mod tests {
         }
 
         String::from_utf8(output.stdout)
-            .expect("git stdout should be utf-8")
+            .expect("git stdout is not valid UTF-8")
             .trim()
             .to_string()
     }
 
     fn read_phase(repo_root: &Path) -> String {
         read_state_value(repo_root)
-            .expect("state.json should be readable")
+            .expect("failed to read state.json")
             .pointer("/cycle_phase/phase")
             .and_then(Value::as_str)
-            .expect("phase should exist")
+            .expect("cycle_phase/phase field missing from state.json")
             .to_string()
     }
 
     fn git_commit_count(repo_root: &Path) -> usize {
         run_git(repo_root, &["rev-list", "--count", "HEAD"])
             .parse::<usize>()
-            .expect("commit count should parse")
+            .expect("failed to parse git commit count as integer")
     }
 
     fn git_head_subject(repo_root: &Path) -> String {
