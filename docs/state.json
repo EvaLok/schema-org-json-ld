@@ -3133,8 +3133,10 @@
     {
       "dispatched_at": "2026-03-13T10:19:07Z",
       "issue": 1162,
+      "merged_at": "2026-03-13T12:14:10Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1163,
+      "status": "merged",
       "title": "Fix cycle-complete: only bump field_inventory markers when cadence conditions are met"
     },
     {
@@ -3329,12 +3331,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1164 Cycle 243 end-of-cycle review (cycle 243)",
-    "dispatch_to_pr_rate": "98.3%",
-    "in_flight": 1,
-    "merged": 338,
+    "dispatch_to_pr_rate": "98.6%",
+    "in_flight": 0,
+    "merged": 339,
     "pr_merge_rate": "99.1%",
-    "produced_pr": 341,
-    "resolved": 346,
+    "produced_pr": 342,
+    "resolved": 347,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 347
