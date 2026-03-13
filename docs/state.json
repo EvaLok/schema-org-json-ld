@@ -3154,6 +3154,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Cycle 244 review"
+    },
+    {
+      "dispatched_at": "2026-03-13T14:25:23Z",
+      "issue": 1167,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Enhance write-entry worklog to auto-populate receipts and issues-processed sections"
     }
   ],
   "audit_dropped": [
@@ -3337,21 +3344,21 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1169 Cycle 244 review (cycle 244)",
-    "dispatch_to_pr_rate": "98.3%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1167 Enhance write-entry worklog to auto-populate receipts and issues-processed sections (cycle 245)",
+    "dispatch_to_pr_rate": "98.0%",
+    "in_flight": 2,
     "merged": 339,
     "pr_merge_rate": "99.1%",
     "produced_pr": 342,
     "resolved": 347,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 348
+    "total_dispatches": 349
   },
   "cycle_phase": {
     "cycle": 245,
-    "phase": "work",
-    "phase_entered_at": "2026-03-13T14:16:26Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-13T14:25:23Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -3440,15 +3447,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 244"
+        "last_refreshed": "cycle 245"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 244"
+        "last_refreshed": "cycle 245"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 244"
+        "last_refreshed": "cycle 245"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
