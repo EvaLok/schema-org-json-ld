@@ -3559,7 +3559,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 247"
+        "last_refreshed": "cycle 248"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -5365,9 +5365,24 @@
         "finding_count": 4,
         "ignored": 0,
         "note": "F1 review-disposition: actioned — reclassified cycle 245 entries from actioned to deferred, added step 0.5.11 regression verification per audit #235 (commit evidence: checklist edit + state.json reclassification). F2 chronic-response: deferred — code-quality chronic fix is instance-level, structural cross-crate pattern needs design. F3 process-adherence: deferred — will implement close-out step comments this cycle. F4 journal-quality: deferred — will improve honesty in this cycle's journal."
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "checklist-quality",
+          "journal-quality",
+          "process-adherence",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 247,
+        "deferred": 2,
+        "finding_count": 4,
+        "ignored": 0,
+        "note": "F1 journal-quality: actioned — write-entry e2e verified this cycle (ran write-entry worklog without --cycle, auto-derived cycle 248 correctly). F2 checklist-quality: actioned — tightened step 0.5.11 to require executable verification for tool/runtime findings. F3 worklog-accuracy: deferred — cycle-receipts tool needs improvement. F4 process-adherence: deferred — recurring close-out step comment gap, will address this cycle."
       }
     ],
-    "last_review_cycle": 246
+    "last_review_cycle": 247
   },
   "schema_status": {
     "directory_layout": {
