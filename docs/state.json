@@ -3134,6 +3134,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix cycle-complete: only bump field_inventory markers when cadence conditions are met"
+    },
+    {
+      "dispatched_at": "2026-03-13T10:29:18Z",
+      "issue": 1164,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 243 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -3317,21 +3324,21 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1162 Fix cycle-complete field_inventory markers (cycle 243)",
-    "dispatch_to_pr_rate": "98.0%",
-    "in_flight": 2,
+    "dispatch_log_latest": "#1164 Cycle 243 end-of-cycle review (cycle 243)",
+    "dispatch_to_pr_rate": "97.7%",
+    "in_flight": 3,
     "merged": 336,
     "pr_merge_rate": "99.1%",
     "produced_pr": 339,
     "resolved": 344,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 346
+    "total_dispatches": 347
   },
   "cycle_phase": {
     "cycle": 243,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-13T10:24:08Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-13T10:29:18Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
