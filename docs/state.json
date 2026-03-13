@@ -3390,8 +3390,8 @@
   },
   "cycle_phase": {
     "cycle": 247,
-    "phase": "work",
-    "phase_entered_at": "2026-03-13T18:11:01Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-13T18:23:25Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -3496,7 +3496,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 246"
+        "last_refreshed": "cycle 247"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -3508,7 +3508,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 246"
+        "last_refreshed": "cycle 247"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -3528,7 +3528,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 246"
+        "last_refreshed": "cycle 247"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -3536,7 +3536,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 246"
+        "last_refreshed": "cycle 247"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -3564,7 +3564,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 246"
+        "last_refreshed": "cycle 247"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -3633,13 +3633,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 13,
+    "duration_minutes": 12,
     "issue": 1180,
     "number": 247,
-    "summary": "Consumed cycle 245 review (3/5, 3 findings). Merged review PR #1174. Dispatched write-entry auto-derivation fix #1176. Added code-quality chronic category response. Verified state-integrity fix working. Refreshed stale field inventory entries.",
-    "timestamp": "2026-03-13T18:11:01Z"
+    "summary": "Consumed cycle 246 review (4 findings, 3/5). Merged PRs #1177 (write-entry fix) and #1179 (review artifact). Accepted audit #235: added regression verification step 0.5.11 to checklist. Reclassified cycle 245 review dispositions per stricter actioned definition. Verified resolved: write-entry auto-derivation bug fixed.",
+    "timestamp": "2026-03-13T18:23:25Z"
   },
-  "last_eva_comment_check": "2026-03-13T18:11:01Z",
+  "last_eva_comment_check": "2026-03-13T18:23:25Z",
   "last_tool_audit_cycle": 236,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
