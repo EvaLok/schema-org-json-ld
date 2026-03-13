@@ -424,15 +424,7 @@ fn build_state_patch(
 
 fn collect_cycle_changes(repo_root: &Path, cycle: u64) -> Result<CycleChanges, String> {
     let start_commit = find_cycle_start_commit(repo_root, cycle)?;
-    let output = run_git(
-        repo_root,
-        &[
-            "diff".to_string(),
-            "--name-only".to_string(),
-            start_commit,
-            "HEAD".to_string(),
-        ],
-    )?;
+    let output = run_git(repo_root, &["diff", "--name-only", start_commit.as_str(), "HEAD"])?;
     let changed_paths = output
         .lines()
         .map(str::trim)
@@ -447,15 +439,15 @@ fn find_cycle_start_commit(repo_root: &Path, cycle: u64) -> Result<String, Strin
     let output = run_git(
         repo_root,
         &[
-            "log".to_string(),
-            "-n".to_string(),
-            "1".to_string(),
-            "--format=%H".to_string(),
-            "--grep".to_string(),
-            "^state(cycle-start):".to_string(),
-            "--grep".to_string(),
-            pattern,
-            "--all-match".to_string(),
+            "log",
+            "-n",
+            "1",
+            "--format=%H",
+            "--grep",
+            "^state(cycle-start):",
+            "--grep",
+            pattern.as_str(),
+            "--all-match",
         ],
     )?;
     let commit = output.trim();
@@ -469,7 +461,7 @@ fn find_cycle_start_commit(repo_root: &Path, cycle: u64) -> Result<String, Strin
     Ok(commit.to_string())
 }
 
-fn run_git(repo_root: &Path, args: &[String]) -> Result<String, String> {
+fn run_git(repo_root: &Path, args: &[&str]) -> Result<String, String> {
     let output = Command::new("git")
         .current_dir(repo_root)
         .args(args)
@@ -756,7 +748,9 @@ fn cadence_cycle_interval(cadence: &str) -> Option<u64> {
         return None;
     }
 
-    cadence.contains("every").then_some(())?;
+    if !cadence.contains("every") {
+        return None;
+    }
     extract_cycle_number(cadence)
 }
 
