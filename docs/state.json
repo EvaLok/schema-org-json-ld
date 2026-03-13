@@ -3151,8 +3151,10 @@
     {
       "dispatched_at": "2026-03-13T12:20:14Z",
       "issue": 1169,
+      "merged_at": "2026-03-13T16:21:07Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1170,
+      "status": "merged",
       "title": "Cycle 244 review"
     },
     {
@@ -3167,8 +3169,10 @@
     {
       "dispatched_at": "2026-03-13T14:41:04Z",
       "issue": 1173,
+      "merged_at": "2026-03-13T16:21:07Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1174,
+      "status": "merged",
       "title": "Cycle 245 end-of-cycle review"
     },
     {
@@ -3362,12 +3366,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1176 fix(write-entry): gate auto-derivation on resolved cycle, not CLI flag presence (cycle 246)",
-    "dispatch_to_pr_rate": "97.7%",
-    "in_flight": 3,
-    "merged": 340,
+    "dispatch_to_pr_rate": "98.3%",
+    "in_flight": 1,
+    "merged": 342,
     "pr_merge_rate": "99.1%",
-    "produced_pr": 343,
-    "resolved": 348,
+    "produced_pr": 345,
+    "resolved": 350,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 351
