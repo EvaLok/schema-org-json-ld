@@ -21,6 +21,13 @@ const INFRASTRUCTURE_FILES: [&str; 4] = [
     "AGENTS.md",
     "AGENTS-ts.md",
 ];
+const AGENT_SESSION_STATUS_TIMESTAMP_FIELDS: [&str; 5] = [
+    "closed_at",
+    "resolved_at",
+    "completed_at",
+    "status_changed_at",
+    "updated_at",
+];
 
 #[derive(Parser)]
 #[command(name = "write-entry")]
@@ -729,18 +736,10 @@ fn agent_session_status_changed_at(session: &AgentSession) -> Option<DateTime<Ut
         .as_deref()
         .and_then(parse_optional_timestamp)
         .or_else(|| {
-            [
-                "closed_at",
-                "resolved_at",
-                "completed_at",
-                "status_changed_at",
-                "updated_at",
-            ]
-            .into_iter()
-            .find_map(|key| {
+            AGENT_SESSION_STATUS_TIMESTAMP_FIELDS.iter().find_map(|key| {
                 session
                     .extra
-                    .get(key)
+                    .get(*key)
                     .and_then(|value| value.as_str())
                     .and_then(parse_optional_timestamp)
             })
@@ -1045,18 +1044,18 @@ fn parse_cycle_receipts_output(json: &str) -> Result<Vec<CommitReceipt>, String>
 }
 
 fn merge_receipts(auto_receipts: Vec<CommitReceipt>, manual_receipts: &[CommitReceipt]) -> Vec<CommitReceipt> {
-    let mut manual_by_tool = HashMap::new();
+    let manual_by_tool = manual_receipts
+        .iter()
+        .map(|receipt| (receipt.tool.to_ascii_lowercase(), receipt))
+        .collect::<HashMap<_, _>>();
     let mut auto_tools = HashSet::new();
-    for receipt in manual_receipts {
-        manual_by_tool.insert(receipt.tool.to_ascii_lowercase(), receipt.clone());
-    }
 
     let mut merged = Vec::new();
     for receipt in auto_receipts {
         let tool_key = receipt.tool.to_ascii_lowercase();
         auto_tools.insert(tool_key.clone());
         if let Some(manual) = manual_by_tool.get(&tool_key) {
-            merged.push(manual.clone());
+            merged.push((*manual).clone());
         } else {
             merged.push(receipt);
         }
