@@ -3124,8 +3124,10 @@
     {
       "dispatched_at": "2026-03-13T10:18:29Z",
       "issue": 1160,
+      "merged_at": "2026-03-13T12:14:06Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1161,
+      "status": "merged",
       "title": "Fix cycle-start stale close-out recovery: close issue before committing state"
     },
     {
@@ -3327,12 +3329,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1164 Cycle 243 end-of-cycle review (cycle 243)",
-    "dispatch_to_pr_rate": "98.0%",
-    "in_flight": 2,
-    "merged": 337,
+    "dispatch_to_pr_rate": "98.3%",
+    "in_flight": 1,
+    "merged": 338,
     "pr_merge_rate": "99.1%",
-    "produced_pr": 340,
-    "resolved": 345,
+    "produced_pr": 341,
+    "resolved": 346,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 347
