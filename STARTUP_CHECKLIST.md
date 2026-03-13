@@ -78,11 +78,12 @@ For each open `cycle-review` issue:
 
 10. **Per-finding action receipt** (per audit [#206](https://github.com/EvaLok/schema-org-json-ld-audit/issues/206)): When closing a review issue (sub-step 5), every finding classified as "actioned" MUST cite concrete evidence: a commit SHA, a dispatched issue/PR number, a specific state.json field or checklist step that was updated, or an explicit rationale for why no concrete change is needed. Findings that cannot cite evidence MUST be classified as "deferred" (not "actioned"), which triggers the existing deferral tracking and escalation mechanisms. This prevents disposition overstatement — claiming findings are "actioned" without substantive resolution.
 
-11. **Regression verification for actioned findings** (per audit [#235](https://github.com/EvaLok/schema-org-json-ld-audit/issues/235)): For each finding marked "actioned" in the **previous** cycle's review history:
-    a. Check whether the current cycle's artifacts (worklog, journal, state.json, issue thread) still exhibit the same defect
-    b. If the defect **persists**: reclassify the finding as `actioned_failed` in `review_agent.history` and treat the underlying category as a blocking chronic issue — the pattern generator must be addressed before dispatching new work
-    c. If the defect is **resolved**: mark as `verified_resolved` in `review_agent.history`
-    d. Record the verification result in the worklog
+11. **Regression verification for actioned findings** (per audit [#235](https://github.com/EvaLok/schema-org-json-ld-audit/issues/235), tightened per review cycle 247 finding 2): For each finding marked "actioned" in the **previous** cycle's review history:
+    a. **For tool/runtime findings** (code bugs, tool failures): Re-run the original reproduction steps or an equivalent executable check. Artifact inspection alone is NOT sufficient — the tool must be invoked on the real production path and the output verified. Record the command run and its output in the worklog.
+    b. **For artifact-only findings** (documentation gaps, worklog inaccuracies, journal quality): Check whether the current cycle's artifacts still exhibit the same defect.
+    c. If the defect **persists**: reclassify the finding as `actioned_failed` in `review_agent.history` and treat the underlying category as a blocking chronic issue — the pattern generator must be addressed before dispatching new work
+    d. If the defect is **resolved**: mark as `verified_resolved` in `review_agent.history`
+    e. Record the verification result in the worklog
 
     **Disposition definitions** (updated per audit #235):
     - `actioned`: Fix has **merged** AND defect no longer reproduces in current artifacts. Requires concrete evidence (commit SHA, merged PR).
