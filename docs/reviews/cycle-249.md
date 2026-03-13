@@ -3,7 +3,7 @@
 ## 1. [process-adherence] The close-out enforcement merge still leaves checklist-required step comments structurally optional
 
 **File**: tools/rust/crates/pipeline-check/src/main.rs:20-31
-**Evidence**: The new enforcement only makes `C1`, `C3`, `C4.1`, `C5`, `C5.5`, `C6`, `C7`, and `C8` mandatory, while `C2` and `C4.5` are only present in `EXPECTED_STEP_IDS` (`tools/rust/crates/pipeline-check/src/main.rs:20-31`). But the completion checklist still says "every step must be posted as a separate comment" and gives explicit `post-step` commands for both `C2` and `C4.5` (`COMPLETION_CHECKLIST.md:5,23-48,101-115`). Cycle 249 therefore merged a partial structural fix while the journal later described the chronic process-adherence problem as closed.
+**Evidence**: The new enforcement only makes `C1`, `C3`, `C4.1`, `C5`, `C5.5`, `C6`, `C7`, and `C8` mandatory, while `C2` and `C4.5` are only present in `EXPECTED_STEP_IDS` (`tools/rust/crates/pipeline-check/src/main.rs:20-31`). But the completion checklist still says "every step must be posted as a separate comment" and gives explicit `post-step` commands for both `C2` and `C4.5` (`COMPLETION_CHECKLIST.md:5,48,115`). Cycle 249 therefore merged a partial structural fix while the journal later described the chronic process-adherence problem as closed.
 **Recommendation**: Decide one policy and encode it everywhere. If `C2` and `C4.5` are genuinely optional, document the exception in `COMPLETION_CHECKLIST.md`; otherwise add them to `MANDATORY_STEP_IDS` so the checker matches the written process.
 
 ## 2. [worklog-accuracy] The published worklog still diverges from the cycle’s authoritative record
