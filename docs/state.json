@@ -3034,10 +3034,10 @@
     {
       "dispatched_at": "2026-03-12T16:42:35Z",
       "issue": 1125,
+      "merged_at": "2026-03-12T20:10:32Z",
       "model": "gpt-5.4",
       "pr": 1132,
       "status": "merged",
-      "merged_at": "2026-03-12T20:10:32Z",
       "title": "Cycle 238 review"
     },
     {
@@ -3052,10 +3052,10 @@
     {
       "dispatched_at": "2026-03-12T18:35:47Z",
       "issue": 1131,
+      "merged_at": "2026-03-12T22:11:26Z",
       "model": "gpt-5.4",
       "pr": 1137,
       "status": "merged",
-      "merged_at": "2026-03-12T22:11:26Z",
       "title": "Cycle 239 review"
     },
     {
@@ -3097,9 +3097,10 @@
     {
       "dispatched_at": "2026-03-13T06:30:32Z",
       "issue": 1152,
+      "merged_at": "2026-03-13T08:24:31Z",
       "model": "gpt-5.4",
       "pr": 1153,
-      "status": "in_flight",
+      "status": "merged",
       "title": "Stale close-out recovery for cycle-start"
     }
   ],
@@ -3285,12 +3286,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1152 Stale close-out recovery for cycle-start (cycle 242)",
-    "dispatch_to_pr_rate": "97.9%",
-    "in_flight": 1,
-    "merged": 333,
+    "dispatch_to_pr_rate": "98.5%",
+    "in_flight": 0,
+    "merged": 334,
     "pr_merge_rate": "99.1%",
-    "produced_pr": 336,
-    "resolved": 341,
+    "produced_pr": 337,
+    "resolved": 342,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 342
