@@ -3215,6 +3215,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add default-path integration tests for auto-derivation tool crates"
+    },
+    {
+      "dispatched_at": "2026-03-13T20:29:35Z",
+      "issue": 1190,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 248 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -3401,21 +3408,21 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1187 default-path integration tests (cycle 248)",
-    "dispatch_to_pr_rate": "98.0%",
-    "in_flight": 2,
+    "dispatch_log_latest": "#1190 Cycle 248 end-of-cycle review (cycle 248)",
+    "dispatch_to_pr_rate": "97.8%",
+    "in_flight": 3,
     "merged": 345,
     "pr_merge_rate": "99.1%",
     "produced_pr": 348,
     "resolved": 353,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 355
+    "total_dispatches": 356
   },
   "cycle_phase": {
     "cycle": 248,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-13T20:22:20Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-13T20:29:35Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
