@@ -3196,8 +3196,10 @@
     {
       "dispatched_at": "2026-03-13T18:26:12Z",
       "issue": 1182,
+      "merged_at": "2026-03-13T20:14:20Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1183,
+      "status": "merged",
       "title": "Cycle 247 end-of-cycle review"
     }
   ],
@@ -3385,12 +3387,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1182 Cycle 247 end-of-cycle review (cycle 247)",
-    "dispatch_to_pr_rate": "98.3%",
-    "in_flight": 1,
-    "merged": 344,
+    "dispatch_to_pr_rate": "98.6%",
+    "in_flight": 0,
+    "merged": 345,
     "pr_merge_rate": "99.1%",
-    "produced_pr": 347,
-    "resolved": 352,
+    "produced_pr": 348,
+    "resolved": 353,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 353
@@ -3487,15 +3489,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 247"
+        "last_refreshed": "cycle 248"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 247"
+        "last_refreshed": "cycle 248"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 247"
+        "last_refreshed": "cycle 248"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
@@ -5364,7 +5366,7 @@
         "deferred": 3,
         "finding_count": 4,
         "ignored": 0,
-        "note": "F1 review-disposition: actioned — reclassified cycle 245 entries from actioned to deferred, added step 0.5.11 regression verification per audit #235 (commit evidence: checklist edit + state.json reclassification). F2 chronic-response: deferred — code-quality chronic fix is instance-level, structural cross-crate pattern needs design. F3 process-adherence: deferred — will implement close-out step comments this cycle. F4 journal-quality: deferred — will improve honesty in this cycle's journal."
+        "note": "F1 review-disposition: verified_resolved (cycle 248 regression check) — step 0.5.11 added and functioning, reclassification confirmed in state.json. F2 chronic-response: deferred — structural cross-crate pattern needs design. F3 process-adherence: deferred — cycle 247 review confirmed this still occurs. F4 journal-quality: deferred."
       },
       {
         "actioned": 2,
