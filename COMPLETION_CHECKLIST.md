@@ -73,7 +73,7 @@ The `write-entry` tool auto-derives self-modifications from git history, validat
 
 Post this step: `bash tools/post-step --issue {N} --step "C3" --title "Documentation entries" --body "..."`
 
-## 4. (Removed — journal now part of Step 3)
+## 4. (Removed — journal now part of Step C3)
 
 Journal is written as part of Step C3 via `write-entry journal`. The tool appends to `docs/journal/YYYY-MM-DD.md`, handles JOURNAL.md index updates, auto-links bare `#N` references, and automatically inserts the matching worklog link.
 
@@ -254,4 +254,4 @@ No manual `cycle-phase` calls are needed for the standard flow (since cycle 226)
 | C6. Review agent dispatch | Semi-automated | `cycle-complete` generates issue body, orchestrator creates issue |
 | C7. Commit dispatch state | Automated | `record-dispatch` commits, then push |
 | C8. Close issue | Manual | Standard gh commands |
-| Phase transition to complete | Automated | `cycle-complete` → close_out, `record-dispatch` → complete (auto, since cycle 226) |
+| Phase transition to complete (not a post-step ID) | Automated | `cycle-complete` → close_out, `record-dispatch` → complete (auto, since cycle 226) |
