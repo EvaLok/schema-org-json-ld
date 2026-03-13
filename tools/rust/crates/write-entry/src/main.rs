@@ -4165,7 +4165,7 @@ Reflective log for the schema-org-json-ld orchestrator.
         fs::create_dir_all(repo_root.path.join("docs")).unwrap();
         fs::write(
             repo_root.path.join("docs/state.json"),
-            "{\n  \"last_cycle\": {\"number\": 168}\n}\n",
+            "{\n  \"last_cycle\": {\"number\": 167},\n  \"cycle_phase\": {\"cycle\": 168}\n}\n",
         )
         .unwrap();
         let mut args = worklog_args("Derived cycle");
@@ -4203,7 +4203,7 @@ Reflective log for the schema-org-json-ld orchestrator.
         write_worklog_fixture(&repo_root.path, fixed_now(), 168, "Derived cycle");
         fs::write(
             repo_root.path.join("docs/state.json"),
-            "{\n  \"last_cycle\": {\"number\": 168}\n}\n",
+            "{\n  \"last_cycle\": {\"number\": 167},\n  \"cycle_phase\": {\"cycle\": 168}\n}\n",
         )
         .unwrap();
         let mut args = journal_args("Derived cycle");

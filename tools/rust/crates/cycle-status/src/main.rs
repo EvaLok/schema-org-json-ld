@@ -2,7 +2,7 @@ use chrono::{DateTime, TimeDelta, Utc};
 use clap::Parser;
 use serde::Serialize;
 use serde_json::Value;
-use state_schema::{PublishGate, StateJson};
+use state_schema::{current_cycle_from_state, PublishGate, StateJson};
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -31,6 +31,7 @@ struct Cli {
 
 #[derive(Serialize)]
 struct Report {
+    cycle: Option<u64>,
     generated_at: String,
     last_cycle_timestamp: String,
     eva_input: EvaInput,
@@ -134,6 +135,12 @@ fn main() {
     let cli = Cli::parse();
     let mut errors = Vec::new();
     let state = read_state_json(&cli.repo_root.join("docs/state.json"), &mut errors);
+    let cycle = current_cycle_from_state(&cli.repo_root)
+        .map(Some)
+        .unwrap_or_else(|error| {
+            errors.push(error);
+            None
+        });
     let publish_gate = read_publish_gate(&state, &mut errors);
     let last_cycle_timestamp = resolve_last_cycle_timestamp(&cli, &state, &mut errors);
 
@@ -168,6 +175,7 @@ fn main() {
         &concurrency,
     );
     let report = Report {
+        cycle,
         generated_at: current_timestamp_utc(),
         last_cycle_timestamp,
         eva_input,
@@ -921,6 +929,10 @@ fn build_action_items(
 fn print_human_report(report: &Report) {
     println!("=== Cycle Status Report ===");
     println!("Generated: {}", report.generated_at);
+    match report.cycle {
+        Some(cycle) => println!("Current cycle: {}", cycle),
+        None => println!("Current cycle: unavailable"),
+    }
     println!("Last cycle: {}", report.last_cycle_timestamp);
     println!();
 
@@ -1531,6 +1543,7 @@ mod tests {
         action_items: Vec<String>,
     ) -> Report {
         Report {
+            cycle: Some(153),
             generated_at: "2026-03-08T00:00:00Z".to_string(),
             last_cycle_timestamp: "2026-03-08T00:00:00Z".to_string(),
             eva_input: EvaInput::default(),
