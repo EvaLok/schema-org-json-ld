@@ -3552,7 +3552,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 246"
+        "last_refreshed": "cycle 247"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -5342,10 +5342,25 @@
         "deferred": 3,
         "finding_count": 3,
         "ignored": 0,
-        "note": "F1 code-quality: deferred (dispatch_created #1176 for auto-derivation fix, PR #1177 pending merge). F2 test-coverage: deferred (dispatch_created, included in #1176). F3 journal-quality: deferred. Reclassified per audit #235 — dispatching a fix is a tracked deferral, not actioned, until the fix merges and the defect stops reproducing."
+        "note": "F1 code-quality: verified_resolved (PR #1177 merged cycle 247, early return removed, regression test added). F2 test-coverage: verified_resolved (PR #1177 added omitted-cycle test path). F3 journal-quality: deferred. Originally dispatch_created, reclassified per audit #235. Regression verification performed cycle 247."
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "chronic-response",
+          "journal-quality",
+          "process-adherence",
+          "review-disposition"
+        ],
+        "complacency_score": 3,
+        "cycle": 246,
+        "deferred": 3,
+        "finding_count": 4,
+        "ignored": 0,
+        "note": "F1 review-disposition: actioned — reclassified cycle 245 entries from actioned to deferred, added step 0.5.11 regression verification per audit #235 (commit evidence: checklist edit + state.json reclassification). F2 chronic-response: deferred — code-quality chronic fix is instance-level, structural cross-crate pattern needs design. F3 process-adherence: deferred — will implement close-out step comments this cycle. F4 journal-quality: deferred — will improve honesty in this cycle's journal."
       }
     ],
-    "last_review_cycle": 245
+    "last_review_cycle": 246
   },
   "schema_status": {
     "directory_layout": {
