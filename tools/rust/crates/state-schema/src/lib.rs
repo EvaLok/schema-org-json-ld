@@ -162,7 +162,7 @@ pub fn current_cycle_from_state(repo_root: &Path) -> Result<u64, String> {
         .pointer("/cycle_phase/cycle")
         .and_then(Value::as_u64)
         .or_else(|| state.pointer("/last_cycle/number").and_then(Value::as_u64))
-        .ok_or_else(|| "missing /last_cycle/number in state.json".to_string())
+        .ok_or_else(|| "missing /cycle_phase/cycle or /last_cycle/number in state.json".to_string())
 }
 
 pub fn write_state_value(repo_root: &Path, state: &Value) -> Result<(), String> {
@@ -851,7 +851,10 @@ mod tests {
         repo.write_state(&json!({"last_cycle": {}}));
 
         let error = current_cycle_from_state(repo.path()).expect_err("missing cycle must fail");
-        assert_eq!(error, "missing /last_cycle/number in state.json");
+        assert_eq!(
+            error,
+            "missing /cycle_phase/cycle or /last_cycle/number in state.json"
+        );
     }
 
     #[test]

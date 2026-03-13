@@ -145,8 +145,9 @@ fn read_body_file(path: &Path) -> Result<String, String> {
 
 fn resolve_cycle(cli_cycle: u64, repo_root: &Path) -> Result<u64, String> {
     let state_cycle = current_cycle_from_state(repo_root).map_err(|error| {
-        if error == "missing /last_cycle/number in state.json" {
-            "missing numeric /last_cycle/number in docs/state.json".to_string()
+        if error == "missing /cycle_phase/cycle or /last_cycle/number in state.json" {
+            "missing numeric /cycle_phase/cycle or /last_cycle/number in docs/state.json"
+                .to_string()
         } else {
             error
         }

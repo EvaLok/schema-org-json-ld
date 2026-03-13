@@ -59,8 +59,9 @@ fn execute(cli: &Cli, runner: &dyn CommentPoster) -> Result<String, String> {
 	let step = validate_required_text("step", &cli.step)?;
 	let title = validate_required_text("title", &cli.title)?;
 	let cycle = current_cycle_from_state(&cli.repo_root).map_err(|error| {
-		if error == "missing /last_cycle/number in state.json" {
-			"missing numeric /last_cycle/number in docs/state.json".to_string()
+		if error == "missing /cycle_phase/cycle or /last_cycle/number in state.json" {
+			"missing numeric /cycle_phase/cycle or /last_cycle/number in docs/state.json"
+				.to_string()
 		} else {
 			error
 		}
@@ -290,7 +291,10 @@ mod tests {
 
 		let error = execute(&cli, &poster).expect_err("execute should fail");
 
-		assert_eq!(error, "missing numeric /last_cycle/number in docs/state.json");
+		assert_eq!(
+			error,
+			"missing numeric /cycle_phase/cycle or /last_cycle/number in docs/state.json"
+		);
 	}
 
 	#[test]

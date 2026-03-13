@@ -93,8 +93,9 @@ fn run(cli: Cli) -> Result<(), String> {
 
     let mut state_value = read_state_value(&cli.repo_root)?;
     let current_cycle = current_cycle_from_state(&cli.repo_root).map_err(|error| {
-        if error == "missing /last_cycle/number in state.json" {
-            "missing numeric /last_cycle/number in docs/state.json".to_string()
+        if error == "missing /cycle_phase/cycle or /last_cycle/number in state.json" {
+            "missing numeric /cycle_phase/cycle or /last_cycle/number in docs/state.json"
+                .to_string()
         } else {
             error
         }
@@ -404,7 +405,11 @@ fn findings_line_bounds(lines: &[&str]) -> Option<(usize, usize)> {
     Some((start + 1, lines.len()))
 }
 
-fn for_each_non_code_line(lines: &[&str], start_index: usize, visitor: &mut impl FnMut(usize, &str)) {
+fn for_each_non_code_line(
+    lines: &[&str],
+    start_index: usize,
+    visitor: &mut impl FnMut(usize, &str),
+) {
     let mut in_code_block = false;
     for (offset, line) in lines.iter().enumerate() {
         let trimmed = line.trim();

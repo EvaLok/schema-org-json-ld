@@ -63,8 +63,9 @@ fn run(cli: Cli) -> Result<(), String> {
     let mut state = read_state_value(&cli.repo_root)?;
     let merged_at = current_utc_timestamp();
     let current_cycle = current_cycle_from_state(&cli.repo_root).map_err(|error| {
-        if error == "missing /last_cycle/number in state.json" {
-            "missing numeric /last_cycle/number in docs/state.json".to_string()
+        if error == "missing /cycle_phase/cycle or /last_cycle/number in state.json" {
+            "missing numeric /cycle_phase/cycle or /last_cycle/number in docs/state.json"
+                .to_string()
         } else {
             error
         }
