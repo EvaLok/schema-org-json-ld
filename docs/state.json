@@ -3035,7 +3035,9 @@
       "dispatched_at": "2026-03-12T16:42:35Z",
       "issue": 1125,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1132,
+      "status": "merged",
+      "merged_at": "2026-03-12T20:10:32Z",
       "title": "Cycle 238 review"
     },
     {
@@ -3051,7 +3053,9 @@
       "dispatched_at": "2026-03-12T18:35:47Z",
       "issue": 1131,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1137,
+      "status": "merged",
+      "merged_at": "2026-03-12T22:11:26Z",
       "title": "Cycle 239 review"
     },
     {
@@ -3080,6 +3084,23 @@
       "pr": 1148,
       "status": "merged",
       "title": "Cycle 241 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-13T04:55:00Z",
+      "issue": 1141,
+      "merged_at": "2026-03-13T06:22:02Z",
+      "model": "gpt-5.4",
+      "pr": 1142,
+      "status": "merged",
+      "title": "Worklog accuracy root cause fix"
+    },
+    {
+      "dispatched_at": "2026-03-13T06:30:32Z",
+      "issue": 1152,
+      "model": "gpt-5.4",
+      "pr": 1153,
+      "status": "in_flight",
+      "title": "Stale close-out recovery for cycle-start"
     }
   ],
   "audit_dropped": [
@@ -3263,16 +3284,16 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1147 Cycle 241 end-of-cycle review (cycle 241)",
+    "dispatch_log_latest": "#1152 Stale close-out recovery for cycle-start (cycle 242)",
     "dispatch_to_pr_rate": "97.9%",
-    "in_flight": 2,
-    "merged": 330,
+    "in_flight": 1,
+    "merged": 333,
     "pr_merge_rate": "99.1%",
-    "produced_pr": 333,
-    "resolved": 338,
+    "produced_pr": 336,
+    "resolved": 341,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 340
+    "total_dispatches": 342
   },
   "cycle_phase": {
     "cycle": 242,
