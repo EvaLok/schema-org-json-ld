@@ -558,10 +558,6 @@ fn apply_worklog_auto_derivations(
     cycle: u64,
     input: &mut WorklogInput,
 ) -> Result<Vec<String>, String> {
-    if args.cycle.is_none() {
-        return Ok(Vec::new());
-    }
-
     let mut warnings = Vec::new();
 
     if input.self_modifications.is_empty() {
@@ -2471,6 +2467,12 @@ mod tests {
     #[test]
     fn worklog_reads_json_from_input_file() {
         let repo_root = TempRepoDir::new("worklog-input-file");
+        init_git_repo(&repo_root.path);
+        let receipt = create_git_commit(&repo_root.path, "notes/input-file.txt", "input\n");
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(r#"[{{"step":"manual","receipt":"{receipt}","commit":"Add notes/input-file.txt"}}]"#),
+        );
         write_state_file(
             &repo_root.path,
             r#"{
@@ -2671,6 +2673,12 @@ mod tests {
     #[test]
     fn worklog_inline_flags_auto_populate_status_from_state() {
         let repo_root = TempRepoDir::new("worklog-auto-populate");
+        init_git_repo(&repo_root.path);
+        let receipt = create_git_commit(&repo_root.path, "notes/auto-populate.txt", "auto\n");
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(r#"[{{"step":"manual","receipt":"{receipt}","commit":"Add notes/auto-populate.txt"}}]"#),
+        );
         write_state_file(
             &repo_root.path,
             r#"{
@@ -2772,6 +2780,74 @@ mod tests {
             "| process-merge | {} | [{}](https://github.com/EvaLok/schema-org-json-ld/commit/{}) |",
             merge_receipt, merge_receipt, merge_receipt
         )));
+    }
+
+    #[test]
+    fn worklog_auto_derives_sections_when_cycle_is_resolved_from_state() {
+        let repo_root = TempRepoDir::new("worklog-auto-derives-resolved-cycle");
+        init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154}
+            }"#,
+        );
+        let start_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154, issue #1 [cycle 154]",
+        );
+        let merge_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "tools/rust/crates/write-entry/src/main.rs",
+            "changed\n",
+            "state(process-merge): update worklog [cycle 154]",
+        );
+        create_git_commit_with_message(
+            &repo_root.path,
+            "AGENTS.md",
+            "agent guidance\n",
+            "docs: update agents [cycle 154]",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154, issue #1 [cycle 154]"}},
+                    {{"step":"process-merge","receipt":"{merge_receipt}","commit":"state(process-merge): update worklog [cycle 154]"}}
+                ]"#
+            ),
+        );
+
+        let mut args = worklog_args("Resolved cycle auto derive");
+        args.cycle = None;
+        args.done = vec!["Closed EvaLok/schema-org-json-ld#1042".to_string()];
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.copilot_metrics = Some("steady".to_string());
+        args.publish_gate = Some("open".to_string());
+        args.in_flight = Some(0);
+
+        let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+        let cycle = resolve_cycle(args.cycle, &repo_root.path).unwrap();
+        let warnings = apply_worklog_auto_derivations(&args, &repo_root.path, cycle, &mut input).unwrap();
+
+        assert!(warnings.is_empty());
+        assert_eq!(input.issues_processed, vec!["#1042"]);
+        assert_eq!(input.self_modifications.len(), 2);
+        assert!(input
+            .self_modifications
+            .iter()
+            .any(|item| item.file == "tools/rust/crates/write-entry/src/main.rs" && item.description == "modified"));
+        assert!(input
+            .self_modifications
+            .iter()
+            .any(|item| item.file == "AGENTS.md" && item.description == "modified"));
+        assert_eq!(input.receipts.len(), 2);
+        assert_eq!(input.receipts[0].tool, "cycle-start");
+        assert_eq!(input.receipts[0].receipt, start_receipt);
+        assert_eq!(input.receipts[1].tool, "process-merge");
+        assert_eq!(input.receipts[1].receipt, merge_receipt);
     }
 
     #[test]
@@ -3153,6 +3229,12 @@ mod tests {
     #[test]
     fn worklog_inline_flags_prefer_explicit_status_over_state() {
         let repo_root = TempRepoDir::new("worklog-status-override");
+        init_git_repo(&repo_root.path);
+        let receipt = create_git_commit(&repo_root.path, "notes/status-override.txt", "override\n");
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(r#"[{{"step":"manual","receipt":"{receipt}","commit":"Add notes/status-override.txt"}}]"#),
+        );
         write_state_file(
             &repo_root.path,
             r#"{
@@ -4074,6 +4156,12 @@ Reflective log for the schema-org-json-ld orchestrator.
     #[test]
     fn worklog_derives_cycle_from_state_when_omitted() {
         let repo_root = TempRepoDir::new("worklog-derived-cycle");
+        init_git_repo(&repo_root.path);
+        let receipt = create_git_commit(&repo_root.path, "notes/derived-cycle.txt", "derived\n");
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(r#"[{{"step":"manual","receipt":"{receipt}","commit":"Add notes/derived-cycle.txt"}}]"#),
+        );
         fs::create_dir_all(repo_root.path.join("docs")).unwrap();
         fs::write(
             repo_root.path.join("docs/state.json"),
