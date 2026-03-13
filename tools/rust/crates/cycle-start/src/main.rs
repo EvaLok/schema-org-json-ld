@@ -13,6 +13,7 @@ use std::process::Command;
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const QC_REPO: &str = "EvaLok/schema-org-json-ld-qc";
 const AUDIT_REPO: &str = "EvaLok/schema-org-json-ld-audit";
+const DEFAULT_STALE_THRESHOLD_SECS: u64 = 7_200;
 const ORCHESTRATOR_SIGNATURES: [&str; 3] = [
     "[main-orchestrator]",
     "[qc-orchestrator]",
@@ -36,6 +37,10 @@ struct Cli {
     /// Output startup brief as JSON
     #[arg(long)]
     json: bool,
+
+    /// Recover close_out phases older than this many seconds
+    #[arg(long, default_value_t = DEFAULT_STALE_THRESHOLD_SECS)]
+    stale_threshold: u64,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -115,6 +120,37 @@ fn build_resume_json(cycle: u64, phase: &str) -> Value {
     })
 }
 
+fn detect_stale_close_out(
+    phase: Option<&str>,
+    phase_entered_at: Option<&str>,
+    stale_threshold_secs: u64,
+    now: DateTime<Utc>,
+) -> Result<Option<String>, String> {
+    if phase != Some("close_out") {
+        return Ok(None);
+    }
+
+    let Some(entered_at) = phase_entered_at else {
+        return Ok(None);
+    };
+
+    let threshold_secs = i64::try_from(stale_threshold_secs)
+        .map_err(|_| format!("stale threshold is too large: {}", stale_threshold_secs))?;
+    let entered_at = DateTime::parse_from_rfc3339(entered_at)
+        .map_err(|error| format!("invalid close_out phase_entered_at timestamp: {}", error))?
+        .with_timezone(&Utc);
+
+    if now.signed_duration_since(entered_at).num_seconds() >= threshold_secs {
+        Ok(Some(
+            entered_at
+                .format("%Y-%m-%dT%H:%M:%SZ")
+                .to_string(),
+        ))
+    } else {
+        Ok(None)
+    }
+}
+
 fn main() {
     let cli = Cli::parse();
     if let Err(error) = run(cli) {
@@ -127,15 +163,32 @@ fn run(cli: Cli) -> Result<(), String> {
     let mut state = read_state_value(&cli.repo_root)?;
     let state_json = read_typed_state_json(&cli.repo_root)?;
     let previous_cycle_issue = state.pointer("/last_cycle/issue").and_then(Value::as_u64);
+    let mut warnings = Vec::new();
 
     // Resume detection for in-progress cycles.
-    let current_phase = state_json
-        .cycle_phase
-        .phase
-        .as_deref()
-        .unwrap_or("complete");
+    let current_phase = state_json.cycle_phase.phase.as_deref();
 
-    if should_resume(Some(current_phase)) {
+    if let Some(entered_at) = detect_stale_close_out(
+        current_phase,
+        state_json.cycle_phase.phase_entered_at.as_deref(),
+        cli.stale_threshold,
+        Utc::now(),
+    )? {
+        let cycle = state_json.cycle_phase.cycle.unwrap_or(0);
+        let warning = format!(
+            "Stale close-out detected for cycle {} (entered at {}). Recovering...",
+            cycle, entered_at
+        );
+        warn(&mut warnings, warning);
+        recover_stale_close_out(
+            &cli.repo_root,
+            &mut state,
+            cycle,
+            previous_cycle_issue,
+            &entered_at,
+        )?;
+    } else if should_resume(current_phase) {
+        let current_phase = current_phase.unwrap_or("complete");
         let cycle = state_json.cycle_phase.cycle.unwrap_or(0);
 
         if cli.json {
@@ -158,7 +211,6 @@ fn run(cli: Cli) -> Result<(), String> {
         .unwrap_or_else(|| "1970-01-01T00:00:00Z".to_string());
     let cycle = derive_cycle_from_state(&state)?;
     let timestamp = current_utc_timestamp();
-    let mut warnings = Vec::new();
     let questions_for_eva = gather_questions_for_eva(&mut warnings);
     let open_question_numbers: Vec<u64> =
         questions_for_eva.iter().map(|issue| issue.number).collect();
@@ -223,6 +275,59 @@ fn run(cli: Cli) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+fn recover_stale_close_out(
+    repo_root: &Path,
+    state: &mut Value,
+    cycle: u64,
+    stale_issue: Option<u64>,
+    entered_at: &str,
+) -> Result<(), String> {
+    transition_cycle_phase(state, cycle, "complete")?;
+    write_state_value(repo_root, state)?;
+    let commit_message = format!(
+        "state(cycle-start): recover stale close-out for cycle {} [cycle {}]",
+        cycle, cycle
+    );
+    commit_state_json(repo_root, &commit_message)?;
+
+    let stale_issue = stale_issue
+        .ok_or_else(|| "missing /last_cycle/issue for stale close-out recovery".to_string())?;
+    close_stale_cycle_issue(stale_issue, cycle, entered_at)?;
+    Ok(())
+}
+
+fn close_stale_cycle_issue(issue: u64, cycle: u64, entered_at: &str) -> Result<(), String> {
+    let comment = build_stale_close_out_comment(cycle, entered_at);
+    let issue_arg = issue.to_string();
+    let output = Command::new("gh")
+        .arg("issue")
+        .arg("close")
+        .arg(issue_arg.as_str())
+        .arg("--repo")
+        .arg(MAIN_REPO)
+        .arg("--comment")
+        .arg(comment)
+        .output()
+        .map_err(|error| format!("failed to execute gh issue close: {}", error))?;
+
+    if output.status.success() {
+        return Ok(());
+    }
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    if stderr.to_ascii_lowercase().contains("already closed") {
+        return Ok(());
+    }
+
+    Err(command_failure_message("gh issue close", &output))
+}
+
+fn build_stale_close_out_comment(cycle: u64, entered_at: &str) -> String {
+    format!(
+        "> **[main-orchestrator]** | Cycle {cycle}\n\nThe orchestrator session terminated during close-out after entering the phase at {entered_at}. Recovery auto-completed the stale close-out so the next cycle can start cleanly."
+    )
 }
 
 fn read_typed_state_json(repo_root: &Path) -> Result<StateJson, String> {
@@ -1125,6 +1230,7 @@ mod tests {
         assert!(help.contains("--model"));
         assert!(help.contains("--repo-root"));
         assert!(help.contains("--json"));
+        assert!(help.contains("--stale-threshold"));
     }
 
     #[test]
@@ -1352,5 +1458,49 @@ mod tests {
         assert_eq!(parsed.get("cycle"), Some(&json!(219)));
         assert_eq!(parsed.get("phase"), Some(&json!("close_out")));
         assert_eq!(parsed.as_object().map(|obj| obj.len()), Some(3));
+    }
+
+    #[test]
+    fn stale_close_out_detected_when_threshold_is_met() {
+        let now = DateTime::parse_from_rfc3339("2026-03-13T06:00:00Z")
+            .expect("timestamp should parse")
+            .with_timezone(&Utc);
+
+        let detected = detect_stale_close_out(
+            Some("close_out"),
+            Some("2026-03-13T04:00:00Z"),
+            DEFAULT_STALE_THRESHOLD_SECS,
+            now,
+        )
+        .expect("stale detection should succeed");
+
+        assert_eq!(detected.as_deref(), Some("2026-03-13T04:00:00Z"));
+    }
+
+    #[test]
+    fn stale_close_out_not_detected_before_threshold() {
+        let now = DateTime::parse_from_rfc3339("2026-03-13T05:59:59Z")
+            .expect("timestamp should parse")
+            .with_timezone(&Utc);
+
+        let detected = detect_stale_close_out(
+            Some("close_out"),
+            Some("2026-03-13T04:00:00Z"),
+            DEFAULT_STALE_THRESHOLD_SECS,
+            now,
+        )
+        .expect("stale detection should succeed");
+
+        assert!(detected.is_none());
+    }
+
+    #[test]
+    fn stale_close_out_comment_is_signed_and_explains_recovery() {
+        let comment = build_stale_close_out_comment(241, "2026-03-13T01:15:00Z");
+
+        assert!(comment.starts_with("> **[main-orchestrator]** | Cycle 241"));
+        assert!(comment.contains("terminated during close-out"));
+        assert!(comment.contains("2026-03-13T01:15:00Z"));
+        assert!(comment.contains("Recovery auto-completed the stale close-out"));
     }
 }
