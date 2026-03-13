@@ -3102,6 +3102,13 @@
       "pr": 1153,
       "status": "merged",
       "title": "Stale close-out recovery for cycle-start"
+    },
+    {
+      "dispatched_at": "2026-03-13T08:34:15Z",
+      "issue": 1157,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 242 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -3285,21 +3292,21 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1152 Stale close-out recovery for cycle-start (cycle 242)",
-    "dispatch_to_pr_rate": "98.5%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1157 Cycle 242 end-of-cycle review (cycle 242)",
+    "dispatch_to_pr_rate": "98.3%",
+    "in_flight": 1,
     "merged": 334,
     "pr_merge_rate": "99.1%",
     "produced_pr": 337,
     "resolved": 342,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 342
+    "total_dispatches": 343
   },
   "cycle_phase": {
     "cycle": 242,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-13T08:28:17Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-13T08:34:15Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
