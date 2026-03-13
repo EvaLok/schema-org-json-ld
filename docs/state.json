@@ -3192,6 +3192,13 @@
       "pr": 1179,
       "status": "merged",
       "title": "Cycle 246 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-13T18:26:12Z",
+      "issue": 1182,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 247 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -3377,21 +3384,21 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1178 Cycle 246 end-of-cycle review (cycle 246)",
-    "dispatch_to_pr_rate": "98.6%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1182 Cycle 247 end-of-cycle review (cycle 247)",
+    "dispatch_to_pr_rate": "98.3%",
+    "in_flight": 1,
     "merged": 344,
     "pr_merge_rate": "99.1%",
     "produced_pr": 347,
     "resolved": 352,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 352
+    "total_dispatches": 353
   },
   "cycle_phase": {
     "cycle": 247,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-13T18:23:25Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-13T18:26:12Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
