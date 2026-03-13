@@ -373,6 +373,7 @@ fn validate_pipeline_check(state: &StateJson, cycle: u64) -> PipelineCheckStatus
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_state_patch(
     cycle: u64,
     issue: u64,
@@ -1350,11 +1351,11 @@ mod tests {
         );
         state.field_inventory.fields.insert(
             "publish_gate".to_string(),
-            json!({"last_refreshed": "cycle 120"}),
+            json!({"cadence": "every cycle when set (divergence check)", "last_refreshed": "cycle 120"}),
         );
         state.field_inventory.fields.insert(
             "review_agent".to_string(),
-            json!({"last_refreshed": "cycle 120"}),
+            json!({"cadence": "every cycle (updated when consuming review findings)", "last_refreshed": "cycle 120"}),
         );
 
         let patch = build_state_patch(
@@ -1387,8 +1388,8 @@ mod tests {
                     "last_cycle": {"last_refreshed": "cycle 120"},
                     "last_cycle.duration_minutes": {"last_refreshed": "cycle 120"},
                     "last_eva_comment_check": {"last_refreshed": "cycle 120"},
-                    "publish_gate": {"last_refreshed": "cycle 120"},
-                    "review_agent": {"last_refreshed": "cycle 120"}
+                    "publish_gate": {"cadence": "every cycle when set (divergence check)", "last_refreshed": "cycle 120"},
+                    "review_agent": {"cadence": "every cycle (updated when consuming review findings)", "last_refreshed": "cycle 120"}
                 }
             }
         });
@@ -1750,7 +1751,7 @@ mod tests {
             parsed
                 .pointer("/completion_steps/1/detail")
                 .and_then(Value::as_str),
-            Some("6 fields to update")
+            Some("9 fields to update")
         );
     }
 
