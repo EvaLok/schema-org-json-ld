@@ -277,6 +277,9 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
 	let pipeline_status = pipeline_overall_status(&steps);
 	steps.push(verify_doc_validation(repo_root, pipeline_status, runner));
 	steps.push(verify_step_comments(repo_root, runner));
+	// Doc validation runs before step-comments so it can pass the pre-step-comments
+	// pipeline status through to validate-docs. Reclassify afterward, once the real
+	// step-comments result is known, but before computing the final overall status.
 	reclassify_doc_validation_cascade(&mut steps);
 	let overall = pipeline_overall_status(&steps);
 	let has_blocking_findings = steps.iter().any(|step| step.status == StepStatus::Fail);
@@ -511,6 +514,12 @@ fn reclassify_doc_validation_cascade(steps: &mut [StepReport]) {
 }
 
 fn is_step_comments_pipeline_cascade(detail: &str) -> bool {
+	// Doc validation joins multiple failures with "; ". A cascade is only the single
+	// worklog pipeline-status mismatch that appears when validate-docs was given PASS
+	// but step-comments later flips the overall pipeline status to FAIL.
+	//
+	// This intentionally matches the current validate-docs error text rather than
+	// broadening the contract in this issue.
 	!detail.contains("; ")
 		&& detail.starts_with("worklog validation failed: pipeline status mismatch:")
 }
