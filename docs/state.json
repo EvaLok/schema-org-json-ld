@@ -3313,8 +3313,16 @@
       "dispatched_at": "2026-03-14T08:22:25Z",
       "issue": 1217,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "merged",
+      "pr": 1218,
       "title": "Cycle 254 review"
+    },
+    {
+      "dispatched_at": "2026-03-14T10:25:00Z",
+      "issue": 1220,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Build receipt-validate Rust tool"
     }
   ],
   "audit_dropped": [
@@ -3502,16 +3510,16 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1217 Cycle 254 review (cycle 254)",
+    "dispatch_log_latest": "#1220 receipt-validate tool (cycle 255)",
     "dispatch_to_pr_rate": "98.4%",
     "in_flight": 1,
-    "merged": 357,
+    "merged": 358,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 360,
-    "resolved": 365,
+    "produced_pr": 361,
+    "resolved": 366,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 366
+    "total_dispatches": 367
   },
   "cycle_phase": {
     "cycle": 255,
