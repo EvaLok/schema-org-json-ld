@@ -33,7 +33,7 @@
 ## Current state
 
 - **In-flight agent sessions**: 1
-- **Pipeline status**: PASS (2 warnings)
+- **Pipeline status**: FAIL (doc-validation: 1 post-worklog fix commit receipt structurally missing; 2 warnings: housekeeping, step-comments)
 - **Copilot metrics**: 379 dispatches, 373 PRs produced, 370 merged, 99.2% PR merge rate
 - **Publish gate**: published
 
