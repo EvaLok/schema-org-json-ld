@@ -3438,9 +3438,9 @@
     {
       "dispatched_at": "2026-03-14T20:26:14Z",
       "issue": 1253,
+      "merged_at": "2026-03-14T22:08:42Z",
       "model": "gpt-5.4",
       "pr": 1254,
-      "merged_at": "2026-03-14T22:08:42Z",
       "status": "merged",
       "title": "Cycle 260 end-of-cycle review"
     },
@@ -3647,12 +3647,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1258 Phase invariant and write-entry fix (cycle 261)",
-    "dispatch_to_pr_rate": "97.9%",
+    "dispatch_to_pr_rate": "98.2%",
     "in_flight": 2,
-    "merged": 371,
+    "merged": 372,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 374,
-    "resolved": 379,
+    "produced_pr": 375,
+    "resolved": 380,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 382
