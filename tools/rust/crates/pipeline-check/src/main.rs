@@ -2582,6 +2582,8 @@ mod tests {
 	#[test]
 	fn run_pipeline_respects_cycle_override_for_step_comments() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		const OVERRIDE_CYCLE: u64 = 254;
+		const CURRENT_CYCLE: u64 = 258;
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
 		let root = std::env::temp_dir()
 			.join(format!("pipeline-check-step-comments-cycle-override-{}", run_id));
@@ -2593,7 +2595,7 @@ mod tests {
 			root.join("docs/state.json"),
 			json!({
 				"previous_cycle_issue": 842,
-				"last_cycle": {"number": 258},
+				"last_cycle": {"number": CURRENT_CYCLE},
 				"cycle_phase": {"phase": "close_out"},
 				"copilot_metrics": {
 					"total_dispatches": 3,
@@ -2607,19 +2609,26 @@ mod tests {
 					"pr_merge_rate": "50.0%"
 				},
 				"review_agent": {
-					"last_review_cycle": 258
+					"last_review_cycle": CURRENT_CYCLE
 				}
 			})
 			.to_string(),
 		)
 		.unwrap();
 		fs::write(
-			root.join("docs/worklog").join(today).join("020304-cycle-258-summary.md"),
+			root
+				.join("docs/worklog")
+				.join(today)
+				.join(format!("020304-cycle-{}-summary.md", CURRENT_CYCLE)),
 			"latest worklog",
 		)
 		.unwrap();
 		fs::write(root.join("docs/journal").join(format!("{today}.md")), "# Journal\n").unwrap();
-		fs::write(root.join("docs/reviews/cycle-258.md"), "review").unwrap();
+		fs::write(
+			root.join(format!("docs/reviews/cycle-{}.md", CURRENT_CYCLE)),
+			"review",
+		)
+		.unwrap();
 
 		struct OverrideRunner;
 
@@ -2684,11 +2693,11 @@ mod tests {
 					.copied()
 					.filter(|step| *step != "C5.1")
 					.collect::<Vec<_>>();
-				Ok(step_comment_bodies(254, &steps))
+				Ok(step_comment_bodies(OVERRIDE_CYCLE, &steps))
 			}
 		}
 
-		let report = run_pipeline(&root, 254, &OverrideRunner);
+		let report = run_pipeline(&root, OVERRIDE_CYCLE, &OverrideRunner);
 		assert_eq!(report.steps[8].name, "step-comments");
 		assert_eq!(report.steps[8].status, StepStatus::Warn);
 		assert_eq!(report.steps[8].severity, Severity::Warning);
