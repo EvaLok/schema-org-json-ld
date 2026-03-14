@@ -4006,11 +4006,12 @@
         },
         {
           "added_cycle": 260,
+          "updated_cycle": 261,
           "category": "review-evidence",
           "chosen_path": "structural-fix",
-          "rationale": "Starting cycle 260, the orchestrator uses gh pr review --approve with a substantive review body on every PR before merging. This creates auditable GitHub review events. If the category persists after this change, the review agent spec should be updated to accept the new review evidence format.",
-          "root_cause": "Orchestrator claims PRs are reviewed in worklog/journal without leaving GitHub review events. The GhCommandRunner in tests is mocked, so gh CLI compatibility issues are invisible until runtime.",
-          "verification_cycle": 260
+          "rationale": "Two-part fix: (1) Behavioral: orchestrator now uses gh pr review --approve with substantive bodies before every merge (adopted cycle 260). (2) Enforceable: dispatching a state-invariants extension that verifies GitHub review events exist for all PRs merged in the current cycle. The behavioral fix alone is insufficient — it depends on the orchestrator remembering to run the command. The invariant check makes the requirement machine-verified.",
+          "root_cause": "Review events were optional and unverified. No tool, checklist step, or invariant confirmed that GitHub review events existed on PRs before merge. The orchestrator merged PRs with only worklog/journal claims of review, which are self-reported and not auditable.",
+          "verification_cycle": 261
         }
       ]
     },
