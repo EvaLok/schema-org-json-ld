@@ -3412,7 +3412,8 @@
     229,
     233,
     235,
-    237
+    237,
+    241
   ],
   "blockers": [
     {
@@ -3571,7 +3572,7 @@
       },
       "audit_processed": {
         "cadence": "after processing audit issues",
-        "last_refreshed": "cycle 248"
+        "last_refreshed": "cycle 253"
       },
       "blockers": {
         "cadence": "after blocker state changes",
@@ -5539,9 +5540,24 @@
         "finding_count": 3,
         "ignored": 0,
         "note": "F1 worklog-accuracy: deferred — write-entry plural PRs format fix needed (dispatch this cycle). F2 state-integrity: deferred — dedup guard narrowing needed (dispatch this cycle). F3 complacency-detection: deferred — disposition overstatement pattern needs structural fix."
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "regression-verification",
+          "worklog-accuracy",
+          "process-adherence",
+          "dispatch-quality"
+        ],
+        "complacency_score": 2,
+        "cycle": 252,
+        "deferred": 2,
+        "finding_count": 4,
+        "ignored": 0,
+        "note": "F1 regression-verification: deferred — regression evidence quality needs executable proof recorded in worklog. F2 worklog-accuracy: actioned — PR #1206 merged (receipt 7885269), receipt table completeness fix. F3 process-adherence: deferred — copilot_metrics hand-edit needs tool-driven repair path. F4 dispatch-quality: actioned — PR #1207 merged (receipt efd00a8), terminal-status allowlist covers dispatched status."
       }
     ],
-    "last_review_cycle": 251
+    "last_review_cycle": 252
   },
   "schema_status": {
     "directory_layout": {
