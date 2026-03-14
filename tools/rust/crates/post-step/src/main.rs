@@ -42,6 +42,10 @@ struct Cli {
 	#[arg(long)]
 	body_file: Option<PathBuf>,
 
+	/// Allow reposting a step ID even if it already exists on the issue
+	#[arg(long)]
+	force: bool,
+
 	/// Skip step ID validation for non-standard step names
 	#[arg(long)]
 	skip_validation: bool,
@@ -85,6 +89,16 @@ fn execute(cli: &Cli, runner: &dyn CommentPoster) -> Result<String, String> {
 	})?;
 	let body = resolve_body(cli)?;
 	let comment = format_comment(cycle, step, title, &body);
+
+	if !cli.force {
+		let existing_comments = runner.existing_comments(cli.issue)?;
+		if has_matching_step_comment(&existing_comments, step) {
+			return Err(format!(
+				"Step {step} already posted on issue #{}. Use a different step ID or --force to override.",
+				cli.issue
+			));
+		}
+	}
 
 	runner.post_comment(cli.issue, &comment)?;
 
@@ -175,13 +189,44 @@ fn format_comment(cycle: u64, step: &str, title: &str, body: &str) -> String {
 	)
 }
 
+fn has_matching_step_comment(existing_comments: &str, step: &str) -> bool {
+	let expected_suffix = format!("| Step {step}");
+
+	existing_comments.lines().any(|line| {
+		line.starts_with(&format!(
+			"> **{ORCHESTRATOR_SIGNATURE}** | Cycle "
+		)) && line.ends_with(&expected_suffix)
+	})
+}
+
 trait CommentPoster {
+	fn existing_comments(&self, issue: u64) -> Result<String, String>;
 	fn post_comment(&self, issue: u64, body: &str) -> Result<(), String>;
 }
 
 struct GhCommandRunner;
 
 impl CommentPoster for GhCommandRunner {
+	fn existing_comments(&self, issue: u64) -> Result<String, String> {
+		let output = Command::new("gh")
+			.arg("api")
+			.arg(format!("repos/{MAIN_REPO}/issues/{issue}/comments"))
+			.arg("--paginate")
+			.arg("--jq")
+			.arg(".[].body")
+			.stdout(Stdio::piped())
+			.stderr(Stdio::piped())
+			.output()
+			.map_err(|error| format!("failed to execute gh api: {}", error))?;
+
+		if !output.status.success() {
+			return Err(command_failure_message("gh api", &output));
+		}
+
+		String::from_utf8(output.stdout)
+			.map_err(|error| format!("gh api returned non-UTF-8 comment bodies: {}", error))
+	}
+
 	fn post_comment(&self, issue: u64, body: &str) -> Result<(), String> {
 		let payload = serde_json::to_vec(&json!({ "body": body }))
 			.map_err(|error| format!("failed to serialize comment payload: {}", error))?;
@@ -244,21 +289,45 @@ mod tests {
 
 	struct RecordingPoster {
 		body: std::sync::Mutex<Vec<String>>,
-		error: Option<String>,
+		existing_comments: String,
+		fetch_error: Option<String>,
+		post_error: Option<String>,
 	}
 
 	impl RecordingPoster {
 		fn success() -> Self {
 			Self {
 				body: std::sync::Mutex::new(Vec::new()),
-				error: None,
+				existing_comments: String::new(),
+				fetch_error: None,
+				post_error: None,
+			}
+		}
+
+		fn with_existing_comments(existing_comments: &str) -> Self {
+			Self {
+				body: std::sync::Mutex::new(Vec::new()),
+				existing_comments: existing_comments.to_string(),
+				fetch_error: None,
+				post_error: None,
 			}
 		}
 
 		fn failing(error: &str) -> Self {
 			Self {
 				body: std::sync::Mutex::new(Vec::new()),
-				error: Some(error.to_string()),
+				existing_comments: String::new(),
+				fetch_error: None,
+				post_error: Some(error.to_string()),
+			}
+		}
+
+		fn fetch_failing(error: &str) -> Self {
+			Self {
+				body: std::sync::Mutex::new(Vec::new()),
+				existing_comments: String::new(),
+				fetch_error: Some(error.to_string()),
+				post_error: None,
 			}
 		}
 
@@ -268,8 +337,16 @@ mod tests {
 	}
 
 	impl CommentPoster for RecordingPoster {
+		fn existing_comments(&self, _issue: u64) -> Result<String, String> {
+			if let Some(error) = &self.fetch_error {
+				return Err(error.clone());
+			}
+
+			Ok(self.existing_comments.clone())
+		}
+
 		fn post_comment(&self, _issue: u64, body: &str) -> Result<(), String> {
-			if let Some(error) = &self.error {
+			if let Some(error) = &self.post_error {
 				return Err(error.clone());
 			}
 
@@ -298,6 +375,7 @@ mod tests {
 			title: "Check for input-from-eva issues".to_string(),
 			body: Some("Found 2 open issues.".to_string()),
 			body_file: None,
+			force: false,
 			skip_validation: false,
 			repo_root: repo_root.clone(),
 		};
@@ -327,6 +405,7 @@ mod tests {
 			title: "Summarize completion checks".to_string(),
 			body: None,
 			body_file: Some(body_path),
+			force: false,
 			skip_validation: false,
 			repo_root: repo_root.clone(),
 		};
@@ -353,6 +432,7 @@ mod tests {
 			title: "Check for input-from-eva issues".to_string(),
 			body: Some("Found 2 open issues.".to_string()),
 			body_file: None,
+			force: false,
 			skip_validation: false,
 			repo_root: repo_root.clone(),
 		};
@@ -376,6 +456,7 @@ mod tests {
 			title: "Check for input-from-eva issues".to_string(),
 			body: Some("Found 2 open issues.".to_string()),
 			body_file: None,
+			force: false,
 			skip_validation: false,
 			repo_root: repo_root.clone(),
 		};
@@ -465,6 +546,7 @@ mod tests {
 			title: "Non-standard step".to_string(),
 			body: Some("Posted intentionally.".to_string()),
 			body_file: None,
+			force: false,
 			skip_validation: true,
 			repo_root: repo_root.clone(),
 		};
@@ -485,6 +567,7 @@ mod tests {
 			title: "Whitespace step".to_string(),
 			body: Some("Body.".to_string()),
 			body_file: None,
+			force: false,
 			skip_validation: false,
 			repo_root: repo_root.clone(),
 		};
@@ -507,8 +590,159 @@ mod tests {
 		assert!(help.contains("--title"));
 		assert!(help.contains("--body"));
 		assert!(help.contains("--body-file"));
+		assert!(help.contains("--force"));
 		assert!(help.contains("--skip-validation"));
 		assert!(help.contains("--repo-root"));
+	}
+
+	#[test]
+	fn execute_allows_posting_when_no_existing_comments_exist() {
+		let repo_root = temp_repo_root("post-step-no-existing-comments");
+		write_state_json(&repo_root, r#"{"last_cycle":{"number":198}}"#);
+		let cli = Cli {
+			issue: 834,
+			step: "1".to_string(),
+			title: "Check for input-from-eva issues".to_string(),
+			body: Some("Found 2 open issues.".to_string()),
+			body_file: None,
+			force: false,
+			skip_validation: false,
+			repo_root: repo_root.clone(),
+		};
+		let poster = RecordingPoster::with_existing_comments("");
+
+		let result = execute(&cli, &poster).expect("execute should succeed");
+
+		assert_eq!(result, "Step 1 posted to EvaLok/schema-org-json-ld#834");
+		assert_eq!(poster.posted_bodies().len(), 1);
+	}
+
+	#[test]
+	fn execute_allows_posting_when_different_step_exists() {
+		let repo_root = temp_repo_root("post-step-different-step");
+		write_state_json(&repo_root, r#"{"last_cycle":{"number":198}}"#);
+		let cli = Cli {
+			issue: 834,
+			step: "1".to_string(),
+			title: "Check for input-from-eva issues".to_string(),
+			body: Some("Found 2 open issues.".to_string()),
+			body_file: None,
+			force: false,
+			skip_validation: false,
+			repo_root: repo_root.clone(),
+		};
+		let poster = RecordingPoster::with_existing_comments(
+			"> **[main-orchestrator]** | Cycle 197 | Step 5.11\n\n### Summarize completion checks\n\nDone.",
+		);
+
+		let result = execute(&cli, &poster).expect("execute should succeed");
+
+		assert_eq!(result, "Step 1 posted to EvaLok/schema-org-json-ld#834");
+		assert_eq!(poster.posted_bodies().len(), 1);
+	}
+
+	#[test]
+	fn execute_rejects_duplicate_step_ids() {
+		let repo_root = temp_repo_root("post-step-duplicate-step");
+		write_state_json(&repo_root, r#"{"last_cycle":{"number":198}}"#);
+		let cli = Cli {
+			issue: 834,
+			step: "1".to_string(),
+			title: "Check for input-from-eva issues".to_string(),
+			body: Some("Found 2 open issues.".to_string()),
+			body_file: None,
+			force: false,
+			skip_validation: false,
+			repo_root: repo_root.clone(),
+		};
+		let poster = RecordingPoster::with_existing_comments(
+			"> **[main-orchestrator]** | Cycle 197 | Step 1\n\n### Earlier update\n\nAlready posted.",
+		);
+
+		let error = execute(&cli, &poster).expect_err("duplicate step should fail");
+
+		assert_eq!(
+			error,
+			"Step 1 already posted on issue #834. Use a different step ID or --force to override."
+		);
+		assert!(poster.posted_bodies().is_empty());
+	}
+
+	#[test]
+	fn execute_allows_duplicate_step_ids_with_force() {
+		let repo_root = temp_repo_root("post-step-force-duplicate");
+		write_state_json(&repo_root, r#"{"last_cycle":{"number":198}}"#);
+		let cli = Cli {
+			issue: 834,
+			step: "1".to_string(),
+			title: "Check for input-from-eva issues".to_string(),
+			body: Some("Found 2 open issues.".to_string()),
+			body_file: None,
+			force: true,
+			skip_validation: false,
+			repo_root: repo_root.clone(),
+		};
+		let poster = RecordingPoster::with_existing_comments(
+			"> **[main-orchestrator]** | Cycle 197 | Step 1\n\n### Earlier update\n\nAlready posted.",
+		);
+
+		let result = execute(&cli, &poster).expect("force should bypass duplicate detection");
+
+		assert_eq!(result, "Step 1 posted to EvaLok/schema-org-json-ld#834");
+		assert_eq!(poster.posted_bodies().len(), 1);
+	}
+
+	#[test]
+	fn execute_rejects_duplicate_step_ids_when_one_of_multiple_comments_matches() {
+		let repo_root = temp_repo_root("post-step-one-of-many-duplicate");
+		write_state_json(&repo_root, r#"{"last_cycle":{"number":198}}"#);
+		let cli = Cli {
+			issue: 834,
+			step: "1".to_string(),
+			title: "Check for input-from-eva issues".to_string(),
+			body: Some("Found 2 open issues.".to_string()),
+			body_file: None,
+			force: false,
+			skip_validation: false,
+			repo_root: repo_root.clone(),
+		};
+		let poster = RecordingPoster::with_existing_comments(
+			concat!(
+				"General discussion comment\n",
+				"> **[main-orchestrator]** | Cycle 197 | Step 5.11\n\n### Different step\n\nDone.\n",
+				"> **[main-orchestrator]** | Cycle 198 | Step 1\n\n### Matching step\n\nAlready posted."
+			),
+		);
+
+		let error = execute(&cli, &poster).expect_err("matching duplicate should fail");
+
+		assert_eq!(
+			error,
+			"Step 1 already posted on issue #834. Use a different step ID or --force to override."
+		);
+		assert!(poster.posted_bodies().is_empty());
+	}
+
+	#[test]
+	fn execute_fails_closed_when_existing_comment_lookup_fails() {
+		let repo_root = temp_repo_root("post-step-existing-comment-lookup-error");
+		write_state_json(&repo_root, r#"{"last_cycle":{"number":198}}"#);
+		let cli = Cli {
+			issue: 834,
+			step: "1".to_string(),
+			title: "Check for input-from-eva issues".to_string(),
+			body: Some("Found 2 open issues.".to_string()),
+			body_file: None,
+			force: false,
+			skip_validation: false,
+			repo_root: repo_root.clone(),
+		};
+		let poster = RecordingPoster::fetch_failing("gh api failed with status 1: rate limited");
+
+		let error = execute(&cli, &poster).expect_err("lookup failure should fail");
+
+		assert_eq!(error, "gh api failed with status 1: rate limited");
+		assert!(poster.posted_bodies().is_empty());
 	}
 
 	fn temp_repo_root(prefix: &str) -> PathBuf {
