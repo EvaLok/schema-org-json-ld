@@ -5475,9 +5475,23 @@
         "finding_count": 4,
         "ignored": 0,
         "note": "F1 process-adherence: actioned — adding C2/C4.5 to MANDATORY_STEP_IDS this cycle. F2 worklog-accuracy: deferred — requires write-entry tooling improvement. F3 journal-quality: deferred — same root cause as F2, phantom receipt hashes. F4 complacency-detection: actioned — will not claim chronic closure until checker/checklist/behavior align."
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "worklog-accuracy",
+          "state-integrity",
+          "complacency-detection"
+        ],
+        "complacency_score": 2,
+        "cycle": 250,
+        "deferred": 1,
+        "finding_count": 3,
+        "ignored": 0,
+        "note": "F1 worklog-accuracy: actioned — merged PR #1197 (write-entry auto-derives PRs merged/reviewed, validates receipt SHAs). F2 state-integrity: actioned — fixed dispatch-review/record-dispatch double-write with dedup guard in apply_dispatch_patch (commit 8cac295). F3 complacency-detection: deferred — narrowing journal claims to match actual dispatch scope."
       }
     ],
-    "last_review_cycle": 249
+    "last_review_cycle": 250
   },
   "schema_status": {
     "directory_layout": {
