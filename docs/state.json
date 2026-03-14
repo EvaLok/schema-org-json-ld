@@ -3535,8 +3535,8 @@
   },
   "cycle_phase": {
     "cycle": 256,
-    "phase": "work",
-    "phase_entered_at": "2026-03-14T12:07:16Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-14T12:19:37Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -3641,7 +3641,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 255"
+        "last_refreshed": "cycle 256"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -3653,7 +3653,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 255"
+        "last_refreshed": "cycle 256"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -3673,7 +3673,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 255"
+        "last_refreshed": "cycle 256"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -3681,7 +3681,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 255"
+        "last_refreshed": "cycle 256"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -3709,7 +3709,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 255"
+        "last_refreshed": "cycle 256"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -3778,13 +3778,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 21,
+    "duration_minutes": 12,
     "issue": 1224,
     "number": 256,
-    "summary": "Structural receipt-scope fix for chronic worklog-accuracy (8+ reviews). Merged PR #1218 (review artifact). Dispatched #1220 (receipt-validate tool). Updated checklist, review spec, and tools.",
-    "timestamp": "2026-03-14T12:07:16Z"
+    "summary": "Merged 2 PRs (#1221 receipt-validate tool, #1223 cycle 255 review artifact), consumed cycle 255 review (5 findings, complacency 2/5, 1 actioned/4 deferred), promoted C5.1 to mandatory in pipeline-check, fixed cycle 255 phase transition, deleted 2 dead branches",
+    "timestamp": "2026-03-14T12:19:37Z"
   },
-  "last_eva_comment_check": "2026-03-14T12:07:16Z",
+  "last_eva_comment_check": "2026-03-14T12:19:37Z",
   "last_tool_audit_cycle": 236,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
