@@ -1,5 +1,5 @@
 use clap::{ArgGroup, Parser};
-use serde_json::json;
+use serde_json::{json, Value};
 use state_schema::current_cycle_from_state;
 use std::fs;
 use std::io::Write;
@@ -215,9 +215,6 @@ impl CommentPoster for GhCommandRunner {
 			.arg("api")
 			.arg(format!("repos/{MAIN_REPO}/issues/{issue}/comments"))
 			.arg("--paginate")
-			.arg("--slurp")
-			.arg("--jq")
-			.arg("[.[].[] | .body]")
 			.stdout(Stdio::piped())
 			.stderr(Stdio::piped())
 			.output()
@@ -227,8 +224,21 @@ impl CommentPoster for GhCommandRunner {
 			return Err(command_failure_message("gh api", &output));
 		}
 
-		serde_json::from_slice(&output.stdout)
-			.map_err(|error| format!("failed to parse gh api comment bodies: {}", error))
+		// --paginate without --slurp outputs concatenated JSON arrays.
+		// Parse as a single array first; fall back to stream-parsing if needed.
+		let raw = String::from_utf8_lossy(&output.stdout);
+		let comments: Vec<Value> = serde_json::from_str(&raw).unwrap_or_else(|_| {
+			// Paginated output may concatenate arrays: [{...}][{...}]
+			// Wrap in an outer array and flatten.
+			let wrapped = format!("[{}]", raw.replace("][", ","));
+			serde_json::from_str::<Vec<Value>>(&wrapped)
+				.unwrap_or_default()
+		});
+
+		Ok(comments
+			.iter()
+			.filter_map(|comment| comment.get("body").and_then(|v| v.as_str()).map(String::from))
+			.collect())
 	}
 
 	fn post_comment(&self, issue: u64, body: &str) -> Result<(), String> {
