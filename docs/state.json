@@ -3634,8 +3634,8 @@
   },
   "cycle_phase": {
     "cycle": 260,
-    "phase": "complete",
-    "phase_entered_at": "2026-03-14T20:17:53Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-14T20:18:36Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -3740,7 +3740,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 259"
+        "last_refreshed": "cycle 260"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -3752,7 +3752,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 259"
+        "last_refreshed": "cycle 260"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -3772,7 +3772,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 259"
+        "last_refreshed": "cycle 260"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -3780,7 +3780,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 259"
+        "last_refreshed": "cycle 260"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -3808,7 +3808,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 259"
+        "last_refreshed": "cycle 260"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -3877,13 +3877,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 16,
+    "duration_minutes": 13,
     "issue": 1250,
     "number": 260,
-    "summary": "Merged 3 PRs (#1241 review artifact, #1237 cascade detection, #1239 patch-pipeline). Consumed cycle 258 review (4 findings, 2/5 complacency, all deferred). Accepted audit #247 (post-step dedup). Dispatched #1244 (post-step dedup) and #1246 (pipeline-check cycle threading). Refreshed tool_pipeline field. Cleaned 3 dead branches.",
-    "timestamp": "2026-03-14T20:05:19Z"
+    "summary": "Merged 3 PRs (#1249 review artifact, #1245 post-step dedup, #1247 cycle threading). Consumed c259 review (3 findings, 3/5 complacency, all deferred). Closed audit-inbound #1243. Dispatched #1251 (cascade broadening). Left auditable GitHub review events on both PRs per c259 finding #2.",
+    "timestamp": "2026-03-14T20:18:36Z"
   },
-  "last_eva_comment_check": "2026-03-14T20:05:19Z",
+  "last_eva_comment_check": "2026-03-14T20:18:36Z",
   "last_tool_audit_cycle": 236,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
@@ -3996,6 +3996,14 @@
           "rationale": "journal-quality findings in cycles 244-249 are critical (phantom receipt hashes, premature closure claims, disposition language inaccuracies). Unlike the cycle 161 recalibration (positive confirmatory findings), these are genuine defects. The root cause is manual journal generation — receipt hashes copied from memory, disposition language not validated against authoritative sources. The structural fix is improving write-entry to auto-derive journal receipt data from cycle-receipts output and validate disposition language against state.json. This is the same root cause as chronic worklog-accuracy. Partial fix merged (write-entry PR #1197 cycle 251). Remaining root cause: stale commitments generated before close-out steps complete. Category persists at 3 reviews since cycle 250.",
           "root_cause": "Journal follow-through receipts and disposition claims are hand-written by the orchestrator rather than derived from cycle-receipts or state.json. This produces phantom hashes (F3 cycle 249) and premature closure claims (F4 cycle 249).",
           "verification_cycle": 257
+        },
+        {
+          "added_cycle": 260,
+          "category": "review-evidence",
+          "chosen_path": "structural-fix",
+          "rationale": "Starting cycle 260, the orchestrator uses gh pr review --approve with a substantive review body on every PR before merging. This creates auditable GitHub review events. If the category persists after this change, the review agent spec should be updated to accept the new review evidence format.",
+          "root_cause": "Orchestrator claims PRs are reviewed in worklog/journal without leaving GitHub review events. The GhCommandRunner in tests is mocked, so gh CLI compatibility issues are invisible until runtime.",
+          "verification_cycle": 260
         }
       ]
     },
