@@ -2625,6 +2625,17 @@ mod tests {
     }
 
     #[test]
+    fn issue_reference_looks_like_pr_rejects_issue_tokens() {
+        for subject in [
+            "state(cycle-start): issue EvaLok/schema-org-json-ld#537 tracked [cycle 154]",
+            "state(cycle-start): issues EvaLok/schema-org-json-ld#537, EvaLok/schema-org-json-ld#538 tracked [cycle 154]",
+        ] {
+            let hash_index = subject.rfind('#').unwrap();
+            assert!(!issue_reference_looks_like_pr(subject, hash_index));
+        }
+    }
+
+    #[test]
     fn parse_cycle_receipts_output_rejects_invalid_json_shape() {
         let error = parse_cycle_receipts_output(r#"{"step":"cycle-start","receipt":"abc1234"}"#)
             .unwrap_err();
