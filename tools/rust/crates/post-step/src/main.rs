@@ -430,7 +430,13 @@ mod tests {
 
 	#[test]
 	fn range_step_ids_are_rejected_with_specific_error() {
-		for (step, from_step, to_step) in [("4-5", "4", "5"), ("6-8", "6", "8"), ("1-3", "1", "3")] {
+		for (step, from_step, to_step) in [
+			("4-5", "4", "5"),
+			("6-8", "6", "8"),
+			("1-3", "1", "3"),
+			("1.1-1.5", "1.1", "1.5"),
+			("step4-5", "step4", "5"),
+		] {
 			let error = validate_step_id(step).expect_err("range should be rejected");
 			assert_eq!(
 				error,
@@ -439,6 +445,14 @@ mod tests {
 				)
 			);
 		}
+	}
+
+	#[test]
+	fn range_token_helpers_extract_expected_tokens() {
+		assert_eq!(step_token_suffix("step4"), "step4");
+		assert_eq!(step_token_suffix("prefix step4.1"), "step4.1");
+		assert_eq!(step_token_prefix("5"), "5");
+		assert_eq!(step_token_prefix("5.13 suffix"), "5.13");
 	}
 
 	#[test]
