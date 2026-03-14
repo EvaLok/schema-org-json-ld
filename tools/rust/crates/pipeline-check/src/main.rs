@@ -2481,7 +2481,7 @@ mod tests {
 	#[test]
 	fn step_comments_pipeline_cascade_matches_pipeline_mismatch_with_shallow_clone_error() {
 		assert!(is_step_comments_pipeline_cascade(
-			"shallow clone cannot find cycle-complete commit abc1234; worklog validation failed: pipeline status mismatch: worklog reports 'PASS', pipeline-check overall is 'fail'",
+			"worklog validation failed: shallow clone cannot find cycle-complete commit abc1234; pipeline status mismatch: worklog reports 'PASS', pipeline-check overall is 'fail'",
 		));
 	}
 
