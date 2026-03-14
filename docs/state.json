@@ -3432,6 +3432,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Broaden cascade detection to handle multi-cause doc-validation failures"
+    },
+    {
+      "dispatched_at": "2026-03-14T20:26:14Z",
+      "issue": 1253,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 260 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -3621,21 +3628,21 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1251 Broaden cascade detection to handle multi-cause doc-validation failures (cycle 260)",
-    "dispatch_to_pr_rate": "98.4%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1253 Cycle 260 end-of-cycle review (cycle 260)",
+    "dispatch_to_pr_rate": "98.2%",
+    "in_flight": 2,
     "merged": 370,
     "pr_merge_rate": "99.2%",
     "produced_pr": 373,
     "resolved": 378,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 379
+    "total_dispatches": 380
   },
   "cycle_phase": {
     "cycle": 260,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-14T20:18:36Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-14T20:26:14Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
