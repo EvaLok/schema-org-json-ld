@@ -842,8 +842,13 @@ fn issue_reference_looks_like_pr(item: &str, hash_index: usize) -> bool {
     let prefix = item[..hash_index].trim_end();
     let mut tokens = prefix.rsplit(|character: char| !character.is_ascii_alphabetic());
     tokens
-        .find(|token| !token.is_empty())
-        .is_some_and(|token| token.eq_ignore_ascii_case("pr"))
+        .find_map(|token| match token.to_ascii_lowercase().as_str() {
+            "" => None,
+            "pr" | "prs" => Some(true),
+            "issue" | "issues" => Some(false),
+            _ => None,
+        })
+        .unwrap_or(false)
 }
 
 fn derive_self_modifications(repo_root: &Path, cycle: u64) -> Result<Vec<SelfModification>, String> {
@@ -2597,12 +2602,40 @@ mod tests {
             r#"[
                 {"step":"cycle-start","receipt":"abc1234","commit":"state(cycle-start): begin cycle 154 [cycle 154]"},
                 {"step":"process-merge","receipt":"def5678","commit":"state(process-merge): PR #537, PR #543 merged [cycle 154]"},
-                {"tool":"process-merge","hash":"fedcba9","message":"state(process-merge): PR #543, PR #544 merged [cycle 154]"}
+                {"tool":"process-merge","hash":"fedcba9","message":"state(process-merge): PRs EvaLok/schema-org-json-ld#1199, EvaLok/schema-org-json-ld#1197 merged [cycle 251]"},
+                {"step":"process-merge","receipt":"7654321","commit":"state(process-merge): PRs EvaLok/schema-org-json-ld#100 merged [cycle 50]"}
             ]"#,
         )
         .unwrap();
 
-        assert_eq!(prs, vec![537, 543, 544]);
+        assert_eq!(prs, vec![537, 543, 1199, 1197, 100]);
+    }
+
+    #[test]
+    fn issue_reference_looks_like_pr_accepts_singular_and_plural_tokens() {
+        for subject in [
+            "state(process-merge): PR EvaLok/schema-org-json-ld#537 merged [cycle 154]",
+            "state(process-merge): pr EvaLok/schema-org-json-ld#537 merged [cycle 154]",
+            "state(process-merge): PRs EvaLok/schema-org-json-ld#537 merged [cycle 154]",
+            "state(process-merge): prs EvaLok/schema-org-json-ld#537 merged [cycle 154]",
+        ] {
+            let hash_index = subject.find('#').unwrap();
+            assert!(issue_reference_looks_like_pr(subject, hash_index));
+        }
+    }
+
+    #[test]
+    fn issue_reference_looks_like_pr_rejects_issue_tokens() {
+        for subject in [
+            "state(cycle-start): issue EvaLok/schema-org-json-ld#537 tracked [cycle 154]",
+            "state(cycle-start): issues EvaLok/schema-org-json-ld#537, EvaLok/schema-org-json-ld#538 tracked [cycle 154]",
+        ] {
+            for (hash_index, character) in subject.char_indices() {
+                if character == '#' {
+                    assert!(!issue_reference_looks_like_pr(subject, hash_index));
+                }
+            }
+        }
     }
 
     #[test]
