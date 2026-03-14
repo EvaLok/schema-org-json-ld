@@ -19,9 +19,9 @@ const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const STEP_COMMENT_THRESHOLD: usize = 17;
 const ORCHESTRATOR_SIGNATURE: &str = "> **[main-orchestrator]**";
-const MANDATORY_STEP_IDS: [&str; 21] = [
+const MANDATORY_STEP_IDS: [&str; 22] = [
 	"0", "0.5", "1", "2", "3", "4", "5", "6", "7", "8", "9", "C1", "C2", "C3", "C4.1",
-	"C4.5", "C5", "C5.5", "C6", "C7", "C8",
+	"C4.5", "C5", "C5.1", "C5.5", "C6", "C7", "C8",
 ];
 // Keep this list aligned with the orchestrator checklist steps that are expected to
 // produce post-step comments. The pass threshold stays lower because some steps are
@@ -2538,7 +2538,7 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("missing mandatory [7, 8, 9, C1, C2, C3, C4.1, C4.5, C5, C5.5, C6, C7, C8]"));
+			.contains("missing mandatory [7, 8, 9, C1, C2, C3, C4.1, C4.5, C5, C5.1, C5.5, C6, C7, C8]"));
 	}
 
 	#[test]
@@ -2594,7 +2594,7 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("missing mandatory [0.5, 1, 2, 3, 4, 6, 7, 8, 9, C1, C2, C3, C4.1, C4.5, C5, C5.5, C6, C7, C8]"));
+			.contains("missing mandatory [0.5, 1, 2, 3, 4, 6, 7, 8, 9, C1, C2, C3, C4.1, C4.5, C5, C5.1, C5.5, C6, C7, C8]"));
 		assert!(step
 			.detail
 			.as_deref()
