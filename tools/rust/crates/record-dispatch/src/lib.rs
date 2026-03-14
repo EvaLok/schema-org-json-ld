@@ -247,11 +247,25 @@ pub fn apply_dispatch_patch(state: &mut Value, patch: &DispatchPatch) -> Result<
         "copilot_metrics.dispatch_to_pr_rate",
         &cycle_marker,
     )?;
-    state
+    let sessions = state
         .pointer_mut("/agent_sessions")
         .and_then(Value::as_array_mut)
-        .ok_or_else(|| "missing array /agent_sessions in docs/state.json".to_string())?
-        .push(patch.agent_session.clone());
+        .ok_or_else(|| "missing array /agent_sessions in docs/state.json".to_string())?;
+    let new_issue = patch
+        .agent_session
+        .get("issue")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| "agent_session missing 'issue' field".to_string())?;
+    let duplicate = sessions.iter().any(|s| {
+        s.get("issue").and_then(Value::as_u64) == Some(new_issue)
+    });
+    if duplicate {
+        return Err(format!(
+            "agent_sessions already contains an entry for issue #{}; refusing to create duplicate",
+            new_issue
+        ));
+    }
+    sessions.push(patch.agent_session.clone());
 
     Ok(())
 }
@@ -519,7 +533,7 @@ mod tests {
         let patch = build_dispatch_patch(
             &state,
             164,
-            602,
+            603,
             "Example dispatch",
             &model,
             "2026-03-07T13:00:00Z",
@@ -542,7 +556,7 @@ mod tests {
         assert_eq!(state["copilot_metrics"]["pr_merge_rate"], json!("100.0%"));
         assert_eq!(
             state["copilot_metrics"]["dispatch_log_latest"],
-            json!("#602 Example dispatch (cycle 164)")
+            json!("#603 Example dispatch (cycle 164)")
         );
         assert_eq!(
             state["copilot_metrics"]["dispatch_to_pr_rate"],
@@ -561,9 +575,28 @@ mod tests {
                 ["last_refreshed"],
             json!("cycle 164")
         );
-        assert_eq!(sessions[2]["issue"], json!(602));
+        assert_eq!(sessions[2]["issue"], json!(603));
         assert_eq!(sessions[2]["status"], json!("in_flight"));
         assert_eq!(sessions[2]["dispatched_at"], json!("2026-03-07T13:00:00Z"));
+    }
+
+    #[test]
+    fn apply_dispatch_patch_rejects_duplicate_issue() {
+        let mut state = sample_state();
+        let model = default_test_model();
+        let patch = build_dispatch_patch(
+            &state,
+            164,
+            601,
+            "Duplicate dispatch",
+            &model,
+            "2026-03-07T13:00:00Z",
+        )
+        .expect("patch should build");
+
+        let error = apply_dispatch_patch(&mut state, &patch)
+            .expect_err("duplicate issue should be rejected");
+        assert!(error.contains("already contains an entry for issue #601"));
     }
 
     #[test]
@@ -581,7 +614,7 @@ mod tests {
         let patch = build_dispatch_patch(
             &state,
             164,
-            602,
+            603,
             "Example dispatch",
             &model,
             "2026-03-07T13:00:00Z",
@@ -599,7 +632,7 @@ mod tests {
         assert_eq!(state["copilot_metrics"]["in_flight"], json!(1));
         assert_eq!(
             state["copilot_metrics"]["dispatch_log_latest"],
-            json!("#602 Example dispatch (cycle 164)")
+            json!("#603 Example dispatch (cycle 164)")
         );
     }
 
