@@ -19,9 +19,29 @@ const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const STEP_COMMENT_THRESHOLD: usize = 17;
 const ORCHESTRATOR_SIGNATURE: &str = "> **[main-orchestrator]**";
-const MANDATORY_STEP_IDS: [&str; 22] = [
-	"0", "0.5", "1", "2", "3", "4", "5", "6", "7", "8", "9", "C1", "C2", "C3", "C4.1",
-	"C4.5", "C5", "C5.1", "C5.5", "C6", "C7", "C8",
+const MANDATORY_STEPS: [(&str, u64); 22] = [
+	("0", 0),
+	("0.5", 0),
+	("1", 0),
+	("2", 0),
+	("3", 0),
+	("4", 0),
+	("5", 0),
+	("6", 0),
+	("7", 0),
+	("8", 0),
+	("9", 0),
+	("C1", 0),
+	("C2", 0),
+	("C3", 0),
+	("C4.1", 0),
+	("C4.5", 0),
+	("C5", 0),
+	("C5.1", 256),
+	("C5.5", 0),
+	("C6", 0),
+	("C7", 0),
+	("C8", 0),
 ];
 // Keep this list aligned with the orchestrator checklist steps that are expected to
 // produce post-step comments. The pass threshold stays lower because some steps are
@@ -769,7 +789,21 @@ fn verify_step_comments(repo_root: &Path, runner: &dyn CommandRunner) -> StepRep
 			};
 		}
 	};
-	let issue_assessment = assess_step_comment_completeness(&found);
+	let cycle = match current_cycle_from_state(repo_root) {
+		Ok(cycle) => cycle,
+		Err(error) => {
+			return StepReport {
+				name: STEP_COMMENTS_STEP_NAME,
+				status: StepStatus::Error,
+				severity: Severity::Blocking,
+				exit_code: None,
+				detail: Some(error),
+				findings: None,
+				summary: None,
+			};
+		}
+	};
+	let issue_assessment = assess_step_comment_completeness(&found, cycle);
 
 	StepReport {
 		name: STEP_COMMENTS_STEP_NAME,
@@ -815,12 +849,21 @@ fn format_step_id_list(step_ids: &[&str]) -> String {
 	}
 }
 
-fn assess_step_comment_completeness(found: &BTreeSet<&'static str>) -> StepCommentAssessment {
+fn is_mandatory_step_for_cycle(step: &str, cycle: u64) -> bool {
+	MANDATORY_STEPS
+		.iter()
+		.any(|(mandatory_step, effective_from_cycle)| *mandatory_step == step && *effective_from_cycle <= cycle)
+}
+
+fn assess_step_comment_completeness(
+	found: &BTreeSet<&'static str>,
+	cycle: u64,
+) -> StepCommentAssessment {
 	let found_ids = ordered_found_step_ids(found);
 	let missing = missing_expected_step_ids(found);
 	let (mandatory_missing, optional_missing): (Vec<_>, Vec<_>) = missing
 		.into_iter()
-		.partition(|step| MANDATORY_STEP_IDS.contains(step));
+		.partition(|step| is_mandatory_step_for_cycle(step, cycle));
 	let detail = format!(
 		"found {} unique step comments [{}]; missing mandatory [{}]; missing optional [{}]",
 		found.len(),
@@ -2490,7 +2533,10 @@ mod tests {
 			root.join("docs/state.json"),
 			json!({
 				"previous_cycle_issue": 834,
-				"last_cycle": { "issue": 999 }
+				"last_cycle": {
+					"issue": 999,
+					"number": 257
+				}
 			})
 			.to_string(),
 		)
@@ -2552,6 +2598,9 @@ mod tests {
 			root.join("docs/state.json"),
 			json!({
 				"previous_cycle_issue": 996,
+				"last_cycle": {
+					"number": 257
+				},
 				"cycle_phase": {
 					"phase": "close_out"
 				}
@@ -2669,6 +2718,152 @@ mod tests {
 	}
 
 	#[test]
+	fn step_comment_verification_does_not_require_c5_1_before_cycle_256() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir()
+			.join(format!("pipeline-check-step-comments-pre-c51-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 839,
+				"last_cycle": {
+					"number": 254
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct StepCommentRunner;
+
+		impl CommandRunner for StepCommentRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected in step comment verification test");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 839);
+				let steps = EXPECTED_STEP_IDS
+					.iter()
+					.copied()
+					.filter(|step| *step != "C5.1")
+					.collect::<Vec<_>>();
+				Ok(step_comment_bodies(254, &steps))
+			}
+		}
+
+		let step = verify_step_comments(&root, &StepCommentRunner);
+		assert_eq!(step.status, StepStatus::Warn);
+		assert_eq!(step.severity, Severity::Warning);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("missing mandatory [none]"));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("missing optional [C5.1]"));
+	}
+
+	#[test]
+	fn step_comment_verification_requires_c5_1_from_cycle_256_onward() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir()
+			.join(format!("pipeline-check-step-comments-post-c51-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 840,
+				"last_cycle": {
+					"number": 257
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct StepCommentRunner;
+
+		impl CommandRunner for StepCommentRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected in step comment verification test");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 840);
+				let steps = EXPECTED_STEP_IDS
+					.iter()
+					.copied()
+					.filter(|step| *step != "C5.1")
+					.collect::<Vec<_>>();
+				Ok(step_comment_bodies(257, &steps))
+			}
+		}
+
+		let step = verify_step_comments(&root, &StepCommentRunner);
+		assert_eq!(step.status, StepStatus::Fail);
+		assert_eq!(step.severity, Severity::Blocking);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("missing mandatory [C5.1]"));
+	}
+
+	#[test]
+	fn step_comment_verification_still_requires_cycle_zero_mandatory_steps() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir()
+			.join(format!("pipeline-check-step-comments-always-mandatory-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 841,
+				"last_cycle": {
+					"number": 254
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct StepCommentRunner;
+
+		impl CommandRunner for StepCommentRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected in step comment verification test");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 841);
+				let steps = EXPECTED_STEP_IDS
+					.iter()
+					.copied()
+					.filter(|step| *step != "C1")
+					.collect::<Vec<_>>();
+				Ok(step_comment_bodies(254, &steps))
+			}
+		}
+
+		let step = verify_step_comments(&root, &StepCommentRunner);
+		assert_eq!(step.status, StepStatus::Fail);
+		assert_eq!(step.severity, Severity::Blocking);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("missing mandatory [C1]"));
+	}
+
+	#[test]
 	fn step_comment_verification_fails_when_mandatory_step_is_missing_even_above_threshold() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -2678,7 +2873,10 @@ mod tests {
 		fs::write(
 			root.join("docs/state.json"),
 			json!({
-				"previous_cycle_issue": 835
+				"previous_cycle_issue": 835,
+				"last_cycle": {
+					"number": 257
+				}
 			})
 			.to_string(),
 		)
@@ -2727,7 +2925,10 @@ mod tests {
 		fs::write(
 			root.join("docs/state.json"),
 			json!({
-				"previous_cycle_issue": 837
+				"previous_cycle_issue": 837,
+				"last_cycle": {
+					"number": 257
+				}
 			})
 			.to_string(),
 		)
@@ -2776,7 +2977,10 @@ mod tests {
 		fs::write(
 			root.join("docs/state.json"),
 			json!({
-				"previous_cycle_issue": 838
+				"previous_cycle_issue": 838,
+				"last_cycle": {
+					"number": 257
+				}
 			})
 			.to_string(),
 		)
