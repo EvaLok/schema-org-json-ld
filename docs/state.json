@@ -3903,9 +3903,9 @@
           "added_cycle": 250,
           "category": "journal-quality",
           "chosen_path": "structural-fix",
-          "rationale": "journal-quality findings in cycles 244-249 are critical (phantom receipt hashes, premature closure claims, disposition language inaccuracies). Unlike the cycle 161 recalibration (positive confirmatory findings), these are genuine defects. The root cause is manual journal generation — receipt hashes copied from memory, disposition language not validated against authoritative sources. The structural fix is improving write-entry to auto-derive journal receipt data from cycle-receipts output and validate disposition language against state.json. This is the same root cause as chronic worklog-accuracy.",
+          "rationale": "journal-quality findings in cycles 244-249 are critical (phantom receipt hashes, premature closure claims, disposition language inaccuracies). Unlike the cycle 161 recalibration (positive confirmatory findings), these are genuine defects. The root cause is manual journal generation — receipt hashes copied from memory, disposition language not validated against authoritative sources. The structural fix is improving write-entry to auto-derive journal receipt data from cycle-receipts output and validate disposition language against state.json. This is the same root cause as chronic worklog-accuracy. Partial fix merged (write-entry PR #1197 cycle 251). Remaining root cause: stale commitments generated before close-out steps complete. Category persists at 3 reviews since cycle 250.",
           "root_cause": "Journal follow-through receipts and disposition claims are hand-written by the orchestrator rather than derived from cycle-receipts or state.json. This produces phantom hashes (F3 cycle 249) and premature closure claims (F4 cycle 249).",
-          "verification_cycle": null
+          "verification_cycle": 257
         }
       ]
     },
