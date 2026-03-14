@@ -3497,8 +3497,8 @@
   },
   "cycle_phase": {
     "cycle": 253,
-    "phase": "complete",
-    "phase_entered_at": "2026-03-14T06:27:08Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-14T06:28:53Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -3603,7 +3603,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 252"
+        "last_refreshed": "cycle 253"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -3615,7 +3615,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 252"
+        "last_refreshed": "cycle 253"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -3635,7 +3635,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 252"
+        "last_refreshed": "cycle 253"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -3643,7 +3643,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 252"
+        "last_refreshed": "cycle 253"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -3659,7 +3659,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 252"
+        "last_refreshed": "cycle 253"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -3671,7 +3671,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 252"
+        "last_refreshed": "cycle 253"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -3740,13 +3740,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 13,
+    "duration_minutes": 15,
     "issue": 1210,
     "number": 253,
-    "summary": "Merged cycle 251 review artifact (PR #1202). Regression-verified 2 actioned_failed findings. Dispatched 2 fixes: #1204 (write-entry plural PRs) and #1205 (dedup guard narrowing).",
-    "timestamp": "2026-03-14T06:13:41Z"
+    "summary": "Merged 3 PRs (#1206 write-entry plural PRs, #1207 dedup guard narrowing, #1209 review artifact). Processed cycle 252 review (4 findings). Accepted audit #241, dispatched #1212 (post-step step ID validation). Regression-verified prior findings resolved.",
+    "timestamp": "2026-03-14T06:28:53Z"
   },
-  "last_eva_comment_check": "2026-03-14T06:13:41Z",
+  "last_eva_comment_check": "2026-03-14T06:28:53Z",
   "last_tool_audit_cycle": 236,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
