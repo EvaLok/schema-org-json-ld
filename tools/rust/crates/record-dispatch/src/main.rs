@@ -57,16 +57,33 @@ fn run(cli: Cli) -> Result<(), String> {
         &model,
         &dispatched_at,
     )?;
-    apply_dispatch_patch(&mut state_value, &patch)?;
+    let already_recorded = match apply_dispatch_patch(&mut state_value, &patch) {
+        Ok(()) => false,
+        Err(error) if error.contains("already contains an entry for issue") => {
+            eprintln!(
+                "Note: session for #{} already recorded (likely by dispatch-review); skipping append, applying phase transition only",
+                cli.issue
+            );
+            true
+        }
+        Err(error) => return Err(error),
+    };
     transition_cycle_phase(&mut state_value, current_cycle, "complete")?;
     write_state_value(&cli.repo_root, &state_value)?;
 
     let commit_message = dispatch_commit_message(cli.issue, patch.current_cycle);
     let receipt = commit_state_json(&cli.repo_root, &commit_message)?;
-    println!(
-        "Dispatch recorded: #{} \"{}\" (model: {}). In-flight: {} (receipt: {})",
-        cli.issue, cli.title, model, patch.in_flight, receipt
-    );
+    if already_recorded {
+        println!(
+            "Phase transitioned to complete (session already recorded for #{}). (receipt: {})",
+            cli.issue, receipt
+        );
+    } else {
+        println!(
+            "Dispatch recorded: #{} \"{}\" (model: {}). In-flight: {} (receipt: {})",
+            cli.issue, cli.title, model, patch.in_flight, receipt
+        );
+    }
     if patch.in_flight >= 3 {
         eprintln!(
             "Warning: in-flight dispatches at {} (approaching/exceeding concurrency limit of 2)",
