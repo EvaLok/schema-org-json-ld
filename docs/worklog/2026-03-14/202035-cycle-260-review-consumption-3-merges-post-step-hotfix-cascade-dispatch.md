@@ -48,8 +48,8 @@
 | Tool | Receipt | Link |
 |------|---------|------|
 | cycle-start | 04a8013 | [04a8013](https://github.com/EvaLok/schema-org-json-ld/commit/04a8013) |
-| process-merge | 8bb836c | [8bb836c](https://github.com/EvaLok/schema-org-json-ld/commit/8bb836c) |
+| process-merge | 9755740 | [9755740](https://github.com/EvaLok/schema-org-json-ld/commit/9755740) |
 | process-review | 540c98e | [540c98e](https://github.com/EvaLok/schema-org-json-ld/commit/540c98e) |
-| process-merge | 8bb836c | [8bb836c](https://github.com/EvaLok/schema-org-json-ld/commit/8bb836c) |
+| process-merge | 76dd661 | [76dd661](https://github.com/EvaLok/schema-org-json-ld/commit/76dd661) |
 | process-merge | 8bb836c | [8bb836c](https://github.com/EvaLok/schema-org-json-ld/commit/8bb836c) |
 | record-dispatch | a02656b | [a02656b](https://github.com/EvaLok/schema-org-json-ld/commit/a02656b) |
