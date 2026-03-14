@@ -3348,8 +3348,10 @@
     {
       "dispatched_at": "2026-03-14T14:22:00Z",
       "issue": 1232,
+      "merged_at": "2026-03-14T16:13:10Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1233,
+      "status": "merged",
       "title": "Cycle 257 review"
     },
     {
@@ -3555,12 +3557,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1229 Stop auto-copying merged PRs to reviewed in write-entry (cycle 257)",
-    "dispatch_to_pr_rate": "98.1%",
-    "in_flight": 2,
-    "merged": 362,
+    "dispatch_to_pr_rate": "98.4%",
+    "in_flight": 1,
+    "merged": 363,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 365,
-    "resolved": 370,
+    "produced_pr": 366,
+    "resolved": 371,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 372
