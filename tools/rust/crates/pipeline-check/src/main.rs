@@ -82,6 +82,7 @@ struct Cli {
 enum StepStatus {
 	Pass,
 	Warn,
+	Cascade,
 	Fail,
 	Error,
 }
@@ -276,6 +277,7 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
 	let pipeline_status = pipeline_overall_status(&steps);
 	steps.push(verify_doc_validation(repo_root, pipeline_status, runner));
 	steps.push(verify_step_comments(repo_root, runner));
+	reclassify_doc_validation_cascade(&mut steps);
 	let overall = pipeline_overall_status(&steps);
 	let has_blocking_findings = steps.iter().any(|step| step.status == StepStatus::Fail);
 
@@ -479,6 +481,38 @@ fn pipeline_overall_status(steps: &[StepReport]) -> StepStatus {
 	} else {
 		StepStatus::Pass
 	}
+}
+
+fn reclassify_doc_validation_cascade(steps: &mut [StepReport]) {
+	let Some(doc_validation_index) = steps.iter().position(|step| step.name == DOC_VALIDATION_STEP_NAME)
+	else {
+		return;
+	};
+	let Some(step_comments_index) = steps.iter().position(|step| step.name == STEP_COMMENTS_STEP_NAME) else {
+		return;
+	};
+	let step_comments_status = steps[step_comments_index].status;
+	if !matches!(step_comments_status, StepStatus::Fail | StepStatus::Error) {
+		return;
+	}
+
+	let doc_validation = &mut steps[doc_validation_index];
+	if doc_validation.status != StepStatus::Fail {
+		return;
+	}
+	let Some(detail) = doc_validation.detail.as_deref() else {
+		return;
+	};
+	if !is_step_comments_pipeline_cascade(detail) {
+		return;
+	}
+
+	doc_validation.status = StepStatus::Cascade;
+}
+
+fn is_step_comments_pipeline_cascade(detail: &str) -> bool {
+	!detail.contains("; ")
+		&& detail.starts_with("worklog validation failed: pipeline status mismatch:")
 }
 
 fn parse_json(raw: &str) -> Option<Value> {
@@ -1213,8 +1247,12 @@ fn pipeline_exit_code(steps: &[StepReport]) -> i32 {
 }
 
 fn print_human_report(report: &PipelineReport) {
-	println!("Pipeline Check — Cycle {}", report.cycle);
-	println!();
+	print!("{}", render_human_report(report));
+}
+
+fn render_human_report(report: &PipelineReport) -> String {
+	let mut output = String::new();
+	output.push_str(&format!("Pipeline Check — Cycle {}\n\n", report.cycle));
 
 	for (index, step) in report.steps.iter().enumerate() {
 		let summary = match step.name {
@@ -1224,20 +1262,20 @@ fn print_human_report(report: &PipelineReport) {
 			_ => step.detail.as_deref().unwrap_or(""),
 		};
 		if summary.is_empty() {
-			println!(
-				"  {}. {:<19} {:<5}",
+			output.push_str(&format!(
+				"  {}. {:<19} {:<5}\n",
 				index + 1,
 				format!("{}:", step.name),
 				step_status_label(step.status)
-			);
+			));
 		} else {
-			println!(
-				"  {}. {:<19} {:<5} ({})",
+			output.push_str(&format!(
+				"  {}. {:<19} {:<5} ({})\n",
 				index + 1,
 				format!("{}:", step.name),
 				step_status_label(step.status),
 				summary
-			);
+			));
 		}
 	}
 
@@ -1246,25 +1284,40 @@ fn print_human_report(report: &PipelineReport) {
 		.iter()
 		.filter(|step| step.status == StepStatus::Warn)
 		.count();
+	let cascade_count = report
+		.steps
+		.iter()
+		.filter(|step| step.status == StepStatus::Cascade)
+		.count();
 
-	println!();
-	if warning_count == 0 {
-		println!("Overall: {}", step_status_label(report.overall));
-	} else {
+	output.push('\n');
+	let mut suffixes = Vec::new();
+	if warning_count > 0 {
 		let suffix = if warning_count == 1 { "warning" } else { "warnings" };
-		println!(
-			"Overall: {} ({} {})",
-			step_status_label(report.overall),
-			warning_count,
-			suffix
-		);
+		suffixes.push(format!("{} {}", warning_count, suffix));
 	}
+	if cascade_count > 0 {
+		let suffix = if cascade_count == 1 { "cascade" } else { "cascades" };
+		suffixes.push(format!("{} {}", cascade_count, suffix));
+	}
+	if suffixes.is_empty() {
+		output.push_str(&format!("Overall: {}\n", step_status_label(report.overall)));
+	} else {
+		output.push_str(&format!(
+			"Overall: {} ({})\n",
+			step_status_label(report.overall),
+			suffixes.join(", ")
+		));
+	}
+
+	output
 }
 
 fn step_status_label(status: StepStatus) -> &'static str {
 	match status {
 		StepStatus::Pass => "PASS",
 		StepStatus::Warn => "WARN",
+		StepStatus::Cascade => "CASCADE",
 		StepStatus::Fail => "FAIL",
 		StepStatus::Error => "ERROR",
 	}
@@ -1742,6 +1795,29 @@ mod tests {
 	}
 
 	#[test]
+	fn pipeline_with_only_cascade_steps_is_overall_pass_and_has_no_blocking_findings() {
+		let report = PipelineReport {
+			cycle: 10,
+			overall: StepStatus::Pass,
+			timestamp: "2026-01-01T00:00:00Z".to_string(),
+			has_blocking_findings: false,
+			steps: vec![StepReport {
+				name: "doc-validation",
+				status: StepStatus::Cascade,
+				severity: Severity::Blocking,
+				exit_code: Some(1),
+				detail: Some("worklog validation failed: pipeline status mismatch".to_string()),
+				findings: None,
+				summary: None,
+			}],
+		};
+
+		assert_eq!(pipeline_overall_status(&report.steps), StepStatus::Pass);
+		assert!(!report.has_blocking_findings);
+		assert_eq!(pipeline_exit_code(&report.steps), 0);
+	}
+
+	#[test]
 	fn pipeline_with_one_fail_step_has_overall_fail_and_blocking_findings() {
 		let report = PipelineReport {
 			cycle: 10,
@@ -1906,6 +1982,40 @@ mod tests {
 				.and_then(Value::as_str),
 			Some("warning")
 		);
+	}
+
+	#[test]
+	fn render_human_report_includes_cascade_status_and_count() {
+		let report = PipelineReport {
+			cycle: 10,
+			overall: StepStatus::Pass,
+			has_blocking_findings: false,
+			timestamp: "2026-01-01T00:00:00Z".to_string(),
+			steps: vec![
+				StepReport {
+					name: "doc-validation",
+					status: StepStatus::Cascade,
+					severity: Severity::Blocking,
+					exit_code: Some(1),
+					detail: Some("worklog validation failed: pipeline status mismatch".to_string()),
+					findings: None,
+					summary: None,
+				},
+				StepReport {
+					name: "field-inventory",
+					status: StepStatus::Warn,
+					severity: Severity::Warning,
+					exit_code: Some(1),
+					detail: Some("metadata refresh pending".to_string()),
+					findings: None,
+					summary: None,
+				},
+			],
+		};
+
+		let rendered = render_human_report(&report);
+		assert!(rendered.contains("doc-validation:     CASCADE"));
+		assert!(rendered.contains("Overall: PASS (1 warning, 1 cascade)"));
 	}
 
     #[test]
@@ -2350,6 +2460,249 @@ mod tests {
 			.as_deref()
 			.unwrap_or_default()
 			.contains("missing receipts"));
+	}
+
+	#[test]
+	fn run_pipeline_marks_doc_validation_as_cascade_when_only_step_comments_fail() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir().join(format!("pipeline-check-doc-validation-cascade-{}", run_id));
+		let today = &current_utc_timestamp()[..10];
+		fs::create_dir_all(root.join("docs/journal")).unwrap();
+		fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
+		fs::create_dir_all(root.join("docs/reviews")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 834,
+				"last_cycle": {"number": 257},
+				"cycle_phase": {"phase": "close_out"},
+				"copilot_metrics": {
+					"total_dispatches": 3,
+					"resolved": 2,
+					"merged": 1,
+					"in_flight": 1,
+					"produced_pr": 2,
+					"closed_without_pr": 0,
+					"reviewed_awaiting_eva": 1,
+					"dispatch_to_pr_rate": "66.7%",
+					"pr_merge_rate": "50.0%"
+				},
+				"review_agent": {
+					"last_review_cycle": 257
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+		fs::write(
+			root.join("docs/worklog").join(today).join("020304-cycle-257-summary.md"),
+			"latest worklog",
+		)
+		.unwrap();
+		fs::write(root.join("docs/journal").join(format!("{today}.md")), "# Journal\n").unwrap();
+		fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
+
+		struct CascadeRunner;
+
+		impl CommandRunner for CascadeRunner {
+			fn run(&self, script_path: &Path, args: &[String]) -> Result<ExecutionResult, String> {
+				let key = script_path
+					.file_name()
+					.and_then(|name| name.to_str())
+					.unwrap_or_default();
+				match key {
+					"metric-snapshot" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({"summary":"13/13 checks","checks":[]}).to_string(),
+					}),
+					"check-field-inventory-rs" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: "PASS: all fields covered".to_string(),
+					}),
+					"housekeeping-scan" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({"items_needing_attention":0}).to_string(),
+					}),
+					"cycle-status" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({
+							"concurrency": {"in_flight": 1},
+							"eva_input": {"comments_since_last_cycle": [{"x": 1}]}
+						})
+						.to_string(),
+					}),
+					"state-invariants" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({"passed":5,"failed":0}).to_string(),
+					}),
+					"derive-metrics" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({
+							"total_dispatches": 3,
+							"resolved": 2,
+							"merged": 1,
+							"in_flight": 1,
+							"produced_pr": 2,
+							"closed_without_pr": 0,
+							"reviewed_awaiting_eva": 1,
+							"dispatch_to_pr_rate": "66.7%",
+							"pr_merge_rate": "50.0%"
+						})
+						.to_string(),
+					}),
+					"validate-docs" => {
+						let mode = args.first().map(String::as_str).unwrap_or_default();
+						if mode == "worklog" {
+							Ok(ExecutionResult {
+								exit_code: Some(1),
+								stdout: "pipeline status mismatch: worklog reports 'PASS', pipeline-check overall is 'fail'".to_string(),
+							})
+						} else {
+							Ok(ExecutionResult {
+								exit_code: Some(0),
+								stdout: String::new(),
+							})
+						}
+					}
+					other => panic!("unexpected tool invocation: {}", other),
+				}
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 834);
+				Ok(step_comment_bodies(257, &["0", "0.5", "0.6", "1", "2", "3", "4", "5", "6"]))
+			}
+		}
+
+		let report = run_pipeline(&root, 257, &CascadeRunner);
+		assert_eq!(report.steps[7].name, "doc-validation");
+		assert_eq!(report.steps[7].status, StepStatus::Cascade);
+		assert_eq!(report.steps[8].name, "step-comments");
+		assert_eq!(report.steps[8].status, StepStatus::Fail);
+		assert_eq!(report.overall, StepStatus::Fail);
+		assert!(report.has_blocking_findings);
+	}
+
+	#[test]
+	fn run_pipeline_keeps_doc_validation_fail_for_independent_failures() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir().join(format!("pipeline-check-doc-validation-independent-{}", run_id));
+		let today = &current_utc_timestamp()[..10];
+		fs::create_dir_all(root.join("docs/journal")).unwrap();
+		fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
+		fs::create_dir_all(root.join("docs/reviews")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 834,
+				"last_cycle": {"number": 257},
+				"cycle_phase": {"phase": "close_out"},
+				"copilot_metrics": {
+					"total_dispatches": 3,
+					"resolved": 2,
+					"merged": 1,
+					"in_flight": 1,
+					"produced_pr": 2,
+					"closed_without_pr": 0,
+					"reviewed_awaiting_eva": 1,
+					"dispatch_to_pr_rate": "66.7%",
+					"pr_merge_rate": "50.0%"
+				},
+				"review_agent": {
+					"last_review_cycle": 257
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+		fs::write(
+			root.join("docs/worklog").join(today).join("020304-cycle-257-summary.md"),
+			"latest worklog",
+		)
+		.unwrap();
+		fs::write(root.join("docs/journal").join(format!("{today}.md")), "# Journal\n").unwrap();
+		fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
+
+		struct IndependentFailureRunner;
+
+		impl CommandRunner for IndependentFailureRunner {
+			fn run(&self, script_path: &Path, args: &[String]) -> Result<ExecutionResult, String> {
+				let key = script_path
+					.file_name()
+					.and_then(|name| name.to_str())
+					.unwrap_or_default();
+				match key {
+					"metric-snapshot" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({"summary":"13/13 checks","checks":[]}).to_string(),
+					}),
+					"check-field-inventory-rs" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: "PASS: all fields covered".to_string(),
+					}),
+					"housekeeping-scan" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({"items_needing_attention":0}).to_string(),
+					}),
+					"cycle-status" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({
+							"concurrency": {"in_flight": 1},
+							"eva_input": {"comments_since_last_cycle": [{"x": 1}]}
+						})
+						.to_string(),
+					}),
+					"state-invariants" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({"passed":5,"failed":0}).to_string(),
+					}),
+					"derive-metrics" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({
+							"total_dispatches": 3,
+							"resolved": 2,
+							"merged": 1,
+							"in_flight": 1,
+							"produced_pr": 2,
+							"closed_without_pr": 0,
+							"reviewed_awaiting_eva": 1,
+							"dispatch_to_pr_rate": "66.7%",
+							"pr_merge_rate": "50.0%"
+						})
+						.to_string(),
+					}),
+					"validate-docs" => {
+						let mode = args.first().map(String::as_str).unwrap_or_default();
+						if mode == "worklog" {
+							Ok(ExecutionResult {
+								exit_code: Some(1),
+								stdout: "missing receipts".to_string(),
+							})
+						} else {
+							Ok(ExecutionResult {
+								exit_code: Some(0),
+								stdout: String::new(),
+							})
+						}
+					}
+					other => panic!("unexpected tool invocation: {}", other),
+				}
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 834);
+				Ok(step_comment_bodies(257, &["0", "0.5", "0.6", "1", "2", "3", "4", "5", "6"]))
+			}
+		}
+
+		let report = run_pipeline(&root, 257, &IndependentFailureRunner);
+		assert_eq!(report.steps[7].name, "doc-validation");
+		assert_eq!(report.steps[7].status, StepStatus::Fail);
+		assert_eq!(report.steps[8].status, StepStatus::Fail);
+		assert_eq!(report.overall, StepStatus::Fail);
+		assert!(report.has_blocking_findings);
 	}
 
 	#[test]
