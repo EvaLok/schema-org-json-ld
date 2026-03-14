@@ -3233,15 +3233,9 @@
       "dispatched_at": "2026-03-13T22:24:37Z",
       "issue": 1193,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1194,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 249 end-of-cycle review"
-    },
-    {
-      "dispatched_at": "2026-03-13T22:24:46Z",
-      "issue": 1193,
-      "model": "gpt-5.4",
-      "status": "in_flight",
-      "title": "Cycle 249 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -3430,14 +3424,14 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1193 Cycle 249 end-of-cycle review (cycle 249)",
     "dispatch_to_pr_rate": "98.0%",
-    "in_flight": 1,
-    "merged": 348,
+    "in_flight": 0,
+    "merged": 349,
     "pr_merge_rate": "99.1%",
-    "produced_pr": 351,
-    "resolved": 356,
+    "produced_pr": 352,
+    "resolved": 357,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 358
+    "total_dispatches": 357
   },
   "cycle_phase": {
     "cycle": 250,
@@ -3519,7 +3513,7 @@
     "fields": {
       "audit_dropped": {
         "cadence": "after dropping a previously accepted audit recommendation",
-        "last_refreshed": "cycle 239"
+        "last_refreshed": "cycle 250"
       },
       "audit_processed": {
         "cadence": "after processing audit issues",
@@ -3607,7 +3601,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 243"
+        "last_refreshed": "cycle 250"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -3794,6 +3788,14 @@
           "chosen_path": "structural-fix",
           "rationale": "Dispatched #1176 to fix write-entry auto-derivation gating on args.cycle instead of resolved cycle, and to add regression tests for the default (omitted-cycle) invocation path. The pattern generator is insufficient test coverage for default invocation paths.",
           "root_cause": "Tool code is merged with tests that only exercise the explicit-argument path (cycle: Some(N)), not the default production path (cycle: None, resolved from state.json). Bugs in the default invocation are invisible to CI.",
+          "verification_cycle": null
+        },
+        {
+          "added_cycle": 250,
+          "category": "journal-quality",
+          "chosen_path": "structural-fix",
+          "rationale": "journal-quality findings in cycles 244-249 are critical (phantom receipt hashes, premature closure claims, disposition language inaccuracies). Unlike the cycle 161 recalibration (positive confirmatory findings), these are genuine defects. The root cause is manual journal generation — receipt hashes copied from memory, disposition language not validated against authoritative sources. The structural fix is improving write-entry to auto-derive journal receipt data from cycle-receipts output and validate disposition language against state.json. This is the same root cause as chronic worklog-accuracy.",
+          "root_cause": "Journal follow-through receipts and disposition claims are hand-written by the orchestrator rather than derived from cycle-receipts or state.json. This produces phantom hashes (F3 cycle 249) and premature closure claims (F4 cycle 249).",
           "verification_cycle": null
         }
       ]
@@ -5440,9 +5442,24 @@
         "finding_count": 5,
         "ignored": 0,
         "note": "F1 regression-verification: deferred. F2 agent-session-tracking: deferred. F3 dispatch-quality: deferred. F4 worklog-accuracy: deferred. F5 journal-quality: deferred. All behavioral — will implement during this cycle close-out. Cycle 247 F1/F2 reclassified to actioned_failed."
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "complacency-detection",
+          "journal-quality",
+          "process-adherence",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 249,
+        "deferred": 2,
+        "finding_count": 4,
+        "ignored": 0,
+        "note": "F1 process-adherence: actioned — adding C2/C4.5 to MANDATORY_STEP_IDS this cycle. F2 worklog-accuracy: deferred — requires write-entry tooling improvement. F3 journal-quality: deferred — same root cause as F2, phantom receipt hashes. F4 complacency-detection: actioned — will not claim chronic closure until checker/checklist/behavior align."
       }
     ],
-    "last_review_cycle": 248
+    "last_review_cycle": 249
   },
   "schema_status": {
     "directory_layout": {
