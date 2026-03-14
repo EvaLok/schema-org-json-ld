@@ -3429,8 +3429,10 @@
     {
       "dispatched_at": "2026-03-14T20:17:53Z",
       "issue": 1251,
+      "merged_at": "2026-03-14T22:17:47Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1252,
+      "status": "merged",
       "title": "Broaden cascade detection to handle multi-cause doc-validation failures"
     },
     {
@@ -3629,12 +3631,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1253 Cycle 260 end-of-cycle review (cycle 260)",
-    "dispatch_to_pr_rate": "98.2%",
-    "in_flight": 2,
-    "merged": 370,
+    "dispatch_to_pr_rate": "98.4%",
+    "in_flight": 1,
+    "merged": 371,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 373,
-    "resolved": 378,
+    "produced_pr": 374,
+    "resolved": 379,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 380
@@ -3731,15 +3733,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 260"
+        "last_refreshed": "cycle 261"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 260"
+        "last_refreshed": "cycle 261"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 260"
+        "last_refreshed": "cycle 261"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
@@ -4006,11 +4008,11 @@
         },
         {
           "added_cycle": 260,
-          "updated_cycle": 261,
           "category": "review-evidence",
           "chosen_path": "structural-fix",
           "rationale": "Two-part fix: (1) Behavioral: orchestrator now uses gh pr review --approve with substantive bodies before every merge (adopted cycle 260). (2) Enforceable: dispatching a state-invariants extension that verifies GitHub review events exist for all PRs merged in the current cycle. The behavioral fix alone is insufficient — it depends on the orchestrator remembering to run the command. The invariant check makes the requirement machine-verified.",
           "root_cause": "Review events were optional and unverified. No tool, checklist step, or invariant confirmed that GitHub review events existed on PRs before merge. The orchestrator merged PRs with only worklog/journal claims of review, which are self-reported and not auditable.",
+          "updated_cycle": 261,
           "verification_cycle": 261
         }
       ]
