@@ -3263,6 +3263,13 @@
       "pr": 1202,
       "status": "merged",
       "title": "[Cycle Review] Cycle 251 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-14T04:45:32Z",
+      "issue": 1204,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix write-entry PR extraction to match plural PRs subject format"
     }
   ],
   "audit_dropped": [
@@ -3449,21 +3456,21 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1201 Cycle 251 review (cycle 251)",
-    "dispatch_to_pr_rate": "98.6%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1204 Fix write-entry PR extraction to match plural PRs subject format (cycle 252)",
+    "dispatch_to_pr_rate": "98.3%",
+    "in_flight": 1,
     "merged": 352,
     "pr_merge_rate": "99.2%",
     "produced_pr": 355,
     "resolved": 360,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 360
+    "total_dispatches": 361
   },
   "cycle_phase": {
     "cycle": 252,
-    "phase": "work",
-    "phase_entered_at": "2026-03-14T04:33:17Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-14T04:45:32Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -5498,9 +5505,23 @@
         "finding_count": 3,
         "ignored": 0,
         "note": "F1 worklog-accuracy: actioned_failed — PR #1197 merged but production subject format (PRs #...) not matched, worklog still shows empty PR sections (regression verified cycle 252). F2 state-integrity: actioned_failed — dedup guard too broad, blocks all repeated issue numbers including terminal sessions (regression verified cycle 252). F3 complacency-detection: deferred — narrowing journal claims to match actual dispatch scope."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "worklog-accuracy",
+          "state-integrity",
+          "complacency-detection"
+        ],
+        "complacency_score": 2,
+        "cycle": 251,
+        "deferred": 3,
+        "finding_count": 3,
+        "ignored": 0,
+        "note": "F1 worklog-accuracy: deferred — write-entry plural PRs format fix needed (dispatch this cycle). F2 state-integrity: deferred — dedup guard narrowing needed (dispatch this cycle). F3 complacency-detection: deferred — disposition overstatement pattern needs structural fix."
       }
     ],
-    "last_review_cycle": 250
+    "last_review_cycle": 251
   },
   "schema_status": {
     "directory_layout": {
