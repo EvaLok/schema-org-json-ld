@@ -3586,8 +3586,8 @@
   },
   "cycle_phase": {
     "cycle": 258,
-    "phase": "complete",
-    "phase_entered_at": "2026-03-14T16:19:15Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-14T16:21:43Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -3692,7 +3692,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 257"
+        "last_refreshed": "cycle 258"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -3704,7 +3704,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 257"
+        "last_refreshed": "cycle 258"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -3724,7 +3724,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 257"
+        "last_refreshed": "cycle 258"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -3732,7 +3732,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 257"
+        "last_refreshed": "cycle 258"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -3760,7 +3760,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 257"
+        "last_refreshed": "cycle 258"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -3829,13 +3829,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 9,
+    "duration_minutes": 14,
     "issue": 1234,
     "number": 258,
-    "summary": "Consumed cycle 256 review (4 findings, complacency 3/5). Merged PR #1226 (review artifact). Dispatched #1228 (cycle-aware mandatory steps) and #1229 (stop auto-copy reviewed PRs). Refreshed 18 stale field inventory entries.",
-    "timestamp": "2026-03-14T16:07:31Z"
+    "summary": "Merged 3 PRs (#1230 pipeline-check cycle-aware, #1231 write-entry reviewed fix, #1233 cycle 257 review artifact). Consumed cycle 257 review (3/5 complacency, 4 findings). Accepted audit #245 (cascade detection). Dispatched #1236 (cascade detection) and #1238 (pipeline status patching).",
+    "timestamp": "2026-03-14T16:21:43Z"
   },
-  "last_eva_comment_check": "2026-03-14T16:07:31Z",
+  "last_eva_comment_check": "2026-03-14T16:21:43Z",
   "last_tool_audit_cycle": 236,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
@@ -5712,7 +5712,7 @@
         "ignored": 0
       },
       {
-        "actioned": 0,
+        "actioned": 1,
         "categories": [
           "receipt-auditability",
           "review-evidence",
@@ -5724,7 +5724,7 @@
         "deferred": 3,
         "finding_count": 4,
         "ignored": 0,
-        "note": "F3 review-evidence: dispatch_created (PR #1231 merged). F1 receipt-auditability, F2 worklog-accuracy, F4 state-integrity: deferred."
+        "note": "F3 review-evidence: actioned (PR #1231 merged, commit 0adbaf5). F1 receipt-auditability, F2 worklog-accuracy, F4 state-integrity: deferred."
       }
     ],
     "last_review_cycle": 257
