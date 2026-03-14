@@ -3294,8 +3294,10 @@
     {
       "dispatched_at": "2026-03-14T06:27:08Z",
       "issue": 1212,
+      "merged_at": "2026-03-14T08:14:23Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1213,
+      "status": "merged",
       "title": "Add step ID validation to post-step tool"
     },
     {
@@ -3494,12 +3496,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1214 Cycle 253 review (cycle 253)",
-    "dispatch_to_pr_rate": "98.4%",
-    "in_flight": 1,
-    "merged": 356,
+    "dispatch_to_pr_rate": "98.6%",
+    "in_flight": 0,
+    "merged": 357,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 359,
-    "resolved": 364,
+    "produced_pr": 360,
+    "resolved": 365,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 365
