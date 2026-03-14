@@ -3243,6 +3243,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Improve write-entry: auto-derive PRs merged/reviewed, validate receipt SHAs"
+    },
+    {
+      "dispatched_at": "2026-03-14T00:29:47Z",
+      "issue": 1198,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 250 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -3429,21 +3436,21 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1196 Improve write-entry: auto-derive PRs merged/reviewed, validate receipt SHAs (cycle 250)",
-    "dispatch_to_pr_rate": "98.3%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1198 [Cycle Review] Cycle 250 end-of-cycle review (cycle 250)",
+    "dispatch_to_pr_rate": "98.1%",
+    "in_flight": 2,
     "merged": 349,
     "pr_merge_rate": "99.1%",
     "produced_pr": 352,
     "resolved": 357,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 358
+    "total_dispatches": 359
   },
   "cycle_phase": {
     "cycle": 250,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-14T00:26:48Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-14T00:29:47Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
