@@ -14,6 +14,7 @@ const AUDIT_ISSUES_URL: &str = "https://github.com/EvaLok/schema-org-json-ld-aud
 const PRIMARY_COMMITS_URL: &str = "https://github.com/EvaLok/schema-org-json-ld/commit";
 const JOURNAL_DESCRIPTION: &str = "Reflective log for the schema-org-json-ld orchestrator.";
 const NOT_PROVIDED: &str = "Not provided.";
+const PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
 const INFRASTRUCTURE_ROOTS: [&str; 2] = ["tools", ".claude/skills"];
 const INFRASTRUCTURE_FILES: [&str; 4] = [
     "STARTUP_CHECKLIST.md",
@@ -45,6 +46,8 @@ enum Command {
     Worklog(WorklogArgs),
     /// Generate or append a journal entry file
     Journal(JournalArgs),
+    /// Patch the pipeline status line in an existing worklog entry file
+    PatchPipeline(PatchPipelineArgs),
 }
 
 #[derive(Parser)]
@@ -116,6 +119,16 @@ struct JournalArgs {
     /// Follow-through detail for the previous cycle commitment
     #[arg(long = "previous-commitment-detail")]
     previous_commitment_detail: Option<String>,
+}
+
+#[derive(Parser)]
+struct PatchPipelineArgs {
+    /// Path to the worklog file to patch
+    #[arg(long)]
+    worklog: PathBuf,
+    /// Replacement pipeline status text
+    #[arg(long)]
+    status: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -218,6 +231,7 @@ fn main() {
     let result = match cli.command {
         Command::Worklog(args) => execute_worklog(&args, &repo_root, now),
         Command::Journal(args) => execute_journal(&args, &repo_root, now),
+        Command::PatchPipeline(args) => execute_patch_pipeline(&args, &repo_root),
     };
 
     match result {
@@ -301,6 +315,56 @@ fn execute_journal(
     write_journal_file(&path, now.date_naive(), &entry)?;
     update_journal_index(repo_root, now.date_naive(), cycle)?;
     Ok(path)
+}
+
+fn execute_patch_pipeline(args: &PatchPipelineArgs, repo_root: &Path) -> Result<PathBuf, String> {
+    let worklog_path = resolve_repo_path(repo_root, &args.worklog);
+    let content = fs::read_to_string(&worklog_path)
+        .map_err(|error| format!("failed to read {}: {}", worklog_path.display(), error))?;
+    let patched = patch_pipeline_status_line(&content, &args.status).ok_or_else(|| {
+        format!(
+            "failed to patch {}: pipeline status line not found",
+            worklog_path.display()
+        )
+    })?;
+    fs::write(&worklog_path, patched)
+        .map_err(|error| format!("failed to write {}: {}", worklog_path.display(), error))?;
+    Ok(worklog_path)
+}
+
+fn resolve_repo_path(repo_root: &Path, path: &Path) -> PathBuf {
+    if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        repo_root.join(path)
+    }
+}
+
+fn patch_pipeline_status_line(content: &str, status: &str) -> Option<String> {
+    let start = content.match_indices(PIPELINE_STATUS_PREFIX).find_map(|(index, _)| {
+        if index == 0 || content.as_bytes().get(index - 1) == Some(&b'\n') {
+            Some(index)
+        } else {
+            None
+        }
+    })?;
+    let search = &content[start..];
+    let line_end = search
+        .find('\n')
+        .map(|offset| start + offset)
+        .unwrap_or(content.len());
+    let suffix_start = if line_end > start && content.as_bytes().get(line_end - 1) == Some(&b'\r') {
+        line_end - 1
+    } else {
+        line_end
+    };
+
+    Some(format!(
+        "{}{}{}",
+        &content[..start],
+        PIPELINE_STATUS_PREFIX.to_string() + status,
+        &content[suffix_start..]
+    ))
 }
 
 fn resolve_cycle(cycle: Option<u64>, repo_root: &Path) -> Result<u64, String> {
@@ -4403,7 +4467,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 assert_eq!(args.title, "test");
                 assert!(args.input_file.is_none());
             }
-            Command::Journal(_) => panic!("expected worklog command"),
+            Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
         }
     }
 
@@ -4417,7 +4481,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 assert!(args.done.is_empty());
                 assert!(args.receipt.is_empty());
             }
-            Command::Journal(_) => panic!("expected worklog command"),
+            Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
         }
     }
 
@@ -4464,7 +4528,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 assert_eq!(args.in_flight, Some(1));
                 assert_eq!(args.receipt, vec!["cycle-start:abc1234".to_string()]);
             }
-            Command::Journal(_) => panic!("expected worklog command"),
+            Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
         }
     }
 
@@ -4495,7 +4559,28 @@ Reflective log for the schema-org-json-ld orchestrator.
                 );
                 assert_eq!(args.self_modification, vec!["Updated AGENTS.md".to_string()]);
             }
-            Command::Journal(_) => panic!("expected worklog command"),
+            Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_patch_pipeline_arguments() {
+        let cli = Cli::try_parse_from([
+            "write-entry",
+            "patch-pipeline",
+            "--worklog",
+            "docs/worklog/test.md",
+            "--status",
+            "PASS (9/9)",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::PatchPipeline(args) => {
+                assert_eq!(args.worklog, PathBuf::from("docs/worklog/test.md"));
+                assert_eq!(args.status, "PASS (9/9)");
+            }
+            Command::Worklog(_) | Command::Journal(_) => panic!("expected patch-pipeline command"),
         }
     }
 
@@ -4530,8 +4615,102 @@ Reflective log for the schema-org-json-ld orchestrator.
                 assert_eq!(args.previous_commitment_status.as_deref(), Some("followed"));
                 assert_eq!(args.previous_commitment_detail.as_deref(), Some("Done."));
             }
-            Command::Worklog(_) => panic!("expected journal command"),
+            Command::Worklog(_) | Command::PatchPipeline(_) => panic!("expected journal command"),
         }
+    }
+
+    #[test]
+    fn patch_pipeline_replaces_status_and_preserves_other_content() {
+        let repo_root = TempRepoDir::new("patch-pipeline-success");
+        let worklog_path = repo_root.path.join("docs/worklog/test.md");
+        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
+        let original = "\
+# Cycle 154 — 2026-03-06 05:14 UTC
+
+## Current state
+
+- **In-flight agent sessions**: 1
+- **Pipeline status**: FAIL (1/9)
+- **Copilot metrics**: stable
+- **Publish gate**: open
+
+## Next steps
+
+1. None.
+";
+        fs::write(&worklog_path, original).unwrap();
+
+        let result = execute_patch_pipeline(
+            &PatchPipelineArgs {
+                worklog: PathBuf::from("docs/worklog/test.md"),
+                status: "PASS (9/9)".to_string(),
+            },
+            &repo_root.path,
+        )
+        .unwrap();
+
+        assert_eq!(result, worklog_path);
+        let updated = fs::read_to_string(&worklog_path).unwrap();
+        assert!(updated.contains("- **Pipeline status**: PASS (9/9)"));
+        assert!(updated.contains("- **In-flight agent sessions**: 1"));
+        assert!(updated.contains("- **Copilot metrics**: stable"));
+        assert!(updated.contains("## Next steps"));
+        assert_eq!(updated.matches("- **Pipeline status**:").count(), 1);
+    }
+
+    #[test]
+    fn patch_pipeline_returns_error_when_pipeline_status_line_is_missing() {
+        let repo_root = TempRepoDir::new("patch-pipeline-missing-pattern");
+        let worklog_path = repo_root.path.join("docs/worklog/test.md");
+        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
+        fs::write(
+            &worklog_path,
+            "# Cycle 154\n\n## Current state\n\n- **Copilot metrics**: stable\n",
+        )
+        .unwrap();
+
+        let error = execute_patch_pipeline(
+            &PatchPipelineArgs {
+                worklog: PathBuf::from("docs/worklog/test.md"),
+                status: "PASS (9/9)".to_string(),
+            },
+            &repo_root.path,
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            error,
+            format!(
+                "failed to patch {}: pipeline status line not found",
+                worklog_path.display()
+            )
+        );
+        assert_eq!(fs::read_to_string(&worklog_path).unwrap(), "# Cycle 154\n\n## Current state\n\n- **Copilot metrics**: stable\n");
+    }
+
+    #[test]
+    fn patch_pipeline_supports_multiline_status() {
+        let repo_root = TempRepoDir::new("patch-pipeline-multiline");
+        let worklog_path = repo_root.path.join("docs/worklog/test.md");
+        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
+        fs::write(
+            &worklog_path,
+            "# Cycle 154\n\n## Current state\n\n- **Pipeline status**: FAIL (warnings pending)\n- **Publish gate**: open\n",
+        )
+        .unwrap();
+
+        execute_patch_pipeline(
+            &PatchPipelineArgs {
+                worklog: PathBuf::from("docs/worklog/test.md"),
+                status: "PASS (2 warnings:\nwarn one\nwarn two)".to_string(),
+            },
+            &repo_root.path,
+        )
+        .unwrap();
+
+        let updated = fs::read_to_string(&worklog_path).unwrap();
+        assert!(updated.contains("- **Pipeline status**: PASS (2 warnings:\nwarn one\nwarn two)"));
+        assert!(updated.contains("- **Publish gate**: open"));
     }
 
     #[test]

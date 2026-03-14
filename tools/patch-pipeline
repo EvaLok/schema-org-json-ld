@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+source "$SCRIPT_DIR/_build-helper.sh"
+ensure_binary "write-entry"
+
+if [ $# -eq 0 ]; then
+	exec "$BINARY" patch-pipeline --help
+fi
+
+case " $* " in
+	*" --repo-root "*|*" --repo-root="*)
+		exec "$BINARY" patch-pipeline "$@"
+		;;
+esac
+
+exec "$BINARY" --repo-root "$REPO_ROOT" patch-pipeline "$@"
