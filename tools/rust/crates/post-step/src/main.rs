@@ -8,10 +8,10 @@ use std::process::{Command, Output, Stdio};
 
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const ORCHESTRATOR_SIGNATURE: &str = "[main-orchestrator]";
-const VALID_STEP_IDS: [&str; 34] = [
+const VALID_STEP_IDS: [&str; 35] = [
 	"0", "0.5", "0.6", "1", "1.1", "1.5", "2", "2.5", "3", "4", "5", "5.5", "5.6", "5.8",
 	"5.9", "5.10", "5.11", "5.12", "5.13", "6", "7", "8", "9", "10", "C1", "C2", "C3",
-	"C4.1", "C4.5", "C5", "C5.5", "C6", "C7", "C8",
+	"C4.1", "C4.5", "C5", "C5.1", "C5.5", "C6", "C7", "C8",
 ];
 
 #[derive(Parser, Debug)]

@@ -128,6 +128,26 @@ This ensures the review agent sees the complete cycle state, eliminating the art
 
 Post this step: `bash tools/post-step --issue {N} --step "C5" --title "Pre-dispatch commit and push" --body "..."`
 
+## C5.1. Receipt table validation (per chronic worklog-accuracy — 8+ consecutive reviews)
+
+After the docs commit (step C5), validate that the worklog receipt table is complete within its defined scope:
+
+```bash
+bash tools/receipt-validate --cycle N --worklog docs/worklog/YYYY-MM-DD/HHMMSS-title.md
+```
+
+The receipt table scope is all commits through `cycle-complete`, excluding:
+- The **docs commit** (`docs(cycle-N): ...`) — created at step C5, after the worklog is written
+- The **record-dispatch commit** (`state(record-dispatch): ...`) — created at step C6
+
+These are **structurally excluded** because they are created after the worklog is generated. Their absence is expected, not a defect.
+
+If the tool reports genuinely missing receipts (receipts that should be in the table but aren't), fix the worklog before proceeding.
+
+**Why:** The `worklog-accuracy` finding appeared in 8+ consecutive reviews because the receipt table was incomplete. The root cause is a temporal ordering constraint: the worklog cannot contain the SHA of the commit that writes it. This step validates completeness within the achievable scope, closing the chronic finding loop.
+
+Post this step: `bash tools/post-step --issue {N} --step "C5.1" --title "Receipt validation" --body "..."`
+
 ## C5.5. Final pipeline gate (per audit [#153](https://github.com/EvaLok/schema-org-json-ld-audit/issues/153))
 
 Re-run the pipeline-check after all state.json modifications are committed:
@@ -161,7 +181,7 @@ The issue body for the review agent MUST be structured as follows:
    - **Worklog accuracy**: cross-reference the worklog's claims against actual commits, state.json, and issue activity. Does the narrative match reality?
    - **Journal quality**: is the journal entry genuine reflection or boilerplate? Does it contain actionable commitments with observable completion conditions?
    - **State.json integrity**: are metrics current? Do field inventory freshness markers match reality? Run spot-checks.
-   - **Commit receipt verification**: verify receipt hashes with `git show <hash> --stat` — do committed changes match claims?
+   - **Commit receipt verification**: verify receipt hashes with `git show <hash> --stat` — do committed changes match claims? **Receipt table scope**: the worklog receipt table covers all commits through `cycle-complete`. The docs commit (`docs(cycle-N): ...`) and record-dispatch commit (`state(record-dispatch): ...`) are **structurally excluded** — they are created after the worklog is written and cannot appear in their own table. This is an inherent temporal constraint, not a defect. Do NOT flag their absence as a worklog-accuracy issue. Instead, verify that all OTHER cycle receipts (cycle-start, process-merge, process-review, etc.) are present and correct.
    - **Infrastructure consistency**: are AGENTS.md, skills, checklists, and tools consistent with actual practice?
    - **Process adherence**: did the orchestrator follow its own checklist? Did it use tools when tools exist? Did it skip steps?
    - **Complacency detection**: are we going through the motions? Are findings being "noted" but not fixed? Are deferred items accumulating?
@@ -250,6 +270,7 @@ No manual `cycle-phase` calls are needed for the standard flow (since cycle 226)
 | C3. Worklog + Journal | Semi-automated | `write-entry worklog` + `write-entry journal` (orchestrator provides structured input) |
 | C4.1. Validate docs | Automated | `validate-docs worklog` + `validate-docs journal` (blocking gate) |
 | C5. Commit worklog/journal/state | Manual | git commit + push (BEFORE review dispatch) |
+| C5.1. Receipt table validation | Automated | `bash tools/receipt-validate` (validates receipt table scope completeness) |
 | C5.5. Final pipeline gate | Automated | `bash tools/pipeline-check` (re-run after all modifications) |
 | C6. Review agent dispatch | Semi-automated | `cycle-complete` generates issue body, orchestrator creates issue |
 | C7. Commit dispatch state | Automated | `record-dispatch` commits, then push |

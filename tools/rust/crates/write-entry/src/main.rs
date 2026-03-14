@@ -611,7 +611,7 @@ fn apply_worklog_auto_derivations(
             let derived_prs = derive_prs_from_cycle_receipt_entries(&entries);
             input.prs_merged = merge_numbered_refs(&input.prs_merged, &derived_prs);
             input.receipt_note = Some(
-                "Additional receipts (docs commit, review dispatch) are created after worklog generation and cannot appear in this table."
+                "Scope: all commits through cycle-complete. Docs and record-dispatch commits are structurally excluded (created post-worklog). Validated by receipt-validate at step C5.1."
                     .to_string(),
             );
         }

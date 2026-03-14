@@ -26,9 +26,9 @@ const MANDATORY_STEP_IDS: [&str; 21] = [
 // Keep this list aligned with the orchestrator checklist steps that are expected to
 // produce post-step comments. The pass threshold stays lower because some steps are
 // conditional, but missing steps should still be surfaced in WARN output.
-const EXPECTED_STEP_IDS: [&str; 24] = [
+const EXPECTED_STEP_IDS: [&str; 25] = [
 	"0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "C1",
-	"C2", "C3", "C4.1", "C4.5", "C5", "C5.5", "C6", "C7", "C8",
+	"C2", "C3", "C4.1", "C4.5", "C5", "C5.1", "C5.5", "C6", "C7", "C8",
 ];
 const REVIEW_LAST_CYCLE_PATH: &str = "/review_agent/last_review_cycle";
 const DERIVE_METRICS_FIELDS: [&str; 9] = [
