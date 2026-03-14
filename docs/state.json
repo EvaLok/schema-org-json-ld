@@ -3270,6 +3270,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix write-entry PR extraction to match plural PRs subject format"
+    },
+    {
+      "dispatched_at": "2026-03-14T04:45:32Z",
+      "issue": 1205,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Narrow record-dispatch dedup guard to only block live session duplicates"
     }
   ],
   "audit_dropped": [
@@ -3456,16 +3463,16 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1204 Fix write-entry PR extraction to match plural PRs subject format (cycle 252)",
-    "dispatch_to_pr_rate": "98.3%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1205 Narrow record-dispatch dedup guard to only block live session duplicates (cycle 252)",
+    "dispatch_to_pr_rate": "98.1%",
+    "in_flight": 2,
     "merged": 352,
     "pr_merge_rate": "99.2%",
     "produced_pr": 355,
     "resolved": 360,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 361
+    "total_dispatches": 362
   },
   "cycle_phase": {
     "cycle": 252,
