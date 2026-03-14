@@ -2630,8 +2630,11 @@ mod tests {
             "state(cycle-start): issue EvaLok/schema-org-json-ld#537 tracked [cycle 154]",
             "state(cycle-start): issues EvaLok/schema-org-json-ld#537, EvaLok/schema-org-json-ld#538 tracked [cycle 154]",
         ] {
-            let hash_index = subject.rfind('#').unwrap();
-            assert!(!issue_reference_looks_like_pr(subject, hash_index));
+            for (hash_index, character) in subject.char_indices() {
+                if character == '#' {
+                    assert!(!issue_reference_looks_like_pr(subject, hash_index));
+                }
+            }
         }
     }
 
