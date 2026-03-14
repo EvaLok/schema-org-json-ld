@@ -3384,8 +3384,10 @@
     {
       "dispatched_at": "2026-03-14T16:19:15Z",
       "issue": 1238,
+      "merged_at": "2026-03-14T18:18:31Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1239,
+      "status": "merged",
       "title": "Add worklog pipeline status patching to write-entry"
     },
     {
@@ -3584,12 +3586,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1240 [Cycle Review] Cycle 258 end-of-cycle review (cycle 258)",
-    "dispatch_to_pr_rate": "98.1%",
-    "in_flight": 2,
-    "merged": 365,
+    "dispatch_to_pr_rate": "98.4%",
+    "in_flight": 1,
+    "merged": 366,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 368,
-    "resolved": 373,
+    "produced_pr": 369,
+    "resolved": 374,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 375
