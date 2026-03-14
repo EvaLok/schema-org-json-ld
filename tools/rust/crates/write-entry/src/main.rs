@@ -360,9 +360,10 @@ fn patch_pipeline_status_line(content: &str, status: &str) -> Option<String> {
     };
 
     Some(format!(
-        "{}{}{}",
+        "{}{}{}{}",
         &content[..start],
-        PIPELINE_STATUS_PREFIX.to_string() + status,
+        PIPELINE_STATUS_PREFIX,
+        status,
         &content[suffix_start..]
     ))
 }
@@ -4685,7 +4686,8 @@ Reflective log for the schema-org-json-ld orchestrator.
                 worklog_path.display()
             )
         );
-        assert_eq!(fs::read_to_string(&worklog_path).unwrap(), "# Cycle 154\n\n## Current state\n\n- **Copilot metrics**: stable\n");
+        let expected = "# Cycle 154\n\n## Current state\n\n- **Copilot metrics**: stable\n";
+        assert_eq!(fs::read_to_string(&worklog_path).unwrap(), expected);
     }
 
     #[test]
