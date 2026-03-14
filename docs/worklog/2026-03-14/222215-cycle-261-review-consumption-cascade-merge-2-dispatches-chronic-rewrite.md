@@ -48,5 +48,8 @@
 | process-merge | 5e77d05 | [5e77d05](https://github.com/EvaLok/schema-org-json-ld/commit/5e77d05) |
 | cycle-tagged | 724dbbb | [724dbbb](https://github.com/EvaLok/schema-org-json-ld/commit/724dbbb) |
 | cycle-complete | 167cac7 | [167cac7](https://github.com/EvaLok/schema-org-json-ld/commit/167cac7) |
+| cycle-phase | d663048 | [d663048](https://github.com/EvaLok/schema-org-json-ld/commit/d663048) |
+| session-reconcile | 7867b57 | [7867b57](https://github.com/EvaLok/schema-org-json-ld/commit/7867b57) |
+| derive-metrics | e58aadc | [e58aadc](https://github.com/EvaLok/schema-org-json-ld/commit/e58aadc) |
 | chronic-fix | daf0521 | [daf0521](https://github.com/EvaLok/schema-org-json-ld/commit/daf0521) |
 | refresh-field-inventory | 724dbbb | [724dbbb](https://github.com/EvaLok/schema-org-json-ld/commit/724dbbb) |
