@@ -8,6 +8,11 @@ use std::process::{Command, Output, Stdio};
 
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const ORCHESTRATOR_SIGNATURE: &str = "[main-orchestrator]";
+const VALID_STEP_IDS: [&str; 34] = [
+	"0", "0.5", "0.6", "1", "1.1", "1.5", "2", "2.5", "3", "4", "5", "5.5", "5.6", "5.8",
+	"5.9", "5.10", "5.11", "5.12", "5.13", "6", "7", "8", "9", "10", "C1", "C2", "C3",
+	"C4.1", "C4.5", "C5", "C5.5", "C6", "C7", "C8",
+];
 
 #[derive(Parser, Debug)]
 #[command(name = "post-step")]
@@ -37,6 +42,10 @@ struct Cli {
 	#[arg(long)]
 	body_file: Option<PathBuf>,
 
+	/// Skip step ID validation for non-standard step names
+	#[arg(long)]
+	skip_validation: bool,
+
 	/// Repository root containing docs/state.json
 	#[arg(long, default_value = ".")]
 	repo_root: PathBuf,
@@ -57,6 +66,14 @@ fn main() {
 
 fn execute(cli: &Cli, runner: &dyn CommentPoster) -> Result<String, String> {
 	let step = validate_required_text("step", &cli.step)?;
+	if cli.skip_validation {
+		eprintln!(
+			"Warning: skipping step ID validation for non-standard step '{}'",
+			cli.step
+		);
+	} else {
+		validate_step_id(step)?;
+	}
 	let title = validate_required_text("title", &cli.title)?;
 	let cycle = current_cycle_from_state(&cli.repo_root).map_err(|error| {
 		if error == "missing /cycle_phase/cycle or /last_cycle/number in state.json" {
@@ -95,6 +112,55 @@ fn validate_required_text<'a>(field_name: &str, value: &'a str) -> Result<&'a st
 	}
 
 	Ok(value)
+}
+
+fn validate_step_id(step: &str) -> Result<(), String> {
+	if let Some((from_step, to_step)) = range_step_ids(step) {
+		return Err(format!(
+			"Invalid step ID '{step}': step IDs must be posted individually. Use separate post-step calls for steps {from_step} and {to_step}."
+		));
+	}
+
+	if VALID_STEP_IDS.contains(&step) {
+		return Ok(());
+	}
+
+	Err(format!(
+		"Invalid step ID '{step}': expected one of {}",
+		VALID_STEP_IDS.join(", ")
+	))
+}
+
+fn range_step_ids(step: &str) -> Option<(&str, &str)> {
+	for (index, character) in step.char_indices() {
+		if character != '-' {
+			continue;
+		}
+
+		let prefix = &step[..index];
+		let suffix = &step[index + 1..];
+		let previous = prefix.chars().next_back()?;
+		let next = suffix.chars().next()?;
+		if previous.is_ascii_digit() && next.is_ascii_digit() {
+			return Some((step_token_suffix(prefix), step_token_prefix(suffix)));
+		}
+	}
+
+	None
+}
+
+fn step_token_suffix(segment: &str) -> &str {
+	let start = segment
+		.rfind(|character: char| !character.is_ascii_alphanumeric() && character != '.')
+		.map_or(0, |index| index + 1);
+	&segment[start..]
+}
+
+fn step_token_prefix(segment: &str) -> &str {
+	let end = segment
+		.find(|character: char| !character.is_ascii_alphanumeric() && character != '.')
+		.unwrap_or(segment.len());
+	&segment[..end]
 }
 
 fn normalize_body_text(body: &str) -> Result<String, String> {
@@ -232,6 +298,7 @@ mod tests {
 			title: "Check for input-from-eva issues".to_string(),
 			body: Some("Found 2 open issues.".to_string()),
 			body_file: None,
+			skip_validation: false,
 			repo_root: repo_root.clone(),
 		};
 		let poster = RecordingPoster::success();
@@ -260,6 +327,7 @@ mod tests {
 			title: "Summarize completion checks".to_string(),
 			body: None,
 			body_file: Some(body_path),
+			skip_validation: false,
 			repo_root: repo_root.clone(),
 		};
 		let poster = RecordingPoster::success();
@@ -285,6 +353,7 @@ mod tests {
 			title: "Check for input-from-eva issues".to_string(),
 			body: Some("Found 2 open issues.".to_string()),
 			body_file: None,
+			skip_validation: false,
 			repo_root: repo_root.clone(),
 		};
 		let poster = RecordingPoster::success();
@@ -307,6 +376,7 @@ mod tests {
 			title: "Check for input-from-eva issues".to_string(),
 			body: Some("Found 2 open issues.".to_string()),
 			body_file: None,
+			skip_validation: false,
 			repo_root: repo_root.clone(),
 		};
 		let poster = RecordingPoster::failing("gh api failed with status 1: rate limited");
@@ -338,6 +408,94 @@ mod tests {
 	}
 
 	#[test]
+	fn valid_step_ids_are_accepted() {
+		for step in ["0", "0.5", "1", "C1", "C4.5", "10"] {
+			assert!(validate_step_id(step).is_ok(), "expected {step} to be valid");
+		}
+	}
+
+	#[test]
+	fn invalid_step_ids_are_rejected() {
+		for step in ["11", "foo", "step1"] {
+			let error = validate_step_id(step).expect_err("step should be rejected");
+			assert_eq!(
+				error,
+				format!(
+					"Invalid step ID '{step}': expected one of {}",
+					VALID_STEP_IDS.join(", ")
+				)
+			);
+		}
+	}
+
+	#[test]
+	fn range_step_ids_are_rejected_with_specific_error() {
+		for (step, from_step, to_step) in [
+			("4-5", "4", "5"),
+			("6-8", "6", "8"),
+			("1-3", "1", "3"),
+			("1.1-1.5", "1.1", "1.5"),
+			("step4-5", "step4", "5"),
+		] {
+			let error = validate_step_id(step).expect_err("range should be rejected");
+			assert_eq!(
+				error,
+				format!(
+					"Invalid step ID '{step}': step IDs must be posted individually. Use separate post-step calls for steps {from_step} and {to_step}."
+				)
+			);
+		}
+	}
+
+	#[test]
+	fn range_token_helpers_extract_expected_tokens() {
+		assert_eq!(step_token_suffix("step4"), "step4");
+		assert_eq!(step_token_suffix("prefix step4.1"), "step4.1");
+		assert_eq!(step_token_prefix("5"), "5");
+		assert_eq!(step_token_prefix("5.13 suffix"), "5.13");
+	}
+
+	#[test]
+	fn skip_validation_allows_non_standard_step_ids() {
+		let repo_root = temp_repo_root("post-step-skip-validation");
+		write_state_json(&repo_root, r#"{"last_cycle":{"number":198}}"#);
+		let cli = Cli {
+			issue: 834,
+			step: "11".to_string(),
+			title: "Non-standard step".to_string(),
+			body: Some("Posted intentionally.".to_string()),
+			body_file: None,
+			skip_validation: true,
+			repo_root: repo_root.clone(),
+		};
+		let poster = RecordingPoster::success();
+
+		let result = execute(&cli, &poster).expect("skip validation should allow the step");
+
+		assert_eq!(result, "Step 11 posted to EvaLok/schema-org-json-ld#834");
+	}
+
+	#[test]
+	fn execute_rejects_whitespace_only_step_ids() {
+		let repo_root = temp_repo_root("post-step-empty-step");
+		write_state_json(&repo_root, r#"{"last_cycle":{"number":198}}"#);
+		let cli = Cli {
+			issue: 834,
+			step: "   ".to_string(),
+			title: "Whitespace step".to_string(),
+			body: Some("Body.".to_string()),
+			body_file: None,
+			skip_validation: false,
+			repo_root: repo_root.clone(),
+		};
+		let poster = RecordingPoster::success();
+
+		let error = execute(&cli, &poster).expect_err("whitespace step should fail");
+
+		assert_eq!(error, "step must not be empty");
+	}
+
+	#[test]
 	fn help_contains_expected_flags() {
 		let mut command = Cli::command();
 		let mut output = Vec::new();
@@ -349,6 +507,7 @@ mod tests {
 		assert!(help.contains("--title"));
 		assert!(help.contains("--body"));
 		assert!(help.contains("--body-file"));
+		assert!(help.contains("--skip-validation"));
 		assert!(help.contains("--repo-root"));
 	}
 
