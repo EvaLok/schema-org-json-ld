@@ -3457,6 +3457,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Phase invariant and write-entry fix"
+    },
+    {
+      "dispatched_at": "2026-03-14T22:29:06Z",
+      "issue": 1260,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 261 review"
     }
   ],
   "audit_dropped": [
@@ -3646,21 +3653,21 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1258 Phase invariant and write-entry fix (cycle 261)",
-    "dispatch_to_pr_rate": "98.2%",
-    "in_flight": 2,
+    "dispatch_log_latest": "#1260 Cycle 261 review (cycle 261)",
+    "dispatch_to_pr_rate": "97.9%",
+    "in_flight": 3,
     "merged": 372,
     "pr_merge_rate": "99.2%",
     "produced_pr": 375,
     "resolved": 380,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 382
+    "total_dispatches": 383
   },
   "cycle_phase": {
     "cycle": 261,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-14T22:24:26Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-14T22:29:06Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
