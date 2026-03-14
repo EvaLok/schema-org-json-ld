@@ -3810,7 +3810,7 @@
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
-        "last_refreshed": "cycle 248"
+        "last_refreshed": "cycle 259"
       },
       "total_enums": {
         "cadence": "after enum additions",
@@ -6295,14 +6295,14 @@
         "status": "complete"
       },
       {
-        "description": "Review what works, iterate, improve",
+        "description": "Ongoing iteration. Pipeline-check now runs 9 phases: metric-snapshot, field-inventory, housekeeping-scan, cycle-status, state-invariants, derive-metrics, artifact-verify, doc-validation, step-comments. Write-side tools: cycle-start, process-merge, process-review, record-dispatch, cycle-complete, write-entry (worklog+journal+patch-pipeline), post-step. Cascade detection added cycle 259 (PR #1237). Pipeline status patching added cycle 259 (PR #1239).",
         "name": "ongoing evaluation",
         "phase": 5,
-        "status": "planned"
+        "status": "active"
       }
     ],
     "publish_gate": "All phases complete. Reliability count computed from blockers.reliability_clock.start_cycle. QC-REQUEST #496.",
-    "status": "phase_4_complete"
+    "status": "phase_5_active"
   },
   "total_enums": 12,
   "total_schema_classes": 89,
