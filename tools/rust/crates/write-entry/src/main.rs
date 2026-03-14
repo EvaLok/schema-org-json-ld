@@ -192,6 +192,8 @@ struct CycleReceiptJsonEntry {
     tool: String,
     #[serde(alias = "hash")]
     receipt: String,
+    #[serde(default, alias = "message")]
+    commit: String,
 }
 
 #[derive(Debug)]
@@ -261,6 +263,7 @@ fn execute_worklog(
     emit_unresolved_receipt_warnings(&mut input.receipts, repo_root)?;
     let path = worklog_path(repo_root, now, &args.title);
     let content = render_worklog(cycle, now, &input);
+    emit_generated_markdown_sha_warnings("worklog", &content, repo_root);
     write_entry_file(&path, &content)?;
     Ok(path)
 }
@@ -294,6 +297,7 @@ fn execute_journal(
         previous.as_deref(),
         worklog_link.as_deref(),
     );
+    emit_generated_markdown_sha_warnings("journal", &entry, repo_root);
     write_journal_file(&path, now.date_naive(), &entry)?;
     update_journal_index(repo_root, now.date_naive(), cycle)?;
     Ok(path)
@@ -600,8 +604,13 @@ fn apply_worklog_auto_derivations(
 
     let manual_receipts = parse_receipts(&args.receipt)?;
     input.receipt_note = None;
-    match derive_receipts_from_cycle(repo_root, cycle) {
-        Ok(receipts) => input.receipts = merge_receipts(receipts, &manual_receipts),
+    match derive_cycle_receipt_entries(repo_root, cycle) {
+        Ok(entries) => {
+            let receipts = cycle_receipt_entries_to_receipts(&entries)?;
+            input.receipts = merge_receipts(receipts, &manual_receipts);
+            let derived_prs = derive_prs_from_cycle_receipt_entries(&entries);
+            input.prs_merged = merge_numbered_refs(&input.prs_merged, &derived_prs);
+        }
         Err(error) if !manual_receipts.is_empty() => {
             warnings.push(format!(
                 "WARNING: failed to auto-derive receipts for cycle {}: {}; using provided manual receipts instead",
@@ -615,8 +624,22 @@ fn apply_worklog_auto_derivations(
         }
         Err(error) => return Err(error),
     }
+    input.prs_reviewed = merge_numbered_refs(&input.prs_reviewed, &input.prs_merged);
 
     Ok(warnings)
+}
+
+fn merge_numbered_refs(existing: &[u64], derived: &[u64]) -> Vec<u64> {
+    let mut seen = HashSet::new();
+    let mut merged = Vec::new();
+
+    for number in existing.iter().chain(derived.iter()) {
+        if seen.insert(*number) {
+            merged.push(*number);
+        }
+    }
+
+    merged
 }
 
 fn merge_issue_processed(existing: &[String], derived: &[String]) -> Vec<String> {
@@ -784,6 +807,35 @@ fn extract_issue_references(item: &str) -> Vec<u64> {
     }
 
     issues
+}
+
+fn extract_pr_references(item: &str) -> Vec<u64> {
+    let mut prs = Vec::new();
+    let bytes = item.as_bytes();
+    let mut index = 0;
+
+    while index < bytes.len() {
+        if bytes[index] != b'#' {
+            index += 1;
+            continue;
+        }
+
+        let start = index + 1;
+        let mut end = start;
+        while end < bytes.len() && bytes[end].is_ascii_digit() {
+            end += 1;
+        }
+
+        if end > start && issue_reference_looks_like_pr(item, index) {
+            if let Ok(pr) = item[start..end].parse::<u64>() {
+                prs.push(pr);
+            }
+        }
+
+        index = if end > start { end } else { index + 1 };
+    }
+
+    prs
 }
 
 fn issue_reference_looks_like_pr(item: &str, hash_index: usize) -> bool {
@@ -995,7 +1047,7 @@ fn extract_cycle_tag(subject: &str) -> Option<u64> {
     remainder[..end].trim().parse::<u64>().ok()
 }
 
-fn derive_receipts_from_cycle(repo_root: &Path, cycle: u64) -> Result<Vec<CommitReceipt>, String> {
+fn derive_cycle_receipt_entries(repo_root: &Path, cycle: u64) -> Result<Vec<CycleReceiptJsonEntry>, String> {
     let cycle = cycle.to_string();
     let output = ProcessCommand::new("bash")
         .arg("tools/cycle-receipts")
@@ -1019,24 +1071,57 @@ fn derive_receipts_from_cycle(repo_root: &Path, cycle: u64) -> Result<Vec<Commit
 
     let json = String::from_utf8(output.stdout)
         .map_err(|error| format!("failed to decode cycle-receipts JSON as UTF-8: {}", error))?;
-    let receipts = parse_cycle_receipts_output(&json)?;
-    if receipts.is_empty() {
+    let entries = parse_cycle_receipt_entries_output(&json)?;
+    if entries.is_empty() {
         return Err(format!(
             "cycle-receipts returned no receipts for cycle {}",
             cycle
         ));
     }
-    Ok(receipts)
+    Ok(entries)
 }
 
+fn parse_cycle_receipt_entries_output(json: &str) -> Result<Vec<CycleReceiptJsonEntry>, String> {
+    serde_json::from_str(json).map_err(|error| format!("invalid cycle-receipts JSON output: {}", error))
+}
+
+#[cfg(test)]
 fn parse_cycle_receipts_output(json: &str) -> Result<Vec<CommitReceipt>, String> {
-    let entries: Vec<CycleReceiptJsonEntry> = serde_json::from_str(json)
-        .map_err(|error| format!("invalid cycle-receipts JSON output: {}", error))?;
+    let entries = parse_cycle_receipt_entries_output(json)?;
+    cycle_receipt_entries_to_receipts(&entries)
+}
+
+fn cycle_receipt_entries_to_receipts(entries: &[CycleReceiptJsonEntry]) -> Result<Vec<CommitReceipt>, String> {
     let receipts = entries
-        .into_iter()
+        .iter()
         .map(|entry| format!("{}:{}", entry.tool.trim(), entry.receipt.trim()))
         .collect::<Vec<_>>();
     parse_receipts(&receipts)
+}
+
+#[cfg(test)]
+fn derive_prs_from_cycle_receipts_output(json: &str) -> Result<Vec<u64>, String> {
+    let entries = parse_cycle_receipt_entries_output(json)?;
+    Ok(derive_prs_from_cycle_receipt_entries(&entries))
+}
+
+fn derive_prs_from_cycle_receipt_entries(entries: &[CycleReceiptJsonEntry]) -> Vec<u64> {
+    let mut seen = HashSet::new();
+    let mut prs = Vec::new();
+
+    for entry in entries {
+        if !entry.tool.eq_ignore_ascii_case("process-merge") {
+            continue;
+        }
+
+        for pr in extract_pr_references(&entry.commit) {
+            if seen.insert(pr) {
+                prs.push(pr);
+            }
+        }
+    }
+
+    prs
 }
 
 fn merge_receipts(auto_receipts: Vec<CommitReceipt>, manual_receipts: &[CommitReceipt]) -> Vec<CommitReceipt> {
@@ -1219,6 +1304,65 @@ fn git_commit_exists(repo_root: &Path, sha: &str) -> Result<bool, String> {
         })?;
 
     Ok(output.status.success())
+}
+
+fn emit_generated_markdown_sha_warnings(entry_kind: &str, content: &str, repo_root: &Path) {
+    match validate_generated_markdown_shas(entry_kind, content, repo_root) {
+        Ok(warnings) => emit_worklog_auto_derivation_warnings(warnings),
+        Err(error) => eprintln!(
+            "WARNING: failed to validate generated {} commit references: {}",
+            entry_kind, error
+        ),
+    }
+}
+
+fn validate_generated_markdown_shas(
+    entry_kind: &str,
+    content: &str,
+    repo_root: &Path,
+) -> Result<Vec<String>, String> {
+    let mut warnings = Vec::new();
+    for sha in find_git_sha_candidates(content) {
+        if git_commit_exists(repo_root, &sha)? {
+            continue;
+        }
+        warnings.push(format!(
+            "WARNING: generated {} references unresolved commit SHA: {}",
+            entry_kind, sha
+        ));
+    }
+    Ok(warnings)
+}
+
+fn find_git_sha_candidates(content: &str) -> Vec<String> {
+    let bytes = content.as_bytes();
+    let mut index = 0;
+    let mut seen = HashSet::new();
+    let mut candidates = Vec::new();
+
+    while index < bytes.len() {
+        if !bytes[index].is_ascii_hexdigit() {
+            index += 1;
+            continue;
+        }
+
+        let start = index;
+        while index < bytes.len() && bytes[index].is_ascii_hexdigit() {
+            index += 1;
+        }
+
+        let candidate = &content[start..index];
+        if (7..=40).contains(&candidate.len())
+            && candidate.chars().any(|character| matches!(character, 'a'..='f' | 'A'..='F'))
+        {
+            let key = candidate.to_ascii_lowercase();
+            if seen.insert(key) {
+                candidates.push(candidate.to_string());
+            }
+        }
+    }
+
+    candidates
 }
 
 fn parse_sections(values: &[String]) -> Result<Vec<JournalSection>, String> {
@@ -2448,6 +2592,20 @@ mod tests {
     }
 
     #[test]
+    fn derive_prs_from_cycle_receipts_output_uses_process_merge_entries() {
+        let prs = derive_prs_from_cycle_receipts_output(
+            r#"[
+                {"step":"cycle-start","receipt":"abc1234","commit":"state(cycle-start): begin cycle 154 [cycle 154]"},
+                {"step":"process-merge","receipt":"def5678","commit":"state(process-merge): PR #537, PR #543 merged [cycle 154]"},
+                {"tool":"process-merge","hash":"fedcba9","message":"state(process-merge): PR #543, PR #544 merged [cycle 154]"}
+            ]"#,
+        )
+        .unwrap();
+
+        assert_eq!(prs, vec![537, 543, 544]);
+    }
+
+    #[test]
     fn parse_cycle_receipts_output_rejects_invalid_json_shape() {
         let error = parse_cycle_receipts_output(r#"{"step":"cycle-start","receipt":"abc1234"}"#)
             .unwrap_err();
@@ -2671,6 +2829,40 @@ mod tests {
     }
 
     #[test]
+    fn generated_markdown_sha_validation_accepts_resolvable_hashes() {
+        let repo_root = TempRepoDir::new("generated-markdown-valid-sha");
+        init_git_repo(&repo_root.path);
+        let valid_sha = create_git_commit(&repo_root.path, "notes/valid.txt", "valid\n");
+
+        let warnings = validate_generated_markdown_shas(
+            "worklog",
+            &format!("Resolved receipt `{valid_sha}` appears in the entry."),
+            &repo_root.path,
+        );
+
+        assert!(warnings.unwrap().is_empty());
+    }
+
+    #[test]
+    fn generated_markdown_sha_validation_warns_on_unresolved_hashes() {
+        let repo_root = TempRepoDir::new("generated-markdown-invalid-sha");
+        init_git_repo(&repo_root.path);
+        let valid_sha = create_git_commit(&repo_root.path, "notes/valid.txt", "valid\n");
+
+        let warnings = validate_generated_markdown_shas(
+            "journal",
+            &format!("Valid `{valid_sha}` and phantom `deadbee0` receipts are noted."),
+            &repo_root.path,
+        )
+        .unwrap();
+
+        assert_eq!(
+            warnings,
+            vec!["WARNING: generated journal references unresolved commit SHA: deadbee0"]
+        );
+    }
+
+    #[test]
     fn worklog_inline_flags_auto_populate_status_from_state() {
         let repo_root = TempRepoDir::new("worklog-auto-populate");
         init_git_repo(&repo_root.path);
@@ -2780,6 +2972,57 @@ mod tests {
             "| process-merge | {} | [{}](https://github.com/EvaLok/schema-org-json-ld/commit/{}) |",
             merge_receipt, merge_receipt, merge_receipt
         )));
+    }
+
+    #[test]
+    fn worklog_auto_derives_pr_sections_from_process_merge_receipts() {
+        let repo_root = TempRepoDir::new("worklog-auto-derives-prs");
+        init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154}
+            }"#,
+        );
+        let start_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154, issue #1 [cycle 154]",
+        );
+        let merge_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/merge.txt",
+            "merged\n",
+            "state(process-merge): PR #237, PR #240 merged [cycle 154]",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154, issue #1 [cycle 154]"}},
+                    {{"step":"process-merge","receipt":"{merge_receipt}","commit":"state(process-merge): PR #237, PR #240 merged [cycle 154]"}}
+                ]"#
+            ),
+        );
+
+        let mut args = worklog_args("Auto derive PR sections");
+        args.cycle = None;
+        args.done = vec!["Closed EvaLok/schema-org-json-ld#1042".to_string()];
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.copilot_metrics = Some("steady".to_string());
+        args.publish_gate = Some("open".to_string());
+        args.in_flight = Some(0);
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains("### PRs merged"));
+        assert!(content.contains("[PR #237](https://github.com/EvaLok/schema-org-json-ld/issues/237)"));
+        assert!(content.contains("[PR #240](https://github.com/EvaLok/schema-org-json-ld/issues/240)"));
+        assert!(content.contains("### PRs reviewed"));
+        assert!(!content.contains("### PRs merged\n\n- None."));
+        assert!(!content.contains("### PRs reviewed\n\n- None."));
     }
 
     #[test]
