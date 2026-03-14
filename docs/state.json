@@ -3371,6 +3371,13 @@
       "pr": 1231,
       "status": "merged",
       "title": "Stop auto-copying merged PRs to reviewed in write-entry"
+    },
+    {
+      "dispatched_at": "2026-03-14T16:19:11Z",
+      "issue": 1236,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add cascade detection to pipeline-check doc-validation phase"
     }
   ],
   "audit_dropped": [
@@ -3494,7 +3501,8 @@
     233,
     235,
     237,
-    241
+    241,
+    245
   ],
   "blockers": [
     {
@@ -3558,21 +3566,21 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1229 Stop auto-copying merged PRs to reviewed in write-entry (cycle 257)",
-    "dispatch_to_pr_rate": "98.7%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1236 Add cascade detection to pipeline-check doc-validation phase (cycle 258)",
+    "dispatch_to_pr_rate": "98.4%",
+    "in_flight": 1,
     "merged": 364,
     "pr_merge_rate": "99.2%",
     "produced_pr": 367,
     "resolved": 372,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 372
+    "total_dispatches": 373
   },
   "cycle_phase": {
     "cycle": 258,
-    "phase": "work",
-    "phase_entered_at": "2026-03-14T16:07:31Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-14T16:19:11Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -3908,7 +3916,7 @@
           "chosen_path": "structural-fix",
           "rationale": "Phased cycle architecture (Eva #992, commit 1e3b45f) is the structural fix. The orchestrator no longer writes its own worklog — a Copilot documentation agent generates worklog/journal from committed state (git log, state.json, issue metadata). This eliminates the root cause: self-reporting inaccuracies. Cycle 221 is the first to use this architecture. If worklog-accuracy findings persist despite the phased architecture, the category should be re-opened.",
           "root_cause": "write-entry defaults to 'Not provided.' for --copilot-metrics, --publish-gate when CLI flags are not passed, instead of reading from state.json. The orchestrator does not always pass these flags. The deeper root cause is that the orchestrator both does the work and writes its own report — no separation of concerns.",
-          "verification_cycle": "pending: write-entry auto-population merged cycle 245 (#1168), bug fix dispatched cycle 246 (#1176). Verify after #1176 merges."
+          "verification_cycle": "258: #1176 merged (PR #1177). Auto-derivation works but worklog-accuracy persists (cycle 257 F2: pipeline status timing). New sub-cause: worklog captures C1 early-check, not C5.5 final gate. Cascade detection dispatched (#1236) per audit #245."
         },
         {
           "added_cycle": 243,
@@ -3924,7 +3932,7 @@
           "chosen_path": "structural-fix",
           "rationale": "Dispatched #1176 to fix write-entry auto-derivation gating on args.cycle instead of resolved cycle, and to add regression tests for the default (omitted-cycle) invocation path. The pattern generator is insufficient test coverage for default invocation paths.",
           "root_cause": "Tool code is merged with tests that only exercise the explicit-argument path (cycle: Some(N)), not the default production path (cycle: None, resolved from state.json). Bugs in the default invocation are invisible to CI.",
-          "verification_cycle": null
+          "verification_cycle": 258
         },
         {
           "added_cycle": 250,
