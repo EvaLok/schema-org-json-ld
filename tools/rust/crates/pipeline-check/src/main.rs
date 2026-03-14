@@ -852,7 +852,8 @@ fn format_step_id_list(step_ids: &[&str]) -> String {
 fn is_mandatory_step_for_cycle(step: &str, cycle: u64) -> bool {
 	MANDATORY_STEPS
 		.iter()
-		.any(|(mandatory_step, effective_from_cycle)| *mandatory_step == step && *effective_from_cycle <= cycle)
+		.copied()
+		.any(|(mandatory_step, effective_from_cycle)| mandatory_step == step && effective_from_cycle <= cycle)
 }
 
 fn assess_step_comment_completeness(
