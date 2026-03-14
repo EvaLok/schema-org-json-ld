@@ -3393,8 +3393,10 @@
     {
       "dispatched_at": "2026-03-14T16:25:55Z",
       "issue": 1240,
+      "merged_at": "2026-03-14T18:25:43Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1241,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 258 end-of-cycle review"
     },
     {
@@ -3600,20 +3602,20 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1246 Thread --cycle override through pipeline-check step-comments verification (cycle 259)",
-    "dispatch_to_pr_rate": "97.9%",
-    "in_flight": 3,
-    "merged": 366,
+    "dispatch_to_pr_rate": "98.1%",
+    "in_flight": 2,
+    "merged": 367,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 369,
-    "resolved": 374,
+    "produced_pr": 370,
+    "resolved": 375,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 377
   },
   "cycle_phase": {
     "cycle": 259,
-    "phase": "complete",
-    "phase_entered_at": "2026-03-14T18:22:12Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-14T18:23:34Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -3718,7 +3720,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 258"
+        "last_refreshed": "cycle 259"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -3730,7 +3732,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 258"
+        "last_refreshed": "cycle 259"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -3750,7 +3752,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 258"
+        "last_refreshed": "cycle 259"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -3758,7 +3760,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 258"
+        "last_refreshed": "cycle 259"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -3786,7 +3788,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 258"
+        "last_refreshed": "cycle 259"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -3855,13 +3857,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 14,
+    "duration_minutes": 16,
     "issue": 1242,
     "number": 259,
-    "summary": "Merged 3 PRs (#1230 pipeline-check cycle-aware, #1231 write-entry reviewed fix, #1233 cycle 257 review artifact). Consumed cycle 257 review (3/5 complacency, 4 findings). Accepted audit #245 (cascade detection). Dispatched #1236 (cascade detection) and #1238 (pipeline status patching).",
-    "timestamp": "2026-03-14T18:07:05Z"
+    "summary": "Merged 3 PRs (#1241 review artifact, #1237 cascade detection, #1239 patch-pipeline). Consumed cycle 258 review (4 findings, 2/5 complacency, all deferred). Accepted audit #247 (post-step dedup). Dispatched #1244 (post-step dedup) and #1246 (pipeline-check cycle threading). Refreshed tool_pipeline field. Cleaned 3 dead branches.",
+    "timestamp": "2026-03-14T18:23:34Z"
   },
-  "last_eva_comment_check": "2026-03-14T18:07:05Z",
+  "last_eva_comment_check": "2026-03-14T18:23:34Z",
   "last_tool_audit_cycle": 236,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
