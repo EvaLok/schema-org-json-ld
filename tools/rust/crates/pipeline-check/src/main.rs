@@ -514,14 +514,28 @@ fn reclassify_doc_validation_cascade(steps: &mut [StepReport]) {
 }
 
 fn is_step_comments_pipeline_cascade(detail: &str) -> bool {
-	// Doc validation joins multiple failures with "; ". A cascade is only the single
-	// worklog pipeline-status mismatch that appears when validate-docs was given PASS
-	// but step-comments later flips the overall pipeline status to FAIL.
-	//
-	// This intentionally matches the current validate-docs error text rather than
-	// broadening the contract in this issue.
-	!detail.contains("; ")
-		&& detail.starts_with("worklog validation failed: pipeline status mismatch:")
+	// Doc validation joins multiple failures with "; ". Treat doc validation as a
+	// cascade only when every sub-failure is either the step-comments-induced
+	// pipeline-status mismatch or a known environment/infrastructure error that can
+	// accompany it, such as shallow-clone history gaps while resolving receipts.
+	detail
+		.split("; ")
+		.all(|part| is_pipeline_status_mismatch_failure(part) || is_known_doc_validation_environment_failure(part))
+}
+
+fn is_pipeline_status_mismatch_failure(detail_part: &str) -> bool {
+	strip_doc_validation_failure_prefix(detail_part).starts_with("pipeline status mismatch:")
+}
+
+fn is_known_doc_validation_environment_failure(detail_part: &str) -> bool {
+	strip_doc_validation_failure_prefix(detail_part).contains("shallow clone")
+}
+
+fn strip_doc_validation_failure_prefix(detail_part: &str) -> &str {
+	detail_part
+		.strip_prefix("worklog validation failed: ")
+		.or_else(|| detail_part.strip_prefix("journal validation failed: "))
+		.unwrap_or(detail_part)
 }
 
 fn parse_json(raw: &str) -> Option<Value> {
@@ -2458,6 +2472,32 @@ mod tests {
 	}
 
 	#[test]
+	fn step_comments_pipeline_cascade_matches_single_pipeline_status_mismatch() {
+		assert!(is_step_comments_pipeline_cascade(
+			"worklog validation failed: pipeline status mismatch: worklog reports 'PASS', pipeline-check overall is 'fail'",
+		));
+	}
+
+	#[test]
+	fn step_comments_pipeline_cascade_matches_pipeline_mismatch_with_shallow_clone_error() {
+		assert!(is_step_comments_pipeline_cascade(
+			"worklog validation failed: shallow clone cannot find cycle-complete commit abc1234; pipeline status mismatch: worklog reports 'PASS', pipeline-check overall is 'fail'",
+		));
+	}
+
+	#[test]
+	fn step_comments_pipeline_cascade_rejects_pipeline_mismatch_with_genuine_doc_failure() {
+		assert!(!is_step_comments_pipeline_cascade(
+			"missing receipts; worklog validation failed: pipeline status mismatch: worklog reports 'PASS', pipeline-check overall is 'fail'",
+		));
+	}
+
+	#[test]
+	fn step_comments_pipeline_cascade_rejects_single_genuine_failure() {
+		assert!(!is_step_comments_pipeline_cascade("missing receipts"));
+	}
+
+	#[test]
 	fn run_pipeline_marks_doc_validation_as_cascade_when_only_step_comments_fail() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -2571,6 +2611,128 @@ mod tests {
 		}
 
 		let report = run_pipeline(&root, 257, &CascadeRunner);
+		assert_eq!(report.steps[7].name, "doc-validation");
+		assert_eq!(report.steps[7].status, StepStatus::Cascade);
+		assert_eq!(report.steps[8].name, "step-comments");
+		assert_eq!(report.steps[8].status, StepStatus::Fail);
+		assert_eq!(report.overall, StepStatus::Fail);
+		assert!(report.has_blocking_findings);
+	}
+
+	#[test]
+	fn run_pipeline_marks_doc_validation_as_cascade_for_multi_cause_step_comments_failures() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir().join(format!("pipeline-check-doc-validation-multi-cause-{}", run_id));
+		let today = &current_utc_timestamp()[..10];
+		fs::create_dir_all(root.join("docs/journal")).unwrap();
+		fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
+		fs::create_dir_all(root.join("docs/reviews")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 834,
+				"last_cycle": {"number": 257},
+				"cycle_phase": {"phase": "close_out"},
+				"copilot_metrics": {
+					"total_dispatches": 3,
+					"resolved": 2,
+					"merged": 1,
+					"in_flight": 1,
+					"produced_pr": 2,
+					"closed_without_pr": 0,
+					"reviewed_awaiting_eva": 1,
+					"dispatch_to_pr_rate": "66.7%",
+					"pr_merge_rate": "50.0%"
+				},
+				"review_agent": {
+					"last_review_cycle": 257
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+		fs::write(
+			root.join("docs/worklog").join(today).join("020304-cycle-257-summary.md"),
+			"latest worklog",
+		)
+		.unwrap();
+		fs::write(root.join("docs/journal").join(format!("{today}.md")), "# Journal\n").unwrap();
+		fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
+
+		struct MultiCauseCascadeRunner;
+
+		impl CommandRunner for MultiCauseCascadeRunner {
+			fn run(&self, script_path: &Path, args: &[String]) -> Result<ExecutionResult, String> {
+				let key = script_path
+					.file_name()
+					.and_then(|name| name.to_str())
+					.unwrap_or_default();
+				match key {
+					"metric-snapshot" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({"summary":"13/13 checks","checks":[]}).to_string(),
+					}),
+					"check-field-inventory-rs" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: "PASS: all fields covered".to_string(),
+					}),
+					"housekeeping-scan" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({"items_needing_attention":0}).to_string(),
+					}),
+					"cycle-status" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({
+							"concurrency": {"in_flight": 1},
+							"eva_input": {"comments_since_last_cycle": [{"x": 1}]}
+						})
+						.to_string(),
+					}),
+					"state-invariants" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({"passed":5,"failed":0}).to_string(),
+					}),
+					"derive-metrics" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({
+							"total_dispatches": 3,
+							"resolved": 2,
+							"merged": 1,
+							"in_flight": 1,
+							"produced_pr": 2,
+							"closed_without_pr": 0,
+							"reviewed_awaiting_eva": 1,
+							"dispatch_to_pr_rate": "66.7%",
+							"pr_merge_rate": "50.0%"
+						})
+						.to_string(),
+					}),
+					"validate-docs" => {
+						let mode = args.first().map(String::as_str).unwrap_or_default();
+						if mode == "worklog" {
+							Ok(ExecutionResult {
+								exit_code: Some(1),
+								stdout: "shallow clone cannot find cycle-complete commit abc1234; pipeline status mismatch: worklog reports 'PASS', pipeline-check overall is 'fail'".to_string(),
+							})
+						} else {
+							Ok(ExecutionResult {
+								exit_code: Some(0),
+								stdout: String::new(),
+							})
+						}
+					}
+					other => panic!("unexpected tool invocation: {}", other),
+				}
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 834);
+				Ok(step_comment_bodies(257, &["0", "0.5", "0.6", "1", "2", "3", "4", "5", "6"]))
+			}
+		}
+
+		let report = run_pipeline(&root, 257, &MultiCauseCascadeRunner);
 		assert_eq!(report.steps[7].name, "doc-validation");
 		assert_eq!(report.steps[7].status, StepStatus::Cascade);
 		assert_eq!(report.steps[8].name, "step-comments");
