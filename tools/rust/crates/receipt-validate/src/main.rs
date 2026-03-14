@@ -5,6 +5,11 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::OnceLock;
+
+const RECEIPT_HEADER_PATTERN_STR: &str = r"^\|\s*Tool\s*\|\s*Receipt\s*\|\s*Link\s*\|\s*$";
+const RECEIPT_SEPARATOR_PATTERN_STR: &str = r"^\|\s*-+\s*\|\s*-+\s*\|\s*-+\s*\|\s*$";
+const RECEIPT_CELL_PATTERN_STR: &str = r"(?i)\b([0-9a-f]{7})\b";
 
 #[derive(Debug, Parser)]
 #[command(name = "receipt-validate")]
@@ -93,10 +98,8 @@ fn run(cli: &Cli) -> Result<ValidationReport, String> {
 }
 
 fn extract_worklog_receipts(content: &str) -> Result<BTreeSet<String>, String> {
-    let header_pattern = Regex::new(r"^\|\s*Tool\s*\|\s*Receipt\s*\|\s*Link\s*\|\s*$")
-        .map_err(|error| format!("failed to compile receipt header regex: {error}"))?;
-    let separator_pattern = Regex::new(r"^\|\s*-+\s*\|\s*-+\s*\|\s*-+\s*\|\s*$")
-        .map_err(|error| format!("failed to compile receipt separator regex: {error}"))?;
+    let header_pattern = receipt_header_pattern();
+    let separator_pattern = receipt_separator_pattern();
 
     let mut lines = content.lines().peekable();
     while let Some(line) = lines.next() {
@@ -105,10 +108,13 @@ fn extract_worklog_receipts(content: &str) -> Result<BTreeSet<String>, String> {
         }
 
         let Some(separator) = lines.next() else {
-            return Ok(BTreeSet::new());
+            return Err("receipt table header found without separator row".to_string());
         };
         if !separator_pattern.is_match(separator.trim()) {
-            continue;
+            return Err(format!(
+                "receipt table header found with malformed separator row: {}",
+                separator.trim()
+            ));
         }
 
         let mut receipts = BTreeSet::new();
@@ -241,10 +247,12 @@ fn fetch_cycle_receipts(
         )
     })?;
     serde_json::from_str::<Vec<CanonicalReceiptEntry>>(&stdout)
-        .map_err(|error| format!("failed to parse cycle-receipts JSON: {error}"))
+        .map_err(|error| format!("failed to parse {} JSON output: {error}", wrapper.display()))
 }
 
 fn extract_receipt_from_row(row: &str) -> Result<Option<String>, String> {
+    // Worklog receipt rows are expected to follow the Tool | Receipt | Link layout,
+    // so the short SHA lives in the second non-empty column.
     let cells = row
         .split('|')
         .map(str::trim)
@@ -257,9 +265,7 @@ fn extract_receipt_from_row(row: &str) -> Result<Option<String>, String> {
 }
 
 fn extract_receipt_from_cell(cell: &str) -> Result<Option<String>, String> {
-    let receipt_pattern = Regex::new(r"(?i)\b([0-9a-f]{7})\b")
-        .map_err(|error| format!("failed to compile receipt regex: {error}"))?;
-    Ok(receipt_pattern
+    Ok(receipt_cell_pattern()
         .captures(cell)
         .and_then(|captures| captures.get(1))
         .map(|capture| capture.as_str().to_ascii_lowercase()))
@@ -285,6 +291,30 @@ fn render_structural_suffix(details: &[MissingDetail]) -> String {
     } else {
         format!(" ({})", categories.join(", "))
     }
+}
+
+fn receipt_header_pattern() -> &'static Regex {
+    static RECEIPT_HEADER_PATTERN: OnceLock<Regex> = OnceLock::new();
+    RECEIPT_HEADER_PATTERN.get_or_init(|| {
+        Regex::new(RECEIPT_HEADER_PATTERN_STR)
+            .expect("RECEIPT_HEADER_PATTERN_STR should compile as valid regex")
+    })
+}
+
+fn receipt_separator_pattern() -> &'static Regex {
+    static RECEIPT_SEPARATOR_PATTERN: OnceLock<Regex> = OnceLock::new();
+    RECEIPT_SEPARATOR_PATTERN.get_or_init(|| {
+        Regex::new(RECEIPT_SEPARATOR_PATTERN_STR)
+            .expect("RECEIPT_SEPARATOR_PATTERN_STR should compile as valid regex")
+    })
+}
+
+fn receipt_cell_pattern() -> &'static Regex {
+    static RECEIPT_CELL_PATTERN: OnceLock<Regex> = OnceLock::new();
+    RECEIPT_CELL_PATTERN.get_or_init(|| {
+        Regex::new(RECEIPT_CELL_PATTERN_STR)
+            .expect("RECEIPT_CELL_PATTERN_STR should compile as valid regex")
+    })
 }
 
 #[cfg(test)]
@@ -412,5 +442,20 @@ mod tests {
         let receipts = extract_worklog_receipts(content).expect("receipt table should parse");
 
         assert_eq!(receipts, BTreeSet::from(["abc1234".to_string()]));
+    }
+
+    #[test]
+    fn fails_closed_for_malformed_receipt_table_separator() {
+        let content = "\
+## Commit receipts
+
+| Tool | Receipt | Link |
+| not-a-separator |
+| cycle-start | abc1234 | [abc1234](https://example.test/commit/abc1234) |
+";
+
+        let error = extract_worklog_receipts(content).expect_err("malformed table should fail");
+
+        assert!(error.contains("malformed separator"));
     }
 }
