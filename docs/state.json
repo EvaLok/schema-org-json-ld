@@ -3297,6 +3297,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add step ID validation to post-step tool"
+    },
+    {
+      "dispatched_at": "2026-03-14T06:32:42Z",
+      "issue": 1214,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 253 review"
     }
   ],
   "audit_dropped": [
@@ -3484,21 +3491,21 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1212 Add step ID validation to post-step tool (cycle 253)",
-    "dispatch_to_pr_rate": "98.4%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1214 Cycle 253 review (cycle 253)",
+    "dispatch_to_pr_rate": "98.1%",
+    "in_flight": 2,
     "merged": 355,
     "pr_merge_rate": "99.2%",
     "produced_pr": 358,
     "resolved": 363,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 364
+    "total_dispatches": 365
   },
   "cycle_phase": {
     "cycle": 253,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-14T06:28:53Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-14T06:32:42Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
