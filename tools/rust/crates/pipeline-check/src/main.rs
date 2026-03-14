@@ -2473,7 +2473,7 @@ mod tests {
 			missing_expected_step_ids(&found),
 			vec![
 				"0.6", "1.1", "3", "4", "5", "8", "C1", "C2", "C3", "C4.1", "C4.5", "C5",
-				"C5.5", "C6", "C7", "C8",
+				"C5.1", "C5.5", "C6", "C7", "C8",
 			]
 		);
 	}
@@ -2709,7 +2709,7 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("found 22 unique step comments"));
+			.contains("found 23 unique step comments"));
 		assert!(step
 			.detail
 			.as_deref()
@@ -2758,7 +2758,7 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("found 23 unique step comments"));
+			.contains("found 24 unique step comments"));
 		assert!(step
 			.detail
 			.as_deref()
@@ -2802,7 +2802,7 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("found 24 unique step comments"));
+			.contains("found 25 unique step comments"));
 		assert!(step
 			.detail
 			.as_deref()
