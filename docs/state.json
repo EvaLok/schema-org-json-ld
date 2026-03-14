@@ -3411,8 +3411,10 @@
     {
       "dispatched_at": "2026-03-14T18:22:12Z",
       "issue": 1246,
+      "merged_at": "2026-03-14T20:16:20Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1247,
+      "status": "merged",
       "title": "Thread --cycle override through pipeline-check step-comments verification"
     },
     {
@@ -3613,12 +3615,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1248 Cycle 259 end-of-cycle review (cycle 259)",
-    "dispatch_to_pr_rate": "98.4%",
-    "in_flight": 1,
-    "merged": 369,
+    "dispatch_to_pr_rate": "98.7%",
+    "in_flight": 0,
+    "merged": 370,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 372,
-    "resolved": 377,
+    "produced_pr": 373,
+    "resolved": 378,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 378
