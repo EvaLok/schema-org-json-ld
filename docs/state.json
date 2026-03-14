@@ -3403,6 +3403,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add duplicate step ID detection to post-step tool"
+    },
+    {
+      "dispatched_at": "2026-03-14T18:22:12Z",
+      "issue": 1246,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Thread --cycle override through pipeline-check step-comments verification"
     }
   ],
   "audit_dropped": [
@@ -3592,21 +3599,21 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1244 Add duplicate step ID detection to post-step tool (cycle 259)",
-    "dispatch_to_pr_rate": "98.1%",
-    "in_flight": 2,
+    "dispatch_log_latest": "#1246 Thread --cycle override through pipeline-check step-comments verification (cycle 259)",
+    "dispatch_to_pr_rate": "97.9%",
+    "in_flight": 3,
     "merged": 366,
     "pr_merge_rate": "99.2%",
     "produced_pr": 369,
     "resolved": 374,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 376
+    "total_dispatches": 377
   },
   "cycle_phase": {
     "cycle": 259,
     "phase": "complete",
-    "phase_entered_at": "2026-03-14T18:21:44Z"
+    "phase_entered_at": "2026-03-14T18:22:12Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
