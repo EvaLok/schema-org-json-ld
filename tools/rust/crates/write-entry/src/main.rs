@@ -610,6 +610,10 @@ fn apply_worklog_auto_derivations(
             input.receipts = merge_receipts(receipts, &manual_receipts);
             let derived_prs = derive_prs_from_cycle_receipt_entries(&entries);
             input.prs_merged = merge_numbered_refs(&input.prs_merged, &derived_prs);
+            input.receipt_note = Some(
+                "Additional receipts (docs commit, review dispatch) are created after worklog generation and cannot appear in this table."
+                    .to_string(),
+            );
         }
         Err(error) if !manual_receipts.is_empty() => {
             warnings.push(format!(
