@@ -3785,7 +3785,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 259"
+        "last_refreshed": "cycle 260"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -5777,9 +5777,22 @@
         "finding_count": 4,
         "ignored": 0,
         "note": "F1 code-quality: deferred (pipeline-check --cycle override threading). F2 review-evidence: deferred (recurring from c257). F3 receipt-auditability: deferred (recurring from c257, non-resolving SHAs). F4 process-adherence: deferred (close-out step ID shift)."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "code-quality",
+          "process-adherence",
+          "review-evidence"
+        ],
+        "complacency_score": 3,
+        "cycle": 259,
+        "deferred": 3,
+        "finding_count": 3,
+        "ignored": 0
       }
     ],
-    "last_review_cycle": 258
+    "last_review_cycle": 259
   },
   "schema_status": {
     "directory_layout": {
