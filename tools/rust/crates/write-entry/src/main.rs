@@ -628,8 +628,6 @@ fn apply_worklog_auto_derivations(
         }
         Err(error) => return Err(error),
     }
-    input.prs_reviewed = merge_numbered_refs(&input.prs_reviewed, &input.prs_merged);
-
     Ok(warnings)
 }
 
@@ -1691,14 +1689,16 @@ fn render_worklog(cycle: u64, now: DateTime<Utc>, input: &WorklogInput) -> Strin
         PRIMARY_ISSUES_URL,
     ));
     lines.push(String::new());
-    lines.push("### PRs reviewed".to_string());
-    lines.push(String::new());
-    lines.extend(render_numbered_refs(
-        &input.prs_reviewed,
-        "PR",
-        PRIMARY_ISSUES_URL,
-    ));
-    lines.push(String::new());
+    if !input.prs_reviewed.is_empty() {
+        lines.push("### PRs reviewed".to_string());
+        lines.push(String::new());
+        lines.extend(render_numbered_refs(
+            &input.prs_reviewed,
+            "PR",
+            PRIMARY_ISSUES_URL,
+        ));
+        lines.push(String::new());
+    }
     lines.push("### Issues processed".to_string());
     lines.push(String::new());
     lines.extend(render_bullet_list(&input.issues_processed));
@@ -2931,7 +2931,7 @@ mod tests {
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
-        assert!(content.contains("### PRs reviewed\n\n- None."));
+        assert!(!content.contains("### PRs reviewed"));
         assert!(content.contains("### Issues processed\n\n- None."));
         assert!(content.contains("## Self-modifications\n\n- None."));
         assert!(content.contains("- **Pipeline status**: Not provided."));
@@ -3057,9 +3057,110 @@ mod tests {
         assert!(content.contains("### PRs merged"));
         assert!(content.contains("[PR #237](https://github.com/EvaLok/schema-org-json-ld/issues/237)"));
         assert!(content.contains("[PR #240](https://github.com/EvaLok/schema-org-json-ld/issues/240)"));
-        assert!(content.contains("### PRs reviewed"));
+        assert!(!content.contains("### PRs reviewed"));
         assert!(!content.contains("### PRs merged\n\n- None."));
-        assert!(!content.contains("### PRs reviewed\n\n- None."));
+    }
+
+    #[test]
+    fn worklog_prs_merged_flag_does_not_auto_render_reviewed_prs() {
+        let repo_root = TempRepoDir::new("worklog-prs-merged-without-reviewed");
+        init_git_repo(&repo_root.path);
+        let start_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154, issue #1 [cycle 154]",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154, issue #1 [cycle 154]"}}
+                ]"#
+            ),
+        );
+
+        let mut args = worklog_args("Merged only");
+        args.pr_merged = vec![1226];
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.copilot_metrics = Some("steady".to_string());
+        args.publish_gate = Some("open".to_string());
+        args.in_flight = Some(0);
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains("### PRs merged"));
+        assert!(content.contains("[PR #1226](https://github.com/EvaLok/schema-org-json-ld/issues/1226)"));
+        assert!(!content.contains("### PRs reviewed"));
+    }
+
+    #[test]
+    fn worklog_prs_reviewed_flag_renders_reviewed_prs() {
+        let repo_root = TempRepoDir::new("worklog-prs-reviewed-explicit");
+        init_git_repo(&repo_root.path);
+        let start_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154, issue #1 [cycle 154]",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154, issue #1 [cycle 154]"}}
+                ]"#
+            ),
+        );
+
+        let mut args = worklog_args("Reviewed only");
+        args.pr_reviewed = vec![1226];
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.copilot_metrics = Some("steady".to_string());
+        args.publish_gate = Some("open".to_string());
+        args.in_flight = Some(0);
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains("### PRs reviewed"));
+        assert!(content.contains("[PR #1226](https://github.com/EvaLok/schema-org-json-ld/issues/1226)"));
+    }
+
+    #[test]
+    fn worklog_prs_merged_and_reviewed_flags_render_both_sections() {
+        let repo_root = TempRepoDir::new("worklog-prs-merged-and-reviewed");
+        init_git_repo(&repo_root.path);
+        let start_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154, issue #1 [cycle 154]",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154, issue #1 [cycle 154]"}}
+                ]"#
+            ),
+        );
+
+        let mut args = worklog_args("Merged and reviewed");
+        args.pr_merged = vec![1226];
+        args.pr_reviewed = vec![1226];
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.copilot_metrics = Some("steady".to_string());
+        args.publish_gate = Some("open".to_string());
+        args.in_flight = Some(0);
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains("### PRs merged"));
+        assert!(content.contains("### PRs reviewed"));
+        assert!(content.contains("[PR #1226](https://github.com/EvaLok/schema-org-json-ld/issues/1226)"));
     }
 
     #[test]
