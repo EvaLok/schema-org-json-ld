@@ -880,6 +880,7 @@ Commit your findings as `docs/reviews/cycle-{cycle}.md`. Do NOT attempt to post 
    - Verify each commit receipt SHA against `git show <sha> --stat`
    - Confirm the committed changes match the worklog claims
    - Check that `bash tools/cycle-receipts --cycle {cycle}` output matches the worklog receipt table
+   - **Receipt table scope**: the worklog receipt table covers all commits through `cycle-complete`. The docs commit (`docs(cycle-N): ...`) and record-dispatch commit (`state(record-dispatch): ...`) are **structurally excluded** — they are created after the worklog is written and cannot appear in their own table. This is an inherent temporal constraint, not a defect. Do NOT flag their absence as a worklog-accuracy issue. Instead, verify that all OTHER cycle receipts are present and correct.
 
 6. **Infrastructure consistency** — check that:
    - AGENTS.md, skills, and checklists are consistent with actual practice
