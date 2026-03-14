@@ -3358,6 +3358,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Make pipeline-check mandatory steps cycle-aware"
+    },
+    {
+      "dispatched_at": "2026-03-14T14:22:06Z",
+      "issue": 1229,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Stop auto-copying merged PRs to reviewed in write-entry"
     }
   ],
   "audit_dropped": [
@@ -3545,16 +3552,16 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1228 Make pipeline-check mandatory steps cycle-aware (cycle 257)",
-    "dispatch_to_pr_rate": "98.1%",
-    "in_flight": 2,
+    "dispatch_log_latest": "#1229 Stop auto-copying merged PRs to reviewed in write-entry (cycle 257)",
+    "dispatch_to_pr_rate": "97.8%",
+    "in_flight": 3,
     "merged": 361,
     "pr_merge_rate": "99.2%",
     "produced_pr": 364,
     "resolved": 369,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 371
+    "total_dispatches": 372
   },
   "cycle_phase": {
     "cycle": 257,
