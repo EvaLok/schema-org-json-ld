@@ -276,7 +276,7 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
 	steps.push(verify_artifacts(repo_root));
 	let pipeline_status = pipeline_overall_status(&steps);
 	steps.push(verify_doc_validation(repo_root, pipeline_status, runner));
-	steps.push(verify_step_comments(repo_root, runner));
+	steps.push(verify_step_comments(repo_root, cycle, runner));
 	// Doc validation runs before step-comments so it can pass the pre-step-comments
 	// pipeline status through to validate-docs. Reclassify afterward, once the real
 	// step-comments result is known, but before computing the final overall status.
@@ -785,7 +785,7 @@ fn verify_doc_validation_for_date(
 	}
 }
 
-fn verify_step_comments(repo_root: &Path, runner: &dyn CommandRunner) -> StepReport {
+fn verify_step_comments(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> StepReport {
 	let state = match read_state_value(repo_root) {
 		Ok(state) => state,
 		Err(error) => {
@@ -820,20 +820,6 @@ fn verify_step_comments(repo_root: &Path, runner: &dyn CommandRunner) -> StepRep
 	};
 	let found = match fetch_step_comments_for_issue(runner, issue) {
 		Ok(found) => found,
-		Err(error) => {
-			return StepReport {
-				name: STEP_COMMENTS_STEP_NAME,
-				status: StepStatus::Error,
-				severity: Severity::Blocking,
-				exit_code: None,
-				detail: Some(error),
-				findings: None,
-				summary: None,
-			};
-		}
-	};
-	let cycle = match current_cycle_from_state(repo_root) {
-		Ok(cycle) => cycle,
 		Err(error) => {
 			return StepReport {
 				name: STEP_COMMENTS_STEP_NAME,
@@ -2594,6 +2580,142 @@ mod tests {
 	}
 
 	#[test]
+	fn run_pipeline_respects_cycle_override_for_step_comments() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		const OVERRIDE_CYCLE: u64 = 254;
+		const CURRENT_CYCLE: u64 = 258;
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir()
+			.join(format!("pipeline-check-step-comments-cycle-override-{}", run_id));
+		let today = &current_utc_timestamp()[..10];
+		fs::create_dir_all(root.join("docs/journal")).unwrap();
+		fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
+		fs::create_dir_all(root.join("docs/reviews")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 842,
+				"last_cycle": {"number": CURRENT_CYCLE},
+				"cycle_phase": {"phase": "close_out"},
+				"copilot_metrics": {
+					"total_dispatches": 3,
+					"resolved": 2,
+					"merged": 1,
+					"in_flight": 1,
+					"produced_pr": 2,
+					"closed_without_pr": 0,
+					"reviewed_awaiting_eva": 1,
+					"dispatch_to_pr_rate": "66.7%",
+					"pr_merge_rate": "50.0%"
+				},
+				"review_agent": {
+					"last_review_cycle": CURRENT_CYCLE
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+		fs::write(
+			root
+				.join("docs/worklog")
+				.join(today)
+				.join(format!("020304-cycle-{}-summary.md", CURRENT_CYCLE)),
+			"latest worklog",
+		)
+		.unwrap();
+		fs::write(root.join("docs/journal").join(format!("{today}.md")), "# Journal\n").unwrap();
+		fs::write(
+			root.join(format!("docs/reviews/cycle-{}.md", CURRENT_CYCLE)),
+			"review",
+		)
+		.unwrap();
+
+		struct OverrideRunner;
+
+		impl CommandRunner for OverrideRunner {
+			fn run(&self, script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				let key = script_path
+					.file_name()
+					.and_then(|name| name.to_str())
+					.unwrap_or_default();
+				match key {
+					"metric-snapshot" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({"summary":"13/13 checks","checks":[]}).to_string(),
+					}),
+					"check-field-inventory-rs" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: "PASS: all fields covered".to_string(),
+					}),
+					"housekeeping-scan" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({"items_needing_attention":0}).to_string(),
+					}),
+					"cycle-status" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({
+							"concurrency": {"in_flight": 1},
+							"eva_input": {"comments_since_last_cycle": [{"x": 1}]}
+						})
+						.to_string(),
+					}),
+					"state-invariants" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({"passed":5,"failed":0}).to_string(),
+					}),
+					"derive-metrics" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({
+							"total_dispatches": 3,
+							"resolved": 2,
+							"merged": 1,
+							"in_flight": 1,
+							"produced_pr": 2,
+							"closed_without_pr": 0,
+							"reviewed_awaiting_eva": 1,
+							"dispatch_to_pr_rate": "66.7%",
+							"pr_merge_rate": "50.0%"
+						})
+						.to_string(),
+					}),
+					"validate-docs" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: String::new(),
+					}),
+					other => panic!("unexpected tool invocation: {}", other),
+				}
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 842);
+				let steps = EXPECTED_STEP_IDS
+					.iter()
+					.copied()
+					.filter(|step| *step != "C5.1")
+					.collect::<Vec<_>>();
+				Ok(step_comment_bodies(OVERRIDE_CYCLE, &steps))
+			}
+		}
+
+		let report = run_pipeline(&root, OVERRIDE_CYCLE, &OverrideRunner);
+		assert_eq!(report.steps[8].name, "step-comments");
+		assert_eq!(report.steps[8].status, StepStatus::Warn);
+		assert_eq!(report.steps[8].severity, Severity::Warning);
+		assert!(report.steps[8]
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("missing mandatory [none]"));
+		assert!(report.steps[8]
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("missing optional [C5.1]"));
+		assert_eq!(report.overall, StepStatus::Pass);
+		assert!(!report.has_blocking_findings);
+	}
+
+	#[test]
 	fn run_pipeline_keeps_doc_validation_fail_for_independent_failures() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -2929,7 +3051,7 @@ mod tests {
 			}
 		}
 
-		let step = verify_step_comments(&root, &StepCommentRunner);
+		let step = verify_step_comments(&root, 257, &StepCommentRunner);
 		assert_eq!(step.name, "step-comments");
 		assert_eq!(step.status, StepStatus::Fail);
 		assert_eq!(step.severity, Severity::Blocking);
@@ -2993,7 +3115,7 @@ mod tests {
 			}
 		}
 
-		let step = verify_step_comments(&root, &StepCommentRunner);
+		let step = verify_step_comments(&root, 257, &StepCommentRunner);
 		assert_eq!(step.status, StepStatus::Fail);
 		assert_eq!(step.severity, Severity::Blocking);
 		assert_eq!(step.findings, Some(2));
@@ -3036,7 +3158,7 @@ mod tests {
 			}
 		}
 
-		let step = verify_step_comments(&root, &StepCommentRunner);
+		let step = verify_step_comments(&root, 257, &StepCommentRunner);
 		assert_eq!(step.status, StepStatus::Pass);
 		assert_eq!(step.severity, Severity::Blocking);
 		assert_eq!(step.detail.as_deref(), Some("skipping step comment verification: /previous_cycle_issue is not set in docs/state.json yet"));
@@ -3071,7 +3193,7 @@ mod tests {
 			}
 		}
 
-		let step = verify_step_comments(&root, &StepCommentRunner);
+		let step = verify_step_comments(&root, 257, &StepCommentRunner);
 		assert_eq!(step.status, StepStatus::Error);
 		assert_eq!(step.severity, Severity::Blocking);
 		assert_eq!(
@@ -3117,7 +3239,7 @@ mod tests {
 			}
 		}
 
-		let step = verify_step_comments(&root, &StepCommentRunner);
+		let step = verify_step_comments(&root, 254, &StepCommentRunner);
 		assert_eq!(step.status, StepStatus::Warn);
 		assert_eq!(step.severity, Severity::Warning);
 		assert!(step
@@ -3169,7 +3291,7 @@ mod tests {
 			}
 		}
 
-		let step = verify_step_comments(&root, &StepCommentRunner);
+		let step = verify_step_comments(&root, 257, &StepCommentRunner);
 		assert_eq!(step.status, StepStatus::Fail);
 		assert_eq!(step.severity, Severity::Blocking);
 		assert!(step
@@ -3216,7 +3338,7 @@ mod tests {
 			}
 		}
 
-		let step = verify_step_comments(&root, &StepCommentRunner);
+		let step = verify_step_comments(&root, 254, &StepCommentRunner);
 		assert_eq!(step.status, StepStatus::Fail);
 		assert_eq!(step.severity, Severity::Blocking);
 		assert!(step
@@ -3263,7 +3385,7 @@ mod tests {
 			}
 		}
 
-		let step = verify_step_comments(&root, &StepCommentRunner);
+		let step = verify_step_comments(&root, 257, &StepCommentRunner);
 		assert_eq!(step.status, StepStatus::Fail);
 		assert_eq!(step.severity, Severity::Blocking);
 		assert!(step
@@ -3315,7 +3437,7 @@ mod tests {
 			}
 		}
 
-		let step = verify_step_comments(&root, &StepCommentRunner);
+		let step = verify_step_comments(&root, 257, &StepCommentRunner);
 		assert_eq!(step.status, StepStatus::Fail);
 		assert_eq!(step.severity, Severity::Blocking);
 		assert!(step
@@ -3362,7 +3484,7 @@ mod tests {
 			}
 		}
 
-		let step = verify_step_comments(&root, &StepCommentRunner);
+		let step = verify_step_comments(&root, 257, &StepCommentRunner);
 		assert_eq!(step.status, StepStatus::Pass);
 		assert_eq!(step.severity, Severity::Blocking);
 		assert!(step
