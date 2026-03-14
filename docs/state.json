@@ -3618,7 +3618,7 @@
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 243"
+        "last_refreshed": "cycle 254"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -3690,7 +3690,7 @@
       },
       "schema_status.planned_next": {
         "cadence": "after planning or completing types",
-        "last_refreshed": "cycle 243"
+        "last_refreshed": "cycle 254"
       },
       "schema_status.property_gap_audit": {
         "cadence": "after property gap fixes",
@@ -3742,7 +3742,7 @@
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
-        "last_refreshed": "cycle 243"
+        "last_refreshed": "cycle 254"
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
@@ -5572,10 +5572,25 @@
         "deferred": 2,
         "finding_count": 4,
         "ignored": 0,
-        "note": "F1 regression-verification: deferred — regression evidence quality needs executable proof recorded in worklog. F2 worklog-accuracy: actioned — PR #1206 merged (receipt 7885269), receipt table completeness fix. F3 process-adherence: deferred — copilot_metrics hand-edit needs tool-driven repair path. F4 dispatch-quality: actioned — PR #1207 merged (receipt efd00a8), terminal-status allowlist covers dispatched status."
+        "note": "F1 regression-verification: deferred — regression evidence quality needs executable proof recorded in worklog. F2 worklog-accuracy: actioned_failed — PR #1206 merged but receipt table still incomplete in cycle 253 (chicken-and-egg: docs commit creates receipt after worklog generation). Structural fix: write-entry now adds note explaining post-worklog receipts (commit 5b1c0ba). F3 process-adherence: deferred — copilot_metrics hand-edit needs tool-driven repair path. F4 dispatch-quality: verified_resolved — housekeeping-scan no longer flags dispatched issues (terminal-status allowlist working)."
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "regression-verification",
+          "review-history-accuracy",
+          "worklog-accuracy",
+          "pipeline-gate-override"
+        ],
+        "complacency_score": 2,
+        "cycle": 253,
+        "deferred": 3,
+        "finding_count": 4,
+        "ignored": 0,
+        "note": "F1 regression-verification: deferred — cycle 253 claimed F1/F2 resolved without recording executable proof per checklist requirement. F2 review-history-accuracy: deferred — cycle 252 disposition over-credited worklog-accuracy as fully actioned when only PR extraction was fixed. F3 worklog-accuracy: actioned — write-entry receipt note added (commit 5b1c0ba) making post-worklog receipt limitation explicit. CHRONIC: 7/7 consecutive reviews. F4 pipeline-gate-override: deferred — closed with 2 FAIL pipeline but worklog reported 1 FAIL."
       }
     ],
-    "last_review_cycle": 252
+    "last_review_cycle": 253
   },
   "schema_status": {
     "directory_layout": {
