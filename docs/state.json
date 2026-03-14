@@ -3697,7 +3697,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 255"
+        "last_refreshed": "cycle 256"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -5630,9 +5630,24 @@
         "finding_count": 5,
         "ignored": 0,
         "note": "F1 worklog-accuracy: receipt table incomplete (docs commit 50372e0 omitted). F2 review-history-accuracy: cycle 253 F3 over-credited as actioned. F3 pipeline-gate-override: cycle closed despite 2 FAIL final pipeline. F4 journal-quality: journal rationalized receipt defect instead of fixing. F5 worklog-accuracy: blurred two history edits into misleading sentence. All findings consumed, structural receipt-table fix planned for cycle 255."
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "infrastructure-consistency",
+          "journal-quality",
+          "process-adherence",
+          "review-evidence",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 255,
+        "deferred": 4,
+        "finding_count": 5,
+        "ignored": 0
       }
     ],
-    "last_review_cycle": 254
+    "last_review_cycle": 255
   },
   "schema_status": {
     "directory_layout": {
