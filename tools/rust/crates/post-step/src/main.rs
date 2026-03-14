@@ -189,31 +189,35 @@ fn format_comment(cycle: u64, step: &str, title: &str, body: &str) -> String {
 	)
 }
 
-fn has_matching_step_comment(existing_comments: &str, step: &str) -> bool {
+fn has_matching_step_comment(existing_comments: &[String], step: &str) -> bool {
 	let expected_suffix = format!("| Step {step}");
 
-	existing_comments.lines().any(|line| {
-		line.starts_with(&format!(
-			"> **{ORCHESTRATOR_SIGNATURE}** | Cycle "
-		)) && line.ends_with(&expected_suffix)
-	})
+	existing_comments
+		.iter()
+		.filter_map(|body| body.lines().next())
+		.any(|line| {
+			line.starts_with(&format!(
+				"> **{ORCHESTRATOR_SIGNATURE}** | Cycle "
+			)) && line.ends_with(&expected_suffix)
+		})
 }
 
 trait CommentPoster {
-	fn existing_comments(&self, issue: u64) -> Result<String, String>;
+	fn existing_comments(&self, issue: u64) -> Result<Vec<String>, String>;
 	fn post_comment(&self, issue: u64, body: &str) -> Result<(), String>;
 }
 
 struct GhCommandRunner;
 
 impl CommentPoster for GhCommandRunner {
-	fn existing_comments(&self, issue: u64) -> Result<String, String> {
+	fn existing_comments(&self, issue: u64) -> Result<Vec<String>, String> {
 		let output = Command::new("gh")
 			.arg("api")
 			.arg(format!("repos/{MAIN_REPO}/issues/{issue}/comments"))
 			.arg("--paginate")
+			.arg("--slurp")
 			.arg("--jq")
-			.arg(".[].body")
+			.arg("[.[].[] | .body]")
 			.stdout(Stdio::piped())
 			.stderr(Stdio::piped())
 			.output()
@@ -223,8 +227,8 @@ impl CommentPoster for GhCommandRunner {
 			return Err(command_failure_message("gh api", &output));
 		}
 
-		String::from_utf8(output.stdout)
-			.map_err(|error| format!("gh api returned non-UTF-8 comment bodies: {}", error))
+		serde_json::from_slice(&output.stdout)
+			.map_err(|error| format!("failed to parse gh api comment bodies: {}", error))
 	}
 
 	fn post_comment(&self, issue: u64, body: &str) -> Result<(), String> {
@@ -289,7 +293,7 @@ mod tests {
 
 	struct RecordingPoster {
 		body: std::sync::Mutex<Vec<String>>,
-		existing_comments: String,
+		existing_comments: Vec<String>,
 		fetch_error: Option<String>,
 		post_error: Option<String>,
 	}
@@ -298,16 +302,16 @@ mod tests {
 		fn success() -> Self {
 			Self {
 				body: std::sync::Mutex::new(Vec::new()),
-				existing_comments: String::new(),
+				existing_comments: Vec::new(),
 				fetch_error: None,
 				post_error: None,
 			}
 		}
 
-		fn with_existing_comments(existing_comments: &str) -> Self {
+		fn with_existing_comments(existing_comments: &[&str]) -> Self {
 			Self {
 				body: std::sync::Mutex::new(Vec::new()),
-				existing_comments: existing_comments.to_string(),
+				existing_comments: existing_comments.iter().map(|body| body.to_string()).collect(),
 				fetch_error: None,
 				post_error: None,
 			}
@@ -316,7 +320,7 @@ mod tests {
 		fn failing(error: &str) -> Self {
 			Self {
 				body: std::sync::Mutex::new(Vec::new()),
-				existing_comments: String::new(),
+				existing_comments: Vec::new(),
 				fetch_error: None,
 				post_error: Some(error.to_string()),
 			}
@@ -325,7 +329,7 @@ mod tests {
 		fn fetch_failing(error: &str) -> Self {
 			Self {
 				body: std::sync::Mutex::new(Vec::new()),
-				existing_comments: String::new(),
+				existing_comments: Vec::new(),
 				fetch_error: Some(error.to_string()),
 				post_error: None,
 			}
@@ -337,7 +341,7 @@ mod tests {
 	}
 
 	impl CommentPoster for RecordingPoster {
-		fn existing_comments(&self, _issue: u64) -> Result<String, String> {
+		fn existing_comments(&self, _issue: u64) -> Result<Vec<String>, String> {
 			if let Some(error) = &self.fetch_error {
 				return Err(error.clone());
 			}
@@ -609,7 +613,7 @@ mod tests {
 			skip_validation: false,
 			repo_root: repo_root.clone(),
 		};
-		let poster = RecordingPoster::with_existing_comments("");
+		let poster = RecordingPoster::with_existing_comments(&[]);
 
 		let result = execute(&cli, &poster).expect("execute should succeed");
 
@@ -631,9 +635,9 @@ mod tests {
 			skip_validation: false,
 			repo_root: repo_root.clone(),
 		};
-		let poster = RecordingPoster::with_existing_comments(
+		let poster = RecordingPoster::with_existing_comments(&[
 			"> **[main-orchestrator]** | Cycle 197 | Step 5.11\n\n### Summarize completion checks\n\nDone.",
-		);
+		]);
 
 		let result = execute(&cli, &poster).expect("execute should succeed");
 
@@ -655,9 +659,9 @@ mod tests {
 			skip_validation: false,
 			repo_root: repo_root.clone(),
 		};
-		let poster = RecordingPoster::with_existing_comments(
+		let poster = RecordingPoster::with_existing_comments(&[
 			"> **[main-orchestrator]** | Cycle 197 | Step 1\n\n### Earlier update\n\nAlready posted.",
-		);
+		]);
 
 		let error = execute(&cli, &poster).expect_err("duplicate step should fail");
 
@@ -682,9 +686,9 @@ mod tests {
 			skip_validation: false,
 			repo_root: repo_root.clone(),
 		};
-		let poster = RecordingPoster::with_existing_comments(
+		let poster = RecordingPoster::with_existing_comments(&[
 			"> **[main-orchestrator]** | Cycle 197 | Step 1\n\n### Earlier update\n\nAlready posted.",
-		);
+		]);
 
 		let result = execute(&cli, &poster).expect("force should bypass duplicate detection");
 
@@ -706,13 +710,11 @@ mod tests {
 			skip_validation: false,
 			repo_root: repo_root.clone(),
 		};
-		let poster = RecordingPoster::with_existing_comments(
-			concat!(
-				"General discussion comment\n",
-				"> **[main-orchestrator]** | Cycle 197 | Step 5.11\n\n### Different step\n\nDone.\n",
-				"> **[main-orchestrator]** | Cycle 198 | Step 1\n\n### Matching step\n\nAlready posted."
-			),
-		);
+		let poster = RecordingPoster::with_existing_comments(&[
+			"General discussion comment",
+			"> **[main-orchestrator]** | Cycle 197 | Step 5.11\n\n### Different step\n\nDone.",
+			"> **[main-orchestrator]** | Cycle 198 | Step 1\n\n### Matching step\n\nAlready posted.",
+		]);
 
 		let error = execute(&cli, &poster).expect_err("matching duplicate should fail");
 
@@ -721,6 +723,41 @@ mod tests {
 			"Step 1 already posted on issue #834. Use a different step ID or --force to override."
 		);
 		assert!(poster.posted_bodies().is_empty());
+	}
+
+	#[test]
+	fn has_matching_step_comment_matches_special_character_steps_across_cycles() {
+		assert!(has_matching_step_comment(
+			&[
+				"> **[main-orchestrator]** | Cycle 197 | Step 5.11\n\n### Earlier update\n\nAlready posted."
+					.to_string(),
+			],
+			"5.11"
+		));
+	}
+
+	#[test]
+	fn has_matching_step_comment_rejects_partial_step_matches() {
+		assert!(!has_matching_step_comment(
+			&[
+				"> **[main-orchestrator]** | Cycle 198 | Step 10\n\n### Different step\n\nAlready posted."
+					.to_string(),
+			],
+			"1"
+		));
+	}
+
+	#[test]
+	fn has_matching_step_comment_ignores_quoted_headers() {
+		assert!(!has_matching_step_comment(
+			&[concat!(
+				"Reviewer note\n\n",
+				"Quoting a previous update:\n",
+				"> **[main-orchestrator]** | Cycle 198 | Step 1\n\n### Matching step\n\nAlready posted."
+			)
+			.to_string()],
+			"1"
+		));
 	}
 
 	#[test]
