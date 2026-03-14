@@ -3321,8 +3321,10 @@
     {
       "dispatched_at": "2026-03-14T10:25:00Z",
       "issue": 1220,
+      "merged_at": "2026-03-14T12:12:40Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1221,
+      "status": "merged",
       "title": "Build receipt-validate Rust tool"
     },
     {
@@ -3521,12 +3523,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1222 [Cycle Review] Cycle 255 end-of-cycle review (cycle 255)",
-    "dispatch_to_pr_rate": "98.4%",
-    "in_flight": 1,
-    "merged": 359,
+    "dispatch_to_pr_rate": "98.6%",
+    "in_flight": 0,
+    "merged": 360,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 362,
-    "resolved": 367,
+    "produced_pr": 363,
+    "resolved": 368,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 368
