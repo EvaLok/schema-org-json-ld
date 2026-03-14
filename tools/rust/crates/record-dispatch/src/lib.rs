@@ -205,8 +205,49 @@ fn update_field_inventory_last_refreshed(
     Ok(())
 }
 
+/// Keep this list aligned with the terminal agent session statuses enforced by
+/// `state-invariants`; anything else is treated as live for duplicate-guard
+/// purposes.
+const TERMINAL_AGENT_SESSION_STATUSES: [&str; 5] = [
+    "merged",
+    "failed",
+    "closed",
+    "closed_without_merge",
+    "closed_without_pr",
+];
+
+fn is_terminal_status(status: &str) -> bool {
+    TERMINAL_AGENT_SESSION_STATUSES.contains(&status)
+}
+
 pub fn apply_dispatch_patch(state: &mut Value, patch: &DispatchPatch) -> Result<(), String> {
     let cycle_marker = format!("cycle {}", patch.current_cycle);
+    let new_issue = patch
+        .agent_session
+        .get("issue")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| "agent_session missing 'issue' field".to_string())?;
+    let duplicate = state
+        .pointer("/agent_sessions")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "missing array /agent_sessions in docs/state.json".to_string())?
+        .iter()
+        .any(|s| {
+            s.get("issue").and_then(Value::as_u64) == Some(new_issue)
+                && s.get("status")
+                    .and_then(Value::as_str)
+                    // Missing status must fail closed as a potentially live
+                    // session, so duplicate dispatches stay blocked.
+                    .map(|status| !is_terminal_status(status))
+                    .unwrap_or(true)
+        });
+    if duplicate {
+        return Err(format!(
+            "agent_sessions already contains an entry for issue #{}; refusing to create duplicate",
+            new_issue
+        ));
+    }
+
     let metrics = state
         .pointer_mut("/copilot_metrics")
         .and_then(Value::as_object_mut)
@@ -247,25 +288,11 @@ pub fn apply_dispatch_patch(state: &mut Value, patch: &DispatchPatch) -> Result<
         "copilot_metrics.dispatch_to_pr_rate",
         &cycle_marker,
     )?;
-    let sessions = state
+    state
         .pointer_mut("/agent_sessions")
         .and_then(Value::as_array_mut)
-        .ok_or_else(|| "missing array /agent_sessions in docs/state.json".to_string())?;
-    let new_issue = patch
-        .agent_session
-        .get("issue")
-        .and_then(Value::as_u64)
-        .ok_or_else(|| "agent_session missing 'issue' field".to_string())?;
-    let duplicate = sessions.iter().any(|s| {
-        s.get("issue").and_then(Value::as_u64) == Some(new_issue)
-    });
-    if duplicate {
-        return Err(format!(
-            "agent_sessions already contains an entry for issue #{}; refusing to create duplicate",
-            new_issue
-        ));
-    }
-    sessions.push(patch.agent_session.clone());
+        .ok_or_else(|| "missing array /agent_sessions in docs/state.json".to_string())?
+        .push(patch.agent_session.clone());
 
     Ok(())
 }
@@ -584,6 +611,16 @@ mod tests {
     fn apply_dispatch_patch_rejects_duplicate_issue() {
         let mut state = sample_state();
         let model = default_test_model();
+        state["agent_sessions"]
+            .as_array_mut()
+            .expect("agent_sessions array")
+            .push(json!({
+                "issue": 601,
+                "title": "Live duplicate",
+                "dispatched_at": "2026-03-06T00:00:00Z",
+                "model": model.clone(),
+                "status": "in_flight"
+            }));
         let patch = build_dispatch_patch(
             &state,
             164,
@@ -597,6 +634,107 @@ mod tests {
         let error = apply_dispatch_patch(&mut state, &patch)
             .expect_err("duplicate issue should be rejected");
         assert!(error.contains("already contains an entry for issue #601"));
+    }
+
+    #[test]
+    fn apply_dispatch_patch_allows_duplicate_issue_after_terminal_session() {
+        let mut state = sample_state();
+        let model = default_test_model();
+        let patch = build_dispatch_patch(
+            &state,
+            164,
+            601,
+            "Redispatched after merge",
+            &model,
+            "2026-03-07T13:00:00Z",
+        )
+        .expect("patch should build");
+
+        apply_dispatch_patch(&mut state, &patch).expect("terminal duplicate should be allowed");
+
+        let sessions = state["agent_sessions"]
+            .as_array()
+            .expect("agent_sessions array");
+        assert_eq!(sessions.len(), 3);
+        assert_eq!(sessions[2]["issue"], json!(601));
+        assert_eq!(sessions[2]["status"], json!("in_flight"));
+        assert_eq!(state["copilot_metrics"]["total_dispatches"], json!(3));
+        assert_eq!(state["copilot_metrics"]["in_flight"], json!(1));
+    }
+
+    #[test]
+    fn apply_dispatch_patch_leaves_state_unchanged_for_duplicate_in_flight_issue() {
+        let mut state = sample_state();
+        let model = default_test_model();
+        state["agent_sessions"]
+            .as_array_mut()
+            .expect("agent_sessions array")
+            .push(json!({
+                "issue": 602,
+                "title": "Still live",
+                "dispatched_at": "2026-03-06T00:00:00Z",
+                "model": model.clone(),
+                "status": "in_flight"
+            }));
+        let original = state.clone();
+        let patch = build_dispatch_patch(
+            &state,
+            164,
+            602,
+            "Duplicate live dispatch",
+            &model,
+            "2026-03-07T13:00:00Z",
+        )
+        .expect("patch should build");
+
+        let error = apply_dispatch_patch(&mut state, &patch)
+            .expect_err("duplicate live issue should be rejected");
+
+        assert!(error.contains("already contains an entry for issue #602"));
+        assert_eq!(state, original);
+    }
+
+    #[test]
+    fn apply_dispatch_patch_rejects_duplicate_issue_when_status_is_missing() {
+        let mut state = sample_state();
+        let model = default_test_model();
+        state["agent_sessions"]
+            .as_array_mut()
+            .expect("agent_sessions array")
+            .push(json!({
+                "issue": 603,
+                "title": "Missing status duplicate",
+                "dispatched_at": "2026-03-06T00:00:00Z",
+                "model": model.clone()
+            }));
+        // `build_dispatch_patch` already fails closed on missing statuses; build
+        // the patch directly so this test can exercise `apply_dispatch_patch`'s
+        // duplicate guard for malformed existing session rows.
+        let patch = DispatchPatch {
+            total_dispatches: 4,
+            resolved: 2,
+            merged: 1,
+            closed_without_pr: 1,
+            reviewed_awaiting_eva: 0,
+            in_flight: 1,
+            produced_pr: 1,
+            pr_merge_rate: "100.0%".to_string(),
+            dispatch_to_pr_rate: "25.0%".to_string(),
+            dispatch_log_latest: "#603 Duplicate live dispatch (cycle 164)".to_string(),
+            agent_session: json!({
+                "issue": 603,
+                "title": "Duplicate live dispatch",
+                "dispatched_at": "2026-03-07T13:00:00Z",
+                "model": model,
+                "status": "in_flight"
+            }),
+            current_cycle: 164,
+        };
+
+        let error = apply_dispatch_patch(&mut state, &patch)
+            .expect_err("missing status duplicate should fail closed");
+
+        assert!(error.contains("already contains an entry for issue #603"));
     }
 
     #[test]
