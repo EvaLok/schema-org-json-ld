@@ -3448,15 +3448,15 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1201 Cycle 251 review (cycle 251)",
-    "dispatch_to_pr_rate": "98.1%",
-    "in_flight": 2,
+    "dispatch_to_pr_rate": "98.3%",
+    "in_flight": 1,
     "merged": 351,
     "pr_merge_rate": "99.2%",
     "produced_pr": 354,
     "resolved": 359,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 361
+    "total_dispatches": 360
   },
   "cycle_phase": {
     "cycle": 252,
@@ -5495,7 +5495,7 @@
         "deferred": 1,
         "finding_count": 3,
         "ignored": 0,
-        "note": "F1 worklog-accuracy: actioned — merged PR #1197 (write-entry auto-derives PRs merged/reviewed, validates receipt SHAs). F2 state-integrity: actioned — fixed dispatch-review/record-dispatch double-write with dedup guard in apply_dispatch_patch (commit 8cac295). F3 complacency-detection: deferred — narrowing journal claims to match actual dispatch scope."
+        "note": "F1 worklog-accuracy: actioned_failed — PR #1197 merged but production subject format (PRs #...) not matched, worklog still shows empty PR sections (regression verified cycle 252). F2 state-integrity: actioned_failed — dedup guard too broad, blocks all repeated issue numbers including terminal sessions (regression verified cycle 252). F3 complacency-detection: deferred — narrowing journal claims to match actual dispatch scope."
       }
     ],
     "last_review_cycle": 250
