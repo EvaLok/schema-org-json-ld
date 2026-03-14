@@ -205,6 +205,9 @@ fn update_field_inventory_last_refreshed(
     Ok(())
 }
 
+/// Keep this list aligned with the terminal agent session statuses enforced by
+/// `state-invariants`; anything else is treated as live for duplicate-guard
+/// purposes.
 const TERMINAL_AGENT_SESSION_STATUSES: [&str; 5] = [
     "merged",
     "failed",
@@ -233,7 +236,10 @@ pub fn apply_dispatch_patch(state: &mut Value, patch: &DispatchPatch) -> Result<
             s.get("issue").and_then(Value::as_u64) == Some(new_issue)
                 && s.get("status")
                     .and_then(Value::as_str)
-                    .is_some_and(|status| !is_terminal_status(status))
+                    // Missing status must fail closed as a potentially live
+                    // session, so duplicate dispatches stay blocked.
+                    .map(|status| !is_terminal_status(status))
+                    .unwrap_or(true)
         });
     if duplicate {
         return Err(format!(
@@ -686,6 +692,49 @@ mod tests {
 
         assert!(error.contains("already contains an entry for issue #602"));
         assert_eq!(state, original);
+    }
+
+    #[test]
+    fn apply_dispatch_patch_rejects_duplicate_issue_when_status_is_missing() {
+        let mut state = sample_state();
+        let model = default_test_model();
+        state["agent_sessions"]
+            .as_array_mut()
+            .expect("agent_sessions array")
+            .push(json!({
+                "issue": 603,
+                "title": "Missing status duplicate",
+                "dispatched_at": "2026-03-06T00:00:00Z",
+                "model": model.clone()
+            }));
+        // `build_dispatch_patch` already fails closed on missing statuses; build
+        // the patch directly so this test can exercise `apply_dispatch_patch`'s
+        // duplicate guard for malformed existing session rows.
+        let patch = DispatchPatch {
+            total_dispatches: 4,
+            resolved: 2,
+            merged: 1,
+            closed_without_pr: 1,
+            reviewed_awaiting_eva: 0,
+            in_flight: 1,
+            produced_pr: 1,
+            pr_merge_rate: "100.0%".to_string(),
+            dispatch_to_pr_rate: "25.0%".to_string(),
+            dispatch_log_latest: "#603 Duplicate live dispatch (cycle 164)".to_string(),
+            agent_session: json!({
+                "issue": 603,
+                "title": "Duplicate live dispatch",
+                "dispatched_at": "2026-03-07T13:00:00Z",
+                "model": model,
+                "status": "in_flight"
+            }),
+            current_cycle: 164,
+        };
+
+        let error = apply_dispatch_patch(&mut state, &patch)
+            .expect_err("missing status duplicate should fail closed");
+
+        assert!(error.contains("already contains an entry for issue #603"));
     }
 
     #[test]
