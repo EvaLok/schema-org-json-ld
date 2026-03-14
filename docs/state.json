@@ -3442,8 +3442,8 @@
   },
   "cycle_phase": {
     "cycle": 250,
-    "phase": "complete",
-    "phase_entered_at": "2026-03-14T00:26:06Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-14T00:26:48Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -3548,7 +3548,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 249"
+        "last_refreshed": "cycle 250"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -3560,7 +3560,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 249"
+        "last_refreshed": "cycle 250"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -3580,7 +3580,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 249"
+        "last_refreshed": "cycle 250"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -3588,7 +3588,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 249"
+        "last_refreshed": "cycle 250"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -3604,7 +3604,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 249"
+        "last_refreshed": "cycle 250"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -3616,7 +3616,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 249"
+        "last_refreshed": "cycle 250"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -3685,13 +3685,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 12,
+    "duration_minutes": 14,
     "issue": 1195,
     "number": 250,
-    "summary": "Consumed cycle 248 review (5 findings, 2/5). Merged PR #1186 (close-out enforcement) and PR #1188 (default-path tests). Built and tested all Rust tools. Refreshed stale field inventory. Deleted 3 dead branches.",
-    "timestamp": "2026-03-14T00:13:04Z"
+    "summary": "Consumed cycle 249 review. Fixed C2/C4.5 mandatory steps in pipeline-check. Reconciled agent_sessions. Dispatched #1196 (write-entry improvement).",
+    "timestamp": "2026-03-14T00:26:48Z"
   },
-  "last_eva_comment_check": "2026-03-14T00:13:04Z",
+  "last_eva_comment_check": "2026-03-14T00:26:48Z",
   "last_tool_audit_cycle": 236,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
