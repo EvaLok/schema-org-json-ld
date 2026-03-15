@@ -3564,8 +3564,10 @@
     {
       "dispatched_at": "2026-03-15T10:24:02Z",
       "issue": 1289,
+      "merged_at": "2026-03-15T14:25:40Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1290,
+      "status": "merged",
       "title": "Build verify-review-events Rust tool"
     },
     {
@@ -3766,12 +3768,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1291 [Cycle Review] Cycle 267 end-of-cycle review (cycle 267)",
-    "dispatch_to_pr_rate": "98.2%",
-    "in_flight": 2,
-    "merged": 385,
+    "dispatch_to_pr_rate": "98.5%",
+    "in_flight": 1,
+    "merged": 386,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 388,
-    "resolved": 393,
+    "produced_pr": 389,
+    "resolved": 394,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 395
@@ -3868,15 +3870,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 267"
+        "last_refreshed": "cycle 268"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 267"
+        "last_refreshed": "cycle 268"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 267"
+        "last_refreshed": "cycle 268"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
