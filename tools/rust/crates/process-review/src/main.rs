@@ -30,6 +30,18 @@ struct Cli {
     #[arg(long, default_value_t = 0)]
     deferred: u64,
 
+    /// Count of findings with a dispatch created this cycle
+    #[arg(long, default_value_t = 0)]
+    dispatch_created: u64,
+
+    /// Count of findings previously actioned but still failing
+    #[arg(long, default_value_t = 0)]
+    actioned_failed: u64,
+
+    /// Count of findings verified resolved via regression check
+    #[arg(long, default_value_t = 0)]
+    verified_resolved: u64,
+
     /// Count of findings ignored this cycle
     #[arg(long, default_value_t = 0)]
     ignored: u64,
@@ -55,6 +67,12 @@ struct ReviewHistoryEntry {
     categories: Vec<String>,
     actioned: u64,
     deferred: u64,
+    #[serde(skip_serializing_if = "is_zero")]
+    dispatch_created: u64,
+    #[serde(skip_serializing_if = "is_zero")]
+    actioned_failed: u64,
+    #[serde(skip_serializing_if = "is_zero")]
+    verified_resolved: u64,
     ignored: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
     note: Option<String>,
@@ -72,6 +90,10 @@ struct ParsedReview {
 struct PatchUpdate {
     path: String,
     value: Value,
+}
+
+fn is_zero(value: &u64) -> bool {
+    *value == 0
 }
 
 fn main() {
@@ -133,6 +155,9 @@ fn validate_dispositions(cli: &Cli, finding_count: u64) -> Result<(), String> {
     let disposition_sum = cli
         .actioned
         .checked_add(cli.deferred)
+        .and_then(|value| value.checked_add(cli.dispatch_created))
+        .and_then(|value| value.checked_add(cli.actioned_failed))
+        .and_then(|value| value.checked_add(cli.verified_resolved))
         .and_then(|value| value.checked_add(cli.ignored))
         .ok_or_else(|| "disposition counts overflowed u64".to_string())?;
 
@@ -140,10 +165,15 @@ fn validate_dispositions(cli: &Cli, finding_count: u64) -> Result<(), String> {
         return Ok(());
     }
 
-    let all_default = cli.actioned == 0 && cli.deferred == 0 && cli.ignored == 0;
+    let all_default = cli.actioned == 0
+        && cli.deferred == 0
+        && cli.dispatch_created == 0
+        && cli.actioned_failed == 0
+        && cli.verified_resolved == 0
+        && cli.ignored == 0;
     if all_default && finding_count > 0 {
         return Err(format!(
-			"review contains {} findings, but --actioned, --deferred, and --ignored were all left at 0; provide disposition flags or pass --skip-disposition-check to bypass this validation",
+			"review contains {} findings, but --actioned, --deferred, --dispatch-created, --actioned-failed, --verified-resolved, and --ignored were all left at 0; provide disposition flags or pass --skip-disposition-check to bypass this validation",
 			finding_count
 		));
     }
@@ -543,6 +573,9 @@ fn build_history_entry(parsed_review: &ParsedReview, cli: &Cli) -> ReviewHistory
         categories: parsed_review.categories.clone(),
         actioned: cli.actioned,
         deferred: cli.deferred,
+        dispatch_created: cli.dispatch_created,
+        actioned_failed: cli.actioned_failed,
+        verified_resolved: cli.verified_resolved,
         ignored: cli.ignored,
         note: cli.note.clone(),
     }
@@ -660,6 +693,9 @@ mod tests {
         assert!(help.contains("--repo-root"));
         assert!(help.contains("--actioned"));
         assert!(help.contains("--deferred"));
+        assert!(help.contains("--dispatch-created"));
+        assert!(help.contains("--actioned-failed"));
+        assert!(help.contains("--verified-resolved"));
         assert!(help.contains("--ignored"));
         assert!(help.contains("--skip-disposition-check"));
         assert!(help.contains("--lenient"));
@@ -675,6 +711,25 @@ mod tests {
             "--lenient",
         ])
         .is_ok());
+    }
+
+    #[test]
+    fn cli_parses_new_disposition_flags() {
+        let cli = Cli::parse_from([
+            "process-review",
+            "--review-file",
+            "docs/reviews/cycle-162.md",
+            "--dispatch-created",
+            "2",
+            "--actioned-failed",
+            "3",
+            "--verified-resolved",
+            "4",
+        ]);
+
+        assert_eq!(cli.dispatch_created, 2);
+        assert_eq!(cli.actioned_failed, 3);
+        assert_eq!(cli.verified_resolved, 4);
     }
 
     #[test]
@@ -980,8 +1035,14 @@ mod tests {
             "1",
             "--deferred",
             "1",
+            "--dispatch-created",
+            "2",
+            "--actioned-failed",
+            "1",
+            "--verified-resolved",
+            "2",
             "--ignored",
-            "5",
+            "1",
             "--note",
             "triaged",
         ]);
@@ -992,8 +1053,61 @@ mod tests {
         assert_eq!(entry.complacency_score, 2);
         assert_eq!(entry.actioned, 1);
         assert_eq!(entry.deferred, 1);
-        assert_eq!(entry.ignored, 5);
+        assert_eq!(entry.dispatch_created, 2);
+        assert_eq!(entry.actioned_failed, 1);
+        assert_eq!(entry.verified_resolved, 2);
+        assert_eq!(entry.ignored, 1);
         assert_eq!(entry.note.as_deref(), Some("triaged"));
+    }
+
+    #[test]
+    fn history_entry_serialization_omits_zero_valued_new_fields() {
+        let entry = ReviewHistoryEntry {
+            cycle: 163,
+            finding_count: 3,
+            complacency_score: 1,
+            categories: vec!["state-consistency".to_string()],
+            actioned: 1,
+            deferred: 1,
+            dispatch_created: 0,
+            actioned_failed: 0,
+            verified_resolved: 0,
+            ignored: 1,
+            note: None,
+        };
+
+        let value = serde_json::to_value(&entry).expect("history entry should serialize");
+        let object = value
+            .as_object()
+            .expect("history entry should be an object");
+        assert!(!object.contains_key("dispatch_created"));
+        assert!(!object.contains_key("actioned_failed"));
+        assert!(!object.contains_key("verified_resolved"));
+    }
+
+    #[test]
+    fn history_entry_serialization_includes_non_zero_new_fields() {
+        let entry = ReviewHistoryEntry {
+            cycle: 163,
+            finding_count: 3,
+            complacency_score: 1,
+            categories: vec!["state-consistency".to_string()],
+            actioned: 1,
+            deferred: 0,
+            dispatch_created: 1,
+            actioned_failed: 1,
+            verified_resolved: 1,
+            ignored: 0,
+            note: None,
+        };
+
+        let value = serde_json::to_value(&entry).expect("history entry should serialize");
+        let object = value
+            .as_object()
+            .expect("history entry should be an object");
+        assert_eq!(object.get("dispatch_created"), Some(&json!(1)));
+        assert_eq!(object.get("actioned_failed"), Some(&json!(1)));
+        assert_eq!(object.get("verified_resolved"), Some(&json!(1)));
     }
 
     #[test]
@@ -1016,9 +1130,28 @@ mod tests {
             "--review-file",
             "docs/reviews/cycle-162.md",
             "--actioned",
-            "2",
+            "1",
             "--deferred",
             "1",
+            "--dispatch-created",
+            "1",
+            "--actioned-failed",
+            "1",
+            "--verified-resolved",
+            "1",
+        ]);
+
+        assert_eq!(validate_dispositions(&cli, 5), Ok(()));
+    }
+
+    #[test]
+    fn disposition_validation_accepts_all_dispatch_created_findings() {
+        let cli = Cli::parse_from([
+            "process-review",
+            "--review-file",
+            "docs/reviews/cycle-162.md",
+            "--dispatch-created",
+            "3",
         ]);
 
         assert_eq!(validate_dispositions(&cli, 3), Ok(()));
@@ -1084,6 +1217,9 @@ mod tests {
             categories: vec!["state-consistency".to_string()],
             actioned: 1,
             deferred: 1,
+            dispatch_created: 0,
+            actioned_failed: 0,
+            verified_resolved: 0,
             ignored: 1,
             note: None,
         };
