@@ -3607,11 +3607,30 @@
       "title": "Cycle 269 review"
     },
     {
+      "cycle": 270,
       "dispatched_at": "2026-03-15T18:32:25Z",
       "issue": 1304,
+      "merged_at": "2026-03-15T20:08:26Z",
+      "model": "gpt-5.4",
+      "pr": 1305,
+      "status": "merged",
+      "title": "Cycle 270 review"
+    },
+    {
+      "cycle": 271,
+      "dispatched_at": "2026-03-15T20:14:00Z",
+      "issue": 1308,
       "model": "gpt-5.4",
       "status": "in_flight",
-      "title": "Cycle 270 review"
+      "title": "Fix verify-review-events status-aware dispatch cycle detection"
+    },
+    {
+      "cycle": 271,
+      "dispatched_at": "2026-03-15T20:14:00Z",
+      "issue": 1310,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix cycle-receipts SHA deduplication"
     }
   ],
   "audit_dropped": [
@@ -3805,15 +3824,16 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1304 Cycle 270 review (cycle 270)",
+    "dispatch_log_latest": "#1310 Fix cycle-receipts SHA deduplication (cycle 271)",
     "dispatch_to_pr_rate": "98.5%",
-    "in_flight": 1,
-    "merged": 390,
+    "in_flight": 2,
+    "merged": 391,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 393,
-    "resolved": 398,
+    "produced_pr": 394,
+    "resolved": 399,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 399
+    "total_dispatches": 401
   },
   "cycle_phase": {
     "cycle": 271,
