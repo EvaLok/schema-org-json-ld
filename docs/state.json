@@ -4033,10 +4033,11 @@
           "added_cycle": 260,
           "category": "review-evidence",
           "chosen_path": "structural-fix",
-          "rationale": "Two-part fix: (1) Behavioral: orchestrator now uses gh pr review --approve with substantive bodies before every merge (adopted cycle 260). (2) Enforceable: dispatching a state-invariants extension that verifies GitHub review events exist for all PRs merged in the current cycle. The behavioral fix alone is insufficient — it depends on the orchestrator remembering to run the command. The invariant check makes the requirement machine-verified.",
+          "rationale": "Two-part fix: (1) Behavioral: orchestrator now uses gh pr review --approve with substantive bodies before every merge (adopted cycle 260). (2) Enforceable: dispatched #1258 for state-invariants extension that verifies GitHub review events exist for all PRs merged in the current cycle. Part 2 is IN PROGRESS — PR #1259 is open and under review. Verification cannot be claimed until the invariant is merged and demonstrated.",
           "root_cause": "Review events were optional and unverified. No tool, checklist step, or invariant confirmed that GitHub review events existed on PRs before merge. The orchestrator merged PRs with only worklog/journal claims of review, which are self-reported and not auditable.",
-          "updated_cycle": 261,
-          "verification_cycle": 261
+          "status": "in_progress",
+          "updated_cycle": 262,
+          "verification_cycle": null
         }
       ]
     },
