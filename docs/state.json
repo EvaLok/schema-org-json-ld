@@ -6112,9 +6112,23 @@
         "dispatch_created": 1,
         "finding_count": 3,
         "ignored": 0
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "process-adherence",
+          "state-integrity",
+          "dispatch-quality"
+        ],
+        "complacency_score": 2,
+        "cycle": 269,
+        "deferred": 1,
+        "dispatch_created": 0,
+        "finding_count": 3,
+        "ignored": 0
       }
     ],
-    "last_review_cycle": 268
+    "last_review_cycle": 269
   },
   "review_events_verified_through_cycle": 268,
   "schema_status": {
