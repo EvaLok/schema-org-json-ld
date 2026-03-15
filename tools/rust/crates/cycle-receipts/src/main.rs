@@ -134,7 +134,6 @@ fn collect_receipts(
                     commit: commit.subject.clone(),
                     url: format!("{}/commit/{}", REPO_URL, commit.full_sha),
                 })
-                .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
 
@@ -195,9 +194,14 @@ fn deduplicate_receipts(matches: Vec<ReceiptMatch>) -> Vec<ReceiptEntry> {
     deduplicated
 }
 
+/// Merge an additional pattern match for the same commit SHA into the canonical
+/// receipt entry, keeping the highest-priority step name and recording the
+/// other matched labels as aliases.
 fn merge_receipt_match(entry: &mut ReceiptEntry, incoming: ReceiptMatch) {
     if step_priority(&incoming.step) > step_priority(&entry.step) {
         push_unique(&mut entry.aliases, entry.step.clone());
+        // Defensive cleanup for cases where the higher-priority step was already
+        // recorded as an alias by an earlier lower-priority merge.
         entry.aliases.retain(|alias| alias != &incoming.step);
         entry.step = incoming.step;
         return;
@@ -208,6 +212,16 @@ fn merge_receipt_match(entry: &mut ReceiptEntry, incoming: ReceiptMatch) {
     }
 }
 
+/// Return the deduplication priority for a step label.
+///
+/// Higher values are more specific: known workflow `state(...)` steps rank
+/// above other custom `state(...)` labels, and the generic cycle-tagged match
+/// ranks last.
+///
+/// Priority levels:
+/// - 2: known workflow steps such as `process-merge`
+/// - 1: custom `state(...)` labels such as `review-history`
+/// - 0: generic `[cycle N]` matches rendered as `cycle-tagged`
 fn step_priority(step: &str) -> u8 {
     if SPECIFIC_STATE_STEPS.contains(&step) {
         return 2;
@@ -476,6 +490,30 @@ mod tests {
 
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].step, "process-merge");
+        assert_eq!(entries[0].aliases, vec![FALLBACK_STEP.to_string()]);
+    }
+
+    #[test]
+    fn deduplication_prefers_custom_state_step_over_cycle_tagged() {
+        let entries = deduplicate_receipts(vec![
+            ReceiptMatch {
+                full_sha: "abcdef1234567890".to_string(),
+                short_sha: "abcdef1".to_string(),
+                step: FALLBACK_STEP.to_string(),
+                commit: "state(review-history): consumed review notes [cycle 198]".to_string(),
+                url: format!("{}/commit/abcdef1234567890", REPO_URL),
+            },
+            ReceiptMatch {
+                full_sha: "abcdef1234567890".to_string(),
+                short_sha: "abcdef1".to_string(),
+                step: "review-history".to_string(),
+                commit: "state(review-history): consumed review notes [cycle 198]".to_string(),
+                url: format!("{}/commit/abcdef1234567890", REPO_URL),
+            },
+        ]);
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].step, "review-history");
         assert_eq!(entries[0].aliases, vec![FALLBACK_STEP.to_string()]);
     }
 
