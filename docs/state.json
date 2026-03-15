@@ -3669,6 +3669,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "state-invariants: two-state chronic gate enforcement"
+    },
+    {
+      "dispatched_at": "2026-03-15T22:33:04Z",
+      "issue": 1321,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 272 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -3861,16 +3868,16 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1319 state-invariants: two-state chronic gate enforcement (cycle 272)",
-    "dispatch_to_pr_rate": "98.5%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1321 [Cycle Review] Cycle 272 end-of-cycle review (cycle 272)",
+    "dispatch_to_pr_rate": "98.3%",
+    "in_flight": 2,
     "merged": 396,
     "pr_merge_rate": "99.2%",
     "produced_pr": 399,
     "resolved": 404,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 405
+    "total_dispatches": 406
   },
   "cycle_phase": {
     "cycle": 272,
