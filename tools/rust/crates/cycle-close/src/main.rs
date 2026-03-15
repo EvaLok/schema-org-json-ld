@@ -280,7 +280,7 @@ fn format_closing_comment(
     lines.extend(
         summary_items(summary)
             .into_iter()
-            .map(|item| format!("- {}", item)),
+            .map(|item| format!("- {}", escape_markdown_cell(&item))),
     );
 
     if let Some(priorities) = priorities.map(str::trim).filter(|value| !value.is_empty()) {
@@ -290,7 +290,7 @@ fn format_closing_comment(
         lines.extend(
             summary_items(priorities)
                 .into_iter()
-                .map(|item| format!("- {}", item)),
+                .map(|item| format!("- {}", escape_markdown_cell(&item))),
         );
     }
 
@@ -1158,6 +1158,138 @@ mod tests {
     }
 
     #[test]
+    fn cli_summary_takes_precedence_over_worklog_summary() {
+        assert_eq!(
+            resolve_summary(
+                Some("CLI summary wins"),
+                Some("Worklog summary"),
+                Some("State summary")
+            ),
+            "CLI summary wins"
+        );
+    }
+
+    #[test]
+    fn summary_falls_back_when_no_sources_are_available() {
+        assert_eq!(resolve_summary(None, None, None), "Cycle close completed.");
+    }
+
+    #[test]
+    fn worklog_summary_is_none_when_section_is_missing() {
+        let repo = TempRepo::new();
+        repo.init(sample_state());
+        let worklog_dir = repo
+            .path()
+            .join("docs/worklog")
+            .join(fixed_now().format("%Y-%m-%d").to_string());
+        fs::create_dir_all(&worklog_dir).unwrap();
+        fs::write(
+            worklog_dir.join(format!(
+                "{}-cycle-202-summary.md",
+                fixed_now().format("%H%M%S")
+            )),
+            "# Cycle 202 — 2026-03-09 08:06 UTC\n\n## Next steps\n\n- Follow up.\n",
+        )
+        .unwrap();
+
+        let summary = current_cycle_worklog_summary(repo.path(), 202, fixed_now()).unwrap();
+
+        assert_eq!(summary, None);
+    }
+
+    #[test]
+    fn finds_worklog_for_current_cycle_heading() {
+        let repo = TempRepo::new();
+        repo.init(sample_state());
+        repo.write_cycle_artifacts(202, fixed_now());
+
+        let worklog = find_current_cycle_worklog_relative_path(repo.path(), 202, fixed_now()).unwrap();
+
+        assert_eq!(
+            worklog,
+            Some(format!(
+                "docs/worklog/{}/{}-cycle-202-summary.md",
+                fixed_now().format("%Y-%m-%d"),
+                fixed_now().format("%H%M%S")
+            ))
+        );
+    }
+
+    #[test]
+    fn ignores_worklog_with_wrong_cycle_heading() {
+        let repo = TempRepo::new();
+        repo.init(sample_state());
+        let worklog_dir = repo
+            .path()
+            .join("docs/worklog")
+            .join(fixed_now().format("%Y-%m-%d").to_string());
+        fs::create_dir_all(&worklog_dir).unwrap();
+        fs::write(
+            worklog_dir.join("080602-cycle-202-summary.md"),
+            "# Cycle 203 — 2026-03-09 08:06 UTC\n\n## What was done\n\n- Wrong cycle.\n",
+        )
+        .unwrap();
+
+        let worklog = find_current_cycle_worklog_relative_path(repo.path(), 202, fixed_now()).unwrap();
+
+        assert_eq!(worklog, None);
+    }
+
+    #[test]
+    fn returns_none_when_no_worklog_exists_for_today() {
+        let repo = TempRepo::new();
+        repo.init(sample_state());
+
+        let worklog = find_current_cycle_worklog_relative_path(repo.path(), 202, fixed_now()).unwrap();
+
+        assert_eq!(worklog, None);
+    }
+
+    #[test]
+    fn cycle_artifact_paths_include_worklog_journal_review_and_modified_journal_index() {
+        let repo = TempRepo::new();
+        repo.init(sample_state());
+        repo.write_cycle_artifacts(202, fixed_now());
+        let runner =
+            MockRunner::with_results(vec![Ok(success_output(" M JOURNAL.md\n"))], vec![], vec![]);
+
+        let paths = cycle_artifact_paths(repo.path(), 202, fixed_now(), &runner).unwrap();
+
+        assert_eq!(
+            paths,
+            vec![
+                format!(
+                    "docs/worklog/{}/{}-cycle-202-summary.md",
+                    fixed_now().format("%Y-%m-%d"),
+                    fixed_now().format("%H%M%S")
+                ),
+                format!("docs/journal/{}.md", fixed_now().format("%Y-%m-%d")),
+                "docs/state.json".to_string(),
+                "JOURNAL.md".to_string(),
+                "docs/reviews/cycle-202.md".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn cycle_artifact_paths_exclude_unmodified_journal_index() {
+        let repo = TempRepo::new();
+        repo.init(sample_state());
+        repo.write_cycle_artifacts(202, fixed_now());
+        let runner = MockRunner::with_results(vec![Ok(success_output(""))], vec![], vec![]);
+
+        let paths = cycle_artifact_paths(repo.path(), 202, fixed_now(), &runner).unwrap();
+
+        assert!(!paths.iter().any(|path| path == "JOURNAL.md"));
+        assert!(paths
+            .iter()
+            .any(|path| path == &format!("docs/journal/{}.md", fixed_now().format("%Y-%m-%d"))));
+        assert!(paths
+            .iter()
+            .any(|path| path == "docs/reviews/cycle-202.md"));
+    }
+
+    #[test]
     fn commit_stages_only_current_cycle_artifacts() {
         let repo = TempRepo::new();
         repo.init(sample_state());
@@ -1224,6 +1356,58 @@ mod tests {
     }
 
     #[test]
+    fn git_add_failure_is_reported() {
+        let repo = TempRepo::new();
+        repo.init(sample_state());
+        repo.write_cycle_artifacts(202, fixed_now());
+        let cli = default_cli(repo.path());
+        let runner = MockRunner::with_results(
+            vec![
+                Ok(success_output(" M JOURNAL.md\n")),
+                Ok(exit_output(
+                    128,
+                    "",
+                    "fatal: pathspec 'docs/worklog/2026-03-09/080602-cycle-202-summary.md' did not match any files",
+                )),
+            ],
+            vec![Ok(success_output("[]"))],
+            vec![],
+        );
+
+        let error = execute_at(&cli, &runner, fixed_now()).unwrap_err();
+
+        assert!(error.contains("git add cycle artifact failed with status 128"));
+        assert!(runner.gh_calls().is_empty());
+    }
+
+    #[test]
+    fn git_commit_failure_is_reported() {
+        let repo = TempRepo::new();
+        repo.init(sample_state());
+        repo.write_cycle_artifacts(202, fixed_now());
+        let cli = default_cli(repo.path());
+        let runner = MockRunner::with_results(
+            vec![
+                Ok(success_output(" M JOURNAL.md\n")),
+                Ok(success_output("")),
+                Ok(success_output("")),
+                Ok(success_output("")),
+                Ok(success_output("")),
+                Ok(success_output("")),
+                Ok(exit_output(1, "", "")),
+                Ok(exit_output(1, "", "pre-commit hook failed")),
+            ],
+            vec![Ok(success_output("[]"))],
+            vec![],
+        );
+
+        let error = execute_at(&cli, &runner, fixed_now()).unwrap_err();
+
+        assert!(error.contains("git commit failed with status 1: pre-commit hook failed"));
+        assert!(runner.gh_calls().is_empty());
+    }
+
+    #[test]
     fn nothing_to_commit_is_not_an_error() {
         let repo = TempRepo::new();
         repo.init(sample_state());
@@ -1250,6 +1434,46 @@ mod tests {
         let output = execute_at(&cli, &runner, fixed_now()).expect("execution should succeed");
 
         assert!(output.contains("No cycle artifact changes to commit"));
+    }
+
+    #[test]
+    fn invalid_cycle_receipts_json_returns_error() {
+        let repo = TempRepo::new();
+        repo.init(sample_state());
+        let runner = MockRunner::with_results(vec![], vec![Ok(success_output("{"))], vec![]);
+
+        let error = load_commit_receipts(repo.path(), 202, &runner).unwrap_err();
+
+        assert!(error.contains("failed to parse cycle-receipts JSON output for cycle 202"));
+    }
+
+    #[test]
+    fn empty_cycle_receipts_json_returns_empty_receipt_list() {
+        let repo = TempRepo::new();
+        repo.init(sample_state());
+        let runner = MockRunner::with_results(vec![], vec![Ok(success_output("[]"))], vec![]);
+
+        let receipts = load_commit_receipts(repo.path(), 202, &runner).unwrap();
+
+        assert!(receipts.is_empty());
+    }
+
+    #[test]
+    fn push_succeeds_on_first_try_without_retry() {
+        let repo = TempRepo::new();
+        repo.init(sample_state());
+        let runner = MockRunner::with_results(vec![Ok(success_output(""))], vec![], vec![]);
+
+        push_origin_master(repo.path(), &runner).expect("push should succeed");
+
+        assert_eq!(
+            runner.git_calls(),
+            vec![vec![
+                "push".to_string(),
+                "origin".to_string(),
+                "master".to_string()
+            ]]
+        );
     }
 
     #[test]
@@ -1294,6 +1518,150 @@ mod tests {
         assert!(git_calls
             .iter()
             .any(|call| call.as_slice() == ["pull", "--rebase", "origin", "master"]));
+    }
+
+    #[test]
+    fn push_fetch_first_error_propagates_when_pull_fails() {
+        let repo = TempRepo::new();
+        repo.init(sample_state());
+        let runner = MockRunner::with_results(
+            vec![
+                Ok(exit_output(
+                    1,
+                    "",
+                    "error: failed to push some refs\nhint: fetch first\n",
+                )),
+                Ok(exit_output(1, "", "could not rebase")),
+            ],
+            vec![],
+            vec![],
+        );
+
+        let error = push_origin_master(repo.path(), &runner).unwrap_err();
+
+        assert!(error.contains("git pull --rebase origin master failed with status 1: could not rebase"));
+        assert_eq!(runner.git_calls().len(), 2);
+    }
+
+    #[test]
+    fn push_non_retryable_error_does_not_retry() {
+        let repo = TempRepo::new();
+        repo.init(sample_state());
+        let runner = MockRunner::with_results(
+            vec![Ok(exit_output(1, "", "permission denied"))],
+            vec![],
+            vec![],
+        );
+
+        let error = push_origin_master(repo.path(), &runner).unwrap_err();
+
+        assert!(error.contains("git push origin master failed with status 1: permission denied"));
+        assert_eq!(runner.git_calls().len(), 1);
+    }
+
+    #[test]
+    fn skip_push_commits_without_running_push() {
+        let repo = TempRepo::new();
+        repo.init(sample_state());
+        repo.write_cycle_artifacts(202, fixed_now());
+        let cli = Cli {
+            skip_push: true,
+            skip_close: true,
+            ..default_cli(repo.path())
+        };
+        let runner = MockRunner::with_results(
+            successful_commit_git_results(),
+            vec![Ok(success_output("[]"))],
+            vec![Ok(success_output("{}"))],
+        );
+
+        let output = execute_at(&cli, &runner, fixed_now()).expect("execution should succeed");
+
+        assert!(output.contains("Committed cycle artifacts: abc1234"));
+        assert!(output.contains("Skipped push due to --skip-push"));
+        assert!(!runner
+            .git_calls()
+            .iter()
+            .any(|call| call.as_slice() == ["push", "origin", "master"]));
+    }
+
+    #[test]
+    fn comment_post_failure_is_reported() {
+        let repo = TempRepo::new();
+        repo.init(sample_state());
+        repo.write_cycle_artifacts(202, fixed_now());
+        let cli = Cli {
+            skip_push: true,
+            ..default_cli(repo.path())
+        };
+        let runner = MockRunner::with_results(
+            successful_commit_git_results(),
+            vec![Ok(success_output("[]"))],
+            vec![Ok(exit_output(1, "", "API rate limit exceeded"))],
+        );
+
+        let error = execute_at(&cli, &runner, fixed_now()).unwrap_err();
+
+        assert!(error.contains("gh api failed with status 1: API rate limit exceeded"));
+        assert_eq!(runner.gh_calls().len(), 1);
+    }
+
+    #[test]
+    fn skip_close_posts_comment_without_closing_issue() {
+        let repo = TempRepo::new();
+        repo.init(sample_state());
+        repo.write_cycle_artifacts(202, fixed_now());
+        let cli = Cli {
+            skip_push: true,
+            skip_close: true,
+            ..default_cli(repo.path())
+        };
+        let runner = MockRunner::with_results(
+            successful_commit_git_results(),
+            vec![Ok(success_output("[]"))],
+            vec![Ok(success_output("{}"))],
+        );
+
+        let output = execute_at(&cli, &runner, fixed_now()).expect("execution should succeed");
+
+        assert!(output.contains("Posted closing summary comment to #871"));
+        assert!(output.contains("Skipped issue close due to --skip-close"));
+        assert_eq!(runner.gh_calls().len(), 1);
+        assert_eq!(
+            runner.gh_calls()[0].0,
+            vec![
+                "api".to_string(),
+                "repos/EvaLok/schema-org-json-ld/issues/871/comments".to_string(),
+                "--method".to_string(),
+                "POST".to_string(),
+                "--input".to_string(),
+                "-".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn issue_close_failure_is_reported() {
+        let repo = TempRepo::new();
+        repo.init(sample_state());
+        repo.write_cycle_artifacts(202, fixed_now());
+        let cli = Cli {
+            skip_push: true,
+            ..default_cli(repo.path())
+        };
+        let runner = MockRunner::with_results(
+            successful_commit_git_results(),
+            vec![Ok(success_output("[]"))],
+            vec![
+                Ok(success_output("{}")),
+                Ok(exit_output(1, "", "validation failed")),
+            ],
+        );
+
+        let error = execute_at(&cli, &runner, fixed_now()).unwrap_err();
+
+        assert!(error.contains("gh api failed with status 1: validation failed"));
+        assert_eq!(runner.gh_calls().len(), 2);
     }
 
     #[test]
@@ -1399,6 +1767,40 @@ mod tests {
         assert!(comment.contains("| cycle-start | abc1234 | [abc1234]("));
     }
 
+    #[test]
+    fn format_closing_comment_omits_receipts_section_when_empty() {
+        let comment = format_closing_comment(
+            202,
+            "Pipeline check: PASS",
+            None,
+            "Validated follow-up",
+            None,
+            &[],
+        );
+
+        assert!(!comment.contains("## Commit receipts"));
+    }
+
+    #[test]
+    fn format_closing_comment_escapes_pipe_characters_in_summary_and_receipts() {
+        let comment = format_closing_comment(
+            202,
+            "Pipeline check: PASS",
+            Some(873),
+            "Validated a | b",
+            Some("Review x | y"),
+            &[ReceiptEntry {
+                tool: "cycle|start".to_string(),
+                receipt: "abc|123".to_string(),
+                url: "https://github.com/EvaLok/schema-org-json-ld/commit/abc1234".to_string(),
+            }],
+        );
+
+        assert!(comment.contains("- Validated a \\| b"));
+        assert!(comment.contains("- Review x \\| y"));
+        assert!(comment.contains("| cycle\\|start | abc\\|123 | [abc|123]("));
+    }
+
     fn success_output(stdout: &str) -> ExecutionResult {
         ExecutionResult {
             exit_code: Some(0),
@@ -1413,5 +1815,31 @@ mod tests {
             stdout: stdout.to_string(),
             stderr: stderr.to_string(),
         }
+    }
+
+    fn default_cli(repo_root: &Path) -> Cli {
+        Cli {
+            repo_root: repo_root.to_path_buf(),
+            issue: 871,
+            summary: None,
+            priorities: None,
+            dry_run: false,
+            skip_push: false,
+            skip_close: false,
+        }
+    }
+
+    fn successful_commit_git_results() -> Vec<Result<ExecutionResult, String>> {
+        vec![
+            Ok(success_output(" M JOURNAL.md\n")),
+            Ok(success_output("")),
+            Ok(success_output("")),
+            Ok(success_output("")),
+            Ok(success_output("")),
+            Ok(success_output("")),
+            Ok(exit_output(1, "", "")),
+            Ok(success_output("")),
+            Ok(success_output("abc1234\n")),
+        ]
     }
 }
