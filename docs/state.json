@@ -3592,6 +3592,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Harden verify-review-events"
+    },
+    {
+      "dispatched_at": "2026-03-15T16:26:38Z",
+      "issue": 1301,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 269 review"
     }
   ],
   "audit_dropped": [
@@ -3783,21 +3790,21 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1299 Harden verify-review-events (cycle 269)",
-    "dispatch_to_pr_rate": "98.5%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1301 Cycle 269 review (cycle 269)",
+    "dispatch_to_pr_rate": "98.2%",
+    "in_flight": 2,
     "merged": 388,
     "pr_merge_rate": "99.2%",
     "produced_pr": 391,
     "resolved": 396,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 397
+    "total_dispatches": 398
   },
   "cycle_phase": {
     "cycle": 269,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-15T16:21:10Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-15T16:26:38Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
