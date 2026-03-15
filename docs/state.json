@@ -3620,8 +3620,10 @@
       "cycle": 271,
       "dispatched_at": "2026-03-15T20:14:00Z",
       "issue": 1308,
+      "merged_at": "2026-03-15T20:29:31Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1309,
+      "status": "merged",
       "title": "Fix verify-review-events status-aware dispatch cycle detection"
     },
     {
@@ -3825,11 +3827,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1310 Fix cycle-receipts SHA deduplication (cycle 271)",
     "dispatch_to_pr_rate": "98.5%",
-    "in_flight": 2,
-    "merged": 391,
+    "in_flight": 1,
+    "merged": 392,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 394,
-    "resolved": 399,
+    "produced_pr": 395,
+    "resolved": 400,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 401
@@ -3926,15 +3928,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 270"
+        "last_refreshed": "cycle 271"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 270"
+        "last_refreshed": "cycle 271"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 270"
+        "last_refreshed": "cycle 271"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
