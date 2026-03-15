@@ -418,13 +418,21 @@ fn build_state_patch(
         });
     }
 
-    updates.extend(build_freshness_updates(cycle, &updates, state, cycle_changes));
+    updates.extend(build_freshness_updates(
+        cycle,
+        &updates,
+        state,
+        cycle_changes,
+    ));
     StatePatch { updates }
 }
 
 fn collect_cycle_changes(repo_root: &Path, cycle: u64) -> Result<CycleChanges, String> {
     let start_commit = find_cycle_start_commit(repo_root, cycle)?;
-    let output = run_git(repo_root, &["diff", "--name-only", start_commit.as_str(), "HEAD"])?;
+    let output = run_git(
+        repo_root,
+        &["diff", "--name-only", start_commit.as_str(), "HEAD"],
+    )?;
     let changed_paths = output
         .lines()
         .map(str::trim)
@@ -482,8 +490,13 @@ fn run_git(repo_root: &Path, args: &[&str]) -> Result<String, String> {
         ));
     }
 
-    String::from_utf8(output.stdout)
-        .map_err(|error| format!("git {} produced non-UTF-8 output: {}", args.join(" "), error))
+    String::from_utf8(output.stdout).map_err(|error| {
+        format!(
+            "git {} produced non-UTF-8 output: {}",
+            args.join(" "),
+            error
+        )
+    })
 }
 
 fn build_agent_session_reconciliation(
@@ -724,11 +737,13 @@ fn field_inventory_entry_due_for_auto_refresh(
     }
 
     if field_name == "typescript_stats" || cadence.contains("ts files") {
-        return cycle_changes.ts_source_changed() && field_inventory_entry_needs_refresh(entry, cycle);
+        return cycle_changes.ts_source_changed()
+            && field_inventory_entry_needs_refresh(entry, cycle);
     }
 
     if field_name == "typescript_plan.status" || cadence.contains("plan phase transitions") {
-        return cycle_changes.ts_files_changed() && field_inventory_entry_needs_refresh(entry, cycle);
+        return cycle_changes.ts_files_changed()
+            && field_inventory_entry_needs_refresh(entry, cycle);
     }
 
     if cadence.contains("dispatch or merge") || cadence.contains("pr merges") {
@@ -1234,7 +1249,9 @@ mod tests {
             .collect();
 
         assert!(freshness_paths.contains(&"/field_inventory/fields/test_count/last_refreshed"));
-        assert!(freshness_paths.contains(&"/field_inventory/fields/typescript_stats/last_refreshed"));
+        assert!(
+            freshness_paths.contains(&"/field_inventory/fields/typescript_stats/last_refreshed")
+        );
         assert!(freshness_paths
             .contains(&"/field_inventory/fields/typescript_plan.status/last_refreshed"));
     }
@@ -1284,7 +1301,9 @@ mod tests {
             .collect();
 
         assert!(!freshness_paths.contains(&"/field_inventory/fields/test_count/last_refreshed"));
-        assert!(!freshness_paths.contains(&"/field_inventory/fields/typescript_stats/last_refreshed"));
+        assert!(
+            !freshness_paths.contains(&"/field_inventory/fields/typescript_stats/last_refreshed")
+        );
         assert!(!freshness_paths
             .contains(&"/field_inventory/fields/typescript_plan.status/last_refreshed"));
         assert!(freshness_paths

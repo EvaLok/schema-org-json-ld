@@ -110,6 +110,7 @@ struct SessionPrCandidate {
 #[derive(Debug, Serialize)]
 struct PullRequestDetails {
     title: String,
+    author_login: String,
     merged_at: Option<String>,
 }
 
@@ -158,12 +159,14 @@ fn run(cli: Cli) -> Result<(VerificationReport, bool), String> {
         current_cycle,
     )?;
     pull_requests.sort_by_key(|pr| (pr.cycle, pr.number));
+    let dispatch_cycles = collect_dispatch_cycles(&state.agent_sessions, &checked_cycles);
 
     let safe_to_advance_to = compute_safe_advance(
         verified_through_cycle,
         current_cycle,
         &checked_cycles,
         &pull_requests,
+        &dispatch_cycles,
     );
     let all_prs_verified = safe_to_advance_to == current_cycle;
 
@@ -290,7 +293,12 @@ fn collect_pull_requests(
     for candidate in candidates {
         let files = fetch_pull_request_files(repo_root, candidate.number)?;
         let classification = classify_pr_paths(&files);
-        let review_data = fetch_pull_request_reviews(repo_root, candidate.number)?;
+        let review_data = fetch_pull_request_reviews(
+            repo_root,
+            candidate.number,
+            &candidate.details.author_login,
+            candidate.details.merged_at.as_deref(),
+        )?;
         let verified = !classification.expects_reviews() || review_data.count > 0;
 
         pull_requests.push(PullRequestVerification {
@@ -306,6 +314,18 @@ fn collect_pull_requests(
     }
 
     Ok(pull_requests)
+}
+
+fn collect_dispatch_cycles(
+    agent_sessions: &[AgentSession],
+    checked_cycles: &[u64],
+) -> BTreeSet<u64> {
+    let checked_cycle_set: BTreeSet<u64> = checked_cycles.iter().copied().collect();
+    agent_sessions
+        .iter()
+        .filter_map(|session| session.extra.get("cycle").and_then(Value::as_u64))
+        .filter(|cycle| checked_cycle_set.contains(cycle))
+        .collect()
 }
 
 fn is_merged_status(status: Option<&str>) -> bool {
@@ -510,9 +530,14 @@ fn fetch_pull_request_details(
         .get("title")
         .and_then(Value::as_str)
         .ok_or_else(|| format!("PR #{} response missing title", pr_number))?;
+    let author_login = value
+        .pointer("/user/login")
+        .and_then(Value::as_str)
+        .ok_or_else(|| format!("PR #{} response missing user.login", pr_number))?;
 
     Ok(PullRequestDetails {
         title: title.to_string(),
+        author_login: author_login.to_string(),
         merged_at: value
             .get("merged_at")
             .and_then(Value::as_str)
@@ -544,7 +569,12 @@ fn fetch_pull_request_files(repo_root: &Path, pr_number: u64) -> Result<Vec<Stri
         .collect()
 }
 
-fn fetch_pull_request_reviews(repo_root: &Path, pr_number: u64) -> Result<ReviewData, String> {
+fn fetch_pull_request_reviews(
+    repo_root: &Path,
+    pr_number: u64,
+    pr_author: &str,
+    pr_merged_at: Option<&str>,
+) -> Result<ReviewData, String> {
     let path = format!("repos/{}/pulls/{}/reviews", REPO, pr_number);
     let value = gh_json(
         repo_root,
@@ -556,15 +586,54 @@ fn fetch_pull_request_reviews(repo_root: &Path, pr_number: u64) -> Result<Review
         ],
     )?;
     let entries = flatten_paginated_array(value, &format!("PR #{} reviews", pr_number))?;
+    review_data_from_entries(
+        &entries,
+        pr_author,
+        pr_merged_at.ok_or_else(|| format!("PR #{} response missing merged_at", pr_number))?,
+    )
+}
+
+fn review_data_from_entries(
+    entries: &[Value],
+    pr_author: &str,
+    pr_merged_at: &str,
+) -> Result<ReviewData, String> {
+    let merged_at = parse_timestamp(pr_merged_at, "pull request merged_at")?;
     let mut reviewers = BTreeSet::new();
-    for entry in &entries {
-        if let Some(login) = entry.pointer("/user/login").and_then(Value::as_str) {
-            reviewers.insert(login.to_string());
+    let mut count = 0;
+
+    for (index, entry) in entries.iter().enumerate() {
+        let state = entry
+            .get("state")
+            .and_then(Value::as_str)
+            .ok_or_else(|| format!("review entry {} missing state", index + 1))?;
+        if state != "APPROVED" {
+            continue;
         }
+
+        let reviewer = entry
+            .pointer("/user/login")
+            .and_then(Value::as_str)
+            .ok_or_else(|| format!("review entry {} missing user.login", index + 1))?;
+        if reviewer == pr_author {
+            continue;
+        }
+
+        let submitted_at_raw = entry
+            .get("submitted_at")
+            .and_then(Value::as_str)
+            .ok_or_else(|| format!("review entry {} missing submitted_at", index + 1))?;
+        let submitted_at = parse_timestamp(submitted_at_raw, "review submitted_at")?;
+        if submitted_at > merged_at {
+            continue;
+        }
+
+        count += 1;
+        reviewers.insert(reviewer.to_string());
     }
 
     Ok(ReviewData {
-        count: entries.len(),
+        count,
         reviewers: reviewers.into_iter().collect(),
     })
 }
@@ -639,6 +708,7 @@ fn compute_safe_advance(
     current_cycle: u64,
     checked_cycles: &[u64],
     pull_requests: &[PullRequestVerification],
+    dispatch_cycles: &BTreeSet<u64>,
 ) -> u64 {
     if checked_cycles.is_empty() {
         return verified_through_cycle.min(current_cycle);
@@ -651,7 +721,7 @@ fn compute_safe_advance(
         let verified = prs_by_cycle
             .get(cycle)
             .map(|prs| prs.iter().all(|pr| pr.verified))
-            .unwrap_or(true);
+            .unwrap_or_else(|| !dispatch_cycles.contains(cycle));
         if !verified {
             break;
         }
@@ -788,13 +858,11 @@ fn format_cycle_range(checked_cycles: &[u64]) -> String {
 }
 
 fn first_unverified_cycle(report: &VerificationReport) -> Option<u64> {
-    let prs_by_cycle = group_pull_requests_by_cycle(&report.pull_requests);
-    report.checked_cycles.iter().copied().find(|cycle| {
-        prs_by_cycle
-            .get(cycle)
-            .map(|prs| prs.iter().any(|pr| !pr.verified))
-            .unwrap_or(false)
-    })
+    report
+        .checked_cycles
+        .iter()
+        .copied()
+        .find(|cycle| *cycle > report.safe_to_advance_to)
 }
 
 fn command_failure_message(command: &str, output: &Output) -> String {
@@ -867,6 +935,22 @@ mod tests {
         }
     }
 
+    fn sample_review(state: &str, reviewer: &str, submitted_at: &str) -> Value {
+        json!({
+            "state": state,
+            "user": {
+                "login": reviewer,
+            },
+            "submitted_at": submitted_at,
+        })
+    }
+
+    fn sample_session(cycle: u64) -> AgentSession {
+        let mut session = AgentSession::default();
+        session.extra.insert("cycle".to_string(), json!(cycle));
+        session
+    }
+
     #[test]
     fn help_contains_expected_flags() {
         let mut command = Cli::command();
@@ -914,6 +998,63 @@ mod tests {
     }
 
     #[test]
+    fn review_data_filters_to_approved_reviews_only() {
+        let comment_only = review_data_from_entries(
+            &[sample_review(
+                "COMMENTED",
+                "reviewer",
+                "2026-03-15T00:30:00Z",
+            )],
+            "author",
+            "2026-03-15T01:00:00Z",
+        )
+        .unwrap();
+        assert_eq!(comment_only.count, 0);
+        assert!(comment_only.reviewers.is_empty());
+
+        let approved = review_data_from_entries(
+            &[sample_review(
+                "APPROVED",
+                "reviewer",
+                "2026-03-15T00:30:00Z",
+            )],
+            "author",
+            "2026-03-15T01:00:00Z",
+        )
+        .unwrap();
+        assert_eq!(approved.count, 1);
+        assert_eq!(approved.reviewers, vec!["reviewer".to_string()]);
+    }
+
+    #[test]
+    fn review_data_rejects_self_reviews() {
+        let review_data = review_data_from_entries(
+            &[sample_review("APPROVED", "author", "2026-03-15T00:30:00Z")],
+            "author",
+            "2026-03-15T01:00:00Z",
+        )
+        .unwrap();
+        assert_eq!(review_data.count, 0);
+        assert!(review_data.reviewers.is_empty());
+    }
+
+    #[test]
+    fn review_data_rejects_post_merge_reviews() {
+        let review_data = review_data_from_entries(
+            &[sample_review(
+                "APPROVED",
+                "reviewer",
+                "2026-03-15T01:30:00Z",
+            )],
+            "author",
+            "2026-03-15T01:00:00Z",
+        )
+        .unwrap();
+        assert_eq!(review_data.count, 0);
+        assert!(review_data.reviewers.is_empty());
+    }
+
+    #[test]
     fn compute_safe_advance_handles_docs_only_and_stops_on_unreviewed_code_prs() {
         let checked_cycles = vec![266, 267];
         let pull_requests = vec![
@@ -922,14 +1063,39 @@ mod tests {
         ];
 
         assert_eq!(
-            compute_safe_advance(265, 267, &checked_cycles, &pull_requests),
+            compute_safe_advance(265, 267, &checked_cycles, &pull_requests, &BTreeSet::new()),
             266
         );
     }
 
     #[test]
     fn compute_safe_advance_advances_when_no_prs_are_in_range() {
-        assert_eq!(compute_safe_advance(265, 267, &[266, 267], &[]), 267);
+        assert_eq!(
+            compute_safe_advance(265, 267, &[266, 267], &[], &BTreeSet::new()),
+            267
+        );
+    }
+
+    #[test]
+    fn compute_safe_advance_fails_closed_when_cycle_has_dispatches_but_no_prs() {
+        let checked_cycles = vec![266, 267];
+        let pull_requests = vec![sample_pr(1284, 266, PrClassification::Docs, 0)];
+        let dispatch_cycles = collect_dispatch_cycles(&[sample_session(267)], &checked_cycles);
+
+        assert_eq!(
+            compute_safe_advance(265, 267, &checked_cycles, &pull_requests, &dispatch_cycles),
+            266
+        );
+    }
+
+    #[test]
+    fn compute_safe_advance_advances_for_legitimate_no_pr_cycles() {
+        let checked_cycles = vec![266, 267];
+
+        assert_eq!(
+            compute_safe_advance(265, 267, &checked_cycles, &[], &BTreeSet::new()),
+            267
+        );
     }
 
     #[test]
