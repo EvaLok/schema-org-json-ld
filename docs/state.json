@@ -4104,7 +4104,7 @@
           "rationale": "Original fix (#1162 cycle 243): cycle-complete cadence-conditional markers. Recurred cycles 264-265: review_events_verified_through_cycle freshness bumped without advancing underlying value. Second structural fix (cycle 266): added state-invariant cross-check that fails when field_inventory freshness marker exceeds actual value by >1 cycle. This catches the drift at invariant-check time, not just at review time.",
           "root_cause": "Two sub-causes: (1) cycle-complete mechanically bumping freshness markers without cadence check (fixed cycle 243). (2) Orchestrator manually bumping freshness markers in field_inventory without actually verifying the underlying data (persisted cycle 264-265). The invariant cross-check catches both.",
           "updated_cycle": 266,
-          "verification_cycle": null
+          "verification_cycle": 266
         },
         {
           "added_cycle": 246,
