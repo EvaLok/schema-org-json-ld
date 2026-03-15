@@ -68,20 +68,42 @@ fn run(cli: Cli) -> Result<(), String> {
         }
         Err(error) => return Err(error),
     };
-    transition_cycle_phase(&mut state_value, current_cycle, "complete")?;
+    let current_phase = state_value
+        .pointer("/cycle_phase/phase")
+        .and_then(|value| value.as_str())
+        .unwrap_or("unknown")
+        .to_string();
+    let phase_transitioned = if current_phase == "close_out" {
+        transition_cycle_phase(&mut state_value, current_cycle, "complete")?;
+        true
+    } else {
+        false
+    };
     write_state_value(&cli.repo_root, &state_value)?;
 
     let commit_message = dispatch_commit_message(cli.issue, patch.current_cycle);
     let receipt = commit_state_json(&cli.repo_root, &commit_message)?;
     if already_recorded {
-        println!(
-            "Phase transitioned to complete (session already recorded for #{}). (receipt: {})",
-            cli.issue, receipt
-        );
-    } else {
+        if phase_transitioned {
+            println!(
+                "Phase transitioned to complete (session already recorded for #{}). (receipt: {})",
+                cli.issue, receipt
+            );
+        } else {
+            println!(
+                "Dispatch recorded (phase unchanged: {}). Session already recorded for #{}. (receipt: {})",
+                current_phase, cli.issue, receipt
+            );
+        }
+    } else if phase_transitioned {
         println!(
             "Dispatch recorded: #{} \"{}\" (model: {}). In-flight: {} (receipt: {})",
             cli.issue, cli.title, model, patch.in_flight, receipt
+        );
+    } else {
+        println!(
+            "Dispatch recorded (phase unchanged: {}). #{} \"{}\" (model: {}). In-flight: {} (receipt: {})",
+            current_phase, cli.issue, cli.title, model, patch.in_flight, receipt
         );
     }
     if patch.in_flight >= 3 {
@@ -211,6 +233,67 @@ mod tests {
     }
 
     #[test]
+    fn run_transitions_close_out_phase_to_complete() {
+        let repo = TempRepo::new();
+        repo.init_with_phase("close_out");
+
+        run(Cli {
+            issue: 602,
+            title: "Example dispatch".to_string(),
+            model: Some("gpt-5.4".to_string()),
+            repo_root: repo.path().to_path_buf(),
+        })
+        .expect("dispatch should succeed");
+
+        let state = repo.read_state();
+        assert_eq!(
+            state.pointer("/cycle_phase/phase"),
+            Some(&serde_json::json!("complete"))
+        );
+        assert_ne!(
+            state
+                .pointer("/cycle_phase/phase_entered_at")
+                .and_then(serde_json::Value::as_str),
+            Some("2026-03-07T12:00:00Z")
+        );
+        assert_eq!(
+            state
+                .pointer("/field_inventory/fields/cycle_phase/last_refreshed")
+                .and_then(serde_json::Value::as_str),
+            Some("cycle 164")
+        );
+    }
+
+    #[test]
+    fn run_keeps_work_phase_unchanged_for_mid_cycle_dispatch() {
+        let repo = TempRepo::new();
+        repo.init_with_phase("work");
+
+        run(Cli {
+            issue: 602,
+            title: "Example dispatch".to_string(),
+            model: Some("gpt-5.4".to_string()),
+            repo_root: repo.path().to_path_buf(),
+        })
+        .expect("dispatch should succeed");
+
+        let state = repo.read_state();
+        assert_eq!(state.pointer("/cycle_phase/phase"), Some(&serde_json::json!("work")));
+        assert_eq!(
+            state
+                .pointer("/cycle_phase/phase_entered_at")
+                .and_then(serde_json::Value::as_str),
+            Some("2026-03-07T12:00:00Z")
+        );
+        assert_eq!(
+            state
+                .pointer("/field_inventory/fields/cycle_phase/last_refreshed")
+                .and_then(serde_json::Value::as_str),
+            Some("cycle 163")
+        );
+    }
+
+    #[test]
     fn run_succeeds_when_worklog_is_missing() {
         let repo = TempRepo::new();
         repo.init();
@@ -260,7 +343,11 @@ mod tests {
         }
 
         fn init(&self) {
-            self.write_state();
+            self.init_with_phase("close_out");
+        }
+
+        fn init_with_phase(&self, phase: &str) {
+            self.write_state(phase);
             git_success(self.path(), ["init"]);
             git_success(
                 self.path(),
@@ -274,68 +361,76 @@ mod tests {
             git_success(self.path(), ["commit", "-m", "initial state"]);
         }
 
-        fn write_state(&self) {
+        fn write_state(&self, phase: &str) {
+            let state = serde_json::json!({
+                "agent_sessions": [
+                    {
+                        "issue": 600,
+                        "title": "Merged change",
+                        "dispatched_at": "2026-03-01T00:00:00Z",
+                        "model": "gpt-5.4",
+                        "status": "merged",
+                        "pr": 700,
+                        "merged_at": "2026-03-02T00:00:00Z"
+                    },
+                    {
+                        "issue": 601,
+                        "title": "Closed change",
+                        "dispatched_at": "2026-03-03T00:00:00Z",
+                        "model": "gpt-5.4",
+                        "status": "closed_without_pr"
+                    }
+                ],
+                "last_cycle": {
+                    "number": 164
+                },
+                "cycle_phase": {
+                    "cycle": 164,
+                    "phase": phase,
+                    "phase_entered_at": "2026-03-07T12:00:00Z"
+                },
+                "copilot_metrics": {
+                    "total_dispatches": 2,
+                    "resolved": 2,
+                    "merged": 1,
+                    "closed_without_pr": 1,
+                    "reviewed_awaiting_eva": 0,
+                    "in_flight": 0,
+                    "produced_pr": 1,
+                    "pr_merge_rate": "100.0%",
+                    "dispatch_to_pr_rate": "50.0%",
+                    "dispatch_log_latest": "#601 Closed change (cycle 164)"
+                },
+                "field_inventory": {
+                    "fields": {
+                        "copilot_metrics.in_flight": {
+                            "last_refreshed": "cycle 163"
+                        },
+                        "cycle_phase": {
+                            "last_refreshed": "cycle 163"
+                        },
+                        "copilot_metrics.pr_merge_rate": {
+                            "last_refreshed": "cycle 163"
+                        },
+                        "copilot_metrics.dispatch_to_pr_rate": {
+                            "last_refreshed": "cycle 163"
+                        }
+                    }
+                }
+            });
             fs::write(
                 self.path().join("docs/state.json"),
-                r##"{
-  "agent_sessions": [
-    {
-      "issue": 600,
-      "title": "Merged change",
-      "dispatched_at": "2026-03-01T00:00:00Z",
-      "model": "gpt-5.4",
-      "status": "merged",
-      "pr": 700,
-      "merged_at": "2026-03-02T00:00:00Z"
-    },
-    {
-      "issue": 601,
-      "title": "Closed change",
-      "dispatched_at": "2026-03-03T00:00:00Z",
-      "model": "gpt-5.4",
-      "status": "closed_without_pr"
-    }
-  ],
-  "last_cycle": {
-    "number": 164
-  },
-  "cycle_phase": {
-    "cycle": 164,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-07T12:00:00Z"
-  },
-  "copilot_metrics": {
-    "total_dispatches": 2,
-    "resolved": 2,
-    "merged": 1,
-    "closed_without_pr": 1,
-    "reviewed_awaiting_eva": 0,
-    "in_flight": 0,
-    "produced_pr": 1,
-    "pr_merge_rate": "100.0%",
-    "dispatch_to_pr_rate": "50.0%",
-    "dispatch_log_latest": "#601 Closed change (cycle 164)"
-  },
-  "field_inventory": {
-    "fields": {
-      "copilot_metrics.in_flight": {
-        "last_refreshed": "cycle 163"
-      },
-      "cycle_phase": {
-        "last_refreshed": "cycle 163"
-      },
-      "copilot_metrics.pr_merge_rate": {
-        "last_refreshed": "cycle 163"
-      },
-      "copilot_metrics.dispatch_to_pr_rate": {
-        "last_refreshed": "cycle 163"
-      }
-    }
-  }
-}
-"##,
+                serde_json::to_string_pretty(&state).expect("state file should serialize"),
             )
             .expect("state file should be written");
+        }
+
+        fn read_state(&self) -> serde_json::Value {
+            serde_json::from_str(
+                &fs::read_to_string(self.path().join("docs/state.json"))
+                    .expect("state file should be readable"),
+            )
+            .expect("state file should parse")
         }
 
         fn write_worklog(&self, date: &str, name: &str, in_flight: i64) -> PathBuf {
