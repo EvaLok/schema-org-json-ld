@@ -3866,7 +3866,11 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 257"
+        "last_refreshed": "cycle 263"
+      },
+      "review_events_verified_through_cycle": {
+        "cadence": "every cycle (after verifying review events on merged PRs)",
+        "last_refreshed": "cycle 263"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -4003,6 +4007,7 @@
       "tagged_at": "2026-02-27T13:25:27Z"
     }
   },
+  "review_events_verified_through_cycle": 263,
   "review_agent": {
     "chronic_category_responses": {
       "description": "Traceable artifacts for chronic category escalation (step 0.5.8). When a finding category appears in 5+ of the last 6 reviews, it must have a response entry here documenting root cause, chosen path, and verification. Per cycle 159/160 review recommendation.",
@@ -4067,11 +4072,11 @@
           "added_cycle": 260,
           "category": "review-evidence",
           "chosen_path": "structural-fix",
-          "rationale": "Two-part fix: (1) Behavioral: orchestrator now uses gh pr review --approve with substantive bodies before every merge (adopted cycle 260). (2) Enforceable: need a state-invariants extension that verifies GitHub review events exist for all PRs merged in the current cycle. Part 2 NOT YET DISPATCHED — #1258/PR #1259 was a cycle_phase invariant (different issue). The review-event verification invariant still needs to be built. Verification cannot be claimed until a review-event invariant is merged and demonstrated.",
+          "rationale": "Two-part fix: (1) Behavioral: orchestrator now uses gh pr review --approve with substantive bodies before every merge (adopted cycle 260). (2) Enforceable: review-event freshness invariant merged (PR #1266, cycle 263). state-invariants now checks review_events_verified_through_cycle against last_cycle.number. Field initialized to cycle 263. Both parts are now in place — behavioral adoption + structural verification.",
           "root_cause": "Review events were optional and unverified. No tool, checklist step, or invariant confirmed that GitHub review events existed on PRs before merge. The orchestrator merged PRs with only worklog/journal claims of review, which are self-reported and not auditable.",
-          "status": "in_progress",
-          "updated_cycle": 262,
-          "verification_cycle": null
+          "status": "verified",
+          "updated_cycle": 263,
+          "verification_cycle": 263
         }
       ]
     },
