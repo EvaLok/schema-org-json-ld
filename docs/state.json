@@ -3573,6 +3573,7 @@
     {
       "dispatched_at": "2026-03-15T10:29:59Z",
       "issue": 1291,
+      "merged_at": "2026-03-15T14:14:26Z",
       "model": "gpt-5.4",
       "pr": 1292,
       "status": "merged",
@@ -3581,6 +3582,7 @@
     {
       "dispatched_at": "2026-03-15T14:39:13Z",
       "issue": 1296,
+      "merged_at": "2026-03-15T16:11:48Z",
       "model": "gpt-5.4",
       "pr": 1297,
       "status": "merged",
@@ -3971,7 +3973,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 263"
+        "last_refreshed": "cycle 270"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
@@ -4007,7 +4009,7 @@
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
-        "last_refreshed": "cycle 259"
+        "last_refreshed": "cycle 270"
       },
       "total_enums": {
         "cadence": "after enum additions",
