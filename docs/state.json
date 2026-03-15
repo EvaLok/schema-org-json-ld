@@ -3931,7 +3931,7 @@
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 266"
+        "last_refreshed": "cycle 267"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -3959,7 +3959,7 @@
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
-        "last_refreshed": "cycle 261"
+        "last_refreshed": "cycle 267"
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
@@ -4003,7 +4003,7 @@
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 261"
+        "last_refreshed": "cycle 267"
       }
     }
   },
@@ -4105,12 +4105,12 @@
           "verification_cycle": "258: #1176 merged (PR #1177). Auto-derivation works but worklog-accuracy persists (cycle 257 F2: pipeline status timing). New sub-cause: worklog captures C1 early-check, not C5.5 final gate. Cascade detection dispatched (#1236) per audit #245."
         },
         {
-          "added_cycle": 243,
+          "added_cycle": 267,
           "category": "state-integrity",
           "chosen_path": "structural-fix",
-          "rationale": "Original fix (#1162 cycle 243): cycle-complete cadence-conditional markers. Recurred cycles 264-265: review_events_verified_through_cycle freshness bumped without advancing underlying value. Second structural fix (cycle 266): added state-invariant cross-check that fails when field_inventory freshness marker exceeds actual value by >1 cycle. This catches the drift at invariant-check time, not just at review time.",
-          "root_cause": "Two sub-causes: (1) cycle-complete mechanically bumping freshness markers without cadence check (fixed cycle 243). (2) Orchestrator manually bumping freshness markers in field_inventory without actually verifying the underlying data (persisted cycle 264-265). The invariant cross-check catches both.",
-          "updated_cycle": 266,
+          "rationale": "Re-filed cycle 267 per review cycle 266 F1: previous cross-check only verified freshness-marker/value consistency, not that the value was derived from actual GitHub review events. Third structural fix: dispatch tool to query PR review events from GitHub API and verify review_events_verified_through_cycle against real data.",
+          "root_cause": "Three sub-causes: (1) cycle-complete mechanically bumping freshness markers (fixed cycle 243). (2) Orchestrator manually bumping markers without verification (caught by cross-check cycle 266). (3) Cross-check itself is superficial — passes on manually asserted values (identified cycle 266 review F1). Need invariant to query actual GitHub review events.",
+          "updated_cycle": 267,
           "verification_cycle": null
         },
         {
@@ -6028,7 +6028,7 @@
         "deferred": 1,
         "finding_count": 3,
         "ignored": 0,
-        "note": "F1 state-integrity: actioned (reclassified cycle 264 F2 as actioned_failed, reset freshness marker, verified review events through cycle 265, advanced value to 265). F2 infrastructure-consistency: actioned (updated COMPLETION_CHECKLIST.md with 5-status process-review flags and cycle-complete --commit flag). F3 journal-quality: deferred (will write concrete auditable commitments this cycle). Complacency: 2/5."
+        "note": "F1 state-integrity: actioned_failed (cycle 267 regression: cycle 266 review F1 found the review_events_verified check is superficial - passes on manually asserted values without querying actual GitHub review events). F2 infrastructure-consistency: verified_resolved (COMPLETION_CHECKLIST.md still contains the 5-status process-review flags and cycle-complete --commit flag). F3 journal-quality: deferred (will write concrete auditable commitments this cycle). Complacency: 2/5."
       },
       {
         "actioned": 1,
@@ -6046,7 +6046,7 @@
     ],
     "last_review_cycle": 266
   },
-  "review_events_verified_through_cycle": 265,
+  "review_events_verified_through_cycle": 266,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
