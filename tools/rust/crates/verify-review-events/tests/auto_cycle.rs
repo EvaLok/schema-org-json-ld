@@ -143,12 +143,15 @@ fn binary_apply_advances_when_no_prs_need_verification() {
     let output = Command::new(binary_path("verify-review-events"))
         .args([
             "--repo-root",
-            repo_root.path.to_str().unwrap(),
+            repo_root
+                .path
+                .to_str()
+                .expect("repo_root path should be valid UTF-8"),
             "--apply",
             "--json",
         ])
         .output()
-        .unwrap();
+        .expect("verify-review-events binary should execute");
 
     assert!(
         output.status.success(),

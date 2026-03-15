@@ -332,7 +332,7 @@ fn resolve_cycle_window(
 ) -> Result<CycleWindow, String> {
     let start = find_cycle_start_timestamp(commits, target_cycle).ok_or_else(|| {
         format!(
-            "could not find cycle-start commit for cycle {}. Fetch more history if this is a shallow clone",
+            "no cycle-start commit found for cycle {}. If this is a shallow clone, fetch full history with: git fetch --unshallow origin",
             target_cycle
         )
     })?;
@@ -417,7 +417,12 @@ fn infer_session_cycle(
 
     let merged_at_raw = session_merged_at(session)
         .or(pull_request_merged_at)
-        .ok_or_else(|| merged_session_label(session, "missing merged_at timestamp"))?;
+        .ok_or_else(|| {
+            merged_session_label(
+                session,
+                "cannot determine cycle because merged_at is missing in both the agent session and PR API response",
+            )
+        })?;
     let merged_at = parse_timestamp(merged_at_raw, "agent_sessions[].merged_at")?;
 
     Ok(cycle_windows
@@ -680,8 +685,13 @@ fn apply_verified_marker(repo_root: &Path, verified_cycle: u64) -> Result<(), St
         return Ok(());
     }
 
-    let cycle_u32 = u32::try_from(verified_cycle)
-        .map_err(|_| format!("cycle {} does not fit within u32", verified_cycle))?;
+    let cycle_u32 = u32::try_from(verified_cycle).map_err(|_| {
+        format!(
+            "cycle number too large: {} (maximum supported value is {})",
+            verified_cycle,
+            u32::MAX,
+        )
+    })?;
     update_freshness(
         &mut state,
         "review_events_verified_through_cycle",
@@ -749,10 +759,10 @@ fn print_report(report: &VerificationReport, json_output: bool) -> Result<(), St
             report.safe_to_advance_to
         );
     } else {
+        let failed_cycle = first_unverified_cycle(report).unwrap_or(report.safe_to_advance_to);
         println!(
-            "  Result: Verification stops at cycle {}. Safe marker remains {}.",
-            report.safe_to_advance_to.saturating_add(1),
-            report.safe_to_advance_to
+            "  Result: Verification failed for cycle {}. Marker stays at {}.",
+            failed_cycle, report.safe_to_advance_to
         );
     }
 
@@ -775,6 +785,16 @@ fn format_cycle_range(checked_cycles: &[u64]) -> String {
         (Some(start), Some(end)) => format!("{}-{}", start, end),
         _ => "none".to_string(),
     }
+}
+
+fn first_unverified_cycle(report: &VerificationReport) -> Option<u64> {
+    let prs_by_cycle = group_pull_requests_by_cycle(&report.pull_requests);
+    report.checked_cycles.iter().copied().find(|cycle| {
+        prs_by_cycle
+            .get(cycle)
+            .map(|prs| prs.iter().any(|pr| !pr.verified))
+            .unwrap_or(false)
+    })
 }
 
 fn command_failure_message(command: &str, output: &Output) -> String {
