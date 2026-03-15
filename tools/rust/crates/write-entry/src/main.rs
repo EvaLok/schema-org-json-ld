@@ -4787,4 +4787,33 @@ Reflective log for the schema-org-json-ld orchestrator.
         let content = fs::read_to_string(path).unwrap();
         assert!(content.contains("## 2026-03-06 — Cycle 168: Derived cycle"));
     }
+
+    #[test]
+    fn journal_preserves_cycle_phase_state_from_disk() {
+        let repo_root = TempRepoDir::new("journal-preserves-cycle-phase");
+        fs::create_dir_all(repo_root.path.join("docs")).unwrap();
+        write_root_journal_index(&repo_root.path, "");
+        write_worklog_fixture(&repo_root.path, fixed_now(), 168, "Cycle phase preserved");
+        let original_state = "{\n  \"last_cycle\": {\"number\": 168},\n  \"cycle_phase\": {\n    \"cycle\": 168,\n    \"phase\": \"complete\",\n    \"phase_entered_at\": \"2026-03-06T05:00:00Z\",\n    \"completed_at\": \"2026-03-06T05:10:00Z\"\n  }\n}\n";
+        fs::write(repo_root.path.join("docs/state.json"), original_state).unwrap();
+        let mut args = journal_args("Cycle phase preserved");
+        args.cycle = None;
+        let payload = r#"{
+			"previous_commitment_status":"no_prior_commitment",
+			"previous_commitment_detail":"No prior commitment recorded.",
+			"sections":[],
+			"concrete_behavior_change":"Keep going.",
+			"open_questions":[]
+		}"#;
+        args.input_file = Some(write_input_file(
+            &repo_root.path,
+            "journal-preserves-cycle-phase.json",
+            payload,
+        ));
+
+        execute_journal(&args, &repo_root.path, fixed_now()).unwrap();
+
+        let state_after = fs::read_to_string(repo_root.path.join("docs/state.json")).unwrap();
+        assert_eq!(state_after, original_state);
+    }
 }

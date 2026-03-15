@@ -1,7 +1,7 @@
 use clap::Parser;
 use serde::Serialize;
 use serde_json::Value;
-use state_schema::StateJson;
+use state_schema::{StateJson, VALID_PHASES};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -88,6 +88,7 @@ fn run_checks(state: &StateJson) -> Report {
         check_publish_gate_consistency(state),
         check_last_cycle_consistency(state),
         check_future_cycle_freshness(state),
+        check_cycle_phase_consistency(state),
         check_chronic_categories(state),
         check_chronic_verification_deadline(state),
         check_agent_sessions_reconciliation(state),
@@ -683,6 +684,60 @@ fn check_future_cycle_freshness(state: &StateJson) -> CheckResult {
     }
 }
 
+fn check_cycle_phase_consistency(state: &StateJson) -> CheckResult {
+    let phase = match state.cycle_phase.phase.as_deref() {
+        Some(value) => value,
+        None => return warn("cycle_phase_consistency", "missing field: cycle_phase.phase"),
+    };
+
+    if !VALID_PHASES.contains(&phase) {
+        return fail(
+            "cycle_phase_consistency",
+            format!(
+                "cycle_phase.phase({}) is invalid; expected one of {:?}",
+                phase, VALID_PHASES
+            ),
+        );
+    }
+
+    let cycle = match state.cycle_phase.cycle {
+        Some(value) => value,
+        None => return warn("cycle_phase_consistency", "missing field: cycle_phase.cycle"),
+    };
+    let last_cycle_number = match state.last_cycle.extra.get("number").and_then(Value::as_u64) {
+        Some(value) => value,
+        None => return warn("cycle_phase_consistency", "missing field: last_cycle.number"),
+    };
+
+    if cycle != last_cycle_number {
+        return fail(
+            "cycle_phase_consistency",
+            format!(
+                "cycle_phase.cycle({}) does not match last_cycle.number({})",
+                cycle, last_cycle_number
+            ),
+        );
+    }
+
+    if phase == "complete" {
+        let completed_at = state
+            .cycle_phase
+            .extra
+            .get("completed_at")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty());
+        if completed_at.is_none() {
+            return fail(
+                "cycle_phase_consistency",
+                "cycle_phase.phase is complete but cycle_phase.completed_at is missing".to_string(),
+            );
+        }
+    }
+
+    pass("cycle_phase_consistency")
+}
+
 fn get_metric_i64(state: &StateJson, key: &str) -> Option<i64> {
     match key {
         "total_dispatches" => state
@@ -1230,7 +1285,12 @@ fn print_human_report(report: &Report) {
         ("publish_gate_consistency", "publish_gate consistency"),
         ("last_cycle_consistency", "last_cycle consistency"),
         ("future_cycle_freshness", "future cycle freshness"),
+        ("cycle_phase_consistency", "cycle_phase consistency"),
         ("chronic_categories", "chronic categories"),
+        (
+            "chronic_verification_deadline",
+            "chronic verification deadline",
+        ),
         (
             "agent_sessions_reconciliation",
             "agent_sessions reconciliation",
@@ -1421,6 +1481,55 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("positive integer"));
+    }
+
+    #[test]
+    fn cycle_phase_consistency_passes_for_valid_phase() {
+        let mut value = minimal_valid_state();
+        value["cycle_phase"] = json!({
+            "cycle": 10,
+            "phase": "work"
+        });
+
+        let state = state_from_json(value);
+        let check = check_cycle_phase_consistency(&state);
+        assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn cycle_phase_consistency_fails_when_cycle_mismatches_last_cycle() {
+        let mut value = minimal_valid_state();
+        value["cycle_phase"] = json!({
+            "cycle": 9,
+            "phase": "close_out"
+        });
+
+        let state = state_from_json(value);
+        let check = check_cycle_phase_consistency(&state);
+        assert_eq!(check.status, CheckStatus::Fail);
+        assert!(check
+            .details
+            .as_deref()
+            .unwrap_or_default()
+            .contains("last_cycle.number"));
+    }
+
+    #[test]
+    fn cycle_phase_consistency_fails_when_complete_is_missing_completed_at() {
+        let mut value = minimal_valid_state();
+        value["cycle_phase"] = json!({
+            "cycle": 10,
+            "phase": "complete"
+        });
+
+        let state = state_from_json(value);
+        let check = check_cycle_phase_consistency(&state);
+        assert_eq!(check.status, CheckStatus::Fail);
+        assert!(check
+            .details
+            .as_deref()
+            .unwrap_or_default()
+            .contains("completed_at"));
     }
 
     #[test]
@@ -1939,9 +2048,13 @@ mod tests {
         let state = state_from_json(minimal_valid_state());
         let report = run_checks(&state);
 
-        assert_eq!(report.checks.len(), 12);
+        assert_eq!(report.checks.len(), 13);
         assert_eq!(
-            report.checks.get(10).map(|check| check.name),
+            report.checks.get(9).map(|check| check.name),
+            Some("cycle_phase_consistency")
+        );
+        assert_eq!(
+            report.checks.get(11).map(|check| check.name),
             Some("chronic_verification_deadline")
         );
         assert_eq!(
