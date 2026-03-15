@@ -3484,6 +3484,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add review-event verification invariant"
+    },
+    {
+      "dispatched_at": "2026-03-15T00:34:16Z",
+      "issue": 1267,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 262 review"
     }
   ],
   "audit_dropped": [
@@ -3673,21 +3680,21 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1265 Add review-event verification invariant (cycle 262)",
-    "dispatch_to_pr_rate": "98.2%",
-    "in_flight": 2,
+    "dispatch_log_latest": "#1267 Cycle 262 review (cycle 262)",
+    "dispatch_to_pr_rate": "97.9%",
+    "in_flight": 3,
     "merged": 375,
     "pr_merge_rate": "99.2%",
     "produced_pr": 378,
     "resolved": 383,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 385
+    "total_dispatches": 386
   },
   "cycle_phase": {
     "cycle": 262,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-15T00:29:35Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-15T00:34:16Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
