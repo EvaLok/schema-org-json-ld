@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+source "$SCRIPT_DIR/_build-helper.sh"
+ensure_binary "verify-review-events"
+
+has_repo_root=false
+for arg in "$@"; do
+	case "$arg" in
+		--repo-root|--repo-root=*)
+			has_repo_root=true
+			;;
+	esac
+done
+
+if [ "$has_repo_root" = true ]; then
+	exec "$BINARY" "$@"
+else
+	exec "$BINARY" --repo-root "$REPO_ROOT" "$@"
+fi
