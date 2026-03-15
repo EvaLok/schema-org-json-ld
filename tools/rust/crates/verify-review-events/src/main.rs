@@ -323,9 +323,38 @@ fn collect_dispatch_cycles(
     let checked_cycle_set: BTreeSet<u64> = checked_cycles.iter().copied().collect();
     agent_sessions
         .iter()
+        .filter(|session| session_expects_merge_outcome(session))
         .filter_map(|session| session.extra.get("cycle").and_then(Value::as_u64))
         .filter(|cycle| checked_cycle_set.contains(cycle))
         .collect()
+}
+
+fn session_expects_merge_outcome(session: &AgentSession) -> bool {
+    match session.status.as_deref() {
+        Some(status) => status_expects_merge_outcome(status),
+        None => true,
+    }
+}
+
+/// Returns whether an `agent_sessions[*].status` value from `docs/state.json`
+/// should still yield a merge outcome that `verify-review-events` must discover.
+/// A merge outcome here means the tool should expect to find a corresponding
+/// merged PR for that session when it verifies review events.
+///
+/// Known statuses are classified as follows:
+/// - merge-expected: `merged`, `reviewed_merged`, `open`, `in_progress`
+/// - terminal non-merge: `failed`, `closed_without_pr`, `closed_without_merge`
+///
+/// Unknown statuses are treated as merge-expected so verification stays
+/// fail-closed if the status taxonomy expands before this tool is updated.
+/// In this tool, fail-closed means defaulting to the safer behavior: requiring
+/// PR discovery/verification instead of silently skipping an unfamiliar status.
+fn status_expects_merge_outcome(status: &str) -> bool {
+    match status {
+        "merged" | "reviewed_merged" | "open" | "in_progress" => true,
+        "failed" | "closed_without_pr" | "closed_without_merge" => false,
+        _ => true,
+    }
 }
 
 fn is_merged_status(status: Option<&str>) -> bool {
@@ -955,7 +984,12 @@ mod tests {
     }
 
     fn sample_session(cycle: u64) -> AgentSession {
+        sample_session_with_status(cycle, Some("merged"))
+    }
+
+    fn sample_session_with_status(cycle: u64, status: Option<&str>) -> AgentSession {
         let mut session = AgentSession::default();
+        session.status = status.map(str::to_string);
         session.extra.insert("cycle".to_string(), json!(cycle));
         session
     }
@@ -1133,6 +1167,109 @@ mod tests {
         assert_eq!(
             compute_safe_advance(265, 267, &checked_cycles, &[], &BTreeSet::new()),
             267
+        );
+    }
+
+    #[test]
+    fn compute_safe_advance_skips_failed_dispatch_cycles() {
+        let checked_cycles = vec![266];
+        let dispatch_cycles = collect_dispatch_cycles(
+            &[sample_session_with_status(266, Some("failed"))],
+            &checked_cycles,
+        );
+
+        assert_eq!(
+            compute_safe_advance(265, 266, &checked_cycles, &[], &dispatch_cycles),
+            266
+        );
+    }
+
+    #[test]
+    fn compute_safe_advance_skips_closed_without_pr_cycles() {
+        let checked_cycles = vec![266];
+        let dispatch_cycles = collect_dispatch_cycles(
+            &[sample_session_with_status(266, Some("closed_without_pr"))],
+            &checked_cycles,
+        );
+
+        assert_eq!(
+            compute_safe_advance(265, 266, &checked_cycles, &[], &dispatch_cycles),
+            266
+        );
+    }
+
+    #[test]
+    fn compute_safe_advance_skips_closed_without_merge_cycles() {
+        let checked_cycles = vec![266];
+        let dispatch_cycles = collect_dispatch_cycles(
+            &[sample_session_with_status(
+                266,
+                Some("closed_without_merge"),
+            )],
+            &checked_cycles,
+        );
+
+        assert_eq!(
+            compute_safe_advance(265, 266, &checked_cycles, &[], &dispatch_cycles),
+            266
+        );
+    }
+
+    #[test]
+    fn compute_safe_advance_blocks_on_open_dispatch_cycles() {
+        let checked_cycles = vec![266];
+        let dispatch_cycles = collect_dispatch_cycles(
+            &[sample_session_with_status(266, Some("open"))],
+            &checked_cycles,
+        );
+
+        assert_eq!(
+            compute_safe_advance(265, 266, &checked_cycles, &[], &dispatch_cycles),
+            265
+        );
+    }
+
+    #[test]
+    fn compute_safe_advance_blocks_on_mixed_status_cycles() {
+        let checked_cycles = vec![266, 267];
+        let pull_requests = vec![sample_pr(1284, 266, PrClassification::Docs, 0)];
+        let dispatch_cycles = collect_dispatch_cycles(
+            &[
+                sample_session_with_status(266, Some("failed")),
+                // Cycle 267 has a merge-expected `merged` status but no
+                // corresponding entry in `pull_requests`, so safe advance must
+                // stop at cycle 266.
+                sample_session_with_status(267, Some("merged")),
+            ],
+            &checked_cycles,
+        );
+
+        assert_eq!(
+            compute_safe_advance(265, 267, &checked_cycles, &pull_requests, &dispatch_cycles),
+            266
+        );
+    }
+
+    #[test]
+    fn collect_dispatch_cycles_filters_by_status() {
+        let checked_cycles = vec![266, 267, 268, 269, 270, 271, 272];
+        let dispatch_cycles = collect_dispatch_cycles(
+            &[
+                sample_session_with_status(266, Some("merged")),
+                sample_session_with_status(267, Some("reviewed_merged")),
+                sample_session_with_status(268, Some("open")),
+                sample_session_with_status(269, Some("in_progress")),
+                sample_session_with_status(270, Some("failed")),
+                sample_session_with_status(271, Some("closed_without_pr")),
+                sample_session_with_status(272, Some("closed_without_merge")),
+                sample_session_with_status(999, Some("merged")),
+            ],
+            &checked_cycles,
+        );
+
+        assert_eq!(
+            dispatch_cycles,
+            BTreeSet::from([266_u64, 267_u64, 268_u64, 269_u64])
         );
     }
 
