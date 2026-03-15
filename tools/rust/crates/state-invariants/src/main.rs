@@ -91,6 +91,7 @@ fn run_checks(state: &StateJson) -> Report {
         check_cycle_phase_consistency(state),
         check_chronic_categories(state),
         check_chronic_verification_deadline(state),
+        check_review_events_verified(state),
         check_agent_sessions_reconciliation(state),
     ];
 
@@ -752,6 +753,7 @@ fn get_metric_i64(state: &StateJson, key: &str) -> Option<i64> {
             .copilot_metrics
             .merged
             .or_else(|| state.copilot_metrics.extra.get(key).and_then(Value::as_i64)),
+        "prs_merged" => state.copilot_metrics.extra.get(key).and_then(Value::as_i64),
         "in_flight" => state
             .copilot_metrics
             .in_flight
@@ -1003,6 +1005,60 @@ fn check_chronic_verification_deadline(state: &StateJson) -> CheckResult {
         pass("chronic_verification_deadline")
     } else {
         fail("chronic_verification_deadline", failures.join("; "))
+    }
+}
+
+fn check_review_events_verified(state: &StateJson) -> CheckResult {
+    let current_cycle = match state.last_cycle.extra.get("number").and_then(Value::as_i64) {
+        Some(value) => value,
+        None => return warn("review_events_verified", "missing field: last_cycle.number"),
+    };
+
+    let merged_prs = get_metric_i64(state, "prs_merged")
+        .or_else(|| get_metric_i64(state, "merged"))
+        .unwrap_or(0);
+
+    if merged_prs <= 0 {
+        return pass("review_events_verified");
+    }
+
+    let verified_through_cycle = match state
+        .extra
+        .get("review_events_verified_through_cycle")
+        .and_then(Value::as_i64)
+    {
+        Some(value) => value,
+        None => {
+            return warn(
+                "review_events_verified",
+                format!(
+                    "missing field: review_events_verified_through_cycle (copilot_metrics.prs_merged={})",
+                    merged_prs
+                ),
+            )
+        }
+    };
+
+    if verified_through_cycle > current_cycle {
+        return fail(
+            "review_events_verified",
+            format!(
+                "review_events_verified_through_cycle({}) exceeds last_cycle.number({})",
+                verified_through_cycle, current_cycle
+            ),
+        );
+    }
+
+    if current_cycle - verified_through_cycle <= 1 {
+        pass("review_events_verified")
+    } else {
+        warn(
+            "review_events_verified",
+            format!(
+                "review_events_verified_through_cycle({}) is stale for last_cycle.number({}); verify review events for merged PRs and update the recorded verification marker",
+                verified_through_cycle, current_cycle
+            ),
+        )
     }
 }
 
@@ -1291,6 +1347,7 @@ fn print_human_report(report: &Report) {
             "chronic_verification_deadline",
             "chronic verification deadline",
         ),
+        ("review_events_verified", "review events verified"),
         (
             "agent_sessions_reconciliation",
             "agent_sessions reconciliation",
@@ -1377,6 +1434,7 @@ mod tests {
                 "resolved": 3,
                 "produced_pr": 2,
                 "merged": 1,
+                "prs_merged": 1,
                 "closed_without_merge": 1,
                 "closed_without_pr": 1
             },
@@ -1416,6 +1474,7 @@ mod tests {
                     }
                 ]
             },
+            "review_events_verified_through_cycle": 10,
             "publish_gate": {
                 "source_diverged": false
             }
@@ -1966,6 +2025,35 @@ mod tests {
     }
 
     #[test]
+    fn review_events_verified_passes_when_verification_is_current() {
+        let mut value = minimal_valid_state();
+        value["last_cycle"]["number"] = json!(20);
+        value["copilot_metrics"]["prs_merged"] = json!(2);
+        value["review_events_verified_through_cycle"] = json!(19);
+
+        let state = state_from_json(value);
+        let check = check_review_events_verified(&state);
+        assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn review_events_verified_warns_when_verification_is_stale() {
+        let mut value = minimal_valid_state();
+        value["last_cycle"]["number"] = json!(20);
+        value["copilot_metrics"]["prs_merged"] = json!(2);
+        value["review_events_verified_through_cycle"] = json!(17);
+
+        let state = state_from_json(value);
+        let check = check_review_events_verified(&state);
+        assert_eq!(check.status, CheckStatus::Warn);
+
+        let details = check.details.as_deref().unwrap_or_default();
+        assert!(details.contains("review_events_verified_through_cycle"));
+        assert!(details.contains("17"));
+        assert!(details.contains("20"));
+    }
+
+    #[test]
     fn agent_sessions_reconciliation_passes_for_matching_summary() {
         let state = state_from_json(minimal_valid_state());
         let check = check_agent_sessions_reconciliation(&state);
@@ -2048,7 +2136,7 @@ mod tests {
         let state = state_from_json(minimal_valid_state());
         let report = run_checks(&state);
 
-        assert_eq!(report.checks.len(), 13);
+        assert_eq!(report.checks.len(), 14);
         assert_eq!(
             report.checks.get(9).map(|check| check.name),
             Some("cycle_phase_consistency")
@@ -2056,6 +2144,10 @@ mod tests {
         assert_eq!(
             report.checks.get(11).map(|check| check.name),
             Some("chronic_verification_deadline")
+        );
+        assert_eq!(
+            report.checks.get(12).map(|check| check.name),
+            Some("review_events_verified")
         );
         assert_eq!(
             report.checks.last().map(|check| check.name),
