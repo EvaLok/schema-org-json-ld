@@ -586,19 +586,22 @@ fn fetch_pull_request_reviews(
         ],
     )?;
     let entries = flatten_paginated_array(value, &format!("PR #{} reviews", pr_number))?;
-    review_data_from_entries(
-        &entries,
-        pr_author,
-        pr_merged_at.ok_or_else(|| format!("PR #{} response missing merged_at", pr_number))?,
-    )
+    let merged_at_raw = pr_merged_at.ok_or_else(|| {
+        format!(
+            "PR #{} is not merged or is missing merged_at timestamp; cannot verify reviews",
+            pr_number
+        )
+    })?;
+    let merged_at_label = format!("PR #{} merged_at", pr_number);
+    let merged_at = parse_timestamp(merged_at_raw, &merged_at_label)?;
+    review_data_from_entries(&entries, pr_author, merged_at)
 }
 
 fn review_data_from_entries(
     entries: &[Value],
     pr_author: &str,
-    pr_merged_at: &str,
+    merged_at: DateTime<Utc>,
 ) -> Result<ReviewData, String> {
-    let merged_at = parse_timestamp(pr_merged_at, "pull request merged_at")?;
     let mut reviewers = BTreeSet::new();
     let mut count = 0;
 
@@ -623,7 +626,8 @@ fn review_data_from_entries(
             .get("submitted_at")
             .and_then(Value::as_str)
             .ok_or_else(|| format!("review entry {} missing submitted_at", index + 1))?;
-        let submitted_at = parse_timestamp(submitted_at_raw, "review submitted_at")?;
+        let submitted_at_label = format!("review entry {} submitted_at", index + 1);
+        let submitted_at = parse_timestamp(submitted_at_raw, &submitted_at_label)?;
         if submitted_at > merged_at {
             continue;
         }
@@ -721,6 +725,9 @@ fn compute_safe_advance(
         let verified = prs_by_cycle
             .get(cycle)
             .map(|prs| prs.iter().all(|pr| pr.verified))
+            // Fail-closed: if a cycle had dispatches but no discovered PRs, treat it as
+            // unverified to prevent incorrect marker advancement. Cycles with neither
+            // dispatches nor PRs are treated as empty and can advance safely.
             .unwrap_or_else(|| !dispatch_cycles.contains(cycle));
         if !verified {
             break;
@@ -858,6 +865,8 @@ fn format_cycle_range(checked_cycles: &[u64]) -> String {
 }
 
 fn first_unverified_cycle(report: &VerificationReport) -> Option<u64> {
+    // safe_to_advance_to already stops before the first checked cycle that either failed
+    // verification or was otherwise deemed unsafe to advance through.
     report
         .checked_cycles
         .iter()
@@ -1006,7 +1015,7 @@ mod tests {
                 "2026-03-15T00:30:00Z",
             )],
             "author",
-            "2026-03-15T01:00:00Z",
+            parse_timestamp("2026-03-15T01:00:00Z", "test merged_at").unwrap(),
         )
         .unwrap();
         assert_eq!(comment_only.count, 0);
@@ -1019,7 +1028,7 @@ mod tests {
                 "2026-03-15T00:30:00Z",
             )],
             "author",
-            "2026-03-15T01:00:00Z",
+            parse_timestamp("2026-03-15T01:00:00Z", "test merged_at").unwrap(),
         )
         .unwrap();
         assert_eq!(approved.count, 1);
@@ -1031,7 +1040,7 @@ mod tests {
         let review_data = review_data_from_entries(
             &[sample_review("APPROVED", "author", "2026-03-15T00:30:00Z")],
             "author",
-            "2026-03-15T01:00:00Z",
+            parse_timestamp("2026-03-15T01:00:00Z", "test merged_at").unwrap(),
         )
         .unwrap();
         assert_eq!(review_data.count, 0);
@@ -1047,11 +1056,40 @@ mod tests {
                 "2026-03-15T01:30:00Z",
             )],
             "author",
-            "2026-03-15T01:00:00Z",
+            parse_timestamp("2026-03-15T01:00:00Z", "test merged_at").unwrap(),
         )
         .unwrap();
         assert_eq!(review_data.count, 0);
         assert!(review_data.reviewers.is_empty());
+    }
+
+    #[test]
+    fn review_data_fails_closed_on_invalid_review_timestamp() {
+        let error = review_data_from_entries(
+            &[sample_review("APPROVED", "reviewer", "not-a-timestamp")],
+            "author",
+            parse_timestamp("2026-03-15T01:00:00Z", "test merged_at").unwrap(),
+        )
+        .expect_err("invalid review timestamps should fail closed");
+
+        assert!(error.contains("review entry 1 submitted_at"));
+    }
+
+    #[test]
+    fn review_data_fails_closed_on_missing_review_state() {
+        let error = review_data_from_entries(
+            &[json!({
+                "user": {
+                    "login": "reviewer",
+                },
+                "submitted_at": "2026-03-15T00:30:00Z",
+            })],
+            "author",
+            parse_timestamp("2026-03-15T01:00:00Z", "test merged_at").unwrap(),
+        )
+        .expect_err("missing review state should fail closed");
+
+        assert!(error.contains("review entry 1 missing state"));
     }
 
     #[test]
