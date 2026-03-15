@@ -3922,7 +3922,7 @@
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 265"
+        "last_refreshed": "cycle 266"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -5992,7 +5992,8 @@
         "note": "F1 code-quality: actioned (review-evidence chronic downgraded from verified to in-progress this cycle). F2 process-adherence: dispatch_created (process-review 5-status taxonomy upgrade to be dispatched). F3 state-integrity: deferred (structural guardrail for field_inventory refresh — separate dispatch needed). F4 journal-quality: actioned (concrete commitment language applied this cycle)."
       },
       {
-        "actioned": 2,
+        "actioned": 1,
+        "actioned_failed": 1,
         "categories": [
           "journal-quality",
           "process-adherence",
@@ -6003,12 +6004,12 @@
         "deferred": 2,
         "finding_count": 4,
         "ignored": 0,
-        "note": "F1 process-adherence: actioned (cycle-complete --commit gap acknowledged, will use --commit flag going forward). F2 state-integrity: actioned (will not bump field_inventory freshness without actual verification). F3 journal-quality: actioned (close-out doc timing commitment explicitly dropped with rationale). F4 process-adherence: deferred (process-review 5-status upgrade PR #1279 pending merge). Complacency: 2/5."
+        "note": "F1 process-adherence: actioned (cycle-complete --commit gap acknowledged, will use --commit flag going forward). F2 state-integrity: actioned_failed (promised not to bump field_inventory freshness without actual verification, but cycle 265 review confirmed review_events_verified_through_cycle freshness was bumped without advancing the underlying value). F3 journal-quality: actioned (close-out doc timing commitment explicitly dropped with rationale). F4 process-adherence: deferred (process-review 5-status upgrade PR #1279 pending merge). Complacency: 2/5."
       }
     ],
     "last_review_cycle": 264
   },
-  "review_events_verified_through_cycle": 263,
+  "review_events_verified_through_cycle": 265,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",

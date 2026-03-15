@@ -30,7 +30,7 @@ Post this step: `bash tools/post-step --issue {N} --step "C1" --title "Pipeline 
 |-------|------|---------|
 | PR merged | `process-merge` | `bash tools/process-merge --prs 123,456 --issues 789,790` (`--issues none` when there are intentionally no linked issues) |
 | Copilot task dispatched | `record-dispatch` | `bash tools/record-dispatch --issue N --title "..." --model gpt-5.4` |
-| Review findings consumed | `process-review` | `bash tools/process-review --review-file docs/reviews/cycle-N.md --actioned A --deferred D --ignored I` |
+| Review findings consumed | `process-review` | `bash tools/process-review --review-file docs/reviews/cycle-N.md --actioned A --deferred D --ignored I --dispatch-created DC --actioned-failed AF --verified-resolved VR` |
 | Audit recommendation processed | `process-audit` | `bash tools/process-audit --audit-id N --action accepted` |
 | Eva directive processed | `process-eva` | `bash tools/process-eva --closed 123,456 --remaining-open 247,436` |
 
@@ -38,7 +38,7 @@ Post this step: `bash tools/post-step --issue {N} --step "C1" --title "Pipeline 
 
 | Step | Tool | Command |
 |------|------|---------|
-| Update `last_cycle` fields | `cycle-complete` | `bash tools/cycle-complete --apply --issue N --summary "..."` |
+| Update `last_cycle` fields | `cycle-complete` | `bash tools/cycle-complete --apply --commit --issue N --summary "..."` |
 | Record review agent dispatch | `record-dispatch` | `bash tools/record-dispatch --issue N --title "Cycle N review" --model gpt-5.4` |
 
 **Important**: Run `cycle-complete` BEFORE dispatching the review agent, so `last_cycle.number` is updated before `record-dispatch` reads it.

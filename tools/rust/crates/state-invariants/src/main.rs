@@ -325,11 +325,16 @@ fn check_review_history_accounting(state: &StateJson) -> CheckResult {
             ));
         }
 
-        let accounted = actioned + deferred + ignored;
+        // 5-status fields are optional (default 0) for backward compatibility
+        let actioned_failed = entry.get("actioned_failed").and_then(Value::as_i64).unwrap_or(0);
+        let dispatch_created = entry.get("dispatch_created").and_then(Value::as_i64).unwrap_or(0);
+        let verified_resolved = entry.get("verified_resolved").and_then(Value::as_i64).unwrap_or(0);
+
+        let accounted = actioned + deferred + ignored + actioned_failed + dispatch_created + verified_resolved;
         if accounted != finding_count {
             failures.push(format!(
-                "review_agent.history[{}] actioned({}) + deferred({}) + ignored({}) != finding_count({})",
-                index, actioned, deferred, ignored, finding_count
+                "review_agent.history[{}] actioned({}) + deferred({}) + ignored({}) + actioned_failed({}) + dispatch_created({}) + verified_resolved({}) != finding_count({})",
+                index, actioned, deferred, ignored, actioned_failed, dispatch_created, verified_resolved, finding_count
             ));
         }
 
@@ -1640,6 +1645,23 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("actioned"));
+    }
+
+    #[test]
+    fn review_history_accounting_includes_5_status_fields() {
+        let mut value = minimal_valid_state();
+        // Set finding_count=4, actioned=1, deferred=2, ignored=0, actioned_failed=1
+        value["review_agent"]["history"][0]["finding_count"] = json!(4);
+        value["review_agent"]["history"][0]["actioned"] = json!(1);
+        value["review_agent"]["history"][0]["deferred"] = json!(2);
+        value["review_agent"]["history"][0]["ignored"] = json!(0);
+        value["review_agent"]["history"][0]["actioned_failed"] = json!(1);
+        value["review_agent"]["history"][0]["categories"] =
+            json!(["state-integrity", "process-adherence", "journal-quality"]);
+
+        let state = state_from_json(value);
+        let check = check_review_history_accounting(&state);
+        assert_eq!(check.status, CheckStatus::Pass);
     }
 
     #[test]
