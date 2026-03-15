@@ -3501,8 +3501,10 @@
     {
       "dispatched_at": "2026-03-15T03:15:41Z",
       "issue": 1271,
+      "merged_at": "2026-03-15T04:51:42Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1272,
+      "status": "merged",
       "title": "Tool audit cycle 263"
     },
     {
@@ -3704,12 +3706,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1273 [Cycle Review] Cycle 263 end-of-cycle review (cycle 263)",
-    "dispatch_to_pr_rate": "98.5%",
-    "in_flight": 1,
-    "merged": 379,
+    "dispatch_to_pr_rate": "98.7%",
+    "in_flight": 0,
+    "merged": 380,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 382,
-    "resolved": 387,
+    "produced_pr": 383,
+    "resolved": 388,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 388
