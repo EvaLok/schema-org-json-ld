@@ -4129,8 +4129,8 @@
           "chosen_path": "structural-fix",
           "rationale": "Re-filed cycle 267 per review cycle 266 F1: previous cross-check only verified freshness-marker/value consistency, not that the value was derived from actual GitHub review events. Third structural fix: dispatch tool to query PR review events from GitHub API and verify review_events_verified_through_cycle against real data.",
           "root_cause": "Three sub-causes: (1) cycle-complete mechanically bumping freshness markers (fixed cycle 243). (2) Orchestrator manually bumping markers without verification (caught by cross-check cycle 266). (3) Cross-check itself is superficial — passes on manually asserted values (identified cycle 266 review F1). Need invariant to query actual GitHub review events.",
-          "updated_cycle": 267,
-          "verification_cycle": null
+          "updated_cycle": 268,
+          "verification_cycle": 268
         },
         {
           "added_cycle": 246,
@@ -4152,11 +4152,11 @@
           "added_cycle": 260,
           "category": "review-evidence",
           "chosen_path": "structural-fix",
-          "rationale": "Behavioral part adopted (gh pr review --approve since cycle 260). Structural part incomplete: PR #1266 merged a freshness-marker check (review_events_verified_through_cycle), but it only verifies that the marker was bumped recently — it does NOT query GitHub for actual review events on merged PRs. Downgraded from verified per cycle 263 review finding #1. Next step: upgrade the invariant to query actual GitHub review events for PRs merged in the verified cycle.",
+          "rationale": "Behavioral part adopted (gh pr review --approve since cycle 260). Structural fix complete: verify-review-events tool (PR #1290, merged cycle 268) queries GitHub API for actual PR review events and classifies PRs as code/docs/tool. Code PRs require formal reviews; docs/tool PRs are exempt. Tool verified cycles 266-268 and advanced marker to 268 with genuine evidence (commit 98e5d65).",
           "root_cause": "Review events were optional and unverified. No tool, checklist step, or invariant confirmed that GitHub review events existed on PRs before merge. The orchestrator merged PRs with only worklog/journal claims of review, which are self-reported and not auditable.",
-          "status": "in-progress",
-          "updated_cycle": 264,
-          "verification_cycle": null
+          "status": "verified",
+          "updated_cycle": 268,
+          "verification_cycle": 268
         }
       ]
     },
