@@ -26,4 +26,4 @@
 
 ## Complacency score
 
-**2/5** — The cycle did real corrective work: it merged the hardening PR, fixed stale merge metadata, and closed with a genuinely green C5.5 gate instead of repeating cycle 269’s gate override. But the cycle still massaged the receipt narrative, re-closed two chronic categories before the admitted hard case had actually run, and wrote a commitment that postpones the proof obligation instead of pinning it to an observable success check. That is not maximum complacency, but it is still closure language moving faster than evidence.
+**2/5** — The cycle did real corrective work. It merged the hardening PR, fixed stale merge metadata, and closed with a genuinely green C5.5 gate instead of repeating cycle 269’s gate override. But it still massaged the receipt narrative, re-closed two chronic categories before the admitted hard case had actually run, and wrote a commitment that postpones the proof obligation instead of pinning it to an observable success check. That is not maximum complacency, but it is still closure language moving faster than evidence.
