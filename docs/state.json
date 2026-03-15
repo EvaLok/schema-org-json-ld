@@ -3823,7 +3823,6 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1304 Cycle 270 review (cycle 270)",
     "dispatch_log_latest": "#1310 Fix cycle-receipts SHA deduplication (cycle 271)",
     "dispatch_to_pr_rate": "98.5%",
     "in_flight": 2,
