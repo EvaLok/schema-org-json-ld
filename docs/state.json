@@ -3497,6 +3497,13 @@
       "pr": 1268,
       "status": "merged",
       "title": "Cycle 262 review"
+    },
+    {
+      "dispatched_at": "2026-03-15T03:15:41Z",
+      "issue": 1271,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Tool audit cycle 263"
     }
   ],
   "audit_dropped": [
@@ -3687,16 +3694,16 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1267 Cycle 262 review (cycle 262)",
-    "dispatch_to_pr_rate": "98.7%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1271 Tool audit cycle 263 (cycle 263)",
+    "dispatch_to_pr_rate": "98.4%",
+    "in_flight": 1,
     "merged": 378,
     "pr_merge_rate": "99.2%",
     "produced_pr": 381,
     "resolved": 386,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 386
+    "total_dispatches": 387
   },
   "cycle_phase": {
     "cycle": 263,
@@ -4007,7 +4014,6 @@
       "tagged_at": "2026-02-27T13:25:27Z"
     }
   },
-  "review_events_verified_through_cycle": 263,
   "review_agent": {
     "chronic_category_responses": {
       "description": "Traceable artifacts for chronic category escalation (step 0.5.8). When a finding category appears in 5+ of the last 6 reviews, it must have a response entry here documenting root cause, chosen path, and verification. Per cycle 159/160 review recommendation.",
@@ -5928,6 +5934,7 @@
     ],
     "last_review_cycle": 262
   },
+  "review_events_verified_through_cycle": 263,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
