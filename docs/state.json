@@ -3483,8 +3483,10 @@
     {
       "dispatched_at": "2026-03-15T00:27:01Z",
       "issue": 1265,
+      "merged_at": "2026-03-15T03:10:30Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1266,
+      "status": "merged",
       "title": "Add review-event verification invariant"
     },
     {
@@ -3686,12 +3688,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1267 Cycle 262 review (cycle 262)",
-    "dispatch_to_pr_rate": "98.4%",
-    "in_flight": 1,
-    "merged": 377,
+    "dispatch_to_pr_rate": "98.7%",
+    "in_flight": 0,
+    "merged": 378,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 380,
-    "resolved": 385,
+    "produced_pr": 381,
+    "resolved": 386,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 386
