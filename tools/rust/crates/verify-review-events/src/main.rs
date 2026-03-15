@@ -343,7 +343,7 @@ fn session_expects_merge_outcome(session: &AgentSession) -> bool {
 ///
 /// Known statuses are classified as follows:
 /// - merge-expected: `merged`, `reviewed_merged`, `open`, `in_progress`
-/// - terminal non-merge: `failed`, `closed_without_pr`, `closed_without_merge`
+/// - terminal non-merge: `failed`, `closed_without_pr`, `closed_without_merge`, `closed`
 ///
 /// Unknown statuses are treated as merge-expected so verification stays
 /// fail-closed if the status taxonomy expands before this tool is updated.
@@ -352,7 +352,7 @@ fn session_expects_merge_outcome(session: &AgentSession) -> bool {
 fn status_expects_merge_outcome(status: &str) -> bool {
     match status {
         "merged" | "reviewed_merged" | "open" | "in_progress" => true,
-        "failed" | "closed_without_pr" | "closed_without_merge" => false,
+        "failed" | "closed_without_pr" | "closed_without_merge" | "closed" => false,
         _ => true,
     }
 }
@@ -1124,6 +1124,21 @@ mod tests {
         .expect_err("missing review state should fail closed");
 
         assert!(error.contains("review entry 1 missing state"));
+    }
+
+    #[test]
+    fn status_expects_merge_outcome_treats_closed_as_terminal_non_merge() {
+        assert!(!status_expects_merge_outcome("closed"));
+    }
+
+    #[test]
+    fn status_expects_merge_outcome_keeps_reviewed_awaiting_eva_merge_expected() {
+        assert!(status_expects_merge_outcome("reviewed_awaiting_eva"));
+    }
+
+    #[test]
+    fn status_expects_merge_outcome_fails_closed_for_unknown_statuses() {
+        assert!(status_expects_merge_outcome("future_status"));
     }
 
     #[test]
