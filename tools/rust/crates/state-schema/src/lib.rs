@@ -82,12 +82,22 @@ pub struct ReviewHistoryEntry {
     pub categories: Vec<String>,
     pub actioned: u64,
     pub deferred: u64,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub dispatch_created: u64,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub actioned_failed: u64,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub verified_resolved: u64,
     pub ignored: u64,
     pub finding_count: u64,
     pub complacency_score: u64,
     pub note: Option<String>,
     #[serde(flatten)]
     pub extra: BTreeMap<String, Value>,
+}
+
+fn is_zero(value: &u64) -> bool {
+    *value == 0
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
@@ -546,10 +556,11 @@ mod tests {
     use super::{
         commit_state_json, current_cycle_from_state, current_utc_timestamp, default_agent_model,
         read_state_value, set_value_at_pointer, transition_cycle_phase, update_freshness,
-        write_state_value, StateJson, ToolsConfig, VALID_PHASES,
+        write_state_value, ReviewHistoryEntry, StateJson, ToolsConfig, VALID_PHASES,
     };
     use chrono::DateTime;
     use serde_json::{json, Value};
+    use std::collections::BTreeMap;
     use std::env;
     use std::fs;
     use std::path::{Path, PathBuf};
@@ -654,6 +665,76 @@ mod tests {
                 .and_then(|value| value.as_str()),
             Some("cycle 153")
         );
+    }
+
+    #[test]
+    fn review_history_entry_deserializes_without_new_fields() {
+        let entry: ReviewHistoryEntry = serde_json::from_value(json!({
+            "cycle": 162,
+            "categories": ["data-integrity"],
+            "actioned": 1,
+            "deferred": 1,
+            "ignored": 5,
+            "finding_count": 7,
+            "complacency_score": 2
+        }))
+        .expect("legacy history entry should deserialize");
+
+        assert_eq!(entry.dispatch_created, 0);
+        assert_eq!(entry.actioned_failed, 0);
+        assert_eq!(entry.verified_resolved, 0);
+    }
+
+    #[test]
+    fn review_history_entry_serialization_omits_zero_new_fields() {
+        let entry = ReviewHistoryEntry {
+            cycle: 162,
+            categories: vec!["data-integrity".to_string()],
+            actioned: 1,
+            deferred: 1,
+            dispatch_created: 0,
+            actioned_failed: 0,
+            verified_resolved: 0,
+            ignored: 5,
+            finding_count: 7,
+            complacency_score: 2,
+            note: None,
+            extra: BTreeMap::new(),
+        };
+
+        let value = serde_json::to_value(&entry).expect("history entry should serialize");
+        let object = value
+            .as_object()
+            .expect("history entry should be an object");
+        assert!(!object.contains_key("dispatch_created"));
+        assert!(!object.contains_key("actioned_failed"));
+        assert!(!object.contains_key("verified_resolved"));
+    }
+
+    #[test]
+    fn review_history_entry_serialization_includes_non_zero_new_fields() {
+        let entry = ReviewHistoryEntry {
+            cycle: 162,
+            categories: vec!["data-integrity".to_string()],
+            actioned: 1,
+            deferred: 1,
+            dispatch_created: 2,
+            actioned_failed: 1,
+            verified_resolved: 1,
+            ignored: 2,
+            finding_count: 7,
+            complacency_score: 2,
+            note: None,
+            extra: BTreeMap::new(),
+        };
+
+        let value = serde_json::to_value(&entry).expect("history entry should serialize");
+        let object = value
+            .as_object()
+            .expect("history entry should be an object");
+        assert_eq!(object.get("dispatch_created"), Some(&json!(2)));
+        assert_eq!(object.get("actioned_failed"), Some(&json!(1)));
+        assert_eq!(object.get("verified_resolved"), Some(&json!(1)));
     }
 
     #[test]
