@@ -209,6 +209,36 @@ trait CommentPoster {
 
 struct GhCommandRunner;
 
+fn parse_paginated_json(raw: &str) -> Result<Vec<Value>, String> {
+	let trimmed = raw.trim();
+	if trimmed.is_empty() {
+		return Ok(Vec::new());
+	}
+
+	let mut comments = Vec::new();
+	for (index, page) in serde_json::Deserializer::from_str(trimmed)
+		.into_iter::<Value>()
+		.enumerate()
+	{
+		let value = page.map_err(|error| {
+			format!(
+				"failed to parse gh api paginated output page {}: {}",
+				index + 1,
+				error
+			)
+		})?;
+		let array = value.as_array().ok_or_else(|| {
+			format!(
+				"failed to parse gh api paginated output page {}: expected JSON array",
+				index + 1
+			)
+		})?;
+		comments.extend(array.iter().cloned());
+	}
+
+	Ok(comments)
+}
+
 impl CommentPoster for GhCommandRunner {
 	fn existing_comments(&self, issue: u64) -> Result<Vec<String>, String> {
 		let output = Command::new("gh")
@@ -224,16 +254,8 @@ impl CommentPoster for GhCommandRunner {
 			return Err(command_failure_message("gh api", &output));
 		}
 
-		// --paginate without --slurp outputs concatenated JSON arrays.
-		// Parse as a single array first; fall back to stream-parsing if needed.
 		let raw = String::from_utf8_lossy(&output.stdout);
-		let comments: Vec<Value> = serde_json::from_str(&raw).unwrap_or_else(|_| {
-			// Paginated output may concatenate arrays: [{...}][{...}]
-			// Wrap in an outer array and flatten.
-			let wrapped = format!("[{}]", raw.replace("][", ","));
-			serde_json::from_str::<Vec<Value>>(&wrapped)
-				.unwrap_or_default()
-		});
+		let comments = parse_paginated_json(&raw)?;
 
 		Ok(comments
 			.iter()
@@ -771,6 +793,43 @@ mod tests {
 	}
 
 	#[test]
+	fn parse_paginated_json_parses_single_page_output() {
+		let comments = parse_paginated_json(r#"[{"body":"hello"}]"#).expect("single page should parse");
+
+		assert_eq!(comment_bodies(&comments), vec!["hello"]);
+	}
+
+	#[test]
+	fn parse_paginated_json_parses_newline_separated_pages() {
+		let comments = parse_paginated_json("[{\"body\":\"a\"}]\n[{\"body\":\"b\"}]")
+			.expect("newline-separated pages should parse");
+
+		assert_eq!(comment_bodies(&comments), vec!["a", "b"]);
+	}
+
+	#[test]
+	fn parse_paginated_json_parses_concatenated_pages_without_whitespace() {
+		let comments = parse_paginated_json(r#"[{"body":"a"}][{"body":"b"}]"#)
+			.expect("concatenated pages should parse");
+
+		assert_eq!(comment_bodies(&comments), vec!["a", "b"]);
+	}
+
+	#[test]
+	fn parse_paginated_json_returns_empty_vec_for_empty_output() {
+		let comments = parse_paginated_json("").expect("empty output should be accepted");
+
+		assert!(comments.is_empty());
+	}
+
+	#[test]
+	fn parse_paginated_json_errors_on_malformed_output() {
+		let error = parse_paginated_json("not json").expect_err("malformed output should fail");
+
+		assert!(error.contains("failed to parse gh api paginated output page 1"));
+	}
+
+	#[test]
 	fn execute_fails_closed_when_existing_comment_lookup_fails() {
 		let repo_root = temp_repo_root("post-step-existing-comment-lookup-error");
 		write_state_json(&repo_root, r#"{"last_cycle":{"number":198}}"#);
@@ -804,5 +863,12 @@ mod tests {
 
 	fn write_state_json(repo_root: &Path, content: &str) {
 		fs::write(repo_root.join("docs/state.json"), content).unwrap();
+	}
+
+	fn comment_bodies(comments: &[Value]) -> Vec<&str> {
+		comments
+			.iter()
+			.filter_map(|comment| comment.get("body").and_then(Value::as_str))
+			.collect()
 	}
 }
