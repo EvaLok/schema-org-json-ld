@@ -2275,6 +2275,31 @@ mod tests {
     }
 
     #[test]
+    fn run_checks_reports_chronic_intermediate_state_warning() {
+        let mut value = minimal_valid_state();
+        value["review_agent"]["chronic_category_responses"] = json!({
+            "entries": [{
+                "category": "worklog-accuracy",
+                "added_cycle": 12,
+                "chosen_path": "structural-fix",
+                "verification_cycle": "270-tool-hardened, pending-code-PR-runtime-proof"
+            }]
+        });
+
+        let state = state_from_json(value);
+        let report = run_checks(&state);
+        let check = report
+            .checks
+            .iter()
+            .find(|check| check.name == "chronic_intermediate_state")
+            .expect("chronic_intermediate_state check should be present");
+
+        assert_eq!(check.status, CheckStatus::Warn);
+        let details = check.details.as_deref().unwrap_or_default();
+        assert!(details.contains("worklog-accuracy"));
+    }
+
+    #[test]
     fn agent_sessions_reconciliation_passes_for_matching_summary() {
         let state = state_from_json(minimal_valid_state());
         let check = check_agent_sessions_reconciliation(&state);
@@ -2369,6 +2394,10 @@ mod tests {
         assert_eq!(
             report.checks.get(12).map(|check| check.name),
             Some("chronic_intermediate_state")
+        );
+        assert_eq!(
+            report.checks.get(12).map(|check| check.status),
+            Some(CheckStatus::Pass)
         );
         assert_eq!(
             report.checks.get(13).map(|check| check.name),
