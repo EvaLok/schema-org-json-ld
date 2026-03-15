@@ -3591,8 +3591,10 @@
     {
       "dispatched_at": "2026-03-15T16:25:00Z",
       "issue": 1299,
+      "merged_at": "2026-03-15T18:15:02Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1300,
+      "status": "merged",
       "title": "Harden verify-review-events"
     },
     {
@@ -3795,12 +3797,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1301 Cycle 269 review (cycle 269)",
-    "dispatch_to_pr_rate": "98.5%",
-    "in_flight": 1,
-    "merged": 389,
+    "dispatch_to_pr_rate": "98.7%",
+    "in_flight": 0,
+    "merged": 390,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 392,
-    "resolved": 397,
+    "produced_pr": 393,
+    "resolved": 398,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 398
