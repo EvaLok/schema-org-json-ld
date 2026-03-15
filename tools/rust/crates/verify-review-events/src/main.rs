@@ -332,9 +332,9 @@ fn resolve_cycle_window(
 ) -> Result<CycleWindow, String> {
     let start = find_cycle_start_timestamp(commits, target_cycle).ok_or_else(|| {
         format!(
-			"could not find cycle-start commit for cycle {}; fetch more history if this is a shallow clone",
-			target_cycle
-		)
+            "could not find cycle-start commit for cycle {}. Fetch more history if this is a shallow clone",
+            target_cycle
+        )
     })?;
     let end = if target_cycle == current_cycle {
         None
@@ -727,7 +727,7 @@ fn print_report(report: &VerificationReport, json_output: bool) -> Result<(), St
             pr.reviewers.join(", ")
         };
         println!(
-            "  PR {REPO}#{} (cycle {}): {} — {} reviews (expected: {}) — {} [reviewers: {}]",
+            "  PR {REPO}#{} (cycle {}): {} -- {} reviews (expected: {}) -- {} [reviewers: {}]",
             pr.number,
             pr.cycle,
             pr.classification.label(),
