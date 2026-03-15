@@ -1054,6 +1054,27 @@ fn check_review_events_verified(state: &StateJson) -> CheckResult {
         );
     }
 
+    // Cross-check: field_inventory freshness must not claim verification beyond the actual value
+    // This catches the chronic pattern of bumping freshness markers without actual verification
+    if let Some(fi) = state.field_inventory.fields
+        .get("review_events_verified_through_cycle")
+        .and_then(|entry| entry.get("last_refreshed"))
+        .and_then(Value::as_str)
+    {
+        if let Some(refreshed_cycle) = fi.strip_prefix("cycle ").and_then(|s| s.parse::<i64>().ok()) {
+            // If freshness claims cycle N but value is < N-1, the freshness marker was bumped without verification
+            if verified_through_cycle < refreshed_cycle - 1 {
+                return fail(
+                    "review_events_verified",
+                    format!(
+                        "field_inventory says review_events_verified_through_cycle was refreshed at cycle {} but actual value is {} — freshness marker drift detected (value should be >= {})",
+                        refreshed_cycle, verified_through_cycle, refreshed_cycle - 1
+                    ),
+                );
+            }
+        }
+    }
+
     if current_cycle - verified_through_cycle <= 1 {
         pass("review_events_verified")
     } else {
@@ -2056,6 +2077,25 @@ mod tests {
         let state = state_from_json(value);
         let check = check_review_events_verified(&state);
         assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn review_events_verified_fails_on_freshness_drift() {
+        let mut value = minimal_valid_state();
+        value["last_cycle"]["number"] = json!(20);
+        value["copilot_metrics"]["prs_merged"] = json!(2);
+        value["review_events_verified_through_cycle"] = json!(17);
+        // Field inventory claims refreshed at cycle 20, but value is 17 (drift)
+        value["field_inventory"]["fields"]["review_events_verified_through_cycle"] = json!({
+            "cadence": "every cycle",
+            "last_refreshed": "cycle 20"
+        });
+
+        let state = state_from_json(value);
+        let check = check_review_events_verified(&state);
+        assert_eq!(check.status, CheckStatus::Fail);
+        let details = check.details.as_deref().unwrap_or_default();
+        assert!(details.contains("freshness marker drift"));
     }
 
     #[test]
