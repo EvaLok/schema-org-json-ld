@@ -688,7 +688,7 @@ mod tests {
     }
 
     #[test]
-    fn collect_receipts_deduplicates_real_dual_match_commit() {
+    fn collect_receipts_handles_state_step_and_cycle_tag_match() {
         let repo = TempRepo::new();
         repo.init_git();
         repo.write_state(&json!({
