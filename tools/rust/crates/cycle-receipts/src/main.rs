@@ -542,7 +542,9 @@ mod tests {
     }
 
     #[test]
-    fn deduplication_handles_triple_match() {
+    fn deduplication_handles_synthetic_triple_match() {
+        // This covers the deduplication priority algorithm directly. The parser
+        // cannot produce three labels from a single commit subject.
         let entries = deduplicate_receipts(vec![
             ReceiptMatch {
                 full_sha: "abcdef1234567890".to_string(),
@@ -683,6 +685,39 @@ mod tests {
                 "docs: worklog touch [cycle 198]",
             ]
         );
+    }
+
+    #[test]
+    fn collect_receipts_handles_state_step_and_cycle_tag_match() {
+        let repo = TempRepo::new();
+        repo.init_git();
+        repo.write_state(&json!({
+            "last_cycle": {
+                "number": 198,
+                "timestamp": "2026-03-09T01:30:00Z"
+            }
+        }));
+        repo.commit_file_at(
+            "notes.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 198, issue #1 [cycle 198]",
+            "2026-03-09T01:00:00Z",
+        );
+        repo.commit_file_at(
+            "notes.txt",
+            "merge\n",
+            "state(process-merge): merged PR #1 [cycle 198]",
+            "2026-03-09T01:10:00Z",
+        );
+
+        let receipts = collect_receipts(repo.path(), 198, None).expect("receipts should collect");
+
+        assert_eq!(receipts.len(), 2);
+        assert_eq!(receipts[0].step, "cycle-start");
+        assert_eq!(receipts[0].aliases, vec![FALLBACK_STEP.to_string()]);
+        assert_eq!(receipts[1].step, "process-merge");
+        assert_eq!(receipts[1].commit, "state(process-merge): merged PR #1 [cycle 198]");
+        assert_eq!(receipts[1].aliases, vec![FALLBACK_STEP.to_string()]);
     }
 
     #[test]
