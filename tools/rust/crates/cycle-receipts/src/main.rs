@@ -2,13 +2,14 @@ use chrono::{DateTime, Utc};
 use clap::Parser;
 use serde::Serialize;
 use state_schema::{current_cycle_from_state, StateJson};
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const REPO_URL: &str = "https://github.com/EvaLok/schema-org-json-ld";
 const FALLBACK_STEP: &str = "cycle-tagged";
-const RECEIPT_PREFIXES: [&str; 10] = [
+const SPECIFIC_STATE_STEPS: [&str; 10] = [
     "cycle-start",
     "process-merge",
     "process-review",
@@ -61,6 +62,17 @@ struct ReceiptEntry {
     receipt: String,
     commit: String,
     url: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    aliases: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct ReceiptMatch {
+    full_sha: String,
+    short_sha: String,
+    step: String,
+    commit: String,
+    url: String,
 }
 
 fn main() {
@@ -110,19 +122,27 @@ fn collect_receipts(
         .collect();
     matching_commits.sort_by_key(|commit| commit.committed_at);
 
-    Ok(matching_commits
+    let matches = matching_commits
         .into_iter()
-        .map(|commit| ReceiptEntry {
-            step: extract_step(&commit.subject).unwrap_or_else(|| FALLBACK_STEP.to_string()),
-            receipt: commit.short_sha.clone(),
-            commit: commit.subject.clone(),
-            url: format!("{}/commit/{}", REPO_URL, commit.full_sha),
+        .flat_map(|commit| {
+            extract_match_steps(&commit.subject, cycle)
+                .into_iter()
+                .map(|step| ReceiptMatch {
+                    full_sha: commit.full_sha.clone(),
+                    short_sha: commit.short_sha.clone(),
+                    step,
+                    commit: commit.subject.clone(),
+                    url: format!("{}/commit/{}", REPO_URL, commit.full_sha),
+                })
+                .collect::<Vec<_>>()
         })
-        .collect())
+        .collect::<Vec<_>>();
+
+    Ok(deduplicate_receipts(matches))
 }
 
 fn matches_receipt_commit(subject: &str, cycle: u64) -> bool {
-    extract_step(subject).is_some() || extract_cycle_tag(subject) == Some(cycle)
+    !extract_match_steps(subject, cycle).is_empty()
 }
 
 fn extract_step(subject: &str) -> Option<String> {
@@ -133,25 +153,106 @@ fn extract_step(subject: &str) -> Option<String> {
 
     let remainder = subject.strip_prefix(prefix)?;
     let (step, suffix) = remainder.split_once("):")?;
-    if suffix.trim().is_empty() || !RECEIPT_PREFIXES.contains(&step) {
+    let step = step.trim();
+    if suffix.trim().is_empty() || step.is_empty() {
         return None;
     }
 
     Some(step.to_string())
 }
 
+fn extract_match_steps(subject: &str, cycle: u64) -> Vec<String> {
+    let mut steps = Vec::new();
+    if let Some(step) = extract_step(subject) {
+        steps.push(step);
+    }
+    if extract_cycle_tag(subject) == Some(cycle) {
+        steps.push(FALLBACK_STEP.to_string());
+    }
+    steps
+}
+
+fn deduplicate_receipts(matches: Vec<ReceiptMatch>) -> Vec<ReceiptEntry> {
+    let mut deduplicated = Vec::new();
+    let mut positions = HashMap::new();
+
+    for entry in matches {
+        if let Some(position) = positions.get(&entry.full_sha).copied() {
+            merge_receipt_match(&mut deduplicated[position], entry);
+            continue;
+        }
+
+        positions.insert(entry.full_sha, deduplicated.len());
+        deduplicated.push(ReceiptEntry {
+            step: entry.step,
+            receipt: entry.short_sha,
+            commit: entry.commit,
+            url: entry.url,
+            aliases: Vec::new(),
+        });
+    }
+
+    deduplicated
+}
+
+fn merge_receipt_match(entry: &mut ReceiptEntry, incoming: ReceiptMatch) {
+    if step_priority(&incoming.step) > step_priority(&entry.step) {
+        push_unique(&mut entry.aliases, entry.step.clone());
+        entry.aliases.retain(|alias| alias != &incoming.step);
+        entry.step = incoming.step;
+        return;
+    }
+
+    if incoming.step != entry.step {
+        push_unique(&mut entry.aliases, incoming.step);
+    }
+}
+
+fn step_priority(step: &str) -> u8 {
+    if SPECIFIC_STATE_STEPS.contains(&step) {
+        return 2;
+    }
+    if step == FALLBACK_STEP {
+        return 0;
+    }
+    1
+}
+
+fn push_unique(values: &mut Vec<String>, value: String) {
+    if !values.iter().any(|existing| existing == &value) {
+        values.push(value);
+    }
+}
+
 fn render_markdown(cycle: u64, entries: &[ReceiptEntry]) -> String {
     let mut output = format!("## Commit receipts — Cycle {}\n\n", cycle);
-    output.push_str("| Step | Receipt | Commit |\n");
-    output.push_str("|------|---------|--------|\n");
+    let include_aliases = entries.iter().any(|entry| !entry.aliases.is_empty());
+    if include_aliases {
+        output.push_str("| Step | Receipt | Commit | Also |\n");
+        output.push_str("|------|---------|--------|------|\n");
+    } else {
+        output.push_str("| Step | Receipt | Commit |\n");
+        output.push_str("|------|---------|--------|\n");
+    }
     for entry in entries {
-        output.push_str(&format!(
-            "| {} | [`{}`]({}) | {} |\n",
-            escape_markdown_cell(&entry.step),
-            entry.receipt,
-            entry.url,
-            escape_markdown_cell(&entry.commit)
-        ));
+        if include_aliases {
+            output.push_str(&format!(
+                "| {} | [`{}`]({}) | {} | {} |\n",
+                escape_markdown_cell(&entry.step),
+                entry.receipt,
+                entry.url,
+                escape_markdown_cell(&entry.commit),
+                escape_markdown_cell(&entry.aliases.join(", "))
+            ));
+        } else {
+            output.push_str(&format!(
+                "| {} | [`{}`]({}) | {} |\n",
+                escape_markdown_cell(&entry.step),
+                entry.receipt,
+                entry.url,
+                escape_markdown_cell(&entry.commit)
+            ));
+        }
     }
     let receipt_label = if entries.len() == 1 {
         "receipt"
@@ -296,7 +397,7 @@ mod tests {
 
     #[test]
     fn matches_known_state_prefixes() {
-        for step in RECEIPT_PREFIXES {
+        for step in SPECIFIC_STATE_STEPS {
             let subject = format!("state({}): committed change", step);
             assert!(
                 matches_receipt_commit(&subject, 198),
@@ -328,12 +429,128 @@ mod tests {
                 receipt: "e4f5g6h".to_string(),
                 commit: "state(process-review): consumed cycle 197 review".to_string(),
                 url: format!("{}/commit/abcdef1234567890", REPO_URL),
+                aliases: Vec::new(),
             }],
         );
 
         assert!(markdown.contains("## Commit receipts — Cycle 198"));
         assert!(markdown.contains("| process-review | [`e4f5g6h`](https://github.com/EvaLok/schema-org-json-ld/commit/abcdef1234567890) | state(process-review): consumed cycle 197 review |"));
         assert!(markdown.contains("1 receipt collected."));
+    }
+
+    #[test]
+    fn render_markdown_includes_alias_column_when_present() {
+        let markdown = render_markdown(
+            198,
+            &[ReceiptEntry {
+                step: "process-merge".to_string(),
+                receipt: "abc1234".to_string(),
+                commit: "state(process-merge): merged PR #1 [cycle 198]".to_string(),
+                url: format!("{}/commit/abcdef1234567890", REPO_URL),
+                aliases: vec!["cycle-tagged".to_string()],
+            }],
+        );
+
+        assert!(markdown.contains("| Step | Receipt | Commit | Also |"));
+        assert!(markdown.contains("| process-merge | [`abc1234`](https://github.com/EvaLok/schema-org-json-ld/commit/abcdef1234567890) | state(process-merge): merged PR #1 [cycle 198] | cycle-tagged |"));
+    }
+
+    #[test]
+    fn deduplication_prefers_specific_step_over_cycle_tagged() {
+        let entries = deduplicate_receipts(vec![
+            ReceiptMatch {
+                full_sha: "abcdef1234567890".to_string(),
+                short_sha: "abcdef1".to_string(),
+                step: FALLBACK_STEP.to_string(),
+                commit: "state(process-merge): merged PR #1 [cycle 198]".to_string(),
+                url: format!("{}/commit/abcdef1234567890", REPO_URL),
+            },
+            ReceiptMatch {
+                full_sha: "abcdef1234567890".to_string(),
+                short_sha: "abcdef1".to_string(),
+                step: "process-merge".to_string(),
+                commit: "state(process-merge): merged PR #1 [cycle 198]".to_string(),
+                url: format!("{}/commit/abcdef1234567890", REPO_URL),
+            },
+        ]);
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].step, "process-merge");
+        assert_eq!(entries[0].aliases, vec![FALLBACK_STEP.to_string()]);
+    }
+
+    #[test]
+    fn deduplication_preserves_unique_commits() {
+        let entries = deduplicate_receipts(vec![
+            ReceiptMatch {
+                full_sha: "abcdef1234567890".to_string(),
+                short_sha: "abcdef1".to_string(),
+                step: "process-review".to_string(),
+                commit: "state(process-review): reviewed change".to_string(),
+                url: format!("{}/commit/abcdef1234567890", REPO_URL),
+            },
+            ReceiptMatch {
+                full_sha: "fedcba0987654321".to_string(),
+                short_sha: "fedcba0".to_string(),
+                step: "cycle-tagged".to_string(),
+                commit: "docs: update worklog [cycle 198]".to_string(),
+                url: format!("{}/commit/fedcba0987654321", REPO_URL),
+            },
+        ]);
+
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].receipt, "abcdef1");
+        assert_eq!(entries[1].receipt, "fedcba0");
+    }
+
+    #[test]
+    fn deduplication_handles_triple_match() {
+        let entries = deduplicate_receipts(vec![
+            ReceiptMatch {
+                full_sha: "abcdef1234567890".to_string(),
+                short_sha: "abcdef1".to_string(),
+                step: "cycle-tagged".to_string(),
+                commit: "state(process-review): reviewed change [cycle 198]".to_string(),
+                url: format!("{}/commit/abcdef1234567890", REPO_URL),
+            },
+            ReceiptMatch {
+                full_sha: "abcdef1234567890".to_string(),
+                short_sha: "abcdef1".to_string(),
+                step: "review-history".to_string(),
+                commit: "state(process-review): reviewed change [cycle 198]".to_string(),
+                url: format!("{}/commit/abcdef1234567890", REPO_URL),
+            },
+            ReceiptMatch {
+                full_sha: "abcdef1234567890".to_string(),
+                short_sha: "abcdef1".to_string(),
+                step: "process-review".to_string(),
+                commit: "state(process-review): reviewed change [cycle 198]".to_string(),
+                url: format!("{}/commit/abcdef1234567890", REPO_URL),
+            },
+        ]);
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].step, "process-review");
+        assert_eq!(
+            entries[0].aliases,
+            vec!["cycle-tagged".to_string(), "review-history".to_string()]
+        );
+    }
+
+    #[test]
+    fn json_output_includes_aliases() {
+        let entries = vec![ReceiptEntry {
+            step: "process-merge".to_string(),
+            receipt: "abcdef1".to_string(),
+            commit: "state(process-merge): merged PR #1 [cycle 198]".to_string(),
+            url: format!("{}/commit/abcdef1234567890", REPO_URL),
+            aliases: vec!["cycle-tagged".to_string()],
+        }];
+
+        let output = serde_json::to_value(&entries).expect("entries should serialize");
+
+        assert_eq!(output[0]["step"], "process-merge");
+        assert_eq!(output[0]["aliases"], json!(["cycle-tagged"]));
     }
 
     #[test]
