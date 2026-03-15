@@ -3770,8 +3770,8 @@
   },
   "cycle_phase": {
     "cycle": 267,
-    "phase": "work",
-    "phase_entered_at": "2026-03-15T10:07:17Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-15T10:26:03Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -3876,7 +3876,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 266"
+        "last_refreshed": "cycle 267"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -3888,7 +3888,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 266"
+        "last_refreshed": "cycle 267"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -3908,7 +3908,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 266"
+        "last_refreshed": "cycle 267"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -3916,7 +3916,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 266"
+        "last_refreshed": "cycle 267"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -3948,7 +3948,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 266"
+        "last_refreshed": "cycle 267"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -4017,13 +4017,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 15,
+    "duration_minutes": 19,
     "issue": 1288,
     "number": 267,
-    "summary": "Merged PR #1284 (cycle 265 review). Processed review with 5-status flags. Fixed state-invariants: 5-status accounting + freshness-drift cross-check. Reclassified cycle 264 F2. Updated COMPLETION_CHECKLIST.md. Cleaned 1 dead branch.",
-    "timestamp": "2026-03-15T10:07:16Z"
+    "summary": "Processed cycle 266 review (3 findings, 2/5 complacency). Actioned F2 (reverted premature verification_cycle). Re-filed chronic state-integrity with stronger fix plan. Dispatched verify-review-events Rust tool (#1289). Refreshed stale field inventory. Cleaned 1 dead branch.",
+    "timestamp": "2026-03-15T10:26:03Z"
   },
-  "last_eva_comment_check": "2026-03-15T10:07:16Z",
+  "last_eva_comment_check": "2026-03-15T10:26:03Z",
   "last_tool_audit_cycle": 263,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
