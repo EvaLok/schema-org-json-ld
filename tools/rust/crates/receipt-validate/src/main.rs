@@ -346,7 +346,10 @@ mod tests {
 
         assert_eq!(
             receipts,
-            BTreeSet::from(["abc1234".to_string(), "def5678".to_string(),])
+            BTreeSet::from([
+                "abc1234".to_string(),
+                "def5678".to_string(),
+            ])
         );
     }
 
@@ -378,10 +381,7 @@ mod tests {
                 ("bbbbbbb", "state(process-merge): merge PR [cycle 255]"),
                 ("ccccccc", "state(cycle-complete): close cycle [cycle 255]"),
                 ("ddddddd", "docs(cycle-255): publish worklog and journal"),
-                (
-                    "eeeeeee",
-                    "state(record-dispatch): issue #10 dispatched [cycle 255]",
-                ),
+                ("eeeeeee", "state(record-dispatch): issue #10 dispatched [cycle 255]"),
             ]),
         );
 
@@ -393,7 +393,8 @@ mod tests {
 
     #[test]
     fn fails_when_non_structural_receipt_is_missing() {
-        let worklog_receipts = BTreeSet::from(["aaaaaaa".to_string(), "bbbbbbb".to_string()]);
+        let worklog_receipts =
+            BTreeSet::from(["aaaaaaa".to_string(), "bbbbbbb".to_string()]);
         let report = compare_receipts(
             255,
             &worklog_receipts,
@@ -402,10 +403,7 @@ mod tests {
                 ("bbbbbbb", "state(process-merge): merge PR [cycle 255]"),
                 ("ccccccc", "state(cycle-complete): close cycle [cycle 255]"),
                 ("ddddddd", "docs(cycle-255): publish worklog and journal"),
-                (
-                    "eeeeeee",
-                    "state(record-dispatch): issue #10 dispatched [cycle 255]",
-                ),
+                ("eeeeeee", "state(record-dispatch): issue #10 dispatched [cycle 255]"),
             ]),
         );
 
