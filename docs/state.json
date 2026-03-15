@@ -4089,11 +4089,11 @@
           "added_cycle": 260,
           "category": "review-evidence",
           "chosen_path": "structural-fix",
-          "rationale": "Two-part fix: (1) Behavioral: orchestrator now uses gh pr review --approve with substantive bodies before every merge (adopted cycle 260). (2) Enforceable: review-event freshness invariant merged (PR #1266, cycle 263). state-invariants now checks review_events_verified_through_cycle against last_cycle.number. Field initialized to cycle 263. Both parts are now in place — behavioral adoption + structural verification.",
+          "rationale": "Behavioral part adopted (gh pr review --approve since cycle 260). Structural part incomplete: PR #1266 merged a freshness-marker check (review_events_verified_through_cycle), but it only verifies that the marker was bumped recently — it does NOT query GitHub for actual review events on merged PRs. Downgraded from verified per cycle 263 review finding #1. Next step: upgrade the invariant to query actual GitHub review events for PRs merged in the verified cycle.",
           "root_cause": "Review events were optional and unverified. No tool, checklist step, or invariant confirmed that GitHub review events existed on PRs before merge. The orchestrator merged PRs with only worklog/journal claims of review, which are self-reported and not auditable.",
-          "status": "verified",
-          "updated_cycle": 263,
-          "verification_cycle": 263
+          "status": "in-progress",
+          "updated_cycle": 264,
+          "verification_cycle": null
         }
       ]
     },
