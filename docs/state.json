@@ -3651,6 +3651,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "verify-review-events: add closed status"
+    },
+    {
+      "dispatched_at": "2026-03-15T22:15:17Z",
+      "issue": 1316,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "cycle-receipts: e2e tests for dedup"
     }
   ],
   "audit_dropped": [
@@ -3843,16 +3850,16 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1315 verify-review-events: add closed status (cycle 272)",
-    "dispatch_to_pr_rate": "98.5%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1316 cycle-receipts: e2e tests for dedup (cycle 272)",
+    "dispatch_to_pr_rate": "98.3%",
+    "in_flight": 2,
     "merged": 394,
     "pr_merge_rate": "99.2%",
     "produced_pr": 397,
     "resolved": 402,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 403
+    "total_dispatches": 404
   },
   "cycle_phase": {
     "cycle": 272,
