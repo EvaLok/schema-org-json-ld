@@ -3504,6 +3504,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Tool audit cycle 263"
+    },
+    {
+      "dispatched_at": "2026-03-15T03:21:07Z",
+      "issue": 1273,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 263 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -3694,16 +3701,16 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1271 Tool audit cycle 263 (cycle 263)",
-    "dispatch_to_pr_rate": "98.4%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1273 [Cycle Review] Cycle 263 end-of-cycle review (cycle 263)",
+    "dispatch_to_pr_rate": "98.2%",
+    "in_flight": 2,
     "merged": 378,
     "pr_merge_rate": "99.2%",
     "produced_pr": 381,
     "resolved": 386,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 387
+    "total_dispatches": 388
   },
   "cycle_phase": {
     "cycle": 263,
