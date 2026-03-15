@@ -3477,6 +3477,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix record-dispatch phase transition for non-review dispatches"
+    },
+    {
+      "dispatched_at": "2026-03-15T00:27:01Z",
+      "issue": 1265,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add review-event verification invariant"
     }
   ],
   "audit_dropped": [
@@ -3666,21 +3673,21 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1263 Fix record-dispatch phase transition for non-review dispatches (cycle 262)",
-    "dispatch_to_pr_rate": "98.4%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1265 Add review-event verification invariant (cycle 262)",
+    "dispatch_to_pr_rate": "98.2%",
+    "in_flight": 2,
     "merged": 375,
     "pr_merge_rate": "99.2%",
     "produced_pr": 378,
     "resolved": 383,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 384
+    "total_dispatches": 385
   },
   "cycle_phase": {
     "cycle": 262,
-    "phase": "work",
-    "phase_entered_at": "2026-03-15T00:13:48Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-15T00:27:01Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
