@@ -305,7 +305,7 @@ fn format_closing_comment(
                 "| {} | {} | [{}]({}) |",
                 escape_markdown_cell(&entry.tool),
                 escape_markdown_cell(&entry.receipt),
-                entry.receipt,
+                escape_markdown_cell(&entry.receipt),
                 entry.url
             )
         }));
@@ -1158,7 +1158,7 @@ mod tests {
     }
 
     #[test]
-    fn cli_summary_takes_precedence_over_worklog_summary() {
+    fn cli_summary_takes_precedence_over_all_other_sources() {
         assert_eq!(
             resolve_summary(
                 Some("CLI summary wins"),
@@ -1225,7 +1225,10 @@ mod tests {
             .join(fixed_now().format("%Y-%m-%d").to_string());
         fs::create_dir_all(&worklog_dir).unwrap();
         fs::write(
-            worklog_dir.join("080602-cycle-202-summary.md"),
+            worklog_dir.join(format!(
+                "{}-cycle-202-summary.md",
+                fixed_now().format("%H%M%S")
+            )),
             "# Cycle 203 — 2026-03-09 08:06 UTC\n\n## What was done\n\n- Wrong cycle.\n",
         )
         .unwrap();
@@ -1798,7 +1801,7 @@ mod tests {
 
         assert!(comment.contains("- Validated a \\| b"));
         assert!(comment.contains("- Review x \\| y"));
-        assert!(comment.contains("| cycle\\|start | abc\\|123 | [abc|123]("));
+        assert!(comment.contains("| cycle\\|start | abc\\|123 | [abc\\|123]("));
     }
 
     fn success_output(stdout: &str) -> ExecutionResult {
