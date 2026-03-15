@@ -3754,8 +3754,8 @@
   },
   "cycle_phase": {
     "cycle": 266,
-    "phase": "work",
-    "phase_entered_at": "2026-03-15T08:10:04Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-15T08:25:26Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -3860,7 +3860,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 265"
+        "last_refreshed": "cycle 266"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -3872,7 +3872,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 265"
+        "last_refreshed": "cycle 266"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -3892,7 +3892,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 265"
+        "last_refreshed": "cycle 266"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -3900,7 +3900,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 265"
+        "last_refreshed": "cycle 266"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -3932,7 +3932,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 265"
+        "last_refreshed": "cycle 266"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -4001,13 +4001,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 14,
+    "duration_minutes": 15,
     "issue": 1285,
     "number": 266,
-    "summary": "3 PRs merged (#1281 review artifact, #1279 process-review 5-status, #1278 cycle-close tests). Cycle 264 review processed (2/5, 4 findings). Close-out doc timing commitment explicitly dropped. 3 stale fields refreshed. 3 dead branches cleaned.",
-    "timestamp": "2026-03-15T08:10:04Z"
+    "summary": "Merged PR #1284 (cycle 265 review). Processed review with 5-status flags. Fixed state-invariants: 5-status accounting + freshness-drift cross-check. Reclassified cycle 264 F2. Updated COMPLETION_CHECKLIST.md. Cleaned 1 dead branch.",
+    "timestamp": "2026-03-15T08:25:26Z"
   },
-  "last_eva_comment_check": "2026-03-15T08:10:04Z",
+  "last_eva_comment_check": "2026-03-15T08:25:26Z",
   "last_tool_audit_cycle": 263,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
