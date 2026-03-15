@@ -94,6 +94,14 @@ For each open `cycle-review` issue:
 
     **Why:** The review system was catching real issues but the disposition loop was broken — findings were marked "actioned" upon dispatch, then the same defect reappeared next cycle. This created a 10+ cycle plateau at complacency 2-3/5. The regression check closes the loop: dispatching a fix is necessary but not sufficient — the fix must demonstrably work.
 
+12. **Two-state chronic verification gate** (per audit [#259](https://github.com/EvaLok/schema-org-json-ld-audit/issues/259)): When marking a chronic category's `verification_cycle`, distinguish between two states:
+    - `tool_hardened`: The verification tool has been merged and passes unit tests, but the runtime scenario that originally caused the chronic failure has not yet been exercised (e.g., a code-PR merge path that hasn't had a code PR to verify against).
+    - `runtime_verified`: The tool has been successfully exercised against the specific scenario that originally caused the chronic failure (e.g., a real code PR was merged, verified, and the tool produced correct results).
+
+    Only `runtime_verified` clears the chronic category. `tool_hardened` acknowledges progress but keeps the category open until runtime proof exists. Use a string value in `verification_cycle` (e.g., `"270-tool-hardened, pending-code-PR-runtime-proof"`) to indicate the intermediate state. When the runtime proof is obtained, update to the numeric cycle number.
+
+    **Why:** In cycles 269-270, state-integrity and review-evidence were marked verified (verification_cycle: 270) while the orchestrator's own journal admitted the hard case (code PRs) had not been tested. The review agent caught this in both cycles. This gate prevents premature closure by requiring the actual failure scenario to be exercised, not just unit-tested.
+
 If no review agent was dispatched last cycle (e.g., first cycle with this process), note it and move on.
 
 ## 0.6. Journal commitment reconciliation (per audit #147)
