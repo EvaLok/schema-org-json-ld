@@ -323,19 +323,23 @@ fn collect_dispatch_cycles(
     let checked_cycle_set: BTreeSet<u64> = checked_cycles.iter().copied().collect();
     agent_sessions
         .iter()
-        .filter(|session| {
-            session
-                .status
-                .as_deref()
-                .is_none_or(status_expects_merge_outcome)
-        })
+        .filter(|session| session_expects_merge_outcome(session))
         .filter_map(|session| session.extra.get("cycle").and_then(Value::as_u64))
         .filter(|cycle| checked_cycle_set.contains(cycle))
         .collect()
 }
 
+fn session_expects_merge_outcome(session: &AgentSession) -> bool {
+    match session.status.as_deref() {
+        Some(status) => status_expects_merge_outcome(status),
+        None => true,
+    }
+}
+
 /// Returns whether an `agent_sessions[*].status` value from `docs/state.json`
 /// should still yield a merge outcome that `verify-review-events` must discover.
+/// A merge outcome here means the tool should expect to find a corresponding
+/// merged PR for that session when it verifies review events.
 ///
 /// Known statuses are classified as follows:
 /// - merge-expected: `merged`, `reviewed_merged`, `open`, `in_progress`
@@ -343,11 +347,14 @@ fn collect_dispatch_cycles(
 ///
 /// Unknown statuses are treated as merge-expected so verification stays
 /// fail-closed if the status taxonomy expands before this tool is updated.
+/// In this tool, fail-closed means defaulting to the safer behavior: requiring
+/// PR discovery/verification instead of silently skipping an unfamiliar status.
 fn status_expects_merge_outcome(status: &str) -> bool {
-    !matches!(
-        status,
-        "failed" | "closed_without_pr" | "closed_without_merge"
-    )
+    match status {
+        "merged" | "reviewed_merged" | "open" | "in_progress" => true,
+        "failed" | "closed_without_pr" | "closed_without_merge" => false,
+        _ => true,
+    }
 }
 
 fn is_merged_status(status: Option<&str>) -> bool {
@@ -1229,6 +1236,9 @@ mod tests {
         let dispatch_cycles = collect_dispatch_cycles(
             &[
                 sample_session_with_status(266, Some("failed")),
+                // Cycle 267 has a merge-expected `merged` status but no
+                // corresponding entry in `pull_requests`, so safe advance must
+                // stop at cycle 266.
                 sample_session_with_status(267, Some("merged")),
             ],
             &checked_cycles,
