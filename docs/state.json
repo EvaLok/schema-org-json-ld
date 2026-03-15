@@ -3855,7 +3855,7 @@
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 254"
+        "last_refreshed": "cycle 265"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -3931,7 +3931,7 @@
       },
       "schema_status.planned_next": {
         "cadence": "after planning or completing types",
-        "last_refreshed": "cycle 254"
+        "last_refreshed": "cycle 265"
       },
       "schema_status.property_gap_audit": {
         "cadence": "after property gap fixes",
@@ -3983,7 +3983,7 @@
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
-        "last_refreshed": "cycle 254"
+        "last_refreshed": "cycle 265"
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
