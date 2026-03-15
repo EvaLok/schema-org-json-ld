@@ -3528,8 +3528,10 @@
     {
       "dispatched_at": "2026-03-15T04:54:37Z",
       "issue": 1277,
+      "merged_at": "2026-03-15T06:31:35Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1278,
+      "status": "merged",
       "title": "Improve cycle-close test coverage (tool audit recommendation)"
     },
     {
@@ -3731,12 +3733,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1280 Cycle 264 end-of-cycle review (cycle 264)",
-    "dispatch_to_pr_rate": "98.5%",
-    "in_flight": 1,
-    "merged": 382,
+    "dispatch_to_pr_rate": "98.7%",
+    "in_flight": 0,
+    "merged": 383,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 385,
-    "resolved": 390,
+    "produced_pr": 386,
+    "resolved": 391,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 391
