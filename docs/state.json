@@ -3581,8 +3581,16 @@
       "dispatched_at": "2026-03-15T14:39:13Z",
       "issue": 1296,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1297,
+      "status": "merged",
       "title": "Cycle 268 review"
+    },
+    {
+      "dispatched_at": "2026-03-15T16:25:00Z",
+      "issue": 1299,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Harden verify-review-events"
     }
   ],
   "audit_dropped": [
@@ -3774,16 +3782,16 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1296 Cycle 268 review (cycle 268)",
+    "dispatch_log_latest": "#1299 Harden verify-review-events (cycle 269)",
     "dispatch_to_pr_rate": "98.2%",
-    "in_flight": 2,
-    "merged": 386,
+    "in_flight": 1,
+    "merged": 387,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 389,
-    "resolved": 394,
+    "produced_pr": 390,
+    "resolved": 395,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 396
+    "total_dispatches": 397
   },
   "cycle_phase": {
     "cycle": 269,
@@ -6081,9 +6089,22 @@
         "dispatch_created": 0,
         "finding_count": 5,
         "ignored": 0
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "tool-correctness",
+          "state-integrity"
+        ],
+        "complacency_score": 2,
+        "cycle": 268,
+        "deferred": 0,
+        "dispatch_created": 1,
+        "finding_count": 3,
+        "ignored": 0
       }
     ],
-    "last_review_cycle": 267
+    "last_review_cycle": 268
   },
   "review_events_verified_through_cycle": 268,
   "schema_status": {
