@@ -3657,8 +3657,10 @@
     {
       "dispatched_at": "2026-03-15T22:15:17Z",
       "issue": 1316,
+      "merged_at": "2026-03-15T22:24:54Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1318,
+      "status": "merged",
       "title": "cycle-receipts: e2e tests for dedup"
     }
   ],
@@ -3853,12 +3855,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1316 cycle-receipts: e2e tests for dedup (cycle 272)",
-    "dispatch_to_pr_rate": "98.5%",
-    "in_flight": 1,
-    "merged": 395,
+    "dispatch_to_pr_rate": "98.8%",
+    "in_flight": 0,
+    "merged": 396,
     "pr_merge_rate": "99.2%",
-    "produced_pr": 398,
-    "resolved": 403,
+    "produced_pr": 399,
+    "resolved": 404,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 404
