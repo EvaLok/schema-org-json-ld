@@ -3644,6 +3644,13 @@
       "pr": 1313,
       "status": "merged",
       "title": "Cycle 271 review"
+    },
+    {
+      "dispatched_at": "2026-03-15T22:15:09Z",
+      "issue": 1315,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "verify-review-events: add closed status"
     }
   ],
   "audit_dropped": [
@@ -3836,16 +3843,16 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1312 Cycle 271 review (cycle 271)",
-    "dispatch_to_pr_rate": "98.8%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1315 verify-review-events: add closed status (cycle 272)",
+    "dispatch_to_pr_rate": "98.5%",
+    "in_flight": 1,
     "merged": 394,
     "pr_merge_rate": "99.2%",
     "produced_pr": 397,
     "resolved": 402,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 402
+    "total_dispatches": 403
   },
   "cycle_phase": {
     "cycle": 272,
