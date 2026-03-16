@@ -4388,7 +4388,7 @@
           "chosen_path": "structural-fix",
           "rationale": "Phased cycle architecture (Eva #992, commit 1e3b45f) is the structural fix. The orchestrator no longer writes its own worklog — a Copilot documentation agent generates worklog/journal from committed state (git log, state.json, issue metadata). This eliminates the root cause: self-reporting inaccuracies. Cycle 221 is the first to use this architecture. If worklog-accuracy findings persist despite the phased architecture, the category should be re-opened.",
           "root_cause": "write-entry defaults to 'Not provided.' for --copilot-metrics, --publish-gate when CLI flags are not passed, instead of reading from state.json. The orchestrator does not always pass these flags. The deeper root cause is that the orchestrator both does the work and writes its own report — no separation of concerns.",
-          "verification_cycle": "258: #1176 merged (PR #1177). Auto-derivation works but worklog-accuracy persists (cycle 257 F2: pipeline status timing). New sub-cause: worklog captures C1 early-check, not C5.5 final gate. Cascade detection dispatched (#1236) per audit #245."
+          "verification_cycle": 278
         },
         {
           "added_cycle": 243,
