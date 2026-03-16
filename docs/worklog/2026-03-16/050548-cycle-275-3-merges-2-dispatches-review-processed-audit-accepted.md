@@ -42,7 +42,7 @@
 
 ## Commit receipts
 
-> Note: Scope: all commits through cycle-complete. Docs and record-dispatch commits are structurally excluded (created post-worklog). Validated by receipt-validate at step C5.1.
+> Note: Scope: all commits through cycle-complete plus post-cycle-complete fixes. The docs commit, receipt-fix commit, and record-dispatch commit are structurally excluded (created post-worklog). Validated by receipt-validate at step C5.1.
 
 | Tool | Receipt | Link |
 |------|---------|------|
