@@ -373,7 +373,36 @@ fn classify_step(name: &'static str, kind: &ToolKind, execution: ExecutionResult
 			if let Some(parsed) = parse_json(&execution.stdout) {
 				let passed = parsed.get("passed").and_then(Value::as_u64).unwrap_or(0);
 				let failed = parsed.get("failed").and_then(Value::as_u64).unwrap_or(0);
-				step.detail = Some(format!("{}/{} invariants pass", passed, passed + failed));
+				let warned = parsed
+					.get("warned")
+					.and_then(Value::as_u64)
+					.or_else(|| {
+						parsed.get("checks").and_then(Value::as_array).map(|checks| {
+							checks
+								.iter()
+								.filter(|check| {
+									check
+										.get("status")
+										.and_then(Value::as_str)
+										.map(|status| status == "warn")
+										.unwrap_or(false)
+								})
+								.count() as u64
+						})
+					})
+					.unwrap_or(0);
+				let total = passed + failed + warned;
+				let warning_suffix = if warned == 0 {
+					String::new()
+				} else if warned == 1 {
+					", 1 warn".to_string()
+				} else {
+					format!(", {} warns", warned)
+				};
+				step.detail = Some(format!(
+					"{}/{} invariants pass{}",
+					passed, total, warning_suffix
+				));
 			} else {
 				step.status = StepStatus::Error;
 				step.detail = Some(format!("invalid JSON output from {}", name));
@@ -1380,6 +1409,24 @@ mod tests {
 		assert_eq!(step.status, StepStatus::Warn);
 		assert_eq!(step.findings, Some(1));
 		assert_eq!(step.detail.as_deref(), Some("1 findings"));
+	}
+
+	#[test]
+	fn state_invariants_detail_includes_warns_in_total_when_present() {
+		let mut checks = vec![json!({"status": "pass"}); 14];
+		checks.push(json!({"status": "warn"}));
+		let execution = ExecutionResult {
+			exit_code: Some(0),
+			stdout: json!({
+				"passed": 14,
+				"failed": 0,
+				"checks": checks
+			})
+			.to_string(),
+		};
+		let step = classify_step("state-invariants", &ToolKind::StateInvariants, execution);
+		assert_eq!(step.status, StepStatus::Pass);
+		assert_eq!(step.detail.as_deref(), Some("14/15 invariants pass, 1 warn"));
 	}
 
 	#[test]
