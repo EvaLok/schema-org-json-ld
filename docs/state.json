@@ -4088,7 +4088,7 @@
   "cycle_phase": {
     "cycle": 283,
     "phase": "close_out",
-    "phase_entered_at": "2026-03-16T20:23:27Z"
+    "phase_entered_at": "2026-03-16T20:25:05Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -4343,13 +4343,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 13,
+    "duration_minutes": 2,
     "issue": 1382,
     "number": 283,
     "summary": "Merged PR #1381 (cycle 282 review artifact, complacency 2/5). Accepted audit #271: recalibrated worklog-accuracy chronic resolution condition (Option A severity threshold). State-invariants now 15/15. Created audit-inbound #1383. Deleted dead branch.",
-    "timestamp": "2026-03-16T20:23:27Z"
+    "timestamp": "2026-03-16T20:25:05Z"
   },
-  "last_eva_comment_check": "2026-03-16T20:23:27Z",
+  "last_eva_comment_check": "2026-03-16T20:25:05Z",
   "last_tool_audit_cycle": 263,
   "open_questions_for_eva": [
     1369
