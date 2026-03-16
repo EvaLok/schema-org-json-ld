@@ -4104,7 +4104,7 @@
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
-        "last_refreshed": "cycle 268"
+        "last_refreshed": "cycle 274"
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
@@ -4148,7 +4148,7 @@
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 268"
+        "last_refreshed": "cycle 274"
       }
     }
   },
