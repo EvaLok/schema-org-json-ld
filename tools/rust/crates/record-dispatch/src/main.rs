@@ -1,6 +1,7 @@
 use clap::Parser;
 use record_dispatch::{
-    apply_dispatch_patch, build_dispatch_patch, dispatch_commit_message, resolve_model,
+    apply_dispatch_patch, build_dispatch_patch, dispatch_commit_message, enforce_pipeline_gate,
+    resolve_model, CommandRunner, ProcessRunner,
 };
 use state_schema::{
     commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
@@ -23,6 +24,10 @@ struct Cli {
     #[arg(long)]
     model: Option<String>,
 
+    /// Bypass the pipeline gate for emergency recovery only
+    #[arg(long)]
+    skip_pipeline_gate: bool,
+
     /// Repository root path
     #[arg(long, default_value = ".")]
     repo_root: PathBuf,
@@ -37,6 +42,19 @@ fn main() {
 }
 
 fn run(cli: Cli) -> Result<(), String> {
+    let runner = ProcessRunner;
+    run_with_runner(cli, &runner, &mut |warning| eprintln!("{}", warning))
+}
+
+fn run_with_runner(
+    cli: Cli,
+    runner: &dyn CommandRunner,
+    warn: &mut dyn FnMut(&str),
+) -> Result<(), String> {
+    if let Some(warning) = enforce_pipeline_gate(&cli.repo_root, cli.skip_pipeline_gate, runner)? {
+        warn(warning);
+    }
+
     let model = resolve_model(cli.model.as_deref(), &cli.repo_root)?;
     let mut state_value = read_state_value(&cli.repo_root)?;
     let dispatched_at = current_utc_timestamp();
@@ -107,10 +125,10 @@ fn run(cli: Cli) -> Result<(), String> {
         );
     }
     if patch.in_flight >= 3 {
-        eprintln!(
+        warn(&format!(
             "Warning: in-flight dispatches at {} (approaching/exceeding concurrency limit of 2)",
             patch.in_flight
-        );
+        ));
     }
 
     Ok(())
@@ -135,6 +153,7 @@ mod tests {
         assert!(help.contains("--issue"));
         assert!(help.contains("--title"));
         assert!(help.contains("--model"));
+        assert!(help.contains("--skip-pipeline-gate"));
         assert!(help.contains("--repo-root"));
     }
 
@@ -182,6 +201,7 @@ mod tests {
             issue: 602,
             title: "Example dispatch".to_string(),
             model: Some("gpt-5.4".to_string()),
+            skip_pipeline_gate: true,
             repo_root: repo.path().to_path_buf(),
         })
         .expect("dispatch should succeed");
@@ -241,6 +261,7 @@ mod tests {
             issue: 602,
             title: "Example dispatch".to_string(),
             model: Some("gpt-5.4".to_string()),
+            skip_pipeline_gate: true,
             repo_root: repo.path().to_path_buf(),
         })
         .expect("dispatch should succeed");
@@ -273,6 +294,7 @@ mod tests {
             issue: 602,
             title: "Example dispatch".to_string(),
             model: Some("gpt-5.4".to_string()),
+            skip_pipeline_gate: true,
             repo_root: repo.path().to_path_buf(),
         })
         .expect("dispatch should succeed");
@@ -302,6 +324,7 @@ mod tests {
             issue: 602,
             title: "Example dispatch".to_string(),
             model: Some("gpt-5.4".to_string()),
+            skip_pipeline_gate: true,
             repo_root: repo.path().to_path_buf(),
         })
         .expect("missing worklog should only warn");
@@ -317,6 +340,161 @@ mod tests {
             String::from_utf8_lossy(&output.stdout).trim(),
             "state(record-dispatch): #602 dispatched [cycle 164]"
         );
+    }
+
+    #[test]
+    fn run_fails_when_pipeline_check_fails() {
+        let repo = TempRepo::new();
+        repo.init();
+        let before = fs::read_to_string(repo.path().join("docs/state.json"))
+            .expect("state file should be readable before run");
+        let mut warnings = Vec::new();
+
+        let error = run_with_runner(
+            Cli {
+                issue: 602,
+                title: "Example dispatch".to_string(),
+                model: Some("gpt-5.4".to_string()),
+                skip_pipeline_gate: false,
+                repo_root: repo.path().to_path_buf(),
+            },
+            &MockRunner::with_exit_code(Some(1)),
+            &mut |warning| warnings.push(warning.to_string()),
+        )
+        .expect_err("pipeline failure should stop dispatch");
+
+        assert_eq!(
+            error,
+            record_dispatch::PIPELINE_GATE_FAILURE_MESSAGE.to_string()
+        );
+        assert!(warnings.is_empty());
+        let after = fs::read_to_string(repo.path().join("docs/state.json"))
+            .expect("state file should be readable after failed run");
+        assert_eq!(after, before);
+    }
+
+    #[test]
+    fn run_proceeds_when_pipeline_check_passes() {
+        let repo = TempRepo::new();
+        repo.init();
+        let mut warnings = Vec::new();
+
+        run_with_runner(
+            Cli {
+                issue: 602,
+                title: "Example dispatch".to_string(),
+                model: Some("gpt-5.4".to_string()),
+                skip_pipeline_gate: false,
+                repo_root: repo.path().to_path_buf(),
+            },
+            &MockRunner::with_exit_code(Some(0)),
+            &mut |warning| warnings.push(warning.to_string()),
+        )
+        .expect("passing pipeline gate should allow dispatch");
+
+        assert!(warnings.is_empty());
+        let state = repo.read_state();
+        assert_eq!(
+            state.pointer("/copilot_metrics/in_flight"),
+            Some(&serde_json::json!(1))
+        );
+        assert_eq!(
+            state.pointer("/agent_sessions/2/issue"),
+            Some(&serde_json::json!(602))
+        );
+    }
+
+    #[test]
+    fn skip_pipeline_gate_bypasses_check_with_warning() {
+        let repo = TempRepo::new();
+        repo.init();
+        let mut warnings = Vec::new();
+        let runner = MockRunner::with_error("runner should not be called when skipping");
+
+        run_with_runner(
+            Cli {
+                issue: 602,
+                title: "Example dispatch".to_string(),
+                model: Some("gpt-5.4".to_string()),
+                skip_pipeline_gate: true,
+                repo_root: repo.path().to_path_buf(),
+            },
+            &runner,
+            &mut |warning| warnings.push(warning.to_string()),
+        )
+        .expect("skip flag should bypass pipeline gate");
+
+        assert_eq!(
+            warnings,
+            vec![record_dispatch::SKIP_PIPELINE_GATE_WARNING.to_string()]
+        );
+        assert_eq!(runner.call_count(), 0);
+        let state = repo.read_state();
+        assert_eq!(
+            state.pointer("/copilot_metrics/in_flight"),
+            Some(&serde_json::json!(1))
+        );
+    }
+
+    #[test]
+    fn run_fails_closed_when_pipeline_check_cannot_execute() {
+        let repo = TempRepo::new();
+        repo.init();
+        let mut warnings = Vec::new();
+
+        let error = run_with_runner(
+            Cli {
+                issue: 602,
+                title: "Example dispatch".to_string(),
+                model: Some("gpt-5.4".to_string()),
+                skip_pipeline_gate: false,
+                repo_root: repo.path().to_path_buf(),
+            },
+            &MockRunner::with_error("missing bash"),
+            &mut |warning| warnings.push(warning.to_string()),
+        )
+        .expect_err("command execution failure should stop dispatch");
+
+        assert_eq!(
+            error,
+            record_dispatch::PIPELINE_GATE_FAILURE_MESSAGE.to_string()
+        );
+        assert!(warnings.is_empty());
+    }
+
+    struct MockRunner {
+        result: Result<record_dispatch::ExecutionResult, String>,
+        call_count: std::cell::Cell<usize>,
+    }
+
+    impl MockRunner {
+        fn with_exit_code(exit_code: Option<i32>) -> Self {
+            Self {
+                result: Ok(record_dispatch::ExecutionResult { exit_code }),
+                call_count: std::cell::Cell::new(0),
+            }
+        }
+
+        fn with_error(message: &str) -> Self {
+            Self {
+                result: Err(message.to_string()),
+                call_count: std::cell::Cell::new(0),
+            }
+        }
+
+        fn call_count(&self) -> usize {
+            self.call_count.get()
+        }
+    }
+
+    impl CommandRunner for MockRunner {
+        fn run_pipeline_check(
+            &self,
+            _repo_root: &Path,
+        ) -> Result<record_dispatch::ExecutionResult, String> {
+            self.call_count.set(self.call_count.get() + 1);
+            self.result.clone()
+        }
     }
 
     struct TempRepo {

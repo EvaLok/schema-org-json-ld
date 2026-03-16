@@ -4,8 +4,59 @@ use std::{
     ffi::OsStr,
     fs,
     path::{Path, PathBuf},
+    process::Command,
     time::SystemTime,
 };
+
+pub const PIPELINE_GATE_FAILURE_MESSAGE: &str =
+    "Cannot dispatch: pipeline-check failed. Fix failures before dispatching.";
+pub const SKIP_PIPELINE_GATE_WARNING: &str =
+    "WARNING: pipeline gate bypassed via --skip-pipeline-gate";
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExecutionResult {
+    pub exit_code: Option<i32>,
+}
+
+pub trait CommandRunner {
+    fn run_pipeline_check(&self, repo_root: &Path) -> Result<ExecutionResult, String>;
+}
+
+pub struct ProcessRunner;
+
+impl CommandRunner for ProcessRunner {
+    fn run_pipeline_check(&self, repo_root: &Path) -> Result<ExecutionResult, String> {
+        let status = Command::new("bash")
+            .args(["tools/pipeline-check"])
+            .current_dir(repo_root)
+            .status()
+            .map_err(|error| format!("failed to execute pipeline-check: {}", error))?;
+
+        Ok(ExecutionResult {
+            exit_code: status.code(),
+        })
+    }
+}
+
+pub fn enforce_pipeline_gate(
+    repo_root: &Path,
+    skip_pipeline_gate: bool,
+    runner: &dyn CommandRunner,
+) -> Result<Option<&'static str>, String> {
+    if skip_pipeline_gate {
+        return Ok(Some(SKIP_PIPELINE_GATE_WARNING));
+    }
+
+    let execution = runner
+        .run_pipeline_check(repo_root)
+        .map_err(|_| PIPELINE_GATE_FAILURE_MESSAGE.to_string())?;
+
+    if execution.exit_code == Some(0) {
+        Ok(None)
+    } else {
+        Err(PIPELINE_GATE_FAILURE_MESSAGE.to_string())
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DispatchPatch {
