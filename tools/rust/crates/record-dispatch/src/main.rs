@@ -24,7 +24,7 @@ struct Cli {
     model: Option<String>,
 
     /// Review finding number(s) to reclassify from deferred to dispatch_created
-    #[arg(long = "review-finding")]
+    #[arg(long = "review-finding", value_name = "NUMBER")]
     review_findings: Vec<u64>,
 
     /// Repository root path
@@ -130,9 +130,23 @@ fn reconcile_review_findings(
         return Ok(());
     }
 
-    let unique_findings: BTreeSet<u64> = review_findings.iter().copied().collect();
-    if unique_findings.len() != review_findings.len() {
-        return Err("duplicate --review-finding values are not allowed".to_string());
+    let mut unique_findings = BTreeSet::new();
+    let mut duplicate_findings = BTreeSet::new();
+    for finding in review_findings {
+        if !unique_findings.insert(*finding) {
+            duplicate_findings.insert(*finding);
+        }
+    }
+    if !duplicate_findings.is_empty() {
+        let duplicates = duplicate_findings
+            .iter()
+            .map(u64::to_string)
+            .collect::<Vec<_>>()
+            .join(", ");
+        return Err(format!(
+            "duplicate --review-finding value(s) are not allowed: {}",
+            duplicates
+        ));
     }
 
     let history = state_value
@@ -164,7 +178,7 @@ fn reconcile_review_findings(
     }
 
     let reclassified_count = u64::try_from(unique_findings.len())
-        .map_err(|_| "review finding count overflowed u64".to_string())?;
+        .map_err(|_| "review finding count too large to store as u64".to_string())?;
     if latest_entry.deferred < reclassified_count {
         return Err(format!(
             "cannot reclassify {} review finding(s): deferred count {} would go below 0",
@@ -180,6 +194,8 @@ fn reconcile_review_findings(
 
     let disposition_sum = review_disposition_sum(&latest_entry)?;
     if disposition_sum != latest_entry.finding_count {
+        // The issue contract requires warning instead of failing so dispatch
+        // recording can proceed even if earlier review bookkeeping was inconsistent.
         eprintln!(
             "Warning: latest review history entry dispositions sum to {} but finding_count is {}; continuing",
             disposition_sum, latest_entry.finding_count
