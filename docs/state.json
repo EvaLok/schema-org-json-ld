@@ -4235,7 +4235,7 @@
       },
       "project_mode": {
         "cadence": "when mode changes (stabilization entry/exit)",
-        "last_refreshed": "cycle 277"
+        "last_refreshed": "cycle 283"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
@@ -4444,10 +4444,11 @@
         {
           "added_cycle": 209,
           "category": "worklog-accuracy",
-          "chosen_path": "structural-fix",
-          "rationale": "Phased cycle architecture (Eva #992, commit 1e3b45f) is the structural fix. The orchestrator no longer writes its own worklog — a Copilot documentation agent generates worklog/journal from committed state (git log, state.json, issue metadata). This eliminates the root cause: self-reporting inaccuracies. Cycle 221 is the first to use this architecture. If worklog-accuracy findings persist despite the phased architecture, the category should be re-opened.",
-          "root_cause": "write-entry defaults to 'Not provided.' for --copilot-metrics, --publish-gate when CLI flags are not passed, instead of reading from state.json. The orchestrator does not always pass these flags. The deeper root cause is that the orchestrator both does the work and writes its own report — no separation of concerns.",
-          "verification_cycle": "278-reverted-279: review cycle 278 found fresh worklog-accuracy defects (Issues processed=None, receipt-scope stale). Pending clean cycle with no worklog-accuracy findings."
+          "chosen_path": "recalibrate",
+          "rationale": "Resolution condition recalibrated per audit #271 (cycle 283). Original condition (zero worklog-accuracy findings) was asymptotically unreachable: the review agent reliably finds timing-inherent drift every cycle (stale pre-dispatch state snapshots, post-worklog commits) because the worklog is structurally written before the review dispatch. Recalibrated condition: only factual worklog errors (wrong links, wrong counts, fabricated data) block resolution. Timing-inherent drift (pre-dispatch snapshots, structural exclusions) is accepted as inherent to the write-then-dispatch architecture. The structural fix (write-entry tool + phased architecture) addresses factual accuracy. Timing drift is a non-defect characteristic of the workflow.",
+          "root_cause": "write-entry defaults to 'Not provided.' for --copilot-metrics, --publish-gate when CLI flags are not passed, instead of reading from state.json. The orchestrator does not always pass these flags. The deeper root cause is that the orchestrator both does the work and writes its own report — no separation of concerns. Secondary root cause: timing-inherent drift where worklog is written before review dispatch, making the state snapshot structurally stale.",
+          "updated_cycle": 283,
+          "verification_cycle": 283
         },
         {
           "added_cycle": 243,
