@@ -3820,6 +3820,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Phase 1 process-review enforce disposition"
+    },
+    {
+      "dispatched_at": "2026-03-16T10:42:11Z",
+      "issue": 1363,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 278 review"
     }
   ],
   "audit_dropped": [
@@ -4013,21 +4020,21 @@
   "copilot_metrics": {
     "closed_without_merge": 5,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1361 Phase 1 process-review enforce disposition (cycle 278)",
-    "dispatch_to_pr_rate": "98.3%",
-    "in_flight": 2,
+    "dispatch_log_latest": "#1363 Cycle 278 review (cycle 278)",
+    "dispatch_to_pr_rate": "98.1%",
+    "in_flight": 3,
     "merged": 410,
     "pr_merge_rate": "98.8%",
     "produced_pr": 415,
     "resolved": 420,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 422
+    "total_dispatches": 423
   },
   "cycle_phase": {
     "cycle": 278,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-16T10:35:28Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-16T10:42:11Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
