@@ -6312,9 +6312,11 @@
         ],
         "complacency_score": 2,
         "cycle": 273,
-        "deferred": 2,
+        "deferred": 0,
+        "dispatch_created": 2,
         "finding_count": 4,
-        "ignored": 0
+        "ignored": 0,
+        "note": "Corrected per cycle 274 review F3: findings 1,3 had dispatches #1331,#1332 created same cycle"
       },
       {
         "actioned": 2,
