@@ -3693,8 +3693,10 @@
     {
       "dispatched_at": "2026-03-16T00:23:43Z",
       "issue": 1326,
+      "merged_at": "2026-03-16T03:13:10Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1327,
+      "status": "merged",
       "title": "Auto-derive issues-processed in write-entry from agent_sessions"
     },
     {
@@ -3896,12 +3898,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1328 Cycle 273 end-of-cycle review (cycle 273)",
-    "dispatch_to_pr_rate": "98.3%",
-    "in_flight": 2,
-    "merged": 399,
+    "dispatch_to_pr_rate": "98.5%",
+    "in_flight": 1,
+    "merged": 400,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 402,
-    "resolved": 407,
+    "produced_pr": 403,
+    "resolved": 408,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 409
