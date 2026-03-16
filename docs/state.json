@@ -6995,9 +6995,7 @@
         "MathSolver (learningResourceType optional, design choice)",
         "EducationQA (shared Question class trade-offs)"
       ],
-      "remaining_low_priority": [
-        "VacationRental: Review.contentReferenceTime (French only)"
-      ],
+      "remaining_low_priority": [],
       "types_audited": 23
     },
     "quality_fixes": [
@@ -7099,10 +7097,8 @@
       }
     ],
     "remaining_audit_findings": {
-      "low_priority": [
-        "VacationRental: Review.contentReferenceTime (French listings only, very niche)"
-      ],
-      "note": "Property gap audit complete (all 23 standalone types). Google property verification complete (all 26 types). QAPage Question/Answer comment gap dispatched #424."
+      "low_priority": [],
+      "note": "Property gap audit complete (all 23 standalone types). Google property verification complete (all 26 types). All property gaps resolved. Review.contentReferenceTime added via PR #1374 (cycle 282)."
     },
     "type_classification": {
       "building_block": 59,
