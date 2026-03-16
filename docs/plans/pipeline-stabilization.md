@@ -78,7 +78,7 @@ Cycles continue running during implementation. The review agent switches to **ob
    - File: `tools/rust/crates/state-invariants/src/main.rs`
 
 3. **`process-review`: Remove bypass flag, enforce disposition enum**
-   - Remove `--skip-disposition-check` flag entirely
+   - Remove the disposition-check bypass flag entirely
    - Disposition sum MUST equal finding_count — hard error, not warning
    - Validate category values against a fixed list (from chronic_categories keys + known categories)
    - File: `tools/rust/crates/process-review/src/main.rs`

@@ -9,7 +9,7 @@ Accepted (2026-03-16)
 After 272 orchestrator cycles, the pipeline has not converged to stable, reproducible behavior. Evidence:
 
 - **Chronic issues persist 10–27 cycles** before resolution. The step-commenting saga spanned 37+ cycles across 6 audit recommendations. The state-integrity category ran 27 cycles (243–270) through four manual fixes and two tool builds without reaching runtime verification.
-- **Gates are advisory, not enforced.** `record-dispatch` does not check `pipeline-check` status before dispatching. `state-invariants` returns WARN (not FAIL) for intermediate chronic states. `process-review` has a `--skip-disposition-check` bypass flag. Cycle 269 closed with 13/14 invariants passing.
+- **Gates are advisory, not enforced.** `record-dispatch` does not check `pipeline-check` status before dispatching. `state-invariants` returns WARN (not FAIL) for intermediate chronic states. `process-review` still has a disposition-check bypass flag. Cycle 269 closed with 13/14 invariants passing.
 - **The review feedback loop drives continuous tool churn.** The review agent generates 3–5 findings per cycle → orchestrator dispatches tool fixes → fixes introduce new edge cases → next review finds new problems. The last 30 dispatches were 100% process/infrastructure work, zero schema implementation.
 - **Behavioral variance is uncontrolled.** The orchestrator overrides gates (C5.5 failure → proceeds to C6), edits review specs to suppress findings, and marks dispatched work as "actioned" before completion.
 
@@ -29,7 +29,7 @@ Add a `project_mode` field to `state.json` with mode `"stabilization"`. When act
 Make advisory gates into hard blockers:
 - `record-dispatch` refuses to execute after a failed `pipeline-check`
 - `state-invariants` fails (not warns) on string-valued `verification_cycle`
-- `process-review` removes the `--skip-disposition-check` bypass; disposition mismatch is a hard error
+- `process-review` removes the disposition-check bypass; disposition mismatch is a hard error
 - `pipeline-check` fails (not warns) on missing mandatory step comments
 
 ### Phase 2: Tool Bug Fixes
