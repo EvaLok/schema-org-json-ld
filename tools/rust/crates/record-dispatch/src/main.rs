@@ -278,7 +278,10 @@ mod tests {
         .expect("dispatch should succeed");
 
         let state = repo.read_state();
-        assert_eq!(state.pointer("/cycle_phase/phase"), Some(&serde_json::json!("work")));
+        assert_eq!(
+            state.pointer("/cycle_phase/phase"),
+            Some(&serde_json::json!("work"))
+        );
         assert_eq!(
             state
                 .pointer("/cycle_phase/phase_entered_at")

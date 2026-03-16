@@ -213,17 +213,20 @@ fn main() {
     };
 
     let now = Utc::now();
-    let summary = cli
-        .summary
-        .as_deref()
-        .unwrap_or("TODO: Fill cycle summary.");
+    let summary = match resolve_summary(cli.summary.as_deref(), &state, now) {
+        Ok(summary) => summary,
+        Err(error) => {
+            eprintln!("Error: {}", error);
+            std::process::exit(1);
+        }
+    };
     let report = match assemble_report(
         cycle,
         cli.issue,
         now,
         &state,
         &cycle_changes,
-        summary,
+        &summary,
         &cli.reconcile,
     ) {
         Ok(report) => report,
@@ -283,11 +286,122 @@ fn validate_cli_flags(cli: &Cli) -> Result<(), String> {
     Ok(())
 }
 
+fn resolve_summary(
+    provided_summary: Option<&str>,
+    state: &StateJson,
+    now: DateTime<Utc>,
+) -> Result<String, String> {
+    if let Some(summary) = provided_summary {
+        return Ok(summary.to_string());
+    }
+
+    derive_cycle_summary(state, now)
+}
+
 fn read_state_json(repo_root: &Path) -> Result<StateJson, String> {
     let state_path = repo_root.join("docs/state.json");
     let state_value = read_state_value(repo_root)?;
     serde_json::from_value(state_value)
         .map_err(|error| format!("failed to parse {}: {}", state_path.display(), error))
+}
+
+fn derive_cycle_summary(state: &StateJson, now: DateTime<Utc>) -> Result<String, String> {
+    let cycle_start = cycle_window_start(state)?;
+    if cycle_start > now {
+        return Err("cycle summary window start is in the future".to_string());
+    }
+
+    let mut dispatch_count = 0usize;
+    let mut merged_prs = BTreeSet::new();
+
+    for session in &state.agent_sessions {
+        if let Some(dispatched_at) = session.dispatched_at.as_deref() {
+            let dispatched_at = parse_timestamp(
+                dispatched_at,
+                &format!(
+                    "agent_sessions issue {} dispatched_at",
+                    session.issue.unwrap_or_default()
+                ),
+            )?;
+            if timestamp_in_cycle_window(dispatched_at, cycle_start, now) {
+                dispatch_count += 1;
+            }
+        }
+
+        if session.status.as_deref() != Some("merged") {
+            continue;
+        }
+
+        let Some(merged_at) = session.merged_at.as_deref() else {
+            continue;
+        };
+        let merged_at = parse_timestamp(
+            merged_at,
+            &format!(
+                "agent_sessions issue {} merged_at",
+                session.issue.unwrap_or_default()
+            ),
+        )?;
+        if !timestamp_in_cycle_window(merged_at, cycle_start, now) {
+            continue;
+        }
+
+        let pr = session.pr.ok_or_else(|| {
+            format!(
+                "agent_sessions issue {} merged this cycle is missing pr",
+                session.issue.unwrap_or_default()
+            )
+        })?;
+        if pr <= 0 {
+            return Err(format!(
+                "agent_sessions issue {} has invalid pr {}",
+                session.issue.unwrap_or_default(),
+                pr
+            ));
+        }
+        merged_prs.insert(pr);
+    }
+
+    if merged_prs.is_empty() {
+        return Ok(format!("{dispatch_count} dispatches, 0 merges"));
+    }
+
+    let merged_list = merged_prs
+        .iter()
+        .map(|pr| format!("PR #{pr}"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    Ok(format!(
+        "{dispatch_count} dispatches, {} merges ({merged_list})",
+        merged_prs.len()
+    ))
+}
+
+fn cycle_window_start(state: &StateJson) -> Result<DateTime<Utc>, String> {
+    let start = state
+        .cycle_phase
+        .phase_entered_at
+        .as_deref()
+        .or(state.last_cycle.timestamp.as_deref())
+        .ok_or_else(|| {
+            "missing docs/state.json cycle_phase.phase_entered_at and last_cycle.timestamp"
+                .to_string()
+        })?;
+    parse_timestamp(start, "cycle summary window start")
+}
+
+fn parse_timestamp(value: &str, field_name: &str) -> Result<DateTime<Utc>, String> {
+    DateTime::parse_from_rfc3339(value)
+        .map(|timestamp| timestamp.with_timezone(&Utc))
+        .map_err(|error| format!("invalid {field_name}: {error}"))
+}
+
+fn timestamp_in_cycle_window(
+    timestamp: DateTime<Utc>,
+    cycle_start: DateTime<Utc>,
+    now: DateTime<Utc>,
+) -> bool {
+    timestamp >= cycle_start && timestamp <= now
 }
 
 fn assemble_report(
@@ -418,13 +532,21 @@ fn build_state_patch(
         });
     }
 
-    updates.extend(build_freshness_updates(cycle, &updates, state, cycle_changes));
+    updates.extend(build_freshness_updates(
+        cycle,
+        &updates,
+        state,
+        cycle_changes,
+    ));
     StatePatch { updates }
 }
 
 fn collect_cycle_changes(repo_root: &Path, cycle: u64) -> Result<CycleChanges, String> {
     let start_commit = find_cycle_start_commit(repo_root, cycle)?;
-    let output = run_git(repo_root, &["diff", "--name-only", start_commit.as_str(), "HEAD"])?;
+    let output = run_git(
+        repo_root,
+        &["diff", "--name-only", start_commit.as_str(), "HEAD"],
+    )?;
     let changed_paths = output
         .lines()
         .map(str::trim)
@@ -482,8 +604,13 @@ fn run_git(repo_root: &Path, args: &[&str]) -> Result<String, String> {
         ));
     }
 
-    String::from_utf8(output.stdout)
-        .map_err(|error| format!("git {} produced non-UTF-8 output: {}", args.join(" "), error))
+    String::from_utf8(output.stdout).map_err(|error| {
+        format!(
+            "git {} produced non-UTF-8 output: {}",
+            args.join(" "),
+            error
+        )
+    })
 }
 
 fn build_agent_session_reconciliation(
@@ -724,11 +851,13 @@ fn field_inventory_entry_due_for_auto_refresh(
     }
 
     if field_name == "typescript_stats" || cadence.contains("ts files") {
-        return cycle_changes.ts_source_changed() && field_inventory_entry_needs_refresh(entry, cycle);
+        return cycle_changes.ts_source_changed()
+            && field_inventory_entry_needs_refresh(entry, cycle);
     }
 
     if field_name == "typescript_plan.status" || cadence.contains("plan phase transitions") {
-        return cycle_changes.ts_files_changed() && field_inventory_entry_needs_refresh(entry, cycle);
+        return cycle_changes.ts_files_changed()
+            && field_inventory_entry_needs_refresh(entry, cycle);
     }
 
     if cadence.contains("dispatch or merge") || cadence.contains("pr merges") {
@@ -1044,6 +1173,14 @@ mod tests {
         }
     }
 
+    fn state_with_agent_sessions(agent_sessions: Value) -> StateJson {
+        let mut state = StateJson::default();
+        state.cycle_phase.phase_entered_at = Some("2026-03-05T04:00:00Z".to_string());
+        state.last_cycle.timestamp = Some("2026-03-05T03:00:00Z".to_string());
+        state.agent_sessions = serde_json::from_value(agent_sessions).unwrap();
+        state
+    }
+
     #[test]
     fn help_contains_expected_flags() {
         let mut command = Cli::command();
@@ -1234,7 +1371,9 @@ mod tests {
             .collect();
 
         assert!(freshness_paths.contains(&"/field_inventory/fields/test_count/last_refreshed"));
-        assert!(freshness_paths.contains(&"/field_inventory/fields/typescript_stats/last_refreshed"));
+        assert!(
+            freshness_paths.contains(&"/field_inventory/fields/typescript_stats/last_refreshed")
+        );
         assert!(freshness_paths
             .contains(&"/field_inventory/fields/typescript_plan.status/last_refreshed"));
     }
@@ -1284,7 +1423,9 @@ mod tests {
             .collect();
 
         assert!(!freshness_paths.contains(&"/field_inventory/fields/test_count/last_refreshed"));
-        assert!(!freshness_paths.contains(&"/field_inventory/fields/typescript_stats/last_refreshed"));
+        assert!(
+            !freshness_paths.contains(&"/field_inventory/fields/typescript_stats/last_refreshed")
+        );
         assert!(!freshness_paths
             .contains(&"/field_inventory/fields/typescript_plan.status/last_refreshed"));
         assert!(freshness_paths
@@ -1327,6 +1468,77 @@ mod tests {
         );
         assert_eq!(patch.updates[4].path, "/last_cycle/summary");
         assert_eq!(patch.updates[4].value, json!("custom summary"));
+    }
+
+    #[test]
+    fn resolve_summary_auto_derives_dispatches_with_zero_merges() {
+        let state = state_with_agent_sessions(json!([
+            {
+                "issue": 1,
+                "status": "in_flight",
+                "dispatched_at": "2026-03-05T04:15:00Z"
+            },
+            {
+                "issue": 2,
+                "status": "in_flight",
+                "dispatched_at": "2026-03-05T04:30:00Z"
+            },
+            {
+                "issue": 3,
+                "status": "in_flight",
+                "dispatched_at": "2026-03-05T03:45:00Z"
+            }
+        ]));
+
+        let summary = resolve_summary(None, &state, fixed_now()).unwrap();
+
+        assert_eq!(summary, "2 dispatches, 0 merges");
+    }
+
+    #[test]
+    fn resolve_summary_auto_derives_multiple_merges_and_prs() {
+        let state = state_with_agent_sessions(json!([
+            {
+                "issue": 1,
+                "status": "merged",
+                "pr": 44,
+                "dispatched_at": "2026-03-05T04:01:00Z",
+                "merged_at": "2026-03-05T04:20:00Z"
+            },
+            {
+                "issue": 2,
+                "status": "merged",
+                "pr": 42,
+                "dispatched_at": "2026-03-05T04:30:00Z",
+                "merged_at": "2026-03-05T05:00:00Z"
+            },
+            {
+                "issue": 3,
+                "status": "merged",
+                "pr": 50,
+                "dispatched_at": "2026-03-05T03:30:00Z",
+                "merged_at": "2026-03-05T04:45:00Z"
+            },
+            {
+                "issue": 4,
+                "status": "merged",
+                "pr": 60,
+                "dispatched_at": "2026-03-05T04:35:00Z",
+                "merged_at": "2026-03-05T05:10:00Z"
+            }
+        ]));
+
+        let summary = resolve_summary(None, &state, fixed_now()).unwrap();
+
+        assert_eq!(summary, "3 dispatches, 3 merges (PR #42, PR #44, PR #50)");
+    }
+
+    #[test]
+    fn resolve_summary_prefers_manual_override() {
+        let summary =
+            resolve_summary(Some("manual summary"), &StateJson::default(), fixed_now()).unwrap();
+
+        assert_eq!(summary, "manual summary");
     }
 
     #[test]
