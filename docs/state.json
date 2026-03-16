@@ -3739,6 +3739,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Backfill merged_at for 16 legacy agent_sessions"
+    },
+    {
+      "dispatched_at": "2026-03-16T05:03:54Z",
+      "issue": 1340,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix write-entry receipt merging for duplicate tool names"
     }
   ],
   "audit_dropped": [
@@ -3932,16 +3939,16 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1339 Backfill merged_at for 16 legacy agent_sessions (cycle 275)",
-    "dispatch_to_pr_rate": "98.3%",
-    "in_flight": 2,
+    "dispatch_log_latest": "#1340 Fix write-entry receipt merging for duplicate tool names (cycle 275)",
+    "dispatch_to_pr_rate": "98.1%",
+    "in_flight": 3,
     "merged": 403,
     "pr_merge_rate": "99.3%",
     "produced_pr": 406,
     "resolved": 411,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 413
+    "total_dispatches": 414
   },
   "cycle_phase": {
     "cycle": 275,
