@@ -13,6 +13,7 @@ export interface ReviewOptions {
 	itemReviewed?: TypedSchema | null;
 	positiveNotes?: ItemList | null;
 	negativeNotes?: ItemList | null;
+	contentReferenceTime?: string | null;
 }
 
 export class Review extends TypedSchema {
@@ -26,6 +27,7 @@ export class Review extends TypedSchema {
 	public readonly itemReviewed: TypedSchema | null;
 	public readonly positiveNotes: ItemList | null;
 	public readonly negativeNotes: ItemList | null;
+	public readonly contentReferenceTime: string | null;
 
 	constructor(options: ReviewOptions) {
 		super();
@@ -37,5 +39,6 @@ export class Review extends TypedSchema {
 		this.itemReviewed = options.itemReviewed ?? null;
 		this.positiveNotes = options.positiveNotes ?? null;
 		this.negativeNotes = options.negativeNotes ?? null;
+		this.contentReferenceTime = options.contentReferenceTime ?? null;
 	}
 }

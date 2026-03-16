@@ -46,6 +46,7 @@ final class ReviewTest extends TestCase {
 		$this->assertFalse(property_exists($obj, 'itemReviewed'));
 		$this->assertFalse(property_exists($obj, 'positiveNotes'));
 		$this->assertFalse(property_exists($obj, 'negativeNotes'));
+		$this->assertFalse(property_exists($obj, 'contentReferenceTime'));
 	}
 
 	public function testFullOutput(): void {
@@ -165,6 +166,18 @@ final class ReviewTest extends TestCase {
 		$this->assertEquals('ListItem', $obj->negativeNotes->itemListElement[0]->{'@type'});
 		$this->assertEquals(1, $obj->negativeNotes->itemListElement[0]->position);
 		$this->assertEquals('No child protection', $obj->negativeNotes->itemListElement[0]->name);
+	}
+
+	public function testContentReferenceTime(): void {
+		$review = new Review(
+			author: 'Jane Doe',
+			reviewRating: new Rating(ratingValue: 5),
+			contentReferenceTime: '2024-07-15T14:00:00+02:00',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $review);
+		$obj = json_decode($json);
+
+		$this->assertEquals('2024-07-15T14:00:00+02:00', $obj->contentReferenceTime);
 	}
 
 	public function testPositiveAndNegativeNotesTogether(): void {

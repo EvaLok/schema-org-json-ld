@@ -29,6 +29,7 @@ describe("Review", () => {
 		const schema = new Review({
 			author: "Jane Doe",
 			reviewRating: new Rating({ ratingValue: 5 }),
+			contentReferenceTime: null,
 			reviewBody: null,
 			datePublished: null,
 			name: null,
@@ -45,6 +46,7 @@ describe("Review", () => {
 		expect(obj).not.toHaveProperty("itemReviewed");
 		expect(obj).not.toHaveProperty("positiveNotes");
 		expect(obj).not.toHaveProperty("negativeNotes");
+		expect(obj).not.toHaveProperty("contentReferenceTime");
 	});
 
 	it("supports author as Person and Organization", () => {
@@ -141,6 +143,18 @@ describe("Review", () => {
 		expect(items[0]["@type"]).toBe("ListItem");
 		expect(items[0].position).toBe(1);
 		expect(items[0].name).toBe("No child protection");
+	});
+
+	it("includes contentReferenceTime when set", () => {
+		const schema = new Review({
+			author: "Jane Doe",
+			reviewRating: new Rating({ ratingValue: 5 }),
+			contentReferenceTime: "2024-07-15T14:00:00+02:00",
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.contentReferenceTime).toBe("2024-07-15T14:00:00+02:00");
 	});
 
 	it("includes both positiveNotes and negativeNotes together", () => {
