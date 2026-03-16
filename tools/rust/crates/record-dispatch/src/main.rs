@@ -4,9 +4,9 @@ use record_dispatch::{
 };
 use state_schema::{
     commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
-    transition_cycle_phase, write_state_value,
+    transition_cycle_phase, write_state_value, ReviewHistoryEntry,
 };
-use std::path::PathBuf;
+use std::{collections::BTreeSet, path::PathBuf};
 
 #[derive(Parser, Debug)]
 #[command(name = "record-dispatch")]
@@ -22,6 +22,10 @@ struct Cli {
     /// Model used for the dispatch
     #[arg(long)]
     model: Option<String>,
+
+    /// Review finding number(s) to reclassify from deferred to dispatch_created
+    #[arg(long = "review-finding")]
+    review_findings: Vec<u64>,
 
     /// Repository root path
     #[arg(long, default_value = ".")]
@@ -68,6 +72,7 @@ fn run(cli: Cli) -> Result<(), String> {
         }
         Err(error) => return Err(error),
     };
+    reconcile_review_findings(&mut state_value, current_cycle, &cli.review_findings)?;
     let current_phase = state_value
         .pointer("/cycle_phase/phase")
         .and_then(|value| value.as_str())
@@ -115,6 +120,87 @@ fn run(cli: Cli) -> Result<(), String> {
 
     Ok(())
 }
+
+fn reconcile_review_findings(
+    state_value: &mut serde_json::Value,
+    current_cycle: u64,
+    review_findings: &[u64],
+) -> Result<(), String> {
+    if review_findings.is_empty() {
+        return Ok(());
+    }
+
+    let unique_findings: BTreeSet<u64> = review_findings.iter().copied().collect();
+    if unique_findings.len() != review_findings.len() {
+        return Err("duplicate --review-finding values are not allowed".to_string());
+    }
+
+    let history = state_value
+        .pointer_mut("/review_agent/history")
+        .and_then(serde_json::Value::as_array_mut)
+        .ok_or_else(|| "missing array: review_agent.history".to_string())?;
+    let latest_entry_value = history
+        .last_mut()
+        .ok_or_else(|| "review_agent.history is empty".to_string())?;
+    let mut latest_entry: ReviewHistoryEntry =
+        serde_json::from_value(latest_entry_value.clone()).map_err(|error| {
+            format!("failed to parse latest review_agent.history entry: {}", error)
+        })?;
+
+    if latest_entry.cycle != current_cycle {
+        return Err(format!(
+            "latest review_agent.history entry is for cycle {}, expected current cycle {}",
+            latest_entry.cycle, current_cycle
+        ));
+    }
+
+    for finding in &unique_findings {
+        if *finding == 0 || *finding > latest_entry.finding_count {
+            return Err(format!(
+                "review finding {} is out of range for cycle {} (expected 1..={})",
+                finding, current_cycle, latest_entry.finding_count
+            ));
+        }
+    }
+
+    let reclassified_count = u64::try_from(unique_findings.len())
+        .map_err(|_| "review finding count overflowed u64".to_string())?;
+    if latest_entry.deferred < reclassified_count {
+        return Err(format!(
+            "cannot reclassify {} review finding(s): deferred count {} would go below 0",
+            reclassified_count, latest_entry.deferred
+        ));
+    }
+
+    latest_entry.deferred -= reclassified_count;
+    latest_entry.dispatch_created = latest_entry
+        .dispatch_created
+        .checked_add(reclassified_count)
+        .ok_or_else(|| "dispatch_created overflowed u64".to_string())?;
+
+    let disposition_sum = review_disposition_sum(&latest_entry)?;
+    if disposition_sum != latest_entry.finding_count {
+        eprintln!(
+            "Warning: latest review history entry dispositions sum to {} but finding_count is {}; continuing",
+            disposition_sum, latest_entry.finding_count
+        );
+    }
+
+    *latest_entry_value = serde_json::to_value(&latest_entry)
+        .map_err(|error| format!("failed to serialize latest review history entry: {}", error))?;
+    Ok(())
+}
+
+fn review_disposition_sum(entry: &ReviewHistoryEntry) -> Result<u64, String> {
+    entry
+        .actioned
+        .checked_add(entry.deferred)
+        .and_then(|value| value.checked_add(entry.dispatch_created))
+        .and_then(|value| value.checked_add(entry.actioned_failed))
+        .and_then(|value| value.checked_add(entry.verified_resolved))
+        .and_then(|value| value.checked_add(entry.ignored))
+        .ok_or_else(|| "review history disposition counts overflowed u64".to_string())
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -135,7 +221,25 @@ mod tests {
         assert!(help.contains("--issue"));
         assert!(help.contains("--title"));
         assert!(help.contains("--model"));
+        assert!(help.contains("--review-finding"));
         assert!(help.contains("--repo-root"));
+    }
+
+    #[test]
+    fn cli_parses_multiple_review_finding_flags() {
+        let cli = Cli::parse_from([
+            "record-dispatch",
+            "--issue",
+            "602",
+            "--title",
+            "Example dispatch",
+            "--review-finding",
+            "1",
+            "--review-finding",
+            "3",
+        ]);
+
+        assert_eq!(cli.review_findings, vec![1, 3]);
     }
 
     #[test]
@@ -182,6 +286,7 @@ mod tests {
             issue: 602,
             title: "Example dispatch".to_string(),
             model: Some("gpt-5.4".to_string()),
+            review_findings: Vec::new(),
             repo_root: repo.path().to_path_buf(),
         })
         .expect("dispatch should succeed");
@@ -241,6 +346,7 @@ mod tests {
             issue: 602,
             title: "Example dispatch".to_string(),
             model: Some("gpt-5.4".to_string()),
+            review_findings: Vec::new(),
             repo_root: repo.path().to_path_buf(),
         })
         .expect("dispatch should succeed");
@@ -273,6 +379,7 @@ mod tests {
             issue: 602,
             title: "Example dispatch".to_string(),
             model: Some("gpt-5.4".to_string()),
+            review_findings: Vec::new(),
             repo_root: repo.path().to_path_buf(),
         })
         .expect("dispatch should succeed");
@@ -302,6 +409,7 @@ mod tests {
             issue: 602,
             title: "Example dispatch".to_string(),
             model: Some("gpt-5.4".to_string()),
+            review_findings: Vec::new(),
             repo_root: repo.path().to_path_buf(),
         })
         .expect("missing worklog should only warn");
@@ -316,6 +424,115 @@ mod tests {
         assert_eq!(
             String::from_utf8_lossy(&output.stdout).trim(),
             "state(record-dispatch): #602 dispatched [cycle 164]"
+        );
+    }
+
+    #[test]
+    fn run_reclassifies_single_review_finding() {
+        let repo = TempRepo::new();
+        repo.init_with_review_history("close_out", vec![sample_review_history_entry(164, 0, 2, 0, 0, 0, 0, 2)]);
+
+        run(Cli {
+            issue: 602,
+            title: "Example dispatch".to_string(),
+            model: Some("gpt-5.4".to_string()),
+            review_findings: vec![1],
+            repo_root: repo.path().to_path_buf(),
+        })
+        .expect("dispatch should reconcile review dispositions");
+
+        let state = repo.read_state();
+        assert_eq!(
+            state.pointer("/review_agent/history/0/deferred"),
+            Some(&serde_json::json!(1))
+        );
+        assert_eq!(
+            state.pointer("/review_agent/history/0/dispatch_created"),
+            Some(&serde_json::json!(1))
+        );
+    }
+
+    #[test]
+    fn run_reclassifies_multiple_review_findings() {
+        let repo = TempRepo::new();
+        repo.init_with_review_history("close_out", vec![sample_review_history_entry(164, 1, 2, 0, 0, 0, 0, 3)]);
+
+        run(Cli {
+            issue: 602,
+            title: "Example dispatch".to_string(),
+            model: Some("gpt-5.4".to_string()),
+            review_findings: vec![1, 3],
+            repo_root: repo.path().to_path_buf(),
+        })
+        .expect("dispatch should reconcile multiple findings");
+
+        let state = repo.read_state();
+        assert_eq!(
+            state.pointer("/review_agent/history/0/deferred"),
+            Some(&serde_json::json!(0))
+        );
+        assert_eq!(
+            state.pointer("/review_agent/history/0/dispatch_created"),
+            Some(&serde_json::json!(2))
+        );
+    }
+
+    #[test]
+    fn run_rejects_out_of_range_review_finding() {
+        let repo = TempRepo::new();
+        repo.init_with_review_history("close_out", vec![sample_review_history_entry(164, 0, 2, 0, 0, 0, 0, 2)]);
+
+        let error = run(Cli {
+            issue: 602,
+            title: "Example dispatch".to_string(),
+            model: Some("gpt-5.4".to_string()),
+            review_findings: vec![3],
+            repo_root: repo.path().to_path_buf(),
+        })
+        .expect_err("out-of-range finding should fail");
+
+        assert!(error.contains("out of range"));
+    }
+
+    #[test]
+    fn run_rejects_review_finding_when_deferred_would_underflow() {
+        let repo = TempRepo::new();
+        repo.init_with_review_history("close_out", vec![sample_review_history_entry(164, 2, 0, 0, 0, 0, 0, 2)]);
+
+        let error = run(Cli {
+            issue: 602,
+            title: "Example dispatch".to_string(),
+            model: Some("gpt-5.4".to_string()),
+            review_findings: vec![1],
+            repo_root: repo.path().to_path_buf(),
+        })
+        .expect_err("underflow should fail");
+
+        assert!(error.contains("would go below 0"));
+    }
+
+    #[test]
+    fn run_leaves_review_history_unchanged_when_flag_is_absent() {
+        let repo = TempRepo::new();
+        repo.init_with_review_history("close_out", vec![sample_review_history_entry(164, 0, 2, 0, 0, 0, 0, 2)]);
+
+        run(Cli {
+            issue: 602,
+            title: "Example dispatch".to_string(),
+            model: Some("gpt-5.4".to_string()),
+            review_findings: Vec::new(),
+            repo_root: repo.path().to_path_buf(),
+        })
+        .expect("dispatch should succeed without review findings");
+
+        let state = repo.read_state();
+        assert_eq!(
+            state.pointer("/review_agent/history/0/deferred"),
+            Some(&serde_json::json!(2))
+        );
+        assert_eq!(
+            state.pointer("/review_agent/history/0/dispatch_created"),
+            Some(&serde_json::json!(0))
         );
     }
 
@@ -348,6 +565,21 @@ mod tests {
 
         fn init_with_phase(&self, phase: &str) {
             self.write_state(phase);
+            git_success(self.path(), ["init"]);
+            git_success(
+                self.path(),
+                ["config", "user.name", "Record Dispatch Tests"],
+            );
+            git_success(
+                self.path(),
+                ["config", "user.email", "record-dispatch-tests@example.com"],
+            );
+            git_success(self.path(), ["add", "docs/state.json"]);
+            git_success(self.path(), ["commit", "-m", "initial state"]);
+        }
+
+        fn init_with_review_history(&self, phase: &str, history: Vec<serde_json::Value>) {
+            self.write_state_with_review_history(phase, history);
             git_success(self.path(), ["init"]);
             git_success(
                 self.path(),
@@ -425,6 +657,77 @@ mod tests {
             .expect("state file should be written");
         }
 
+        fn write_state_with_review_history(&self, phase: &str, history: Vec<serde_json::Value>) {
+            let mut state = self.base_state(phase);
+            state["review_agent"] = serde_json::json!({
+                "history": history
+            });
+            fs::write(
+                self.path().join("docs/state.json"),
+                serde_json::to_string_pretty(&state).expect("state file should serialize"),
+            )
+            .expect("state file should be written");
+        }
+
+        fn base_state(&self, phase: &str) -> serde_json::Value {
+            serde_json::json!({
+                "agent_sessions": [
+                    {
+                        "issue": 600,
+                        "title": "Merged change",
+                        "dispatched_at": "2026-03-01T00:00:00Z",
+                        "model": "gpt-5.4",
+                        "status": "merged",
+                        "pr": 700,
+                        "merged_at": "2026-03-02T00:00:00Z"
+                    },
+                    {
+                        "issue": 601,
+                        "title": "Closed change",
+                        "dispatched_at": "2026-03-03T00:00:00Z",
+                        "model": "gpt-5.4",
+                        "status": "closed_without_pr"
+                    }
+                ],
+                "last_cycle": {
+                    "number": 164
+                },
+                "cycle_phase": {
+                    "cycle": 164,
+                    "phase": phase,
+                    "phase_entered_at": "2026-03-07T12:00:00Z"
+                },
+                "copilot_metrics": {
+                    "total_dispatches": 2,
+                    "resolved": 2,
+                    "merged": 1,
+                    "closed_without_pr": 1,
+                    "reviewed_awaiting_eva": 0,
+                    "in_flight": 0,
+                    "produced_pr": 1,
+                    "pr_merge_rate": "100.0%",
+                    "dispatch_to_pr_rate": "50.0%",
+                    "dispatch_log_latest": "#601 Closed change (cycle 164)"
+                },
+                "field_inventory": {
+                    "fields": {
+                        "copilot_metrics.in_flight": {
+                            "last_refreshed": "cycle 163"
+                        },
+                        "cycle_phase": {
+                            "last_refreshed": "cycle 163"
+                        },
+                        "copilot_metrics.pr_merge_rate": {
+                            "last_refreshed": "cycle 163"
+                        },
+                        "copilot_metrics.dispatch_to_pr_rate": {
+                            "last_refreshed": "cycle 163"
+                        }
+                    }
+                }
+            })
+        }
+
         fn read_state(&self) -> serde_json::Value {
             serde_json::from_str(
                 &fs::read_to_string(self.path().join("docs/state.json"))
@@ -485,5 +788,29 @@ mod tests {
             rendered_args.join(" "),
             String::from_utf8_lossy(&output.stderr)
         );
+    }
+
+    fn sample_review_history_entry(
+        cycle: u64,
+        actioned: u64,
+        deferred: u64,
+        dispatch_created: u64,
+        actioned_failed: u64,
+        verified_resolved: u64,
+        ignored: u64,
+        finding_count: u64,
+    ) -> serde_json::Value {
+        serde_json::json!({
+            "cycle": cycle,
+            "categories": ["dispatch-reconciliation"],
+            "actioned": actioned,
+            "deferred": deferred,
+            "dispatch_created": dispatch_created,
+            "actioned_failed": actioned_failed,
+            "verified_resolved": verified_resolved,
+            "ignored": ignored,
+            "finding_count": finding_count,
+            "complacency_score": 4
+        })
     }
 }
