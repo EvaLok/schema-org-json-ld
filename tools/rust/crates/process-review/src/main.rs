@@ -174,7 +174,7 @@ fn validate_dispositions(cli: &Cli, finding_count: u64) -> Result<(), String> {
     }
 
     Err(format!(
-        "disposition counts must sum to the parsed finding count: expected {} from --actioned + --deferred + --ignored + --dispatch-created + --actioned-failed + --verified-resolved, got {}",
+        "disposition counts must sum to the parsed finding count: expected {} from --actioned + --deferred + --dispatch-created + --actioned-failed + --verified-resolved + --ignored, got {}",
         finding_count,
         disposition_sum
     ))
@@ -190,11 +190,9 @@ fn validate_categories(repo_root: &Path, categories: &[String]) -> Result<Vec<St
 }
 
 fn known_review_categories(repo_root: &Path) -> Result<BTreeSet<String>, String> {
-    let state_path = repo_root.join("docs/state.json");
-    let content = fs::read_to_string(&state_path)
-        .map_err(|error| format!("failed to read {}: {}", state_path.display(), error))?;
-    let state: StateJson = serde_json::from_str(&content)
-        .map_err(|error| format!("failed to parse {}: {}", state_path.display(), error))?;
+    let state_value = read_state_value(repo_root)?;
+    let state: StateJson = serde_json::from_value(state_value)
+        .map_err(|error| format!("failed to parse docs/state.json: {}", error))?;
     known_review_categories_from_state(&state)
 }
 
@@ -1293,6 +1291,55 @@ mod tests {
         let warnings = validate_categories(&repo_root, &["custom-chronic-category".to_string()])
             .expect("validation should succeed");
         assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn known_review_categories_from_state_combines_builtin_history_and_chronic_categories() {
+        let state: StateJson = serde_json::from_value(json!({
+            "review_agent": {
+                "history": [
+                    {"categories": ["History Category"], "actioned": 0, "deferred": 0, "ignored": 0, "finding_count": 1, "complacency_score": 1, "cycle": 1}
+                ],
+                "chronic_category_responses": {
+                    "entries": [
+                        {"category": "Chronic Category"}
+                    ]
+                }
+            }
+        }))
+        .expect("state should parse");
+
+        let categories =
+            known_review_categories_from_state(&state).expect("category extraction should work");
+
+        assert!(categories.contains("review-accounting"));
+        assert!(categories.contains("history-category"));
+        assert!(categories.contains("chronic-category"));
+    }
+
+    #[test]
+    fn known_review_categories_from_state_requires_review_agent() {
+        let state = StateJson::default();
+
+        let error =
+            known_review_categories_from_state(&state).expect_err("missing review_agent should fail");
+        assert!(error.contains("missing field: review_agent"));
+    }
+
+    #[test]
+    fn chronic_response_categories_ignore_missing_entries_and_categories() {
+        assert!(chronic_response_categories(&json!({})).is_empty());
+        assert!(chronic_response_categories(&json!({"entries": [{}]})).is_empty());
+        assert_eq!(
+            chronic_response_categories(&json!({
+                "entries": [
+                    {"category": "Valid Category"},
+                    {"category": 3},
+                    {"other": "ignored"}
+                ]
+            })),
+            BTreeSet::from(["valid-category".to_string()])
+        );
     }
 
     #[test]
