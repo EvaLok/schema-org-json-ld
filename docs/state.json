@@ -4250,7 +4250,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 279"
+        "last_refreshed": "cycle 282"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
@@ -4446,8 +4446,8 @@
           "chosen_path": "structural-fix",
           "rationale": "Re-filed cycle 267 per review cycle 266 F1: previous cross-check only verified freshness-marker/value consistency, not that the value was derived from actual GitHub review events. Third structural fix: dispatch tool to query PR review events from GitHub API and verify review_events_verified_through_cycle against real data. Cycle 268 review identified verify-review-events tool has correctness gaps (accepts any review state, fail-open). Downgraded cycle 269. Cycle 270: PR #1300 merged hardened tool (APPROVED-only filter, self-review rejection, post-merge rejection, fail-closed). Tool re-run verified successfully against cycles 269-270 (marker advanced to 270). Unit tests cover all filtering paths. Code-PR hard case will be naturally tested at next schema implementation merge.",
           "root_cause": "Three sub-causes: (1) cycle-complete mechanically bumping freshness markers (fixed cycle 243). (2) Orchestrator manually bumping markers without verification (caught by cross-check cycle 266). (3) Cross-check itself is superficial — passes on manually asserted values (identified cycle 266 review F1). (4) verify-review-events tool accepts any review state and fails open on missing PRs (fixed cycle 270, PR #1300).",
-          "updated_cycle": 271,
-          "verification_cycle": "279-tool-verified: verify-review-events passes through cycle 279 (marker=279). PRs #1360/#1362 have APPROVED reviews. No code PRs during stabilization — code-PR expected_reviews=true scenario untested. Will resolve when first schema implementation PR is merged with review."
+          "updated_cycle": 282,
+          "verification_cycle": 282
         },
         {
           "added_cycle": 246,
@@ -4471,8 +4471,8 @@
           "chosen_path": "structural-fix",
           "rationale": "Behavioral part adopted (gh pr review --approve since cycle 260). Tool hardened cycle 270 (PR #1300): APPROVED-only filter, self-review rejection, post-merge rejection, fail-closed on missing PRs. Tool re-run cycle 270 verified successfully against cycles 269-270 (marker advanced to 270). All filtering paths covered by unit tests.",
           "root_cause": "Review events were optional and unverified. No tool, checklist step, or invariant confirmed that GitHub review events existed on PRs before merge. The orchestrator merged PRs with only worklog/journal claims of review, which are self-reported and not auditable.",
-          "updated_cycle": 271,
-          "verification_cycle": "279-tool-verified: verify-review-events passes through cycle 279 (marker=279). PRs #1360/#1362 have APPROVED reviews. No code PRs during stabilization — code-PR expected_reviews=true scenario untested. Will resolve when first schema implementation PR is merged with review."
+          "updated_cycle": 282,
+          "verification_cycle": 282
         }
       ]
     },
