@@ -28,7 +28,7 @@ Post this step: `bash tools/post-step --issue {N} --step "C1" --title "Pipeline 
 
 | Event | Tool | Command |
 |-------|------|---------|
-| PR merged | `process-merge` | `bash tools/process-merge --prs 123,456 --issues 789,790` (`--issues none` when there are intentionally no linked issues) |
+| PR merged | `process-merge` | `bash tools/process-merge --prs 123,456 --issues 789,790 --merged-at "2026-03-16T05:00:00Z"` (`--issues none` when there are intentionally no linked issues; always pass `--merged-at` with the actual GitHub `merged_at` timestamp to ensure accurate session state) |
 | Copilot task dispatched | `record-dispatch` | `bash tools/record-dispatch --issue N --title "..." --model gpt-5.4` |
 | Review findings consumed | `process-review` | `bash tools/process-review --review-file docs/reviews/cycle-N.md --actioned A --deferred D --ignored I --dispatch-created DC --actioned-failed AF --verified-resolved VR` |
 | Audit recommendation processed | `process-audit` | `bash tools/process-audit --audit-id N --action accepted` |
