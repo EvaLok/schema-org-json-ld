@@ -3793,6 +3793,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Phase 1: pipeline-check missing mandatory steps FAIL"
+    },
+    {
+      "dispatched_at": "2026-03-16T08:43:07Z",
+      "issue": 1356,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 277 review"
     }
   ],
   "audit_dropped": [
@@ -3986,21 +3993,21 @@
   "copilot_metrics": {
     "closed_without_merge": 5,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1353 Phase 1: pipeline-check missing mandatory steps FAIL (cycle 277)",
-    "dispatch_to_pr_rate": "98.3%",
-    "in_flight": 2,
+    "dispatch_log_latest": "#1356 Cycle 277 review (cycle 277)",
+    "dispatch_to_pr_rate": "98.1%",
+    "in_flight": 3,
     "merged": 407,
     "pr_merge_rate": "98.8%",
     "produced_pr": 412,
     "resolved": 417,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 419
+    "total_dispatches": 420
   },
   "cycle_phase": {
     "cycle": 277,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-16T08:37:54Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-16T08:43:07Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
