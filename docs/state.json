@@ -4397,7 +4397,7 @@
           "chosen_path": "structural-fix",
           "rationale": "Phased cycle architecture (Eva #992, commit 1e3b45f) is the structural fix. The orchestrator no longer writes its own worklog — a Copilot documentation agent generates worklog/journal from committed state (git log, state.json, issue metadata). This eliminates the root cause: self-reporting inaccuracies. Cycle 221 is the first to use this architecture. If worklog-accuracy findings persist despite the phased architecture, the category should be re-opened.",
           "root_cause": "write-entry defaults to 'Not provided.' for --copilot-metrics, --publish-gate when CLI flags are not passed, instead of reading from state.json. The orchestrator does not always pass these flags. The deeper root cause is that the orchestrator both does the work and writes its own report — no separation of concerns.",
-          "verification_cycle": 278
+          "verification_cycle": "278-reverted-279: review cycle 278 found fresh worklog-accuracy defects (Issues processed=None, receipt-scope stale). Pending clean cycle with no worklog-accuracy findings."
         },
         {
           "added_cycle": 243,
@@ -4406,7 +4406,7 @@
           "rationale": "Re-filed cycle 267 per review cycle 266 F1: previous cross-check only verified freshness-marker/value consistency, not that the value was derived from actual GitHub review events. Third structural fix: dispatch tool to query PR review events from GitHub API and verify review_events_verified_through_cycle against real data. Cycle 268 review identified verify-review-events tool has correctness gaps (accepts any review state, fail-open). Downgraded cycle 269. Cycle 270: PR #1300 merged hardened tool (APPROVED-only filter, self-review rejection, post-merge rejection, fail-closed). Tool re-run verified successfully against cycles 269-270 (marker advanced to 270). Unit tests cover all filtering paths. Code-PR hard case will be naturally tested at next schema implementation merge.",
           "root_cause": "Three sub-causes: (1) cycle-complete mechanically bumping freshness markers (fixed cycle 243). (2) Orchestrator manually bumping markers without verification (caught by cross-check cycle 266). (3) Cross-check itself is superficial — passes on manually asserted values (identified cycle 266 review F1). (4) verify-review-events tool accepts any review state and fails open on missing PRs (fixed cycle 270, PR #1300).",
           "updated_cycle": 271,
-          "verification_cycle": 278
+          "verification_cycle": "278-reverted-279: review cycle 278 found no GitHub PR review events on merged PRs #1354/#1355/#1357. Code-PR runtime proof still pending."
         },
         {
           "added_cycle": 246,
@@ -4431,7 +4431,7 @@
           "rationale": "Behavioral part adopted (gh pr review --approve since cycle 260). Tool hardened cycle 270 (PR #1300): APPROVED-only filter, self-review rejection, post-merge rejection, fail-closed on missing PRs. Tool re-run cycle 270 verified successfully against cycles 269-270 (marker advanced to 270). All filtering paths covered by unit tests.",
           "root_cause": "Review events were optional and unverified. No tool, checklist step, or invariant confirmed that GitHub review events existed on PRs before merge. The orchestrator merged PRs with only worklog/journal claims of review, which are self-reported and not auditable.",
           "updated_cycle": 271,
-          "verification_cycle": 278
+          "verification_cycle": "278-reverted-279: review cycle 278 found no GitHub PR review events on merged PRs #1354/#1355/#1357. Code-PR runtime proof still pending."
         }
       ]
     },
@@ -6520,7 +6520,7 @@
     ],
     "last_review_cycle": 278
   },
-  "review_events_verified_through_cycle": 278,
+  "review_events_verified_through_cycle": 270,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
