@@ -3804,6 +3804,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Cycle 277 review"
+    },
+    {
+      "dispatched_at": "2026-03-16T10:34:27Z",
+      "issue": 1359,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Phase 1 record-dispatch pipeline gate"
     }
   ],
   "audit_dropped": [
@@ -3997,16 +4004,16 @@
   "copilot_metrics": {
     "closed_without_merge": 5,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1356 Cycle 277 review (cycle 277)",
-    "dispatch_to_pr_rate": "98.6%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1359 Phase 1 record-dispatch pipeline gate (cycle 278)",
+    "dispatch_to_pr_rate": "98.3%",
+    "in_flight": 2,
     "merged": 409,
     "pr_merge_rate": "98.8%",
     "produced_pr": 414,
     "resolved": 419,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 420
+    "total_dispatches": 421
   },
   "cycle_phase": {
     "cycle": 278,
