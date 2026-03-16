@@ -3709,8 +3709,10 @@
     {
       "dispatched_at": "2026-03-16T03:14:19Z",
       "issue": 1331,
+      "merged_at": "2026-03-16T04:58:27Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1333,
+      "status": "merged",
       "title": "Fix pipeline-check warned denominator"
     },
     {
@@ -3921,12 +3923,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1335 Cycle 274 review (cycle 274)",
-    "dispatch_to_pr_rate": "98.1%",
-    "in_flight": 3,
-    "merged": 401,
+    "dispatch_to_pr_rate": "98.3%",
+    "in_flight": 2,
+    "merged": 402,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 404,
-    "resolved": 409,
+    "produced_pr": 405,
+    "resolved": 410,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 412
