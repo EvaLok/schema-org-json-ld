@@ -3745,8 +3745,10 @@
     {
       "dispatched_at": "2026-03-16T05:03:54Z",
       "issue": 1340,
+      "merged_at": "2026-03-16T06:43:15Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1342,
+      "status": "merged",
       "title": "Fix write-entry receipt merging for duplicate tool names"
     },
     {
@@ -3951,12 +3953,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1343 Cycle 275 end-of-cycle review (cycle 275)",
-    "dispatch_to_pr_rate": "98.3%",
-    "in_flight": 2,
-    "merged": 405,
+    "dispatch_to_pr_rate": "98.6%",
+    "in_flight": 1,
+    "merged": 406,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 408,
-    "resolved": 413,
+    "produced_pr": 409,
+    "resolved": 414,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 415
