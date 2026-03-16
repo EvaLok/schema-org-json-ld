@@ -56,3 +56,5 @@
 | record-dispatch | 55a0dae | [55a0dae](https://github.com/EvaLok/schema-org-json-ld/commit/55a0dae) |
 | record-dispatch | 18a147d | [18a147d](https://github.com/EvaLok/schema-org-json-ld/commit/18a147d) |
 | cycle-complete | 8d810b1 | [8d810b1](https://github.com/EvaLok/schema-org-json-ld/commit/8d810b1) |
+| fix | ca2b403 | [ca2b403](https://github.com/EvaLok/schema-org-json-ld/commit/ca2b403) |
+| fix | a6d9c01 | [a6d9c01](https://github.com/EvaLok/schema-org-json-ld/commit/a6d9c01) |
