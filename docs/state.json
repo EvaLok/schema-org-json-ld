@@ -4077,8 +4077,8 @@
   },
   "cycle_phase": {
     "cycle": 282,
-    "phase": "work",
-    "phase_entered_at": "2026-03-16T18:18:57Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-16T18:44:09Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -4188,7 +4188,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 281"
+        "last_refreshed": "cycle 282"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -4200,7 +4200,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 281"
+        "last_refreshed": "cycle 282"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -4220,7 +4220,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 281"
+        "last_refreshed": "cycle 282"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -4232,7 +4232,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 281"
+        "last_refreshed": "cycle 282"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -4264,7 +4264,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 281"
+        "last_refreshed": "cycle 282"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -4333,13 +4333,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 17,
+    "duration_minutes": 25,
     "issue": 1377,
     "number": 282,
-    "summary": "Merged cycle 280 review PR #1371. Dispatched #1373 (Review.contentReferenceTime). Refreshed review_events_verified and tool_pipeline fields.",
-    "timestamp": "2026-03-16T18:18:56Z"
+    "summary": "Merged PR #1376 (cycle 281 review). Merged PR #1374 (Review.contentReferenceTime). Advanced state-integrity and review-evidence chronic categories to runtime_verified (282). Processed audit #268, #269 (deferred: stabilization). Deleted 2 dead branches.",
+    "timestamp": "2026-03-16T18:44:09Z"
   },
-  "last_eva_comment_check": "2026-03-16T18:18:56Z",
+  "last_eva_comment_check": "2026-03-16T18:44:09Z",
   "last_tool_audit_cycle": 263,
   "open_questions_for_eva": [
     1369
