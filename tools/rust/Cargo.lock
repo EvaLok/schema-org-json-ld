@@ -478,6 +478,7 @@ dependencies = [
 name = "process-merge"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "clap",
  "serde",
  "serde_json",

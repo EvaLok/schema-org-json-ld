@@ -1,3 +1,4 @@
+use chrono::DateTime;
 use clap::Parser;
 use serde_json::{json, Value};
 use state_schema::{
@@ -22,6 +23,10 @@ struct Cli {
     /// Required comma-separated list of issue numbers matching --prs by position; use "none" when intentionally providing no issue links
     #[arg(long, required = true, value_delimiter = ',', num_args = 1.., value_parser = parse_issue_value)]
     issues: Vec<IssueValue>,
+
+    /// Optional RFC 3339 merge timestamp to record instead of the current time
+    #[arg(long, value_parser = parse_merged_at)]
+    merged_at: Option<String>,
 
     /// Repository root path
     #[arg(long, default_value = ".")]
@@ -61,7 +66,7 @@ fn run(cli: Cli) -> Result<(), String> {
     let issues = normalize_issues(&cli.issues, cli.prs.len())?;
 
     let mut state = read_state_value(&cli.repo_root)?;
-    let merged_at = current_utc_timestamp();
+    let merged_at = resolve_merged_at(cli.merged_at.as_deref(), current_utc_timestamp);
     let current_cycle = current_cycle_from_state(&cli.repo_root).map_err(|error| {
         if error == "missing /cycle_phase/cycle or /last_cycle/number in state.json" {
             "missing numeric /cycle_phase/cycle or /last_cycle/number in docs/state.json"
@@ -101,6 +106,19 @@ fn parse_issue_value(raw: &str) -> Result<IssueValue, String> {
     raw.parse::<u64>()
         .map(IssueValue::Number)
         .map_err(|_| "issues must be numeric or the literal 'none'".to_string())
+}
+
+fn parse_merged_at(raw: &str) -> Result<String, String> {
+    DateTime::parse_from_rfc3339(raw)
+        .map(|_| raw.to_string())
+        .map_err(|_| "--merged-at must be a valid RFC 3339 timestamp".to_string())
+}
+
+fn resolve_merged_at<F>(merged_at: Option<&str>, fallback: F) -> String
+where
+    F: FnOnce() -> String,
+{
+    merged_at.map(ToOwned::to_owned).unwrap_or_else(fallback)
 }
 
 fn normalize_issues(issue_values: &[IssueValue], pr_count: usize) -> Result<Vec<u64>, String> {
@@ -193,7 +211,10 @@ fn compute_update(state: &Value, cycle: u64, prs: &[u64]) -> Result<MergeUpdate,
 }
 
 fn format_percentage(numerator: i64, denominator: i64) -> String {
-    debug_assert!(numerator >= 0, "copilot metric numerators must be non-negative");
+    debug_assert!(
+        numerator >= 0,
+        "copilot metric numerators must be non-negative"
+    );
     debug_assert!(
         denominator >= 0,
         "copilot metric denominators must be non-negative"
@@ -387,6 +408,7 @@ mod tests {
         let help = String::from_utf8(output).unwrap();
         assert!(help.contains("--prs"));
         assert!(help.contains("--issues"));
+        assert!(help.contains("--merged-at"));
         assert!(help.contains("none"));
         assert!(help.contains("--repo-root"));
     }
@@ -596,5 +618,50 @@ mod tests {
         assert_eq!(sessions[0]["status"], json!("merged"));
         assert_eq!(sessions[0]["pr"], json!(668));
         assert_eq!(sessions[0]["merged_at"], json!("2026-03-07T13:00:00Z"));
+    }
+
+    #[test]
+    fn cli_accepts_explicit_merged_at_timestamp() {
+        let cli = Cli::try_parse_from([
+            "process-merge",
+            "--prs",
+            "668",
+            "--issues",
+            "667",
+            "--merged-at",
+            "2026-03-07T12:34:56Z",
+        ])
+        .expect("merged-at should parse");
+
+        assert_eq!(cli.merged_at.as_deref(), Some("2026-03-07T12:34:56Z"));
+        assert_eq!(
+            resolve_merged_at(cli.merged_at.as_deref(), || "fallback".to_string()),
+            "2026-03-07T12:34:56Z"
+        );
+    }
+
+    #[test]
+    fn cli_rejects_invalid_merged_at_timestamp() {
+        let error = Cli::try_parse_from([
+            "process-merge",
+            "--prs",
+            "668",
+            "--issues",
+            "667",
+            "--merged-at",
+            "not-a-timestamp",
+        ])
+        .expect_err("invalid merged-at should be rejected");
+
+        assert_eq!(error.kind(), ErrorKind::ValueValidation);
+        assert!(error.to_string().contains("--merged-at"));
+    }
+
+    #[test]
+    fn resolve_merged_at_uses_fallback_when_flag_omitted() {
+        assert_eq!(
+            resolve_merged_at(None, || "2026-03-08T01:02:03Z".to_string()),
+            "2026-03-08T01:02:03Z"
+        );
     }
 }
