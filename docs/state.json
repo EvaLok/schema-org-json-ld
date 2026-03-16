@@ -3748,6 +3748,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix write-entry receipt merging for duplicate tool names"
+    },
+    {
+      "dispatched_at": "2026-03-16T05:11:15Z",
+      "issue": 1343,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 275 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -3941,21 +3948,21 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1340 Fix write-entry receipt merging for duplicate tool names (cycle 275)",
-    "dispatch_to_pr_rate": "98.3%",
-    "in_flight": 2,
+    "dispatch_log_latest": "#1343 Cycle 275 end-of-cycle review (cycle 275)",
+    "dispatch_to_pr_rate": "98.1%",
+    "in_flight": 3,
     "merged": 404,
     "pr_merge_rate": "99.3%",
     "produced_pr": 407,
     "resolved": 412,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 414
+    "total_dispatches": 415
   },
   "cycle_phase": {
     "cycle": 275,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-16T05:05:11Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-16T05:11:15Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
