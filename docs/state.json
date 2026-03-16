@@ -4069,7 +4069,8 @@
       436,
       699,
       808,
-      809
+      809,
+      1350
     ]
   },
   "field_inventory": {
@@ -4105,11 +4106,11 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 276"
+        "last_refreshed": "cycle 277"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 276"
+        "last_refreshed": "cycle 277"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -6443,23 +6444,6 @@
         "finding_count": 7,
         "ignored": 0,
         "note": "F1 process-adherence: close-out order reversed — deferred (tool fix blocked by stabilization). F2 pipeline-gate: actioned — state-invariants fixed, pipeline re-verified. F3 worklog-accuracy: deferred (procedural fix). F4 receipt-integrity: deferred (structural tension with post-worklog commits). F5 state-integrity: actioned — closed_without_merge 4→5, pr_merge_rate 99.0→98.8, state-invariants now PASS. F6 review-evidence: deferred (hand-advance discipline). F7 journal-quality: deferred (generate journal after dispositions stable)."
-      },
-      {
-        "actioned": 2,
-        "categories": [
-          "journal-quality",
-          "pipeline-gate",
-          "process-adherence",
-          "receipt-integrity",
-          "review-evidence",
-          "state-integrity",
-          "worklog-accuracy"
-        ],
-        "complacency_score": 3,
-        "cycle": 276,
-        "deferred": 5,
-        "finding_count": 7,
-        "ignored": 0
       }
     ],
     "last_review_cycle": 276
