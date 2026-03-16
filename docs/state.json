@@ -3819,8 +3819,10 @@
     {
       "dispatched_at": "2026-03-16T10:34:32Z",
       "issue": 1361,
+      "merged_at": "2026-03-16T12:32:09Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1362,
+      "status": "merged",
       "title": "Phase 1 process-review enforce disposition"
     },
     {
@@ -4025,12 +4027,12 @@
     "closed_without_merge": 5,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1363 Cycle 278 review (cycle 278)",
-    "dispatch_to_pr_rate": "98.6%",
-    "in_flight": 1,
-    "merged": 412,
+    "dispatch_to_pr_rate": "98.8%",
+    "in_flight": 0,
+    "merged": 413,
     "pr_merge_rate": "98.8%",
-    "produced_pr": 417,
-    "resolved": 422,
+    "produced_pr": 418,
+    "resolved": 423,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 423
