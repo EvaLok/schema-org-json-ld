@@ -73,6 +73,9 @@ struct WorklogArgs {
     /// Short description of an issue processed this cycle
     #[arg(long = "issue-processed")]
     issue_processed: Vec<String>,
+    /// Auto-derive processed issues from docs/state.json agent_sessions
+    #[arg(long = "auto-issues", default_value_t = false)]
+    auto_issues: bool,
     /// Self-modification description, optionally in FILE:DESCRIPTION form
     #[arg(long = "self-modification")]
     self_modification: Vec<String>,
@@ -639,33 +642,13 @@ fn apply_worklog_auto_derivations(
         }
     }
 
-    let mut auto_issues = derive_issue_processed_from_done(&input.what_was_done);
-    let derived_issues_from_done = !auto_issues.is_empty();
-    match derive_issue_processed_from_git_history(repo_root, cycle) {
-        Ok(issues) => auto_issues = merge_issue_processed(&auto_issues, &issues),
-        Err(error) if !derived_issues_from_done => warnings.push(format!(
-            "WARNING: failed to auto-derive issues processed from git history for cycle {}: {}",
-            cycle, error
-        )),
-        Err(_) => {}
+    if args.auto_issues {
+        let state = load_worklog_state(repo_root, true)?.ok_or_else(|| {
+            "docs/state.json is required for --auto-issues".to_string()
+        })?;
+        let auto_issues = derive_issue_processed_from_state(cycle, &state)?;
+        input.issues_processed = merge_issue_processed(&auto_issues, &input.issues_processed);
     }
-    match load_worklog_state(repo_root, false) {
-        Ok(Some(state)) => match derive_issue_processed_from_state(repo_root, cycle, &state) {
-            Ok(issues) => auto_issues = merge_issue_processed(&auto_issues, &issues),
-            Err(error) if !derived_issues_from_done => warnings.push(format!(
-                "WARNING: failed to auto-derive issues processed from docs/state.json for cycle {}: {}",
-                cycle, error
-            )),
-            Err(_) => {}
-        },
-        Ok(None) => {}
-        Err(error) if !derived_issues_from_done => warnings.push(format!(
-            "WARNING: failed to read docs/state.json for issues processed auto-derivation in cycle {}: {}",
-            cycle, error
-        )),
-        Err(_) => {}
-    }
-    input.issues_processed = merge_issue_processed(&input.issues_processed, &auto_issues);
 
     let manual_receipts = parse_receipts(&args.receipt)?;
     input.receipt_note = None;
@@ -732,119 +715,84 @@ fn issue_processed_key(item: &str) -> String {
     }
 }
 
-fn derive_issue_processed_from_done(items: &[String]) -> Vec<String> {
-    let mut seen = HashSet::new();
-    let mut issues = Vec::new();
-
-    for item in items {
-        if !done_item_has_issue_action(item) {
-            continue;
-        }
-
-        for issue in extract_issue_references(item) {
-            if seen.insert(issue) {
-                issues.push(format!("#{}", issue));
-            }
-        }
+fn derive_issue_processed_from_state(cycle: u64, state: &StateJson) -> Result<Vec<String>, String> {
+    let state_cycle = state.cycle_phase.cycle.ok_or_else(|| {
+        "missing docs/state.json cycle_phase.cycle for --auto-issues".to_string()
+    })?;
+    if state_cycle != cycle {
+        return Err(format!(
+            "docs/state.json cycle_phase.cycle {} does not match requested cycle {} for --auto-issues",
+            state_cycle, cycle
+        ));
     }
-
-    issues
-}
-
-fn derive_issue_processed_from_git_history(repo_root: &Path, cycle: u64) -> Result<Vec<String>, String> {
-    let commits = read_git_history(repo_root)?;
-    let (start, end) = cycle_history_window(repo_root, cycle, &commits)?;
-    let mut seen = HashSet::new();
-    let mut issues = Vec::new();
-
-    for commit in commits.iter().filter(|commit| commit.committed_at >= start) {
-        if end.is_some_and(|timestamp| commit.committed_at >= timestamp) {
-            continue;
-        }
-        if !done_item_has_issue_action(&commit.subject) {
-            continue;
-        }
-        for issue in extract_issue_references(&commit.subject) {
-            let issue_ref = format!("#{}", issue);
-            if seen.insert(issue_ref.clone()) {
-                issues.push(issue_ref);
-            }
-        }
-    }
-
-    Ok(issues)
-}
-
-fn derive_issue_processed_from_state(
-    repo_root: &Path,
-    cycle: u64,
-    state: &StateJson,
-) -> Result<Vec<String>, String> {
-    let commits = read_git_history(repo_root)?;
-    let (start, end) = cycle_history_window(repo_root, cycle, &commits)?;
+    let start = state
+        .cycle_phase
+        .phase_entered_at
+        .as_deref()
+        .ok_or_else(|| {
+            "missing docs/state.json cycle_phase.phase_entered_at for --auto-issues".to_string()
+        })
+        .and_then(|value| parse_timestamp(value, "docs/state.json cycle_phase.phase_entered_at"))?;
     let mut seen = HashSet::new();
     let mut issues = Vec::new();
 
     for session in &state.agent_sessions {
-        if !agent_session_status_looks_processed(session) {
+        if !agent_session_had_activity_since(session, start)? {
             continue;
         }
         let Some(issue) = session.issue.and_then(|value| u64::try_from(value).ok()) else {
             continue;
         };
-        let Some(changed_at) = agent_session_status_changed_at(session) else {
-            continue;
-        };
-        if changed_at < start || end.is_some_and(|timestamp| changed_at >= timestamp) {
-            continue;
-        }
-        let issue_ref = format!("#{}", issue);
-        if seen.insert(issue_ref.clone()) {
-            issues.push(issue_ref);
+        if seen.insert(issue) {
+            issues.push(format_issue_processed_entry(issue, session.title.as_deref()));
         }
     }
 
     Ok(issues)
 }
 
-fn agent_session_status_looks_processed(session: &AgentSession) -> bool {
-    session.status.as_deref().is_some_and(|status| {
-        matches!(
-            status.trim().to_ascii_lowercase().as_str(),
-            "merged" | "closed" | "resolved" | "completed"
-        )
-    })
+fn agent_session_had_activity_since(
+    session: &AgentSession,
+    cycle_start: DateTime<Utc>,
+) -> Result<bool, String> {
+    if let Some(timestamp) = session.dispatched_at.as_deref() {
+        if parse_timestamp(timestamp, "agent_sessions[].dispatched_at")? >= cycle_start {
+            return Ok(true);
+        }
+    }
+    if let Some(timestamp) = session.merged_at.as_deref() {
+        if parse_timestamp(timestamp, "agent_sessions[].merged_at")? >= cycle_start {
+            return Ok(true);
+        }
+    }
+    if let Some(timestamp) = agent_session_status_changed_at(session)? {
+        if timestamp >= cycle_start {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
 }
 
-fn agent_session_status_changed_at(session: &AgentSession) -> Option<DateTime<Utc>> {
-    session
-        .merged_at
-        .as_deref()
-        .and_then(parse_optional_timestamp)
-        .or_else(|| {
-            AGENT_SESSION_STATUS_TIMESTAMP_FIELDS.iter().find_map(|key| {
-                session
-                    .extra
-                    .get(*key)
-                    .and_then(|value| value.as_str())
-                    .and_then(parse_optional_timestamp)
-            })
-        })
+fn agent_session_status_changed_at(session: &AgentSession) -> Result<Option<DateTime<Utc>>, String> {
+    for key in AGENT_SESSION_STATUS_TIMESTAMP_FIELDS {
+        let Some(value) = session.extra.get(key) else {
+            continue;
+        };
+        let Some(timestamp) = value.as_str() else {
+            return Err(format!("agent_sessions[].{} must be a string timestamp", key));
+        };
+        return parse_timestamp(timestamp, &format!("agent_sessions[].{}", key)).map(Some);
+    }
+
+    Ok(None)
 }
 
-fn parse_optional_timestamp(value: &str) -> Option<DateTime<Utc>> {
-    parse_timestamp(value, "status change timestamp").ok()
-}
-
-fn done_item_has_issue_action(item: &str) -> bool {
-    item.split(|character: char| !character.is_ascii_alphabetic())
-        .filter(|token| !token.is_empty())
-        .any(|token| {
-            matches!(
-                token.to_ascii_lowercase().as_str(),
-                "closed" | "processed" | "resolved" | "merged"
-            )
-        })
+fn format_issue_processed_entry(issue: u64, title: Option<&str>) -> String {
+    match title.map(str::trim).filter(|value| !value.is_empty()) {
+        Some(title) => format!("#{}: {}", issue, title),
+        None => format!("#{}", issue),
+    }
 }
 
 fn extract_issue_references(item: &str) -> Vec<u64> {
@@ -981,55 +929,6 @@ fn find_cycle_start_commit(repo_root: &Path, cycle: u64) -> Result<String, Strin
             cycle
         )
     })
-}
-
-fn cycle_history_window(
-    repo_root: &Path,
-    cycle: u64,
-    commits: &[GitHistoryEntry],
-) -> Result<(DateTime<Utc>, Option<DateTime<Utc>>), String> {
-    let start = find_cycle_start_timestamp(repo_root, cycle, commits)?;
-    let end = find_explicit_cycle_start_timestamp(cycle + 1, commits);
-    Ok((start, end))
-}
-
-fn find_cycle_start_timestamp(
-    repo_root: &Path,
-    cycle: u64,
-    commits: &[GitHistoryEntry],
-) -> Result<DateTime<Utc>, String> {
-    if let Some(timestamp) = find_explicit_cycle_start_timestamp(cycle, commits) {
-        return Ok(timestamp);
-    }
-
-    let current_cycle = current_cycle_from_state(repo_root)?;
-    if cycle != current_cycle {
-        return Err(format!(
-            "could not determine a cycle start timestamp for cycle {}; ensure history is available",
-            cycle
-        ));
-    }
-
-    let state = load_worklog_state(repo_root, true)?
-        .ok_or_else(|| "docs/state.json is required to resolve current cycle timestamp".to_string())?;
-    let timestamp = state
-        .cycle_phase
-        .phase_entered_at
-        .as_deref()
-        .ok_or_else(|| {
-            "missing docs/state.json cycle_phase.phase_entered_at for current cycle".to_string()
-        })?;
-    parse_timestamp(timestamp, "docs/state.json cycle_phase.phase_entered_at")
-}
-
-fn find_explicit_cycle_start_timestamp(cycle: u64, commits: &[GitHistoryEntry]) -> Option<DateTime<Utc>> {
-    commits
-        .iter()
-        .find(|commit| {
-            commit.subject.starts_with("state(cycle-start):")
-                && extract_cycle_tag(&commit.subject) == Some(cycle)
-        })
-        .map(|commit| commit.committed_at)
 }
 
 fn read_git_history(repo_root: &Path) -> Result<Vec<GitHistoryEntry>, String> {
@@ -2350,6 +2249,7 @@ mod tests {
             pr_merged: Vec::new(),
             pr_reviewed: Vec::new(),
             issue_processed: Vec::new(),
+            auto_issues: false,
             self_modification: Vec::new(),
             next: Vec::new(),
             pipeline: None,
@@ -2613,19 +2513,6 @@ mod tests {
     fn parse_issue_processed_rejects_empty_descriptions() {
         let error = parse_issue_processed(&["   ".to_string()]).unwrap_err();
         assert!(error.contains("issue-processed description cannot be empty"));
-    }
-
-    #[test]
-    fn derive_issue_processed_from_done_extracts_issue_references() {
-        let issues = derive_issue_processed_from_done(&[
-            "Closed EvaLok/schema-org-json-ld#1042".to_string(),
-            "Processed audit #198 and resolved #199".to_string(),
-            "Merged PR #200".to_string(),
-            "Checked #42".to_string(),
-            "Resolved #199 again".to_string(),
-        ]);
-
-        assert_eq!(issues, vec!["#1042", "#198", "#199"]);
     }
 
     #[test]
@@ -3060,8 +2947,7 @@ mod tests {
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
 
-        assert!(content.contains("### Issues processed\n\n- [#1042]("));
-        assert!(!content.contains("### Issues processed\n\n- None."));
+        assert!(content.contains("### Issues processed\n\n- None."));
         assert!(content.contains("- **`tools/rust/crates/write-entry/src/main.rs`**: modified"));
         assert!(content.contains("- **`AGENTS.md`**: modified"));
         assert!(!content.contains("README.md"));
@@ -3279,7 +3165,7 @@ mod tests {
         let warnings = apply_worklog_auto_derivations(&args, &repo_root.path, cycle, &mut input).unwrap();
 
         assert!(warnings.is_empty());
-        assert_eq!(input.issues_processed, vec!["#1042"]);
+        assert!(input.issues_processed.is_empty());
         assert_eq!(input.self_modifications.len(), 2);
         assert!(input
             .self_modifications
@@ -3400,13 +3286,13 @@ mod tests {
         assert_eq!(input.receipts[1].receipt, manual_override_receipt);
         assert_eq!(input.receipts[2].tool, "manual");
         assert_eq!(input.receipts[2].receipt, manual_only_receipt);
-        assert_eq!(input.issues_processed, vec!["Closed #999", "#1042"]);
+        assert_eq!(input.issues_processed, vec!["Closed #999"]);
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
 
         assert!(content.contains("- Closed [#999](https://github.com/EvaLok/schema-org-json-ld/issues/999)"));
-        assert!(content.contains("- [#1042](https://github.com/EvaLok/schema-org-json-ld/issues/1042)"));
+        assert!(!content.contains("[#1042](https://github.com/EvaLok/schema-org-json-ld/issues/1042)"));
         assert!(content.contains("- **`AGENTS.md`**: manual override"));
         assert!(!content.contains(": modified"));
         assert!(content.contains(&format!(
@@ -3477,17 +3363,273 @@ mod tests {
             }"#,
         );
 
-        let mut args = worklog_args("State-derived issues");
-        args.pipeline = Some("PASS (6/6)".to_string());
-        args.copilot_metrics = Some("steady".to_string());
-        args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
+        let cli = Cli::try_parse_from([
+            "write-entry",
+            "--repo-root",
+            repo_root.path.to_str().unwrap(),
+            "worklog",
+            "--title",
+            "State-derived issues",
+            "--auto-issues",
+            "--pipeline",
+            "PASS (6/6)",
+            "--copilot-metrics",
+            "steady",
+            "--publish-gate",
+            "open",
+            "--in-flight",
+            "0",
+        ])
+        .unwrap();
+        let args = match cli.command {
+            Command::Worklog(args) => args,
+            Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
+        };
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
 
         assert!(content.contains("### Issues processed\n\n- [#42]("));
+        assert!(content.contains(": Merged this cycle"));
         assert!(!content.contains("[#41]("));
+    }
+
+    #[test]
+    fn worklog_auto_issues_derives_multiple_sessions_from_state() {
+        let repo_root = TempRepoDir::new("worklog-auto-issues-multiple");
+        init_git_repo(&repo_root.path);
+        let start_receipt = create_git_commit_at(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154 [cycle 154]",
+            "2026-03-06T01:00:00Z",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}}
+                ]"#
+            ),
+        );
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "phase": "work",
+                    "phase_entered_at": "2026-03-06T01:00:00Z",
+                    "cycle": 154
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 42,
+                        "pr": 100,
+                        "status": "queued",
+                        "dispatched_at": "2026-03-06T01:05:00Z",
+                        "title": "Dispatched this cycle"
+                    },
+                    {
+                        "issue": 43,
+                        "pr": 101,
+                        "status": "merged",
+                        "merged_at": "2026-03-06T02:00:00Z",
+                        "title": "Merged this cycle"
+                    },
+                    {
+                        "issue": 44,
+                        "pr": 102,
+                        "status": "in_progress",
+                        "status_changed_at": "2026-03-06T03:00:00Z",
+                        "title": "Status changed this cycle"
+                    },
+                    {
+                        "issue": 45,
+                        "pr": 103,
+                        "status": "queued",
+                        "dispatched_at": "2026-03-05T23:00:00Z",
+                        "title": "Dispatched prior cycle"
+                    }
+                ]
+            }"#,
+        );
+
+        let cli = Cli::try_parse_from([
+            "write-entry",
+            "--repo-root",
+            repo_root.path.to_str().unwrap(),
+            "worklog",
+            "--title",
+            "Auto issues multiple",
+            "--auto-issues",
+            "--pipeline",
+            "PASS (6/6)",
+            "--copilot-metrics",
+            "steady",
+            "--publish-gate",
+            "open",
+            "--in-flight",
+            "0",
+        ])
+        .unwrap();
+        let args = match cli.command {
+            Command::Worklog(args) => args,
+            Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
+        };
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains("- [#42](https://github.com/EvaLok/schema-org-json-ld/issues/42): Dispatched this cycle"));
+        assert!(content.contains("- [#43](https://github.com/EvaLok/schema-org-json-ld/issues/43): Merged this cycle"));
+        assert!(content.contains("- [#44](https://github.com/EvaLok/schema-org-json-ld/issues/44): Status changed this cycle"));
+        assert!(!content.contains("[#45]("));
+        assert!(!content.contains("[PR #100]("));
+        assert!(!content.contains("[PR #101]("));
+        assert!(!content.contains("[PR #102]("));
+    }
+
+    #[test]
+    fn worklog_auto_issues_renders_none_when_no_sessions_match() {
+        let repo_root = TempRepoDir::new("worklog-auto-issues-none");
+        init_git_repo(&repo_root.path);
+        let start_receipt = create_git_commit_at(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154 [cycle 154]",
+            "2026-03-06T01:00:00Z",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}}
+                ]"#
+            ),
+        );
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "phase": "work",
+                    "phase_entered_at": "2026-03-06T01:00:00Z",
+                    "cycle": 154
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 45,
+                        "status": "queued",
+                        "dispatched_at": "2026-03-05T23:00:00Z",
+                        "title": "Prior cycle"
+                    }
+                ]
+            }"#,
+        );
+
+        let cli = Cli::try_parse_from([
+            "write-entry",
+            "--repo-root",
+            repo_root.path.to_str().unwrap(),
+            "worklog",
+            "--title",
+            "Auto issues none",
+            "--auto-issues",
+            "--pipeline",
+            "PASS (6/6)",
+            "--copilot-metrics",
+            "steady",
+            "--publish-gate",
+            "open",
+            "--in-flight",
+            "0",
+        ])
+        .unwrap();
+        let args = match cli.command {
+            Command::Worklog(args) => args,
+            Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
+        };
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains("### Issues processed\n\n- None."));
+    }
+
+    #[test]
+    fn worklog_auto_issues_appends_manual_entries_after_auto_entries() {
+        let repo_root = TempRepoDir::new("worklog-auto-issues-manual");
+        init_git_repo(&repo_root.path);
+        let start_receipt = create_git_commit_at(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154 [cycle 154]",
+            "2026-03-06T01:00:00Z",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}}
+                ]"#
+            ),
+        );
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "phase": "work",
+                    "phase_entered_at": "2026-03-06T01:00:00Z",
+                    "cycle": 154
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 42,
+                        "status": "merged",
+                        "merged_at": "2026-03-06T02:00:00Z",
+                        "title": "Merged this cycle"
+                    }
+                ]
+            }"#,
+        );
+
+        let cli = Cli::try_parse_from([
+            "write-entry",
+            "--repo-root",
+            repo_root.path.to_str().unwrap(),
+            "worklog",
+            "--title",
+            "Auto issues manual",
+            "--auto-issues",
+            "--issue-processed",
+            "Processed review #77",
+            "--pipeline",
+            "PASS (6/6)",
+            "--copilot-metrics",
+            "steady",
+            "--publish-gate",
+            "open",
+            "--in-flight",
+            "0",
+        ])
+        .unwrap();
+        let args = match cli.command {
+            Command::Worklog(args) => args,
+            Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
+        };
+
+        let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+        let warnings = apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
+
+        assert!(warnings.is_empty());
+        assert_eq!(
+            input.issues_processed,
+            vec!["#42: Merged this cycle", "Processed review #77"]
+        );
     }
 
     #[test]
@@ -3543,7 +3685,20 @@ mod tests {
             }"#,
         );
 
-        let args = worklog_args("Cycle only");
+        let cli = Cli::try_parse_from([
+            "write-entry",
+            "--repo-root",
+            repo_root.path.to_str().unwrap(),
+            "worklog",
+            "--title",
+            "Cycle only",
+            "--auto-issues",
+        ])
+        .unwrap();
+        let args = match cli.command {
+            Command::Worklog(args) => args,
+            Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
+        };
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
 
@@ -3666,7 +3821,7 @@ mod tests {
         let warnings = apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
 
         assert!(input.self_modifications.is_empty());
-        assert_eq!(input.issues_processed, vec!["#42"]);
+        assert!(input.issues_processed.is_empty());
         assert_eq!(warnings.len(), 1);
         assert!(warnings[0].contains("failed to auto-derive self-modifications for cycle 154"));
         assert!(warnings[0].contains("cycle_phase.phase_entered_at"));
@@ -4540,6 +4695,7 @@ Reflective log for the schema-org-json-ld orchestrator.
             "worklog",
             "--title",
             "test",
+            "--auto-issues",
             "--done",
             "did stuff",
             "--pr-reviewed",
