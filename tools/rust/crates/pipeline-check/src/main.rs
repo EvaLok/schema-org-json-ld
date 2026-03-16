@@ -19,10 +19,12 @@ const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const STEP_COMMENT_THRESHOLD: usize = 17;
 const ORCHESTRATOR_SIGNATURE: &str = "> **[main-orchestrator]**";
-const MANDATORY_STEPS: [(&str, u64); 22] = [
+const MANDATORY_STEPS: [(&str, u64); 24] = [
 	("0", 0),
 	("0.5", 0),
+	("0.6", 0),
 	("1", 0),
+	("1.1", 0),
 	("2", 0),
 	("3", 0),
 	("4", 0),
@@ -45,7 +47,7 @@ const MANDATORY_STEPS: [(&str, u64); 22] = [
 ];
 // Keep this list aligned with the orchestrator checklist steps that are expected to
 // produce post-step comments. The pass threshold stays lower because some steps are
-// conditional, but missing steps should still be surfaced in WARN output.
+// conditional, but mandatory gaps must still fail while optional gaps warn.
 const EXPECTED_STEP_IDS: [&str; 27] = [
 	"0", "0.1", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
 	"C1", "C2", "C3", "C4.1", "C4.5", "C5", "C5.1", "C5.5", "C5.6", "C6", "C7", "C8",
@@ -3278,7 +3280,7 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("missing mandatory [7, 8, 9, C1, C2, C3, C4.1, C4.5, C5, C5.1, C5.5, C6, C7, C8]"));
+			.contains("missing mandatory [1.1, 7, 8, 9, C1, C2, C3, C4.1, C4.5, C5, C5.1, C5.5, C6, C7, C8]"));
 	}
 
 	#[test]
@@ -3337,7 +3339,7 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("missing mandatory [0.5, 1, 2, 3, 4, 6, 7, 8, 9, C1, C2, C3, C4.1, C4.5, C5, C5.1, C5.5, C6, C7, C8]"));
+			.contains("missing mandatory [0.5, 0.6, 1, 1.1, 2, 3, 4, 6, 7, 8, 9, C1, C2, C3, C4.1, C4.5, C5, C5.1, C5.5, C6, C7, C8]"));
 		assert!(step
 			.detail
 			.as_deref()
@@ -3607,6 +3609,110 @@ mod tests {
 			.as_deref()
 			.unwrap_or_default()
 			.contains("missing mandatory [C1, C8]"));
+	}
+
+	#[test]
+	fn step_comment_verification_fails_when_phase_one_mandatory_steps_are_missing() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir()
+			.join(format!("pipeline-check-step-comments-phase-one-mandatory-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 843,
+				"last_cycle": {
+					"number": 257
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct StepCommentRunner;
+
+		impl CommandRunner for StepCommentRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected in step comment verification test");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 843);
+				let steps = EXPECTED_STEP_IDS
+					.iter()
+					.copied()
+					.filter(|step| *step != "0.6" && *step != "1.1")
+					.collect::<Vec<_>>();
+				Ok(step_comment_bodies(257, &steps))
+			}
+		}
+
+		let step = verify_step_comments(&root, 257, &StepCommentRunner);
+		assert_eq!(step.status, StepStatus::Fail);
+		assert_eq!(step.severity, Severity::Blocking);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("missing mandatory [0.6, 1.1]"));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("missing optional [none]"));
+	}
+
+	#[test]
+	fn step_comment_verification_warns_when_only_optional_steps_are_missing() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root =
+			std::env::temp_dir().join(format!("pipeline-check-step-comments-optional-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 844,
+				"last_cycle": {
+					"number": 257
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct StepCommentRunner;
+
+		impl CommandRunner for StepCommentRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected in step comment verification test");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 844);
+				let steps = EXPECTED_STEP_IDS
+					.iter()
+					.copied()
+					.filter(|step| *step != "0.1" && *step != "10" && *step != "C5.6")
+					.collect::<Vec<_>>();
+				Ok(step_comment_bodies(257, &steps))
+			}
+		}
+
+		let step = verify_step_comments(&root, 257, &StepCommentRunner);
+		assert_eq!(step.status, StepStatus::Warn);
+		assert_eq!(step.severity, Severity::Warning);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("missing mandatory [none]"));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("missing optional [0.1, 10, C5.6]"));
 	}
 
 	#[test]
