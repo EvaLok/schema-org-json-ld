@@ -1093,7 +1093,7 @@ fn check_chronic_intermediate_state(state: &StateJson) -> CheckResult {
     if categories.is_empty() {
         pass("chronic_intermediate_state")
     } else {
-        warn(
+        fail(
             "chronic_intermediate_state",
             format!(
                 "chronic categories in tool_hardened intermediate state: {}",
@@ -2254,7 +2254,7 @@ mod tests {
     }
 
     #[test]
-    fn chronic_intermediate_state_warns_when_verification_cycle_is_string() {
+    fn chronic_intermediate_state_fails_when_verification_cycle_is_string() {
         let mut value = minimal_valid_state();
         value["review_agent"]["chronic_category_responses"] = json!({
             "entries": [{
@@ -2267,7 +2267,7 @@ mod tests {
 
         let state = state_from_json(value);
         let check = check_chronic_intermediate_state(&state);
-        assert_eq!(check.status, CheckStatus::Warn);
+        assert_eq!(check.status, CheckStatus::Fail);
 
         let details = check.details.as_deref().unwrap_or_default();
         assert!(details.contains("worklog-accuracy"));
@@ -2275,7 +2275,24 @@ mod tests {
     }
 
     #[test]
-    fn run_checks_reports_chronic_intermediate_state_warning() {
+    fn chronic_intermediate_state_passes_when_verification_cycle_is_numeric() {
+        let mut value = minimal_valid_state();
+        value["review_agent"]["chronic_category_responses"] = json!({
+            "entries": [{
+                "category": "worklog-accuracy",
+                "added_cycle": 12,
+                "chosen_path": "structural-fix",
+                "verification_cycle": 270
+            }]
+        });
+
+        let state = state_from_json(value);
+        let check = check_chronic_intermediate_state(&state);
+        assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn run_checks_reports_chronic_intermediate_state_failure() {
         let mut value = minimal_valid_state();
         value["review_agent"]["chronic_category_responses"] = json!({
             "entries": [{
@@ -2294,7 +2311,7 @@ mod tests {
             .find(|check| check.name == "chronic_intermediate_state")
             .expect("chronic_intermediate_state check should be present");
 
-        assert_eq!(check.status, CheckStatus::Warn);
+        assert_eq!(check.status, CheckStatus::Fail);
         let details = check.details.as_deref().unwrap_or_default();
         assert!(details.contains("worklog-accuracy"));
     }
