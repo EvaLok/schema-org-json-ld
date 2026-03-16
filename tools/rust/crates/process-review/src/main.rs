@@ -3,13 +3,26 @@ use serde::Serialize;
 use serde_json::{json, Value};
 use state_schema::{
     commit_state_json, current_cycle_from_state, read_state_value, set_value_at_pointer,
-    write_state_value,
+    write_state_value, StateJson,
 };
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 const MAX_CATEGORY_LENGTH: usize = 40;
+const BUILTIN_KNOWN_CATEGORIES: &[&str] = &[
+    "complacency-audit",
+    "data-integrity",
+    "process-integrity",
+    "publish-gate-evidence-reuse",
+    "reactive-manual-repair",
+    "review-accounting",
+    "review-agent-freshness-drift",
+    "review-evidence",
+    "state-integrity",
+    "tooling-contract",
+    "worklog-accuracy",
+];
 
 #[derive(Parser, Debug)]
 #[command(name = "process-review")]
@@ -45,10 +58,6 @@ struct Cli {
     /// Count of findings ignored this cycle
     #[arg(long, default_value_t = 0)]
     ignored: u64,
-
-    /// Bypass validation that disposition counts match the parsed finding count
-    #[arg(long, default_value_t = false)]
-    skip_disposition_check: bool,
 
     /// Warn on malformed review artifacts instead of failing before state updates
     #[arg(long, default_value_t = false)]
@@ -111,6 +120,9 @@ fn run(cli: Cli) -> Result<(), String> {
 
     let parsed_review = parse_review(&review_path, &review_content, cli.lenient)?;
     validate_dispositions(&cli, parsed_review.finding_count)?;
+    for warning in validate_categories(&cli.repo_root, &parsed_review.categories)? {
+        eprintln!("{}", warning);
+    }
     let entry = build_history_entry(&parsed_review, &cli);
 
     let mut state_value = read_state_value(&cli.repo_root)?;
@@ -148,10 +160,6 @@ fn run(cli: Cli) -> Result<(), String> {
 }
 
 fn validate_dispositions(cli: &Cli, finding_count: u64) -> Result<(), String> {
-    if cli.skip_disposition_check {
-        return Ok(());
-    }
-
     let disposition_sum = cli
         .actioned
         .checked_add(cli.deferred)
@@ -165,24 +173,64 @@ fn validate_dispositions(cli: &Cli, finding_count: u64) -> Result<(), String> {
         return Ok(());
     }
 
-    let all_default = cli.actioned == 0
-        && cli.deferred == 0
-        && cli.dispatch_created == 0
-        && cli.actioned_failed == 0
-        && cli.verified_resolved == 0
-        && cli.ignored == 0;
-    if all_default && finding_count > 0 {
-        return Err(format!(
-			"review contains {} findings, but --actioned, --deferred, --dispatch-created, --actioned-failed, --verified-resolved, and --ignored were all left at 0; provide disposition flags or pass --skip-disposition-check to bypass this validation",
-			finding_count
-		));
+    Err(format!(
+        "disposition counts must sum to the parsed finding count: expected {} from --actioned + --deferred + --ignored + --dispatch-created + --actioned-failed + --verified-resolved, got {}",
+        finding_count,
+        disposition_sum
+    ))
+}
+
+fn validate_categories(repo_root: &Path, categories: &[String]) -> Result<Vec<String>, String> {
+    let known_categories = known_review_categories(repo_root)?;
+    Ok(categories
+        .iter()
+        .filter(|category| !known_categories.contains(*category))
+        .map(|category| format!("WARNING: unrecognized review category: {}", category))
+        .collect())
+}
+
+fn known_review_categories(repo_root: &Path) -> Result<BTreeSet<String>, String> {
+    let state_path = repo_root.join("docs/state.json");
+    let content = fs::read_to_string(&state_path)
+        .map_err(|error| format!("failed to read {}: {}", state_path.display(), error))?;
+    let state: StateJson = serde_json::from_str(&content)
+        .map_err(|error| format!("failed to parse {}: {}", state_path.display(), error))?;
+    known_review_categories_from_state(&state)
+}
+
+fn known_review_categories_from_state(state: &StateJson) -> Result<BTreeSet<String>, String> {
+    let review_agent = state.review_agent()?;
+    let mut categories = BUILTIN_KNOWN_CATEGORIES
+        .iter()
+        .map(|category| (*category).to_string())
+        .collect::<BTreeSet<_>>();
+
+    for category in review_agent
+        .history
+        .iter()
+        .flat_map(|entry| entry.categories.iter())
+    {
+        if let Some(normalized) = normalize_category(category) {
+            categories.insert(normalized);
+        }
     }
 
-    eprintln!(
-        "Warning: disposition counts sum to {} but parsed finding_count is {}; proceeding anyway",
-        disposition_sum, finding_count
-    );
-    Ok(())
+    if let Some(chronic_category_responses) = review_agent.chronic_category_responses.as_ref() {
+        categories.extend(chronic_response_categories(chronic_category_responses));
+    }
+
+    Ok(categories)
+}
+
+fn chronic_response_categories(value: &Value) -> BTreeSet<String> {
+    value
+        .get("entries")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|entry| entry.get("category").and_then(Value::as_str))
+        .filter_map(normalize_category)
+        .collect()
 }
 
 fn resolve_review_path(repo_root: &Path, review_file: &Path) -> PathBuf {
@@ -697,7 +745,6 @@ mod tests {
         assert!(help.contains("--actioned-failed"));
         assert!(help.contains("--verified-resolved"));
         assert!(help.contains("--ignored"));
-        assert!(help.contains("--skip-disposition-check"));
         assert!(help.contains("--lenient"));
         assert!(help.contains("--note"));
     }
@@ -1119,8 +1166,8 @@ mod tests {
         ]);
 
         let error = validate_dispositions(&cli, 3).expect_err("validation should fail");
-        assert!(error.contains("review contains 3 findings"));
-        assert!(error.contains("--skip-disposition-check"));
+        assert!(error.contains("expected 3"));
+        assert!(error.contains("got 0"));
     }
 
     #[test]
@@ -1158,15 +1205,19 @@ mod tests {
     }
 
     #[test]
-    fn disposition_validation_skip_flag_bypasses_check() {
-        let cli = Cli::parse_from([
+    fn cli_rejects_removed_skip_disposition_check_flag() {
+        let removed_flag = format!("--{}-{}-{}", "skip", "disposition", "check");
+        let error = Cli::try_parse_from([
             "process-review",
             "--review-file",
             "docs/reviews/cycle-162.md",
-            "--skip-disposition-check",
-        ]);
+            removed_flag.as_str(),
+        ])
+        .expect_err("removed flag should be rejected");
 
-        assert_eq!(validate_dispositions(&cli, 3), Ok(()));
+        let rendered = error.to_string();
+        assert!(rendered.contains("unexpected argument"));
+        assert!(rendered.contains(&removed_flag));
     }
 
     #[test]
@@ -1181,7 +1232,7 @@ mod tests {
     }
 
     #[test]
-    fn disposition_validation_warns_but_allows_non_default_mismatch() {
+    fn disposition_validation_rejects_non_default_mismatch() {
         let cli = Cli::parse_from([
             "process-review",
             "--review-file",
@@ -1190,7 +1241,58 @@ mod tests {
             "1",
         ]);
 
-        assert_eq!(validate_dispositions(&cli, 3), Ok(()));
+        let error = validate_dispositions(&cli, 3).expect_err("validation should fail");
+        assert!(error.contains("expected 3"));
+        assert!(error.contains("got 1"));
+    }
+
+    #[test]
+    fn recognized_categories_pass_validation_silently() {
+        let repo_root = write_temp_state_repo(json!({
+            "review_agent": {
+                "history": [],
+                "chronic_category_responses": {"entries": []}
+            }
+        }));
+
+        let warnings = validate_categories(&repo_root, &["review-accounting".to_string()])
+            .expect("validation should succeed");
+        assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn unrecognized_categories_emit_warning_without_failing() {
+        let repo_root = write_temp_state_repo(json!({
+            "review_agent": {
+                "history": [],
+                "chronic_category_responses": {"entries": []}
+            }
+        }));
+
+        let warnings = validate_categories(&repo_root, &["brand-new-category".to_string()])
+            .expect("validation should succeed");
+        assert_eq!(
+            warnings,
+            vec!["WARNING: unrecognized review category: brand-new-category".to_string()]
+        );
+    }
+
+    #[test]
+    fn chronic_category_responses_categories_are_treated_as_known() {
+        let repo_root = write_temp_state_repo(json!({
+            "review_agent": {
+                "history": [],
+                "chronic_category_responses": {
+                    "entries": [
+                        {"category": "Custom Chronic Category"}
+                    ]
+                }
+            }
+        }));
+
+        let warnings = validate_categories(&repo_root, &["custom-chronic-category".to_string()])
+            .expect("validation should succeed");
+        assert!(warnings.is_empty());
     }
 
     #[test]
@@ -1420,5 +1522,27 @@ Category: Review Accounting
 "#;
 
         assert!(validate_review_format(markdown).is_empty());
+    }
+
+    fn write_temp_state_repo(state: Value) -> PathBuf {
+        use std::time::{SystemTime, UNIX_EPOCH};
+
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock should be after unix epoch")
+            .as_nanos();
+        let repo_root = std::env::temp_dir().join(format!(
+            "process-review-test-{}-{}",
+            std::process::id(),
+            unique
+        ));
+        let docs_dir = repo_root.join("docs");
+        fs::create_dir_all(&docs_dir).expect("temp docs directory should be created");
+        fs::write(
+            docs_dir.join("state.json"),
+            serde_json::to_string(&state).expect("state json should serialize"),
+        )
+        .expect("state.json should be written");
+        repo_root
     }
 }
