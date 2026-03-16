@@ -3759,6 +3759,13 @@
       "pr": 1344,
       "status": "merged",
       "title": "Cycle 275 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-16T06:49:18Z",
+      "issue": 1346,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add --review-finding flag to record-dispatch"
     }
   ],
   "audit_dropped": [
@@ -3952,16 +3959,16 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1343 Cycle 275 end-of-cycle review (cycle 275)",
-    "dispatch_to_pr_rate": "98.6%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1346 Add --review-finding flag to record-dispatch (cycle 276)",
+    "dispatch_to_pr_rate": "98.3%",
+    "in_flight": 2,
     "merged": 406,
     "pr_merge_rate": "99.3%",
     "produced_pr": 409,
     "resolved": 414,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 415
+    "total_dispatches": 416
   },
   "cycle_phase": {
     "cycle": 276,
@@ -4075,7 +4082,7 @@
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 265"
+        "last_refreshed": "cycle 276"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -4151,7 +4158,7 @@
       },
       "schema_status.planned_next": {
         "cadence": "after planning or completing types",
-        "last_refreshed": "cycle 265"
+        "last_refreshed": "cycle 276"
       },
       "schema_status.property_gap_audit": {
         "cadence": "after property gap fixes",
@@ -4203,7 +4210,7 @@
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
-        "last_refreshed": "cycle 265"
+        "last_refreshed": "cycle 276"
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
