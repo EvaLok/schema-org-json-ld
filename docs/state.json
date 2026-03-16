@@ -3783,15 +3783,19 @@
     {
       "dispatched_at": "2026-03-16T08:35:52Z",
       "issue": 1352,
+      "merged_at": "2026-03-16T10:32:23Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1354,
+      "status": "merged",
       "title": "Phase 1: state-invariants string verification_cycle FAIL"
     },
     {
       "dispatched_at": "2026-03-16T08:35:54Z",
       "issue": 1353,
+      "merged_at": "2026-03-16T10:32:23Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1355,
+      "status": "merged",
       "title": "Phase 1: pipeline-check missing mandatory steps FAIL"
     },
     {
@@ -3994,12 +3998,12 @@
     "closed_without_merge": 5,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1356 Cycle 277 review (cycle 277)",
-    "dispatch_to_pr_rate": "98.1%",
-    "in_flight": 3,
-    "merged": 407,
+    "dispatch_to_pr_rate": "98.6%",
+    "in_flight": 1,
+    "merged": 409,
     "pr_merge_rate": "98.8%",
-    "produced_pr": 412,
-    "resolved": 417,
+    "produced_pr": 414,
+    "resolved": 419,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 420
@@ -4097,15 +4101,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 277"
+        "last_refreshed": "cycle 278"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 277"
+        "last_refreshed": "cycle 278"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 277"
+        "last_refreshed": "cycle 278"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
