@@ -6633,11 +6633,25 @@
         "finding_count": 5,
         "ignored": 0,
         "note": "STABILIZATION (ADR 0011): All 5 findings deferred per observation mode. F1 worklog-accuracy: audit link to wrong repo. F2 worklog-accuracy: stale pre-dispatch current-state snapshot. F3 worklog-accuracy: underreported pipeline failures. F4 process-adherence: gate override undocumented in worklog. F5 journal-quality: binary commitment softened to partially met."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "receipt-integrity",
+          "worklog-accuracy",
+          "state-integrity"
+        ],
+        "complacency_score": 3,
+        "cycle": 283,
+        "deferred": 3,
+        "finding_count": 3,
+        "ignored": 0,
+        "note": "STABILIZATION (ADR 0011): All 3 findings deferred per observation mode. F1 receipt-integrity: clean-cycle commit missing from worklog receipt table. F2 worklog-accuracy: chronic recalibration marked runtime_verified before proof cycle. F3 state-integrity: clean-cycle counter incremented on intermediate PASS that broke on record-dispatch."
       }
     ],
-    "last_review_cycle": 282
+    "last_review_cycle": 283
   },
-  "review_events_verified_through_cycle": 282,
+  "review_events_verified_through_cycle": 284,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
