@@ -111,10 +111,7 @@ fn total_findings(report: &Report) -> usize {
         + report.stale_qc_inbound.len()
 }
 
-fn scan_stale_agent_issues(
-    now: DateTime<Utc>,
-    draft_prs: &[DraftPrInfo],
-) -> Result<Vec<Finding>, String> {
+fn scan_stale_agent_issues(now: DateTime<Utc>, draft_prs: &[DraftPrInfo]) -> Result<Vec<Finding>, String> {
     let path = format!(
         "repos/{}/issues?assignee={}&state=open",
         REPO, AGENT_ISSUE_ASSIGNEE
@@ -126,11 +123,7 @@ fn scan_stale_agent_issues(
     Ok(find_stale_agent_issues(items, draft_prs, now))
 }
 
-fn find_stale_agent_issues(
-    items: &[Value],
-    draft_prs: &[DraftPrInfo],
-    now: DateTime<Utc>,
-) -> Vec<Finding> {
+fn find_stale_agent_issues(items: &[Value], draft_prs: &[DraftPrInfo], now: DateTime<Utc>) -> Vec<Finding> {
     items
         .iter()
         .filter(|issue| issue.get("pull_request").is_none())
@@ -202,17 +195,11 @@ fn parse_open_copilot_draft_prs(prs: &[Value]) -> Result<Vec<DraftPrInfo>, Strin
     Ok(draft_prs)
 }
 
-fn scan_orphan_draft_prs(
-    now: DateTime<Utc>,
-    draft_prs: &[DraftPrInfo],
-) -> Result<Vec<Finding>, String> {
+fn scan_orphan_draft_prs(now: DateTime<Utc>, draft_prs: &[DraftPrInfo]) -> Result<Vec<Finding>, String> {
     find_orphan_draft_prs(draft_prs, now)
 }
 
-fn find_orphan_draft_prs(
-    draft_prs: &[DraftPrInfo],
-    now: DateTime<Utc>,
-) -> Result<Vec<Finding>, String> {
+fn find_orphan_draft_prs(draft_prs: &[DraftPrInfo], now: DateTime<Utc>) -> Result<Vec<Finding>, String> {
     let mut findings = Vec::new();
 
     for pr in draft_prs {
@@ -605,10 +592,7 @@ mod tests {
 
         assert_eq!(findings.len(), 2);
         assert_eq!(
-            findings
-                .iter()
-                .map(|finding| finding.identifier.as_str())
-                .collect::<Vec<_>>(),
+            findings.iter().map(|finding| finding.identifier.as_str()).collect::<Vec<_>>(),
             vec!["#747", "#748"]
         );
     }

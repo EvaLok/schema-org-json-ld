@@ -1203,8 +1203,7 @@ mod tests {
         repo.init(sample_state());
         repo.write_cycle_artifacts(202, fixed_now());
 
-        let worklog =
-            find_current_cycle_worklog_relative_path(repo.path(), 202, fixed_now()).unwrap();
+        let worklog = find_current_cycle_worklog_relative_path(repo.path(), 202, fixed_now()).unwrap();
 
         assert_eq!(
             worklog,
@@ -1234,8 +1233,7 @@ mod tests {
         )
         .unwrap();
 
-        let worklog =
-            find_current_cycle_worklog_relative_path(repo.path(), 202, fixed_now()).unwrap();
+        let worklog = find_current_cycle_worklog_relative_path(repo.path(), 202, fixed_now()).unwrap();
 
         assert_eq!(worklog, None);
     }
@@ -1245,8 +1243,7 @@ mod tests {
         let repo = TempRepo::new();
         repo.init(sample_state());
 
-        let worklog =
-            find_current_cycle_worklog_relative_path(repo.path(), 202, fixed_now()).unwrap();
+        let worklog = find_current_cycle_worklog_relative_path(repo.path(), 202, fixed_now()).unwrap();
 
         assert_eq!(worklog, None);
     }
@@ -1290,7 +1287,9 @@ mod tests {
         assert!(paths
             .iter()
             .any(|path| path == &format!("docs/journal/{}.md", fixed_now().format("%Y-%m-%d"))));
-        assert!(paths.iter().any(|path| path == "docs/reviews/cycle-202.md"));
+        assert!(paths
+            .iter()
+            .any(|path| path == "docs/reviews/cycle-202.md"));
     }
 
     #[test]
@@ -1543,8 +1542,7 @@ mod tests {
 
         let error = push_origin_master(repo.path(), &runner).unwrap_err();
 
-        assert!(error
-            .contains("git pull --rebase origin master failed with status 1: could not rebase"));
+        assert!(error.contains("git pull --rebase origin master failed with status 1: could not rebase"));
         assert_eq!(runner.git_calls().len(), 2);
     }
 

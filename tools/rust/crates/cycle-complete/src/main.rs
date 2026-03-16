@@ -334,10 +334,7 @@ fn derive_cycle_summary(state: &StateJson, now: DateTime<Utc>) -> Result<String,
         let merged_at = session.merged_at.as_deref().ok_or_else(|| {
             format!("agent_sessions {issue_label} has status merged but is missing merged_at")
         })?;
-        let merged_at = parse_timestamp(
-            merged_at,
-            &format!("agent_sessions {issue_label} merged_at"),
-        )?;
+        let merged_at = parse_timestamp(merged_at, &format!("agent_sessions {issue_label} merged_at"))?;
         if !timestamp_in_cycle_window(merged_at, cycle_start, now) {
             continue;
         }
