@@ -4228,7 +4228,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 280"
+        "last_refreshed": "cycle 281"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -6552,9 +6552,21 @@
         "deferred": 3,
         "finding_count": 3,
         "ignored": 0
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "journal-quality",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 280,
+        "deferred": 3,
+        "finding_count": 3,
+        "ignored": 0
       }
     ],
-    "last_review_cycle": 279
+    "last_review_cycle": 280
   },
   "review_events_verified_through_cycle": 279,
   "schema_status": {
