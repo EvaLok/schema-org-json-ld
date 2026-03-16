@@ -3718,8 +3718,10 @@
     {
       "dispatched_at": "2026-03-16T03:14:27Z",
       "issue": 1332,
+      "merged_at": "2026-03-16T04:58:32Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1334,
+      "status": "merged",
       "title": "Fix process-merge merged_at timestamp"
     },
     {
@@ -3923,12 +3925,12 @@
     "closed_without_merge": 4,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1335 Cycle 274 review (cycle 274)",
-    "dispatch_to_pr_rate": "98.3%",
-    "in_flight": 2,
-    "merged": 402,
+    "dispatch_to_pr_rate": "98.5%",
+    "in_flight": 1,
+    "merged": 403,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 405,
-    "resolved": 410,
+    "produced_pr": 406,
+    "resolved": 411,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
     "total_dispatches": 412
