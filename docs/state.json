@@ -4268,7 +4268,7 @@
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
-        "last_refreshed": "cycle 270"
+        "last_refreshed": "cycle 281"
       },
       "total_enums": {
         "cadence": "after enum additions",
@@ -6568,7 +6568,7 @@
     ],
     "last_review_cycle": 280
   },
-  "review_events_verified_through_cycle": 279,
+  "review_events_verified_through_cycle": 281,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
