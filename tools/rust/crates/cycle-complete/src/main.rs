@@ -311,20 +311,19 @@ fn derive_cycle_summary(state: &StateJson, now: DateTime<Utc>) -> Result<String,
         return Err("cycle summary window start is in the future".to_string());
     }
 
-    let mut dispatch_count = 0usize;
+    let mut dispatches = 0usize;
     let mut merged_prs = BTreeSet::new();
 
     for session in &state.agent_sessions {
+        let issue_label = session_issue_label(session.issue);
+
         if let Some(dispatched_at) = session.dispatched_at.as_deref() {
             let dispatched_at = parse_timestamp(
                 dispatched_at,
-                &format!(
-                    "agent_sessions issue {} dispatched_at",
-                    session.issue.unwrap_or_default()
-                ),
+                &format!("agent_sessions {issue_label} dispatched_at"),
             )?;
             if timestamp_in_cycle_window(dispatched_at, cycle_start, now) {
-                dispatch_count += 1;
+                dispatches += 1;
             }
         }
 
@@ -332,38 +331,25 @@ fn derive_cycle_summary(state: &StateJson, now: DateTime<Utc>) -> Result<String,
             continue;
         }
 
-        let Some(merged_at) = session.merged_at.as_deref() else {
-            continue;
-        };
-        let merged_at = parse_timestamp(
-            merged_at,
-            &format!(
-                "agent_sessions issue {} merged_at",
-                session.issue.unwrap_or_default()
-            ),
-        )?;
+        let merged_at = session.merged_at.as_deref().ok_or_else(|| {
+            format!("agent_sessions {issue_label} has status merged but is missing merged_at")
+        })?;
+        let merged_at = parse_timestamp(merged_at, &format!("agent_sessions {issue_label} merged_at"))?;
         if !timestamp_in_cycle_window(merged_at, cycle_start, now) {
             continue;
         }
 
         let pr = session.pr.ok_or_else(|| {
-            format!(
-                "agent_sessions issue {} merged this cycle is missing pr",
-                session.issue.unwrap_or_default()
-            )
+            format!("agent_sessions {issue_label} merged this cycle is missing pr")
         })?;
         if pr <= 0 {
-            return Err(format!(
-                "agent_sessions issue {} has invalid pr {}",
-                session.issue.unwrap_or_default(),
-                pr
-            ));
+            return Err(format!("agent_sessions {issue_label} has invalid pr {pr}"));
         }
         merged_prs.insert(pr);
     }
 
     if merged_prs.is_empty() {
-        return Ok(format!("{dispatch_count} dispatches, 0 merges"));
+        return Ok(format!("{dispatches} dispatches, 0 merges"));
     }
 
     let merged_list = merged_prs
@@ -372,9 +358,15 @@ fn derive_cycle_summary(state: &StateJson, now: DateTime<Utc>) -> Result<String,
         .collect::<Vec<_>>()
         .join(", ");
     Ok(format!(
-        "{dispatch_count} dispatches, {} merges ({merged_list})",
+        "{dispatches} dispatches, {} merges ({merged_list})",
         merged_prs.len()
     ))
+}
+
+fn session_issue_label(issue: Option<i64>) -> String {
+    issue
+        .map(|issue| format!("issue {issue}"))
+        .unwrap_or_else(|| "issue <unknown>".to_string())
 }
 
 fn cycle_window_start(state: &StateJson) -> Result<DateTime<Utc>, String> {
@@ -1483,6 +1475,7 @@ mod tests {
                 "status": "in_flight",
                 "dispatched_at": "2026-03-05T04:30:00Z"
             },
+            // Excluded because the dispatch happened before the cycle window start.
             {
                 "issue": 3,
                 "status": "in_flight",
@@ -1519,6 +1512,7 @@ mod tests {
                 "dispatched_at": "2026-03-05T03:30:00Z",
                 "merged_at": "2026-03-05T04:45:00Z"
             },
+            // Counted as a dispatch but excluded from merges because it lands after `fixed_now()`.
             {
                 "issue": 4,
                 "status": "merged",
@@ -1539,6 +1533,23 @@ mod tests {
             resolve_summary(Some("manual summary"), &StateJson::default(), fixed_now()).unwrap();
 
         assert_eq!(summary, "manual summary");
+    }
+
+    #[test]
+    fn resolve_summary_fails_closed_for_merged_session_without_merged_at() {
+        let state = state_with_agent_sessions(json!([
+            {
+                "issue": 7,
+                "status": "merged",
+                "pr": 77,
+                "dispatched_at": "2026-03-05T04:15:00Z"
+            }
+        ]));
+
+        let error = resolve_summary(None, &state, fixed_now()).unwrap_err();
+
+        assert!(error.contains("issue 7"));
+        assert!(error.contains("missing merged_at"));
     }
 
     #[test]
