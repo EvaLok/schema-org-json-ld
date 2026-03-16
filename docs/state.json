@@ -4005,9 +4005,9 @@
     "total_dispatches": 420
   },
   "cycle_phase": {
-    "cycle": 277,
-    "phase": "complete",
-    "phase_entered_at": "2026-03-16T08:43:07Z"
+    "cycle": 278,
+    "phase": "work",
+    "phase_entered_at": "2026-03-16T10:22:09Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -4109,7 +4109,7 @@
       },
       "cycle_phase": {
         "cadence": "every phase transition",
-        "last_refreshed": "cycle 277"
+        "last_refreshed": "cycle 278"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
@@ -4121,7 +4121,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 277"
+        "last_refreshed": "cycle 278"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -4129,7 +4129,7 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 277"
+        "last_refreshed": "cycle 278"
       },
       "last_tool_audit_cycle": {
         "cadence": "every 10 cycles",
@@ -4137,7 +4137,7 @@
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 277"
+        "last_refreshed": "cycle 278"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -4149,7 +4149,7 @@
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 277"
+        "last_refreshed": "cycle 278"
       },
       "project_mode": {
         "cadence": "when mode changes (stabilization entry/exit)",
@@ -4259,12 +4259,12 @@
   },
   "last_cycle": {
     "duration_minutes": 16,
-    "issue": 1351,
-    "number": 277,
+    "issue": 1358,
+    "number": 278,
     "summary": "Processed cycle 276 review (7 findings, 2 actioned, 5 deferred). Fixed state-invariants: closed_without_merge 4→5, pr_merge_rate corrected. Added project_mode to field inventory. Merged review PR #1349. Dispatched Phase 1 items #1352 and #1353 per Eva #1350. Closed session #1346 as reviewed_awaiting_eva.",
-    "timestamp": "2026-03-16T08:41:00Z"
+    "timestamp": "2026-03-16T10:22:09Z"
   },
-  "last_eva_comment_check": "2026-03-16T08:37:54Z",
+  "last_eva_comment_check": "2026-03-16T10:22:09Z",
   "last_tool_audit_cycle": 263,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
@@ -4273,7 +4273,7 @@
     "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
     "started_at": "cycle 199"
   },
-  "previous_cycle_issue": 1345,
+  "previous_cycle_issue": 1351,
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
     "clean_cycle_counter": 0,
