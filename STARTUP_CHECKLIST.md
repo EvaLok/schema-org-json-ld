@@ -52,6 +52,25 @@ This distinguishes orchestrator comments from Eva's (human) comments, since all 
 
 Identifiers: `[main-orchestrator]`, `[qc-orchestrator]`, `[audit-orchestrator]`.
 
+## 0.1. Check project mode (per ADR 0011)
+
+Read the project operating mode:
+
+```bash
+jq '.project_mode' docs/state.json
+```
+
+If `mode` is `"stabilization"`:
+- **Do not dispatch tool/infrastructure PRs** this cycle. Only schema implementation work or review agent sessions.
+- **Review agent runs in observation mode** — findings are logged but not actioned (see COMPLETION_CHECKLIST step C6).
+- **Track the clean cycle counter** — see COMPLETION_CHECKLIST step C5.6.
+- **Do not modify the review agent spec** — create a `question-for-eva` issue if changes are needed.
+- Note the current counter value and target (50) in your step comment.
+
+If `mode` is not `"stabilization"`, skip this step.
+
+Post this step: `bash tools/post-step --issue {N} --step "0.1" --title "Project mode check" --body "..."`
+
 ## 0.5. Check previous cycle's review agent (per #463, updated per audit #100)
 
 Check for completed review agent PRs/issues from the previous cycle. These contain critical feedback and recommendations that should be acted on.

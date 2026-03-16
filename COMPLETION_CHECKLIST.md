@@ -166,9 +166,41 @@ If the pipeline fails at this point:
 
 Post this step: `bash tools/post-step --issue {N} --step "C5.5" --title "Final pipeline gate" --body "..."`
 
+## C5.6. Stabilization counter update (per ADR 0011)
+
+**Conditional step**: Only runs when `project_mode.mode` is `"stabilization"` in `docs/state.json`.
+
+After the final pipeline gate (C5.5), evaluate whether this cycle qualifies as "clean":
+
+1. **pipeline-check passed**: Step C5.5 returned exit 0 (all phases pass)
+2. **No tool/infrastructure dispatches**: No PRs modifying Rust tool crates, shell wrappers, or pipeline tooling were dispatched OR merged during this cycle
+
+If BOTH conditions are met:
+- Increment `project_mode.clean_cycle_counter` by 1
+- Append the current cycle number to `project_mode.consecutive_clean_cycles`
+
+If EITHER condition fails:
+- Reset `project_mode.clean_cycle_counter` to 0
+- Clear `project_mode.consecutive_clean_cycles` to `[]`
+- Log the reason for the reset in the journal
+
+Update state.json via a targeted `jq` write or a future tool. Commit the state change as part of the C5 docs commit (or as a separate atomic commit).
+
+**Target**: 50 consecutive clean cycles. When `clean_cycle_counter >= 50`, create a `question-for-eva` issue recommending transition out of stabilization mode.
+
+Post this step: `bash tools/post-step --issue {N} --step "C5.6" --title "Stabilization counter" --body "..."`
+
 ## C6. Dispatch review agent (MANDATORY)
 
 Dispatch a 5.4 agent to perform an **adversarial** end-of-cycle review. This is our primary quality control mechanism. The review agent's job is to find problems, not confirm that everything is fine.
+
+### Stabilization observation mode (per ADR 0011)
+
+**When `project_mode.mode` is `"stabilization"`**: The review agent still runs with full adversarial scope, but its findings are for observation only. Prepend the following block to the review issue body BEFORE the adversarial mandate:
+
+> **OBSERVATION MODE (ADR 0011):** Log all findings in the standard structured format, but do NOT classify any finding as requiring immediate action. All findings are logged for post-stabilization triage. The orchestrator will NOT dispatch fixes or mark findings as actioned during stabilization. Your role this cycle is forensic documentation, not remediation.
+
+In subsequent cycles, when processing findings from an observation-mode review at step 0.5, classify ALL findings as `deferred` with note "stabilization observation mode — logged for post-stabilization triage." Do not dispatch fixes, do not mark as actioned, do not trigger chronic category escalation. The findings accumulate for bulk triage when stabilization ends.
 
 ### Review prompt structure (per Eva directive [#725](https://github.com/EvaLok/schema-org-json-ld/issues/725))
 

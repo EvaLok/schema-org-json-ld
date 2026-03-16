@@ -28,6 +28,24 @@ These are non-negotiable constraints. Violations are process failures, not style
 
 **Iterate on PRs until they're genuinely ready**: Do not merge a PR that has known issues — even minor ones. If a Copilot review, your own review, or CI detects problems, request revisions via `@copilot` on the PR and wait for another agent pass. Repeat as many times as necessary. Copilot requests are effectively unlimited; there is zero cost pressure to merge early or skip revision rounds. A PR that takes three `@copilot` iterations to get right is a success. A PR merged with known issues is a process failure. Historically, the orchestrator has merged PRs despite review findings because of an implicit reluctance to "waste" agent requests. This is the wrong trade-off — merging broken code creates downstream cleanup work that costs more than the revision rounds would have.
 
+## Stabilization mode (ADR 0011)
+
+The project has a `project_mode` field in `docs/state.json`. Check it at the start of every cycle via `jq '.project_mode.mode' docs/state.json`.
+
+**When `project_mode.mode` is `"stabilization"`**, the following constraints apply in addition to all other directives:
+
+1. **No tool/infrastructure dispatches.** Do not dispatch PRs that modify Rust tool crates, shell wrappers, pipeline tooling, or orchestrator infrastructure. Only dispatch schema implementation work (new types, bug fixes in library code) or review agent sessions. If you identify a tool issue during a stabilization cycle, log it in the journal as a post-stabilization item — do not dispatch a fix.
+
+2. **Review agent observation mode.** When dispatching the review agent (step C6), prepend the following to the review issue body: `"OBSERVATION MODE (ADR 0011): Log all findings in the standard structured format, but do NOT classify any finding as requiring immediate action. All findings are logged for post-stabilization triage. The orchestrator will NOT dispatch fixes or mark findings as actioned during stabilization. Your role this cycle is forensic documentation, not remediation."` The review agent still runs adversarially and produces findings — they are simply not actioned until stabilization ends.
+
+3. **Clean cycle counter.** The stability counter in `project_mode.clean_cycle_counter` tracks consecutive clean cycles. A cycle is "clean" when: (a) pipeline-check passes (exit 0) at step C5.5, AND (b) no tool/infrastructure PRs were dispatched or merged during the cycle. The counter resets to 0 on any violation. The target is 50 consecutive clean cycles. See COMPLETION_CHECKLIST.md step C5.6 for the counter update procedure.
+
+4. **No review spec modifications.** Do not edit the review agent dispatch spec, review prompt structure, or review output format during stabilization. If the review agent's spec needs updating, create a `question-for-eva` issue explaining the proposed change and wait for approval.
+
+5. **Gate overrides are counter resets.** If you override any pipeline gate (proceeding past a C5.5 failure, dispatching after a failed pipeline-check, etc.), the clean cycle counter resets to 0. Gate overrides during stabilization are process failures, not judgment calls.
+
+**When `project_mode.mode` is NOT `"stabilization"`**, ignore these constraints entirely — they only apply during the stabilization program.
+
 ## Tool-first philosophy
 
 **Tools are the default, not the exception.** Even for tasks that require thought and judgment, build tools that lay the groundwork — gather data, structure inputs, present summaries — so that the orchestrator spends the vast majority of its effort on reasoning rather than mechanical data collection.
