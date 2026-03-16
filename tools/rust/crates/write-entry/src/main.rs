@@ -644,9 +644,10 @@ fn apply_worklog_auto_derivations(
 
     if args.auto_issues {
         let state = load_worklog_state(repo_root, true)?.ok_or_else(|| {
-            "docs/state.json is required for --auto-issues".to_string()
+            "docs/state.json not found; --auto-issues requires docs/state.json to be present"
+                .to_string()
         })?;
-        let auto_issues = derive_issue_processed_from_state(cycle, &state)?;
+        let auto_issues = derive_issue_processed_from_agent_sessions(cycle, &state)?;
         input.issues_processed = merge_issue_processed(&auto_issues, &input.issues_processed);
     }
 
@@ -715,7 +716,10 @@ fn issue_processed_key(item: &str) -> String {
     }
 }
 
-fn derive_issue_processed_from_state(cycle: u64, state: &StateJson) -> Result<Vec<String>, String> {
+fn derive_issue_processed_from_agent_sessions(
+    cycle: u64,
+    state: &StateJson,
+) -> Result<Vec<String>, String> {
     let state_cycle = state.cycle_phase.cycle.ok_or_else(|| {
         "missing docs/state.json cycle_phase.cycle for --auto-issues".to_string()
     })?;
@@ -2184,6 +2188,8 @@ fn parse_digits(chars: &[char], start: usize) -> (String, usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
+    use std::collections::BTreeMap;
     use std::process::Command as ProcessCommand;
     use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -2513,6 +2519,98 @@ mod tests {
     fn parse_issue_processed_rejects_empty_descriptions() {
         let error = parse_issue_processed(&["   ".to_string()]).unwrap_err();
         assert!(error.contains("issue-processed description cannot be empty"));
+    }
+
+    #[test]
+    fn format_issue_processed_entry_uses_optional_title() {
+        assert_eq!(
+            format_issue_processed_entry(42, Some("Merged this cycle")),
+            "#42: Merged this cycle"
+        );
+        assert_eq!(format_issue_processed_entry(43, Some("   ")), "#43");
+        assert_eq!(format_issue_processed_entry(44, None), "#44");
+    }
+
+    #[test]
+    fn agent_session_status_changed_at_reads_validates_and_rejects_invalid_extra_fields() {
+        let mut session = AgentSession {
+            issue: Some(42),
+            ..AgentSession::default()
+        };
+        assert_eq!(agent_session_status_changed_at(&session).unwrap(), None);
+
+        session
+            .extra
+            .insert("status_changed_at".to_string(), json!("2026-03-06T03:00:00Z"));
+        assert_eq!(
+            agent_session_status_changed_at(&session)
+                .unwrap()
+                .unwrap()
+                .to_rfc3339(),
+            "2026-03-06T03:00:00+00:00"
+        );
+
+        let mut non_string = AgentSession {
+            extra: BTreeMap::from([("updated_at".to_string(), json!(123))]),
+            ..AgentSession::default()
+        };
+        let error = agent_session_status_changed_at(&non_string).unwrap_err();
+        assert!(error.contains("agent_sessions[].updated_at must be a string timestamp"));
+
+        non_string.extra =
+            BTreeMap::from([("updated_at".to_string(), json!("not-a-timestamp"))]);
+        let error = agent_session_status_changed_at(&non_string).unwrap_err();
+        assert!(error.contains("invalid agent_sessions[].updated_at"));
+    }
+
+    #[test]
+    fn agent_session_had_activity_since_checks_each_timestamp_source() {
+        let cycle_start = parse_timestamp("2026-03-06T01:00:00Z", "cycle start").unwrap();
+
+        let dispatched = AgentSession {
+            dispatched_at: Some("2026-03-06T01:05:00Z".to_string()),
+            ..AgentSession::default()
+        };
+        assert!(agent_session_had_activity_since(&dispatched, cycle_start).unwrap());
+
+        let merged = AgentSession {
+            merged_at: Some("2026-03-06T02:00:00Z".to_string()),
+            ..AgentSession::default()
+        };
+        assert!(agent_session_had_activity_since(&merged, cycle_start).unwrap());
+
+        let status_changed = AgentSession {
+            extra: BTreeMap::from([(
+                "status_changed_at".to_string(),
+                json!("2026-03-06T03:00:00Z"),
+            )]),
+            ..AgentSession::default()
+        };
+        assert!(agent_session_had_activity_since(&status_changed, cycle_start).unwrap());
+
+        let prior = AgentSession {
+            dispatched_at: Some("2026-03-05T23:00:00Z".to_string()),
+            ..AgentSession::default()
+        };
+        assert!(!agent_session_had_activity_since(&prior, cycle_start).unwrap());
+
+        let empty = AgentSession::default();
+        assert!(!agent_session_had_activity_since(&empty, cycle_start).unwrap());
+
+        let invalid = AgentSession {
+            merged_at: Some("invalid".to_string()),
+            ..AgentSession::default()
+        };
+        let error = agent_session_had_activity_since(&invalid, cycle_start).unwrap_err();
+        assert!(error.contains("invalid agent_sessions[].merged_at"));
+
+        let invalid_status_changed = AgentSession {
+            extra: BTreeMap::from([("status_changed_at".to_string(), json!(5))]),
+            ..AgentSession::default()
+        };
+        let error =
+            agent_session_had_activity_since(&invalid_status_changed, cycle_start).unwrap_err();
+        assert!(error.contains("agent_sessions[].status_changed_at must be a string timestamp"));
     }
 
     #[test]
@@ -3630,6 +3728,16 @@ mod tests {
             input.issues_processed,
             vec!["#42: Merged this cycle", "Processed review #77"]
         );
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+        let auto_index = content
+            .find("- [#42](https://github.com/EvaLok/schema-org-json-ld/issues/42): Merged this cycle")
+            .unwrap();
+        let manual_index = content
+            .find("- Processed review [#77](https://github.com/EvaLok/schema-org-json-ld/issues/77)")
+            .unwrap();
+        assert!(auto_index < manual_index);
     }
 
     #[test]
