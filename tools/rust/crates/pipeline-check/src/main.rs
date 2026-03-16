@@ -19,7 +19,7 @@ const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const STEP_COMMENT_THRESHOLD: usize = 17;
 const ORCHESTRATOR_SIGNATURE: &str = "> **[main-orchestrator]**";
-const MANDATORY_STEPS: [(&str, u64); 24] = [
+const MANDATORY_STEPS: &[(&str, u64)] = &[
 	("0", 0),
 	("0.5", 0),
 	("0.6", 0),
