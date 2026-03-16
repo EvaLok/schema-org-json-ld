@@ -3719,6 +3719,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix process-merge merged_at timestamp"
+    },
+    {
+      "dispatched_at": "2026-03-16T03:24:30Z",
+      "issue": 1335,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 274 review"
     }
   ],
   "audit_dropped": [
@@ -3911,21 +3918,21 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1332 Fix process-merge merged_at timestamp (cycle 274)",
-    "dispatch_to_pr_rate": "98.1%",
-    "in_flight": 3,
+    "dispatch_log_latest": "#1335 Cycle 274 review (cycle 274)",
+    "dispatch_to_pr_rate": "97.8%",
+    "in_flight": 4,
     "merged": 400,
     "pr_merge_rate": "99.3%",
     "produced_pr": 403,
     "resolved": 408,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 411
+    "total_dispatches": 412
   },
   "cycle_phase": {
     "cycle": 274,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-16T03:19:51Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-16T03:24:30Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
