@@ -14,6 +14,12 @@ pub const SKIP_PIPELINE_GATE_WARNING: &str =
     "WARNING: pipeline gate bypassed via --skip-pipeline-gate";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PipelineGateError {
+    Failed,
+    ExecutionFailed(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExecutionResult {
     pub exit_code: Option<i32>,
 }
@@ -42,20 +48,26 @@ pub fn enforce_pipeline_gate(
     repo_root: &Path,
     skip_pipeline_gate: bool,
     runner: &dyn CommandRunner,
-) -> Result<Option<&'static str>, String> {
+) -> Result<Option<&'static str>, PipelineGateError> {
     if skip_pipeline_gate {
         return Ok(Some(SKIP_PIPELINE_GATE_WARNING));
     }
 
     let execution = runner
         .run_pipeline_check(repo_root)
-        .map_err(|_| PIPELINE_GATE_FAILURE_MESSAGE.to_string())?;
+        .map_err(PipelineGateError::ExecutionFailed)?;
 
-    if execution.exit_code == Some(0) {
-        Ok(None)
-    } else {
-        Err(PIPELINE_GATE_FAILURE_MESSAGE.to_string())
+    match execution.exit_code {
+        Some(0) => Ok(None),
+        _ => Err(PipelineGateError::Failed),
     }
+}
+
+pub fn concurrency_warning_message(in_flight: i64) -> String {
+    format!(
+        "Warning: in-flight dispatches at {} (approaching/exceeding concurrency limit of 2)",
+        in_flight
+    )
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

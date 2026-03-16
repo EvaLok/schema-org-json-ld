@@ -1,7 +1,8 @@
 use clap::Parser;
 use record_dispatch::{
-    apply_dispatch_patch, build_dispatch_patch, dispatch_commit_message, enforce_pipeline_gate,
-    resolve_model, CommandRunner, ProcessRunner,
+    apply_dispatch_patch, build_dispatch_patch, concurrency_warning_message,
+    dispatch_commit_message, enforce_pipeline_gate, resolve_model, CommandRunner,
+    PipelineGateError, ProcessRunner,
 };
 use state_schema::{
     commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
@@ -43,7 +44,7 @@ fn main() {
 
 fn run(cli: Cli) -> Result<(), String> {
     let runner = ProcessRunner;
-    run_with_runner(cli, &runner, &mut |warning| eprintln!("{}", warning))
+    run_with_runner(cli, &runner, &mut |warning| eprintln!("{warning}"))
 }
 
 fn run_with_runner(
@@ -51,7 +52,19 @@ fn run_with_runner(
     runner: &dyn CommandRunner,
     warn: &mut dyn FnMut(&str),
 ) -> Result<(), String> {
-    if let Some(warning) = enforce_pipeline_gate(&cli.repo_root, cli.skip_pipeline_gate, runner)? {
+    let pipeline_warning = match enforce_pipeline_gate(&cli.repo_root, cli.skip_pipeline_gate, runner)
+    {
+        Ok(warning) => warning,
+        Err(PipelineGateError::ExecutionFailed(detail)) => {
+            eprintln!("pipeline-check execution error: {detail}");
+            return Err(record_dispatch::PIPELINE_GATE_FAILURE_MESSAGE.to_string());
+        }
+        Err(PipelineGateError::Failed) => {
+            return Err(record_dispatch::PIPELINE_GATE_FAILURE_MESSAGE.to_string());
+        }
+    };
+
+    if let Some(warning) = pipeline_warning {
         warn(warning);
     }
 
@@ -125,10 +138,7 @@ fn run_with_runner(
         );
     }
     if patch.in_flight >= 3 {
-        warn(&format!(
-            "Warning: in-flight dispatches at {} (approaching/exceeding concurrency limit of 2)",
-            patch.in_flight
-        ));
+        warn(&concurrency_warning_message(patch.in_flight));
     }
 
     Ok(())
