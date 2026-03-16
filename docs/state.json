@@ -4173,7 +4173,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 277"
+        "last_refreshed": "cycle 278"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -6451,9 +6451,25 @@
         "finding_count": 7,
         "ignored": 0,
         "note": "F1 process-adherence: close-out order reversed — deferred (tool fix blocked by stabilization). F2 pipeline-gate: actioned — state-invariants fixed, pipeline re-verified. F3 worklog-accuracy: deferred (procedural fix). F4 receipt-integrity: deferred (structural tension with post-worklog commits). F5 state-integrity: actioned — closed_without_merge 4→5, pr_merge_rate 99.0→98.8, state-invariants now PASS. F6 review-evidence: deferred (hand-advance discipline). F7 journal-quality: deferred (generate journal after dispositions stable)."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "journal-quality",
+          "pipeline-gate",
+          "process-adherence",
+          "review-evidence",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 277,
+        "deferred": 5,
+        "finding_count": 5,
+        "ignored": 0,
+        "note": "STABILIZATION (ADR 0011): All 5 findings deferred per observation mode. F1 process-adherence: C5.1 ran before cycle-complete commit. F2 pipeline-gate: mixed gate result treated as false-positive. F3 worklog-accuracy: Issues processed section empty despite processed issues. F4 review-evidence: PR reviewed without artifact. F5 journal-quality: journal omits own gate override."
       }
     ],
-    "last_review_cycle": 276
+    "last_review_cycle": 277
   },
   "review_events_verified_through_cycle": 276,
   "schema_status": {
