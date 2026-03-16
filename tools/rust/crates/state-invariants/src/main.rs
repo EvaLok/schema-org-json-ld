@@ -91,6 +91,7 @@ fn run_checks(state: &StateJson) -> Report {
         check_cycle_phase_consistency(state),
         check_chronic_categories(state),
         check_chronic_verification_deadline(state),
+        check_chronic_intermediate_state(state),
         check_review_events_verified(state),
         check_agent_sessions_reconciliation(state),
     ];
@@ -960,19 +961,35 @@ fn check_chronic_verification_deadline(state: &StateJson) -> CheckResult {
             }
         };
 
-        if !verification_cycle.is_null() {
+        if verification_cycle.is_number() {
             continue;
+        }
+
+        if verification_cycle.is_string() {
+            continue;
+        }
+
+        if !verification_cycle.is_null() {
+            return warn(
+                "chronic_verification_deadline",
+                format!(
+                    "invalid field: review_agent.chronic_category_responses.entries[{}].verification_cycle must be null, number, or string",
+                    entry_index
+                ),
+            );
         }
 
         let category = match entry.get("category").and_then(Value::as_str) {
             Some(value) => value,
-            None => return warn(
-                "chronic_verification_deadline",
-                format!(
+            None => {
+                return warn(
+                    "chronic_verification_deadline",
+                    format!(
                     "missing field: review_agent.chronic_category_responses.entries[{}].category",
                     entry_index
                 ),
-            ),
+                )
+            }
         };
 
         let added_cycle = match entry.get("added_cycle").and_then(Value::as_i64) {
@@ -1010,6 +1027,79 @@ fn check_chronic_verification_deadline(state: &StateJson) -> CheckResult {
         pass("chronic_verification_deadline")
     } else {
         fail("chronic_verification_deadline", failures.join("; "))
+    }
+}
+
+fn check_chronic_intermediate_state(state: &StateJson) -> CheckResult {
+    let review_agent = match state.extra.get("review_agent") {
+        Some(value) => value,
+        None => return warn("chronic_intermediate_state", "missing field: review_agent"),
+    };
+
+    let entries = match review_agent
+        .get("chronic_category_responses")
+        .and_then(|value| value.get("entries"))
+        .and_then(Value::as_array)
+    {
+        Some(entries) => entries,
+        None => return pass("chronic_intermediate_state"),
+    };
+
+    let mut categories = Vec::new();
+    for (entry_index, entry) in entries.iter().enumerate() {
+        let verification_cycle = match entry.get("verification_cycle") {
+            Some(value) => value,
+            None => {
+                return warn(
+                    "chronic_intermediate_state",
+                    format!(
+                        "missing field: review_agent.chronic_category_responses.entries[{}].verification_cycle",
+                        entry_index
+                    ),
+                )
+            }
+        };
+
+        if verification_cycle.is_string() {
+            let category = match entry.get("category").and_then(Value::as_str) {
+                Some(value) => value,
+                None => {
+                    return warn(
+                        "chronic_intermediate_state",
+                        format!(
+                            "missing field: review_agent.chronic_category_responses.entries[{}].category",
+                            entry_index
+                        ),
+                    )
+                }
+            };
+            categories.push(category.to_owned());
+            continue;
+        }
+
+        if verification_cycle.is_null() || verification_cycle.is_number() {
+            continue;
+        }
+
+        return warn(
+            "chronic_intermediate_state",
+            format!(
+                "invalid field: review_agent.chronic_category_responses.entries[{}].verification_cycle must be null, number, or string",
+                entry_index
+            ),
+        );
+    }
+
+    if categories.is_empty() {
+        pass("chronic_intermediate_state")
+    } else {
+        warn(
+            "chronic_intermediate_state",
+            format!(
+                "chronic categories in tool_hardened intermediate state: {}",
+                categories.join(", ")
+            ),
+        )
     }
 }
 
@@ -1373,6 +1463,7 @@ fn print_human_report(report: &Report) {
             "chronic_verification_deadline",
             "chronic verification deadline",
         ),
+        ("chronic_intermediate_state", "chronic intermediate state"),
         ("review_events_verified", "review events verified"),
         (
             "agent_sessions_reconciliation",
@@ -2030,6 +2121,53 @@ mod tests {
     }
 
     #[test]
+    fn chronic_verification_deadline_passes_when_verification_cycle_is_string() {
+        let mut value = minimal_valid_state();
+        value["last_cycle"]["number"] = json!(20);
+        value["review_agent"]["history"] = json!([
+            {
+                "cycle": 12,
+                "finding_count": 1,
+                "actioned": 0,
+                "deferred": 1,
+                "ignored": 0,
+                "complacency_score": 1,
+                "categories": ["worklog-accuracy"]
+            },
+            {
+                "cycle": 16,
+                "finding_count": 1,
+                "actioned": 0,
+                "deferred": 1,
+                "ignored": 0,
+                "complacency_score": 1,
+                "categories": ["worklog-accuracy"]
+            },
+            {
+                "cycle": 20,
+                "finding_count": 1,
+                "actioned": 0,
+                "deferred": 1,
+                "ignored": 0,
+                "complacency_score": 1,
+                "categories": ["worklog-accuracy"]
+            }
+        ]);
+        value["review_agent"]["chronic_category_responses"] = json!({
+            "entries": [{
+                "category": "worklog-accuracy",
+                "added_cycle": 12,
+                "chosen_path": "structural-fix",
+                "verification_cycle": "270-tool-hardened, pending-code-PR-runtime-proof"
+            }]
+        });
+
+        let state = state_from_json(value);
+        let check = check_chronic_verification_deadline(&state);
+        assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
     fn chronic_verification_deadline_passes_when_old_entry_has_fewer_than_three_reviews() {
         let mut value = minimal_valid_state();
         value["last_cycle"]["number"] = json!(20);
@@ -2116,6 +2254,52 @@ mod tests {
     }
 
     #[test]
+    fn chronic_intermediate_state_warns_when_verification_cycle_is_string() {
+        let mut value = minimal_valid_state();
+        value["review_agent"]["chronic_category_responses"] = json!({
+            "entries": [{
+                "category": "worklog-accuracy",
+                "added_cycle": 12,
+                "chosen_path": "structural-fix",
+                "verification_cycle": "270-tool-hardened, pending-code-PR-runtime-proof"
+            }]
+        });
+
+        let state = state_from_json(value);
+        let check = check_chronic_intermediate_state(&state);
+        assert_eq!(check.status, CheckStatus::Warn);
+
+        let details = check.details.as_deref().unwrap_or_default();
+        assert!(details.contains("worklog-accuracy"));
+        assert!(details.contains("tool_hardened intermediate state"));
+    }
+
+    #[test]
+    fn run_checks_reports_chronic_intermediate_state_warning() {
+        let mut value = minimal_valid_state();
+        value["review_agent"]["chronic_category_responses"] = json!({
+            "entries": [{
+                "category": "worklog-accuracy",
+                "added_cycle": 12,
+                "chosen_path": "structural-fix",
+                "verification_cycle": "270-tool-hardened, pending-code-PR-runtime-proof"
+            }]
+        });
+
+        let state = state_from_json(value);
+        let report = run_checks(&state);
+        let check = report
+            .checks
+            .iter()
+            .find(|check| check.name == "chronic_intermediate_state")
+            .expect("chronic_intermediate_state check should be present");
+
+        assert_eq!(check.status, CheckStatus::Warn);
+        let details = check.details.as_deref().unwrap_or_default();
+        assert!(details.contains("worklog-accuracy"));
+    }
+
+    #[test]
     fn agent_sessions_reconciliation_passes_for_matching_summary() {
         let state = state_from_json(minimal_valid_state());
         let check = check_agent_sessions_reconciliation(&state);
@@ -2198,7 +2382,7 @@ mod tests {
         let state = state_from_json(minimal_valid_state());
         let report = run_checks(&state);
 
-        assert_eq!(report.checks.len(), 14);
+        assert_eq!(report.checks.len(), 15);
         assert_eq!(
             report.checks.get(9).map(|check| check.name),
             Some("cycle_phase_consistency")
@@ -2209,6 +2393,14 @@ mod tests {
         );
         assert_eq!(
             report.checks.get(12).map(|check| check.name),
+            Some("chronic_intermediate_state")
+        );
+        assert_eq!(
+            report.checks.get(12).map(|check| check.status),
+            Some(CheckStatus::Pass)
+        );
+        assert_eq!(
+            report.checks.get(13).map(|check| check.name),
             Some("review_events_verified")
         );
         assert_eq!(
