@@ -3732,6 +3732,13 @@
       "pr": 1336,
       "status": "merged",
       "title": "Cycle 274 review"
+    },
+    {
+      "dispatched_at": "2026-03-16T05:03:48Z",
+      "issue": 1339,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Backfill merged_at for 16 legacy agent_sessions"
     }
   ],
   "audit_dropped": [
@@ -3925,16 +3932,16 @@
   "copilot_metrics": {
     "closed_without_merge": 4,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1335 Cycle 274 review (cycle 274)",
-    "dispatch_to_pr_rate": "98.5%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1339 Backfill merged_at for 16 legacy agent_sessions (cycle 275)",
+    "dispatch_to_pr_rate": "98.3%",
+    "in_flight": 2,
     "merged": 403,
     "pr_merge_rate": "99.3%",
     "produced_pr": 406,
     "resolved": 411,
     "reviewed_awaiting_eva": 1,
     "revision_rounds": 5,
-    "total_dispatches": 412
+    "total_dispatches": 413
   },
   "cycle_phase": {
     "cycle": 275,
