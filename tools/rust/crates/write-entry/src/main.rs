@@ -1100,25 +1100,38 @@ fn derive_prs_from_cycle_receipt_entries(entries: &[CycleReceiptJsonEntry]) -> V
 }
 
 fn merge_receipts(auto_receipts: Vec<CommitReceipt>, manual_receipts: &[CommitReceipt]) -> Vec<CommitReceipt> {
-    let manual_by_tool = manual_receipts
+    let manual_indexes_by_tool = manual_receipts
         .iter()
-        .map(|receipt| (receipt.tool.to_ascii_lowercase(), receipt))
-        .collect::<HashMap<_, _>>();
-    let mut auto_tools = HashSet::new();
+        .enumerate()
+        .fold(HashMap::new(), |mut indexes, (index, receipt)| {
+            indexes
+                .entry(receipt.tool.to_ascii_lowercase())
+                .or_insert_with(Vec::new)
+                .push(index);
+            indexes
+        });
+    let mut used_manual_by_tool = HashMap::<String, usize>::new();
+    let mut used_manual_indexes = HashSet::new();
 
     let mut merged = Vec::new();
     for receipt in auto_receipts {
         let tool_key = receipt.tool.to_ascii_lowercase();
-        auto_tools.insert(tool_key.clone());
-        if let Some(manual) = manual_by_tool.get(&tool_key) {
-            merged.push((*manual).clone());
+        let manual_position = *used_manual_by_tool.get(&tool_key).unwrap_or(&0);
+        if let Some(manual_index) = manual_indexes_by_tool
+            .get(&tool_key)
+            .and_then(|indexes| indexes.get(manual_position))
+            .copied()
+        {
+            merged.push(manual_receipts[manual_index].clone());
+            used_manual_indexes.insert(manual_index);
+            used_manual_by_tool.insert(tool_key, manual_position + 1);
         } else {
             merged.push(receipt);
         }
     }
 
-    for receipt in manual_receipts {
-        if !auto_tools.contains(&receipt.tool.to_ascii_lowercase()) {
+    for (index, receipt) in manual_receipts.iter().enumerate() {
+        if !used_manual_indexes.contains(&index) {
             merged.push(receipt.clone());
         }
     }
@@ -2648,6 +2661,87 @@ mod tests {
         assert_eq!(receipts[0].receipt, "abc1234");
         assert_eq!(receipts[1].tool, "process-merge");
         assert_eq!(receipts[1].receipt, "def5678");
+    }
+
+    #[test]
+    fn merge_receipts_preserves_duplicate_manual_overrides_by_occurrence() {
+        let merged = merge_receipts(
+            vec![
+                CommitReceipt {
+                    tool: "cycle-start".to_string(),
+                    receipt: "aaaaaaa".to_string(),
+                    unresolved: false,
+                },
+                CommitReceipt {
+                    tool: "process-merge".to_string(),
+                    receipt: "bbbbbbb".to_string(),
+                    unresolved: false,
+                },
+                CommitReceipt {
+                    tool: "process-merge".to_string(),
+                    receipt: "ccccccc".to_string(),
+                    unresolved: false,
+                },
+            ],
+            &[
+                CommitReceipt {
+                    tool: "process-merge".to_string(),
+                    receipt: "1111111".to_string(),
+                    unresolved: false,
+                },
+                CommitReceipt {
+                    tool: "process-merge".to_string(),
+                    receipt: "2222222".to_string(),
+                    unresolved: false,
+                },
+            ],
+        );
+
+        assert_eq!(merged.len(), 3);
+        assert_eq!(merged[0].tool, "cycle-start");
+        assert_eq!(merged[0].receipt, "aaaaaaa");
+        assert_eq!(merged[1].tool, "process-merge");
+        assert_eq!(merged[1].receipt, "1111111");
+        assert_eq!(merged[2].tool, "process-merge");
+        assert_eq!(merged[2].receipt, "2222222");
+    }
+
+    #[test]
+    fn merge_receipts_keeps_single_override_behavior_and_appends_manual_only_tools() {
+        let merged = merge_receipts(
+            vec![
+                CommitReceipt {
+                    tool: "cycle-start".to_string(),
+                    receipt: "aaaaaaa".to_string(),
+                    unresolved: false,
+                },
+                CommitReceipt {
+                    tool: "process-merge".to_string(),
+                    receipt: "bbbbbbb".to_string(),
+                    unresolved: false,
+                },
+            ],
+            &[
+                CommitReceipt {
+                    tool: "process-merge".to_string(),
+                    receipt: "1111111".to_string(),
+                    unresolved: false,
+                },
+                CommitReceipt {
+                    tool: "manual".to_string(),
+                    receipt: "2222222".to_string(),
+                    unresolved: false,
+                },
+            ],
+        );
+
+        assert_eq!(merged.len(), 3);
+        assert_eq!(merged[0].tool, "cycle-start");
+        assert_eq!(merged[0].receipt, "aaaaaaa");
+        assert_eq!(merged[1].tool, "process-merge");
+        assert_eq!(merged[1].receipt, "1111111");
+        assert_eq!(merged[2].tool, "manual");
+        assert_eq!(merged[2].receipt, "2222222");
     }
 
     #[test]
