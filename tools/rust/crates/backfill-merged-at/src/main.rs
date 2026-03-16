@@ -145,9 +145,8 @@ fn sessions_missing_merged_at(sessions: &[AgentSession]) -> Result<Vec<SessionTo
         missing.push(SessionToBackfill {
             index,
             issue: session.issue,
-            pr: u64::try_from(pr).map_err(|_| {
-                format!("{} has invalid pr {}", session_label(session.issue), pr)
-            })?,
+            pr: u64::try_from(pr)
+                .map_err(|_| format!("{} has invalid pr {}", session_label(session.issue), pr))?,
         });
     }
 
@@ -164,7 +163,11 @@ fn fetch_merged_at(repo_root: &Path, runner: &dyn GhRunner, pr: u64) -> Result<S
             "`gh {}` failed with status {}: {}",
             args.join(" "),
             exit_code,
-            if stderr.is_empty() { "<no stderr>" } else { stderr }
+            if stderr.is_empty() {
+                "<no stderr>"
+            } else {
+                stderr
+            }
         ));
     }
 
@@ -204,7 +207,8 @@ fn write_agent_sessions(repo_root: &Path, sessions: &[AgentSession]) -> Result<(
 }
 
 fn session_label(issue: Option<i64>) -> String {
-    issue.map(|value| format!("issue #{value}"))
+    issue
+        .map(|value| format!("issue #{value}"))
         .unwrap_or_else(|| "agent_session <unknown issue>".to_string())
 }
 
@@ -431,7 +435,11 @@ mod tests {
     fn write_state(repo_root: &Path, state: &StateJson) {
         let state_path = repo_root.join("docs/state.json");
         fs::create_dir_all(state_path.parent().unwrap()).unwrap();
-        fs::write(state_path, format!("{}\n", serde_json::to_string_pretty(state).unwrap())).unwrap();
+        fs::write(
+            state_path,
+            format!("{}\n", serde_json::to_string_pretty(state).unwrap()),
+        )
+        .unwrap();
     }
 
     fn read_state(repo_root: &Path) -> StateJson {
