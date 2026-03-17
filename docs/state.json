@@ -3918,9 +3918,25 @@
     {
       "dispatched_at": "2026-03-17T04:50:29Z",
       "issue": 1399,
+      "merged_at": "2026-03-17T06:23:44Z",
+      "model": "gpt-5.4",
+      "pr": 1400,
+      "status": "merged",
+      "title": "Cycle 287 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-17T06:31:50Z",
+      "issue": 1404,
       "model": "gpt-5.4",
       "status": "in_flight",
-      "title": "Cycle 287 end-of-cycle review"
+      "title": "Phase 2 Batch 1: pipeline-check + record-dispatch fixes"
+    },
+    {
+      "dispatched_at": "2026-03-17T06:31:51Z",
+      "issue": 1405,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Phase 2 Batch 2: write-entry + cycle-complete + transition fixes"
     }
   ],
   "audit_dropped": [
@@ -4055,7 +4071,8 @@
     269,
     271,
     273,
-    275
+    275,
+    277
   ],
   "blockers": [
     {
@@ -4119,16 +4136,16 @@
   "copilot_metrics": {
     "closed_without_merge": 5,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1399 Cycle 287 end-of-cycle review (cycle 287)",
+    "dispatch_log_latest": "#1405 Phase 2 Batch 2 (cycle 288)",
     "dispatch_to_pr_rate": "98.6%",
-    "in_flight": 1,
-    "merged": 422,
+    "in_flight": 2,
+    "merged": 423,
     "pr_merge_rate": "98.8%",
-    "produced_pr": 427,
-    "resolved": 432,
+    "produced_pr": 428,
+    "resolved": 433,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 433
+    "total_dispatches": 435
   },
   "cycle_phase": {
     "completed_at": "2026-03-16T22:39:05Z",
