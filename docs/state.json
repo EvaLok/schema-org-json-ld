@@ -4320,7 +4320,7 @@
       },
       "schema_status.planned_next": {
         "cadence": "after planning or completing types",
-        "last_refreshed": "cycle 276"
+        "last_refreshed": "cycle 287"
       },
       "schema_status.property_gap_audit": {
         "cadence": "after property gap fixes",
@@ -4372,7 +4372,7 @@
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
-        "last_refreshed": "cycle 276"
+        "last_refreshed": "cycle 287"
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
@@ -6703,9 +6703,23 @@
         "finding_count": 4,
         "ignored": 0,
         "note": "STABILIZATION (ADR 0011): All 4 findings deferred per observation mode. F1 receipt-integrity recurring (283-285). F2 process-adherence C4.1 gate violation. F3 state-integrity freshness without evidence (284-285). F4 journal-quality indefinite commitments."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "worklog-accuracy",
+          "process-adherence",
+          "journal-quality"
+        ],
+        "complacency_score": 3,
+        "cycle": 286,
+        "deferred": 3,
+        "finding_count": 3,
+        "ignored": 0,
+        "note": "STABILIZATION (ADR 0011): All 3 findings deferred per observation mode. F1 worklog-accuracy contradicts canonical state on metrics/issues/failures. F2 process-adherence post-cycle-complete repairs with scope expansion. F3 journal-quality recurring defects converted to generic post-stabilization placeholders."
       }
     ],
-    "last_review_cycle": 285
+    "last_review_cycle": 286
   },
   "review_events_verified_through_cycle": 286,
   "schema_status": {
