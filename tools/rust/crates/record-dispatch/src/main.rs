@@ -52,17 +52,17 @@ fn run_with_runner(
     runner: &dyn CommandRunner,
     warn: &mut dyn FnMut(&str),
 ) -> Result<(), String> {
-    let pipeline_warning =
-        match enforce_pipeline_gate(&cli.repo_root, cli.skip_pipeline_gate, runner) {
-            Ok(warning) => warning,
-            Err(PipelineGateError::ExecutionFailed(detail)) => {
-                eprintln!("pipeline-check execution error: {detail}");
-                return Err(record_dispatch::PIPELINE_GATE_FAILURE_MESSAGE.to_string());
-            }
-            Err(PipelineGateError::Failed) => {
-                return Err(record_dispatch::PIPELINE_GATE_FAILURE_MESSAGE.to_string());
-            }
-        };
+    let pipeline_warning = match enforce_pipeline_gate(&cli.repo_root, cli.skip_pipeline_gate, runner)
+    {
+        Ok(warning) => warning,
+        Err(PipelineGateError::ExecutionFailed(detail)) => {
+            eprintln!("pipeline-check execution error: {detail}");
+            return Err(record_dispatch::PIPELINE_GATE_FAILURE_MESSAGE.to_string());
+        }
+        Err(PipelineGateError::Failed) => {
+            return Err(record_dispatch::PIPELINE_GATE_FAILURE_MESSAGE.to_string());
+        }
+    };
 
     if let Some(warning) = pipeline_warning {
         warn(warning);
@@ -310,10 +310,7 @@ mod tests {
         .expect("dispatch should succeed");
 
         let state = repo.read_state();
-        assert_eq!(
-            state.pointer("/cycle_phase/phase"),
-            Some(&serde_json::json!("work"))
-        );
+        assert_eq!(state.pointer("/cycle_phase/phase"), Some(&serde_json::json!("work")));
         assert_eq!(
             state
                 .pointer("/cycle_phase/phase_entered_at")
