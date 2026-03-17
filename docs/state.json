@@ -3905,6 +3905,13 @@
       "pr": 1392,
       "status": "merged",
       "title": "Cycle 285 review"
+    },
+    {
+      "dispatched_at": "2026-03-17T03:14:48Z",
+      "issue": 1394,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 286 review"
     }
   ],
   "audit_dropped": [
@@ -4102,22 +4109,22 @@
   "copilot_metrics": {
     "closed_without_merge": 5,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1391 Cycle 285 review (cycle 285)",
-    "dispatch_to_pr_rate": "98.8%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1394 Cycle 286 review (cycle 286)",
+    "dispatch_to_pr_rate": "98.6%",
+    "in_flight": 1,
     "merged": 421,
     "pr_merge_rate": "98.8%",
     "produced_pr": 426,
     "resolved": 431,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 431
+    "total_dispatches": 432
   },
   "cycle_phase": {
     "completed_at": "2026-03-16T22:39:05Z",
     "cycle": 286,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-17T03:04:44Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-17T03:14:48Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
