@@ -1,0 +1,23 @@
+# Cycle 284 Review
+
+## 1. [receipt-integrity] The published receipt table repeated cycle 283's missing clean-cycle receipt and the logged validation result is false
+
+**File**: docs/worklog/2026-03-16/223202-cycle-284-maintenance-review-processed-property-gap-resolved.md:39-47
+**Evidence**: The worklog note says the receipt scope is "all commits through cycle-complete" and excludes only docs and record-dispatch commits, while step `C5.1` on issue `#1386` says `PASS. 5 worklog receipts, 6 canonical, 1 structurally excluded (docs commit), 0 missing.` But canonical `bash tools/cycle-receipts --cycle 284 --repo-root .` returns seven receipts, including `e992265 state(clean-cycle): stabilization counter 1->2, cycle 284 clean [cycle 284]`. `bash tools/receipt-validate --cycle 284 --worklog docs/worklog/2026-03-16/223202-cycle-284-maintenance-review-processed-property-gap-resolved.md` therefore fails with `Genuinely missing: 1` for that clean-cycle commit. This is the same omission pattern cycle 283 review F1 had already documented.
+**Recommendation**: Keep the receipt accounting aligned with the real cycle scope: either regenerate the worklog receipt table after the clean-cycle commit lands, or explicitly classify `state(clean-cycle)` as structurally excluded in both the tool output and the worklog note before claiming receipt-validation PASS.
+
+## 2. [process-adherence] The cycle claimed dispatch-time pipeline PASS on a commit that still failed a blocking invariant, then silently repaired it afterward
+
+**File**: docs/worklog/2026-03-16/223202-cycle-284-maintenance-review-processed-property-gap-resolved.md:27-35
+**Evidence**: The worklog's current-state section says `Pipeline status: PASS (9/9, 1 warning)` and its next steps defer the `completed_at` repair to post-stabilization. But step `C7` on issue `#1386` specifically says record-dispatch commit `9d212e0` had `Pipeline PASS at dispatch time (15/15 invariants)`. Re-running `bash tools/pipeline-check --json` and `bash tools/state-invariants` against that exact `9d212e0` commit shows the opposite: `pipeline-check` fails and invariant 10 reports `cycle_phase.phase is complete but cycle_phase.completed_at is missing`. Only the later undocumented commit `d792142 state(fix): add completed_at to cycle_phase for invariant 15/15 [cycle 284]` restores a passing 15/15 state. So the pass claim was attached to the wrong commit, and the cycle narrative never recorded the follow-up state fix that actually made the close-out state clean.
+**Recommendation**: Validate the exact record-dispatch commit before reporting dispatch-time PASS, and if a compensating state-fix commit is required after dispatch, record it explicitly in the worklog/journal before treating the cycle as clean.
+
+## 3. [state-integrity] `review_events_verified_through_cycle` was manually advanced to 284 without fresh review-event evidence
+
+**File**: docs/state.json:6657
+**Evidence**: Commit `8440b72 state(review-processed): cycle 283 review — 3 findings, complacency 3/5, all deferred [cycle 284]` manually changes `review_events_verified_through_cycle` from `282` to `284`. Step `2.5` on issue `#1386` explains the bump as `advanced review_events_verified_through_cycle to 284 (only review artifact PRs merged since 282)`, not as the result of `verify-review-events`. But the chronic rationale for this marker says it must be "derived from actual GitHub review events" and specifically notes that the next code-PR hard case should be naturally tested by a later schema implementation merge (`docs/state.json:4472-4475`). GitHub metadata for PR `#1385`, the only PR merged this cycle, shows no PR reviews at all (`get_reviews` returns `[]`). Advancing the marker two cycles on the basis of review-artifact merges with no qualifying review events recreates the same unsupported freshness-bump pattern that the chronic entry says was previously fixed.
+**Recommendation**: Hold `review_events_verified_through_cycle` at the last cycle supported by actual qualifying GitHub review events, and only advance it when `verify-review-events` (or equivalent recorded evidence) confirms fresh approved review data for a later qualifying PR.
+
+## Complacency score
+
+**3/5** — Cycle 284 did non-trivial maintenance work and eventually reached a clean post-fix state, but it repeated the prior cycle's receipt-omission defect, manually advanced a review-events freshness marker without fresh review evidence, and reported a dispatch-time blocking PASS on `9d212e0` even though that commit still failed `state-invariants` until a later silent repair. Because a blocking gate was misreported during close-out, the score cannot go above 3/5.
