@@ -45,3 +45,4 @@
 | process-merge | fba63de | [fba63de](https://github.com/EvaLok/schema-org-json-ld/commit/fba63de) |
 | process-eva | 000bd3d | [000bd3d](https://github.com/EvaLok/schema-org-json-ld/commit/000bd3d) |
 | cycle-complete | a952317 | [a952317](https://github.com/EvaLok/schema-org-json-ld/commit/a952317) |
+| review-events | f4af72d | [f4af72d](https://github.com/EvaLok/schema-org-json-ld/commit/f4af72d) |
