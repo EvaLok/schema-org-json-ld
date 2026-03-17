@@ -3948,6 +3948,13 @@
       "pr": 1409,
       "status": "merged",
       "title": "Cycle 288 review"
+    },
+    {
+      "dispatched_at": "2026-03-17T08:51:24Z",
+      "issue": 1413,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Phase 2 Batch 2 redispatch"
     }
   ],
   "audit_dropped": [
@@ -4147,16 +4154,16 @@
   "copilot_metrics": {
     "closed_without_merge": 5,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1408 Cycle 288 review (cycle 288)",
-    "dispatch_to_pr_rate": "98.6%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1413 Phase 2 Batch 2 redispatch (cycle 289)",
+    "dispatch_to_pr_rate": "98.4%",
+    "in_flight": 2,
     "merged": 425,
     "pr_merge_rate": "98.8%",
     "produced_pr": 430,
     "resolved": 435,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 436
+    "total_dispatches": 437
   },
   "cycle_phase": {
     "completed_at": "2026-03-16T22:39:05Z",
@@ -6792,6 +6799,7 @@
     ],
     "last_review_cycle": 288
   },
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 289,
   "schema_status": {
     "directory_layout": {
