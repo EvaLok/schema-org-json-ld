@@ -3937,7 +3937,8 @@
       "dispatched_at": "2026-03-17T06:31:51Z",
       "issue": 1405,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "note": "PR #1407 closed due to merge conflicts. Redispatched as #1413.",
+      "status": "failed",
       "title": "Phase 2 Batch 2: write-entry + cycle-complete + transition fixes"
     },
     {
