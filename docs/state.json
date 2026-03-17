@@ -4150,10 +4150,10 @@
     "dispatch_log_latest": "#1408 Cycle 288 review (cycle 288)",
     "dispatch_to_pr_rate": "98.6%",
     "in_flight": 1,
-    "merged": 427,
-    "pr_merge_rate": "99.3%",
+    "merged": 425,
+    "pr_merge_rate": "98.8%",
     "produced_pr": 430,
-    "resolved": 436,
+    "resolved": 435,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 436
