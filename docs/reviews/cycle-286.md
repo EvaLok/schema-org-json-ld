@@ -1,0 +1,36 @@
+# Cycle 286 Review
+
+## 1. [worklog-accuracy] The published worklog contradicts the cycle record on issue activity, metrics, and the final failure surface
+
+**File**: docs/worklog/2026-03-17/030504-cycle-286-stabilization-maintenance-review-processed-housekeeping.md:5-27
+**Evidence**:
+- The worklog's own narrative says the cycle `Closed stale audit-inbound #1390` (line 7), but the `Issues processed` section immediately below says `None.` (lines 15-17).
+- The metrics line is stale: it reports `431 dispatches, 425 PRs produced, 421 merged` (line 27), while the final committed state records `total_dispatches: 431`, `produced_pr: 426`, and `merged: 421` in `docs/state.json:4102-4114`.
+- The failure summary is narrowed too far: the worklog's current-state block reports only `step-comments` (line 26), but the cycle's own `C5.5` step comment on issue `#1393` records two failures — `step-comments` and `doc-validation` — and step `C4.1` explicitly says the worklog validation failed before the cycle proceeded.
+- Taken together, the artifact reads like a partially updated draft rather than a faithful summary of the final committed state.
+**Recommendation**: Generate the worklog's issue summary, metrics block, and pipeline-status line directly from the final committed state and recorded step results instead of carrying forward hand-written values. If a cycle closes an issue, changes copilot metrics, or proceeds past a failed validation gate, the published worklog should reflect all of that explicitly.
+
+## 2. [process-adherence] The cycle repaired state after `cycle-complete` and then expanded receipt scope to legitimize the out-of-order fixes
+
+**File**: docs/worklog/2026-03-17/030504-cycle-286-stabilization-maintenance-review-processed-housekeeping.md:36-47
+**Evidence**:
+- **Expected order per checklist:** `COMPLETION_CHECKLIST.md:23-45` defines `process-merge` as a C2 write-side tool that runs when a PR merges, before the cycle-end `cycle-complete` step.
+- **Expected receipt scope per checklist:** `COMPLETION_CHECKLIST.md:131-143,216` says the worklog receipt table covers commits through `cycle-complete`, excluding only the docs commit and the later `record-dispatch` commit.
+- **Actual order from git history:** cycle 286 committed `cycle-complete` at `782a919` (03:04:44Z), then `process-merge` at `b51457f` (03:05:58Z), then `verify-review-events` at `c8f5475` (03:09:55Z).
+- **Recorded acknowledgment of the late repairs:** the `C2` step comment on issue `#1393` mentions only `cycle-complete`, `process-review`, and field-inventory refresh, while the later `C4.1` step comment admits `process-merge` was run to fix the in-flight count and `verify-review-events` was run to restore `state-invariants` to 15/15.
+- **Post-hoc scope change in the artifact:** instead of treating that as a checklist ordering defect, the published worklog rewrites the receipt note to say the scope includes `post-cycle-complete state corrections` and step `C5.1` validates that broadened scope. That is not the scope the checklist currently documents.
+**Recommendation**: Pick one rule and enforce it consistently. Either require `process-merge`/`verify-review-events` to land before `cycle-complete` so the worklog really freezes at the documented boundary, or update the checklist, receipt-validation contract, and generated note text together so post-`cycle-complete` repair receipts are formally part of the cycle rather than justified ad hoc in a single worklog.
+
+## 3. [journal-quality] The journal continues to convert recurring defects into generic post-stabilization placeholders instead of reconciling them
+
+**File**: docs/journal/2026-03-17.md:52-71
+**Evidence**:
+- The cycle 286 entry marks the prior cycle's commitments as `Not applicable ... Carried forward` (line 57) and then adds three more `Post-stabilization:` commitments (lines 69-71).
+- None of those commitments include an observable next-cycle completion condition, a linked checklist step, or a tracking issue created this cycle.
+- `STARTUP_CHECKLIST.md:126-137` says repeated commitments across 2+ cycles must be actioned, tied to concrete tracking, or explicitly dropped with rationale — "`noted for future` does not count."
+- This is not a one-off wording slip. Cycle 285's review already flagged the same pattern in `docs/reviews/cycle-285.md:21-25`, and cycle 286 still responds to a now-3-cycle receipt-integrity chronic (`docs/journal/2026-03-17.md:61`) by adding yet another undated post-stabilization placeholder instead of closing or structurally tracking the item.
+**Recommendation**: Stop treating `Post-stabilization:` as a sufficient commitment format. For each carried-forward item, either create a concrete tracking artifact with observable closure conditions, map it to a specific future checklist step, or explicitly drop it with rationale. If none of those happen, the journal should say the commitment was not reconciled rather than presenting the carry-forward as acceptable completion.
+
+## Complacency score
+
+**3/5** — The cycle did real bookkeeping work, but it again normalized process debt instead of surfacing it cleanly. The published worklog still contains obvious factual drift, the cycle crossed a blocking `C4.1` validation failure and later bypassed the failed final gate at `C7` because review dispatch was mandatory, and the journal continues the same indefinite carry-forward pattern already flagged in cycle 285. Because the cycle overrode blocking gate failures and redefined receipt/process boundaries after the fact, the scoring cap applies and the score cannot exceed 3/5.
