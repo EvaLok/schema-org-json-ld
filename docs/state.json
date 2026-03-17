@@ -3955,6 +3955,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Phase 2 Batch 2 redispatch"
+    },
+    {
+      "dispatched_at": "2026-03-17T08:51:40Z",
+      "issue": 1411,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Phase 2 Batch 3 tests"
     }
   ],
   "audit_dropped": [
@@ -4154,16 +4161,16 @@
   "copilot_metrics": {
     "closed_without_merge": 5,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1413 Phase 2 Batch 2 redispatch (cycle 289)",
-    "dispatch_to_pr_rate": "98.4%",
-    "in_flight": 2,
+    "dispatch_log_latest": "#1411 Phase 2 Batch 3 tests (cycle 289)",
+    "dispatch_to_pr_rate": "98.2%",
+    "in_flight": 3,
     "merged": 425,
     "pr_merge_rate": "98.8%",
     "produced_pr": 430,
     "resolved": 435,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 437
+    "total_dispatches": 438
   },
   "cycle_phase": {
     "completed_at": "2026-03-16T22:39:05Z",
