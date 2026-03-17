@@ -3927,8 +3927,10 @@
     {
       "dispatched_at": "2026-03-17T06:31:50Z",
       "issue": 1404,
+      "merged_at": "2026-03-17T08:39:20Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1406,
+      "status": "merged",
       "title": "Phase 2 Batch 1: pipeline-check + record-dispatch fixes"
     },
     {
@@ -3941,8 +3943,10 @@
     {
       "dispatched_at": "2026-03-17T06:46:05Z",
       "issue": 1408,
+      "merged_at": "2026-03-17T08:39:20Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1409,
+      "status": "merged",
       "title": "Cycle 288 review"
     }
   ],
@@ -4144,12 +4148,12 @@
     "closed_without_merge": 5,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1408 Cycle 288 review (cycle 288)",
-    "dispatch_to_pr_rate": "98.2%",
-    "in_flight": 1,
-    "merged": 425,
+    "dispatch_to_pr_rate": "98.6%",
+    "in_flight": 0,
+    "merged": 427,
     "pr_merge_rate": "99.3%",
-    "produced_pr": 428,
-    "resolved": 435,
+    "produced_pr": 430,
+    "resolved": 436,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 436
@@ -4252,15 +4256,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 288"
+        "last_refreshed": "cycle 289"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 288"
+        "last_refreshed": "cycle 289"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 288"
+        "last_refreshed": "cycle 289"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
@@ -4332,6 +4336,10 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
+        "last_refreshed": "cycle 289"
+      },
+      "review_dispatch_consecutive": {
+        "cadence": "every cycle (updated by record-dispatch tool)",
         "last_refreshed": "cycle 289"
       },
       "review_events_verified_through_cycle": {
