@@ -814,7 +814,7 @@ fn cycle_start_from_state(
 
 fn positive_cycle_reference(value: i64, label: &str) -> Result<u64, String> {
     if value <= 0 {
-        return Err(format!("{label} must contain positive issue numbers"));
+        return Err(format!("{label} must be a positive issue number"));
     }
     Ok(value as u64)
 }
@@ -939,9 +939,9 @@ fn receipt_tools(entries: &[CycleReceiptJsonEntry]) -> Vec<String> {
     let mut seen = HashSet::new();
     let mut tools = Vec::new();
     for entry in entries {
-        let tool = entry.tool.trim().to_string();
+        let tool = entry.tool.trim();
         if seen.insert(tool.to_ascii_lowercase()) {
-            tools.push(tool);
+            tools.push(tool.to_string());
         }
     }
     tools

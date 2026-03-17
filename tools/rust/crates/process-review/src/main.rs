@@ -1321,8 +1321,8 @@ mod tests {
     fn known_review_categories_from_state_requires_review_agent() {
         let state = StateJson::default();
 
-        let error =
-            known_review_categories_from_state(&state).expect_err("missing review_agent should fail");
+        let error = known_review_categories_from_state(&state)
+            .expect_err("missing review_agent should fail");
         assert!(error.contains("missing field: review_agent"));
     }
 

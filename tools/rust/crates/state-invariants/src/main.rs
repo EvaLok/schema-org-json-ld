@@ -327,11 +327,21 @@ fn check_review_history_accounting(state: &StateJson) -> CheckResult {
         }
 
         // 5-status fields are optional (default 0) for backward compatibility
-        let actioned_failed = entry.get("actioned_failed").and_then(Value::as_i64).unwrap_or(0);
-        let dispatch_created = entry.get("dispatch_created").and_then(Value::as_i64).unwrap_or(0);
-        let verified_resolved = entry.get("verified_resolved").and_then(Value::as_i64).unwrap_or(0);
+        let actioned_failed = entry
+            .get("actioned_failed")
+            .and_then(Value::as_i64)
+            .unwrap_or(0);
+        let dispatch_created = entry
+            .get("dispatch_created")
+            .and_then(Value::as_i64)
+            .unwrap_or(0);
+        let verified_resolved = entry
+            .get("verified_resolved")
+            .and_then(Value::as_i64)
+            .unwrap_or(0);
 
-        let accounted = actioned + deferred + ignored + actioned_failed + dispatch_created + verified_resolved;
+        let accounted =
+            actioned + deferred + ignored + actioned_failed + dispatch_created + verified_resolved;
         if accounted != finding_count {
             failures.push(format!(
                 "review_agent.history[{}] actioned({}) + deferred({}) + ignored({}) + actioned_failed({}) + dispatch_created({}) + verified_resolved({}) != finding_count({})",
@@ -694,7 +704,12 @@ fn check_future_cycle_freshness(state: &StateJson) -> CheckResult {
 fn check_cycle_phase_consistency(state: &StateJson) -> CheckResult {
     let phase = match state.cycle_phase.phase.as_deref() {
         Some(value) => value,
-        None => return warn("cycle_phase_consistency", "missing field: cycle_phase.phase"),
+        None => {
+            return warn(
+                "cycle_phase_consistency",
+                "missing field: cycle_phase.phase",
+            )
+        }
     };
 
     if !VALID_PHASES.contains(&phase) {
@@ -709,11 +724,21 @@ fn check_cycle_phase_consistency(state: &StateJson) -> CheckResult {
 
     let cycle = match state.cycle_phase.cycle {
         Some(value) => value,
-        None => return warn("cycle_phase_consistency", "missing field: cycle_phase.cycle"),
+        None => {
+            return warn(
+                "cycle_phase_consistency",
+                "missing field: cycle_phase.cycle",
+            )
+        }
     };
     let last_cycle_number = match state.last_cycle.extra.get("number").and_then(Value::as_u64) {
         Some(value) => value,
-        None => return warn("cycle_phase_consistency", "missing field: last_cycle.number"),
+        None => {
+            return warn(
+                "cycle_phase_consistency",
+                "missing field: last_cycle.number",
+            )
+        }
     };
 
     if cycle != last_cycle_number {
@@ -1146,12 +1171,17 @@ fn check_review_events_verified(state: &StateJson) -> CheckResult {
 
     // Cross-check: field_inventory freshness must not claim verification beyond the actual value
     // This catches the chronic pattern of bumping freshness markers without actual verification
-    if let Some(fi) = state.field_inventory.fields
+    if let Some(fi) = state
+        .field_inventory
+        .fields
         .get("review_events_verified_through_cycle")
         .and_then(|entry| entry.get("last_refreshed"))
         .and_then(Value::as_str)
     {
-        if let Some(refreshed_cycle) = fi.strip_prefix("cycle ").and_then(|s| s.parse::<i64>().ok()) {
+        if let Some(refreshed_cycle) = fi
+            .strip_prefix("cycle ")
+            .and_then(|s| s.parse::<i64>().ok())
+        {
             // If freshness claims cycle N but value is < N-1, the freshness marker was bumped without verification
             if verified_through_cycle < refreshed_cycle - 1 {
                 return fail(

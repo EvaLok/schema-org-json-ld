@@ -654,7 +654,7 @@ fn build_agent_session_reconciliation(
             && session.get("merged_at").and_then(Value::as_str).is_none()
         {
             let merged_at = format_timestamp(now);
-            session.insert("merged_at".to_string(), json!(merged_at.clone()));
+            session.insert("merged_at".to_string(), json!(&merged_at));
             Some(format!("Set merged_at to {merged_at} (was missing)"))
         } else {
             None
