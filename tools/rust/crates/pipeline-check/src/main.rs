@@ -1002,6 +1002,7 @@ fn assess_step_comment_completeness(
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum StepCommentCheckScope {
+	#[cfg_attr(not(test), allow(dead_code))]
 	CurrentCycle,
 	PreviousCycle,
 }
