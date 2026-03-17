@@ -453,7 +453,7 @@ mod tests {
             198,
             &[ReceiptEntry {
                 step: "process-review".to_string(),
-                receipt: "e4f5g6h".to_string(),
+                receipt: "abcdef1".to_string(),
                 commit: "state(process-review): consumed cycle 197 review".to_string(),
                 url: format!("{}/commit/abcdef1234567890", REPO_URL),
                 aliases: Vec::new(),
@@ -461,7 +461,7 @@ mod tests {
         );
 
         assert!(markdown.contains("## Commit receipts — Cycle 198"));
-        assert!(markdown.contains("| process-review | [`e4f5g6h`](https://github.com/EvaLok/schema-org-json-ld/commit/abcdef1234567890) | state(process-review): consumed cycle 197 review |"));
+        assert!(markdown.contains("| process-review | [`abcdef1`](https://github.com/EvaLok/schema-org-json-ld/commit/abcdef1234567890) | state(process-review): consumed cycle 197 review |"));
         assert!(markdown.contains("1 receipt collected."));
     }
 
@@ -473,13 +473,13 @@ mod tests {
                 step: "process-merge".to_string(),
                 receipt: "abc1234".to_string(),
                 commit: "state(process-merge): merged PR #1 [cycle 198]".to_string(),
-                url: format!("{}/commit/abcdef1234567890", REPO_URL),
+                url: format!("{}/commit/abc1234def567890", REPO_URL),
                 aliases: vec!["cycle-tagged".to_string()],
             }],
         );
 
         assert!(markdown.contains("| Step | Receipt | Commit | Also |"));
-        assert!(markdown.contains("| process-merge | [`abc1234`](https://github.com/EvaLok/schema-org-json-ld/commit/abcdef1234567890) | state(process-merge): merged PR #1 [cycle 198] | cycle-tagged |"));
+        assert!(markdown.contains("| process-merge | [`abc1234`](https://github.com/EvaLok/schema-org-json-ld/commit/abc1234def567890) | state(process-merge): merged PR #1 [cycle 198] | cycle-tagged |"));
     }
 
     #[test]
@@ -555,9 +555,10 @@ mod tests {
     }
 
     #[test]
-    fn deduplication_handles_synthetic_triple_match() {
-        // This covers the deduplication priority algorithm directly. The parser
-        // cannot produce three labels from a single commit subject.
+    /// Algorithmic boundary test: the parser can only emit at most two matches
+    /// for a commit subject in production, but the deduplication priority logic
+    /// should still behave predictably if given three matches directly.
+    fn deduplication_algorithmic_boundary_triple_match() {
         let entries = deduplicate_receipts(vec![
             ReceiptMatch {
                 full_sha: "abcdef1234567890".to_string(),

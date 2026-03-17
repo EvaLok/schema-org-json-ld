@@ -1142,7 +1142,34 @@ mod tests {
     }
 
     #[test]
-    fn compute_safe_advance_handles_docs_only_and_stops_on_unreviewed_code_prs() {
+    fn code_pr_classification_expects_reviews() {
+        assert!(PrClassification::Code.expects_reviews());
+    }
+
+    #[test]
+    fn compute_safe_advance_advances_reviewed_code_prs() {
+        let checked_cycles = vec![266];
+        let pull_requests = vec![sample_pr(1288, 266, PrClassification::Code, 1)];
+
+        assert_eq!(
+            compute_safe_advance(265, 266, &checked_cycles, &pull_requests, &BTreeSet::new()),
+            266
+        );
+    }
+
+    #[test]
+    fn compute_safe_advance_blocks_unreviewed_code_prs() {
+        let checked_cycles = vec![266];
+        let pull_requests = vec![sample_pr(1288, 266, PrClassification::Code, 0)];
+
+        assert_eq!(
+            compute_safe_advance(265, 266, &checked_cycles, &pull_requests, &BTreeSet::new()),
+            265
+        );
+    }
+
+    #[test]
+    fn compute_safe_advance_allows_docs_without_reviews_but_blocks_unreviewed_code_prs() {
         let checked_cycles = vec![266, 267];
         let pull_requests = vec![
             sample_pr(1284, 266, PrClassification::Docs, 0),
