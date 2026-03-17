@@ -3989,8 +3989,10 @@
     {
       "dispatched_at": "2026-03-17T16:57:13Z",
       "issue": 1421,
+      "merged_at": "2026-03-17T18:21:36Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1422,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 291 end-of-cycle review"
     }
   ],
@@ -4127,7 +4129,8 @@
     271,
     273,
     275,
-    277
+    277,
+    281
   ],
   "blockers": [
     {
@@ -4192,12 +4195,12 @@
     "closed_without_merge": 5,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#1421 [Cycle Review] Cycle 291 end-of-cycle review (cycle 291)",
-    "dispatch_to_pr_rate": "98.4%",
-    "in_flight": 1,
-    "merged": 429,
-    "pr_merge_rate": "98.8%",
-    "produced_pr": 434,
-    "resolved": 440,
+    "dispatch_to_pr_rate": "98.6%",
+    "in_flight": 0,
+    "merged": 430,
+    "pr_merge_rate": "98.9%",
+    "produced_pr": 435,
+    "resolved": 441,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 441
@@ -4291,7 +4294,7 @@
       },
       "audit_processed": {
         "cadence": "after processing audit issues",
-        "last_refreshed": "cycle 287"
+        "last_refreshed": "cycle 292"
       },
       "blockers": {
         "cadence": "after blocker state changes",
@@ -4299,15 +4302,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 291"
+        "last_refreshed": "cycle 292"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 291"
+        "last_refreshed": "cycle 292"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 291"
+        "last_refreshed": "cycle 292"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
@@ -6866,13 +6869,17 @@
         "note": "STABILIZATION (ADR 0011): 8 findings. Actioned: F6 state-integrity (cleared stale completed_at, commit pending), F7 state-integrity (advanced review_events_verified_through_cycle to 290). Deferred: F1 code-change-quality (fixture SHA realism, tool crate, blocked by stabilization), F2 pr-review-quality (formal review objects), F3 receipt-integrity (receipt table completeness), F4 worklog-accuracy (state block timing), F5 worklog-accuracy (next-steps referencing merged items), F8 journal-quality (auditable commitments)."
       },
       {
-        "cycle": 291,
-        "finding_count": 5,
-        "complacency_score": 4,
         "actioned": 0,
+        "categories": [
+          "worklog-accuracy",
+          "state-integrity",
+          "process-integrity"
+        ],
+        "complacency_score": 4,
+        "cycle": 291,
         "deferred": 5,
+        "finding_count": 5,
         "ignored": 0,
-        "categories": ["worklog-accuracy", "state-integrity", "process-integrity"],
         "note": "STABILIZATION (ADR 0011): 5 findings from cycle 291 review. All deferred per observation mode. F1 worklog-accuracy: Phase 2 completeness overstated (fixture-realism defect in cycle-receipts item 2 unresolved). F2 worklog-accuracy: Issues processed None despite 2 issues closed (write-entry --auto-issues not used). F3 worklog-accuracy: Current state block stale (pipeline/metric values from earlier snapshot). F4 state-integrity: review_agent.history commit pending language stale. F5 process-integrity: Local --ours merge dropped state change (later restored)."
       }
     ],
