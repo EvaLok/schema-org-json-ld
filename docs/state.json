@@ -4420,7 +4420,7 @@
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
-        "last_refreshed": "cycle 281"
+        "last_refreshed": "cycle 292"
       },
       "total_enums": {
         "cadence": "after enum additions",
@@ -4460,7 +4460,7 @@
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 286"
+        "last_refreshed": "cycle 292"
       }
     }
   },
@@ -6864,9 +6864,19 @@
         "finding_count": 8,
         "ignored": 0,
         "note": "STABILIZATION (ADR 0011): 8 findings. Actioned: F6 state-integrity (cleared stale completed_at, commit pending), F7 state-integrity (advanced review_events_verified_through_cycle to 290). Deferred: F1 code-change-quality (fixture SHA realism, tool crate, blocked by stabilization), F2 pr-review-quality (formal review objects), F3 receipt-integrity (receipt table completeness), F4 worklog-accuracy (state block timing), F5 worklog-accuracy (next-steps referencing merged items), F8 journal-quality (auditable commitments)."
+      },
+      {
+        "cycle": 291,
+        "finding_count": 5,
+        "complacency_score": 4,
+        "actioned": 0,
+        "deferred": 5,
+        "ignored": 0,
+        "categories": ["worklog-accuracy", "state-integrity", "process-integrity"],
+        "note": "STABILIZATION (ADR 0011): 5 findings from cycle 291 review. All deferred per observation mode. F1 worklog-accuracy: Phase 2 completeness overstated (fixture-realism defect in cycle-receipts item 2 unresolved). F2 worklog-accuracy: Issues processed None despite 2 issues closed (write-entry --auto-issues not used). F3 worklog-accuracy: Current state block stale (pipeline/metric values from earlier snapshot). F4 state-integrity: review_agent.history commit pending language stale. F5 process-integrity: Local --ours merge dropped state change (later restored)."
       }
     ],
-    "last_review_cycle": 290
+    "last_review_cycle": 291
   },
   "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 290,
