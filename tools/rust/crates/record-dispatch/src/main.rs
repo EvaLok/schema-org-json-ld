@@ -1,8 +1,8 @@
 use clap::Parser;
 use record_dispatch::{
     apply_dispatch_patch, build_dispatch_patch, concurrency_warning_message,
-    dispatch_commit_message, enforce_pipeline_gate, resolve_model, CommandRunner,
-    PipelineGateError, ProcessRunner,
+    dispatch_commit_message, enforce_pipeline_gate, resolve_model,
+    update_review_dispatch_tracking, CommandRunner, PipelineGateError, ProcessRunner,
 };
 use state_schema::{
     commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
@@ -25,9 +25,9 @@ struct Cli {
     #[arg(long)]
     model: Option<String>,
 
-    /// Bypass the pipeline gate for emergency recovery only
+    /// Bypass pipeline gate for review agent dispatch only. Logged in receipts.
     #[arg(long)]
-    skip_pipeline_gate: bool,
+    review_dispatch: bool,
 
     /// Repository root path
     #[arg(long, default_value = ".")]
@@ -52,8 +52,7 @@ fn run_with_runner(
     runner: &dyn CommandRunner,
     warn: &mut dyn FnMut(&str),
 ) -> Result<(), String> {
-    let pipeline_warning = match enforce_pipeline_gate(&cli.repo_root, cli.skip_pipeline_gate, runner)
-    {
+    let pipeline_warning = match enforce_pipeline_gate(&cli.repo_root, cli.review_dispatch, runner) {
         Ok(warning) => warning,
         Err(PipelineGateError::ExecutionFailed(detail)) => {
             eprintln!("pipeline-check execution error: {detail}");
@@ -70,6 +69,11 @@ fn run_with_runner(
 
     let model = resolve_model(cli.model.as_deref(), &cli.repo_root)?;
     let mut state_value = read_state_value(&cli.repo_root)?;
+    let review_dispatch_warning =
+        update_review_dispatch_tracking(&mut state_value, cli.review_dispatch)?;
+    if let Some(warning) = review_dispatch_warning.as_deref() {
+        warn(warning);
+    }
     let dispatched_at = current_utc_timestamp();
     let current_cycle = current_cycle_from_state(&cli.repo_root).map_err(|error| {
         if error == "missing /cycle_phase/cycle or /last_cycle/number in state.json" {
@@ -163,7 +167,8 @@ mod tests {
         assert!(help.contains("--issue"));
         assert!(help.contains("--title"));
         assert!(help.contains("--model"));
-        assert!(help.contains("--skip-pipeline-gate"));
+        assert!(help.contains("--review-dispatch"));
+        assert!(!help.contains("--skip-pipeline-gate"));
         assert!(help.contains("--repo-root"));
     }
 
@@ -211,7 +216,7 @@ mod tests {
             issue: 602,
             title: "Example dispatch".to_string(),
             model: Some("gpt-5.4".to_string()),
-            skip_pipeline_gate: true,
+            review_dispatch: true,
             repo_root: repo.path().to_path_buf(),
         })
         .expect("dispatch should succeed");
@@ -271,7 +276,7 @@ mod tests {
             issue: 602,
             title: "Example dispatch".to_string(),
             model: Some("gpt-5.4".to_string()),
-            skip_pipeline_gate: true,
+            review_dispatch: true,
             repo_root: repo.path().to_path_buf(),
         })
         .expect("dispatch should succeed");
@@ -304,7 +309,7 @@ mod tests {
             issue: 602,
             title: "Example dispatch".to_string(),
             model: Some("gpt-5.4".to_string()),
-            skip_pipeline_gate: true,
+            review_dispatch: true,
             repo_root: repo.path().to_path_buf(),
         })
         .expect("dispatch should succeed");
@@ -334,7 +339,7 @@ mod tests {
             issue: 602,
             title: "Example dispatch".to_string(),
             model: Some("gpt-5.4".to_string()),
-            skip_pipeline_gate: true,
+            review_dispatch: true,
             repo_root: repo.path().to_path_buf(),
         })
         .expect("missing worklog should only warn");
@@ -365,7 +370,7 @@ mod tests {
                 issue: 602,
                 title: "Example dispatch".to_string(),
                 model: Some("gpt-5.4".to_string()),
-                skip_pipeline_gate: false,
+                review_dispatch: false,
                 repo_root: repo.path().to_path_buf(),
             },
             &MockRunner::with_exit_code(Some(1)),
@@ -394,7 +399,7 @@ mod tests {
                 issue: 602,
                 title: "Example dispatch".to_string(),
                 model: Some("gpt-5.4".to_string()),
-                skip_pipeline_gate: false,
+                review_dispatch: false,
                 repo_root: repo.path().to_path_buf(),
             },
             &MockRunner::with_exit_code(Some(0)),
@@ -415,7 +420,7 @@ mod tests {
     }
 
     #[test]
-    fn skip_pipeline_gate_bypasses_check_with_warning() {
+    fn review_dispatch_bypasses_check_with_warning() {
         let repo = TempRepo::new();
         repo.init();
         let mut warnings = Vec::new();
@@ -426,22 +431,26 @@ mod tests {
                 issue: 602,
                 title: "Example dispatch".to_string(),
                 model: Some("gpt-5.4".to_string()),
-                skip_pipeline_gate: true,
+                review_dispatch: true,
                 repo_root: repo.path().to_path_buf(),
             },
             &runner,
             &mut |warning| warnings.push(warning.to_string()),
         )
-        .expect("skip flag should bypass pipeline gate");
+        .expect("review-dispatch flag should bypass pipeline gate");
 
         assert_eq!(
             warnings,
-            vec![record_dispatch::SKIP_PIPELINE_GATE_WARNING.to_string()]
+            vec![record_dispatch::REVIEW_DISPATCH_WARNING.to_string()]
         );
         assert_eq!(runner.call_count(), 0);
         let state = repo.read_state();
         assert_eq!(
             state.pointer("/copilot_metrics/in_flight"),
+            Some(&serde_json::json!(1))
+        );
+        assert_eq!(
+            state.pointer("/review_dispatch_consecutive"),
             Some(&serde_json::json!(1))
         );
     }
@@ -457,7 +466,7 @@ mod tests {
                 issue: 602,
                 title: "Example dispatch".to_string(),
                 model: Some("gpt-5.4".to_string()),
-                skip_pipeline_gate: false,
+                review_dispatch: false,
                 repo_root: repo.path().to_path_buf(),
             },
             &MockRunner::with_error("missing bash"),
@@ -470,6 +479,67 @@ mod tests {
             record_dispatch::PIPELINE_GATE_FAILURE_MESSAGE.to_string()
         );
         assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn review_dispatch_warns_after_three_consecutive_bypasses() {
+        let repo = TempRepo::new();
+        repo.init();
+        repo.set_review_dispatch_consecutive(2);
+        let mut warnings = Vec::new();
+        let runner = MockRunner::with_error("runner should not be called when bypassing");
+
+        run_with_runner(
+            Cli {
+                issue: 602,
+                title: "Example dispatch".to_string(),
+                model: Some("gpt-5.4".to_string()),
+                review_dispatch: true,
+                repo_root: repo.path().to_path_buf(),
+            },
+            &runner,
+            &mut |warning| warnings.push(warning.to_string()),
+        )
+        .expect("review dispatch should succeed");
+
+        assert_eq!(runner.call_count(), 0);
+        assert!(warnings.contains(&record_dispatch::REVIEW_DISPATCH_WARNING.to_string()));
+        assert!(warnings.contains(&record_dispatch::review_dispatch_consecutive_warning(3)));
+        let state = repo.read_state();
+        assert_eq!(
+            state.pointer("/review_dispatch_consecutive"),
+            Some(&serde_json::json!(3))
+        );
+    }
+
+    #[test]
+    fn non_review_dispatch_resets_consecutive_bypass_counter() {
+        let repo = TempRepo::new();
+        repo.init();
+        repo.set_review_dispatch_consecutive(2);
+        let mut warnings = Vec::new();
+        let runner = MockRunner::with_exit_code(Some(0));
+
+        run_with_runner(
+            Cli {
+                issue: 602,
+                title: "Example dispatch".to_string(),
+                model: Some("gpt-5.4".to_string()),
+                review_dispatch: false,
+                repo_root: repo.path().to_path_buf(),
+            },
+            &runner,
+            &mut |warning| warnings.push(warning.to_string()),
+        )
+        .expect("non-review dispatch should succeed");
+
+        assert_eq!(runner.call_count(), 1);
+        assert!(warnings.is_empty());
+        let state = repo.read_state();
+        assert_eq!(
+            state.pointer("/review_dispatch_consecutive"),
+            Some(&serde_json::json!(0))
+        );
     }
 
     struct MockRunner {
@@ -619,6 +689,16 @@ mod tests {
                     .expect("state file should be readable"),
             )
             .expect("state file should parse")
+        }
+
+        fn set_review_dispatch_consecutive(&self, count: u64) {
+            let mut state = self.read_state();
+            state["review_dispatch_consecutive"] = serde_json::json!(count);
+            fs::write(
+                self.path().join("docs/state.json"),
+                serde_json::to_string_pretty(&state).expect("state should serialize"),
+            )
+            .expect("state file should be updated");
         }
 
         fn write_worklog(&self, date: &str, name: &str, in_flight: i64) -> PathBuf {

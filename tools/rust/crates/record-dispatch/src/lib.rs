@@ -10,8 +10,8 @@ use std::{
 
 pub const PIPELINE_GATE_FAILURE_MESSAGE: &str =
     "Cannot dispatch: pipeline-check failed. Fix failures before dispatching.";
-pub const SKIP_PIPELINE_GATE_WARNING: &str =
-    "WARNING: pipeline gate bypassed via --skip-pipeline-gate";
+pub const REVIEW_DISPATCH_WARNING: &str =
+    "Pipeline gate bypassed for review dispatch (--review-dispatch)";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PipelineGateError {
@@ -46,11 +46,11 @@ impl CommandRunner for ProcessRunner {
 
 pub fn enforce_pipeline_gate(
     repo_root: &Path,
-    skip_pipeline_gate: bool,
+    review_dispatch: bool,
     runner: &dyn CommandRunner,
 ) -> Result<Option<&'static str>, PipelineGateError> {
-    if skip_pipeline_gate {
-        return Ok(Some(SKIP_PIPELINE_GATE_WARNING));
+    if review_dispatch {
+        return Ok(Some(REVIEW_DISPATCH_WARNING));
     }
 
     let execution = runner
@@ -61,6 +61,52 @@ pub fn enforce_pipeline_gate(
         Some(0) => Ok(None),
         _ => Err(PipelineGateError::Failed),
     }
+}
+
+pub fn update_review_dispatch_tracking(
+    state: &mut Value,
+    review_dispatch: bool,
+) -> Result<Option<String>, String> {
+    let previous = read_review_dispatch_consecutive(state)?;
+    let next = if review_dispatch {
+        previous
+            .checked_add(1)
+            .ok_or_else(|| "review_dispatch_consecutive overflowed u64".to_string())?
+    } else {
+        0
+    };
+
+    let state_object = state
+        .as_object_mut()
+        .ok_or_else(|| "docs/state.json root must be an object".to_string())?;
+    state_object.insert("review_dispatch_consecutive".to_string(), json!(next));
+
+    if review_dispatch && next >= 3 {
+        return Ok(Some(review_dispatch_consecutive_warning(next)));
+    }
+
+    Ok(None)
+}
+
+fn read_review_dispatch_consecutive(state: &Value) -> Result<u64, String> {
+    match state.get("review_dispatch_consecutive") {
+        None => Ok(0),
+        Some(Value::Number(value)) => value.as_u64().ok_or_else(|| {
+            "docs/state.json field review_dispatch_consecutive must be a non-negative integer"
+                .to_string()
+        }),
+        Some(_) => Err(
+            "docs/state.json field review_dispatch_consecutive must be a non-negative integer"
+                .to_string(),
+        ),
+    }
+}
+
+pub fn review_dispatch_consecutive_warning(count: u64) -> String {
+    format!(
+        "review-dispatch bypass used {} consecutive cycles — investigate underlying pipeline failure.",
+        count
+    )
 }
 
 pub fn concurrency_warning_message(in_flight: i64) -> String {
@@ -589,6 +635,58 @@ mod tests {
     fn resolve_model_rejects_empty_cli_override() {
         let error = resolve_model(Some("   "), &repo_root()).expect_err("empty override must fail");
         assert_eq!(error, "--model must not be empty");
+    }
+
+    #[test]
+    fn update_review_dispatch_tracking_increments_missing_counter() {
+        let mut state = sample_state();
+
+        let warning = update_review_dispatch_tracking(&mut state, true)
+            .expect("tracking should update cleanly");
+
+        assert_eq!(warning, None);
+        assert_eq!(state["review_dispatch_consecutive"], json!(1));
+    }
+
+    #[test]
+    fn update_review_dispatch_tracking_resets_counter_without_review_dispatch() {
+        let mut state = sample_state();
+        state["review_dispatch_consecutive"] = json!(2);
+
+        let warning = update_review_dispatch_tracking(&mut state, false)
+            .expect("tracking should reset cleanly");
+
+        assert_eq!(warning, None);
+        assert_eq!(state["review_dispatch_consecutive"], json!(0));
+    }
+
+    #[test]
+    fn update_review_dispatch_tracking_warns_on_third_consecutive_bypass() {
+        let mut state = sample_state();
+        state["review_dispatch_consecutive"] = json!(2);
+
+        let warning = update_review_dispatch_tracking(&mut state, true)
+            .expect("tracking should update cleanly");
+
+        assert_eq!(state["review_dispatch_consecutive"], json!(3));
+        assert_eq!(
+            warning,
+            Some(review_dispatch_consecutive_warning(3))
+        );
+    }
+
+    #[test]
+    fn update_review_dispatch_tracking_rejects_invalid_counter_type() {
+        let mut state = sample_state();
+        state["review_dispatch_consecutive"] = json!("oops");
+
+        let error = update_review_dispatch_tracking(&mut state, true)
+            .expect_err("invalid counter type must fail closed");
+
+        assert_eq!(
+            error,
+            "docs/state.json field review_dispatch_consecutive must be a non-negative integer"
+        );
     }
 
     #[test]
