@@ -455,13 +455,13 @@ mod tests {
                 step: "process-review".to_string(),
                 receipt: "abcdef1".to_string(),
                 commit: "state(process-review): consumed cycle 197 review".to_string(),
-                url: format!("{}/commit/abcdef1", REPO_URL),
+                url: format!("{}/commit/abcdef1234567890", REPO_URL),
                 aliases: Vec::new(),
             }],
         );
 
         assert!(markdown.contains("## Commit receipts — Cycle 198"));
-        assert!(markdown.contains("| process-review | [`abcdef1`](https://github.com/EvaLok/schema-org-json-ld/commit/abcdef1) | state(process-review): consumed cycle 197 review |"));
+        assert!(markdown.contains("| process-review | [`abcdef1`](https://github.com/EvaLok/schema-org-json-ld/commit/abcdef1234567890) | state(process-review): consumed cycle 197 review |"));
         assert!(markdown.contains("1 receipt collected."));
     }
 

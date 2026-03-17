@@ -32,12 +32,12 @@
 
 ## 4. [state-integrity] Cycle-scoped state was marked refreshed in cycle 289 even though stale values were carried forward
 
-**File**: docs/state.json:4184-4299
+**File**: docs/state.json:4175-4289
 **Evidence**:
-- `cycle_phase` now says cycle 290 is in `work`, but `completed_at` is still `2026-03-16T22:39:05Z`, older than the current cycle and older than `phase_entered_at` (`2026-03-17T14:25:19Z`) at lines 4184-4189.
+- `cycle_phase` says cycle 289 is in `close_out`, but `completed_at` is still `2026-03-16T22:39:05Z`, older than the current cycle and older than `phase_entered_at` (`2026-03-17T08:51:57Z`) at lines 4175-4179.
 - The stale timestamp was already carried through cycle start: commit `69a543f state(cycle-start)` changed the phase from `complete` to `work` without clearing `completed_at`, so cycle 289 refreshed the phase marker while preserving an out-of-phase completion timestamp.
-- `eva_input_issues.closed_this_cycle` still contains `[1350]` at lines 4255-4257, but GitHub issue `#1350` was closed on `2026-03-16T12:33:26Z`, before cycle 289 began.
-- The field inventory nevertheless marks `eva_input_issues.closed_this_cycle` as refreshed in cycle 289 at lines 4297-4299, even though the cycle-scoped list was not reset to this cycle's reality.
+- `eva_input_issues.closed_this_cycle` still contains `[1350]` at lines 4246-4248, but GitHub issue `#1350` was closed on `2026-03-16T12:33:26Z`, before cycle 289 began.
+- The field inventory nevertheless marks `eva_input_issues.closed_this_cycle` as refreshed in cycle 289 at lines 4287-4289, even though the cycle-scoped list was not reset to this cycle's reality.
 **Recommendation**: Treat cycle-scoped fields as data that must be reset, not just re-labeled. Close-out/state-invariant tooling should fail when `last_refreshed` advances for stale `closed_this_cycle` data or when `cycle_phase.completed_at` conflicts with the active phase.
 
 ## Complacency score

@@ -3937,7 +3937,8 @@
       "dispatched_at": "2026-03-17T06:31:51Z",
       "issue": 1405,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "note": "PR #1407 closed due to merge conflicts. Redispatched as #1413.",
+      "status": "failed",
       "title": "Phase 2 Batch 2: write-entry + cycle-complete + transition fixes"
     },
     {
@@ -3968,9 +3969,18 @@
     {
       "dispatched_at": "2026-03-17T08:55:54Z",
       "issue": 1415,
+      "merged_at": "2026-03-17T14:51:02Z",
+      "model": "gpt-5.4",
+      "pr": 1416,
+      "status": "merged",
+      "title": "Cycle 289 review"
+    },
+    {
+      "dispatched_at": "2026-03-17T14:57:37Z",
+      "issue": 1418,
       "model": "gpt-5.4",
       "status": "in_flight",
-      "title": "Cycle 289 review"
+      "title": "Cycle 290 review"
     }
   ],
   "audit_dropped": [
@@ -4169,23 +4179,23 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 5,
-    "closed_without_pr": 3,
-    "dispatch_log_latest": "#1415 Cycle 289 review (cycle 289)",
+    "closed_without_pr": 4,
+    "dispatch_log_latest": "#1418 Cycle 290 review (cycle 290)",
     "dispatch_to_pr_rate": "98.2%",
-    "in_flight": 3,
-    "merged": 426,
+    "in_flight": 2,
+    "merged": 427,
     "pr_merge_rate": "98.8%",
-    "produced_pr": 431,
-    "resolved": 436,
+    "produced_pr": 432,
+    "resolved": 438,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 439
+    "total_dispatches": 440
   },
   "cycle_phase": {
-    "completed_at": "2026-03-16T22:39:05Z",
-    "cycle": 290,
+    "completed_at": null,
+    "cycle": 291,
     "phase": "work",
-    "phase_entered_at": "2026-03-17T14:25:19Z"
+    "phase_entered_at": "2026-03-17T16:23:59Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -4291,12 +4301,12 @@
       },
       "cycle_phase": {
         "cadence": "every phase transition",
-        "last_refreshed": "cycle 290",
+        "last_refreshed": "cycle 291",
         "notes": "Tracks cycle, phase, phase_entered_at, and completed_at when phase is complete."
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 289"
+        "last_refreshed": "cycle 290"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -4304,15 +4314,15 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 290"
+        "last_refreshed": "cycle 291"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 289"
+        "last_refreshed": "cycle 290"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 290"
+        "last_refreshed": "cycle 291"
       },
       "last_tool_audit_cycle": {
         "cadence": "every 10 cycles",
@@ -4320,7 +4330,7 @@
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 290"
+        "last_refreshed": "cycle 291"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -4328,11 +4338,11 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 289"
+        "last_refreshed": "cycle 290"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 290"
+        "last_refreshed": "cycle 291"
       },
       "project_mode": {
         "cadence": "when mode changes (stabilization entry/exit)",
@@ -4340,7 +4350,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 289"
+        "last_refreshed": "cycle 290"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -4364,11 +4374,11 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 289"
+        "last_refreshed": "cycle 290"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 289"
+        "last_refreshed": "cycle 290"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -4376,7 +4386,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 289"
+        "last_refreshed": "cycle 290"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -4445,13 +4455,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 37,
-    "issue": 1417,
-    "number": 290,
-    "summary": "Merged Batch 1 (PR #1406). Review PR #1409 merged, cycle 288 review processed (3/5). Redispatched Batch 2 (#1413) after conflict. Dispatched Batch 3 (#1411). Pipeline PASS.",
-    "timestamp": "2026-03-17T14:25:19Z"
+    "duration_minutes": 24,
+    "issue": 1420,
+    "number": 291,
+    "summary": "Merged review PR 1416 (cycle 289 review, 3/5). Merged Batch 3 PR 1412 (test coverage). Requested revision on Batch 2 PR 1414 (cumulative array bug). Copilot rebase in progress.",
+    "timestamp": "2026-03-17T16:23:58Z"
   },
-  "last_eva_comment_check": "2026-03-17T14:25:19Z",
+  "last_eva_comment_check": "2026-03-17T16:23:58Z",
   "last_tool_audit_cycle": 263,
   "open_questions_for_eva": [
     1398
@@ -4462,7 +4472,7 @@
     "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
     "started_at": "cycle 199"
   },
-  "previous_cycle_issue": 1410,
+  "previous_cycle_issue": 1417,
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
     "clean_cycle_counter": 0,
@@ -6827,12 +6837,29 @@
         "finding_count": 4,
         "ignored": 0,
         "note": "Stabilization observation mode (ADR 0011). All 4 findings deferred: receipt-integrity, worklog-accuracy, journal-quality, state-integrity."
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "code-change-quality",
+          "pr-review-quality",
+          "receipt-integrity",
+          "worklog-accuracy",
+          "state-integrity",
+          "journal-quality"
+        ],
+        "complacency_score": 4,
+        "cycle": 290,
+        "deferred": 6,
+        "finding_count": 8,
+        "ignored": 0,
+        "note": "STABILIZATION (ADR 0011): 8 findings. Actioned: F6 state-integrity (cleared stale completed_at, commit pending), F7 state-integrity (advanced review_events_verified_through_cycle to 290). Deferred: F1 code-change-quality (fixture SHA realism, tool crate, blocked by stabilization), F2 pr-review-quality (formal review objects), F3 receipt-integrity (receipt table completeness), F4 worklog-accuracy (state block timing), F5 worklog-accuracy (next-steps referencing merged items), F8 journal-quality (auditable commitments)."
       }
     ],
-    "last_review_cycle": 289
+    "last_review_cycle": 290
   },
-  "review_dispatch_consecutive": 1,
-  "review_events_verified_through_cycle": 289,
+  "review_dispatch_consecutive": 0,
+  "review_events_verified_through_cycle": 290,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
