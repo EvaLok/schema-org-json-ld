@@ -3962,6 +3962,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Phase 2 Batch 3 tests"
+    },
+    {
+      "dispatched_at": "2026-03-17T08:55:54Z",
+      "issue": 1415,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 289 review"
     }
   ],
   "audit_dropped": [
@@ -4161,22 +4168,22 @@
   "copilot_metrics": {
     "closed_without_merge": 5,
     "closed_without_pr": 3,
-    "dispatch_log_latest": "#1411 Phase 2 Batch 3 tests (cycle 289)",
-    "dispatch_to_pr_rate": "98.2%",
-    "in_flight": 3,
+    "dispatch_log_latest": "#1415 Cycle 289 review (cycle 289)",
+    "dispatch_to_pr_rate": "97.9%",
+    "in_flight": 4,
     "merged": 425,
     "pr_merge_rate": "98.8%",
     "produced_pr": 430,
     "resolved": 435,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 438
+    "total_dispatches": 439
   },
   "cycle_phase": {
     "completed_at": "2026-03-16T22:39:05Z",
     "cycle": 289,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-17T08:51:57Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-17T08:55:54Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -6806,7 +6813,7 @@
     ],
     "last_review_cycle": 288
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 289,
   "schema_status": {
     "directory_layout": {
