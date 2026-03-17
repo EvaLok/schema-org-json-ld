@@ -811,30 +811,6 @@ fn derive_issue_processed_entries(cycle: u64, state: &StateJson) -> Result<Vec<S
         );
     }
 
-    for qc_issue in state
-        .qc_processed
-        .iter()
-        .filter_map(|value| u64::try_from(*value).ok())
-    {
-        push_issue_processed_entry(
-            &mut issues,
-            &mut seen,
-            format_named_issue_processed_entry("QC", qc_issue, Some("Processed this cycle")),
-        );
-    }
-
-    for audit_issue in state
-        .audit_processed
-        .iter()
-        .filter_map(|value| u64::try_from(*value).ok())
-    {
-        push_issue_processed_entry(
-            &mut issues,
-            &mut seen,
-            format_named_issue_processed_entry("audit", audit_issue, Some("Processed this cycle")),
-        );
-    }
-
     Ok(issues)
 }
 
@@ -4304,8 +4280,6 @@ mod tests {
                 "#43: Audit linked this cycle",
                 "audit #315: Audit linked this cycle",
                 "#99: Eva input closed this cycle",
-                "QC #171: Processed this cycle",
-                "audit #400: Processed this cycle",
                 "Processed review #77",
             ]
         );
@@ -4315,10 +4289,10 @@ mod tests {
         assert!(content.contains("- [QC #160](https://github.com/EvaLok/schema-org-json-ld-qc/issues/160): Merged this cycle"));
         assert!(content.contains("- [audit #315](https://github.com/EvaLok/schema-org-json-ld-audit/issues/315): Audit linked this cycle"));
         assert!(content.contains("- [#99](https://github.com/EvaLok/schema-org-json-ld/issues/99): Eva input closed this cycle"));
-        assert!(content.contains("- [QC #171](https://github.com/EvaLok/schema-org-json-ld-qc/issues/171): Processed this cycle"));
-        assert!(content.contains("- [audit #400](https://github.com/EvaLok/schema-org-json-ld-audit/issues/400): Processed this cycle"));
+        assert!(!content.contains("[QC #171]"));
+        assert!(!content.contains("[audit #400]"));
         let auto_index = content
-            .find("- [audit #400](https://github.com/EvaLok/schema-org-json-ld-audit/issues/400): Processed this cycle")
+            .find("- [audit #315](https://github.com/EvaLok/schema-org-json-ld-audit/issues/315): Audit linked this cycle")
             .unwrap();
         let manual_index = content
             .find("- Processed review [#77](https://github.com/EvaLok/schema-org-json-ld/issues/77)")
