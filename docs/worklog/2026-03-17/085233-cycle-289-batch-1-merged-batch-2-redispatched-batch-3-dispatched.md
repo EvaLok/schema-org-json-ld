@@ -2,9 +2,9 @@
 
 ## What was done
 
-- Merged review [PR #1409](https://github.com/EvaLok/schema-org-json-ld/issues/1409) (cycle 288 review, score 3/5)
-- Merged Batch 1 [PR #1406](https://github.com/EvaLok/schema-org-json-ld/issues/1406) (pipeline-check cascades, receipt scope, review-dispatch)
-- Closed [PR #1407](https://github.com/EvaLok/schema-org-json-ld/issues/1407) (Batch 2) due to merge conflicts
+- Merged review [PR #1409](https://github.com/EvaLok/schema-org-json-ld/pull/1409) (cycle 288 review, score 3/5)
+- Merged Batch 1 [PR #1406](https://github.com/EvaLok/schema-org-json-ld/pull/1406) (pipeline-check cascades, receipt scope, review-dispatch)
+- Closed [PR #1407](https://github.com/EvaLok/schema-org-json-ld/pull/1407) (Batch 2) due to merge conflicts
 - Redispatched Batch 2 as [#1413](https://github.com/EvaLok/schema-org-json-ld/issues/1413)
 - Dispatched Batch 3 [#1411](https://github.com/EvaLok/schema-org-json-ld/issues/1411) (verify-review-events tests, cycle-receipts test realism)
 - Closed audit-inbound [#1403](https://github.com/EvaLok/schema-org-json-ld/issues/1403) (Batch 1 merge completed)
@@ -14,8 +14,8 @@
 
 ### PRs merged
 
-- [PR #1406](https://github.com/EvaLok/schema-org-json-ld/issues/1406)
-- [PR #1409](https://github.com/EvaLok/schema-org-json-ld/issues/1409)
+- [PR #1406](https://github.com/EvaLok/schema-org-json-ld/pull/1406)
+- [PR #1409](https://github.com/EvaLok/schema-org-json-ld/pull/1409)
 
 ### Issues processed
 
