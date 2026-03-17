@@ -141,11 +141,7 @@ fn detect_stale_close_out(
         .with_timezone(&Utc);
 
     if now.signed_duration_since(entered_at).num_seconds() >= threshold_secs {
-        Ok(Some(
-            entered_at
-                .format("%Y-%m-%dT%H:%M:%SZ")
-                .to_string(),
-        ))
+        Ok(Some(entered_at.format("%Y-%m-%dT%H:%M:%SZ").to_string()))
     } else {
         Ok(None)
     }
@@ -284,9 +280,14 @@ fn recover_stale_close_out(
     stale_issue: Option<u64>,
     entered_at: &str,
 ) -> Result<(), String> {
-    recover_stale_close_out_with(repo_root, state, cycle, stale_issue, entered_at, |issue, cycle, entered_at| {
-        close_stale_cycle_issue(issue, cycle, entered_at)
-    })
+    recover_stale_close_out_with(
+        repo_root,
+        state,
+        cycle,
+        stale_issue,
+        entered_at,
+        close_stale_cycle_issue,
+    )
 }
 
 fn recover_stale_close_out_with<F>(
@@ -1173,9 +1174,13 @@ mod tests {
                 std::process::id(),
                 unique
             ));
-            fs::create_dir_all(path.join("docs")).expect("failed to create temp repo docs directory");
-            fs::write(path.join("docs/state.json"), format!("{}\n", minimal_state_json()))
-                .expect("failed to write state.json");
+            fs::create_dir_all(path.join("docs"))
+                .expect("failed to create temp repo docs directory");
+            fs::write(
+                path.join("docs/state.json"),
+                format!("{}\n", minimal_state_json()),
+            )
+            .expect("failed to write state.json");
 
             run_git(&path, &["init"]);
             run_git(&path, &["config", "user.name", "Cycle Start Tests"]);

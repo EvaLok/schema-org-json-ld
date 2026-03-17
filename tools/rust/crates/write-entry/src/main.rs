@@ -1,6 +1,7 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use clap::{Parser, Subcommand};
 use serde::{Deserialize, Deserializer};
+use serde_json::Value;
 use state_schema::{current_cycle_from_state, read_state_value, AgentSession, StateJson};
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
@@ -344,13 +345,15 @@ fn resolve_repo_path(repo_root: &Path, path: &Path) -> PathBuf {
 }
 
 fn patch_pipeline_status_line(content: &str, status: &str) -> Option<String> {
-    let start = content.match_indices(PIPELINE_STATUS_PREFIX).find_map(|(index, _)| {
-        if index == 0 || content.as_bytes().get(index - 1) == Some(&b'\n') {
-            Some(index)
-        } else {
-            None
-        }
-    })?;
+    let start = content
+        .match_indices(PIPELINE_STATUS_PREFIX)
+        .find_map(|(index, _)| {
+            if index == 0 || content.as_bytes().get(index - 1) == Some(&b'\n') {
+                Some(index)
+            } else {
+                None
+            }
+        })?;
     let search = &content[start..];
     let line_end = search
         .find('\n')
@@ -642,12 +645,13 @@ fn apply_worklog_auto_derivations(
         }
     }
 
+    let state = load_worklog_state(repo_root, args.auto_issues)?;
     if args.auto_issues {
-        let state = load_worklog_state(repo_root, true)?.ok_or_else(|| {
+        let state = state.as_ref().ok_or_else(|| {
             "docs/state.json not found; --auto-issues requires docs/state.json to be present"
                 .to_string()
         })?;
-        let auto_issues = derive_issue_processed_from_agent_sessions(cycle, &state)?;
+        let auto_issues = derive_issue_processed_from_state(cycle, state)?;
         input.issues_processed = merge_issue_processed(&auto_issues, &input.issues_processed);
     }
 
@@ -659,10 +663,7 @@ fn apply_worklog_auto_derivations(
             input.receipts = merge_receipts(receipts, &manual_receipts);
             let derived_prs = derive_prs_from_cycle_receipt_entries(&entries);
             input.prs_merged = merge_numbered_refs(&input.prs_merged, &derived_prs);
-            input.receipt_note = Some(
-                "Scope: all commits through cycle-complete. Docs and record-dispatch commits are structurally excluded (created post-worklog). Validated by receipt-validate at step C5.1."
-                    .to_string(),
-            );
+            input.receipt_note = Some(derive_receipt_scope_note(cycle, state.as_ref(), &entries));
         }
         Err(error) if !manual_receipts.is_empty() => {
             warnings.push(format!(
@@ -698,10 +699,7 @@ fn merge_issue_processed(existing: &[String], derived: &[String]) -> Vec<String>
     let mut merged = Vec::new();
 
     for item in existing.iter().chain(derived.iter()) {
-        let key = issue_processed_key(item);
-        if seen.insert(key) {
-            merged.push(item.clone());
-        }
+        push_issue_processed_entry(&mut merged, &mut seen, item.clone());
     }
 
     merged
@@ -716,27 +714,15 @@ fn issue_processed_key(item: &str) -> String {
     }
 }
 
-fn derive_issue_processed_from_agent_sessions(
-    cycle: u64,
-    state: &StateJson,
-) -> Result<Vec<String>, String> {
-    let state_cycle = state.cycle_phase.cycle.ok_or_else(|| {
-        "missing docs/state.json cycle_phase.cycle for --auto-issues".to_string()
-    })?;
-    if state_cycle != cycle {
-        return Err(format!(
-            "docs/state.json cycle_phase.cycle {} does not match requested cycle {} for --auto-issues",
-            state_cycle, cycle
-        ));
+fn push_issue_processed_entry(items: &mut Vec<String>, seen: &mut HashSet<String>, entry: String) {
+    let key = issue_processed_key(&entry);
+    if seen.insert(key) {
+        items.push(entry);
     }
-    let start = state
-        .cycle_phase
-        .phase_entered_at
-        .as_deref()
-        .ok_or_else(|| {
-            "missing docs/state.json cycle_phase.phase_entered_at for --auto-issues".to_string()
-        })
-        .and_then(|value| parse_timestamp(value, "docs/state.json cycle_phase.phase_entered_at"))?;
+}
+
+fn derive_issue_processed_from_state(cycle: u64, state: &StateJson) -> Result<Vec<String>, String> {
+    let start = cycle_start_from_state(cycle, state, "--auto-issues")?;
     let mut seen = HashSet::new();
     let mut issues = Vec::new();
 
@@ -744,15 +730,221 @@ fn derive_issue_processed_from_agent_sessions(
         if !agent_session_had_activity_since(session, start)? {
             continue;
         }
-        let Some(issue) = session.issue.and_then(|value| u64::try_from(value).ok()) else {
-            continue;
-        };
-        if seen.insert(issue) {
-            issues.push(format_issue_processed_entry(issue, session.title.as_deref()));
+        if let Some(issue) = session_issue_number(session)? {
+            push_issue_processed_entry(
+                &mut issues,
+                &mut seen,
+                format_issue_processed_entry(issue, session.title.as_deref()),
+            );
+        }
+        if let Some(qc_report) = agent_session_extra_u64(session, "qc_report")? {
+            push_issue_processed_entry(
+                &mut issues,
+                &mut seen,
+                format!("QC #{}: processed this cycle", qc_report),
+            );
+        }
+        if let Some(audit_inbound) = agent_session_extra_u64(session, "audit_inbound")? {
+            push_issue_processed_entry(
+                &mut issues,
+                &mut seen,
+                format!("audit #{}: processed this cycle", audit_inbound),
+            );
         }
     }
 
+    for issue in &state.eva_input_issues.closed_this_cycle {
+        let issue = positive_cycle_reference(
+            *issue,
+            "docs/state.json eva_input_issues.closed_this_cycle[]",
+        )?;
+        push_issue_processed_entry(
+            &mut issues,
+            &mut seen,
+            format!("#{}: closed this cycle", issue),
+        );
+    }
+    for issue in &state.qc_processed {
+        let issue = positive_cycle_reference(*issue, "docs/state.json qc_processed[]")?;
+        push_issue_processed_entry(
+            &mut issues,
+            &mut seen,
+            format!("QC #{}: processed this cycle", issue),
+        );
+    }
+    for issue in &state.audit_processed {
+        let issue = positive_cycle_reference(*issue, "docs/state.json audit_processed[]")?;
+        push_issue_processed_entry(
+            &mut issues,
+            &mut seen,
+            format!("audit #{}: processed this cycle", issue),
+        );
+    }
+
     Ok(issues)
+}
+
+fn cycle_start_from_state(
+    cycle: u64,
+    state: &StateJson,
+    context: &str,
+) -> Result<DateTime<Utc>, String> {
+    let state_cycle = state
+        .cycle_phase
+        .cycle
+        .ok_or_else(|| format!("missing docs/state.json cycle_phase.cycle for {}", context))?;
+    if state_cycle != cycle {
+        return Err(format!(
+            "docs/state.json cycle_phase.cycle {} does not match requested cycle {} for {}",
+            state_cycle, cycle, context
+        ));
+    }
+    state
+        .cycle_phase
+        .phase_entered_at
+        .as_deref()
+        .ok_or_else(|| {
+            format!(
+                "missing docs/state.json cycle_phase.phase_entered_at for {}",
+                context
+            )
+        })
+        .and_then(|value| parse_timestamp(value, "docs/state.json cycle_phase.phase_entered_at"))
+}
+
+fn positive_cycle_reference(value: i64, label: &str) -> Result<u64, String> {
+    if value <= 0 {
+        return Err(format!("{label} must contain positive issue numbers"));
+    }
+    Ok(value as u64)
+}
+
+fn session_issue_number(session: &AgentSession) -> Result<Option<u64>, String> {
+    session
+        .issue
+        .map(|value| positive_cycle_reference(value, "docs/state.json agent_sessions[].issue"))
+        .transpose()
+}
+
+fn agent_session_extra_u64(session: &AgentSession, key: &str) -> Result<Option<u64>, String> {
+    let Some(value) = session.extra.get(key) else {
+        return Ok(None);
+    };
+    let Some(number) = value.as_i64() else {
+        return Err(format!(
+            "docs/state.json agent_sessions[].{} must be an integer",
+            key
+        ));
+    };
+    positive_cycle_reference(number, &format!("docs/state.json agent_sessions[].{}", key)).map(Some)
+}
+
+fn derive_receipt_scope_note(
+    cycle: u64,
+    state: Option<&StateJson>,
+    entries: &[CycleReceiptJsonEntry],
+) -> String {
+    let mut scope_parts = Vec::new();
+    if let Some(mode) = state.and_then(state_project_mode) {
+        scope_parts.push(format!("{} mode", mode));
+    }
+    if let Some(phase) = state
+        .and_then(|state| state.cycle_phase.phase.as_deref())
+        .map(str::trim)
+        .filter(|phase| !phase.is_empty())
+    {
+        scope_parts.push(format!("{} phase snapshot", phase));
+    }
+    if let Some((dispatches, review_linked)) = state.and_then(|state| {
+        summarize_cycle_session_activity(cycle, state)
+            .ok()
+            .flatten()
+    }) {
+        if dispatches > 0 {
+            scope_parts.push(count_phrase(dispatches, "dispatch", "dispatches"));
+        }
+        if review_linked > 0 {
+            scope_parts.push(count_phrase(
+                review_linked,
+                "review-linked issue",
+                "review-linked issues",
+            ));
+        }
+    }
+    let merges = derive_prs_from_cycle_receipt_entries(entries).len();
+    if merges > 0 {
+        scope_parts.push(count_phrase(merges, "merge", "merges"));
+    }
+
+    let derived_scope = if scope_parts.is_empty() {
+        "cycle activity derived from receipts".to_string()
+    } else {
+        scope_parts.join(", ")
+    };
+    let tools = receipt_tools(entries);
+
+    format!(
+        "Scope: {}. Derived from {} receipt{} across {}. Validated by receipt-validate at step C5.1.",
+        derived_scope,
+        entries.len(),
+        if entries.len() == 1 { "" } else { "s" },
+        tools.join(", ")
+    )
+}
+
+fn state_project_mode(state: &StateJson) -> Option<&str> {
+    state
+        .extra
+        .get("project_mode")
+        .and_then(|value| value.get("mode"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+}
+
+fn summarize_cycle_session_activity(
+    cycle: u64,
+    state: &StateJson,
+) -> Result<Option<(usize, usize)>, String> {
+    let Ok(start) = cycle_start_from_state(cycle, state, "receipt scope note") else {
+        return Ok(None);
+    };
+    let mut dispatches = 0;
+    let mut review_linked = 0;
+
+    for session in &state.agent_sessions {
+        if !agent_session_had_activity_since(session, start)? {
+            continue;
+        }
+        dispatches += 1;
+        let status = session
+            .status
+            .as_deref()
+            .map(str::trim)
+            .unwrap_or_default()
+            .to_ascii_lowercase();
+        if status.contains("review") || agent_session_extra_u64(session, "qc_report")?.is_some() {
+            review_linked += 1;
+        }
+    }
+
+    Ok(Some((dispatches, review_linked)))
+}
+
+fn count_phrase(count: usize, singular: &str, plural: &str) -> String {
+    format!("{} {}", count, if count == 1 { singular } else { plural })
+}
+
+fn receipt_tools(entries: &[CycleReceiptJsonEntry]) -> Vec<String> {
+    let mut seen = HashSet::new();
+    let mut tools = Vec::new();
+    for entry in entries {
+        let tool = entry.tool.trim().to_string();
+        if seen.insert(tool.to_ascii_lowercase()) {
+            tools.push(tool);
+        }
+    }
+    tools
 }
 
 fn agent_session_had_activity_since(
@@ -778,13 +970,18 @@ fn agent_session_had_activity_since(
     Ok(false)
 }
 
-fn agent_session_status_changed_at(session: &AgentSession) -> Result<Option<DateTime<Utc>>, String> {
+fn agent_session_status_changed_at(
+    session: &AgentSession,
+) -> Result<Option<DateTime<Utc>>, String> {
     for key in AGENT_SESSION_STATUS_TIMESTAMP_FIELDS {
         let Some(value) = session.extra.get(key) else {
             continue;
         };
         let Some(timestamp) = value.as_str() else {
-            return Err(format!("agent_sessions[].{} must be a string timestamp", key));
+            return Err(format!(
+                "agent_sessions[].{} must be a string timestamp",
+                key
+            ));
         };
         return parse_timestamp(timestamp, &format!("agent_sessions[].{}", key)).map(Some);
     }
@@ -870,7 +1067,10 @@ fn issue_reference_looks_like_pr(item: &str, hash_index: usize) -> bool {
         .unwrap_or(false)
 }
 
-fn derive_self_modifications(repo_root: &Path, cycle: u64) -> Result<Vec<SelfModification>, String> {
+fn derive_self_modifications(
+    repo_root: &Path,
+    cycle: u64,
+) -> Result<Vec<SelfModification>, String> {
     let start_commit = find_cycle_start_commit(repo_root, cycle)?;
     let output = ProcessCommand::new("git")
         .arg("diff")
@@ -922,7 +1122,8 @@ fn is_infrastructure_path(path: &str) -> bool {
 fn find_cycle_start_commit(repo_root: &Path, cycle: u64) -> Result<String, String> {
     let commits = read_git_history(repo_root)?;
     if let Some(commit) = commits.iter().find(|commit| {
-        commit.subject.starts_with("state(cycle-start):") && extract_cycle_tag(&commit.subject) == Some(cycle)
+        commit.subject.starts_with("state(cycle-start):")
+            && extract_cycle_tag(&commit.subject) == Some(cycle)
     }) {
         return Ok(commit.full_sha.clone());
     }
@@ -943,7 +1144,13 @@ fn read_git_history(repo_root: &Path) -> Result<Vec<GitHistoryEntry>, String> {
         .arg("--reverse")
         .current_dir(repo_root)
         .output()
-        .map_err(|error| format!("failed to read git history in {}: {}", repo_root.display(), error))?;
+        .map_err(|error| {
+            format!(
+                "failed to read git history in {}: {}",
+                repo_root.display(),
+                error
+            )
+        })?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
         return Err(format!("git log failed: {}", stderr));
@@ -991,8 +1198,9 @@ fn find_first_commit_after_cycle_timestamp(
         return Ok(None);
     }
 
-    let state = load_worklog_state(repo_root, true)?
-        .ok_or_else(|| "docs/state.json is required to resolve current cycle timestamp".to_string())?;
+    let state = load_worklog_state(repo_root, true)?.ok_or_else(|| {
+        "docs/state.json is required to resolve current cycle timestamp".to_string()
+    })?;
     let timestamp = state
         .cycle_phase
         .phase_entered_at
@@ -1022,7 +1230,10 @@ fn extract_cycle_tag(subject: &str) -> Option<u64> {
     remainder[..end].trim().parse::<u64>().ok()
 }
 
-fn derive_cycle_receipt_entries(repo_root: &Path, cycle: u64) -> Result<Vec<CycleReceiptJsonEntry>, String> {
+fn derive_cycle_receipt_entries(
+    repo_root: &Path,
+    cycle: u64,
+) -> Result<Vec<CycleReceiptJsonEntry>, String> {
     let cycle = cycle.to_string();
     let output = ProcessCommand::new("bash")
         .arg("tools/cycle-receipts")
@@ -1057,7 +1268,8 @@ fn derive_cycle_receipt_entries(repo_root: &Path, cycle: u64) -> Result<Vec<Cycl
 }
 
 fn parse_cycle_receipt_entries_output(json: &str) -> Result<Vec<CycleReceiptJsonEntry>, String> {
-    serde_json::from_str(json).map_err(|error| format!("invalid cycle-receipts JSON output: {}", error))
+    serde_json::from_str(json)
+        .map_err(|error| format!("invalid cycle-receipts JSON output: {}", error))
 }
 
 #[cfg(test)]
@@ -1066,7 +1278,9 @@ fn parse_cycle_receipts_output(json: &str) -> Result<Vec<CommitReceipt>, String>
     cycle_receipt_entries_to_receipts(&entries)
 }
 
-fn cycle_receipt_entries_to_receipts(entries: &[CycleReceiptJsonEntry]) -> Result<Vec<CommitReceipt>, String> {
+fn cycle_receipt_entries_to_receipts(
+    entries: &[CycleReceiptJsonEntry],
+) -> Result<Vec<CommitReceipt>, String> {
     let receipts = entries
         .iter()
         .map(|entry| format!("{}:{}", entry.tool.trim(), entry.receipt.trim()))
@@ -1099,17 +1313,21 @@ fn derive_prs_from_cycle_receipt_entries(entries: &[CycleReceiptJsonEntry]) -> V
     prs
 }
 
-fn merge_receipts(auto_receipts: Vec<CommitReceipt>, manual_receipts: &[CommitReceipt]) -> Vec<CommitReceipt> {
-    let manual_indexes_by_tool = manual_receipts
-        .iter()
-        .enumerate()
-        .fold(HashMap::new(), |mut indexes, (index, receipt)| {
-            indexes
-                .entry(receipt.tool.to_ascii_lowercase())
-                .or_insert_with(Vec::new)
-                .push(index);
-            indexes
-        });
+fn merge_receipts(
+    auto_receipts: Vec<CommitReceipt>,
+    manual_receipts: &[CommitReceipt],
+) -> Vec<CommitReceipt> {
+    let manual_indexes_by_tool =
+        manual_receipts
+            .iter()
+            .enumerate()
+            .fold(HashMap::new(), |mut indexes, (index, receipt)| {
+                indexes
+                    .entry(receipt.tool.to_ascii_lowercase())
+                    .or_insert_with(Vec::new)
+                    .push(index);
+                indexes
+            });
     let mut used_manual_by_tool = HashMap::<String, usize>::new();
     let mut used_manual_indexes = HashSet::new();
 
@@ -1257,10 +1475,7 @@ fn emit_unresolved_receipt_warnings(
     validate_receipt_shas(receipts, repo_root)
 }
 
-fn validate_receipt_shas(
-    receipts: &mut [CommitReceipt],
-    repo_root: &Path,
-) -> Result<(), String> {
+fn validate_receipt_shas(receipts: &mut [CommitReceipt], repo_root: &Path) -> Result<(), String> {
     for receipt in receipts {
         if git_commit_exists(repo_root, &receipt.receipt)? {
             continue;
@@ -1341,7 +1556,9 @@ fn find_git_sha_candidates(content: &str) -> Vec<String> {
 
         let candidate = &content[start..index];
         if (7..=40).contains(&candidate.len())
-            && candidate.chars().any(|character| matches!(character, 'a'..='f' | 'A'..='F'))
+            && candidate
+                .chars()
+                .any(|character| matches!(character, 'a'..='f' | 'A'..='F'))
         {
             let key = candidate.to_ascii_lowercase();
             if seen.insert(key) {
@@ -1907,7 +2124,9 @@ fn strip_cycle_prefix(title: &str) -> &str {
         return title;
     }
     let suffix = &remainder[digits_length..];
-    suffix.strip_prefix(':').map_or(title, |rest| rest.trim_start())
+    suffix
+        .strip_prefix(':')
+        .map_or(title, |rest| rest.trim_start())
 }
 
 fn journal_commitments(input: &JournalInput) -> Vec<&str> {
@@ -2316,12 +2535,7 @@ mod tests {
     }
 
     fn create_git_commit(repo_root: &Path, file_name: &str, content: &str) -> String {
-        create_git_commit_with_message(
-            repo_root,
-            file_name,
-            content,
-            &format!("Add {}", file_name),
-        )
+        create_git_commit_with_message(repo_root, file_name, content, &format!("Add {}", file_name))
     }
 
     fn create_git_commit_with_message(
@@ -2376,9 +2590,7 @@ mod tests {
         fs::create_dir_all(script_path.parent().unwrap()).unwrap();
         fs::write(
             script_path,
-            format!(
-                "#!/usr/bin/env bash\nset -euo pipefail\ncat <<'JSON'\n{json}\nJSON\n"
-            ),
+            format!("#!/usr/bin/env bash\nset -euo pipefail\ncat <<'JSON'\n{json}\nJSON\n"),
         )
         .unwrap();
     }
@@ -2411,7 +2623,8 @@ mod tests {
 
     fn write_state_file(repo_root: &Path, payload: &str) {
         fs::create_dir_all(repo_root.join("docs")).expect("failed to create docs directory");
-        fs::write(repo_root.join("docs/state.json"), payload).expect("failed to write test state.json");
+        fs::write(repo_root.join("docs/state.json"), payload)
+            .expect("failed to write test state.json");
     }
 
     #[test]
@@ -2545,6 +2758,99 @@ mod tests {
     }
 
     #[test]
+    fn derive_issue_processed_from_state_includes_related_cycle_sources() {
+        let state: StateJson = serde_json::from_value(json!({
+            "cycle_phase": {
+                "phase": "work",
+                "phase_entered_at": "2026-03-06T01:00:00Z",
+                "cycle": 154
+            },
+            "agent_sessions": [
+                {
+                    "issue": 42,
+                    "status": "merged",
+                    "merged_at": "2026-03-06T02:00:00Z",
+                    "title": "Merged this cycle",
+                    "qc_report": 160,
+                    "audit_inbound": 315
+                },
+                {
+                    "issue": 43,
+                    "status": "reviewed_awaiting_eva",
+                    "dispatched_at": "2026-03-06T03:00:00Z",
+                    "title": "Review dispatched"
+                }
+            ],
+            "eva_input_issues": {
+                "closed_this_cycle": [42, 80]
+            },
+            "qc_processed": [160],
+            "audit_processed": [315]
+        }))
+        .unwrap();
+
+        let issues = derive_issue_processed_from_state(154, &state).unwrap();
+
+        assert_eq!(
+            issues,
+            vec![
+                "#42: Merged this cycle",
+                "QC #160: processed this cycle",
+                "audit #315: processed this cycle",
+                "#43: Review dispatched",
+                "#80: closed this cycle",
+            ]
+        );
+    }
+
+    #[test]
+    fn derive_receipt_scope_note_uses_state_and_cycle_activity() {
+        let state: StateJson = serde_json::from_value(json!({
+            "cycle_phase": {
+                "phase": "work",
+                "phase_entered_at": "2026-03-06T01:00:00Z",
+                "cycle": 154
+            },
+            "project_mode": {
+                "mode": "stabilization"
+            },
+            "agent_sessions": [
+                {
+                    "issue": 42,
+                    "status": "queued",
+                    "dispatched_at": "2026-03-06T01:05:00Z",
+                    "title": "Dispatched this cycle"
+                },
+                {
+                    "issue": 43,
+                    "status": "reviewed_awaiting_eva",
+                    "dispatched_at": "2026-03-06T01:10:00Z",
+                    "title": "Review dispatched",
+                    "qc_report": 160
+                }
+            ]
+        }))
+        .unwrap();
+        let entries = parse_cycle_receipt_entries_output(
+            r#"[
+                {"step":"cycle-start","receipt":"abc1234","commit":"state(cycle-start): begin cycle 154 [cycle 154]"},
+                {"step":"process-merge","receipt":"def5678","commit":"state(process-merge): PR #537 merged [cycle 154]"}
+            ]"#,
+        )
+        .unwrap();
+
+        let note = derive_receipt_scope_note(154, Some(&state), &entries);
+
+        assert!(note.contains("stabilization mode"));
+        assert!(note.contains("work phase snapshot"));
+        assert!(note.contains("2 dispatches"));
+        assert!(note.contains("1 review-linked issue"));
+        assert!(note.contains("1 merge"));
+        assert!(note.contains("2 receipts across cycle-start, process-merge"));
+        assert!(!note.contains("Docs and record-dispatch commits are structurally excluded"));
+    }
+
+    #[test]
     fn agent_session_status_changed_at_reads_validates_and_rejects_invalid_extra_fields() {
         let mut session = AgentSession {
             issue: Some(42),
@@ -2552,9 +2858,10 @@ mod tests {
         };
         assert_eq!(agent_session_status_changed_at(&session).unwrap(), None);
 
-        session
-            .extra
-            .insert("status_changed_at".to_string(), json!("2026-03-06T03:00:00Z"));
+        session.extra.insert(
+            "status_changed_at".to_string(),
+            json!("2026-03-06T03:00:00Z"),
+        );
         assert_eq!(
             agent_session_status_changed_at(&session)
                 .unwrap()
@@ -2570,8 +2877,7 @@ mod tests {
         let error = agent_session_status_changed_at(&non_string).unwrap_err();
         assert!(error.contains("agent_sessions[].updated_at must be a string timestamp"));
 
-        non_string.extra =
-            BTreeMap::from([("updated_at".to_string(), json!("not-a-timestamp"))]);
+        non_string.extra = BTreeMap::from([("updated_at".to_string(), json!("not-a-timestamp"))]);
         let error = agent_session_status_changed_at(&non_string).unwrap_err();
         assert!(error.contains("invalid agent_sessions[].updated_at"));
     }
@@ -2639,10 +2945,16 @@ mod tests {
         );
 
         assert_eq!(modifications.len(), 4);
-        assert_eq!(modifications[0].file, "tools/rust/crates/write-entry/src/main.rs");
+        assert_eq!(
+            modifications[0].file,
+            "tools/rust/crates/write-entry/src/main.rs"
+        );
         assert_eq!(modifications[0].description, "modified");
         assert_eq!(modifications[1].file, "STARTUP_CHECKLIST.md");
-        assert_eq!(modifications[2].file, ".claude/skills/rust-tooling/SKILL.md");
+        assert_eq!(
+            modifications[2].file,
+            ".claude/skills/rust-tooling/SKILL.md"
+        );
         assert_eq!(modifications[3].file, "AGENTS-ts.md");
     }
 
@@ -2810,12 +3122,30 @@ mod tests {
         let receipt = create_git_commit(&repo_root.path, "notes/input-file.txt", "input\n");
         write_cycle_receipts_script(
             &repo_root.path,
-            &format!(r#"[{{"step":"manual","receipt":"{receipt}","commit":"Add notes/input-file.txt"}}]"#),
+            &format!(
+                r#"[{{"step":"manual","receipt":"{receipt}","commit":"Add notes/input-file.txt"}}]"#
+            ),
         );
         write_state_file(
             &repo_root.path,
             r#"{
-                "last_cycle": {"number": 154}
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "phase": "work",
+                    "phase_entered_at": "2026-03-06T01:00:00Z",
+                    "cycle": 154
+                },
+                "project_mode": {
+                    "mode": "stabilization"
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 42,
+                        "status": "queued",
+                        "dispatched_at": "2026-03-06T01:05:00Z",
+                        "title": "Dispatched this cycle"
+                    }
+                ]
             }"#,
         );
         let payload_path = repo_root.path.join("worklog.json");
@@ -2950,7 +3280,23 @@ mod tests {
         write_state_file(
             &repo_root.path,
             r#"{
-                "last_cycle": {"number": 154}
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "phase": "work",
+                    "phase_entered_at": "2026-03-06T01:00:00Z",
+                    "cycle": 154
+                },
+                "project_mode": {
+                    "mode": "stabilization"
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 42,
+                        "status": "queued",
+                        "dispatched_at": "2026-03-06T01:05:00Z",
+                        "title": "Dispatched this cycle"
+                    }
+                ]
             }"#,
         );
         let first_receipt = create_git_commit(&repo_root.path, "first.txt", "first");
@@ -2978,9 +3324,8 @@ mod tests {
         assert!(content.contains(
             "- Merged [PR #123](https://github.com/EvaLok/schema-org-json-ld/issues/123)"
         ));
-        assert!(content.contains(
-            "- [PR #789](https://github.com/EvaLok/schema-org-json-ld/issues/789)"
-        ));
+        assert!(content
+            .contains("- [PR #789](https://github.com/EvaLok/schema-org-json-ld/issues/789)"));
         assert!(content.contains("- Closed EvaLok/schema-org-json-ld#924 (cycle review)"));
         assert!(content.contains("- Updated AGENTS.md"));
         assert!(!content.contains("### PRs reviewed\n\n- None."));
@@ -3050,7 +3395,9 @@ mod tests {
         let receipt = create_git_commit(&repo_root.path, "notes/auto-populate.txt", "auto\n");
         write_cycle_receipts_script(
             &repo_root.path,
-            &format!(r#"[{{"step":"manual","receipt":"{receipt}","commit":"Add notes/auto-populate.txt"}}]"#),
+            &format!(
+                r#"[{{"step":"manual","receipt":"{receipt}","commit":"Add notes/auto-populate.txt"}}]"#
+            ),
         );
         write_state_file(
             &repo_root.path,
@@ -3080,11 +3427,9 @@ mod tests {
         assert!(content.contains("## Self-modifications\n\n- None."));
         assert!(content.contains("- **Pipeline status**: Not provided."));
         assert!(content.contains("- **In-flight agent sessions**: 3"));
-        assert!(
-            content.contains(
-                "- **Copilot metrics**: 45 dispatches, 42 PRs produced, 40 merged, 88.9% PR merge rate"
-            )
-        );
+        assert!(content.contains(
+            "- **Copilot metrics**: 45 dispatches, 42 PRs produced, 40 merged, 88.9% PR merge rate"
+        ));
         assert!(content.contains("- **Publish gate**: published"));
     }
 
@@ -3161,7 +3506,23 @@ mod tests {
         write_state_file(
             &repo_root.path,
             r#"{
-                "last_cycle": {"number": 154}
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "phase": "work",
+                    "phase_entered_at": "2026-03-06T01:00:00Z",
+                    "cycle": 154
+                },
+                "project_mode": {
+                    "mode": "stabilization"
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 42,
+                        "status": "queued",
+                        "dispatched_at": "2026-03-06T01:05:00Z",
+                        "title": "Dispatched this cycle"
+                    }
+                ]
             }"#,
         );
         let start_receipt = create_git_commit_with_message(
@@ -3198,8 +3559,12 @@ mod tests {
         let content = fs::read_to_string(path).unwrap();
 
         assert!(content.contains("### PRs merged"));
-        assert!(content.contains("[PR #237](https://github.com/EvaLok/schema-org-json-ld/issues/237)"));
-        assert!(content.contains("[PR #240](https://github.com/EvaLok/schema-org-json-ld/issues/240)"));
+        assert!(
+            content.contains("[PR #237](https://github.com/EvaLok/schema-org-json-ld/issues/237)")
+        );
+        assert!(
+            content.contains("[PR #240](https://github.com/EvaLok/schema-org-json-ld/issues/240)")
+        );
         assert!(!content.contains("### PRs reviewed"));
         assert!(!content.contains("### PRs merged\n\n- None."));
     }
@@ -3234,7 +3599,8 @@ mod tests {
         let content = fs::read_to_string(path).unwrap();
 
         assert!(content.contains("### PRs merged"));
-        assert!(content.contains("[PR #1226](https://github.com/EvaLok/schema-org-json-ld/issues/1226)"));
+        assert!(content
+            .contains("[PR #1226](https://github.com/EvaLok/schema-org-json-ld/issues/1226)"));
         assert!(!content.contains("### PRs reviewed"));
     }
 
@@ -3268,7 +3634,8 @@ mod tests {
         let content = fs::read_to_string(path).unwrap();
 
         assert!(content.contains("### PRs reviewed"));
-        assert!(content.contains("[PR #1226](https://github.com/EvaLok/schema-org-json-ld/issues/1226)"));
+        assert!(content
+            .contains("[PR #1226](https://github.com/EvaLok/schema-org-json-ld/issues/1226)"));
     }
 
     #[test]
@@ -3303,7 +3670,8 @@ mod tests {
 
         assert!(content.contains("### PRs merged"));
         assert!(content.contains("### PRs reviewed"));
-        assert!(content.contains("[PR #1226](https://github.com/EvaLok/schema-org-json-ld/issues/1226)"));
+        assert!(content
+            .contains("[PR #1226](https://github.com/EvaLok/schema-org-json-ld/issues/1226)"));
     }
 
     #[test]
@@ -3313,7 +3681,23 @@ mod tests {
         write_state_file(
             &repo_root.path,
             r#"{
-                "last_cycle": {"number": 154}
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "phase": "work",
+                    "phase_entered_at": "2026-03-06T01:00:00Z",
+                    "cycle": 154
+                },
+                "project_mode": {
+                    "mode": "stabilization"
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 42,
+                        "status": "queued",
+                        "dispatched_at": "2026-03-06T01:05:00Z",
+                        "title": "Dispatched this cycle"
+                    }
+                ]
             }"#,
         );
         let start_receipt = create_git_commit_with_message(
@@ -3354,15 +3738,15 @@ mod tests {
 
         let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
         let cycle = resolve_cycle(args.cycle, &repo_root.path).unwrap();
-        let warnings = apply_worklog_auto_derivations(&args, &repo_root.path, cycle, &mut input).unwrap();
+        let warnings =
+            apply_worklog_auto_derivations(&args, &repo_root.path, cycle, &mut input).unwrap();
 
         assert!(warnings.is_empty());
         assert!(input.issues_processed.is_empty());
         assert_eq!(input.self_modifications.len(), 2);
-        assert!(input
-            .self_modifications
-            .iter()
-            .any(|item| item.file == "tools/rust/crates/write-entry/src/main.rs" && item.description == "modified"));
+        assert!(input.self_modifications.iter().any(|item| item.file
+            == "tools/rust/crates/write-entry/src/main.rs"
+            && item.description == "modified"));
         assert!(input
             .self_modifications
             .iter()
@@ -3372,17 +3756,19 @@ mod tests {
         assert_eq!(input.receipts[0].receipt, start_receipt);
         assert_eq!(input.receipts[1].tool, "process-merge");
         assert_eq!(input.receipts[1].receipt, merge_receipt);
+        assert_eq!(
+            input.receipt_note.as_deref(),
+            Some(
+                "Scope: stabilization mode, work phase snapshot, 1 dispatch. Derived from 2 receipts across cycle-start, process-merge. Validated by receipt-validate at step C5.1."
+            )
+        );
     }
 
     #[test]
     fn worklog_auto_derivation_falls_back_to_manual_receipts_when_cycle_receipts_command_fails() {
         let repo_root = TempRepoDir::new("worklog-auto-derivation-fallback");
         init_git_repo(&repo_root.path);
-        let manual_receipt = create_git_commit(
-            &repo_root.path,
-            "notes/manual.txt",
-            "manual\n",
-        );
+        let manual_receipt = create_git_commit(&repo_root.path, "notes/manual.txt", "manual\n");
         let mut args = worklog_args("Fallback");
         args.done = vec!["Closed #42".to_string()];
         args.receipt = vec![format!("manual:{manual_receipt}")];
@@ -3428,11 +3814,8 @@ mod tests {
             "start\n",
             "state(cycle-start): begin cycle 154, issue #1 [cycle 154]",
         );
-        let manual_only_receipt = create_git_commit(
-            &repo_root.path,
-            "notes/manual.txt",
-            "manual\n",
-        );
+        let manual_only_receipt =
+            create_git_commit(&repo_root.path, "notes/manual.txt", "manual\n");
         let manual_override_receipt = create_git_commit(
             &repo_root.path,
             "notes/manual-override.txt",
@@ -3468,7 +3851,8 @@ mod tests {
         args.in_flight = Some(0);
 
         let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
-        let warnings = apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
+        let warnings =
+            apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
 
         assert!(warnings.is_empty());
         assert_eq!(input.receipts.len(), 3);
@@ -3483,8 +3867,11 @@ mod tests {
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
 
-        assert!(content.contains("- Closed [#999](https://github.com/EvaLok/schema-org-json-ld/issues/999)"));
-        assert!(!content.contains("[#1042](https://github.com/EvaLok/schema-org-json-ld/issues/1042)"));
+        assert!(content
+            .contains("- Closed [#999](https://github.com/EvaLok/schema-org-json-ld/issues/999)"));
+        assert!(
+            !content.contains("[#1042](https://github.com/EvaLok/schema-org-json-ld/issues/1042)")
+        );
         assert!(content.contains("- **`AGENTS.md`**: manual override"));
         assert!(!content.contains(": modified"));
         assert!(content.contains(&format!(
@@ -3674,12 +4061,96 @@ mod tests {
         let content = fs::read_to_string(path).unwrap();
 
         assert!(content.contains("- [#42](https://github.com/EvaLok/schema-org-json-ld/issues/42): Dispatched this cycle"));
-        assert!(content.contains("- [#43](https://github.com/EvaLok/schema-org-json-ld/issues/43): Merged this cycle"));
+        assert!(content.contains(
+            "- [#43](https://github.com/EvaLok/schema-org-json-ld/issues/43): Merged this cycle"
+        ));
         assert!(content.contains("- [#44](https://github.com/EvaLok/schema-org-json-ld/issues/44): Status changed this cycle"));
         assert!(!content.contains("[#45]("));
         assert!(!content.contains("[PR #100]("));
         assert!(!content.contains("[PR #101]("));
         assert!(!content.contains("[PR #102]("));
+    }
+
+    #[test]
+    fn worklog_auto_issues_includes_qc_audit_and_closed_cycle_state() {
+        let repo_root = TempRepoDir::new("worklog-auto-issues-related-state");
+        init_git_repo(&repo_root.path);
+        let start_receipt = create_git_commit_at(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154 [cycle 154]",
+            "2026-03-06T01:00:00Z",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}}
+                ]"#
+            ),
+        );
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "phase": "work",
+                    "phase_entered_at": "2026-03-06T01:00:00Z",
+                    "cycle": 154
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 42,
+                        "status": "merged",
+                        "merged_at": "2026-03-06T02:00:00Z",
+                        "title": "Merged this cycle",
+                        "qc_report": 160,
+                        "audit_inbound": 315
+                    }
+                ],
+                "eva_input_issues": {
+                    "closed_this_cycle": [80]
+                },
+                "qc_processed": [160],
+                "audit_processed": [315]
+            }"#,
+        );
+
+        let cli = Cli::try_parse_from([
+            "write-entry",
+            "--repo-root",
+            repo_root.path.to_str().unwrap(),
+            "worklog",
+            "--title",
+            "Auto issues related state",
+            "--auto-issues",
+            "--pipeline",
+            "PASS (6/6)",
+            "--copilot-metrics",
+            "steady",
+            "--publish-gate",
+            "open",
+            "--in-flight",
+            "0",
+        ])
+        .unwrap();
+        let args = match cli.command {
+            Command::Worklog(args) => args,
+            Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
+        };
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains(
+            "- [#42](https://github.com/EvaLok/schema-org-json-ld/issues/42): Merged this cycle"
+        ));
+        assert!(content.contains("- [QC #160](https://github.com/EvaLok/schema-org-json-ld-qc/issues/160): processed this cycle"));
+        assert!(content.contains("- [audit #315](https://github.com/EvaLok/schema-org-json-ld-audit/issues/315): processed this cycle"));
+        assert!(content.contains(
+            "- [#80](https://github.com/EvaLok/schema-org-json-ld/issues/80): closed this cycle"
+        ));
     }
 
     #[test]
@@ -3815,7 +4286,8 @@ mod tests {
         };
 
         let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
-        let warnings = apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
+        let warnings =
+            apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
 
         assert!(warnings.is_empty());
         assert_eq!(
@@ -3829,7 +4301,9 @@ mod tests {
             .find("- [#42](https://github.com/EvaLok/schema-org-json-ld/issues/42): Merged this cycle")
             .unwrap();
         let manual_index = content
-            .find("- Processed review [#77](https://github.com/EvaLok/schema-org-json-ld/issues/77)")
+            .find(
+                "- Processed review [#77](https://github.com/EvaLok/schema-org-json-ld/issues/77)",
+            )
             .unwrap();
         assert!(auto_index < manual_index);
     }
@@ -3967,9 +4441,9 @@ mod tests {
             Some("../worklog/2026-03-11/123451-cycle-226-summary.md"),
         );
 
-        assert!(rendered.contains(
-            "## 2026-03-11 — Cycle 226: Breaking the worklog-accuracy pattern"
-        ));
+        assert!(
+            rendered.contains("## 2026-03-11 — Cycle 226: Breaking the worklog-accuracy pattern")
+        );
         assert!(!rendered.contains("Cycle 226: Cycle 226:"));
         assert!(rendered.contains("Cycle 226 focused on Breaking the worklog-accuracy pattern."));
         assert!(!rendered.contains("focused on Cycle 226:"));
@@ -4020,7 +4494,8 @@ mod tests {
             receipt_note: None,
         };
 
-        let warnings = apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
+        let warnings =
+            apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
 
         assert!(input.self_modifications.is_empty());
         assert!(input.issues_processed.is_empty());
@@ -4036,7 +4511,9 @@ mod tests {
         let receipt = create_git_commit(&repo_root.path, "notes/status-override.txt", "override\n");
         write_cycle_receipts_script(
             &repo_root.path,
-            &format!(r#"[{{"step":"manual","receipt":"{receipt}","commit":"Add notes/status-override.txt"}}]"#),
+            &format!(
+                r#"[{{"step":"manual","receipt":"{receipt}","commit":"Add notes/status-override.txt"}}]"#
+            ),
         );
         write_state_file(
             &repo_root.path,
@@ -4069,11 +4546,7 @@ mod tests {
         assert!(content.contains("- **In-flight agent sessions**: 1"));
         assert!(content.contains("- **Copilot metrics**: custom metrics"));
         assert!(content.contains("- **Publish gate**: pre-publish"));
-        assert!(
-            !content.contains(
-                "45 dispatches, 42 PRs produced, 40 merged, 88.9% PR merge rate"
-            )
-        );
+        assert!(!content.contains("45 dispatches, 42 PRs produced, 40 merged, 88.9% PR merge rate"));
         assert!(!content.contains("- **Publish gate**: published"));
     }
 
@@ -4916,7 +5389,10 @@ Reflective log for the schema-org-json-ld orchestrator.
                     args.issue_processed,
                     vec!["Closed EvaLok/schema-org-json-ld#924 (cycle review)".to_string()]
                 );
-                assert_eq!(args.self_modification, vec!["Updated AGENTS.md".to_string()]);
+                assert_eq!(
+                    args.self_modification,
+                    vec!["Updated AGENTS.md".to_string()]
+                );
             }
             Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
         }
@@ -5080,7 +5556,9 @@ Reflective log for the schema-org-json-ld orchestrator.
         let receipt = create_git_commit(&repo_root.path, "notes/derived-cycle.txt", "derived\n");
         write_cycle_receipts_script(
             &repo_root.path,
-            &format!(r#"[{{"step":"manual","receipt":"{receipt}","commit":"Add notes/derived-cycle.txt"}}]"#),
+            &format!(
+                r#"[{{"step":"manual","receipt":"{receipt}","commit":"Add notes/derived-cycle.txt"}}]"#
+            ),
         );
         fs::create_dir_all(repo_root.path.join("docs")).unwrap();
         fs::write(

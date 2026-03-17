@@ -281,8 +281,16 @@ pub fn transition_cycle_phase(
         .ok_or_else(|| "missing object /cycle_phase in docs/state.json".to_string())?;
 
     cycle_phase.insert("phase".to_string(), Value::String(new_phase.to_string()));
-    cycle_phase.insert("phase_entered_at".to_string(), Value::String(timestamp));
+    cycle_phase.insert(
+        "phase_entered_at".to_string(),
+        Value::String(timestamp.clone()),
+    );
     cycle_phase.insert("cycle".to_string(), serde_json::json!(cycle));
+    if new_phase == "complete" {
+        cycle_phase.insert("completed_at".to_string(), Value::String(timestamp));
+    } else {
+        cycle_phase.remove("completed_at");
+    }
 
     // Bump field_inventory freshness
     let cycle_marker = format!("cycle {}", cycle);
@@ -291,11 +299,19 @@ pub fn transition_cycle_phase(
         .and_then(Value::as_object_mut);
 
     if let Some(fields) = fields {
-        let entry = fields
-            .entry("cycle_phase".to_string())
-            .or_insert_with(|| serde_json::json!({"cadence": "every phase transition"}));
+        let entry = fields.entry("cycle_phase".to_string()).or_insert_with(|| {
+            serde_json::json!({
+                "cadence": "every phase transition",
+                "note": "Tracks cycle, phase, phase_entered_at, and completed_at."
+            })
+        });
         if let Some(obj) = entry.as_object_mut() {
             obj.insert("last_refreshed".to_string(), Value::String(cycle_marker));
+            obj.entry("note".to_string()).or_insert_with(|| {
+                Value::String(
+                    "Tracks cycle, phase, phase_entered_at, and completed_at.".to_string(),
+                )
+            });
         }
     }
 
@@ -483,6 +499,8 @@ pub struct CyclePhase {
     pub cycle: Option<u64>,
     pub phase: Option<String>,
     pub phase_entered_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub completed_at: Option<String>,
     #[serde(flatten)]
     pub extra: BTreeMap<String, Value>,
 }
@@ -981,6 +999,7 @@ mod tests {
         assert!(state.cycle_phase.cycle.is_none());
         assert!(state.cycle_phase.phase.is_none());
         assert!(state.cycle_phase.phase_entered_at.is_none());
+        assert!(state.cycle_phase.completed_at.is_none());
     }
 
     #[test]
@@ -1000,6 +1019,7 @@ mod tests {
             state.cycle_phase.phase_entered_at.as_deref(),
             Some("2026-03-10T15:00:00Z")
         );
+        assert!(state.cycle_phase.completed_at.is_none());
     }
 
     #[test]
@@ -1034,12 +1054,19 @@ mod tests {
                 .and_then(Value::as_str),
             Some("2026-03-10T12:00:00Z")
         );
+        assert!(state.pointer("/cycle_phase/completed_at").is_none());
         // freshness should be bumped
         assert_eq!(
             state
                 .pointer("/field_inventory/fields/cycle_phase/last_refreshed")
                 .and_then(Value::as_str),
             Some("cycle 219")
+        );
+        assert_eq!(
+            state
+                .pointer("/field_inventory/fields/cycle_phase/note")
+                .and_then(Value::as_str),
+            Some("Tracks cycle, phase, phase_entered_at, and completed_at.")
         );
     }
 
@@ -1066,12 +1093,46 @@ mod tests {
             state.pointer("/cycle_phase/phase"),
             Some(&json!("complete"))
         );
+        let completed_at = state
+            .pointer("/cycle_phase/completed_at")
+            .and_then(Value::as_str)
+            .expect("completed_at should be set when phase becomes complete");
+        let phase_entered_at = state
+            .pointer("/cycle_phase/phase_entered_at")
+            .and_then(Value::as_str)
+            .expect("phase_entered_at should be set");
+        assert_eq!(completed_at, phase_entered_at);
         assert_eq!(
             state
                 .pointer("/field_inventory/fields/cycle_phase/last_refreshed")
                 .and_then(Value::as_str),
             Some("cycle 219")
         );
+    }
+
+    #[test]
+    fn transition_cycle_phase_clears_completed_at_outside_complete() {
+        let mut state = json!({
+            "cycle_phase": {
+                "cycle": 219,
+                "phase": "complete",
+                "phase_entered_at": "2026-03-10T13:00:00Z",
+                "completed_at": "2026-03-10T13:05:00Z"
+            },
+            "field_inventory": {
+                "fields": {
+                    "cycle_phase": {
+                        "cadence": "every phase transition",
+                        "last_refreshed": "cycle 218"
+                    }
+                }
+            }
+        });
+
+        transition_cycle_phase(&mut state, 219, "work").expect("transition should succeed");
+
+        assert_eq!(state.pointer("/cycle_phase/phase"), Some(&json!("work")));
+        assert!(state.pointer("/cycle_phase/completed_at").is_none());
     }
 
     #[test]
@@ -1122,7 +1183,8 @@ mod tests {
             "cycle_phase": {
                 "cycle": 220,
                 "phase": "work",
-                "phase_entered_at": "2026-03-10T16:00:00Z"
+                "phase_entered_at": "2026-03-10T16:00:00Z",
+                "completed_at": "2026-03-10T16:30:00Z"
             }
         });
         let state: StateJson = serde_json::from_value(input).expect("state should deserialize");
@@ -1135,6 +1197,10 @@ mod tests {
         assert_eq!(
             serialized.pointer("/cycle_phase/phase_entered_at"),
             Some(&json!("2026-03-10T16:00:00Z"))
+        );
+        assert_eq!(
+            serialized.pointer("/cycle_phase/completed_at"),
+            Some(&json!("2026-03-10T16:30:00Z"))
         );
     }
 

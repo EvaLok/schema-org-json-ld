@@ -4240,7 +4240,8 @@
       },
       "cycle_phase": {
         "cadence": "every phase transition",
-        "last_refreshed": "cycle 287"
+        "last_refreshed": "cycle 287",
+        "note": "Tracks cycle, phase, phase_entered_at, and completed_at."
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
