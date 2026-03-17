@@ -877,7 +877,8 @@ fn verify_step_comments(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner
 			};
 		}
 	};
-	let issue_assessment = assess_step_comment_completeness(&found, cycle);
+	let issue_assessment =
+		assess_step_comment_completeness(&found, cycle, StepCommentCheckScope::PreviousCycle);
 
 	StepReport {
 		name: STEP_COMMENTS_STEP_NAME,
@@ -933,6 +934,7 @@ fn is_mandatory_step_for_cycle(step: &str, cycle: u64) -> bool {
 fn assess_step_comment_completeness(
 	found: &BTreeSet<&'static str>,
 	cycle: u64,
+	scope: StepCommentCheckScope,
 ) -> StepCommentAssessment {
 	let found_ids = ordered_found_step_ids(found);
 	let missing = missing_expected_step_ids(found);
@@ -960,6 +962,19 @@ fn assess_step_comment_completeness(
 	}
 
 	if !mandatory_missing.is_empty() {
+		if scope == StepCommentCheckScope::PreviousCycle {
+			return StepCommentAssessment {
+				status: StepStatus::Warn,
+				severity: Severity::Warning,
+				detail: format!(
+					"{}; {}",
+					format_step_comment_cascade_message(cycle, &mandatory_missing),
+					detail
+				),
+				findings: found.len(),
+			};
+		}
+
 		return StepCommentAssessment {
 			status: StepStatus::Fail,
 			severity: Severity::Blocking,
@@ -985,11 +1000,31 @@ fn assess_step_comment_completeness(
 	}
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum StepCommentCheckScope {
+	CurrentCycle,
+	PreviousCycle,
+}
+
+fn format_step_comment_cascade_message(cycle: u64, missing_steps: &[&str]) -> String {
+	let label = if missing_steps.len() == 1 { "step" } else { "steps" };
+	let verb = if missing_steps.len() == 1 { "was" } else { "were" };
+	format!(
+		"Cascade from cycle {}: {} {} {} missing (already penalized)",
+		cycle,
+		label,
+		format_step_id_list(missing_steps),
+		verb
+	)
+}
+
 /// Completeness assessment for a collected set of step comments.
 ///
 /// PASS means all expected steps were found, WARN means only optional steps are
-/// missing, and FAIL means either a mandatory step is missing or the threshold
-/// backstop was not met.
+/// missing, and FAIL means either a current-cycle mandatory step is missing or
+/// the threshold backstop was not met. Previous-cycle mandatory misses are
+/// downgraded to WARN so the next cycle records the cascade without double
+/// penalizing the original omission.
 struct StepCommentAssessment {
 	status: StepStatus,
 	severity: Severity,
@@ -3466,7 +3501,7 @@ mod tests {
 	}
 
 	#[test]
-	fn step_comment_verification_requires_c5_1_from_cycle_256_onward() {
+	fn step_comment_verification_warns_for_previous_cycle_c5_1_gap_from_cycle_256_onward() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
 		let root = std::env::temp_dir()
@@ -3503,8 +3538,13 @@ mod tests {
 		}
 
 		let step = verify_step_comments(&root, 257, &StepCommentRunner);
-		assert_eq!(step.status, StepStatus::Fail);
-		assert_eq!(step.severity, Severity::Blocking);
+		assert_eq!(step.status, StepStatus::Warn);
+		assert_eq!(step.severity, Severity::Warning);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("Cascade from cycle 257: step C5.1 was missing (already penalized)"));
 		assert!(step
 			.detail
 			.as_deref()
@@ -3513,7 +3553,7 @@ mod tests {
 	}
 
 	#[test]
-	fn step_comment_verification_still_requires_cycle_zero_mandatory_steps() {
+	fn step_comment_verification_warns_for_previous_cycle_zero_mandatory_gap() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
 		let root = std::env::temp_dir()
@@ -3550,8 +3590,13 @@ mod tests {
 		}
 
 		let step = verify_step_comments(&root, 254, &StepCommentRunner);
-		assert_eq!(step.status, StepStatus::Fail);
-		assert_eq!(step.severity, Severity::Blocking);
+		assert_eq!(step.status, StepStatus::Warn);
+		assert_eq!(step.severity, Severity::Warning);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("Cascade from cycle 254: step C1 was missing (already penalized)"));
 		assert!(step
 			.detail
 			.as_deref()
@@ -3560,7 +3605,7 @@ mod tests {
 	}
 
 	#[test]
-	fn step_comment_verification_fails_when_mandatory_step_is_missing_even_above_threshold() {
+	fn step_comment_verification_warns_when_previous_cycle_mandatory_step_is_missing_above_threshold() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
 		let root =
@@ -3597,8 +3642,13 @@ mod tests {
 		}
 
 		let step = verify_step_comments(&root, 257, &StepCommentRunner);
-		assert_eq!(step.status, StepStatus::Fail);
-		assert_eq!(step.severity, Severity::Blocking);
+		assert_eq!(step.status, StepStatus::Warn);
+		assert_eq!(step.severity, Severity::Warning);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("Cascade from cycle 257: steps C1, C8 were missing (already penalized)"));
 		assert!(step
 			.detail
 			.as_deref()
@@ -3612,7 +3662,7 @@ mod tests {
 	}
 
 	#[test]
-	fn step_comment_verification_fails_when_phase_one_mandatory_steps_are_missing() {
+	fn step_comment_verification_warns_when_previous_cycle_phase_one_mandatory_steps_are_missing() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
 		let root = std::env::temp_dir()
@@ -3649,8 +3699,13 @@ mod tests {
 		}
 
 		let step = verify_step_comments(&root, 257, &StepCommentRunner);
-		assert_eq!(step.status, StepStatus::Fail);
-		assert_eq!(step.severity, Severity::Blocking);
+		assert_eq!(step.status, StepStatus::Warn);
+		assert_eq!(step.severity, Severity::Warning);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("Cascade from cycle 257: steps 0.6, 1.1 were missing (already penalized)"));
 		assert!(step
 			.detail
 			.as_deref()
@@ -3716,7 +3771,7 @@ mod tests {
 	}
 
 	#[test]
-	fn step_comment_verification_fails_when_mandatory_closeout_step_c4_5_is_missing() {
+	fn step_comment_verification_warns_when_previous_cycle_closeout_step_c4_5_is_missing() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
 		let root =
@@ -3753,8 +3808,13 @@ mod tests {
 		}
 
 		let step = verify_step_comments(&root, 257, &StepCommentRunner);
-		assert_eq!(step.status, StepStatus::Fail);
-		assert_eq!(step.severity, Severity::Blocking);
+		assert_eq!(step.status, StepStatus::Warn);
+		assert_eq!(step.severity, Severity::Warning);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("Cascade from cycle 257: step C4.5 was missing (already penalized)"));
 		assert!(step
 			.detail
 			.as_deref()
@@ -3817,6 +3877,48 @@ mod tests {
 			.as_deref()
 			.unwrap_or_default()
 			.contains("missing optional [none]"));
+	}
+
+	#[test]
+	fn assess_step_comment_completeness_warns_for_previous_cycle_mandatory_gap() {
+		let found = EXPECTED_STEP_IDS
+			.iter()
+			.copied()
+			.filter(|step| *step != "1.1")
+			.collect::<BTreeSet<_>>();
+
+		let assessment =
+			assess_step_comment_completeness(&found, 257, StepCommentCheckScope::PreviousCycle);
+
+		assert_eq!(assessment.status, StepStatus::Warn);
+		assert_eq!(assessment.severity, Severity::Warning);
+		assert!(assessment
+			.detail
+			.contains("Cascade from cycle 257: step 1.1 was missing (already penalized)"));
+		assert!(assessment.detail.contains("missing mandatory [1.1]"));
+	}
+
+	#[test]
+	fn assess_step_comment_completeness_fails_for_current_cycle_mandatory_gap() {
+		let found = EXPECTED_STEP_IDS
+			.iter()
+			.copied()
+			.filter(|step| *step != "1.1")
+			.collect::<BTreeSet<_>>();
+
+		let assessment =
+			assess_step_comment_completeness(&found, 257, StepCommentCheckScope::CurrentCycle);
+
+		assert_eq!(assessment.status, StepStatus::Fail);
+		assert_eq!(assessment.severity, Severity::Blocking);
+		assert!(!assessment.detail.contains("already penalized"));
+		assert!(assessment.detail.contains("missing mandatory [1.1]"));
+	}
+
+	#[test]
+	fn step_1_1_is_mandatory_from_cycle_zero() {
+		assert!(is_mandatory_step_for_cycle("1.1", 0));
+		assert!(is_mandatory_step_for_cycle("1.1", 257));
 	}
 
 	#[test]

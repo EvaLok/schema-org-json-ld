@@ -36,6 +36,7 @@ pub struct StateJson {
     pub total_testable_types: Option<i64>,
     pub total_standalone_testable_types: Option<i64>,
     pub total_testable_types_note: Option<String>,
+    pub review_dispatch_consecutive: Option<u64>,
     pub tool_pipeline: ToolPipeline,
     pub field_inventory: FieldInventory,
     pub cycle_phase: CyclePhase,
