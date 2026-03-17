@@ -4203,9 +4203,10 @@
     "total_dispatches": 441
   },
   "cycle_phase": {
+    "completed_at": "2026-03-17T16:57:28Z",
     "cycle": 291,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-17T16:51:09Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-17T16:57:28Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -6868,7 +6869,7 @@
     ],
     "last_review_cycle": 290
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 290,
   "schema_status": {
     "directory_layout": {
