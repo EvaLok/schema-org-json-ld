@@ -38,7 +38,7 @@
 
 ## Commit receipts
 
-> Note: Scope: all commits through cycle-complete. Post-cycle-complete commits (process-merge 4e634e2 for PR #1416, state-fix for #1405, docs, record-dispatch) are structurally excluded. Validated by receipt-validate at step C5.1.
+> Note: Scope: all tool-generated commits. Docs and record-dispatch commits are structurally excluded (created post-worklog). Validated by receipt-validate at step C5.1.
 
 | Tool | Receipt | Link |
 |------|---------|------|
@@ -47,3 +47,4 @@
 | cycle-tagged | 20cd1a4 | [20cd1a4](https://github.com/EvaLok/schema-org-json-ld/commit/20cd1a4) |
 | process-merge | 4d9637e | [4d9637e](https://github.com/EvaLok/schema-org-json-ld/commit/4d9637e) |
 | cycle-complete | ddd05cb | [ddd05cb](https://github.com/EvaLok/schema-org-json-ld/commit/ddd05cb) |
+| process-merge | 4e634e2 | [4e634e2](https://github.com/EvaLok/schema-org-json-ld/commit/4e634e2) |
