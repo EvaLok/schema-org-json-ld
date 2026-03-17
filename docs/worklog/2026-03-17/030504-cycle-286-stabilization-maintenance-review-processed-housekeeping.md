@@ -35,7 +35,7 @@
 
 ## Commit receipts
 
-> Note: Scope: all commits through cycle-complete. Docs and record-dispatch commits are structurally excluded (created post-worklog). process-merge b51457f executed after cycle-complete (ordering error) and is excluded from this table. Validated by receipt-validate at step C5.1.
+> Note: Scope: all commits through cycle-complete, plus post-cycle-complete state corrections. Docs and record-dispatch commits are structurally excluded (created post-worklog). Validated by receipt-validate at step C5.1.
 
 | Tool | Receipt | Link |
 |------|---------|------|
@@ -43,3 +43,5 @@
 | process-review | 69102d1 | [69102d1](https://github.com/EvaLok/schema-org-json-ld/commit/69102d1) |
 | field-inventory | c022627 | [c022627](https://github.com/EvaLok/schema-org-json-ld/commit/c022627) |
 | cycle-complete | 782a919 | [782a919](https://github.com/EvaLok/schema-org-json-ld/commit/782a919) |
+| process-merge | b51457f | [b51457f](https://github.com/EvaLok/schema-org-json-ld/commit/b51457f) |
+| verify-review-events | c8f5475 | [c8f5475](https://github.com/EvaLok/schema-org-json-ld/commit/c8f5475) |
