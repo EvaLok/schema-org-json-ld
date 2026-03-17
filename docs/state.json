@@ -3959,8 +3959,10 @@
     {
       "dispatched_at": "2026-03-17T08:51:40Z",
       "issue": 1411,
+      "merged_at": "2026-03-17T14:40:55Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1412,
+      "status": "merged",
       "title": "Phase 2 Batch 3 tests"
     },
     {
@@ -4169,12 +4171,12 @@
     "closed_without_merge": 5,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1415 Cycle 289 review (cycle 289)",
-    "dispatch_to_pr_rate": "97.9%",
-    "in_flight": 4,
-    "merged": 425,
+    "dispatch_to_pr_rate": "98.2%",
+    "in_flight": 3,
+    "merged": 426,
     "pr_merge_rate": "98.8%",
-    "produced_pr": 430,
-    "resolved": 435,
+    "produced_pr": 431,
+    "resolved": 436,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 439
@@ -4277,15 +4279,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 289"
+        "last_refreshed": "cycle 290"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 289"
+        "last_refreshed": "cycle 290"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 289"
+        "last_refreshed": "cycle 290"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
