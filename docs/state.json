@@ -6661,9 +6661,23 @@
         "finding_count": 3,
         "ignored": 0,
         "note": "STABILIZATION (ADR 0011): All 3 findings deferred per observation mode. F1 receipt-integrity: clean-cycle commit missing from worklog receipt table. F2 worklog-accuracy: chronic recalibration marked runtime_verified before proof cycle. F3 state-integrity: clean-cycle counter incremented on intermediate PASS that broke on record-dispatch."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "receipt-integrity",
+          "process-adherence",
+          "state-integrity"
+        ],
+        "complacency_score": 3,
+        "cycle": 284,
+        "deferred": 3,
+        "finding_count": 3,
+        "ignored": 0,
+        "note": "STABILIZATION (ADR 0011): All 3 findings deferred per observation mode. F1 receipt-integrity: clean-cycle commit missing from receipt table (recurring from cycle 283). F2 process-adherence: dispatch-time PASS claimed on commit 9d212e0 that still failed invariant 10 — silent fix commit d792142 not documented. F3 state-integrity: review_events_verified_through_cycle advanced to 284 without fresh review evidence from verify-review-events tool."
       }
     ],
-    "last_review_cycle": 283
+    "last_review_cycle": 284
   },
   "review_events_verified_through_cycle": 284,
   "schema_status": {
