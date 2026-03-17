@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (2026-03-16)
+Accepted (2026-03-16). Phase 1 complete. Phase 2 issued ([#1401](https://github.com/EvaLok/schema-org-json-ld/issues/1401), 2026-03-17).
 
 ## Context
 

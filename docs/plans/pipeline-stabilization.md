@@ -7,8 +7,9 @@
 >
 > **Status tracking:**
 > - Phase 0: COMPLETE (committed `b38e0a9`, 2026-03-16)
-> - Phase 1: ISSUED ([#1350](https://github.com/EvaLok/schema-org-json-ld/issues/1350))
-> - Phases 2–5: NOT YET ISSUED — awaiting Eva
+> - Phase 1: COMPLETE ([#1350](https://github.com/EvaLok/schema-org-json-ld/issues/1350), merged cycles 277–279)
+> - Phase 2: ISSUED ([#1401](https://github.com/EvaLok/schema-org-json-ld/issues/1401))
+> - Phases 3–5: NOT YET ISSUED — awaiting Eva
 
 ---
 
