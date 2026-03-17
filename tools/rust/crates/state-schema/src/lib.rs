@@ -281,9 +281,23 @@ pub fn transition_cycle_phase(
         .and_then(Value::as_object_mut)
         .ok_or_else(|| "missing object /cycle_phase in docs/state.json".to_string())?;
 
+    let completed_at = if new_phase == "complete" {
+        Some(timestamp.clone())
+    } else {
+        None
+    };
+
     cycle_phase.insert("phase".to_string(), Value::String(new_phase.to_string()));
     cycle_phase.insert("phase_entered_at".to_string(), Value::String(timestamp));
     cycle_phase.insert("cycle".to_string(), serde_json::json!(cycle));
+    match completed_at {
+        Some(completed_at) => {
+            cycle_phase.insert("completed_at".to_string(), Value::String(completed_at));
+        }
+        None => {
+            cycle_phase.remove("completed_at");
+        }
+    }
 
     // Bump field_inventory freshness
     let cycle_marker = format!("cycle {}", cycle);
@@ -294,9 +308,21 @@ pub fn transition_cycle_phase(
     if let Some(fields) = fields {
         let entry = fields
             .entry("cycle_phase".to_string())
-            .or_insert_with(|| serde_json::json!({"cadence": "every phase transition"}));
+            .or_insert_with(|| {
+                serde_json::json!({
+                    "cadence": "every phase transition",
+                    "notes": "Tracks cycle, phase, phase_entered_at, and completed_at when phase is complete."
+                })
+            });
         if let Some(obj) = entry.as_object_mut() {
             obj.insert("last_refreshed".to_string(), Value::String(cycle_marker));
+            obj.insert(
+                "notes".to_string(),
+                Value::String(
+                    "Tracks cycle, phase, phase_entered_at, and completed_at when phase is complete."
+                        .to_string(),
+                ),
+            );
         }
     }
 
@@ -484,6 +510,8 @@ pub struct CyclePhase {
     pub cycle: Option<u64>,
     pub phase: Option<String>,
     pub phase_entered_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub completed_at: Option<String>,
     #[serde(flatten)]
     pub extra: BTreeMap<String, Value>,
 }
@@ -982,6 +1010,7 @@ mod tests {
         assert!(state.cycle_phase.cycle.is_none());
         assert!(state.cycle_phase.phase.is_none());
         assert!(state.cycle_phase.phase_entered_at.is_none());
+        assert!(state.cycle_phase.completed_at.is_none());
     }
 
     #[test]
@@ -990,7 +1019,8 @@ mod tests {
             "cycle_phase": {
                 "cycle": 219,
                 "phase": "close_out",
-                "phase_entered_at": "2026-03-10T15:00:00Z"
+                "phase_entered_at": "2026-03-10T15:00:00Z",
+                "completed_at": "2026-03-10T16:00:00Z"
             }
         }))
         .expect("state should deserialize");
@@ -1001,6 +1031,10 @@ mod tests {
             state.cycle_phase.phase_entered_at.as_deref(),
             Some("2026-03-10T15:00:00Z")
         );
+        assert_eq!(
+            state.cycle_phase.completed_at.as_deref(),
+            Some("2026-03-10T16:00:00Z")
+        );
     }
 
     #[test]
@@ -1009,7 +1043,8 @@ mod tests {
             "cycle_phase": {
                 "cycle": 219,
                 "phase": "work",
-                "phase_entered_at": "2026-03-10T12:00:00Z"
+                "phase_entered_at": "2026-03-10T12:00:00Z",
+                "completed_at": "2026-03-10T12:30:00Z"
             },
             "field_inventory": {
                 "fields": {
@@ -1042,6 +1077,13 @@ mod tests {
                 .and_then(Value::as_str),
             Some("cycle 219")
         );
+        assert_eq!(state.pointer("/cycle_phase/completed_at"), None);
+        assert_eq!(
+            state
+                .pointer("/field_inventory/fields/cycle_phase/notes")
+                .and_then(Value::as_str),
+            Some("Tracks cycle, phase, phase_entered_at, and completed_at when phase is complete.")
+        );
     }
 
     #[test]
@@ -1072,6 +1114,10 @@ mod tests {
                 .pointer("/field_inventory/fields/cycle_phase/last_refreshed")
                 .and_then(Value::as_str),
             Some("cycle 219")
+        );
+        assert_eq!(
+            state.pointer("/cycle_phase/completed_at").and_then(Value::as_str),
+            state.pointer("/cycle_phase/phase_entered_at").and_then(Value::as_str)
         );
     }
 
@@ -1109,6 +1155,12 @@ mod tests {
                 .and_then(Value::as_str),
             Some("cycle 219")
         );
+        assert_eq!(
+            state
+                .pointer("/field_inventory/fields/cycle_phase/notes")
+                .and_then(Value::as_str),
+            Some("Tracks cycle, phase, phase_entered_at, and completed_at when phase is complete.")
+        );
     }
 
     #[test]
@@ -1137,6 +1189,21 @@ mod tests {
             serialized.pointer("/cycle_phase/phase_entered_at"),
             Some(&json!("2026-03-10T16:00:00Z"))
         );
+        assert_eq!(serialized.pointer("/cycle_phase/completed_at"), None);
+    }
+
+    #[test]
+    fn cycle_phase_deserializes_without_completed_at_for_backward_compatibility() {
+        let state: StateJson = serde_json::from_value(json!({
+            "cycle_phase": {
+                "cycle": 220,
+                "phase": "work",
+                "phase_entered_at": "2026-03-10T16:00:00Z"
+            }
+        }))
+        .expect("state should deserialize");
+
+        assert!(state.cycle_phase.completed_at.is_none());
     }
 
     #[test]

@@ -116,6 +116,8 @@ struct ReconciledAgentSession {
     issue: i64,
     pr: i64,
     status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    note: Option<String>,
 }
 
 struct AgentSessionReconciliationPlan {
@@ -408,7 +410,7 @@ fn assemble_report(
     let timestamp = format_timestamp(now);
     let session_duration_minutes = compute_session_duration_minutes(state, now)?;
     let pipeline_check = validate_pipeline_check(state, cycle);
-    let agent_session_reconciliation = build_agent_session_reconciliation(state, reconcile)?;
+    let agent_session_reconciliation = build_agent_session_reconciliation(state, reconcile, &timestamp)?;
     let state_json_patch = build_state_patch(
         cycle,
         issue,
@@ -608,6 +610,7 @@ fn run_git(repo_root: &Path, args: &[&str]) -> Result<String, String> {
 fn build_agent_session_reconciliation(
     state: &StateJson,
     reconcile: &[ReconcileArg],
+    timestamp: &str,
 ) -> Result<AgentSessionReconciliationPlan, String> {
     if reconcile.is_empty() {
         return Ok(AgentSessionReconciliationPlan {
@@ -644,10 +647,17 @@ fn build_agent_session_reconciliation(
             .ok_or_else(|| "agent_sessions entries must be objects".to_string())?;
         session.insert("status".to_string(), json!(item.status.as_str()));
         session.insert("pr".to_string(), json!(item.pr));
+        let note = if item.status == ReconcileStatus::Merged && !session.contains_key("merged_at") {
+            session.insert("merged_at".to_string(), json!(timestamp));
+            Some(format!("Set merged_at to {} (was missing)", timestamp))
+        } else {
+            None
+        };
         reconciled.push(ReconciledAgentSession {
             issue: item.issue,
             pr: item.pr,
             status: item.status.as_str().to_string(),
+            note,
         });
     }
 
@@ -699,6 +709,7 @@ fn apply_cycle_patch(repo_root: &Path, patch: &StatePatch) -> Result<Vec<String>
     for path in [
         "/cycle_phase/phase",
         "/cycle_phase/phase_entered_at",
+        "/cycle_phase/completed_at",
         "/cycle_phase/cycle",
         "/field_inventory/fields/cycle_phase/last_refreshed",
     ] {
@@ -738,10 +749,16 @@ fn print_agent_session_reconciliation(report: &AgentSessionReconciliationReport)
         report.reconciled.len()
     );
     for reconciled in &report.reconciled {
-        println!(
-            "- issue #{} -> PR #{} ({})",
-            reconciled.issue, reconciled.pr, reconciled.status
-        );
+        match reconciled.note.as_deref() {
+            Some(note) => println!(
+                "- issue #{} -> PR #{} ({}) — {}",
+                reconciled.issue, reconciled.pr, reconciled.status, note
+            ),
+            None => println!(
+                "- issue #{} -> PR #{} ({})",
+                reconciled.issue, reconciled.pr, reconciled.status
+            ),
+        }
     }
 }
 
@@ -1797,6 +1814,10 @@ mod tests {
         assert_eq!(report.agent_session_reconciliation.reconciled[0].issue, 751);
         assert_eq!(report.agent_session_reconciliation.reconciled[0].pr, 752);
         assert_eq!(
+            report.agent_session_reconciliation.reconciled[0].note.as_deref(),
+            Some("Set merged_at to 2026-03-05T05:06:07Z (was missing)")
+        );
+        assert_eq!(
             report
                 .state_json_patch
                 .updates
@@ -1808,7 +1829,74 @@ mod tests {
                     "issue": 751,
                     "status": "merged",
                     "title": "example",
-                    "pr": 752
+                    "pr": 752,
+                    "merged_at": "2026-03-05T05:06:07Z"
+                }
+            ]))
+        );
+    }
+
+    #[test]
+    fn reconcile_preserves_existing_merged_at_timestamp() {
+        let mut state = StateJson::default();
+        state.last_cycle.timestamp = Some("2026-03-05T04:19:37Z".to_string());
+        state.agent_sessions = serde_json::from_value(json!([
+            {
+                "issue": 751,
+                "status": "in_flight",
+                "title": "example",
+                "merged_at": "2026-03-05T04:59:00Z"
+            }
+        ]))
+        .unwrap();
+        state.field_inventory.fields.insert(
+            "last_cycle".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "last_cycle.duration_minutes".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "last_eva_comment_check".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "agent_sessions".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+
+        let report = assemble_report(
+            139,
+            464,
+            fixed_now(),
+            &state,
+            &no_cycle_changes(),
+            "summary",
+            &[ReconcileArg {
+                issue: 751,
+                pr: 752,
+                status: ReconcileStatus::Merged,
+            }],
+        )
+        .unwrap();
+
+        assert_eq!(report.agent_session_reconciliation.reconciled.len(), 1);
+        assert!(report.agent_session_reconciliation.reconciled[0].note.is_none());
+        assert_eq!(
+            report
+                .state_json_patch
+                .updates
+                .iter()
+                .find(|update| update.path == "/agent_sessions")
+                .map(|update| update.value.clone()),
+            Some(json!([
+                {
+                    "issue": 751,
+                    "status": "merged",
+                    "title": "example",
+                    "pr": 752,
+                    "merged_at": "2026-03-05T04:59:00Z"
                 }
             ]))
         );
