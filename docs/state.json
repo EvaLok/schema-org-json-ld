@@ -4389,7 +4389,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 292"
+        "last_refreshed": "cycle 293"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -6891,9 +6891,24 @@
         "finding_count": 5,
         "ignored": 0,
         "note": "STABILIZATION (ADR 0011): 5 findings from cycle 291 review. All deferred per observation mode. F1 worklog-accuracy: Phase 2 completeness overstated (fixture-realism defect in cycle-receipts item 2 unresolved). F2 worklog-accuracy: Issues processed None despite 2 issues closed (write-entry --auto-issues not used). F3 worklog-accuracy: Current state block stale (pipeline/metric values from earlier snapshot). F4 state-integrity: review_agent.history commit pending language stale. F5 process-integrity: Local --ours merge dropped state change (later restored)."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "gate-enforcement",
+          "phase-closure",
+          "receipt-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 4,
+        "cycle": 292,
+        "deferred": 4,
+        "finding_count": 4,
+        "ignored": 0,
+        "note": "STABILIZATION (ADR 0011): All 4 findings deferred per observation mode. F1 phase-closure: Phase 2 closed despite test-realism defect. F2 receipt-integrity: stabilization commit missing from receipt table. F3 worklog-accuracy: narrative froze before stabilization outcome. F4 gate-enforcement: burn-in restarted with known MANDATORY_STEP_IDS gap."
       }
     ],
-    "last_review_cycle": 291
+    "last_review_cycle": 292
   },
   "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 291,
