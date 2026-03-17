@@ -14,7 +14,7 @@
 **File**: docs/journal/2026-03-17.md:123-143
 **Evidence**:
 - The cycle 288 entry says the prior commitments were `**Followed.**` because matching Phase 2 issues were dispatched (lines 123-129).
-- One of those commitments was `fix transition_cycle_phase completed_at` (line 127), but the published state for the same cycle still shows `phase = "close_out"` while `completed_at` remains set to an older timestamp (`2026-03-16T22:39:05Z`) at `docs/state.json:4150-4154`. The bug was queued in `#1405`; it was not yet fixed in the repository state the journal certifies.
+- One of those commitments was `fix transition_cycle_phase completed_at` (line 127), but the cycle 288 docs commit (`64b47c6`) still shows `phase = "close_out"` while `completed_at` remains set to an older timestamp (`2026-03-16T22:39:05Z`) in `docs/state.json`. The bug was queued in `#1405`; it was not yet fixed in the repository state the journal certifies.
 - The cycle's own `Step C3` comment on issue `#1402` repeats the same framing — `Previous commitments: followed (all 3 post-stabilization items now in Phase 2 scope)` (https://github.com/EvaLok/schema-org-json-ld/issues/1402#issuecomment-4072753177) — which collapses “dispatched” into “done”.
 **Recommendation**: Reserve `Followed` for commitments whose promised behavior is visible in the committed repo state. If a commitment has only been dispatched into a new issue, label it as queued/dispatched and cite the follow-on issue instead of treating issue creation as closure.
 
