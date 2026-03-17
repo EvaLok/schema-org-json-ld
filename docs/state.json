@@ -3980,8 +3980,10 @@
     {
       "dispatched_at": "2026-03-17T14:57:37Z",
       "issue": 1418,
+      "merged_at": "2026-03-17T16:25:38Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1419,
+      "status": "merged",
       "title": "Cycle 290 review"
     }
   ],
@@ -4183,12 +4185,12 @@
     "closed_without_merge": 5,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#1418 Cycle 290 review (cycle 290)",
-    "dispatch_to_pr_rate": "98.4%",
-    "in_flight": 1,
-    "merged": 428,
+    "dispatch_to_pr_rate": "98.6%",
+    "in_flight": 0,
+    "merged": 429,
     "pr_merge_rate": "98.8%",
-    "produced_pr": 433,
-    "resolved": 439,
+    "produced_pr": 434,
+    "resolved": 440,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 440
