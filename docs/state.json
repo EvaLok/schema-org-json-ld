@@ -4172,14 +4172,14 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 5,
-    "closed_without_pr": 3,
+    "closed_without_pr": 4,
     "dispatch_log_latest": "#1415 Cycle 289 review (cycle 289)",
     "dispatch_to_pr_rate": "98.4%",
-    "in_flight": 2,
+    "in_flight": 1,
     "merged": 427,
     "pr_merge_rate": "98.8%",
     "produced_pr": 432,
-    "resolved": 437,
+    "resolved": 438,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 439
