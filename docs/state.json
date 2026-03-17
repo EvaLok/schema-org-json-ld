@@ -4137,7 +4137,7 @@
     "closed_without_merge": 5,
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1405 Phase 2 Batch 2 (cycle 288)",
-    "dispatch_to_pr_rate": "98.6%",
+    "dispatch_to_pr_rate": "98.4%",
     "in_flight": 2,
     "merged": 423,
     "pr_merge_rate": "98.8%",
@@ -4357,7 +4357,7 @@
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
-        "last_refreshed": "cycle 282"
+        "last_refreshed": "cycle 288"
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
@@ -6762,7 +6762,7 @@
     ],
     "last_review_cycle": 287
   },
-  "review_events_verified_through_cycle": 286,
+  "review_events_verified_through_cycle": 287,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
@@ -7234,8 +7234,8 @@
   },
   "schema_version": 1,
   "test_count": {
-    "last_verified": "cycle 282",
-    "last_verified_note": "php = PHPUnit test count (composer run test-unit). ts = metric-snapshot tool count. Updated cycle 282: +1 PHP test (testContentReferenceTime), +1 TS test (includes contentReferenceTime when set) from PR #1374.",
+    "last_verified": "cycle 288",
+    "last_verified_note": "php = PHPUnit test count (composer run test-unit). ts = metric-snapshot tool count. Verified cycle 288: no change (426 PHP, 420 TS).",
     "php": 426,
     "total": 846,
     "ts": 420
