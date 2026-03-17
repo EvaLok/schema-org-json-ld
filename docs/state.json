@@ -4145,11 +4145,11 @@
     "closed_without_pr": 3,
     "dispatch_log_latest": "#1408 Cycle 288 review (cycle 288)",
     "dispatch_to_pr_rate": "98.2%",
-    "in_flight": 3,
-    "merged": 423,
-    "pr_merge_rate": "98.8%",
+    "in_flight": 1,
+    "merged": 425,
+    "pr_merge_rate": "99.3%",
     "produced_pr": 428,
-    "resolved": 433,
+    "resolved": 435,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 436
@@ -4308,7 +4308,7 @@
       },
       "project_mode": {
         "cadence": "when mode changes (stabilization entry/exit)",
-        "last_refreshed": "cycle 283"
+        "last_refreshed": "cycle 289"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
@@ -4332,7 +4332,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 283"
+        "last_refreshed": "cycle 289"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
