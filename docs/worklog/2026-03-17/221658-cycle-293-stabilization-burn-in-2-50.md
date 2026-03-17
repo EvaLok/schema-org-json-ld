@@ -41,3 +41,4 @@
 | process-merge | 679fb7a | [679fb7a](https://github.com/EvaLok/schema-org-json-ld/commit/679fb7a) |
 | process-review | f780650 | [f780650](https://github.com/EvaLok/schema-org-json-ld/commit/f780650) |
 | cycle-complete | 77e8921 | [77e8921](https://github.com/EvaLok/schema-org-json-ld/commit/77e8921) |
+| verify-review-events | 50f7622 | [50f7622](https://github.com/EvaLok/schema-org-json-ld/commit/50f7622) |
