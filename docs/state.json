@@ -4328,7 +4328,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 288"
+        "last_refreshed": "cycle 289"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -6765,9 +6765,24 @@
         "finding_count": 3,
         "ignored": 0,
         "note": "STABILIZATION (ADR 0011): All 3 findings deferred per observation mode. F1 worklog-accuracy: worklog omits doc-validation failure from final pipeline state. F2 process-adherence: manual state write created duplicate cycle-286 review history entry (fixed this cycle). F3 journal-quality: post-stabilization commitments still lack concrete closure conditions."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "dispatch-spec-quality",
+          "journal-quality",
+          "process-adherence",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 3,
+        "cycle": 288,
+        "deferred": 4,
+        "finding_count": 4,
+        "ignored": 0,
+        "note": "STABILIZATION (ADR 0011): All 4 findings deferred per observation mode. F1 worklog-accuracy. F2 journal-quality. F3 process-adherence. F4 dispatch-spec-quality."
       }
     ],
-    "last_review_cycle": 287
+    "last_review_cycle": 288
   },
   "review_events_verified_through_cycle": 287,
   "schema_status": {
