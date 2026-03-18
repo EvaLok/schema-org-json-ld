@@ -28,7 +28,7 @@
 
 - **In-flight agent sessions**: 0
 - **Pipeline status**: FAIL (step-comments cascade from cycle 296)
-- **Copilot metrics**: 446 dispatches, 439 PRs produced, 434 merged, 98.9% PR merge rate
+- **Copilot metrics**: 446 dispatches, 440 PRs produced, 434 merged, 98.6% PR merge rate
 - **Publish gate**: published
 
 ## Next steps
@@ -47,4 +47,5 @@
 | process-eva | e4a4132 | [e4a4132](https://github.com/EvaLok/schema-org-json-ld/commit/e4a4132) |
 | cycle-tagged | 22318cf | [22318cf](https://github.com/EvaLok/schema-org-json-ld/commit/22318cf) |
 | cycle-complete | cdc7a93 | [cdc7a93](https://github.com/EvaLok/schema-org-json-ld/commit/cdc7a93) |
+| state-integrity | b998719 | [b998719](https://github.com/EvaLok/schema-org-json-ld/commit/b998719) |
 | checklist | 22318cf | [22318cf](https://github.com/EvaLok/schema-org-json-ld/commit/22318cf) |
