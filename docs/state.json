@@ -4036,7 +4036,7 @@
       "issue": 1440,
       "model": "gpt-5.4",
       "pr": 1441,
-      "status": "closed",
+      "status": "closed_without_merge",
       "title": "Cycle 296 review"
     }
   ],
@@ -4238,15 +4238,15 @@
     "total_classes_converted": 54
   },
   "copilot_metrics": {
-    "closed_without_merge": 5,
+    "closed_without_merge": 6,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#1440 Cycle 296 review (cycle 296)",
-    "dispatch_to_pr_rate": "98.4%",
+    "dispatch_to_pr_rate": "98.7%",
     "in_flight": 0,
     "merged": 434,
-    "pr_merge_rate": "98.9%",
-    "produced_pr": 439,
-    "resolved": 445,
+    "pr_merge_rate": "98.6%",
+    "produced_pr": 440,
+    "resolved": 446,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 446
@@ -4531,7 +4531,7 @@
     "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
     "started_at": "cycle 199"
   },
-  "previous_cycle_issue": 1444,
+  "previous_cycle_issue": 1439,
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
     "clean_cycle_counter": 0,
@@ -7022,7 +7022,7 @@
     "last_review_cycle": 296
   },
   "review_dispatch_consecutive": 0,
-  "review_events_verified_through_cycle": 295,
+  "review_events_verified_through_cycle": 296,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
