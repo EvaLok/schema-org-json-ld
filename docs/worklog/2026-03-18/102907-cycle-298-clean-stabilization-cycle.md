@@ -24,7 +24,7 @@
 
 - **In-flight agent sessions**: 0
 - **Pipeline status**: PASS (3 warnings: stale field inventory — refreshed)
-- **Copilot metrics**: 447 dispatches, 440 PRs produced, 434 merged, 98.6% PR merge rate
+- **Copilot metrics**: 447 dispatches, 441 PRs produced, 435 merged, 98.6% PR merge rate
 - **Publish gate**: published
 
 ## Next steps
@@ -40,3 +40,4 @@
 | cycle-start | f9711a6 | [f9711a6](https://github.com/EvaLok/schema-org-json-ld/commit/f9711a6) |
 | process-review | d9525a5 | [d9525a5](https://github.com/EvaLok/schema-org-json-ld/commit/d9525a5) |
 | cycle-complete | 59f3bbd | [59f3bbd](https://github.com/EvaLok/schema-org-json-ld/commit/59f3bbd) |
+| process-merge | 9b1cde1 | [9b1cde1](https://github.com/EvaLok/schema-org-json-ld/commit/9b1cde1) |
