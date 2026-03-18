@@ -4539,7 +4539,7 @@
     "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
     "started_at": "cycle 199"
   },
-  "previous_cycle_issue": 1439,
+  "previous_cycle_issue": 1444,
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
     "clean_cycle_counter": 0,
