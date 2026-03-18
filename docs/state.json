@@ -4016,8 +4016,10 @@
     {
       "dispatched_at": "2026-03-18T00:37:51Z",
       "issue": 1434,
+      "merged_at": "2026-03-18T03:03:23Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1435,
+      "status": "merged",
       "title": "Cycle 294 review"
     }
   ],
@@ -4221,12 +4223,12 @@
     "closed_without_merge": 5,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#1434 Cycle 294 review (cycle 294)",
-    "dispatch_to_pr_rate": "98.4%",
-    "in_flight": 1,
-    "merged": 432,
+    "dispatch_to_pr_rate": "98.6%",
+    "in_flight": 0,
+    "merged": 433,
     "pr_merge_rate": "98.9%",
-    "produced_pr": 437,
-    "resolved": 443,
+    "produced_pr": 438,
+    "resolved": 444,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 444
