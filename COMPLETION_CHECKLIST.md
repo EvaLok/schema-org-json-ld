@@ -187,7 +187,7 @@ If EITHER condition fails:
 
 Update state.json via a targeted `jq` write or a future tool. Commit the state change as part of the C5 docs commit (or as a separate atomic commit).
 
-**Target**: 50 consecutive clean cycles. When `clean_cycle_counter >= 50`, create a `question-for-eva` issue recommending transition out of stabilization mode.
+**Target**: 12 consecutive clean cycles. When `clean_cycle_counter >= 12`, create a `question-for-eva` issue recommending transition out of stabilization mode.
 
 Post this step: `bash tools/post-step --issue {N} --step "C5.6" --title "Stabilization counter" --body "..."`
 

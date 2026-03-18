@@ -56,24 +56,28 @@ Remove orchestrator discretion at observed variance points:
 - `write-entry` derives all dynamic content from tool output
 - Chronic category lifecycle transitions driven by tool output, not orchestrator judgment
 
-### Phase 5: 50-Cycle Burn-In
-Run 50 consecutive clean cycles with no tool modifications. Counter resets on any: tool PR merged, pipeline-check failure, manual state.json edit, or gate override. Review agent findings accumulated and triaged post-burn-in.
+### Phase 5: 12-Cycle Burn-In
+Run 12 consecutive clean cycles with no tool modifications. Counter resets on any: tool PR merged, pipeline-check failure, manual state.json edit, or gate override. Review agent findings accumulated and triaged post-burn-in.
 
-**Stability threshold**: 50 consecutive clean cycles. A "clean cycle" is defined as: `pipeline-check` returns exit 0 AND no tool/infrastructure PRs dispatched or merged during the cycle.
+**Stability threshold**: 12 consecutive clean cycles. A "clean cycle" is defined as: `pipeline-check` returns exit 0 AND no tool/infrastructure PRs dispatched or merged during the cycle.
 
-**Failure protocol**: If counter cannot reach 50 after 100 total cycles (50% failure rate), reassess — identify the specific steps/tools causing resets and return to Phases 1–2.
+**Target revised** (2026-03-19, Eva-authorized): Original target was 50 cycles. Reduced to 12 because: (a) each enforcement fix resets the counter, creating a perverse dynamic where finding-and-fixing bugs is penalized; (b) 12 consecutive clean cycles with the hardened enforcement (Phase 2a) provides sufficient evidence of stability; (c) the deferred-fix backlog grows with every cycle, increasing post-stabilization destabilization risk.
+
+**Failure protocol**: If counter cannot reach 12 after 50 total cycles, reassess — identify the specific steps/tools causing resets and return to Phases 1–2.
+
+**Eva-authorized counter reset exemption**: Tool changes pushed directly by Eva (not dispatched by the orchestrator) do NOT reset the clean cycle counter. The counter tracks orchestrator-initiated instability, not operator interventions.
 
 ## Consequences
 
 ### Positive
 - Pipeline behavior becomes measurably reproducible
 - Gates enforce compliance structurally rather than relying on orchestrator discipline
-- The 50-cycle burn-in provides concrete evidence of stability (or identifies remaining instability)
+- The 12-cycle burn-in provides concrete evidence of stability (or identifies remaining instability)
 - Review agent observation mode breaks the finding→dispatch→new-finding loop
 
 ### Negative
 - Schema implementation work may slow during Phases 1–4 as tool changes land
-- 50-cycle burn-in (~1 week) produces no new tool improvements
+- 12-cycle burn-in produces no new tool improvements
 - Accumulated review findings during observation mode may reveal issues that weren't being addressed
 
 ### Trade-offs
