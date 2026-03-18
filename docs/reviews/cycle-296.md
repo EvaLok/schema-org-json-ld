@@ -22,7 +22,7 @@
 
 ## 3. [state-integrity] `project_mode` changed in cycle 296, but its freshness marker still certifies only cycle 295
 
-**File**: docs/state.json:4398-4400,4527-4536
+**File**: docs/state.json:4406-4408,4535-4548
 **Evidence**:
 - `field_inventory.fields.project_mode` still says `last_refreshed: "cycle 295"` and describes its cadence as `when mode changes (stabilization entry/exit)`.
 - But the cycle 296 stabilization commit `ba1a897` changes values inside the `project_mode` object itself: `clean_cycle_counter` advances from `4` to `5`, and `consecutive_clean_cycles` gains `296`.
@@ -32,7 +32,7 @@
 
 ## 4. [stabilization-integrity] The clean-cycle counter keeps advancing even though the unresolved counter-integrity escalation remains open and unchanged
 
-**File**: docs/state.json:4527-4536
+**File**: docs/state.json:4535-4548
 **Evidence**:
 - Cycle 296 advances `project_mode.clean_cycle_counter` to `5` and extends `consecutive_clean_cycles` through `296`.
 - Open question-for-eva [#1433](https://github.com/EvaLok/schema-org-json-ld/issues/1433) is still open with no updates since creation, and its body explicitly warns that the clean-cycle counter may be accumulating on tainted cycles because the Step 1.1 enforcement gap is still unresolved.
@@ -42,4 +42,4 @@
 
 ## Complacency score
 
-**3/5** — The score is capped at 3/5 here because the cycle again relied on a receipt-validation result that did not survive to the final published artifact once the stabilization commit landed. Beyond that cap-triggering behavior, the cycle still preferred a tidy stabilization story over the harder truth: the journal contradicted itself about open questions, the `project_mode` freshness bookkeeping drifted from actual state changes, and the burn-in counter kept moving even though the Eva escalation challenging that counter's validity remains unresolved and untouched.
+**3/5** — The score is capped at 3/5 here because the cycle again relied on a receipt-validation result that did not survive to the final published artifact once the stabilization commit landed. Beyond that cap-triggering behavior, the cycle still preferred a tidy stabilization story over the harder truth. The journal contradicted itself about open questions, the `project_mode` freshness bookkeeping drifted from actual state changes, and the burn-in counter kept moving even though the Eva escalation challenging that counter's validity remains unresolved and untouched.
