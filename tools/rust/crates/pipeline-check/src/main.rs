@@ -16,7 +16,11 @@ const DERIVE_METRICS_WRAPPER_PATH: &str = "tools/derive-metrics";
 const ARTIFACT_VERIFY_STEP_NAME: &str = "artifact-verify";
 const DOC_VALIDATION_STEP_NAME: &str = "doc-validation";
 const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
+const CURRENT_CYCLE_STEPS_STEP_NAME: &str = "current-cycle-steps";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
+// Steps that have not been posted yet when pipeline-check runs at C5.5.
+// These are excluded from the current-cycle mandatory step check.
+const POST_GATE_STEP_IDS: &[&str] = &["C5.5", "C5.6", "C6", "C7", "C8"];
 const STEP_COMMENT_THRESHOLD: usize = 17;
 const ORCHESTRATOR_SIGNATURE: &str = "> **[main-orchestrator]**";
 const MANDATORY_STEPS: &[(&str, u64)] = &[
@@ -279,6 +283,7 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
 	let pipeline_status = pipeline_overall_status(&steps);
 	steps.push(verify_doc_validation(repo_root, pipeline_status, runner));
 	steps.push(verify_step_comments(repo_root, cycle, runner));
+	steps.push(verify_current_cycle_step_comments(repo_root, cycle, runner));
 	// Doc validation runs before step-comments so it can pass the pre-step-comments
 	// pipeline status through to validate-docs. Reclassify afterward, once the real
 	// step-comments result is known, but before computing the final overall status.
@@ -888,6 +893,109 @@ fn verify_step_comments(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner
 		detail: Some(format!("issue #{}: {}", issue, issue_assessment.detail)),
 		findings: Some(issue_assessment.findings),
 		summary: None,
+	}
+}
+
+/// Check the current cycle's issue for pre-gate mandatory steps.
+/// Steps posted after C5.5 (C5.5, C5.6, C6, C7, C8) are excluded because
+/// they haven't been posted yet when pipeline-check runs.
+fn verify_current_cycle_step_comments(
+	repo_root: &Path,
+	cycle: u64,
+	runner: &dyn CommandRunner,
+) -> StepReport {
+	let state = match read_state_value(repo_root) {
+		Ok(state) => state,
+		Err(error) => {
+			return StepReport {
+				name: CURRENT_CYCLE_STEPS_STEP_NAME,
+				status: StepStatus::Error,
+				severity: Severity::Blocking,
+				exit_code: None,
+				detail: Some(error),
+				findings: None,
+				summary: None,
+			};
+		}
+	};
+
+	let issue = match state.pointer("/last_cycle/issue").and_then(Value::as_u64) {
+		Some(issue) => issue,
+		None => {
+			return StepReport {
+				name: CURRENT_CYCLE_STEPS_STEP_NAME,
+				status: StepStatus::Pass,
+				severity: Severity::Blocking,
+				exit_code: None,
+				detail: Some(
+					"skipping current-cycle step verification: /last_cycle/issue is not set in docs/state.json"
+						.to_string(),
+				),
+				findings: None,
+				summary: None,
+			};
+		}
+	};
+
+	let found = match fetch_step_comments_for_issue(runner, issue) {
+		Ok(found) => found,
+		Err(error) => {
+			return StepReport {
+				name: CURRENT_CYCLE_STEPS_STEP_NAME,
+				status: StepStatus::Error,
+				severity: Severity::Blocking,
+				exit_code: None,
+				detail: Some(error),
+				findings: None,
+				summary: None,
+			};
+		}
+	};
+
+	// Check only pre-gate mandatory steps (exclude post-gate steps that haven't been posted yet)
+	let pre_gate_mandatory_missing: Vec<&str> = MANDATORY_STEPS
+		.iter()
+		.copied()
+		.filter(|(step, effective_from_cycle)| {
+			*effective_from_cycle <= cycle
+				&& !POST_GATE_STEP_IDS.contains(step)
+				&& !found.contains(step)
+		})
+		.map(|(step, _)| step)
+		.collect();
+
+	let found_ids = ordered_found_step_ids(&found);
+
+	if pre_gate_mandatory_missing.is_empty() {
+		StepReport {
+			name: CURRENT_CYCLE_STEPS_STEP_NAME,
+			status: StepStatus::Pass,
+			severity: Severity::Blocking,
+			exit_code: None,
+			detail: Some(format!(
+				"issue #{}: {} pre-gate mandatory steps present [{}]",
+				issue,
+				found_ids.len(),
+				format_step_id_list(&found_ids)
+			)),
+			findings: Some(found_ids.len()),
+			summary: None,
+		}
+	} else {
+		StepReport {
+			name: CURRENT_CYCLE_STEPS_STEP_NAME,
+			status: StepStatus::Fail,
+			severity: Severity::Blocking,
+			exit_code: None,
+			detail: Some(format!(
+				"issue #{}: missing pre-gate mandatory steps [{}]; found [{}]",
+				issue,
+				format_step_id_list(&pre_gate_mandatory_missing),
+				format_step_id_list(&found_ids)
+			)),
+			findings: Some(found_ids.len()),
+			summary: None,
+		}
 	}
 }
 
@@ -2197,19 +2305,7 @@ mod tests {
 
 			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
 				assert_eq!(issue, 834, "aggregation test should read last_cycle.issue from state");
-				Ok(concat!(
-					"> **[main-orchestrator]** | Cycle 135 | Step 0\n",
-					"> **[main-orchestrator]** | Cycle 135 | Step 0.5\n",
-					"> **[main-orchestrator]** | Cycle 135 | Step 0.6\n",
-					"> **[main-orchestrator]** | Cycle 135 | Step 1\n",
-					"> **[main-orchestrator]** | Cycle 135 | Step 1.1\n",
-					"> **[main-orchestrator]** | Cycle 135 | Step 2\n",
-					"> **[main-orchestrator]** | Cycle 135 | Step 3\n",
-					"> **[main-orchestrator]** | Cycle 135 | Step 4\n",
-					"> **[main-orchestrator]** | Cycle 135 | Step 5\n",
-					"> **[main-orchestrator]** | Cycle 135 | Step 6\n"
-				)
-				.to_string())
+				Ok(step_comment_bodies(135, &EXPECTED_STEP_IDS))
 			}
         }
 
@@ -2318,7 +2414,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-		assert_eq!(report.steps.len(), 9);
+		assert_eq!(report.steps.len(), 10);
 		assert_eq!(report.steps[0].status, StepStatus::Pass);
 		assert_eq!(report.steps[1].status, StepStatus::Pass);
 		assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -2343,6 +2439,8 @@ mod tests {
 		assert_eq!(report.steps[7].status, StepStatus::Pass);
 		assert_eq!(report.steps[8].name, "step-comments");
 		assert_eq!(report.steps[8].status, StepStatus::Pass);
+		assert_eq!(report.steps[9].name, "current-cycle-steps");
+		assert_eq!(report.steps[9].status, StepStatus::Pass);
 	}
 
     #[test]
@@ -2377,7 +2475,7 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-		assert_eq!(report.steps.len(), 9);
+		assert_eq!(report.steps.len(), 10);
 		assert!(report
 			.steps
 			.iter()
@@ -3919,6 +4017,175 @@ mod tests {
 	fn step_1_1_is_mandatory_from_cycle_zero() {
 		assert!(is_mandatory_step_for_cycle("1.1", 0));
 		assert!(is_mandatory_step_for_cycle("1.1", 257));
+	}
+
+	#[test]
+	fn current_cycle_steps_passes_when_all_pre_gate_mandatory_steps_present() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir()
+			.join(format!("pipeline-check-current-cycle-pass-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 900,
+				"last_cycle": {
+					"number": 301,
+					"issue": 950
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct Runner;
+
+		impl CommandRunner for Runner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 950);
+				// All expected steps including post-gate ones
+				let steps: Vec<&str> = EXPECTED_STEP_IDS.to_vec();
+				Ok(step_comment_bodies(301, &steps))
+			}
+		}
+
+		let step = verify_current_cycle_step_comments(&root, 301, &Runner);
+		assert_eq!(step.status, StepStatus::Pass);
+		assert_eq!(step.severity, Severity::Blocking);
+		assert!(step.detail.as_deref().unwrap_or_default().contains("issue #950"));
+	}
+
+	#[test]
+	fn current_cycle_steps_fails_when_pre_gate_mandatory_step_missing() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir()
+			.join(format!("pipeline-check-current-cycle-fail-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 900,
+				"last_cycle": {
+					"number": 301,
+					"issue": 951
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct Runner;
+
+		impl CommandRunner for Runner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 951);
+				// Missing steps 1.1 and 3 (the exact cycle 299 scenario)
+				let steps: Vec<&str> = EXPECTED_STEP_IDS
+					.iter()
+					.copied()
+					.filter(|step| *step != "1.1" && *step != "3")
+					.collect();
+				Ok(step_comment_bodies(301, &steps))
+			}
+		}
+
+		let step = verify_current_cycle_step_comments(&root, 301, &Runner);
+		assert_eq!(step.status, StepStatus::Fail);
+		assert_eq!(step.severity, Severity::Blocking);
+		let detail = step.detail.as_deref().unwrap_or_default();
+		assert!(detail.contains("missing pre-gate mandatory steps [1.1, 3]"),
+			"expected missing steps 1.1 and 3, got: {}", detail);
+	}
+
+	#[test]
+	fn current_cycle_steps_ignores_missing_post_gate_steps() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir()
+			.join(format!("pipeline-check-current-cycle-post-gate-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 900,
+				"last_cycle": {
+					"number": 301,
+					"issue": 952
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct Runner;
+
+		impl CommandRunner for Runner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 952);
+				// All pre-gate steps present, but post-gate steps (C5.5, C5.6, C6, C7, C8) missing
+				let steps: Vec<&str> = EXPECTED_STEP_IDS
+					.iter()
+					.copied()
+					.filter(|step| !POST_GATE_STEP_IDS.contains(step))
+					.collect();
+				Ok(step_comment_bodies(301, &steps))
+			}
+		}
+
+		let step = verify_current_cycle_step_comments(&root, 301, &Runner);
+		assert_eq!(step.status, StepStatus::Pass);
+		assert_eq!(step.severity, Severity::Blocking);
+	}
+
+	#[test]
+	fn current_cycle_steps_skips_when_last_cycle_issue_missing() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir()
+			.join(format!("pipeline-check-current-cycle-skip-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 900,
+				"last_cycle": {
+					"number": 301
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct Runner;
+
+		impl CommandRunner for Runner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected");
+			}
+
+			fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+				panic!("gh api should not run when last_cycle.issue is missing");
+			}
+		}
+
+		let step = verify_current_cycle_step_comments(&root, 301, &Runner);
+		assert_eq!(step.status, StepStatus::Pass);
+		assert!(step.detail.as_deref().unwrap_or_default()
+			.contains("skipping current-cycle step verification"));
 	}
 
 	#[test]
