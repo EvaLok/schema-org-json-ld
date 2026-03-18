@@ -30,7 +30,7 @@
 - That is not reflective synthesis; it is a direct contradiction inside the same journal entry about the cycle's main unresolved escalation.
 **Recommendation**: Derive the journal's `Open questions` section from the same source as `open_questions_for_eva` or, at minimum, require the entry to list any still-open `question-for-eva` issue referenced elsewhere in the same journal block.
 
-## 4. [stabilization-integrity] The clean-cycle counter advanced even though the cycle's own escalation says the counter is currently untrustworthy
+## 4. [stabilization-integrity] The clean-cycle counter advanced even though the cycle's own escalation says the counter is currently unreliable
 
 **File**: docs/state.json:4507-4518
 **Evidence**:
