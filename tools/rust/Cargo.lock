@@ -256,6 +256,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "cycle-runner"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "serde",
+ "serde_json",
+ "state-schema",
+]
+
+[[package]]
 name = "cycle-start"
 version = "0.1.0"
 dependencies = [

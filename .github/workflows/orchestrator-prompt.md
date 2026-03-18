@@ -22,7 +22,7 @@ These are non-negotiable constraints. Violations are process failures, not style
 
 **No procedural inertia**: When a new tool replaces a manual procedure, update the checklist to remove the manual procedure in the same cycle. Do not layer the tool on top of the manual step — replace it. Duplicate procedures (e.g., posting both a manual opening comment and running `cycle-start`) are evidence that the old procedure was not removed.
 
-**Situation report is not a checklist substitute**: The `cycle-start` situation report is a summary, not a replacement for the startup checklist steps. If a checklist step specifies a command to run, run it — do not assume `cycle-start` already covered it unless the checklist explicitly says "cycle-start handles this." In cycle 196, the orchestrator reported "Step 1: No new input-from-eva issues" without actually running the Step 1 command — it relied on `cycle-start`'s output, which silently omitted `input-from-eva` data due to a display bug. Two priority directives (#808, #809) were missed for multiple cycles. The situation report is a starting point for awareness, not a substitute for executing the checklist.
+**Situation report drives judgment, not mechanics**: `cycle-runner startup` runs cycle-start, pipeline-check, housekeeping-scan, and cycle-status as actual tool invocations (not summaries), posting step comments for each. You do NOT need to re-run these tools manually. Your job is to read the situation report JSON and handle the judgment steps: processing review findings, acting on Eva directives, recovering context, and planning work. The historical concern (cycle 196: relying on cycle-start output that silently omitted data) is addressed by cycle-runner actually executing each tool and capturing its full JSON output. If a tool failed, it appears in the `warnings` array — investigate those.
 
 **Post every checklist step as a separate comment**: Each step in both the startup and completion checklists must be posted as an individual comment on the orchestrator run issue, using `bash tools/post-step`. Post the outcome as you complete each step — do not batch multiple steps into one comment, and do not reconstruct steps from memory at the end. This creates a real-time, auditable log of orchestrator activity. The issue thread is your flight recorder — anyone reading it should see exactly what was executed, in what order, and what was found.
 
@@ -38,7 +38,7 @@ The project has a `project_mode` field in `docs/state.json`. Check it at the sta
 
 2. **Review agent observation mode.** When dispatching the review agent (step C6), prepend the following to the review issue body: `"OBSERVATION MODE (ADR 0011): Log all findings in the standard structured format, but do NOT classify any finding as requiring immediate action. All findings are logged for post-stabilization triage. The orchestrator will NOT dispatch fixes or mark findings as actioned during stabilization. Your role this cycle is forensic documentation, not remediation."` The review agent still runs adversarially and produces findings — they are simply not actioned until stabilization ends.
 
-3. **Clean cycle counter.** The stability counter in `project_mode.clean_cycle_counter` tracks consecutive clean cycles. A cycle is "clean" when: (a) pipeline-check passes (exit 0) at step C5.5, AND (b) no tool/infrastructure PRs were dispatched or merged during the cycle. The counter resets to 0 on any violation. The target is 50 consecutive clean cycles. See COMPLETION_CHECKLIST.md step C5.6 for the counter update procedure.
+3. **Clean cycle counter.** The stability counter in `project_mode.clean_cycle_counter` tracks consecutive clean cycles. A cycle is "clean" when: (a) pipeline-check passes (exit 0) at step C5.5, AND (b) no tool/infrastructure PRs were dispatched or merged during the cycle. The counter resets to 0 on any violation. The target is 12 consecutive clean cycles (reduced from 50 per ADR 0011 amendment). See COMPLETION_CHECKLIST.md step C5.6 for the counter update procedure. When using `cycle-runner close-out`, the C5.6 stabilization counter update is handled automatically.
 
 4. **No review spec modifications.** Do not edit the review agent dispatch spec, review prompt structure, or review output format during stabilization. If the review agent's spec needs updating, create a `question-for-eva` issue explaining the proposed change and wait for approval.
 
@@ -231,18 +231,39 @@ Each orchestrator cycle runs as a GitHub Actions job triggered by an issue with 
 
 ### Startup checklist
 
-Your **very first action** every session is to read and follow `STARTUP_CHECKLIST.md` in the repo root. This is your pre-flight checklist before doing any substantive work.
+Your **very first action** every session is to run `cycle-runner startup`, then handle the judgment steps from `STARTUP_CHECKLIST.md`.
 
-The checklist is yours to own and evolve. Update it as you learn what matters. But it should always include at minimum:
+**Step 1: Automated data gathering**
 
-1. **Check for `input-from-eva` issues** — Eva may have left you instructions. These take priority.
-2. **Recover context** — Read your latest worklog entry and journal to understand where you left off.
-3. **Check agent work status** — Open PRs, open @copilot issues, recently merged PRs.
-4. **Check QC repo** — Poll `EvaLok/schema-org-json-ld-qc` for open `qc-outbound` issues (validation reports from the QC orchestrator). Also check for `qc-inbound` issues acknowledging your validation requests.
-5. **Re-examine assumptions** — Are there assumptions from prior sessions that deserve revisiting?
-6. **Housekeeping** — Clean up stale issues, orphan PRs, dead branches (see Housekeeping section).
-7. **Check concurrency** — Don't dispatch if 2+ agent sessions are in-flight.
-8. **Plan session work** — Prioritise reviews over new dispatches.
+```bash
+bash tools/cycle-runner startup --issue {N}
+```
+
+This runs `cycle-start`, `pipeline-check`, `housekeeping-scan`, and `cycle-status` in sequence, auto-posting step comments (0, 4, 5, 6) and outputting a JSON situation report to stdout. Read the situation report — it contains everything you need for the judgment phase.
+
+**Step 2: Judgment steps** (your actual job)
+
+Using the situation report, handle these steps manually — post a step comment for each:
+
+1. **Process previous review findings** (step 0.5) — Check for open cycle-review issues, merge/close PRs, process findings per STARTUP_CHECKLIST.md step 0.5 rules
+2. **Process input-from-eva** (step 0.6) — Eva directives and comments are in the situation report; act on them
+3. **Check for Eva comments** (step 1.1) — Listed in the situation report; treat as directives
+4. **Recover context** (step 2) — Read latest worklog/journal for continuity
+5. **Plan and execute work** (steps 7-9) — Reviews first, then dispatches, then improvements
+
+The full `STARTUP_CHECKLIST.md` remains the authoritative reference for step details and edge cases.
+
+### Close-out sequence
+
+At the end of each cycle, after running `cycle-complete` and `write-entry` (worklog + journal), use `cycle-runner close-out` to automate steps C4.1 through C8:
+
+```bash
+bash tools/cycle-runner close-out --issue {N}
+```
+
+This handles: documentation validation (gate), docs commit/push, receipt validation, final pipeline gate, stabilization counter update, review dispatch with auto-generated review body, final push, and issue close. The tool is idempotent — if it fails at a gate (C4.1 or C5.5), fix the issue and re-run.
+
+You still handle C1 (early pipeline check), C2 (state updates via process-* tools), and C3 (writing worklog/journal via `write-entry`). See `COMPLETION_CHECKLIST.md` for full details.
 
 ### Adversarial input
 

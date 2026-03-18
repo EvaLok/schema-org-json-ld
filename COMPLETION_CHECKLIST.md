@@ -2,9 +2,23 @@
 
 Follow this checklist at the end of every orchestrator cycle. Do not skip steps.
 
-**Step-level commenting**: As with the startup checklist, every step must be posted as a **separate comment** on the orchestrator run issue using `bash tools/post-step`. Post each step's outcome as you complete it — do not batch or summarize from memory.
+**Step-level commenting**: `cycle-runner close-out` auto-posts steps **C4.1, C5, C5.1, C5.5, C5.6, C6, C7, C8**. Post steps **C1, C2, C3, C4.5** manually as separate comments using `bash tools/post-step`. Post each step's outcome as you complete it — do not batch or summarize from memory.
 
 **Critical**: The review agent dispatch (step C6) is MANDATORY. Every cycle must end with a review agent in-flight. Eva directive [#463](https://github.com/EvaLok/schema-org-json-ld/issues/463).
+
+## Automated close-out via cycle-runner
+
+`cycle-runner close-out` automates steps C4.1 through C8 (documentation validation, docs commit/push, receipt validation, pipeline gate, stabilization counter, review dispatch, final push, issue close):
+
+```bash
+bash tools/cycle-runner close-out --issue {N}
+```
+
+**Prerequisites**: Run `cycle-complete`, `write-entry worklog`, and `write-entry journal` before invoking close-out. The tool reads the cycle number from state.json (override with `--cycle N`).
+
+**Gate handling**: Exits non-zero on C4.1 (doc validation) or C5.5 (pipeline) failure. Fix the issue and re-run — the tool is idempotent (detects already-committed docs, already-dispatched reviews, etc.).
+
+Use `--dry-run` to preview without executing.
 
 ## C1. Run pipeline verification (early check)
 
@@ -79,6 +93,8 @@ Journal is written as part of Step C3 via `write-entry journal`. The tool append
 
 ## C4.1. Validate documentation entries (per review finding: worklog-accuracy chronic)
 
+> **Automated by `cycle-runner close-out`** — steps C4.1 through C8 are handled automatically. Run `bash tools/cycle-runner close-out --issue {N}` after completing C1-C3. The details below are retained for reference and manual fallback.
+
 After writing worklog and journal entries, validate them before committing. This is a **blocking gate** — do not proceed to step C5 if validation fails.
 
 ```bash
@@ -116,6 +132,8 @@ Post this step: `bash tools/post-step --issue {N} --step "C4.5" --title "ADR che
 
 ## C5. Commit worklog, journal, and state before review dispatch
 
+> **Automated by `cycle-runner close-out`** — commits docs/ and pushes. Idempotent (skips if already committed).
+
 **CRITICAL ORDERING**: The review agent reads the repo at dispatch time. If worklog and journal entries are not committed and pushed before the review dispatch, the review agent will flag them as "missing" — a false positive that has contaminated complacency scores since cycle 189. Per audit [#151](https://github.com/EvaLok/schema-org-json-ld-audit/issues/151).
 
 Before dispatching the review agent:
@@ -129,6 +147,8 @@ This ensures the review agent sees the complete cycle state, eliminating the art
 Post this step: `bash tools/post-step --issue {N} --step "C5" --title "Pre-dispatch commit and push" --body "..."`
 
 ## C5.1. Receipt table validation (per chronic worklog-accuracy — 8+ consecutive reviews)
+
+> **Automated by `cycle-runner close-out`** — runs receipt-validate and reports findings (not a gate).
 
 After the docs commit (step C5), validate that the worklog receipt table is complete within its defined scope:
 
@@ -151,6 +171,8 @@ Post this step: `bash tools/post-step --issue {N} --step "C5.1" --title "Receipt
 
 ## C5.5. Final pipeline gate (per audit [#153](https://github.com/EvaLok/schema-org-json-ld-audit/issues/153))
 
+> **Automated by `cycle-runner close-out`** — runs pipeline-check as a blocking gate. Exits non-zero on failure.
+
 Re-run the pipeline-check after all state.json modifications are committed:
 
 ```bash
@@ -168,6 +190,8 @@ If the pipeline fails at this point:
 Post this step: `bash tools/post-step --issue {N} --step "C5.5" --title "Final pipeline gate" --body "..."`
 
 ## C5.6. Stabilization counter update (per ADR 0011)
+
+> **Automated by `cycle-runner close-out`** — evaluates clean criteria and updates the counter automatically.
 
 **Conditional step**: Only runs when `project_mode.mode` is `"stabilization"` in `docs/state.json`.
 
@@ -192,6 +216,8 @@ Update state.json via a targeted `jq` write or a future tool. Commit the state c
 Post this step: `bash tools/post-step --issue {N} --step "C5.6" --title "Stabilization counter" --body "..."`
 
 ## C6. Dispatch review agent (MANDATORY)
+
+> **Automated by `cycle-runner close-out`** — generates the review body from cycle data (with observation mode for stabilization) and calls `dispatch-review`. Idempotent (skips if review already dispatched for this cycle).
 
 Dispatch a 5.4 agent to perform an **adversarial** end-of-cycle review. This is our primary quality control mechanism. The review agent's job is to find problems, not confirm that everything is fine.
 
@@ -262,6 +288,8 @@ Post this step: `bash tools/post-step --issue {N} --step "C6" --title "Review di
 
 ## C7. Commit review dispatch state and push
 
+> **Automated by `cycle-runner close-out`** — pushes to origin/master after dispatch.
+
 After dispatching the review agent (step C6), `record-dispatch` has already committed the state change. Push immediately:
 
 ```bash
@@ -273,6 +301,8 @@ The `record-dispatch` commit is the LAST commit of the cycle. Its receipt hash a
 Post this step: `bash tools/post-step --issue {N} --step "C7" --title "Dispatch state push" --body "..."`
 
 ## C8. Close the orchestrator issue
+
+> **Automated by `cycle-runner close-out`** — posts closing summary and closes the issue.
 
 Post a closing summary comment on the cycle issue and close it.
 

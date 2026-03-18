@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (2026-03-16). Phase 1 complete. Phase 2 complete ([#1401](https://github.com/EvaLok/schema-org-json-ld/issues/1401)). Phase 2a: enforcement integrity fix (2026-03-18).
+Accepted (2026-03-16). Phase 1 complete. Phase 2 complete ([#1401](https://github.com/EvaLok/schema-org-json-ld/issues/1401)). Phase 2a: enforcement integrity fix (2026-03-18). Phase 2b: cycle-runner orchestration layer (2026-03-19, Eva-authorized).
 
 ## Context
 
@@ -45,6 +45,21 @@ Fix the cascade/enforcement gap identified by audit [#281](https://github.com/Ev
 - `cycle-receipts` and `receipt-validate`: align structural exclusions with production commit prefixes (`state(stabilization)`)
 
 Counter resets to 0 per stabilization rules (tool PR merged).
+
+### Phase 2b: Cycle-Runner Orchestration Layer (Eva-authorized, 2026-03-19)
+
+Add a top-level coordination tool (`cycle-runner`) that composes existing tools into automated startup and close-out sequences. The orchestrator previously made ~40 manual tool invocations per cycle, introducing behavioral errors every few cycles (wrong issue numbers, missing step comments, stale snapshots, ordering violations).
+
+- `cycle-runner startup --issue N`: runs cycle-start, pipeline-check, housekeeping-scan, cycle-status in sequence; auto-posts step comments; outputs JSON situation report
+- `cycle-runner close-out --issue N`: runs C4.1 through C8 (doc validation gate, commit/push, receipt validation, pipeline gate, stabilization counter, review dispatch with auto-generated review body, final push, issue close)
+
+The orchestrator now handles only judgment steps (review findings, Eva directives, work planning, journal reflections) and close-out preparation (C1-C3: early pipeline, state updates, write-entry).
+
+Counter resets to 0 per stabilization rules (tool crate added). Orchestrator prompt, STARTUP_CHECKLIST.md, and COMPLETION_CHECKLIST.md updated to reference cycle-runner as the primary interface.
+
+**Operational changes** (same commit):
+- Main repo orchestrator reasoning effort: default → high
+- Audit repo orchestrator reasoning effort: default → max, cron reduced from 8x/day to 2x/day (06:00, 12:00 UTC — off-peak NA hours). Rationale: fewer but deeper audit cycles produce higher-quality recommendations than frequent shallow ones.
 
 ### Phase 3: Pipeline Contract Specification
 Formalize every pipeline step with explicit input/output/success/failure/hand-off contracts in `docs/pipeline-contract.md`. Eliminate conditional steps (make them always-run with PASS/SKIP status) and remove ambiguous language from checklists.

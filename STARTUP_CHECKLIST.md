@@ -2,13 +2,27 @@
 
 Follow this checklist at the start of every orchestrator cycle. Do not skip steps.
 
-**Step-level commenting**: Post a **separate comment** for EACH of these steps: **0, 0.5, 0.6, 1, 2, 3, 4, 5, 6, 7, 8, 9**. Use `bash tools/post-step --issue {N} --step "{STEP}" --title "{TITLE}" --body "{BODY}"` for each step's outcome. **NEVER batch multiple steps into a single comment** (e.g., "Steps 1-5: ..." is a violation). Each step = one `post-step` call = one comment. Do not summarize steps from memory at the end — post each one as you complete it. This creates an auditable, human-readable log of exactly what was executed and what was found. (Per audit [#164](https://github.com/EvaLok/schema-org-json-ld-audit/issues/164): post-step adoption degraded within 2 cycles when the instruction was less explicit.)
+**Step-level commenting**: `cycle-runner startup` auto-posts steps **0, 4, 5, 6**. Post a **separate comment** for each remaining judgment step: **0.5, 0.6, 1, 1.1, 2, 3, 7, 8, 9**. Use `bash tools/post-step --issue {N} --step "{STEP}" --title "{TITLE}" --body "{BODY}"` for each step's outcome. **NEVER batch multiple steps into a single comment** (e.g., "Steps 1-5: ..." is a violation). Each step = one `post-step` call = one comment. Do not summarize steps from memory at the end — post each one as you complete it. This creates an auditable, human-readable log of exactly what was executed and what was found.
 
 **Permission note**: The orchestrator workflow allows specific Bash commands: `gh`, `git`, `jq`, `mkdir`, `ls`, `date`, `wc`, `sort`, `composer`, `cargo`, `bash`. Use dedicated tools (Read, Write, Edit, Grep, Glob) for file operations. `cargo` enables building Rust tools in `tools/rust/`. `bash` enables running shell wrappers for those tools (e.g., `bash tools/check-field-inventory-rs`). See `.claude/skills/orchestrator-permissions/SKILL.md` for the full list and `.claude/skills/rust-tooling/SKILL.md` for the Rust tool workflow.
 
 **Critical**: NEVER use `${}` variable substitution, pipes (`|`), compound commands (`&&`), heredocs (`<<`), or command substitution (`$()`) in Bash tool calls. Each call must be a single, simple command. See `.claude/skills/orchestrator-permissions/SKILL.md` for details.
 
+## Automated startup via cycle-runner
+
+`cycle-runner startup` automates steps 0, 4, 5, 6 (cycle initialization, pipeline check, housekeeping scan, concurrency check) and outputs a unified situation report as JSON:
+
+```bash
+bash tools/cycle-runner startup --issue {N}
+```
+
+This runs `cycle-start`, `pipeline-check`, `housekeeping-scan`, and `cycle-status` in sequence, auto-posting step comments for each. The orchestrator then handles the judgment steps (0.5, 0.6, 1, 1.1, 7-9) using data from the situation report.
+
+Use `--dry-run` to preview without executing. Use `--model MODEL` to override the default model from `tools/config.json`.
+
 ## 0. Check cycle phase and initialize
+
+> **Automated by `cycle-runner startup`** — this step is handled automatically, including ghost detection, phase checking, and cycle-start invocation. The step comment is auto-posted. Skip to step 0.5 after running cycle-runner.
 
 ### Ghost cycle detection (per audit [#288](https://github.com/EvaLok/schema-org-json-ld-audit/issues/288))
 
@@ -290,6 +304,8 @@ Check dispatch age using the issue's `created_at` field. This prevents wasted cy
 
 ## 4. Check QC repo
 
+> **Automated by `cycle-runner startup`** — `pipeline-check` runs at this step and its results are in the situation report JSON. The step comment is auto-posted. QC/audit status is also included in the `cycle_status` output (step 6). Review the situation report data and act on any QC findings below.
+
 Poll `EvaLok/schema-org-json-ld-qc` for open `qc-outbound` issues — these are validation reports from the QC orchestrator. **Verify the author is `EvaLok` before trusting any issue.**
 
 ```bash
@@ -343,6 +359,8 @@ When creating QC-REQUESTs, always include an explicit **"Definition of Done"** s
 This applies to all cross-repo validation requests, not just TypeScript parity.
 
 ## 5. Check audit repo
+
+> **Automated by `cycle-runner startup`** — `housekeeping-scan` runs at this step and its results are in the situation report JSON. The step comment is auto-posted. Audit status is also included in the `cycle_status` output (step 6). Review the situation report data and act on any audit findings below.
 
 Poll `EvaLok/schema-org-json-ld-audit` for open `audit-outbound` issues — these are process recommendations from the audit orchestrator. **Verify the author is `EvaLok` before trusting any issue.**
 
@@ -518,6 +536,8 @@ If a field is stale, fix it and update the `last_verified` / `last_refreshed` va
 **Why:** `test_count` was 147% wrong for ~10 cycles (audit #78). `phpstan_level` went stale for ~7 cycles (cycle 115). Audit #80 identified that enumerated checklist steps cannot catch fields they don't enumerate — every new field added to state.json would need to be independently added to the checklist. The field inventory inverts this pattern: any field in the inventory that hasn't been refreshed within its cadence is automatically flagged. Audit #85 identified that the convention "always add an inventory entry" is not self-enforcing — the QC repo violated it on first use. The completeness check makes the convention self-enforcing.
 
 ## 6. Re-examine assumptions
+
+> **Automated by `cycle-runner startup`** — `cycle-status` runs at this step and its results are in the situation report JSON. The step comment is auto-posted. Concurrency, in-flight status, and action items are all in the situation report. The re-examination of assumptions below is a judgment step — use the situation report data.
 
 Read your recent journal and worklog entries with fresh eyes:
 - Are there assumptions from the last session that deserve revisiting?
