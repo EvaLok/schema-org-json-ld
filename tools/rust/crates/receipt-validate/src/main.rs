@@ -179,7 +179,10 @@ fn compare_receipts(
 }
 
 fn is_structurally_excluded(subject: &str) -> bool {
-    subject.starts_with("docs(cycle-") || subject.starts_with("state(record-dispatch):")
+    subject.starts_with("docs(cycle-")
+        || subject.starts_with("state(record-dispatch):")
+        || subject.starts_with("state(stabilization")
+        || subject.starts_with("state(clean-cycle")
 }
 
 fn render_human(report: &ValidationReport) -> String {
@@ -361,6 +364,12 @@ mod tests {
         assert!(is_structurally_excluded(
             "state(record-dispatch): issue #10 dispatched [cycle 255]"
         ));
+        assert!(is_structurally_excluded(
+            "state(stabilization): clean cycle 292 — counter 1/50 [cycle 292]"
+        ));
+        assert!(is_structurally_excluded(
+            "state(clean-cycle): stabilization counter 0->1, cycle 285 clean [cycle 285]"
+        ));
         assert!(!is_structurally_excluded(
             "state(cycle-complete): close cycle [cycle 255]"
         ));
@@ -382,13 +391,14 @@ mod tests {
                 ("ccccccc", "state(cycle-complete): close cycle [cycle 255]"),
                 ("ddddddd", "docs(cycle-255): publish worklog and journal"),
                 ("eeeeeee", "state(record-dispatch): issue #10 dispatched [cycle 255]"),
+                ("fffffff", "state(stabilization): clean cycle 255 — counter 3/50 [cycle 255]"),
             ]),
         );
 
         assert_eq!(report.result, "PASS");
         assert_eq!(report.genuinely_missing, 0);
-        assert_eq!(report.structurally_excluded, 2);
-        assert_eq!(report.excluded_details.len(), 2);
+        assert_eq!(report.structurally_excluded, 3);
+        assert_eq!(report.excluded_details.len(), 3);
     }
 
     #[test]

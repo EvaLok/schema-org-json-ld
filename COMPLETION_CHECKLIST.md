@@ -139,6 +139,7 @@ bash tools/receipt-validate --cycle N --worklog docs/worklog/YYYY-MM-DD/HHMMSS-t
 The receipt table scope is all commits through `cycle-complete`, excluding:
 - The **docs commit** (`docs(cycle-N): ...`) — created at step C5, after the worklog is written
 - The **record-dispatch commit** (`state(record-dispatch): ...`) — created at step C6
+- The **stabilization commit** (`state(stabilization): ...` or `state(clean-cycle): ...`) — created at step C5.6, after receipt validation
 
 These are **structurally excluded** because they are created after the worklog is generated. Their absence is expected, not a defect.
 

@@ -962,23 +962,22 @@ fn assess_step_comment_completeness(
 	}
 
 	if !mandatory_missing.is_empty() {
-		if scope == StepCommentCheckScope::PreviousCycle {
-			return StepCommentAssessment {
-				status: StepStatus::Warn,
-				severity: Severity::Warning,
-				detail: format!(
-					"{}; {}",
-					format_step_comment_cascade_message(cycle, &mandatory_missing),
-					detail
-				),
-				findings: found.len(),
-			};
-		}
-
+		// Mandatory step failures are always blocking, regardless of scope.
+		// A missing mandatory step in the previous cycle means that cycle was
+		// not compliant — the current cycle's pipeline must reflect that.
+		// (audit #281, #284 — cascade logic must not downgrade mandatory failures)
 		return StepCommentAssessment {
 			status: StepStatus::Fail,
 			severity: Severity::Blocking,
-			detail,
+			detail: if scope == StepCommentCheckScope::PreviousCycle {
+				format!(
+					"{}; {}",
+					format_step_comment_cascade_message(cycle, &mandatory_missing),
+					detail
+				)
+			} else {
+				detail
+			},
 			findings: found.len(),
 		};
 	}
@@ -3539,8 +3538,8 @@ mod tests {
 		}
 
 		let step = verify_step_comments(&root, 257, &StepCommentRunner);
-		assert_eq!(step.status, StepStatus::Warn);
-		assert_eq!(step.severity, Severity::Warning);
+		assert_eq!(step.status, StepStatus::Fail);
+		assert_eq!(step.severity, Severity::Blocking);
 		assert!(step
 			.detail
 			.as_deref()
@@ -3591,8 +3590,8 @@ mod tests {
 		}
 
 		let step = verify_step_comments(&root, 254, &StepCommentRunner);
-		assert_eq!(step.status, StepStatus::Warn);
-		assert_eq!(step.severity, Severity::Warning);
+		assert_eq!(step.status, StepStatus::Fail);
+		assert_eq!(step.severity, Severity::Blocking);
 		assert!(step
 			.detail
 			.as_deref()
@@ -3643,8 +3642,8 @@ mod tests {
 		}
 
 		let step = verify_step_comments(&root, 257, &StepCommentRunner);
-		assert_eq!(step.status, StepStatus::Warn);
-		assert_eq!(step.severity, Severity::Warning);
+		assert_eq!(step.status, StepStatus::Fail);
+		assert_eq!(step.severity, Severity::Blocking);
 		assert!(step
 			.detail
 			.as_deref()
@@ -3700,8 +3699,8 @@ mod tests {
 		}
 
 		let step = verify_step_comments(&root, 257, &StepCommentRunner);
-		assert_eq!(step.status, StepStatus::Warn);
-		assert_eq!(step.severity, Severity::Warning);
+		assert_eq!(step.status, StepStatus::Fail);
+		assert_eq!(step.severity, Severity::Blocking);
 		assert!(step
 			.detail
 			.as_deref()
@@ -3809,8 +3808,8 @@ mod tests {
 		}
 
 		let step = verify_step_comments(&root, 257, &StepCommentRunner);
-		assert_eq!(step.status, StepStatus::Warn);
-		assert_eq!(step.severity, Severity::Warning);
+		assert_eq!(step.status, StepStatus::Fail);
+		assert_eq!(step.severity, Severity::Blocking);
 		assert!(step
 			.detail
 			.as_deref()
@@ -3891,8 +3890,8 @@ mod tests {
 		let assessment =
 			assess_step_comment_completeness(&found, 257, StepCommentCheckScope::PreviousCycle);
 
-		assert_eq!(assessment.status, StepStatus::Warn);
-		assert_eq!(assessment.severity, Severity::Warning);
+		assert_eq!(assessment.status, StepStatus::Fail);
+		assert_eq!(assessment.severity, Severity::Blocking);
 		assert!(assessment
 			.detail
 			.contains("Cascade from cycle 257: step 1.1 was missing (already penalized)"));

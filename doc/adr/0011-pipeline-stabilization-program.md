@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (2026-03-16). Phase 1 complete. Phase 2 issued ([#1401](https://github.com/EvaLok/schema-org-json-ld/issues/1401), 2026-03-17).
+Accepted (2026-03-16). Phase 1 complete. Phase 2 complete ([#1401](https://github.com/EvaLok/schema-org-json-ld/issues/1401)). Phase 2a: enforcement integrity fix (2026-03-18).
 
 ## Context
 
@@ -38,6 +38,13 @@ Fix known correctness gaps:
 - `cycle-receipts` — fix unrealistic dedup tests and SHA duplication in rendering
 - `cycle-complete --reconcile` — enforce `merged_at` on status:"merged" transitions
 - `write-entry` — derive scope notes from data, not hardcoded strings
+
+### Phase 2a: Enforcement Integrity (Eva-authorized, 2026-03-18)
+Fix the cascade/enforcement gap identified by audit [#281](https://github.com/EvaLok/schema-org-json-ld-audit/issues/281) and [#284](https://github.com/EvaLok/schema-org-json-ld-audit/issues/284):
+- `pipeline-check`: mandatory step failures are blocking regardless of cascade scope (a missing mandatory step in the previous cycle produces FAIL, not WARN)
+- `cycle-receipts` and `receipt-validate`: align structural exclusions with production commit prefixes (`state(stabilization)`)
+
+Counter resets to 0 per stabilization rules (tool PR merged).
 
 ### Phase 3: Pipeline Contract Specification
 Formalize every pipeline step with explicit input/output/success/failure/hand-off contracts in `docs/pipeline-contract.md`. Eliminate conditional steps (make them always-run with PASS/SKIP status) and remove ambiguous language from checklists.
