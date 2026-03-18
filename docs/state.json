@@ -7175,9 +7175,22 @@
         "finding_count": 5,
         "ignored": 0,
         "note": "All 5 findings deferred per ADR 0011 stabilization observation mode"
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "journal-quality",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 302,
+        "deferred": 3,
+        "finding_count": 3,
+        "ignored": 0,
+        "note": "ADR 0011 stabilization: all findings deferred"
       }
     ],
-    "last_review_cycle": 301
+    "last_review_cycle": 302
   },
   "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 301,
