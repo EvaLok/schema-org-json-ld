@@ -4337,7 +4337,7 @@
   "cycle_phase": {
     "cycle": 303,
     "phase": "close_out",
-    "phase_entered_at": "2026-03-18T20:28:36Z"
+    "phase_entered_at": "2026-03-18T22:15:15Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -4604,13 +4604,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 10,
-    "issue": 1470,
+    "duration_minutes": 107,
+    "issue": 1473,
     "number": 303,
-    "summary": "Merged review PR 1469 (cycle 302, 3 findings, all deferred). Refreshed 2 stale field inventory entries. Cleaned 4 housekeeping items. Stabilization 3/12.",
-    "timestamp": "2026-03-18T20:28:36Z"
+    "summary": "Resumed close-out: merged cycle 303 review PR #1472 (3 findings, 3/5, all deferred per ADR 0011). Stabilization 3/12.",
+    "timestamp": "2026-03-18T22:15:15Z"
   },
-  "last_eva_comment_check": "2026-03-18T20:28:36Z",
+  "last_eva_comment_check": "2026-03-18T22:15:15Z",
   "last_tool_audit_cycle": 263,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
