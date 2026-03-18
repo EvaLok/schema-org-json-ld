@@ -32,7 +32,7 @@
 
 - **In-flight agent sessions**: 0
 - **Pipeline status**: Expected PASS (field inventory refreshed, step-comments cascade fixed, agent_sessions repaired)
-- **Copilot metrics**: 451 dispatches, 445 PRs produced, 439 merged, 98.7% merge rate
+- **Copilot metrics**: 451 dispatches, 447 PRs produced, 439 merged, 98.2% merge rate
 - **Publish gate**: published
 
 ## Next steps
@@ -41,7 +41,7 @@
 
 ## Commit receipts
 
-> Note: Scope: cycle 302 commits through cycle-complete — mode stabilization; phase close_out; receipt events: 1 merge, 1 review. Docs and record-dispatch commits are structurally excluded (created post-worklog). Validated by receipt-validate at step C5.1.
+> Note: Scope: All cycle 302 commits including docs and cycle-complete. Receipt events: 1 merge, 1 review, 1 audit. Validated by receipt-validate at step C5.1.
 
 | Tool | Receipt | Link |
 |------|---------|------|
@@ -49,3 +49,5 @@
 | process-merge | fbf3bf6 | [fbf3bf6](https://github.com/EvaLok/schema-org-json-ld/commit/fbf3bf6) |
 | process-review | 04e2cae | [04e2cae](https://github.com/EvaLok/schema-org-json-ld/commit/04e2cae) |
 | process-audit | 6388e32 | [6388e32](https://github.com/EvaLok/schema-org-json-ld/commit/6388e32) |
+| docs | 4c8306e | [4c8306e](https://github.com/EvaLok/schema-org-json-ld/commit/4c8306e) |
+| cycle-complete | 9f96500 | [9f96500](https://github.com/EvaLok/schema-org-json-ld/commit/9f96500) |
