@@ -4078,8 +4078,10 @@
     {
       "dispatched_at": "2026-03-18T16:41:42Z",
       "issue": 1459,
+      "merged_at": "2026-03-18T18:23:13Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1460,
+      "status": "merged",
       "title": "Cycle 301 review"
     }
   ],
@@ -4285,12 +4287,12 @@
     "closed_without_merge": 6,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#1459 Cycle 301 review (cycle 301)",
-    "dispatch_to_pr_rate": "98.4%",
-    "in_flight": 1,
-    "merged": 438,
-    "pr_merge_rate": "98.6%",
-    "produced_pr": 444,
-    "resolved": 450,
+    "dispatch_to_pr_rate": "98.7%",
+    "in_flight": 0,
+    "merged": 439,
+    "pr_merge_rate": "98.7%",
+    "produced_pr": 445,
+    "resolved": 451,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 451
@@ -4394,15 +4396,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 301"
+        "last_refreshed": "cycle 302"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 301"
+        "last_refreshed": "cycle 302"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 301"
+        "last_refreshed": "cycle 302"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
