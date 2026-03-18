@@ -4233,8 +4233,8 @@
   },
   "cycle_phase": {
     "cycle": 295,
-    "phase": "work",
-    "phase_entered_at": "2026-03-18T03:01:46Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-18T03:11:04Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -4329,15 +4329,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 294"
+        "last_refreshed": "cycle 295"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 294"
+        "last_refreshed": "cycle 295"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 294"
+        "last_refreshed": "cycle 295"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
@@ -4346,7 +4346,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 294"
+        "last_refreshed": "cycle 295"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -4358,7 +4358,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 294"
+        "last_refreshed": "cycle 295"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -4378,7 +4378,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 294"
+        "last_refreshed": "cycle 295"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -4390,7 +4390,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 294"
+        "last_refreshed": "cycle 295"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -4406,7 +4406,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 294"
+        "last_refreshed": "cycle 295"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -4414,11 +4414,11 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 294"
+        "last_refreshed": "cycle 295"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 294"
+        "last_refreshed": "cycle 295"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -4426,7 +4426,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 294"
+        "last_refreshed": "cycle 295"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -4495,13 +4495,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 20,
+    "duration_minutes": 9,
     "issue": 1436,
     "number": 295,
-    "summary": "Stabilization burn-in cycle 294. Merged review PR #1430 (cycle 293 review, 4 findings deferred per ADR 0011). Processed audit #284 (counter integrity gap), created question-for-eva #1433. Refreshed test_count. Clean cycle counter target 3/50.",
-    "timestamp": "2026-03-18T03:01:45Z"
+    "summary": "Stabilization burn-in cycle 295. Merged review PR #1435 (cycle 294 review, 4 findings deferred per ADR 0011). Processed housekeeping (dead branch, stale audit-inbound #1432). Clean cycle counter target 4/50.",
+    "timestamp": "2026-03-18T03:11:04Z"
   },
-  "last_eva_comment_check": "2026-03-18T03:01:45Z",
+  "last_eva_comment_check": "2026-03-18T03:11:04Z",
   "last_tool_audit_cycle": 263,
   "open_questions_for_eva": [
     1433
