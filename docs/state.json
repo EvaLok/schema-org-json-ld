@@ -4007,8 +4007,10 @@
     {
       "dispatched_at": "2026-03-17T22:23:48Z",
       "issue": 1429,
+      "merged_at": "2026-03-18T00:19:28Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1430,
+      "status": "merged",
       "title": "Cycle 293 review"
     }
   ],
@@ -4146,7 +4148,8 @@
     273,
     275,
     277,
-    281
+    281,
+    284
   ],
   "blockers": [
     {
@@ -4211,12 +4214,12 @@
     "closed_without_merge": 5,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#1429 Cycle 293 review (cycle 293)",
-    "dispatch_to_pr_rate": "98.4%",
-    "in_flight": 1,
-    "merged": 431,
+    "dispatch_to_pr_rate": "98.6%",
+    "in_flight": 0,
+    "merged": 432,
     "pr_merge_rate": "98.9%",
-    "produced_pr": 436,
-    "resolved": 442,
+    "produced_pr": 437,
+    "resolved": 443,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 443
@@ -4319,15 +4322,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 293"
+        "last_refreshed": "cycle 294"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 293"
+        "last_refreshed": "cycle 294"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 293"
+        "last_refreshed": "cycle 294"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
@@ -4436,7 +4439,7 @@
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
-        "last_refreshed": "cycle 288"
+        "last_refreshed": "cycle 294"
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
@@ -6914,9 +6917,24 @@
         "finding_count": 4,
         "ignored": 0,
         "note": "STABILIZATION (ADR 0011): All 4 findings deferred per observation mode. F1 phase-closure: Phase 2 closed despite test-realism defect. F2 receipt-integrity: stabilization commit missing from receipt table. F3 worklog-accuracy: narrative froze before stabilization outcome. F4 gate-enforcement: burn-in restarted with known MANDATORY_STEP_IDS gap."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "receipt-integrity",
+          "process-adherence",
+          "worklog-accuracy",
+          "journal-quality"
+        ],
+        "complacency_score": 3,
+        "cycle": 293,
+        "deferred": 4,
+        "finding_count": 4,
+        "ignored": 0,
+        "note": "STABILIZATION (ADR 0011): All 4 findings deferred per observation mode. F1 receipt-integrity: stabilization commit missing from receipt table (structural timing issue). F2 process-adherence: checklist validates receipts before stabilization creates another canonical receipt. F3 worklog-accuracy: Issues processed said None despite closing review issue #1425. F4 journal-quality: credits wrong cycle for satisfying clean-cycle commitment."
       }
     ],
-    "last_review_cycle": 292
+    "last_review_cycle": 293
   },
   "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 293,
@@ -7391,8 +7409,8 @@
   },
   "schema_version": 1,
   "test_count": {
-    "last_verified": "cycle 288",
-    "last_verified_note": "php = PHPUnit test count (composer run test-unit). ts = metric-snapshot tool count. Verified cycle 288: no change (426 PHP, 420 TS).",
+    "last_verified": "cycle 294",
+    "last_verified_note": "php = PHPUnit test count (composer run test-unit). ts = metric-snapshot tool count. Verified cycle 294: no change (426 PHP, 420 TS).",
     "php": 426,
     "total": 846,
     "ts": 420
