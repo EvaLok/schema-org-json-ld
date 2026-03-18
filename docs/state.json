@@ -4510,7 +4510,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 296"
+        "last_refreshed": "cycle 303"
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
@@ -4550,7 +4550,7 @@
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
-        "last_refreshed": "cycle 292"
+        "last_refreshed": "cycle 303"
       },
       "total_enums": {
         "cadence": "after enum additions",
@@ -7715,7 +7715,7 @@
         "status": "complete"
       },
       {
-        "description": "Ongoing iteration. Pipeline-check now runs 9 phases: metric-snapshot, field-inventory, housekeeping-scan, cycle-status, state-invariants, derive-metrics, artifact-verify, doc-validation, step-comments. Write-side tools: cycle-start, process-merge, process-review, record-dispatch, cycle-complete, write-entry (worklog+journal+patch-pipeline), post-step. Cascade detection added cycle 259 (PR #1237). Pipeline status patching added cycle 259 (PR #1239).",
+        "description": "Ongoing iteration. Pipeline-check now runs 10 phases: metric-snapshot, field-inventory, housekeeping-scan, cycle-status, state-invariants, derive-metrics, artifact-verify, doc-validation, step-comments, current-cycle-steps. Write-side tools: cycle-start, process-merge, process-review, record-dispatch, cycle-complete, write-entry (worklog+journal+patch-pipeline), post-step. Cascade detection added cycle 259 (PR #1237). Pipeline status patching added cycle 259 (PR #1239). current-cycle-steps phase added cycle 301.",
         "name": "ongoing evaluation",
         "phase": 5,
         "status": "active"
