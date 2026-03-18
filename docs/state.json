@@ -1259,16 +1259,20 @@
     {
       "dispatched_at": "2026-03-06T06:22:00Z",
       "issue": 553,
+      "merged_at": "2026-03-06T07:47:06Z",
       "model": "gpt-5.3-codex",
       "note": "Eva directive #538 Phase 2. Shell utility for commit-hash receipts. Merged cycle 156.",
+      "pr": 554,
       "status": "merged",
       "title": "Build commit-state-change shell utility (Eva #538 Phase 2)"
     },
     {
       "dispatched_at": "2026-03-06T06:27:00Z",
       "issue": 555,
+      "merged_at": "2026-03-06T07:47:09Z",
       "model": "gpt-5.3-codex",
       "note": "Review agent. Cycle 155 end-of-cycle review. 9 findings, score 3/5. Merged cycle 156.",
+      "pr": 556,
       "status": "merged",
       "title": "Cycle 155 end-of-cycle review"
     },
@@ -1858,6 +1862,7 @@
     {
       "dispatched_at": "2026-03-08T06:21:26Z",
       "issue": 746,
+      "merged_at": "2026-03-08T07:47:13Z",
       "model": "gpt-5.4",
       "pr": 747,
       "status": "merged",
@@ -1866,6 +1871,7 @@
     {
       "dispatched_at": "2026-03-08T06:25:09Z",
       "issue": 748,
+      "merged_at": "2026-03-08T07:46:06Z",
       "model": "gpt-5.4",
       "pr": 749,
       "status": "merged",
@@ -1874,6 +1880,7 @@
     {
       "dispatched_at": "2026-03-08T07:50:01Z",
       "issue": 751,
+      "merged_at": "2026-03-08T09:13:06Z",
       "model": "gpt-5.4",
       "pr": 752,
       "status": "merged",
@@ -1882,6 +1889,7 @@
     {
       "dispatched_at": "2026-03-08T07:50:04Z",
       "issue": 753,
+      "merged_at": "2026-03-08T09:13:58Z",
       "model": "gpt-5.4",
       "pr": 754,
       "status": "merged",
@@ -1890,6 +1898,7 @@
     {
       "dispatched_at": "2026-03-08T07:53:54Z",
       "issue": 755,
+      "merged_at": "2026-03-08T09:11:08Z",
       "model": "gpt-5.4",
       "pr": 756,
       "status": "merged",
@@ -1898,6 +1907,7 @@
     {
       "dispatched_at": "2026-03-08T09:16:26Z",
       "issue": 759,
+      "merged_at": "2026-03-08T09:26:49Z",
       "model": "gpt-5.4",
       "pr": 760,
       "status": "merged",
@@ -2113,6 +2123,7 @@
     {
       "dispatched_at": "2026-03-09T00:24:43Z",
       "issue": 835,
+      "merged_at": "2026-03-09T01:02:25Z",
       "model": "gpt-5.4",
       "pr": 836,
       "status": "merged",
@@ -2121,6 +2132,7 @@
     {
       "dispatched_at": "2026-03-09T00:32:34Z",
       "issue": 838,
+      "merged_at": "2026-03-09T01:02:21Z",
       "model": "gpt-5.4",
       "pr": 839,
       "status": "merged",
@@ -2633,6 +2645,7 @@
     {
       "dispatched_at": "2026-03-10T20:13:49Z",
       "issue": 997,
+      "merged_at": "2026-03-10T22:08:14Z",
       "model": "gpt-5.4",
       "pr": 998,
       "resolved_at": "2026-03-10T22:08:14Z",
@@ -2669,6 +2682,7 @@
     {
       "dispatched_at": "2026-03-11T00:12:34Z",
       "issue": 1007,
+      "merged_at": "2026-03-11T02:56:11Z",
       "model": "gpt-5.4",
       "pr": 1008,
       "status": "merged",
@@ -2677,6 +2691,7 @@
     {
       "dispatched_at": "2026-03-11T03:03:53Z",
       "issue": 1012,
+      "merged_at": "2026-03-11T04:40:24Z",
       "model": "gpt-5.4",
       "pr": 1014,
       "status": "merged",
@@ -2685,6 +2700,7 @@
     {
       "dispatched_at": "2026-03-11T03:03:57Z",
       "issue": 1013,
+      "merged_at": "2026-03-11T04:40:26Z",
       "model": "gpt-5.4",
       "pr": 1015,
       "status": "merged",
@@ -2693,6 +2709,7 @@
     {
       "dispatched_at": "2026-03-11T03:08:21Z",
       "issue": 1016,
+      "merged_at": "2026-03-11T04:35:15Z",
       "model": "gpt-5.4",
       "pr": 1017,
       "status": "merged",
@@ -3232,6 +3249,7 @@
     {
       "dispatched_at": "2026-03-13T22:24:37Z",
       "issue": 1193,
+      "merged_at": "2026-03-14T00:14:11Z",
       "model": "gpt-5.4",
       "pr": 1194,
       "status": "merged",
@@ -4288,11 +4306,11 @@
     "closed_without_merge": 6,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#1459 Cycle 301 review (cycle 301)",
-    "dispatch_to_pr_rate": "98.7%",
+    "dispatch_to_pr_rate": "99.1%",
     "in_flight": 0,
     "merged": 439,
-    "pr_merge_rate": "98.7%",
-    "produced_pr": 445,
+    "pr_merge_rate": "98.2%",
+    "produced_pr": 447,
     "resolved": 451,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
@@ -4300,8 +4318,8 @@
   },
   "cycle_phase": {
     "cycle": 302,
-    "phase": "work",
-    "phase_entered_at": "2026-03-18T18:19:45Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-18T18:33:57Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -4368,10 +4386,15 @@
       1352,
       1353,
       1401,
-      1442
+      1442,
+      1461,
+      1463,
+      1464
     ],
     "closed_this_cycle": [
-      1442
+      1461,
+      1463,
+      1464
     ],
     "remaining_open": [
       436,
@@ -4385,7 +4408,7 @@
     "fields": {
       "audit_dropped": {
         "cadence": "after dropping a previously accepted audit recommendation",
-        "last_refreshed": "cycle 291"
+        "last_refreshed": "cycle 302"
       },
       "audit_processed": {
         "cadence": "after processing audit issues",
@@ -4393,7 +4416,7 @@
       },
       "blockers": {
         "cadence": "after blocker state changes",
-        "last_refreshed": "cycle 291"
+        "last_refreshed": "cycle 302"
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
@@ -4414,11 +4437,11 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 301"
+        "last_refreshed": "cycle 302"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 297"
+        "last_refreshed": "cycle 302"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -4426,7 +4449,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 301"
+        "last_refreshed": "cycle 302"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -4442,11 +4465,11 @@
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
-        "last_refreshed": "cycle 291"
+        "last_refreshed": "cycle 302"
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 301"
+        "last_refreshed": "cycle 302"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -4454,23 +4477,23 @@
       },
       "project_mode": {
         "cadence": "when mode or counter changes",
-        "last_refreshed": "cycle 299"
+        "last_refreshed": "cycle 302"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 301"
+        "last_refreshed": "cycle 302"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
-        "last_refreshed": "cycle 291"
+        "last_refreshed": "cycle 302"
       },
       "qc_requests_pending": {
         "cadence": "after QC request creation or completion",
-        "last_refreshed": "cycle 291"
+        "last_refreshed": "cycle 302"
       },
       "qc_status": {
         "cadence": "after QC interactions",
-        "last_refreshed": "cycle 291"
+        "last_refreshed": "cycle 302"
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
@@ -4482,23 +4505,23 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 301"
+        "last_refreshed": "cycle 302"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 301"
+        "last_refreshed": "cycle 302"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
-        "last_refreshed": "cycle 291"
+        "last_refreshed": "cycle 302"
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 301"
+        "last_refreshed": "cycle 302"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
-        "last_refreshed": "cycle 291"
+        "last_refreshed": "cycle 302"
       },
       "schema_status.planned_next": {
         "cadence": "after planning or completing types",
@@ -4506,11 +4529,11 @@
       },
       "schema_status.property_gap_audit": {
         "cadence": "after property gap fixes",
-        "last_refreshed": "cycle 291"
+        "last_refreshed": "cycle 302"
       },
       "schema_status.remaining_audit_findings": {
         "cadence": "after property gap fixes",
-        "last_refreshed": "cycle 291"
+        "last_refreshed": "cycle 302"
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
@@ -4522,35 +4545,35 @@
       },
       "total_enums": {
         "cadence": "after enum additions",
-        "last_refreshed": "cycle 291"
+        "last_refreshed": "cycle 302"
       },
       "total_schema_classes": {
         "cadence": "after schema class additions",
-        "last_refreshed": "cycle 291"
+        "last_refreshed": "cycle 302"
       },
       "total_schema_types": {
         "cadence": "after schema type additions",
-        "last_refreshed": "cycle 291"
+        "last_refreshed": "cycle 302"
       },
       "total_standalone_testable_types": {
         "cadence": "after building-block-only type changes (publish gate)",
-        "last_refreshed": "cycle 291"
+        "last_refreshed": "cycle 302"
       },
       "total_sub_types": {
         "cadence": "after sub-type additions",
-        "last_refreshed": "cycle 291"
+        "last_refreshed": "cycle 302"
       },
       "total_testable_types": {
         "cadence": "after schema class or enum additions",
-        "last_refreshed": "cycle 291"
+        "last_refreshed": "cycle 302"
       },
       "total_testable_types_note": {
         "cadence": "after classification changes",
-        "last_refreshed": "cycle 291"
+        "last_refreshed": "cycle 302"
       },
       "type_classification": {
         "cadence": "after schema class additions/reclassifications",
-        "last_refreshed": "cycle 291"
+        "last_refreshed": "cycle 302"
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
@@ -4563,13 +4586,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 11,
+    "duration_minutes": 14,
     "issue": 1465,
     "number": 302,
-    "summary": "Merged review PR #1456 (cycle 300, 5 findings, 2/5, all deferred per ADR 0011). Processed audit #292 (accepted, deferred). Posted retroactive steps 0.5/0.6 to fix cycle 300 step-comments cascade. Pipeline PASS.",
-    "timestamp": "2026-03-18T18:19:44Z"
+    "summary": "Merged review PR #1460 (cycle 301, 5 findings, 2/5, all deferred per ADR 0011). Processed audit #294 (accepted, stabilization exit triage). Closed Eva directives #1461, #1463, #1464. Refreshed 18 stale field inventory entries. Fixed 14 agent_sessions missing merged_at. Stabilization 2/12.",
+    "timestamp": "2026-03-18T18:33:57Z"
   },
-  "last_eva_comment_check": "2026-03-18T18:19:44Z",
+  "last_eva_comment_check": "2026-03-18T18:33:57Z",
   "last_tool_audit_cycle": 263,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
@@ -7147,7 +7170,7 @@
     "last_review_cycle": 301
   },
   "review_dispatch_consecutive": 0,
-  "review_events_verified_through_cycle": 300,
+  "review_events_verified_through_cycle": 301,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",

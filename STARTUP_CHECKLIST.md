@@ -93,6 +93,19 @@ If `mode` is `"stabilization"`:
 
 If `mode` is not `"stabilization"`, skip this step.
 
+### Post-stabilization triage (per audit [#294](https://github.com/EvaLok/schema-org-json-ld-audit/issues/294))
+
+When `clean_cycle_counter >= 12` (or when `project_mode` transitions from `stabilization` to normal), perform a **one-time deferred-finding triage** before resuming normal operations:
+
+1. Enumerate all review findings classified as "deferred under stabilization" from the stabilization period (check `review_agent.history` for entries with deferred > 0 since stabilization began)
+2. Group by chronic category (receipt-integrity, worklog-accuracy, journal-quality, state-integrity, process-adherence)
+3. For each category: classify as (a) resolved by infrastructure changes during stabilization, (b) still actionable — dispatch fix, or (c) dropped with rationale
+4. Remove `project_mode: stabilization` from state.json (set mode to null/normal)
+5. Close ADR 0011 with a summary of outcomes
+6. Log the triage results in the worklog and journal
+
+This is a one-time transition step, not a recurring check. It ensures the deferred backlog gets deliberate disposition rather than silent abandonment.
+
 Post this step: `bash tools/post-step --issue {N} --step "0.1" --title "Project mode check" --body "..."`
 
 ## 0.5. Check previous cycle's review agent (per #463, updated per audit #100)
@@ -386,6 +399,17 @@ If a recommendation has been accepted but not implemented after 5 cycles:
 3. Do NOT silently defer — the 10-cycle gap on audit #104 (caught by audit #117) is the cautionary example
 
 This check is mechanical: scan `audit_processed` entries, cross-reference with `audit-inbound` issues that claim "accepted," and verify each has a corresponding dispatch or completed implementation.
+
+### Unmerged-PR re-dispatch tracking (per audit [#269](https://github.com/EvaLok/schema-org-json-ld-audit/issues/269))
+
+After the staleness check, verify that accepted audit recommendations with implementation PRs were actually merged:
+
+For each entry in `audit_processed` where status is "accepted":
+1. Check if the implementation PR (if any) was merged
+2. If the PR was closed unmerged and no re-dispatch exists, flag for re-dispatch this cycle
+3. Log any unmerged-PR findings in the worklog
+
+**Why:** Audit #269 identified that accepted recommendations can be marked "processed" even when the implementation PR was closed unmerged and never re-dispatched. This creates a false sense of completion. The staleness enforcement (above) catches undispatched recommendations, but not ones where a dispatch happened and then silently failed.
 
 ## 5.5. New-language prerequisite gate
 
