@@ -4445,7 +4445,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 298"
+        "last_refreshed": "cycle 299"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -7053,9 +7053,23 @@
         "finding_count": 5,
         "ignored": 0,
         "note": "STABILIZATION (ADR 0011): All 5 findings deferred per observation mode. F1 startup-checklist: ghost-cycle check can self-match live issue. F2 worklog-accuracy: multi-blocker FAIL compressed to single cause. F3 receipt-scope: scope contract drift. F4 process-adherence: cycle closed despite failed C5.5 gate. F5 journal-quality: partial verification labeled as enforcement verified."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "journal-quality",
+          "process-adherence",
+          "state-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 298,
+        "deferred": 4,
+        "finding_count": 4,
+        "ignored": 0
       }
     ],
-    "last_review_cycle": 297
+    "last_review_cycle": 298
   },
   "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 297,
