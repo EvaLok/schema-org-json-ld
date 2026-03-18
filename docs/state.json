@@ -4035,7 +4035,8 @@
       "dispatched_at": "2026-03-18T04:49:42Z",
       "issue": 1440,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1441,
+      "status": "closed",
       "title": "Cycle 296 review"
     }
   ],
@@ -4174,7 +4175,8 @@
     275,
     277,
     281,
-    284
+    284,
+    288
   ],
   "blockers": [
     {
@@ -4240,7 +4242,7 @@
     "closed_without_pr": 4,
     "dispatch_log_latest": "#1440 Cycle 296 review (cycle 296)",
     "dispatch_to_pr_rate": "98.4%",
-    "in_flight": 1,
+    "in_flight": 0,
     "merged": 434,
     "pr_merge_rate": "98.9%",
     "produced_pr": 439,
@@ -4318,10 +4320,11 @@
       1350,
       1352,
       1353,
-      1401
+      1401,
+      1442
     ],
     "closed_this_cycle": [
-      1401
+      1442
     ],
     "remaining_open": [
       436,
@@ -4364,11 +4367,11 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 296"
+        "last_refreshed": "cycle 297"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 292"
+        "last_refreshed": "cycle 297"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -4403,8 +4406,8 @@
         "last_refreshed": "cycle 297"
       },
       "project_mode": {
-        "cadence": "when mode changes (stabilization entry/exit)",
-        "last_refreshed": "cycle 295"
+        "cadence": "when mode or counter changes",
+        "last_refreshed": "cycle 297"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
@@ -4528,7 +4531,7 @@
     "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
     "started_at": "cycle 199"
   },
-  "previous_cycle_issue": 1439,
+  "previous_cycle_issue": 1444,
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
     "clean_cycle_counter": 0,
