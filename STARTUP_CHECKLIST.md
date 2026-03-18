@@ -10,6 +10,16 @@ Follow this checklist at the start of every orchestrator cycle. Do not skip step
 
 ## 0. Check cycle phase and initialize
 
+### Ghost cycle detection (per audit [#288](https://github.com/EvaLok/schema-org-json-ld-audit/issues/288))
+
+Before initializing, check for open orchestrator-run issues from previous cron intervals that never executed:
+
+```bash
+gh issue list --label orchestrator-run --state open --json number,title,comments --jq '.[] | select(.comments == 0) | "\(.number) \(.title)"'
+```
+
+If any open orchestrator-run issue has **zero comments**, it's a ghost cycle (the Actions runner triggered but the orchestrator never started). Close it with a comment noting the ghost cycle. This is a checklist-only fix; no tool modification needed.
+
 Read the current cycle phase:
 ```bash
 jq '.cycle_phase.phase // "complete"' docs/state.json
