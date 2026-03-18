@@ -1,44 +1,44 @@
 {
-"name": "@evabee/schema-org-json-ld",
-"version": "1.0.2",
-"description": "TypeScript/JavaScript library for generating schema.org JSON-LD structured data for Google Rich Results",
-"keywords": [
-"schema.org",
-"json-ld",
-"structured-data",
-"seo",
-"google-rich-results",
-"schema",
-"linked-data",
-"typescript"
-],
-"repository": {
-"type": "git",
-"url": "https://github.com/EvaLok/schema-org-json-ld.git"
-},
-"author": "EvaLok",
-"license": "MIT",
-"homepage": "https://github.com/EvaLok/schema-org-json-ld#readme",
-"bugs": {
-"url": "https://github.com/EvaLok/schema-org-json-ld/issues"
-},
-"type": "module",
-"engines": {
-"node": ">=20"
-},
-"main": "dist/index.cjs",
-"module": "dist/index.js",
-"types": "dist/index.d.ts",
-"exports": {
-".": {
-"types": "./dist/index.d.ts",
-"import": "./dist/index.js",
-"require": "./dist/index.cjs"
-}
-},
-"files": [
-"dist"
-],
+  "name": "@evabee/schema-org-json-ld",
+  "version": "1.0.2",
+  "description": "TypeScript/JavaScript library for generating schema.org JSON-LD structured data for Google Rich Results",
+  "keywords": [
+    "schema.org",
+    "json-ld",
+    "structured-data",
+    "seo",
+    "google-rich-results",
+    "schema",
+    "linked-data",
+    "typescript"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EvaLok/schema-org-json-ld.git"
+  },
+  "author": "EvaLok",
+  "license": "MIT",
+  "homepage": "https://github.com/EvaLok/schema-org-json-ld#readme",
+  "bugs": {
+    "url": "https://github.com/EvaLok/schema-org-json-ld/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup --config ts/tsup.config.ts",
     "test": "vitest --config ts/vitest.config.ts",
@@ -47,11 +47,11 @@
     "format": "biome format --write ts",
     "verify-build": "node scripts/verify-build.mjs"
   },
-"devDependencies": {
-"@biomejs/biome": "^1.9.4",
-"php-parser": "^3.4.0",
-"tsup": "^8.5.0",
-"typescript": "^5.9.2",
-"vitest": "^3.2.4"
-}
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "php-parser": "^3.4.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
 }
