@@ -4526,7 +4526,7 @@
   "previous_cycle_issue": 1436,
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
-    "clean_cycle_counter": 4,
+    "clean_cycle_counter": 5,
     "clean_cycle_criteria": {
       "pipeline_all_pass": true,
       "zero_tool_dispatches": true
@@ -4535,7 +4535,8 @@
       292,
       293,
       294,
-      295
+      295,
+      296
     ],
     "mode": "stabilization",
     "started_cycle": 273
