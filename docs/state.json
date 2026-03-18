@@ -4025,8 +4025,10 @@
     {
       "dispatched_at": "2026-03-18T03:18:38Z",
       "issue": 1437,
+      "merged_at": "2026-03-18T04:41:39Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1438,
+      "status": "merged",
       "title": "Cycle 295 review"
     }
   ],
@@ -4230,12 +4232,12 @@
     "closed_without_merge": 5,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#1437 Cycle 295 review (cycle 295)",
-    "dispatch_to_pr_rate": "98.4%",
-    "in_flight": 1,
-    "merged": 433,
+    "dispatch_to_pr_rate": "98.7%",
+    "in_flight": 0,
+    "merged": 434,
     "pr_merge_rate": "98.9%",
-    "produced_pr": 438,
-    "resolved": 444,
+    "produced_pr": 439,
+    "resolved": 445,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 445
@@ -4338,15 +4340,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 295"
+        "last_refreshed": "cycle 296"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 295"
+        "last_refreshed": "cycle 296"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 295"
+        "last_refreshed": "cycle 296"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
