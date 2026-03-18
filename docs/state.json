@@ -4425,7 +4425,7 @@
       },
       "project_mode": {
         "cadence": "when mode or counter changes",
-        "last_refreshed": "cycle 297"
+        "last_refreshed": "cycle 299"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
@@ -4552,13 +4552,14 @@
   "previous_cycle_issue": 1448,
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
-    "clean_cycle_counter": 1,
+    "clean_cycle_counter": 2,
     "clean_cycle_criteria": {
       "pipeline_all_pass": true,
       "zero_tool_dispatches": true
     },
     "consecutive_clean_cycles": [
-      298
+      298,
+      299
     ],
     "mode": "stabilization",
     "started_cycle": 273
