@@ -4047,6 +4047,13 @@
       "pr": 1447,
       "status": "merged",
       "title": "[Cycle Review] Cycle 297 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-18T10:35:55Z",
+      "issue": 1449,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 298 review"
     }
   ],
   "audit_dropped": [
@@ -4249,21 +4256,22 @@
   "copilot_metrics": {
     "closed_without_merge": 6,
     "closed_without_pr": 4,
-    "dispatch_log_latest": "#1446 [Cycle Review] Cycle 297 end-of-cycle review (cycle 297)",
-    "dispatch_to_pr_rate": "98.7%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1449 Cycle 298 review (cycle 298)",
+    "dispatch_to_pr_rate": "98.4%",
+    "in_flight": 1,
     "merged": 435,
     "pr_merge_rate": "98.6%",
     "produced_pr": 441,
     "resolved": 447,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 447
+    "total_dispatches": 448
   },
   "cycle_phase": {
+    "completed_at": "2026-03-18T10:35:55Z",
     "cycle": 298,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-18T10:28:45Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-18T10:35:55Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -4548,7 +4556,9 @@
       "pipeline_all_pass": true,
       "zero_tool_dispatches": true
     },
-    "consecutive_clean_cycles": [298],
+    "consecutive_clean_cycles": [
+      298
+    ],
     "mode": "stabilization",
     "started_cycle": 273
   },
@@ -7046,7 +7056,7 @@
     ],
     "last_review_cycle": 297
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 297,
   "schema_status": {
     "directory_layout": {
