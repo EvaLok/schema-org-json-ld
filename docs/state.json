@@ -6983,12 +6983,28 @@
         "finding_count": 4,
         "ignored": 0,
         "note": "STABILIZATION (ADR 0011): All 4 findings deferred per observation mode. F1 receipt-integrity: stabilization commit created after receipt validation. F2 state-integrity: open_questions_for_eva empty despite #1433 creation (resolved by cycle-start 295). F3 journal-quality: Open questions section says None despite #1433. F4 stabilization-integrity: counter advanced despite known enforcement gap in step 1.1."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "receipt-integrity",
+          "worklog-accuracy",
+          "state-integrity",
+          "journal-quality",
+          "stabilization-integrity"
+        ],
+        "complacency_score": 3,
+        "cycle": 295,
+        "deferred": 5,
+        "finding_count": 5,
+        "ignored": 0,
+        "note": "STABILIZATION (ADR 0011): All 5 findings deferred per observation mode. F1 receipt-integrity: receipt table omits stabilization receipt (recurring from 294). F2 worklog-accuracy: stale merge metrics written after fresher state existed. F3 state-integrity: project_mode freshness marker bumped outside cadence. F4 journal-quality: vague monitoring commitment for #1433. F5 stabilization-integrity: counter advancing despite unresolved #1433 escalation."
       }
     ],
-    "last_review_cycle": 294
+    "last_review_cycle": 295
   },
   "review_dispatch_consecutive": 0,
-  "review_events_verified_through_cycle": 294,
+  "review_events_verified_through_cycle": 295,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
