@@ -4253,8 +4253,8 @@
   },
   "cycle_phase": {
     "cycle": 297,
-    "phase": "work",
-    "phase_entered_at": "2026-03-18T08:13:01Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-18T08:25:50Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -4350,15 +4350,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 296"
+        "last_refreshed": "cycle 297"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 296"
+        "last_refreshed": "cycle 297"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 296"
+        "last_refreshed": "cycle 297"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
@@ -4379,7 +4379,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 296"
+        "last_refreshed": "cycle 297"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -4399,7 +4399,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 296"
+        "last_refreshed": "cycle 297"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -4411,7 +4411,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 296"
+        "last_refreshed": "cycle 297"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -4435,11 +4435,11 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 296"
+        "last_refreshed": "cycle 297"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 296"
+        "last_refreshed": "cycle 297"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -4447,7 +4447,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 296"
+        "last_refreshed": "cycle 297"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -4516,13 +4516,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 5,
+    "duration_minutes": 13,
     "issue": 1444,
     "number": 297,
-    "summary": "Stabilization burn-in cycle 296. Merged review PR #1438 (cycle 295 review, 5 findings deferred per ADR 0011). Housekeeping (dead branch). Clean cycle counter target 5/50.",
-    "timestamp": "2026-03-18T08:13:01Z"
+    "summary": "Counter reset cycle. Processed Eva directive #1442 (Option B authorized, counter reset 5 to 0). Merged review findings (cycle 296, 4 findings deferred). Accepted audit #288 (ghost cycle detection). Closed ghost cycle #1443. Pipeline FAIL due to cascade from 296.",
+    "timestamp": "2026-03-18T08:25:50Z"
   },
-  "last_eva_comment_check": "2026-03-18T08:13:01Z",
+  "last_eva_comment_check": "2026-03-18T08:25:50Z",
   "last_tool_audit_cycle": 263,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
