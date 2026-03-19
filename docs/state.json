@@ -4442,12 +4442,11 @@
       1442,
       1461,
       1463,
-      1464
+      1464,
+      1488
     ],
     "closed_this_cycle": [
-      1461,
-      1463,
-      1464
+      1488
     ],
     "remaining_open": [
       436,
@@ -4490,11 +4489,11 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 307"
+        "last_refreshed": "cycle 308"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 302"
+        "last_refreshed": "cycle 308"
       },
       "last_cycle": {
         "cadence": "every cycle",
