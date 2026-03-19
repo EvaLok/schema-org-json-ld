@@ -498,7 +498,7 @@ fn step_c6_5(repo_root: &Path, issue: u64, worklog: &Path) -> Result<(), String>
         .ok_or_else(|| "missing numeric /cycle_phase/cycle in docs/state.json".to_string())?;
 
     let metrics = worklog_metrics_from_state(&state)?;
-    let patch_result = patch_worklog_from_state(worklog, &state)?;
+    let patch_result = patch_worklog_from_state(worklog, &metrics)?;
     let metrics_line = format_copilot_metrics_line(&metrics);
 
     let body = if patch_result {
@@ -688,8 +688,7 @@ fn parse_dispatch_output(stdout: &str) -> Result<ReviewInfo, String> {
     })
 }
 
-fn patch_worklog_from_state(worklog: &Path, state: &Value) -> Result<bool, String> {
-    let metrics = worklog_metrics_from_state(state)?;
+fn patch_worklog_from_state(worklog: &Path, metrics: &WorklogMetrics) -> Result<bool, String> {
     let content = std::fs::read_to_string(worklog)
         .map_err(|error| format!("failed to read worklog {}: {}", worklog.display(), error))?;
     let patched = patch_worklog_content(&content, &metrics)?;
@@ -889,7 +888,7 @@ mod tests {
     }
 
     #[test]
-    fn patch_worklog_from_state_updates_current_state_lines() {
+    fn patch_worklog_from_state_rewrites_legacy_metrics_format() {
         let dir = std::env::temp_dir().join(format!(
             "cycle-runner-close-out-test-{}",
             std::process::id()
@@ -897,30 +896,31 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         let worklog = dir.join("worklog.md");
+        let legacy_metrics_line =
+            "- **Copilot metrics**: 462 dispatches, 458 PRs produced, 450 merged, 98.3% PR merge rate";
         fs::write(
             &worklog,
-            "# Worklog\n\n## Current state\n- **In-flight agent sessions**: 0\n- **Copilot metrics**: 462 dispatches, 458 PRs produced, 450 merged, 98.3% PR merge rate\n",
+            format!(
+                "# Worklog\n\n## Current state\n- **In-flight agent sessions**: 0\n{}\n",
+                legacy_metrics_line
+            ),
         )
         .unwrap();
 
-        let state = json!({
-            "copilot_metrics": {
-                "in_flight": 1,
-                "total_dispatches": 463,
-                "produced_pr": 459,
-                "merged": 451,
-                "pr_merge_rate": "98.3%"
-            }
-        });
-
-        let changed = patch_worklog_from_state(&worklog, &state).unwrap();
+        let metrics = WorklogMetrics {
+            in_flight: 1,
+            total_dispatches: 463,
+            produced_pr: 459,
+            merged: 451,
+            pr_merge_rate: "98.3%".to_string(),
+        };
+        let changed = patch_worklog_from_state(&worklog, &metrics).unwrap();
         assert!(changed);
 
         let updated = fs::read_to_string(&worklog).unwrap();
-        assert!(updated.contains("- **In-flight agent sessions**: 1"));
-        assert!(updated.contains(
-            "- **Copilot metrics**: 463 dispatches, 459 PRs, 451 merged, 98.3% merge rate"
-        ));
+        assert!(updated.contains(&format_in_flight_line(metrics.in_flight)));
+        assert!(updated.contains(&format_copilot_metrics_line(&metrics)));
+        assert!(!updated.contains(legacy_metrics_line));
 
         let _ = fs::remove_dir_all(&dir);
     }
@@ -934,9 +934,53 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         let worklog = dir.join("worklog.md");
-        let expected = "# Worklog\n\n## Current state\n- **In-flight agent sessions**: 1\n- **Copilot metrics**: 463 dispatches, 459 PRs, 451 merged, 98.3% merge rate\n";
-        fs::write(&worklog, expected).unwrap();
+        let metrics = WorklogMetrics {
+            in_flight: 1,
+            total_dispatches: 463,
+            produced_pr: 459,
+            merged: 451,
+            pr_merge_rate: "98.3%".to_string(),
+        };
+        let expected = format!(
+            "# Worklog\n\n## Current state\n{}\n{}\n",
+            format_in_flight_line(metrics.in_flight),
+            format_copilot_metrics_line(&metrics)
+        );
+        fs::write(&worklog, &expected).unwrap();
 
+        let changed = patch_worklog_from_state(&worklog, &metrics).unwrap();
+        assert!(!changed);
+        assert_eq!(fs::read_to_string(&worklog).unwrap(), expected);
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn format_copilot_metrics_line_matches_worklog_patch_format() {
+        let metrics = WorklogMetrics {
+            in_flight: 1,
+            total_dispatches: 463,
+            produced_pr: 459,
+            merged: 451,
+            pr_merge_rate: "98.3%".to_string(),
+        };
+
+        assert_eq!(
+            format_copilot_metrics_line(&metrics),
+            "- **Copilot metrics**: 463 dispatches, 459 PRs, 451 merged, 98.3% merge rate"
+        );
+    }
+
+    #[test]
+    fn format_in_flight_line_matches_worklog_patch_format() {
+        assert_eq!(
+            format_in_flight_line(1),
+            "- **In-flight agent sessions**: 1"
+        );
+    }
+
+    #[test]
+    fn worklog_metrics_from_state_reads_expected_fields() {
         let state = json!({
             "copilot_metrics": {
                 "in_flight": 1,
@@ -947,10 +991,67 @@ mod tests {
             }
         });
 
-        let changed = patch_worklog_from_state(&worklog, &state).unwrap();
-        assert!(!changed);
-        assert_eq!(fs::read_to_string(&worklog).unwrap(), expected);
+        assert_eq!(
+            worklog_metrics_from_state(&state).unwrap(),
+            WorklogMetrics {
+                in_flight: 1,
+                total_dispatches: 463,
+                produced_pr: 459,
+                merged: 451,
+                pr_merge_rate: "98.3%".to_string(),
+            }
+        );
+    }
 
-        let _ = fs::remove_dir_all(&dir);
+    #[test]
+    fn worklog_metrics_from_state_fails_closed_on_missing_fields() {
+        let state = json!({
+            "copilot_metrics": {
+                "total_dispatches": 463,
+                "produced_pr": 459,
+                "merged": 451,
+                "pr_merge_rate": "98.3%"
+            }
+        });
+
+        let error = worklog_metrics_from_state(&state).unwrap_err();
+        assert_eq!(
+            error,
+            "missing numeric /copilot_metrics/in_flight in docs/state.json"
+        );
+    }
+
+    #[test]
+    fn patch_worklog_content_fails_closed_when_in_flight_line_is_missing() {
+        let metrics = WorklogMetrics {
+            in_flight: 1,
+            total_dispatches: 463,
+            produced_pr: 459,
+            merged: 451,
+            pr_merge_rate: "98.3%".to_string(),
+        };
+        let content =
+            "# Worklog\n\n## Current state\n- **Copilot metrics**: 462 dispatches, 458 PRs produced, 450 merged, 98.3% PR merge rate\n";
+
+        let error = patch_worklog_content(content, &metrics).unwrap_err();
+        assert_eq!(
+            error,
+            "worklog missing '- **In-flight agent sessions**:' line"
+        );
+    }
+
+    #[test]
+    fn patch_worklog_content_fails_closed_when_metrics_line_is_missing() {
+        let metrics = WorklogMetrics {
+            in_flight: 1,
+            total_dispatches: 463,
+            produced_pr: 459,
+            merged: 451,
+            pr_merge_rate: "98.3%".to_string(),
+        };
+        let content = "# Worklog\n\n## Current state\n- **In-flight agent sessions**: 0\n";
+
+        let error = patch_worklog_content(content, &metrics).unwrap_err();
+        assert_eq!(error, "worklog missing '- **Copilot metrics**:' line");
     }
 }
