@@ -1,5 +1,8 @@
 use clap::Parser;
-use record_dispatch::{apply_dispatch_patch, build_dispatch_patch, dispatch_commit_message};
+use record_dispatch::{
+    apply_dispatch_patch, build_dispatch_patch, dispatch_commit_message, enforce_pipeline_gate,
+    update_review_dispatch_tracking, ProcessRunner,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use state_schema::{
@@ -170,7 +173,18 @@ fn record_created_issue(
     title: &str,
     model: &str,
 ) -> Result<(), String> {
+    // Enforce pipeline gate (logs warning for review dispatches, blocks for others)
+    if let Err(error) = enforce_pipeline_gate(repo_root, true, &ProcessRunner) {
+        return Err(format!("pipeline gate check failed: {:?}", error));
+    }
+
     let mut state = read_state_value(repo_root)?;
+
+    // Track consecutive review dispatches (warns at 3+)
+    if let Some(warning) = update_review_dispatch_tracking(&mut state, true)? {
+        eprintln!("Warning: {}", warning);
+    }
+
     apply_dispatch_record(
         &mut state,
         cycle,
