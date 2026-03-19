@@ -41,4 +41,5 @@
 | process-review | d89d1bb | [d89d1bb](https://github.com/EvaLok/schema-org-json-ld/commit/d89d1bb) |
 | process-merge | 6ee7795 | [6ee7795](https://github.com/EvaLok/schema-org-json-ld/commit/6ee7795) |
 | field-refresh | 5ce80f0 | [5ce80f0](https://github.com/EvaLok/schema-org-json-ld/commit/5ce80f0) |
+| field-refresh | a5c32d9 | [a5c32d9](https://github.com/EvaLok/schema-org-json-ld/commit/a5c32d9) |
 | cycle-complete | 4cfe7a5 | [4cfe7a5](https://github.com/EvaLok/schema-org-json-ld/commit/4cfe7a5) |
