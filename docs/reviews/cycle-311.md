@@ -3,19 +3,35 @@
 ## 1. [worklog-accuracy] The published worklog describes a pre-dispatch snapshot as if it were the final cycle state
 
 **File**: docs/worklog/2026-03-19/163128-cycle-311-stabilization-review-merge-field-refresh.md:5-10,24-29
-**Evidence**: The worklog says `No dispatches (stabilization mode)`, `In-flight agent sessions: 0`, and `Pipeline status: PASS (all blocking checks pass)`. The final cycle-311 tree says otherwise: commit `1e62606` records `dispatch_log_latest: "#1499 [Cycle Review] Cycle 311 end-of-cycle review (cycle 311)"`, `in_flight: 1`, and `total_dispatches: 461` in `docs/state.json:4394-4406`, while `project_mode.clean_cycle_counter` is only advanced there at `docs/state.json:4694-4707`. A fresh validation against that final tree (`git worktree add --detach /tmp/cycle311-final 1e62606 && bash tools/validate-docs worklog --file docs/worklog/2026-03-19/163128-cycle-311-stabilization-review-merge-field-refresh.md --cycle 311 --repo-root .`) fails with `in-flight agent sessions mismatch: worklog reports 0, state.json has 1`, and the nested `pipeline-check` reports blocking failure rather than PASS.
+**Evidence**: The worklog says `No dispatches (stabilization mode)`, `In-flight agent sessions: 0`, and `Pipeline status: PASS (all blocking checks pass)`.
+
+The final cycle-311 tree says otherwise. Commit `1e62606` records `dispatch_log_latest: "#1499 [Cycle Review] Cycle 311 end-of-cycle review (cycle 311)"`, `in_flight: 1`, and `total_dispatches: 461` at `docs/state.json:4394-4406`. That same commit is also where `project_mode.clean_cycle_counter` is finally advanced at `docs/state.json:4694-4707`.
+
+A fresh validation against that final tree (for example, in a detached temp worktree at commit `1e62606`) fails with `in-flight agent sessions mismatch: worklog reports 0, state.json has 1`. The nested `pipeline-check` output reports a blocking failure rather than PASS.
 **Recommendation**: Treat the published worklog as incomplete until after review dispatch and final state mutations are recorded, or label the `Current state` block explicitly as a pre-dispatch snapshot and regenerate it before the cycle is declared complete.
 
 ## 2. [process-adherence] The manual close-out still advanced the clean-cycle counter even though the final tree was not blocking-clean
 
 **File**: docs/state.json:4394-4412; tools/rust/crates/state-invariants/src/main.rs:729-740
-**Evidence**: Step `C4.1` on issue `#1498` already logged blocking failures during documentation validation: `state-invariants` failed, `doc-validation` failed, and `current-cycle-steps` was missing mandatory steps. The orchestrator then manually continued through `C4.5`/`C5`/`C5.5`/`C5.6` and declared `Pipeline check: PASS` plus `Clean cycle 4/6`. But validating the actual final tree at commit `1e62606` still fails `bash tools/state-invariants` with `cycle_phase.phase is complete but cycle_phase.completed_at is missing`, even though `docs/state.json:4408-4412` shows `phase: "complete"`. The failure comes from `state-invariants` checking `state.cycle_phase.extra["completed_at"]` instead of the parsed field at `tools/rust/crates/state-invariants/src/main.rs:729-740`. Regardless of whether the defect is in state serialization or the validator, the repository's own blocking check still fails on the final cycle-311 tree while the counter is advanced to `4` at `docs/state.json:4694-4707`.
+**Evidence**: Step `C4.1` on issue `#1498` already logged blocking failures during documentation validation: `state-invariants` failed, `doc-validation` failed, and `current-cycle-steps` was missing mandatory steps.
+
+The orchestrator then manually continued through `C4.5`/`C5`/`C5.5`/`C5.6` and declared `Pipeline check: PASS` plus `Clean cycle 4/6`.
+
+But validating the actual final tree at commit `1e62606` still fails `bash tools/state-invariants` with `cycle_phase.phase is complete but cycle_phase.completed_at is missing`, even though `docs/state.json:4408-4412` shows `phase: "complete"`. The failure comes from the `cycle_phase_consistency` check in `tools/rust/crates/state-invariants/src/main.rs:729-740`, which looks at `state.cycle_phase.extra["completed_at"]` instead of the parsed `completed_at` field.
+
+Regardless of whether the defect is in state serialization or the validator, the repository's own blocking check still fails on the final cycle-311 tree while the counter is advanced to `4` at `docs/state.json:4694-4707`.
 **Recommendation**: Do not increment the clean-cycle counter until the post-dispatch final tree passes the blocking gate, and fix the `state-invariants`/`cycle_phase` path so the same committed state cannot simultaneously look complete in JSON and fail the invariant checker.
 
 ## 3. [process-adherence] `current-cycle-steps` still certifies cycle 311 by unioning cycle 310 and cycle 311 comments on the same issue
 
 **File**: tools/rust/crates/pipeline-check/src/main.rs:940-1008; tools/rust/crates/pipeline-check/src/main.rs:1163-1186
-**Evidence**: Issue `#1498` contains two cycles of orchestrator step comments. Cycle 310 contributed 10 step comments (`opening`, `0`, `4`, `5`, `6`, `0.5`, `0.6`, `1.1`, `2`, `3`), while cycle 311 contributed 16 more (`7`, `8`, `9`, `C1`, `C2`, `C3`, `C4.1`, `1`, `C4.5`, `C5`, `C5.1`, `C5.5`, `C5.6`, `C6`, `C7`, `C8`). At step `C4.1`, the orchestrator's own comment shows `current-cycle-steps` failing for cycle 311 with only 15 found steps and missing `[1, C4.1, C4.5, C5, C5.1]`. Yet validating the final tree reports `issue #1498: 25 pre-gate mandatory steps present`, which is exactly the issue-wide union of cycle 310 and 311 step tokens. The implementation explains why: `verify_current_cycle_step_comments()` fetches all comment bodies for the cycle issue and `detect_any_step_comment_token()` extracts `Step <token>` without checking the `Cycle N` label in the same comment. That means prior-cycle comments on a reused issue can still satisfy cycle-311 mandatory-step requirements and help certify a "clean" cycle.
+**Evidence**: Issue `#1498` contains two cycles of orchestrator step comments. Cycle 310 contributed 10 step comments (`opening`, `0`, `4`, `5`, `6`, `0.5`, `0.6`, `1.1`, `2`, `3`). Cycle 311 contributed 16 more (`7`, `8`, `9`, `C1`, `C2`, `C3`, `C4.1`, `1`, `C4.5`, `C5`, `C5.1`, `C5.5`, `C5.6`, `C6`, `C7`, `C8`).
+
+At step `C4.1`, the orchestrator's own comment shows `current-cycle-steps` failing for cycle 311 with only 15 found steps and missing `[1, C4.1, C4.5, C5, C5.1]`.
+
+Yet validating the final tree reports `issue #1498: 25 pre-gate mandatory steps present`, which is exactly the issue-wide union of cycle 310 and cycle 311 step tokens.
+
+The implementation explains why. `verify_current_cycle_step_comments()` fetches all comment bodies for the cycle issue, and `detect_any_step_comment_token()` extracts `Step <token>` without checking the `Cycle N` label in the same comment. Prior-cycle comments on a reused issue can therefore still satisfy cycle-311 mandatory-step requirements and help certify a "clean" cycle.
 **Recommendation**: Filter step comments by the current cycle number (or, failing that, by timestamps after the current cycle-start comment) before `current-cycle-steps` can satisfy blocking requirements.
 
 ## 4. [journal-quality] The journal entry reframes recurring failures as proof of stability instead of documenting what actually happened
@@ -26,4 +42,4 @@
 
 ## Complacency score
 
-**1/5** — Cycle 311 did perform real verification work (`metric-snapshot`, `cycle-receipts`, receipt validation, and review processing all happened), but the final published artifacts still describe a non-final state, the clean-cycle counter was advanced even though the final tree fails a blocking check, and the mandatory-step gate can still be satisfied by prior-cycle comments on a reused issue. This is not exemplary stabilization discipline; it is the system continuing to certify itself despite evidence that the certification path is still leaky.
+**1/5** (1 = serious issues, 5 = exemplary) — Cycle 311 did perform real verification work (`metric-snapshot`, `cycle-receipts`, receipt validation, and review processing all happened), but the final published artifacts still describe a non-final state, the clean-cycle counter was advanced even though the final tree fails a blocking check, and the mandatory-step gate can still be satisfied by prior-cycle comments on a reused issue. This is not exemplary stabilization discipline; it is the system continuing to certify itself despite evidence that the certification path is still leaky.
