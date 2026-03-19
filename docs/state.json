@@ -4726,8 +4726,10 @@
       312,
       313
     ],
-    "mode": "stabilization",
-    "started_cycle": 273
+    "mode": "normal",
+    "started_cycle": 273,
+    "stabilization_completed_at": "2026-03-19T20:35:23Z",
+    "stabilization_completed_cycle": 313
   },
   "publish_gate": {
     "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z",
