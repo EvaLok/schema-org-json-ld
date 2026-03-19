@@ -4649,7 +4649,7 @@
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
-        "last_refreshed": "cycle 303"
+        "last_refreshed": "cycle 314"
       },
       "total_enums": {
         "cadence": "after enum additions",
@@ -7978,7 +7978,7 @@
         "status": "complete"
       },
       {
-        "description": "Ongoing iteration. Pipeline-check now runs 10 phases: metric-snapshot, field-inventory, housekeeping-scan, cycle-status, state-invariants, derive-metrics, artifact-verify, doc-validation, step-comments, current-cycle-steps. Write-side tools: cycle-start, process-merge, process-review, record-dispatch, cycle-complete, write-entry (worklog+journal+patch-pipeline), post-step. Cascade detection added cycle 259 (PR #1237). Pipeline status patching added cycle 259 (PR #1239). current-cycle-steps phase added cycle 301.",
+        "description": "Ongoing iteration. Pipeline-check runs 10 phases: metric-snapshot, field-inventory, housekeeping-scan, cycle-status, state-invariants, derive-metrics, artifact-verify, doc-validation, step-comments, current-cycle-steps. Write-side tools: cycle-start, process-merge, process-review, record-dispatch, cycle-complete, write-entry, post-step. cycle-runner (Phase 2b, cycle 308) composes startup and close-out sequences. Stabilization program (ADR 0011) completed cycle 313 with 6 consecutive clean cycles (308-313). Post-stabilization: addressing close-out ordering defect (audit 297).",
         "name": "ongoing evaluation",
         "phase": 5,
         "status": "active"
