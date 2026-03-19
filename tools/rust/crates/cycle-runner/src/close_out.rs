@@ -13,6 +13,15 @@ struct ReviewInfo {
     issue_url: String,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct WorklogMetrics {
+    in_flight: u64,
+    total_dispatches: u64,
+    produced_pr: u64,
+    merged: u64,
+    pr_merge_rate: String,
+}
+
 pub fn run(
     repo_root: &Path,
     issue: u64,
@@ -67,6 +76,9 @@ pub fn run(
 
     // C6: Review dispatch
     let review_info = step_c6(repo_root, issue, cycle)?;
+
+    // C6.5: Patch worklog with post-dispatch state
+    step_c6_5(repo_root, issue, &worklog)?;
 
     // C7: Push
     step_c7(repo_root, issue)?;
@@ -476,6 +488,66 @@ fn step_c6(repo_root: &Path, issue: u64, cycle: u64) -> Result<ReviewInfo, Strin
     Ok(review_info)
 }
 
+fn step_c6_5(repo_root: &Path, issue: u64, worklog: &Path) -> Result<(), String> {
+    eprintln!("C6.5: Patching worklog with post-dispatch state...");
+
+    let state = state_schema::read_state_value(repo_root)?;
+    let cycle = state
+        .pointer("/cycle_phase/cycle")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| "missing numeric /cycle_phase/cycle in docs/state.json".to_string())?;
+
+    let metrics = worklog_metrics_from_state(&state)?;
+    let patch_result = patch_worklog_from_state(worklog, &state)?;
+    let metrics_line = format_copilot_metrics_line(&metrics);
+
+    let body = if patch_result {
+        let worklog_rel = worklog.strip_prefix(repo_root).map_err(|error| {
+            format!(
+                "worklog path {} is not under repo root {}: {}",
+                worklog.display(),
+                repo_root.display(),
+                error
+            )
+        })?;
+        let worklog_rel = worklog_rel
+            .to_str()
+            .ok_or_else(|| format!("non-utf8 worklog path: {}", worklog.display()))?;
+        let commit_message = format!(
+            "docs(worklog-patch): post-dispatch state correction [cycle {}]",
+            cycle
+        );
+        let sha = git::add_and_commit(repo_root, &[worklog_rel], &commit_message)?;
+        if sha.is_empty() {
+            format!(
+                "Patched worklog values but found nothing new to commit\n- In-flight agent sessions: {}\n- Copilot metrics: {}",
+                metrics.in_flight, metrics_line
+            )
+        } else {
+            format!(
+                "Patched worklog current state after review dispatch\n- In-flight agent sessions: {}\n- Copilot metrics: {}\n- Commit: {}",
+                metrics.in_flight, metrics_line, sha
+            )
+        }
+    } else {
+        format!(
+            "Worklog already reflects post-dispatch state, skipping patch\n- In-flight agent sessions: {}\n- Copilot metrics: {}",
+            metrics.in_flight, metrics_line
+        )
+    };
+
+    steps::post_step(
+        repo_root,
+        issue,
+        "C6.5",
+        "Worklog post-dispatch patch",
+        &body,
+        false,
+    )?;
+
+    Ok(())
+}
+
 fn step_c7(repo_root: &Path, issue: u64) -> Result<(), String> {
     eprintln!("C7: Pushing dispatch state...");
 
@@ -616,6 +688,115 @@ fn parse_dispatch_output(stdout: &str) -> Result<ReviewInfo, String> {
     })
 }
 
+fn patch_worklog_from_state(worklog: &Path, state: &Value) -> Result<bool, String> {
+    let metrics = worklog_metrics_from_state(state)?;
+    let content = std::fs::read_to_string(worklog)
+        .map_err(|error| format!("failed to read worklog {}: {}", worklog.display(), error))?;
+    let patched = patch_worklog_content(&content, &metrics)?;
+    match patched {
+        Some(updated) => {
+            std::fs::write(worklog, updated).map_err(|error| {
+                format!("failed to write worklog {}: {}", worklog.display(), error)
+            })?;
+            Ok(true)
+        }
+        None => Ok(false),
+    }
+}
+
+fn worklog_metrics_from_state(state: &Value) -> Result<WorklogMetrics, String> {
+    Ok(WorklogMetrics {
+        in_flight: state
+            .pointer("/copilot_metrics/in_flight")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| "missing numeric /copilot_metrics/in_flight in docs/state.json".to_string())?,
+        total_dispatches: state
+            .pointer("/copilot_metrics/total_dispatches")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| {
+                "missing numeric /copilot_metrics/total_dispatches in docs/state.json".to_string()
+            })?,
+        produced_pr: state
+            .pointer("/copilot_metrics/produced_pr")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| "missing numeric /copilot_metrics/produced_pr in docs/state.json".to_string())?,
+        merged: state
+            .pointer("/copilot_metrics/merged")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| "missing numeric /copilot_metrics/merged in docs/state.json".to_string())?,
+        pr_merge_rate: state
+            .pointer("/copilot_metrics/pr_merge_rate")
+            .and_then(Value::as_str)
+            .ok_or_else(|| "missing string /copilot_metrics/pr_merge_rate in docs/state.json".to_string())?
+            .to_string(),
+    })
+}
+
+fn patch_worklog_content(
+    content: &str,
+    metrics: &WorklogMetrics,
+) -> Result<Option<String>, String> {
+    let in_flight_line = format_in_flight_line(metrics.in_flight);
+    let copilot_metrics_line = format_copilot_metrics_line(metrics);
+    let had_trailing_newline = content.ends_with('\n');
+    let mut found_in_flight = false;
+    let mut found_copilot_metrics = false;
+    let mut changed = false;
+    let mut lines = Vec::new();
+
+    for line in content.lines() {
+        if line.starts_with("- **In-flight agent sessions**:") {
+            found_in_flight = true;
+            if line == in_flight_line {
+                lines.push(line.to_string());
+            } else {
+                lines.push(in_flight_line.clone());
+                changed = true;
+            }
+        } else if line.starts_with("- **Copilot metrics**:") {
+            found_copilot_metrics = true;
+            if line == copilot_metrics_line {
+                lines.push(line.to_string());
+            } else {
+                lines.push(copilot_metrics_line.clone());
+                changed = true;
+            }
+        } else {
+            lines.push(line.to_string());
+        }
+    }
+
+    if !found_in_flight {
+        return Err("worklog missing '- **In-flight agent sessions**:' line".to_string());
+    }
+
+    if !found_copilot_metrics {
+        return Err("worklog missing '- **Copilot metrics**:' line".to_string());
+    }
+
+    if !changed {
+        return Ok(None);
+    }
+
+    let mut updated = lines.join("\n");
+    if had_trailing_newline {
+        updated.push('\n');
+    }
+
+    Ok(Some(updated))
+}
+
+fn format_in_flight_line(in_flight: u64) -> String {
+    format!("- **In-flight agent sessions**: {}", in_flight)
+}
+
+fn format_copilot_metrics_line(metrics: &WorklogMetrics) -> String {
+    format!(
+        "- **Copilot metrics**: {} dispatches, {} PRs, {} merged, {} merge rate",
+        metrics.total_dispatches, metrics.produced_pr, metrics.merged, metrics.pr_merge_rate
+    )
+}
+
 fn print_dry_run(cycle: u64, issue: u64) {
     eprintln!("[dry-run] Would run close-out sequence for cycle {} (issue #{})", cycle, issue);
     eprintln!("[dry-run] C4.1: validate-docs worklog + journal (GATE)");
@@ -624,6 +805,7 @@ fn print_dry_run(cycle: u64, issue: u64) {
     eprintln!("[dry-run] C5.5: pipeline-check (GATE)");
     eprintln!("[dry-run] C5.6: stabilization counter update (if applicable)");
     eprintln!("[dry-run] C6:   generate review body + dispatch-review");
+    eprintln!("[dry-run] C6.5: patch worklog current state after dispatch");
     eprintln!("[dry-run] C7:   git push");
     eprintln!("[dry-run] C8:   close issue #{}", issue);
 }
@@ -632,6 +814,7 @@ fn print_dry_run(cycle: u64, issue: u64) {
 mod tests {
     use super::*;
     use serde_json::json;
+    use std::fs;
 
     #[test]
     fn parse_dispatch_output_extracts_issue_number() {
@@ -703,5 +886,71 @@ mod tests {
         assert_eq!(result_300.unwrap().issue_number, 1400);
 
         assert!(find_existing_review_dispatch(&state, 999).is_none());
+    }
+
+    #[test]
+    fn patch_worklog_from_state_updates_current_state_lines() {
+        let dir = std::env::temp_dir().join(format!(
+            "cycle-runner-close-out-test-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let worklog = dir.join("worklog.md");
+        fs::write(
+            &worklog,
+            "# Worklog\n\n## Current state\n- **In-flight agent sessions**: 0\n- **Copilot metrics**: 462 dispatches, 458 PRs produced, 450 merged, 98.3% PR merge rate\n",
+        )
+        .unwrap();
+
+        let state = json!({
+            "copilot_metrics": {
+                "in_flight": 1,
+                "total_dispatches": 463,
+                "produced_pr": 459,
+                "merged": 451,
+                "pr_merge_rate": "98.3%"
+            }
+        });
+
+        let changed = patch_worklog_from_state(&worklog, &state).unwrap();
+        assert!(changed);
+
+        let updated = fs::read_to_string(&worklog).unwrap();
+        assert!(updated.contains("- **In-flight agent sessions**: 1"));
+        assert!(updated.contains(
+            "- **Copilot metrics**: 463 dispatches, 459 PRs, 451 merged, 98.3% merge rate"
+        ));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn patch_worklog_from_state_skips_when_current_state_already_matches() {
+        let dir = std::env::temp_dir().join(format!(
+            "cycle-runner-close-out-test-skip-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let worklog = dir.join("worklog.md");
+        let expected = "# Worklog\n\n## Current state\n- **In-flight agent sessions**: 1\n- **Copilot metrics**: 463 dispatches, 459 PRs, 451 merged, 98.3% merge rate\n";
+        fs::write(&worklog, expected).unwrap();
+
+        let state = json!({
+            "copilot_metrics": {
+                "in_flight": 1,
+                "total_dispatches": 463,
+                "produced_pr": 459,
+                "merged": 451,
+                "pr_merge_rate": "98.3%"
+            }
+        });
+
+        let changed = patch_worklog_from_state(&worklog, &state).unwrap();
+        assert!(!changed);
+        assert_eq!(fs::read_to_string(&worklog).unwrap(), expected);
+
+        let _ = fs::remove_dir_all(&dir);
     }
 }
