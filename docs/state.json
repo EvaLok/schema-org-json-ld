@@ -7359,9 +7359,23 @@
         "finding_count": 3,
         "ignored": 0,
         "note": "ADR 0011: all findings deferred during stabilization"
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "journal-quality",
+          "process-adherence",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 310,
+        "deferred": 3,
+        "finding_count": 3,
+        "ignored": 0,
+        "note": "ADR 0011 observation mode — 3 findings deferred: worklog-accuracy (pre-dispatch snapshot drift), journal-quality (duplicate worklog link), process-adherence (step-comment cycle scoping)"
       }
     ],
-    "last_review_cycle": 309
+    "last_review_cycle": 310
   },
   "review_dispatch_consecutive": 5,
   "review_events_verified_through_cycle": 309,
