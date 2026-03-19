@@ -4132,8 +4132,10 @@
     {
       "dispatched_at": "2026-03-19T03:11:50Z",
       "issue": 1478,
+      "merged_at": "2026-03-19T04:43:23Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1479,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 305 end-of-cycle review"
     }
   ],
@@ -4340,12 +4342,12 @@
     "closed_without_merge": 6,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#1478 [Cycle Review] Cycle 305 end-of-cycle review (cycle 305)",
-    "dispatch_to_pr_rate": "98.9%",
-    "in_flight": 1,
-    "merged": 442,
+    "dispatch_to_pr_rate": "99.1%",
+    "in_flight": 0,
+    "merged": 443,
     "pr_merge_rate": "98.2%",
-    "produced_pr": 450,
-    "resolved": 454,
+    "produced_pr": 451,
+    "resolved": 455,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 455
