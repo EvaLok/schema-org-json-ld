@@ -40,3 +40,5 @@
 |------|---------|------|
 | cycle-start | 5ecd334 | [5ecd334](https://github.com/EvaLok/schema-org-json-ld/commit/5ecd334) |
 | process-merge | b43b50d | [b43b50d](https://github.com/EvaLok/schema-org-json-ld/commit/b43b50d) |
+| cycle-complete | 573cd77 | [573cd77](https://github.com/EvaLok/schema-org-json-ld/commit/573cd77) |
+| field-fix | 41f8acd | [41f8acd](https://github.com/EvaLok/schema-org-json-ld/commit/41f8acd) |
