@@ -4216,6 +4216,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix close-out worklog accuracy: add C6.5 post-dispatch patching step"
+    },
+    {
+      "dispatched_at": "2026-03-19T22:32:59Z",
+      "issue": 1510,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 314 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -4421,16 +4428,16 @@
   "copilot_metrics": {
     "closed_without_merge": 6,
     "closed_without_pr": 4,
-    "dispatch_log_latest": "#1508 Fix close-out worklog accuracy: add C6.5 post-dispatch patching step (cycle 314)",
-    "dispatch_to_pr_rate": "98.9%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1510 [Cycle Review] Cycle 314 end-of-cycle review (cycle 314)",
+    "dispatch_to_pr_rate": "98.7%",
+    "in_flight": 2,
     "merged": 451,
     "pr_merge_rate": "98.3%",
     "produced_pr": 459,
     "resolved": 463,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 464
+    "total_dispatches": 465
   },
   "cycle_phase": {
     "cycle": 314,
