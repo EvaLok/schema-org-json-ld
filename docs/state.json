@@ -4370,10 +4370,9 @@
     "total_dispatches": 457
   },
   "cycle_phase": {
-    "completed_at": "2026-03-19T08:37:39Z",
-    "cycle": 307,
-    "phase": "complete",
-    "phase_entered_at": "2026-03-19T08:37:39Z"
+    "cycle": 308,
+    "phase": "work",
+    "phase_entered_at": "2026-03-19T10:14:50Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -4486,7 +4485,7 @@
       },
       "cycle_phase": {
         "cadence": "every phase transition",
-        "last_refreshed": "cycle 307",
+        "last_refreshed": "cycle 308",
         "notes": "Tracks cycle, phase, phase_entered_at, and completed_at when phase is complete."
       },
       "eva_input_issues.closed_this_cycle": {
@@ -4499,7 +4498,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 307"
+        "last_refreshed": "cycle 308"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -4507,7 +4506,7 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 307"
+        "last_refreshed": "cycle 308"
       },
       "last_tool_audit_cycle": {
         "cadence": "every 10 cycles",
@@ -4515,7 +4514,7 @@
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 307"
+        "last_refreshed": "cycle 308"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -4527,7 +4526,7 @@
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 307"
+        "last_refreshed": "cycle 308"
       },
       "project_mode": {
         "cadence": "when mode or counter changes",
@@ -4641,12 +4640,12 @@
   },
   "last_cycle": {
     "duration_minutes": 1,
-    "issue": 1484,
-    "number": 307,
+    "issue": 1489,
+    "number": 308,
     "summary": "Merged cycle 306 review artifact. Fixed pipeline (closed stale in-flight session, corrected metrics). Accepted audit #297 (close-out ordering defect), created audit-inbound #1485. Clean stabilization cycle 7/12.",
-    "timestamp": "2026-03-19T08:26:09Z"
+    "timestamp": "2026-03-19T10:14:48Z"
   },
-  "last_eva_comment_check": "2026-03-19T08:26:09Z",
+  "last_eva_comment_check": "2026-03-19T10:14:48Z",
   "last_tool_audit_cycle": 263,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
@@ -4655,9 +4654,10 @@
     "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
     "started_at": "cycle 199"
   },
-  "previous_cycle_issue": 1481,
+  "previous_cycle_issue": 1484,
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
+    "burn_in_target": 6,
     "clean_cycle_counter": 0,
     "clean_cycle_criteria": {
       "pipeline_all_pass": true,
@@ -4665,8 +4665,7 @@
     },
     "consecutive_clean_cycles": [],
     "mode": "stabilization",
-    "started_cycle": 273,
-    "burn_in_target": 6
+    "started_cycle": 273
   },
   "publish_gate": {
     "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z",
