@@ -7270,9 +7270,22 @@
         "finding_count": 4,
         "ignored": 0,
         "note": "ADR 0011 stabilization: all findings deferred"
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "journal-quality",
+          "receipt-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 3,
+        "cycle": 306,
+        "deferred": 3,
+        "finding_count": 3,
+        "ignored": 0
       }
     ],
-    "last_review_cycle": 305
+    "last_review_cycle": 306
   },
   "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 306,
