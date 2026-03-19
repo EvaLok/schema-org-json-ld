@@ -4419,7 +4419,7 @@
   "cycle_phase": {
     "cycle": 313,
     "phase": "close_out",
-    "phase_entered_at": "2026-03-19T20:27:28Z"
+    "phase_entered_at": "2026-03-19T20:28:20Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -4536,7 +4536,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 312"
+        "last_refreshed": "cycle 313"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -4548,7 +4548,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 312"
+        "last_refreshed": "cycle 313"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -4568,7 +4568,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 312"
+        "last_refreshed": "cycle 313"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -4580,7 +4580,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 312"
+        "last_refreshed": "cycle 313"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -4604,7 +4604,7 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 312"
+        "last_refreshed": "cycle 313"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
@@ -4616,7 +4616,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 312"
+        "last_refreshed": "cycle 313"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -4685,13 +4685,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 8,
+    "duration_minutes": 17,
     "issue": 1504,
     "number": 313,
-    "summary": "Stabilization burn-in cycle 5/6. Merged cycle 311 review PR #1500 (score 1/5, 4 findings deferred per ADR 0011). Refreshed 1 stale field inventory entry. No dispatches.",
-    "timestamp": "2026-03-19T20:11:10Z"
+    "summary": "Cycle 313: stabilization burn-in 6/6. Merged cycle 312 review (PR 1503, score 1/5, 5 findings deferred per ADR 0011). Refreshed 19 stale field inventory entries. Verified review events through cycle 313. No dispatches (stabilization). Review dispatched as cycle-end review.",
+    "timestamp": "2026-03-19T20:28:20Z"
   },
-  "last_eva_comment_check": "2026-03-19T20:11:10Z",
+  "last_eva_comment_check": "2026-03-19T20:28:20Z",
   "last_tool_audit_cycle": 263,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
