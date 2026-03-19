@@ -1,0 +1,23 @@
+# Cycle 308 Review
+
+## 1. [worklog-accuracy] The published `Current state` block is already rejected by the repository's own validator
+
+**File**: docs/worklog/2026-03-19/102115-cycle-308-adr0012-counter-reset-review-merge.md:24-29
+**Evidence**: The worklog says the current state is `0` in-flight sessions, `PASS phases 1-7`, and `457` dispatches. The final committed state disagrees: `docs/state.json:4159-4164` records review dispatch `#1490` as `in_flight`, and `docs/state.json:4367-4379` records `dispatch_log_latest: "#1490 [Cycle Review] Cycle 308 end-of-cycle review (cycle 308)"`, `in_flight: 1`, and `total_dispatches: 458`. A fresh `bash tools/validate-docs worklog --file docs/worklog/2026-03-19/102115-cycle-308-adr0012-counter-reset-review-merge.md --cycle 308 --repo-root .` fails with `in-flight agent sessions mismatch: worklog reports 0, state.json has 1`, and the same run shows `pipeline-check` now returns `overall: "fail"` because blocking `doc-validation` fails on this worklog. That directly contradicts step `C5.5` (`Pipeline: pass (all checks passed)`) and step `C8` (`Pipeline: PASS`).
+**Recommendation**: Do not publish the final cycle worklog from a pre-dispatch snapshot. Either regenerate the `Current state` block after step `C6`, or label it explicitly as pre-dispatch and patch it before closing the cycle.
+
+## 2. [journal-quality] The journal marks a superseded target as "Followed" and still says `No dispatches this cycle`
+
+**File**: docs/journal/2026-03-19.md:147-167
+**Evidence**: The previous commitment was `Stabilization burn-in target 8/12 next cycle`, but Eva directive `#1488` reset the stabilization counter from `7` to `0` and changed the burn-in target from `12` to `6` before cycle 308 close-out. The journal nevertheless marks that commitment as `Followed` by citing cycle 307's old `7/12` state instead of recording that the original observable target was superseded. The same entry then says `No dispatches this cycle`, but step `C6` on issue `#1489` says `Review dispatched as #1490`, and the final `docs/state.json:4159-4164,4367-4379` records that dispatch as in flight. This is not reflective follow-through; it rewrites changed conditions into success and preserves a cleaner narrative than the committed state supports.
+**Recommendation**: When Eva changes the target mid-stream, mark the prior commitment as superseded or deferred with the reason. And once step `C6` dispatches the mandatory review, the journal should say so instead of claiming a no-dispatch cycle.
+
+## 3. [remediation-scope] Cycle 308 repeats the exact stabilization-era drift that audit-inbound `#1485` said would be mitigated
+
+**File**: docs/worklog/2026-03-19/102115-cycle-308-adr0012-counter-reset-review-merge.md:24-38; docs/journal/2026-03-19.md:157-163
+**Evidence**: Audit-inbound `#1485` documents three stabilization-period mitigations: the worklog should carry an explicit note that the in-flight count is a pre-dispatch snapshot, receipt notes should come from validator output rather than hand-authored narrative, and the journal should honestly report the ordering defect's friction points. Cycle 308 does not actually honor that plan. The worklog presents definitive current-state values with no pre-dispatch warning, and the journal still says `No dispatches this cycle` even though step `C6` and `docs/state.json:4159-4164,4367-4379` show the review dispatch happened. That is the same gap cycle 307's review already called out under `remediation-scope`: the accepted fix acknowledges the broader defect, but the published artifacts still behave as if only the worklog needs eventual correction.
+**Recommendation**: Either expand `#1485` so the promised mitigation includes journal correction and enforce that mitigation during stabilization, or stop describing the mitigation as active while the published artifacts still contradict the final state.
+
+## Complacency score
+
+**2/5** — Cycle 308 did real procedural work: step comments were posted, receipts resolve, `metric-snapshot` and `state-invariants` pass, and the ADR 0012 counter reset was processed consistently in state. But the cycle still acknowledged the chronic categories without materially tightening the published artifacts. The worklog now fails the repository's own blocking doc-validation check, the journal still rewrites a dispatched-review cycle as `No dispatches`, and the promised stabilization-era mitigation from `#1485` is not actually visible in the artifacts. Because the cycle certified `Pipeline: PASS` and closed out anyway while the final committed tree now fails blocking `doc-validation`, the score cap applies; within that cap, `2/5` fits a cycle that is documenting the problem more readily than it is containing it.
