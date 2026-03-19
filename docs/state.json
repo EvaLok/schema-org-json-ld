@@ -4434,8 +4434,8 @@
   },
   "cycle_phase": {
     "cycle": 314,
-    "phase": "work",
-    "phase_entered_at": "2026-03-19T22:07:12Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-19T22:21:46Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -4552,7 +4552,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 313"
+        "last_refreshed": "cycle 314"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -4564,7 +4564,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 313"
+        "last_refreshed": "cycle 314"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -4572,7 +4572,7 @@
       },
       "last_tool_audit_cycle": {
         "cadence": "every 10 cycles",
-        "last_refreshed": "cycle 304"
+        "last_refreshed": "cycle 314"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
@@ -4584,7 +4584,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 313"
+        "last_refreshed": "cycle 314"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -4596,7 +4596,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 313"
+        "last_refreshed": "cycle 314"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -4620,11 +4620,11 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 313"
+        "last_refreshed": "cycle 314"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 313"
+        "last_refreshed": "cycle 314"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -4632,7 +4632,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 313"
+        "last_refreshed": "cycle 314"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -4701,13 +4701,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 17,
+    "duration_minutes": 15,
     "issue": 1507,
     "number": 314,
-    "summary": "Cycle 313: stabilization burn-in 6/6. Merged cycle 312 review (PR 1503, score 1/5, 5 findings deferred per ADR 0011). Refreshed 19 stale field inventory entries. Verified review events through cycle 313. No dispatches (stabilization). Review dispatched as cycle-end review.",
-    "timestamp": "2026-03-19T22:07:11Z"
+    "summary": "Exited stabilization mode (ADR 0011 complete, 6/6 clean cycles 308-313). Merged cycle 313 review PR 1506 (score 1/5, 4 findings deferred). Dispatched #1508 close-out C6.5 post-dispatch worklog patching fix. Housekeeping: deleted dead branch, refreshed tool_pipeline field.",
+    "timestamp": "2026-03-19T22:21:46Z"
   },
-  "last_eva_comment_check": "2026-03-19T22:07:11Z",
+  "last_eva_comment_check": "2026-03-19T22:21:46Z",
   "last_tool_audit_cycle": 263,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
@@ -4734,9 +4734,9 @@
       313
     ],
     "mode": "normal",
-    "started_cycle": 273,
     "stabilization_completed_at": "2026-03-19T20:35:23Z",
-    "stabilization_completed_cycle": 313
+    "stabilization_completed_cycle": 313,
+    "started_cycle": 273
   },
   "publish_gate": {
     "audit_signoff": "audit#125 confirmed 2026-03-06T17:15Z",
