@@ -4382,8 +4382,8 @@
   },
   "cycle_phase": {
     "cycle": 309,
-    "phase": "work",
-    "phase_entered_at": "2026-03-19T12:17:41Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-19T12:24:28Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -4483,15 +4483,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 308"
+        "last_refreshed": "cycle 309"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 308"
+        "last_refreshed": "cycle 309"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 308"
+        "last_refreshed": "cycle 309"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
@@ -4500,7 +4500,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 308"
+        "last_refreshed": "cycle 309"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -4512,7 +4512,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 308"
+        "last_refreshed": "cycle 309"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -4532,7 +4532,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 308"
+        "last_refreshed": "cycle 309"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -4544,7 +4544,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 308"
+        "last_refreshed": "cycle 309"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -4560,7 +4560,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 308"
+        "last_refreshed": "cycle 309"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -4568,7 +4568,7 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 308"
+        "last_refreshed": "cycle 309"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
@@ -4580,7 +4580,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 308"
+        "last_refreshed": "cycle 309"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -4649,13 +4649,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 6,
+    "duration_minutes": 7,
     "issue": 1492,
     "number": 309,
-    "summary": "Clean stabilization cycle 1/6 (ADR 0012). Processed Eva directive #1488 (counter reset). Merged cycle 307 review (PR #1487, score 2/5, 3 deferred). No dispatches.",
-    "timestamp": "2026-03-19T12:17:40Z"
+    "summary": "Stabilization burn-in cycle 2/6. Completed cycle 308 close-out (merged review PR #1491, score 2/5, 3 findings deferred). Refreshed stale fields. Cleaned dead branch. No dispatches.",
+    "timestamp": "2026-03-19T12:24:28Z"
   },
-  "last_eva_comment_check": "2026-03-19T12:17:40Z",
+  "last_eva_comment_check": "2026-03-19T12:24:28Z",
   "last_tool_audit_cycle": 263,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
