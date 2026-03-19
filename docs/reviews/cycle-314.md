@@ -9,7 +9,7 @@
 ## 2. [worklog-accuracy] The published worklog is already stale against the final repository state after the review dispatch is recorded
 
 **File**: `docs/worklog/2026-03-19/222221-cycle-314-exit-stabilization-first-post-stab-dispatch.md:25-29`; `docs/state.json:4213-4226,4428-4440`
-**Evidence**: The worklog's `Current state` block still says `In-flight agent sessions: 1` and `Copilot metrics: 464 dispatches`, but the final state now records two in-flight sessions (`#1508` and review issue `#1510`) and `copilot_metrics.total_dispatches: 465`. Re-running `bash tools/validate-docs worklog --file docs/worklog/2026-03-19/222221-cycle-314-exit-stabilization-first-post-stab-dispatch.md --cycle 314 --repo-root .` fails with `in-flight agent sessions mismatch: worklog reports 1, state.json has 2`.
+**Evidence**: The worklog's `Current state` block still says `In-flight agent sessions: 1` and `Copilot metrics: 464 dispatches`, but the final state now records two in-flight sessions (`#1508` and review issue `#1510`) and `copilot_metrics.total_dispatches: 465`. Rerunning `bash tools/validate-docs worklog --file docs/worklog/2026-03-19/222221-cycle-314-exit-stabilization-first-post-stab-dispatch.md --cycle 314 --repo-root .` fails with `in-flight agent sessions mismatch: worklog reports 1, state.json has 2`.
 **Recommendation**: Patch the worklog after review dispatch, or label the `Current state` section as a pre-review snapshot so it stops pretending to be the final cycle state.
 
 ## 3. [process-adherence] The final blocking gate was `doc-validation`, not `current-cycle-steps`, but the worklog still reports the opposite failure mode
