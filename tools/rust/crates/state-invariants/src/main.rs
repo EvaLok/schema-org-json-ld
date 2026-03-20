@@ -94,6 +94,7 @@ fn run_checks(state: &StateJson) -> Report {
         check_chronic_intermediate_state(state),
         check_review_events_verified(state),
         check_agent_sessions_reconciliation(state),
+        check_eva_input_overlap(state),
     ];
 
     let passed = checks
@@ -1418,6 +1419,61 @@ fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
     }
 }
 
+fn check_eva_input_overlap(state: &StateJson) -> CheckResult {
+    let closed_this: HashSet<i64> = state.eva_input_issues.closed_this_cycle.iter().copied().collect();
+    let closed_prior: HashSet<i64> = state
+        .eva_input_issues
+        .closed_prior_cycles
+        .iter()
+        .copied()
+        .collect();
+    let remaining: HashSet<i64> = state.eva_input_issues.remaining_open.iter().copied().collect();
+
+    let mut problems = Vec::new();
+
+    for (left_name, left, right_name, right) in [
+        (
+            "closed_this_cycle",
+            &closed_this,
+            "closed_prior_cycles",
+            &closed_prior,
+        ),
+        (
+            "closed_this_cycle",
+            &closed_this,
+            "remaining_open",
+            &remaining,
+        ),
+        (
+            "closed_prior_cycles",
+            &closed_prior,
+            "remaining_open",
+            &remaining,
+        ),
+    ] {
+        let mut overlap: Vec<i64> = left.intersection(right).copied().collect();
+        overlap.sort_unstable();
+        if !overlap.is_empty() {
+            problems.push(format!(
+                "{} and {} overlap: {}",
+                left_name,
+                right_name,
+                overlap
+                    .iter()
+                    .map(i64::to_string)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
+    }
+
+    if problems.is_empty() {
+        pass("eva_input_overlap")
+    } else {
+        fail("eva_input_overlap", problems.join("; "))
+    }
+}
+
 fn pass(name: &'static str) -> CheckResult {
     CheckResult {
         name,
@@ -1468,6 +1524,7 @@ fn print_human_report(report: &Report) {
             "agent_sessions_reconciliation",
             "agent_sessions reconciliation",
         ),
+        ("eva_input_overlap", "eva_input overlap"),
     ];
 
     for (index, (name, label)) in labels.iter().enumerate() {
@@ -2394,11 +2451,47 @@ mod tests {
     }
 
     #[test]
+    fn eva_input_overlap_passes_when_issue_sets_are_disjoint() {
+        let mut value = minimal_valid_state();
+        value["eva_input_issues"] = json!({
+            "closed_this_cycle": [1488],
+            "closed_prior_cycles": [1487],
+            "remaining_open": [1486]
+        });
+
+        let state = state_from_json(value);
+        let check = check_eva_input_overlap(&state);
+        assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn eva_input_overlap_fails_when_any_issue_appears_in_multiple_arrays() {
+        let mut value = minimal_valid_state();
+        value["eva_input_issues"] = json!({
+            "closed_this_cycle": [1488, 1490],
+            "closed_prior_cycles": [1488, 1491],
+            "remaining_open": [1490, 1491]
+        });
+
+        let state = state_from_json(value);
+        let check = check_eva_input_overlap(&state);
+        assert_eq!(check.status, CheckStatus::Fail);
+
+        let details = check.details.as_deref().unwrap_or_default();
+        assert!(details.contains("closed_this_cycle and closed_prior_cycles overlap"));
+        assert!(details.contains("closed_this_cycle and remaining_open overlap"));
+        assert!(details.contains("closed_prior_cycles and remaining_open overlap"));
+        assert!(details.contains("1488"));
+        assert!(details.contains("1490"));
+        assert!(details.contains("1491"));
+    }
+
+    #[test]
     fn run_checks_includes_chronic_verification_deadline_and_agent_sessions_checks() {
         let state = state_from_json(minimal_valid_state());
         let report = run_checks(&state);
 
-        assert_eq!(report.checks.len(), 15);
+        assert_eq!(report.checks.len(), 16);
         assert_eq!(
             report.checks.get(9).map(|check| check.name),
             Some("cycle_phase_consistency")
@@ -2420,9 +2513,10 @@ mod tests {
             Some("review_events_verified")
         );
         assert_eq!(
-            report.checks.last().map(|check| check.name),
+            report.checks.get(14).map(|check| check.name),
             Some("agent_sessions_reconciliation")
         );
+        assert_eq!(report.checks.last().map(|check| check.name), Some("eva_input_overlap"));
     }
 
     #[test]
