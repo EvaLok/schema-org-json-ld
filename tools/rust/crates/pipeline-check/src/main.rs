@@ -871,10 +871,10 @@ fn verify_step_comments(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner
 		None => {
 			return StepReport {
 				name: STEP_COMMENTS_STEP_NAME,
-				status: StepStatus::Error,
+				status: StepStatus::Pass,
 				severity: Severity::Blocking,
 				exit_code: None,
-				detail: Some("cannot verify previous-cycle step comments for cycle 0".to_string()),
+				detail: Some("skipping step comment verification: cycle 0 has no previous cycle".to_string()),
 				findings: None,
 				summary: None,
 			};
@@ -1230,7 +1230,11 @@ fn orchestrator_step_comment_matches_cycle(line: &str, expected_cycle: u64) -> b
 }
 
 fn extract_cycle_marker(line: &str) -> Option<u64> {
-	let cycle_fragment = line.split_once("Cycle ")?.1;
+	let signature_index = line.find(ORCHESTRATOR_SIGNATURE)?;
+	let cycle_fragment = line
+		.get(signature_index + ORCHESTRATOR_SIGNATURE.len()..)?
+		.split_once("Cycle ")?
+		.1;
 	let digits: String = cycle_fragment
 		.chars()
 		.take_while(|ch| ch.is_ascii_digit())
@@ -3865,6 +3869,37 @@ mod tests {
 		assert_eq!(step.status, StepStatus::Pass);
 		assert_eq!(step.severity, Severity::Blocking);
 		assert_eq!(step.detail.as_deref(), Some("skipping step comment verification: /previous_cycle_issue is not set in docs/state.json yet"));
+	}
+
+	#[test]
+	fn step_comment_verification_skips_for_cycle_zero() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root =
+			std::env::temp_dir().join(format!("pipeline-check-step-comments-cycle-zero-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(root.join("docs/state.json"), json!({"previous_cycle_issue": 834}).to_string())
+			.unwrap();
+
+		struct StepCommentRunner;
+
+		impl CommandRunner for StepCommentRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected in step comment verification test");
+			}
+
+			fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+				panic!("gh api should not run when cycle 0 has no previous cycle");
+			}
+		}
+
+		let step = verify_step_comments(&root, 0, &StepCommentRunner);
+		assert_eq!(step.status, StepStatus::Pass);
+		assert_eq!(step.severity, Severity::Blocking);
+		assert_eq!(
+			step.detail.as_deref(),
+			Some("skipping step comment verification: cycle 0 has no previous cycle")
+		);
 	}
 
 	#[test]
