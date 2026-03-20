@@ -7465,9 +7465,25 @@
         "finding_count": 4,
         "ignored": 0,
         "note": "ADR 0011 observation mode: all 4 findings deferred (pre-dispatch/post-dispatch ordering structural issue)"
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "dispatch-quality",
+          "journal-quality",
+          "process-adherence",
+          "state-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 314,
+        "deferred": 2,
+        "finding_count": 5,
+        "ignored": 2,
+        "note": "Score 2/5. Finding 2 actioned by PR #1509 (C6.5). Findings 3,4 deferred. Findings 1,5 positive/no action."
       }
     ],
-    "last_review_cycle": 313
+    "last_review_cycle": 314
   },
   "review_dispatch_consecutive": 10,
   "review_events_verified_through_cycle": 313,
