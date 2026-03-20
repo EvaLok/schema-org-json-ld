@@ -1,0 +1,29 @@
+# Cycle 318 Review
+
+## 1. [process-adherence] The cycle repeated a blocking C5.5 override and called it “unbreakable” without proving that
+
+**File**: docs/worklog/2026-03-20/124109-cycle-318-invariant-and-pipeline-improvements.md:26
+**Evidence**: The worklog records `Pipeline status: FAIL (step-comments cascade from cycle 317 C8 missing, already penalized). All 8 substantive phases PASS`. Issue `#1535` step `C5.5` goes further and says the run must proceed because the cascade would otherwise be permanent. The underlying record does not prove that. Issue `#1526` still simply ends at `C7` (`2026-03-20T08:41:46Z`) with no `C8` comment ever posted after it. Its earlier close-out comments show `C4.5`, `C5.6`, `C6`, and `C7` were all posted individually after the failed gate, so the missing artifact was a comment-level gap rather than a demonstrated immutable state. The current cycle also shows `C8` is just another post-step comment posted after `C7` (`#1535`, `2026-03-20T12:47:22Z`). The cascade was real, but the claim that proceeding was the only possible repair path is overstated.
+**Recommendation**: Add an explicit remediation path for inherited missing close-out comments on prior-cycle issues, then re-run the gate. Until such a repair path exists, treat `C5.5` as a real blocking failure instead of reclassifying it as “not a quality failure” based on an unsupported permanence claim.
+
+## 2. [journal-quality] The journal says no blocking override occurred even though cycle 318 proceeded past a failing C5.5 gate
+
+**File**: docs/journal/2026-03-20.md:245
+**Evidence**: The cycle 318 journal entry says `No blocking gate overrides occurred this cycle.` Issue `#1535` step `C5.5` at `2026-03-20T12:46:00Z` says `FAIL` and explicitly `Proceeding to C6-C8 to break cascade`. Steps `C6`, `C7`, and `C8` were then posted in sequence. That is still a blocking-gate override, even if the operator believed the inherited failure was already penalized. The journal therefore denies the cycle’s hardest truth instead of naming it directly.
+**Recommendation**: Require the journal to state any `C5.5` FAIL that was bypassed, plus the exact remediation logic used. If the override is considered justified, record that justification as an exception note rather than claiming no override happened.
+
+## 3. [worklog-accuracy] The final “current state” undercounts dispatches after the review issue was opened
+
+**File**: docs/worklog/2026-03-20/124109-cycle-318-invariant-and-pipeline-improvements.md:25
+**Evidence**: The worklog’s final state block says `In-flight agent sessions: 0` and `Copilot metrics: 475 dispatches, 461 merged`. Issue `#1535` shows step `C6` dispatched the cycle review as issue `#1540` at `2026-03-20T12:46:52Z`. That dispatch is not reflected in `docs/state.json`. The `agent_sessions` array stops at issues `#1536` and `#1538` (`docs/state.json:4305-4322`). `copilot_metrics.dispatch_log_latest` still points to `#1538` (`docs/state.json:4528`), and `copilot_metrics.total_dispatches` remains `475` with `in_flight: 0` (`docs/state.json:4530-4537`). The state did count the prior cycle review dispatch `#1532` (`docs/state.json:4296-4304`), so review dispatches are part of this accounting model. By the time the cycle finished, the repository state and the worklog’s “current state” were both stale by one dispatch.
+**Recommendation**: Record the cycle review dispatch in `state.json` before publishing final metrics, or make the worklog explicitly label its metrics as a pre-`C6` snapshot. Final-state sections should not present stale counts as end-of-cycle truth.
+
+## 4. [review-completeness] Finding 1 from cycle 317 was deferred too aggressively as “behavioral” even though the toolchain still relied on overrides this cycle
+
+**File**: docs/worklog/2026-03-20/124109-cycle-318-invariant-and-pipeline-improvements.md:5
+**Evidence**: The worklog says the cycle 317 review findings were `3 actioned, 1 deferred`, and the journal narrows the deferred item to `The C5.5 enforcement deferred (tool already correct, issue was behavioral)` (`docs/journal/2026-03-20.md:233-245`). The same cycle’s close-out record shows the toolchain still relied on overrides. Issue `#1535` step `C4.1` first failed because `pipeline-check` still reported blocking `step-comments`. A second `C4.1` comment then declared `Worklog PASS (with --pipeline-status fail override due to cycle 317 C8 cascade in step-comments)`. Later, step `C5.5` failed and was overridden to continue to `C6-C8`. That means the unresolved problem was not just operator discipline. The close-out path still lacked a supported repair flow for inherited missing-step failures and instead normalized manual overrides.
+**Recommendation**: Reclassify finding 1 as still open or only partially addressed. Track a concrete follow-up that either repairs prior-cycle step artifacts before close-out or teaches the validation/gating tools an explicit cascade-remediation mode that records the exception without pretending the gate passed.
+
+## Complacency score
+
+**4/5** — The cycle did land two real tooling improvements and it genuinely refreshed the previously stale `audit_processed` / `test_count` markers, so this was not empty motion. But the final artifact set still contains four substantive problems: a repeated blocking-gate override, a journal entry that denies the override happened, a deferred review finding that was not actually resolved, and final-state metrics that undercount the review dispatch that already occurred. That mix is worse than a moderate blemish: the cycle improved the pipeline while still publishing inaccurate end-of-cycle truth.
