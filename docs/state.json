@@ -4308,6 +4308,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add eva_input_overlap invariant to state-invariants"
+    },
+    {
+      "dispatched_at": "2026-03-20T12:25:00Z",
+      "issue": 1538,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix record-dispatch pipeline gate to exclude step-audit phases"
     }
   ],
   "audit_dropped": [
@@ -4514,16 +4521,16 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 4,
-    "dispatch_log_latest": "#1536 Add eva_input_overlap invariant to state-invariants (cycle 318)",
+    "dispatch_log_latest": "#1538 Fix record-dispatch pipeline gate to exclude step-audit phases (cycle 318)",
     "dispatch_to_pr_rate": "99.2%",
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 459,
     "pr_merge_rate": "97.9%",
     "produced_pr": 469,
     "resolved": 473,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 474
+    "total_dispatches": 475
   },
   "cycle_phase": {
     "cycle": 318,
