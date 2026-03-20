@@ -535,15 +535,29 @@ mod tests {
     use super::*;
     use std::{
         env,
+        ffi::OsString,
         fs,
-        os::unix::fs::PermissionsExt,
         sync::{Mutex, OnceLock},
         time::{SystemTime, UNIX_EPOCH},
     };
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
 
     fn env_lock() -> &'static Mutex<()> {
         static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
         LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    struct PathGuard(Option<OsString>);
+
+    impl Drop for PathGuard {
+        fn drop(&mut self) {
+            if let Some(path) = self.0.take() {
+                env::set_var("PATH", path);
+            } else {
+                env::remove_var("PATH");
+            }
+        }
     }
 
     fn repo_root() -> PathBuf {
@@ -704,6 +718,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn pipeline_check_excludes_step_audit_phases() {
         let _env_guard = env_lock().lock().expect("env lock should not be poisoned");
@@ -729,17 +744,12 @@ mod tests {
             combined_entries.extend(env::split_paths(path));
         }
         let combined_path = env::join_paths(combined_entries).expect("PATH should join");
+        let _path_guard = PathGuard(original_path);
         env::set_var("PATH", &combined_path);
 
         let result = ProcessRunner
             .run_pipeline_check(&repo_root)
             .expect("pipeline-check should execute");
-
-        if let Some(path) = original_path {
-            env::set_var("PATH", path);
-        } else {
-            env::remove_var("PATH");
-        }
 
         assert_eq!(result.exit_code, Some(0));
         let recorded_args =
