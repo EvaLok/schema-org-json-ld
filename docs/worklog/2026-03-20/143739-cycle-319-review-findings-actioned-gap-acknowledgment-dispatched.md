@@ -18,9 +18,9 @@
 
 ## Current state
 
-- **In-flight agent sessions**: 2
+- **In-flight agent sessions**: 3
 - **Pipeline status**: PASS (8 substantive phases pass, 1 warn housekeeping). Step-comments WARN (prior cycle complete). Current-cycle-steps expected to resolve at close-out.
-- **Copilot metrics**: 477 dispatches, 461 merged, 2 in-flight
+- **Copilot metrics**: 478 dispatches, 471 PRs, 461 merged, 97.9% merge rate
 - **Publish gate**: published
 
 ## Next steps
