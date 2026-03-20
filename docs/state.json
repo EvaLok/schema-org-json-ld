@@ -4290,6 +4290,13 @@
       "pr": null,
       "status": "in_flight",
       "title": "Add --addresses-finding flag to record-dispatch for disposition reconciliation"
+    },
+    {
+      "dispatched_at": "2026-03-20T08:41:21Z",
+      "issue": 1532,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 317 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -4496,16 +4503,16 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 4,
-    "dispatch_log_latest": "#1528 Add --addresses-finding flag to record-dispatch for disposition reconciliation (cycle 317)",
-    "dispatch_to_pr_rate": "98.7%",
-    "in_flight": 2,
+    "dispatch_log_latest": "#1532 [Cycle Review] Cycle 317 end-of-cycle review (cycle 317)",
+    "dispatch_to_pr_rate": "98.5%",
+    "in_flight": 3,
     "merged": 456,
     "pr_merge_rate": "97.9%",
     "produced_pr": 466,
     "resolved": 470,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 472
+    "total_dispatches": 473
   },
   "cycle_phase": {
     "cycle": 317,
@@ -7600,7 +7607,7 @@
     ],
     "last_review_cycle": 316
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 317,
   "schema_status": {
     "directory_layout": {
