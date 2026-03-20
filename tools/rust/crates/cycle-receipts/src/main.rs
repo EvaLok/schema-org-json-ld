@@ -9,11 +9,8 @@ use std::process::Command;
 
 const REPO_URL: &str = "https://github.com/EvaLok/schema-org-json-ld";
 const FALLBACK_STEP: &str = "cycle-tagged";
-const POST_RECEIPT_COMMIT_PREFIXES: [&str; 3] = [
-    "state(clean-cycle",
-    "state(stabilization",
-    "state(record-dispatch):",
-];
+const POST_RECEIPT_COMMIT_PREFIXES: [&str; 3] =
+    ["state(clean-cycle", "state(stabilization", "state(record-dispatch):"];
 const SPECIFIC_STATE_STEPS: [&str; 10] = [
     "cycle-start",
     "process-merge",
@@ -734,10 +731,7 @@ mod tests {
         assert_eq!(receipts[0].step, "cycle-start");
         assert_eq!(receipts[0].aliases, vec![FALLBACK_STEP.to_string()]);
         assert_eq!(receipts[1].step, "process-merge");
-        assert_eq!(
-            receipts[1].commit,
-            "state(process-merge): merged PR #1 [cycle 198]"
-        );
+        assert_eq!(receipts[1].commit, "state(process-merge): merged PR #1 [cycle 198]");
         assert_eq!(receipts[1].aliases, vec![FALLBACK_STEP.to_string()]);
     }
 
