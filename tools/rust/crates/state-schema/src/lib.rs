@@ -40,8 +40,19 @@ pub struct StateJson {
     pub tool_pipeline: ToolPipeline,
     pub field_inventory: FieldInventory,
     pub cycle_phase: CyclePhase,
+    pub step_comment_acknowledged_gaps: Option<Vec<StepCommentGap>>,
     #[serde(flatten)]
     pub extra: BTreeMap<String, Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub struct StepCommentGap {
+    pub cycle: u64,
+    pub issue: u64,
+    pub missing_steps: Vec<String>,
+    pub acknowledged_at: String,
+    pub reason: String,
 }
 
 impl StateJson {

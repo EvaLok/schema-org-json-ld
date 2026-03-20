@@ -2,9 +2,9 @@ use chrono::NaiveDate;
 use clap::Parser;
 use serde::Serialize;
 use serde_json::Value;
-use state_schema::{current_cycle_from_state, current_utc_timestamp, read_state_value};
-use std::fs;
+use state_schema::{current_cycle_from_state, current_utc_timestamp, read_state_value, StepCommentGap};
 use std::collections::BTreeSet;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -926,10 +926,32 @@ fn verify_step_comments(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner
 			};
 		}
 	};
-	let issue_assessment = assess_step_comment_completeness(
-		&found,
+	let acknowledged = match acknowledged_step_comment_ids(&state, previous_cycle) {
+		Ok(acknowledged) => acknowledged,
+		Err(error) => {
+			return StepReport {
+				name: STEP_COMMENTS_STEP_NAME,
+				status: StepStatus::Error,
+				severity: Severity::Blocking,
+				exit_code: None,
+				detail: Some(error),
+				findings: None,
+				summary: None,
+			};
+		}
+	};
+	let effective_acknowledged = acknowledged
+		.difference(&found)
+		.copied()
+		.collect::<BTreeSet<_>>();
+	let mut merged_found = found.clone();
+	merged_found.extend(effective_acknowledged.iter().copied());
+	let issue_assessment = assess_step_comment_completeness_with_acknowledged(
+		&merged_found,
 		previous_cycle,
 		StepCommentCheckScope::PreviousCycle,
+		&found,
+		&effective_acknowledged,
 	);
 
 	StepReport {
@@ -1056,6 +1078,38 @@ fn fetch_step_comments_for_issue(
 		.map(|comment_bodies| collect_step_comment_ids(&comment_bodies, cycle))
 }
 
+fn acknowledged_step_comment_ids(state: &Value, cycle: u64) -> Result<BTreeSet<&'static str>, String> {
+	let Some(gaps_value) = state.pointer("/step_comment_acknowledged_gaps") else {
+		return Ok(BTreeSet::new());
+	};
+	if gaps_value.is_null() {
+		return Ok(BTreeSet::new());
+	}
+	let gaps: Vec<StepCommentGap> = serde_json::from_value(gaps_value.clone()).map_err(|error| {
+		format!(
+			"failed to parse /step_comment_acknowledged_gaps in docs/state.json: {}",
+			error
+		)
+	})?;
+	let mut acknowledged = BTreeSet::new();
+	for gap in gaps.into_iter().filter(|gap| gap.cycle == cycle) {
+		for missing_step in gap.missing_steps {
+			let step_id = EXPECTED_STEP_IDS
+				.iter()
+				.copied()
+				.find(|candidate| *candidate == missing_step)
+				.ok_or_else(|| {
+					format!(
+						"invalid /step_comment_acknowledged_gaps entry for cycle {} issue {}: unknown step id {}",
+						gap.cycle, gap.issue, missing_step
+					)
+				})?;
+			acknowledged.insert(step_id);
+		}
+	}
+	Ok(acknowledged)
+}
+
 fn missing_expected_step_ids(found: &BTreeSet<&'static str>) -> Vec<&'static str> {
 	EXPECTED_STEP_IDS
 		.iter()
@@ -1092,17 +1146,34 @@ fn assess_step_comment_completeness(
 	cycle: u64,
 	scope: StepCommentCheckScope,
 ) -> StepCommentAssessment {
+	assess_step_comment_completeness_with_acknowledged(
+		found,
+		cycle,
+		scope,
+		found,
+		&BTreeSet::new(),
+	)
+}
+
+fn assess_step_comment_completeness_with_acknowledged(
+	found: &BTreeSet<&'static str>,
+	cycle: u64,
+	scope: StepCommentCheckScope,
+	actual_found: &BTreeSet<&'static str>,
+	acknowledged: &BTreeSet<&'static str>,
+) -> StepCommentAssessment {
 	let found_ids = ordered_found_step_ids(found);
 	let missing = missing_expected_step_ids(found);
 	let (mandatory_missing, optional_missing): (Vec<_>, Vec<_>) = missing
 		.into_iter()
 		.partition(|step| is_mandatory_step_for_cycle(step, cycle));
-	let detail = format!(
-		"found {} unique step comments [{}]; missing mandatory [{}]; missing optional [{}]",
-		found.len(),
-		format_step_id_list(&found_ids),
-		format_step_id_list(&mandatory_missing),
-		format_step_id_list(&optional_missing)
+	let detail = format_step_comment_detail(
+		found,
+		&found_ids,
+		&mandatory_missing,
+		&optional_missing,
+		actual_found,
+		acknowledged,
 	);
 
 	if found.len() < STEP_COMMENT_THRESHOLD {
@@ -1165,6 +1236,39 @@ fn assess_step_comment_completeness(
 		detail,
 		findings: found.len(),
 	}
+}
+
+fn format_step_comment_detail(
+	found: &BTreeSet<&'static str>,
+	found_ids: &[&'static str],
+	mandatory_missing: &[&'static str],
+	optional_missing: &[&'static str],
+	actual_found: &BTreeSet<&'static str>,
+	acknowledged: &BTreeSet<&'static str>,
+) -> String {
+	if acknowledged.is_empty() {
+		return format!(
+			"found {} unique step comments [{}]; missing mandatory [{}]; missing optional [{}]",
+			found.len(),
+			format_step_id_list(found_ids),
+			format_step_id_list(mandatory_missing),
+			format_step_id_list(optional_missing)
+		);
+	}
+
+	let actual_found_ids = ordered_found_step_ids(actual_found);
+	let acknowledged_ids = ordered_found_step_ids(acknowledged);
+	format!(
+		"found {} unique step comments ({} acknowledged) [{}]; actually found [{}]; {} step(s) acknowledged via gap record [{}]; missing mandatory [{}]; missing optional [{}]",
+		found.len(),
+		acknowledged_ids.len(),
+		format_step_id_list(found_ids),
+		format_step_id_list(&actual_found_ids),
+		acknowledged_ids.len(),
+		format_step_id_list(&acknowledged_ids),
+		format_step_id_list(mandatory_missing),
+		format_step_id_list(optional_missing)
+	)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -4390,6 +4494,182 @@ mod tests {
 	}
 
 	#[test]
+	fn step_comment_verification_acknowledges_matching_previous_cycle_gap() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root =
+			std::env::temp_dir().join(format!("pipeline-check-step-comments-acknowledged-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 846,
+				"last_cycle": {
+					"number": 257
+				},
+				"step_comment_acknowledged_gaps": [
+					{
+						"cycle": 256,
+						"issue": 846,
+						"missing_steps": ["C4.5"],
+						"acknowledged_at": "2026-03-20T14:00:00Z",
+						"reason": "inherited close-out timeout"
+					}
+				]
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct StepCommentRunner;
+
+		impl CommandRunner for StepCommentRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected in step comment verification test");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 846);
+				let steps = EXPECTED_STEP_IDS
+					.iter()
+					.copied()
+					.filter(|step| *step != "C4.5")
+					.collect::<Vec<_>>();
+				Ok(step_comment_bodies(256, &steps))
+			}
+		}
+
+		let step = verify_step_comments(&root, 257, &StepCommentRunner);
+		assert_eq!(step.status, StepStatus::Pass);
+		assert_eq!(step.severity, Severity::Blocking);
+		assert_eq!(step.findings, Some(27));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("found 27 unique step comments (1 acknowledged)"));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("1 step(s) acknowledged via gap record [C4.5]"));
+	}
+
+	#[test]
+	fn step_comment_verification_ignores_non_matching_acknowledged_gap_cycles() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir()
+			.join(format!("pipeline-check-step-comments-acknowledged-ignore-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 847,
+				"last_cycle": {
+					"number": 257
+				},
+				"step_comment_acknowledged_gaps": [
+					{
+						"cycle": 255,
+						"issue": 847,
+						"missing_steps": ["C4.5"],
+						"acknowledged_at": "2026-03-20T14:00:00Z",
+						"reason": "wrong cycle"
+					}
+				]
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct StepCommentRunner;
+
+		impl CommandRunner for StepCommentRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected in step comment verification test");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 847);
+				let steps = EXPECTED_STEP_IDS
+					.iter()
+					.copied()
+					.filter(|step| *step != "C4.5")
+					.collect::<Vec<_>>();
+				Ok(step_comment_bodies(256, &steps))
+			}
+		}
+
+		let step = verify_step_comments(&root, 257, &StepCommentRunner);
+		assert_eq!(step.status, StepStatus::Fail);
+		assert_eq!(step.severity, Severity::Blocking);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("missing mandatory [C4.5]"));
+		assert!(!step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("acknowledged via gap record"));
+	}
+
+	#[test]
+	fn step_comment_verification_empty_acknowledged_gap_list_keeps_existing_behavior() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir()
+			.join(format!("pipeline-check-step-comments-acknowledged-empty-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 848,
+				"last_cycle": {
+					"number": 257
+				},
+				"step_comment_acknowledged_gaps": []
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct StepCommentRunner;
+
+		impl CommandRunner for StepCommentRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected in step comment verification test");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 848);
+				let steps = EXPECTED_STEP_IDS
+					.iter()
+					.copied()
+					.filter(|step| *step != "C4.5")
+					.collect::<Vec<_>>();
+				Ok(step_comment_bodies(256, &steps))
+			}
+		}
+
+		let step = verify_step_comments(&root, 257, &StepCommentRunner);
+		assert_eq!(step.status, StepStatus::Fail);
+		assert_eq!(step.severity, Severity::Blocking);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("missing mandatory [C4.5]"));
+		assert!(!step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("acknowledged via gap record"));
+	}
+
+	#[test]
 	fn step_comment_verification_filters_previous_cycle_comments_by_cycle_number() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -4579,6 +4859,63 @@ mod tests {
 		let detail = step.detail.as_deref().unwrap_or_default();
 		assert!(detail.contains("missing pre-gate mandatory steps [1.1, 3]"),
 			"expected missing steps 1.1 and 3, got: {}", detail);
+	}
+
+	#[test]
+	fn current_cycle_step_verification_ignores_acknowledged_gap_records() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir()
+			.join(format!("pipeline-check-current-cycle-acknowledged-ignore-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 900,
+				"last_cycle": {
+					"number": 301,
+					"issue": 952
+				},
+				"step_comment_acknowledged_gaps": [
+					{
+						"cycle": 301,
+						"issue": 952,
+						"missing_steps": ["3"],
+						"acknowledged_at": "2026-03-20T14:00:00Z",
+						"reason": "should not affect current cycle checks"
+					}
+				]
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct Runner;
+
+		impl CommandRunner for Runner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 952);
+				let steps: Vec<&str> = EXPECTED_STEP_IDS
+					.iter()
+					.copied()
+					.filter(|step| *step != "3")
+					.collect();
+				Ok(step_comment_bodies(301, &steps))
+			}
+		}
+
+		let step = verify_current_cycle_step_comments(&root, 301, &Runner);
+		assert_eq!(step.status, StepStatus::Fail);
+		assert_eq!(step.severity, Severity::Blocking);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("missing pre-gate mandatory steps [3]"));
 	}
 
 	#[test]

@@ -4715,6 +4715,10 @@
         "cadence": "every cycle",
         "last_refreshed": "cycle 319"
       },
+      "step_comment_acknowledged_gaps": {
+        "cadence": "after acknowledging step comment gaps",
+        "last_refreshed": "cycle 319"
+      },
       "project_mode": {
         "cadence": "when mode or counter changes",
         "last_refreshed": "cycle 317"
@@ -4842,6 +4846,7 @@
     "started_at": "cycle 199"
   },
   "previous_cycle_issue": 1535,
+  "step_comment_acknowledged_gaps": [],
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
     "burn_in_target": 6,
