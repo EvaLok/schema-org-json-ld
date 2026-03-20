@@ -4278,24 +4278,28 @@
     {
       "dispatched_at": "2026-03-20T08:22:26Z",
       "issue": 1527,
+      "merged_at": "2026-03-20T10:18:26Z",
       "model": "gpt-5.4",
-      "pr": null,
-      "status": "in_flight",
+      "pr": 1529,
+      "status": "merged",
       "title": "Fix cycle-runner step ID collision with checklist section numbers"
     },
     {
       "dispatched_at": "2026-03-20T08:22:28Z",
       "issue": 1528,
+      "merged_at": "2026-03-20T10:18:26Z",
       "model": "gpt-5.4",
-      "pr": null,
-      "status": "in_flight",
+      "pr": 1530,
+      "status": "merged",
       "title": "Add --addresses-finding flag to record-dispatch for disposition reconciliation"
     },
     {
       "dispatched_at": "2026-03-20T08:41:21Z",
       "issue": 1532,
+      "merged_at": "2026-03-20T10:18:26Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1533,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 317 end-of-cycle review"
     }
   ],
@@ -4504,12 +4508,12 @@
     "closed_without_merge": 8,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#1532 [Cycle Review] Cycle 317 end-of-cycle review (cycle 317)",
-    "dispatch_to_pr_rate": "98.5%",
-    "in_flight": 3,
-    "merged": 456,
+    "dispatch_to_pr_rate": "99.2%",
+    "in_flight": 0,
+    "merged": 459,
     "pr_merge_rate": "97.9%",
-    "produced_pr": 466,
-    "resolved": 470,
+    "produced_pr": 469,
+    "resolved": 473,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 473
