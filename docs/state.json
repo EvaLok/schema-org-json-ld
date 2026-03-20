@@ -4213,8 +4213,10 @@
     {
       "dispatched_at": "2026-03-19T22:20:33Z",
       "issue": 1508,
+      "merged_at": "2026-03-20T00:19:23Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1509,
+      "status": "merged",
       "title": "Fix close-out worklog accuracy: add C6.5 post-dispatch patching step"
     },
     {
@@ -4431,12 +4433,12 @@
     "closed_without_merge": 6,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#1510 [Cycle Review] Cycle 314 end-of-cycle review (cycle 314)",
-    "dispatch_to_pr_rate": "98.9%",
-    "in_flight": 1,
-    "merged": 452,
+    "dispatch_to_pr_rate": "99.1%",
+    "in_flight": 0,
+    "merged": 453,
     "pr_merge_rate": "98.3%",
-    "produced_pr": 460,
-    "resolved": 464,
+    "produced_pr": 461,
+    "resolved": 465,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 465
