@@ -23,7 +23,7 @@
 
 - **In-flight agent sessions**: 2
 - **Pipeline status**: FAIL at startup (phase 10: current-cycle-steps always fails mid-cycle)
-- **Copilot metrics**: 472 dispatches, 466 PRs, 456 merged, 99.1% D2PR rate
+- **Copilot metrics**: 472 dispatches, 466 PRs, 456 merged, 98.7% D2PR rate
 - **Publish gate**: published
 
 ## Next steps

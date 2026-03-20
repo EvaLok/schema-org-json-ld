@@ -4274,6 +4274,22 @@
       "pr": 1524,
       "status": "merged",
       "title": "Clarify receipt validation scope note to say snapshot, not certification"
+    },
+    {
+      "dispatched_at": "2026-03-20T08:22:26Z",
+      "issue": 1527,
+      "model": "gpt-5.4",
+      "pr": null,
+      "status": "in_flight",
+      "title": "Fix cycle-runner step ID collision with checklist section numbers"
+    },
+    {
+      "dispatched_at": "2026-03-20T08:22:28Z",
+      "issue": 1528,
+      "model": "gpt-5.4",
+      "pr": null,
+      "status": "in_flight",
+      "title": "Add --addresses-finding flag to record-dispatch for disposition reconciliation"
     }
   ],
   "audit_dropped": [
@@ -4481,7 +4497,7 @@
     "closed_without_merge": 8,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#1528 Add --addresses-finding flag to record-dispatch for disposition reconciliation (cycle 317)",
-    "dispatch_to_pr_rate": "99.1%",
+    "dispatch_to_pr_rate": "98.7%",
     "in_flight": 2,
     "merged": 456,
     "pr_merge_rate": "97.9%",
