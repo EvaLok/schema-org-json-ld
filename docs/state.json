@@ -4319,6 +4319,13 @@
       "pr": 1539,
       "status": "merged",
       "title": "Fix record-dispatch pipeline gate to exclude step-audit phases"
+    },
+    {
+      "dispatched_at": "2026-03-20T12:46:47Z",
+      "issue": 1540,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 318 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -4525,16 +4532,16 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 4,
-    "dispatch_log_latest": "#1538 Fix record-dispatch pipeline gate to exclude step-audit phases (cycle 318)",
-    "dispatch_to_pr_rate": "99.2%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1540 [Cycle Review] Cycle 318 end-of-cycle review (cycle 318)",
+    "dispatch_to_pr_rate": "98.9%",
+    "in_flight": 1,
     "merged": 461,
     "pr_merge_rate": "97.9%",
     "produced_pr": 471,
     "resolved": 475,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 475
+    "total_dispatches": 476
   },
   "cycle_phase": {
     "cycle": 318,
@@ -7642,7 +7649,7 @@
     ],
     "last_review_cycle": 317
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 317,
   "schema_status": {
     "directory_layout": {
