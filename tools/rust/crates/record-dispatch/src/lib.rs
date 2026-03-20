@@ -705,7 +705,7 @@ mod tests {
     }
 
     #[test]
-    fn process_runner_passes_step_audit_exclusions_to_pipeline_check() {
+    fn pipeline_check_excludes_step_audit_phases() {
         let _env_guard = env_lock().lock().expect("env lock should not be poisoned");
         let repo_root = temp_repo_root("record-dispatch-pipeline-check");
         let bin_dir = repo_root.join("bin");
@@ -724,15 +724,11 @@ mod tests {
             .expect("fake bash should be executable");
 
         let original_path = env::var_os("PATH");
-        let combined_path = match original_path.as_deref() {
-            Some(path) if !path.is_empty() => {
-                let mut combined = bin_dir.into_os_string();
-                combined.push(":");
-                combined.push(path);
-                combined
-            }
-            _ => bin_dir.into_os_string(),
-        };
+        let mut combined_entries = vec![bin_dir.clone()];
+        if let Some(path) = original_path.as_ref() {
+            combined_entries.extend(env::split_paths(path));
+        }
+        let combined_path = env::join_paths(combined_entries).expect("PATH should join");
         env::set_var("PATH", &combined_path);
 
         let result = ProcessRunner
