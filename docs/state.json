@@ -4583,9 +4583,10 @@
     "total_dispatches": 480
   },
   "cycle_phase": {
+    "completed_at": "2026-03-20T20:13:40Z",
     "cycle": 321,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-20T18:22:44Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-20T20:13:40Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
