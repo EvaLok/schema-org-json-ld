@@ -29,7 +29,7 @@
 
 - **In-flight agent sessions**: 2
 - **Pipeline status**: PASS (state-invariants bug fixed this cycle)
-- **Copilot metrics**: 470 dispatches, 464 PRs produced, 454 merged, 97.8% PR merge rate
+- **Copilot metrics**: 470 dispatches, 464 PRs, 454 merged, 97.8% merge rate
 - **Publish gate**: published
 
 ## Next steps
