@@ -22,9 +22,9 @@
 
 ## Current state
 
-- **In-flight agent sessions**: 1
+- **In-flight agent sessions**: 2
 - **Pipeline status**: PASS (2 warnings: stale typescript_stats, 1 housekeeping item cleaned)
-- **Copilot metrics**: 481 dispatches, 466 merged
+- **Copilot metrics**: 482 dispatches, 476 PRs, 466 merged, 97.9% merge rate
 - **Publish gate**: published
 
 ## Next steps
