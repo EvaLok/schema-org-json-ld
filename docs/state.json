@@ -4314,8 +4314,10 @@
     {
       "dispatched_at": "2026-03-20T12:25:00Z",
       "issue": 1538,
+      "merged_at": "2026-03-20T12:39:17Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1539,
+      "status": "merged",
       "title": "Fix record-dispatch pipeline gate to exclude step-audit phases"
     }
   ],
@@ -4524,12 +4526,12 @@
     "closed_without_merge": 8,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#1538 Fix record-dispatch pipeline gate to exclude step-audit phases (cycle 318)",
-    "dispatch_to_pr_rate": "98.9%",
-    "in_flight": 1,
-    "merged": 460,
+    "dispatch_to_pr_rate": "99.2%",
+    "in_flight": 0,
+    "merged": 461,
     "pr_merge_rate": "97.9%",
-    "produced_pr": 470,
-    "resolved": 474,
+    "produced_pr": 471,
+    "resolved": 475,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 475
