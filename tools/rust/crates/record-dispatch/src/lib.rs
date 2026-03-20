@@ -12,6 +12,13 @@ pub const PIPELINE_GATE_FAILURE_MESSAGE: &str =
     "Cannot dispatch: pipeline-check failed. Fix failures before dispatching.";
 pub const REVIEW_DISPATCH_WARNING: &str =
     "Pipeline gate bypassed for review dispatch (--review-dispatch)";
+const PIPELINE_CHECK_ARGS: [&str; 5] = [
+    "tools/pipeline-check",
+    "--exclude-step",
+    "step-comments",
+    "--exclude-step",
+    "current-cycle-steps",
+];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PipelineGateError {
@@ -33,7 +40,7 @@ pub struct ProcessRunner;
 impl CommandRunner for ProcessRunner {
     fn run_pipeline_check(&self, repo_root: &Path) -> Result<ExecutionResult, String> {
         let status = Command::new("bash")
-            .args(["tools/pipeline-check"])
+            .args(PIPELINE_CHECK_ARGS)
             .current_dir(repo_root)
             .status()
             .map_err(|error| format!("failed to execute pipeline-check: {}", error))?;
@@ -527,9 +534,31 @@ fn replace_in_flight_line(content: &str, in_flight: i64) -> Option<String> {
 mod tests {
     use super::*;
     use std::{
+        env,
+        ffi::OsString,
         fs,
+        sync::{Mutex, OnceLock},
         time::{SystemTime, UNIX_EPOCH},
     };
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
+
+    fn env_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    struct PathGuard(Option<OsString>);
+
+    impl Drop for PathGuard {
+        fn drop(&mut self) {
+            if let Some(path) = self.0.take() {
+                env::set_var("PATH", path);
+            } else {
+                env::remove_var("PATH");
+            }
+        }
+    }
 
     fn repo_root() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../..")
@@ -686,6 +715,48 @@ mod tests {
         assert_eq!(
             error,
             "docs/state.json field review_dispatch_consecutive must be a non-negative integer"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn pipeline_check_excludes_step_audit_phases() {
+        let _env_guard = env_lock().lock().expect("env lock should not be poisoned");
+        let repo_root = temp_repo_root("record-dispatch-pipeline-check");
+        let bin_dir = repo_root.join("bin");
+        fs::create_dir_all(&bin_dir).expect("bin dir should be created");
+        let captured_args = repo_root.join("captured-args.txt");
+        let fake_bash = bin_dir.join("bash");
+        fs::write(
+            &fake_bash,
+            format!(
+                "#!/bin/bash\nset -euo pipefail\nprintf '%s\\n' \"$@\" > '{}'\n",
+                captured_args.display()
+            ),
+        )
+        .expect("fake bash should be written");
+        fs::set_permissions(&fake_bash, fs::Permissions::from_mode(0o755))
+            .expect("fake bash should be executable");
+
+        let original_path = env::var_os("PATH");
+        let mut combined_entries = vec![bin_dir.clone()];
+        if let Some(path) = original_path.as_ref() {
+            combined_entries.extend(env::split_paths(path));
+        }
+        let combined_path = env::join_paths(combined_entries).expect("PATH should join");
+        let _path_guard = PathGuard(original_path);
+        env::set_var("PATH", &combined_path);
+
+        let result = ProcessRunner
+            .run_pipeline_check(&repo_root)
+            .expect("pipeline-check should execute");
+
+        assert_eq!(result.exit_code, Some(0));
+        let recorded_args =
+            fs::read_to_string(&captured_args).expect("captured args should be readable");
+        assert_eq!(
+            recorded_args.lines().collect::<Vec<_>>(),
+            PIPELINE_CHECK_ARGS
         );
     }
 
