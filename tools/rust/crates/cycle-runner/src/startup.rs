@@ -26,9 +26,22 @@ pub fn run(
     dry_run: bool,
 ) -> Result<(), String> {
     if dry_run {
-        for line in dry_run_messages(issue) {
-            eprintln!("{line}");
-        }
+        eprintln!("[dry-run] Would run startup sequence for issue #{}", issue);
+        eprintln!("[dry-run] 1. cycle-start --issue {} --json", issue);
+        eprintln!("[dry-run] 2. post-step --step 0 (cycle initialization)");
+        eprintln!("[dry-run] 3. pipeline-check --json");
+        eprintln!("[dry-run] 4. post-step --step 4 (pipeline check)");
+        eprintln!("[dry-run] 5. housekeeping-scan --json");
+        eprintln!(
+            "[dry-run] 6. post-step --step {} (housekeeping scan)",
+            HOUSEKEEPING_STEP_ID
+        );
+        eprintln!("[dry-run] 7. cycle-status --json");
+        eprintln!(
+            "[dry-run] 8. post-step --step {} (concurrency check)",
+            CONCURRENCY_STEP_ID
+        );
+        eprintln!("[dry-run] 9. Output combined situation report as JSON");
         return Ok(());
     }
 
@@ -153,27 +166,6 @@ pub fn run(
     Ok(())
 }
 
-fn dry_run_messages(issue: u64) -> Vec<String> {
-    vec![
-        format!("[dry-run] Would run startup sequence for issue #{}", issue),
-        format!("[dry-run] 1. cycle-start --issue {} --json", issue),
-        "[dry-run] 2. post-step --step 0 (cycle initialization)".to_string(),
-        "[dry-run] 3. pipeline-check --json".to_string(),
-        "[dry-run] 4. post-step --step 4 (pipeline check)".to_string(),
-        "[dry-run] 5. housekeeping-scan --json".to_string(),
-        format!(
-            "[dry-run] 6. post-step --step {} (housekeeping scan)",
-            HOUSEKEEPING_STEP_ID
-        ),
-        "[dry-run] 7. cycle-status --json".to_string(),
-        format!(
-            "[dry-run] 8. post-step --step {} (concurrency check)",
-            CONCURRENCY_STEP_ID
-        ),
-        "[dry-run] 9. Output combined situation report as JSON".to_string(),
-    ]
-}
-
 fn format_startup_brief(brief: &Value) -> String {
     let mut parts = Vec::new();
 
@@ -220,10 +212,7 @@ fn format_pipeline_summary(pipeline: &Value) -> String {
     if let Some(overall) = pipeline.get("overall").and_then(Value::as_str) {
         parts.push(format!("Overall: {}", overall));
     }
-    if let Some(true) = pipeline
-        .get("has_blocking_findings")
-        .and_then(Value::as_bool)
-    {
+    if let Some(true) = pipeline.get("has_blocking_findings").and_then(Value::as_bool) {
         parts.push("BLOCKING findings detected".to_string());
     }
     if let Some(steps) = pipeline.get("steps").and_then(Value::as_array) {
@@ -311,18 +300,6 @@ mod tests {
     fn startup_step_ids_match_checklist_sections() {
         assert_eq!(HOUSEKEEPING_STEP_ID, "7");
         assert_eq!(CONCURRENCY_STEP_ID, "8");
-    }
-
-    #[test]
-    fn dry_run_messages_use_housekeeping_and_concurrency_checklist_step_ids() {
-        let messages = dry_run_messages(123);
-
-        assert!(
-            messages.contains(&"[dry-run] 6. post-step --step 7 (housekeeping scan)".to_string())
-        );
-        assert!(
-            messages.contains(&"[dry-run] 8. post-step --step 8 (concurrency check)".to_string())
-        );
     }
 
     #[test]
