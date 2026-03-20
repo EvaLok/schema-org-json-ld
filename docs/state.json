@@ -4301,6 +4301,13 @@
       "pr": 1533,
       "status": "merged",
       "title": "[Cycle Review] Cycle 317 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-20T12:20:00Z",
+      "issue": 1536,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add eva_input_overlap invariant to state-invariants"
     }
   ],
   "audit_dropped": [
@@ -4507,16 +4514,16 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 4,
-    "dispatch_log_latest": "#1532 [Cycle Review] Cycle 317 end-of-cycle review (cycle 317)",
+    "dispatch_log_latest": "#1536 Add eva_input_overlap invariant to state-invariants (cycle 318)",
     "dispatch_to_pr_rate": "99.2%",
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 459,
     "pr_merge_rate": "97.9%",
     "produced_pr": 469,
     "resolved": 473,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 473
+    "total_dispatches": 474
   },
   "cycle_phase": {
     "cycle": 318,
@@ -4619,11 +4626,11 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 317"
+        "last_refreshed": "cycle 318"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 317"
+        "last_refreshed": "cycle 318"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
