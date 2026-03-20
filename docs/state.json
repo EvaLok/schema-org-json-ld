@@ -7764,9 +7764,24 @@
         "finding_count": 3,
         "ignored": 0,
         "note": "receipt-integrity and worklog-accuracy actioned; process-adherence deferred (architectural)"
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "journal-quality",
+          "process-adherence",
+          "receipt-integrity"
+        ],
+        "complacency_score": 3,
+        "cycle": 322,
+        "deferred": 2,
+        "dispatch_created": 1,
+        "finding_count": 3,
+        "ignored": 0,
+        "note": "Finding 1 (gate override): root cause fixed by PR #1556 (current-cycle-steps resumed cycle support). Findings 2-3 (receipt provenance, journal labels): deferred process discipline improvements."
       }
     ],
-    "last_review_cycle": 321
+    "last_review_cycle": 322
   },
   "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 322,
