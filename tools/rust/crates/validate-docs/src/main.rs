@@ -473,6 +473,8 @@ fn pipeline_check_args(repo_root: &Path, cycle: u64) -> Vec<String> {
         repo_root.display().to_string(),
         "--exclude-step".to_string(),
         "doc-validation".to_string(),
+        "--exclude-step".to_string(),
+        "current-cycle-steps".to_string(),
     ]
 }
 
@@ -864,6 +866,8 @@ mod tests {
                 "/tmp/repo".to_string(),
                 "--exclude-step".to_string(),
                 "doc-validation".to_string(),
+                "--exclude-step".to_string(),
+                "current-cycle-steps".to_string(),
             ]
         );
     }
