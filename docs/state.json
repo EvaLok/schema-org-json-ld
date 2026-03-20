@@ -4231,8 +4231,10 @@
     {
       "dispatched_at": "2026-03-20T00:25:16Z",
       "issue": 1513,
+      "merged_at": "2026-03-20T03:06:26Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1514,
+      "status": "merged",
       "title": "Fix doc-validation circular dependency at close-out C4.1"
     },
     {
@@ -4447,12 +4449,12 @@
     "closed_without_merge": 6,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#1515 [Cycle Review] Cycle 315 end-of-cycle review (cycle 315)",
-    "dispatch_to_pr_rate": "98.7%",
-    "in_flight": 2,
-    "merged": 453,
+    "dispatch_to_pr_rate": "98.9%",
+    "in_flight": 1,
+    "merged": 454,
     "pr_merge_rate": "98.3%",
-    "produced_pr": 461,
-    "resolved": 465,
+    "produced_pr": 462,
+    "resolved": 466,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 467
@@ -4560,15 +4562,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 315"
+        "last_refreshed": "cycle 316"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 315"
+        "last_refreshed": "cycle 316"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 315"
+        "last_refreshed": "cycle 316"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
