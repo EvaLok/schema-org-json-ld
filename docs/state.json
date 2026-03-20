@@ -4487,10 +4487,9 @@
     "total_dispatches": 470
   },
   "cycle_phase": {
-    "completed_at": "2026-03-20T04:45:19Z",
     "cycle": 316,
-    "phase": "complete",
-    "phase_entered_at": "2026-03-20T04:45:19Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-20T04:49:25Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -4756,13 +4755,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 14,
-    "issue": 1517,
+    "duration_minutes": 97,
+    "issue": 1520,
     "number": 316,
-    "summary": "0 dispatches, 1 merges (PR #1514)",
-    "timestamp": "2026-03-20T03:12:19Z"
+    "summary": "Resumed cycle: processed cycle 316 review (2/5, 4 findings), dispatched #1521 (step-checker cycle-aware fix) and #1523 (receipt validation scope note), fixed state-invariants completed_at bug",
+    "timestamp": "2026-03-20T04:49:25Z"
   },
-  "last_eva_comment_check": "2026-03-20T03:12:19Z",
+  "last_eva_comment_check": "2026-03-20T04:49:25Z",
   "last_tool_audit_cycle": 263,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
