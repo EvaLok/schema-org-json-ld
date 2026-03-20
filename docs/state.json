@@ -4768,7 +4768,7 @@
       },
       "schema_status.planned_next": {
         "cadence": "after planning or completing types",
-        "last_refreshed": "cycle 309"
+        "last_refreshed": "cycle 320"
       },
       "schema_status.property_gap_audit": {
         "cadence": "after property gap fixes",
@@ -4824,7 +4824,7 @@
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
-        "last_refreshed": "cycle 309"
+        "last_refreshed": "cycle 320"
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
