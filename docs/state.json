@@ -4241,8 +4241,11 @@
       "dispatched_at": "2026-03-20T00:34:02Z",
       "issue": 1515,
       "model": "gpt-5.4",
-      "status": "in_flight",
-      "title": "[Cycle Review] Cycle 315 end-of-cycle review"
+      "pr": 1516,
+      "status": "closed_without_merge",
+      "title": "[Cycle Review] Cycle 315 end-of-cycle review",
+      "resolved_at": "2026-03-20T03:04:00Z",
+      "note": "PR #1516 had merge conflicts; review artifact extracted manually and committed directly"
     }
   ],
   "audit_dropped": [
@@ -4446,15 +4449,15 @@
     "total_classes_converted": 54
   },
   "copilot_metrics": {
-    "closed_without_merge": 6,
+    "closed_without_merge": 7,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#1515 [Cycle Review] Cycle 315 end-of-cycle review (cycle 315)",
-    "dispatch_to_pr_rate": "98.9%",
-    "in_flight": 1,
+    "dispatch_to_pr_rate": "99.1%",
+    "in_flight": 0,
     "merged": 454,
-    "pr_merge_rate": "98.3%",
-    "produced_pr": 462,
-    "resolved": 466,
+    "pr_merge_rate": "98.1%",
+    "produced_pr": 463,
+    "resolved": 467,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 467
@@ -7524,7 +7527,7 @@
     "last_review_cycle": 315
   },
   "review_dispatch_consecutive": 1,
-  "review_events_verified_through_cycle": 314,
+  "review_events_verified_through_cycle": 315,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
