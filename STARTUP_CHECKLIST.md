@@ -2,7 +2,7 @@
 
 Follow this checklist at the start of every orchestrator cycle. Do not skip steps.
 
-**Step-level commenting**: `cycle-runner startup` auto-posts steps **0, 4, 5, 6**. Post a **separate comment** for each remaining judgment step: **0.5, 0.6, 1, 1.1, 2, 3, 7, 8, 9**. Use `bash tools/post-step --issue {N} --step "{STEP}" --title "{TITLE}" --body "{BODY}"` for each step's outcome. **NEVER batch multiple steps into a single comment** (e.g., "Steps 1-5: ..." is a violation). Each step = one `post-step` call = one comment. Do not summarize steps from memory at the end — post each one as you complete it. This creates an auditable, human-readable log of exactly what was executed and what was found.
+**Step-level commenting**: `cycle-runner startup` auto-posts steps **0, 4, 7, 8**. Post a **separate comment** for each remaining judgment step: **0.5, 0.6, 1, 1.1, 2, 3, 5, 6, 9**. Use `bash tools/post-step --issue {N} --step "{STEP}" --title "{TITLE}" --body "{BODY}"` for each step's outcome. **NEVER batch multiple steps into a single comment** (e.g., "Steps 1-5: ..." is a violation). Each step = one `post-step` call = one comment. Do not summarize steps from memory at the end — post each one as you complete it. This creates an auditable, human-readable log of exactly what was executed and what was found.
 
 **Permission note**: The orchestrator workflow allows specific Bash commands: `gh`, `git`, `jq`, `mkdir`, `ls`, `date`, `wc`, `sort`, `composer`, `cargo`, `bash`. Use dedicated tools (Read, Write, Edit, Grep, Glob) for file operations. `cargo` enables building Rust tools in `tools/rust/`. `bash` enables running shell wrappers for those tools (e.g., `bash tools/check-field-inventory-rs`). See `.claude/skills/orchestrator-permissions/SKILL.md` for the full list and `.claude/skills/rust-tooling/SKILL.md` for the Rust tool workflow.
 
@@ -10,13 +10,13 @@ Follow this checklist at the start of every orchestrator cycle. Do not skip step
 
 ## Automated startup via cycle-runner
 
-`cycle-runner startup` automates steps 0, 4, 5, 6 (cycle initialization, pipeline check, housekeeping scan, concurrency check) and outputs a unified situation report as JSON:
+`cycle-runner startup` automates steps 0, 4, 7, 8 (cycle initialization, pipeline check, housekeeping scan, concurrency check) and outputs a unified situation report as JSON:
 
 ```bash
 bash tools/cycle-runner startup --issue {N}
 ```
 
-This runs `cycle-start`, `pipeline-check`, `housekeeping-scan`, and `cycle-status` in sequence, auto-posting step comments for each. The orchestrator then handles the judgment steps (0.5, 0.6, 1, 1.1, 7-9) using data from the situation report.
+This runs `cycle-start`, `pipeline-check`, `housekeeping-scan`, and `cycle-status` in sequence, auto-posting step comments for each. The orchestrator then handles the judgment steps (0.5, 0.6, 1, 1.1, 2, 3, 5, 6, 9) using data from the situation report.
 
 Use `--dry-run` to preview without executing. Use `--model MODEL` to override the default model from `tools/config.json`.
 

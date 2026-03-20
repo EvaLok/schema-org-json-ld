@@ -1,8 +1,8 @@
 use clap::Parser;
 use record_dispatch::{
     apply_dispatch_patch, build_dispatch_patch, concurrency_warning_message,
-    dispatch_commit_message, enforce_pipeline_gate, resolve_model,
-    update_review_dispatch_tracking, CommandRunner, PipelineGateError, ProcessRunner,
+    dispatch_commit_message, enforce_pipeline_gate, resolve_model, update_review_dispatch_tracking,
+    CommandRunner, PipelineGateError, ProcessRunner,
 };
 use state_schema::{
     commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
@@ -52,7 +52,8 @@ fn run_with_runner(
     runner: &dyn CommandRunner,
     warn: &mut dyn FnMut(&str),
 ) -> Result<(), String> {
-    let pipeline_warning = match enforce_pipeline_gate(&cli.repo_root, cli.review_dispatch, runner) {
+    let pipeline_warning = match enforce_pipeline_gate(&cli.repo_root, cli.review_dispatch, runner)
+    {
         Ok(warning) => warning,
         Err(PipelineGateError::ExecutionFailed(detail)) => {
             eprintln!("pipeline-check execution error: {detail}");
@@ -315,7 +316,10 @@ mod tests {
         .expect("dispatch should succeed");
 
         let state = repo.read_state();
-        assert_eq!(state.pointer("/cycle_phase/phase"), Some(&serde_json::json!("work")));
+        assert_eq!(
+            state.pointer("/cycle_phase/phase"),
+            Some(&serde_json::json!("work"))
+        );
         assert_eq!(
             state
                 .pointer("/cycle_phase/phase_entered_at")

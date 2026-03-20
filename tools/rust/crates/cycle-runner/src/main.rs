@@ -9,7 +9,10 @@ mod startup;
 mod steps;
 
 #[derive(Parser, Debug)]
-#[command(name = "cycle-runner", about = "Top-level orchestrator cycle automation")]
+#[command(
+    name = "cycle-runner",
+    about = "Top-level orchestrator cycle automation"
+)]
 struct Cli {
     /// Repository root path
     #[arg(long, default_value = ".", global = true)]

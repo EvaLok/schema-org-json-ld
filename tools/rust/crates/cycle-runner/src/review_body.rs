@@ -57,13 +57,17 @@ pub fn generate(
         "- **Direct pushes to master**: Run `bash tools/cycle-receipts --cycle {} --repo-root .` for full commit list\n",
         cycle
     ));
-    body.push_str("- **Dispatched**: Check agent_sessions in state.json for this cycle's dispatches\n\n");
+    body.push_str(
+        "- **Dispatched**: Check agent_sessions in state.json for this cycle's dispatches\n\n",
+    );
 
     // Review targets
     body.push_str("## Review Targets\n\n");
 
     body.push_str("### 1. Code changes\n");
-    body.push_str("Merged PRs and direct pushes — quality issues, test gaps, convention violations.\n\n");
+    body.push_str(
+        "Merged PRs and direct pushes — quality issues, test gaps, convention violations.\n\n",
+    );
 
     body.push_str("### 2. Worklog accuracy\n");
     body.push_str(&format!("- File: `{}`\n", worklog_rel));
@@ -83,7 +87,9 @@ pub fn generate(
     body.push_str("- Run `bash tools/state-invariants` and `bash tools/metric-snapshot`\n\n");
 
     body.push_str("### 5. Process adherence\n");
-    body.push_str("- Did the orchestrator follow its own checklist? Did it use tools when tools exist?\n");
+    body.push_str(
+        "- Did the orchestrator follow its own checklist? Did it use tools when tools exist?\n",
+    );
     body.push_str(&format!(
         "- Did the orchestrator post per-step comments? Count step comments on {}#{}.\n\n",
         MAIN_REPO, issue
@@ -92,7 +98,10 @@ pub fn generate(
     body.push_str("### 6. Complacency detection\n");
     if let Some(ref review) = last_review {
         if let Some(score) = review.get("complacency_score").and_then(Value::as_u64) {
-            body.push_str(&format!("- Previous review complacency score: {}/5\n", score));
+            body.push_str(&format!(
+                "- Previous review complacency score: {}/5\n",
+                score
+            ));
         }
         if let Some(categories) = review.get("categories").and_then(Value::as_array) {
             let cat_list: Vec<&str> = categories.iter().filter_map(Value::as_str).collect();
@@ -126,7 +135,9 @@ pub fn generate(
     ));
     body.push_str("```\n## N. [category-name] Finding title\n\n**File**: path/to/file:line\n**Evidence**: what was observed\n**Recommendation**: concrete action\n```\n\n");
     body.push_str("End with a justified complacency score (1-5). Three deeply investigated findings with evidence are more valuable than ten surface-level observations.\n\n");
-    body.push_str("Do NOT attempt to post issue comments — commit the review file as your only output.\n");
+    body.push_str(
+        "Do NOT attempt to post issue comments — commit the review file as your only output.\n",
+    );
 
     Ok(body)
 }
@@ -215,10 +226,7 @@ fn get_merged_prs(state: &Value) -> Vec<(u64, String)> {
 
     let mut merged = Vec::new();
     for session in sessions {
-        let status = session
-            .get("status")
-            .and_then(Value::as_str)
-            .unwrap_or("");
+        let status = session.get("status").and_then(Value::as_str).unwrap_or("");
         if status != "merged" {
             continue;
         }
