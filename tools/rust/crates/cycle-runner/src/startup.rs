@@ -4,6 +4,9 @@ use serde::Serialize;
 use serde_json::Value;
 use std::path::Path;
 
+const HOUSEKEEPING_STEP_ID: &str = "7";
+const CONCURRENCY_STEP_ID: &str = "8";
+
 #[derive(Debug, Serialize)]
 pub struct SituationReport {
     pub cycle: u64,
@@ -29,9 +32,15 @@ pub fn run(
         eprintln!("[dry-run] 3. pipeline-check --json");
         eprintln!("[dry-run] 4. post-step --step 4 (pipeline check)");
         eprintln!("[dry-run] 5. housekeeping-scan --json");
-        eprintln!("[dry-run] 6. post-step --step 5 (housekeeping scan)");
+        eprintln!(
+            "[dry-run] 6. post-step --step {} (housekeeping scan)",
+            HOUSEKEEPING_STEP_ID
+        );
         eprintln!("[dry-run] 7. cycle-status --json");
-        eprintln!("[dry-run] 8. post-step --step 6 (concurrency check)");
+        eprintln!(
+            "[dry-run] 8. post-step --step {} (concurrency check)",
+            CONCURRENCY_STEP_ID
+        );
         eprintln!("[dry-run] 9. Output combined situation report as JSON");
         return Ok(());
     }
@@ -112,7 +121,7 @@ pub fn run(
     steps::post_step(
         repo_root,
         issue,
-        "5",
+        HOUSEKEEPING_STEP_ID,
         "Housekeeping scan",
         &housekeeping_body,
         false,
@@ -131,7 +140,7 @@ pub fn run(
     steps::post_step(
         repo_root,
         issue,
-        "6",
+        CONCURRENCY_STEP_ID,
         "Concurrency check",
         &status_body,
         false,
@@ -286,6 +295,12 @@ fn format_status_summary(status: &Value) -> String {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn startup_step_ids_match_checklist_sections() {
+        assert_eq!(HOUSEKEEPING_STEP_ID, "7");
+        assert_eq!(CONCURRENCY_STEP_ID, "8");
+    }
 
     #[test]
     fn format_startup_brief_with_full_data() {

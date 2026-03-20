@@ -4481,6 +4481,19 @@ mod tests {
 	}
 
 	#[test]
+	fn startup_step_constants_keep_manual_and_automated_steps_distinct() {
+		assert!(MANDATORY_STEPS.contains(&("5", 0)));
+		assert!(MANDATORY_STEPS.contains(&("6", 0)));
+		assert!(MANDATORY_STEPS.contains(&("7", 0)));
+		assert!(MANDATORY_STEPS.contains(&("8", 0)));
+
+		assert!(EXPECTED_STEP_IDS.contains(&"5"));
+		assert!(EXPECTED_STEP_IDS.contains(&"6"));
+		assert!(EXPECTED_STEP_IDS.contains(&"7"));
+		assert!(EXPECTED_STEP_IDS.contains(&"8"));
+	}
+
+	#[test]
 	fn current_cycle_steps_passes_when_all_pre_gate_mandatory_steps_present() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
