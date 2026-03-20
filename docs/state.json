@@ -4256,6 +4256,13 @@
       "resolved_at": "2026-03-20T04:40:00Z",
       "status": "closed_without_merge",
       "title": "[Cycle Review] Cycle 316 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-20T04:45:19Z",
+      "issue": 1521,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Make step-comment checker cycle-aware in pipeline-check"
     }
   ],
   "audit_dropped": [
@@ -4461,21 +4468,22 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 4,
-    "dispatch_log_latest": "#1518 [Cycle Review] Cycle 316 end-of-cycle review (cycle 316)",
-    "dispatch_to_pr_rate": "99.1%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1521 Make step-comment checker cycle-aware in pipeline-check (cycle 316)",
+    "dispatch_to_pr_rate": "98.9%",
+    "in_flight": 1,
     "merged": 454,
     "pr_merge_rate": "97.8%",
     "produced_pr": 464,
     "resolved": 468,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 468
+    "total_dispatches": 469
   },
   "cycle_phase": {
+    "completed_at": "2026-03-20T04:45:19Z",
     "cycle": 316,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-20T03:12:19Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-20T04:45:19Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -7551,7 +7559,7 @@
     ],
     "last_review_cycle": 316
   },
-  "review_dispatch_consecutive": 2,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 315,
   "schema_status": {
     "directory_layout": {
