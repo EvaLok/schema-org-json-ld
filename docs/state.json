@@ -4333,6 +4333,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add step-comment gap acknowledgment to pipeline-check"
+    },
+    {
+      "dispatched_at": "2026-03-20T14:47:34Z",
+      "issue": 1546,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 319 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -4540,16 +4547,16 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 4,
-    "dispatch_log_latest": "#1544 Add step-comment gap acknowledgment to pipeline-check (cycle 319)",
-    "dispatch_to_pr_rate": "98.7%",
-    "in_flight": 2,
+    "dispatch_log_latest": "#1546 [Cycle Review] Cycle 319 end-of-cycle review (cycle 319)",
+    "dispatch_to_pr_rate": "98.5%",
+    "in_flight": 3,
     "merged": 461,
     "pr_merge_rate": "97.9%",
     "produced_pr": 471,
     "resolved": 475,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 477
+    "total_dispatches": 478
   },
   "cycle_phase": {
     "cycle": 319,
@@ -7673,7 +7680,7 @@
     ],
     "last_review_cycle": 318
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 318,
   "schema_status": {
     "directory_layout": {
