@@ -1,8 +1,8 @@
 use clap::Parser;
 use record_dispatch::{
     apply_dispatch_patch, build_dispatch_patch, concurrency_warning_message,
-    dispatch_commit_message, enforce_pipeline_gate, resolve_model,
-    update_review_dispatch_tracking, CommandRunner, PipelineGateError, ProcessRunner,
+    dispatch_commit_message, enforce_pipeline_gate, resolve_model, update_review_dispatch_tracking,
+    CommandRunner, PipelineGateError, ProcessRunner,
 };
 use state_schema::{
     commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
@@ -29,9 +29,43 @@ struct Cli {
     #[arg(long)]
     review_dispatch: bool,
 
+    /// Review finding this dispatch addresses, formatted as CYCLE:INDEX
+    #[arg(long)]
+    addresses_finding: Option<AddressedFinding>,
+
     /// Repository root path
     #[arg(long, default_value = ".")]
     repo_root: PathBuf,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct AddressedFinding {
+    cycle: u64,
+    index: u64,
+}
+
+impl std::str::FromStr for AddressedFinding {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let (cycle, index) = value.split_once(':').ok_or_else(|| {
+            "--addresses-finding must use CYCLE:INDEX format (for example 316:2)".to_string()
+        })?;
+        let cycle = cycle
+            .parse::<u64>()
+            .map_err(|_| "--addresses-finding cycle must be a positive integer".to_string())?;
+        let index = index
+            .parse::<u64>()
+            .map_err(|_| "--addresses-finding index must be a positive integer".to_string())?;
+        if cycle == 0 {
+            return Err("--addresses-finding cycle must be greater than zero".to_string());
+        }
+        if index == 0 {
+            return Err("--addresses-finding index must be greater than zero".to_string());
+        }
+
+        Ok(Self { cycle, index })
+    }
 }
 
 fn main() {
@@ -52,7 +86,8 @@ fn run_with_runner(
     runner: &dyn CommandRunner,
     warn: &mut dyn FnMut(&str),
 ) -> Result<(), String> {
-    let pipeline_warning = match enforce_pipeline_gate(&cli.repo_root, cli.review_dispatch, runner) {
+    let pipeline_warning = match enforce_pipeline_gate(&cli.repo_root, cli.review_dispatch, runner)
+    {
         Ok(warning) => warning,
         Err(PipelineGateError::ExecutionFailed(detail)) => {
             eprintln!("pipeline-check execution error: {detail}");
@@ -103,6 +138,9 @@ fn run_with_runner(
         }
         Err(error) => return Err(error),
     };
+    if let Some(addressed_finding) = cli.addresses_finding.as_ref() {
+        reconcile_review_history_dispatch(&mut state_value, addressed_finding)?;
+    }
     let current_phase = state_value
         .pointer("/cycle_phase/phase")
         .and_then(|value| value.as_str())
@@ -147,6 +185,83 @@ fn run_with_runner(
 
     Ok(())
 }
+
+fn reconcile_review_history_dispatch(
+    state: &mut serde_json::Value,
+    addressed_finding: &AddressedFinding,
+) -> Result<(), String> {
+    let history = state
+        .pointer_mut("/review_agent/history")
+        .and_then(serde_json::Value::as_array_mut)
+        .ok_or_else(|| "missing array /review_agent/history in docs/state.json".to_string())?;
+
+    let entry = history
+        .iter_mut()
+        .find(|entry| {
+            entry.get("cycle").and_then(serde_json::Value::as_u64) == Some(addressed_finding.cycle)
+        })
+        .ok_or_else(|| {
+            format!(
+                "review history entry for cycle {} was not found in docs/state.json",
+                addressed_finding.cycle
+            )
+        })?;
+
+    let finding_count = entry
+        .get("finding_count")
+        .and_then(serde_json::Value::as_u64)
+        .ok_or_else(|| {
+            format!(
+                "review history entry for cycle {} is missing a numeric finding_count",
+                addressed_finding.cycle
+            )
+        })?;
+    if addressed_finding.index > finding_count {
+        return Err(format!(
+            "--addresses-finding {}:{} is out of range; cycle {} has {} finding(s)",
+            addressed_finding.cycle,
+            addressed_finding.index,
+            addressed_finding.cycle,
+            finding_count
+        ));
+    }
+
+    let deferred = entry
+        .get("deferred")
+        .and_then(serde_json::Value::as_u64)
+        .ok_or_else(|| {
+            format!(
+                "review history entry for cycle {} is missing a numeric deferred count",
+                addressed_finding.cycle
+            )
+        })?;
+    if deferred == 0 {
+        return Err(format!(
+            "review history entry for cycle {} has no deferred findings left to mark as dispatch_created",
+            addressed_finding.cycle
+        ));
+    }
+
+    let dispatch_created = entry
+        .get("dispatch_created")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0);
+
+    let entry_object = entry.as_object_mut().ok_or_else(|| {
+        format!(
+            "review history entry for cycle {} must be an object",
+            addressed_finding.cycle
+        )
+    })?;
+    entry_object.insert("deferred".to_string(), serde_json::json!(deferred - 1));
+    entry_object.insert(
+        "dispatch_created".to_string(),
+        serde_json::json!(dispatch_created + 1),
+    );
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -168,8 +283,123 @@ mod tests {
         assert!(help.contains("--title"));
         assert!(help.contains("--model"));
         assert!(help.contains("--review-dispatch"));
+        assert!(help.contains("--addresses-finding"));
         assert!(!help.contains("--skip-pipeline-gate"));
         assert!(help.contains("--repo-root"));
+    }
+
+    #[test]
+    fn cli_rejects_malformed_addresses_finding_flag() {
+        let error = Cli::try_parse_from([
+            "record-dispatch",
+            "--issue",
+            "602",
+            "--title",
+            "Example dispatch",
+            "--review-dispatch",
+            "--addresses-finding",
+            "164",
+        ])
+        .expect_err("malformed finding reference should fail");
+
+        let rendered = error.to_string();
+        assert!(rendered.contains("--addresses-finding"));
+        assert!(rendered.contains("CYCLE:INDEX format"));
+    }
+
+    #[test]
+    fn run_reconciles_review_history_when_addresses_finding_is_provided() {
+        let repo = TempRepo::new();
+        repo.init();
+        repo.set_review_history_entry(164, 3, 2, 0);
+
+        run(Cli {
+            issue: 602,
+            title: "Example dispatch".to_string(),
+            model: Some("gpt-5.4".to_string()),
+            review_dispatch: true,
+            addresses_finding: Some("164:2".parse().expect("finding ref should parse")),
+            repo_root: repo.path().to_path_buf(),
+        })
+        .expect("dispatch should reconcile review history");
+
+        let state = repo.read_state();
+        assert_eq!(
+            state.pointer("/review_agent/history/0/deferred"),
+            Some(&serde_json::json!(1))
+        );
+        assert_eq!(
+            state.pointer("/review_agent/history/0/dispatch_created"),
+            Some(&serde_json::json!(1))
+        );
+    }
+
+    #[test]
+    fn run_leaves_review_history_unchanged_when_addresses_finding_is_omitted() {
+        let repo = TempRepo::new();
+        repo.init();
+        repo.set_review_history_entry(164, 3, 2, 0);
+        let before = repo.read_state();
+
+        run(Cli {
+            issue: 602,
+            title: "Example dispatch".to_string(),
+            model: Some("gpt-5.4".to_string()),
+            review_dispatch: true,
+            addresses_finding: None,
+            repo_root: repo.path().to_path_buf(),
+        })
+        .expect("dispatch without finding ref should still succeed");
+
+        let after = repo.read_state();
+        assert_eq!(
+            after.pointer("/review_agent/history"),
+            before.pointer("/review_agent/history")
+        );
+    }
+
+    #[test]
+    fn run_fails_when_addresses_finding_cycle_is_missing() {
+        let repo = TempRepo::new();
+        repo.init();
+        repo.set_review_history_entry(164, 3, 2, 0);
+
+        let error = run(Cli {
+            issue: 602,
+            title: "Example dispatch".to_string(),
+            model: Some("gpt-5.4".to_string()),
+            review_dispatch: true,
+            addresses_finding: Some("999:1".parse().expect("finding ref should parse")),
+            repo_root: repo.path().to_path_buf(),
+        })
+        .expect_err("missing review cycle should fail");
+
+        assert_eq!(
+            error,
+            "review history entry for cycle 999 was not found in docs/state.json"
+        );
+    }
+
+    #[test]
+    fn run_fails_when_addresses_finding_index_is_out_of_range() {
+        let repo = TempRepo::new();
+        repo.init();
+        repo.set_review_history_entry(164, 3, 2, 0);
+
+        let error = run(Cli {
+            issue: 602,
+            title: "Example dispatch".to_string(),
+            model: Some("gpt-5.4".to_string()),
+            review_dispatch: true,
+            addresses_finding: Some("164:4".parse().expect("finding ref should parse")),
+            repo_root: repo.path().to_path_buf(),
+        })
+        .expect_err("out-of-range finding index should fail");
+
+        assert_eq!(
+            error,
+            "--addresses-finding 164:4 is out of range; cycle 164 has 3 finding(s)"
+        );
     }
 
     #[test]
@@ -217,6 +447,7 @@ mod tests {
             title: "Example dispatch".to_string(),
             model: Some("gpt-5.4".to_string()),
             review_dispatch: true,
+            addresses_finding: None,
             repo_root: repo.path().to_path_buf(),
         })
         .expect("dispatch should succeed");
@@ -277,6 +508,7 @@ mod tests {
             title: "Example dispatch".to_string(),
             model: Some("gpt-5.4".to_string()),
             review_dispatch: true,
+            addresses_finding: None,
             repo_root: repo.path().to_path_buf(),
         })
         .expect("dispatch should succeed");
@@ -310,12 +542,16 @@ mod tests {
             title: "Example dispatch".to_string(),
             model: Some("gpt-5.4".to_string()),
             review_dispatch: true,
+            addresses_finding: None,
             repo_root: repo.path().to_path_buf(),
         })
         .expect("dispatch should succeed");
 
         let state = repo.read_state();
-        assert_eq!(state.pointer("/cycle_phase/phase"), Some(&serde_json::json!("work")));
+        assert_eq!(
+            state.pointer("/cycle_phase/phase"),
+            Some(&serde_json::json!("work"))
+        );
         assert_eq!(
             state
                 .pointer("/cycle_phase/phase_entered_at")
@@ -340,6 +576,7 @@ mod tests {
             title: "Example dispatch".to_string(),
             model: Some("gpt-5.4".to_string()),
             review_dispatch: true,
+            addresses_finding: None,
             repo_root: repo.path().to_path_buf(),
         })
         .expect("missing worklog should only warn");
@@ -371,6 +608,7 @@ mod tests {
                 title: "Example dispatch".to_string(),
                 model: Some("gpt-5.4".to_string()),
                 review_dispatch: false,
+                addresses_finding: None,
                 repo_root: repo.path().to_path_buf(),
             },
             &MockRunner::with_exit_code(Some(1)),
@@ -400,6 +638,7 @@ mod tests {
                 title: "Example dispatch".to_string(),
                 model: Some("gpt-5.4".to_string()),
                 review_dispatch: false,
+                addresses_finding: None,
                 repo_root: repo.path().to_path_buf(),
             },
             &MockRunner::with_exit_code(Some(0)),
@@ -432,6 +671,7 @@ mod tests {
                 title: "Example dispatch".to_string(),
                 model: Some("gpt-5.4".to_string()),
                 review_dispatch: true,
+                addresses_finding: None,
                 repo_root: repo.path().to_path_buf(),
             },
             &runner,
@@ -467,6 +707,7 @@ mod tests {
                 title: "Example dispatch".to_string(),
                 model: Some("gpt-5.4".to_string()),
                 review_dispatch: false,
+                addresses_finding: None,
                 repo_root: repo.path().to_path_buf(),
             },
             &MockRunner::with_error("missing bash"),
@@ -495,6 +736,7 @@ mod tests {
                 title: "Example dispatch".to_string(),
                 model: Some("gpt-5.4".to_string()),
                 review_dispatch: true,
+                addresses_finding: None,
                 repo_root: repo.path().to_path_buf(),
             },
             &runner,
@@ -526,6 +768,7 @@ mod tests {
                 title: "Example dispatch".to_string(),
                 model: Some("gpt-5.4".to_string()),
                 review_dispatch: false,
+                addresses_finding: None,
                 repo_root: repo.path().to_path_buf(),
             },
             &runner,
@@ -674,6 +917,9 @@ mod tests {
                             "last_refreshed": "cycle 163"
                         }
                     }
+                },
+                "review_agent": {
+                    "history": []
                 }
             });
             fs::write(
@@ -694,6 +940,37 @@ mod tests {
         fn set_review_dispatch_consecutive(&self, count: u64) {
             let mut state = self.read_state();
             state["review_dispatch_consecutive"] = serde_json::json!(count);
+            fs::write(
+                self.path().join("docs/state.json"),
+                serde_json::to_string_pretty(&state).expect("state should serialize"),
+            )
+            .expect("state file should be updated");
+        }
+
+        fn set_review_history_entry(
+            &self,
+            cycle: u64,
+            finding_count: u64,
+            deferred: u64,
+            dispatch_created: u64,
+        ) {
+            let mut state = self.read_state();
+            state["review_agent"] = serde_json::json!({
+                "history": [
+                    {
+                        "cycle": cycle,
+                        "finding_count": finding_count,
+                        "complacency_score": 0,
+                        "categories": ["correctness"],
+                        "actioned": 0,
+                        "deferred": deferred,
+                        "dispatch_created": dispatch_created,
+                        "actioned_failed": 0,
+                        "verified_resolved": 0,
+                        "ignored": 0
+                    }
+                ]
+            });
             fs::write(
                 self.path().join("docs/state.json"),
                 serde_json::to_string_pretty(&state).expect("state should serialize"),
