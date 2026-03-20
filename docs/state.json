@@ -4330,15 +4330,19 @@
     {
       "dispatched_at": "2026-03-20T14:35:38Z",
       "issue": 1544,
+      "merged_at": "2026-03-20T16:19:37Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1545,
+      "status": "merged",
       "title": "Add step-comment gap acknowledgment to pipeline-check"
     },
     {
       "dispatched_at": "2026-03-20T14:47:34Z",
       "issue": 1546,
+      "merged_at": "2026-03-20T16:19:37Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1547,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 319 end-of-cycle review"
     }
   ],
@@ -4548,12 +4552,12 @@
     "closed_without_merge": 8,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#1546 [Cycle Review] Cycle 319 end-of-cycle review (cycle 319)",
-    "dispatch_to_pr_rate": "98.5%",
-    "in_flight": 3,
-    "merged": 461,
+    "dispatch_to_pr_rate": "99.0%",
+    "in_flight": 1,
+    "merged": 463,
     "pr_merge_rate": "97.9%",
-    "produced_pr": 471,
-    "resolved": 475,
+    "produced_pr": 473,
+    "resolved": 477,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 478
@@ -4659,15 +4663,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 319"
+        "last_refreshed": "cycle 320"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 319"
+        "last_refreshed": "cycle 320"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 319"
+        "last_refreshed": "cycle 320"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
@@ -4713,10 +4717,6 @@
       "previous_cycle_issue": {
         "cadence": "every cycle",
         "last_refreshed": "cycle 320"
-      },
-      "step_comment_acknowledged_gaps": {
-        "cadence": "after acknowledging step comment gaps",
-        "last_refreshed": "cycle 319"
       },
       "project_mode": {
         "cadence": "when mode or counter changes",
@@ -4777,6 +4777,10 @@
       "schema_status.remaining_audit_findings": {
         "cadence": "after property gap fixes",
         "last_refreshed": "cycle 313"
+      },
+      "step_comment_acknowledged_gaps": {
+        "cadence": "after acknowledging step comment gaps",
+        "last_refreshed": "cycle 319"
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
@@ -4845,7 +4849,6 @@
     "started_at": "cycle 199"
   },
   "previous_cycle_issue": 1542,
-  "step_comment_acknowledged_gaps": [],
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
     "burn_in_target": 6,
@@ -8157,6 +8160,7 @@
     }
   },
   "schema_version": 1,
+  "step_comment_acknowledged_gaps": [],
   "test_count": {
     "last_verified": "cycle 300",
     "last_verified_note": "php = PHPUnit test count (composer run test-unit). ts = metric-snapshot tool count. Verified cycle 300: no change (426 PHP, 420 TS).",
