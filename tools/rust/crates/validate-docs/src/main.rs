@@ -458,19 +458,22 @@ fn section_mentions_path(section: &str, path: &str) -> bool {
 }
 
 fn fetch_pipeline_report(repo_root: &Path, cycle: u64) -> Result<PipelineReport, String> {
-    let output = run_wrapper(
-        repo_root,
-        "tools/pipeline-check",
-        &[
-            "--json".to_string(),
-            "--cycle".to_string(),
-            cycle.to_string(),
-            "--repo-root".to_string(),
-            repo_root.display().to_string(),
-        ],
-    )?;
+    let args = pipeline_check_args(repo_root, cycle);
+    let output = run_wrapper(repo_root, "tools/pipeline-check", &args)?;
     serde_json::from_str::<PipelineReport>(&output)
         .map_err(|error| format!("failed to parse pipeline-check JSON: {}", error))
+}
+
+fn pipeline_check_args(repo_root: &Path, cycle: u64) -> Vec<String> {
+    vec![
+        "--json".to_string(),
+        "--cycle".to_string(),
+        cycle.to_string(),
+        "--repo-root".to_string(),
+        repo_root.display().to_string(),
+        "--exclude-step".to_string(),
+        "doc-validation".to_string(),
+    ]
 }
 
 fn resolve_pipeline_status<F>(
@@ -846,6 +849,23 @@ mod tests {
         .expect("pipeline status should resolve");
 
         assert_eq!(status, "fail");
+    }
+
+    #[test]
+    fn pipeline_check_args_exclude_doc_validation() {
+        let args = pipeline_check_args(Path::new("/tmp/repo"), 226);
+        assert_eq!(
+            args,
+            vec![
+                "--json".to_string(),
+                "--cycle".to_string(),
+                "226".to_string(),
+                "--repo-root".to_string(),
+                "/tmp/repo".to_string(),
+                "--exclude-step".to_string(),
+                "doc-validation".to_string(),
+            ]
+        );
     }
 
     #[test]
