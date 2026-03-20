@@ -4263,6 +4263,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Make step-comment checker cycle-aware in pipeline-check"
+    },
+    {
+      "dispatched_at": "2026-03-20T04:48:37Z",
+      "issue": 1523,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Clarify receipt validation scope note to say snapshot, not certification"
     }
   ],
   "audit_dropped": [
@@ -4468,16 +4475,16 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 4,
-    "dispatch_log_latest": "#1521 Make step-comment checker cycle-aware in pipeline-check (cycle 316)",
-    "dispatch_to_pr_rate": "98.9%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1523 Clarify receipt validation scope note to say snapshot, not certification (cycle 316)",
+    "dispatch_to_pr_rate": "98.7%",
+    "in_flight": 2,
     "merged": 454,
     "pr_merge_rate": "97.8%",
     "produced_pr": 464,
     "resolved": 468,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 469
+    "total_dispatches": 470
   },
   "cycle_phase": {
     "completed_at": "2026-03-20T04:45:19Z",
