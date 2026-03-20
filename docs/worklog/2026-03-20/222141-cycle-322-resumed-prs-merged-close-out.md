@@ -26,7 +26,7 @@
 
 - **In-flight agent sessions**: 0
 - **Pipeline status**: PASS (1 warning: stale typescript_stats)
-- **Copilot metrics**: 482 dispatches, 468 merged, 97.9% merge rate
+- **Copilot metrics**: 482 dispatches, 478 PRs, 468 merged, 97.9% merge rate
 - **Publish gate**: published
 
 ## Next steps
