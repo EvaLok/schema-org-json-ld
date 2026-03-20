@@ -7732,9 +7732,23 @@
         "deferred": 3,
         "finding_count": 4,
         "ignored": 0
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "process-adherence",
+          "receipt-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 3,
+        "cycle": 321,
+        "deferred": 1,
+        "finding_count": 3,
+        "ignored": 0,
+        "note": "receipt-integrity and worklog-accuracy actioned; process-adherence deferred (architectural)"
       }
     ],
-    "last_review_cycle": 320
+    "last_review_cycle": 321
   },
   "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 320,
