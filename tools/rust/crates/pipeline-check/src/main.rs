@@ -1006,7 +1006,11 @@ fn verify_current_cycle_step_comments(
 		}
 	};
 
-	let found = match fetch_step_comments_for_issue(runner, issue, cycle) {
+	let previous_cycle_issue = state
+		.pointer("/previous_cycle_issue")
+		.and_then(Value::as_u64)
+		.filter(|previous_issue| *previous_issue != issue);
+	let mut found = match fetch_step_comments_for_issue(runner, issue, cycle) {
 		Ok(found) => found,
 		Err(error) => {
 			return StepReport {
@@ -1019,6 +1023,29 @@ fn verify_current_cycle_step_comments(
 				summary: None,
 			};
 		}
+	};
+	let issue_detail = if let Some(previous_issue) = previous_cycle_issue {
+		let previous_found = match fetch_step_comments_for_issue(runner, previous_issue, cycle) {
+			Ok(found) => found,
+			Err(error) => {
+				return StepReport {
+					name: CURRENT_CYCLE_STEPS_STEP_NAME,
+					status: StepStatus::Error,
+					severity: Severity::Blocking,
+					exit_code: None,
+					detail: Some(error),
+					findings: None,
+					summary: None,
+				};
+			}
+		};
+		found.extend(previous_found);
+		format!(
+			"issue {}#{} + {}#{}",
+			MAIN_REPO, issue, MAIN_REPO, previous_issue
+		)
+	} else {
+		format!("issue #{}", issue)
 	};
 
 	// Check only pre-gate mandatory steps (exclude post-gate steps that haven't been posted yet)
@@ -1042,8 +1069,8 @@ fn verify_current_cycle_step_comments(
 			severity: Severity::Blocking,
 			exit_code: None,
 			detail: Some(format!(
-				"issue #{}: {} pre-gate mandatory steps present [{}]",
-				issue,
+				"{}: {} pre-gate mandatory steps present [{}]",
+				issue_detail,
 				found_ids.len(),
 				format_step_id_list(&found_ids)
 			)),
@@ -1057,8 +1084,8 @@ fn verify_current_cycle_step_comments(
 			severity: Severity::Blocking,
 			exit_code: None,
 			detail: Some(format!(
-				"issue #{}: missing pre-gate mandatory steps [{}]; found [{}]",
-				issue,
+				"{}: missing pre-gate mandatory steps [{}]; found [{}]",
+				issue_detail,
 				format_step_id_list(&pre_gate_mandatory_missing),
 				format_step_id_list(&found_ids)
 			)),
@@ -1141,6 +1168,7 @@ fn is_mandatory_step_for_cycle(step: &str, cycle: u64) -> bool {
 		.any(|(mandatory_step, effective_from_cycle)| mandatory_step == step && effective_from_cycle <= cycle)
 }
 
+#[cfg(test)]
 fn assess_step_comment_completeness(
 	found: &BTreeSet<&'static str>,
 	cycle: u64,
@@ -4783,7 +4811,7 @@ mod tests {
 		fs::write(
 			root.join("docs/state.json"),
 			json!({
-				"previous_cycle_issue": 900,
+				"previous_cycle_issue": 950,
 				"last_cycle": {
 					"number": 301,
 					"issue": 950
@@ -4824,7 +4852,7 @@ mod tests {
 		fs::write(
 			root.join("docs/state.json"),
 			json!({
-				"previous_cycle_issue": 900,
+				"previous_cycle_issue": 951,
 				"last_cycle": {
 					"number": 301,
 					"issue": 951
@@ -4871,7 +4899,7 @@ mod tests {
 		fs::write(
 			root.join("docs/state.json"),
 			json!({
-				"previous_cycle_issue": 900,
+				"previous_cycle_issue": 952,
 				"last_cycle": {
 					"number": 301,
 					"issue": 952
@@ -4919,6 +4947,60 @@ mod tests {
 	}
 
 	#[test]
+	fn current_cycle_steps_merge_resumed_cycle_comments_from_both_issues() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir()
+			.join(format!("pipeline-check-current-cycle-resumed-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 1551,
+				"last_cycle": {
+					"number": 321,
+					"issue": 1554
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct Runner;
+
+		impl CommandRunner for Runner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				match issue {
+					1554 => {
+						let steps: Vec<&str> = EXPECTED_STEP_IDS
+							.iter()
+							.copied()
+							.filter(|step| *step != "3")
+							.collect();
+						Ok(step_comment_bodies(321, &steps))
+					}
+					1551 => Ok(step_comment_bodies(321, &["3"])),
+					_ => panic!("unexpected issue {issue}"),
+				}
+			}
+		}
+
+		let step = verify_current_cycle_step_comments(&root, 321, &Runner);
+		assert_eq!(step.status, StepStatus::Pass);
+		assert_eq!(step.severity, Severity::Blocking);
+		assert_eq!(step.findings, Some(EXPECTED_STEP_IDS.len()));
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("issue EvaLok/schema-org-json-ld#1554 + EvaLok/schema-org-json-ld#1551"));
+	}
+
+	#[test]
 	fn current_cycle_steps_rejects_mandatory_steps_from_other_cycles() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -4928,7 +5010,7 @@ mod tests {
 		fs::write(
 			root.join("docs/state.json"),
 			json!({
-				"previous_cycle_issue": 900,
+				"previous_cycle_issue": 953,
 				"last_cycle": {
 					"number": 316,
 					"issue": 953
@@ -4993,7 +5075,7 @@ mod tests {
 		fs::write(
 			root.join("docs/state.json"),
 			json!({
-				"previous_cycle_issue": 900,
+				"previous_cycle_issue": 952,
 				"last_cycle": {
 					"number": 301,
 					"issue": 952
