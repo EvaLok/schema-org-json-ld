@@ -61,6 +61,23 @@ struct JournalArgs {
 #[derive(Clone, Debug, Deserialize)]
 struct ReceiptEntry {
     receipt: String,
+    #[serde(default)]
+    url: String,
+}
+
+impl ReceiptEntry {
+    /// Return the longest available SHA — full SHA from URL if available, otherwise the short receipt.
+    fn best_sha(&self) -> &str {
+        if !self.url.is_empty() {
+            if let Some(pos) = self.url.rfind('/') {
+                let candidate = &self.url[pos + 1..];
+                if !candidate.is_empty() && candidate.chars().all(|c| c.is_ascii_hexdigit()) {
+                    return candidate;
+                }
+            }
+        }
+        &self.receipt
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -265,11 +282,11 @@ fn filter_receipts_through_cycle_complete(
     let mut filtered = Vec::new();
 
     for entry in expected {
-        let receipt = entry.receipt.trim();
-        if receipt.is_empty() {
+        let sha = entry.best_sha();
+        if sha.is_empty() {
             continue;
         }
-        if is_ancestor_commit(repo_root, receipt, &cycle_complete_commit)? {
+        if is_ancestor_commit(repo_root, sha, &cycle_complete_commit)? {
             filtered.push(entry.clone());
         }
     }
@@ -898,12 +915,15 @@ mod tests {
             &content,
             &[
                 ReceiptEntry {
+                    url: String::new(),
                     receipt: first_receipt,
                 },
                 ReceiptEntry {
+                    url: String::new(),
                     receipt: missing_receipt.clone(),
                 },
                 ReceiptEntry {
+                    url: String::new(),
                     receipt: cycle_complete_receipt,
                 },
             ],
@@ -936,12 +956,15 @@ mod tests {
             &content,
             &[
                 ReceiptEntry {
+                    url: String::new(),
                     receipt: included_receipt,
                 },
                 ReceiptEntry {
+                    url: String::new(),
                     receipt: cycle_complete_receipt,
                 },
                 ReceiptEntry {
+                    url: String::new(),
                     receipt: excluded_receipt,
                 },
             ],
@@ -974,9 +997,11 @@ mod tests {
             &content,
             &[
                 ReceiptEntry {
+                    url: String::new(),
                     receipt: required_receipt.clone(),
                 },
                 ReceiptEntry {
+                    url: String::new(),
                     receipt: cycle_complete_receipt,
                 },
             ],
