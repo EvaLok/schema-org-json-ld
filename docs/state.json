@@ -7645,9 +7645,24 @@
         "finding_count": 4,
         "ignored": 0,
         "note": "F1 C5.5 gate override deferred (needs cycle-runner enforcement). F2 eva input 1488 mis-bucketed resolved by cycle transition. F3 field inventory audit_processed refreshed. F4 journal quality addressed this cycle."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "journal-quality",
+          "process-adherence",
+          "review-completeness",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 4,
+        "cycle": 318,
+        "deferred": 4,
+        "finding_count": 4,
+        "ignored": 0,
+        "note": "All 4 findings deferred: resumed close-out session. Finding 1 (C5.5 override remediation path) and finding 4 (reclassify cycle 317 finding) require tool work. Finding 2 (journal accuracy) and finding 3 (worklog timing) are procedural improvements for next cycle."
       }
     ],
-    "last_review_cycle": 317
+    "last_review_cycle": 318
   },
   "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 317,
