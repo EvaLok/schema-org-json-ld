@@ -7709,9 +7709,23 @@
         "deferred": 4,
         "finding_count": 4,
         "ignored": 0
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "process-adherence",
+          "receipt-integrity",
+          "state-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 3,
+        "cycle": 320,
+        "deferred": 3,
+        "finding_count": 4,
+        "ignored": 0
       }
     ],
-    "last_review_cycle": 319
+    "last_review_cycle": 320
   },
   "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 319,
