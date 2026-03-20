@@ -29,7 +29,7 @@
 
 - **In-flight agent sessions**: 0
 - **Pipeline status**: PASS at startup; FAIL at C1 (expected: doc-validation pending, step-comments cycle-aware filtering)
-- **Copilot metrics**: 470 dispatches, 456 merged, 97.0% merge rate
+- **Copilot metrics**: 470 dispatches, 466 PRs, 456 merged, 97.9% merge rate
 - **Publish gate**: published
 
 ## Next steps
