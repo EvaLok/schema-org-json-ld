@@ -4323,8 +4323,10 @@
     {
       "dispatched_at": "2026-03-20T12:46:47Z",
       "issue": 1540,
+      "merged_at": "2026-03-20T16:28:57Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1541,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 318 end-of-cycle review"
     },
     {
@@ -4552,12 +4554,12 @@
     "closed_without_merge": 8,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#1546 [Cycle Review] Cycle 319 end-of-cycle review (cycle 319)",
-    "dispatch_to_pr_rate": "99.0%",
-    "in_flight": 1,
-    "merged": 463,
+    "dispatch_to_pr_rate": "99.2%",
+    "in_flight": 0,
+    "merged": 464,
     "pr_merge_rate": "97.9%",
-    "produced_pr": 473,
-    "resolved": 477,
+    "produced_pr": 474,
+    "resolved": 478,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 478
@@ -7703,7 +7705,7 @@
     "last_review_cycle": 319
   },
   "review_dispatch_consecutive": 0,
-  "review_events_verified_through_cycle": 318,
+  "review_events_verified_through_cycle": 319,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
