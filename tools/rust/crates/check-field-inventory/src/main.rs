@@ -372,29 +372,20 @@ mod tests {
         );
 
         let stale = detect_stale_fields(&state, 158);
-        let stale_names = stale
-            .iter()
-            .map(|field| field.name.as_str())
-            .collect::<Vec<_>>();
+        let stale_names = stale.iter().map(|field| field.name.as_str()).collect::<Vec<_>>();
 
         assert_eq!(
             stale_names,
-            vec![
-                "after-stale",
-                "per-cycle-stale",
-                "periodic-stale",
-                "phase-stale"
-            ]
+            vec!["after-stale", "per-cycle-stale", "periodic-stale", "phase-stale"]
         );
     }
 
     #[test]
     fn detect_stale_fields_marks_missing_last_refreshed_as_stale() {
         let mut state = StateJson::default();
-        state.field_inventory.fields.insert(
-            "missing-last".to_string(),
-            json!({"cadence": "after changes"}),
-        );
+        state.field_inventory
+            .fields
+            .insert("missing-last".to_string(), json!({"cadence": "after changes"}));
 
         let stale = detect_stale_fields(&state, 158);
         assert_eq!(stale.len(), 1);

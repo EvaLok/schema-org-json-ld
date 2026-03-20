@@ -1116,12 +1116,8 @@ mod tests {
             Some("cycle 219")
         );
         assert_eq!(
-            state
-                .pointer("/cycle_phase/completed_at")
-                .and_then(Value::as_str),
-            state
-                .pointer("/cycle_phase/phase_entered_at")
-                .and_then(Value::as_str)
+            state.pointer("/cycle_phase/completed_at").and_then(Value::as_str),
+            state.pointer("/cycle_phase/phase_entered_at").and_then(Value::as_str)
         );
     }
 

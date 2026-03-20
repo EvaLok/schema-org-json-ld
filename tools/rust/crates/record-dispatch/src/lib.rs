@@ -387,7 +387,11 @@ pub fn apply_dispatch_patch(state: &mut Value, patch: &DispatchPatch) -> Result<
         json!(patch.dispatch_log_latest),
     );
     update_field_inventory_last_refreshed(state, "copilot_metrics.in_flight", &cycle_marker)?;
-    update_field_inventory_last_refreshed(state, "copilot_metrics.pr_merge_rate", &cycle_marker)?;
+    update_field_inventory_last_refreshed(
+        state,
+        "copilot_metrics.pr_merge_rate",
+        &cycle_marker,
+    )?;
     update_field_inventory_last_refreshed(
         state,
         "copilot_metrics.dispatch_to_pr_rate",
@@ -480,11 +484,7 @@ fn find_latest_worklog_file(repo_root: &Path) -> Result<Option<PathBuf>, String>
                 .map_err(|error| format!("failed to read {}: {}", path.display(), error))?
                 .modified()
                 .map_err(|error| {
-                    format!(
-                        "failed to read modification time for {}: {}",
-                        path.display(),
-                        error
-                    )
+                    format!("failed to read modification time for {}: {}", path.display(), error)
                 })?;
             let should_replace = latest
                 .as_ref()
@@ -669,7 +669,10 @@ mod tests {
             .expect("tracking should update cleanly");
 
         assert_eq!(state["review_dispatch_consecutive"], json!(3));
-        assert_eq!(warning, Some(review_dispatch_consecutive_warning(3)));
+        assert_eq!(
+            warning,
+            Some(review_dispatch_consecutive_warning(3))
+        );
     }
 
     #[test]
