@@ -729,9 +729,8 @@ fn check_cycle_phase_consistency(state: &StateJson) -> CheckResult {
     if phase == "complete" {
         let completed_at = state
             .cycle_phase
-            .extra
-            .get("completed_at")
-            .and_then(Value::as_str)
+            .completed_at
+            .as_deref()
             .map(str::trim)
             .filter(|value| !value.is_empty());
         if completed_at.is_none() {
