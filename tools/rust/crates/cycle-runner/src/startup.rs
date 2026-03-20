@@ -203,7 +203,10 @@ fn format_pipeline_summary(pipeline: &Value) -> String {
     if let Some(overall) = pipeline.get("overall").and_then(Value::as_str) {
         parts.push(format!("Overall: {}", overall));
     }
-    if let Some(true) = pipeline.get("has_blocking_findings").and_then(Value::as_bool) {
+    if let Some(true) = pipeline
+        .get("has_blocking_findings")
+        .and_then(Value::as_bool)
+    {
         parts.push("BLOCKING findings detected".to_string());
     }
     if let Some(steps) = pipeline.get("steps").and_then(Value::as_array) {
