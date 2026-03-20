@@ -4234,6 +4234,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix doc-validation circular dependency at close-out C4.1"
+    },
+    {
+      "dispatched_at": "2026-03-20T00:34:02Z",
+      "issue": 1515,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 315 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -4439,16 +4446,16 @@
   "copilot_metrics": {
     "closed_without_merge": 6,
     "closed_without_pr": 4,
-    "dispatch_log_latest": "#1513 Fix doc-validation circular dependency at close-out C4.1 (cycle 314)",
-    "dispatch_to_pr_rate": "98.9%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1515 [Cycle Review] Cycle 315 end-of-cycle review (cycle 315)",
+    "dispatch_to_pr_rate": "98.7%",
+    "in_flight": 2,
     "merged": 453,
     "pr_merge_rate": "98.3%",
     "produced_pr": 461,
     "resolved": 465,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 466
+    "total_dispatches": 467
   },
   "cycle_phase": {
     "cycle": 315,
@@ -7496,7 +7503,7 @@
     ],
     "last_review_cycle": 314
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 314,
   "schema_status": {
     "directory_layout": {
