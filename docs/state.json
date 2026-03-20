@@ -4371,6 +4371,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix current-cycle-steps check to support resumed cycles"
+    },
+    {
+      "dispatched_at": "2026-03-20T20:25:05Z",
+      "issue": 1557,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 322 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -4578,16 +4585,16 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 4,
-    "dispatch_log_latest": "#1555 Fix current-cycle-steps check to support resumed cycles (cycle 322)",
-    "dispatch_to_pr_rate": "99.0%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1557 [Cycle Review] Cycle 322 end-of-cycle review (cycle 322)",
+    "dispatch_to_pr_rate": "98.8%",
+    "in_flight": 2,
     "merged": 466,
     "pr_merge_rate": "97.9%",
     "produced_pr": 476,
     "resolved": 480,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 481
+    "total_dispatches": 482
   },
   "cycle_phase": {
     "cycle": 322,
@@ -7757,7 +7764,7 @@
     ],
     "last_review_cycle": 321
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 322,
   "schema_status": {
     "directory_layout": {
