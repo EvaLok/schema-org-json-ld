@@ -4368,8 +4368,10 @@
     {
       "dispatched_at": "2026-03-20T20:19:25Z",
       "issue": 1555,
+      "merged_at": "2026-03-20T22:18:47Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1556,
+      "status": "merged",
       "title": "Fix current-cycle-steps check to support resumed cycles"
     },
     {
@@ -4588,12 +4590,12 @@
     "closed_without_merge": 8,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#1557 [Cycle Review] Cycle 322 end-of-cycle review (cycle 322)",
-    "dispatch_to_pr_rate": "99.0%",
-    "in_flight": 1,
-    "merged": 467,
+    "dispatch_to_pr_rate": "99.2%",
+    "in_flight": 0,
+    "merged": 468,
     "pr_merge_rate": "97.9%",
-    "produced_pr": 477,
-    "resolved": 481,
+    "produced_pr": 478,
+    "resolved": 482,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 482
