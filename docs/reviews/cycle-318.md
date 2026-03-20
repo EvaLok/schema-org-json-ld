@@ -1,0 +1,23 @@
+# Cycle 318 Review
+
+## 1. [process-adherence] The cycle repeated a blocking C5.5 override and called it “unbreakable” without proving that
+
+**File**: docs/worklog/2026-03-20/124109-cycle-318-invariant-and-pipeline-improvements.md:26
+**Evidence**: The worklog records `Pipeline status: FAIL (step-comments cascade from cycle 317 C8 missing, already penalized). All 8 substantive phases PASS`, and issue `#1535` step `C5.5` then escalates that to `Proceeding to C6-C8 to break cascade -- stopping here would perpetuate it indefinitely. This is NOT a quality failure but a permanent cascade from cycle 317 missing C8.` That “permanent and unbreakable” claim is not supported by the underlying record. Issue `#1526` still simply ends at `C7` (`2026-03-20T08:41:46Z`) with no `C8` comment ever posted after it; the earlier close-out comments on that same issue show `C4.5`, `C5.6`, `C6`, and `C7` were all posted individually after the failed gate, so the missing artifact was a comment-level gap, not a demonstrated immutable state. The current cycle also shows `C8` is just another post-step comment posted after `C7` (`#1535`, `2026-03-20T12:47:22Z`). The cascade was real, but the justification that proceeding past a blocking gate was the only possible repair path is overstated.
+**Recommendation**: Add an explicit remediation path for inherited missing close-out comments on prior-cycle issues, then re-run the gate. Until such a repair path exists, treat `C5.5` as a real blocking failure instead of reclassifying it as “not a quality failure” based on an unsupported permanence claim.
+
+## 2. [journal-quality] The journal says no blocking override occurred even though cycle 318 proceeded past a failing C5.5 gate
+
+**File**: docs/journal/2026-03-20.md:245
+**Evidence**: The cycle 318 journal entry says `No blocking gate overrides occurred this cycle.` But issue `#1535` step `C5.5` at `2026-03-20T12:46:00Z` says `FAIL` and explicitly `Proceeding to C6-C8 to break cascade`, after which steps `C6`, `C7`, and `C8` were posted in sequence. That is still a blocking-gate override, even if the operator believed the inherited failure was already penalized. This directly undercuts the cycle’s claim that the journal now acknowledges the hardest operational truth of the run.
+**Recommendation**: Require the journal to state any `C5.5` FAIL that was bypassed, plus the exact remediation logic used. If the override is considered justified, record that justification as an exception note rather than claiming no override happened.
+
+## 3. [review-completeness] Finding 1 from cycle 317 was deferred too aggressively as “behavioral” even though the toolchain still relied on overrides this cycle
+
+**File**: docs/worklog/2026-03-20/124109-cycle-318-invariant-and-pipeline-improvements.md:5
+**Evidence**: The worklog says the cycle 317 review findings were `3 actioned, 1 deferred`, and the journal narrows the deferred item to `The C5.5 enforcement deferred (tool already correct, issue was behavioral)` (`docs/journal/2026-03-20.md:233-245`). But the same cycle’s close-out record shows the toolchain still had to be pushed through the inherited failure in two places: issue `#1535` step `C4.1` first failed because `pipeline-check` still reported blocking `step-comments`, then a second `C4.1` comment declared `Worklog PASS (with --pipeline-status fail override due to cycle 317 C8 cascade in step-comments)`; later step `C5.5` again failed and was overridden to continue to `C6-C8`. That means the unresolved problem was not just operator discipline. The close-out path still lacked a supported repair flow for inherited missing-step failures and instead normalized manual overrides.
+**Recommendation**: Reclassify finding 1 as still open or only partially addressed. Track a concrete follow-up that either repairs prior-cycle step artifacts before close-out or teaches the validation/gating tools an explicit cascade-remediation mode that records the exception without pretending the gate passed.
+
+## Complacency score
+
+**3/5** — The cycle was not a wash: the worklog’s 475 dispatches / 461 merged metrics match `docs/state.json`, the stale `audit_processed` and `test_count` markers were genuinely refreshed to cycle 318, and both improvement issues (`#1536`, `#1538`) were well-specified and merged with successful `claude-review` checks. But the cycle still normalized a blocking-gate bypass, mislabeled that bypass in the journal, and overclaimed that the inherited failure was “permanent” rather than just unrepaired. That is not severe enough for the worst score because the state and worklog accounting mostly tightened up, but it is still a meaningful complacency signal rather than an excellent close-out.
