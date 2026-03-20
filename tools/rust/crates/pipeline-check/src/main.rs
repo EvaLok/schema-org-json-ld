@@ -81,6 +81,9 @@ struct Cli {
 
     #[arg(long)]
     json: bool,
+
+	#[arg(long = "exclude-step", help = "Step name(s) to exclude from the pipeline run")]
+	exclude_steps: Vec<String>,
 }
 
 #[derive(Clone, Copy, Serialize, PartialEq, Eq, Debug)]
@@ -196,7 +199,7 @@ fn main() {
         },
     };
     let runner = ProcessRunner;
-    let report = run_pipeline(&cli.repo_root, cycle, &runner);
+    let report = run_pipeline_with_excluded_steps(&cli.repo_root, cycle, &cli.exclude_steps, &runner);
     let exit_code = pipeline_exit_code(&report.steps);
 
     if cli.json {
@@ -214,7 +217,17 @@ fn main() {
     std::process::exit(exit_code);
 }
 
+#[cfg(test)]
 fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> PipelineReport {
+	run_pipeline_with_excluded_steps(repo_root, cycle, &[], runner)
+}
+
+fn run_pipeline_with_excluded_steps(
+	repo_root: &Path,
+	cycle: u64,
+	exclude_steps: &[String],
+	runner: &dyn CommandRunner,
+) -> PipelineReport {
 	let specs = [
 		ToolSpec {
 			display_name: "metric-snapshot",
@@ -278,12 +291,25 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
 	];
 
 	let mut steps = Vec::new();
-	steps.extend(specs.iter().map(|spec| run_step(repo_root, spec, runner)));
-	steps.push(verify_artifacts(repo_root));
+	steps.extend(
+		specs
+			.iter()
+			.filter(|spec| !is_excluded_step(spec.display_name, exclude_steps))
+			.map(|spec| run_step(repo_root, spec, runner)),
+	);
+	if !is_excluded_step(ARTIFACT_VERIFY_STEP_NAME, exclude_steps) {
+		steps.push(verify_artifacts(repo_root));
+	}
 	let pipeline_status = pipeline_overall_status(&steps);
-	steps.push(verify_doc_validation(repo_root, pipeline_status, runner));
-	steps.push(verify_step_comments(repo_root, cycle, runner));
-	steps.push(verify_current_cycle_step_comments(repo_root, cycle, runner));
+	if !is_excluded_step(DOC_VALIDATION_STEP_NAME, exclude_steps) {
+		steps.push(verify_doc_validation(repo_root, pipeline_status, runner));
+	}
+	if !is_excluded_step(STEP_COMMENTS_STEP_NAME, exclude_steps) {
+		steps.push(verify_step_comments(repo_root, cycle, runner));
+	}
+	if !is_excluded_step(CURRENT_CYCLE_STEPS_STEP_NAME, exclude_steps) {
+		steps.push(verify_current_cycle_step_comments(repo_root, cycle, runner));
+	}
 	// Doc validation runs before step-comments so it can pass the pre-step-comments
 	// pipeline status through to validate-docs. Reclassify afterward, once the real
 	// step-comments result is known, but before computing the final overall status.
@@ -298,6 +324,10 @@ fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> Pip
 		timestamp: current_utc_timestamp(),
 		steps,
 	}
+}
+
+fn is_excluded_step(name: &str, exclude_steps: &[String]) -> bool {
+	exclude_steps.iter().any(|excluded| excluded == name)
 }
 
 fn run_step(repo_root: &Path, spec: &ToolSpec, runner: &dyn CommandRunner) -> StepReport {
@@ -2448,7 +2478,26 @@ mod tests {
         let cli = Cli::try_parse_from(["pipeline-check", "--repo-root", "."]).unwrap();
         assert_eq!(cli.repo_root, PathBuf::from("."));
         assert_eq!(cli.cycle, None);
+		assert!(cli.exclude_steps.is_empty());
     }
+
+	#[test]
+	fn cli_accepts_repeated_exclude_step_argument() {
+		let cli = Cli::try_parse_from([
+			"pipeline-check",
+			"--repo-root",
+			".",
+			"--exclude-step",
+			"doc-validation",
+			"--exclude-step",
+			"step-comments",
+		])
+		.unwrap();
+		assert_eq!(
+			cli.exclude_steps,
+			vec!["doc-validation".to_string(), "step-comments".to_string()]
+		);
+	}
 
     #[test]
     fn run_pipeline_fails_when_all_steps_error() {
@@ -3178,6 +3227,237 @@ mod tests {
 		assert_eq!(report.steps[8].status, StepStatus::Fail);
 		assert_eq!(report.overall, StepStatus::Fail);
 		assert!(report.has_blocking_findings);
+	}
+
+	#[test]
+	fn run_pipeline_omits_excluded_steps_from_output() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir().join(format!("pipeline-check-exclude-doc-validation-{}", run_id));
+		let today = &current_utc_timestamp()[..10];
+		fs::create_dir_all(root.join("docs/journal")).unwrap();
+		fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
+		fs::create_dir_all(root.join("docs/reviews")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 834,
+				"last_cycle": {"number": 257, "issue": 834},
+				"cycle_phase": {"phase": "close_out"},
+				"copilot_metrics": {
+					"total_dispatches": 3,
+					"resolved": 2,
+					"merged": 1,
+					"in_flight": 1,
+					"produced_pr": 2,
+					"closed_without_pr": 0,
+					"reviewed_awaiting_eva": 1,
+					"dispatch_to_pr_rate": "66.7%",
+					"pr_merge_rate": "50.0%"
+				},
+				"review_agent": {
+					"last_review_cycle": 257
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+		fs::write(
+			root.join("docs/worklog").join(today).join("020304-cycle-257-summary.md"),
+			"latest worklog",
+		)
+		.unwrap();
+		fs::write(root.join("docs/journal").join(format!("{today}.md")), "# Journal\n").unwrap();
+		fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
+
+		struct ExcludeDocValidationRunner;
+
+		impl CommandRunner for ExcludeDocValidationRunner {
+			fn run(&self, script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				let key = script_path
+					.file_name()
+					.and_then(|name| name.to_str())
+					.unwrap_or_default();
+				match key {
+					"metric-snapshot" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({"summary":"13/13 checks","checks":[]}).to_string(),
+					}),
+					"check-field-inventory-rs" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: "PASS: all fields covered".to_string(),
+					}),
+					"housekeeping-scan" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({"items_needing_attention":0}).to_string(),
+					}),
+					"cycle-status" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({
+							"concurrency": {"in_flight": 1},
+							"eva_input": {"comments_since_last_cycle": [{"x": 1}]}
+						})
+						.to_string(),
+					}),
+					"state-invariants" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({"passed":5,"failed":0}).to_string(),
+					}),
+					"derive-metrics" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({
+							"total_dispatches": 3,
+							"resolved": 2,
+							"merged": 1,
+							"in_flight": 1,
+							"produced_pr": 2,
+							"closed_without_pr": 0,
+							"reviewed_awaiting_eva": 1,
+							"dispatch_to_pr_rate": "66.7%",
+							"pr_merge_rate": "50.0%"
+						})
+						.to_string(),
+					}),
+					"validate-docs" => panic!("doc-validation should be excluded"),
+					other => panic!("unexpected tool invocation: {}", other),
+				}
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 834);
+				Ok(step_comment_bodies(257, &EXPECTED_STEP_IDS))
+			}
+		}
+
+		let report = run_pipeline_with_excluded_steps(
+			&root,
+			257,
+			&["doc-validation".to_string()],
+			&ExcludeDocValidationRunner,
+		);
+		assert_eq!(report.overall, StepStatus::Pass);
+		assert_eq!(report.steps.len(), 9);
+		assert!(!report.steps.iter().any(|step| step.name == "doc-validation"));
+		assert!(report.steps.iter().any(|step| step.name == "step-comments"));
+		assert!(report.steps.iter().any(|step| step.name == "current-cycle-steps"));
+	}
+
+	#[test]
+	fn run_pipeline_ignores_unknown_excluded_step_names() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir().join(format!("pipeline-check-exclude-unknown-{}", run_id));
+		let today = &current_utc_timestamp()[..10];
+		fs::create_dir_all(root.join("docs/journal")).unwrap();
+		fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
+		fs::create_dir_all(root.join("docs/reviews")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 834,
+				"last_cycle": {"number": 257, "issue": 834},
+				"cycle_phase": {"phase": "close_out"},
+				"copilot_metrics": {
+					"total_dispatches": 3,
+					"resolved": 2,
+					"merged": 1,
+					"in_flight": 1,
+					"produced_pr": 2,
+					"closed_without_pr": 0,
+					"reviewed_awaiting_eva": 1,
+					"dispatch_to_pr_rate": "66.7%",
+					"pr_merge_rate": "50.0%"
+				},
+				"review_agent": {
+					"last_review_cycle": 257
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+		fs::write(
+			root.join("docs/worklog").join(today).join("020304-cycle-257-summary.md"),
+			"latest worklog",
+		)
+		.unwrap();
+		fs::write(root.join("docs/journal").join(format!("{today}.md")), "# Journal\n").unwrap();
+		fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
+
+		struct UnknownExcludeRunner;
+
+		impl CommandRunner for UnknownExcludeRunner {
+			fn run(&self, script_path: &Path, args: &[String]) -> Result<ExecutionResult, String> {
+				let key = script_path
+					.file_name()
+					.and_then(|name| name.to_str())
+					.unwrap_or_default();
+				match key {
+					"metric-snapshot" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({"summary":"13/13 checks","checks":[]}).to_string(),
+					}),
+					"check-field-inventory-rs" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: "PASS: all fields covered".to_string(),
+					}),
+					"housekeeping-scan" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({"items_needing_attention":0}).to_string(),
+					}),
+					"cycle-status" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({
+							"concurrency": {"in_flight": 1},
+							"eva_input": {"comments_since_last_cycle": [{"x": 1}]}
+						})
+						.to_string(),
+					}),
+					"state-invariants" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({"passed":5,"failed":0}).to_string(),
+					}),
+					"derive-metrics" => Ok(ExecutionResult {
+						exit_code: Some(0),
+						stdout: json!({
+							"total_dispatches": 3,
+							"resolved": 2,
+							"merged": 1,
+							"in_flight": 1,
+							"produced_pr": 2,
+							"closed_without_pr": 0,
+							"reviewed_awaiting_eva": 1,
+							"dispatch_to_pr_rate": "66.7%",
+							"pr_merge_rate": "50.0%"
+						})
+						.to_string(),
+					}),
+					"validate-docs" => {
+						let mode = args.first().map(String::as_str).unwrap_or_default();
+						assert!(matches!(mode, "worklog" | "journal"));
+						Ok(ExecutionResult {
+							exit_code: Some(0),
+							stdout: String::new(),
+						})
+					}
+					other => panic!("unexpected tool invocation: {}", other),
+				}
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 834);
+				Ok(step_comment_bodies(257, &EXPECTED_STEP_IDS))
+			}
+		}
+
+		let report = run_pipeline_with_excluded_steps(
+			&root,
+			257,
+			&["not-a-real-step".to_string()],
+			&UnknownExcludeRunner,
+		);
+		assert_eq!(report.overall, StepStatus::Pass);
+		assert_eq!(report.steps.len(), 10);
+		assert!(report.steps.iter().any(|step| step.name == "doc-validation"));
 	}
 
 	#[test]
