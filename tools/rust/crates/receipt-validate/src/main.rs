@@ -180,6 +180,8 @@ fn compare_receipts(
 
 fn is_structurally_excluded(subject: &str) -> bool {
     subject.starts_with("docs(cycle-")
+        || subject.starts_with("docs(worklog-patch):")
+        || subject.starts_with("docs(review-body):")
         || subject.starts_with("state(record-dispatch):")
         || subject.starts_with("state(stabilization")
         || subject.starts_with("state(clean-cycle")
@@ -276,10 +278,11 @@ fn extract_receipt_from_cell(cell: &str) -> Result<Option<String>, String> {
 
 fn render_structural_suffix(details: &[MissingDetail]) -> String {
     let mut categories = Vec::new();
-    if details
-        .iter()
-        .any(|detail| detail.subject.starts_with("docs(cycle-"))
-    {
+    if details.iter().any(|detail| {
+        detail.subject.starts_with("docs(cycle-")
+            || detail.subject.starts_with("docs(worklog-patch):")
+            || detail.subject.starts_with("docs(review-body):")
+    }) {
         categories.push("docs commit");
     }
     if details
@@ -349,10 +352,7 @@ mod tests {
 
         assert_eq!(
             receipts,
-            BTreeSet::from([
-                "abc1234".to_string(),
-                "def5678".to_string(),
-            ])
+            BTreeSet::from(["abc1234".to_string(), "def5678".to_string(),])
         );
     }
 
@@ -360,6 +360,12 @@ mod tests {
     fn detects_structural_exclusions_by_subject_prefix() {
         assert!(is_structurally_excluded(
             "docs(cycle-255): publish worklog and journal"
+        ));
+        assert!(is_structurally_excluded(
+            "docs(worklog-patch): post-dispatch state correction [cycle 255]"
+        ));
+        assert!(is_structurally_excluded(
+            "docs(review-body): cycle 255 review dispatch body [cycle 255]"
         ));
         assert!(is_structurally_excluded(
             "state(record-dispatch): issue #10 dispatched [cycle 255]"
@@ -390,21 +396,34 @@ mod tests {
                 ("bbbbbbb", "state(process-merge): merge PR [cycle 255]"),
                 ("ccccccc", "state(cycle-complete): close cycle [cycle 255]"),
                 ("ddddddd", "docs(cycle-255): publish worklog and journal"),
-                ("eeeeeee", "state(record-dispatch): issue #10 dispatched [cycle 255]"),
-                ("fffffff", "state(stabilization): clean cycle 255 — counter 3/50 [cycle 255]"),
+                (
+                    "eeeeeee",
+                    "state(record-dispatch): issue #10 dispatched [cycle 255]",
+                ),
+                (
+                    "fffffff",
+                    "state(stabilization): clean cycle 255 — counter 3/50 [cycle 255]",
+                ),
+                (
+                    "ggggggg",
+                    "docs(worklog-patch): post-dispatch state correction [cycle 255]",
+                ),
+                (
+                    "hhhhhhh",
+                    "docs(review-body): cycle 255 review dispatch body [cycle 255]",
+                ),
             ]),
         );
 
         assert_eq!(report.result, "PASS");
         assert_eq!(report.genuinely_missing, 0);
-        assert_eq!(report.structurally_excluded, 3);
-        assert_eq!(report.excluded_details.len(), 3);
+        assert_eq!(report.structurally_excluded, 5);
+        assert_eq!(report.excluded_details.len(), 5);
     }
 
     #[test]
     fn fails_when_non_structural_receipt_is_missing() {
-        let worklog_receipts =
-            BTreeSet::from(["aaaaaaa".to_string(), "bbbbbbb".to_string()]);
+        let worklog_receipts = BTreeSet::from(["aaaaaaa".to_string(), "bbbbbbb".to_string()]);
         let report = compare_receipts(
             255,
             &worklog_receipts,
@@ -413,7 +432,10 @@ mod tests {
                 ("bbbbbbb", "state(process-merge): merge PR [cycle 255]"),
                 ("ccccccc", "state(cycle-complete): close cycle [cycle 255]"),
                 ("ddddddd", "docs(cycle-255): publish worklog and journal"),
-                ("eeeeeee", "state(record-dispatch): issue #10 dispatched [cycle 255]"),
+                (
+                    "eeeeeee",
+                    "state(record-dispatch): issue #10 dispatched [cycle 255]",
+                ),
             ]),
         );
 
