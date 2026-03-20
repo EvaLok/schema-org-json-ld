@@ -4350,8 +4350,10 @@
     {
       "dispatched_at": "2026-03-20T16:31:15Z",
       "issue": 1549,
+      "merged_at": "2026-03-20T18:15:24Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1550,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 320 end-of-cycle review"
     }
   ],
@@ -4561,12 +4563,12 @@
     "closed_without_merge": 8,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#1549 [Cycle Review] Cycle 320 end-of-cycle review (cycle 320)",
-    "dispatch_to_pr_rate": "99.0%",
-    "in_flight": 1,
-    "merged": 464,
+    "dispatch_to_pr_rate": "99.2%",
+    "in_flight": 0,
+    "merged": 465,
     "pr_merge_rate": "97.9%",
-    "produced_pr": 474,
-    "resolved": 478,
+    "produced_pr": 475,
+    "resolved": 479,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 479
@@ -4709,7 +4711,7 @@
       },
       "last_tool_audit_cycle": {
         "cadence": "every 10 cycles",
-        "last_refreshed": "cycle 314"
+        "last_refreshed": "cycle 321"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
@@ -4849,7 +4851,7 @@
     "timestamp": "2026-03-20T16:25:52Z"
   },
   "last_eva_comment_check": "2026-03-20T16:25:52Z",
-  "last_tool_audit_cycle": 263,
+  "last_tool_audit_cycle": 320,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
