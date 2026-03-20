@@ -4723,7 +4723,7 @@
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 310"
+        "last_refreshed": "cycle 316"
       }
     }
   },
