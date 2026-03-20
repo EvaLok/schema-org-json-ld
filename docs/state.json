@@ -7601,7 +7601,7 @@
     "last_review_cycle": 316
   },
   "review_dispatch_consecutive": 0,
-  "review_events_verified_through_cycle": 315,
+  "review_events_verified_through_cycle": 317,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
