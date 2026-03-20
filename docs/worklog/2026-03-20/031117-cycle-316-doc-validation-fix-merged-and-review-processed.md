@@ -26,9 +26,9 @@
 
 ## Current state
 
-- **In-flight agent sessions**: 0
+- **In-flight agent sessions**: 1
 - **Pipeline status**: PASS (doc-validation circular dependency fixed)
-- **Copilot metrics**: 467 dispatches, 454 merged, 98.3% PR merge rate
+- **Copilot metrics**: 468 dispatches, 463 PRs, 454 merged, 98.1% merge rate
 - **Publish gate**: published
 
 ## Next steps
