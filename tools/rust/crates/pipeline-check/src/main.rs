@@ -561,7 +561,7 @@ fn reclassify_doc_validation_cascade(steps: &mut [StepReport]) {
 		return;
 	};
 	let step_comments_status = steps[step_comments_index].status;
-	if !matches!(step_comments_status, StepStatus::Fail | StepStatus::Error) {
+	if !matches!(step_comments_status, StepStatus::Fail | StepStatus::Error | StepStatus::Warn) {
 		return;
 	}
 
@@ -1106,9 +1106,21 @@ fn assess_step_comment_completeness(
 	);
 
 	if found.len() < STEP_COMMENT_THRESHOLD {
+		// The backstop only blocks for the current cycle. For the previous cycle,
+		// cycle-aware filtering may legitimately reduce the per-cycle count below
+		// the threshold (e.g., resumed cycles where steps span multiple cycle numbers).
+		// Individual missing mandatory steps are still caught by the cascade logic below.
+		let backstop_severity = match scope {
+			StepCommentCheckScope::CurrentCycle => Severity::Blocking,
+			StepCommentCheckScope::PreviousCycle => Severity::Warning,
+		};
+		let backstop_status = match scope {
+			StepCommentCheckScope::CurrentCycle => StepStatus::Fail,
+			StepCommentCheckScope::PreviousCycle => StepStatus::Warn,
+		};
 		return StepCommentAssessment {
-			status: StepStatus::Fail,
-			severity: Severity::Blocking,
+			status: backstop_status,
+			severity: backstop_severity,
 			detail: format!(
 				"{}; below backstop threshold {}",
 				detail, STEP_COMMENT_THRESHOLD
@@ -2882,7 +2894,7 @@ mod tests {
 
 			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
 				assert_eq!(issue, 834);
-				Ok(step_comment_bodies(257, &["0", "0.5", "0.6", "1", "2", "3", "4", "5", "6"]))
+				Ok(step_comment_bodies(256, &["0", "0.5", "0.6", "1", "2", "3", "4", "5", "6"]))
 			}
 		}
 
@@ -2890,9 +2902,10 @@ mod tests {
 		assert_eq!(report.steps[7].name, "doc-validation");
 		assert_eq!(report.steps[7].status, StepStatus::Cascade);
 		assert_eq!(report.steps[8].name, "step-comments");
-		assert_eq!(report.steps[8].status, StepStatus::Fail);
-		assert_eq!(report.overall, StepStatus::Fail);
-		assert!(report.has_blocking_findings);
+		// Previous-cycle backstop is downgraded to Warn — no blocking failures remain
+		assert_eq!(report.steps[8].status, StepStatus::Warn);
+		assert_eq!(report.overall, StepStatus::Pass);
+		assert!(!report.has_blocking_findings);
 	}
 
 	#[test]
@@ -3004,7 +3017,7 @@ mod tests {
 
 			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
 				assert_eq!(issue, 834);
-				Ok(step_comment_bodies(257, &["0", "0.5", "0.6", "1", "2", "3", "4", "5", "6"]))
+				Ok(step_comment_bodies(256, &["0", "0.5", "0.6", "1", "2", "3", "4", "5", "6"]))
 			}
 		}
 
@@ -3012,9 +3025,10 @@ mod tests {
 		assert_eq!(report.steps[7].name, "doc-validation");
 		assert_eq!(report.steps[7].status, StepStatus::Cascade);
 		assert_eq!(report.steps[8].name, "step-comments");
-		assert_eq!(report.steps[8].status, StepStatus::Fail);
-		assert_eq!(report.overall, StepStatus::Fail);
-		assert!(report.has_blocking_findings);
+		// Previous-cycle backstop is downgraded to Warn — no blocking failures remain
+		assert_eq!(report.steps[8].status, StepStatus::Warn);
+		assert_eq!(report.overall, StepStatus::Pass);
+		assert!(!report.has_blocking_findings);
 	}
 
 	#[test]
@@ -3269,7 +3283,8 @@ mod tests {
 		let report = run_pipeline(&root, 257, &IndependentFailureRunner);
 		assert_eq!(report.steps[7].name, "doc-validation");
 		assert_eq!(report.steps[7].status, StepStatus::Fail);
-		assert_eq!(report.steps[8].status, StepStatus::Fail);
+		// Previous-cycle backstop is downgraded to Warn
+		assert_eq!(report.steps[8].status, StepStatus::Warn);
 		assert_eq!(report.overall, StepStatus::Fail);
 		assert!(report.has_blocking_findings);
 	}
@@ -3760,8 +3775,10 @@ mod tests {
 
 		let step = verify_step_comments(&root, 257, &StepCommentRunner);
 		assert_eq!(step.name, "step-comments");
-		assert_eq!(step.status, StepStatus::Fail);
-		assert_eq!(step.severity, Severity::Blocking);
+		// Previous-cycle backstop is downgraded to Warn/Warning (cycle-aware filter
+		// can legitimately reduce per-cycle counts below the backstop threshold)
+		assert_eq!(step.status, StepStatus::Warn);
+		assert_eq!(step.severity, Severity::Warning);
 		assert!(step
 			.detail
 			.as_deref()
@@ -3823,8 +3840,9 @@ mod tests {
 		}
 
 		let step = verify_step_comments(&root, 257, &StepCommentRunner);
-		assert_eq!(step.status, StepStatus::Fail);
-		assert_eq!(step.severity, Severity::Blocking);
+		// Previous-cycle backstop is downgraded to Warn/Warning
+		assert_eq!(step.status, StepStatus::Warn);
+		assert_eq!(step.severity, Severity::Warning);
 		assert_eq!(step.findings, Some(2));
 		assert!(step
 			.detail
