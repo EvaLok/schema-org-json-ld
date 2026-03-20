@@ -3366,7 +3366,9 @@ mod tests {
 
 			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
 				assert_eq!(issue, 834);
-				Ok(step_comment_bodies(256, &EXPECTED_STEP_IDS))
+				let mut bodies = step_comment_bodies(256, &EXPECTED_STEP_IDS);
+				bodies.push_str(&step_comment_bodies(257, &EXPECTED_STEP_IDS));
+				Ok(bodies)
 			}
 		}
 
@@ -3486,7 +3488,9 @@ mod tests {
 
 			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
 				assert_eq!(issue, 834);
-				Ok(step_comment_bodies(256, &EXPECTED_STEP_IDS))
+				let mut bodies = step_comment_bodies(256, &EXPECTED_STEP_IDS);
+				bodies.push_str(&step_comment_bodies(257, &EXPECTED_STEP_IDS));
+				Ok(bodies)
 			}
 		}
 
@@ -3803,12 +3807,12 @@ mod tests {
 			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
 				assert_eq!(issue, 996);
 				Ok(concat!(
-					"> **[main-orchestrator]** | Cycle 221 | Step 0\n",
-					"> **[main-orchestrator]** | Cycle 221 | Step 5\n",
-					"> **[main-orchestrator]** | Cycle 221 | Step Opening\n",
-					"> **[main-orchestrator]** | Cycle 221 | Step 10.B\n",
-					"> **[main-orchestrator]** | Cycle 221 | Step 10.C\n",
-					"> **[main-orchestrator]** | Cycle 221 | Step Close\n"
+					"> **[main-orchestrator]** | Cycle 256 | Step 0\n",
+					"> **[main-orchestrator]** | Cycle 256 | Step 5\n",
+					"> **[main-orchestrator]** | Cycle 256 | Step Opening\n",
+					"> **[main-orchestrator]** | Cycle 256 | Step 10.B\n",
+					"> **[main-orchestrator]** | Cycle 256 | Step 10.C\n",
+					"> **[main-orchestrator]** | Cycle 256 | Step Close\n"
 				)
 				.to_string())
 			}
@@ -4364,7 +4368,7 @@ mod tests {
 					.iter()
 					.copied()
 					.filter(|step| *step != "0")
-					collect::<Vec<_>>();
+					.collect::<Vec<_>>();
 				let mut bodies = step_comment_bodies(315, &previous_cycle_steps);
 				bodies.push_str("> **[main-orchestrator]** | Cycle 316 | Step 0\n");
 				Ok(bodies)
