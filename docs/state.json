@@ -4326,6 +4326,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "[Cycle Review] Cycle 318 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-20T14:35:38Z",
+      "issue": 1544,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add step-comment gap acknowledgment to pipeline-check"
     }
   ],
   "audit_dropped": [
@@ -4533,16 +4540,16 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 4,
-    "dispatch_log_latest": "#1540 [Cycle Review] Cycle 318 end-of-cycle review (cycle 318)",
-    "dispatch_to_pr_rate": "98.9%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1544 Add step-comment gap acknowledgment to pipeline-check (cycle 319)",
+    "dispatch_to_pr_rate": "98.7%",
+    "in_flight": 2,
     "merged": 461,
     "pr_merge_rate": "97.9%",
     "produced_pr": 471,
     "resolved": 475,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 476
+    "total_dispatches": 477
   },
   "cycle_phase": {
     "cycle": 319,
@@ -4645,15 +4652,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 318"
+        "last_refreshed": "cycle 319"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 318"
+        "last_refreshed": "cycle 319"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 318"
+        "last_refreshed": "cycle 319"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
@@ -7657,7 +7664,8 @@
         ],
         "complacency_score": 4,
         "cycle": 318,
-        "deferred": 4,
+        "deferred": 3,
+        "dispatch_created": 1,
         "finding_count": 4,
         "ignored": 0,
         "note": "All 4 findings deferred: resumed close-out session. Finding 1 (C5.5 override remediation path) and finding 4 (reclassify cycle 317 finding) require tool work. Finding 2 (journal accuracy) and finding 3 (worklog timing) are procedural improvements for next cycle."
@@ -7665,7 +7673,7 @@
     ],
     "last_review_cycle": 318
   },
-  "review_dispatch_consecutive": 2,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 317,
   "schema_status": {
     "directory_layout": {
