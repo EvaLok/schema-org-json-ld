@@ -4269,8 +4269,10 @@
     {
       "dispatched_at": "2026-03-20T04:48:37Z",
       "issue": 1523,
+      "merged_at": "2026-03-20T06:20:56Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1524,
+      "status": "merged",
       "title": "Clarify receipt validation scope note to say snapshot, not certification"
     }
   ],
@@ -4478,12 +4480,12 @@
     "closed_without_merge": 8,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#1523 Clarify receipt validation scope note to say snapshot, not certification (cycle 316)",
-    "dispatch_to_pr_rate": "98.9%",
-    "in_flight": 1,
-    "merged": 455,
-    "pr_merge_rate": "97.8%",
-    "produced_pr": 465,
-    "resolved": 469,
+    "dispatch_to_pr_rate": "99.1%",
+    "in_flight": 0,
+    "merged": 456,
+    "pr_merge_rate": "97.9%",
+    "produced_pr": 466,
+    "resolved": 470,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 470
