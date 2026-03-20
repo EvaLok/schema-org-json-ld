@@ -4251,7 +4251,10 @@
       "dispatched_at": "2026-03-20T03:21:25Z",
       "issue": 1518,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "note": "Review artifact extracted manually; PR had state.json conflicts",
+      "pr": 1519,
+      "resolved_at": "2026-03-20T04:40:00Z",
+      "status": "closed_without_merge",
       "title": "[Cycle Review] Cycle 316 end-of-cycle review"
     }
   ],
@@ -4456,15 +4459,15 @@
     "total_classes_converted": 54
   },
   "copilot_metrics": {
-    "closed_without_merge": 7,
+    "closed_without_merge": 8,
     "closed_without_pr": 4,
     "dispatch_log_latest": "#1518 [Cycle Review] Cycle 316 end-of-cycle review (cycle 316)",
     "dispatch_to_pr_rate": "98.9%",
-    "in_flight": 1,
+    "in_flight": 0,
     "merged": 454,
     "pr_merge_rate": "98.1%",
     "produced_pr": 463,
-    "resolved": 467,
+    "resolved": 468,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 468
