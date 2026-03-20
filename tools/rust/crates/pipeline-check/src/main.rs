@@ -866,6 +866,20 @@ fn verify_doc_validation_for_date(
 }
 
 fn verify_step_comments(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> StepReport {
+	let previous_cycle = match cycle.checked_sub(1) {
+		Some(previous_cycle) => previous_cycle,
+		None => {
+			return StepReport {
+				name: STEP_COMMENTS_STEP_NAME,
+				status: StepStatus::Error,
+				severity: Severity::Blocking,
+				exit_code: None,
+				detail: Some("cannot verify previous-cycle step comments for cycle 0".to_string()),
+				findings: None,
+				summary: None,
+			};
+		}
+	};
 	let state = match read_state_value(repo_root) {
 		Ok(state) => state,
 		Err(error) => {
@@ -898,7 +912,7 @@ fn verify_step_comments(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner
 			};
 		}
 	};
-	let found = match fetch_step_comments_for_issue(runner, issue) {
+	let found = match fetch_step_comments_for_issue(runner, issue, previous_cycle) {
 		Ok(found) => found,
 		Err(error) => {
 			return StepReport {
@@ -912,8 +926,11 @@ fn verify_step_comments(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner
 			};
 		}
 	};
-	let issue_assessment =
-		assess_step_comment_completeness(&found, cycle, StepCommentCheckScope::PreviousCycle);
+	let issue_assessment = assess_step_comment_completeness(
+		&found,
+		previous_cycle,
+		StepCommentCheckScope::PreviousCycle,
+	);
 
 	StepReport {
 		name: STEP_COMMENTS_STEP_NAME,
@@ -967,7 +984,7 @@ fn verify_current_cycle_step_comments(
 		}
 	};
 
-	let found = match fetch_step_comments_for_issue(runner, issue) {
+	let found = match fetch_step_comments_for_issue(runner, issue, cycle) {
 		Ok(found) => found,
 		Err(error) => {
 			return StepReport {
@@ -1032,10 +1049,11 @@ fn verify_current_cycle_step_comments(
 fn fetch_step_comments_for_issue(
 	runner: &dyn CommandRunner,
 	issue: u64,
+	cycle: u64,
 ) -> Result<BTreeSet<&'static str>, String> {
 	runner
 		.fetch_issue_comment_bodies(issue)
-		.map(|comment_bodies| collect_step_comment_ids(&comment_bodies))
+		.map(|comment_bodies| collect_step_comment_ids(&comment_bodies, cycle))
 }
 
 fn missing_expected_step_ids(found: &BTreeSet<&'static str>) -> Vec<&'static str> {
@@ -1174,15 +1192,15 @@ struct StepCommentAssessment {
 ///
 /// Returned step IDs are references to the static `EXPECTED_STEP_IDS` list rather than
 /// slices of the input text. Unrecognized step tokens are ignored.
-fn collect_step_comment_ids(comment_bodies: &str) -> BTreeSet<&'static str> {
+fn collect_step_comment_ids(comment_bodies: &str, cycle: u64) -> BTreeSet<&'static str> {
 	comment_bodies
 		.lines()
-		.filter_map(detect_step_comment_id)
+		.filter_map(|line| detect_step_comment_id(line, cycle))
 		.collect()
 }
 
-fn detect_step_comment_id(line: &str) -> Option<&'static str> {
-	detect_any_step_comment_token(line).and_then(|candidate| {
+fn detect_step_comment_id(line: &str, cycle: u64) -> Option<&'static str> {
+	detect_any_step_comment_token(line, cycle).and_then(|candidate| {
 		EXPECTED_STEP_IDS
 			.iter()
 			.copied()
@@ -1190,14 +1208,37 @@ fn detect_step_comment_id(line: &str) -> Option<&'static str> {
 	})
 }
 
-fn detect_any_step_comment_token(line: &str) -> Option<&str> {
+fn detect_any_step_comment_token(line: &str, cycle: u64) -> Option<&str> {
 	let trimmed = line.trim();
 	if trimmed.starts_with(ORCHESTRATOR_SIGNATURE) {
+		if !orchestrator_step_comment_matches_cycle(trimmed, cycle) {
+			return None;
+		}
 		extract_step_token_after_marker(trimmed, "Step ")
 	} else if trimmed.starts_with("## Step ") {
 		extract_step_token_after_marker(trimmed, "## Step ")
 	} else {
 		None
+	}
+}
+
+fn orchestrator_step_comment_matches_cycle(line: &str, expected_cycle: u64) -> bool {
+	match extract_cycle_marker(line) {
+		Some(found_cycle) => found_cycle == expected_cycle,
+		None => !line.contains("Cycle "),
+	}
+}
+
+fn extract_cycle_marker(line: &str) -> Option<u64> {
+	let cycle_fragment = line.split_once("Cycle ")?.1;
+	let digits: String = cycle_fragment
+		.chars()
+		.take_while(|ch| ch.is_ascii_digit())
+		.collect();
+	if digits.is_empty() {
+		None
+	} else {
+		digits.parse().ok()
 	}
 }
 
@@ -2975,7 +3016,7 @@ mod tests {
 	#[test]
 	fn run_pipeline_respects_cycle_override_for_step_comments() {
 		static COUNTER: AtomicU64 = AtomicU64::new(0);
-		const OVERRIDE_CYCLE: u64 = 254;
+		const OVERRIDE_CYCLE: u64 = 255;
 		const CURRENT_CYCLE: u64 = 258;
 		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
 		let root = std::env::temp_dir()
@@ -3086,7 +3127,7 @@ mod tests {
 					.copied()
 					.filter(|step| *step != "C5.1")
 					.collect::<Vec<_>>();
-				Ok(step_comment_bodies(OVERRIDE_CYCLE, &steps))
+				Ok(step_comment_bodies(OVERRIDE_CYCLE - 1, &steps))
 			}
 		}
 
@@ -3217,7 +3258,7 @@ mod tests {
 
 			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
 				assert_eq!(issue, 834);
-				Ok(step_comment_bodies(257, &["0", "0.5", "0.6", "1", "2", "3", "4", "5", "6"]))
+				Ok(step_comment_bodies(256, &["0", "0.5", "0.6", "1", "2", "3", "4", "5", "6"]))
 			}
 		}
 
@@ -3325,7 +3366,7 @@ mod tests {
 
 			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
 				assert_eq!(issue, 834);
-				Ok(step_comment_bodies(257, &EXPECTED_STEP_IDS))
+				Ok(step_comment_bodies(256, &EXPECTED_STEP_IDS))
 			}
 		}
 
@@ -3445,7 +3486,7 @@ mod tests {
 
 			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
 				assert_eq!(issue, 834);
-				Ok(step_comment_bodies(257, &EXPECTED_STEP_IDS))
+				Ok(step_comment_bodies(256, &EXPECTED_STEP_IDS))
 			}
 		}
 
@@ -3605,7 +3646,7 @@ mod tests {
 			"> **[main-orchestrator]** | Cycle 212 | Step 10\n\n### Duplicate\n"
 		);
 
-		let detected = collect_step_comment_ids(bodies);
+		let detected = collect_step_comment_ids(bodies, 212);
 
 		assert_eq!(detected.len(), 5);
 		assert!(detected.contains("0"));
@@ -3613,6 +3654,40 @@ mod tests {
 		assert!(detected.contains("1.1"));
 		assert!(detected.contains("C1"));
 		assert!(detected.contains("10"));
+	}
+
+	#[test]
+	fn step_comment_detection_ignores_orchestrator_comments_from_other_cycles() {
+		let bodies = concat!(
+			"> **[main-orchestrator]** | Cycle 315 | Step 0\n",
+			"> **[main-orchestrator]** | Cycle 316 | Step 0.5\n",
+			"> **[main-orchestrator]** | Cycle 316 | Step 1\n",
+			"> **[main-orchestrator]** | Cycle 317 | Step 2\n"
+		);
+
+		let detected = collect_step_comment_ids(bodies, 316);
+
+		assert_eq!(detected.len(), 2);
+		assert!(detected.contains("0.5"));
+		assert!(detected.contains("1"));
+		assert!(!detected.contains("0"));
+		assert!(!detected.contains("2"));
+	}
+
+	#[test]
+	fn step_comment_detection_keeps_old_heading_format_without_cycle_marker() {
+		let bodies = concat!(
+			"## Step 0: Start cycle\n",
+			"## Step 0.5: Validate state\n",
+			"> **[main-orchestrator]** | Cycle 315 | Step 1\n"
+		);
+
+		let detected = collect_step_comment_ids(bodies, 316);
+
+		assert_eq!(detected.len(), 2);
+		assert!(detected.contains("0"));
+		assert!(detected.contains("0.5"));
+		assert!(!detected.contains("1"));
 	}
 
 	#[test]
@@ -3661,15 +3736,15 @@ mod tests {
 			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
 				assert_eq!(issue, 834);
 				Ok(concat!(
-					"> **[main-orchestrator]** | Cycle 212 | Step 0\n",
-					"> **[main-orchestrator]** | Cycle 212 | Step 0.5\n",
-					"> **[main-orchestrator]** | Cycle 212 | Step 0.6\n",
-					"> **[main-orchestrator]** | Cycle 212 | Step 1\n",
-					"> **[main-orchestrator]** | Cycle 212 | Step 2\n",
-					"> **[main-orchestrator]** | Cycle 212 | Step 3\n",
-					"> **[main-orchestrator]** | Cycle 212 | Step 4\n",
-					"> **[main-orchestrator]** | Cycle 212 | Step 5\n",
-					"> **[main-orchestrator]** | Cycle 212 | Step 6\n"
+					"> **[main-orchestrator]** | Cycle 256 | Step 0\n",
+					"> **[main-orchestrator]** | Cycle 256 | Step 0.5\n",
+					"> **[main-orchestrator]** | Cycle 256 | Step 0.6\n",
+					"> **[main-orchestrator]** | Cycle 256 | Step 1\n",
+					"> **[main-orchestrator]** | Cycle 256 | Step 2\n",
+					"> **[main-orchestrator]** | Cycle 256 | Step 3\n",
+					"> **[main-orchestrator]** | Cycle 256 | Step 4\n",
+					"> **[main-orchestrator]** | Cycle 256 | Step 5\n",
+					"> **[main-orchestrator]** | Cycle 256 | Step 6\n"
 				)
 				.to_string())
 			}
@@ -3859,7 +3934,7 @@ mod tests {
 					.copied()
 					.filter(|step| *step != "C5.1")
 					.collect::<Vec<_>>();
-				Ok(step_comment_bodies(254, &steps))
+				Ok(step_comment_bodies(253, &steps))
 			}
 		}
 
@@ -3911,7 +3986,7 @@ mod tests {
 					.copied()
 					.filter(|step| *step != "C5.1")
 					.collect::<Vec<_>>();
-				Ok(step_comment_bodies(257, &steps))
+				Ok(step_comment_bodies(256, &steps))
 			}
 		}
 
@@ -3922,7 +3997,7 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("Cascade from cycle 257: step C5.1 was missing (already penalized)"));
+			.contains("Cascade from cycle 256: step C5.1 was missing (already penalized)"));
 		assert!(step
 			.detail
 			.as_deref()
@@ -3963,7 +4038,7 @@ mod tests {
 					.copied()
 					.filter(|step| *step != "C1")
 					.collect::<Vec<_>>();
-				Ok(step_comment_bodies(254, &steps))
+				Ok(step_comment_bodies(253, &steps))
 			}
 		}
 
@@ -3974,7 +4049,7 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("Cascade from cycle 254: step C1 was missing (already penalized)"));
+			.contains("Cascade from cycle 253: step C1 was missing (already penalized)"));
 		assert!(step
 			.detail
 			.as_deref()
@@ -4015,7 +4090,7 @@ mod tests {
 					.copied()
 					.filter(|step| *step != "C1" && *step != "C8")
 					.collect::<Vec<_>>();
-				Ok(step_comment_bodies(212, &steps))
+				Ok(step_comment_bodies(256, &steps))
 			}
 		}
 
@@ -4026,7 +4101,7 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("Cascade from cycle 257: steps C1, C8 were missing (already penalized)"));
+			.contains("Cascade from cycle 256: steps C1, C8 were missing (already penalized)"));
 		assert!(step
 			.detail
 			.as_deref()
@@ -4072,7 +4147,7 @@ mod tests {
 					.copied()
 					.filter(|step| *step != "0.6" && *step != "1.1")
 					.collect::<Vec<_>>();
-				Ok(step_comment_bodies(257, &steps))
+				Ok(step_comment_bodies(256, &steps))
 			}
 		}
 
@@ -4083,7 +4158,7 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("Cascade from cycle 257: steps 0.6, 1.1 were missing (already penalized)"));
+			.contains("Cascade from cycle 256: steps 0.6, 1.1 were missing (already penalized)"));
 		assert!(step
 			.detail
 			.as_deref()
@@ -4129,7 +4204,7 @@ mod tests {
 					.copied()
 					.filter(|step| *step != "0.1" && *step != "10" && *step != "C5.6")
 					.collect::<Vec<_>>();
-				Ok(step_comment_bodies(257, &steps))
+				Ok(step_comment_bodies(256, &steps))
 			}
 		}
 
@@ -4181,7 +4256,7 @@ mod tests {
 					.copied()
 					.filter(|step| *step != "C4.5")
 					.collect::<Vec<_>>();
-				Ok(step_comment_bodies(212, &steps))
+				Ok(step_comment_bodies(256, &steps))
 			}
 		}
 
@@ -4192,7 +4267,7 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("Cascade from cycle 257: step C4.5 was missing (already penalized)"));
+			.contains("Cascade from cycle 256: step C4.5 was missing (already penalized)"));
 		assert!(step
 			.detail
 			.as_deref()
@@ -4233,7 +4308,7 @@ mod tests {
 
 			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
 				assert_eq!(issue, 838);
-				Ok(step_comment_bodies(212, &EXPECTED_STEP_IDS))
+				Ok(step_comment_bodies(256, &EXPECTED_STEP_IDS))
 			}
 		}
 
@@ -4255,6 +4330,55 @@ mod tests {
 			.as_deref()
 			.unwrap_or_default()
 			.contains("missing optional [none]"));
+	}
+
+	#[test]
+	fn step_comment_verification_filters_previous_cycle_comments_by_cycle_number() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir()
+			.join(format!("pipeline-check-step-comments-cycle-filter-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 845,
+				"last_cycle": {
+					"number": 316
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct StepCommentRunner;
+
+		impl CommandRunner for StepCommentRunner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected in step comment verification test");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 845);
+				let previous_cycle_steps = EXPECTED_STEP_IDS
+					.iter()
+					.copied()
+					.filter(|step| *step != "0")
+					collect::<Vec<_>>();
+				let mut bodies = step_comment_bodies(315, &previous_cycle_steps);
+				bodies.push_str("> **[main-orchestrator]** | Cycle 316 | Step 0\n");
+				Ok(bodies)
+			}
+		}
+
+		let step = verify_step_comments(&root, 316, &StepCommentRunner);
+		assert_eq!(step.status, StepStatus::Fail);
+		assert_eq!(step.severity, Severity::Blocking);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("Cascade from cycle 315: step 0 was missing (already penalized)"));
 	}
 
 	#[test]
@@ -4385,6 +4509,71 @@ mod tests {
 		let detail = step.detail.as_deref().unwrap_or_default();
 		assert!(detail.contains("missing pre-gate mandatory steps [1.1, 3]"),
 			"expected missing steps 1.1 and 3, got: {}", detail);
+	}
+
+	#[test]
+	fn current_cycle_steps_rejects_mandatory_steps_from_other_cycles() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir()
+			.join(format!("pipeline-check-current-cycle-wrong-cycle-{}", run_id));
+		fs::create_dir_all(root.join("docs")).unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"previous_cycle_issue": 900,
+				"last_cycle": {
+					"number": 316,
+					"issue": 953
+				}
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		struct Runner;
+
+		impl CommandRunner for Runner {
+			fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+				panic!("tool wrapper execution not expected");
+			}
+
+			fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+				assert_eq!(issue, 953);
+				Ok(concat!(
+					"> **[main-orchestrator]** | Cycle 315 | Step 0\n",
+					"> **[main-orchestrator]** | Cycle 316 | Step 0.5\n",
+					"> **[main-orchestrator]** | Cycle 316 | Step 0.6\n",
+					"> **[main-orchestrator]** | Cycle 316 | Step 1\n",
+					"> **[main-orchestrator]** | Cycle 316 | Step 1.1\n",
+					"> **[main-orchestrator]** | Cycle 316 | Step 2\n",
+					"> **[main-orchestrator]** | Cycle 316 | Step 3\n",
+					"> **[main-orchestrator]** | Cycle 316 | Step 4\n",
+					"> **[main-orchestrator]** | Cycle 316 | Step 5\n",
+					"> **[main-orchestrator]** | Cycle 316 | Step 6\n",
+					"> **[main-orchestrator]** | Cycle 316 | Step 7\n",
+					"> **[main-orchestrator]** | Cycle 316 | Step 8\n",
+					"> **[main-orchestrator]** | Cycle 316 | Step 9\n",
+					"> **[main-orchestrator]** | Cycle 316 | Step C1\n",
+					"> **[main-orchestrator]** | Cycle 316 | Step C2\n",
+					"> **[main-orchestrator]** | Cycle 316 | Step C3\n",
+					"> **[main-orchestrator]** | Cycle 316 | Step C4.1\n",
+					"> **[main-orchestrator]** | Cycle 316 | Step C4.5\n",
+					"> **[main-orchestrator]** | Cycle 316 | Step C5\n",
+					"> **[main-orchestrator]** | Cycle 316 | Step C5.1\n"
+				)
+				.to_string())
+			}
+		}
+
+		let step = verify_current_cycle_step_comments(&root, 316, &Runner);
+		assert_eq!(step.status, StepStatus::Fail);
+		assert_eq!(step.severity, Severity::Blocking);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("missing pre-gate mandatory steps [0]"));
 	}
 
 	#[test]
