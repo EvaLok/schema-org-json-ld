@@ -4394,7 +4394,7 @@
       "dispatched_at": "2026-03-21T03:08:17Z",
       "issue": 1563,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed_without_pr",
       "title": "[Cycle Review] Cycle 324 end-of-cycle review"
     }
   ],
