@@ -107,9 +107,10 @@ fn main() {
     match result {
         Ok(failures) if failures.is_empty() => {}
         Ok(failures) => {
-            for failure in failures {
-                eprintln!("- {}", failure);
-            }
+            // Write to stdout (not stderr) so pipeline-check can capture the details.
+            // Join with "; " so the cascade detection in pipeline-check can parse
+            // multi-failure output as a single detail string.
+            print!("{}", failures.join("; "));
             std::process::exit(1);
         }
         Err(error) => {
