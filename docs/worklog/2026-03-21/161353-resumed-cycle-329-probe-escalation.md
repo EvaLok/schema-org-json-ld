@@ -1,13 +1,10 @@
-# Cycle 328 — 2026-03-21 12:15 UTC
+# Cycle 328 — 2026-03-21 16:13 UTC
 
 ## What was done
 
-- Probed Copilot availability ([#1576](https://github.com/EvaLok/schema-org-json-ld/issues/1576)) — 7th consecutive ruleset violation failure
-- Processed [audit #307](https://github.com/EvaLok/schema-org-json-ld-audit/issues/307): updated C6.1 self-review to require structured output format
-- Created audit-inbound [#1577](https://github.com/EvaLok/schema-org-json-ld/issues/1577)
-- Corrected dispatch_to_pr_rate metric (97.7% -> 97.8%)
-- Performed C6.1 fallback self-review with new structured format
-- Updated escalation [#1567](https://github.com/EvaLok/schema-org-json-ld/issues/1567) with 7th failure count
+- Probed Copilot availability ([#1582](https://github.com/EvaLok/schema-org-json-ld/issues/1582)) — 10th consecutive repository ruleset violation failure
+- Filed urgent escalation [#1583](https://github.com/EvaLok/schema-org-json-ld/issues/1583) (question-for-eva) with detailed diagnosis and remediation steps
+- Updated escalation [#1567](https://github.com/EvaLok/schema-org-json-ld/issues/1567) with 10th failure count
 
 ### PRs merged
 
@@ -15,30 +12,30 @@
 
 ### Issues processed
 
-- [#1576](https://github.com/EvaLok/schema-org-json-ld/issues/1576) (probe, failed)
-- [#1577](https://github.com/EvaLok/schema-org-json-ld/issues/1577) (audit-inbound, created)
+- [#1582](https://github.com/EvaLok/schema-org-json-ld/issues/1582) (probe, failed - Copilot ruleset violation)
+- [#1583](https://github.com/EvaLok/schema-org-json-ld/issues/1583) (question-for-eva, created - urgent escalation)
 
 ## Self-modifications
 
-- **`COMPLETION_CHECKLIST.md`**: Updated C6.1 self-review format for pipeline compatibility (per [audit #307](https://github.com/EvaLok/schema-org-json-ld-audit/issues/307))
-- **`tools/rust/crates/validate-docs/src/main.rs`**: Changed error output from stderr to stdout for pipeline-check cascade detection (resumed session)
+- **`COMPLETION_CHECKLIST.md`**: modified
+- **`tools/rust/crates/validate-docs/src/main.rs`**: modified
 
 ## Current state
 
 - **In-flight agent sessions**: 0
 - **Pipeline status**: PASS
-- **Copilot metrics**: 491 dispatches, 478 PRs, 468 merged, 97.9% merge rate
+- **Copilot metrics**: 492 dispatches, 478 PRs, 468 merged, 97.9% merge rate
 - **Publish gate**: published
 
 ## Next steps
 
-1. Probe Copilot availability each cycle until resolved
-2. If Copilot available, dispatch review or schema work
-3. If still failing, continue maintenance with self-review fallback
+1. Continue probing Copilot each cycle until resolved
+2. Monitor Eva response on [#1567](https://github.com/EvaLok/schema-org-json-ld/issues/1567) and [#1583](https://github.com/EvaLok/schema-org-json-ld/issues/1583)
+3. When Copilot returns, immediately dispatch accumulated review and schema work
 
 ## Commit receipts
 
-> Note: Scope: cycle 328 commits through cycle-complete — mode normal; phase close_out; receipt events: 2 reviews. Receipt table covers commits through cycle-complete (C5.1 snapshot). Post-C5.1 commits (docs, record-dispatch, review-body) are structurally excluded.
+> Note: Scope: cycle 328 commits through cycle-complete — mode normal; phase close_out; receipt events: 4 reviews. Receipt table covers commits through cycle-complete (C5.1 snapshot). Post-C5.1 commits (docs, record-dispatch, review-body) are structurally excluded.
 
 | Tool | Receipt | Link |
 |------|---------|------|
