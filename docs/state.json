@@ -4602,10 +4602,10 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 5,
+    "closed_without_pr": 6,
     "dispatch_log_latest": "#1563 [Cycle Review] Cycle 324 end-of-cycle review (cycle 324)",
     "dispatch_to_pr_rate": "98.8%",
-    "in_flight": 1,
+    "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
@@ -4840,7 +4840,7 @@
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
-        "last_refreshed": "cycle 314"
+        "last_refreshed": "cycle 325"
       },
       "total_enums": {
         "cadence": "after enum additions",
