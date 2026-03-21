@@ -4415,7 +4415,7 @@
       "dispatched_at": "2026-03-21T08:16:45Z",
       "issue": 1572,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "[Cycle Review] Cycle 327 end-of-cycle review"
     }
   ],
@@ -4625,14 +4625,14 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 8,
+    "closed_without_pr": 9,
     "dispatch_log_latest": "#1572 [Cycle Review] Cycle 327 end-of-cycle review (cycle 327)",
     "dispatch_to_pr_rate": "98.2%",
-    "in_flight": 1,
+    "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
-    "resolved": 486,
+    "resolved": 487,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 487
