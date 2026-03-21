@@ -4674,10 +4674,9 @@
     "total_dispatches": 492
   },
   "cycle_phase": {
-    "completed_at": "2026-03-21T16:10:36Z",
     "cycle": 328,
-    "phase": "complete",
-    "phase_entered_at": "2026-03-21T16:10:36Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-21T16:13:24Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -4945,13 +4944,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 127,
-    "issue": 1579,
+    "duration_minutes": 111,
+    "issue": 1581,
     "number": 328,
-    "summary": "1 dispatches, 0 merges",
-    "timestamp": "2026-03-21T14:22:19Z"
+    "summary": "1 dispatch (probe, failed), 0 merges",
+    "timestamp": "2026-03-21T16:13:24Z"
   },
-  "last_eva_comment_check": "2026-03-21T14:22:19Z",
+  "last_eva_comment_check": "2026-03-21T16:13:24Z",
   "last_tool_audit_cycle": 320,
   "open_questions_for_eva": [
     1567
