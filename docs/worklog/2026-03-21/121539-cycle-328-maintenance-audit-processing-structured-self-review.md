@@ -25,7 +25,7 @@
 ## Current state
 
 - **In-flight agent sessions**: 0
-- **Pipeline status**: WARN (housekeeping: 1 finding — just-created audit-inbound #1577)
+- **Pipeline status**: PASS
 - **Copilot metrics**: 489 dispatches, 478 PRs, 468 merged, 97.9% merge rate
 - **Publish gate**: published
 
