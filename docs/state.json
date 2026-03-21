@@ -4450,7 +4450,7 @@
       "dispatched_at": "2026-03-21T16:10:36Z",
       "issue": 1582,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "Copilot availability probe - cycle 329"
     }
   ],
@@ -4661,14 +4661,14 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 13,
-    "dispatch_log_latest": "#1582 Copilot availability probe - cycle 329 (cycle 328)",
+    "closed_without_pr": 14,
+    "dispatch_log_latest": "#1582 Copilot availability probe - cycle 329 (cycle 328, failed - ruleset violation)",
     "dispatch_to_pr_rate": "97.2%",
-    "in_flight": 1,
+    "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
-    "resolved": 491,
+    "resolved": 492,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 492
