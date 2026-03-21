@@ -4431,6 +4431,13 @@
       "model": "gpt-5.4",
       "status": "failed",
       "title": "Copilot availability probe — cycle 328"
+    },
+    {
+      "dispatched_at": "2026-03-21T12:34:27Z",
+      "issue": 1578,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 328 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -4641,16 +4648,16 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 11,
-    "dispatch_log_latest": "#1576 Copilot availability probe — cycle 328 (cycle 328)",
-    "dispatch_to_pr_rate": "97.8%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1578 [Cycle Review] Cycle 328 end-of-cycle review (cycle 328)",
+    "dispatch_to_pr_rate": "97.6%",
+    "in_flight": 1,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
     "resolved": 489,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 489
+    "total_dispatches": 490
   },
   "cycle_phase": {
     "cycle": 328,
@@ -7837,7 +7844,7 @@
     ],
     "last_review_cycle": 322
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 328,
   "schema_status": {
     "directory_layout": {
