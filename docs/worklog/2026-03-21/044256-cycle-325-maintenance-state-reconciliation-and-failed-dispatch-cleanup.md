@@ -41,3 +41,4 @@
 | cycle-325 | 6c1cfc9 | [6c1cfc9](https://github.com/EvaLok/schema-org-json-ld/commit/6c1cfc9) |
 | cycle-325 | eea2fcd | [eea2fcd](https://github.com/EvaLok/schema-org-json-ld/commit/eea2fcd) |
 | cycle-325 | b016300 | [b016300](https://github.com/EvaLok/schema-org-json-ld/commit/b016300) |
+| cycle-complete | 67854d1 | [67854d1](https://github.com/EvaLok/schema-org-json-ld/commit/67854d1) |
