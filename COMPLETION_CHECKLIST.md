@@ -14,7 +14,7 @@ Follow this checklist at the end of every orchestrator cycle. Do not skip steps.
 bash tools/cycle-runner close-out --issue {N}
 ```
 
-**Prerequisites**: Run `cycle-complete`, `write-entry worklog`, and `write-entry journal` before invoking close-out. The tool reads the cycle number from state.json (override with `--cycle N`).
+**Prerequisites**: Run `cycle-complete`, `write-entry worklog`, `write-entry journal`, AND post step C4.5 (ADR check) before invoking close-out. The C5.5 pipeline gate validates that C4.5 exists — if you skip it, close-out will fail at the gate. The tool reads the cycle number from state.json (override with `--cycle N`).
 
 **Gate handling**: Exits non-zero on C4.1 (doc validation) or C5.5 (pipeline) failure. Fix the issue and re-run — the tool is idempotent (detects already-committed docs, already-dispatched reviews, etc.).
 
@@ -285,6 +285,25 @@ Label the issue `agent-task` and `cycle-review`.
 **Important**: The next cycle consumes review findings by reading the review file from the merged PR (or from the PR branch if not yet merged).
 
 Post this step: `bash tools/post-step --issue {N} --step "C6" --title "Review dispatch" --body "..."`
+
+## C6.1. Fallback self-review (per [audit #305](https://github.com/EvaLok/schema-org-json-ld-audit/issues/305))
+
+If the C6 review dispatch fails (Copilot agent unavailable) AND the previous cycle's review dispatch also failed (2+ consecutive failures), perform a structured self-review as a fallback.
+
+**When to trigger**: 2+ consecutive review dispatch failures. The first failure is tolerated as transient; the second triggers this fallback to prevent a quality control gap.
+
+**Self-review checklist**:
+1. **Receipt verification**: run `bash tools/cycle-receipts` and verify all receipts match `git show <hash> --stat`
+2. **Step comment audit**: verify all mandatory steps posted on the cycle issue
+3. **State.json integrity**: run `bash tools/pipeline-check` and confirm all invariants pass
+4. **Worklog accuracy**: cross-reference worklog claims against actual git history
+5. **Complacency check**: are deferred items accumulating? Are we going through the motions?
+
+**Output**: Commit the self-review as `docs/reviews/cycle-NNN-self-review.md` with header: `# Self-review — independent review agent unavailable (N consecutive failures)`. The self-review is explicitly inferior to an independent review but prevents quality blind spots during Copilot outages.
+
+**Escalation**: If 2+ consecutive dispatches fail, file a `question-for-eva` immediately (not at 3 as previously configured).
+
+Post this step: `bash tools/post-step --issue {N} --step "C6.1" --title "Fallback self-review" --body "..."`
 
 ## C7. Commit review dispatch state and push
 
