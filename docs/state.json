@@ -4758,7 +4758,7 @@
       },
       "project_mode": {
         "cadence": "when mode or counter changes",
-        "last_refreshed": "cycle 317"
+        "last_refreshed": "cycle 323"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
@@ -4866,7 +4866,7 @@
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 316"
+        "last_refreshed": "cycle 323"
       }
     }
   },
