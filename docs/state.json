@@ -4403,6 +4403,13 @@
       "model": "gpt-5.4",
       "status": "closed_without_pr",
       "title": "[Cycle Review] Cycle 325 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-21T06:27:41Z",
+      "issue": 1568,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 326 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -4610,16 +4617,16 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 7,
-    "dispatch_log_latest": "#1565 [Cycle Review] Cycle 325 end-of-cycle review (cycle 325)",
-    "dispatch_to_pr_rate": "98.6%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1568 [Cycle Review] Cycle 326 end-of-cycle review (cycle 326)",
+    "dispatch_to_pr_rate": "98.4%",
+    "in_flight": 1,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
     "resolved": 485,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 485
+    "total_dispatches": 486
   },
   "cycle_phase": {
     "cycle": 326,
@@ -7804,7 +7811,7 @@
     ],
     "last_review_cycle": 322
   },
-  "review_dispatch_consecutive": 6,
+  "review_dispatch_consecutive": 7,
   "review_events_verified_through_cycle": 326,
   "schema_status": {
     "directory_layout": {
