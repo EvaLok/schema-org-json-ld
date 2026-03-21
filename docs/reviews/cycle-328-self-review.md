@@ -1,58 +1,31 @@
-# Self-review — independent review agent unavailable (7 consecutive failures)
+# Self-review — independent review agent unavailable (9 consecutive failures)
 
-**Cycle**: 328
+**Cycle**: 328 (resumed)
 **Date**: 2026-03-21
 **Reviewer**: Orchestrator (self-review fallback per C6.1)
 
-## Receipt verification
-
-Receipts collected via `bash tools/cycle-receipts --cycle 328`:
-
-| Step | Receipt | Message |
-|------|---------|---------|
-| cycle-start | f4b3966 | begin cycle 328, issue #1575 |
-| reconcile | 23648be | #1576 probe failed (7th consecutive ruleset violation) |
-| process-audit | 3100c85 | accepted audit #307, created audit-inbound #1577 |
-| derive-metrics | 9b954c8 | fix dispatch_to_pr_rate 97.7%->97.8% |
-
-All 4 receipts verified against `git log --oneline`. Each commit exists and its message matches the recorded operation.
-
-## Step comment audit
-
-Steps posted on #1575: 0, 0.5, 0.6, 1, 1.1, 2, 3, 4, 5, 6, 7, 8, 9 (13 steps). All mandatory startup steps covered. Close-out steps (C1-C8) will be posted during close-out sequence.
-
-## State.json integrity
-
-Pipeline check at time of review: 9/10 PASS, 1 expected FAIL (current-cycle-steps — mid-cycle). 1 WARN from housekeeping-scan (#1577 audit-inbound just created). derive-metrics now PASS after 97.7%->97.8% correction.
-
-State invariants: 15/16 pass, 1 warn (acceptable).
-
-## Worklog accuracy
-
-Git log confirms:
-- cycle-start at f4b3966 (correct)
-- Probe #1576 dispatched at 42a1834, failed and reconciled at 23648be (correct)
-- Audit #307 processed at 3100c85 (correct)
-- Metrics corrected at 9b954c8 (correct)
-
-No discrepancies between git history and worklog claims.
-
 ## Complacency Score: 2/5
 
-**Evidence**: This cycle performed productive work despite Copilot unavailability:
-- Probed Copilot availability (7th consecutive failure confirmed)
-- Processed new audit recommendation #307 with concrete COMPLETION_CHECKLIST.md changes
-- Corrected a metrics derivation error
-- All steps followed procedure without shortcuts
+**Evidence**: This resumed cycle identified and fixed a genuine bug (validate-docs writing to stderr instead of stdout, breaking pipeline cascade detection). This was proactive root-cause investigation, not routine maintenance. The fix was simple but the debugging was substantive. Additionally cleaned up stale state (duplicate worklog, in-flight count mismatch, stale audit-inbound). The Copilot outage limits what can be accomplished, but the cycle made productive use of available time.
 
-Score of 2/5 (low complacency) because: the cycle was maintenance-forced but the orchestrator used the time productively to improve process (structured self-review output). No signs of going through motions — the audit processing was substantive.
+**Deduction factors**: No schema implementation work (blocked by Copilot outage). Self-review is inherently less thorough than independent review.
 
-**Concern**: 7 consecutive maintenance-only cycles (322-328) forced by Copilot outage. While each cycle has been productive (audit processing, process improvements, state reconciliation), the inability to dispatch implementation work means the project is treading water on its secondary objective (schema type coverage). This is not complacency — it's a blocker that requires Eva's intervention.
+## 1. [tool-quality] validate-docs stderr/stdout mismatch was long-standing
 
-## 1. [process] Copilot outage duration exceeds any historical precedent
+**Evidence**: The bug has existed since validate-docs was created. All error output via `eprintln!` meant pipeline-check never received error details from validate-docs. The cascade detection logic was effectively dead code for this tool. Only discovered when the specific conditions triggered (close_out phase + pipeline mismatch + step-comments WARN).
 
-**Evidence**: 7 consecutive failures across cycles 322-328, spanning ~38+ hours. The Copilot agent has been completely unavailable since the last successful dispatch (#1558, merged 2026-03-20 22:17 UTC). Eva was notified at #1567 but has not responded.
+**Recommendation**: When building new Rust tools that are consumed by pipeline-check, verify that error details flow through stdout (which pipeline-check captures) not just stderr. Consider adding an integration test that verifies pipeline-check can parse validate-docs failure output. Finding actioned this cycle (fix committed at 2bc396b).
 
-**Recommendation**: Continue probing each cycle. No action available to the orchestrator beyond escalation (already done). If the outage persists for 10+ consecutive failures, consider creating a second `question-for-eva` with higher urgency.
+## 2. [state-hygiene] Duplicate worklog files from previous cycle
 
-## Summary: 1 findings (0 actioned, 1 deferred, 0 ignored)
+**Evidence**: Two worklog files existed for cycle 328 with the same timestamp prefix (121539) but different names. One lacked the cycle number prefix in the filename. This caused confusion about which file pipeline-check was validating, and the journal linked to the wrong one.
+
+**Recommendation**: The write-entry tool should check for existing files with the same timestamp prefix before creating a new one. Deferred: requires Copilot to implement.
+
+## 3. [process-adherence] Copilot outage at 9 consecutive failures
+
+**Evidence**: 9 consecutive failures across cycles 322-328 (multiple sessions), spanning ~40+ hours. The Copilot agent has been completely unavailable since the last successful dispatch (#1558, merged 2026-03-20 22:17 UTC). Eva was notified at #1567 but has not responded.
+
+**Recommendation**: Continue probing each cycle. Next cycle marks the 10th failure threshold for higher-urgency escalation.
+
+## Summary: 3 findings (1 actioned, 2 deferred, 0 ignored)

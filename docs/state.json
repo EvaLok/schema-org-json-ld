@@ -4667,10 +4667,9 @@
     "total_dispatches": 491
   },
   "cycle_phase": {
-    "completed_at": "2026-03-21T14:20:40Z",
     "cycle": 328,
-    "phase": "complete",
-    "phase_entered_at": "2026-03-21T14:20:40Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-21T14:22:19Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -4938,13 +4937,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 9,
-    "issue": 1575,
+    "duration_minutes": 127,
+    "issue": 1579,
     "number": 328,
-    "summary": "Maintenance cycle: probed Copilot (7th consecutive failure), processed audit #307 (C6.1 structured output), performed self-review",
-    "timestamp": "2026-03-21T12:15:15Z"
+    "summary": "1 dispatches, 0 merges",
+    "timestamp": "2026-03-21T14:22:19Z"
   },
-  "last_eva_comment_check": "2026-03-21T12:15:15Z",
+  "last_eva_comment_check": "2026-03-21T14:22:19Z",
   "last_tool_audit_cycle": 320,
   "open_questions_for_eva": [
     1567
