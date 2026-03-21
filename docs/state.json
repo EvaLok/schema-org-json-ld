@@ -4429,7 +4429,7 @@
       "dispatched_at": "2026-03-21T12:09:15Z",
       "issue": 1576,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "Copilot availability probe — cycle 328"
     }
   ],
@@ -4639,14 +4639,14 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 10,
+    "closed_without_pr": 11,
     "dispatch_log_latest": "#1576 Copilot availability probe — cycle 328 (cycle 328)",
-    "dispatch_to_pr_rate": "97.8%",
-    "in_flight": 1,
+    "dispatch_to_pr_rate": "97.7%",
+    "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
-    "resolved": 488,
+    "resolved": 489,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 489
