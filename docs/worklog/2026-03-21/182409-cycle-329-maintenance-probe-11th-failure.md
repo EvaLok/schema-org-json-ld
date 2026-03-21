@@ -14,16 +14,18 @@
 ### Issues processed
 
 - [#1585](https://github.com/EvaLok/schema-org-json-ld/issues/1585) (probe, failed - Copilot ruleset violation)
+- [#1586](https://github.com/EvaLok/schema-org-json-ld/issues/1586) (cycle-review, failed - Copilot ruleset violation)
 
 ## Self-modifications
 
-- None.
+- **`tools/rust/crates/post-step/src/main.rs`**: Added C6.5 to VALID_STEP_IDS (was missing, blocking close-out)
+- **`tools/rust/crates/pipeline-check/src/main.rs`**: Added C6.5 to POST_GATE_STEP_IDS for proper classification
 
 ## Current state
 
-- **In-flight agent sessions**: 1
+- **In-flight agent sessions**: 0
 - **Pipeline status**: PASS
-- **Copilot metrics**: 494 dispatches, 478 PRs, 468 merged, 97.9% merge rate
+- **Copilot metrics**: 494 dispatches, 478 PRs, 468 merged, 97.9% merge rate (2 dispatches this cycle, both failed)
 - **Publish gate**: published
 
 ## Next steps

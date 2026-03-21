@@ -4464,7 +4464,7 @@
       "dispatched_at": "2026-03-21T18:26:34Z",
       "issue": 1586,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "[Cycle Review] Cycle 329 end-of-cycle review"
     }
   ],
@@ -4675,14 +4675,14 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 15,
-    "dispatch_log_latest": "#1586 [Cycle Review] Cycle 329 end-of-cycle review (cycle 329)",
+    "closed_without_pr": 16,
+    "dispatch_log_latest": "#1586 [Cycle Review] Cycle 329 end-of-cycle review (cycle 329, failed)",
     "dispatch_to_pr_rate": "96.8%",
-    "in_flight": 1,
+    "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
-    "resolved": 493,
+    "resolved": 494,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 494
