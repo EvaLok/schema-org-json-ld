@@ -27,7 +27,7 @@
 
 - **In-flight agent sessions**: 0
 - **Pipeline status**: PASS
-- **Copilot metrics**: 491 dispatches, 478 PRs, 468 merged, 97.9% merge rate
+- **Copilot metrics**: 492 dispatches, 478 PRs, 468 merged, 97.9% merge rate
 - **Publish gate**: published
 
 ## Next steps
