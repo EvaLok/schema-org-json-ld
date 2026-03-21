@@ -4417,6 +4417,13 @@
       "model": "gpt-5.4",
       "status": "failed",
       "title": "[Cycle Review] Cycle 327 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-21T10:09:32Z",
+      "issue": 1574,
+      "model": "gpt-5.4",
+      "status": "failed",
+      "title": "[Probe] Copilot availability check"
     }
   ],
   "audit_dropped": [
@@ -4625,17 +4632,17 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 9,
-    "dispatch_log_latest": "#1572 [Cycle Review] Cycle 327 end-of-cycle review (cycle 327)",
-    "dispatch_to_pr_rate": "98.2%",
+    "closed_without_pr": 10,
+    "dispatch_log_latest": "#1574 [Probe] Copilot availability check (cycle 327)",
+    "dispatch_to_pr_rate": "98.0%",
     "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
-    "resolved": 487,
+    "resolved": 488,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 487
+    "total_dispatches": 488
   },
   "cycle_phase": {
     "cycle": 327,
