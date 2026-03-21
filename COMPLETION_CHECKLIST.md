@@ -299,7 +299,19 @@ If the C6 review dispatch fails (Copilot agent unavailable) AND the previous cyc
 4. **Worklog accuracy**: cross-reference worklog claims against actual git history
 5. **Complacency check**: are deferred items accumulating? Are we going through the motions?
 
-**Output**: Commit the self-review as `docs/reviews/cycle-NNN-self-review.md` with header: `# Self-review — independent review agent unavailable (N consecutive failures)`. The self-review is explicitly inferior to an independent review but prevents quality blind spots during Copilot outages.
+**Output format** (per [audit #307](https://github.com/EvaLok/schema-org-json-ld-audit/issues/307)): Commit the self-review as `docs/reviews/cycle-NNN-self-review.md`. The output MUST use structured format compatible with the review data pipeline:
+
+1. **Header**: `# Self-review — independent review agent unavailable (N consecutive failures)`
+2. **Complacency score**: Include a `## Complacency Score: N/5` section with evidence justification (matching independent review format). Always assign a numeric score 1-5.
+3. **Structured findings**: Any concerns must use the standard format:
+   ```
+   ## N. [category] Title
+   **Evidence**: ...
+   **Recommendation**: ...
+   ```
+4. **Summary counts**: End with `## Summary: N findings (A actioned, D deferred, I ignored)` to enable `process-review` consumption.
+
+The self-review is explicitly inferior to an independent review but prevents quality blind spots AND data pipeline gaps during Copilot outages.
 
 **Escalation**: If 2+ consecutive dispatches fail, file a `question-for-eva` immediately (not at 3 as previously configured).
 
