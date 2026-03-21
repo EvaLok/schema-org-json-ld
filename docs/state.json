@@ -4831,7 +4831,7 @@
       },
       "project_mode": {
         "cadence": "when mode or counter changes",
-        "last_refreshed": "cycle 323"
+        "last_refreshed": "cycle 329"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
@@ -4939,16 +4939,16 @@
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 323"
+        "last_refreshed": "cycle 329"
       }
     }
   },
   "last_cycle": {
     "duration_minutes": 111,
-    "issue": 1584,
-    "number": 329,
+    "issue": 1581,
+    "number": 328,
     "summary": "1 dispatch (probe, failed), 0 merges",
-    "timestamp": "2026-03-21T18:08:33Z"
+    "timestamp": "2026-03-21T16:13:24Z"
   },
   "last_eva_comment_check": "2026-03-21T18:08:33Z",
   "last_tool_audit_cycle": 320,
