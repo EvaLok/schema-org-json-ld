@@ -20,7 +20,7 @@ const CURRENT_CYCLE_STEPS_STEP_NAME: &str = "current-cycle-steps";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 // Steps that have not been posted yet when pipeline-check runs at C5.5.
 // These are excluded from the current-cycle mandatory step check.
-const POST_GATE_STEP_IDS: &[&str] = &["C5.5", "C5.6", "C6", "C7", "C8"];
+const POST_GATE_STEP_IDS: &[&str] = &["C5.5", "C5.6", "C6", "C6.5", "C7", "C8"];
 const STEP_COMMENT_THRESHOLD: usize = 17;
 const ORCHESTRATOR_SIGNATURE: &str = "> **[main-orchestrator]**";
 const MANDATORY_STEPS: &[(&str, u64)] = &[
