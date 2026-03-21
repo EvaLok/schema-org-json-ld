@@ -4438,6 +4438,13 @@
       "model": "gpt-5.4",
       "status": "failed",
       "title": "[Cycle Review] Cycle 328 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-21T14:20:40Z",
+      "issue": 1580,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Probe] Copilot availability check - cycle 328 resumed"
     }
   ],
   "audit_dropped": [
@@ -4648,21 +4655,22 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 12,
-    "dispatch_log_latest": "#1578 [Cycle Review] Cycle 328 end-of-cycle review (cycle 328)",
-    "dispatch_to_pr_rate": "97.6%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1580 [Probe] Copilot availability check - cycle 328 resumed (cycle 328)",
+    "dispatch_to_pr_rate": "97.4%",
+    "in_flight": 1,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
     "resolved": 490,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 490
+    "total_dispatches": 491
   },
   "cycle_phase": {
+    "completed_at": "2026-03-21T14:20:40Z",
     "cycle": 328,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-21T12:15:15Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-21T14:20:40Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -7844,7 +7852,7 @@
     ],
     "last_review_cycle": 322
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 328,
   "schema_status": {
     "directory_layout": {
