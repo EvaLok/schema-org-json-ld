@@ -4485,7 +4485,7 @@
       "dispatched_at": "2026-03-22T00:16:19Z",
       "issue": 1592,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "Copilot probe (cycle 331, 14th consecutive failure)"
     }
   ],
@@ -4696,22 +4696,22 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 18,
+    "closed_without_pr": 19,
     "dispatch_log_latest": "#1592 Copilot probe (cycle 331, 14th consecutive failure) (cycle 331)",
     "dispatch_to_pr_rate": "96.2%",
-    "in_flight": 1,
+    "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
-    "resolved": 496,
+    "resolved": 497,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 497
   },
   "cycle_phase": {
     "cycle": 331,
-    "phase": "work",
-    "phase_entered_at": "2026-03-22T00:12:26Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-22T00:20:00Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -4979,13 +4979,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 7,
+    "duration_minutes": 6,
     "issue": 1591,
     "number": 331,
-    "summary": "Maintenance cycle: 13th consecutive Copilot probe failure (ruleset violation), field inventory refresh, state maintenance",
-    "timestamp": "2026-03-22T00:12:25Z"
+    "summary": "Maintenance cycle: 14th consecutive Copilot probe failure (ruleset violation), field inventory refresh, state maintenance",
+    "timestamp": "2026-03-22T00:18:06Z"
   },
-  "last_eva_comment_check": "2026-03-22T00:12:25Z",
+  "last_eva_comment_check": "2026-03-22T00:18:06Z",
   "last_tool_audit_cycle": 320,
   "open_questions_for_eva": [
     1583,
@@ -7895,7 +7895,7 @@
     "last_review_cycle": 322
   },
   "review_dispatch_consecutive": 0,
-  "review_events_verified_through_cycle": 330,
+  "review_events_verified_through_cycle": 331,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
