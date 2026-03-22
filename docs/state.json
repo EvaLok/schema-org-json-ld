@@ -4520,7 +4520,7 @@
       "dispatched_at": "2026-03-22T06:29:42Z",
       "issue": 1600,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "[Cycle Review] Cycle 333 end-of-cycle review"
     }
   ],
@@ -4731,7 +4731,7 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 23,
+    "closed_without_pr": 24,
     "dispatch_log_latest": "#1600 [Cycle Review] Cycle 333 end-of-cycle review (cycle 333)",
     "dispatch_to_pr_rate": "95.2%",
     "in_flight": 1,
