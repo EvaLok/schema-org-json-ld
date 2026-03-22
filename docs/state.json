@@ -4492,7 +4492,7 @@
       "dispatched_at": "2026-03-22T03:05:17Z",
       "issue": 1594,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "Copilot probe (cycle 332, 15th consecutive failure)"
     }
   ],
@@ -4703,22 +4703,22 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 19,
+    "closed_without_pr": 20,
     "dispatch_log_latest": "#1594 Copilot probe (cycle 332, 15th consecutive failure) (cycle 332)",
     "dispatch_to_pr_rate": "96.0%",
-    "in_flight": 1,
+    "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
-    "resolved": 497,
+    "resolved": 498,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 498
   },
   "cycle_phase": {
     "cycle": 332,
-    "phase": "work",
-    "phase_entered_at": "2026-03-22T03:01:52Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-22T03:06:23Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -4833,7 +4833,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 330"
+        "last_refreshed": "cycle 332"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -4845,7 +4845,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 330"
+        "last_refreshed": "cycle 332"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -4853,7 +4853,7 @@
       },
       "last_tool_audit_cycle": {
         "cadence": "every 10 cycles",
-        "last_refreshed": "cycle 321"
+        "last_refreshed": "cycle 332"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
@@ -4865,7 +4865,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 330"
+        "last_refreshed": "cycle 332"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -4877,7 +4877,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 330"
+        "last_refreshed": "cycle 332"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -4893,7 +4893,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 330"
+        "last_refreshed": "cycle 332"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -4901,11 +4901,11 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 330"
+        "last_refreshed": "cycle 332"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 330"
+        "last_refreshed": "cycle 332"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -4913,7 +4913,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 330"
+        "last_refreshed": "cycle 332"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -4986,13 +4986,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 6,
+    "duration_minutes": 5,
     "issue": 1593,
     "number": 332,
-    "summary": "Maintenance cycle: 14th consecutive Copilot probe failure (ruleset violation), field inventory refresh, state maintenance",
-    "timestamp": "2026-03-22T03:01:52Z"
+    "summary": "Maintenance cycle: 15th consecutive Copilot probe failure (ruleset violation)",
+    "timestamp": "2026-03-22T03:06:23Z"
   },
-  "last_eva_comment_check": "2026-03-22T03:01:52Z",
+  "last_eva_comment_check": "2026-03-22T03:06:23Z",
   "last_tool_audit_cycle": 320,
   "open_questions_for_eva": [
     1583,
