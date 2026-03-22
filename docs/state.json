@@ -4571,9 +4571,10 @@
     },
     {
       "dispatched_at": "2026-03-22T18:14:24Z",
+      "failure_reason": "repository_ruleset_violation",
       "issue": 1615,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed_without_pr",
       "title": "Copilot connectivity probe — cycle 336 (24th consecutive failure)"
     }
   ],
@@ -4786,17 +4787,17 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 30,
+    "closed_without_pr": 31,
     "dispatch_log_latest": "#1615 Copilot connectivity probe — cycle 336 (24th consecutive failure) (cycle 336)",
-    "dispatch_to_pr_rate": "93.9%",
-    "in_flight": 1,
+    "dispatch_to_pr_rate": "93.7%",
+    "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
-    "resolved": 508,
+    "resolved": 509,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 509
+    "total_dispatches": 510
   },
   "cycle_phase": {
     "cycle": 336,
