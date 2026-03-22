@@ -4735,11 +4735,11 @@
     "closed_without_pr": 24,
     "dispatch_log_latest": "#1600 [Cycle Review] Cycle 333 end-of-cycle review (cycle 333)",
     "dispatch_to_pr_rate": "95.2%",
-    "in_flight": 1,
+    "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
-    "resolved": 501,
+    "resolved": 502,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 502
