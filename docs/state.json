@@ -4592,6 +4592,13 @@
       "model": "gpt-5.4",
       "status": "closed_without_pr",
       "title": "Copilot probe #26 (FAQ stub)"
+    },
+    {
+      "dispatched_at": "2026-03-22T22:15:44Z",
+      "issue": 1620,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 337 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -4804,16 +4811,16 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 33,
-    "dispatch_log_latest": "#1619 Copilot probe #26 (FAQ stub) (cycle 337)",
-    "dispatch_to_pr_rate": "93.5%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1620 [Cycle Review] Cycle 337 end-of-cycle review (cycle 337)",
+    "dispatch_to_pr_rate": "93.4%",
+    "in_flight": 1,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
     "resolved": 511,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 511
+    "total_dispatches": 512
   },
   "cycle_phase": {
     "cycle": 337,
@@ -8001,7 +8008,7 @@
     ],
     "last_review_cycle": 322
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 336,
   "schema_status": {
     "directory_layout": {
