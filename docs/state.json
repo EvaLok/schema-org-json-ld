@@ -5047,13 +5047,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 8,
-    "issue": 1606,
+    "duration_minutes": 118,
+    "issue": 1609,
     "number": 334,
-    "summary": "21st consecutive Copilot failure (probe #1608). Repository ruleset violation continues. ~68 hour outage across 13 unique cycles. Processed audit #311.",
-    "timestamp": "2026-03-22T12:17:15Z"
+    "summary": "22nd consecutive Copilot failure (probe #1610). Repository ruleset violation continues. ~70+ hour outage across 14 unique cycles.",
+    "timestamp": "2026-03-22T14:15:20Z"
   },
-  "last_eva_comment_check": "2026-03-22T12:17:15Z",
+  "last_eva_comment_check": "2026-03-22T14:15:20Z",
   "last_tool_audit_cycle": 320,
   "open_questions_for_eva": [
     1583,
