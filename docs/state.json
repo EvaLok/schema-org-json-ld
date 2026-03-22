@@ -4480,6 +4480,13 @@
       "model": "gpt-5.4",
       "status": "failed",
       "title": "Probe: Copilot availability check (cycle 330)"
+    },
+    {
+      "dispatched_at": "2026-03-22T00:16:19Z",
+      "issue": 1592,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Copilot probe (cycle 331, 14th consecutive failure)"
     }
   ],
   "audit_dropped": [
@@ -4690,16 +4697,16 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 18,
-    "dispatch_log_latest": "#1590 Probe: Copilot availability check (cycle 330) (cycle 330)",
-    "dispatch_to_pr_rate": "96.4%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1592 Copilot probe (cycle 331, 14th consecutive failure) (cycle 331)",
+    "dispatch_to_pr_rate": "96.2%",
+    "in_flight": 1,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
     "resolved": 496,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 496
+    "total_dispatches": 497
   },
   "cycle_phase": {
     "cycle": 331,
@@ -4802,15 +4809,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 330"
+        "last_refreshed": "cycle 331"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 330"
+        "last_refreshed": "cycle 331"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 330"
+        "last_refreshed": "cycle 331"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
@@ -4883,7 +4890,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 324"
+        "last_refreshed": "cycle 331"
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
@@ -4907,7 +4914,7 @@
       },
       "schema_status.planned_next": {
         "cadence": "after planning or completing types",
-        "last_refreshed": "cycle 320"
+        "last_refreshed": "cycle 331"
       },
       "schema_status.property_gap_audit": {
         "cadence": "after property gap fixes",
@@ -4963,7 +4970,7 @@
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
-        "last_refreshed": "cycle 320"
+        "last_refreshed": "cycle 331"
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
