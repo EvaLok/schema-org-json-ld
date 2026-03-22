@@ -4534,7 +4534,7 @@
       "dispatched_at": "2026-03-22T10:08:35Z",
       "issue": 1605,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "Copilot probe 20th consecutive failure"
     }
   ],
@@ -4746,14 +4746,14 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 25,
+    "closed_without_pr": 26,
     "dispatch_log_latest": "#1605 Copilot probe 20th consecutive failure (cycle 333)",
     "dispatch_to_pr_rate": "94.8%",
-    "in_flight": 1,
+    "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
-    "resolved": 503,
+    "resolved": 504,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 504
