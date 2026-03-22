@@ -4576,6 +4576,13 @@
       "model": "gpt-5.4",
       "status": "closed_without_pr",
       "title": "Copilot connectivity probe — cycle 336 (24th consecutive failure)"
+    },
+    {
+      "dispatched_at": "2026-03-22T20:09:05Z",
+      "issue": 1617,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Copilot probe 25th consecutive — failed (ruleset violation)"
     }
   ],
   "audit_dropped": [
@@ -4788,21 +4795,22 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 31,
-    "dispatch_log_latest": "#1615 Copilot connectivity probe — cycle 336 (24th consecutive failure) (cycle 336)",
-    "dispatch_to_pr_rate": "93.9%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1617 Copilot probe 25th consecutive — failed (ruleset violation) (cycle 336)",
+    "dispatch_to_pr_rate": "93.7%",
+    "in_flight": 1,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
     "resolved": 509,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 509
+    "total_dispatches": 510
   },
   "cycle_phase": {
+    "completed_at": "2026-03-22T20:09:05Z",
     "cycle": 336,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-22T18:18:12Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-22T20:09:05Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
