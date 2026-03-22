@@ -4546,9 +4546,11 @@
     },
     {
       "dispatched_at": "2026-03-22T14:12:17Z",
+      "closed_at": "2026-03-22T14:13:24Z",
+      "failure_reason": "repository_ruleset_violation",
       "issue": 1610,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed_without_pr",
       "title": "Copilot probe 22"
     }
   ],
@@ -4761,14 +4763,14 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 27,
+    "closed_without_pr": 28,
     "dispatch_log_latest": "#1610 Copilot probe 22 (cycle 334)",
     "dispatch_to_pr_rate": "94.5%",
-    "in_flight": 1,
+    "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
-    "resolved": 505,
+    "resolved": 506,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 506
