@@ -4522,6 +4522,13 @@
       "model": "gpt-5.4",
       "status": "failed",
       "title": "[Cycle Review] Cycle 333 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-22T08:15:31Z",
+      "issue": 1603,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Copilot probe (cycle 333, 19th consecutive test)"
     }
   ],
   "audit_dropped": [
@@ -4733,21 +4740,22 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 24,
-    "dispatch_log_latest": "#1600 [Cycle Review] Cycle 333 end-of-cycle review (cycle 333)",
-    "dispatch_to_pr_rate": "95.2%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1603 Copilot probe (cycle 333, 19th consecutive test) (cycle 333)",
+    "dispatch_to_pr_rate": "95.0%",
+    "in_flight": 1,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
     "resolved": 502,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 502
+    "total_dispatches": 503
   },
   "cycle_phase": {
+    "completed_at": "2026-03-22T08:15:31Z",
     "cycle": 333,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-22T06:24:52Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-22T08:15:31Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -7930,7 +7938,7 @@
     ],
     "last_review_cycle": 322
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 333,
   "schema_status": {
     "directory_layout": {
