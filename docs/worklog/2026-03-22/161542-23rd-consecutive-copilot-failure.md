@@ -46,3 +46,4 @@
 | probe-failed | 1589034 | [1589034](https://github.com/EvaLok/schema-org-json-ld/commit/1589034) |
 | cycle-complete | 1042529 | [1042529](https://github.com/EvaLok/schema-org-json-ld/commit/1042529) |
 | record-dispatch | c271b7e | [c271b7e](https://github.com/EvaLok/schema-org-json-ld/commit/c271b7e) |
+| state-invariants | d8dca97 | [d8dca97](https://github.com/EvaLok/schema-org-json-ld/commit/d8dca97) |
