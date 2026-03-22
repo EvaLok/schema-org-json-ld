@@ -4738,8 +4738,8 @@
   },
   "cycle_phase": {
     "cycle": 333,
-    "phase": "work",
-    "phase_entered_at": "2026-03-22T06:18:50Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-22T06:24:52Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -4854,7 +4854,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 332"
+        "last_refreshed": "cycle 333"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -4866,7 +4866,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 332"
+        "last_refreshed": "cycle 333"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -4886,7 +4886,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 332"
+        "last_refreshed": "cycle 333"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -4898,7 +4898,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 332"
+        "last_refreshed": "cycle 333"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -4914,7 +4914,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 332"
+        "last_refreshed": "cycle 333"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -4922,11 +4922,11 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 332"
+        "last_refreshed": "cycle 333"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 332"
+        "last_refreshed": "cycle 333"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -4934,7 +4934,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 332"
+        "last_refreshed": "cycle 333"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -5007,13 +5007,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 100,
+    "duration_minutes": 6,
     "issue": 1598,
     "number": 333,
-    "summary": "Resumed cycle 332: 17th consecutive Copilot probe failure (ruleset violation), closed failed review #1595 and probe #1597",
-    "timestamp": "2026-03-22T06:18:50Z"
+    "summary": "18th consecutive Copilot probe failure (ruleset violation), dispatched #1599, updated escalation #1567",
+    "timestamp": "2026-03-22T06:24:52Z"
   },
-  "last_eva_comment_check": "2026-03-22T06:18:50Z",
+  "last_eva_comment_check": "2026-03-22T06:24:52Z",
   "last_tool_audit_cycle": 320,
   "open_questions_for_eva": [
     1583,
