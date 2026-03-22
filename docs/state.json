@@ -4555,16 +4555,18 @@
     },
     {
       "dispatched_at": "2026-03-22T14:21:48Z",
+      "failure_reason": "repository_ruleset_violation",
       "issue": 1611,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed_without_pr",
       "title": "[Cycle Review] Cycle 334 end-of-cycle review"
     },
     {
       "dispatched_at": "2026-03-22T16:12:52Z",
+      "failure_reason": "repository_ruleset_violation",
       "issue": 1613,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed_without_pr",
       "title": "Copilot probe: 23rd consecutive failure test"
     }
   ],
@@ -4777,14 +4779,14 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 28,
+    "closed_without_pr": 30,
     "dispatch_log_latest": "#1613 Copilot probe: 23rd consecutive failure test (cycle 335)",
     "dispatch_to_pr_rate": "94.1%",
-    "in_flight": 2,
+    "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
-    "resolved": 506,
+    "resolved": 508,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 508
