@@ -4585,10 +4585,12 @@
       "title": "Copilot probe 25th consecutive — failed (ruleset violation)"
     },
     {
+      "closed_at": "2026-03-22T22:08:30Z",
       "dispatched_at": "2026-03-22T22:09:47Z",
+      "failure_reason": "repository_ruleset_violation",
       "issue": 1619,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed_without_pr",
       "title": "Copilot probe #26 (FAQ stub)"
     }
   ],
@@ -4801,14 +4803,14 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 32,
+    "closed_without_pr": 33,
     "dispatch_log_latest": "#1619 Copilot probe #26 (FAQ stub) (cycle 337)",
-    "dispatch_to_pr_rate": "93.5%",
-    "in_flight": 1,
+    "dispatch_to_pr_rate": "93.3%",
+    "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
-    "resolved": 510,
+    "resolved": 511,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 511
