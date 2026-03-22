@@ -4709,10 +4709,9 @@
     "total_dispatches": 497
   },
   "cycle_phase": {
-    "completed_at": "2026-03-22T00:22:00Z",
-    "cycle": 331,
-    "phase": "complete",
-    "phase_entered_at": "2026-03-22T00:22:00Z"
+    "cycle": 332,
+    "phase": "work",
+    "phase_entered_at": "2026-03-22T03:01:52Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -4822,7 +4821,7 @@
       },
       "cycle_phase": {
         "cadence": "every phase transition",
-        "last_refreshed": "cycle 331",
+        "last_refreshed": "cycle 332",
         "notes": "Tracks cycle, phase, phase_entered_at, and completed_at when phase is complete."
       },
       "eva_input_issues.closed_this_cycle": {
@@ -4835,7 +4834,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 331"
+        "last_refreshed": "cycle 332"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -4843,7 +4842,7 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 331"
+        "last_refreshed": "cycle 332"
       },
       "last_tool_audit_cycle": {
         "cadence": "every 10 cycles",
@@ -4851,7 +4850,7 @@
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 331"
+        "last_refreshed": "cycle 332"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -4863,7 +4862,7 @@
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 331"
+        "last_refreshed": "cycle 332"
       },
       "project_mode": {
         "cadence": "when mode or counter changes",
@@ -4981,12 +4980,12 @@
   },
   "last_cycle": {
     "duration_minutes": 6,
-    "issue": 1591,
-    "number": 331,
+    "issue": 1593,
+    "number": 332,
     "summary": "Maintenance cycle: 14th consecutive Copilot probe failure (ruleset violation), field inventory refresh, state maintenance",
-    "timestamp": "2026-03-22T00:18:06Z"
+    "timestamp": "2026-03-22T03:01:52Z"
   },
-  "last_eva_comment_check": "2026-03-22T00:18:06Z",
+  "last_eva_comment_check": "2026-03-22T03:01:52Z",
   "last_tool_audit_cycle": 320,
   "open_questions_for_eva": [
     1583,
@@ -4998,7 +4997,7 @@
     "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
     "started_at": "cycle 199"
   },
-  "previous_cycle_issue": 1589,
+  "previous_cycle_issue": 1591,
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
     "burn_in_target": 6,
