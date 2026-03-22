@@ -1,14 +1,10 @@
-# Cycle 333 — 2026-03-22 08:18 UTC
+# Cycle 333 — 2026-03-22 10:10 UTC
 
 ## What was done
 
-- Processed audit outbound [#309](https://github.com/EvaLok/schema-org-json-ld/issues/309) (self-review artifact gap for cycles 329-332)
-- Created self-review artifact: docs/reviews/cycle-333-self-review.md
-- Created audit-inbound [#1602](https://github.com/EvaLok/schema-org-json-ld/issues/1602) acknowledging [#309](https://github.com/EvaLok/schema-org-json-ld/issues/309)
-- Closed failed review [#1600](https://github.com/EvaLok/schema-org-json-ld/issues/1600) (19th Copilot failure)
-- Dispatched and closed probe [#1603](https://github.com/EvaLok/schema-org-json-ld/issues/1603) (19th consecutive Copilot failure)
-- Reconciled copilot_metrics after [#1600](https://github.com/EvaLok/schema-org-json-ld/issues/1600) failure
-- Updated escalation issue [#1567](https://github.com/EvaLok/schema-org-json-ld/issues/1567) with 19th failure
+- Dispatched probe [#1605](https://github.com/EvaLok/schema-org-json-ld/issues/1605) (20th consecutive Copilot failure) — failed immediately due to repository ruleset violation
+- Updated escalation issue [#1567](https://github.com/EvaLok/schema-org-json-ld/issues/1567) with 20th failure
+- Updated copilot_metrics: closed_without_pr 25→26, resolved 503→504
 
 ### PRs merged
 
@@ -16,27 +12,24 @@
 
 ### Issues processed
 
-- [#1600](https://github.com/EvaLok/schema-org-json-ld/issues/1600): Cycle 333 review — Copilot failed, closed
-- [#1603](https://github.com/EvaLok/schema-org-json-ld/issues/1603): Copilot probe 19th consecutive — failed, closed
-- [Audit #309](https://github.com/EvaLok/schema-org-json-ld-audit/issues/309): C6.1 self-review gap — processed, audit-inbound [#1602](https://github.com/EvaLok/schema-org-json-ld/issues/1602) created
+- [#1605](https://github.com/EvaLok/schema-org-json-ld/issues/1605): Copilot probe 20th consecutive — failed, closed
 
 ## Self-modifications
 
-- **`docs/state.json`**: session [#1600](https://github.com/EvaLok/schema-org-json-ld/issues/1600) failed, [#1603](https://github.com/EvaLok/schema-org-json-ld/issues/1603) failed, [audit #309](https://github.com/EvaLok/schema-org-json-ld-audit/issues/309) processed, metrics reconciled
-- **`docs/reviews/cycle-333-self-review.md`**: new self-review artifact
+- **`docs/state.json`**: [#1605](https://github.com/EvaLok/schema-org-json-ld/issues/1605) failed, metrics updated, cycle-complete applied
 
 ## Current state
 
 - **In-flight agent sessions**: 0
-- **Pipeline status**: PASS (all 16 invariants pass)
-- **Copilot metrics**: 503 dispatches, 478 PRs, 468 merged, 97.9% merge rate
+- **Pipeline status**: PASS (all checks pass, 1 housekeeping warning)
+- **Copilot metrics**: 504 dispatches, 478 PRs, 468 merged, 97.9% merge rate
 - **Publish gate**: published v1.0.2
 
 ## Next steps
 
 1. Continue probing Copilot each cycle until resolved
 2. Monitor Eva response on [#1567](https://github.com/EvaLok/schema-org-json-ld/issues/1567) and [#1583](https://github.com/EvaLok/schema-org-json-ld/issues/1583)
-3. When Copilot returns: dispatch C6.1 enforcement tools ([audit #309](https://github.com/EvaLok/schema-org-json-ld-audit/issues/309) suggestions)
+3. When Copilot returns: dispatch accumulated review and schema work
 
 ## Commit receipts
 
@@ -47,6 +40,8 @@
 | cycle-start | ff089dd | [ff089dd](https://github.com/EvaLok/schema-org-json-ld/commit/ff089dd) |
 | probe-failed | 67f4cae | [67f4cae](https://github.com/EvaLok/schema-org-json-ld/commit/67f4cae) |
 | cycle-complete | cb0abc8 | [cb0abc8](https://github.com/EvaLok/schema-org-json-ld/commit/cb0abc8) |
+| probe-failed | b75715d | [b75715d](https://github.com/EvaLok/schema-org-json-ld/commit/b75715d) |
+| cycle-complete | 8b588de | [8b588de](https://github.com/EvaLok/schema-org-json-ld/commit/8b588de) |
 | fix-invariant | df9ab34 | [df9ab34](https://github.com/EvaLok/schema-org-json-ld/commit/df9ab34) |
 | cycle-tagged | 89b85b4 | [89b85b4](https://github.com/EvaLok/schema-org-json-ld/commit/89b85b4) |
 | cycle-tagged | 441617b | [441617b](https://github.com/EvaLok/schema-org-json-ld/commit/441617b) |
@@ -58,7 +53,6 @@
 | cycle-complete | adc4426 | [adc4426](https://github.com/EvaLok/schema-org-json-ld/commit/adc4426) |
 | fix-metrics | 4414558 | [4414558](https://github.com/EvaLok/schema-org-json-ld/commit/4414558) |
 | cycle-tagged | 8ab4086 | [8ab4086](https://github.com/EvaLok/schema-org-json-ld/commit/8ab4086) |
-| record-dispatch | e27cb1b | [e27cb1b](https://github.com/EvaLok/schema-org-json-ld/commit/e27cb1b) |
-| record-dispatch | 14defb1 | [14defb1](https://github.com/EvaLok/schema-org-json-ld/commit/14defb1) |
 | probe-failed | b75715d | [b75715d](https://github.com/EvaLok/schema-org-json-ld/commit/b75715d) |
 | cycle-complete | 8b588de | [8b588de](https://github.com/EvaLok/schema-org-json-ld/commit/8b588de) |
+| record-dispatch | 14defb1 | [14defb1](https://github.com/EvaLok/schema-org-json-ld/commit/14defb1) |
