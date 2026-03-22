@@ -4741,7 +4741,7 @@
     "closed_without_merge": 8,
     "closed_without_pr": 25,
     "dispatch_log_latest": "#1603 Copilot probe (cycle 333, 19th consecutive test) (cycle 333)",
-    "dispatch_to_pr_rate": "94.8%",
+    "dispatch_to_pr_rate": "95.0%",
     "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
