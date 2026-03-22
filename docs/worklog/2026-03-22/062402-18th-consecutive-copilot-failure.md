@@ -40,3 +40,4 @@
 | cycle-start | ff089dd | [ff089dd](https://github.com/EvaLok/schema-org-json-ld/commit/ff089dd) |
 | probe-failed | 67f4cae | [67f4cae](https://github.com/EvaLok/schema-org-json-ld/commit/67f4cae) |
 | cycle-complete | cb0abc8 | [cb0abc8](https://github.com/EvaLok/schema-org-json-ld/commit/cb0abc8) |
+| fix-invariant | df9ab34 | [df9ab34](https://github.com/EvaLok/schema-org-json-ld/commit/df9ab34) |
