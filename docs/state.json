@@ -4752,10 +4752,9 @@
     "total_dispatches": 503
   },
   "cycle_phase": {
-    "completed_at": "2026-03-22T08:15:31Z",
     "cycle": 333,
-    "phase": "complete",
-    "phase_entered_at": "2026-03-22T08:15:31Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-22T08:17:18Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -5023,13 +5022,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 6,
-    "issue": 1598,
+    "duration_minutes": 112,
+    "issue": 1601,
     "number": 333,
-    "summary": "18th consecutive Copilot probe failure (ruleset violation), dispatched #1599, updated escalation #1567",
-    "timestamp": "2026-03-22T06:24:52Z"
+    "summary": "Cycle 333 (3rd resume): processed audit #309, created self-review artifact, 19th consecutive Copilot failure (#1603)",
+    "timestamp": "2026-03-22T08:17:18Z"
   },
-  "last_eva_comment_check": "2026-03-22T06:24:52Z",
+  "last_eva_comment_check": "2026-03-22T08:17:18Z",
   "last_tool_audit_cycle": 320,
   "open_questions_for_eva": [
     1583,
