@@ -4515,6 +4515,13 @@
       "model": "gpt-5.4",
       "status": "failed",
       "title": "Copilot probe (cycle 333, 18th consecutive test)"
+    },
+    {
+      "dispatched_at": "2026-03-22T06:29:42Z",
+      "issue": 1600,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 333 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -4725,16 +4732,16 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 23,
-    "dispatch_log_latest": "#1599 Copilot probe (cycle 333, 18th consecutive failure) (cycle 333)",
-    "dispatch_to_pr_rate": "95.4%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1600 [Cycle Review] Cycle 333 end-of-cycle review (cycle 333)",
+    "dispatch_to_pr_rate": "95.2%",
+    "in_flight": 1,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
     "resolved": 501,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 501
+    "total_dispatches": 502
   },
   "cycle_phase": {
     "cycle": 333,
@@ -7922,7 +7929,7 @@
     ],
     "last_review_cycle": 322
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 333,
   "schema_status": {
     "directory_layout": {
