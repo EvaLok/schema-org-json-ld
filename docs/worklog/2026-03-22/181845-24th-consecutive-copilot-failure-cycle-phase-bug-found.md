@@ -47,3 +47,5 @@
 | cycle-complete | 12713c1 | [12713c1](https://github.com/EvaLok/schema-org-json-ld/commit/12713c1) |
 | field-inventory | 8a32c16 | [8a32c16](https://github.com/EvaLok/schema-org-json-ld/commit/8a32c16) |
 | record-dispatch | 25a760e | [25a760e](https://github.com/EvaLok/schema-org-json-ld/commit/25a760e) |
+| metrics-fix | 318bd9d | [318bd9d](https://github.com/EvaLok/schema-org-json-ld/commit/318bd9d) |
+| state-invariants | fa09f09 | [fa09f09](https://github.com/EvaLok/schema-org-json-ld/commit/fa09f09) |
