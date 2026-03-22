@@ -4789,7 +4789,7 @@
     "closed_without_merge": 8,
     "closed_without_pr": 31,
     "dispatch_log_latest": "#1615 Copilot connectivity probe — cycle 336 (24th consecutive failure) (cycle 336)",
-    "dispatch_to_pr_rate": "93.7%",
+    "dispatch_to_pr_rate": "93.9%",
     "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
@@ -4797,7 +4797,7 @@
     "resolved": 509,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 510
+    "total_dispatches": 509
   },
   "cycle_phase": {
     "cycle": 336,
