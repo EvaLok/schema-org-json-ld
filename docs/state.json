@@ -4513,7 +4513,7 @@
       "dispatched_at": "2026-03-22T06:20:53Z",
       "issue": 1599,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "Copilot probe (cycle 333, 18th consecutive test)"
     }
   ],
@@ -4724,14 +4724,14 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 22,
-    "dispatch_log_latest": "#1599 Copilot probe (cycle 333, 18th consecutive test) (cycle 333)",
+    "closed_without_pr": 23,
+    "dispatch_log_latest": "#1599 Copilot probe (cycle 333, 18th consecutive failure) (cycle 333)",
     "dispatch_to_pr_rate": "95.4%",
-    "in_flight": 1,
+    "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
-    "resolved": 500,
+    "resolved": 501,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 501
