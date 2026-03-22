@@ -4499,7 +4499,7 @@
       "dispatched_at": "2026-03-22T03:08:57Z",
       "issue": 1595,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "[Cycle Review] Cycle 332 end-of-cycle review"
     }
   ],
@@ -4710,14 +4710,14 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 20,
+    "closed_without_pr": 21,
     "dispatch_log_latest": "#1595 [Cycle Review] Cycle 332 end-of-cycle review (cycle 332)",
-    "dispatch_to_pr_rate": "95.8%",
-    "in_flight": 1,
+    "dispatch_to_pr_rate": "95.6%",
+    "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
-    "resolved": 498,
+    "resolved": 499,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 499
