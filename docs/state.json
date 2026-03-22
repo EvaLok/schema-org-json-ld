@@ -4759,10 +4759,9 @@
     "total_dispatches": 504
   },
   "cycle_phase": {
-    "completed_at": "2026-03-22T10:08:35Z",
     "cycle": 333,
-    "phase": "complete",
-    "phase_entered_at": "2026-03-22T10:08:35Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-22T10:10:32Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -5030,13 +5029,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 112,
-    "issue": 1601,
+    "duration_minutes": 113,
+    "issue": 1604,
     "number": 333,
-    "summary": "Cycle 333 (3rd resume): processed audit #309, created self-review artifact, 19th consecutive Copilot failure (#1603)",
-    "timestamp": "2026-03-22T08:17:18Z"
+    "summary": "20th consecutive Copilot failure (probe #1605). Repository ruleset violation continues. ~64 hour outage across 12 unique cycles.",
+    "timestamp": "2026-03-22T10:10:32Z"
   },
-  "last_eva_comment_check": "2026-03-22T08:17:18Z",
+  "last_eva_comment_check": "2026-03-22T10:10:32Z",
   "last_tool_audit_cycle": 320,
   "open_questions_for_eva": [
     1583,
