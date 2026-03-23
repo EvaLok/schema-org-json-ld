@@ -4927,11 +4927,11 @@
     "dispatch_log_latest": "#1662 [Cycle Review] Cycle 344 end-of-cycle review (cycle 344)",
     "dispatch_to_pr_rate": "91.3%",
     "failed_dispatches": 1,
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 470,
     "pr_merge_rate": "97.9%",
     "produced_pr": 480,
-    "resolved": 526,
+    "resolved": 525,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 526
@@ -5210,7 +5210,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 14,
     "issue": 1655,
