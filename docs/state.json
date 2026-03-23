@@ -4660,6 +4660,13 @@
       "pr": null,
       "status": "failed",
       "title": "Copilot probe 33 — failed (ruleset violation)"
+    },
+    {
+      "dispatched_at": "2026-03-23T10:32:46Z",
+      "issue": 1636,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 341 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -4873,16 +4880,16 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 42,
-    "dispatch_log_latest": "#1635 Copilot probe 33 — failed (ruleset violation) (cycle 341)",
-    "dispatch_to_pr_rate": "91.9%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1636 [Cycle Review] Cycle 341 end-of-cycle review (cycle 341)",
+    "dispatch_to_pr_rate": "91.7%",
+    "in_flight": 1,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
     "resolved": 520,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 520
+    "total_dispatches": 521
   },
   "cycle_phase": {
     "completed_at": "2026-03-23T10:26:59Z",
@@ -8071,7 +8078,7 @@
     ],
     "last_review_cycle": 322
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 340,
   "schema_status": {
     "directory_layout": {
