@@ -4603,10 +4603,12 @@
       "title": "[Cycle Review] Cycle 337 end-of-cycle review"
     },
     {
+      "closed_at": "2026-03-23T00:20:00Z",
       "dispatched_at": "2026-03-23T00:17:53Z",
+      "failure_reason": "repository_ruleset_violation",
       "issue": 1622,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed_without_pr",
       "title": "Copilot probe #28 — cycle 338 availability test"
     }
   ],
@@ -4819,14 +4821,14 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 34,
-    "dispatch_log_latest": "#1622 Copilot probe #28 (cycle 338)",
-    "dispatch_to_pr_rate": "93.3%",
-    "in_flight": 1,
+    "closed_without_pr": 35,
+    "dispatch_log_latest": "#1622 Copilot probe #28 — failed (cycle 338)",
+    "dispatch_to_pr_rate": "93.2%",
+    "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
-    "resolved": 512,
+    "resolved": 513,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 513
