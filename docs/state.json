@@ -4734,6 +4734,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix cycle-complete agent_sessions overwrite regression"
+    },
+    {
+      "dispatched_at": "2026-03-23T22:14:45Z",
+      "issue": 1667,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add stale question-for-eva detection to cycle-status"
     }
   ],
   "audit_dropped": [
@@ -4949,17 +4956,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1666 Fix cycle-complete agent_sessions overwrite regression (cycle 344)",
-    "dispatch_to_pr_rate": "90.9%",
+    "dispatch_log_latest": "#1667 Add stale question-for-eva detection to cycle-status (cycle 344)",
+    "dispatch_to_pr_rate": "90.8%",
     "failed_dispatches": 1,
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 471,
     "pr_merge_rate": "97.9%",
     "produced_pr": 481,
     "resolved": 528,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 529
+    "total_dispatches": 530
   },
   "cycle_issues": [
     1647,
