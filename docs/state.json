@@ -4684,14 +4684,14 @@
       "dispatched_at": "2026-03-23T12:26:02Z",
       "issue": 1639,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "[Cycle Review] Cycle 342 end-of-cycle review"
     },
     {
       "dispatched_at": "2026-03-23T14:39:02Z",
       "issue": 1652,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "Copilot probe 36 (failed)"
     }
   ],
