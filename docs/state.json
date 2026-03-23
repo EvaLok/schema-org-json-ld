@@ -4838,7 +4838,7 @@
     "resolved": 513,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 514
+    "total_dispatches": 515
   },
   "cycle_phase": {
     "cycle": 339,
@@ -5022,7 +5022,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 331"
+        "last_refreshed": "cycle 339"
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
