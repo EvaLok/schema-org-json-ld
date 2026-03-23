@@ -56,6 +56,7 @@ const EXPECTED_STEP_IDS: [&str; 27] = [
 	"0", "0.1", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
 	"C1", "C2", "C3", "C4.1", "C4.5", "C5", "C5.1", "C5.5", "C5.6", "C6", "C7", "C8",
 ];
+const MIN_CURRENT_CYCLE_FOR_FALLBACK_WARNING: u64 = 1;
 const LAST_CYCLE_NUMBER_PATH: &str = "/last_cycle/number";
 const REVIEW_LAST_CYCLE_PATH: &str = "/review_agent/last_review_cycle";
 const COPILOT_IN_FLIGHT_PATH: &str = "/copilot_metrics/in_flight";
@@ -1562,12 +1563,13 @@ fn verify_review_artifact_exists(repo_root: &Path) -> Result<(StepStatus, String
 		.and_then(Value::as_u64)
 		.ok_or_else(|| format!("missing integer: {}", REVIEW_LAST_CYCLE_PATH))?;
 	let review_path = repo_root.join(format!("docs/reviews/cycle-{}.md", cycle));
-	let mut status = if review_path.is_file() {
+	let review_exists = review_path.is_file();
+	let mut status = if review_exists {
 		StepStatus::Pass
 	} else {
 		StepStatus::Warn
 	};
-	let mut details = vec![if review_path.is_file() {
+	let mut details = vec![if review_exists {
 		format!("Review artifact present for cycle {}", cycle)
 	} else {
 		format!("Review artifact missing for cycle {}", cycle)
@@ -1585,12 +1587,16 @@ fn review_artifact_fallback_warning(repo_root: &Path, state: &Value) -> Result<O
 	let Some(current_cycle) = state.pointer(LAST_CYCLE_NUMBER_PATH).and_then(Value::as_u64) else {
 		return Ok(None);
 	};
-	if current_cycle <= 1 || !copilot_review_fallback_needed(state) {
+	if current_cycle <= MIN_CURRENT_CYCLE_FOR_FALLBACK_WARNING {
+		return Ok(None);
+	}
+	if !copilot_review_fallback_needed(state) {
 		return Ok(None);
 	}
 
+	let min_acceptable_review_cycle = current_cycle.saturating_sub(1);
 	let latest_review_cycle = latest_review_artifact_cycle(&repo_root.join("docs/reviews"))?;
-	if latest_review_cycle.is_some_and(|cycle| cycle >= current_cycle.saturating_sub(1)) {
+	if latest_review_cycle.is_some_and(|cycle| cycle >= min_acceptable_review_cycle) {
 		return Ok(None);
 	}
 
