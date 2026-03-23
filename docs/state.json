@@ -4615,8 +4615,15 @@
       "dispatched_at": "2026-03-23T00:24:58Z",
       "issue": 1623,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "[Cycle Review] Cycle 338 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-23T03:05:37Z",
+      "issue": 1625,
+      "model": "gpt-5.4",
+      "status": "failed",
+      "title": "Copilot probe #29 — cycle 339 availability check"
     }
   ],
   "audit_dropped": [
@@ -4828,14 +4835,14 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 35,
-    "dispatch_log_latest": "#1623 [Cycle Review] Cycle 338 end-of-cycle review (cycle 338)",
-    "dispatch_to_pr_rate": "93.0%",
-    "in_flight": 1,
+    "closed_without_pr": 37,
+    "dispatch_log_latest": "#1625 Copilot probe #29 — cycle 339 availability check (cycle 339)",
+    "dispatch_to_pr_rate": "92.8%",
+    "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
-    "resolved": 513,
+    "resolved": 515,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 515
