@@ -4657,7 +4657,8 @@
       "dispatched_at": "2026-03-23T10:26:59Z",
       "issue": 1635,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": null,
+      "status": "failed",
       "title": "Copilot probe 33 — failed (ruleset violation)"
     }
   ],
@@ -4871,14 +4872,14 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 41,
+    "closed_without_pr": 42,
     "dispatch_log_latest": "#1635 Copilot probe 33 — failed (ruleset violation) (cycle 341)",
     "dispatch_to_pr_rate": "91.9%",
-    "in_flight": 1,
+    "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
-    "resolved": 519,
+    "resolved": 520,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 520
