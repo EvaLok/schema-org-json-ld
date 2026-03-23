@@ -4913,24 +4913,24 @@
     "total_classes_converted": 54
   },
   "copilot_metrics": {
-    "closed_without_merge": 9,
+    "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1660 Add self-review artifact warning to pipeline-check (cycle 344)",
-    "dispatch_to_pr_rate": "91.1%",
+    "dispatch_log_latest": "#1653 [Cycle Review] Cycle 343 end-of-cycle review (cycle 343)",
+    "dispatch_to_pr_rate": "91.0%",
     "failed_dispatches": 1,
-    "in_flight": 2,
+    "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
-    "produced_pr": 479,
-    "resolved": 526,
+    "produced_pr": 478,
+    "resolved": 525,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 528
+    "total_dispatches": 525
   },
   "cycle_phase": {
     "cycle": 344,
-    "phase": "work",
-    "phase_entered_at": "2026-03-23T18:18:36Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-23T18:33:54Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -5028,15 +5028,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 343"
+        "last_refreshed": "cycle 344"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 343"
+        "last_refreshed": "cycle 344"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 343"
+        "last_refreshed": "cycle 344"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
@@ -5045,7 +5045,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 342"
+        "last_refreshed": "cycle 344"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -5061,7 +5061,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 342"
+        "last_refreshed": "cycle 344"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -5081,7 +5081,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 342"
+        "last_refreshed": "cycle 344"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -5093,7 +5093,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 342"
+        "last_refreshed": "cycle 344"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -5109,7 +5109,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 342"
+        "last_refreshed": "cycle 344"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -5117,11 +5117,11 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 342"
+        "last_refreshed": "cycle 344"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 342"
+        "last_refreshed": "cycle 344"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -5129,7 +5129,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 342"
+        "last_refreshed": "cycle 344"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -5201,20 +5201,17 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 0,
   "last_cycle": {
-    "duration_minutes": 8,
+    "duration_minutes": 14,
     "issue": 1655,
     "number": 344,
-    "summary": "1 dispatches, 0 merges",
-    "timestamp": "2026-03-23T18:18:35Z"
+    "summary": "3 dispatches, 0 merges",
+    "timestamp": "2026-03-23T18:32:09Z"
   },
-  "last_eva_comment_check": "2026-03-23T18:18:35Z",
+  "last_eva_comment_check": "2026-03-23T18:32:09Z",
   "last_tool_audit_cycle": 320,
-  "open_questions_for_eva": [
-    1583,
-    1567
-  ],
+  "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
     "description": "Per Eva directive on #699: 5 consecutive clean cycles (pipeline 5/5 at startup, no bugs, no problems) required before starting Python implementation. Count restarts on any problem.",
@@ -8119,7 +8116,7 @@
     "last_review_cycle": 322
   },
   "review_dispatch_consecutive": 1,
-  "review_events_verified_through_cycle": 342,
+  "review_events_verified_through_cycle": 344,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
