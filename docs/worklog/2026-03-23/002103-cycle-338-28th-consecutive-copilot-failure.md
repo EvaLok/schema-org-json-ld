@@ -23,7 +23,7 @@
 ## Current state
 
 - **In-flight agent sessions**: 0
-- **Pipeline status**: FAIL — current-cycle-steps expected mid-cycle, all other checks PASS
+- **Pipeline status**: PASS (4 warnings: field-inventory stale, housekeeping 1 finding, step-comments optional missing, current-cycle-steps mid-close-out)
 - **Copilot metrics**: 513 dispatches, 478 PRs, 468 merged, 97.9% merge rate
 - **Publish gate**: published v1.0.2
 
@@ -44,3 +44,5 @@
 | probe-dispatch | 31af757 | [31af757](https://github.com/EvaLok/schema-org-json-ld/commit/31af757) |
 | probe-failed | 3074698 | [3074698](https://github.com/EvaLok/schema-org-json-ld/commit/3074698) |
 | cycle-complete | 4324890 | [4324890](https://github.com/EvaLok/schema-org-json-ld/commit/4324890) |
+| cycle-phase | 1bcd45e | [1bcd45e](https://github.com/EvaLok/schema-org-json-ld/commit/1bcd45e) |
+| state-fix | 25c8b23 | [25c8b23](https://github.com/EvaLok/schema-org-json-ld/commit/25c8b23) |
