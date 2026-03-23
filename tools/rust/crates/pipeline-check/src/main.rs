@@ -56,7 +56,10 @@ const EXPECTED_STEP_IDS: [&str; 27] = [
 	"0", "0.1", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
 	"C1", "C2", "C3", "C4.1", "C4.5", "C5", "C5.1", "C5.5", "C5.6", "C6", "C7", "C8",
 ];
+const LAST_CYCLE_NUMBER_PATH: &str = "/last_cycle/number";
 const REVIEW_LAST_CYCLE_PATH: &str = "/review_agent/last_review_cycle";
+const COPILOT_IN_FLIGHT_PATH: &str = "/copilot_metrics/in_flight";
+const BLOCKERS_PATH: &str = "/blockers";
 const DERIVE_METRICS_FIELDS: [&str; 9] = [
 	"total_dispatches",
 	"resolved",
@@ -1559,18 +1562,104 @@ fn verify_review_artifact_exists(repo_root: &Path) -> Result<(StepStatus, String
 		.and_then(Value::as_u64)
 		.ok_or_else(|| format!("missing integer: {}", REVIEW_LAST_CYCLE_PATH))?;
 	let review_path = repo_root.join(format!("docs/reviews/cycle-{}.md", cycle));
-
-	if review_path.is_file() {
-		Ok((
-			StepStatus::Pass,
-			format!("Review artifact present for cycle {}", cycle),
-		))
+	let mut status = if review_path.is_file() {
+		StepStatus::Pass
 	} else {
-		Ok((
-			StepStatus::Warn,
-			format!("Review artifact missing for cycle {}", cycle),
-		))
+		StepStatus::Warn
+	};
+	let mut details = vec![if review_path.is_file() {
+		format!("Review artifact present for cycle {}", cycle)
+	} else {
+		format!("Review artifact missing for cycle {}", cycle)
+	}];
+
+	if let Some(detail) = review_artifact_fallback_warning(repo_root, &state)? {
+		status = StepStatus::Warn;
+		details.push(detail);
 	}
+
+	Ok((status, details.join("; ")))
+}
+
+fn review_artifact_fallback_warning(repo_root: &Path, state: &Value) -> Result<Option<String>, String> {
+	let Some(current_cycle) = state.pointer(LAST_CYCLE_NUMBER_PATH).and_then(Value::as_u64) else {
+		return Ok(None);
+	};
+	if current_cycle <= 1 || !copilot_review_fallback_needed(state) {
+		return Ok(None);
+	}
+
+	let latest_review_cycle = latest_review_artifact_cycle(&repo_root.join("docs/reviews"))?;
+	if latest_review_cycle.is_some_and(|cycle| cycle >= current_cycle.saturating_sub(1)) {
+		return Ok(None);
+	}
+
+	Ok(Some(
+		"No review artifact for current cycle — C6.1 self-review fallback may be needed".to_string(),
+	))
+}
+
+fn copilot_review_fallback_needed(state: &Value) -> bool {
+	state
+		.pointer(COPILOT_IN_FLIGHT_PATH)
+		.and_then(Value::as_u64)
+		.is_some_and(|in_flight| in_flight == 0)
+		&& state
+			.pointer(BLOCKERS_PATH)
+			.and_then(Value::as_array)
+			.is_some_and(|blockers| blockers.iter().any(blocker_mentions_copilot))
+}
+
+fn blocker_mentions_copilot(blocker: &Value) -> bool {
+	match blocker {
+		Value::String(text) => text.to_ascii_lowercase().contains("copilot"),
+		Value::Array(items) => items.iter().any(blocker_mentions_copilot),
+		Value::Object(entries) => entries.values().any(blocker_mentions_copilot),
+		_ => false,
+	}
+}
+
+fn latest_review_artifact_cycle(review_dir: &Path) -> Result<Option<u64>, String> {
+	if !review_dir.is_dir() {
+		return Ok(None);
+	}
+
+	let entries = fs::read_dir(review_dir)
+		.map_err(|error| format!("failed to read {}: {}", review_dir.display(), error))?;
+	let mut latest: Option<u64> = None;
+
+	for entry in entries {
+		let entry =
+			entry.map_err(|error| format!("failed to read {}: {}", review_dir.display(), error))?;
+		if !entry
+			.file_type()
+			.map_err(|error| format!("failed to inspect {}: {}", entry.path().display(), error))?
+			.is_file()
+		{
+			continue;
+		}
+
+		let file_name = entry.file_name();
+		let Some(file_name) = file_name.to_str() else {
+			continue;
+		};
+		let Some(cycle) = review_artifact_cycle_from_file_name(file_name) else {
+			continue;
+		};
+		latest = Some(match latest {
+			Some(existing) => existing.max(cycle),
+			None => cycle,
+		});
+	}
+
+	Ok(latest)
+}
+
+fn review_artifact_cycle_from_file_name(file_name: &str) -> Option<u64> {
+	file_name
+		.strip_prefix("cycle-")
+		.and_then(|suffix| suffix.strip_suffix(".md"))
+		.and_then(|value| value.parse::<u64>().ok())
 }
 
 fn latest_journal_file_date(journal_dir: &Path) -> Result<Option<String>, String> {
@@ -3787,6 +3876,127 @@ mod tests {
 			.as_deref()
 			.unwrap_or_default()
 			.contains("Review artifact missing for cycle 208"));
+	}
+
+	#[test]
+	fn artifact_verification_does_not_warn_when_review_artifact_exists_for_current_cycle() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir().join(format!("pipeline-check-artifacts-current-{}", run_id));
+		fs::create_dir_all(root.join("docs/journal")).unwrap();
+		fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+		fs::create_dir_all(root.join("docs/reviews")).unwrap();
+		fs::write(root.join("docs/journal/2026-03-09.md"), "# Journal\n").unwrap();
+		fs::write(
+			root.join("docs/worklog/2026-03-09/120000-cycle-210-summary.md"),
+			"# Worklog\n",
+		)
+		.unwrap();
+		fs::write(root.join("docs/reviews/cycle-210.md"), "# Review\n").unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"last_cycle": {"number": 210},
+				"review_agent": {"last_review_cycle": 210},
+				"copilot_metrics": {"in_flight": 0},
+				"blockers": [{"summary": "Copilot outage continues"}]
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		let step = verify_artifacts_for_date(&root, "2026-03-09");
+
+		assert_eq!(step.status, StepStatus::Pass);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("Review artifact present for cycle 210"));
+		assert!(!step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("C6.1 self-review fallback"));
+	}
+
+	#[test]
+	fn artifact_verification_does_not_warn_for_stale_review_when_copilot_is_active() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir().join(format!("pipeline-check-artifacts-active-{}", run_id));
+		fs::create_dir_all(root.join("docs/journal")).unwrap();
+		fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+		fs::create_dir_all(root.join("docs/reviews")).unwrap();
+		fs::write(root.join("docs/journal/2026-03-09.md"), "# Journal\n").unwrap();
+		fs::write(
+			root.join("docs/worklog/2026-03-09/120000-cycle-210-summary.md"),
+			"# Worklog\n",
+		)
+		.unwrap();
+		fs::write(root.join("docs/reviews/cycle-208.md"), "# Review\n").unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"last_cycle": {"number": 210},
+				"review_agent": {"last_review_cycle": 208},
+				"copilot_metrics": {"in_flight": 2},
+				"blockers": [{"summary": "Copilot outage continues"}]
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		let step = verify_artifacts_for_date(&root, "2026-03-09");
+
+		assert_eq!(step.status, StepStatus::Pass);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("Review artifact present for cycle 208"));
+		assert!(!step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("C6.1 self-review fallback"));
+	}
+
+	#[test]
+	fn artifact_verification_warns_when_recent_review_artifacts_are_missing_during_copilot_outage() {
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		let root = std::env::temp_dir().join(format!("pipeline-check-artifacts-outage-{}", run_id));
+		fs::create_dir_all(root.join("docs/journal")).unwrap();
+		fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+		fs::create_dir_all(root.join("docs/reviews")).unwrap();
+		fs::write(root.join("docs/journal/2026-03-09.md"), "# Journal\n").unwrap();
+		fs::write(
+			root.join("docs/worklog/2026-03-09/120000-cycle-210-summary.md"),
+			"# Worklog\n",
+		)
+		.unwrap();
+		fs::write(root.join("docs/reviews/cycle-208.md"), "# Review\n").unwrap();
+		fs::write(
+			root.join("docs/state.json"),
+			json!({
+				"last_cycle": {"number": 210},
+				"review_agent": {"last_review_cycle": 208},
+				"copilot_metrics": {"in_flight": 0},
+				"blockers": [{"summary": "Copilot outage continues"}]
+			})
+			.to_string(),
+		)
+		.unwrap();
+
+		let step = verify_artifacts_for_date(&root, "2026-03-09");
+
+		assert_eq!(step.status, StepStatus::Warn);
+		assert!(step
+			.detail
+			.as_deref()
+			.unwrap_or_default()
+			.contains("No review artifact for current cycle — C6.1 self-review fallback may be needed"));
 	}
 
 	#[test]
