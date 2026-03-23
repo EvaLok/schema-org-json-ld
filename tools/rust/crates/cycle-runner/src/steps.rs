@@ -22,14 +22,7 @@ pub fn post_step(
         repo_root,
         "post-step",
         &[
-            "--issue",
-            &issue_str,
-            "--step",
-            step,
-            "--title",
-            title,
-            "--body",
-            body,
+            "--issue", &issue_str, "--step", step, "--title", title, "--body", body,
         ],
     )?;
 
@@ -37,10 +30,7 @@ pub fn post_step(
         let stderr = runner::stderr_text(&output);
         // Don't fail on duplicate step (already posted in a previous run)
         if stderr.contains("already posted") {
-            eprintln!(
-                "Step {} already posted on issue #{}, skipping",
-                step, issue
-            );
+            eprintln!("Step {} already posted on issue #{}, skipping", step, issue);
             return Ok(());
         }
         return Err(format!("post-step {} failed: {}", step, stderr));

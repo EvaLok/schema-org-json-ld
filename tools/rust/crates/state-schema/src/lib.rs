@@ -26,6 +26,7 @@ pub struct StateJson {
     pub constructor_refactoring: Option<ConstructorRefactoring>,
     pub copilot_metrics: CopilotMetrics,
     pub last_cycle: LastCycle,
+    pub cycle_issues: Option<Vec<u64>>,
     pub last_eva_comment_check: Option<String>,
     pub audit_processed: Vec<i64>,
     pub test_count: TestCount,
@@ -1127,8 +1128,12 @@ mod tests {
             Some("cycle 219")
         );
         assert_eq!(
-            state.pointer("/cycle_phase/completed_at").and_then(Value::as_str),
-            state.pointer("/cycle_phase/phase_entered_at").and_then(Value::as_str)
+            state
+                .pointer("/cycle_phase/completed_at")
+                .and_then(Value::as_str),
+            state
+                .pointer("/cycle_phase/phase_entered_at")
+                .and_then(Value::as_str)
         );
     }
 
@@ -1215,6 +1220,16 @@ mod tests {
         .expect("state should deserialize");
 
         assert!(state.cycle_phase.completed_at.is_none());
+    }
+
+    #[test]
+    fn cycle_issues_deserializes_when_present() {
+        let state: StateJson = serde_json::from_value(json!({
+            "cycle_issues": [1647, 1654, 1655]
+        }))
+        .expect("state should deserialize");
+
+        assert_eq!(state.cycle_issues, Some(vec![1647, 1654, 1655]));
     }
 
     #[test]

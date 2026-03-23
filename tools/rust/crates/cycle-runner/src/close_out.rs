@@ -111,23 +111,20 @@ fn step_c4_1(
     let worklog_detail = if worklog_ok {
         "PASS".to_string()
     } else {
-        format!(
-            "FAIL: {}",
-            runner::stderr_text(&worklog_output)
-        )
+        format!("FAIL: {}", runner::stderr_text(&worklog_output))
     };
 
     let journal_str = journal.to_string_lossy().to_string();
-    let journal_output =
-        runner::run_tool(repo_root, "validate-docs", &["journal", "--file", &journal_str])?;
+    let journal_output = runner::run_tool(
+        repo_root,
+        "validate-docs",
+        &["journal", "--file", &journal_str],
+    )?;
     let journal_ok = journal_output.status.success();
     let journal_detail = if journal_ok {
         "PASS".to_string()
     } else {
-        format!(
-            "FAIL: {}",
-            runner::stderr_text(&journal_output)
-        )
+        format!("FAIL: {}", runner::stderr_text(&journal_output))
     };
 
     let body = format!(
@@ -184,12 +181,7 @@ fn step_c5(repo_root: &Path, issue: u64, cycle: u64) -> Result<(), String> {
     Ok(())
 }
 
-fn step_c5_1(
-    repo_root: &Path,
-    issue: u64,
-    cycle: u64,
-    worklog: &Path,
-) -> Result<(), String> {
+fn step_c5_1(repo_root: &Path, issue: u64, cycle: u64, worklog: &Path) -> Result<(), String> {
     eprintln!("C5.1: Validating receipts...");
 
     let cycle_str = cycle.to_string();
@@ -237,14 +229,7 @@ fn step_c5_1(
     };
 
     // Receipt validation is report-only, not a gate
-    steps::post_step(
-        repo_root,
-        issue,
-        "C5.1",
-        "Receipt validation",
-        &body,
-        false,
-    )?;
+    steps::post_step(repo_root, issue, "C5.1", "Receipt validation", &body, false)?;
 
     Ok(())
 }
@@ -283,9 +268,7 @@ fn step_c5_5(repo_root: &Path, issue: u64) -> Result<bool, String> {
     )?;
 
     if !passed {
-        return Err(
-            "Pipeline check failed at C5.5 — fix issues and re-run close-out".to_string(),
-        );
+        return Err("Pipeline check failed at C5.5 — fix issues and re-run close-out".to_string());
     }
 
     Ok(true)
@@ -322,9 +305,7 @@ fn step_c5_6(
     let already_updated = state
         .pointer("/project_mode/consecutive_clean_cycles")
         .and_then(Value::as_array)
-        .map_or(false, |arr| {
-            arr.iter().any(|v| v.as_u64() == Some(cycle))
-        });
+        .map_or(false, |arr| arr.iter().any(|v| v.as_u64() == Some(cycle)));
 
     if already_updated {
         let counter = state
@@ -439,10 +420,8 @@ fn step_c6(repo_root: &Path, issue: u64, cycle: u64) -> Result<ReviewInfo, Strin
     }
 
     // Check stabilization mode
-    let is_stabilization = state
-        .pointer("/project_mode/mode")
-        .and_then(Value::as_str)
-        == Some("stabilization");
+    let is_stabilization =
+        state.pointer("/project_mode/mode").and_then(Value::as_str) == Some("stabilization");
 
     // Generate review body
     let body_content = review_body::generate(repo_root, cycle, issue, is_stabilization)?;
@@ -627,10 +606,7 @@ fn had_tool_dispatches_this_cycle(state: &Value, _cycle: u64) -> bool {
             .unwrap_or("");
         // Only check sessions dispatched after the previous cycle ended
         if !last_cycle_ts.is_empty() && dispatched_at > last_cycle_ts {
-            let title = session
-                .get("title")
-                .and_then(Value::as_str)
-                .unwrap_or("");
+            let title = session.get("title").and_then(Value::as_str).unwrap_or("");
             // Exclude review dispatches (they're mandatory, not "tool" dispatches)
             if !title.starts_with("[Cycle Review]") {
                 return true;
@@ -671,12 +647,7 @@ fn parse_dispatch_output(stdout: &str) -> Result<ReviewInfo, String> {
             )
         })?;
 
-    let url = stdout
-        .rsplit(": ")
-        .next()
-        .unwrap_or("")
-        .trim()
-        .to_string();
+    let url = stdout.rsplit(": ").next().unwrap_or("").trim().to_string();
 
     Ok(ReviewInfo {
         issue_number: issue_num,
@@ -708,7 +679,9 @@ fn worklog_metrics_from_state(state: &Value) -> Result<WorklogMetrics, String> {
         in_flight: state
             .pointer("/copilot_metrics/in_flight")
             .and_then(Value::as_u64)
-            .ok_or_else(|| "missing numeric /copilot_metrics/in_flight in docs/state.json".to_string())?,
+            .ok_or_else(|| {
+                "missing numeric /copilot_metrics/in_flight in docs/state.json".to_string()
+            })?,
         total_dispatches: state
             .pointer("/copilot_metrics/total_dispatches")
             .and_then(Value::as_u64)
@@ -718,15 +691,21 @@ fn worklog_metrics_from_state(state: &Value) -> Result<WorklogMetrics, String> {
         produced_pr: state
             .pointer("/copilot_metrics/produced_pr")
             .and_then(Value::as_u64)
-            .ok_or_else(|| "missing numeric /copilot_metrics/produced_pr in docs/state.json".to_string())?,
+            .ok_or_else(|| {
+                "missing numeric /copilot_metrics/produced_pr in docs/state.json".to_string()
+            })?,
         merged: state
             .pointer("/copilot_metrics/merged")
             .and_then(Value::as_u64)
-            .ok_or_else(|| "missing numeric /copilot_metrics/merged in docs/state.json".to_string())?,
+            .ok_or_else(|| {
+                "missing numeric /copilot_metrics/merged in docs/state.json".to_string()
+            })?,
         pr_merge_rate: state
             .pointer("/copilot_metrics/pr_merge_rate")
             .and_then(Value::as_str)
-            .ok_or_else(|| "missing string /copilot_metrics/pr_merge_rate in docs/state.json".to_string())?
+            .ok_or_else(|| {
+                "missing string /copilot_metrics/pr_merge_rate in docs/state.json".to_string()
+            })?
             .to_string(),
     })
 }
@@ -797,7 +776,10 @@ fn format_copilot_metrics_line(metrics: &WorklogMetrics) -> String {
 }
 
 fn print_dry_run(cycle: u64, issue: u64) {
-    eprintln!("[dry-run] Would run close-out sequence for cycle {} (issue #{})", cycle, issue);
+    eprintln!(
+        "[dry-run] Would run close-out sequence for cycle {} (issue #{})",
+        cycle, issue
+    );
     eprintln!("[dry-run] C4.1: validate-docs worklog + journal (GATE)");
     eprintln!("[dry-run] C5:   git add docs/ && git commit && git push");
     eprintln!("[dry-run] C5.1: receipt-validate (report only)");
