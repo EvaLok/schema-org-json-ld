@@ -4663,9 +4663,11 @@
     },
     {
       "dispatched_at": "2026-03-23T10:32:46Z",
+      "failure_reason": "34th consecutive Copilot ruleset violation",
       "issue": 1636,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "resolved_at": "2026-03-23T12:15:00Z",
+      "status": "failed",
       "title": "[Cycle Review] Cycle 341 end-of-cycle review"
     }
   ],
@@ -5097,7 +5099,7 @@
       },
       "schema_status.planned_next": {
         "cadence": "after planning or completing types",
-        "last_refreshed": "cycle 331"
+        "last_refreshed": "cycle 342"
       },
       "schema_status.property_gap_audit": {
         "cadence": "after property gap fixes",
@@ -5153,7 +5155,7 @@
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
-        "last_refreshed": "cycle 331"
+        "last_refreshed": "cycle 342"
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
