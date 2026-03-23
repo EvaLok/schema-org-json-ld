@@ -4686,6 +4686,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "[Cycle Review] Cycle 342 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-23T14:39:02Z",
+      "issue": 1652,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Copilot probe 36 (failed)"
     }
   ],
   "audit_dropped": [
@@ -4835,7 +4842,9 @@
     307,
     309,
     311,
-    313
+    313,
+    315,
+    316
   ],
   "blockers": [
     {
@@ -4899,16 +4908,16 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 44,
-    "dispatch_log_latest": "#1639 [Cycle Review] Cycle 342 end-of-cycle review (cycle 342)",
-    "dispatch_to_pr_rate": "91.4%",
-    "in_flight": 1,
+    "dispatch_log_latest": "#1652 Copilot probe 36 (failed) (cycle 343)",
+    "dispatch_to_pr_rate": "91.2%",
+    "in_flight": 2,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
     "resolved": 522,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 523
+    "total_dispatches": 524
   },
   "cycle_phase": {
     "cycle": 343,
@@ -5011,15 +5020,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 342"
+        "last_refreshed": "cycle 343"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 342"
+        "last_refreshed": "cycle 343"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 342"
+        "last_refreshed": "cycle 343"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
@@ -5180,6 +5189,7 @@
       }
     }
   },
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 8,
     "issue": 1647,
@@ -8096,7 +8106,7 @@
     ],
     "last_review_cycle": 322
   },
-  "review_dispatch_consecutive": 2,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 342,
   "schema_status": {
     "directory_layout": {
