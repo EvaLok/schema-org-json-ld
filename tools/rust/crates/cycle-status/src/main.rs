@@ -919,6 +919,7 @@ fn gather_processing_status(
     section
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_action_items(
     eva_input: &EvaInput,
     eva_escalations: &EvaEscalations,
@@ -947,12 +948,12 @@ fn build_action_items(
             EvaEscalationStaleness::UrgentStale => items.push(format!(
                 "URGENT: question-for-eva #{} has no Eva response for {}h",
                 issue.number,
-                display_age_hours(issue.age_hours)
+                ceil_age_hours(issue.age_hours)
             )),
             EvaEscalationStaleness::Stale => items.push(format!(
                 "Stale question-for-eva #{} ({}h without response)",
                 issue.number,
-                display_age_hours(issue.age_hours)
+                ceil_age_hours(issue.age_hours)
             )),
             EvaEscalationStaleness::Active => {}
         }
@@ -1327,11 +1328,18 @@ fn issue_has_eva_response(issue_number: u64, issue_created_at: &str) -> Result<b
     let issue_created_at = DateTime::parse_from_rfc3339(issue_created_at)
         .map_err(|error| format!("invalid issue created_at timestamp {:?}: {}", issue_created_at, error))?
         .with_timezone(&Utc);
-    let comments_path = format!("repos/{}/issues/{}/comments?per_page=100", MAIN_REPO, issue_number);
+    let comments_path = format!(
+        "repos/{}/issues/{}/comments?sort=created&direction=desc&per_page=100",
+        MAIN_REPO, issue_number
+    );
     let value = gh_json(&["api", &comments_path, "--paginate"])?;
     let Some(items) = value.as_array() else {
-        return Ok(false);
+        return Err(format!(
+            "unexpected comments response format for issue #{}",
+            issue_number
+        ));
     };
+    let mut malformed_timestamp = false;
 
     for item in items {
         if json_str(item, &["user", "login"]) != Some(EVA_LOGIN) {
@@ -1340,12 +1348,21 @@ fn issue_has_eva_response(issue_number: u64, issue_created_at: &str) -> Result<b
         let Some(created_at) = json_str(item, &["created_at"]) else {
             continue;
         };
-        let created_at = DateTime::parse_from_rfc3339(created_at)
-            .map_err(|error| format!("invalid comment timestamp on issue #{}: {}", issue_number, error))?
-            .with_timezone(&Utc);
+        let Ok(created_at) = DateTime::parse_from_rfc3339(created_at) else {
+            malformed_timestamp = true;
+            continue;
+        };
+        let created_at = created_at.with_timezone(&Utc);
         if created_at > issue_created_at {
             return Ok(true);
         }
+    }
+
+    if malformed_timestamp {
+        return Err(format!(
+            "invalid Eva comment timestamp encountered on issue #{}",
+            issue_number
+        ));
     }
 
     Ok(false)
@@ -1400,7 +1417,7 @@ fn build_eva_escalations(
     }
 }
 
-fn display_age_hours(age_hours: f64) -> i64 {
+fn ceil_age_hours(age_hours: f64) -> i64 {
     age_hours.ceil() as i64
 }
 
@@ -1782,6 +1799,11 @@ mod tests {
         assert!(action_items.iter().any(|item| {
             item == "URGENT: question-for-eva #3002 has no Eva response for 27h"
         }));
+    }
+
+    #[test]
+    fn ceil_age_hours_rounds_up_fractional_hours() {
+        assert_eq!(ceil_age_hours(52.3), 53);
     }
 
     #[test]
