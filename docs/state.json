@@ -5034,7 +5034,7 @@
       },
       "project_mode": {
         "cadence": "when mode or counter changes",
-        "last_refreshed": "cycle 335"
+        "last_refreshed": "cycle 341"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
@@ -5094,7 +5094,7 @@
       },
       "step_comment_acknowledged_gaps": {
         "cadence": "after acknowledging step comment gaps",
-        "last_refreshed": "cycle 330"
+        "last_refreshed": "cycle 341"
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
@@ -5142,7 +5142,7 @@
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 335"
+        "last_refreshed": "cycle 341"
       }
     }
   },
