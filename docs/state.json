@@ -4672,10 +4672,13 @@
     },
     {
       "dispatched_at": "2026-03-23T12:18:00Z",
+      "failure_reason": "35th consecutive Copilot ruleset violation",
       "issue": 1638,
       "model": "gpt-5.4",
-      "status": "in_flight",
-      "title": "Copilot probe 34 — outage check"
+      "pr": null,
+      "resolved_at": "2026-03-23T12:20:00Z",
+      "status": "failed",
+      "title": "Copilot probe 34 — failed (ruleset violation)"
     }
   ],
   "audit_dropped": [
