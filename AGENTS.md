@@ -1,3 +1,4 @@
+<!-- Copilot dispatch probe cycle 344 -->
 # Coding Agent Instructions
 
 You are implementing features for `schema-org-json-ld`, a PHP and TypeScript library that generates schema.org JSON-LD structured data for Google Rich Results.
