@@ -1298,13 +1298,13 @@ mod tests {
     fn temp_repo_root(test_name: &str) -> PathBuf {
         let unique = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .expect("failed to get current time for temp repo path")
             .as_nanos();
         let path = std::env::temp_dir().join(format!(
             "cycle-complete-{test_name}-{}-{unique}",
             std::process::id()
         ));
-        std::fs::create_dir_all(path.join("docs")).unwrap();
+        std::fs::create_dir_all(path.join("docs")).expect("failed to create temp repo docs directory");
         path
     }
 
@@ -2138,7 +2138,7 @@ mod tests {
                 }
             }
         });
-        write_state_value(&repo_root, &raw_state).unwrap();
+        write_state_value(&repo_root, &raw_state).expect("failed to write test state.json");
 
         let changed_paths = apply_cycle_patch(&repo_root, &report.state_json_patch).unwrap();
         assert!(changed_paths.iter().any(|path| path == "/agent_sessions"));
