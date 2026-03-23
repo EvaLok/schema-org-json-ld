@@ -4643,7 +4643,7 @@
       "dispatched_at": "2026-03-23T06:27:51Z",
       "issue": 1630,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "Copilot probe 31"
     }
   ],
@@ -4856,14 +4856,14 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 39,
+    "closed_without_pr": 40,
     "dispatch_log_latest": "#1630 Copilot probe 31 (cycle 340)",
-    "dispatch_to_pr_rate": "92.3%",
-    "in_flight": 1,
+    "dispatch_to_pr_rate": "92.1%",
+    "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
-    "resolved": 517,
+    "resolved": 518,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 518
