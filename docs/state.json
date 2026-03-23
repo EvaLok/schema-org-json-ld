@@ -4917,11 +4917,12 @@
     "resolved": 522,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 524
+    "total_dispatches": 524,
+    "failed_dispatches": 1
   },
   "cycle_phase": {
     "cycle": 343,
-    "phase": "work",
+    "phase": "close_out",
     "phase_entered_at": "2026-03-23T14:26:24Z"
   },
   "eva_input_issues": {
