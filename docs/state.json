@@ -4645,6 +4645,13 @@
       "model": "gpt-5.4",
       "status": "failed",
       "title": "Copilot probe 31"
+    },
+    {
+      "dispatched_at": "2026-03-23T08:23:28Z",
+      "issue": 1633,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Copilot probe 32 — failed (ruleset violation)"
     }
   ],
   "audit_dropped": [
@@ -4858,16 +4865,16 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 40,
-    "dispatch_log_latest": "#1630 Copilot probe 31 (cycle 340)",
-    "dispatch_to_pr_rate": "92.3%",
-    "in_flight": 0,
+    "dispatch_log_latest": "#1633 Copilot probe 32 — failed (ruleset violation) (cycle 341)",
+    "dispatch_to_pr_rate": "92.1%",
+    "in_flight": 1,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
     "resolved": 518,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 518
+    "total_dispatches": 519
   },
   "cycle_phase": {
     "cycle": 341,
@@ -4970,15 +4977,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 340"
+        "last_refreshed": "cycle 341"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 340"
+        "last_refreshed": "cycle 341"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 340"
+        "last_refreshed": "cycle 341"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
