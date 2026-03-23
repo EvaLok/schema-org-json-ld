@@ -4870,8 +4870,8 @@
   },
   "cycle_phase": {
     "cycle": 340,
-    "phase": "work",
-    "phase_entered_at": "2026-03-23T06:24:07Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-23T06:31:54Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -5139,13 +5139,13 @@
     }
   },
   "last_cycle": {
-    "duration_minutes": 103,
+    "duration_minutes": 8,
     "issue": 1629,
     "number": 340,
-    "summary": "Cycle 339 (resumed): 30th consecutive Copilot failure. Probe #1628 and review #1626 both failed with ruleset violation. Updated escalation #1567 with 30-failure milestone. No schema or tooling progress possible.",
-    "timestamp": "2026-03-23T06:24:07Z"
+    "summary": "1 dispatches, 0 merges",
+    "timestamp": "2026-03-23T06:31:54Z"
   },
-  "last_eva_comment_check": "2026-03-23T06:24:07Z",
+  "last_eva_comment_check": "2026-03-23T06:31:54Z",
   "last_tool_audit_cycle": 320,
   "open_questions_for_eva": [
     1583,
