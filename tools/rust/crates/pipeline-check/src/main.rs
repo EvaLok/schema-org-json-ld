@@ -1189,7 +1189,7 @@ fn discover_current_cycle_issues(state: &Value, issue: u64) -> Result<CurrentCyc
 fn dedup_issue_numbers(issues: Vec<u64>) -> Vec<u64> {
     let mut deduped = Vec::new();
     for issue in issues {
-        if deduped.last().copied() != Some(issue) {
+        if !deduped.contains(&issue) {
             deduped.push(issue);
         }
     }

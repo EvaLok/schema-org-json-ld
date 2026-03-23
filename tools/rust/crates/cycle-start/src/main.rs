@@ -513,9 +513,7 @@ fn update_cycle_issues_for_resume(
     let mut cycle_issues = existing_or_legacy_cycle_issues(state)?;
     let mut changed = false;
 
-    if cycle_issues.last().copied() != Some(issue) {
-        cycle_issues.push(issue);
-    }
+    push_issue_if_missing(&mut cycle_issues, issue);
 
     changed |= set_or_insert_value_at_pointer(state, "/cycle_issues", json!(cycle_issues))?;
     changed |= set_or_insert_value_at_pointer(state, "/last_cycle/issue", json!(issue))?;
@@ -573,10 +571,10 @@ fn legacy_cycle_issues(state: &Value) -> Vec<u64> {
         .pointer("/previous_cycle_issue")
         .and_then(Value::as_u64)
     {
-        push_issue_if_new(&mut issues, previous_cycle_issue);
+        push_issue_if_missing(&mut issues, previous_cycle_issue);
     }
     if let Some(last_cycle_issue) = state.pointer("/last_cycle/issue").and_then(Value::as_u64) {
-        push_issue_if_new(&mut issues, last_cycle_issue);
+        push_issue_if_missing(&mut issues, last_cycle_issue);
     }
     issues
 }
@@ -584,17 +582,19 @@ fn legacy_cycle_issues(state: &Value) -> Vec<u64> {
 fn dedup_issue_numbers(issues: Vec<u64>) -> Vec<u64> {
     let mut deduped = Vec::new();
     for issue in issues {
-        push_issue_if_new(&mut deduped, issue);
+        push_issue_if_missing(&mut deduped, issue);
     }
     deduped
 }
 
-fn push_issue_if_new(issues: &mut Vec<u64>, issue: u64) {
-    if issues.last().copied() != Some(issue) {
+fn push_issue_if_missing(issues: &mut Vec<u64>, issue: u64) {
+    if !issues.contains(&issue) {
         issues.push(issue);
     }
 }
 
+/// Update a JSON pointer when the parent object exists, inserting the terminal
+/// field when needed. Returns true only when the stored value changed.
 fn set_or_insert_value_at_pointer(
     root: &mut Value,
     pointer: &str,
@@ -1558,6 +1558,36 @@ mod tests {
             Some(&json!([1647, 1654, 1655]))
         );
         assert_eq!(state.pointer("/last_cycle/issue"), Some(&json!(1655)));
+        assert_eq!(state.pointer("/previous_cycle_issue"), Some(&json!(1654)));
+    }
+
+    #[test]
+    fn resume_cycle_issues_does_not_duplicate_existing_issue_numbers() {
+        let mut state = json!({
+            "previous_cycle_issue": 1647,
+            "last_cycle": {
+                "number": 321,
+                "issue": 1654
+            },
+            "cycle_issues": [1647, 1654],
+            "field_inventory": {
+                "fields": {
+                    "last_cycle": {
+                        "last_refreshed": "cycle 321"
+                    },
+                    "previous_cycle_issue": {
+                        "last_refreshed": "cycle 321"
+                    }
+                }
+            }
+        });
+
+        let changed = update_cycle_issues_for_resume(&mut state, 321, 1647)
+            .expect("resume update should succeed");
+
+        assert!(changed);
+        assert_eq!(state.pointer("/cycle_issues"), Some(&json!([1647, 1654])));
+        assert_eq!(state.pointer("/last_cycle/issue"), Some(&json!(1647)));
         assert_eq!(state.pointer("/previous_cycle_issue"), Some(&json!(1654)));
     }
 
