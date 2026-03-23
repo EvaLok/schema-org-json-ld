@@ -4975,10 +4975,9 @@
     1665
   ],
   "cycle_phase": {
-    "completed_at": "2026-03-23T22:14:35Z",
     "cycle": 344,
-    "phase": "complete",
-    "phase_entered_at": "2026-03-23T22:14:35Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-23T22:17:21Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -5255,13 +5254,13 @@
   },
   "in_flight_sessions": 1,
   "last_cycle": {
-    "duration_minutes": 130,
+    "duration_minutes": 95,
     "issue": 1665,
     "number": 344,
-    "summary": "3 PRs merged (tool improvements), 3 review findings deferred, 2 audit-ACKs closed",
-    "timestamp": "2026-03-23T20:42:02Z"
+    "summary": "2 tool dispatches (#1666 cycle-complete fix, #1667 question-for-eva timeout), 3 branch cleanups, housekeeping",
+    "timestamp": "2026-03-23T22:17:21Z"
   },
-  "last_eva_comment_check": "2026-03-23T20:42:02Z",
+  "last_eva_comment_check": "2026-03-23T22:17:21Z",
   "last_tool_audit_cycle": 320,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
