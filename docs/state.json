@@ -4994,11 +4994,11 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 339"
+        "last_refreshed": "cycle 341"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 330"
+        "last_refreshed": "cycle 341"
       },
       "last_cycle": {
         "cadence": "every cycle",
