@@ -4669,6 +4669,13 @@
       "resolved_at": "2026-03-23T12:15:00Z",
       "status": "failed",
       "title": "[Cycle Review] Cycle 341 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-23T12:18:00Z",
+      "issue": 1638,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Copilot probe 34 — outage check"
     }
   ],
   "audit_dropped": [
