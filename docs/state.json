@@ -4954,6 +4954,7 @@
     "revision_rounds": 5,
     "total_dispatches": 528
   },
+  "cycle_issues": [1647, 1655, 1664],
   "cycle_phase": {
     "cycle": 344,
     "phase": "close_out",
