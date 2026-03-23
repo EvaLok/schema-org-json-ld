@@ -137,14 +137,15 @@ fn validate_worklog(
     }
 
     match fetch_cycle_receipts(repo_root, cycle) {
-        Ok(expected_receipts) => {
-            match validate_receipt_completeness(repo_root, cycle, &content, &expected_receipts) {
-                Ok(receipt_failures) => failures.extend(receipt_failures),
-                Err(error) => {
-                    failures.push(format!("unable to validate commit receipts: {}", error))
-                }
-            }
-        }
+        Ok(expected_receipts) => match validate_receipt_completeness(
+            repo_root,
+            cycle,
+            &content,
+            &expected_receipts,
+        ) {
+            Ok(receipt_failures) => failures.extend(receipt_failures),
+            Err(error) => failures.push(format!("unable to validate commit receipts: {}", error)),
+        },
         Err(error) => failures.push(format!("unable to validate commit receipts: {}", error)),
     }
 
@@ -408,10 +409,7 @@ fn find_cycle_complete_commit(repo_root: &Path, cycle: u64) -> Result<String, St
 }
 
 fn is_ancestor_commit(repo_root: &Path, ancestor: &str, descendant: &str) -> Result<bool, String> {
-    let output = run_git_output(
-        repo_root,
-        &["merge-base", "--is-ancestor", ancestor, descendant],
-    )?;
+    let output = run_git_output(repo_root, &["merge-base", "--is-ancestor", ancestor, descendant])?;
     match output.status.code() {
         Some(0) => Ok(true),
         Some(1) => Ok(false),
@@ -474,9 +472,7 @@ fn summarize_infrastructure_path(path: &str) -> String {
 }
 
 fn section_mentions_path(section: &str, path: &str) -> bool {
-    section
-        .to_ascii_lowercase()
-        .contains(&path.to_ascii_lowercase())
+    section.to_ascii_lowercase().contains(&path.to_ascii_lowercase())
 }
 
 fn fetch_pipeline_report(repo_root: &Path, cycle: u64) -> Result<PipelineReport, String> {
@@ -849,21 +845,17 @@ mod tests {
     #[test]
     fn provided_pipeline_status_skips_fetching_pipeline_report() {
         let fetch_called = std::cell::Cell::new(false);
-        let status =
-            resolve_pipeline_status(Path::new("."), 226, Some("pass"), |_repo_root, cycle| {
-                fetch_called.set(true);
-                assert_eq!(cycle, 226);
-                Ok(PipelineReport {
-                    overall: "fail".to_string(),
-                })
+        let status = resolve_pipeline_status(Path::new("."), 226, Some("pass"), |_repo_root, cycle| {
+            fetch_called.set(true);
+            assert_eq!(cycle, 226);
+            Ok(PipelineReport {
+                overall: "fail".to_string(),
             })
-            .expect("pipeline status should resolve");
+        })
+        .expect("pipeline status should resolve");
 
         assert_eq!(status, "pass");
-        assert!(
-            !fetch_called.get(),
-            "pipeline-check should not be invoked when --pipeline-status is provided"
-        );
+        assert!(!fetch_called.get(), "pipeline-check should not be invoked when --pipeline-status is provided");
     }
 
     #[test]
@@ -946,11 +938,7 @@ mod tests {
     fn ignores_receipts_after_cycle_complete() {
         let repo = TestRepo::new();
         repo.init();
-        let included_receipt = repo.commit(
-            "notes/merge.txt",
-            "merged\n",
-            "state(process-merge): merge work [cycle 226]",
-        );
+        let included_receipt = repo.commit("notes/merge.txt", "merged\n", "state(process-merge): merge work [cycle 226]");
         let cycle_complete_receipt = repo.commit(
             "notes/complete.txt",
             "complete\n",
@@ -991,11 +979,7 @@ mod tests {
     fn still_requires_receipts_up_to_cycle_complete() {
         let repo = TestRepo::new();
         repo.init();
-        let required_receipt = repo.commit(
-            "notes/merge.txt",
-            "merged\n",
-            "state(process-merge): merge work [cycle 226]",
-        );
+        let required_receipt = repo.commit("notes/merge.txt", "merged\n", "state(process-merge): merge work [cycle 226]");
         let cycle_complete_receipt = repo.commit(
             "notes/complete.txt",
             "complete\n",

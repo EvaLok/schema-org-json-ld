@@ -336,10 +336,7 @@ fn derive_cycle_summary(state: &StateJson, now: DateTime<Utc>) -> Result<String,
         let merged_at = session.merged_at.as_deref().ok_or_else(|| {
             format!("agent_sessions {issue_label} has status merged but is missing merged_at")
         })?;
-        let merged_at = parse_timestamp(
-            merged_at,
-            &format!("agent_sessions {issue_label} merged_at"),
-        )?;
+        let merged_at = parse_timestamp(merged_at, &format!("agent_sessions {issue_label} merged_at"))?;
         if !timestamp_in_cycle_window(merged_at, cycle_start, now) {
             continue;
         }
@@ -413,8 +410,7 @@ fn assemble_report(
     let timestamp = format_timestamp(now);
     let session_duration_minutes = compute_session_duration_minutes(state, now)?;
     let pipeline_check = validate_pipeline_check(state, cycle);
-    let agent_session_reconciliation =
-        build_agent_session_reconciliation(state, reconcile, &timestamp)?;
+    let agent_session_reconciliation = build_agent_session_reconciliation(state, reconcile, &timestamp)?;
     let state_json_patch = build_state_patch(
         cycle,
         issue,
@@ -1818,9 +1814,7 @@ mod tests {
         assert_eq!(report.agent_session_reconciliation.reconciled[0].issue, 751);
         assert_eq!(report.agent_session_reconciliation.reconciled[0].pr, 752);
         assert_eq!(
-            report.agent_session_reconciliation.reconciled[0]
-                .note
-                .as_deref(),
+            report.agent_session_reconciliation.reconciled[0].note.as_deref(),
             Some("Set merged_at to 2026-03-05T05:06:07Z (was missing)")
         );
         assert_eq!(
@@ -1888,9 +1882,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(report.agent_session_reconciliation.reconciled.len(), 1);
-        assert!(report.agent_session_reconciliation.reconciled[0]
-            .note
-            .is_none());
+        assert!(report.agent_session_reconciliation.reconciled[0].note.is_none());
         assert_eq!(
             report
                 .state_json_patch
