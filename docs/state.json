@@ -4698,7 +4698,7 @@
       "dispatched_at": "2026-03-23T14:51:15Z",
       "issue": 1653,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed_without_pr",
       "title": "[Cycle Review] Cycle 343 end-of-cycle review"
     }
   ],
@@ -4914,15 +4914,15 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 46,
+    "closed_without_pr": 47,
     "dispatch_log_latest": "#1653 [Cycle Review] Cycle 343 end-of-cycle review (cycle 343)",
     "dispatch_to_pr_rate": "91.0%",
     "failed_dispatches": 1,
-    "in_flight": 1,
+    "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
     "produced_pr": 478,
-    "resolved": 524,
+    "resolved": 525,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 525
