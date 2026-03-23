@@ -3,8 +3,8 @@ use clap::Parser;
 use serde::Serialize;
 use serde_json::{json, Value};
 use state_schema::{
-    commit_state_json, current_utc_timestamp, read_state_value, set_value_at_pointer,
-    transition_cycle_phase, write_state_value, StateJson,
+    commit_state_json, current_utc_timestamp, read_state_value, transition_cycle_phase,
+    write_state_value, StateJson,
 };
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -141,11 +141,7 @@ fn detect_stale_close_out(
         .with_timezone(&Utc);
 
     if now.signed_duration_since(entered_at).num_seconds() >= threshold_secs {
-        Ok(Some(
-            entered_at
-                .format("%Y-%m-%dT%H:%M:%SZ")
-                .to_string(),
-        ))
+        Ok(Some(entered_at.format("%Y-%m-%dT%H:%M:%SZ").to_string()))
     } else {
         Ok(None)
     }
@@ -190,6 +186,15 @@ fn run(cli: Cli) -> Result<(), String> {
     } else if should_resume(current_phase) {
         let current_phase = current_phase.unwrap_or("complete");
         let cycle = state_json.cycle_phase.cycle.unwrap_or(0);
+
+        if update_cycle_issues_for_resume(&mut state, cycle, cli.issue)? {
+            write_state_value(&cli.repo_root, &state)?;
+            let commit_message = format!(
+                "state(cycle-start): resume cycle {}, issue #{} [cycle {}]",
+                cycle, cli.issue, cycle
+            );
+            commit_state_json(&cli.repo_root, &commit_message)?;
+        }
 
         if cli.json {
             println!(
@@ -284,9 +289,14 @@ fn recover_stale_close_out(
     stale_issue: Option<u64>,
     entered_at: &str,
 ) -> Result<(), String> {
-    recover_stale_close_out_with(repo_root, state, cycle, stale_issue, entered_at, |issue, cycle, entered_at| {
-        close_stale_cycle_issue(issue, cycle, entered_at)
-    })
+    recover_stale_close_out_with(
+        repo_root,
+        state,
+        cycle,
+        stale_issue,
+        entered_at,
+        close_stale_cycle_issue,
+    )
 }
 
 fn recover_stale_close_out_with<F>(
@@ -445,6 +455,10 @@ fn build_state_patch(
             value: json!(open_question_numbers),
         },
         PatchUpdate {
+            path: "/cycle_issues".to_string(),
+            value: json!([issue]),
+        },
+        PatchUpdate {
             path: "/field_inventory/fields/last_cycle/last_refreshed".to_string(),
             value: json!(format!("cycle {}", cycle)),
         },
@@ -455,6 +469,13 @@ fn build_state_patch(
         PatchUpdate {
             path: "/field_inventory/fields/open_questions_for_eva/last_refreshed".to_string(),
             value: json!(format!("cycle {}", cycle)),
+        },
+        PatchUpdate {
+            path: "/field_inventory/fields/cycle_issues".to_string(),
+            value: json!({
+                "cadence": "every cycle",
+                "last_refreshed": format!("cycle {}", cycle),
+            }),
         },
     ];
 
@@ -478,9 +499,143 @@ fn build_state_patch(
 
 fn apply_state_patch(state: &mut Value, patch: &[PatchUpdate]) -> Result<(), String> {
     for update in patch {
-        set_value_at_pointer(state, &update.path, update.value.clone())?;
+        set_or_insert_value_at_pointer(state, &update.path, update.value.clone())?;
     }
     Ok(())
+}
+
+fn update_cycle_issues_for_resume(
+    state: &mut Value,
+    cycle: u64,
+    issue: u64,
+) -> Result<bool, String> {
+    let previous_issue = state.pointer("/last_cycle/issue").and_then(Value::as_u64);
+    let mut cycle_issues = existing_or_legacy_cycle_issues(state)?;
+    let mut changed = false;
+
+    if cycle_issues.last().copied() != Some(issue) {
+        cycle_issues.push(issue);
+    }
+
+    changed |= set_or_insert_value_at_pointer(state, "/cycle_issues", json!(cycle_issues))?;
+    changed |= set_or_insert_value_at_pointer(state, "/last_cycle/issue", json!(issue))?;
+    changed |= set_or_insert_value_at_pointer(
+        state,
+        "/field_inventory/fields/last_cycle/last_refreshed",
+        json!(format!("cycle {}", cycle)),
+    )?;
+    changed |= set_or_insert_value_at_pointer(
+        state,
+        "/field_inventory/fields/cycle_issues",
+        json!({
+            "cadence": "every cycle",
+            "last_refreshed": format!("cycle {}", cycle),
+        }),
+    )?;
+
+    if let Some(previous_issue) = previous_issue.filter(|previous_issue| *previous_issue != issue) {
+        changed |=
+            set_or_insert_value_at_pointer(state, "/previous_cycle_issue", json!(previous_issue))?;
+        changed |= set_or_insert_value_at_pointer(
+            state,
+            "/field_inventory/fields/previous_cycle_issue",
+            json!({
+                "cadence": "every cycle",
+                "last_refreshed": format!("cycle {}", cycle),
+            }),
+        )?;
+    }
+
+    Ok(changed)
+}
+
+fn existing_or_legacy_cycle_issues(state: &Value) -> Result<Vec<u64>, String> {
+    if let Some(cycle_issues) = state.pointer("/cycle_issues") {
+        if cycle_issues.is_null() {
+            return Ok(legacy_cycle_issues(state));
+        }
+
+        let parsed: Vec<u64> = serde_json::from_value(cycle_issues.clone()).map_err(|error| {
+            format!(
+                "failed to parse /cycle_issues in docs/state.json: {}",
+                error
+            )
+        })?;
+        return Ok(dedup_issue_numbers(parsed));
+    }
+
+    Ok(legacy_cycle_issues(state))
+}
+
+fn legacy_cycle_issues(state: &Value) -> Vec<u64> {
+    let mut issues = Vec::new();
+    if let Some(previous_cycle_issue) = state
+        .pointer("/previous_cycle_issue")
+        .and_then(Value::as_u64)
+    {
+        push_issue_if_new(&mut issues, previous_cycle_issue);
+    }
+    if let Some(last_cycle_issue) = state.pointer("/last_cycle/issue").and_then(Value::as_u64) {
+        push_issue_if_new(&mut issues, last_cycle_issue);
+    }
+    issues
+}
+
+fn dedup_issue_numbers(issues: Vec<u64>) -> Vec<u64> {
+    let mut deduped = Vec::new();
+    for issue in issues {
+        push_issue_if_new(&mut deduped, issue);
+    }
+    deduped
+}
+
+fn push_issue_if_new(issues: &mut Vec<u64>, issue: u64) {
+    if issues.last().copied() != Some(issue) {
+        issues.push(issue);
+    }
+}
+
+fn set_or_insert_value_at_pointer(
+    root: &mut Value,
+    pointer: &str,
+    value: Value,
+) -> Result<bool, String> {
+    let segments: Vec<String> = pointer
+        .split('/')
+        .skip(1)
+        .map(|segment| segment.replace("~1", "/").replace("~0", "~"))
+        .collect();
+
+    if segments.is_empty() {
+        return Err("json pointer must not be empty".to_string());
+    }
+
+    let mut cursor = root;
+    for segment in &segments[..segments.len() - 1] {
+        cursor = cursor
+            .as_object_mut()
+            .and_then(|object| object.get_mut(segment))
+            .ok_or_else(|| {
+                format!(
+                    "missing object path segment for pointer {}: {}",
+                    pointer, segment
+                )
+            })?;
+    }
+
+    let terminal = segments
+        .last()
+        .expect("segments is guaranteed to be non-empty");
+    let object = cursor
+        .as_object_mut()
+        .ok_or_else(|| format!("target parent is not an object for pointer {}", pointer))?;
+
+    if object.get(terminal) == Some(&value) {
+        return Ok(false);
+    }
+
+    object.insert(terminal.clone(), value);
+    Ok(true)
 }
 
 fn post_opening_comment(
@@ -1173,9 +1328,13 @@ mod tests {
                 std::process::id(),
                 unique
             ));
-            fs::create_dir_all(path.join("docs")).expect("failed to create temp repo docs directory");
-            fs::write(path.join("docs/state.json"), format!("{}\n", minimal_state_json()))
-                .expect("failed to write state.json");
+            fs::create_dir_all(path.join("docs"))
+                .expect("failed to create temp repo docs directory");
+            fs::write(
+                path.join("docs/state.json"),
+                format!("{}\n", minimal_state_json()),
+            )
+            .expect("failed to write state.json");
 
             run_git(&path, &["init"]);
             run_git(&path, &["config", "user.name", "Cycle Start Tests"]);
@@ -1283,9 +1442,11 @@ mod tests {
                 "/last_cycle/timestamp",
                 "/last_eva_comment_check",
                 "/open_questions_for_eva",
+                "/cycle_issues",
                 "/field_inventory/fields/last_cycle/last_refreshed",
                 "/field_inventory/fields/last_eva_comment_check/last_refreshed",
                 "/field_inventory/fields/open_questions_for_eva/last_refreshed",
+                "/field_inventory/fields/cycle_issues",
                 "/previous_cycle_issue",
                 "/field_inventory/fields/previous_cycle_issue",
             ]
@@ -1293,11 +1454,19 @@ mod tests {
         assert_eq!(patch[0].value, json!(163));
         assert_eq!(patch[1].value, json!(592));
         assert_eq!(patch[4].value, json!([600, 601]));
-        assert_eq!(patch[5].value, json!("cycle 163"));
-        assert_eq!(patch[7].value, json!("cycle 163"));
-        assert_eq!(patch[8].value, json!(591));
+        assert_eq!(patch[5].value, json!([592]));
+        assert_eq!(patch[6].value, json!("cycle 163"));
+        assert_eq!(patch[8].value, json!("cycle 163"));
         assert_eq!(
             patch[9].value,
+            json!({
+                "cadence": "every cycle",
+                "last_refreshed": "cycle 163",
+            })
+        );
+        assert_eq!(patch[10].value, json!(591));
+        assert_eq!(
+            patch[11].value,
             json!({
                 "cadence": "every cycle",
                 "last_refreshed": "cycle 163",
@@ -1323,7 +1492,73 @@ mod tests {
         let paths: Vec<&str> = patch.iter().map(|update| update.path.as_str()).collect();
 
         assert!(!paths.contains(&"/previous_cycle_issue"));
+        assert!(paths.contains(&"/cycle_issues"));
+        assert!(paths.contains(&"/field_inventory/fields/cycle_issues"));
         assert!(paths.contains(&"/field_inventory/fields/previous_cycle_issue"));
+    }
+
+    #[test]
+    fn resume_cycle_issues_appends_new_issue() {
+        let mut state = json!({
+            "last_cycle": {
+                "number": 321,
+                "issue": 1654
+            },
+            "cycle_issues": [1647, 1654],
+            "field_inventory": {
+                "fields": {
+                    "last_cycle": {
+                        "last_refreshed": "cycle 321"
+                    },
+                    "previous_cycle_issue": {
+                        "last_refreshed": "cycle 321"
+                    }
+                }
+            }
+        });
+
+        let changed = update_cycle_issues_for_resume(&mut state, 321, 1655)
+            .expect("resume update should succeed");
+
+        assert!(changed);
+        assert_eq!(
+            state.pointer("/cycle_issues"),
+            Some(&json!([1647, 1654, 1655]))
+        );
+        assert_eq!(state.pointer("/last_cycle/issue"), Some(&json!(1655)));
+        assert_eq!(state.pointer("/previous_cycle_issue"), Some(&json!(1654)));
+    }
+
+    #[test]
+    fn resume_cycle_issues_preserves_legacy_issue_history_when_array_is_missing() {
+        let mut state = json!({
+            "previous_cycle_issue": 1647,
+            "last_cycle": {
+                "number": 321,
+                "issue": 1654
+            },
+            "field_inventory": {
+                "fields": {
+                    "last_cycle": {
+                        "last_refreshed": "cycle 321"
+                    },
+                    "previous_cycle_issue": {
+                        "last_refreshed": "cycle 320"
+                    }
+                }
+            }
+        });
+
+        let changed = update_cycle_issues_for_resume(&mut state, 321, 1655)
+            .expect("resume update should succeed");
+
+        assert!(changed);
+        assert_eq!(
+            state.pointer("/cycle_issues"),
+            Some(&json!([1647, 1654, 1655]))
+        );
+        assert_eq!(state.pointer("/last_cycle/issue"), Some(&json!(1655)));
+        assert_eq!(state.pointer("/previous_cycle_issue"), Some(&json!(1654)));
     }
 
     #[test]
