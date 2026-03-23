@@ -4939,7 +4939,7 @@
   "cycle_phase": {
     "cycle": 344,
     "phase": "close_out",
-    "phase_entered_at": "2026-03-23T18:33:54Z"
+    "phase_entered_at": "2026-03-23T20:42:02Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -5212,13 +5212,13 @@
   },
   "in_flight_sessions": 1,
   "last_cycle": {
-    "duration_minutes": 14,
-    "issue": 1655,
+    "duration_minutes": 130,
+    "issue": 1664,
     "number": 344,
-    "summary": "3 dispatches, 0 merges",
-    "timestamp": "2026-03-23T18:32:09Z"
+    "summary": "3 PRs merged (tool improvements), 3 review findings deferred, 2 audit-ACKs closed",
+    "timestamp": "2026-03-23T20:42:02Z"
   },
-  "last_eva_comment_check": "2026-03-23T18:32:09Z",
+  "last_eva_comment_check": "2026-03-23T20:42:02Z",
   "last_tool_audit_cycle": 320,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
