@@ -4858,7 +4858,7 @@
     "closed_without_merge": 8,
     "closed_without_pr": 40,
     "dispatch_log_latest": "#1630 Copilot probe 31 (cycle 340)",
-    "dispatch_to_pr_rate": "92.1%",
+    "dispatch_to_pr_rate": "92.3%",
     "in_flight": 0,
     "merged": 468,
     "pr_merge_rate": "97.9%",
@@ -4869,6 +4869,7 @@
     "total_dispatches": 518
   },
   "cycle_phase": {
+    "completed_at": "2026-03-23T06:31:54Z",
     "cycle": 340,
     "phase": "complete",
     "phase_entered_at": "2026-03-23T06:31:54Z"
@@ -8055,7 +8056,7 @@
     "last_review_cycle": 322
   },
   "review_dispatch_consecutive": 0,
-  "review_events_verified_through_cycle": 338,
+  "review_events_verified_through_cycle": 340,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
