@@ -5278,7 +5278,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 350"
+        "last_refreshed": "cycle 351"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -8382,9 +8382,23 @@
         "finding_count": 3,
         "ignored": 0,
         "note": "All 3 findings are behavioral: (1) receipt-integrity — will use cycle-receipts output directly; (2) process-adherence — will derive self-modifications from git diff; (3) journal-quality — will evaluate compound commitments item-by-item. Demonstration in this cycle's worklog/journal."
+      },
+      {
+        "actioned": 3,
+        "categories": [
+          "journal-quality",
+          "process-adherence",
+          "receipt-integrity"
+        ],
+        "complacency_score": 2,
+        "cycle": 350,
+        "deferred": 0,
+        "finding_count": 3,
+        "ignored": 0,
+        "note": "All 3 findings actioned this cycle: receipt table will use verbatim cycle-receipts output, self-modifications derived from infrastructure diff, journal commitments quoted verbatim."
       }
     ],
-    "last_review_cycle": 349
+    "last_review_cycle": 350
   },
   "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 349,
