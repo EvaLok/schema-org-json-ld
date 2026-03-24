@@ -4972,7 +4972,8 @@
     1647,
     1655,
     1664,
-    1665
+    1665,
+    1670
   ],
   "cycle_phase": {
     "cycle": 344,
@@ -5255,7 +5256,7 @@
   "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 95,
-    "issue": 1665,
+    "issue": 1670,
     "number": 344,
     "summary": "2 tool dispatches (#1666 cycle-complete fix, #1667 question-for-eva timeout), 3 branch cleanups, housekeeping",
     "timestamp": "2026-03-23T22:17:21Z"
@@ -5269,7 +5270,7 @@
     "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
     "started_at": "cycle 199"
   },
-  "previous_cycle_issue": 1664,
+  "previous_cycle_issue": 1665,
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
     "burn_in_target": 6,
