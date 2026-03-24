@@ -4848,8 +4848,10 @@
     {
       "dispatched_at": "2026-03-24T18:27:47Z",
       "issue": 1704,
+      "merged_at": "2026-03-24T22:17:15Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1705,
+      "status": "merged",
       "title": "Add per-finding disposition tracking and deferral accumulation detection"
     },
     {
@@ -5078,13 +5080,13 @@
     "closed_without_merge": 8,
     "closed_without_pr": 47,
     "dispatch_log_latest": "#1706 [Cycle Review] Cycle 350 end-of-cycle review (cycle 350)",
-    "dispatch_to_pr_rate": "91.2%",
+    "dispatch_to_pr_rate": "91.3%",
     "failed_dispatches": 1,
-    "in_flight": 1,
-    "merged": 485,
+    "in_flight": 0,
+    "merged": 486,
     "pr_merge_rate": "98.0%",
-    "produced_pr": 495,
-    "resolved": 542,
+    "produced_pr": 496,
+    "resolved": 543,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 543
