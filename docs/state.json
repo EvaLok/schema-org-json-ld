@@ -4749,8 +4749,10 @@
     {
       "dispatched_at": "2026-03-24T00:21:43Z",
       "issue": 1671,
+      "merged_at": "2026-03-24T03:08:24Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1672,
+      "status": "merged",
       "title": "Align Quiz schema with Google Education Q&A spec"
     }
   ],
@@ -4968,13 +4970,13 @@
     "closed_without_merge": 8,
     "closed_without_pr": 47,
     "dispatch_log_latest": "#1671 Align Quiz schema with Google Education Q&A spec (cycle 344)",
-    "dispatch_to_pr_rate": "91.0%",
+    "dispatch_to_pr_rate": "91.1%",
     "failed_dispatches": 1,
-    "in_flight": 1,
-    "merged": 473,
+    "in_flight": 0,
+    "merged": 474,
     "pr_merge_rate": "97.9%",
-    "produced_pr": 483,
-    "resolved": 530,
+    "produced_pr": 484,
+    "resolved": 531,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 531
@@ -5083,15 +5085,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 344"
+        "last_refreshed": "cycle 345"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 344"
+        "last_refreshed": "cycle 345"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 344"
+        "last_refreshed": "cycle 345"
       },
       "cycle_issues": {
         "cadence": "every cycle",
