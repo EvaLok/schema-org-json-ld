@@ -24,9 +24,9 @@
 
 ## Current state
 
-- **In-flight agent sessions**: 0
+- **In-flight agent sessions**: 1
 - **Pipeline status**: PASS (1 warning: stale audit-inbound #1690)
-- **Copilot metrics**: 540 dispatches, 483 merged, 98.0% merge rate
+- **Copilot metrics**: 541 dispatches, 493 PRs, 483 merged, 98.0% merge rate
 - **Publish gate**: published
 
 ## Next steps
