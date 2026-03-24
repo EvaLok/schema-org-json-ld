@@ -4821,8 +4821,10 @@
     {
       "dispatched_at": "2026-03-24T14:36:26Z",
       "issue": 1696,
+      "merged_at": "2026-03-24T16:31:34Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1697,
+      "status": "merged",
       "title": "Add disposition-match validation phase to pipeline-check"
     },
     {
@@ -5049,13 +5051,13 @@
     "closed_without_merge": 8,
     "closed_without_pr": 47,
     "dispatch_log_latest": "#1698 [Cycle Review] Cycle 348 end-of-cycle review (cycle 348)",
-    "dispatch_to_pr_rate": "90.9%",
+    "dispatch_to_pr_rate": "91.1%",
     "failed_dispatches": 1,
-    "in_flight": 2,
-    "merged": 481,
+    "in_flight": 1,
+    "merged": 482,
     "pr_merge_rate": "98.0%",
-    "produced_pr": 491,
-    "resolved": 538,
+    "produced_pr": 492,
+    "resolved": 539,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 540
