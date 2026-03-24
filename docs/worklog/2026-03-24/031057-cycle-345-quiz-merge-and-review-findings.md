@@ -19,7 +19,7 @@
 ## Current state
 
 - **In-flight agent sessions**: 0
-- **Pipeline status**: FAIL (step-comments cascade from cycle 344: steps 1, 5, 6 missing on issue #1670; housekeeping warning)
+- **Pipeline status**: PASS (all 13 metric checks pass; step-comments WARN on prior issue #1673)
 - **Copilot metrics**: 531 dispatches, 484 PRs, 474 merged, 97.9% merge rate
 - **Publish gate**: published
 
