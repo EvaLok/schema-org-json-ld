@@ -4851,6 +4851,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add per-finding disposition tracking and deferral accumulation detection"
+    },
+    {
+      "dispatched_at": "2026-03-24T18:35:24Z",
+      "issue": 1706,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 350 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -5068,17 +5075,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1704 Add per-finding disposition tracking and deferral accumulation detection (cycle 350)",
-    "dispatch_to_pr_rate": "91.1%",
+    "dispatch_log_latest": "#1706 [Cycle Review] Cycle 350 end-of-cycle review (cycle 350)",
+    "dispatch_to_pr_rate": "91.0%",
     "failed_dispatches": 1,
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 484,
     "pr_merge_rate": "98.0%",
     "produced_pr": 494,
     "resolved": 541,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 542
+    "total_dispatches": 543
   },
   "cycle_issues": [
     1703
@@ -8377,7 +8384,7 @@
     ],
     "last_review_cycle": 349
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 349,
   "schema_status": {
     "directory_layout": {
