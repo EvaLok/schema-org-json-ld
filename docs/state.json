@@ -4799,6 +4799,13 @@
       "pr": 1689,
       "status": "merged",
       "title": "Fix cycle-receipts scope: exclude docs commits, custom state labels, and fix resumed cycle window"
+    },
+    {
+      "dispatched_at": "2026-03-24T12:47:45Z",
+      "issue": 1691,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 347 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -5016,17 +5023,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1688 Fix cycle-receipts scope: exclude docs commits, custom state labels, and fix resumed cycle window (cycle 347)",
-    "dispatch_to_pr_rate": "91.2%",
+    "dispatch_log_latest": "#1691 [Cycle Review] Cycle 347 end-of-cycle review (cycle 347)",
+    "dispatch_to_pr_rate": "91.1%",
     "failed_dispatches": 1,
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 479,
     "pr_merge_rate": "98.0%",
     "produced_pr": 489,
     "resolved": 536,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 536
+    "total_dispatches": 537
   },
   "cycle_issues": [
     1687
@@ -8282,7 +8289,7 @@
     ],
     "last_review_cycle": 346
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 346,
   "schema_status": {
     "directory_layout": {
