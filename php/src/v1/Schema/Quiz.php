@@ -12,8 +12,9 @@ class Quiz extends TypedSchema {
 	public function __construct(
 		/** @var Question[] $hasPart */
 		public array $hasPart,
-		public null|string $about = null,
-		public null|AlignmentObject $educationalAlignment = null,
+		public null|string|Thing $about = null,
+		/** @var AlignmentObject|AlignmentObject[]|null */
+		public null|AlignmentObject|array $educationalAlignment = null,
 		public null|string $name = null,
 		public null|string $description = null,
 	) {}
