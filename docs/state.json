@@ -5017,14 +5017,12 @@
     "total_dispatches": 535
   },
   "cycle_issues": [
-    1680,
-    1684
+    1687
   ],
   "cycle_phase": {
-    "completed_at": "2026-03-24T10:42:03Z",
-    "cycle": 346,
-    "phase": "complete",
-    "phase_entered_at": "2026-03-24T10:42:03Z"
+    "cycle": 347,
+    "phase": "work",
+    "phase_entered_at": "2026-03-24T12:15:08Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -5134,11 +5132,11 @@
       },
       "cycle_issues": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 346"
+        "last_refreshed": "cycle 347"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
-        "last_refreshed": "cycle 346",
+        "last_refreshed": "cycle 347",
         "notes": "Tracks cycle, phase, phase_entered_at, and completed_at when phase is complete."
       },
       "eva_input_issues.closed_this_cycle": {
@@ -5155,7 +5153,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 346"
+        "last_refreshed": "cycle 347"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -5163,7 +5161,7 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 346"
+        "last_refreshed": "cycle 347"
       },
       "last_tool_audit_cycle": {
         "cadence": "every 10 cycles",
@@ -5171,7 +5169,7 @@
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 346"
+        "last_refreshed": "cycle 347"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -5183,7 +5181,7 @@
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 346"
+        "last_refreshed": "cycle 347"
       },
       "project_mode": {
         "cadence": "when mode or counter changes",
@@ -5302,12 +5300,12 @@
   "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 121,
-    "issue": 1684,
-    "number": 346,
+    "issue": 1687,
+    "number": 347,
     "summary": "Processed cycle 346 review (2/5, 1 actioned, 4 deferred). Merged review PR #1683. Acknowledged inherited step-comments cascade from cycle 345. Dispatched #1685 (auto-cascade-acknowledgment for cycle-runner startup). Cleaned housekeeping (1 dead branch, 1 stale audit-inbound).",
-    "timestamp": "2026-03-24T10:37:48Z"
+    "timestamp": "2026-03-24T12:15:08Z"
   },
-  "last_eva_comment_check": "2026-03-24T10:37:48Z",
+  "last_eva_comment_check": "2026-03-24T12:15:08Z",
   "last_tool_audit_cycle": 320,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
@@ -5316,7 +5314,7 @@
     "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
     "started_at": "cycle 199"
   },
-  "previous_cycle_issue": 1680,
+  "previous_cycle_issue": 1684,
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
     "burn_in_target": 6,
