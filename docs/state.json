@@ -4987,10 +4987,9 @@
     1670
   ],
   "cycle_phase": {
-    "completed_at": "2026-03-24T00:21:43Z",
     "cycle": 344,
-    "phase": "complete",
-    "phase_entered_at": "2026-03-24T00:21:43Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-24T00:22:59Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -5267,13 +5266,13 @@
   },
   "in_flight_sessions": 1,
   "last_cycle": {
-    "duration_minutes": 95,
+    "duration_minutes": 126,
     "issue": 1670,
     "number": 344,
-    "summary": "2 tool dispatches (#1666 cycle-complete fix, #1667 question-for-eva timeout), 3 branch cleanups, housekeeping",
-    "timestamp": "2026-03-23T22:17:21Z"
+    "summary": "Reviewed and merged 2 tool PRs (#1668 cycle-complete fix, #1669 stale question-for-eva detection). Closed audit-ACK #1632. Dispatched Quiz schema alignment (#1671).",
+    "timestamp": "2026-03-24T00:22:59Z"
   },
-  "last_eva_comment_check": "2026-03-23T22:17:21Z",
+  "last_eva_comment_check": "2026-03-24T00:22:59Z",
   "last_tool_audit_cycle": 320,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
