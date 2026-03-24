@@ -4745,6 +4745,13 @@
       "pr": 1669,
       "status": "merged",
       "title": "Add stale question-for-eva detection to cycle-status"
+    },
+    {
+      "dispatched_at": "2026-03-24T00:21:43Z",
+      "issue": 1671,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Align Quiz schema with Google Education Q&A spec"
     }
   ],
   "audit_dropped": [
@@ -4960,17 +4967,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1667 Add stale question-for-eva detection to cycle-status (cycle 344)",
-    "dispatch_to_pr_rate": "91.1%",
+    "dispatch_log_latest": "#1671 Align Quiz schema with Google Education Q&A spec (cycle 344)",
+    "dispatch_to_pr_rate": "91.0%",
     "failed_dispatches": 1,
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 473,
     "pr_merge_rate": "97.9%",
     "produced_pr": 483,
     "resolved": 530,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 530
+    "total_dispatches": 531
   },
   "cycle_issues": [
     1647,
@@ -4980,9 +4987,10 @@
     1670
   ],
   "cycle_phase": {
+    "completed_at": "2026-03-24T00:21:43Z",
     "cycle": 344,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-23T22:17:21Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-24T00:21:43Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
