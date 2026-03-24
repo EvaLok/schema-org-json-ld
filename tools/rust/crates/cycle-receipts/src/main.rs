@@ -167,7 +167,7 @@ fn extract_step(subject: &str) -> Option<String> {
     let remainder = subject.strip_prefix(prefix)?;
     let (step, suffix) = remainder.split_once("):")?;
     let step = step.trim();
-    if suffix.trim().is_empty() || step.is_empty() {
+    if suffix.trim().is_empty() || step.is_empty() || !SPECIFIC_STATE_STEPS.contains(&step) {
         return None;
     }
 
@@ -179,7 +179,7 @@ fn extract_match_steps(subject: &str, cycle: u64) -> Vec<String> {
     if let Some(step) = extract_step(subject) {
         steps.push(step);
     }
-    if extract_cycle_tag(subject) == Some(cycle) {
+    if !subject.starts_with("docs(") && extract_cycle_tag(subject) == Some(cycle) {
         steps.push(FALLBACK_STEP.to_string());
     }
     steps
@@ -393,7 +393,7 @@ fn parse_timestamp(value: &str, label: &str) -> Result<DateTime<Utc>, String> {
 }
 
 fn find_cycle_start_timestamp(commits: &[GitCommit], cycle: u64) -> Option<DateTime<Utc>> {
-    commits.iter().find_map(|commit| {
+    commits.iter().rev().find_map(|commit| {
         if extract_step(&commit.subject).as_deref() == Some("cycle-start")
             && extract_cycle_tag(&commit.subject) == Some(cycle)
         {
@@ -446,6 +446,23 @@ mod tests {
             198
         ));
         assert_eq!(extract_step("docs: update worklog [cycle 198]"), None);
+    }
+
+    #[test]
+    fn docs_cycle_commit_is_not_matched_as_receipt() {
+        let subject = "docs(cycle-347): worklog and journal updates [cycle 347]";
+        assert_eq!(extract_match_steps(subject, 347), Vec::<String>::new());
+        assert!(!matches_receipt_commit(subject, 347));
+    }
+
+    #[test]
+    fn custom_state_label_is_not_matched_as_receipt_step() {
+        let subject = "state(cycle-complete-phase): switched to close-out [cycle 347]";
+        assert_eq!(extract_step(subject), None);
+        assert_eq!(
+            extract_match_steps(subject, 347),
+            vec![FALLBACK_STEP.to_string()]
+        );
     }
 
     #[test]
@@ -902,6 +919,48 @@ mod tests {
                 "state(cycle-complete): cycle 198 close out [cycle 198]",
                 "docs: worklog touch [cycle 198]",
             ]
+        );
+    }
+
+    #[test]
+    fn find_cycle_start_timestamp_uses_oldest_start_for_resumed_cycle() {
+        let commits = vec![
+            GitCommit {
+                full_sha: "ddddddd123456789".to_string(),
+                short_sha: "ddddddd".to_string(),
+                committed_at: parse_timestamp("2026-03-09T01:30:00Z", "test timestamp")
+                    .expect("timestamp should parse"),
+                subject: "state(process-review): consumed cycle 346 review".to_string(),
+            },
+            GitCommit {
+                full_sha: "ccccccc123456789".to_string(),
+                short_sha: "ccccccc".to_string(),
+                committed_at: parse_timestamp("2026-03-09T01:20:00Z", "test timestamp")
+                    .expect("timestamp should parse"),
+                subject: "state(cycle-start): resumed cycle 347 [cycle 347]".to_string(),
+            },
+            GitCommit {
+                full_sha: "bbbbbbb123456789".to_string(),
+                short_sha: "bbbbbbb".to_string(),
+                committed_at: parse_timestamp("2026-03-09T01:10:00Z", "test timestamp")
+                    .expect("timestamp should parse"),
+                subject: "state(process-merge): merged PR #1 [cycle 347]".to_string(),
+            },
+            GitCommit {
+                full_sha: "aaaaaaa123456789".to_string(),
+                short_sha: "aaaaaaa".to_string(),
+                committed_at: parse_timestamp("2026-03-09T01:00:00Z", "test timestamp")
+                    .expect("timestamp should parse"),
+                subject: "state(cycle-start): begin cycle 347 [cycle 347]".to_string(),
+            },
+        ];
+
+        let start = find_cycle_start_timestamp(&commits, 347).expect("start timestamp should exist");
+
+        assert_eq!(
+            start,
+            parse_timestamp("2026-03-09T01:00:00Z", "test timestamp")
+                .expect("timestamp should parse")
         );
     }
 
