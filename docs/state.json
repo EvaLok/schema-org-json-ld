@@ -8758,6 +8758,16 @@
         "C4.1"
       ],
       "reason": "Inherited cascade from cycle 345. Steps missing due to multi-issue cycle split (steps posted on #1677 not #1680). Already penalized in cycle 345 pipeline."
+    },
+    {
+      "acknowledged_at": "2026-03-24T12:30:00Z",
+      "cycle": 346,
+      "issue": 1684,
+      "missing_steps": [
+        "1",
+        "C4.5"
+      ],
+      "reason": "Inherited cascade from cycle 346. Steps 1 and C4.5 were missing on #1684. Already penalized in cycle 346 pipeline."
     }
   ],
   "test_count": {
