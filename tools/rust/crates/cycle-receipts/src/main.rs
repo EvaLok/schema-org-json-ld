@@ -451,6 +451,7 @@ mod tests {
     #[test]
     fn docs_cycle_commit_is_not_matched_as_receipt() {
         let subject = "docs(cycle-347): worklog and journal updates [cycle 347]";
+        assert_eq!(extract_cycle_tag(subject), Some(347));
         assert_eq!(extract_match_steps(subject, 347), Vec::<String>::new());
         assert!(!matches_receipt_commit(subject, 347));
     }
