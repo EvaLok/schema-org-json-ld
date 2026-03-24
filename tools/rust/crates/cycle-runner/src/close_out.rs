@@ -5,7 +5,10 @@ use crate::steps;
 use serde_json::Value;
 use std::path::Path;
 use std::process::Command;
-use state_schema::{commit_state_json, read_state_value, transition_cycle_phase, write_state_value};
+use state_schema::{
+    commit_state_json, current_cycle_from_state, read_state_value, transition_cycle_phase,
+    write_state_value,
+};
 
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 
@@ -32,7 +35,7 @@ pub fn run(
     let state = read_state_value(repo_root)?;
     let cycle = match cycle_override {
         Some(c) => c,
-        None => state_schema::current_cycle_from_state(repo_root)?,
+        None => current_cycle_from_state(repo_root)?,
     };
 
     let phase = state
@@ -87,13 +90,18 @@ pub fn run(
     // C8: Close issue
     step_c8(repo_root, issue, cycle, &review_info)?;
     complete_close_out_phase(repo_root, cycle)?;
-    git::push(repo_root)?;
+    git::push(repo_root).map_err(|error| {
+        format!(
+            "{} (cycle phase was already committed locally; retry the push to publish the complete state)",
+            error
+        )
+    })?;
 
     eprintln!("Close-out complete for cycle {}", cycle);
     Ok(())
 }
 
-fn complete_close_out_phase(repo_root: &Path, cycle: u64) -> Result<String, String> {
+fn complete_close_out_phase(repo_root: &Path, cycle: u64) -> Result<(), String> {
     let mut state = read_state_value(repo_root)?;
     transition_cycle_phase(&mut state, cycle, "complete")?;
     write_state_value(repo_root, &state)?;
@@ -102,7 +110,8 @@ fn complete_close_out_phase(repo_root: &Path, cycle: u64) -> Result<String, Stri
         "state(cycle-complete-phase): cycle {} phase -> complete [cycle {}]",
         cycle, cycle
     );
-    commit_state_json(repo_root, &commit_message)
+    commit_state_json(repo_root, &commit_message)?;
+    Ok(())
 }
 
 fn step_c4_1(
@@ -830,6 +839,7 @@ mod tests {
     use serde_json::json;
     use std::fs;
     use std::process::Command;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn parse_dispatch_output_extracts_issue_number() {
@@ -905,10 +915,7 @@ mod tests {
 
     #[test]
     fn patch_worklog_from_state_rewrites_legacy_metrics_format() {
-        let dir = std::env::temp_dir().join(format!(
-            "cycle-runner-close-out-test-{}",
-            std::process::id()
-        ));
+        let dir = unique_temp_dir("cycle-runner-close-out-test");
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         let worklog = dir.join("worklog.md");
@@ -938,15 +945,12 @@ mod tests {
         assert!(updated.contains(&format_copilot_metrics_line(&metrics)));
         assert!(!updated.contains(legacy_metrics_line));
 
-        let _ = fs::remove_dir_all(&dir);
+        fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
     fn patch_worklog_from_state_skips_when_current_state_already_matches() {
-        let dir = std::env::temp_dir().join(format!(
-            "cycle-runner-close-out-test-skip-{}",
-            std::process::id()
-        ));
+        let dir = unique_temp_dir("cycle-runner-close-out-test-skip");
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         let worklog = dir.join("worklog.md");
@@ -1072,7 +1076,7 @@ mod tests {
     }
 
     fn setup_temp_repo(name: &str) -> std::path::PathBuf {
-        let dir = std::env::temp_dir().join(format!("cycle-runner-close-out-{}", name));
+        let dir = unique_temp_dir(&format!("cycle-runner-close-out-{}", name));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(dir.join("docs")).unwrap();
         Command::new("git")
@@ -1094,6 +1098,14 @@ mod tests {
             .output()
             .unwrap();
         dir
+    }
+
+    fn unique_temp_dir(prefix: &str) -> std::path::PathBuf {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        std::env::temp_dir().join(format!("{}-{}", prefix, suffix))
     }
 
     #[test]
@@ -1140,6 +1152,6 @@ mod tests {
             "state(cycle-complete-phase): cycle 345 phase -> complete [cycle 345]"
         );
 
-        let _ = fs::remove_dir_all(&dir);
+        fs::remove_dir_all(&dir).unwrap();
     }
 }
