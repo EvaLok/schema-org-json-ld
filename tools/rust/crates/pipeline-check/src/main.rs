@@ -1,9 +1,10 @@
 use chrono::NaiveDate;
 use clap::Parser;
+use regex::Regex;
 use serde::Serialize;
 use serde_json::Value;
 use state_schema::{
-    current_cycle_from_state, current_utc_timestamp, read_state_value, StepCommentGap,
+    current_cycle_from_state, current_utc_timestamp, read_state_value, StateJson, StepCommentGap,
 };
 use std::collections::BTreeSet;
 use std::fs;
@@ -16,6 +17,7 @@ const CYCLE_STATUS_DIRECTIVES_PATH: &str = "/eva_input/comments_since_last_cycle
 const DERIVE_METRICS_TOOL_NAME: &str = "derive-metrics";
 const DERIVE_METRICS_WRAPPER_PATH: &str = "tools/derive-metrics";
 const ARTIFACT_VERIFY_STEP_NAME: &str = "artifact-verify";
+const DISPOSITION_MATCH_STEP_NAME: &str = "disposition-match";
 const DOC_VALIDATION_STEP_NAME: &str = "doc-validation";
 const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const CURRENT_CYCLE_STEPS_STEP_NAME: &str = "current-cycle-steps";
@@ -309,6 +311,9 @@ fn run_pipeline_with_excluded_steps(
     );
     if !is_excluded_step(ARTIFACT_VERIFY_STEP_NAME, exclude_steps) {
         steps.push(verify_artifacts(repo_root));
+    }
+    if !is_excluded_step(DISPOSITION_MATCH_STEP_NAME, exclude_steps) {
+        steps.push(verify_disposition_match(repo_root));
     }
     let pipeline_status = pipeline_overall_status(&steps);
     if !is_excluded_step(DOC_VALIDATION_STEP_NAME, exclude_steps) {
@@ -1675,6 +1680,111 @@ fn is_worklog_entry_filename(file_name: &str) -> bool {
         && file_name.as_bytes()[6] == b'-'
 }
 
+fn verify_disposition_match(repo_root: &Path) -> StepReport {
+    match disposition_match_status(repo_root) {
+        Ok((status, detail)) => StepReport {
+            name: DISPOSITION_MATCH_STEP_NAME,
+            status,
+            severity: Severity::Warning,
+            exit_code: None,
+            detail: Some(detail),
+            findings: None,
+            summary: None,
+        },
+        Err(error) => StepReport {
+            name: DISPOSITION_MATCH_STEP_NAME,
+            status: StepStatus::Error,
+            severity: Severity::Warning,
+            exit_code: None,
+            detail: Some(error),
+            findings: None,
+            summary: None,
+        },
+    }
+}
+
+fn disposition_match_status(repo_root: &Path) -> Result<(StepStatus, String), String> {
+    let state_value = read_state_value(repo_root)?;
+    let state: StateJson = serde_json::from_value(state_value)
+        .map_err(|error| format!("failed to parse state.json: {}", error))?;
+    let review_agent = state.review_agent()?;
+    let Some(history_entry) = review_agent.history.last() else {
+        return Ok((StepStatus::Pass, "no review history".to_string()));
+    };
+
+    let review_relative_path = format!("docs/reviews/cycle-{}.md", history_entry.cycle);
+    let review_path = repo_root.join(&review_relative_path);
+    if !review_path.is_file() {
+        return Ok((
+            StepStatus::Warn,
+            format!("review file not found: {}", review_relative_path),
+        ));
+    }
+
+    let review_content = fs::read_to_string(&review_path)
+        .map_err(|error| format!("failed to read {}: {}", review_path.display(), error))?;
+    let review_finding_count = count_review_findings(&review_content)?;
+    let disposition_sum = checked_disposition_sum(history_entry)?;
+
+    let mut details = vec![format!(
+        "{} findings in review file for cycle {}",
+        review_finding_count, history_entry.cycle
+    )];
+
+    if history_entry.finding_count != review_finding_count {
+        details.push(format!(
+            "history finding_count {} does not match review file {}",
+            history_entry.finding_count, review_finding_count
+        ));
+        if disposition_sum == history_entry.finding_count {
+            details.push(format!(
+                "disposition sum {} matches history finding_count",
+                disposition_sum
+            ));
+        } else {
+            details.push(format!(
+                "disposition sum {} does not match finding_count {}",
+                disposition_sum, history_entry.finding_count
+            ));
+        }
+        return Ok((StepStatus::Fail, details.join("; ")));
+    }
+
+    if disposition_sum != history_entry.finding_count {
+        details.push(format!(
+            "disposition sum {} does not match finding_count {}",
+            disposition_sum, history_entry.finding_count
+        ));
+        return Ok((StepStatus::Warn, details.join("; ")));
+    }
+
+    details.push("history finding_count and dispositions match review file".to_string());
+    Ok((StepStatus::Pass, details.join("; ")))
+}
+
+fn count_review_findings(review_content: &str) -> Result<u64, String> {
+    let regex = Regex::new(r"(?m)^## \d+\.")
+        .map_err(|error| format!("failed to build review finding regex: {}", error))?;
+    let count = regex.find_iter(review_content).count();
+    u64::try_from(count).map_err(|error| format!("review finding count overflow: {}", error))
+}
+
+fn checked_disposition_sum(
+    history_entry: &state_schema::ReviewHistoryEntry,
+) -> Result<u64, String> {
+    history_entry
+        .actioned
+        .checked_add(history_entry.deferred)
+        .and_then(|sum| sum.checked_add(history_entry.dispatch_created))
+        .and_then(|sum| sum.checked_add(history_entry.ignored))
+        .ok_or_else(|| {
+            format!(
+                "disposition sum overflow for review cycle {}",
+                history_entry.cycle
+            )
+        })
+}
+
 fn verify_review_artifact_exists(repo_root: &Path) -> Result<(StepStatus, String), String> {
     let state = read_state_value(repo_root)?;
     let cycle = state
@@ -2905,7 +3015,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 10);
+        assert_eq!(report.steps.len(), 11);
         assert_eq!(report.steps[0].status, StepStatus::Pass);
         assert_eq!(report.steps[1].status, StepStatus::Pass);
         assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -2926,12 +3036,14 @@ mod tests {
         );
         assert_eq!(report.steps[6].name, "artifact-verify");
         assert_eq!(report.steps[6].status, StepStatus::Pass);
-        assert_eq!(report.steps[7].name, "doc-validation");
+        assert_eq!(report.steps[7].name, "disposition-match");
         assert_eq!(report.steps[7].status, StepStatus::Pass);
-        assert_eq!(report.steps[8].name, "step-comments");
+        assert_eq!(report.steps[8].name, "doc-validation");
         assert_eq!(report.steps[8].status, StepStatus::Pass);
-        assert_eq!(report.steps[9].name, "current-cycle-steps");
+        assert_eq!(report.steps[9].name, "step-comments");
         assert_eq!(report.steps[9].status, StepStatus::Pass);
+        assert_eq!(report.steps[10].name, "current-cycle-steps");
+        assert_eq!(report.steps[10].status, StepStatus::Pass);
     }
 
     #[test]
@@ -2981,7 +3093,7 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 10);
+        assert_eq!(report.steps.len(), 11);
         assert!(report
             .steps
             .iter()
@@ -3336,11 +3448,11 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &CascadeRunner);
-        assert_eq!(report.steps[7].name, "doc-validation");
-        assert_eq!(report.steps[7].status, StepStatus::Cascade);
-        assert_eq!(report.steps[8].name, "step-comments");
+        assert_eq!(report.steps[8].name, "doc-validation");
+        assert_eq!(report.steps[8].status, StepStatus::Cascade);
+        assert_eq!(report.steps[9].name, "step-comments");
         // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[8].status, StepStatus::Warn);
+        assert_eq!(report.steps[9].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -3471,11 +3583,11 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &MultiCauseCascadeRunner);
-        assert_eq!(report.steps[7].name, "doc-validation");
-        assert_eq!(report.steps[7].status, StepStatus::Cascade);
-        assert_eq!(report.steps[8].name, "step-comments");
+        assert_eq!(report.steps[8].name, "doc-validation");
+        assert_eq!(report.steps[8].status, StepStatus::Cascade);
+        assert_eq!(report.steps[9].name, "step-comments");
         // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[8].status, StepStatus::Warn);
+        assert_eq!(report.steps[9].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -3604,15 +3716,15 @@ mod tests {
         }
 
         let report = run_pipeline(&root, OVERRIDE_CYCLE, &OverrideRunner);
-        assert_eq!(report.steps[8].name, "step-comments");
-        assert_eq!(report.steps[8].status, StepStatus::Warn);
-        assert_eq!(report.steps[8].severity, Severity::Warning);
-        assert!(report.steps[8]
+        assert_eq!(report.steps[9].name, "step-comments");
+        assert_eq!(report.steps[9].status, StepStatus::Warn);
+        assert_eq!(report.steps[9].severity, Severity::Warning);
+        assert!(report.steps[9]
             .detail
             .as_deref()
             .unwrap_or_default()
             .contains("missing mandatory [none]"));
-        assert!(report.steps[8]
+        assert!(report.steps[9]
             .detail
             .as_deref()
             .unwrap_or_default()
@@ -3747,10 +3859,10 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &IndependentFailureRunner);
-        assert_eq!(report.steps[7].name, "doc-validation");
-        assert_eq!(report.steps[7].status, StepStatus::Fail);
+        assert_eq!(report.steps[8].name, "doc-validation");
+        assert_eq!(report.steps[8].status, StepStatus::Fail);
         // Previous-cycle backstop is downgraded to Warn
-        assert_eq!(report.steps[8].status, StepStatus::Warn);
+        assert_eq!(report.steps[9].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -3871,7 +3983,7 @@ mod tests {
             &ExcludeDocValidationRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 9);
+        assert_eq!(report.steps.len(), 10);
         assert!(!report
             .steps
             .iter()
@@ -4005,7 +4117,7 @@ mod tests {
             &UnknownExcludeRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 10);
+        assert_eq!(report.steps.len(), 11);
         assert!(report
             .steps
             .iter()
@@ -4270,6 +4382,210 @@ mod tests {
         assert!(step.detail.as_deref().unwrap_or_default().contains(
             "No review artifact for current cycle — C6.1 self-review fallback may be needed"
         ));
+    }
+
+    #[test]
+    fn disposition_match_passes_when_review_history_and_review_file_match() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-disposition-match-pass-{}", run_id));
+        fs::create_dir_all(root.join("docs/reviews")).unwrap();
+        fs::write(
+            root.join("docs/reviews/cycle-210.md"),
+            concat!(
+                "# Cycle 210 Review\n\n",
+                "## 1. [validation] First finding\n\n",
+                "Details\n\n",
+                "## 2. [testing] Second finding\n\n",
+                "Details\n\n",
+                "## Complacency score\n\n",
+                "1/5\n"
+            ),
+        )
+        .unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "review_agent": {
+                    "history": [{
+                        "cycle": 210,
+                        "categories": ["validation", "testing"],
+                        "actioned": 1,
+                        "deferred": 0,
+                        "dispatch_created": 1,
+                        "ignored": 0,
+                        "finding_count": 2,
+                        "complacency_score": 1
+                    }]
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_disposition_match(&root);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.name, "disposition-match");
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("2 findings"));
+    }
+
+    #[test]
+    fn disposition_match_warns_when_disposition_sum_does_not_match_finding_count() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-disposition-match-warn-{}", run_id));
+        fs::create_dir_all(root.join("docs/reviews")).unwrap();
+        fs::write(
+            root.join("docs/reviews/cycle-211.md"),
+            concat!(
+                "# Cycle 211 Review\n\n",
+                "## 1. [validation] First finding\n\n",
+                "## 2. [testing] Second finding\n"
+            ),
+        )
+        .unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "review_agent": {
+                    "history": [{
+                        "cycle": 211,
+                        "categories": ["validation", "testing"],
+                        "actioned": 1,
+                        "deferred": 0,
+                        "dispatch_created": 0,
+                        "ignored": 0,
+                        "finding_count": 2,
+                        "complacency_score": 1
+                    }]
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_disposition_match(&root);
+
+        assert_eq!(step.status, StepStatus::Warn);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("disposition sum 1 does not match finding_count 2"));
+    }
+
+    #[test]
+    fn disposition_match_fails_when_history_finding_count_differs_from_review_file() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-disposition-match-fail-{}", run_id));
+        fs::create_dir_all(root.join("docs/reviews")).unwrap();
+        fs::write(
+            root.join("docs/reviews/cycle-212.md"),
+            concat!(
+                "# Cycle 212 Review\n\n",
+                "## 1. [validation] First finding\n\n",
+                "## 2. [testing] Second finding\n\n",
+                "## 3. [docs] Third finding\n"
+            ),
+        )
+        .unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "review_agent": {
+                    "history": [{
+                        "cycle": 212,
+                        "categories": ["validation", "testing", "docs"],
+                        "actioned": 1,
+                        "deferred": 1,
+                        "dispatch_created": 0,
+                        "ignored": 0,
+                        "finding_count": 2,
+                        "complacency_score": 1
+                    }]
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_disposition_match(&root);
+
+        assert_eq!(step.status, StepStatus::Fail);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("history finding_count 2 does not match review file 3"));
+    }
+
+    #[test]
+    fn disposition_match_warns_when_review_file_is_missing() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir()
+            .join(format!("pipeline-check-disposition-match-missing-file-{}", run_id));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "review_agent": {
+                    "history": [{
+                        "cycle": 213,
+                        "categories": ["validation"],
+                        "actioned": 1,
+                        "deferred": 0,
+                        "dispatch_created": 0,
+                        "ignored": 0,
+                        "finding_count": 1,
+                        "complacency_score": 1
+                    }]
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_disposition_match(&root);
+
+        assert_eq!(step.status, StepStatus::Warn);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("review file not found: docs/reviews/cycle-213.md")
+        );
+    }
+
+    #[test]
+    fn disposition_match_passes_when_review_history_is_empty() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir()
+            .join(format!("pipeline-check-disposition-match-empty-history-{}", run_id));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "review_agent": {
+                    "history": []
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_disposition_match(&root);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.detail.as_deref(), Some("no review history"));
     }
 
     #[test]
