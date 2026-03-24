@@ -38,3 +38,4 @@
 | process-merge | 4c23006 | [4c23006](https://github.com/EvaLok/schema-org-json-ld/commit/4c23006) |
 | cycle-tagged | f7fa81d | [f7fa81d](https://github.com/EvaLok/schema-org-json-ld/commit/f7fa81d) |
 | cycle-complete | 941cfd8 | [941cfd8](https://github.com/EvaLok/schema-org-json-ld/commit/941cfd8) |
+| worklog-fix | 252e603 | [252e603](https://github.com/EvaLok/schema-org-json-ld/commit/252e603) |
