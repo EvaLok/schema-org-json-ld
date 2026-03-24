@@ -4754,6 +4754,13 @@
       "pr": 1672,
       "status": "merged",
       "title": "Align Quiz schema with Google Education Q&A spec"
+    },
+    {
+      "dispatched_at": "2026-03-24T03:22:10Z",
+      "issue": 1674,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 345 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -4969,17 +4976,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1671 Align Quiz schema with Google Education Q&A spec (cycle 344)",
-    "dispatch_to_pr_rate": "91.1%",
+    "dispatch_log_latest": "#1674 [Cycle Review] Cycle 345 end-of-cycle review (cycle 345)",
+    "dispatch_to_pr_rate": "91.0%",
     "failed_dispatches": 1,
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 474,
     "pr_merge_rate": "97.9%",
     "produced_pr": 484,
     "resolved": 531,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 531
+    "total_dispatches": 532
   },
   "cycle_issues": [
     1673
@@ -8190,7 +8197,7 @@
     ],
     "last_review_cycle": 344
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 344,
   "schema_status": {
     "directory_layout": {
