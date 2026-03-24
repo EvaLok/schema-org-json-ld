@@ -8410,7 +8410,7 @@
     "last_review_cycle": 350
   },
   "review_dispatch_consecutive": 0,
-  "review_events_verified_through_cycle": 349,
+  "review_events_verified_through_cycle": 351,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
