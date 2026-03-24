@@ -4989,7 +4989,8 @@
     "total_dispatches": 532
   },
   "cycle_issues": [
-    1673
+    1673,
+    1676
   ],
   "cycle_phase": {
     "cycle": 345,
@@ -5272,7 +5273,7 @@
   "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 11,
-    "issue": 1673,
+    "issue": 1676,
     "number": 345,
     "summary": "Merged PR #1672 (Quiz schema alignment). Processed cycle 344 review findings (score 3/5).",
     "timestamp": "2026-03-24T03:10:32Z"
@@ -5286,7 +5287,7 @@
     "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
     "started_at": "cycle 199"
   },
-  "previous_cycle_issue": 1670,
+  "previous_cycle_issue": 1673,
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
     "burn_in_target": 6,
