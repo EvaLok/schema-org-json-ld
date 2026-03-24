@@ -4869,6 +4869,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add --auto-receipts and --auto-self-modifications flags to write-entry"
+    },
+    {
+      "dispatched_at": "2026-03-24T22:30:53Z",
+      "issue": 1711,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 351 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -5086,17 +5093,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1709 Add --auto-receipts and --auto-self-modifications flags to write-entry (cycle 351)",
-    "dispatch_to_pr_rate": "91.2%",
+    "dispatch_log_latest": "#1711 [Cycle Review] Cycle 351 end-of-cycle review (cycle 351)",
+    "dispatch_to_pr_rate": "91.0%",
     "failed_dispatches": 1,
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 486,
     "pr_merge_rate": "98.0%",
     "produced_pr": 496,
     "resolved": 543,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 544
+    "total_dispatches": 545
   },
   "cycle_issues": [
     1708
@@ -8409,7 +8416,7 @@
     ],
     "last_review_cycle": 350
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 351,
   "schema_status": {
     "directory_layout": {
