@@ -8196,9 +8196,24 @@
         "finding_count": 3,
         "ignored": 0,
         "note": "All 3 findings deferred: (1) state-integrity — cycle-close dispatch overwrite needs tool fix, (2) process-adherence — pipeline gate override, (3) journal-quality — compound commitment grading. Finding 1 requires a dispatch to fix cycle-close logic; findings 2 and 3 are behavioral process improvements."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "commit-receipts",
+          "journal-quality",
+          "process-adherence",
+          "state-integrity"
+        ],
+        "complacency_score": 2,
+        "cycle": 345,
+        "deferred": 5,
+        "finding_count": 5,
+        "ignored": 0,
+        "note": "All 5 findings valid. F1: narrative/state mismatch on prior review disposition — lesson learned. F2: cycle-runner step-0 bug on resume — needs tool fix. F3: C4.5 checklist misuse — needs process update. F4: journal accuracy on CI timing — lesson learned. F5: receipt scope drift — lesson learned."
       }
     ],
-    "last_review_cycle": 344
+    "last_review_cycle": 345
   },
   "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 344,
