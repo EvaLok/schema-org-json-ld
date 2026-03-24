@@ -9,6 +9,7 @@ use EvaLok\SchemaOrgJsonLd\v1\Schema\AlignmentObject;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Answer;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Question;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Quiz;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\Thing;
 use PHPUnit\Framework\TestCase;
 
 final class QuizTest extends TestCase {
@@ -108,5 +109,43 @@ final class QuizTest extends TestCase {
 
 		$this->assertEquals('assesses', $obj->educationalAlignment->alignmentType);
 		$this->assertEquals('https://example.com/curriculum/addition', $obj->educationalAlignment->targetUrl);
+	}
+
+	public function testEducationalAlignmentSerializesAsArray(): void {
+		$schema = new Quiz(
+			hasPart: [
+				new Question(name: 'What is 2 + 2?', acceptedAnswer: new Answer(text: '4')),
+			],
+			educationalAlignment: [
+				new AlignmentObject(
+					alignmentType: 'educationalSubject',
+					targetName: 'Mathematics',
+				),
+				new AlignmentObject(
+					alignmentType: 'educationalLevel',
+					targetName: 'Grade 5',
+				),
+			],
+		);
+		$obj = json_decode(JsonLdGenerator::SchemaToJson(schema: $schema));
+
+		$this->assertCount(2, $obj->educationalAlignment);
+		$this->assertEquals('educationalSubject', $obj->educationalAlignment[0]->alignmentType);
+		$this->assertEquals('Mathematics', $obj->educationalAlignment[0]->targetName);
+		$this->assertEquals('educationalLevel', $obj->educationalAlignment[1]->alignmentType);
+		$this->assertEquals('Grade 5', $obj->educationalAlignment[1]->targetName);
+	}
+
+	public function testAboutSerializesAsThing(): void {
+		$schema = new Quiz(
+			hasPart: [
+				new Question(name: 'What is 2 + 2?', acceptedAnswer: new Answer(text: '4')),
+			],
+			about: new Thing(name: 'Algebra'),
+		);
+		$obj = json_decode(JsonLdGenerator::SchemaToJson(schema: $schema));
+
+		$this->assertEquals('Thing', $obj->about->{'@type'});
+		$this->assertEquals('Algebra', $obj->about->name);
 	}
 }

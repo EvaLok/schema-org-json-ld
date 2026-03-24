@@ -1,11 +1,12 @@
 import { TypedSchema } from "../TypedSchema.js";
 import type { AlignmentObject } from "./AlignmentObject.js";
 import type { Question } from "./Question.js";
+import type { Thing } from "./Thing.js";
 
 export interface QuizOptions {
 	hasPart: readonly Question[];
-	about?: string | null;
-	educationalAlignment?: AlignmentObject | null;
+	about?: string | Thing | null;
+	educationalAlignment?: AlignmentObject | readonly AlignmentObject[] | null;
 	name?: string | null;
 	description?: string | null;
 }
@@ -14,8 +15,11 @@ export class Quiz extends TypedSchema {
 	static readonly schemaType = "Quiz";
 
 	public readonly hasPart: readonly Question[];
-	public readonly about: string | null;
-	public readonly educationalAlignment: AlignmentObject | null;
+	public readonly about: string | Thing | null;
+	public readonly educationalAlignment:
+		| AlignmentObject
+		| readonly AlignmentObject[]
+		| null;
 	public readonly name: string | null;
 	public readonly description: string | null;
 
