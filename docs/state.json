@@ -5009,9 +5009,9 @@
     "failed_dispatches": 1,
     "in_flight": 1,
     "merged": 477,
-    "pr_merge_rate": "97.7%",
+    "pr_merge_rate": "97.9%",
     "produced_pr": 487,
-    "resolved": 535,
+    "resolved": 534,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 535
