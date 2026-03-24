@@ -97,6 +97,8 @@ struct PipelineCheckStatus {
 #[derive(Serialize)]
 struct StatePatch {
     updates: Vec<PatchUpdate>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    agent_session_updates: Vec<AgentSessionPatchUpdate>,
 }
 
 #[derive(Serialize)]
@@ -120,8 +122,17 @@ struct ReconciledAgentSession {
     note: Option<String>,
 }
 
+#[derive(Serialize)]
+struct AgentSessionPatchUpdate {
+    issue: i64,
+    status: String,
+    pr: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    merged_at: Option<String>,
+}
+
 struct AgentSessionReconciliationPlan {
-    patch_value: Option<Value>,
+    updates: Vec<AgentSessionPatchUpdate>,
     report: AgentSessionReconciliationReport,
 }
 
@@ -336,7 +347,10 @@ fn derive_cycle_summary(state: &StateJson, now: DateTime<Utc>) -> Result<String,
         let merged_at = session.merged_at.as_deref().ok_or_else(|| {
             format!("agent_sessions {issue_label} has status merged but is missing merged_at")
         })?;
-        let merged_at = parse_timestamp(merged_at, &format!("agent_sessions {issue_label} merged_at"))?;
+        let merged_at = parse_timestamp(
+            merged_at,
+            &format!("agent_sessions {issue_label} merged_at"),
+        )?;
         if !timestamp_in_cycle_window(merged_at, cycle_start, now) {
             continue;
         }
@@ -410,7 +424,8 @@ fn assemble_report(
     let timestamp = format_timestamp(now);
     let session_duration_minutes = compute_session_duration_minutes(state, now)?;
     let pipeline_check = validate_pipeline_check(state, cycle);
-    let agent_session_reconciliation = build_agent_session_reconciliation(state, reconcile, &timestamp)?;
+    let agent_session_reconciliation =
+        build_agent_session_reconciliation(state, reconcile, &timestamp)?;
     let state_json_patch = build_state_patch(
         cycle,
         issue,
@@ -519,20 +534,24 @@ fn build_state_patch(
         },
     ];
 
-    if let Some(agent_sessions) = agent_session_reconciliation.patch_value.as_ref() {
-        updates.push(PatchUpdate {
-            path: "/agent_sessions".to_string(),
-            value: agent_sessions.clone(),
-        });
+    let mut freshness_updates = build_freshness_updates(cycle, &updates, state, cycle_changes);
+    if !agent_session_reconciliation.updates.is_empty() {
+        maybe_add_agent_sessions_freshness(cycle, state, &mut freshness_updates);
     }
-
-    updates.extend(build_freshness_updates(
-        cycle,
-        &updates,
-        state,
-        cycle_changes,
-    ));
-    StatePatch { updates }
+    updates.extend(freshness_updates);
+    StatePatch {
+        updates,
+        agent_session_updates: agent_session_reconciliation
+            .updates
+            .iter()
+            .map(|update| AgentSessionPatchUpdate {
+                issue: update.issue,
+                status: update.status.clone(),
+                pr: update.pr,
+                merged_at: update.merged_at.clone(),
+            })
+            .collect(),
+    }
 }
 
 fn collect_cycle_changes(repo_root: &Path, cycle: u64) -> Result<CycleChanges, String> {
@@ -614,7 +633,7 @@ fn build_agent_session_reconciliation(
 ) -> Result<AgentSessionReconciliationPlan, String> {
     if reconcile.is_empty() {
         return Ok(AgentSessionReconciliationPlan {
-            patch_value: None,
+            updates: Vec::new(),
             report: AgentSessionReconciliationReport {
                 requested: 0,
                 reconciled: Vec::new(),
@@ -629,6 +648,7 @@ fn build_agent_session_reconciliation(
         .as_array_mut()
         .ok_or_else(|| "agent_sessions must serialize to an array".to_string())?;
     let mut reconciled = Vec::new();
+    let mut updates = Vec::new();
 
     for item in reconcile {
         let Some(session_value) = session_entries
@@ -647,7 +667,9 @@ fn build_agent_session_reconciliation(
             .ok_or_else(|| "agent_sessions entries must be objects".to_string())?;
         session.insert("status".to_string(), json!(item.status.as_str()));
         session.insert("pr".to_string(), json!(item.pr));
-        let note = if item.status == ReconcileStatus::Merged && !session.contains_key("merged_at") {
+        let set_merged_at =
+            item.status == ReconcileStatus::Merged && !session.contains_key("merged_at");
+        let note = if set_merged_at {
             session.insert("merged_at".to_string(), json!(timestamp));
             Some(format!("Set merged_at to {} (was missing)", timestamp))
         } else {
@@ -659,14 +681,20 @@ fn build_agent_session_reconciliation(
             status: item.status.as_str().to_string(),
             note,
         });
+        updates.push(AgentSessionPatchUpdate {
+            issue: item.issue,
+            status: item.status.as_str().to_string(),
+            pr: item.pr,
+            merged_at: if set_merged_at {
+                Some(timestamp.to_string())
+            } else {
+                None
+            },
+        });
     }
 
     Ok(AgentSessionReconciliationPlan {
-        patch_value: if reconciled.is_empty() {
-            None
-        } else {
-            Some(sessions)
-        },
+        updates,
         report: AgentSessionReconciliationReport {
             requested: reconcile.len(),
             reconciled,
@@ -691,6 +719,26 @@ fn prune_nulls(value: &mut Value) {
     }
 }
 
+fn maybe_add_agent_sessions_freshness(
+    cycle: u64,
+    state: &StateJson,
+    updates: &mut Vec<PatchUpdate>,
+) {
+    let Some(entry) = state.field_inventory.fields.get("agent_sessions") else {
+        return;
+    };
+    let path = "/field_inventory/fields/agent_sessions/last_refreshed";
+    if !field_inventory_entry_needs_refresh(entry, cycle)
+        || updates.iter().any(|update| update.path == path)
+    {
+        return;
+    }
+    updates.push(PatchUpdate {
+        path: path.to_string(),
+        value: json!(format!("cycle {}", cycle)),
+    });
+}
+
 fn apply_state_patch(state_value: &mut Value, patch: &StatePatch) -> Result<Vec<String>, String> {
     let mut changed_paths = Vec::new();
     for update in &patch.updates {
@@ -702,9 +750,66 @@ fn apply_state_patch(state_value: &mut Value, patch: &StatePatch) -> Result<Vec<
     Ok(changed_paths)
 }
 
+fn apply_agent_session_reconciliation(
+    state_value: &mut Value,
+    patch: &StatePatch,
+) -> Result<bool, String> {
+    if patch.agent_session_updates.is_empty() {
+        return Ok(false);
+    }
+
+    let session_entries = state_value
+        .pointer_mut("/agent_sessions")
+        .and_then(Value::as_array_mut)
+        .ok_or_else(|| "missing array /agent_sessions in docs/state.json".to_string())?;
+    let mut changed = false;
+
+    for update in &patch.agent_session_updates {
+        let Some(session_value) = session_entries
+            .iter_mut()
+            .find(|entry| entry.get("issue").and_then(Value::as_i64) == Some(update.issue))
+        else {
+            continue;
+        };
+
+        if session_value.get("status").and_then(Value::as_str) != Some("in_flight") {
+            continue;
+        }
+
+        let session = session_value
+            .as_object_mut()
+            .ok_or_else(|| "agent_sessions entries must be objects".to_string())?;
+        let status = json!(&update.status);
+        if session.get("status") != Some(&status) {
+            session.insert("status".to_string(), status);
+            changed = true;
+        }
+        let pr = json!(update.pr);
+        if session.get("pr") != Some(&pr) {
+            session.insert("pr".to_string(), pr);
+            changed = true;
+        }
+        if let Some(merged_at) = update.merged_at.as_ref() {
+            if !session.contains_key("merged_at") {
+                session.insert("merged_at".to_string(), json!(merged_at));
+                changed = true;
+            }
+        }
+    }
+
+    Ok(changed)
+}
+
 fn apply_cycle_patch(repo_root: &Path, patch: &StatePatch) -> Result<Vec<String>, String> {
     let mut state_value = read_state_value(repo_root)?;
     let mut changed_paths = apply_state_patch(&mut state_value, patch)?;
+    if apply_agent_session_reconciliation(&mut state_value, patch)?
+        && !changed_paths
+            .iter()
+            .any(|existing| existing == "/agent_sessions")
+    {
+        changed_paths.push("/agent_sessions".to_string());
+    }
     apply_close_out_phase_transition(&mut state_value)?;
     for path in [
         "/cycle_phase/phase",
@@ -1164,7 +1269,7 @@ mod tests {
 
     fn no_reconciliation() -> AgentSessionReconciliationPlan {
         AgentSessionReconciliationPlan {
-            patch_value: None,
+            updates: Vec::new(),
             report: AgentSessionReconciliationReport {
                 requested: 0,
                 reconciled: Vec::new(),
@@ -1188,6 +1293,19 @@ mod tests {
         state.last_cycle.timestamp = Some("2026-03-05T03:00:00Z".to_string());
         state.agent_sessions = serde_json::from_value(agent_sessions).unwrap();
         state
+    }
+
+    fn temp_repo_root(test_name: &str) -> PathBuf {
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("failed to get current time for temp repo path")
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!(
+            "cycle-complete-{test_name}-{}-{unique}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(path.join("docs")).expect("failed to create temp repo docs directory");
+        path
     }
 
     #[test]
@@ -1695,6 +1813,7 @@ mod tests {
                 path: "/last_cycle/summary".to_string(),
                 value: json!("custom summary"),
             }],
+            agent_session_updates: Vec::new(),
         };
         let mut raw_state = json!({
             "last_cycle": {
@@ -1814,25 +1933,29 @@ mod tests {
         assert_eq!(report.agent_session_reconciliation.reconciled[0].issue, 751);
         assert_eq!(report.agent_session_reconciliation.reconciled[0].pr, 752);
         assert_eq!(
-            report.agent_session_reconciliation.reconciled[0].note.as_deref(),
+            report.agent_session_reconciliation.reconciled[0]
+                .note
+                .as_deref(),
             Some("Set merged_at to 2026-03-05T05:06:07Z (was missing)")
         );
         assert_eq!(
             report
                 .state_json_patch
-                .updates
+                .agent_session_updates
                 .iter()
-                .find(|update| update.path == "/agent_sessions")
-                .map(|update| update.value.clone()),
-            Some(json!([
-                {
-                    "issue": 751,
-                    "status": "merged",
-                    "title": "example",
-                    "pr": 752,
-                    "merged_at": "2026-03-05T05:06:07Z"
-                }
-            ]))
+                .map(|update| json!({
+                    "issue": update.issue,
+                    "status": update.status,
+                    "pr": update.pr,
+                    "merged_at": update.merged_at,
+                }))
+                .collect::<Vec<_>>(),
+            vec![json!({
+                "issue": 751,
+                "status": "merged",
+                "pr": 752,
+                "merged_at": "2026-03-05T05:06:07Z"
+            })]
         );
     }
 
@@ -1882,23 +2005,27 @@ mod tests {
         .unwrap();
 
         assert_eq!(report.agent_session_reconciliation.reconciled.len(), 1);
-        assert!(report.agent_session_reconciliation.reconciled[0].note.is_none());
+        assert!(report.agent_session_reconciliation.reconciled[0]
+            .note
+            .is_none());
         assert_eq!(
             report
                 .state_json_patch
-                .updates
+                .agent_session_updates
                 .iter()
-                .find(|update| update.path == "/agent_sessions")
-                .map(|update| update.value.clone()),
-            Some(json!([
-                {
-                    "issue": 751,
-                    "status": "merged",
-                    "title": "example",
-                    "pr": 752,
-                    "merged_at": "2026-03-05T04:59:00Z"
-                }
-            ]))
+                .map(|update| json!({
+                    "issue": update.issue,
+                    "status": update.status,
+                    "pr": update.pr,
+                    "merged_at": update.merged_at,
+                }))
+                .collect::<Vec<_>>(),
+            vec![json!({
+                "issue": 751,
+                "status": "merged",
+                "pr": 752,
+                "merged_at": null
+            })]
         );
     }
 
@@ -1927,11 +2054,121 @@ mod tests {
         .unwrap();
 
         assert_eq!(report.agent_session_reconciliation.reconciled.len(), 0);
-        assert!(report
-            .state_json_patch
-            .updates
-            .iter()
-            .all(|update| update.path != "/agent_sessions"));
+        assert!(report.state_json_patch.agent_session_updates.is_empty());
+    }
+
+    #[test]
+    fn apply_cycle_patch_preserves_new_agent_sessions_from_fresh_state() {
+        let mut state = StateJson::default();
+        state.last_cycle.timestamp = Some("2026-03-05T04:19:37Z".to_string());
+        state.agent_sessions = serde_json::from_value(json!([
+            {
+                "issue": 751,
+                "status": "in_flight",
+                "title": "example"
+            }
+        ]))
+        .unwrap();
+        state.field_inventory.fields.insert(
+            "last_cycle".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "last_cycle.duration_minutes".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "last_eva_comment_check".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "agent_sessions".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+
+        let report = assemble_report(
+            153,
+            700,
+            fixed_now(),
+            &state,
+            &no_cycle_changes(),
+            "summary",
+            &[ReconcileArg {
+                issue: 751,
+                pr: 752,
+                status: ReconcileStatus::Merged,
+            }],
+        )
+        .unwrap();
+
+        let repo_root = temp_repo_root("preserve-fresh-agent-sessions");
+        let raw_state = json!({
+            "agent_sessions": [
+                {
+                    "issue": 751,
+                    "status": "in_flight",
+                    "title": "example"
+                },
+                {
+                    "issue": 999,
+                    "status": "in_flight",
+                    "title": "added-after-startup"
+                }
+            ],
+            "last_cycle": {
+                "number": 120,
+                "issue": 100,
+                "timestamp": "2026-02-01T00:00:00Z",
+                "duration_minutes": 15,
+                "summary": "old summary"
+            },
+            "last_eva_comment_check": "2026-02-01T00:00:00Z",
+            "cycle_phase": {
+                "cycle": 153,
+                "phase": "work",
+                "phase_entered_at": "2026-03-05T00:00:00Z"
+            },
+            "field_inventory": {
+                "fields": {
+                    "last_cycle": {"last_refreshed": "cycle 120"},
+                    "last_cycle.duration_minutes": {"last_refreshed": "cycle 120"},
+                    "last_eva_comment_check": {"last_refreshed": "cycle 120"},
+                    "agent_sessions": {"last_refreshed": "cycle 120"},
+                    "cycle_phase": {"last_refreshed": "cycle 152"}
+                }
+            }
+        });
+        write_state_value(&repo_root, &raw_state).expect("failed to write test state.json");
+
+        let changed_paths = apply_cycle_patch(&repo_root, &report.state_json_patch).unwrap();
+        assert!(changed_paths.iter().any(|path| path == "/agent_sessions"));
+
+        let written_state = read_state_value(&repo_root).unwrap();
+        assert_eq!(
+            written_state.pointer("/agent_sessions"),
+            Some(&json!([
+                {
+                    "issue": 751,
+                    "status": "merged",
+                    "title": "example",
+                    "pr": 752,
+                    "merged_at": "2026-03-05T05:06:07Z"
+                },
+                {
+                    "issue": 999,
+                    "status": "in_flight",
+                    "title": "added-after-startup"
+                }
+            ]))
+        );
+        assert_eq!(
+            written_state
+                .pointer("/field_inventory/fields/agent_sessions/last_refreshed")
+                .and_then(Value::as_str),
+            Some("cycle 153")
+        );
+
+        std::fs::remove_dir_all(repo_root).unwrap();
     }
 
     #[test]
