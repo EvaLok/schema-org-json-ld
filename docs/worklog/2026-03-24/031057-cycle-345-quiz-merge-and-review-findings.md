@@ -19,7 +19,7 @@
 ## Current state
 
 - **In-flight agent sessions**: 0
-- **Pipeline status**: PASS (2 expected failures: step-comments cascade from cycle 344, current-cycle-steps mid-cycle)
+- **Pipeline status**: FAIL (step-comments cascade from cycle 344: steps 1, 5, 6 missing on issue #1670; housekeeping warning)
 - **Copilot metrics**: 531 dispatches, 484 PRs, 474 merged, 97.9% merge rate
 - **Publish gate**: published
 
@@ -29,10 +29,12 @@
 
 ## Commit receipts
 
-> Note: Scope: cycle 345 commits through cycle-complete — mode normal; phase close_out; receipt events: 1 merge. Receipt table covers commits through cycle-complete (C5.1 snapshot). Post-C5.1 commits (docs, record-dispatch, review-body) are structurally excluded.
+> Note: Scope: cycle 345 commits through cycle-complete — mode normal; phase close_out; receipt events: 1 merge. Includes docs and cycle-complete commits. Post-close-out commits (record-dispatch, review-body) are structurally excluded.
 
 | Tool | Receipt | Link |
 |------|---------|------|
 | cycle-start | e0d49f8 | [e0d49f8](https://github.com/EvaLok/schema-org-json-ld/commit/e0d49f8) |
 | cycle-start | 7a6c9b0 | [7a6c9b0](https://github.com/EvaLok/schema-org-json-ld/commit/7a6c9b0) |
 | process-merge | 4c23006 | [4c23006](https://github.com/EvaLok/schema-org-json-ld/commit/4c23006) |
+| cycle-tagged | f7fa81d | [f7fa81d](https://github.com/EvaLok/schema-org-json-ld/commit/f7fa81d) |
+| cycle-complete | 941cfd8 | [941cfd8](https://github.com/EvaLok/schema-org-json-ld/commit/941cfd8) |
