@@ -4997,7 +4997,7 @@
   "cycle_phase": {
     "cycle": 345,
     "phase": "close_out",
-    "phase_entered_at": "2026-03-24T03:10:32Z"
+    "phase_entered_at": "2026-03-24T04:46:37Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -5274,13 +5274,13 @@
   },
   "in_flight_sessions": 1,
   "last_cycle": {
-    "duration_minutes": 11,
+    "duration_minutes": 96,
     "issue": 1676,
     "number": 345,
-    "summary": "Merged PR #1672 (Quiz schema alignment). Processed cycle 344 review findings (score 3/5).",
-    "timestamp": "2026-03-24T03:10:32Z"
+    "summary": "Resumed cycle 345 close-out. Merged cycle review PR #1675 (score 2/5, 5 findings deferred). Fixed doc-validation pipeline gate. All Google Rich Results types implemented (89 PHP + 89 TS schema classes).",
+    "timestamp": "2026-03-24T04:46:37Z"
   },
-  "last_eva_comment_check": "2026-03-24T03:10:32Z",
+  "last_eva_comment_check": "2026-03-24T04:46:37Z",
   "last_tool_audit_cycle": 320,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
