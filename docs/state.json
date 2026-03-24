@@ -8243,9 +8243,24 @@
         "finding_count": 5,
         "ignored": 0,
         "note": "F1 (narrative fabrication) and F2 (step-0 bug) deferred pending tooling fixes. F3 (C4.5 misuse), F4 (CI timing), F5 (receipt scope) actioned as behavioral corrections."
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "code-quality",
+          "commit-receipts",
+          "journal-quality",
+          "process-adherence",
+          "state-integrity"
+        ],
+        "complacency_score": 2,
+        "cycle": 346,
+        "deferred": 4,
+        "finding_count": 5,
+        "ignored": 0
       }
     ],
-    "last_review_cycle": 345
+    "last_review_cycle": 346
   },
   "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 346,
