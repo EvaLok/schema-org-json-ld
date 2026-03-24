@@ -199,12 +199,17 @@ fn step_c4_5(repo_root: &Path, issue: u64) -> Result<(), String> {
                                 error
                             )
                         })?;
-                        Ok((entry.file_name(), file_type.is_file()))
+                        let path = entry.path();
+                        let name = entry
+                            .file_name()
+                            .into_string()
+                            .map_err(|_| format!("ADR path is not valid UTF-8: {}", path.display()))?;
+                        Ok((name, file_type.is_file()))
                     })
             })
             .collect::<Result<Vec<_>, _>>()?
             .into_iter()
-            .filter_map(|(name, is_file)| is_file.then_some(name.to_string_lossy().into_owned()))
+            .filter_map(|(name, is_file)| is_file.then_some(name))
             .collect::<Vec<_>>(),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Vec::new(),
         Err(error) => {
