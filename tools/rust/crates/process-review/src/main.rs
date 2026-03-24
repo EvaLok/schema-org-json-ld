@@ -3,13 +3,21 @@ use serde::Serialize;
 use serde_json::{json, Value};
 use state_schema::{
     commit_state_json, current_cycle_from_state, read_state_value, set_value_at_pointer,
-    write_state_value, StateJson,
+    write_state_value, FindingDisposition, StateJson,
 };
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 const MAX_CATEGORY_LENGTH: usize = 40;
+const VALID_FINDING_DISPOSITIONS: &[&str] = &[
+    "actioned",
+    "deferred",
+    "dispatch_created",
+    "actioned_failed",
+    "verified_resolved",
+    "ignored",
+];
 const BUILTIN_KNOWN_CATEGORIES: &[&str] = &[
     "complacency-audit",
     "data-integrity",
@@ -59,6 +67,10 @@ struct Cli {
     #[arg(long, default_value_t = 0)]
     ignored: u64,
 
+    /// Per-finding disposition in CATEGORY:DISPOSITION form; may be repeated once per finding
+    #[arg(long = "disposition")]
+    finding_dispositions: Vec<String>,
+
     /// Warn on malformed review artifacts instead of failing before state updates
     #[arg(long, default_value_t = false)]
     lenient: bool,
@@ -85,6 +97,8 @@ struct ReviewHistoryEntry {
     ignored: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
     note: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    finding_dispositions: Vec<FindingDisposition>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -119,11 +133,11 @@ fn run(cli: Cli) -> Result<(), String> {
         .map_err(|error| format!("failed to read {}: {}", review_path.display(), error))?;
 
     let parsed_review = parse_review(&review_path, &review_content, cli.lenient)?;
-    validate_dispositions(&cli, parsed_review.finding_count)?;
+    let finding_dispositions = validate_dispositions(&cli, &parsed_review)?;
     for warning in validate_categories(&cli.repo_root, &parsed_review.categories)? {
         eprintln!("{}", warning);
     }
-    let entry = build_history_entry(&parsed_review, &cli);
+    let entry = build_history_entry(&parsed_review, &cli, finding_dispositions);
 
     let mut state_value = read_state_value(&cli.repo_root)?;
     let current_cycle = current_cycle_from_state(&cli.repo_root).map_err(|error| {
@@ -159,7 +173,10 @@ fn run(cli: Cli) -> Result<(), String> {
     Ok(())
 }
 
-fn validate_dispositions(cli: &Cli, finding_count: u64) -> Result<(), String> {
+fn validate_dispositions(
+    cli: &Cli,
+    parsed_review: &ParsedReview,
+) -> Result<Vec<FindingDisposition>, String> {
     let disposition_sum = cli
         .actioned
         .checked_add(cli.deferred)
@@ -169,15 +186,120 @@ fn validate_dispositions(cli: &Cli, finding_count: u64) -> Result<(), String> {
         .and_then(|value| value.checked_add(cli.ignored))
         .ok_or_else(|| "disposition counts overflowed u64".to_string())?;
 
-    if disposition_sum == finding_count {
-        return Ok(());
+    if disposition_sum != parsed_review.finding_count {
+        return Err(format!(
+            "disposition counts must sum to the parsed finding count: expected {} from --actioned + --deferred + --dispatch-created + --actioned-failed + --verified-resolved + --ignored, got {}",
+            parsed_review.finding_count,
+            disposition_sum
+        ));
     }
 
-    Err(format!(
-        "disposition counts must sum to the parsed finding count: expected {} from --actioned + --deferred + --dispatch-created + --actioned-failed + --verified-resolved + --ignored, got {}",
-        finding_count,
-        disposition_sum
-    ))
+    if cli.finding_dispositions.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let expected_len = usize::try_from(parsed_review.finding_count)
+        .map_err(|error| format!("finding count exceeds usize: {}", error))?;
+    if cli.finding_dispositions.len() != expected_len {
+        return Err(format!(
+            "--disposition must be provided once per finding when used: expected {} entries, got {}",
+            parsed_review.finding_count,
+            cli.finding_dispositions.len()
+        ));
+    }
+
+    let known_categories = parsed_review
+        .categories
+        .iter()
+        .cloned()
+        .collect::<BTreeSet<_>>();
+    let mut parsed_dispositions = Vec::with_capacity(cli.finding_dispositions.len());
+    for raw in &cli.finding_dispositions {
+        let (category, disposition) = parse_finding_disposition(raw)?;
+        if !known_categories.contains(&category) {
+            return Err(format!(
+                "--disposition category '{}' does not appear in the review file categories",
+                category
+            ));
+        }
+        parsed_dispositions.push(FindingDisposition {
+            category,
+            disposition,
+        });
+    }
+
+    let counts = count_finding_dispositions(&parsed_dispositions);
+    if counts.actioned != cli.actioned
+        || counts.deferred != cli.deferred
+        || counts.dispatch_created != cli.dispatch_created
+        || counts.actioned_failed != cli.actioned_failed
+        || counts.verified_resolved != cli.verified_resolved
+        || counts.ignored != cli.ignored
+    {
+        return Err(format!(
+            "--disposition aggregate counts do not match the provided totals: actioned={}, deferred={}, dispatch_created={}, actioned_failed={}, verified_resolved={}, ignored={}",
+            counts.actioned,
+            counts.deferred,
+            counts.dispatch_created,
+            counts.actioned_failed,
+            counts.verified_resolved,
+            counts.ignored
+        ));
+    }
+
+    Ok(parsed_dispositions)
+}
+
+fn parse_finding_disposition(raw: &str) -> Result<(String, String), String> {
+    let (category_raw, disposition_raw) = raw.split_once(':').ok_or_else(|| {
+        format!(
+            "invalid --disposition '{}': expected CATEGORY:DISPOSITION",
+            raw
+        )
+    })?;
+    let category = normalize_category(category_raw).ok_or_else(|| {
+        format!(
+            "invalid --disposition category '{}': category must normalize to a non-empty slug",
+            category_raw
+        )
+    })?;
+    let disposition = disposition_raw.trim();
+    if !VALID_FINDING_DISPOSITIONS.contains(&disposition) {
+        return Err(format!(
+            "invalid --disposition value '{}': expected one of {}",
+            disposition,
+            VALID_FINDING_DISPOSITIONS.join(", ")
+        ));
+    }
+
+    Ok((category, disposition.to_string()))
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+struct DispositionCounts {
+    actioned: u64,
+    deferred: u64,
+    dispatch_created: u64,
+    actioned_failed: u64,
+    verified_resolved: u64,
+    ignored: u64,
+}
+
+fn count_finding_dispositions(dispositions: &[FindingDisposition]) -> DispositionCounts {
+    let mut counts = DispositionCounts::default();
+    for disposition in dispositions {
+        match disposition.disposition.as_str() {
+            "actioned" => counts.actioned += 1,
+            "deferred" => counts.deferred += 1,
+            "dispatch_created" => counts.dispatch_created += 1,
+            "actioned_failed" => counts.actioned_failed += 1,
+            "verified_resolved" => counts.verified_resolved += 1,
+            "ignored" => counts.ignored += 1,
+            _ => {}
+        }
+    }
+
+    counts
 }
 
 fn validate_categories(repo_root: &Path, categories: &[String]) -> Result<Vec<String>, String> {
@@ -611,7 +733,11 @@ fn find_number_before_token(text: &str, token: &str) -> Option<(u64, usize)> {
     Some((value, start))
 }
 
-fn build_history_entry(parsed_review: &ParsedReview, cli: &Cli) -> ReviewHistoryEntry {
+fn build_history_entry(
+    parsed_review: &ParsedReview,
+    cli: &Cli,
+    finding_dispositions: Vec<FindingDisposition>,
+) -> ReviewHistoryEntry {
     ReviewHistoryEntry {
         cycle: parsed_review.cycle,
         finding_count: parsed_review.finding_count,
@@ -624,6 +750,7 @@ fn build_history_entry(parsed_review: &ParsedReview, cli: &Cli) -> ReviewHistory
         verified_resolved: cli.verified_resolved,
         ignored: cli.ignored,
         note: cli.note.clone(),
+        finding_dispositions,
     }
 }
 
@@ -743,6 +870,7 @@ mod tests {
         assert!(help.contains("--actioned-failed"));
         assert!(help.contains("--verified-resolved"));
         assert!(help.contains("--ignored"));
+        assert!(help.contains("--disposition"));
         assert!(help.contains("--lenient"));
         assert!(help.contains("--note"));
     }
@@ -770,11 +898,22 @@ mod tests {
             "3",
             "--verified-resolved",
             "4",
+            "--disposition",
+            "data-integrity:dispatch_created",
+            "--disposition",
+            "process-integrity:actioned_failed",
         ]);
 
         assert_eq!(cli.dispatch_created, 2);
         assert_eq!(cli.actioned_failed, 3);
         assert_eq!(cli.verified_resolved, 4);
+        assert_eq!(
+            cli.finding_dispositions,
+            vec![
+                "data-integrity:dispatch_created".to_string(),
+                "process-integrity:actioned_failed".to_string()
+            ]
+        );
     }
 
     #[test]
@@ -1068,7 +1207,7 @@ mod tests {
     fn history_entry_construction_uses_cli_overrides() {
         let parsed = ParsedReview {
             cycle: 162,
-            finding_count: 7,
+            finding_count: 8,
             complacency_score: 2,
             categories: vec!["data-integrity".to_string()],
         };
@@ -1090,11 +1229,31 @@ mod tests {
             "1",
             "--note",
             "triaged",
+            "--disposition",
+            "data-integrity:actioned",
+            "--disposition",
+            "data-integrity:verified_resolved",
+            "--disposition",
+            "data-integrity:ignored",
+            "--disposition",
+            "data-integrity:dispatch_created",
+            "--disposition",
+            "data-integrity:dispatch_created",
+            "--disposition",
+            "data-integrity:actioned_failed",
+            "--disposition",
+            "data-integrity:deferred",
+            "--disposition",
+            "data-integrity:verified_resolved",
         ]);
 
-        let entry = build_history_entry(&parsed, &cli);
+        let entry = build_history_entry(
+            &parsed,
+            &cli,
+            validate_dispositions(&cli, &parsed).expect("dispositions should validate"),
+        );
         assert_eq!(entry.cycle, 162);
-        assert_eq!(entry.finding_count, 7);
+        assert_eq!(entry.finding_count, 8);
         assert_eq!(entry.complacency_score, 2);
         assert_eq!(entry.actioned, 1);
         assert_eq!(entry.deferred, 1);
@@ -1103,6 +1262,7 @@ mod tests {
         assert_eq!(entry.verified_resolved, 2);
         assert_eq!(entry.ignored, 1);
         assert_eq!(entry.note.as_deref(), Some("triaged"));
+        assert_eq!(entry.finding_dispositions.len(), 8);
     }
 
     #[test]
@@ -1119,6 +1279,7 @@ mod tests {
             verified_resolved: 0,
             ignored: 1,
             note: None,
+            finding_dispositions: Vec::new(),
         };
 
         let value = serde_json::to_value(&entry).expect("history entry should serialize");
@@ -1128,6 +1289,7 @@ mod tests {
         assert!(!object.contains_key("dispatch_created"));
         assert!(!object.contains_key("actioned_failed"));
         assert!(!object.contains_key("verified_resolved"));
+        assert!(!object.contains_key("finding_dispositions"));
     }
 
     #[test]
@@ -1144,6 +1306,10 @@ mod tests {
             verified_resolved: 1,
             ignored: 0,
             note: None,
+            finding_dispositions: vec![FindingDisposition {
+                category: "state-consistency".to_string(),
+                disposition: "dispatch_created".to_string(),
+            }],
         };
 
         let value = serde_json::to_value(&entry).expect("history entry should serialize");
@@ -1153,6 +1319,13 @@ mod tests {
         assert_eq!(object.get("dispatch_created"), Some(&json!(1)));
         assert_eq!(object.get("actioned_failed"), Some(&json!(1)));
         assert_eq!(object.get("verified_resolved"), Some(&json!(1)));
+        assert_eq!(
+            object.get("finding_dispositions"),
+            Some(&json!([{
+                "category": "state-consistency",
+                "disposition": "dispatch_created"
+            }]))
+        );
     }
 
     #[test]
@@ -1163,7 +1336,17 @@ mod tests {
             "docs/reviews/cycle-162.md",
         ]);
 
-        let error = validate_dispositions(&cli, 3).expect_err("validation should fail");
+        let parsed = ParsedReview {
+            cycle: 162,
+            finding_count: 3,
+            complacency_score: 2,
+            categories: vec![
+                "data-integrity".to_string(),
+                "process-integrity".to_string(),
+            ],
+        };
+
+        let error = validate_dispositions(&cli, &parsed).expect_err("validation should fail");
         assert!(error.contains("expected 3"));
         assert!(error.contains("got 0"));
     }
@@ -1186,7 +1369,17 @@ mod tests {
             "1",
         ]);
 
-        assert_eq!(validate_dispositions(&cli, 5), Ok(()));
+        let parsed = ParsedReview {
+            cycle: 162,
+            finding_count: 5,
+            complacency_score: 2,
+            categories: vec![
+                "data-integrity".to_string(),
+                "process-integrity".to_string(),
+            ],
+        };
+
+        assert_eq!(validate_dispositions(&cli, &parsed), Ok(Vec::new()));
     }
 
     #[test]
@@ -1199,7 +1392,14 @@ mod tests {
             "3",
         ]);
 
-        assert_eq!(validate_dispositions(&cli, 3), Ok(()));
+        let parsed = ParsedReview {
+            cycle: 162,
+            finding_count: 3,
+            complacency_score: 2,
+            categories: vec!["data-integrity".to_string()],
+        };
+
+        assert_eq!(validate_dispositions(&cli, &parsed), Ok(Vec::new()));
     }
 
     #[test]
@@ -1226,7 +1426,14 @@ mod tests {
             "docs/reviews/cycle-162.md",
         ]);
 
-        assert_eq!(validate_dispositions(&cli, 0), Ok(()));
+        let parsed = ParsedReview {
+            cycle: 162,
+            finding_count: 0,
+            complacency_score: 2,
+            categories: Vec::new(),
+        };
+
+        assert_eq!(validate_dispositions(&cli, &parsed), Ok(Vec::new()));
     }
 
     #[test]
@@ -1239,9 +1446,190 @@ mod tests {
             "1",
         ]);
 
-        let error = validate_dispositions(&cli, 3).expect_err("validation should fail");
+        let parsed = ParsedReview {
+            cycle: 162,
+            finding_count: 3,
+            complacency_score: 2,
+            categories: vec!["data-integrity".to_string()],
+        };
+
+        let error = validate_dispositions(&cli, &parsed).expect_err("validation should fail");
         assert!(error.contains("expected 3"));
         assert!(error.contains("got 1"));
+    }
+
+    #[test]
+    fn disposition_validation_accepts_matching_per_finding_dispositions() {
+        let cli = Cli::parse_from([
+            "process-review",
+            "--review-file",
+            "docs/reviews/cycle-162.md",
+            "--actioned",
+            "1",
+            "--deferred",
+            "1",
+            "--ignored",
+            "1",
+            "--disposition",
+            "data-integrity:actioned",
+            "--disposition",
+            "process-integrity:deferred",
+            "--disposition",
+            "process-integrity:ignored",
+        ]);
+        let parsed = ParsedReview {
+            cycle: 162,
+            finding_count: 3,
+            complacency_score: 2,
+            categories: vec![
+                "data-integrity".to_string(),
+                "process-integrity".to_string(),
+            ],
+        };
+
+        let dispositions =
+            validate_dispositions(&cli, &parsed).expect("dispositions should validate");
+        assert_eq!(
+            dispositions,
+            vec![
+                FindingDisposition {
+                    category: "data-integrity".to_string(),
+                    disposition: "actioned".to_string(),
+                },
+                FindingDisposition {
+                    category: "process-integrity".to_string(),
+                    disposition: "deferred".to_string(),
+                },
+                FindingDisposition {
+                    category: "process-integrity".to_string(),
+                    disposition: "ignored".to_string(),
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn disposition_validation_rejects_per_finding_count_mismatch() {
+        let cli = Cli::parse_from([
+            "process-review",
+            "--review-file",
+            "docs/reviews/cycle-162.md",
+            "--actioned",
+            "2",
+            "--deferred",
+            "1",
+            "--disposition",
+            "data-integrity:actioned",
+            "--disposition",
+            "process-integrity:deferred",
+        ]);
+        let parsed = ParsedReview {
+            cycle: 162,
+            finding_count: 3,
+            complacency_score: 2,
+            categories: vec![
+                "data-integrity".to_string(),
+                "process-integrity".to_string(),
+            ],
+        };
+
+        let error = validate_dispositions(&cli, &parsed).expect_err("validation should fail");
+        assert!(error.contains("expected 3 entries"));
+        assert!(error.contains("got 2"));
+    }
+
+    #[test]
+    fn disposition_validation_rejects_category_not_in_review() {
+        let cli = Cli::parse_from([
+            "process-review",
+            "--review-file",
+            "docs/reviews/cycle-162.md",
+            "--actioned",
+            "1",
+            "--deferred",
+            "1",
+            "--ignored",
+            "1",
+            "--disposition",
+            "data-integrity:actioned",
+            "--disposition",
+            "unknown-category:deferred",
+            "--disposition",
+            "process-integrity:ignored",
+        ]);
+        let parsed = ParsedReview {
+            cycle: 162,
+            finding_count: 3,
+            complacency_score: 2,
+            categories: vec![
+                "data-integrity".to_string(),
+                "process-integrity".to_string(),
+            ],
+        };
+
+        let error = validate_dispositions(&cli, &parsed).expect_err("validation should fail");
+        assert!(error.contains("unknown-category"));
+        assert!(error.contains("does not appear in the review file categories"));
+    }
+
+    #[test]
+    fn disposition_validation_rejects_aggregate_mismatch_from_per_finding_values() {
+        let cli = Cli::parse_from([
+            "process-review",
+            "--review-file",
+            "docs/reviews/cycle-162.md",
+            "--actioned",
+            "2",
+            "--deferred",
+            "1",
+            "--disposition",
+            "data-integrity:actioned",
+            "--disposition",
+            "process-integrity:deferred",
+            "--disposition",
+            "process-integrity:ignored",
+        ]);
+        let parsed = ParsedReview {
+            cycle: 162,
+            finding_count: 3,
+            complacency_score: 2,
+            categories: vec![
+                "data-integrity".to_string(),
+                "process-integrity".to_string(),
+            ],
+        };
+
+        let error = validate_dispositions(&cli, &parsed).expect_err("validation should fail");
+        assert!(error.contains("aggregate counts do not match"));
+        assert!(error.contains("ignored=1"));
+    }
+
+    #[test]
+    fn disposition_validation_is_backward_compatible_without_per_finding_flags() {
+        let cli = Cli::parse_from([
+            "process-review",
+            "--review-file",
+            "docs/reviews/cycle-162.md",
+            "--actioned",
+            "1",
+            "--deferred",
+            "1",
+            "--ignored",
+            "1",
+        ]);
+        let parsed = ParsedReview {
+            cycle: 162,
+            finding_count: 3,
+            complacency_score: 2,
+            categories: vec![
+                "data-integrity".to_string(),
+                "process-integrity".to_string(),
+            ],
+        };
+
+        let dispositions =
+            validate_dispositions(&cli, &parsed).expect("backward-compatible mode should pass");
+        assert!(dispositions.is_empty());
     }
 
     #[test]
@@ -1321,8 +1709,8 @@ mod tests {
     fn known_review_categories_from_state_requires_review_agent() {
         let state = StateJson::default();
 
-        let error =
-            known_review_categories_from_state(&state).expect_err("missing review_agent should fail");
+        let error = known_review_categories_from_state(&state)
+            .expect_err("missing review_agent should fail");
         assert!(error.contains("missing field: review_agent"));
     }
 
@@ -1371,6 +1759,7 @@ mod tests {
             verified_resolved: 0,
             ignored: 1,
             note: None,
+            finding_dispositions: Vec::new(),
         };
 
         let patch = build_state_patch(&state, 163, 163, &entry).expect("patch should build");

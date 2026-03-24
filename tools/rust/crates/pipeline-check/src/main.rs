@@ -6,7 +6,7 @@ use serde_json::Value;
 use state_schema::{
     current_cycle_from_state, current_utc_timestamp, read_state_value, StateJson, StepCommentGap,
 };
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -19,6 +19,7 @@ const DERIVE_METRICS_TOOL_NAME: &str = "derive-metrics";
 const DERIVE_METRICS_WRAPPER_PATH: &str = "tools/derive-metrics";
 const ARTIFACT_VERIFY_STEP_NAME: &str = "artifact-verify";
 const DISPOSITION_MATCH_STEP_NAME: &str = "disposition-match";
+const DEFERRAL_ACCUMULATION_STEP_NAME: &str = "deferral-accumulation";
 const DOC_VALIDATION_STEP_NAME: &str = "doc-validation";
 const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const CURRENT_CYCLE_STEPS_STEP_NAME: &str = "current-cycle-steps";
@@ -78,6 +79,7 @@ const DERIVE_METRICS_FIELDS: [&str; 9] = [
     "pr_merge_rate",
 ];
 const DERIVE_METRICS_RATE_FIELDS: [&str; 2] = ["dispatch_to_pr_rate", "pr_merge_rate"];
+const DEFERRAL_ACCUMULATION_THRESHOLD: usize = 3;
 static REVIEW_FINDING_HEADER_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?m)^## \d+\.").expect("review finding regex should compile"));
 
@@ -317,6 +319,9 @@ fn run_pipeline_with_excluded_steps(
     }
     if !is_excluded_step(DISPOSITION_MATCH_STEP_NAME, exclude_steps) {
         steps.push(verify_disposition_match(repo_root));
+    }
+    if !is_excluded_step(DEFERRAL_ACCUMULATION_STEP_NAME, exclude_steps) {
+        steps.push(verify_deferral_accumulation(repo_root));
     }
     let pipeline_status = pipeline_overall_status(&steps);
     if !is_excluded_step(DOC_VALIDATION_STEP_NAME, exclude_steps) {
@@ -1706,6 +1711,29 @@ fn verify_disposition_match(repo_root: &Path) -> StepReport {
     }
 }
 
+fn verify_deferral_accumulation(repo_root: &Path) -> StepReport {
+    match deferral_accumulation_status(repo_root) {
+        Ok((status, detail)) => StepReport {
+            name: DEFERRAL_ACCUMULATION_STEP_NAME,
+            status,
+            severity: Severity::Warning,
+            exit_code: None,
+            detail: Some(detail),
+            findings: None,
+            summary: None,
+        },
+        Err(error) => StepReport {
+            name: DEFERRAL_ACCUMULATION_STEP_NAME,
+            status: StepStatus::Error,
+            severity: Severity::Warning,
+            exit_code: None,
+            detail: Some(error),
+            findings: None,
+            summary: None,
+        },
+    }
+}
+
 fn disposition_match_status(repo_root: &Path) -> Result<(StepStatus, String), String> {
     let state_value = read_state_value(repo_root)?;
     let state: StateJson = serde_json::from_value(state_value)
@@ -1765,8 +1793,127 @@ fn disposition_match_status(repo_root: &Path) -> Result<(StepStatus, String), St
     Ok((StepStatus::Pass, details.join("; ")))
 }
 
+fn deferral_accumulation_status(repo_root: &Path) -> Result<(StepStatus, String), String> {
+    let state_value = read_state_value(repo_root)?;
+    let state: StateJson = serde_json::from_value(state_value)
+        .map_err(|error| format!("failed to parse state.json: {}", error))?;
+    let review_agent = state.review_agent()?;
+
+    if review_agent.history.is_empty() {
+        return Ok((StepStatus::Pass, "no review history".to_string()));
+    }
+
+    let accumulations = find_deferral_accumulations(&review_agent.history);
+    if accumulations.is_empty() {
+        if review_agent
+            .history
+            .iter()
+            .all(|entry| entry.finding_dispositions.is_empty())
+        {
+            return Ok((
+                StepStatus::Pass,
+                "per-finding disposition data not yet available in review history".to_string(),
+            ));
+        }
+
+        return Ok((
+            StepStatus::Pass,
+            format!(
+                "no categories deferred {}+ consecutive cycles",
+                DEFERRAL_ACCUMULATION_THRESHOLD
+            ),
+        ));
+    }
+
+    let details = accumulations
+        .iter()
+        .map(|accumulation| {
+            format!(
+                "category '{}' deferred in cycles {}",
+                accumulation.category,
+                format_cycle_list(&accumulation.cycles)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("; ");
+    Ok((StepStatus::Warn, details))
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct DeferralAccumulation {
+    category: String,
+    cycles: Vec<u64>,
+}
+
+fn find_deferral_accumulations(
+    history: &[state_schema::ReviewHistoryEntry],
+) -> Vec<DeferralAccumulation> {
+    let mut cycles_by_category: BTreeMap<String, Vec<u64>> = BTreeMap::new();
+
+    for entry in history
+        .iter()
+        .filter(|entry| !entry.finding_dispositions.is_empty())
+    {
+        let deferred_categories = entry
+            .finding_dispositions
+            .iter()
+            .filter(|disposition| disposition.disposition == "deferred")
+            .map(|disposition| disposition.category.clone())
+            .collect::<BTreeSet<_>>();
+        for category in deferred_categories {
+            cycles_by_category
+                .entry(category)
+                .or_default()
+                .push(entry.cycle);
+        }
+    }
+
+    let mut accumulations = Vec::new();
+    for (category, mut cycles) in cycles_by_category {
+        cycles.sort_unstable();
+        cycles.dedup();
+
+        let mut streak = Vec::new();
+        for cycle in cycles {
+            if streak.last().is_none_or(|previous| *previous + 1 == cycle) {
+                streak.push(cycle);
+                continue;
+            }
+
+            if streak.len() >= DEFERRAL_ACCUMULATION_THRESHOLD {
+                accumulations.push(DeferralAccumulation {
+                    category: category.clone(),
+                    cycles: streak.clone(),
+                });
+            }
+
+            streak.clear();
+            streak.push(cycle);
+        }
+
+        if streak.len() >= DEFERRAL_ACCUMULATION_THRESHOLD {
+            accumulations.push(DeferralAccumulation {
+                category,
+                cycles: streak,
+            });
+        }
+    }
+
+    accumulations
+}
+
+fn format_cycle_list(cycles: &[u64]) -> String {
+    cycles
+        .iter()
+        .map(u64::to_string)
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 fn count_review_findings(review_content: &str) -> Result<u64, String> {
-    let count = REVIEW_FINDING_HEADER_REGEX.find_iter(review_content).count();
+    let count = REVIEW_FINDING_HEADER_REGEX
+        .find_iter(review_content)
+        .count();
     u64::try_from(count).map_err(|error| format!("review finding count overflow: {}", error))
 }
 
@@ -1777,6 +1924,8 @@ fn checked_disposition_sum(
         .actioned
         .checked_add(history_entry.deferred)
         .and_then(|sum| sum.checked_add(history_entry.dispatch_created))
+        .and_then(|sum| sum.checked_add(history_entry.actioned_failed))
+        .and_then(|sum| sum.checked_add(history_entry.verified_resolved))
         .and_then(|sum| sum.checked_add(history_entry.ignored))
         .ok_or_else(|| {
             format!(
@@ -3016,7 +3165,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 11);
+        assert_eq!(report.steps.len(), 12);
         assert_eq!(report.steps[0].status, StepStatus::Pass);
         assert_eq!(report.steps[1].status, StepStatus::Pass);
         assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -3039,12 +3188,14 @@ mod tests {
         assert_eq!(report.steps[6].status, StepStatus::Pass);
         assert_eq!(report.steps[7].name, "disposition-match");
         assert_eq!(report.steps[7].status, StepStatus::Pass);
-        assert_eq!(report.steps[8].name, "doc-validation");
+        assert_eq!(report.steps[8].name, "deferral-accumulation");
         assert_eq!(report.steps[8].status, StepStatus::Pass);
-        assert_eq!(report.steps[9].name, "step-comments");
+        assert_eq!(report.steps[9].name, "doc-validation");
         assert_eq!(report.steps[9].status, StepStatus::Pass);
-        assert_eq!(report.steps[10].name, "current-cycle-steps");
+        assert_eq!(report.steps[10].name, "step-comments");
         assert_eq!(report.steps[10].status, StepStatus::Pass);
+        assert_eq!(report.steps[11].name, "current-cycle-steps");
+        assert_eq!(report.steps[11].status, StepStatus::Pass);
     }
 
     #[test]
@@ -3094,7 +3245,7 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 11);
+        assert_eq!(report.steps.len(), 12);
         assert!(report
             .steps
             .iter()
@@ -3449,11 +3600,11 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &CascadeRunner);
-        assert_eq!(report.steps[8].name, "doc-validation");
-        assert_eq!(report.steps[8].status, StepStatus::Cascade);
-        assert_eq!(report.steps[9].name, "step-comments");
+        assert_eq!(report.steps[9].name, "doc-validation");
+        assert_eq!(report.steps[9].status, StepStatus::Cascade);
+        assert_eq!(report.steps[10].name, "step-comments");
         // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[9].status, StepStatus::Warn);
+        assert_eq!(report.steps[10].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -3584,11 +3735,11 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &MultiCauseCascadeRunner);
-        assert_eq!(report.steps[8].name, "doc-validation");
-        assert_eq!(report.steps[8].status, StepStatus::Cascade);
-        assert_eq!(report.steps[9].name, "step-comments");
+        assert_eq!(report.steps[9].name, "doc-validation");
+        assert_eq!(report.steps[9].status, StepStatus::Cascade);
+        assert_eq!(report.steps[10].name, "step-comments");
         // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[9].status, StepStatus::Warn);
+        assert_eq!(report.steps[10].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -3717,15 +3868,15 @@ mod tests {
         }
 
         let report = run_pipeline(&root, OVERRIDE_CYCLE, &OverrideRunner);
-        assert_eq!(report.steps[9].name, "step-comments");
-        assert_eq!(report.steps[9].status, StepStatus::Warn);
-        assert_eq!(report.steps[9].severity, Severity::Warning);
-        assert!(report.steps[9]
+        assert_eq!(report.steps[10].name, "step-comments");
+        assert_eq!(report.steps[10].status, StepStatus::Warn);
+        assert_eq!(report.steps[10].severity, Severity::Warning);
+        assert!(report.steps[10]
             .detail
             .as_deref()
             .unwrap_or_default()
             .contains("missing mandatory [none]"));
-        assert!(report.steps[9]
+        assert!(report.steps[10]
             .detail
             .as_deref()
             .unwrap_or_default()
@@ -3860,10 +4011,10 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &IndependentFailureRunner);
-        assert_eq!(report.steps[8].name, "doc-validation");
-        assert_eq!(report.steps[8].status, StepStatus::Fail);
+        assert_eq!(report.steps[9].name, "doc-validation");
+        assert_eq!(report.steps[9].status, StepStatus::Fail);
         // Previous-cycle backstop is downgraded to Warn
-        assert_eq!(report.steps[9].status, StepStatus::Warn);
+        assert_eq!(report.steps[10].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -3984,7 +4135,7 @@ mod tests {
             &ExcludeDocValidationRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 10);
+        assert_eq!(report.steps.len(), 11);
         assert!(!report
             .steps
             .iter()
@@ -4118,7 +4269,7 @@ mod tests {
             &UnknownExcludeRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 11);
+        assert_eq!(report.steps.len(), 12);
         assert!(report
             .steps
             .iter()
@@ -4533,8 +4684,10 @@ mod tests {
     fn disposition_match_warns_when_review_file_is_missing() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir()
-            .join(format!("pipeline-check-disposition-match-missing-file-{}", run_id));
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-disposition-match-missing-file-{}",
+            run_id
+        ));
         fs::create_dir_all(root.join("docs")).unwrap();
         fs::write(
             root.join("docs/state.json"),
@@ -4569,8 +4722,10 @@ mod tests {
     fn disposition_match_passes_when_review_history_is_empty() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir()
-            .join(format!("pipeline-check-disposition-match-empty-history-{}", run_id));
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-disposition-match-empty-history-{}",
+            run_id
+        ));
         fs::create_dir_all(root.join("docs")).unwrap();
         fs::write(
             root.join("docs/state.json"),
@@ -4587,6 +4742,269 @@ mod tests {
 
         assert_eq!(step.status, StepStatus::Pass);
         assert_eq!(step.detail.as_deref(), Some("no review history"));
+    }
+
+    #[test]
+    fn deferral_accumulation_passes_when_review_history_is_empty() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-deferral-accumulation-empty-history-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "review_agent": {
+                    "history": []
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_deferral_accumulation(&root);
+
+        assert_eq!(step.name, "deferral-accumulation");
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.detail.as_deref(), Some("no review history"));
+    }
+
+    #[test]
+    fn deferral_accumulation_passes_when_per_finding_data_is_unavailable() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-deferral-accumulation-no-finding-data-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "review_agent": {
+                    "history": [{
+                        "cycle": 210,
+                        "categories": ["journal-quality"],
+                        "actioned": 0,
+                        "deferred": 1,
+                        "ignored": 0,
+                        "finding_count": 1,
+                        "complacency_score": 1
+                    }]
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_deferral_accumulation(&root);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("per-finding disposition data not yet available in review history")
+        );
+    }
+
+    #[test]
+    fn deferral_accumulation_passes_for_two_consecutive_deferred_cycles() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-deferral-accumulation-two-cycles-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "review_agent": {
+                    "history": [
+                        {
+                            "cycle": 348,
+                            "categories": ["journal-quality"],
+                            "actioned": 0,
+                            "deferred": 1,
+                            "ignored": 0,
+                            "finding_count": 1,
+                            "complacency_score": 2,
+                            "finding_dispositions": [{
+                                "category": "journal-quality",
+                                "disposition": "deferred"
+                            }]
+                        },
+                        {
+                            "cycle": 349,
+                            "categories": ["journal-quality"],
+                            "actioned": 0,
+                            "deferred": 1,
+                            "ignored": 0,
+                            "finding_count": 1,
+                            "complacency_score": 2,
+                            "finding_dispositions": [{
+                                "category": "journal-quality",
+                                "disposition": "deferred"
+                            }]
+                        }
+                    ]
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_deferral_accumulation(&root);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("no categories deferred 3+ consecutive cycles")
+        );
+    }
+
+    #[test]
+    fn deferral_accumulation_warns_for_three_consecutive_deferred_cycles() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-deferral-accumulation-three-cycles-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "review_agent": {
+                    "history": [
+                        {
+                            "cycle": 348,
+                            "categories": ["journal-quality"],
+                            "actioned": 0,
+                            "deferred": 1,
+                            "ignored": 0,
+                            "finding_count": 1,
+                            "complacency_score": 2,
+                            "finding_dispositions": [{
+                                "category": "journal-quality",
+                                "disposition": "deferred"
+                            }]
+                        },
+                        {
+                            "cycle": 349,
+                            "categories": ["journal-quality"],
+                            "actioned": 0,
+                            "deferred": 1,
+                            "ignored": 0,
+                            "finding_count": 1,
+                            "complacency_score": 2,
+                            "finding_dispositions": [{
+                                "category": "journal-quality",
+                                "disposition": "deferred"
+                            }]
+                        },
+                        {
+                            "cycle": 350,
+                            "categories": ["journal-quality"],
+                            "actioned": 0,
+                            "deferred": 1,
+                            "ignored": 0,
+                            "finding_count": 1,
+                            "complacency_score": 2,
+                            "finding_dispositions": [{
+                                "category": "journal-quality",
+                                "disposition": "deferred"
+                            }]
+                        }
+                    ]
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_deferral_accumulation(&root);
+
+        assert_eq!(step.status, StepStatus::Warn);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("category 'journal-quality' deferred in cycles 348, 349, 350")
+        );
+    }
+
+    #[test]
+    fn deferral_accumulation_warns_only_for_categories_meeting_the_threshold() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-deferral-accumulation-mixed-categories-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "review_agent": {
+                    "history": [
+                        {
+                            "cycle": 348,
+                            "categories": ["journal-quality", "receipt-integrity"],
+                            "actioned": 0,
+                            "deferred": 2,
+                            "ignored": 0,
+                            "finding_count": 2,
+                            "complacency_score": 2,
+                            "finding_dispositions": [
+                                {"category": "journal-quality", "disposition": "deferred"},
+                                {"category": "receipt-integrity", "disposition": "deferred"}
+                            ]
+                        },
+                        {
+                            "cycle": 349,
+                            "categories": ["journal-quality", "receipt-integrity"],
+                            "actioned": 1,
+                            "deferred": 1,
+                            "ignored": 0,
+                            "finding_count": 2,
+                            "complacency_score": 2,
+                            "finding_dispositions": [
+                                {"category": "journal-quality", "disposition": "deferred"},
+                                {"category": "receipt-integrity", "disposition": "actioned"}
+                            ]
+                        },
+                        {
+                            "cycle": 350,
+                            "categories": ["journal-quality"],
+                            "actioned": 0,
+                            "deferred": 1,
+                            "ignored": 0,
+                            "finding_count": 1,
+                            "complacency_score": 2,
+                            "finding_dispositions": [
+                                {"category": "journal-quality", "disposition": "deferred"}
+                            ]
+                        }
+                    ]
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_deferral_accumulation(&root);
+
+        assert_eq!(step.status, StepStatus::Warn);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("journal-quality"));
+        assert!(!step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("receipt-integrity"));
     }
 
     #[test]
