@@ -4812,8 +4812,10 @@
     {
       "dispatched_at": "2026-03-24T14:34:56Z",
       "issue": 1694,
+      "merged_at": "2026-03-24T16:31:03Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1695,
+      "status": "merged",
       "title": "Add C4.5 (ADR check) step to cycle-runner close-out"
     },
     {
@@ -5047,13 +5049,13 @@
     "closed_without_merge": 8,
     "closed_without_pr": 47,
     "dispatch_log_latest": "#1698 [Cycle Review] Cycle 348 end-of-cycle review (cycle 348)",
-    "dispatch_to_pr_rate": "90.7%",
+    "dispatch_to_pr_rate": "90.9%",
     "failed_dispatches": 1,
-    "in_flight": 3,
-    "merged": 480,
+    "in_flight": 2,
+    "merged": 481,
     "pr_merge_rate": "98.0%",
-    "produced_pr": 490,
-    "resolved": 537,
+    "produced_pr": 491,
+    "resolved": 538,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 540
@@ -5162,15 +5164,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 348"
+        "last_refreshed": "cycle 349"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 348"
+        "last_refreshed": "cycle 349"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 348"
+        "last_refreshed": "cycle 349"
       },
       "cycle_issues": {
         "cadence": "every cycle",
