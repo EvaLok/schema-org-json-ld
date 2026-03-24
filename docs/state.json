@@ -4767,8 +4767,10 @@
     {
       "dispatched_at": "2026-03-24T06:31:48Z",
       "issue": 1678,
+      "merged_at": "2026-03-24T08:37:13Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1679,
+      "status": "merged",
       "title": "Fix: cycle-runner close-out must transition phase to complete"
     }
   ],
@@ -4989,11 +4991,11 @@
     "dispatch_log_latest": "#1678 Fix: cycle-runner close-out must transition phase to complete (cycle 345)",
     "dispatch_to_pr_rate": "91.0%",
     "failed_dispatches": 1,
-    "in_flight": 0,
-    "merged": 476,
-    "pr_merge_rate": "98.1%",
+    "in_flight": 1,
+    "merged": 475,
+    "pr_merge_rate": "97.9%",
     "produced_pr": 485,
-    "resolved": 533,
+    "resolved": 532,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 533
@@ -5003,8 +5005,8 @@
   ],
   "cycle_phase": {
     "cycle": 346,
-    "phase": "work",
-    "phase_entered_at": "2026-03-24T08:15:32Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-24T08:37:13Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -5102,15 +5104,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 345"
+        "last_refreshed": "cycle 346"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 345"
+        "last_refreshed": "cycle 346"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 345"
+        "last_refreshed": "cycle 346"
       },
       "cycle_issues": {
         "cadence": "every cycle",
@@ -5123,7 +5125,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 345"
+        "last_refreshed": "cycle 346"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -5131,7 +5133,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 345"
+        "last_refreshed": "cycle 346"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -5139,7 +5141,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 345"
+        "last_refreshed": "cycle 346"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -5159,7 +5161,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 345"
+        "last_refreshed": "cycle 346"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -5171,7 +5173,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 345"
+        "last_refreshed": "cycle 346"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -5195,11 +5197,11 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 345"
+        "last_refreshed": "cycle 346"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 345"
+        "last_refreshed": "cycle 346"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -5207,7 +5209,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 345"
+        "last_refreshed": "cycle 346"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -5279,15 +5281,15 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
-    "duration_minutes": 96,
+    "duration_minutes": 22,
     "issue": 1680,
     "number": 346,
-    "summary": "Resumed cycle 345 close-out. Merged cycle review PR #1675 (score 2/5, 5 findings deferred). Fixed doc-validation pipeline gate. All Google Rich Results types implemented (89 PHP + 89 TS schema classes).",
-    "timestamp": "2026-03-24T08:15:31Z"
+    "summary": "Reviewed and merged cycle-runner close-out phase transition fix (PR #1679). Processed cycle 345 review (2/5, 3 actioned, 2 deferred). Processed audit #318 (narrative fabrication finding). Refreshed 19 stale field inventory markers. Created audit-inbound #1681.",
+    "timestamp": "2026-03-24T08:37:13Z"
   },
-  "last_eva_comment_check": "2026-03-24T08:15:31Z",
+  "last_eva_comment_check": "2026-03-24T08:37:13Z",
   "last_tool_audit_cycle": 320,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
