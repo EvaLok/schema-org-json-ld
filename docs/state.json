@@ -4989,11 +4989,11 @@
     "dispatch_log_latest": "#1678 Fix: cycle-runner close-out must transition phase to complete (cycle 345)",
     "dispatch_to_pr_rate": "91.0%",
     "failed_dispatches": 1,
-    "in_flight": 1,
-    "merged": 475,
-    "pr_merge_rate": "97.9%",
+    "in_flight": 0,
+    "merged": 476,
+    "pr_merge_rate": "98.1%",
     "produced_pr": 485,
-    "resolved": 532,
+    "resolved": 533,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 533
@@ -5279,7 +5279,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 96,
     "issue": 1680,
