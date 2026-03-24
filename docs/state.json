@@ -4835,6 +4835,13 @@
       "pr": 1699,
       "status": "merged",
       "title": "[Cycle Review] Cycle 348 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-24T16:50:28Z",
+      "issue": 1701,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 349 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -5052,17 +5059,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1698 [Cycle Review] Cycle 348 end-of-cycle review (cycle 348)",
-    "dispatch_to_pr_rate": "91.3%",
+    "dispatch_log_latest": "#1701 [Cycle Review] Cycle 349 end-of-cycle review (cycle 349)",
+    "dispatch_to_pr_rate": "91.1%",
     "failed_dispatches": 1,
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 483,
     "pr_merge_rate": "98.0%",
     "produced_pr": 493,
     "resolved": 540,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 540
+    "total_dispatches": 541
   },
   "cycle_issues": [
     1700
@@ -8347,7 +8354,7 @@
     ],
     "last_review_cycle": 348
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 349,
   "schema_status": {
     "directory_layout": {
