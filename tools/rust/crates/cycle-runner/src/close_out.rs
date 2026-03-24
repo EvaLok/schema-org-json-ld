@@ -5,6 +5,7 @@ use crate::steps;
 use serde_json::Value;
 use std::path::Path;
 use std::process::Command;
+use state_schema::{commit_state_json, read_state_value, transition_cycle_phase, write_state_value};
 
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 
@@ -28,7 +29,7 @@ pub fn run(
     cycle_override: Option<u64>,
     dry_run: bool,
 ) -> Result<(), String> {
-    let state = state_schema::read_state_value(repo_root)?;
+    let state = read_state_value(repo_root)?;
     let cycle = match cycle_override {
         Some(c) => c,
         None => state_schema::current_cycle_from_state(repo_root)?,
@@ -85,9 +86,23 @@ pub fn run(
 
     // C8: Close issue
     step_c8(repo_root, issue, cycle, &review_info)?;
+    complete_close_out_phase(repo_root, cycle)?;
+    git::push(repo_root)?;
 
     eprintln!("Close-out complete for cycle {}", cycle);
     Ok(())
+}
+
+fn complete_close_out_phase(repo_root: &Path, cycle: u64) -> Result<String, String> {
+    let mut state = read_state_value(repo_root)?;
+    transition_cycle_phase(&mut state, cycle, "complete")?;
+    write_state_value(repo_root, &state)?;
+
+    let commit_message = format!(
+        "state(cycle-complete-phase): cycle {} phase -> complete [cycle {}]",
+        cycle, cycle
+    );
+    commit_state_json(repo_root, &commit_message)
 }
 
 fn step_c4_1(
@@ -814,6 +829,7 @@ mod tests {
     use super::*;
     use serde_json::json;
     use std::fs;
+    use std::process::Command;
 
     #[test]
     fn parse_dispatch_output_extracts_issue_number() {
@@ -1053,5 +1069,77 @@ mod tests {
 
         let error = patch_worklog_content(content, &metrics).unwrap_err();
         assert_eq!(error, "worklog missing '- **Copilot metrics**:' line");
+    }
+
+    fn setup_temp_repo(name: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("cycle-runner-close-out-{}", name));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(dir.join("docs")).unwrap();
+        Command::new("git")
+            .arg("-C")
+            .arg(&dir)
+            .arg("init")
+            .output()
+            .unwrap();
+        Command::new("git")
+            .arg("-C")
+            .arg(&dir)
+            .args(["config", "user.email", "test@test.com"])
+            .output()
+            .unwrap();
+        Command::new("git")
+            .arg("-C")
+            .arg(&dir)
+            .args(["config", "user.name", "Test"])
+            .output()
+            .unwrap();
+        dir
+    }
+
+    #[test]
+    fn complete_close_out_phase_transitions_state_and_commits_expected_message() {
+        let dir = setup_temp_repo("complete-phase");
+        let state_path = dir.join("docs/state.json");
+        fs::write(
+            &state_path,
+            serde_json::to_string_pretty(&json!({
+                "cycle_phase": {
+                    "cycle": 345,
+                    "phase": "close_out",
+                    "phase_entered_at": "2026-03-24T00:00:00Z"
+                },
+                "field_inventory": {
+                    "fields": {
+                        "cycle_phase": {
+                            "last_refreshed": "cycle 344"
+                        }
+                    }
+                }
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        complete_close_out_phase(&dir, 345).unwrap();
+
+        let state = state_schema::read_state_value(&dir).unwrap();
+        assert_eq!(
+            state.pointer("/cycle_phase/phase"),
+            Some(&json!("complete"))
+        );
+
+        let log_output = Command::new("git")
+            .arg("-C")
+            .arg(&dir)
+            .args(["log", "-1", "--pretty=%s"])
+            .output()
+            .unwrap();
+        assert!(log_output.status.success());
+        assert_eq!(
+            String::from_utf8(log_output.stdout).unwrap().trim(),
+            "state(cycle-complete-phase): cycle 345 phase -> complete [cycle 345]"
+        );
+
+        let _ = fs::remove_dir_all(&dir);
     }
 }
