@@ -23,7 +23,7 @@
 ## Current state
 
 - **In-flight agent sessions**: 0
-- **Pipeline status**: PASS after stale field refresh (inherited step-comments cascade from C4.5 acknowledged)
+- **Pipeline status**: FAIL (inherited step-comments cascade from cycle 345 C4.5; all blocking checks pass except step-comments)
 - **Copilot metrics**: 533 dispatches, 486 PRs, 476 merged, 97.9% merge rate
 - **Publish gate**: published
 
