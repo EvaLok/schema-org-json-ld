@@ -1875,7 +1875,7 @@ fn find_deferral_accumulations(
 
         let mut streak = Vec::new();
         for cycle in cycles {
-            if streak.last().is_none_or(|previous| *previous + 1 == cycle) {
+            if streak.last().map_or(true, |previous| *previous + 1 == cycle) {
                 streak.push(cycle);
                 continue;
             }
@@ -1911,9 +1911,7 @@ fn format_cycle_list(cycles: &[u64]) -> String {
 }
 
 fn count_review_findings(review_content: &str) -> Result<u64, String> {
-    let count = REVIEW_FINDING_HEADER_REGEX
-        .find_iter(review_content)
-        .count();
+    let count = REVIEW_FINDING_HEADER_REGEX.find_iter(review_content).count();
     u64::try_from(count).map_err(|error| format!("review finding count overflow: {}", error))
 }
 

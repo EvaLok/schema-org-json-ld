@@ -228,7 +228,7 @@ fn validate_dispositions(
         });
     }
 
-    let counts = count_finding_dispositions(&parsed_dispositions);
+    let counts = count_finding_dispositions(&parsed_dispositions)?;
     if counts.actioned != cli.actioned
         || counts.deferred != cli.deferred
         || counts.dispatch_created != cli.dispatch_created
@@ -285,7 +285,9 @@ struct DispositionCounts {
     ignored: u64,
 }
 
-fn count_finding_dispositions(dispositions: &[FindingDisposition]) -> DispositionCounts {
+fn count_finding_dispositions(
+    dispositions: &[FindingDisposition],
+) -> Result<DispositionCounts, String> {
     let mut counts = DispositionCounts::default();
     for disposition in dispositions {
         match disposition.disposition.as_str() {
@@ -295,11 +297,16 @@ fn count_finding_dispositions(dispositions: &[FindingDisposition]) -> Dispositio
             "actioned_failed" => counts.actioned_failed += 1,
             "verified_resolved" => counts.verified_resolved += 1,
             "ignored" => counts.ignored += 1,
-            _ => {}
+            other => {
+                return Err(format!(
+                    "invalid validated disposition encountered while counting: {}",
+                    other
+                ));
+            }
         }
     }
 
-    counts
+    Ok(counts)
 }
 
 fn validate_categories(repo_root: &Path, categories: &[String]) -> Result<Vec<String>, String> {
@@ -1262,7 +1269,43 @@ mod tests {
         assert_eq!(entry.verified_resolved, 2);
         assert_eq!(entry.ignored, 1);
         assert_eq!(entry.note.as_deref(), Some("triaged"));
-        assert_eq!(entry.finding_dispositions.len(), 8);
+        assert_eq!(
+            entry.finding_dispositions,
+            vec![
+                FindingDisposition {
+                    category: "data-integrity".to_string(),
+                    disposition: "actioned".to_string(),
+                },
+                FindingDisposition {
+                    category: "data-integrity".to_string(),
+                    disposition: "verified_resolved".to_string(),
+                },
+                FindingDisposition {
+                    category: "data-integrity".to_string(),
+                    disposition: "ignored".to_string(),
+                },
+                FindingDisposition {
+                    category: "data-integrity".to_string(),
+                    disposition: "dispatch_created".to_string(),
+                },
+                FindingDisposition {
+                    category: "data-integrity".to_string(),
+                    disposition: "dispatch_created".to_string(),
+                },
+                FindingDisposition {
+                    category: "data-integrity".to_string(),
+                    disposition: "actioned_failed".to_string(),
+                },
+                FindingDisposition {
+                    category: "data-integrity".to_string(),
+                    disposition: "deferred".to_string(),
+                },
+                FindingDisposition {
+                    category: "data-integrity".to_string(),
+                    disposition: "verified_resolved".to_string(),
+                },
+            ]
+        );
     }
 
     #[test]
