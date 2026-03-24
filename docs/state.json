@@ -4794,8 +4794,10 @@
     {
       "dispatched_at": "2026-03-24T12:29:21Z",
       "issue": 1688,
+      "merged_at": "2026-03-24T12:39:11Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1689,
+      "status": "merged",
       "title": "Fix cycle-receipts scope: exclude docs commits, custom state labels, and fix resumed cycle window"
     }
   ],
@@ -5015,13 +5017,13 @@
     "closed_without_merge": 8,
     "closed_without_pr": 47,
     "dispatch_log_latest": "#1688 Fix cycle-receipts scope: exclude docs commits, custom state labels, and fix resumed cycle window (cycle 347)",
-    "dispatch_to_pr_rate": "91.0%",
+    "dispatch_to_pr_rate": "91.2%",
     "failed_dispatches": 1,
-    "in_flight": 1,
-    "merged": 478,
+    "in_flight": 0,
+    "merged": 479,
     "pr_merge_rate": "98.0%",
-    "produced_pr": 488,
-    "resolved": 535,
+    "produced_pr": 489,
+    "resolved": 536,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 536
