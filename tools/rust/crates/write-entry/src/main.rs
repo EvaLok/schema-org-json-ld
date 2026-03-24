@@ -673,7 +673,16 @@ fn apply_worklog_auto_derivations(
     };
 
     let cycle_receipt_entries = if args.auto_receipts || args.auto_self_modifications {
-        Some(derive_cycle_receipt_entries(repo_root, cycle)?)
+        let receipt_flag = match (args.auto_receipts, args.auto_self_modifications) {
+            (true, true) => "--auto-receipts/--auto-self-modifications",
+            (true, false) => "--auto-receipts",
+            (false, true) => "--auto-self-modifications",
+            (false, false) => unreachable!("receipt auto-derivation should only run when requested"),
+        };
+        Some(
+            derive_cycle_receipt_entries(repo_root, cycle)
+                .map_err(|error| format!("{} failed: {}", receipt_flag, error))?,
+        )
     } else {
         None
     };
@@ -681,7 +690,7 @@ fn apply_worklog_auto_derivations(
     if args.auto_self_modifications {
         let entries = cycle_receipt_entries
             .as_ref()
-            .expect("cycle receipts must be loaded for auto self-modifications");
+            .expect("BUG: cycle_receipt_entries should be Some when auto_self_modifications is true");
         input.self_modifications = derive_self_modifications_from_receipts(repo_root, entries)?;
     }
 
@@ -697,7 +706,7 @@ fn apply_worklog_auto_derivations(
     if args.auto_receipts {
         let entries = cycle_receipt_entries
             .as_ref()
-            .expect("cycle receipts must be loaded for auto receipts");
+            .expect("BUG: cycle_receipt_entries should be Some when auto_receipts is true");
         let receipts = cycle_receipt_entries_to_receipts(entries)?;
         input.receipts = receipts;
         let derived_prs = derive_prs_from_cycle_receipt_entries(entries);
@@ -1377,11 +1386,11 @@ fn cycle_receipt_entries_to_receipts(entries: &[CycleReceiptJsonEntry]) -> Resul
         .map(|entry| {
             let receipt = format!("{}:{}", entry.tool.trim(), entry.receipt.trim());
             let mut parsed = parse_receipts(&[receipt])?;
-            let mut receipt = parsed
+            let mut parsed_receipt = parsed
                 .pop()
                 .ok_or_else(|| "parsed receipt unexpectedly empty".to_string())?;
-            receipt.url = entry.url.clone().filter(|url| !url.trim().is_empty());
-            Ok(receipt)
+            parsed_receipt.url = entry.url.clone().filter(|url| !url.trim().is_empty());
+            Ok(parsed_receipt)
         })
         .collect()
 }
