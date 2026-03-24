@@ -5267,7 +5267,7 @@
     "duration_minutes": 11,
     "issue": 1673,
     "number": 345,
-    "summary": "0 dispatches, 1 merges (PR #1672)",
+    "summary": "Merged PR #1672 (Quiz schema alignment). Processed cycle 344 review findings (score 3/5).",
     "timestamp": "2026-03-24T03:10:32Z"
   },
   "last_eva_comment_check": "2026-03-24T03:10:32Z",
