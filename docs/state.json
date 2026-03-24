@@ -5008,7 +5008,8 @@
     "total_dispatches": 534
   },
   "cycle_issues": [
-    1680
+    1680,
+    1684
   ],
   "cycle_phase": {
     "cycle": 346,
@@ -5291,7 +5292,7 @@
   "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 22,
-    "issue": 1680,
+    "issue": 1684,
     "number": 346,
     "summary": "Reviewed and merged cycle-runner close-out phase transition fix (PR #1679). Processed cycle 345 review (2/5, 3 actioned, 2 deferred). Processed audit #318 (narrative fabrication finding). Refreshed 19 stale field inventory markers. Created audit-inbound #1681.",
     "timestamp": "2026-03-24T08:37:13Z"
@@ -5305,7 +5306,7 @@
     "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
     "started_at": "cycle 199"
   },
-  "previous_cycle_issue": 1677,
+  "previous_cycle_issue": 1680,
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
     "burn_in_target": 6,
