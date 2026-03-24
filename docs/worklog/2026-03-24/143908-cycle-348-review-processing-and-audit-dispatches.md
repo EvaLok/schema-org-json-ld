@@ -26,9 +26,9 @@
 
 ## Current state
 
-- **In-flight agent sessions**: 2
+- **In-flight agent sessions**: 3
 - **Pipeline status**: PASS with 1 warning (housekeeping: stale audit-inbound [#1690](https://github.com/EvaLok/schema-org-json-ld/issues/1690))
-- **Copilot metrics**: 539 dispatches, 490 PRs produced, 480 merged, 98.0% PR merge rate
+- **Copilot metrics**: 540 dispatches, 490 PRs, 480 merged, 98.0% merge rate
 - **Publish gate**: published
 
 ## Next steps
