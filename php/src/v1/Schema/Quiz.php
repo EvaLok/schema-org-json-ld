@@ -13,7 +13,7 @@ class Quiz extends TypedSchema {
 		/** @var Question[] $hasPart */
 		public array $hasPart,
 		public null|string|Thing $about = null,
-		/** @var AlignmentObject|AlignmentObject[]|null $educationalAlignment */
+		/** @var AlignmentObject|AlignmentObject[]|null */
 		public null|AlignmentObject|array $educationalAlignment = null,
 		public null|string $name = null,
 		public null|string $description = null,
