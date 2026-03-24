@@ -5262,7 +5262,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 349"
+        "last_refreshed": "cycle 350"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -8352,9 +8352,23 @@
         "finding_count": 3,
         "ignored": 0,
         "note": "F1 worklog-accuracy: actioned (derive pipeline status from C5.5). F2 process-adherence: actioned (all steps posted before close-out). F3 journal-quality: actioned (sequencing defect recorded as open structural debt)."
+      },
+      {
+        "actioned": 3,
+        "categories": [
+          "journal-quality",
+          "process-adherence",
+          "receipt-integrity"
+        ],
+        "complacency_score": 3,
+        "cycle": 349,
+        "deferred": 0,
+        "finding_count": 3,
+        "ignored": 0,
+        "note": "All 3 findings are behavioral: (1) receipt-integrity — will use cycle-receipts output directly; (2) process-adherence — will derive self-modifications from git diff; (3) journal-quality — will evaluate compound commitments item-by-item. Demonstration in this cycle's worklog/journal."
       }
     ],
-    "last_review_cycle": 348
+    "last_review_cycle": 349
   },
   "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 349,
