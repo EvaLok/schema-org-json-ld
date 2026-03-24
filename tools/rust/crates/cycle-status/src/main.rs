@@ -12,6 +12,8 @@ const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const QC_REPO: &str = "EvaLok/schema-org-json-ld-qc";
 const AUDIT_REPO: &str = "EvaLok/schema-org-json-ld-audit";
 const MAX_CONCURRENCY: usize = 2;
+const EVA_LOGIN: &str = "EvaLok";
+const ORCHESTRATOR_ISSUE_AUTHORS: [&str; 2] = ["github-actions[bot]", "app/github-actions"];
 
 #[derive(Parser)]
 #[command(name = "cycle-status")]
@@ -35,6 +37,7 @@ struct Report {
     generated_at: String,
     last_cycle_timestamp: String,
     eva_input: EvaInput,
+    eva_escalations: EvaEscalations,
     agent_status: AgentStatus,
     qc_status: ProcessingStatus,
     audit_status: ProcessingStatus,
@@ -48,6 +51,14 @@ struct Report {
 struct EvaInput {
     open_issues: Vec<SimpleIssue>,
     comments_since_last_cycle: Vec<EvaComment>,
+}
+
+#[derive(Default, Serialize)]
+struct EvaEscalations {
+    open_count: usize,
+    stale_count: usize,
+    urgent_stale_count: usize,
+    issues: Vec<EvaEscalationIssueSummary>,
 }
 
 #[derive(Default, Serialize)]
@@ -117,6 +128,30 @@ struct StaleDispatch {
     age_hours: f64,
 }
 
+#[derive(Clone)]
+struct QuestionForEvaIssue {
+    number: u64,
+    title: String,
+    created_at: String,
+    has_urgent_label: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+enum EvaEscalationStaleness {
+    Active,
+    Stale,
+    UrgentStale,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+struct EvaEscalationIssueSummary {
+    number: u64,
+    title: String,
+    age_hours: f64,
+    staleness: EvaEscalationStaleness,
+}
+
 struct CopilotIssue {
     number: u64,
     title: String,
@@ -145,6 +180,7 @@ fn main() {
     let last_cycle_timestamp = resolve_last_cycle_timestamp(&cli, &state, &mut errors);
 
     let eva_input = gather_eva_input(&last_cycle_timestamp, &mut errors);
+    let eva_escalations = gather_eva_escalations(&mut errors);
     let agent_status = gather_agent_status(&mut errors);
     let qc_status = gather_qc_status(&state, &mut errors);
     let audit_status = gather_audit_status(&state, &mut errors);
@@ -167,6 +203,7 @@ fn main() {
 
     let action_items = build_action_items(
         &eva_input,
+        &eva_escalations,
         &agent_status,
         &qc_status,
         &audit_status,
@@ -179,6 +216,7 @@ fn main() {
         generated_at: current_timestamp_utc(),
         last_cycle_timestamp,
         eva_input,
+        eva_escalations,
         agent_status,
         qc_status,
         audit_status,
@@ -187,6 +225,13 @@ fn main() {
         action_items,
         errors,
     };
+
+    eprintln!(
+        "Eva escalations: {} open, {} stale, {} urgent-stale",
+        report.eva_escalations.open_count,
+        report.eva_escalations.stale_count,
+        report.eva_escalations.urgent_stale_count
+    );
 
     if cli.json {
         match serde_json::to_string_pretty(&report) {
@@ -350,6 +395,59 @@ fn gather_eva_input(last_cycle_timestamp: &str, errors: &mut Vec<String>) -> Eva
     }
 
     section
+}
+
+fn gather_eva_escalations(errors: &mut Vec<String>) -> EvaEscalations {
+    let mut summaries = Vec::new();
+    let mut open_count = 0;
+    let now = Utc::now();
+
+    match gh_json(&[
+        "issue",
+        "list",
+        "--repo",
+        MAIN_REPO,
+        "--label",
+        "question-for-eva",
+        "--state",
+        "open",
+        "--json",
+        "number,title,author,createdAt,labels",
+    ]) {
+        Ok(value) => {
+            if let Some(items) = value.as_array() {
+                for item in items.iter().filter(|item| {
+                    json_str(item, &["author", "login"]).is_some_and(is_eva_or_orchestrator_author)
+                }) {
+                    open_count += 1;
+                    let Some(issue) = to_question_for_eva_issue(item) else {
+                        continue;
+                    };
+                    let has_eva_response = match issue_has_eva_response(issue.number, &issue.created_at)
+                    {
+                        Ok(has_response) => has_response,
+                        Err(error) => {
+                            errors.push(format!(
+                                "Eva response query failed for question-for-eva #{}: {}",
+                                issue.number, error
+                            ));
+                            false
+                        }
+                    };
+                    match classify_eva_escalation(&issue, now, has_eva_response) {
+                        Ok(summary) => summaries.push(summary),
+                        Err(error) => errors.push(format!(
+                            "Failed to classify question-for-eva #{}: {}",
+                            issue.number, error
+                        )),
+                    }
+                }
+            }
+        }
+        Err(error) => errors.push(format!("Eva escalation issues query failed: {}", error)),
+    }
+
+    build_eva_escalations(open_count, summaries)
 }
 
 fn gather_agent_status(errors: &mut Vec<String>) -> AgentStatus {
@@ -821,8 +919,10 @@ fn gather_processing_status(
     section
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_action_items(
     eva_input: &EvaInput,
+    eva_escalations: &EvaEscalations,
     agent_status: &AgentStatus,
     qc_status: &ProcessingStatus,
     audit_status: &ProcessingStatus,
@@ -842,6 +942,21 @@ fn build_action_items(
                 "s"
             }
         ));
+    }
+    for issue in &eva_escalations.issues {
+        match issue.staleness {
+            EvaEscalationStaleness::UrgentStale => items.push(format!(
+                "URGENT: question-for-eva #{} has no Eva response for {}h",
+                issue.number,
+                ceil_age_hours(issue.age_hours)
+            )),
+            EvaEscalationStaleness::Stale => items.push(format!(
+                "Stale question-for-eva #{} ({}h without response)",
+                issue.number,
+                ceil_age_hours(issue.age_hours)
+            )),
+            EvaEscalationStaleness::Active => {}
+        }
     }
     if !qc_status.unprocessed_outbound.is_empty() {
         items.push(format!(
@@ -950,6 +1065,18 @@ fn print_human_report(report: &Report) {
     );
     for comment in &report.eva_input.comments_since_last_cycle {
         println!("  {} {}", comment.issue_url, comment.first_line);
+    }
+    println!(
+        "Eva escalations: {} open, {} stale, {} urgent-stale",
+        report.eva_escalations.open_count,
+        report.eva_escalations.stale_count,
+        report.eva_escalations.urgent_stale_count
+    );
+    for issue in &report.eva_escalations.issues {
+        println!(
+            "  {}#{} {} [{:?}; {:.1}h]",
+            MAIN_REPO, issue.number, issue.title, issue.staleness, issue.age_hours
+        );
     }
     println!();
 
@@ -1156,6 +1283,15 @@ fn to_copilot_issue(value: &Value) -> Option<CopilotIssue> {
     })
 }
 
+fn to_question_for_eva_issue(value: &Value) -> Option<QuestionForEvaIssue> {
+    Some(QuestionForEvaIssue {
+        number: value.get("number")?.as_u64()?,
+        title: value.get("title")?.as_str()?.to_string(),
+        created_at: value.get("createdAt")?.as_str()?.to_string(),
+        has_urgent_label: has_urgent_label(value),
+    })
+}
+
 fn json_str<'a>(value: &'a Value, path: &[&str]) -> Option<&'a str> {
     let mut current = value;
     for key in path {
@@ -1168,6 +1304,121 @@ fn json_str<'a>(value: &'a Value, path: &[&str]) -> Option<&'a str> {
 /// Example: `https://api.github.com/repos/owner/repo/issues/123` -> `https://github.com/owner/repo/issues/123`.
 fn api_issue_url_to_web_url(api_url: &str) -> String {
     api_url.replace("https://api.github.com/repos/", "https://github.com/")
+}
+
+fn has_urgent_label(value: &Value) -> bool {
+    value
+        .get("labels")
+        .and_then(Value::as_array)
+        .is_some_and(|labels| {
+            labels.iter().any(|label| {
+                label
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .is_some_and(|name| name.to_ascii_lowercase().contains("urgent"))
+            })
+        })
+}
+
+fn is_eva_or_orchestrator_author(login: &str) -> bool {
+    login == EVA_LOGIN || ORCHESTRATOR_ISSUE_AUTHORS.contains(&login)
+}
+
+fn issue_has_eva_response(issue_number: u64, issue_created_at: &str) -> Result<bool, String> {
+    let issue_created_at = DateTime::parse_from_rfc3339(issue_created_at)
+        .map_err(|error| format!("invalid issue created_at timestamp {:?}: {}", issue_created_at, error))?
+        .with_timezone(&Utc);
+    let comments_path = format!(
+        "repos/{}/issues/{}/comments?sort=created&direction=desc&per_page=100",
+        MAIN_REPO, issue_number
+    );
+    let value = gh_json(&["api", &comments_path, "--paginate"])?;
+    let Some(items) = value.as_array() else {
+        return Err(format!(
+            "unexpected comments response format for issue #{}",
+            issue_number
+        ));
+    };
+    let mut malformed_timestamp = false;
+
+    for item in items {
+        if json_str(item, &["user", "login"]) != Some(EVA_LOGIN) {
+            continue;
+        }
+        let Some(created_at) = json_str(item, &["created_at"]) else {
+            continue;
+        };
+        let Ok(created_at) = DateTime::parse_from_rfc3339(created_at) else {
+            malformed_timestamp = true;
+            continue;
+        };
+        let created_at = created_at.with_timezone(&Utc);
+        if created_at > issue_created_at {
+            return Ok(true);
+        }
+    }
+
+    if malformed_timestamp {
+        return Err(format!(
+            "invalid Eva comment timestamp encountered on issue #{}",
+            issue_number
+        ));
+    }
+
+    Ok(false)
+}
+
+fn classify_eva_escalation(
+    issue: &QuestionForEvaIssue,
+    now: DateTime<Utc>,
+    has_eva_response: bool,
+) -> Result<EvaEscalationIssueSummary, String> {
+    let created_at = DateTime::parse_from_rfc3339(&issue.created_at)
+        .map_err(|error| format!("invalid created_at timestamp {:?}: {}", issue.created_at, error))?
+        .with_timezone(&Utc);
+    let age = now.signed_duration_since(created_at);
+    let age_hours = age.num_minutes() as f64 / 60.0;
+    let staleness = if has_eva_response {
+        EvaEscalationStaleness::Active
+    } else if issue.has_urgent_label && age > TimeDelta::try_hours(24).unwrap() {
+        EvaEscalationStaleness::UrgentStale
+    } else if age > TimeDelta::try_hours(48).unwrap() {
+        EvaEscalationStaleness::Stale
+    } else {
+        EvaEscalationStaleness::Active
+    };
+
+    Ok(EvaEscalationIssueSummary {
+        number: issue.number,
+        title: issue.title.clone(),
+        age_hours,
+        staleness,
+    })
+}
+
+fn build_eva_escalations(
+    open_count: usize,
+    issues: Vec<EvaEscalationIssueSummary>,
+) -> EvaEscalations {
+    let stale_count = issues
+        .iter()
+        .filter(|issue| issue.staleness == EvaEscalationStaleness::Stale)
+        .count();
+    let urgent_stale_count = issues
+        .iter()
+        .filter(|issue| issue.staleness == EvaEscalationStaleness::UrgentStale)
+        .count();
+
+    EvaEscalations {
+        open_count,
+        stale_count,
+        urgent_stale_count,
+        issues,
+    }
+}
+
+fn ceil_age_hours(age_hours: f64) -> i64 {
+    age_hours.ceil() as i64
 }
 
 fn gh_json(args: &[&str]) -> Result<Value, String> {
@@ -1253,6 +1504,7 @@ mod tests {
 
         let action_items = build_action_items(
             &eva_input,
+            &EvaEscalations::default(),
             &agent_status,
             &qc_status,
             &audit_status,
@@ -1286,6 +1538,7 @@ mod tests {
 
         let action_items = build_action_items(
             &eva_input,
+            &EvaEscalations::default(),
             &agent_status,
             &qc_status,
             &audit_status,
@@ -1319,6 +1572,7 @@ mod tests {
 
         let action_items = build_action_items(
             &eva_input,
+            &EvaEscalations::default(),
             &agent_status,
             &qc_status,
             &audit_status,
@@ -1436,6 +1690,153 @@ mod tests {
     }
 
     #[test]
+    fn question_for_eva_issue_older_than_48h_is_stale() {
+        let now = Utc::now();
+        let issue = QuestionForEvaIssue {
+            number: 2001,
+            title: "Need decision".to_string(),
+            created_at: (now - TimeDelta::try_hours(49).unwrap()).to_rfc3339(),
+            has_urgent_label: false,
+        };
+
+        let summary = classify_eva_escalation(&issue, now, false).unwrap();
+
+        assert_eq!(summary.number, 2001);
+        assert_eq!(summary.staleness, EvaEscalationStaleness::Stale);
+        assert!(summary.age_hours >= 49.0);
+    }
+
+    #[test]
+    fn urgent_question_for_eva_issue_older_than_24h_is_urgent_stale() {
+        let now = Utc::now();
+        let issue = QuestionForEvaIssue {
+            number: 2002,
+            title: "Urgent blocker".to_string(),
+            created_at: (now - TimeDelta::try_hours(25).unwrap()).to_rfc3339(),
+            has_urgent_label: true,
+        };
+
+        let summary = classify_eva_escalation(&issue, now, false).unwrap();
+
+        assert_eq!(summary.staleness, EvaEscalationStaleness::UrgentStale);
+    }
+
+    #[test]
+    fn fresh_question_for_eva_issue_is_active() {
+        let now = Utc::now();
+        let issue = QuestionForEvaIssue {
+            number: 2003,
+            title: "Recent question".to_string(),
+            created_at: (now - TimeDelta::try_hours(6).unwrap()).to_rfc3339(),
+            has_urgent_label: false,
+        };
+
+        let summary = classify_eva_escalation(&issue, now, false).unwrap();
+
+        assert_eq!(summary.staleness, EvaEscalationStaleness::Active);
+    }
+
+    #[test]
+    fn question_for_eva_issue_with_eva_comment_is_not_stale() {
+        let now = Utc::now();
+        let issue = QuestionForEvaIssue {
+            number: 2004,
+            title: "Answered question".to_string(),
+            created_at: (now - TimeDelta::try_hours(72).unwrap()).to_rfc3339(),
+            has_urgent_label: true,
+        };
+
+        let summary = classify_eva_escalation(&issue, now, true).unwrap();
+
+        assert_eq!(summary.staleness, EvaEscalationStaleness::Active);
+    }
+
+    #[test]
+    fn build_action_items_includes_question_for_eva_stale_warnings() {
+        let eva_input = EvaInput::default();
+        let agent_status = AgentStatus::default();
+        let qc_status = ProcessingStatus::default();
+        let audit_status = ProcessingStatus::default();
+        let concurrency = Concurrency {
+            in_flight: 0,
+            max: 2,
+            dispatch_available: true,
+        };
+        let eva_escalations = EvaEscalations {
+            open_count: 2,
+            stale_count: 1,
+            urgent_stale_count: 1,
+            issues: vec![
+                EvaEscalationIssueSummary {
+                    number: 3001,
+                    title: "Still waiting".to_string(),
+                    age_hours: 52.0,
+                    staleness: EvaEscalationStaleness::Stale,
+                },
+                EvaEscalationIssueSummary {
+                    number: 3002,
+                    title: "Urgent blocker".to_string(),
+                    age_hours: 27.0,
+                    staleness: EvaEscalationStaleness::UrgentStale,
+                },
+            ],
+        };
+
+        let action_items = build_action_items(
+            &eva_input,
+            &eva_escalations,
+            &agent_status,
+            &qc_status,
+            &audit_status,
+            None,
+            Some("validated"),
+            &concurrency,
+        );
+
+        assert!(action_items.iter().any(|item| {
+            item == "Stale question-for-eva #3001 (52h without response)"
+        }));
+        assert!(action_items.iter().any(|item| {
+            item == "URGENT: question-for-eva #3002 has no Eva response for 27h"
+        }));
+    }
+
+    #[test]
+    fn ceil_age_hours_rounds_up_fractional_hours() {
+        assert_eq!(ceil_age_hours(52.3), 53);
+    }
+
+    #[test]
+    fn report_json_includes_eva_escalations_field() {
+        let report = sample_report(
+            None,
+            Vec::new(),
+            EvaEscalations {
+                open_count: 1,
+                stale_count: 0,
+                urgent_stale_count: 0,
+                issues: vec![EvaEscalationIssueSummary {
+                    number: 4001,
+                    title: "Waiting on Eva".to_string(),
+                    age_hours: 5.0,
+                    staleness: EvaEscalationStaleness::Active,
+                }],
+            },
+        );
+
+        let value = serde_json::to_value(&report).unwrap();
+        let eva_escalations = value.get("eva_escalations").unwrap();
+        assert_eq!(eva_escalations.get("open_count").unwrap().as_u64(), Some(1));
+        assert_eq!(
+            eva_escalations
+                .get("issues")
+                .and_then(Value::as_array)
+                .map(Vec::len),
+            Some(1)
+        );
+    }
+
+    #[test]
     fn diverged_false_does_not_produce_commit_freeze_action_item() {
         let eva_input = EvaInput::default();
         let agent_status = AgentStatus::default();
@@ -1455,6 +1856,7 @@ mod tests {
 
         let action_items = build_action_items(
             &eva_input,
+            &EvaEscalations::default(),
             &agent_status,
             &qc_status,
             &audit_status,
@@ -1516,6 +1918,7 @@ mod tests {
 
         let action_items = build_action_items(
             &eva_input,
+            &EvaEscalations::default(),
             &agent_status,
             &qc_status,
             &audit_status,
@@ -1541,12 +1944,14 @@ mod tests {
     fn sample_report(
         commit_freeze: Option<CommitFreezeStatus>,
         action_items: Vec<String>,
+        eva_escalations: EvaEscalations,
     ) -> Report {
         Report {
             cycle: Some(153),
             generated_at: "2026-03-08T00:00:00Z".to_string(),
             last_cycle_timestamp: "2026-03-08T00:00:00Z".to_string(),
             eva_input: EvaInput::default(),
+            eva_escalations,
             agent_status: AgentStatus::default(),
             qc_status: ProcessingStatus::default(),
             audit_status: ProcessingStatus::default(),
@@ -1571,6 +1976,7 @@ mod tests {
                 changed_files: vec![],
             }),
             Vec::new(),
+            EvaEscalations::default(),
         );
 
         assert_eq!(report_exit_code(&report, Some("validated")), 0);
@@ -1586,6 +1992,7 @@ mod tests {
                 changed_files: vec![],
             }),
             vec!["Commit freeze check failed".to_string()],
+            EvaEscalations::default(),
         );
 
         assert_eq!(report_exit_code(&report, Some("validated")), 1);
@@ -1601,6 +2008,7 @@ mod tests {
                 changed_files: vec!["ts/src/index.ts".to_string()],
             }),
             vec!["Source files changed since QC-validated commit".to_string()],
+            EvaEscalations::default(),
         );
 
         assert_eq!(report_exit_code(&report, Some("validated")), 1);
@@ -1619,6 +2027,7 @@ mod tests {
                 "Source files changed since QC-validated commit outside pre-publish gate — awareness only"
                     .to_string(),
             ],
+            EvaEscalations::default(),
         );
 
         assert_eq!(report_exit_code(&report, Some("published")), 0);
@@ -1634,6 +2043,7 @@ mod tests {
                 changed_files: vec!["package.json".to_string()],
             }),
             vec!["Source files changed since QC-validated commit".to_string()],
+            EvaEscalations::default(),
         );
 
         assert_eq!(report_exit_code(&report, None), 1);
@@ -1649,6 +2059,7 @@ mod tests {
                 changed_files: vec!["package.json".to_string()],
             }),
             vec!["Source files changed since QC-validated commit".to_string()],
+            EvaEscalations::default(),
         );
 
         assert_eq!(report_exit_code(&report, Some("some_future_status")), 1);
@@ -1664,6 +2075,7 @@ mod tests {
                 changed_files: vec!["package.json".to_string()],
             }),
             vec!["Source files changed since QC-validated commit".to_string()],
+            EvaEscalations::default(),
         );
 
         assert_eq!(report_exit_code(&report, Some("awaiting_validation")), 1);
@@ -1682,6 +2094,7 @@ mod tests {
                 "Dispatch slots are full (2 / 2)".to_string(),
                 "1 open input-from-eva issue requires attention".to_string(),
             ],
+            EvaEscalations::default(),
         );
 
         assert_eq!(report_exit_code(&report, Some("validated")), 0);
