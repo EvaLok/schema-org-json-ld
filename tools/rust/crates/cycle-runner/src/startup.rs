@@ -585,12 +585,14 @@ mod tests {
             std::process::id(),
             run_id
         ));
-        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::create_dir_all(root.join("docs"))
+            .expect("failed to create docs directory for startup test");
         root
     }
 
     fn write_state(root: &std::path::Path, state: serde_json::Value) {
-        fs::write(root.join("docs/state.json"), format!("{}\n", state)).unwrap();
+        fs::write(root.join("docs/state.json"), format!("{}\n", state))
+            .expect("failed to write startup test state to docs/state.json");
     }
 
     #[test]
