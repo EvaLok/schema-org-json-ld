@@ -10,6 +10,7 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::LazyLock;
 
 const HOUSEKEEPING_FINDINGS_KEY: &str = "items_needing_attention";
 const CYCLE_STATUS_IN_FLIGHT_PATH: &str = "/concurrency/in_flight";
@@ -77,6 +78,8 @@ const DERIVE_METRICS_FIELDS: [&str; 9] = [
     "pr_merge_rate",
 ];
 const DERIVE_METRICS_RATE_FIELDS: [&str; 2] = ["dispatch_to_pr_rate", "pr_merge_rate"];
+static REVIEW_FINDING_HEADER_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?m)^## \d+\.").expect("review finding regex should compile"));
 
 #[derive(Parser)]
 #[command(name = "pipeline-check")]
@@ -1763,9 +1766,7 @@ fn disposition_match_status(repo_root: &Path) -> Result<(StepStatus, String), St
 }
 
 fn count_review_findings(review_content: &str) -> Result<u64, String> {
-    let regex = Regex::new(r"(?m)^## \d+\.")
-        .map_err(|error| format!("failed to build review finding regex: {}", error))?;
-    let count = regex.find_iter(review_content).count();
+    let count = REVIEW_FINDING_HEADER_REGEX.find_iter(review_content).count();
     u64::try_from(count).map_err(|error| format!("review finding count overflow: {}", error))
 }
 
