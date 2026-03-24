@@ -4763,6 +4763,13 @@
       "pr": 1675,
       "status": "merged",
       "title": "[Cycle Review] Cycle 345 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-24T06:31:48Z",
+      "issue": 1678,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix: cycle-runner close-out must transition phase to complete"
     }
   ],
   "audit_dropped": [
@@ -4978,17 +4985,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1674 [Cycle Review] Cycle 345 end-of-cycle review (cycle 345)",
-    "dispatch_to_pr_rate": "91.2%",
+    "dispatch_log_latest": "#1678 Fix: cycle-runner close-out must transition phase to complete (cycle 345)",
+    "dispatch_to_pr_rate": "91.0%",
     "failed_dispatches": 1,
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 475,
     "pr_merge_rate": "97.9%",
     "produced_pr": 485,
     "resolved": 532,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 532
+    "total_dispatches": 533
   },
   "cycle_issues": [
     1673,
@@ -4996,9 +5003,10 @@
     1677
   ],
   "cycle_phase": {
+    "completed_at": "2026-03-24T06:31:48Z",
     "cycle": 345,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-24T04:46:37Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-24T06:31:48Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -8216,7 +8224,7 @@
     ],
     "last_review_cycle": 345
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 344,
   "schema_status": {
     "directory_layout": {
