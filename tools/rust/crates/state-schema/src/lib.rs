@@ -88,6 +88,12 @@ pub struct ReviewAgent {
     pub extra: BTreeMap<String, Value>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct FindingDisposition {
+    pub category: String,
+    pub disposition: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
 #[serde(default, rename_all = "snake_case")]
 pub struct ReviewHistoryEntry {
@@ -105,6 +111,8 @@ pub struct ReviewHistoryEntry {
     pub finding_count: u64,
     pub complacency_score: u64,
     pub note: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub finding_dispositions: Vec<FindingDisposition>,
     #[serde(flatten)]
     pub extra: BTreeMap<String, Value>,
 }
@@ -597,7 +605,8 @@ mod tests {
     use super::{
         commit_state_json, current_cycle_from_state, current_utc_timestamp, default_agent_model,
         read_state_value, set_value_at_pointer, transition_cycle_phase, update_freshness,
-        write_state_value, ReviewHistoryEntry, StateJson, ToolsConfig, VALID_PHASES,
+        write_state_value, FindingDisposition, ReviewHistoryEntry, StateJson, ToolsConfig,
+        VALID_PHASES,
     };
     use chrono::DateTime;
     use serde_json::{json, Value};
@@ -724,6 +733,7 @@ mod tests {
         assert_eq!(entry.dispatch_created, 0);
         assert_eq!(entry.actioned_failed, 0);
         assert_eq!(entry.verified_resolved, 0);
+        assert!(entry.finding_dispositions.is_empty());
     }
 
     #[test]
@@ -740,6 +750,7 @@ mod tests {
             finding_count: 7,
             complacency_score: 2,
             note: None,
+            finding_dispositions: Vec::new(),
             extra: BTreeMap::new(),
         };
 
@@ -750,6 +761,7 @@ mod tests {
         assert!(!object.contains_key("dispatch_created"));
         assert!(!object.contains_key("actioned_failed"));
         assert!(!object.contains_key("verified_resolved"));
+        assert!(!object.contains_key("finding_dispositions"));
     }
 
     #[test]
@@ -766,6 +778,10 @@ mod tests {
             finding_count: 7,
             complacency_score: 2,
             note: None,
+            finding_dispositions: vec![FindingDisposition {
+                category: "data-integrity".to_string(),
+                disposition: "actioned".to_string(),
+            }],
             extra: BTreeMap::new(),
         };
 
@@ -776,6 +792,35 @@ mod tests {
         assert_eq!(object.get("dispatch_created"), Some(&json!(2)));
         assert_eq!(object.get("actioned_failed"), Some(&json!(1)));
         assert_eq!(object.get("verified_resolved"), Some(&json!(1)));
+        assert_eq!(
+            object.get("finding_dispositions"),
+            Some(&json!([{
+                "category": "data-integrity",
+                "disposition": "actioned"
+            }]))
+        );
+    }
+
+    #[test]
+    fn finding_disposition_round_trips_through_json() {
+        let disposition = FindingDisposition {
+            category: "journal-quality".to_string(),
+            disposition: "deferred".to_string(),
+        };
+
+        let value =
+            serde_json::to_value(&disposition).expect("finding disposition should serialize");
+        assert_eq!(
+            value,
+            json!({
+                "category": "journal-quality",
+                "disposition": "deferred"
+            })
+        );
+
+        let reparsed: FindingDisposition =
+            serde_json::from_value(value).expect("finding disposition should deserialize");
+        assert_eq!(reparsed, disposition);
     }
 
     #[test]

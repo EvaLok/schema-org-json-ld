@@ -568,6 +568,7 @@ This should stay focused.
                 finding_count: 2,
                 complacency_score: 5,
                 note: Some("Deferred: cycle-close-drift.".to_string()),
+                finding_dispositions: Vec::new(),
                 extra: Default::default(),
             },
             state_schema::ReviewHistoryEntry {
@@ -585,6 +586,7 @@ This should stay focused.
                 finding_count: 2,
                 complacency_score: 5,
                 note: Some("Deferred 1 (cycle-close-drift).".to_string()),
+                finding_dispositions: Vec::new(),
                 extra: Default::default(),
             },
             state_schema::ReviewHistoryEntry {
@@ -602,6 +604,7 @@ This should stay focused.
                 finding_count: 2,
                 complacency_score: 4,
                 note: Some("Deferred 1 (cycle-close-drift awaiting structural fix).".to_string()),
+                finding_dispositions: Vec::new(),
                 extra: Default::default(),
             },
             state_schema::ReviewHistoryEntry {
@@ -619,6 +622,7 @@ This should stay focused.
                 finding_count: 2,
                 complacency_score: 4,
                 note: None,
+                finding_dispositions: Vec::new(),
                 extra: Default::default(),
             },
         ];
