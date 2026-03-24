@@ -4808,6 +4808,13 @@
       "pr": 1692,
       "status": "merged",
       "title": "[Cycle Review] Cycle 347 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-24T14:34:56Z",
+      "issue": 1694,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add C4.5 (ADR check) step to cycle-runner close-out"
     }
   ],
   "audit_dropped": [
@@ -5025,17 +5032,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1691 [Cycle Review] Cycle 347 end-of-cycle review (cycle 347)",
-    "dispatch_to_pr_rate": "91.2%",
+    "dispatch_log_latest": "#1694 Add C4.5 (ADR check) step to cycle-runner close-out (cycle 348)",
+    "dispatch_to_pr_rate": "91.1%",
     "failed_dispatches": 1,
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 480,
     "pr_merge_rate": "98.0%",
     "produced_pr": 490,
     "resolved": 537,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 537
+    "total_dispatches": 538
   },
   "cycle_issues": [
     1693
@@ -8291,7 +8298,7 @@
     ],
     "last_review_cycle": 346
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 346,
   "schema_status": {
     "directory_layout": {
