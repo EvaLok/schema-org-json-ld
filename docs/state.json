@@ -4776,8 +4776,10 @@
     {
       "dispatched_at": "2026-03-24T08:47:10Z",
       "issue": 1682,
+      "merged_at": "2026-03-24T10:32:03Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1683,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 346 end-of-cycle review"
     }
   ],
@@ -4996,13 +4998,13 @@
     "closed_without_merge": 8,
     "closed_without_pr": 47,
     "dispatch_log_latest": "#1682 [Cycle Review] Cycle 346 end-of-cycle review (cycle 346)",
-    "dispatch_to_pr_rate": "91.0%",
+    "dispatch_to_pr_rate": "91.2%",
     "failed_dispatches": 1,
-    "in_flight": 1,
-    "merged": 476,
+    "in_flight": 0,
+    "merged": 477,
     "pr_merge_rate": "97.9%",
-    "produced_pr": 486,
-    "resolved": 533,
+    "produced_pr": 487,
+    "resolved": 534,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 534
@@ -8734,7 +8736,22 @@
     }
   },
   "schema_version": 1,
-  "step_comment_acknowledged_gaps": [],
+  "step_comment_acknowledged_gaps": [
+    {
+      "acknowledged_at": "2026-03-24T10:30:00Z",
+      "cycle": 345,
+      "issue": 1680,
+      "missing_steps": [
+        "0",
+        "1.1",
+        "4",
+        "7",
+        "8",
+        "C4.1"
+      ],
+      "reason": "Inherited cascade from cycle 345. Steps missing due to multi-issue cycle split (steps posted on #1677 not #1680). Already penalized in cycle 345 pipeline."
+    }
+  ],
   "test_count": {
     "last_verified": "cycle 345",
     "last_verified_note": "php = PHPUnit test count (composer run test-unit). ts = metric-snapshot tool count. Verified cycle 345: PR #1672 added Quiz tests (428 PHP, 422 TS).",
