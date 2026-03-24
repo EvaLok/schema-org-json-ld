@@ -4781,6 +4781,13 @@
       "pr": 1683,
       "status": "merged",
       "title": "[Cycle Review] Cycle 346 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-24T10:33:23Z",
+      "issue": 1685,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Auto-acknowledge inherited step-comments cascades in cycle-runner startup"
     }
   ],
   "audit_dropped": [
@@ -4997,17 +5004,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1682 [Cycle Review] Cycle 346 end-of-cycle review (cycle 346)",
-    "dispatch_to_pr_rate": "91.2%",
+    "dispatch_log_latest": "#1685 Auto-acknowledge inherited step-comments cascades (cycle 346)",
+    "dispatch_to_pr_rate": "91.0%",
     "failed_dispatches": 1,
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 477,
-    "pr_merge_rate": "97.9%",
+    "pr_merge_rate": "97.7%",
     "produced_pr": 487,
-    "resolved": 534,
+    "resolved": 535,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 534
+    "total_dispatches": 535
   },
   "cycle_issues": [
     1680,
