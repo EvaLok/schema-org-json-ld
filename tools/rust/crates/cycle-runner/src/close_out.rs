@@ -3,6 +3,7 @@ use crate::review_body;
 use crate::runner;
 use crate::steps;
 use serde_json::Value;
+use std::fs;
 use std::path::Path;
 use std::process::Command;
 use state_schema::{
@@ -65,6 +66,9 @@ pub fn run(
 
     // C4.1: Validate docs — GATE
     step_c4_1(repo_root, issue, cycle, &worklog, &journal)?;
+
+    // C4.5: ADR check
+    step_c4_5(repo_root, issue)?;
 
     // C5: Commit and push docs
     step_c5(repo_root, issue, cycle)?;
@@ -176,6 +180,51 @@ fn step_c4_1(
     }
 
     Ok(())
+}
+
+fn step_c4_5(repo_root: &Path, issue: u64) -> Result<(), String> {
+    eprintln!("C4.5: ADR check...");
+
+    let adr_dir = repo_root.join("doc/adr");
+    let mut adrs = match fs::read_dir(&adr_dir) {
+        Ok(entries) => entries
+            .map(|entry| {
+                entry
+                    .map_err(|error| format!("failed to read entry in {}: {}", adr_dir.display(), error))
+                    .and_then(|entry| {
+                        let file_type = entry.file_type().map_err(|error| {
+                            format!(
+                                "failed to read file type for {}: {}",
+                                entry.path().display(),
+                                error
+                            )
+                        })?;
+                        Ok((entry.file_name(), file_type.is_file()))
+                    })
+            })
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .filter_map(|(name, is_file)| is_file.then_some(name.to_string_lossy().into_owned()))
+            .collect::<Vec<_>>(),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Vec::new(),
+        Err(error) => {
+            return Err(format!(
+                "failed to scan {} for ADRs: {}",
+                adr_dir.display(),
+                error
+            ));
+        }
+    };
+
+    adrs.sort();
+
+    let body = if adrs.is_empty() {
+        "No ADR-worthy decisions this cycle".to_string()
+    } else {
+        format!("{} ADRs in doc/adr/:\n- {}", adrs.len(), adrs.join("\n- "))
+    };
+
+    steps::post_step(repo_root, issue, "C4.5", "ADR check", &body, false)
 }
 
 fn step_c5(repo_root: &Path, issue: u64, cycle: u64) -> Result<(), String> {
@@ -823,6 +872,7 @@ fn format_copilot_metrics_line(metrics: &WorklogMetrics) -> String {
 fn print_dry_run(cycle: u64, issue: u64) {
     eprintln!("[dry-run] Would run close-out sequence for cycle {} (issue #{})", cycle, issue);
     eprintln!("[dry-run] C4.1: validate-docs worklog + journal (GATE)");
+    eprintln!("[dry-run] C4.5: scan doc/adr/ and post ADR check step");
     eprintln!("[dry-run] C5:   git add docs/ && git commit && git push");
     eprintln!("[dry-run] C5.1: receipt-validate (report only)");
     eprintln!("[dry-run] C5.5: pipeline-check (GATE)");
@@ -1153,5 +1203,39 @@ mod tests {
         );
 
         fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn step_c4_5_posts_adr_check_with_existing_adrs() {
+        let dir = setup_temp_repo("step-c4-5");
+        fs::create_dir_all(dir.join("doc/adr")).unwrap();
+        fs::create_dir_all(dir.join("tools")).unwrap();
+        fs::write(dir.join("doc/adr/0001-example.md"), "# ADR 1\n").unwrap();
+        fs::write(dir.join("doc/adr/0002-example.md"), "# ADR 2\n").unwrap();
+
+        let args_path = dir.join("post-step-args.txt");
+        fs::write(
+            dir.join("tools/post-step"),
+            format!(
+                "#!/usr/bin/env bash\nset -euo pipefail\n{{\nfor arg in \"$@\"; do\nprintf -- '---ARG---\\n%s\\n' \"$arg\"\ndone\n}} > \"{}\"\n",
+                args_path.display()
+            ),
+        )
+        .unwrap();
+
+        step_c4_5(&dir, 123).unwrap();
+
+        let args = fs::read_to_string(&args_path).unwrap();
+        assert!(args.contains("---ARG---\n--issue\n"));
+        assert!(args.contains("---ARG---\n123\n"));
+        assert!(args.contains("---ARG---\n--step\n"));
+        assert!(args.contains("---ARG---\nC4.5\n"));
+        assert!(args.contains("---ARG---\n--title\n"));
+        assert!(args.contains("---ARG---\nADR check\n"));
+        assert!(args.contains("2 ADRs in doc/adr/"));
+        assert!(args.contains("0001-example.md"));
+        assert!(args.contains("0002-example.md"));
+
+        let _ = fs::remove_dir_all(&dir);
     }
 }
