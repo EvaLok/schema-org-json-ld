@@ -77,10 +77,7 @@ pub fn push(repo_root: &Path) -> Result<(), String> {
 
 fn has_changes(repo_root: &Path, paths: &[&str]) -> Result<bool, String> {
     let mut cmd = Command::new("git");
-    cmd.arg("-C")
-        .arg(repo_root)
-        .arg("status")
-        .arg("--porcelain");
+    cmd.arg("-C").arg(repo_root).arg("status").arg("--porcelain");
     for path in paths {
         cmd.arg(path);
     }
