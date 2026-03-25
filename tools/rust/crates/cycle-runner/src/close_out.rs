@@ -92,7 +92,7 @@ pub fn run(
     step_c7(repo_root, issue)?;
 
     // C8: Close issue
-    step_c8(repo_root, issue, cycle, &review_info)?;
+    step_c8(repo_root, issue, cycle, &review_info, pipeline_passed)?;
     complete_close_out_phase(repo_root, cycle)?;
     git::push(repo_root).map_err(|error| {
         format!(
@@ -753,15 +753,17 @@ fn step_c8(
     issue: u64,
     cycle: u64,
     review_info: &ReviewInfo,
+    pipeline_passed: bool,
 ) -> Result<(), String> {
     eprintln!("C8: Closing orchestrator issue...");
+    let pipeline_status = if pipeline_passed { "PASS" } else { "FAIL" };
 
     let closing_body = format!(
         "Cycle {} close-out complete.\n\n\
          - Review: dispatched as #{} ({})\n\
-         - Pipeline: PASS\n\
+         - Pipeline: {}\n\
          - All close-out steps completed by cycle-runner",
-        cycle, review_info.issue_number, review_info.issue_url,
+        cycle, review_info.issue_number, review_info.issue_url, pipeline_status,
     );
 
     steps::post_step(
@@ -1416,6 +1418,8 @@ mod tests {
         assert!(c4_7 < c5);
         assert!(args.contains("simulated verify-review-events failure"));
         assert!(args.contains("---ARG---\nC5.5\n"));
+        assert!(args.contains("Cycle 345 close-out complete."));
+        assert!(args.contains("- Pipeline: PASS"));
 
         let state = state_schema::read_state_value(&dir).unwrap();
         assert_eq!(
@@ -1449,6 +1453,39 @@ mod tests {
         assert!(args.contains("2 ADRs in doc/adr/"));
         assert!(args.contains("0001-example.md"));
         assert!(args.contains("0002-example.md"));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn step_c8_posts_fail_pipeline_status_when_pipeline_did_not_pass() {
+        let dir = setup_temp_repo("step-c8-pipeline-fail");
+        let args_path = dir.join("post-step-args.txt");
+        write_post_step_capture_script(&dir, &args_path);
+
+        let bin_dir = dir.join("bin");
+        fs::create_dir_all(&bin_dir).unwrap();
+        let gh_path = bin_dir.join("gh");
+        fs::write(
+            &gh_path,
+            "#!/usr/bin/env bash\nset -euo pipefail\nif [ \"$1\" = \"issue\" ] && [ \"$2\" = \"close\" ]; then\n  exit 0\nfi\nprintf 'unexpected gh invocation\\n' >&2\nexit 1\n",
+        )
+        .unwrap();
+        make_executable(&gh_path);
+
+        let review_info = ReviewInfo {
+            issue_number: 1470,
+            issue_url: "https://github.com/EvaLok/schema-org-json-ld/issues/1470".to_string(),
+        };
+
+        with_path_prefix(&bin_dir, || step_c8(&dir, 123, 345, &review_info, false)).unwrap();
+
+        let args = fs::read_to_string(&args_path).unwrap();
+        assert!(args.contains("---ARG---\nC8\n"));
+        assert!(args.contains("Cycle 345 close-out complete."));
+        assert!(args.contains("- Review: dispatched as #1470 (https://github.com/EvaLok/schema-org-json-ld/issues/1470)"));
+        assert!(args.contains("- Pipeline: FAIL"));
+        assert!(args.contains("- All close-out steps completed by cycle-runner"));
 
         let _ = fs::remove_dir_all(&dir);
     }
