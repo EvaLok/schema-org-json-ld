@@ -4965,8 +4965,10 @@
     {
       "dispatched_at": "2026-03-25T08:23:01Z",
       "issue": 1737,
+      "merged_at": "2026-03-25T08:38:17Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1738,
+      "status": "merged",
       "title": "Harden cycle-runner close-out: enforce C5.5 gate and remove C6.5 worklog patch"
     }
   ],
@@ -5187,13 +5189,13 @@
     "closed_without_merge": 8,
     "closed_without_pr": 47,
     "dispatch_log_latest": "#1737 Harden cycle-runner close-out: enforce C5.5 gate and remove C6.5 worklog patch (cycle 356)",
-    "dispatch_to_pr_rate": "91.4%",
+    "dispatch_to_pr_rate": "91.5%",
     "failed_dispatches": 1,
-    "in_flight": 1,
-    "merged": 497,
+    "in_flight": 0,
+    "merged": 498,
     "pr_merge_rate": "98.0%",
-    "produced_pr": 507,
-    "resolved": 554,
+    "produced_pr": 508,
+    "resolved": 555,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 555
@@ -5479,7 +5481,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 25,
     "issue": 1734,
