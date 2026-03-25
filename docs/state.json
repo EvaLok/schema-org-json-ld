@@ -5024,6 +5024,13 @@
       "pr": 1752,
       "status": "merged",
       "title": "[Cycle Review] Cycle 358 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-25T14:39:00Z",
+      "issue": 1755,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add dispatch-finding reconciliation check to pipeline-check"
     }
   ],
   "audit_dropped": [
@@ -5243,17 +5250,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1751 [Cycle Review] Cycle 358 end-of-cycle review (cycle 358)",
-    "dispatch_to_pr_rate": "91.6%",
+    "dispatch_log_latest": "#1755 Add dispatch-finding reconciliation check to pipeline-check (cycle 359)",
+    "dispatch_to_pr_rate": "91.5%",
     "failed_dispatches": 1,
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 504,
     "pr_merge_rate": "98.1%",
     "produced_pr": 514,
     "resolved": 561,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 561
+    "total_dispatches": 562
   },
   "cycle_issues": [
     1753
@@ -5536,7 +5543,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 20,
     "issue": 1753,
@@ -8759,7 +8766,8 @@
         ],
         "complacency_score": 2,
         "cycle": 358,
-        "deferred": 1,
+        "deferred": 0,
+        "dispatch_created": 1,
         "finding_count": 4,
         "finding_dispositions": [
           {
@@ -8785,7 +8793,7 @@
     ],
     "last_review_cycle": 358
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 357,
   "schema_status": {
     "directory_layout": {
