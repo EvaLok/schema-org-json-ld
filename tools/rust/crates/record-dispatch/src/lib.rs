@@ -409,6 +409,11 @@ pub fn apply_dispatch_patch(state: &mut Value, patch: &DispatchPatch) -> Result<
         .and_then(Value::as_array_mut)
         .ok_or_else(|| "missing array /agent_sessions in docs/state.json".to_string())?
         .push(patch.agent_session.clone());
+    state
+        .as_object_mut()
+        .ok_or_else(|| "docs/state.json root must be an object".to_string())?
+        .insert("in_flight_sessions".to_string(), json!(patch.in_flight));
+    update_field_inventory_last_refreshed(state, "in_flight_sessions", &cycle_marker)?;
 
     Ok(())
 }
@@ -812,6 +817,7 @@ mod tests {
         assert_eq!(state["copilot_metrics"]["reviewed_awaiting_eva"], json!(0));
         assert_eq!(state["copilot_metrics"]["produced_pr"], json!(1));
         assert_eq!(state["copilot_metrics"]["in_flight"], json!(1));
+        assert_eq!(state["in_flight_sessions"], json!(1));
         assert_eq!(state["copilot_metrics"]["pr_merge_rate"], json!("100.0%"));
         assert_eq!(
             state["copilot_metrics"]["dispatch_log_latest"],
@@ -834,9 +840,37 @@ mod tests {
                 ["last_refreshed"],
             json!("cycle 164")
         );
+        assert_eq!(
+            state["field_inventory"]["fields"]["in_flight_sessions"]["last_refreshed"],
+            json!("cycle 164")
+        );
         assert_eq!(sessions[2]["issue"], json!(603));
         assert_eq!(sessions[2]["status"], json!("in_flight"));
         assert_eq!(sessions[2]["dispatched_at"], json!("2026-03-07T13:00:00Z"));
+    }
+
+    #[test]
+    fn apply_dispatch_patch_syncs_in_flight_sessions() {
+        let mut state = sample_state();
+        state["in_flight_sessions"] = json!(0);
+        let model = default_test_model();
+        let patch = build_dispatch_patch(
+            &state,
+            164,
+            603,
+            "Example dispatch",
+            &model,
+            "2026-03-07T13:00:00Z",
+        )
+        .expect("patch should build");
+
+        apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
+
+        assert_eq!(state["in_flight_sessions"], json!(patch.in_flight));
+        assert_eq!(
+            state["field_inventory"]["fields"]["in_flight_sessions"]["last_refreshed"],
+            json!("cycle 164")
+        );
     }
 
     #[test]
