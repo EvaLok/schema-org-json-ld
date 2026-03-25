@@ -5053,8 +5053,10 @@
     {
       "dispatched_at": "2026-03-25T17:02:57Z",
       "issue": 1762,
+      "merged_at": "2026-03-25T18:22:35Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1763,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 360 end-of-cycle review"
     }
   ],
@@ -5276,13 +5278,13 @@
     "closed_without_merge": 8,
     "closed_without_pr": 47,
     "dispatch_log_latest": "#1762 [Cycle Review] Cycle 360 end-of-cycle review (cycle 360)",
-    "dispatch_to_pr_rate": "91.3%",
+    "dispatch_to_pr_rate": "91.5%",
     "failed_dispatches": 1,
-    "in_flight": 2,
-    "merged": 506,
+    "in_flight": 1,
+    "merged": 507,
     "pr_merge_rate": "98.1%",
-    "produced_pr": 516,
-    "resolved": 563,
+    "produced_pr": 517,
+    "resolved": 564,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 565
@@ -5391,15 +5393,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 360"
+        "last_refreshed": "cycle 361"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 360"
+        "last_refreshed": "cycle 361"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 360"
+        "last_refreshed": "cycle 361"
       },
       "cycle_issues": {
         "cadence": "every cycle",
@@ -5420,7 +5422,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 360"
+        "last_refreshed": "cycle 361"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -5568,7 +5570,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 32,
     "issue": 1764,
