@@ -93,6 +93,7 @@ fn run_checks(state: &StateJson) -> Report {
         check_chronic_verification_deadline(state),
         check_chronic_intermediate_state(state),
         check_review_events_verified(state),
+        check_in_flight_sessions_consistency(state),
         check_agent_sessions_reconciliation(state),
         check_eva_input_overlap(state),
     ];
@@ -1226,6 +1227,49 @@ fn review_history_entry_mentions_category(entry: &Value, category: &str) -> Resu
         .any(|finding| finding.get("category").and_then(Value::as_str) == Some(category)))
 }
 
+fn count_in_flight_agent_sessions(state: &StateJson) -> Result<i64, String> {
+    let mut in_flight = 0_i64;
+
+    for (index, session) in state.agent_sessions.iter().enumerate() {
+        match session.status.as_deref() {
+            Some("in_flight") | Some("dispatched") => in_flight += 1,
+            Some(_) => {}
+            None => return Err(format!("agent_sessions[{}].status is missing", index)),
+        }
+    }
+
+    Ok(in_flight)
+}
+
+fn check_in_flight_sessions_consistency(state: &StateJson) -> CheckResult {
+    let actual = match state.extra.get("in_flight_sessions").and_then(Value::as_i64) {
+        Some(value) => value,
+        None => {
+            return warn(
+                "in_flight_sessions_consistency",
+                "missing field: in_flight_sessions",
+            )
+        }
+    };
+
+    let expected = match count_in_flight_agent_sessions(state) {
+        Ok(value) => value,
+        Err(error) => return fail("in_flight_sessions_consistency", error),
+    };
+
+    if actual == expected {
+        pass("in_flight_sessions_consistency")
+    } else {
+        fail(
+            "in_flight_sessions_consistency",
+            format!(
+                "in_flight_sessions expected {} from agent_sessions but actual {}",
+                expected, actual
+            ),
+        )
+    }
+}
+
 fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
     let total_dispatches = match get_metric_i64(state, "total_dispatches") {
         Some(value) => value,
@@ -1292,7 +1336,10 @@ fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
     };
 
     let mut merged_expected = 0;
-    let mut in_flight_expected = 0;
+    let in_flight_expected = match count_in_flight_agent_sessions(state) {
+        Ok(value) => value,
+        Err(error) => return fail("agent_sessions_reconciliation", error),
+    };
     let mut closed_without_merge_expected = 0;
     let mut closed_without_pr_expected = 0;
     let mut produced_pr_expected = 0;
@@ -1315,7 +1362,6 @@ fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
                 }
             }
             Some("in_flight") | Some("dispatched") => {
-                in_flight_expected += 1;
                 if let Some(issue) = session.issue {
                     *in_flight_issue_counts.entry(issue).or_insert(0) += 1;
                 }
@@ -1572,6 +1618,7 @@ mod tests {
         json!({
             "schema_version": 1,
             "schema_status": {},
+            "in_flight_sessions": 0,
             "agent_sessions": [
                 {
                     "issue": 101,
@@ -2491,7 +2538,7 @@ mod tests {
         let state = state_from_json(minimal_valid_state());
         let report = run_checks(&state);
 
-        assert_eq!(report.checks.len(), 16);
+        assert_eq!(report.checks.len(), 17);
         assert_eq!(
             report.checks.get(9).map(|check| check.name),
             Some("cycle_phase_consistency")
@@ -2514,6 +2561,10 @@ mod tests {
         );
         assert_eq!(
             report.checks.get(14).map(|check| check.name),
+            Some("in_flight_sessions_consistency")
+        );
+        assert_eq!(
+            report.checks.get(15).map(|check| check.name),
             Some("agent_sessions_reconciliation")
         );
         assert_eq!(report.checks.last().map(|check| check.name), Some("eva_input_overlap"));
@@ -2532,5 +2583,21 @@ mod tests {
         let state = state_from_json(value);
         let check = check_agent_sessions_reconciliation(&state);
         assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn in_flight_sessions_consistency_detects_mismatch() {
+        let mut value = minimal_valid_state();
+        value["agent_sessions"][1]["status"] = json!("in_flight");
+        value["in_flight_sessions"] = json!(0);
+
+        let state = state_from_json(value);
+        let check = check_in_flight_sessions_consistency(&state);
+        assert_eq!(check.status, CheckStatus::Fail);
+
+        let details = check.details.as_deref().unwrap_or_default();
+        assert!(details.contains("in_flight_sessions"));
+        assert!(details.contains("expected 1"));
+        assert!(details.contains("actual 0"));
     }
 }
