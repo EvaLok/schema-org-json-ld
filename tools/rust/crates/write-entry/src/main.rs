@@ -699,16 +699,17 @@ fn parse_issue_processed_numbers(values: &[String]) -> Result<Vec<String>, Strin
     let mut issues = Vec::new();
 
     for value in values {
-        for raw_issue in value.split(',') {
-            let trimmed = raw_issue.trim();
-            if trimmed.is_empty() {
-                return Err("issues-processed entries must be non-empty issue numbers".to_string());
-            }
-            let issue = trimmed.parse::<u64>().map_err(|_| {
-                format!("issues-processed entry '{}' is not a valid issue number", trimmed)
-            })?;
-            issues.push(format!("#{}", issue));
+        let trimmed = value.trim();
+        if trimmed.is_empty() {
+            return Err("issues-processed entries must be non-empty issue numbers".to_string());
         }
+        let issue = trimmed.parse::<u64>().map_err(|_| {
+            format!("issues-processed entry '{}' is not a valid issue number", trimmed)
+        })?;
+        if issue == 0 {
+            return Err("issues-processed entry '0' is not a valid issue number".to_string());
+        }
+        issues.push(format!("#{}", issue));
     }
 
     Ok(issues)
@@ -2932,16 +2933,23 @@ mod tests {
     }
 
     #[test]
-    fn parse_issue_processed_numbers_supports_csv_and_rejects_invalid_values() {
+    fn parse_issue_processed_numbers_validates_split_input() {
         assert_eq!(
-            parse_issue_processed_numbers(&["42, 77".to_string(), "105".to_string()]).unwrap(),
+            parse_issue_processed_numbers(&["42".to_string(), "77".to_string(), "105".to_string()])
+                .unwrap(),
             vec!["#42", "#77", "#105"]
         );
 
-        let error = parse_issue_processed_numbers(&["42, nope".to_string()]).unwrap_err();
+        let error = parse_issue_processed_numbers(&["nope".to_string()]).unwrap_err();
         assert_eq!(
             error,
             "issues-processed entry 'nope' is not a valid issue number"
+        );
+
+        let zero_error = parse_issue_processed_numbers(&["0".to_string()]).unwrap_err();
+        assert_eq!(
+            zero_error,
+            "issues-processed entry '0' is not a valid issue number"
         );
     }
 
