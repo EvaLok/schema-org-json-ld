@@ -8682,7 +8682,7 @@
     "last_review_cycle": 356
   },
   "review_dispatch_consecutive": 0,
-  "review_events_verified_through_cycle": 355,
+  "review_events_verified_through_cycle": 356,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
