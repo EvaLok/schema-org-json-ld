@@ -5001,8 +5001,10 @@
     {
       "dispatched_at": "2026-03-25T12:27:07Z",
       "issue": 1747,
+      "merged_at": "2026-03-25T14:32:11Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1748,
+      "status": "merged",
       "title": "Add pre-C5 verify-review-events step to close-out"
     },
     {
@@ -5241,13 +5243,13 @@
     "closed_without_merge": 8,
     "closed_without_pr": 47,
     "dispatch_log_latest": "#1751 [Cycle Review] Cycle 358 end-of-cycle review (cycle 358)",
-    "dispatch_to_pr_rate": "91.4%",
+    "dispatch_to_pr_rate": "91.6%",
     "failed_dispatches": 1,
-    "in_flight": 1,
-    "merged": 503,
+    "in_flight": 0,
+    "merged": 504,
     "pr_merge_rate": "98.1%",
-    "produced_pr": 513,
-    "resolved": 560,
+    "produced_pr": 514,
+    "resolved": 561,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 561
@@ -5533,7 +5535,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 20,
     "issue": 1753,
