@@ -5064,8 +5064,10 @@
     {
       "dispatched_at": "2026-03-25T18:28:52Z",
       "issue": 1765,
+      "merged_at": "2026-03-25T20:16:14Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1766,
+      "status": "merged",
       "title": "Fix receipt event counting to use tool names only"
     },
     {
@@ -5296,13 +5298,13 @@
     "closed_without_merge": 8,
     "closed_without_pr": 47,
     "dispatch_log_latest": "#1767 [Cycle Review] Cycle 361 end-of-cycle review (cycle 361)",
-    "dispatch_to_pr_rate": "91.5%",
+    "dispatch_to_pr_rate": "91.7%",
     "failed_dispatches": 1,
-    "in_flight": 1,
-    "merged": 509,
+    "in_flight": 0,
+    "merged": 510,
     "pr_merge_rate": "98.1%",
-    "produced_pr": 519,
-    "resolved": 566,
+    "produced_pr": 520,
+    "resolved": 567,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 567
@@ -5588,7 +5590,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 11,
     "issue": 1769,
