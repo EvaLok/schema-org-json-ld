@@ -12,6 +12,7 @@ use state_schema::{
 };
 
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
+const VERIFY_REVIEW_EVENTS_TIMEOUT_SECS: u64 = 30;
 
 struct ReviewInfo {
     issue_number: u64,
@@ -66,6 +67,11 @@ pub fn run(
 
     // C4.5: ADR check
     step_c4_5(repo_root, issue)?;
+
+    // C4.7: Verify review events (best-effort, non-blocking)
+    if let Err(warn) = step_c4_7(repo_root, issue) {
+        eprintln!("C4.7 warning: {}", warn);
+    }
 
     // C5: Commit and push docs
     step_c5(repo_root, issue, cycle, &worklog)?;
@@ -224,6 +230,125 @@ fn step_c4_5(repo_root: &Path, issue: u64) -> Result<(), String> {
     };
 
     steps::post_step(repo_root, issue, "C4.5", "ADR check", &body, false)
+}
+
+fn step_c4_7(repo_root: &Path, issue: u64) -> Result<(), String> {
+    step_c4_7_with_timeout(repo_root, issue, VERIFY_REVIEW_EVENTS_TIMEOUT_SECS)
+}
+
+fn step_c4_7_with_timeout(repo_root: &Path, issue: u64, timeout_seconds: u64) -> Result<(), String> {
+    eprintln!("C4.7: Verifying review events...");
+
+    let repo_root_str = repo_root.to_string_lossy().to_string();
+    let output = match runner::run_tool_with_timeout(
+        repo_root,
+        "verify-review-events",
+        &["--apply", "--repo-root", &repo_root_str],
+        timeout_seconds,
+    ) {
+        Ok(output) => output,
+        Err(error) => {
+            let body = format!(
+                "verify-review-events warning: {}\nNon-blocking; C5.5 will still validate state freshness.",
+                error
+            );
+            steps::post_step(repo_root, issue, "C4.7", "Verify review events", &body, false)?;
+            return Err(error);
+        }
+    };
+
+    let stdout = runner::stdout_text(&output);
+    let stderr = runner::stderr_text(&output);
+    let safe_to_advance_to = parse_verify_review_events_safe_to_advance_to(&stdout).ok();
+
+    let (body, warning) = if runner::timed_out(&output) {
+        (
+            format!(
+                "verify-review-events warning: timed out after {} seconds\nNon-blocking; C5.5 will still validate state freshness.",
+                timeout_seconds
+            ),
+            Some(format!(
+                "verify-review-events timed out after {} seconds",
+                timeout_seconds
+            )),
+        )
+    } else if output.status.success() {
+        let safe_to_advance_to = parse_verify_review_events_safe_to_advance_to(&stdout)?;
+        (
+            format!(
+                "verify-review-events succeeded\n- safe_to_advance_to: {}\n- state updates applied before C5 commit",
+                safe_to_advance_to
+            ),
+            None,
+        )
+    } else {
+        let mut body = format!(
+            "verify-review-events warning: exit_code {}",
+            output.status.code().unwrap_or(-1)
+        );
+        if let Some(value) = safe_to_advance_to {
+            body.push_str(&format!("\n- safe_to_advance_to: {}", value));
+        }
+        if !stderr.is_empty() {
+            body.push_str(&format!("\n- stderr: {}", stderr));
+        } else if !stdout.is_empty() {
+            body.push_str(&format!("\n- stdout: {}", stdout));
+        }
+        body.push_str("\n- Non-blocking; C5.5 will still validate state freshness.");
+        (
+            body,
+            Some(format!(
+                "verify-review-events failed with exit code {}",
+                output.status.code().unwrap_or(-1)
+            )),
+        )
+    };
+
+    steps::post_step(repo_root, issue, "C4.7", "Verify review events", &body, false)?;
+
+    if let Some(warning) = warning {
+        return Err(warning);
+    }
+
+    Ok(())
+}
+
+fn parse_verify_review_events_safe_to_advance_to(stdout: &str) -> Result<u64, String> {
+    if stdout.is_empty() {
+        return Err("verify-review-events produced empty stdout".to_string());
+    }
+
+    if let Ok(report) = serde_json::from_str::<Value>(stdout) {
+        return report
+            .get("safe_to_advance_to")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| {
+                "verify-review-events JSON output is missing numeric safe_to_advance_to".to_string()
+            });
+    }
+
+    for prefix in ["Safe to advance marker to ", "Marker stays at "] {
+        if let Some(value) = stdout.lines().find_map(|line| {
+            line.find(prefix).and_then(|index| {
+                let remainder = line[index + prefix.len()..].trim_start();
+                let token = remainder
+                    .split_whitespace()
+                    .next()
+                    .unwrap_or("")
+                    .trim_end_matches(|ch: char| !ch.is_ascii_digit());
+                (!token.is_empty() && token.chars().all(|ch| ch.is_ascii_digit()))
+                    .then(|| token.parse::<u64>().ok())
+                    .flatten()
+            })
+        }) {
+            return Ok(value);
+        }
+    }
+
+    Err(format!(
+        "unable to extract safe_to_advance_to from verify-review-events output: {}",
+        stdout
+    ))
 }
 
 fn step_c5(repo_root: &Path, issue: u64, cycle: u64, worklog: &Path) -> Result<(), String> {
@@ -760,6 +885,7 @@ fn close_out_dry_run_lines(cycle: u64, issue: u64) -> Vec<String> {
         ),
         "[dry-run] C4.1: validate-docs worklog + journal (GATE)".to_string(),
         "[dry-run] C4.5: scan doc/adr/ and post ADR check step".to_string(),
+        "[dry-run] C4.7: verify-review-events --apply (best-effort, non-blocking)".to_string(),
         "[dry-run] C5:   git add docs/ && git commit && git push (worklog frozen at this point)"
             .to_string(),
         "[dry-run] C5.1: receipt-validate (report only)".to_string(),
@@ -775,8 +901,11 @@ fn close_out_dry_run_lines(cycle: u64, issue: u64) -> Vec<String> {
 mod tests {
     use super::*;
     use serde_json::json;
+    use std::ffi::OsString;
     use std::fs;
+    use std::os::unix::fs::PermissionsExt;
     use std::process::Command;
+    use std::sync::{Mutex, OnceLock};
     use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
@@ -859,7 +988,7 @@ mod tests {
         Command::new("git")
             .arg("-C")
             .arg(&dir)
-            .arg("init")
+            .args(["init", "-b", "master"])
             .output()
             .unwrap();
         Command::new("git")
@@ -878,14 +1007,74 @@ mod tests {
     }
 
     fn write_post_step_capture_script(dir: &std::path::Path, output_path: &std::path::Path) {
+        let output_path = shell_single_quote(output_path);
         fs::write(
             dir.join("tools/post-step"),
             format!(
-                "#!/usr/bin/env bash\nset -euo pipefail\n{{\nfor arg in \"$@\"; do\nprintf -- '---ARG---\\n%s\\n' \"$arg\"\ndone\n}} > \"{}\"\n",
-                output_path.display()
+                "#!/usr/bin/env bash\nset -euo pipefail\n{{\nfor arg in \"$@\"; do\nprintf -- '---ARG---\\n%s\\n' \"$arg\"\ndone\n}} > {}\n",
+                output_path
             ),
         )
         .unwrap();
+    }
+
+    fn write_post_step_append_capture_script(dir: &std::path::Path, output_path: &std::path::Path) {
+        let output_path = shell_single_quote(output_path);
+        fs::write(
+            dir.join("tools/post-step"),
+            format!(
+                "#!/usr/bin/env bash\nset -euo pipefail\n{{\nfor arg in \"$@\"; do\nprintf -- '---ARG---\\n%s\\n' \"$arg\"\ndone\n}} >> {}\n",
+                output_path
+            ),
+        )
+        .unwrap();
+    }
+
+    fn setup_temp_repo_with_remote(name: &str) -> (std::path::PathBuf, std::path::PathBuf) {
+        let dir = setup_temp_repo(name);
+        let remote = unique_temp_dir(&format!("cycle-runner-close-out-remote-{}", name));
+        let _ = fs::remove_dir_all(&remote);
+        Command::new("git")
+            .arg("init")
+            .arg("--bare")
+            .arg(&remote)
+            .output()
+            .unwrap();
+        Command::new("git")
+            .arg("-C")
+            .arg(&dir)
+            .args(["remote", "add", "origin"])
+            .arg(&remote)
+            .output()
+            .unwrap();
+        (dir, remote)
+    }
+
+    fn path_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    fn make_executable(path: &std::path::Path) {
+        let mut permissions = fs::metadata(path).unwrap().permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(path, permissions).unwrap();
+    }
+
+    fn shell_single_quote(path: &std::path::Path) -> String {
+        format!("'{}'", path.to_string_lossy().replace('\'', "'\"'\"'"))
+    }
+
+    fn with_path_prefix<T>(prefix: &std::path::Path, f: impl FnOnce() -> T) -> T {
+        let _guard = path_lock().lock().unwrap();
+        let old_path = std::env::var_os("PATH").unwrap_or_default();
+        let mut new_path = OsString::from(prefix.as_os_str());
+        new_path.push(":");
+        new_path.push(&old_path);
+        std::env::set_var("PATH", &new_path);
+        let result = f();
+        std::env::set_var("PATH", old_path);
+        result
     }
 
     fn unique_temp_dir(prefix: &str) -> std::path::PathBuf {
@@ -1031,6 +1220,211 @@ mod tests {
             .expect("C7 dry-run line should exist");
 
         assert_eq!(c7, c6 + 1);
+    }
+
+    #[test]
+    fn close_out_dry_run_includes_c4_7_between_c4_5_and_c5() {
+        let lines = close_out_dry_run_lines(345, 123);
+
+        let c4_5 = lines
+            .iter()
+            .position(|line| line.contains("[dry-run] C4.5:"))
+            .expect("C4.5 dry-run line should exist");
+        let c4_7 = lines
+            .iter()
+            .position(|line| line.contains("[dry-run] C4.7:"))
+            .expect("C4.7 dry-run line should exist");
+        let c5 = lines
+            .iter()
+            .position(|line| line.contains("[dry-run] C5:"))
+            .expect("C5 dry-run line should exist");
+
+        assert_eq!(c4_7, c4_5 + 1);
+        assert_eq!(c5, c4_7 + 1);
+    }
+
+    #[test]
+    fn step_c4_7_posts_safe_to_advance_to_on_success() {
+        let dir = setup_temp_repo("step-c4-7-success");
+        let args_path = dir.join("post-step-args.txt");
+        write_post_step_capture_script(&dir, &args_path);
+        fs::write(
+            dir.join("tools/verify-review-events"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf 'Verification report\\n  Result: All 2 PRs verified. Safe to advance marker to 345.\\n'\n",
+        )
+        .unwrap();
+
+        step_c4_7_with_timeout(&dir, 123, 1).unwrap();
+
+        let args = fs::read_to_string(&args_path).unwrap();
+        assert!(args.contains("---ARG---\nC4.7\n"));
+        assert!(args.contains("---ARG---\nVerify review events\n"));
+        assert!(args.contains("safe_to_advance_to: 345"));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn step_c4_7_posts_safe_to_advance_to_from_json_output() {
+        let dir = setup_temp_repo("step-c4-7-json-success");
+        let args_path = dir.join("post-step-args.txt");
+        write_post_step_capture_script(&dir, &args_path);
+        fs::write(
+            dir.join("tools/verify-review-events"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\\n' '{\"safe_to_advance_to\":344}'\n",
+        )
+        .unwrap();
+
+        step_c4_7_with_timeout(&dir, 123, 1).unwrap();
+
+        let args = fs::read_to_string(&args_path).unwrap();
+        assert!(args.contains("safe_to_advance_to: 344"));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn parse_verify_review_events_safe_to_advance_to_accepts_marker_stays_prefix() {
+        let value = parse_verify_review_events_safe_to_advance_to(
+            "Verification report\n  Result: Verification failed for cycle 345. Marker stays at 344.\n",
+        )
+        .unwrap();
+
+        assert_eq!(value, 344);
+    }
+
+    #[test]
+    fn step_c4_7_timeout_posts_warning_and_returns_err() {
+        let dir = setup_temp_repo("step-c4-7-timeout");
+        let args_path = dir.join("post-step-args.txt");
+        write_post_step_capture_script(&dir, &args_path);
+        fs::write(
+            dir.join("tools/verify-review-events"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nsleep 2\n",
+        )
+        .unwrap();
+
+        let error = step_c4_7_with_timeout(&dir, 123, 1).unwrap_err();
+        assert!(error.contains("timed out"));
+
+        let args = fs::read_to_string(&args_path).unwrap();
+        assert!(args.contains("---ARG---\nC4.7\n"));
+        assert!(args.contains("timed out after 1 seconds"));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn close_out_run_continues_after_c4_7_failure() {
+        let (dir, remote) = setup_temp_repo_with_remote("close-out-c4-7-warning");
+        fs::create_dir_all(dir.join("docs/worklog/2026-03-25")).unwrap();
+        fs::create_dir_all(dir.join("docs/journal")).unwrap();
+        fs::write(
+            dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"),
+            "# Cycle 345\n",
+        )
+        .unwrap();
+        fs::write(dir.join("docs/journal/2026-03-25.md"), "# Journal\n").unwrap();
+        fs::write(
+            dir.join("docs/state.json"),
+            serde_json::to_string_pretty(&json!({
+                "cycle_phase": {
+                    "cycle": 345,
+                    "phase": "close_out",
+                    "phase_entered_at": "2026-03-25T00:00:00Z"
+                },
+                "last_cycle": {
+                    "number": 345,
+                    "timestamp": "2026-03-24T00:00:00Z"
+                },
+                "field_inventory": {
+                    "fields": {
+                        "cycle_phase": {
+                            "last_refreshed": "cycle 344"
+                        }
+                    }
+                },
+                "agent_sessions": []
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        let args_path = dir.join("post-step-args.txt");
+        write_post_step_append_capture_script(&dir, &args_path);
+        fs::write(
+            dir.join("tools/validate-docs"),
+            "#!/usr/bin/env bash\nset -euo pipefail\n",
+        )
+        .unwrap();
+        fs::write(
+            dir.join("tools/verify-review-events"),
+            "#!/usr/bin/env bash\nset -euo pipefail\necho 'simulated verify-review-events failure' >&2\nexit 1\n",
+        )
+        .unwrap();
+        fs::write(
+            dir.join("tools/receipt-validate"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"result\":\"pass\",\"canonical_receipts\":1,\"worklog_receipts\":1,\"genuinely_missing\":0}'\n",
+        )
+        .unwrap();
+        fs::write(
+            dir.join("tools/pipeline-check"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"overall\":\"pass\",\"has_blocking_findings\":false}'\n",
+        )
+        .unwrap();
+        fs::write(
+            dir.join("tools/dispatch-review"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' 'Created review issue #1470 from orchestrator issue #123: https://github.com/EvaLok/schema-org-json-ld/issues/1470'\n",
+        )
+        .unwrap();
+
+        Command::new("git")
+            .arg("-C")
+            .arg(&dir)
+            .args(["add", "."])
+            .output()
+            .unwrap();
+        Command::new("git")
+            .arg("-C")
+            .arg(&dir)
+            .args(["commit", "-m", "initial test state"])
+            .output()
+            .unwrap();
+        Command::new("git")
+            .arg("-C")
+            .arg(&dir)
+            .args(["push", "-u", "origin", "master"])
+            .output()
+            .unwrap();
+
+        let bin_dir = dir.join("bin");
+        fs::create_dir_all(&bin_dir).unwrap();
+        let gh_path = bin_dir.join("gh");
+        fs::write(
+            &gh_path,
+            "#!/usr/bin/env bash\nset -euo pipefail\nif [ \"$1\" = \"issue\" ] && [ \"$2\" = \"close\" ]; then\n  exit 0\nfi\nprintf 'unexpected gh invocation\\n' >&2\nexit 1\n",
+        )
+        .unwrap();
+        make_executable(&gh_path);
+
+        with_path_prefix(&bin_dir, || run(&dir, 123, Some(345), false)).unwrap();
+
+        let args = fs::read_to_string(&args_path).unwrap();
+        let c4_5 = args.find("---ARG---\nC4.5\n").unwrap();
+        let c4_7 = args.find("---ARG---\nC4.7\n").unwrap();
+        let c5 = args.find("---ARG---\nC5\n").unwrap();
+        assert!(c4_5 < c4_7);
+        assert!(c4_7 < c5);
+        assert!(args.contains("simulated verify-review-events failure"));
+        assert!(args.contains("---ARG---\nC5.5\n"));
+
+        let state = state_schema::read_state_value(&dir).unwrap();
+        assert_eq!(
+            state.pointer("/cycle_phase/phase"),
+            Some(&json!("complete"))
+        );
+
+        let _ = fs::remove_dir_all(&dir);
+        let _ = fs::remove_dir_all(&remote);
     }
 
     #[test]

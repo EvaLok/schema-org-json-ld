@@ -156,7 +156,7 @@ pub fn find_worklog_for_cycle(repo_root: &Path, cycle: u64) -> Result<PathBuf, S
     for entry in entries {
         let entry =
             entry.map_err(|error| format!("failed to read worklog dir entry: {}", error))?;
-        if !entry.file_type().map_or(false, |ft| ft.is_dir()) {
+        if !entry.file_type().is_ok_and(|ft| ft.is_dir()) {
             continue;
         }
         let sub_entries = fs::read_dir(entry.path())
