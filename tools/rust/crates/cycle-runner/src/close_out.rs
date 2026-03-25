@@ -19,12 +19,9 @@ struct ReviewInfo {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-struct WorklogMetrics {
-    in_flight: u64,
-    total_dispatches: u64,
-    produced_pr: u64,
-    merged: u64,
-    pr_merge_rate: String,
+struct PipelineGateReport {
+    overall: String,
+    has_blocking_findings: bool,
 }
 
 pub fn run(
@@ -71,7 +68,7 @@ pub fn run(
     step_c4_5(repo_root, issue)?;
 
     // C5: Commit and push docs
-    step_c5(repo_root, issue, cycle)?;
+    step_c5(repo_root, issue, cycle, &worklog)?;
 
     // C5.1: Receipt validation (report only)
     step_c5_1(repo_root, issue, cycle, &worklog)?;
@@ -84,9 +81,6 @@ pub fn run(
 
     // C6: Review dispatch
     let review_info = step_c6(repo_root, issue, cycle)?;
-
-    // C6.5: Patch worklog with post-dispatch state
-    step_c6_5(repo_root, issue, &worklog)?;
 
     // C7: Push
     step_c7(repo_root, issue)?;
@@ -232,7 +226,7 @@ fn step_c4_5(repo_root: &Path, issue: u64) -> Result<(), String> {
     steps::post_step(repo_root, issue, "C4.5", "ADR check", &body, false)
 }
 
-fn step_c5(repo_root: &Path, issue: u64, cycle: u64) -> Result<(), String> {
+fn step_c5(repo_root: &Path, issue: u64, cycle: u64, worklog: &Path) -> Result<(), String> {
     eprintln!("C5: Committing and pushing docs...");
 
     let message = format!(
@@ -249,7 +243,15 @@ fn step_c5(repo_root: &Path, issue: u64, cycle: u64) -> Result<(), String> {
 
     git::push(repo_root)?;
 
-    let push_body = format!("{}\nPushed to origin/master", body);
+    let worklog_rel = worklog
+        .strip_prefix(repo_root)
+        .ok()
+        .and_then(|path| path.to_str())
+        .unwrap_or("worklog");
+    let push_body = format!(
+        "{}\nPushed to origin/master\nWorklog frozen at C5 commit time: {}",
+        body, worklog_rel
+    );
     steps::post_step(
         repo_root,
         issue,
@@ -331,24 +333,42 @@ fn step_c5_5(repo_root: &Path, issue: u64) -> Result<bool, String> {
     eprintln!("C5.5: Final pipeline gate...");
 
     let output = runner::run_tool(repo_root, "pipeline-check", &["--json"])?;
-    let passed = output.status.success();
+    let exit_ok = output.status.success();
     let stdout = runner::stdout_text(&output);
+    let stderr = runner::stderr_text(&output);
+    let exit_code = output.status.code().unwrap_or(-1);
 
-    let body = if passed {
-        // Parse overall status from JSON
-        match serde_json::from_str::<Value>(&stdout) {
-            Ok(report) => {
-                let overall = report
-                    .get("overall")
-                    .and_then(Value::as_str)
-                    .unwrap_or("Pass");
-                format!("Pipeline: {} (all checks passed)", overall)
+    let (passed, body) = match parse_pipeline_gate_report(&stdout) {
+        Ok(report) => {
+            let passed = exit_ok && report.overall == "pass" && !report.has_blocking_findings;
+            let mut body = format!(
+                "Pipeline: {}\n- exit_code: {}\n- overall: {}\n- has_blocking_findings: {}",
+                if passed { "PASS" } else { "FAIL" },
+                exit_code,
+                report.overall,
+                report.has_blocking_findings
+            );
+            if !stdout.is_empty() {
+                body.push_str(&format!("\n- raw_json: {}", stdout));
             }
-            Err(_) => "Pipeline: PASS".to_string(),
+            if !stderr.is_empty() {
+                body.push_str(&format!("\n- stderr: {}", stderr));
+            }
+            (passed, body)
         }
-    } else {
-        let stderr = runner::stderr_text(&output);
-        format!("Pipeline: FAIL\n\n{}\n{}", stdout, stderr)
+        Err(parse_error) => {
+            let mut body = format!(
+                "Pipeline: FAIL\n- exit_code: {}\n- json_parse_error: {}",
+                exit_code, parse_error
+            );
+            if !stdout.is_empty() {
+                body.push_str(&format!("\n- stdout: {}", stdout));
+            }
+            if !stderr.is_empty() {
+                body.push_str(&format!("\n- stderr: {}", stderr));
+            }
+            (false, body)
+        }
     };
 
     steps::post_step(
@@ -367,6 +387,26 @@ fn step_c5_5(repo_root: &Path, issue: u64) -> Result<bool, String> {
     }
 
     Ok(true)
+}
+
+fn parse_pipeline_gate_report(stdout: &str) -> Result<PipelineGateReport, String> {
+    let report: Value = serde_json::from_str(stdout)
+        .map_err(|error| format!("failed to parse pipeline-check JSON output: {}", error))?;
+    let overall = report
+        .get("overall")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "missing string overall in pipeline-check JSON output".to_string())?;
+    let has_blocking_findings = report
+        .get("has_blocking_findings")
+        .and_then(Value::as_bool)
+        .ok_or_else(|| {
+            "missing bool has_blocking_findings in pipeline-check JSON output".to_string()
+        })?;
+
+    Ok(PipelineGateReport {
+        overall: overall.to_string(),
+        has_blocking_findings,
+    })
 }
 
 fn step_c5_6(
@@ -400,7 +440,7 @@ fn step_c5_6(
     let already_updated = state
         .pointer("/project_mode/consecutive_clean_cycles")
         .and_then(Value::as_array)
-        .map_or(false, |arr| {
+        .is_some_and(|arr| {
             arr.iter().any(|v| v.as_u64() == Some(cycle))
         });
 
@@ -566,66 +606,6 @@ fn step_c6(repo_root: &Path, issue: u64, cycle: u64) -> Result<ReviewInfo, Strin
     Ok(review_info)
 }
 
-fn step_c6_5(repo_root: &Path, issue: u64, worklog: &Path) -> Result<(), String> {
-    eprintln!("C6.5: Patching worklog with post-dispatch state...");
-
-    let state = state_schema::read_state_value(repo_root)?;
-    let cycle = state
-        .pointer("/cycle_phase/cycle")
-        .and_then(Value::as_u64)
-        .ok_or_else(|| "missing numeric /cycle_phase/cycle in docs/state.json".to_string())?;
-
-    let metrics = worklog_metrics_from_state(&state)?;
-    let patch_result = patch_worklog_from_state(worklog, &metrics)?;
-    let metrics_line = format_copilot_metrics_line(&metrics);
-
-    let body = if patch_result {
-        let worklog_rel = worklog.strip_prefix(repo_root).map_err(|error| {
-            format!(
-                "worklog path {} is not under repo root {}: {}",
-                worklog.display(),
-                repo_root.display(),
-                error
-            )
-        })?;
-        let worklog_rel = worklog_rel
-            .to_str()
-            .ok_or_else(|| format!("non-utf8 worklog path: {}", worklog.display()))?;
-        let commit_message = format!(
-            "docs(worklog-patch): post-dispatch state correction [cycle {}]",
-            cycle
-        );
-        let sha = git::add_and_commit(repo_root, &[worklog_rel], &commit_message)?;
-        if sha.is_empty() {
-            format!(
-                "Patched worklog values but found nothing new to commit\n- In-flight agent sessions: {}\n- Copilot metrics: {}",
-                metrics.in_flight, metrics_line
-            )
-        } else {
-            format!(
-                "Patched worklog current state after review dispatch\n- In-flight agent sessions: {}\n- Copilot metrics: {}\n- Commit: {}",
-                metrics.in_flight, metrics_line, sha
-            )
-        }
-    } else {
-        format!(
-            "Worklog already reflects post-dispatch state, skipping patch\n- In-flight agent sessions: {}\n- Copilot metrics: {}",
-            metrics.in_flight, metrics_line
-        )
-    };
-
-    steps::post_step(
-        repo_root,
-        issue,
-        "C6.5",
-        "Worklog post-dispatch patch",
-        &body,
-        false,
-    )?;
-
-    Ok(())
-}
-
 fn step_c7(repo_root: &Path, issue: u64) -> Result<(), String> {
     eprintln!("C7: Pushing dispatch state...");
 
@@ -766,126 +746,29 @@ fn parse_dispatch_output(stdout: &str) -> Result<ReviewInfo, String> {
     })
 }
 
-fn patch_worklog_from_state(worklog: &Path, metrics: &WorklogMetrics) -> Result<bool, String> {
-    let content = std::fs::read_to_string(worklog)
-        .map_err(|error| format!("failed to read worklog {}: {}", worklog.display(), error))?;
-    let patched = patch_worklog_content(&content, &metrics)?;
-    match patched {
-        Some(updated) => {
-            std::fs::write(worklog, updated).map_err(|error| {
-                format!("failed to write worklog {}: {}", worklog.display(), error)
-            })?;
-            Ok(true)
-        }
-        None => Ok(false),
-    }
-}
-
-fn worklog_metrics_from_state(state: &Value) -> Result<WorklogMetrics, String> {
-    Ok(WorklogMetrics {
-        in_flight: state
-            .pointer("/copilot_metrics/in_flight")
-            .and_then(Value::as_u64)
-            .ok_or_else(|| "missing numeric /copilot_metrics/in_flight in docs/state.json".to_string())?,
-        total_dispatches: state
-            .pointer("/copilot_metrics/total_dispatches")
-            .and_then(Value::as_u64)
-            .ok_or_else(|| {
-                "missing numeric /copilot_metrics/total_dispatches in docs/state.json".to_string()
-            })?,
-        produced_pr: state
-            .pointer("/copilot_metrics/produced_pr")
-            .and_then(Value::as_u64)
-            .ok_or_else(|| "missing numeric /copilot_metrics/produced_pr in docs/state.json".to_string())?,
-        merged: state
-            .pointer("/copilot_metrics/merged")
-            .and_then(Value::as_u64)
-            .ok_or_else(|| "missing numeric /copilot_metrics/merged in docs/state.json".to_string())?,
-        pr_merge_rate: state
-            .pointer("/copilot_metrics/pr_merge_rate")
-            .and_then(Value::as_str)
-            .ok_or_else(|| "missing string /copilot_metrics/pr_merge_rate in docs/state.json".to_string())?
-            .to_string(),
-    })
-}
-
-fn patch_worklog_content(
-    content: &str,
-    metrics: &WorklogMetrics,
-) -> Result<Option<String>, String> {
-    let in_flight_line = format_in_flight_line(metrics.in_flight);
-    let copilot_metrics_line = format_copilot_metrics_line(metrics);
-    let had_trailing_newline = content.ends_with('\n');
-    let mut found_in_flight = false;
-    let mut found_copilot_metrics = false;
-    let mut changed = false;
-    let mut lines = Vec::new();
-
-    for line in content.lines() {
-        if line.starts_with("- **In-flight agent sessions**:") {
-            found_in_flight = true;
-            if line == in_flight_line {
-                lines.push(line.to_string());
-            } else {
-                lines.push(in_flight_line.clone());
-                changed = true;
-            }
-        } else if line.starts_with("- **Copilot metrics**:") {
-            found_copilot_metrics = true;
-            if line == copilot_metrics_line {
-                lines.push(line.to_string());
-            } else {
-                lines.push(copilot_metrics_line.clone());
-                changed = true;
-            }
-        } else {
-            lines.push(line.to_string());
-        }
-    }
-
-    if !found_in_flight {
-        return Err("worklog missing '- **In-flight agent sessions**:' line".to_string());
-    }
-
-    if !found_copilot_metrics {
-        return Err("worklog missing '- **Copilot metrics**:' line".to_string());
-    }
-
-    if !changed {
-        return Ok(None);
-    }
-
-    let mut updated = lines.join("\n");
-    if had_trailing_newline {
-        updated.push('\n');
-    }
-
-    Ok(Some(updated))
-}
-
-fn format_in_flight_line(in_flight: u64) -> String {
-    format!("- **In-flight agent sessions**: {}", in_flight)
-}
-
-fn format_copilot_metrics_line(metrics: &WorklogMetrics) -> String {
-    format!(
-        "- **Copilot metrics**: {} dispatches, {} PRs, {} merged, {} merge rate",
-        metrics.total_dispatches, metrics.produced_pr, metrics.merged, metrics.pr_merge_rate
-    )
-}
-
 fn print_dry_run(cycle: u64, issue: u64) {
-    eprintln!("[dry-run] Would run close-out sequence for cycle {} (issue #{})", cycle, issue);
-    eprintln!("[dry-run] C4.1: validate-docs worklog + journal (GATE)");
-    eprintln!("[dry-run] C4.5: scan doc/adr/ and post ADR check step");
-    eprintln!("[dry-run] C5:   git add docs/ && git commit && git push");
-    eprintln!("[dry-run] C5.1: receipt-validate (report only)");
-    eprintln!("[dry-run] C5.5: pipeline-check (GATE)");
-    eprintln!("[dry-run] C5.6: stabilization counter update (if applicable)");
-    eprintln!("[dry-run] C6:   generate review body + dispatch-review");
-    eprintln!("[dry-run] C6.5: patch worklog current state after dispatch");
-    eprintln!("[dry-run] C7:   git push");
-    eprintln!("[dry-run] C8:   close issue #{}", issue);
+    for line in close_out_dry_run_lines(cycle, issue) {
+        eprintln!("{}", line);
+    }
+}
+
+fn close_out_dry_run_lines(cycle: u64, issue: u64) -> Vec<String> {
+    vec![
+        format!(
+            "[dry-run] Would run close-out sequence for cycle {} (issue #{})",
+            cycle, issue
+        ),
+        "[dry-run] C4.1: validate-docs worklog + journal (GATE)".to_string(),
+        "[dry-run] C4.5: scan doc/adr/ and post ADR check step".to_string(),
+        "[dry-run] C5:   git add docs/ && git commit && git push (worklog frozen at this point)"
+            .to_string(),
+        "[dry-run] C5.1: receipt-validate (report only)".to_string(),
+        "[dry-run] C5.5: pipeline-check (GATE)".to_string(),
+        "[dry-run] C5.6: stabilization counter update (if applicable)".to_string(),
+        "[dry-run] C6:   generate review body + dispatch-review".to_string(),
+        "[dry-run] C7:   git push".to_string(),
+        format!("[dry-run] C8:   close issue #{}", issue),
+    ]
 }
 
 #[cfg(test)]
@@ -968,172 +851,11 @@ mod tests {
         assert!(find_existing_review_dispatch(&state, 999).is_none());
     }
 
-    #[test]
-    fn patch_worklog_from_state_rewrites_legacy_metrics_format() {
-        let dir = unique_temp_dir("cycle-runner-close-out-test");
-        let _ = fs::remove_dir_all(&dir);
-        fs::create_dir_all(&dir).unwrap();
-        let worklog = dir.join("worklog.md");
-        let legacy_metrics_line =
-            "- **Copilot metrics**: 462 dispatches, 458 PRs produced, 450 merged, 98.3% PR merge rate";
-        fs::write(
-            &worklog,
-            format!(
-                "# Worklog\n\n## Current state\n- **In-flight agent sessions**: 0\n{}\n",
-                legacy_metrics_line
-            ),
-        )
-        .unwrap();
-
-        let metrics = WorklogMetrics {
-            in_flight: 1,
-            total_dispatches: 463,
-            produced_pr: 459,
-            merged: 451,
-            pr_merge_rate: "98.3%".to_string(),
-        };
-        let changed = patch_worklog_from_state(&worklog, &metrics).unwrap();
-        assert!(changed);
-
-        let updated = fs::read_to_string(&worklog).unwrap();
-        assert!(updated.contains(&format_in_flight_line(metrics.in_flight)));
-        assert!(updated.contains(&format_copilot_metrics_line(&metrics)));
-        assert!(!updated.contains(legacy_metrics_line));
-
-        fs::remove_dir_all(&dir).unwrap();
-    }
-
-    #[test]
-    fn patch_worklog_from_state_skips_when_current_state_already_matches() {
-        let dir = unique_temp_dir("cycle-runner-close-out-test-skip");
-        let _ = fs::remove_dir_all(&dir);
-        fs::create_dir_all(&dir).unwrap();
-        let worklog = dir.join("worklog.md");
-        let metrics = WorklogMetrics {
-            in_flight: 1,
-            total_dispatches: 463,
-            produced_pr: 459,
-            merged: 451,
-            pr_merge_rate: "98.3%".to_string(),
-        };
-        let expected = format!(
-            "# Worklog\n\n## Current state\n{}\n{}\n",
-            format_in_flight_line(metrics.in_flight),
-            format_copilot_metrics_line(&metrics)
-        );
-        fs::write(&worklog, &expected).unwrap();
-
-        let changed = patch_worklog_from_state(&worklog, &metrics).unwrap();
-        assert!(!changed);
-        assert_eq!(fs::read_to_string(&worklog).unwrap(), expected);
-
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn format_copilot_metrics_line_matches_worklog_patch_format() {
-        let metrics = WorklogMetrics {
-            in_flight: 1,
-            total_dispatches: 463,
-            produced_pr: 459,
-            merged: 451,
-            pr_merge_rate: "98.3%".to_string(),
-        };
-
-        assert_eq!(
-            format_copilot_metrics_line(&metrics),
-            "- **Copilot metrics**: 463 dispatches, 459 PRs, 451 merged, 98.3% merge rate"
-        );
-    }
-
-    #[test]
-    fn format_in_flight_line_matches_worklog_patch_format() {
-        assert_eq!(
-            format_in_flight_line(1),
-            "- **In-flight agent sessions**: 1"
-        );
-    }
-
-    #[test]
-    fn worklog_metrics_from_state_reads_expected_fields() {
-        let state = json!({
-            "copilot_metrics": {
-                "in_flight": 1,
-                "total_dispatches": 463,
-                "produced_pr": 459,
-                "merged": 451,
-                "pr_merge_rate": "98.3%"
-            }
-        });
-
-        assert_eq!(
-            worklog_metrics_from_state(&state).unwrap(),
-            WorklogMetrics {
-                in_flight: 1,
-                total_dispatches: 463,
-                produced_pr: 459,
-                merged: 451,
-                pr_merge_rate: "98.3%".to_string(),
-            }
-        );
-    }
-
-    #[test]
-    fn worklog_metrics_from_state_fails_closed_on_missing_fields() {
-        let state = json!({
-            "copilot_metrics": {
-                "total_dispatches": 463,
-                "produced_pr": 459,
-                "merged": 451,
-                "pr_merge_rate": "98.3%"
-            }
-        });
-
-        let error = worklog_metrics_from_state(&state).unwrap_err();
-        assert_eq!(
-            error,
-            "missing numeric /copilot_metrics/in_flight in docs/state.json"
-        );
-    }
-
-    #[test]
-    fn patch_worklog_content_fails_closed_when_in_flight_line_is_missing() {
-        let metrics = WorklogMetrics {
-            in_flight: 1,
-            total_dispatches: 463,
-            produced_pr: 459,
-            merged: 451,
-            pr_merge_rate: "98.3%".to_string(),
-        };
-        let content =
-            "# Worklog\n\n## Current state\n- **Copilot metrics**: 462 dispatches, 458 PRs produced, 450 merged, 98.3% PR merge rate\n";
-
-        let error = patch_worklog_content(content, &metrics).unwrap_err();
-        assert_eq!(
-            error,
-            "worklog missing '- **In-flight agent sessions**:' line"
-        );
-    }
-
-    #[test]
-    fn patch_worklog_content_fails_closed_when_metrics_line_is_missing() {
-        let metrics = WorklogMetrics {
-            in_flight: 1,
-            total_dispatches: 463,
-            produced_pr: 459,
-            merged: 451,
-            pr_merge_rate: "98.3%".to_string(),
-        };
-        let content = "# Worklog\n\n## Current state\n- **In-flight agent sessions**: 0\n";
-
-        let error = patch_worklog_content(content, &metrics).unwrap_err();
-        assert_eq!(error, "worklog missing '- **Copilot metrics**:' line");
-    }
-
     fn setup_temp_repo(name: &str) -> std::path::PathBuf {
         let dir = unique_temp_dir(&format!("cycle-runner-close-out-{}", name));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(dir.join("docs")).unwrap();
+        fs::create_dir_all(dir.join("tools")).unwrap();
         Command::new("git")
             .arg("-C")
             .arg(&dir)
@@ -1153,6 +875,17 @@ mod tests {
             .output()
             .unwrap();
         dir
+    }
+
+    fn write_post_step_capture_script(dir: &std::path::Path, output_path: &std::path::Path) {
+        fs::write(
+            dir.join("tools/post-step"),
+            format!(
+                "#!/usr/bin/env bash\nset -euo pipefail\n{{\nfor arg in \"$@\"; do\nprintf -- '---ARG---\\n%s\\n' \"$arg\"\ndone\n}} > \"{}\"\n",
+                output_path.display()
+            ),
+        )
+        .unwrap();
     }
 
     fn unique_temp_dir(prefix: &str) -> std::path::PathBuf {
@@ -1211,22 +944,104 @@ mod tests {
     }
 
     #[test]
+    fn step_c5_5_rejects_zero_exit_when_json_overall_is_fail() {
+        let dir = setup_temp_repo("step-c5-5-overall-fail");
+        let args_path = dir.join("post-step-args.txt");
+        write_post_step_capture_script(&dir, &args_path);
+        fs::write(
+            dir.join("tools/pipeline-check"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"overall\":\"fail\",\"has_blocking_findings\":false}'\n",
+        )
+        .unwrap();
+
+        let error = step_c5_5(&dir, 123).unwrap_err();
+        assert_eq!(
+            error,
+            "Pipeline check failed at C5.5 — fix issues and re-run close-out"
+        );
+
+        let args = fs::read_to_string(&args_path).unwrap();
+        assert!(args.contains("---ARG---\nC5.5\n"));
+        assert!(args.contains("overall: fail"));
+        assert!(args.contains("has_blocking_findings: false"));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn step_c5_5_rejects_zero_exit_when_json_reports_blocking_findings() {
+        let dir = setup_temp_repo("step-c5-5-blocking");
+        let args_path = dir.join("post-step-args.txt");
+        write_post_step_capture_script(&dir, &args_path);
+        fs::write(
+            dir.join("tools/pipeline-check"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"overall\":\"pass\",\"has_blocking_findings\":true}'\n",
+        )
+        .unwrap();
+
+        let error = step_c5_5(&dir, 123).unwrap_err();
+        assert_eq!(
+            error,
+            "Pipeline check failed at C5.5 — fix issues and re-run close-out"
+        );
+
+        let args = fs::read_to_string(&args_path).unwrap();
+        assert!(args.contains("overall: pass"));
+        assert!(args.contains("has_blocking_findings: true"));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn step_c5_5_rejects_zero_exit_when_json_overall_is_unexpected() {
+        let dir = setup_temp_repo("step-c5-5-unexpected-overall");
+        let args_path = dir.join("post-step-args.txt");
+        write_post_step_capture_script(&dir, &args_path);
+        fs::write(
+            dir.join("tools/pipeline-check"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"overall\":\"warning\",\"has_blocking_findings\":false}'\n",
+        )
+        .unwrap();
+
+        let error = step_c5_5(&dir, 123).unwrap_err();
+        assert_eq!(
+            error,
+            "Pipeline check failed at C5.5 — fix issues and re-run close-out"
+        );
+
+        let args = fs::read_to_string(&args_path).unwrap();
+        assert!(args.contains("overall: warning"));
+        assert!(args.contains("has_blocking_findings: false"));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn close_out_dry_run_sequence_goes_directly_from_c6_to_c7() {
+        let lines = close_out_dry_run_lines(345, 123);
+        assert!(lines.iter().all(|line| !line.contains("C6.5")));
+
+        let c6 = lines
+            .iter()
+            .position(|line| line.contains("[dry-run] C6:"))
+            .expect("C6 dry-run line should exist");
+        let c7 = lines
+            .iter()
+            .position(|line| line.contains("[dry-run] C7:"))
+            .expect("C7 dry-run line should exist");
+
+        assert_eq!(c7, c6 + 1);
+    }
+
+    #[test]
     fn step_c4_5_posts_adr_check_with_existing_adrs() {
         let dir = setup_temp_repo("step-c4-5");
         fs::create_dir_all(dir.join("doc/adr")).unwrap();
-        fs::create_dir_all(dir.join("tools")).unwrap();
         fs::write(dir.join("doc/adr/0001-example.md"), "# ADR 1\n").unwrap();
         fs::write(dir.join("doc/adr/0002-example.md"), "# ADR 2\n").unwrap();
 
         let args_path = dir.join("post-step-args.txt");
-        fs::write(
-            dir.join("tools/post-step"),
-            format!(
-                "#!/usr/bin/env bash\nset -euo pipefail\n{{\nfor arg in \"$@\"; do\nprintf -- '---ARG---\\n%s\\n' \"$arg\"\ndone\n}} > \"{}\"\n",
-                args_path.display()
-            ),
-        )
-        .unwrap();
+        write_post_step_capture_script(&dir, &args_path);
 
         step_c4_5(&dir, 123).unwrap();
 
