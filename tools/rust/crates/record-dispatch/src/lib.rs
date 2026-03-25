@@ -1069,7 +1069,8 @@ mod tests {
         fs::write(
             &worklog_path,
             concat!(
-                "## Current state\n\n",
+                "## Pre-dispatch state\n\n",
+                "*Snapshot before review dispatch — final counters may differ after C6.*\n",
                 "- **In-flight agent sessions**: 0\n",
                 "- **Pipeline status**: PASS (8/8)\n"
             ),

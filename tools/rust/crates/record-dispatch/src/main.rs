@@ -985,7 +985,7 @@ mod tests {
             fs::write(
                 &path,
                 format!(
-                    "# Cycle 164 — 2026-03-10 14:25 UTC\n\n## Current state\n\n- **In-flight agent sessions**: {}\n- **Pipeline status**: PASS (8/8)\n",
+                    "# Cycle 164 — 2026-03-10 14:25 UTC\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: {}\n- **Pipeline status**: PASS (8/8)\n",
                     in_flight
                 ),
             )

@@ -2068,8 +2068,9 @@ fn render_worklog(cycle: u64, now: DateTime<Utc>, input: &WorklogInput) -> Strin
         }
     }
     lines.push(String::new());
-    lines.push("## Current state".to_string());
+    lines.push("## Pre-dispatch state".to_string());
     lines.push(String::new());
+    lines.push("*Snapshot before review dispatch — final counters may differ after C6.*".to_string());
     lines.push(format!(
         "- **In-flight agent sessions**: {}",
         input.current_state.in_flight_sessions
@@ -2845,11 +2846,14 @@ mod tests {
         let rendered = render_worklog(154, fixed_now(), &input);
         let what_done = rendered.find("## What was done").unwrap();
         let self_mods = rendered.find("## Self-modifications").unwrap();
-        let current = rendered.find("## Current state").unwrap();
+        let current = rendered.find("## Pre-dispatch state").unwrap();
         let next = rendered.find("## Next steps").unwrap();
         assert!(what_done < self_mods);
         assert!(self_mods < current);
         assert!(current < next);
+        assert!(rendered.contains(
+            "*Snapshot before review dispatch — final counters may differ after C6.*"
+        ));
         assert!(rendered.contains("[#42](https://github.com/EvaLok/schema-org-json-ld/issues/42)"));
         assert!(rendered.contains(
             "[audit #117](https://github.com/EvaLok/schema-org-json-ld-audit/issues/117)"
@@ -5739,7 +5743,9 @@ Reflective log for the schema-org-json-ld orchestrator.
         let original = "\
 # Cycle 154 — 2026-03-06 05:14 UTC
 
-## Current state
+## Pre-dispatch state
+
+*Snapshot before review dispatch — final counters may differ after C6.*
 
 - **In-flight agent sessions**: 1
 - **Pipeline status**: FAIL (1/9)
@@ -5777,7 +5783,7 @@ Reflective log for the schema-org-json-ld orchestrator.
         fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
         fs::write(
             &worklog_path,
-            "# Cycle 154\n\n## Current state\n\n- **Copilot metrics**: stable\n",
+            "# Cycle 154\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **Copilot metrics**: stable\n",
         )
         .unwrap();
 
@@ -5797,7 +5803,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 worklog_path.display()
             )
         );
-        let expected = "# Cycle 154\n\n## Current state\n\n- **Copilot metrics**: stable\n";
+        let expected = "# Cycle 154\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **Copilot metrics**: stable\n";
         assert_eq!(fs::read_to_string(&worklog_path).unwrap(), expected);
     }
 
@@ -5808,7 +5814,7 @@ Reflective log for the schema-org-json-ld orchestrator.
         fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
         fs::write(
             &worklog_path,
-            "# Cycle 154\n\n## Current state\n\n- **Pipeline status**: FAIL (warnings pending)\n- **Publish gate**: open\n",
+            "# Cycle 154\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **Pipeline status**: FAIL (warnings pending)\n- **Publish gate**: open\n",
         )
         .unwrap();
 

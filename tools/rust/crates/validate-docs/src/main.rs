@@ -209,7 +209,7 @@ fn validate_in_flight_count(content: &str, expected: usize) -> Option<String> {
     let reported = match extract_markdown_value(content, "In-flight agent sessions") {
         Some(reported) => reported,
         None => return Some(
-            "worklog is missing the 'In-flight agent sessions' line in the Current state section"
+            "worklog is missing the 'In-flight agent sessions' line in the Pre-dispatch state section"
                 .to_string(),
         ),
     };
@@ -516,7 +516,7 @@ fn validate_pipeline_status(content: &str, overall: &str) -> Option<String> {
         Some(reported) => reported,
         None => {
             return Some(
-                "worklog is missing the 'Pipeline status' line in the Current state section"
+                "worklog is missing the 'Pipeline status' line in the Pre-dispatch state section"
                     .to_string(),
             )
         }
@@ -822,7 +822,7 @@ mod tests {
     #[test]
     fn detects_in_flight_mismatch() {
         let content = "\
-## Current state
+## Pre-dispatch state
 
 - **In-flight agent sessions**: 4
 ";
@@ -834,7 +834,7 @@ mod tests {
     #[test]
     fn detects_pipeline_status_mismatch() {
         let content = "\
-## Current state
+## Pre-dispatch state
 
 - **Pipeline status**: PASS (8/8)
 ";
