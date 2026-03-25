@@ -5296,7 +5296,7 @@
       },
       "project_mode": {
         "cadence": "when mode or counter changes",
-        "last_refreshed": "cycle 347"
+        "last_refreshed": "cycle 353"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
@@ -5320,7 +5320,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 346"
+        "last_refreshed": "cycle 353"
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
@@ -5344,7 +5344,7 @@
       },
       "schema_status.planned_next": {
         "cadence": "after planning or completing types",
-        "last_refreshed": "cycle 342"
+        "last_refreshed": "cycle 353"
       },
       "schema_status.property_gap_audit": {
         "cadence": "after property gap fixes",
@@ -5400,11 +5400,11 @@
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
-        "last_refreshed": "cycle 342"
+        "last_refreshed": "cycle 353"
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 347"
+        "last_refreshed": "cycle 353"
       }
     }
   },
