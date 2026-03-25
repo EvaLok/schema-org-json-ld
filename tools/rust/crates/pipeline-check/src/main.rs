@@ -1,5 +1,5 @@
 use chrono::NaiveDate;
-use clap::Parser;
+use clap::{builder::PossibleValuesParser, Parser};
 use regex::Regex;
 use serde::Serialize;
 use serde_json::Value;
@@ -21,9 +21,25 @@ const ARTIFACT_VERIFY_STEP_NAME: &str = "artifact-verify";
 const DISPOSITION_MATCH_STEP_NAME: &str = "disposition-match";
 const DEFERRAL_ACCUMULATION_STEP_NAME: &str = "deferral-accumulation";
 const DOC_VALIDATION_STEP_NAME: &str = "doc-validation";
+const WORKLOG_DEDUP_STEP_NAME: &str = "worklog-dedup";
 const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const CURRENT_CYCLE_STEPS_STEP_NAME: &str = "current-cycle-steps";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
+const STEP_NAMES: [&str; 13] = [
+    "metric-snapshot",
+    "field-inventory",
+    "housekeeping-scan",
+    "cycle-status",
+    "state-invariants",
+    DERIVE_METRICS_TOOL_NAME,
+    ARTIFACT_VERIFY_STEP_NAME,
+    DISPOSITION_MATCH_STEP_NAME,
+    DEFERRAL_ACCUMULATION_STEP_NAME,
+    DOC_VALIDATION_STEP_NAME,
+    WORKLOG_DEDUP_STEP_NAME,
+    STEP_COMMENTS_STEP_NAME,
+    CURRENT_CYCLE_STEPS_STEP_NAME,
+];
 // Steps that have not been posted yet when pipeline-check runs at C5.5.
 // These are excluded from the current-cycle mandatory step check.
 const POST_GATE_STEP_IDS: &[&str] = &["C5.5", "C5.6", "C6", "C6.5", "C7", "C8"];
@@ -97,7 +113,8 @@ struct Cli {
 
     #[arg(
         long = "exclude-step",
-        help = "Step name(s) to exclude from the pipeline run"
+        help = "Step name(s) to exclude from the pipeline run",
+        value_parser = PossibleValuesParser::new(STEP_NAMES)
     )]
     exclude_steps: Vec<String>,
 }
@@ -326,6 +343,9 @@ fn run_pipeline_with_excluded_steps(
     let pipeline_status = pipeline_overall_status(&steps);
     if !is_excluded_step(DOC_VALIDATION_STEP_NAME, exclude_steps) {
         steps.push(verify_doc_validation(repo_root, pipeline_status, runner));
+    }
+    if !is_excluded_step(WORKLOG_DEDUP_STEP_NAME, exclude_steps) {
+        steps.push(verify_worklog_dedup(repo_root));
     }
     if !is_excluded_step(STEP_COMMENTS_STEP_NAME, exclude_steps) {
         steps.push(verify_step_comments(repo_root, cycle, runner));
@@ -735,6 +755,10 @@ fn verify_doc_validation(
         pipeline_status,
         runner,
     )
+}
+
+fn verify_worklog_dedup(repo_root: &Path) -> StepReport {
+    verify_worklog_dedup_for_date(repo_root, &current_utc_timestamp()[..10])
 }
 
 fn verify_doc_validation_for_date(
@@ -1681,11 +1705,129 @@ fn latest_worklog_entry_for_date(repo_root: &Path, today: &str) -> Result<Option
     Ok(latest.map(|(_, path)| path))
 }
 
+fn verify_worklog_dedup_for_date(repo_root: &Path, today: &str) -> StepReport {
+    match worklog_dedup_status_for_date(repo_root, today) {
+        Ok((status, detail)) => StepReport {
+            name: WORKLOG_DEDUP_STEP_NAME,
+            status,
+            severity: Severity::Blocking,
+            exit_code: None,
+            detail: Some(detail),
+            findings: None,
+            summary: None,
+        },
+        Err(error) => StepReport {
+            name: WORKLOG_DEDUP_STEP_NAME,
+            status: StepStatus::Error,
+            severity: Severity::Blocking,
+            exit_code: None,
+            detail: Some(error),
+            findings: None,
+            summary: None,
+        },
+    }
+}
+
+fn worklog_dedup_status_for_date(repo_root: &Path, today: &str) -> Result<(StepStatus, String), String> {
+    let worklog_dir = repo_root.join("docs/worklog").join(today);
+    if !worklog_dir.is_dir() {
+        return Ok((StepStatus::Pass, "No duplicate worklog files found".to_string()));
+    }
+
+    let entries = fs::read_dir(&worklog_dir)
+        .map_err(|error| format!("failed to read {}: {}", worklog_dir.display(), error))?;
+    let mut cycles_to_files: BTreeMap<u64, Vec<String>> = BTreeMap::new();
+    let mut legacy_files = Vec::new();
+
+    for entry in entries {
+        let entry = entry
+            .map_err(|error| format!("failed to read {}: {}", worklog_dir.display(), error))?;
+        if !entry
+            .file_type()
+            .map_err(|error| format!("failed to inspect {}: {}", entry.path().display(), error))?
+            .is_file()
+        {
+            continue;
+        }
+
+        let file_name = entry.file_name();
+        let Some(file_name) = file_name.to_str() else {
+            continue;
+        };
+        if !file_name.ends_with(".md") {
+            continue;
+        }
+
+        match extract_worklog_cycle_from_filename(file_name) {
+            Some(cycle) => cycles_to_files
+                .entry(cycle)
+                .or_default()
+                .push(file_name.to_string()),
+            None => legacy_files.push(file_name.to_string()),
+        }
+    }
+
+    let duplicate_details = cycles_to_files
+        .into_iter()
+        .filter_map(|(cycle, mut files)| {
+            if files.len() < 2 {
+                return None;
+            }
+            files.sort_unstable();
+            Some(format!(
+                "Duplicate worklog files for cycle {}: {}",
+                cycle,
+                files.join(", ")
+            ))
+        })
+        .collect::<Vec<_>>();
+
+    legacy_files.sort_unstable();
+    let legacy_detail = if legacy_files.is_empty() {
+        None
+    } else {
+        Some(format!(
+            "worklog files missing cycle-NNN pattern: {}",
+            legacy_files.join(", ")
+        ))
+    };
+
+    if !duplicate_details.is_empty() {
+        let mut detail = duplicate_details.join("; ");
+        if let Some(legacy_detail) = legacy_detail {
+            detail.push_str("; ");
+            detail.push_str(&legacy_detail);
+        }
+        return Ok((StepStatus::Fail, detail));
+    }
+
+    if let Some(legacy_detail) = legacy_detail {
+        return Ok((
+            StepStatus::Warn,
+            format!("No duplicate worklog files found; {}", legacy_detail),
+        ));
+    }
+
+    Ok((StepStatus::Pass, "No duplicate worklog files found".to_string()))
+}
+
 fn is_worklog_entry_filename(file_name: &str) -> bool {
     file_name.ends_with(".md")
         && file_name.len() > 10
         && file_name.as_bytes()[..6].iter().all(u8::is_ascii_digit)
         && file_name.as_bytes()[6] == b'-'
+}
+
+fn extract_worklog_cycle_from_filename(file_name: &str) -> Option<u64> {
+    static WORKLOG_CYCLE_FILENAME_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?:^|-)cycle-(\d+)(?:-|\.md$)")
+            .expect("worklog cycle filename regex should compile")
+    });
+
+    WORKLOG_CYCLE_FILENAME_REGEX
+        .captures(file_name)
+        .and_then(|captures| captures.get(1))
+        .and_then(|capture| capture.as_str().parse::<u64>().ok())
 }
 
 fn verify_disposition_match(repo_root: &Path) -> StepReport {
@@ -1875,7 +2017,7 @@ fn find_deferral_accumulations(
 
         let mut streak = Vec::new();
         for cycle in cycles {
-            if streak.last().map_or(true, |previous| *previous + 1 == cycle) {
+            if streak.last().is_none_or(|previous| *previous + 1 == cycle) {
                 streak.push(cycle);
                 continue;
             }
@@ -3046,13 +3188,16 @@ mod tests {
                     issue, 834,
                     "aggregation test should read last_cycle.issue from state"
                 );
-                Ok(step_comment_bodies(135, &EXPECTED_STEP_IDS))
+                let mut bodies = step_comment_bodies(134, &EXPECTED_STEP_IDS);
+                bodies.push_str(&step_comment_bodies(135, &EXPECTED_STEP_IDS));
+                Ok(bodies)
             }
         }
 
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root = std::env::temp_dir().join(format!("pipeline-check-test-{}", run_id));
+        let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(root.join("docs")).unwrap();
         fs::write(
             root.join("docs/state.json"),
@@ -3091,7 +3236,9 @@ mod tests {
         .unwrap();
         fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
         fs::write(
-            root.join("docs/worklog").join(today).join("entry.md"),
+            root.join("docs/worklog")
+                .join(today)
+                .join("020304-cycle-135-summary.md"),
             "worklog",
         )
         .unwrap();
@@ -3163,7 +3310,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 12);
+        assert_eq!(report.steps.len(), 13);
         assert_eq!(report.steps[0].status, StepStatus::Pass);
         assert_eq!(report.steps[1].status, StepStatus::Pass);
         assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -3190,10 +3337,12 @@ mod tests {
         assert_eq!(report.steps[8].status, StepStatus::Pass);
         assert_eq!(report.steps[9].name, "doc-validation");
         assert_eq!(report.steps[9].status, StepStatus::Pass);
-        assert_eq!(report.steps[10].name, "step-comments");
+        assert_eq!(report.steps[10].name, "worklog-dedup");
         assert_eq!(report.steps[10].status, StepStatus::Pass);
-        assert_eq!(report.steps[11].name, "current-cycle-steps");
+        assert_eq!(report.steps[11].name, "step-comments");
         assert_eq!(report.steps[11].status, StepStatus::Pass);
+        assert_eq!(report.steps[12].name, "current-cycle-steps");
+        assert_eq!(report.steps[12].status, StepStatus::Pass);
     }
 
     #[test]
@@ -3213,17 +3362,30 @@ mod tests {
             "--exclude-step",
             "doc-validation",
             "--exclude-step",
-            "step-comments",
+            "worklog-dedup",
         ])
         .unwrap();
         assert_eq!(
             cli.exclude_steps,
-            vec!["doc-validation".to_string(), "step-comments".to_string()]
+            vec!["doc-validation".to_string(), "worklog-dedup".to_string()]
         );
     }
 
     #[test]
-    fn run_pipeline_fails_when_all_steps_error() {
+    fn cli_rejects_unknown_exclude_step_argument() {
+        let result = Cli::try_parse_from([
+            "pipeline-check",
+            "--repo-root",
+            ".",
+            "--exclude-step",
+            "not-a-real-step",
+        ]);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn run_pipeline_fails_when_wrapper_steps_error_and_local_checks_fallback() {
         struct ErrorRunner;
 
         impl CommandRunner for ErrorRunner {
@@ -3239,15 +3401,23 @@ mod tests {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root = std::env::temp_dir().join(format!("pipeline-check-fail-all-errors-{}", run_id));
+        let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(&root).unwrap();
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 12);
+        assert_eq!(report.steps.len(), 13);
+        assert!(report.steps[..10]
+            .iter()
+            .all(|step| matches!(step.status, StepStatus::Error)));
+        assert_eq!(report.steps[10].status, StepStatus::Pass);
+        assert!(report.steps[11..]
+            .iter()
+            .all(|step| matches!(step.status, StepStatus::Error)));
         assert!(report
             .steps
             .iter()
-            .all(|step| matches!(step.status, StepStatus::Error)));
+            .any(|step| matches!(step.status, StepStatus::Error)));
     }
 
     #[test]
@@ -3600,9 +3770,11 @@ mod tests {
         let report = run_pipeline(&root, 257, &CascadeRunner);
         assert_eq!(report.steps[9].name, "doc-validation");
         assert_eq!(report.steps[9].status, StepStatus::Cascade);
-        assert_eq!(report.steps[10].name, "step-comments");
+        assert_eq!(report.steps[10].name, "worklog-dedup");
+        assert_eq!(report.steps[10].status, StepStatus::Pass);
+        assert_eq!(report.steps[11].name, "step-comments");
         // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[10].status, StepStatus::Warn);
+        assert_eq!(report.steps[11].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -3735,9 +3907,11 @@ mod tests {
         let report = run_pipeline(&root, 257, &MultiCauseCascadeRunner);
         assert_eq!(report.steps[9].name, "doc-validation");
         assert_eq!(report.steps[9].status, StepStatus::Cascade);
-        assert_eq!(report.steps[10].name, "step-comments");
+        assert_eq!(report.steps[10].name, "worklog-dedup");
+        assert_eq!(report.steps[10].status, StepStatus::Pass);
+        assert_eq!(report.steps[11].name, "step-comments");
         // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[10].status, StepStatus::Warn);
+        assert_eq!(report.steps[11].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -3866,15 +4040,15 @@ mod tests {
         }
 
         let report = run_pipeline(&root, OVERRIDE_CYCLE, &OverrideRunner);
-        assert_eq!(report.steps[10].name, "step-comments");
-        assert_eq!(report.steps[10].status, StepStatus::Warn);
-        assert_eq!(report.steps[10].severity, Severity::Warning);
-        assert!(report.steps[10]
+        assert_eq!(report.steps[11].name, "step-comments");
+        assert_eq!(report.steps[11].status, StepStatus::Warn);
+        assert_eq!(report.steps[11].severity, Severity::Warning);
+        assert!(report.steps[11]
             .detail
             .as_deref()
             .unwrap_or_default()
             .contains("missing mandatory [none]"));
-        assert!(report.steps[10]
+        assert!(report.steps[11]
             .detail
             .as_deref()
             .unwrap_or_default()
@@ -4011,8 +4185,10 @@ mod tests {
         let report = run_pipeline(&root, 257, &IndependentFailureRunner);
         assert_eq!(report.steps[9].name, "doc-validation");
         assert_eq!(report.steps[9].status, StepStatus::Fail);
+        assert_eq!(report.steps[10].name, "worklog-dedup");
+        assert_eq!(report.steps[10].status, StepStatus::Pass);
         // Previous-cycle backstop is downgraded to Warn
-        assert_eq!(report.steps[10].status, StepStatus::Warn);
+        assert_eq!(report.steps[11].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -4133,11 +4309,12 @@ mod tests {
             &ExcludeDocValidationRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 11);
+        assert_eq!(report.steps.len(), 12);
         assert!(!report
             .steps
             .iter()
             .any(|step| step.name == "doc-validation"));
+        assert!(report.steps.iter().any(|step| step.name == "worklog-dedup"));
         assert!(report.steps.iter().any(|step| step.name == "step-comments"));
         assert!(report
             .steps
@@ -4267,11 +4444,155 @@ mod tests {
             &UnknownExcludeRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 12);
+        assert_eq!(report.steps.len(), 13);
         assert!(report
             .steps
             .iter()
             .any(|step| step.name == "doc-validation"));
+        assert!(report
+            .steps
+            .iter()
+            .any(|step| step.name == "worklog-dedup"));
+    }
+
+    #[test]
+    fn run_pipeline_omits_worklog_dedup_when_excluded() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-exclude-worklog-dedup-{}",
+            run_id
+        ));
+        let today = &current_utc_timestamp()[..10];
+        fs::create_dir_all(root.join("docs/journal")).unwrap();
+        fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
+        fs::create_dir_all(root.join("docs/reviews")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "previous_cycle_issue": 834,
+                "last_cycle": {"number": 257, "issue": 834},
+                "cycle_phase": {"phase": "close_out"},
+                "copilot_metrics": {
+                    "total_dispatches": 3,
+                    "resolved": 2,
+                    "merged": 1,
+                    "in_flight": 1,
+                    "produced_pr": 2,
+                    "closed_without_pr": 0,
+                    "reviewed_awaiting_eva": 1,
+                    "dispatch_to_pr_rate": "66.7%",
+                    "pr_merge_rate": "50.0%"
+                },
+                "review_agent": {
+                    "last_review_cycle": 257
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+        fs::write(
+            root.join("docs/worklog")
+                .join(today)
+                .join("020304-cycle-257-summary.md"),
+            "latest worklog",
+        )
+        .unwrap();
+        fs::write(
+            root.join("docs/worklog")
+                .join(today)
+                .join("020305-cycle-257-followup.md"),
+            "duplicate worklog",
+        )
+        .unwrap();
+        fs::write(
+            root.join("docs/journal").join(format!("{today}.md")),
+            "# Journal\n",
+        )
+        .unwrap();
+        fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
+
+        struct ExcludeWorklogDedupRunner;
+
+        impl CommandRunner for ExcludeWorklogDedupRunner {
+            fn run(&self, script_path: &Path, args: &[String]) -> Result<ExecutionResult, String> {
+                let key = script_path
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or_default();
+                match key {
+                    "metric-snapshot" => Ok(ExecutionResult {
+                        exit_code: Some(0),
+                        stdout: json!({"summary":"13/13 checks","checks":[]}).to_string(),
+                    }),
+                    "check-field-inventory-rs" => Ok(ExecutionResult {
+                        exit_code: Some(0),
+                        stdout: "PASS: all fields covered".to_string(),
+                    }),
+                    "housekeeping-scan" => Ok(ExecutionResult {
+                        exit_code: Some(0),
+                        stdout: json!({"items_needing_attention":0}).to_string(),
+                    }),
+                    "cycle-status" => Ok(ExecutionResult {
+                        exit_code: Some(0),
+                        stdout: json!({
+                            "concurrency": {"in_flight": 1},
+                            "eva_input": {"comments_since_last_cycle": [{"x": 1}]}
+                        })
+                        .to_string(),
+                    }),
+                    "state-invariants" => Ok(ExecutionResult {
+                        exit_code: Some(0),
+                        stdout: json!({"passed":5,"failed":0}).to_string(),
+                    }),
+                    "derive-metrics" => Ok(ExecutionResult {
+                        exit_code: Some(0),
+                        stdout: json!({
+                            "total_dispatches": 3,
+                            "resolved": 2,
+                            "merged": 1,
+                            "in_flight": 1,
+                            "produced_pr": 2,
+                            "closed_without_pr": 0,
+                            "reviewed_awaiting_eva": 1,
+                            "dispatch_to_pr_rate": "66.7%",
+                            "pr_merge_rate": "50.0%"
+                        })
+                        .to_string(),
+                    }),
+                    "validate-docs" => {
+                        let mode = args.first().map(String::as_str).unwrap_or_default();
+                        assert!(matches!(mode, "worklog" | "journal"));
+                        Ok(ExecutionResult {
+                            exit_code: Some(0),
+                            stdout: String::new(),
+                        })
+                    }
+                    other => panic!("unexpected tool invocation: {}", other),
+                }
+            }
+
+            fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+                assert_eq!(issue, 834);
+                let mut bodies = step_comment_bodies(256, &EXPECTED_STEP_IDS);
+                bodies.push_str(&step_comment_bodies(257, &EXPECTED_STEP_IDS));
+                Ok(bodies)
+            }
+        }
+
+        let report = run_pipeline_with_excluded_steps(
+            &root,
+            257,
+            &["worklog-dedup".to_string()],
+            &ExcludeWorklogDedupRunner,
+        );
+
+        assert_eq!(report.overall, StepStatus::Pass);
+        assert_eq!(report.steps.len(), 12);
+        assert!(!report
+            .steps
+            .iter()
+            .any(|step| step.name == "worklog-dedup"));
     }
 
     #[test]
@@ -4373,6 +4694,132 @@ mod tests {
             latest_journal_file_date(&journal_dir).unwrap().as_deref(),
             Some("2026-03-08")
         );
+    }
+
+    #[test]
+    fn worklog_dedup_passes_when_today_has_no_worklog_files() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-worklog-dedup-empty-{}", run_id));
+        fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+
+        let step = verify_worklog_dedup_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.name, "worklog-dedup");
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("No duplicate worklog files found")
+        );
+    }
+
+    #[test]
+    fn worklog_dedup_passes_with_one_file_per_cycle() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-worklog-dedup-unique-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+        fs::write(
+            root.join("docs/worklog/2026-03-09/120000-cycle-210-summary.md"),
+            "# Worklog\n",
+        )
+        .unwrap();
+        fs::write(
+            root.join("docs/worklog/2026-03-09/120100-cycle-211-summary.md"),
+            "# Worklog\n",
+        )
+        .unwrap();
+        fs::create_dir_all(root.join("docs/worklog/2026-03-08")).unwrap();
+        fs::write(
+            root.join("docs/worklog/2026-03-08/120000-cycle-210-legacy.md"),
+            "# Older worklog\n",
+        )
+        .unwrap();
+
+        let step = verify_worklog_dedup_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("No duplicate worklog files found")
+        );
+    }
+
+    #[test]
+    fn worklog_dedup_fails_when_cycle_has_multiple_files() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-worklog-dedup-duplicate-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+        fs::write(
+            root.join("docs/worklog/2026-03-09/120000-cycle-354-summary.md"),
+            "# Worklog A\n",
+        )
+        .unwrap();
+        fs::write(
+            root.join("docs/worklog/2026-03-09/120100-cycle-354-followup.md"),
+            "# Worklog B\n",
+        )
+        .unwrap();
+
+        let step = verify_worklog_dedup_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Fail);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("Duplicate worklog files for cycle 354"));
+        assert!(detail.contains("120000-cycle-354-summary.md"));
+        assert!(detail.contains("120100-cycle-354-followup.md"));
+    }
+
+    #[test]
+    fn worklog_dedup_warns_when_file_is_missing_cycle_marker() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-worklog-dedup-legacy-name-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+        fs::write(root.join("docs/worklog/2026-03-09/entry.md"), "# Worklog\n").unwrap();
+
+        let step = verify_worklog_dedup_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Warn);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("missing cycle-NNN pattern"));
+        assert!(detail.contains("entry.md"));
+    }
+
+    #[test]
+    fn worklog_dedup_warns_without_blocking_when_only_legacy_name_is_extra() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-worklog-dedup-mixed-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+        fs::write(
+            root.join("docs/worklog/2026-03-09/120000-cycle-354-summary.md"),
+            "# Worklog\n",
+        )
+        .unwrap();
+        fs::write(root.join("docs/worklog/2026-03-09/notes.md"), "# Notes\n").unwrap();
+
+        let step = verify_worklog_dedup_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Warn);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("No duplicate worklog files found"));
+        assert!(detail.contains("notes.md"));
     }
 
     #[test]
