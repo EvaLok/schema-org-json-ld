@@ -259,6 +259,10 @@ fn build_patch(update: &MergeUpdate) -> Result<Vec<PatchUpdate>, String> {
             value: json!(update.dispatch_to_pr_rate),
         },
         PatchUpdate {
+            path: "/in_flight_sessions",
+            value: json!(update.in_flight),
+        },
+        PatchUpdate {
             path: "/field_inventory/fields/copilot_metrics.in_flight/last_refreshed",
             value: json!(marker),
         },
@@ -268,6 +272,10 @@ fn build_patch(update: &MergeUpdate) -> Result<Vec<PatchUpdate>, String> {
         },
         PatchUpdate {
             path: "/field_inventory/fields/copilot_metrics.dispatch_to_pr_rate/last_refreshed",
+            value: json!(marker),
+        },
+        PatchUpdate {
+            path: "/field_inventory/fields/in_flight_sessions/last_refreshed",
             value: json!(marker),
         },
     ])
@@ -378,6 +386,7 @@ mod tests {
                     "pr": 669
                 }
             ],
+            "in_flight_sessions": 3,
             "last_cycle": {"number": 164},
             "copilot_metrics": {
                 "closed_without_merge": 1,
@@ -394,7 +403,8 @@ mod tests {
                 "fields": {
                     "copilot_metrics.in_flight": {"last_refreshed": "cycle 163"},
                     "copilot_metrics.pr_merge_rate": {"last_refreshed": "cycle 163"},
-                    "copilot_metrics.dispatch_to_pr_rate": {"last_refreshed": "cycle 163"}
+                    "copilot_metrics.dispatch_to_pr_rate": {"last_refreshed": "cycle 163"},
+                    "in_flight_sessions": {"last_refreshed": "cycle 163"}
                 }
             }
         })
@@ -468,17 +478,21 @@ mod tests {
                 "/copilot_metrics/produced_pr",
                 "/copilot_metrics/pr_merge_rate",
                 "/copilot_metrics/dispatch_to_pr_rate",
+                "/in_flight_sessions",
                 "/field_inventory/fields/copilot_metrics.in_flight/last_refreshed",
                 "/field_inventory/fields/copilot_metrics.pr_merge_rate/last_refreshed",
                 "/field_inventory/fields/copilot_metrics.dispatch_to_pr_rate/last_refreshed",
+                "/field_inventory/fields/in_flight_sessions/last_refreshed",
             ]
         );
         assert_eq!(patch[3].value, json!(85));
         assert_eq!(patch[4].value, json!("95.3%"));
         assert_eq!(patch[5].value, json!("100.0%"));
-        assert_eq!(patch[6].value, json!("cycle 164"));
+        assert_eq!(patch[6].value, json!(2));
         assert_eq!(patch[7].value, json!("cycle 164"));
         assert_eq!(patch[8].value, json!("cycle 164"));
+        assert_eq!(patch[9].value, json!("cycle 164"));
+        assert_eq!(patch[10].value, json!("cycle 164"));
     }
 
     #[test]
@@ -508,6 +522,7 @@ mod tests {
             state["copilot_metrics"]["dispatch_to_pr_rate"],
             json!("100.0%")
         );
+        assert_eq!(state["in_flight_sessions"], json!(2));
         assert_eq!(
             state["field_inventory"]["fields"]["copilot_metrics.pr_merge_rate"]["last_refreshed"],
             json!("cycle 164")
@@ -515,6 +530,10 @@ mod tests {
         assert_eq!(
             state["field_inventory"]["fields"]["copilot_metrics.dispatch_to_pr_rate"]
                 ["last_refreshed"],
+            json!("cycle 164")
+        );
+        assert_eq!(
+            state["field_inventory"]["fields"]["in_flight_sessions"]["last_refreshed"],
             json!("cycle 164")
         );
     }
