@@ -5462,7 +5462,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 359"
+        "last_refreshed": "cycle 360"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -8800,9 +8800,37 @@
         ],
         "ignored": 0,
         "note": "F1 actioned: PR #1750 renames heading to Pre-dispatch state. F2 actioned: PR #1748 adds C4.7 verify-review-events to close-out. F3 actioned: PR #1748 runs verify-review-events --apply automatically using correct contract. F4 deferred: structural C3/C5.5 ordering issue — will mark follow-through as unresolved when outcome depends on post-C3 steps."
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "journal-quality",
+          "process-adherence",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 3,
+        "cycle": 359,
+        "deferred": 1,
+        "dispatch_created": 1,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "process-adherence",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "actioned"
+          },
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred"
+          }
+        ],
+        "ignored": 0
       }
     ],
-    "last_review_cycle": 358
+    "last_review_cycle": 359
   },
   "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 359,
