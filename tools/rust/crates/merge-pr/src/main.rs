@@ -145,7 +145,7 @@ fn execute(cli: &Cli, runner: &dyn CommandRunner) -> Result<String, String> {
         if pr.is_draft {
             ensure_success(
                 &format!("gh pr ready {} --repo {}", cli.pr, MAIN_REPO),
-                runner.gh(
+                &runner.gh(
                     &cli.repo_root,
                     &[
                         "pr".to_string(),
@@ -161,7 +161,7 @@ fn execute(cli: &Cli, runner: &dyn CommandRunner) -> Result<String, String> {
 
         ensure_success(
             &format!("gh pr merge {} --squash --repo {}", cli.pr, MAIN_REPO),
-            runner.gh(
+            &runner.gh(
                 &cli.repo_root,
                 &[
                     "pr".to_string(),
@@ -187,7 +187,7 @@ fn execute(cli: &Cli, runner: &dyn CommandRunner) -> Result<String, String> {
 
     ensure_success(
         "git pull --rebase origin master",
-        runner.git(
+        &runner.git(
             &cli.repo_root,
             &[
                 "pull".to_string(),
@@ -210,7 +210,7 @@ fn execute(cli: &Cli, runner: &dyn CommandRunner) -> Result<String, String> {
             cli.repo_root.display().to_string(),
         ],
     )?;
-    ensure_success("process-merge", process_merge_output.clone())?;
+    ensure_success("process-merge", &process_merge_output)?;
     let receipt = extract_receipt_hash(&process_merge_output.stdout)?;
     lines.push(format!(
         "Processed merge state for PR #{} and issue #{} (receipt: {})",
@@ -225,30 +225,30 @@ fn execute(cli: &Cli, runner: &dyn CommandRunner) -> Result<String, String> {
             "master".to_string(),
         ],
     )?;
-    ensure_success("git push origin master", push_output)?;
+    ensure_success("git push origin master", &push_output)?;
     lines.push("Pushed origin/master state updates".to_string());
 
+    let delete_branch_command = format!("git push origin --delete {}", branch_name);
+    let deleted_branch_message = format!("Deleted remote branch {}", branch_name);
+    let skipped_branch_message = format!(
+        "Remote branch {} was already deleted; skipping branch deletion",
+        branch_name
+    );
     let delete_branch_output = runner.git(
         &cli.repo_root,
         &[
             "push".to_string(),
             "origin".to_string(),
             "--delete".to_string(),
-            branch_name.clone(),
+            branch_name,
         ],
     )?;
     if matches!(delete_branch_output.exit_code, Some(0)) {
-        lines.push(format!("Deleted remote branch {}", branch_name));
+        lines.push(deleted_branch_message);
     } else if is_missing_remote_branch(&delete_branch_output) {
-        lines.push(format!(
-            "Remote branch {} was already deleted; skipping branch deletion",
-            branch_name
-        ));
+        lines.push(skipped_branch_message);
     } else {
-        return Err(command_failure_message(
-            &format!("git push origin --delete {}", branch_name),
-            &delete_branch_output,
-        ));
+        return Err(command_failure_message(&delete_branch_command, &delete_branch_output));
     }
 
     lines.push(format!("Merge workflow complete for PR #{} (receipt: {})", cli.pr, receipt));
@@ -290,7 +290,7 @@ fn fetch_pr_view(
             "state,isDraft,mergeable,headRefName".to_string(),
         ],
     )?;
-    ensure_success(&format!("gh pr view {} --repo {}", pr_number, MAIN_REPO), output.clone())?;
+    ensure_success(&format!("gh pr view {} --repo {}", pr_number, MAIN_REPO), &output)?;
     parse_pr_view(&output.stdout)
 }
 
@@ -396,11 +396,11 @@ fn is_missing_remote_branch(output: &ExecutionResult) -> bool {
         || combined.contains("couldn't find remote ref")
 }
 
-fn ensure_success(command: &str, output: ExecutionResult) -> Result<(), String> {
+fn ensure_success(command: &str, output: &ExecutionResult) -> Result<(), String> {
     if matches!(output.exit_code, Some(0)) {
         Ok(())
     } else {
-        Err(command_failure_message(command, &output))
+        Err(command_failure_message(command, output))
     }
 }
 
