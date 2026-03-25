@@ -5507,7 +5507,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 362"
+        "last_refreshed": "cycle 363"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -8913,9 +8913,37 @@
         "deferred": 2,
         "finding_count": 3,
         "ignored": 0
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "complacency-detection",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 362,
+        "deferred": 0,
+        "dispatch_created": 1,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "worklog-accuracy",
+            "disposition": "actioned"
+          },
+          {
+            "category": "worklog-accuracy",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "complacency-detection",
+            "disposition": "actioned"
+          }
+        ],
+        "ignored": 0,
+        "note": "F1 actioned (consistent labeling this cycle), F2 dispatch_created (write-entry Issues processed auto-population), F3 actioned (creating tracked issue for deferred receipt table work)"
       }
     ],
-    "last_review_cycle": 361
+    "last_review_cycle": 362
   },
   "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 361,
