@@ -4943,6 +4943,13 @@
       "pr": 1730,
       "status": "merged",
       "title": "Consolidate worklog lifecycle to one file per cycle"
+    },
+    {
+      "dispatched_at": "2026-03-25T06:50:51Z",
+      "issue": 1732,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 355 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -5161,17 +5168,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1729 Consolidate worklog lifecycle to one file per cycle (cycle 355)",
-    "dispatch_to_pr_rate": "91.5%",
+    "dispatch_log_latest": "#1732 [Cycle Review] Cycle 355 end-of-cycle review (cycle 355)",
+    "dispatch_to_pr_rate": "91.3%",
     "failed_dispatches": 1,
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 495,
     "pr_merge_rate": "98.0%",
     "produced_pr": 505,
     "resolved": 552,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 552
+    "total_dispatches": 553
   },
   "cycle_issues": [
     1726
@@ -5454,7 +5461,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 25,
     "issue": 1726,
@@ -8578,7 +8585,7 @@
     ],
     "last_review_cycle": 354
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 354,
   "schema_status": {
     "directory_layout": {
