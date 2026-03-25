@@ -3,7 +3,12 @@
 ## 1. [process-adherence] The cycle overrode a blocking C5.5 failure and then announced `Pipeline: PASS`
 
 **File**: /home/runner/work/schema-org-json-ld/schema-org-json-ld/COMPLETION_CHECKLIST.md:17-19; /home/runner/work/schema-org-json-ld/schema-org-json-ld/COMPLETION_CHECKLIST.md:172-174; /home/runner/work/schema-org-json-ld/schema-org-json-ld/COMPLETION_CHECKLIST.md:334-347
-**Evidence**: The checklist says `cycle-runner close-out` must stop on C4.1 or C5.5 failure and be re-run only after fixing the problem. Cycle 359 did the opposite. Issue comment `#4127231657` records a blocking C5.5 failure with `overall: fail`, `has_blocking_findings: true`, and `current-cycle-steps` missing mandatory step `0`. The missing step is real: the cycle's step `0` comment was posted later at `#4127237005`, after the gate had already failed. Despite that, close-out continued through C5.6, dispatched review `#1757` at C6, pushed at C7, and C8 still claimed `Pipeline: PASS` in comment `#4127241517`. That is a direct override of the repository's blocking gate, and it also makes the closing status statement false.
+**Evidence**: The checklist says `cycle-runner close-out` must stop on C4.1 or C5.5 failure and be re-run only after fixing the problem. Cycle 359 did the opposite. The issue thread shows the sequence clearly:
+- Comment `#4127231657` records a blocking C5.5 failure with `overall: fail`, `has_blocking_findings: true`, and `current-cycle-steps` missing mandatory step `0`.
+- The missing step was not imaginary; the cycle's step `0` comment was posted later at `#4127237005`, after the gate had already failed.
+- Despite the blocking failure, close-out continued through C5.6, dispatched review `#1757` at C6, and pushed at C7.
+- C8 still claimed `Pipeline: PASS` in comment `#4127241517`.
+That is a direct override of the repository's blocking gate, and it also makes the closing status statement false.
 **Recommendation**: Treat a failing C5.5 result as terminal for the cycle-runner invocation. Do not execute C5.6-C8 until the missing step or other blocking condition is fixed and the gate re-runs clean. Also derive the C8 pipeline summary from the actual C5.5 result so a failed gate cannot be reported as `PASS`.
 
 ## 2. [journal-quality] The follow-through section still labels an unresolved post-C3 outcome as `Followed`
