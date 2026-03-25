@@ -141,7 +141,13 @@ fn auto_derives_cycle_from_state_json() {
         String::from_utf8_lossy(&output.stderr)
     );
 
-    let output_path = PathBuf::from(String::from_utf8(output.stdout).unwrap().trim());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let output_path = PathBuf::from(
+        stdout
+            .trim()
+            .strip_prefix("Worklog created: ")
+            .unwrap_or(stdout.trim()),
+    );
     let content = fs::read_to_string(&output_path).unwrap();
     let expected_date_dir = repo_root
         .path
@@ -149,6 +155,7 @@ fn auto_derives_cycle_from_state_json() {
         .join(Utc::now().format("%Y-%m-%d").to_string());
 
     assert!(content.contains("Cycle 99"));
+    assert!(stdout.contains("Worklog created: "));
     assert_eq!(output_path.parent(), Some(expected_date_dir.as_path()));
     assert!(output_path.is_file());
 }

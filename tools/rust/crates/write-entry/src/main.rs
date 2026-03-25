@@ -143,6 +143,12 @@ struct PatchPipelineArgs {
     status: String,
 }
 
+#[derive(Debug)]
+struct WorklogWriteOutcome {
+    path: PathBuf,
+    replaced_existing: bool,
+}
+
 #[derive(Debug, Deserialize)]
 struct WorklogInput {
     #[serde(default)]
@@ -247,18 +253,37 @@ fn main() {
     let repo_root = cli.repo_root;
     let now = Utc::now();
 
-    let result = match cli.command {
-        Command::Worklog(args) => execute_worklog(&args, &repo_root, now),
-        Command::Journal(args) => execute_journal(&args, &repo_root, now),
-        Command::PatchPipeline(args) => execute_patch_pipeline(&args, &repo_root),
-    };
-
-    match result {
-        Ok(path) => println!("{}", path.display()),
-        Err(error) => {
-            eprintln!("Error: {}", error);
-            std::process::exit(1);
-        }
+    match cli.command {
+        Command::Worklog(args) => match execute_worklog_with_outcome(&args, &repo_root, now) {
+            Ok(outcome) => {
+                if outcome.replaced_existing {
+                    println!(
+                        "Worklog updated: {} (replaced existing)",
+                        outcome.path.display()
+                    );
+                } else {
+                    println!("Worklog created: {}", outcome.path.display());
+                }
+            }
+            Err(error) => {
+                eprintln!("Error: {}", error);
+                std::process::exit(1);
+            }
+        },
+        Command::Journal(args) => match execute_journal(&args, &repo_root, now) {
+            Ok(path) => println!("{}", path.display()),
+            Err(error) => {
+                eprintln!("Error: {}", error);
+                std::process::exit(1);
+            }
+        },
+        Command::PatchPipeline(args) => match execute_patch_pipeline(&args, &repo_root) {
+            Ok(path) => println!("{}", path.display()),
+            Err(error) => {
+                eprintln!("Error: {}", error);
+                std::process::exit(1);
+            }
+        },
     }
 }
 
@@ -283,22 +308,38 @@ fn read_input_file(path: &Path) -> Result<String, String> {
     Ok(input)
 }
 
+#[cfg_attr(not(test), allow(dead_code))]
 fn execute_worklog(
     args: &WorklogArgs,
     repo_root: &Path,
     now: DateTime<Utc>,
 ) -> Result<PathBuf, String> {
+    execute_worklog_with_outcome(args, repo_root, now).map(|outcome| outcome.path)
+}
+
+fn execute_worklog_with_outcome(
+    args: &WorklogArgs,
+    repo_root: &Path,
+    now: DateTime<Utc>,
+) -> Result<WorklogWriteOutcome, String> {
     let cycle = resolve_cycle(args.cycle, repo_root)?;
     let mut input = resolve_worklog_input(args, repo_root)?;
     emit_worklog_auto_derivation_warnings(apply_worklog_auto_derivations(
         args, repo_root, cycle, &mut input,
     )?);
     emit_unresolved_receipt_warnings(&mut input.receipts, repo_root)?;
-    let path = worklog_path(repo_root, now, &args.title);
+    let (path, replaced_existing) = if let Some(existing_path) = find_worklog_for_cycle(repo_root, cycle)? {
+        (existing_path, true)
+    } else {
+        (worklog_path(repo_root, now, &args.title), false)
+    };
     let content = render_worklog(cycle, now, &input);
     emit_generated_markdown_sha_warnings("worklog", &content, repo_root);
     write_entry_file(&path, &content)?;
-    Ok(path)
+    Ok(WorklogWriteOutcome {
+        path,
+        replaced_existing,
+    })
 }
 
 fn execute_journal(
@@ -1737,7 +1778,7 @@ fn journal_path(repo_root: &Path, now: DateTime<Utc>) -> PathBuf {
         .join(format!("{}.md", now.format("%Y-%m-%d")))
 }
 
-fn find_worklog_relative_path(repo_root: &Path, cycle: u64) -> Result<Option<String>, String> {
+fn find_worklog_for_cycle(repo_root: &Path, cycle: u64) -> Result<Option<PathBuf>, String> {
     let worklog_root = repo_root.join("docs").join("worklog");
     if !worklog_root.exists() {
         return Ok(None);
@@ -1782,9 +1823,11 @@ fn find_worklog_relative_path(repo_root: &Path, cycle: u64) -> Result<Option<Str
     }
 
     candidates.sort();
-    candidates
-        .into_iter()
-        .last()
+    Ok(candidates.into_iter().last())
+}
+
+fn find_worklog_relative_path(repo_root: &Path, cycle: u64) -> Result<Option<String>, String> {
+    find_worklog_for_cycle(repo_root, cycle)?
         .map(|path| {
             path.strip_prefix(repo_root)
                 .map_err(|error| {
@@ -3190,6 +3233,110 @@ mod tests {
         assert!(content.contains(
             "1. Review [PR #124](https://github.com/EvaLok/schema-org-json-ld/issues/124)"
         ));
+    }
+
+    #[test]
+    fn execute_worklog_overwrites_existing_cycle_file() {
+        let repo_root = TempRepoDir::new("worklog-overwrite-existing-cycle");
+        let date_dir = repo_root
+            .path
+            .join("docs")
+            .join("worklog")
+            .join("2026-03-06");
+
+        let mut first_args = worklog_args("Cycle 100 initial");
+        first_args.cycle = Some(100);
+        first_args.done = vec!["Initial worklog entry".to_string()];
+        first_args.pipeline = Some("PASS (1/1)".to_string());
+        first_args.copilot_metrics = Some("steady".to_string());
+        first_args.publish_gate = Some("open".to_string());
+        first_args.in_flight = Some(0);
+
+        let first_path = execute_worklog(&first_args, &repo_root.path, fixed_now()).unwrap();
+
+        let mut second_args = worklog_args("Cycle 100 corrected");
+        second_args.cycle = Some(100);
+        second_args.done = vec!["Corrected worklog entry".to_string()];
+        second_args.pipeline = Some("PASS (2/2)".to_string());
+        second_args.copilot_metrics = Some("improved".to_string());
+        second_args.publish_gate = Some("clear".to_string());
+        second_args.in_flight = Some(1);
+
+        let second_path = execute_worklog(&second_args, &repo_root.path, fixed_now()).unwrap();
+        let files: Vec<_> = fs::read_dir(&date_dir)
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .collect();
+        let content = fs::read_to_string(&second_path).unwrap();
+
+        assert_eq!(first_path, second_path);
+        assert_eq!(files.len(), 1);
+        assert!(content.contains("Corrected worklog entry"));
+        assert!(content.contains("- **Pipeline status**: PASS (2/2)"));
+        assert!(!content.contains("Initial worklog entry"));
+    }
+
+    #[test]
+    fn execute_worklog_creates_new_file_for_different_cycle() {
+        let repo_root = TempRepoDir::new("worklog-different-cycle");
+        let date_dir = repo_root
+            .path
+            .join("docs")
+            .join("worklog")
+            .join("2026-03-06");
+
+        let mut first_args = worklog_args("Cycle 100");
+        first_args.cycle = Some(100);
+        first_args.done = vec!["Cycle 100 entry".to_string()];
+        first_args.pipeline = Some("PASS (1/1)".to_string());
+        first_args.copilot_metrics = Some("steady".to_string());
+        first_args.publish_gate = Some("open".to_string());
+        first_args.in_flight = Some(0);
+
+        let mut second_args = worklog_args("Cycle 101");
+        second_args.cycle = Some(101);
+        second_args.done = vec!["Cycle 101 entry".to_string()];
+        second_args.pipeline = Some("PASS (2/2)".to_string());
+        second_args.copilot_metrics = Some("steady".to_string());
+        second_args.publish_gate = Some("open".to_string());
+        second_args.in_flight = Some(0);
+
+        let first_path = execute_worklog(&first_args, &repo_root.path, fixed_now()).unwrap();
+        let second_path = execute_worklog(&second_args, &repo_root.path, fixed_now()).unwrap();
+        let files: Vec<_> = fs::read_dir(&date_dir)
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .collect();
+
+        assert_ne!(first_path, second_path);
+        assert_eq!(files.len(), 2);
+        assert!(first_path.exists());
+        assert!(second_path.exists());
+    }
+
+    #[test]
+    fn execute_worklog_creates_new_file_when_none_exists() {
+        let repo_root = TempRepoDir::new("worklog-create-when-missing");
+        let mut args = worklog_args("Cycle 100 initial");
+        args.cycle = Some(100);
+        args.done = vec!["First worklog entry".to_string()];
+        args.pipeline = Some("PASS (1/1)".to_string());
+        args.copilot_metrics = Some("steady".to_string());
+        args.publish_gate = Some("open".to_string());
+        args.in_flight = Some(0);
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let files: Vec<_> = fs::read_dir(path.parent().unwrap())
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .collect();
+
+        assert_eq!(
+            path,
+            worklog_path(&repo_root.path, fixed_now(), "Cycle 100 initial")
+        );
+        assert!(path.exists());
+        assert_eq!(files.len(), 1);
     }
 
     #[test]
