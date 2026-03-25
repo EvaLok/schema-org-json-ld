@@ -340,8 +340,7 @@ fn step_c5_5(repo_root: &Path, issue: u64) -> Result<bool, String> {
 
     let (passed, body) = match parse_pipeline_gate_report(&stdout) {
         Ok(report) => {
-            let passed =
-                exit_ok && report.overall.eq_ignore_ascii_case("pass") && !report.has_blocking_findings;
+            let passed = exit_ok && report.overall == "pass" && !report.has_blocking_findings;
             let mut body = format!(
                 "Pipeline: {}\n- exit_code: {}\n- overall: {}\n- has_blocking_findings: {}",
                 if passed { "PASS" } else { "FAIL" },
