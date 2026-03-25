@@ -2084,6 +2084,9 @@ fn dispatch_finding_reconciliation_status(repo_root: &Path) -> Result<(StepStatu
 }
 
 fn is_review_dispatch_session(session: &state_schema::AgentSession) -> bool {
+    // Review dispatches may be identified either by an explicit flag written by
+    // record-dispatch/dispatch-review or by the standardized review title used
+    // by cycle-runner when locating existing review issues in state.json.
     session
         .extra
         .get("review_dispatch")
@@ -2096,6 +2099,8 @@ fn is_review_dispatch_session(session: &state_schema::AgentSession) -> bool {
 }
 
 fn session_has_addresses_finding(session: &state_schema::AgentSession) -> bool {
+    // AgentSession flattens unknown state.json keys into `extra`, so a
+    // top-level JSON field like `addresses_finding` is accessed here.
     session
         .extra
         .get("addresses_finding")
