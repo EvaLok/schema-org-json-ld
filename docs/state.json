@@ -5008,8 +5008,10 @@
     {
       "dispatched_at": "2026-03-25T12:31:18Z",
       "issue": 1749,
+      "merged_at": "2026-03-25T14:32:05Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1750,
+      "status": "merged",
       "title": "Rename worklog Current state to Pre-dispatch state"
     },
     {
@@ -5239,13 +5241,13 @@
     "closed_without_merge": 8,
     "closed_without_pr": 47,
     "dispatch_log_latest": "#1751 [Cycle Review] Cycle 358 end-of-cycle review (cycle 358)",
-    "dispatch_to_pr_rate": "91.3%",
+    "dispatch_to_pr_rate": "91.4%",
     "failed_dispatches": 1,
-    "in_flight": 2,
-    "merged": 502,
-    "pr_merge_rate": "98.0%",
-    "produced_pr": 512,
-    "resolved": 559,
+    "in_flight": 1,
+    "merged": 503,
+    "pr_merge_rate": "98.1%",
+    "produced_pr": 513,
+    "resolved": 560,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 561
@@ -5531,7 +5533,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 20,
     "issue": 1753,
