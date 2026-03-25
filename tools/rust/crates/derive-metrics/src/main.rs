@@ -174,6 +174,13 @@ fn collect_mismatches(
 
     let mut mismatches = Vec::new();
 
+    compare_top_level_i64(
+        state_value,
+        "in_flight_sessions",
+        derived.in_flight,
+        &mut mismatches,
+    );
+
     compare_i64(
         metrics,
         "total_dispatches",
@@ -214,6 +221,17 @@ fn collect_mismatches(
     );
 
     Ok(mismatches)
+}
+
+fn compare_top_level_i64(state_value: &Value, field: &str, expected: i64, mismatches: &mut Vec<String>) {
+    match state_value.get(field).and_then(Value::as_i64) {
+        Some(actual) if actual == expected => {}
+        Some(actual) => mismatches.push(format!(
+            "{} expected {} but found {}",
+            field, expected, actual
+        )),
+        None => mismatches.push(format!("{} is missing or not an integer", field)),
+    }
 }
 
 fn compare_i64(
@@ -284,6 +302,11 @@ fn apply_derived_metrics_value(
     state_value: &mut Value,
     derived: &DerivedMetrics,
 ) -> Result<(), String> {
+    let state_object = state_value
+        .as_object_mut()
+        .ok_or_else(|| "state.json root must be an object".to_string())?;
+    state_object.insert("in_flight_sessions".to_string(), json!(derived.in_flight));
+
     let metrics = state_value
         .pointer_mut("/copilot_metrics")
         .and_then(Value::as_object_mut)
@@ -380,6 +403,7 @@ mod tests {
         let mismatches = collect_mismatches(
             &derived,
             &json!({
+                "in_flight_sessions": 0,
                 "copilot_metrics": {
                     "total_dispatches": 3,
                     "resolved": 3,
@@ -412,6 +436,7 @@ mod tests {
         let mismatches = collect_mismatches(
             &derived,
             &json!({
+                "in_flight_sessions": 9,
                 "copilot_metrics": {
                     "total_dispatches": 2,
                     "resolved": 2,
@@ -426,8 +451,17 @@ mod tests {
         )
         .expect("mismatch collection should succeed");
 
-        assert_eq!(mismatches.len(), 1);
-        assert!(mismatches[0].contains("reviewed_awaiting_eva"));
+        assert_eq!(mismatches.len(), 2);
+        assert!(
+            mismatches
+                .iter()
+                .any(|mismatch| mismatch.contains("reviewed_awaiting_eva"))
+        );
+        assert!(
+            mismatches
+                .iter()
+                .any(|mismatch| mismatch.contains("in_flight_sessions"))
+        );
     }
 
     #[test]
@@ -442,6 +476,7 @@ mod tests {
         let derived = derive_metrics(&state).expect("derivation should succeed");
 
         let mut value = json!({
+            "in_flight_sessions": 9,
             "copilot_metrics": {
                 "closed_without_merge": 99,
                 "dispatch_log_latest": "keep",
@@ -474,6 +509,7 @@ mod tests {
             value["copilot_metrics"]["dispatch_log_latest"],
             json!("keep")
         );
+        assert_eq!(value["in_flight_sessions"], json!(0));
     }
 
     #[test]
