@@ -5285,8 +5285,8 @@
   ],
   "cycle_phase": {
     "cycle": 360,
-    "phase": "work",
-    "phase_entered_at": "2026-03-25T16:27:12Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-25T16:58:51Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -5405,7 +5405,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 359"
+        "last_refreshed": "cycle 360"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -5421,7 +5421,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 359"
+        "last_refreshed": "cycle 360"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -5441,7 +5441,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 359"
+        "last_refreshed": "cycle 360"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -5453,7 +5453,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 359"
+        "last_refreshed": "cycle 360"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -5477,11 +5477,11 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 359"
+        "last_refreshed": "cycle 360"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 359"
+        "last_refreshed": "cycle 360"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -5489,7 +5489,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 359"
+        "last_refreshed": "cycle 360"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -5563,13 +5563,13 @@
   },
   "in_flight_sessions": 1,
   "last_cycle": {
-    "duration_minutes": 18,
+    "duration_minutes": 32,
     "issue": 1759,
     "number": 360,
-    "summary": "Merged cycle 358 review artifact (4 findings, complacency 2/5) and 2 pipeline fixes. Processed review: 3 actioned (F1 worklog rename #1750, F2+F3 C4.7 verify-review-events #1748), 1 deferred (F4 journal quality). Accepted audit #324 (--addresses-finding adoption gap), updated checklists, first use of --addresses-finding flag. Dispatched #1755 pipeline-check reconciliation check. Refreshed 2 stale field inventory entries. Cleaned 3 dead branches.",
-    "timestamp": "2026-03-25T16:27:11Z"
+    "summary": "Merged cycle 359 review artifact (3 findings, complacency 3/5) and pipeline reconciliation PR. Processed review: F1 dispatch_created (C8 pipeline status fix #1760), F2 actioned (journal follow-through discipline), F3 deferred (receipt auto-generation). Closed audit-inbound #1754. Refreshed 2 stale fields. Cleaned 2 dead branches. Dispatched #1760 C8 pipeline status fix (--addresses-finding 359:1).",
+    "timestamp": "2026-03-25T16:58:51Z"
   },
-  "last_eva_comment_check": "2026-03-25T16:27:11Z",
+  "last_eva_comment_check": "2026-03-25T16:58:51Z",
   "last_tool_audit_cycle": 353,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
