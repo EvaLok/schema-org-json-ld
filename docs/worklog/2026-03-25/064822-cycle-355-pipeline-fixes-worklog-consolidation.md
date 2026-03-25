@@ -28,9 +28,9 @@
 
 ## Current state
 
-- **In-flight agent sessions**: 0
+- **In-flight agent sessions**: 1
 - **Pipeline status**: PASS (17/17 invariants after derive-metrics sync)
-- **Copilot metrics**: 552 dispatches, 495 merged, 0 in-flight
+- **Copilot metrics**: 553 dispatches, 505 PRs, 495 merged, 98.0% merge rate
 - **Publish gate**: published
 
 ## Next steps
