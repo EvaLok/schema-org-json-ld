@@ -5238,7 +5238,7 @@
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 341"
+        "last_refreshed": "cycle 352"
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
@@ -5338,7 +5338,7 @@
       },
       "step_comment_acknowledged_gaps": {
         "cadence": "after acknowledging step comment gaps",
-        "last_refreshed": "cycle 341"
+        "last_refreshed": "cycle 352"
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
