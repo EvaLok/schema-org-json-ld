@@ -5087,6 +5087,13 @@
       "pr": 1771,
       "status": "merged",
       "title": "[Cycle Review] Cycle 362 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-25T22:17:20Z",
+      "issue": 1773,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Enhancement: auto-populate Issues processed in write-entry"
     }
   ],
   "audit_dropped": [
@@ -5306,17 +5313,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1770 [Cycle Review] Cycle 362 end-of-cycle review (cycle 362)",
-    "dispatch_to_pr_rate": "91.7%",
+    "dispatch_log_latest": "#1773 Enhancement: auto-populate Issues processed in write-entry (cycle 363)",
+    "dispatch_to_pr_rate": "91.6%",
     "failed_dispatches": 1,
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 511,
     "pr_merge_rate": "98.1%",
     "produced_pr": 521,
     "resolved": 568,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 568
+    "total_dispatches": 569
   },
   "cycle_issues": [
     1772
@@ -5447,7 +5454,7 @@
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 352"
+        "last_refreshed": "cycle 363"
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
@@ -5547,7 +5554,7 @@
       },
       "step_comment_acknowledged_gaps": {
         "cadence": "after acknowledging step comment gaps",
-        "last_refreshed": "cycle 352"
+        "last_refreshed": "cycle 363"
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
@@ -5599,7 +5606,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 16,
     "issue": 1772,
@@ -8945,7 +8952,7 @@
     ],
     "last_review_cycle": 362
   },
-  "review_dispatch_consecutive": 2,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 361,
   "schema_status": {
     "directory_layout": {
