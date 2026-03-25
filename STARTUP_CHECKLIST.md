@@ -601,6 +601,8 @@ Based on the above context:
 
 Prioritise reviews over new dispatches — unreviewed PRs block progress.
 
+When dispatching work that addresses a specific review finding, use `--addresses-finding <finding-id>` with `record-dispatch`. This links the dispatch to the finding for automated reconciliation (per audit recommendation #324).
+
 ## 10. Cycle completion
 
 Cycles use a single-session completion flow: `work -> close_out -> complete`. See `COMPLETION_CHECKLIST.md` for the full procedure.
