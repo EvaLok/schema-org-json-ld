@@ -4970,6 +4970,13 @@
       "pr": 1738,
       "status": "merged",
       "title": "Harden cycle-runner close-out: enforce C5.5 gate and remove C6.5 worklog patch"
+    },
+    {
+      "dispatched_at": "2026-03-25T08:48:22Z",
+      "issue": 1739,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 356 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -5188,17 +5195,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1737 Harden cycle-runner close-out: enforce C5.5 gate and remove C6.5 worklog patch (cycle 356)",
-    "dispatch_to_pr_rate": "91.5%",
+    "dispatch_log_latest": "#1739 [Cycle Review] Cycle 356 end-of-cycle review (cycle 356)",
+    "dispatch_to_pr_rate": "91.4%",
     "failed_dispatches": 1,
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 498,
     "pr_merge_rate": "98.0%",
     "produced_pr": 508,
     "resolved": 555,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 555
+    "total_dispatches": 556
   },
   "cycle_issues": [
     1734
@@ -5481,7 +5488,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 28,
     "issue": 1734,
@@ -8634,7 +8641,7 @@
     ],
     "last_review_cycle": 355
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 355,
   "schema_status": {
     "directory_layout": {
