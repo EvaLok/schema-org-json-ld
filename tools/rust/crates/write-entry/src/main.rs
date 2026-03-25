@@ -1086,18 +1086,13 @@ fn summarize_receipt_events(entries: &[CycleReceiptJsonEntry]) -> Option<String>
 
     for entry in entries {
         let tool = entry.tool.trim().to_ascii_lowercase();
-        let commit = entry.commit.trim().to_ascii_lowercase();
-        if tool == "process-merge" || commit.contains(" merged ") || commit.ends_with(" merged") {
+        if tool == "process-merge" {
             merges += 1;
         }
-        if tool == "record-dispatch"
-            || tool == "dispatch-review"
-            || commit.contains(" dispatched ")
-            || commit.ends_with(" dispatched")
-        {
+        if tool == "record-dispatch" || tool == "dispatch-review" {
             dispatches += 1;
         }
-        if tool.contains("review") || commit.contains("review") {
+        if tool == "process-review" {
             reviews += 1;
         }
     }
@@ -3129,6 +3124,42 @@ mod tests {
     }
 
     #[test]
+    fn summarize_receipt_events_counts_only_authoritative_tool_names() {
+        let summary = summarize_receipt_events(&[
+            CycleReceiptJsonEntry {
+                tool: "process-merge".to_string(),
+                receipt: "aaaaaaa".to_string(),
+                commit: "state(process-merge): PR #1 merged [cycle 360]".to_string(),
+                url: None,
+                _aliases: Vec::new(),
+            },
+            CycleReceiptJsonEntry {
+                tool: "process-merge".to_string(),
+                receipt: "bbbbbbb".to_string(),
+                commit: "state(process-merge): PR #2 merged [cycle 360]".to_string(),
+                url: None,
+                _aliases: Vec::new(),
+            },
+            CycleReceiptJsonEntry {
+                tool: "process-review".to_string(),
+                receipt: "ccccccc".to_string(),
+                commit: "state(process-review): review consumed [cycle 360]".to_string(),
+                url: None,
+                _aliases: Vec::new(),
+            },
+            CycleReceiptJsonEntry {
+                tool: "cycle-complete".to_string(),
+                receipt: "ddddddd".to_string(),
+                commit: "Merged cycle 359 review; Dispatched EvaLok/schema-org-json-ld#1760; review consumed".to_string(),
+                url: None,
+                _aliases: Vec::new(),
+            },
+        ]);
+
+        assert_eq!(summary.as_deref(), Some("receipt events: 2 merges, 1 review"));
+    }
+
+    #[test]
     fn derive_prs_from_cycle_receipts_output_uses_process_merge_entries() {
         let prs = derive_prs_from_cycle_receipts_output(
             r#"[
@@ -3958,7 +3989,7 @@ mod tests {
         assert!(note.contains("mode stabilization"));
         assert!(note.contains("phase close_out"));
         assert!(note.contains("agent activity: 1 dispatch, 1 merge, 1 status update"));
-        assert!(note.contains("receipt events: 1 dispatch, 1 merge, 1 review"));
+        assert!(note.contains("receipt events: 1 dispatch, 1 merge"));
         assert!(note.contains("Receipt table covers commits through cycle-complete (C5.1 snapshot)."));
         assert!(note.contains(
             "Post-C5.1 commits (docs, record-dispatch, review-body) are structurally excluded."
