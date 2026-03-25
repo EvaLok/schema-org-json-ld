@@ -5398,7 +5398,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 356"
+        "last_refreshed": "cycle 357"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -8639,9 +8639,38 @@
         ],
         "ignored": 0,
         "note": "F1+F2: dispatch cycle-runner close-out hardening (enforce blocking gate, freeze worklog before dispatch). F3: deferred to this cycle journal."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "journal-quality",
+          "process-adherence",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 356,
+        "deferred": 2,
+        "dispatch_created": 1,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "process-adherence",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "deferred"
+          }
+        ],
+        "ignored": 0,
+        "note": "F1 root cause: cycle-runner binary not rebuilt after PR #1738 merged during cycle 356. Fix should be active now (CI pre-build). F2/F3 downstream of F1 - will resolve once gate holds."
       }
     ],
-    "last_review_cycle": 355
+    "last_review_cycle": 356
   },
   "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 355,
