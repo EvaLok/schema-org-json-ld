@@ -3385,7 +3385,7 @@ mod tests {
     }
 
     #[test]
-    fn run_pipeline_fails_when_wrapper_steps_error_and_local_checks_fallback() {
+    fn run_pipeline_fails_when_wrapper_steps_error_despite_passing_local_checks() {
         struct ErrorRunner;
 
         impl CommandRunner for ErrorRunner {
