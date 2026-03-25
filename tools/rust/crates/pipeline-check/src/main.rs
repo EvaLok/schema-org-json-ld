@@ -20,12 +20,13 @@ const DERIVE_METRICS_WRAPPER_PATH: &str = "tools/derive-metrics";
 const ARTIFACT_VERIFY_STEP_NAME: &str = "artifact-verify";
 const DISPOSITION_MATCH_STEP_NAME: &str = "disposition-match";
 const DEFERRAL_ACCUMULATION_STEP_NAME: &str = "deferral-accumulation";
+const DISPATCH_FINDING_RECONCILIATION_STEP_NAME: &str = "dispatch-finding-reconciliation";
 const DOC_VALIDATION_STEP_NAME: &str = "doc-validation";
 const WORKLOG_DEDUP_STEP_NAME: &str = "worklog-dedup";
 const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const CURRENT_CYCLE_STEPS_STEP_NAME: &str = "current-cycle-steps";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
-const STEP_NAMES: [&str; 13] = [
+const STEP_NAMES: [&str; 14] = [
     "metric-snapshot",
     "field-inventory",
     "housekeeping-scan",
@@ -35,6 +36,7 @@ const STEP_NAMES: [&str; 13] = [
     ARTIFACT_VERIFY_STEP_NAME,
     DISPOSITION_MATCH_STEP_NAME,
     DEFERRAL_ACCUMULATION_STEP_NAME,
+    DISPATCH_FINDING_RECONCILIATION_STEP_NAME,
     DOC_VALIDATION_STEP_NAME,
     WORKLOG_DEDUP_STEP_NAME,
     STEP_COMMENTS_STEP_NAME,
@@ -339,6 +341,9 @@ fn run_pipeline_with_excluded_steps(
     }
     if !is_excluded_step(DEFERRAL_ACCUMULATION_STEP_NAME, exclude_steps) {
         steps.push(verify_deferral_accumulation(repo_root));
+    }
+    if !is_excluded_step(DISPATCH_FINDING_RECONCILIATION_STEP_NAME, exclude_steps) {
+        steps.push(verify_dispatch_finding_reconciliation(repo_root));
     }
     let pipeline_status = pipeline_overall_status(&steps);
     if !is_excluded_step(DOC_VALIDATION_STEP_NAME, exclude_steps) {
@@ -1876,6 +1881,29 @@ fn verify_deferral_accumulation(repo_root: &Path) -> StepReport {
     }
 }
 
+fn verify_dispatch_finding_reconciliation(repo_root: &Path) -> StepReport {
+    match dispatch_finding_reconciliation_status(repo_root) {
+        Ok((status, detail)) => StepReport {
+            name: DISPATCH_FINDING_RECONCILIATION_STEP_NAME,
+            status,
+            severity: Severity::Warning,
+            exit_code: None,
+            detail: Some(detail),
+            findings: None,
+            summary: None,
+        },
+        Err(error) => StepReport {
+            name: DISPATCH_FINDING_RECONCILIATION_STEP_NAME,
+            status: StepStatus::Error,
+            severity: Severity::Warning,
+            exit_code: None,
+            detail: Some(error),
+            findings: None,
+            summary: None,
+        },
+    }
+}
+
 fn disposition_match_status(repo_root: &Path) -> Result<(StepStatus, String), String> {
     let state_value = read_state_value(repo_root)?;
     let state: StateJson = serde_json::from_value(state_value)
@@ -1979,6 +2007,113 @@ fn deferral_accumulation_status(repo_root: &Path) -> Result<(StepStatus, String)
         .collect::<Vec<_>>()
         .join("; ");
     Ok((StepStatus::Warn, details))
+}
+
+fn dispatch_finding_reconciliation_status(repo_root: &Path) -> Result<(StepStatus, String), String> {
+    let current_cycle = current_cycle_from_state(repo_root)?;
+    let Some(previous_cycle) = current_cycle.checked_sub(1) else {
+        return Ok((StepStatus::Pass, "cycle 0 has no previous review cycle".to_string()));
+    };
+
+    let state_value = read_state_value(repo_root)?;
+    let state: StateJson = serde_json::from_value(state_value)
+        .map_err(|error| format!("failed to parse state.json: {}", error))?;
+    let review_agent = state.review_agent()?;
+    let Some(history_entry) = review_agent
+        .history
+        .iter()
+        .find(|entry| entry.cycle == previous_cycle)
+    else {
+        return Ok((
+            StepStatus::Pass,
+            format!("no review history entry for cycle {}", previous_cycle),
+        ));
+    };
+
+    if !history_entry
+        .finding_dispositions
+        .iter()
+        .any(|disposition| disposition.disposition == "dispatch_created")
+    {
+        return Ok((
+            StepStatus::Pass,
+            format!(
+                "review cycle {} has no dispatch_created finding dispositions",
+                previous_cycle
+            ),
+        ));
+    }
+
+    let last_cycle_timestamp = state
+        .last_cycle
+        .timestamp
+        .as_deref()
+        .ok_or_else(|| "missing /last_cycle/timestamp in state.json".to_string())?;
+    let candidate_dispatches = state
+        .agent_sessions
+        .iter()
+        .filter(|session| {
+            session
+                .dispatched_at
+                .as_deref()
+                .is_some_and(|dispatched_at| dispatched_at > last_cycle_timestamp)
+        })
+        .filter(|session| !is_review_dispatch_session(session))
+        .filter(|session| !session_has_addresses_finding(session))
+        .map(format_dispatch_candidate)
+        .collect::<Vec<_>>();
+
+    if candidate_dispatches.is_empty() {
+        return Ok((
+            StepStatus::Pass,
+            format!(
+                "review cycle {} has dispatch_created findings and all current-cycle non-review dispatches set addresses_finding",
+                previous_cycle
+            ),
+        ));
+    }
+
+    Ok((
+        StepStatus::Warn,
+        format!(
+            "review cycle {} has dispatch_created findings; current-cycle dispatches may need --addresses-finding: {}",
+            previous_cycle,
+            candidate_dispatches.join(", ")
+        ),
+    ))
+}
+
+fn is_review_dispatch_session(session: &state_schema::AgentSession) -> bool {
+    // Review dispatches may be identified either by an explicit flag written by
+    // record-dispatch/dispatch-review or by the standardized review title used
+    // by cycle-runner when locating existing review issues in state.json.
+    session
+        .extra
+        .get("review_dispatch")
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
+        || session
+            .title
+            .as_deref()
+            .is_some_and(|title| title.contains("[Cycle Review]"))
+}
+
+fn session_has_addresses_finding(session: &state_schema::AgentSession) -> bool {
+    // AgentSession flattens unknown state.json keys into `extra`, so a
+    // top-level JSON field like `addresses_finding` is accessed here.
+    session
+        .extra
+        .get("addresses_finding")
+        .is_some_and(|value| !value.is_null())
+}
+
+fn format_dispatch_candidate(session: &state_schema::AgentSession) -> String {
+    match (session.issue, session.title.as_deref()) {
+        (Some(issue), Some(title)) => format!("#{} \"{}\"", issue, title),
+        (Some(issue), None) => format!("#{}", issue),
+        (None, Some(title)) => format!("\"{}\"", title),
+        (None, None) => "dispatch with missing issue/title".to_string(),
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -3310,7 +3445,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 13);
+        assert_eq!(report.steps.len(), 14);
         assert_eq!(report.steps[0].status, StepStatus::Pass);
         assert_eq!(report.steps[1].status, StepStatus::Pass);
         assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -3335,14 +3470,16 @@ mod tests {
         assert_eq!(report.steps[7].status, StepStatus::Pass);
         assert_eq!(report.steps[8].name, "deferral-accumulation");
         assert_eq!(report.steps[8].status, StepStatus::Pass);
-        assert_eq!(report.steps[9].name, "doc-validation");
+        assert_eq!(report.steps[9].name, "dispatch-finding-reconciliation");
         assert_eq!(report.steps[9].status, StepStatus::Pass);
-        assert_eq!(report.steps[10].name, "worklog-dedup");
+        assert_eq!(report.steps[10].name, "doc-validation");
         assert_eq!(report.steps[10].status, StepStatus::Pass);
-        assert_eq!(report.steps[11].name, "step-comments");
+        assert_eq!(report.steps[11].name, "worklog-dedup");
         assert_eq!(report.steps[11].status, StepStatus::Pass);
-        assert_eq!(report.steps[12].name, "current-cycle-steps");
+        assert_eq!(report.steps[12].name, "step-comments");
         assert_eq!(report.steps[12].status, StepStatus::Pass);
+        assert_eq!(report.steps[13].name, "current-cycle-steps");
+        assert_eq!(report.steps[13].status, StepStatus::Pass);
     }
 
     #[test]
@@ -3406,12 +3543,12 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 13);
-        assert!(report.steps[..10]
+        assert_eq!(report.steps.len(), 14);
+        assert!(report.steps[..11]
             .iter()
             .all(|step| matches!(step.status, StepStatus::Error)));
-        assert_eq!(report.steps[10].status, StepStatus::Pass);
-        assert!(report.steps[11..]
+        assert_eq!(report.steps[11].status, StepStatus::Pass);
+        assert!(report.steps[12..]
             .iter()
             .all(|step| matches!(step.status, StepStatus::Error)));
         assert!(report
@@ -3768,13 +3905,13 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &CascadeRunner);
-        assert_eq!(report.steps[9].name, "doc-validation");
-        assert_eq!(report.steps[9].status, StepStatus::Cascade);
-        assert_eq!(report.steps[10].name, "worklog-dedup");
-        assert_eq!(report.steps[10].status, StepStatus::Pass);
-        assert_eq!(report.steps[11].name, "step-comments");
+        assert_eq!(report.steps[10].name, "doc-validation");
+        assert_eq!(report.steps[10].status, StepStatus::Cascade);
+        assert_eq!(report.steps[11].name, "worklog-dedup");
+        assert_eq!(report.steps[11].status, StepStatus::Pass);
+        assert_eq!(report.steps[12].name, "step-comments");
         // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[11].status, StepStatus::Warn);
+        assert_eq!(report.steps[12].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -3905,13 +4042,13 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &MultiCauseCascadeRunner);
-        assert_eq!(report.steps[9].name, "doc-validation");
-        assert_eq!(report.steps[9].status, StepStatus::Cascade);
-        assert_eq!(report.steps[10].name, "worklog-dedup");
-        assert_eq!(report.steps[10].status, StepStatus::Pass);
-        assert_eq!(report.steps[11].name, "step-comments");
+        assert_eq!(report.steps[10].name, "doc-validation");
+        assert_eq!(report.steps[10].status, StepStatus::Cascade);
+        assert_eq!(report.steps[11].name, "worklog-dedup");
+        assert_eq!(report.steps[11].status, StepStatus::Pass);
+        assert_eq!(report.steps[12].name, "step-comments");
         // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[11].status, StepStatus::Warn);
+        assert_eq!(report.steps[12].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -4040,15 +4177,15 @@ mod tests {
         }
 
         let report = run_pipeline(&root, OVERRIDE_CYCLE, &OverrideRunner);
-        assert_eq!(report.steps[11].name, "step-comments");
-        assert_eq!(report.steps[11].status, StepStatus::Warn);
-        assert_eq!(report.steps[11].severity, Severity::Warning);
-        assert!(report.steps[11]
+        assert_eq!(report.steps[12].name, "step-comments");
+        assert_eq!(report.steps[12].status, StepStatus::Warn);
+        assert_eq!(report.steps[12].severity, Severity::Warning);
+        assert!(report.steps[12]
             .detail
             .as_deref()
             .unwrap_or_default()
             .contains("missing mandatory [none]"));
-        assert!(report.steps[11]
+        assert!(report.steps[12]
             .detail
             .as_deref()
             .unwrap_or_default()
@@ -4183,12 +4320,12 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &IndependentFailureRunner);
-        assert_eq!(report.steps[9].name, "doc-validation");
-        assert_eq!(report.steps[9].status, StepStatus::Fail);
-        assert_eq!(report.steps[10].name, "worklog-dedup");
-        assert_eq!(report.steps[10].status, StepStatus::Pass);
+        assert_eq!(report.steps[10].name, "doc-validation");
+        assert_eq!(report.steps[10].status, StepStatus::Fail);
+        assert_eq!(report.steps[11].name, "worklog-dedup");
+        assert_eq!(report.steps[11].status, StepStatus::Pass);
         // Previous-cycle backstop is downgraded to Warn
-        assert_eq!(report.steps[11].status, StepStatus::Warn);
+        assert_eq!(report.steps[12].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -4309,7 +4446,7 @@ mod tests {
             &ExcludeDocValidationRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 12);
+        assert_eq!(report.steps.len(), 13);
         assert!(!report
             .steps
             .iter()
@@ -4444,7 +4581,7 @@ mod tests {
             &UnknownExcludeRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 13);
+        assert_eq!(report.steps.len(), 14);
         assert!(report
             .steps
             .iter()
@@ -4588,7 +4725,7 @@ mod tests {
         );
 
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 12);
+        assert_eq!(report.steps.len(), 13);
         assert!(!report
             .steps
             .iter()
@@ -5450,6 +5587,266 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("receipt-integrity"));
+    }
+
+    #[test]
+    fn dispatch_finding_reconciliation_passes_when_review_has_no_dispatch_created_findings() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-dispatch-finding-reconciliation-no-findings-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {
+                    "number": 350,
+                    "timestamp": "2026-03-10T00:00:00Z"
+                },
+                "cycle_phase": {
+                    "cycle": 351
+                },
+                "agent_sessions": [{
+                    "issue": 901,
+                    "title": "Follow-up dispatch",
+                    "dispatched_at": "2026-03-10T12:00:00Z",
+                    "status": "in_flight"
+                }],
+                "review_agent": {
+                    "history": [{
+                        "cycle": 350,
+                        "categories": ["testing"],
+                        "actioned": 1,
+                        "deferred": 0,
+                        "ignored": 0,
+                        "finding_count": 1,
+                        "complacency_score": 1,
+                        "finding_dispositions": [{
+                            "category": "testing",
+                            "disposition": "actioned"
+                        }]
+                    }]
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_dispatch_finding_reconciliation(&root);
+
+        assert_eq!(step.name, "dispatch-finding-reconciliation");
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("review cycle 350 has no dispatch_created finding dispositions")
+        );
+    }
+
+    #[test]
+    fn dispatch_finding_reconciliation_passes_when_all_relevant_dispatches_are_flagged() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-dispatch-finding-reconciliation-all-flagged-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {
+                    "number": 350,
+                    "timestamp": "2026-03-10T00:00:00Z"
+                },
+                "cycle_phase": {
+                    "cycle": 351
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 902,
+                        "title": "Address review finding",
+                        "dispatched_at": "2026-03-10T12:00:00Z",
+                        "status": "in_flight",
+                        "addresses_finding": "350:1"
+                    },
+                    {
+                        "issue": 800,
+                        "title": "Older dispatch",
+                        "dispatched_at": "2026-03-09T12:00:00Z",
+                        "status": "merged"
+                    }
+                ],
+                "review_agent": {
+                    "history": [{
+                        "cycle": 350,
+                        "categories": ["testing"],
+                        "actioned": 0,
+                        "deferred": 0,
+                        "dispatch_created": 1,
+                        "ignored": 0,
+                        "finding_count": 1,
+                        "complacency_score": 1,
+                        "finding_dispositions": [{
+                            "category": "testing",
+                            "disposition": "dispatch_created"
+                        }]
+                    }]
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_dispatch_finding_reconciliation(&root);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some(
+                "review cycle 350 has dispatch_created findings and all current-cycle non-review dispatches set addresses_finding"
+            )
+        );
+    }
+
+    #[test]
+    fn dispatch_finding_reconciliation_warns_when_current_cycle_dispatches_are_unflagged() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-dispatch-finding-reconciliation-warn-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {
+                    "number": 350,
+                    "timestamp": "2026-03-10T00:00:00Z"
+                },
+                "cycle_phase": {
+                    "cycle": 351
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 903,
+                        "title": "Unflagged finding fix",
+                        "dispatched_at": "2026-03-10T12:00:00Z",
+                        "status": "in_flight",
+                        "addresses_finding": null
+                    },
+                    {
+                        "issue": 904,
+                        "title": "Flagged finding fix",
+                        "dispatched_at": "2026-03-10T12:30:00Z",
+                        "status": "in_flight",
+                        "addresses_finding": "350:2"
+                    }
+                ],
+                "review_agent": {
+                    "history": [{
+                        "cycle": 350,
+                        "categories": ["testing"],
+                        "actioned": 0,
+                        "deferred": 0,
+                        "dispatch_created": 1,
+                        "ignored": 0,
+                        "finding_count": 1,
+                        "complacency_score": 1,
+                        "finding_dispositions": [{
+                            "category": "testing",
+                            "disposition": "dispatch_created"
+                        }]
+                    }]
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_dispatch_finding_reconciliation(&root);
+
+        assert_eq!(step.status, StepStatus::Warn);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("#903 \"Unflagged finding fix\""));
+        assert!(!step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("#904 \"Flagged finding fix\""));
+    }
+
+    #[test]
+    fn dispatch_finding_reconciliation_excludes_review_dispatches() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-dispatch-finding-reconciliation-review-dispatch-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {
+                    "number": 350,
+                    "timestamp": "2026-03-10T00:00:00Z"
+                },
+                "cycle_phase": {
+                    "cycle": 351
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 905,
+                        "title": "[Cycle Review] Cycle 350 end-of-cycle review",
+                        "dispatched_at": "2026-03-10T12:00:00Z",
+                        "status": "in_flight",
+                        "review_dispatch": true,
+                        "addresses_finding": null
+                    },
+                    {
+                        "issue": 906,
+                        "title": "Non-review finding fix",
+                        "dispatched_at": "2026-03-10T12:30:00Z",
+                        "status": "in_flight",
+                        "addresses_finding": "350:1"
+                    }
+                ],
+                "review_agent": {
+                    "history": [{
+                        "cycle": 350,
+                        "categories": ["testing"],
+                        "actioned": 0,
+                        "deferred": 0,
+                        "dispatch_created": 1,
+                        "ignored": 0,
+                        "finding_count": 1,
+                        "complacency_score": 1,
+                        "finding_dispositions": [{
+                            "category": "testing",
+                            "disposition": "dispatch_created"
+                        }]
+                    }]
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_dispatch_finding_reconciliation(&root);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some(
+                "review cycle 350 has dispatch_created findings and all current-cycle non-review dispatches set addresses_finding"
+            )
+        );
     }
 
     #[test]
