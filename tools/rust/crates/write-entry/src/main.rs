@@ -76,6 +76,9 @@ struct WorklogArgs {
     /// Short description of an issue processed this cycle
     #[arg(long = "issue-processed")]
     issue_processed: Vec<String>,
+    /// Issue numbers processed this cycle (comma-separated)
+    #[arg(long = "issues-processed", value_delimiter = ',')]
+    issues_processed: Vec<String>,
     /// Auto-derive processed issues from docs/state.json activity sources
     #[arg(long = "auto-issues", default_value_t = false)]
     auto_issues: bool,
@@ -455,7 +458,10 @@ fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<Worklog
             self_modifications: parse_self_modifications(&args.self_modification)?,
             prs_merged: args.pr_merged.clone(),
             prs_reviewed: args.pr_reviewed.clone(),
-            issues_processed: parse_issue_processed(&args.issue_processed)?,
+            issues_processed: merge_issue_processed(
+                &parse_issue_processed_numbers(&args.issues_processed)?,
+                &parse_issue_processed(&args.issue_processed)?,
+            ),
             current_state: CurrentState {
                 in_flight_sessions: match args.in_flight {
                     Some(value) => value,
@@ -652,6 +658,7 @@ fn has_inline_worklog_content(args: &WorklogArgs) -> bool {
         || !args.pr_merged.is_empty()
         || !args.pr_reviewed.is_empty()
         || !args.issue_processed.is_empty()
+        || !args.issues_processed.is_empty()
         || !args.self_modification.is_empty()
         || !args.next.is_empty()
         || args.pipeline.is_some()
@@ -686,6 +693,25 @@ fn parse_issue_processed(values: &[String]) -> Result<Vec<String>, String> {
             Ok(trimmed.to_string())
         })
         .collect()
+}
+
+fn parse_issue_processed_numbers(values: &[String]) -> Result<Vec<String>, String> {
+    let mut issues = Vec::new();
+
+    for value in values {
+        for raw_issue in value.split(',') {
+            let trimmed = raw_issue.trim();
+            if trimmed.is_empty() {
+                return Err("issues-processed entries must be non-empty issue numbers".to_string());
+            }
+            let issue = trimmed.parse::<u64>().map_err(|_| {
+                format!("issues-processed entry '{}' is not a valid issue number", trimmed)
+            })?;
+            issues.push(format!("#{}", issue));
+        }
+    }
+
+    Ok(issues)
 }
 
 fn emit_worklog_auto_derivation_warnings(warnings: Vec<String>) {
@@ -2633,6 +2659,7 @@ mod tests {
             pr_merged: Vec::new(),
             pr_reviewed: Vec::new(),
             issue_processed: Vec::new(),
+            issues_processed: Vec::new(),
             auto_issues: false,
             self_modification: Vec::new(),
             auto_self_modifications: false,
@@ -2902,6 +2929,20 @@ mod tests {
     fn parse_issue_processed_rejects_empty_descriptions() {
         let error = parse_issue_processed(&["   ".to_string()]).unwrap_err();
         assert!(error.contains("issue-processed description cannot be empty"));
+    }
+
+    #[test]
+    fn parse_issue_processed_numbers_supports_csv_and_rejects_invalid_values() {
+        assert_eq!(
+            parse_issue_processed_numbers(&["42, 77".to_string(), "105".to_string()]).unwrap(),
+            vec!["#42", "#77", "#105"]
+        );
+
+        let error = parse_issue_processed_numbers(&["42, nope".to_string()]).unwrap_err();
+        assert_eq!(
+            error,
+            "issues-processed entry 'nope' is not a valid issue number"
+        );
     }
 
     #[test]
@@ -4529,6 +4570,58 @@ mod tests {
     }
 
     #[test]
+    fn worklog_explicit_issue_numbers_flag_renders_linked_issue_entries() {
+        let repo_root = TempRepoDir::new("worklog-explicit-issue-numbers");
+        init_git_repo(&repo_root.path);
+
+        let cli = Cli::try_parse_from([
+            "write-entry",
+            "--repo-root",
+            repo_root.path.to_str().unwrap(),
+            "worklog",
+            "--cycle",
+            "154",
+            "--title",
+            "Explicit issue numbers",
+            "--issues-processed",
+            "42, 77",
+            "--pipeline",
+            "PASS (6/6)",
+            "--copilot-metrics",
+            "steady",
+            "--publish-gate",
+            "open",
+            "--in-flight",
+            "0",
+        ])
+        .unwrap();
+        let args = match cli.command {
+            Command::Worklog(args) => args,
+            Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
+        };
+
+        let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+        assert_eq!(input.issues_processed, vec!["#42", "#77"]);
+
+        let warnings =
+            apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
+        assert!(warnings.is_empty());
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(
+            content.contains(
+                "### Issues processed\n\n- [#42](https://github.com/EvaLok/schema-org-json-ld/issues/42)"
+            )
+        );
+        assert!(content.contains(
+            "- [#77](https://github.com/EvaLok/schema-org-json-ld/issues/77)"
+        ));
+        assert!(!content.contains("### Issues processed\n\n- None."));
+    }
+
+    #[test]
     fn worklog_cycle_only_arguments_render_auto_populated_sections() {
         let repo_root = TempRepoDir::new("worklog-cycle-only");
         init_git_repo(&repo_root.path);
@@ -5639,6 +5732,8 @@ Reflective log for the schema-org-json-ld orchestrator.
             "Merged PR #123",
             "--pr-merged",
             "123",
+            "--issues-processed",
+            "42,43",
             "--next",
             "Review PR #124",
             "--pipeline",
@@ -5661,6 +5756,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 assert_eq!(args.pr_merged, vec![123]);
                 assert!(args.pr_reviewed.is_empty());
                 assert!(args.issue_processed.is_empty());
+                assert_eq!(args.issues_processed, vec!["42".to_string(), "43".to_string()]);
                 assert!(args.self_modification.is_empty());
                 assert_eq!(args.next, vec!["Review PR #124".to_string()]);
                 assert_eq!(args.pipeline.as_deref(), Some("PASS (6/6)"));
@@ -5680,6 +5776,8 @@ Reflective log for the schema-org-json-ld orchestrator.
             "worklog",
             "--title",
             "test",
+            "--issues-processed",
+            "924,925",
             "--auto-issues",
             "--auto-self-modifications",
             "--auto-receipts",
@@ -5696,6 +5794,7 @@ Reflective log for the schema-org-json-ld orchestrator.
 
         match cli.command {
             Command::Worklog(args) => {
+                assert_eq!(args.issues_processed, vec!["924".to_string(), "925".to_string()]);
                 assert!(args.auto_issues);
                 assert!(args.auto_self_modifications);
                 assert!(args.auto_receipts);
