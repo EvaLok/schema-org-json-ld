@@ -341,7 +341,7 @@ fn step_c5_5(repo_root: &Path, issue: u64) -> Result<bool, String> {
     let (passed, body) = match parse_pipeline_gate_report(&stdout) {
         Ok(report) => {
             let passed =
-                exit_ok && !report.overall.eq_ignore_ascii_case("fail") && !report.has_blocking_findings;
+                exit_ok && report.overall.eq_ignore_ascii_case("pass") && !report.has_blocking_findings;
             let mut body = format!(
                 "Pipeline: {}\n- exit_code: {}\n- overall: {}\n- has_blocking_findings: {}",
                 if passed { "PASS" } else { "FAIL" },
@@ -989,6 +989,30 @@ mod tests {
         let args = fs::read_to_string(&args_path).unwrap();
         assert!(args.contains("overall: pass"));
         assert!(args.contains("has_blocking_findings: true"));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn step_c5_5_rejects_zero_exit_when_json_overall_is_unexpected() {
+        let dir = setup_temp_repo("step-c5-5-unexpected-overall");
+        let args_path = dir.join("post-step-args.txt");
+        write_post_step_capture_script(&dir, &args_path);
+        fs::write(
+            dir.join("tools/pipeline-check"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"overall\":\"warning\",\"has_blocking_findings\":false}'\n",
+        )
+        .unwrap();
+
+        let error = step_c5_5(&dir, 123).unwrap_err();
+        assert_eq!(
+            error,
+            "Pipeline check failed at C5.5 — fix issues and re-run close-out"
+        );
+
+        let args = fs::read_to_string(&args_path).unwrap();
+        assert!(args.contains("overall: warning"));
+        assert!(args.contains("has_blocking_findings: false"));
 
         let _ = fs::remove_dir_all(&dir);
     }
