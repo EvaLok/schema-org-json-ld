@@ -4905,6 +4905,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Build merge-pr tool: automate full PR merge workflow"
+    },
+    {
+      "dispatched_at": "2026-03-25T03:34:44Z",
+      "issue": 1721,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 353 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -5122,17 +5129,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1719 Build merge-pr tool: automate full PR merge workflow (cycle 353)",
-    "dispatch_to_pr_rate": "91.2%",
+    "dispatch_log_latest": "#1721 [Cycle Review] Cycle 353 end-of-cycle review (cycle 353)",
+    "dispatch_to_pr_rate": "91.1%",
     "failed_dispatches": 1,
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 490,
     "pr_merge_rate": "98.0%",
     "produced_pr": 500,
     "resolved": 547,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 548
+    "total_dispatches": 549
   },
   "cycle_issues": [
     1718
@@ -8478,7 +8485,7 @@
     ],
     "last_review_cycle": 351
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 353,
   "schema_status": {
     "directory_layout": {
