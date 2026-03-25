@@ -4988,6 +4988,13 @@
       "pr": 1743,
       "status": "merged",
       "title": "Add worklog-dedup check to pipeline-check"
+    },
+    {
+      "dispatched_at": "2026-03-25T11:02:58Z",
+      "issue": 1744,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 357 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -5206,25 +5213,26 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1742 Add worklog-dedup check to pipeline-check (cycle 357)",
-    "dispatch_to_pr_rate": "91.6%",
+    "dispatch_log_latest": "#1744 [Cycle Review] Cycle 357 end-of-cycle review (cycle 357)",
+    "dispatch_to_pr_rate": "91.4%",
     "failed_dispatches": 1,
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 500,
     "pr_merge_rate": "98.0%",
     "produced_pr": 510,
     "resolved": 557,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 557
+    "total_dispatches": 558
   },
   "cycle_issues": [
     1741
   ],
   "cycle_phase": {
+    "completed_at": "2026-03-25T11:02:58Z",
     "cycle": 357,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-25T10:55:17Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-25T11:02:58Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -5499,7 +5507,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 36,
     "issue": 1741,
@@ -8681,7 +8689,7 @@
     ],
     "last_review_cycle": 356
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 356,
   "schema_status": {
     "directory_layout": {
