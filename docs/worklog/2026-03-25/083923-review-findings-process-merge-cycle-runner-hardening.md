@@ -29,7 +29,7 @@
 ## Current state
 
 - **In-flight agent sessions**: 0
-- **Pipeline status**: PASS with 2 warnings (field-inventory, housekeeping)
+- **Pipeline status**: PASS (17/17 state-invariants, 2 warnings)
 - **Copilot metrics**: 555 dispatches, 508 PRs produced, 498 merged, 98.0% PR merge rate
 - **Publish gate**: published
 
@@ -41,7 +41,7 @@
 
 ## Commit receipts
 
-> Note: Scope: cycle 356 commits through cycle-complete — mode normal; phase work; agent activity: 2 dispatchs, 3 merges; receipt events: 3 merges, 1 review. Receipt table covers commits through cycle-complete (C5.1 snapshot). Post-C5.1 commits (docs, record-dispatch, review-body) are structurally excluded.
+> Note: Scope: cycle 356 commits through cycle-complete — mode normal; phase work; agent activity: 2 dispatches, 3 merges; receipt events: 3 merges, 1 review. Receipt table covers commits through cycle-complete (C5.1 snapshot). Post-C5.1 commits (docs, record-dispatch, review-body) are structurally excluded.
 
 | Tool | Receipt | Link |
 |------|---------|------|
@@ -51,3 +51,4 @@
 | cycle-tagged | d650392 | [d650392](https://github.com/EvaLok/schema-org-json-ld/commit/d650392d83047eef45dad6757bfcddac4cbdc810) |
 | process-merge | ea6a433 | [ea6a433](https://github.com/EvaLok/schema-org-json-ld/commit/ea6a4331a2de4b5efd5315f74257c45b0454ab57) |
 | process-merge | 29a00d3 | [29a00d3](https://github.com/EvaLok/schema-org-json-ld/commit/29a00d3059a4ee6501c85cd72547e02981a57c5a) |
+| cycle-complete | 4206a29 | [4206a29](https://github.com/EvaLok/schema-org-json-ld/commit/4206a29e42b75c5cdee80ea1e8e9e02e26c25cf4) |
