@@ -8559,7 +8559,7 @@
     "last_review_cycle": 354
   },
   "review_dispatch_consecutive": 2,
-  "review_events_verified_through_cycle": 353,
+  "review_events_verified_through_cycle": 354,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
