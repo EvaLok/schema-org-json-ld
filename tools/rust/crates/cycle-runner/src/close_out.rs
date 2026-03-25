@@ -330,13 +330,15 @@ fn parse_verify_review_events_safe_to_advance_to(stdout: &str) -> Result<u64, St
     for prefix in ["Safe to advance marker to ", "Marker stays at "] {
         if let Some(value) = stdout.lines().find_map(|line| {
             line.find(prefix).and_then(|index| {
-                let digits: String = line[index + prefix.len()..]
-                    .chars()
-                    .take_while(|ch| ch.is_ascii_digit())
-                    .collect();
-                (!digits.is_empty())
-                    .then_some(digits)
-                    .and_then(|digits| digits.parse::<u64>().ok())
+                let remainder = line[index + prefix.len()..].trim_start();
+                let token = remainder
+                    .split_whitespace()
+                    .next()
+                    .unwrap_or("")
+                    .trim_end_matches(|ch: char| !ch.is_ascii_digit());
+                (!token.is_empty() && token.chars().all(|ch| ch.is_ascii_digit()))
+                    .then(|| token.parse::<u64>().ok())
+                    .flatten()
             })
         }) {
             return Ok(value);
@@ -1005,11 +1007,24 @@ mod tests {
     }
 
     fn write_post_step_capture_script(dir: &std::path::Path, output_path: &std::path::Path) {
+        let output_path = shell_single_quote(output_path);
         fs::write(
             dir.join("tools/post-step"),
             format!(
-                "#!/usr/bin/env bash\nset -euo pipefail\n{{\nfor arg in \"$@\"; do\nprintf -- '---ARG---\\n%s\\n' \"$arg\"\ndone\n}} >> \"{}\"\n",
-                output_path.display()
+                "#!/usr/bin/env bash\nset -euo pipefail\n{{\nfor arg in \"$@\"; do\nprintf -- '---ARG---\\n%s\\n' \"$arg\"\ndone\n}} > {}\n",
+                output_path
+            ),
+        )
+        .unwrap();
+    }
+
+    fn write_post_step_append_capture_script(dir: &std::path::Path, output_path: &std::path::Path) {
+        let output_path = shell_single_quote(output_path);
+        fs::write(
+            dir.join("tools/post-step"),
+            format!(
+                "#!/usr/bin/env bash\nset -euo pipefail\n{{\nfor arg in \"$@\"; do\nprintf -- '---ARG---\\n%s\\n' \"$arg\"\ndone\n}} >> {}\n",
+                output_path
             ),
         )
         .unwrap();
@@ -1044,6 +1059,10 @@ mod tests {
         let mut permissions = fs::metadata(path).unwrap().permissions();
         permissions.set_mode(0o755);
         fs::set_permissions(path, permissions).unwrap();
+    }
+
+    fn shell_single_quote(path: &std::path::Path) -> String {
+        format!("'{}'", path.to_string_lossy().replace('\'', "'\"'\"'"))
     }
 
     fn with_path_prefix<T>(prefix: &std::path::Path, f: impl FnOnce() -> T) -> T {
@@ -1246,6 +1265,35 @@ mod tests {
     }
 
     #[test]
+    fn step_c4_7_posts_safe_to_advance_to_from_json_output() {
+        let dir = setup_temp_repo("step-c4-7-json-success");
+        let args_path = dir.join("post-step-args.txt");
+        write_post_step_capture_script(&dir, &args_path);
+        fs::write(
+            dir.join("tools/verify-review-events"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\\n' '{\"safe_to_advance_to\":344}'\n",
+        )
+        .unwrap();
+
+        step_c4_7_with_timeout(&dir, 123, 1).unwrap();
+
+        let args = fs::read_to_string(&args_path).unwrap();
+        assert!(args.contains("safe_to_advance_to: 344"));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn parse_verify_review_events_safe_to_advance_to_accepts_marker_stays_prefix() {
+        let value = parse_verify_review_events_safe_to_advance_to(
+            "Verification report\n  Result: Verification failed for cycle 345. Marker stays at 344.\n",
+        )
+        .unwrap();
+
+        assert_eq!(value, 344);
+    }
+
+    #[test]
     fn step_c4_7_timeout_posts_warning_and_returns_err() {
         let dir = setup_temp_repo("step-c4-7-timeout");
         let args_path = dir.join("post-step-args.txt");
@@ -1302,7 +1350,7 @@ mod tests {
         )
         .unwrap();
         let args_path = dir.join("post-step-args.txt");
-        write_post_step_capture_script(&dir, &args_path);
+        write_post_step_append_capture_script(&dir, &args_path);
         fs::write(
             dir.join("tools/validate-docs"),
             "#!/usr/bin/env bash\nset -euo pipefail\n",
