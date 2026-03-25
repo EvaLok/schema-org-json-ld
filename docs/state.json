@@ -5004,6 +5004,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add pre-C5 verify-review-events step to close-out"
+    },
+    {
+      "dispatched_at": "2026-03-25T12:31:18Z",
+      "issue": 1749,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Rename worklog Current state to Pre-dispatch state"
     }
   ],
   "audit_dropped": [
@@ -5222,17 +5229,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1747 Add pre-C5 verify-review-events step to close-out (cycle 358)",
-    "dispatch_to_pr_rate": "91.4%",
+    "dispatch_log_latest": "#1749 Rename worklog Current state to Pre-dispatch state (cycle 358)",
+    "dispatch_to_pr_rate": "91.2%",
     "failed_dispatches": 1,
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 501,
     "pr_merge_rate": "98.0%",
     "produced_pr": 511,
     "resolved": 558,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 559
+    "total_dispatches": 560
   },
   "cycle_issues": [
     1746
@@ -5515,7 +5522,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 36,
     "issue": 1746,
