@@ -4938,8 +4938,10 @@
     {
       "dispatched_at": "2026-03-25T06:33:39Z",
       "issue": 1729,
+      "merged_at": "2026-03-25T06:45:45Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1730,
+      "status": "merged",
       "title": "Consolidate worklog lifecycle to one file per cycle"
     }
   ],
@@ -5160,13 +5162,13 @@
     "closed_without_merge": 8,
     "closed_without_pr": 47,
     "dispatch_log_latest": "#1729 Consolidate worklog lifecycle to one file per cycle (cycle 355)",
-    "dispatch_to_pr_rate": "91.3%",
+    "dispatch_to_pr_rate": "91.5%",
     "failed_dispatches": 1,
-    "in_flight": 1,
-    "merged": 494,
+    "in_flight": 0,
+    "merged": 495,
     "pr_merge_rate": "98.0%",
-    "produced_pr": 504,
-    "resolved": 551,
+    "produced_pr": 505,
+    "resolved": 552,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 552
