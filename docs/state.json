@@ -5046,8 +5046,10 @@
     {
       "dispatched_at": "2026-03-25T16:57:28Z",
       "issue": 1760,
+      "merged_at": "2026-03-25T18:22:38Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1761,
+      "status": "merged",
       "title": "Fix cycle-runner C8 to derive pipeline status from C5.5 result"
     },
     {
@@ -5278,13 +5280,13 @@
     "closed_without_merge": 8,
     "closed_without_pr": 47,
     "dispatch_log_latest": "#1762 [Cycle Review] Cycle 360 end-of-cycle review (cycle 360)",
-    "dispatch_to_pr_rate": "91.5%",
+    "dispatch_to_pr_rate": "91.7%",
     "failed_dispatches": 1,
-    "in_flight": 1,
-    "merged": 507,
+    "in_flight": 0,
+    "merged": 508,
     "pr_merge_rate": "98.1%",
-    "produced_pr": 517,
-    "resolved": 564,
+    "produced_pr": 518,
+    "resolved": 565,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 565
@@ -5570,7 +5572,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 32,
     "issue": 1764,
