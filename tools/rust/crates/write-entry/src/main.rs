@@ -1024,7 +1024,7 @@ fn derive_receipt_scope_note(
     }
 
     Ok(format!(
-        "Scope: {}. Receipt table covers commits through cycle-complete (C5.1 snapshot). Post-C5.1 commits (docs, record-dispatch, review-body) are structurally excluded.",
+        "Scope: {}. Receipt table covers commits through cycle-complete (C5.1 snapshot). Post-C5.1 commits (docs, record-dispatch, review-body, cycle-tagged) are structurally excluded.",
         scope
     ))
 }
@@ -1036,7 +1036,7 @@ fn fallback_receipt_scope_note(cycle: u64, entries: &[CycleReceiptJsonEntry]) ->
         scope.push_str(&event_summary);
     }
     format!(
-        "Scope: {}. Receipt table covers commits through cycle-complete (C5.1 snapshot). Post-C5.1 commits (docs, record-dispatch, review-body) are structurally excluded.",
+        "Scope: {}. Receipt table covers commits through cycle-complete (C5.1 snapshot). Post-C5.1 commits (docs, record-dispatch, review-body, cycle-tagged) are structurally excluded.",
         scope
     )
 }
@@ -3992,7 +3992,7 @@ mod tests {
         assert!(note.contains("receipt events: 1 dispatch, 1 merge"));
         assert!(note.contains("Receipt table covers commits through cycle-complete (C5.1 snapshot)."));
         assert!(note.contains(
-            "Post-C5.1 commits (docs, record-dispatch, review-body) are structurally excluded."
+            "Post-C5.1 commits (docs, record-dispatch, review-body, cycle-tagged) are structurally excluded."
         ));
         assert!(!note.contains("Validated by receipt-validate at step C5.1."));
     }
