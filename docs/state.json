@@ -5454,7 +5454,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 15,
     "issue": 1726,
