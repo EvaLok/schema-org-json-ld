@@ -4952,6 +4952,20 @@
       "pr": 1733,
       "status": "merged",
       "title": "[Cycle Review] Cycle 355 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-25T08:22:46Z",
+      "issue": 1735,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Sync root-level in_flight_sessions in process-merge tool"
+    },
+    {
+      "dispatched_at": "2026-03-25T08:23:01Z",
+      "issue": 1737,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Harden cycle-runner close-out: enforce C5.5 gate and remove C6.5 worklog patch"
     }
   ],
   "audit_dropped": [
@@ -5170,17 +5184,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1732 [Cycle Review] Cycle 355 end-of-cycle review (cycle 355)",
-    "dispatch_to_pr_rate": "91.5%",
+    "dispatch_log_latest": "#1737 Harden cycle-runner close-out: enforce C5.5 gate and remove C6.5 worklog patch (cycle 356)",
+    "dispatch_to_pr_rate": "91.2%",
     "failed_dispatches": 1,
-    "in_flight": 0,
+    "in_flight": 2,
     "merged": 496,
     "pr_merge_rate": "98.0%",
     "produced_pr": 506,
     "resolved": 553,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 553
+    "total_dispatches": 555
   },
   "cycle_issues": [
     1734
@@ -5463,7 +5477,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 25,
     "issue": 1734,
