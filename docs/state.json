@@ -5290,7 +5290,7 @@
       },
       "last_tool_audit_cycle": {
         "cadence": "every 10 cycles",
-        "last_refreshed": "cycle 352"
+        "last_refreshed": "cycle 354"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
@@ -5422,7 +5422,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 17,
     "issue": 1723,
@@ -5431,7 +5431,7 @@
     "timestamp": "2026-03-25T04:39:54Z"
   },
   "last_eva_comment_check": "2026-03-25T04:39:54Z",
-  "last_tool_audit_cycle": 320,
+  "last_tool_audit_cycle": 353,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
     "count": 0,
