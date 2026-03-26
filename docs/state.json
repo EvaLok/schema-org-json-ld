@@ -5091,15 +5091,19 @@
     {
       "dispatched_at": "2026-03-25T22:17:20Z",
       "issue": 1773,
+      "merged_at": "2026-03-26T00:20:19Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1774,
+      "status": "merged",
       "title": "Enhancement: auto-populate Issues processed in write-entry"
     },
     {
       "dispatched_at": "2026-03-25T22:26:26Z",
       "issue": 1776,
+      "merged_at": "2026-03-26T00:20:19Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1777,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 363 end-of-cycle review"
     }
   ],
@@ -5321,13 +5325,13 @@
     "closed_without_merge": 8,
     "closed_without_pr": 47,
     "dispatch_log_latest": "#1776 [Cycle Review] Cycle 363 end-of-cycle review (cycle 363)",
-    "dispatch_to_pr_rate": "91.4%",
+    "dispatch_to_pr_rate": "91.8%",
     "failed_dispatches": 1,
-    "in_flight": 2,
-    "merged": 511,
+    "in_flight": 0,
+    "merged": 513,
     "pr_merge_rate": "98.1%",
-    "produced_pr": 521,
-    "resolved": 568,
+    "produced_pr": 523,
+    "resolved": 570,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 570
@@ -5436,15 +5440,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 363"
+        "last_refreshed": "cycle 364"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 363"
+        "last_refreshed": "cycle 364"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 363"
+        "last_refreshed": "cycle 364"
       },
       "cycle_issues": {
         "cadence": "every cycle",
@@ -5465,7 +5469,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 363"
+        "last_refreshed": "cycle 364"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -5613,7 +5617,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 8,
     "issue": 1778,
