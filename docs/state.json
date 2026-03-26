@@ -5298,8 +5298,10 @@
     {
       "dispatched_at": "2026-03-26T16:38:10Z",
       "issue": 1830,
+      "merged_at": "2026-03-26T18:25:43Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1831,
+      "status": "merged",
       "title": "Add --auto-next flag to write-entry and --next-steps to patch-pipeline"
     },
     {
@@ -5531,13 +5533,13 @@
     "closed_without_merge": 8,
     "closed_without_pr": 47,
     "dispatch_log_latest": "#1832 [Cycle Review] Cycle 372 end-of-cycle review (cycle 372)",
-    "dispatch_to_pr_rate": "91.9%",
+    "dispatch_to_pr_rate": "92.1%",
     "failed_dispatches": 1,
-    "in_flight": 1,
-    "merged": 535,
+    "in_flight": 0,
+    "merged": 536,
     "pr_merge_rate": "98.2%",
-    "produced_pr": 545,
-    "resolved": 592,
+    "produced_pr": 546,
+    "resolved": 593,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 593
@@ -5823,7 +5825,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 14,
     "issue": 1834,
