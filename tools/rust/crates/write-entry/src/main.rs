@@ -21,6 +21,7 @@ const JOURNAL_DESCRIPTION: &str = "Reflective log for the schema-org-json-ld orc
 const NOT_PROVIDED: &str = "Not provided.";
 const CYCLE_STATE_HEADING: &str = "## Cycle state";
 const LEGACY_STATE_HEADING: &str = "## Pre-dispatch state";
+const NEXT_STEPS_HEADING: &str = "## Next steps";
 const LEGACY_STATE_DISCLAIMER: &str = "*Snapshot before review dispatch — final counters may differ after C6.*";
 const IN_FLIGHT_PREFIX: &str = "- **In-flight agent sessions**: ";
 const PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
@@ -99,6 +100,9 @@ struct WorklogArgs {
     /// Next step for the following cycle
     #[arg(long = "next")]
     next: Vec<String>,
+    /// Auto-derive next steps from in-flight agent sessions in docs/state.json
+    #[arg(long = "auto-next", default_value_t = false)]
+    auto_next: bool,
     /// Pipeline summary for the current state section
     #[arg(long)]
     pipeline: Option<String>,
@@ -164,6 +168,9 @@ struct PatchPipelineArgs {
     /// Replacement publish gate summary text
     #[arg(long = "publish-gate")]
     publish_gate: Option<String>,
+    /// Replacement next steps content as numbered entries
+    #[arg(long = "next-steps", value_delimiter = ',')]
+    next_steps: Vec<String>,
     /// Replacement current state section title
     #[arg(long = "section-title")]
     section_title: Option<String>,
@@ -458,6 +465,16 @@ fn execute_patch_pipeline(args: &PatchPipelineArgs, repo_root: &Path) -> Result<
         })?;
         patched = remove_legacy_state_disclaimer(&patched);
     }
+    if !args.next_steps.is_empty() {
+        patched = patch_numbered_section(&patched, NEXT_STEPS_HEADING, &args.next_steps).ok_or_else(
+            || {
+                format!(
+                    "failed to patch {}: next steps section not found",
+                    worklog_path.display()
+                )
+            },
+        )?;
+    }
     fs::write(&worklog_path, patched)
         .map_err(|error| format!("failed to write {}: {}", worklog_path.display(), error))?;
     Ok(worklog_path)
@@ -523,6 +540,33 @@ fn remove_legacy_state_disclaimer(content: &str) -> String {
         .replace(&format!("{}\n\n", LEGACY_STATE_DISCLAIMER), "")
 }
 
+fn patch_numbered_section(content: &str, heading: &str, items: &[String]) -> Option<String> {
+    let mut lines: Vec<String> = content.lines().map(ToOwned::to_owned).collect();
+    let heading_index = lines.iter().position(|line| line == heading)?;
+    let section_start = heading_index + 1;
+    let section_end = lines[section_start..]
+        .iter()
+        .position(|line| line.starts_with("## "))
+        .map(|offset| section_start + offset)
+        .unwrap_or(lines.len());
+
+    let mut replacement = vec![String::new()];
+    for (index, item) in items.iter().enumerate() {
+        replacement.push(format!("{}. {}", index + 1, item));
+    }
+    if section_end < lines.len() {
+        replacement.push(String::new());
+    }
+
+    lines.splice(section_start..section_end, replacement);
+
+    let mut patched = lines.join("\n");
+    if content.ends_with('\n') {
+        patched.push('\n');
+    }
+    Some(patched)
+}
+
 fn resolve_cycle(cycle: Option<u64>, repo_root: &Path) -> Result<u64, String> {
     match cycle {
         Some(cycle) => Ok(cycle),
@@ -569,7 +613,7 @@ fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<Worklog
                     None => state_publish_gate_status(state.as_ref())?,
                 },
             },
-            next_steps: args.next.clone(),
+            next_steps: resolve_next_steps(args, state.as_ref())?,
             receipts: parse_receipts(&args.receipt)?,
             receipt_note: None,
         };
@@ -590,7 +634,7 @@ fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<Worklog
             copilot_metrics: format_state_copilot_metrics(state.as_ref())?,
             publish_gate: state_publish_gate_status(state.as_ref())?,
         },
-        next_steps: Vec::new(),
+        next_steps: resolve_next_steps(args, state.as_ref())?,
         receipts: Vec::new(),
         receipt_note: None,
     };
@@ -599,6 +643,9 @@ fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<Worklog
 }
 
 fn validate_worklog_flag_combinations(args: &WorklogArgs) -> Result<(), String> {
+    if args.auto_next && !args.next.is_empty() {
+        return Err("cannot combine --auto-next with --next".to_string());
+    }
     if args.auto_pipeline && args.pipeline.is_some() {
         return Err("cannot combine --auto-pipeline with --pipeline".to_string());
     }
@@ -614,7 +661,10 @@ fn validate_worklog_flag_combinations(args: &WorklogArgs) -> Result<(), String> 
 }
 
 fn requires_worklog_state(args: &WorklogArgs) -> bool {
-    args.copilot_metrics.is_none() || args.publish_gate.is_none() || args.in_flight.is_none()
+    args.auto_next
+        || args.copilot_metrics.is_none()
+        || args.publish_gate.is_none()
+        || args.in_flight.is_none()
 }
 
 fn load_worklog_state(repo_root: &Path, required: bool) -> Result<Option<StateJson>, String> {
@@ -702,6 +752,58 @@ fn resolve_pipeline_status(
         return auto_pipeline_status(repo_root);
     }
     Ok(state_pipeline_status(state))
+}
+
+fn resolve_next_steps(args: &WorklogArgs, state: Option<&StateJson>) -> Result<Vec<String>, String> {
+    if !args.next.is_empty() {
+        return Ok(args.next.clone());
+    }
+    if args.auto_next {
+        return auto_next_steps(state);
+    }
+    Ok(Vec::new())
+}
+
+fn auto_next_steps(state: Option<&StateJson>) -> Result<Vec<String>, String> {
+    let state =
+        state.ok_or_else(|| "docs/state.json is required to populate next steps".to_string())?;
+    let mut next_steps = Vec::new();
+
+    for session in &state.agent_sessions {
+        if session.status.as_deref().map(str::trim) != Some("in_flight") {
+            continue;
+        }
+        next_steps.push(format_in_flight_next_step(session)?);
+    }
+
+    if next_steps.is_empty() {
+        next_steps.push("No in-flight sessions — plan next dispatch".to_string());
+    }
+
+    Ok(next_steps)
+}
+
+fn format_in_flight_next_step(session: &AgentSession) -> Result<String, String> {
+    let issue = session
+        .issue
+        .ok_or_else(|| "agent_sessions[].issue is required for in-flight sessions when using --auto-next".to_string())
+        .and_then(|value| {
+            u64::try_from(value).map_err(|_| {
+                "agent_sessions[].issue must be a positive integer for in-flight sessions when using --auto-next"
+                    .to_string()
+            })
+        })?;
+    let title = session
+        .title
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(|value| format!(" ({})", value))
+        .unwrap_or_default();
+    Ok(format!(
+        "Review and iterate on PR from #{}{} when Copilot completes",
+        issue, title
+    ))
 }
 
 fn auto_pipeline_status(repo_root: &Path) -> Result<String, String> {
@@ -804,6 +906,7 @@ fn has_inline_worklog_content(args: &WorklogArgs) -> bool {
         || !args.issues_processed.is_empty()
         || !args.self_modification.is_empty()
         || !args.next.is_empty()
+        || args.auto_next
         || args.pipeline.is_some()
         || args.auto_pipeline
         || args.copilot_metrics.is_some()
@@ -2917,6 +3020,7 @@ mod tests {
             self_modification: Vec::new(),
             auto_self_modifications: false,
             next: Vec::new(),
+            auto_next: false,
             pipeline: None,
             auto_pipeline: false,
             copilot_metrics: None,
@@ -5333,6 +5437,106 @@ mod tests {
     }
 
     #[test]
+    fn worklog_auto_next_generates_next_steps_from_state() {
+        let repo_root = TempRepoDir::new("worklog-auto-next");
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "cycle_phase": {
+                    "cycle": 154
+                },
+                "tool_pipeline": {
+                    "status": "PASS (6/6)"
+                },
+                "publish_gate": {
+                    "status": "open"
+                },
+                "copilot_metrics": {
+                    "total_dispatches": 12,
+                    "produced_pr": 11,
+                    "merged": 10,
+                    "pr_merge_rate": "90.9%",
+                    "in_flight": 1
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 1825,
+                        "title": "Add --auto-pipeline flag to write-entry",
+                        "status": "in_flight"
+                    },
+                    {
+                        "issue": 1826,
+                        "title": "Already merged",
+                        "status": "merged"
+                    }
+                ]
+            }"#,
+        );
+
+        let mut args = worklog_args("Auto next");
+        args.auto_next = true;
+
+        let input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+
+        assert_eq!(
+            input.next_steps,
+            vec![
+                "Review and iterate on PR from #1825 (Add --auto-pipeline flag to write-entry) when Copilot completes"
+                    .to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn worklog_auto_next_empty_when_no_sessions() {
+        let repo_root = TempRepoDir::new("worklog-auto-next-empty");
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "cycle_phase": {
+                    "cycle": 154
+                },
+                "tool_pipeline": {
+                    "status": "PASS (6/6)"
+                },
+                "publish_gate": {
+                    "status": "open"
+                },
+                "copilot_metrics": {
+                    "total_dispatches": 12,
+                    "produced_pr": 11,
+                    "merged": 10,
+                    "pr_merge_rate": "90.9%",
+                    "in_flight": 0
+                },
+                "agent_sessions": []
+            }"#,
+        );
+
+        let mut args = worklog_args("Auto next empty");
+        args.auto_next = true;
+
+        let input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+
+        assert_eq!(
+            input.next_steps,
+            vec!["No in-flight sessions — plan next dispatch".to_string()]
+        );
+    }
+
+    #[test]
+    fn auto_next_rejects_manual_next_flag() {
+        let repo_root = TempRepoDir::new("auto-next-mutually-exclusive");
+        let mut args = worklog_args("Auto next conflict");
+        args.auto_next = true;
+        args.next = vec!["Manual follow-up".to_string()];
+
+        let error = resolve_worklog_input(&args, &repo_root.path).unwrap_err();
+
+        assert_eq!(error, "cannot combine --auto-next with --next");
+    }
+
+    #[test]
     fn worklog_inline_flags_reject_placeholder_when_state_has_real_status() {
         let repo_root = TempRepoDir::new("worklog-placeholder-rejected");
         write_state_file(
@@ -6361,6 +6565,7 @@ Reflective log for the schema-org-json-ld orchestrator.
             "--issues-processed",
             "924,925",
             "--auto-issues",
+            "--auto-next",
             "--auto-pipeline",
             "--auto-self-modifications",
             "--auto-receipts",
@@ -6379,6 +6584,7 @@ Reflective log for the schema-org-json-ld orchestrator.
             Command::Worklog(args) => {
                 assert_eq!(args.issues_processed, vec!["924".to_string(), "925".to_string()]);
                 assert!(args.auto_issues);
+                assert!(args.auto_next);
                 assert!(args.auto_pipeline);
                 assert!(args.auto_self_modifications);
                 assert!(args.auto_receipts);
@@ -6408,6 +6614,8 @@ Reflective log for the schema-org-json-ld orchestrator.
             "46 dispatches, 43 PRs produced, 40 merged, 93.0% PR merge rate",
             "--publish-gate",
             "published",
+            "--next-steps",
+            "Review [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) when Copilot completes,Prepare follow-up dispatch",
             "--section-title",
             "Cycle state",
         ])
@@ -6423,6 +6631,14 @@ Reflective log for the schema-org-json-ld orchestrator.
                     Some("46 dispatches, 43 PRs produced, 40 merged, 93.0% PR merge rate")
                 );
                 assert_eq!(args.publish_gate.as_deref(), Some("published"));
+                assert_eq!(
+                    args.next_steps,
+                    vec![
+                        "Review [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) when Copilot completes"
+                            .to_string(),
+                        "Prepare follow-up dispatch".to_string()
+                    ]
+                );
                 assert_eq!(args.section_title.as_deref(), Some("Cycle state"));
             }
             Command::Worklog(_) | Command::Journal(_) => panic!("expected patch-pipeline command"),
@@ -6494,6 +6710,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 in_flight: None,
                 copilot_metrics: None,
                 publish_gate: None,
+                next_steps: Vec::new(),
                 section_title: None,
             },
             &repo_root.path,
@@ -6541,6 +6758,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                     "46 dispatches, 43 PRs produced, 40 merged, 93.0% PR merge rate".to_string(),
                 ),
                 publish_gate: Some("published".to_string()),
+                next_steps: Vec::new(),
                 section_title: Some("Cycle state".to_string()),
             },
             &repo_root.path,
@@ -6578,6 +6796,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 in_flight: None,
                 copilot_metrics: None,
                 publish_gate: None,
+                next_steps: Vec::new(),
                 section_title: None,
             },
             &repo_root.path,
@@ -6613,6 +6832,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 in_flight: None,
                 copilot_metrics: None,
                 publish_gate: None,
+                next_steps: Vec::new(),
                 section_title: None,
             },
             &repo_root.path,
@@ -6622,6 +6842,71 @@ Reflective log for the schema-org-json-ld orchestrator.
         let updated = fs::read_to_string(&worklog_path).unwrap();
         assert!(updated.contains("- **Pipeline status**: PASS (2 warnings:\nwarn one\nwarn two)"));
         assert!(updated.contains("- **Publish gate**: open"));
+    }
+
+    #[test]
+    fn patch_pipeline_replaces_next_steps_section() {
+        let repo_root = TempRepoDir::new("patch-pipeline-next-steps");
+        let worklog_path = repo_root.path.join("docs/worklog/test.md");
+        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
+        fs::write(
+            &worklog_path,
+            "# Cycle 154\n\n## Cycle state\n\n- **Pipeline status**: PASS\n\n## Next steps\n\n1. Old next step\n2. Another old step\n",
+        )
+        .unwrap();
+
+        execute_patch_pipeline(
+            &PatchPipelineArgs {
+                worklog: PathBuf::from("docs/worklog/test.md"),
+                status: "PASS".to_string(),
+                in_flight: None,
+                copilot_metrics: None,
+                publish_gate: None,
+                next_steps: vec![
+                    "Review [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) when Copilot completes"
+                        .to_string(),
+                    "Prepare follow-up dispatch".to_string(),
+                ],
+                section_title: None,
+            },
+            &repo_root.path,
+        )
+        .unwrap();
+
+        let updated = fs::read_to_string(&worklog_path).unwrap();
+        assert!(updated.contains("## Next steps\n\n1. Review [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) when Copilot completes\n2. Prepare follow-up dispatch\n"));
+        assert!(!updated.contains("Old next step"));
+    }
+
+    #[test]
+    fn patch_pipeline_preserves_sections_after_next_steps() {
+        let repo_root = TempRepoDir::new("patch-pipeline-next-steps-preserve");
+        let worklog_path = repo_root.path.join("docs/worklog/test.md");
+        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
+        fs::write(
+            &worklog_path,
+            "# Cycle 154\n\n## Cycle state\n\n- **Pipeline status**: PASS\n\n## Next steps\n\n1. Old next step\n\n## Commit receipts\n\n| tool | sha |\n| --- | --- |\n| cycle-start | abc1234 |\n",
+        )
+        .unwrap();
+
+        execute_patch_pipeline(
+            &PatchPipelineArgs {
+                worklog: PathBuf::from("docs/worklog/test.md"),
+                status: "PASS".to_string(),
+                in_flight: None,
+                copilot_metrics: None,
+                publish_gate: None,
+                next_steps: vec!["No in-flight sessions — plan next dispatch".to_string()],
+                section_title: None,
+            },
+            &repo_root.path,
+        )
+        .unwrap();
+
+        let updated = fs::read_to_string(&worklog_path).unwrap();
+        assert!(updated.contains("## Next steps\n\n1. No in-flight sessions — plan next dispatch\n\n## Commit receipts\n"));
+        assert!(updated.contains("| cycle-start | abc1234 |"));
+        assert!(!updated.contains("Old next step"));
     }
 
     #[test]

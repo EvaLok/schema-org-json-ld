@@ -866,27 +866,34 @@ fn step_c6_5(
         .ok_or_else(|| "missing publish_gate.status in state.json".to_string())?
         .to_string();
     let copilot_metrics = format_copilot_metrics(&state)?;
+    let next_steps = derive_patch_pipeline_next_steps(&state)?;
     let worklog_str = worklog.to_string_lossy().to_string();
     let in_flight_str = in_flight.to_string();
+    let mut patch_args = vec![
+        "patch-pipeline".to_string(),
+        "--worklog-file".to_string(),
+        worklog_str.clone(),
+        "--status".to_string(),
+        pipeline_summary.to_string(),
+        "--in-flight".to_string(),
+        in_flight_str,
+        "--copilot-metrics".to_string(),
+        copilot_metrics.clone(),
+        "--publish-gate".to_string(),
+        publish_gate.clone(),
+        "--section-title".to_string(),
+        "Cycle state".to_string(),
+    ];
+    for next_step in &next_steps {
+        patch_args.push("--next-steps".to_string());
+        patch_args.push(next_step.clone());
+    }
+    let patch_args_refs: Vec<&str> = patch_args.iter().map(String::as_str).collect();
 
     let output = runner::run_tool(
         repo_root,
         "write-entry",
-        &[
-            "patch-pipeline",
-            "--worklog-file",
-            &worklog_str,
-            "--status",
-            pipeline_summary,
-            "--in-flight",
-            &in_flight_str,
-            "--copilot-metrics",
-            &copilot_metrics,
-            "--publish-gate",
-            &publish_gate,
-            "--section-title",
-            "Cycle state",
-        ],
+        &patch_args_refs,
     )?;
     if !output.status.success() {
         return Err(format!(
@@ -915,6 +922,45 @@ fn step_c6_5(
     };
     steps::post_step(repo_root, issue, "C6.5", "Refresh worklog state", &body, false)?;
     Ok(())
+}
+
+fn derive_patch_pipeline_next_steps(state: &StateJson) -> Result<Vec<String>, String> {
+    let mut next_steps = Vec::new();
+
+    for session in &state.agent_sessions {
+        if session.status.as_deref().map(str::trim) != Some("in_flight") {
+            continue;
+        }
+        let issue = session
+            .issue
+            .ok_or_else(|| {
+                "agent_sessions[].issue is required for in-flight sessions during C6.5 refresh"
+                    .to_string()
+            })
+            .and_then(|value| {
+                u64::try_from(value).map_err(|_| {
+                    "agent_sessions[].issue must be a positive integer for in-flight sessions during C6.5 refresh"
+                        .to_string()
+                })
+            })?;
+        let title = session
+            .title
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(|value| format!(" ({})", value))
+            .unwrap_or_default();
+        next_steps.push(format!(
+            "Review and iterate on PR from [#{}](https://github.com/{}/issues/{}){} when Copilot completes",
+            issue, MAIN_REPO, issue, title
+        ));
+    }
+
+    if next_steps.is_empty() {
+        next_steps.push("No in-flight sessions — plan next dispatch".to_string());
+    }
+
+    Ok(next_steps)
 }
 
 fn format_copilot_metrics(state: &StateJson) -> Result<String, String> {
@@ -1234,7 +1280,7 @@ mod tests {
     fn write_write_entry_patch_script(dir: &std::path::Path) {
         fs::write(
             dir.join("tools/write-entry"),
-            "#!/usr/bin/env bash\nset -euo pipefail\npython - \"$@\" <<'PY'\nimport sys\nfrom pathlib import Path\nargs = sys.argv[1:]\nif not args or args[0] != 'patch-pipeline':\n    raise SystemExit(f'unexpected write-entry args: {args}')\nvalues = {}\ni = 1\nwhile i < len(args):\n    key = args[i]\n    if i + 1 >= len(args):\n        raise SystemExit(f'missing value for {key}')\n    values[key] = args[i + 1]\n    i += 2\nworklog = Path(values['--worklog-file'])\nlines = worklog.read_text().splitlines()\nfor index, line in enumerate(lines):\n    if line == '## Pre-dispatch state':\n        lines[index] = '## ' + values['--section-title']\n        break\nelse:\n    raise SystemExit('missing state heading')\nlines = [line for line in lines if line != '*Snapshot before review dispatch — final counters may differ after C6.*']\nreplacements = {\n    '- **In-flight agent sessions**: ': values['--in-flight'],\n    '- **Pipeline status**: ': values['--status'],\n    '- **Copilot metrics**: ': values['--copilot-metrics'],\n    '- **Publish gate**: ': values['--publish-gate'],\n}\nfor prefix, value in replacements.items():\n    for index, line in enumerate(lines):\n        if line.startswith(prefix):\n            lines[index] = prefix + value\n            break\n    else:\n        raise SystemExit(f'missing line for {prefix}')\nworklog.write_text('\\n'.join(lines) + '\\n')\nprint(worklog)\nPY\n",
+            "#!/usr/bin/env bash\nset -euo pipefail\npython - \"$@\" <<'PY'\nimport sys\nfrom pathlib import Path\nargs = sys.argv[1:]\nif not args or args[0] != 'patch-pipeline':\n    raise SystemExit(f'unexpected write-entry args: {args}')\nvalues = {}\nlist_values = {}\ni = 1\nwhile i < len(args):\n    key = args[i]\n    if key == '--next-steps':\n        if i + 1 >= len(args):\n            raise SystemExit(f'missing value for {key}')\n        list_values.setdefault(key, []).append(args[i + 1])\n        i += 2\n        continue\n    if i + 1 >= len(args):\n        raise SystemExit(f'missing value for {key}')\n    values[key] = args[i + 1]\n    i += 2\nworklog = Path(values['--worklog-file'])\nlines = worklog.read_text().splitlines()\nfor index, line in enumerate(lines):\n    if line == '## Pre-dispatch state':\n        lines[index] = '## ' + values['--section-title']\n        break\nelse:\n    raise SystemExit('missing state heading')\nlines = [line for line in lines if line != '*Snapshot before review dispatch — final counters may differ after C6.*']\nreplacements = {\n    '- **In-flight agent sessions**: ': values['--in-flight'],\n    '- **Pipeline status**: ': values['--status'],\n    '- **Copilot metrics**: ': values['--copilot-metrics'],\n    '- **Publish gate**: ': values['--publish-gate'],\n}\nfor prefix, value in replacements.items():\n    for index, line in enumerate(lines):\n        if line.startswith(prefix):\n            lines[index] = prefix + value\n            break\n    else:\n        raise SystemExit(f'missing line for {prefix}')\nif '--next-steps' in list_values:\n    for index, line in enumerate(lines):\n        if line == '## Next steps':\n            next_start = index + 1\n            break\n    else:\n        raise SystemExit('missing next steps heading')\n    next_end = len(lines)\n    for index in range(next_start, len(lines)):\n        if lines[index].startswith('## '):\n            next_end = index\n            break\n    replacement = ['']\n    for step_index, step in enumerate(list_values['--next-steps'], start=1):\n        replacement.append(f'{step_index}. {step}')\n    lines[next_start:next_end] = replacement\nworklog.write_text('\\n'.join(lines) + '\\n')\nprint(worklog)\nPY\n",
         )
         .unwrap();
     }
@@ -1620,7 +1666,7 @@ mod tests {
         fs::create_dir_all(dir.join("docs/journal")).unwrap();
         fs::write(
             dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"),
-            "# Cycle 345\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: PASS\n- **Copilot metrics**: 1 dispatches, 1 PRs produced, 1 merged, 100.0% PR merge rate\n- **Publish gate**: published\n",
+            "# Cycle 345\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: PASS\n- **Copilot metrics**: 1 dispatches, 1 PRs produced, 1 merged, 100.0% PR merge rate\n- **Publish gate**: published\n\n## Next steps\n\n1. None.\n",
         )
         .unwrap();
         fs::write(dir.join("docs/journal/2026-03-25.md"), "# Journal\n").unwrap();
@@ -1755,7 +1801,7 @@ mod tests {
         fs::create_dir_all(dir.join("docs/journal")).unwrap();
         fs::write(
             dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"),
-            "# Cycle 345\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: PASS\n- **Copilot metrics**: 1 dispatches, 1 PRs produced, 1 merged, 100.0% PR merge rate\n- **Publish gate**: published\n",
+            "# Cycle 345\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: PASS\n- **Copilot metrics**: 1 dispatches, 1 PRs produced, 1 merged, 100.0% PR merge rate\n- **Publish gate**: published\n\n## Next steps\n\n1. None.\n",
         )
         .unwrap();
         fs::write(dir.join("docs/journal/2026-03-25.md"), "# Journal\n").unwrap();
@@ -1872,6 +1918,9 @@ mod tests {
             "- **Copilot metrics**: 2 dispatches, 2 PRs produced, 1 merged, 50.0% PR merge rate"
         ));
         assert!(worklog.contains("- **Publish gate**: published"));
+        assert!(worklog.contains(
+            "## Next steps\n\n1. Review and iterate on PR from [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) ([Cycle Review] Cycle 345 end-of-cycle review) when Copilot completes\n"
+        ));
 
         let log_output = Command::new("git")
             .arg("-C")
