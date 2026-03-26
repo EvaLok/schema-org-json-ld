@@ -9,8 +9,7 @@ use std::process::Command;
 
 const REPO_URL: &str = "https://github.com/EvaLok/schema-org-json-ld";
 const FALLBACK_STEP: &str = "cycle-tagged";
-const POST_RECEIPT_COMMIT_PREFIXES: [&str; 3] =
-    ["state(clean-cycle", "state(stabilization", "state(record-dispatch):"];
+const POST_RECEIPT_COMMIT_PREFIXES: [&str; 2] = ["state(clean-cycle", "state(stabilization"];
 const SPECIFIC_STATE_STEPS: [&str; 10] = [
     "cycle-start",
     "process-merge",
@@ -107,8 +106,9 @@ fn run(cli: Cli) -> Result<String, String> {
 /// the window to commits strictly before `before`.
 ///
 /// Receipt scope stops at the worklog/journal commit that publishes the table.
-/// Later commits such as `state(clean-cycle...)` and `state(record-dispatch):`
-/// are structurally post-receipt and must stay out of the canonical table so
+/// Later commits such as `state(clean-cycle...)`, `state(stabilization...)`,
+/// and `state(record-dispatch):` entries that occur at or after the first
+/// `state(cycle-complete):` commit must stay out of the canonical table so
 /// later validation does not demand receipts the table could not have listed.
 fn collect_receipts(
     repo_root: &Path,
@@ -120,12 +120,24 @@ fn collect_receipts(
     let commits = read_git_commits(repo_root)?;
     let window = resolve_cycle_window(cycle, current_cycle, &state, &commits)?;
 
-    let mut matching_commits: Vec<&GitCommit> = commits
+    let candidate_commits: Vec<&GitCommit> = commits
         .iter()
         .filter(|commit| commit.committed_at >= window.start)
         .filter(|commit| window.end.is_none_or(|end| commit.committed_at < end))
         .filter(|commit| before.is_none_or(|timestamp| commit.committed_at < timestamp))
+        .collect();
+    let cycle_complete_at = candidate_commits
+        .iter()
+        .filter(|commit| is_cycle_complete_commit(&commit.subject))
+        .map(|commit| commit.committed_at)
+        .min();
+
+    let mut matching_commits: Vec<&GitCommit> = candidate_commits
+        .into_iter()
         .filter(|commit| !is_post_receipt_commit(&commit.subject))
+        .filter(|commit| {
+            !is_post_cycle_complete_record_dispatch_commit(commit, cycle_complete_at)
+        })
         .filter(|commit| matches_receipt_commit(&commit.subject, cycle))
         .collect();
     matching_commits.sort_by_key(|commit| commit.committed_at);
@@ -152,6 +164,18 @@ fn is_post_receipt_commit(subject: &str) -> bool {
     POST_RECEIPT_COMMIT_PREFIXES
         .iter()
         .any(|prefix| subject.starts_with(prefix))
+}
+
+fn is_cycle_complete_commit(subject: &str) -> bool {
+    extract_step(subject).as_deref() == Some("cycle-complete")
+}
+
+fn is_post_cycle_complete_record_dispatch_commit(
+    commit: &GitCommit,
+    cycle_complete_at: Option<DateTime<Utc>>,
+) -> bool {
+    commit.subject.starts_with("state(record-dispatch):")
+        && cycle_complete_at.is_some_and(|timestamp| commit.committed_at >= timestamp)
 }
 
 fn matches_receipt_commit(subject: &str, cycle: u64) -> bool {
@@ -901,12 +925,6 @@ mod tests {
             "state(stabilization): clean cycle 198 — counter 1/50 [cycle 198]",
             "2026-03-09T01:35:00Z",
         );
-        repo.commit_file_at(
-            "notes.txt",
-            "dispatch\n",
-            "state(record-dispatch): #123 dispatched [cycle 198]",
-            "2026-03-09T01:40:00Z",
-        );
 
         let receipts = collect_receipts(repo.path(), 198, None).expect("receipts should collect");
         let subjects: Vec<&str> = receipts
@@ -919,6 +937,56 @@ mod tests {
                 "state(cycle-start): begin cycle 198, issue #1 [cycle 198]",
                 "state(cycle-complete): cycle 198 close out [cycle 198]",
                 "docs: worklog touch [cycle 198]",
+            ]
+        );
+    }
+
+    #[test]
+    fn collect_receipts_includes_only_pre_complete_dispatch_commits() {
+        let repo = TempRepo::new();
+        repo.init_git();
+        repo.write_state(&json!({
+            "last_cycle": {
+                "number": 198,
+                "timestamp": "2026-03-09T01:00:00Z"
+            }
+        }));
+        repo.commit_file_at(
+            "notes.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 198, issue #1 [cycle 198]",
+            "2026-03-09T01:00:00Z",
+        );
+        repo.commit_file_at(
+            "notes.txt",
+            "pre-complete dispatch\n",
+            "state(record-dispatch): #123 dispatched during work [cycle 198]",
+            "2026-03-09T01:05:00Z",
+        );
+        repo.commit_file_at(
+            "notes.txt",
+            "complete\n",
+            "state(cycle-complete): cycle 198 close out [cycle 198]",
+            "2026-03-09T01:10:00Z",
+        );
+        repo.commit_file_at(
+            "notes.txt",
+            "post-complete dispatch\n",
+            "state(record-dispatch): #124 dispatched during close-out [cycle 198]",
+            "2026-03-09T01:15:00Z",
+        );
+
+        let receipts = collect_receipts(repo.path(), 198, None).expect("receipts should collect");
+        let subjects: Vec<&str> = receipts
+            .iter()
+            .map(|receipt| receipt.commit.as_str())
+            .collect();
+        assert_eq!(
+            subjects,
+            vec![
+                "state(cycle-start): begin cycle 198, issue #1 [cycle 198]",
+                "state(record-dispatch): #123 dispatched during work [cycle 198]",
+                "state(cycle-complete): cycle 198 close out [cycle 198]",
             ]
         );
     }
