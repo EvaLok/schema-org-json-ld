@@ -8,21 +8,84 @@ ensure_binary "record-dispatch"
 
 FORWARD_ARGS=("$@")
 HAS_REPO_ROOT=false
+HAS_ADDRESSES_FINDING=false
+ISSUE_NUMBER=""
+
+detect_review_finding_reference() {
+	ISSUE_TEXT="$1" python3 - <<'PY'
+import re
+import os
+
+text = os.environ["ISSUE_TEXT"]
+patterns = [
+	(r'cycle[- ]?(\d+).*review.*finding.*F?(\d+)', (1, 2)),
+	(r'fixes.*cycle[- ]?(\d+).*review.*F?(\d+)', (1, 2)),
+	(r'addresses.*finding.*?(\d+):(\d+)', (1, 2)),
+	(r'review finding.*?(\d+).*from cycle[- ]?(\d+)', (2, 1)),
+]
+
+for pattern, groups in patterns:
+	match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+	if match:
+		cycle = int(match.group(groups[0]))
+		finding = int(match.group(groups[1]))
+		print(f"{cycle}:{finding}")
+		break
+PY
+}
 
 while [ "$#" -gt 0 ]; do
 	case "$1" in
 		--repo-root)
-			shift
-			if [ "$#" -gt 0 ]; then
+			if [ "$#" -gt 1 ]; then
 				HAS_REPO_ROOT=true
+				shift 2
+			else
+				shift
 			fi
+			continue
 			;;
 		--repo-root=*)
 			HAS_REPO_ROOT=true
 			;;
+		--issue)
+			if [ "$#" -gt 1 ]; then
+				ISSUE_NUMBER="$2"
+				shift 2
+			else
+				shift
+			fi
+			continue
+			;;
+		--issue=*)
+			ISSUE_NUMBER="${1#--issue=}"
+			;;
+		--addresses-finding)
+			HAS_ADDRESSES_FINDING=true
+			if [ "$#" -gt 1 ]; then
+				shift 2
+			else
+				shift
+			fi
+			continue
+			;;
+		--addresses-finding=*)
+			HAS_ADDRESSES_FINDING=true
+			;;
 	esac
 	shift
 done
+
+if [ "$HAS_ADDRESSES_FINDING" = false ] && [[ "$ISSUE_NUMBER" =~ ^[0-9]+$ ]]; then
+	if ISSUE_TEXT="$(gh api "repos/EvaLok/schema-org-json-ld/issues/${ISSUE_NUMBER}" --jq '.title + " " + (.body // "")' 2>/dev/null)"; then
+		if ADDRESSES_FINDING="$(detect_review_finding_reference "$ISSUE_TEXT")" && [ -n "$ADDRESSES_FINDING" ]; then
+			FORWARD_ARGS+=(--addresses-finding "$ADDRESSES_FINDING")
+			AUTO_CYCLE="${ADDRESSES_FINDING%%:*}"
+			AUTO_FINDING="${ADDRESSES_FINDING##*:}"
+			echo "Auto-detected review finding reference: cycle ${AUTO_CYCLE} finding ${AUTO_FINDING}" >&2
+		fi
+	fi
+fi
 
 RECORD_DISPATCH_BINARY="$BINARY"
 

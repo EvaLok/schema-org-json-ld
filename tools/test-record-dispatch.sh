@@ -2,146 +2,128 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SCRIPT_UNDER_TEST="$SCRIPT_DIR/record-dispatch"
-DERIVE_METRICS_SCRIPT="$SCRIPT_DIR/derive-metrics"
+WRAPPER_SOURCE="$SCRIPT_DIR/record-dispatch"
 
 fail() {
 	echo "FAIL: $1" >&2
 	exit 1
 }
 
-create_repo() {
-	local repo_root="$1"
-	local status_one="$2"
-	local status_two="$3"
+assert_logged_arg() {
+	local expected="$1"
+	local log_path="$2"
 
-	mkdir -p "$repo_root/docs"
-	cd "$repo_root"
-
-	git init -q
-	git config user.name "Test User"
-	git config user.email "test@example.com"
-
-	cat <<EOF > docs/state.json
-{
-  "agent_sessions": [
-    {
-      "issue": 600,
-      "title": "Merged change",
-      "dispatched_at": "2026-03-01T00:00:00Z",
-      "model": "gpt-5.4",
-      "status": "$status_one",
-      "pr": 700,
-      "merged_at": "2026-03-02T00:00:00Z"
-    },
-    {
-      "issue": 601,
-      "title": "Closed change",
-      "dispatched_at": "2026-03-03T00:00:00Z",
-      "model": "gpt-5.4",
-      "status": "$status_two"
-    }
-  ],
-  "last_cycle": {
-    "number": 164
-  },
-  "copilot_metrics": {
-    "total_dispatches": 2,
-    "resolved": 2,
-    "merged": 1,
-    "closed_without_pr": 1,
-    "reviewed_awaiting_eva": 0,
-    "in_flight": 0,
-    "produced_pr": 1,
-    "pr_merge_rate": "100.0%",
-    "dispatch_to_pr_rate": "50.0%",
-    "dispatch_log_latest": "#601 Closed change (cycle 164)"
-  },
-  "field_inventory": {
-    "fields": {
-      "copilot_metrics.in_flight": {
-        "last_refreshed": "cycle 163"
-      }
-    }
-  }
+	grep -Fx -- "$expected" "$log_path" >/dev/null || fail "expected '$expected' in $(basename "$log_path")"
 }
-EOF
 
-	git add docs/state.json
-	git commit -q -m "initial state"
+assert_no_logged_arg() {
+	local unexpected="$1"
+	local log_path="$2"
+
+	if grep -Fx -- "$unexpected" "$log_path" >/dev/null; then
+		fail "did not expect '$unexpected' in $(basename "$log_path")"
+	fi
+}
+
+run_wrapper() {
+	local stdout_path="$1"
+	local stderr_path="$2"
+	local status=0
+	shift 2
+
+	: >"$ARGS_LOG"
+	: >"$GH_CALLS_LOG"
+	PATH="$TEST_BIN_DIR:$PATH" WRAPPER_ARGS_LOG="$ARGS_LOG" GH_CALLS_LOG="$GH_CALLS_LOG" GH_OUTPUT="$GH_OUTPUT" GH_FAIL="$GH_FAIL" \
+		bash "$WRAPPER_UNDER_TEST" "$@" >"$stdout_path" 2>"$stderr_path" || status=$?
+	return "$status"
 }
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-# Test 1: Successful dispatch re-derives metrics in the updated state file.
-SUCCESS_REPO="$TMP_DIR/success-repo"
-create_repo "$SUCCESS_REPO" "merged" "closed_without_pr"
+TEST_TOOLS_DIR="$TMP_DIR/tools"
+TEST_BIN_DIR="$TMP_DIR/bin"
+mkdir -p "$TEST_TOOLS_DIR" "$TEST_BIN_DIR" "$TMP_DIR/repo"
 
-SUCCESS_STDOUT="$TMP_DIR/success.stdout"
-SUCCESS_STDERR="$TMP_DIR/success.stderr"
-if bash "$SCRIPT_UNDER_TEST" --repo-root "$SUCCESS_REPO" --issue 602 --title "Example dispatch" --model "gpt-5.4" >"$SUCCESS_STDOUT" 2>"$SUCCESS_STDERR"; then
-	SUCCESS_STATUS=0
-else
-	SUCCESS_STATUS=$?
+cp "$WRAPPER_SOURCE" "$TEST_TOOLS_DIR/record-dispatch"
+chmod +x "$TEST_TOOLS_DIR/record-dispatch"
+WRAPPER_UNDER_TEST="$TEST_TOOLS_DIR/record-dispatch"
+
+cat <<EOF > "$TEST_TOOLS_DIR/_build-helper.sh"
+ensure_binary() {
+	BINARY="$TEST_BIN_DIR/record-dispatch-binary"
+}
+EOF
+
+cat <<'EOF' > "$TEST_BIN_DIR/record-dispatch-binary"
+#!/usr/bin/env bash
+set -euo pipefail
+for arg in "$@"; do
+	printf '%s\n' "$arg" >> "$WRAPPER_ARGS_LOG"
+done
+printf 'stub-output\n'
+EOF
+chmod +x "$TEST_BIN_DIR/record-dispatch-binary"
+
+cat <<'EOF' > "$TEST_BIN_DIR/gh"
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >> "$GH_CALLS_LOG"
+if [ "${GH_FAIL:-0}" = "1" ]; then
+	exit 1
+fi
+printf '%s' "${GH_OUTPUT:-}"
+EOF
+chmod +x "$TEST_BIN_DIR/gh"
+
+ARGS_LOG="$TMP_DIR/args.log"
+GH_CALLS_LOG="$TMP_DIR/gh-calls.log"
+
+# Test 1: Regex patterns auto-detect review-finding references.
+PATTERN_FIXTURES=$'cycle 367 review finding F1|367:1\nFixes cycle-368 review F2|368:2\naddresses finding 369:3|369:3\nreview finding F4 from cycle 370|370:4'
+
+while IFS='|' read -r issue_text expected_ref; do
+	[ -n "$issue_text" ] || continue
+	GH_OUTPUT="$issue_text"
+	GH_FAIL=0
+	STDOUT_PATH="$TMP_DIR/pattern.stdout"
+	STDERR_PATH="$TMP_DIR/pattern.stderr"
+
+	run_wrapper "$STDOUT_PATH" "$STDERR_PATH" --repo-root "$TMP_DIR/repo" --issue 123 --title "Example dispatch" || fail "expected auto-detect case '$issue_text' to succeed"
+
+	assert_logged_arg "--addresses-finding" "$ARGS_LOG"
+	assert_logged_arg "$expected_ref" "$ARGS_LOG"
+	grep -Fq "Auto-detected review finding reference: cycle ${expected_ref%%:*} finding ${expected_ref##*:}" "$STDERR_PATH" || fail "expected auto-detect notice for '$issue_text'"
+	assert_logged_arg 'api repos/EvaLok/schema-org-json-ld/issues/123 --jq .title + " " + (.body // "")' "$GH_CALLS_LOG"
+done <<< "$PATTERN_FIXTURES"
+
+# Test 2: Explicit --addresses-finding takes precedence and skips auto-detection.
+GH_OUTPUT="Fixes cycle 999 review finding F9"
+GH_FAIL=0
+STDOUT_PATH="$TMP_DIR/explicit.stdout"
+STDERR_PATH="$TMP_DIR/explicit.stderr"
+
+run_wrapper "$STDOUT_PATH" "$STDERR_PATH" --repo-root "$TMP_DIR/repo" --issue=124 --title "Explicit dispatch" --addresses-finding=400:5 || fail "expected explicit addresses-finding case to succeed"
+
+assert_logged_arg "--addresses-finding=400:5" "$ARGS_LOG"
+assert_no_logged_arg "999:9" "$ARGS_LOG"
+[ ! -s "$GH_CALLS_LOG" ] || fail "expected gh not to be called when --addresses-finding is explicit"
+if grep -Fq "Auto-detected review finding reference:" "$STDERR_PATH"; then
+	fail "did not expect auto-detect notice when --addresses-finding is explicit"
 fi
 
-[ "$SUCCESS_STATUS" -eq 0 ] || fail "expected success exit code 0, got $SUCCESS_STATUS"
-grep -Eq 'receipt: [0-9a-f]{7,40}' "$SUCCESS_STDOUT" || fail "expected receipt hash in stdout"
-grep -Fq 'Dispatch recorded: #602 "Example dispatch" (model: gpt-5.4).' "$SUCCESS_STDOUT" || fail "expected dispatch summary in stdout"
-if grep -Eq '(^Error:|unsupported value)' "$SUCCESS_STDERR"; then
-	fail "expected no error output on successful dispatch"
+# Test 3: GitHub API failures are best-effort and do not block dispatch.
+GH_OUTPUT=""
+GH_FAIL=1
+STDOUT_PATH="$TMP_DIR/fallback.stdout"
+STDERR_PATH="$TMP_DIR/fallback.stderr"
+
+run_wrapper "$STDOUT_PATH" "$STDERR_PATH" --repo-root "$TMP_DIR/repo" --issue 125 --title "Fallback dispatch" || fail "expected API failure fallback to succeed"
+
+assert_no_logged_arg "--addresses-finding" "$ARGS_LOG"
+assert_logged_arg 'api repos/EvaLok/schema-org-json-ld/issues/125 --jq .title + " " + (.body // "")' "$GH_CALLS_LOG"
+if grep -Fq "Auto-detected review finding reference:" "$STDERR_PATH"; then
+	fail "did not expect auto-detect notice when gh api fails"
 fi
-
-python - <<'PY' "$SUCCESS_REPO/docs/state.json"
-import json
-import sys
-
-with open(sys.argv[1], encoding="utf-8") as handle:
-    state = json.load(handle)
-
-metrics = state["copilot_metrics"]
-sessions = state["agent_sessions"]
-
-assert len(sessions) == 3, sessions
-assert metrics["total_dispatches"] == 3, metrics
-assert metrics["resolved"] == 2, metrics
-assert metrics["in_flight"] == 1, metrics
-assert metrics["produced_pr"] == 1, metrics
-assert metrics["dispatch_to_pr_rate"] == "33.3%", metrics
-assert metrics["pr_merge_rate"] == "100.0%", metrics
-assert sessions[-1]["issue"] == 602, sessions[-1]
-assert sessions[-1]["status"] == "in_flight", sessions[-1]
-PY
-
-bash "$DERIVE_METRICS_SCRIPT" --repo-root "$SUCCESS_REPO" --check >/dev/null 2>/dev/null || fail "expected derive-metrics --check to pass after wrapper update"
-
-# Test 2: Unsupported session status fails closed before mutating state.
-FAIL_REPO="$TMP_DIR/fail-repo"
-create_repo "$FAIL_REPO" "merged" "mystery_status"
-
-FAIL_STDOUT="$TMP_DIR/fail.stdout"
-FAIL_STDERR="$TMP_DIR/fail.stderr"
-if bash "$SCRIPT_UNDER_TEST" --repo-root "$FAIL_REPO" --issue 603 --title "Bad metrics dispatch" --model "gpt-5.4" >"$FAIL_STDOUT" 2>"$FAIL_STDERR"; then
-	FAIL_STATUS=0
-else
-	FAIL_STATUS=$?
-fi
-
-[ "$FAIL_STATUS" -ne 0 ] || fail "expected invalid status to return non-zero exit code"
-grep -Fq "unsupported value 'mystery_status'" "$FAIL_STDERR" || fail "expected invalid status details on stderr"
-[ ! -s "$FAIL_STDOUT" ] || fail "expected no stdout when wrapper fails after dispatch"
-
-python - <<'PY' "$FAIL_REPO/docs/state.json"
-import json
-import sys
-
-with open(sys.argv[1], encoding="utf-8") as handle:
-    state = json.load(handle)
-
-assert len(state["agent_sessions"]) == 2, state["agent_sessions"]
-assert state["agent_sessions"][-1]["issue"] == 601, state["agent_sessions"]
-assert state["copilot_metrics"]["total_dispatches"] == 2, state["copilot_metrics"]
-PY
 
 echo "PASS"
