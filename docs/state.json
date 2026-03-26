@@ -5145,8 +5145,10 @@
     {
       "dispatched_at": "2026-03-26T03:16:16Z",
       "issue": 1788,
+      "merged_at": "2026-03-26T04:57:00Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1789,
+      "status": "merged",
       "title": "Fix: record-dispatch --addresses-finding should update per-finding disposition"
     },
     {
@@ -5377,13 +5379,13 @@
     "closed_without_merge": 8,
     "closed_without_pr": 47,
     "dispatch_log_latest": "#1790 [Cycle Review] Cycle 365 end-of-cycle review (cycle 365)",
-    "dispatch_to_pr_rate": "91.7%",
+    "dispatch_to_pr_rate": "91.8%",
     "failed_dispatches": 1,
-    "in_flight": 1,
-    "merged": 518,
+    "in_flight": 0,
+    "merged": 519,
     "pr_merge_rate": "98.1%",
-    "produced_pr": 528,
-    "resolved": 575,
+    "produced_pr": 529,
+    "resolved": 576,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 576
@@ -5669,7 +5671,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 14,
     "issue": 1792,
