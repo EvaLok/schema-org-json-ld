@@ -5276,6 +5276,13 @@
       "pr": 1823,
       "status": "merged",
       "title": "[Cycle Review] Cycle 370 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-26T14:48:35Z",
+      "issue": 1825,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add --auto-pipeline flag to write-entry"
     }
   ],
   "audit_dropped": [
@@ -5496,17 +5503,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1822 [Cycle Review] Cycle 370 end-of-cycle review (cycle 370)",
-    "dispatch_to_pr_rate": "92.0%",
+    "dispatch_log_latest": "#1825 Add --auto-pipeline flag to write-entry (cycle 371)",
+    "dispatch_to_pr_rate": "91.9%",
     "failed_dispatches": 1,
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 532,
     "pr_merge_rate": "98.2%",
     "produced_pr": 542,
     "resolved": 589,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 589
+    "total_dispatches": 590
   },
   "cycle_issues": [
     1824
@@ -5789,7 +5796,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 11,
     "issue": 1824,
@@ -9363,7 +9370,7 @@
     ],
     "last_review_cycle": 370
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 369,
   "schema_status": {
     "directory_layout": {
