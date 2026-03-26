@@ -1,3 +1,5 @@
+mod runner;
+
 use chrono::{DateTime, NaiveDate, Utc};
 use clap::{Parser, Subcommand};
 use serde::{Deserialize, Deserializer};
@@ -100,6 +102,9 @@ struct WorklogArgs {
     /// Pipeline summary for the current state section
     #[arg(long)]
     pipeline: Option<String>,
+    /// Auto-derive pipeline summary from tools/pipeline-check
+    #[arg(long = "auto-pipeline", default_value_t = false)]
+    auto_pipeline: bool,
     /// Copilot metrics summary for the current state section
     #[arg(long = "copilot-metrics")]
     copilot_metrics: Option<String>,
@@ -554,10 +559,7 @@ fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<Worklog
                     Some(value) => value,
                     None => state_copilot_in_flight(state.as_ref())?,
                 },
-                pipeline_status: args
-                    .pipeline
-                    .clone()
-                    .unwrap_or_else(|| NOT_PROVIDED.to_string()),
+                pipeline_status: resolve_pipeline_status(args, repo_root, state.as_ref())?,
                 copilot_metrics: match &args.copilot_metrics {
                     Some(value) => value.clone(),
                     None => format_state_copilot_metrics(state.as_ref())?,
@@ -584,7 +586,7 @@ fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<Worklog
         issues_processed: Vec::new(),
         current_state: CurrentState {
             in_flight_sessions: state_copilot_in_flight(state.as_ref())?,
-            pipeline_status: state_pipeline_status(state.as_ref()),
+            pipeline_status: resolve_pipeline_status(args, repo_root, state.as_ref())?,
             copilot_metrics: format_state_copilot_metrics(state.as_ref())?,
             publish_gate: state_publish_gate_status(state.as_ref())?,
         },
@@ -597,6 +599,9 @@ fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<Worklog
 }
 
 fn validate_worklog_flag_combinations(args: &WorklogArgs) -> Result<(), String> {
+    if args.auto_pipeline && args.pipeline.is_some() {
+        return Err("cannot combine --auto-pipeline with --pipeline".to_string());
+    }
     if args.auto_receipts && !args.receipt.is_empty() {
         return Err("cannot combine --auto-receipts with --receipt".to_string());
     }
@@ -685,6 +690,57 @@ fn state_pipeline_status(state: Option<&StateJson>) -> String {
         .unwrap_or_else(|| NOT_PROVIDED.to_string())
 }
 
+fn resolve_pipeline_status(
+    args: &WorklogArgs,
+    repo_root: &Path,
+    state: Option<&StateJson>,
+) -> Result<String, String> {
+    if let Some(pipeline) = &args.pipeline {
+        return Ok(pipeline.clone());
+    }
+    if args.auto_pipeline {
+        return auto_pipeline_status(repo_root);
+    }
+    Ok(state_pipeline_status(state))
+}
+
+fn auto_pipeline_status(repo_root: &Path) -> Result<String, String> {
+    let output = runner::run_tool(repo_root, "pipeline-check", &[])?;
+    if !output.status.success() {
+        let stderr = runner::stderr_text(&output);
+        let stdout = runner::stdout_text(&output);
+        let detail = match (stdout.is_empty(), stderr.is_empty()) {
+            (false, false) => format!("stdout: {}; stderr: {}", stdout, stderr),
+            (false, true) => format!("stdout: {}", stdout),
+            (true, false) => stderr,
+            (true, true) => "no output".to_string(),
+        };
+        return Err(format!(
+            "pipeline-check failed (exit {}): {}",
+            output.status.code().unwrap_or(-1),
+            detail
+        ));
+    }
+    parse_pipeline_check_summary(&runner::stdout_text(&output))
+}
+
+fn parse_pipeline_check_summary(stdout: &str) -> Result<String, String> {
+    let summary_line = stdout
+        .lines()
+        .rev()
+        .find(|line| !line.trim().is_empty())
+        .map(str::trim)
+        .ok_or_else(|| "pipeline-check produced no stdout".to_string())?;
+    let summary = summary_line
+        .strip_prefix("Overall: ")
+        .ok_or_else(|| format!("pipeline-check summary line missing `Overall:` prefix: {}", summary_line))?
+        .trim();
+    if summary.is_empty() {
+        return Err("pipeline-check overall summary was empty".to_string());
+    }
+    Ok(summary.to_string())
+}
+
 fn state_copilot_in_flight(state: Option<&StateJson>) -> Result<u64, String> {
     let state = state.ok_or_else(|| {
         "docs/state.json is required to populate in-flight agent sessions".to_string()
@@ -749,6 +805,7 @@ fn has_inline_worklog_content(args: &WorklogArgs) -> bool {
         || !args.self_modification.is_empty()
         || !args.next.is_empty()
         || args.pipeline.is_some()
+        || args.auto_pipeline
         || args.copilot_metrics.is_some()
         || args.publish_gate.is_some()
         || args.in_flight.is_some()
@@ -2861,6 +2918,7 @@ mod tests {
             auto_self_modifications: false,
             next: Vec::new(),
             pipeline: None,
+            auto_pipeline: false,
             copilot_metrics: None,
             publish_gate: None,
             in_flight: None,
@@ -2969,6 +3027,16 @@ mod tests {
             format!(
                 "#!/usr/bin/env bash\nset -euo pipefail\ncat <<'JSON'\n{json}\nJSON\n"
             ),
+        )
+        .unwrap();
+    }
+
+    fn write_pipeline_check_script(repo_root: &Path, body: &str) {
+        let script_path = repo_root.join("tools").join("pipeline-check");
+        fs::create_dir_all(script_path.parent().unwrap()).unwrap();
+        fs::write(
+            script_path,
+            format!("#!/usr/bin/env bash\nset -euo pipefail\n{body}\n"),
         )
         .unwrap();
     }
@@ -5181,6 +5249,26 @@ mod tests {
     }
 
     #[test]
+    fn worklog_auto_pipeline_uses_pipeline_check_summary() {
+        let repo_root = TempRepoDir::new("worklog-auto-pipeline");
+        write_pipeline_check_script(
+            &repo_root.path,
+            "printf 'metric-snapshot: PASS\\nOverall: FAIL (2 blocking, 1 warning)\\n'",
+        );
+
+        let mut args = worklog_args("Auto pipeline");
+        args.done = vec!["Merged PR #123".to_string()];
+        args.auto_pipeline = true;
+        args.copilot_metrics = Some("steady".to_string());
+        args.publish_gate = Some("open".to_string());
+        args.in_flight = Some(0);
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+        assert!(content.contains("- **Pipeline status**: FAIL (2 blocking, 1 warning)"));
+    }
+
+    #[test]
     fn worklog_inline_flags_fail_closed_when_state_status_is_unavailable() {
         let repo_root = TempRepoDir::new("worklog-status-missing");
         let mut args = worklog_args("Missing status");
@@ -5189,6 +5277,59 @@ mod tests {
         let error = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap_err();
         assert!(error.contains("failed to read"));
         assert!(error.contains("docs/state.json"));
+    }
+
+    #[test]
+    fn worklog_auto_pipeline_fails_closed_when_pipeline_check_fails() {
+        let repo_root = TempRepoDir::new("worklog-auto-pipeline-failure");
+        write_pipeline_check_script(&repo_root.path, "echo 'pipeline blocked' >&2\nexit 1");
+
+        let mut args = worklog_args("Auto pipeline failure");
+        args.done = vec!["Merged PR #123".to_string()];
+        args.auto_pipeline = true;
+        args.copilot_metrics = Some("steady".to_string());
+        args.publish_gate = Some("open".to_string());
+        args.in_flight = Some(0);
+
+        let error = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap_err();
+        assert!(error.contains("pipeline-check failed"));
+        assert!(error.contains("pipeline blocked"));
+    }
+
+    #[test]
+    fn worklog_auto_pipeline_overrides_state_when_it_is_the_only_inline_flag() {
+        let repo_root = TempRepoDir::new("worklog-auto-pipeline-only-inline");
+        write_pipeline_check_script(
+            &repo_root.path,
+            "printf 'cycle-status: PASS\\nOverall: PASS (3 warnings)\\n'",
+        );
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "tool_pipeline": {"status": "FAIL (state value should not be used)"},
+                "copilot_metrics": {
+                    "total_dispatches": 45,
+                    "produced_pr": 42,
+                    "merged": 40,
+                    "pr_merge_rate": "88.9%",
+                    "in_flight": 3
+                },
+                "publish_gate": {
+                    "status": "published"
+                }
+            }"#,
+        );
+
+        let mut args = worklog_args("Auto pipeline only");
+        args.cycle = None;
+        args.auto_pipeline = true;
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+        assert!(content.contains("- **Pipeline status**: PASS (3 warnings)"));
+        assert!(!content.contains("FAIL (state value should not be used)"));
+        assert!(content.contains("- **In-flight agent sessions**: 3"));
     }
 
     #[test]
@@ -5265,6 +5406,22 @@ mod tests {
         let error = resolve_worklog_input(&args, &repo_root.path).unwrap_err();
         assert!(error.contains("--auto-self-modifications"));
         assert!(error.contains("--self-modification"));
+    }
+
+    #[test]
+    fn auto_pipeline_rejects_manual_pipeline_flag() {
+        let repo_root = TempRepoDir::new("auto-pipeline-mutually-exclusive");
+        let mut args = worklog_args("Auto pipeline conflict");
+        args.done = vec!["Closed #42".to_string()];
+        args.auto_pipeline = true;
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.copilot_metrics = Some("steady".to_string());
+        args.publish_gate = Some("open".to_string());
+        args.in_flight = Some(0);
+
+        let error = resolve_worklog_input(&args, &repo_root.path).unwrap_err();
+        assert!(error.contains("--auto-pipeline"));
+        assert!(error.contains("--pipeline"));
     }
 
     #[test]
@@ -6204,6 +6361,7 @@ Reflective log for the schema-org-json-ld orchestrator.
             "--issues-processed",
             "924,925",
             "--auto-issues",
+            "--auto-pipeline",
             "--auto-self-modifications",
             "--auto-receipts",
             "--done",
@@ -6221,6 +6379,7 @@ Reflective log for the schema-org-json-ld orchestrator.
             Command::Worklog(args) => {
                 assert_eq!(args.issues_processed, vec!["924".to_string(), "925".to_string()]);
                 assert!(args.auto_issues);
+                assert!(args.auto_pipeline);
                 assert!(args.auto_self_modifications);
                 assert!(args.auto_receipts);
                 assert_eq!(args.pr_reviewed, vec![123]);
