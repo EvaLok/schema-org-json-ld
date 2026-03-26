@@ -26,14 +26,14 @@
 
 ## Cycle state
 
-- **In-flight agent sessions**: 0
-- **Pipeline status**: PASS (3 warnings)
-- **Copilot metrics**: 595 dispatches, 546 PRs produced, 536 merged, 98.2% PR merge rate
+- **In-flight agent sessions**: 1
+- **Pipeline status**: PASS (1 blocking warning, 2 warnings)
+- **Copilot metrics**: 596 dispatches, 546 PRs produced, 536 merged, 98.2% PR merge rate
 - **Publish gate**: published
 
 ## Next steps
 
-1. No in-flight sessions — plan next dispatch
+1. Review and iterate on PR from [#1840](https://github.com/EvaLok/schema-org-json-ld/issues/1840) ([Cycle Review] Cycle 374 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
