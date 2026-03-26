@@ -1228,7 +1228,7 @@ mod tests {
         let failures = validate_no_duplicate_section_headers(content);
         assert_eq!(failures.len(), 1);
         assert!(failures[0].contains("duplicate section heading"));
-        assert!(failures[0].contains("Cycle 226") || failures[0].contains("cycle 226"));
+        assert!(failures[0].contains("cycle 226"));
     }
 
     #[test]
