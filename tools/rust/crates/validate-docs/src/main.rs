@@ -137,15 +137,14 @@ fn validate_worklog(
     }
 
     match fetch_cycle_receipts(repo_root, cycle) {
-        Ok(expected_receipts) => match validate_receipt_completeness(
-            repo_root,
-            cycle,
-            &content,
-            &expected_receipts,
-        ) {
-            Ok(receipt_failures) => failures.extend(receipt_failures),
-            Err(error) => failures.push(format!("unable to validate commit receipts: {}", error)),
-        },
+        Ok(expected_receipts) => {
+            match validate_receipt_completeness(repo_root, cycle, &content, &expected_receipts) {
+                Ok(receipt_failures) => failures.extend(receipt_failures),
+                Err(error) => {
+                    failures.push(format!("unable to validate commit receipts: {}", error))
+                }
+            }
+        }
         Err(error) => failures.push(format!("unable to validate commit receipts: {}", error)),
     }
 
@@ -181,6 +180,9 @@ fn validate_journal(file: &Path) -> Result<Vec<String>, String> {
     let mut failures = Vec::new();
 
     failures.extend(validate_journal_headings(&content));
+    failures.extend(validate_no_duplicate_cycles(&content));
+    failures.extend(validate_no_duplicate_section_headers(&content));
+    failures.extend(validate_no_escaped_newlines(&content));
     failures.extend(validate_worklog_links(&content, file));
     if let Some(failure) = validate_commitment_section(&content) {
         failures.push(failure);
@@ -409,7 +411,10 @@ fn find_cycle_complete_commit(repo_root: &Path, cycle: u64) -> Result<String, St
 }
 
 fn is_ancestor_commit(repo_root: &Path, ancestor: &str, descendant: &str) -> Result<bool, String> {
-    let output = run_git_output(repo_root, &["merge-base", "--is-ancestor", ancestor, descendant])?;
+    let output = run_git_output(
+        repo_root,
+        &["merge-base", "--is-ancestor", ancestor, descendant],
+    )?;
     match output.status.code() {
         Some(0) => Ok(true),
         Some(1) => Ok(false),
@@ -472,7 +477,9 @@ fn summarize_infrastructure_path(path: &str) -> String {
 }
 
 fn section_mentions_path(section: &str, path: &str) -> bool {
-    section.to_ascii_lowercase().contains(&path.to_ascii_lowercase())
+    section
+        .to_ascii_lowercase()
+        .contains(&path.to_ascii_lowercase())
 }
 
 fn fetch_pipeline_report(repo_root: &Path, cycle: u64) -> Result<PipelineReport, String> {
@@ -512,15 +519,14 @@ where
 }
 
 fn validate_pipeline_status(content: &str, overall: &str) -> Option<String> {
-    let reported = match extract_markdown_value(content, "Pipeline status") {
-        Some(reported) => reported,
-        None => {
-            return Some(
+    let reported =
+        match extract_markdown_value(content, "Pipeline status") {
+            Some(reported) => reported,
+            None => return Some(
                 "worklog is missing the 'Pipeline status' line in the Pre-dispatch state section"
                     .to_string(),
-            )
-        }
-    };
+            ),
+        };
     let expected = if overall.eq_ignore_ascii_case("pass") {
         "PASS"
     } else {
@@ -565,6 +571,79 @@ fn validate_worklog_links(content: &str, journal_file: &Path) -> Vec<String> {
         .into_iter()
         .filter_map(|(cycle, link)| validate_worklog_link(journal_file, cycle, &link))
         .collect()
+}
+
+fn validate_no_duplicate_cycles(content: &str) -> Vec<String> {
+    let mut seen = BTreeSet::new();
+    let mut failures = Vec::new();
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if heading_level(trimmed) != Some(2) {
+            continue;
+        }
+        let Some(cycle) = extract_first_cycle_number(trimmed) else {
+            continue;
+        };
+        if !seen.insert(cycle) {
+            failures.push(format!(
+                "duplicate journal entry: cycle {} appears more than once",
+                cycle
+            ));
+        }
+    }
+
+    failures
+}
+
+fn validate_no_duplicate_section_headers(content: &str) -> Vec<String> {
+    let mut failures = Vec::new();
+    let mut current_cycle = None;
+    let mut seen_section_headers = BTreeSet::new();
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        match heading_level(trimmed) {
+            Some(2) => {
+                current_cycle = extract_first_cycle_number(trimmed);
+                seen_section_headers.clear();
+            }
+            Some(3) => {
+                let Some(cycle) = current_cycle else {
+                    continue;
+                };
+                if !seen_section_headers.insert(trimmed.to_string()) {
+                    failures.push(format!(
+                        "cycle {} contains duplicate section heading '{}'",
+                        cycle, trimmed
+                    ));
+                }
+            }
+            _ => {}
+        }
+    }
+
+    failures
+}
+
+fn validate_no_escaped_newlines(content: &str) -> Vec<String> {
+    let mut failures = Vec::new();
+    let mut in_code_block = false;
+
+    for (line_num, line) in content.lines().enumerate() {
+        if line.trim_start().starts_with("```") {
+            in_code_block = !in_code_block;
+            continue;
+        }
+        if !in_code_block && line.contains("\\n") {
+            failures.push(format!(
+                "line {}: contains literal escaped newline characters (\\n)",
+                line_num + 1
+            ));
+        }
+    }
+
+    failures
 }
 
 fn validate_worklog_link(journal_file: &Path, cycle: u64, link: &str) -> Option<String> {
@@ -845,17 +924,21 @@ mod tests {
     #[test]
     fn provided_pipeline_status_skips_fetching_pipeline_report() {
         let fetch_called = std::cell::Cell::new(false);
-        let status = resolve_pipeline_status(Path::new("."), 226, Some("pass"), |_repo_root, cycle| {
-            fetch_called.set(true);
-            assert_eq!(cycle, 226);
-            Ok(PipelineReport {
-                overall: "fail".to_string(),
+        let status =
+            resolve_pipeline_status(Path::new("."), 226, Some("pass"), |_repo_root, cycle| {
+                fetch_called.set(true);
+                assert_eq!(cycle, 226);
+                Ok(PipelineReport {
+                    overall: "fail".to_string(),
+                })
             })
-        })
-        .expect("pipeline status should resolve");
+            .expect("pipeline status should resolve");
 
         assert_eq!(status, "pass");
-        assert!(!fetch_called.get(), "pipeline-check should not be invoked when --pipeline-status is provided");
+        assert!(
+            !fetch_called.get(),
+            "pipeline-check should not be invoked when --pipeline-status is provided"
+        );
     }
 
     #[test]
@@ -938,7 +1021,11 @@ mod tests {
     fn ignores_receipts_after_cycle_complete() {
         let repo = TestRepo::new();
         repo.init();
-        let included_receipt = repo.commit("notes/merge.txt", "merged\n", "state(process-merge): merge work [cycle 226]");
+        let included_receipt = repo.commit(
+            "notes/merge.txt",
+            "merged\n",
+            "state(process-merge): merge work [cycle 226]",
+        );
         let cycle_complete_receipt = repo.commit(
             "notes/complete.txt",
             "complete\n",
@@ -979,7 +1066,11 @@ mod tests {
     fn still_requires_receipts_up_to_cycle_complete() {
         let repo = TestRepo::new();
         repo.init();
-        let required_receipt = repo.commit("notes/merge.txt", "merged\n", "state(process-merge): merge work [cycle 226]");
+        let required_receipt = repo.commit(
+            "notes/merge.txt",
+            "merged\n",
+            "state(process-merge): merge work [cycle 226]",
+        );
         let cycle_complete_receipt = repo.commit(
             "notes/complete.txt",
             "complete\n",
@@ -1092,6 +1183,132 @@ mod tests {
         let failures = validate_journal_headings(content);
         assert_eq!(failures.len(), 1);
         assert!(failures[0].contains("duplicated cycle prefix"));
+    }
+
+    #[test]
+    fn rejects_duplicate_cycle_entries() {
+        let content = "\
+## 2026-03-11 — Cycle 226: First entry
+
+### Concrete commitments for next cycle
+
+- Finish validation.
+
+## 2026-03-11 — Cycle 226: Duplicate entry
+";
+        let failures = validate_no_duplicate_cycles(content);
+        assert_eq!(failures.len(), 1);
+        assert!(failures[0].contains("cycle 226"));
+    }
+
+    #[test]
+    fn allows_unique_cycle_entries() {
+        let content = "\
+## 2026-03-11 — Cycle 226: First entry
+
+## 2026-03-11 — Cycle 227: Second entry
+";
+        let failures = validate_no_duplicate_cycles(content);
+        assert!(failures.is_empty());
+    }
+
+    #[test]
+    fn rejects_duplicate_section_headers_within_cycle() {
+        let content = "\
+## 2026-03-11 — Cycle 226: First entry
+
+### Previous commitment follow-through
+
+- Done.
+
+### Previous commitment follow-through
+
+- Also done.
+";
+        let failures = validate_no_duplicate_section_headers(content);
+        assert_eq!(failures.len(), 1);
+        assert!(failures[0].contains("duplicate section heading"));
+        assert!(failures[0].contains("Cycle 226") || failures[0].contains("cycle 226"));
+    }
+
+    #[test]
+    fn allows_repeated_section_headers_in_different_cycles() {
+        let content = "\
+## 2026-03-11 — Cycle 226: First entry
+
+### Previous commitment follow-through
+
+- Done.
+
+## 2026-03-12 — Cycle 227: Second entry
+
+### Previous commitment follow-through
+
+- Done again.
+";
+        let failures = validate_no_duplicate_section_headers(content);
+        assert!(failures.is_empty());
+    }
+
+    #[test]
+    fn rejects_literal_escaped_newlines_outside_code_blocks() {
+        let content = "\
+## 2026-03-11 — Cycle 226: First entry
+
+Line with escaped newline\\nshould fail.
+";
+        let failures = validate_no_escaped_newlines(content);
+        assert_eq!(failures.len(), 1);
+        assert!(failures[0].contains("line 3"));
+    }
+
+    #[test]
+    fn ignores_literal_escaped_newlines_inside_code_blocks() {
+        let content = "\
+## 2026-03-11 — Cycle 226: First entry
+
+```text
+Line with escaped newline\\nshould be ignored.
+```
+";
+        let failures = validate_no_escaped_newlines(content);
+        assert!(failures.is_empty());
+    }
+
+    #[test]
+    fn validate_journal_reports_new_journal_validation_failures() {
+        let temp = TestDir::new();
+        let journal_path = temp.path().join("2026-03-11.md");
+        let content = "\
+## 2026-03-11 — Cycle 226: First entry
+
+### Previous commitment follow-through
+
+- Done.
+
+### Previous commitment follow-through
+
+- Done again.
+
+### Concrete commitments for next cycle
+
+- Finish validation.\\nNo escaped newlines.
+
+## 2026-03-11 — Cycle 226: Duplicate entry
+";
+        fs::write(&journal_path, content).expect("write journal");
+
+        let failures = validate_journal(&journal_path).expect("journal validation should run");
+        assert_eq!(failures.len(), 3);
+        assert!(failures
+            .iter()
+            .any(|failure| failure.contains("duplicate journal entry")));
+        assert!(failures
+            .iter()
+            .any(|failure| failure.contains("duplicate section heading")));
+        assert!(failures
+            .iter()
+            .any(|failure| failure.contains("escaped newline characters")));
     }
 
     #[test]
