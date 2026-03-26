@@ -12,7 +12,6 @@ use state_schema::{
 };
 
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
-const NOT_PROVIDED: &str = "Not provided.";
 const VERIFY_REVIEW_EVENTS_TIMEOUT_SECS: u64 = 30;
 
 struct ReviewInfo {
@@ -24,6 +23,9 @@ struct ReviewInfo {
 struct PipelineGateReport {
     overall: String,
     has_blocking_findings: bool,
+    warning_count: usize,
+    cascade_count: usize,
+    blocking_steps: Vec<String>,
 }
 
 pub fn run(
@@ -81,7 +83,7 @@ pub fn run(
     step_c5_1(repo_root, issue, cycle, &worklog)?;
 
     // C5.5: Pipeline check — GATE
-    let pipeline_passed = step_c5_5(repo_root, issue)?;
+    let (pipeline_passed, pipeline_summary) = step_c5_5(repo_root, issue)?;
 
     // C5.6: Stabilization counter
     step_c5_6(repo_root, issue, cycle, pipeline_passed)?;
@@ -90,13 +92,13 @@ pub fn run(
     let review_info = step_c6(repo_root, issue, cycle)?;
 
     // C6.5: Refresh worklog state after review dispatch
-    step_c6_5(repo_root, issue, cycle, &worklog)?;
+    step_c6_5(repo_root, issue, cycle, &worklog, &pipeline_summary)?;
 
     // C7: Push
     step_c7(repo_root, issue)?;
 
     // C8: Close issue
-    step_c8(repo_root, issue, cycle, &review_info, pipeline_passed)?;
+    step_c8(repo_root, issue, cycle, &review_info, &pipeline_summary)?;
     complete_close_out_phase(repo_root, cycle)?;
     git::push(repo_root).map_err(|error| {
         format!(
@@ -458,7 +460,7 @@ fn step_c5_1(
     Ok(())
 }
 
-fn step_c5_5(repo_root: &Path, issue: u64) -> Result<bool, String> {
+fn step_c5_5(repo_root: &Path, issue: u64) -> Result<(bool, String), String> {
     eprintln!("C5.5: Final pipeline gate...");
 
     let output = runner::run_tool(repo_root, "pipeline-check", &["--json"])?;
@@ -467,12 +469,13 @@ fn step_c5_5(repo_root: &Path, issue: u64) -> Result<bool, String> {
     let stderr = runner::stderr_text(&output);
     let exit_code = output.status.code().unwrap_or(-1);
 
-    let (passed, body) = match parse_pipeline_gate_report(&stdout) {
+    let (passed, pipeline_summary, body) = match parse_pipeline_gate_report(&stdout) {
         Ok(report) => {
             let passed = exit_ok && report.overall == "pass" && !report.has_blocking_findings;
+            let pipeline_summary = format_pipeline_summary(&report);
             let mut body = format!(
                 "Pipeline: {}\n- exit_code: {}\n- overall: {}\n- has_blocking_findings: {}",
-                if passed { "PASS" } else { "FAIL" },
+                pipeline_summary,
                 exit_code,
                 report.overall,
                 report.has_blocking_findings
@@ -483,9 +486,10 @@ fn step_c5_5(repo_root: &Path, issue: u64) -> Result<bool, String> {
             if !stderr.is_empty() {
                 body.push_str(&format!("\n- stderr: {}", stderr));
             }
-            (passed, body)
+            (passed, pipeline_summary, body)
         }
         Err(parse_error) => {
+            let pipeline_summary = "FAIL (invalid pipeline-check JSON)".to_string();
             let mut body = format!(
                 "Pipeline: FAIL\n- exit_code: {}\n- json_parse_error: {}",
                 exit_code, parse_error
@@ -496,7 +500,7 @@ fn step_c5_5(repo_root: &Path, issue: u64) -> Result<bool, String> {
             if !stderr.is_empty() {
                 body.push_str(&format!("\n- stderr: {}", stderr));
             }
-            (false, body)
+            (false, pipeline_summary, body)
         }
     };
 
@@ -515,7 +519,7 @@ fn step_c5_5(repo_root: &Path, issue: u64) -> Result<bool, String> {
         );
     }
 
-    Ok(true)
+    Ok((true, pipeline_summary))
 }
 
 fn parse_pipeline_gate_report(stdout: &str) -> Result<PipelineGateReport, String> {
@@ -531,11 +535,73 @@ fn parse_pipeline_gate_report(stdout: &str) -> Result<PipelineGateReport, String
         .ok_or_else(|| {
             "missing bool has_blocking_findings in pipeline-check JSON output".to_string()
         })?;
+    let steps = report
+        .get("steps")
+        .and_then(Value::as_array)
+        .map(Vec::as_slice)
+        .unwrap_or(&[]);
+    let warning_count = steps
+        .iter()
+        .filter(|step| step.get("status").and_then(Value::as_str) == Some("warn"))
+        .count();
+    let cascade_count = steps
+        .iter()
+        .filter(|step| step.get("status").and_then(Value::as_str) == Some("cascade"))
+        .count();
+    let blocking_steps = steps
+        .iter()
+        .filter(|step| step.get("status").and_then(Value::as_str) == Some("fail"))
+        .filter_map(|step| step.get("name").and_then(Value::as_str).map(str::to_string))
+        .collect();
 
     Ok(PipelineGateReport {
         overall: overall.to_string(),
         has_blocking_findings,
+        warning_count,
+        cascade_count,
+        blocking_steps,
     })
+}
+
+fn format_pipeline_summary(report: &PipelineGateReport) -> String {
+    let overall = report.overall.to_ascii_uppercase();
+    let mut details = Vec::new();
+
+    if report.warning_count > 0 {
+        let suffix = if report.warning_count == 1 {
+            "warning"
+        } else {
+            "warnings"
+        };
+        details.push(format!("{} {}", report.warning_count, suffix));
+    }
+
+    if report.cascade_count > 0 {
+        let suffix = if report.cascade_count == 1 {
+            "cascade"
+        } else {
+            "cascades"
+        };
+        details.push(format!("{} {}", report.cascade_count, suffix));
+    }
+
+    if report.has_blocking_findings {
+        if report.blocking_steps.is_empty() {
+            details.push("blocking findings".to_string());
+        } else {
+            details.push(format!(
+                "{} blocking: {}",
+                report.blocking_steps.len(),
+                report.blocking_steps.join(", ")
+            ));
+        }
+    }
+
+    if details.is_empty() {
+        overall
+    } else {
+        format!("{} ({})", overall, details.join(", "))
+    }
 }
 
 fn step_c5_6(
@@ -752,7 +818,13 @@ fn step_c7(repo_root: &Path, issue: u64) -> Result<(), String> {
     Ok(())
 }
 
-fn step_c6_5(repo_root: &Path, issue: u64, cycle: u64, worklog: &Path) -> Result<(), String> {
+fn step_c6_5(
+    repo_root: &Path,
+    issue: u64,
+    cycle: u64,
+    worklog: &Path,
+    pipeline_summary: &str,
+) -> Result<(), String> {
     eprintln!("C6.5: Refreshing worklog state after review dispatch...");
 
     let state_value = read_state_value(repo_root)?;
@@ -766,14 +838,6 @@ fn step_c6_5(repo_root: &Path, issue: u64, cycle: u64, worklog: &Path) -> Result
             u64::try_from(value)
                 .map_err(|_| "copilot_metrics.in_flight must be non-negative in state.json".to_string())
         })?;
-    let pipeline_status = state
-        .tool_pipeline
-        .status
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .unwrap_or(NOT_PROVIDED)
-        .to_string();
     let publish_gate = state
         .publish_gate()?
         .status
@@ -794,7 +858,7 @@ fn step_c6_5(repo_root: &Path, issue: u64, cycle: u64, worklog: &Path) -> Result
             "--worklog-file",
             &worklog_str,
             "--status",
-            &pipeline_status,
+            pipeline_summary,
             "--in-flight",
             &in_flight_str,
             "--copilot-metrics",
@@ -869,17 +933,16 @@ fn step_c8(
     issue: u64,
     cycle: u64,
     review_info: &ReviewInfo,
-    pipeline_passed: bool,
+    pipeline_summary: &str,
 ) -> Result<(), String> {
     eprintln!("C8: Closing orchestrator issue...");
-    let pipeline_status = if pipeline_passed { "PASS" } else { "FAIL" };
 
     let closing_body = format!(
         "Cycle {} close-out complete.\n\n\
          - Review: dispatched as #{} ({})\n\
          - Pipeline: {}\n\
          - All close-out steps completed by cycle-runner",
-        cycle, review_info.issue_number, review_info.issue_url, pipeline_status,
+        cycle, review_info.issue_number, review_info.issue_url, pipeline_summary,
     );
 
     steps::post_step(
@@ -1285,6 +1348,28 @@ mod tests {
     }
 
     #[test]
+    fn step_c5_5_returns_pipeline_summary_for_warning_pass() {
+        let dir = setup_temp_repo("step-c5-5-warning-pass");
+        let args_path = dir.join("post-step-args.txt");
+        write_post_step_capture_script(&dir, &args_path);
+        fs::write(
+            dir.join("tools/pipeline-check"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"overall\":\"pass\",\"has_blocking_findings\":false,\"steps\":[{\"name\":\"doc-validation\",\"status\":\"warn\"}]}'\n",
+        )
+        .unwrap();
+
+        let (passed, summary) = step_c5_5(&dir, 123).unwrap();
+        assert!(passed);
+        assert_eq!(summary, "PASS (1 warning)");
+
+        let args = fs::read_to_string(&args_path).unwrap();
+        assert!(args.contains("---ARG---\nC5.5\n"));
+        assert!(args.contains("Pipeline: PASS (1 warning)"));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn step_c5_5_rejects_zero_exit_when_json_reports_blocking_findings() {
         let dir = setup_temp_repo("step-c5-5-blocking");
         let args_path = dir.join("post-step-args.txt");
@@ -1476,7 +1561,7 @@ mod tests {
                     }
                 },
                 "tool_pipeline": {
-                    "status": "PASS"
+                    "status": "phase_5_active"
                 },
                 "publish_gate": {
                     "status": "published"
@@ -1513,7 +1598,7 @@ mod tests {
         .unwrap();
         fs::write(
             dir.join("tools/pipeline-check"),
-            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"overall\":\"pass\",\"has_blocking_findings\":false}'\n",
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"overall\":\"pass\",\"has_blocking_findings\":false,\"steps\":[{\"name\":\"doc-validation\",\"status\":\"warn\"}]}'\n",
         )
         .unwrap();
         fs::write(
@@ -1568,7 +1653,7 @@ mod tests {
         assert!(args.contains("simulated verify-review-events failure"));
         assert!(args.contains("---ARG---\nC5.5\n"));
         assert!(args.contains("Cycle 345 close-out complete."));
-        assert!(args.contains("- Pipeline: PASS"));
+        assert!(args.contains("- Pipeline: PASS (1 warning)"));
 
         let state = state_schema::read_state_value(&dir).unwrap();
         assert_eq!(
@@ -1611,7 +1696,7 @@ mod tests {
                     }
                 },
                 "tool_pipeline": {
-                    "status": "PASS"
+                    "status": "phase_5_active"
                 },
                 "publish_gate": {
                     "status": "published"
@@ -1648,7 +1733,7 @@ mod tests {
         .unwrap();
         fs::write(
             dir.join("tools/pipeline-check"),
-            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"overall\":\"pass\",\"has_blocking_findings\":false}'\n",
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"overall\":\"pass\",\"has_blocking_findings\":false,\"steps\":[{\"name\":\"doc-validation\",\"status\":\"warn\"}]}'\n",
         )
         .unwrap();
         fs::write(
@@ -1698,7 +1783,8 @@ mod tests {
         assert!(!worklog.contains("## Pre-dispatch state"));
         assert!(!worklog.contains("Snapshot before review dispatch"));
         assert!(worklog.contains("- **In-flight agent sessions**: 1"));
-        assert!(worklog.contains("- **Pipeline status**: PASS"));
+        assert!(worklog.contains("- **Pipeline status**: PASS (1 warning)"));
+        assert!(!worklog.contains("phase_5_active"));
         assert!(worklog.contains(
             "- **Copilot metrics**: 2 dispatches, 2 PRs produced, 1 merged, 50.0% PR merge rate"
         ));
@@ -1744,7 +1830,7 @@ mod tests {
     }
 
     #[test]
-    fn step_c8_posts_fail_pipeline_status_when_pipeline_did_not_pass() {
+    fn step_c8_posts_pipeline_summary() {
         let dir = setup_temp_repo("step-c8-pipeline-fail");
         let args_path = dir.join("post-step-args.txt");
         write_post_step_capture_script(&dir, &args_path);
@@ -1764,13 +1850,22 @@ mod tests {
             issue_url: "https://github.com/EvaLok/schema-org-json-ld/issues/1470".to_string(),
         };
 
-        with_path_prefix(&bin_dir, || step_c8(&dir, 123, 345, &review_info, false)).unwrap();
+        with_path_prefix(&bin_dir, || {
+            step_c8(
+                &dir,
+                123,
+                345,
+                &review_info,
+                "FAIL (1 blocking: doc-validation)",
+            )
+        })
+        .unwrap();
 
         let args = fs::read_to_string(&args_path).unwrap();
         assert!(args.contains("---ARG---\nC8\n"));
         assert!(args.contains("Cycle 345 close-out complete."));
         assert!(args.contains("- Review: dispatched as #1470 (https://github.com/EvaLok/schema-org-json-ld/issues/1470)"));
-        assert!(args.contains("- Pipeline: FAIL"));
+        assert!(args.contains("- Pipeline: FAIL (1 blocking: doc-validation)"));
         assert!(args.contains("- All close-out steps completed by cycle-runner"));
 
         let _ = fs::remove_dir_all(&dir);
