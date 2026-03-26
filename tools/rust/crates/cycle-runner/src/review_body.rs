@@ -1,8 +1,10 @@
+use std::collections::HashSet;
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
+const PR_PREFIX: &str = "PR ";
 
 pub fn generate(
     repo_root: &Path,
@@ -235,26 +237,33 @@ fn get_merged_prs(state: &Value) -> Vec<(u64, String)> {
 
 fn extract_pr_numbers_from_summary(summary: &str) -> Vec<u64> {
     let mut pr_numbers = Vec::new();
+    let mut seen = HashSet::new();
     let mut remaining = summary;
 
-    while let Some(pr_index) = remaining.find("PR ") {
-        remaining = &remaining[pr_index + 3..];
+    while let Some(pr_index) = remaining.find(PR_PREFIX) {
+        remaining = &remaining[pr_index + PR_PREFIX.len()..];
 
         let Some(hash_index) = remaining.find('#') else {
-            break;
+            continue;
         };
+        let qualifier = &remaining[..hash_index];
+        // Accept both "PR #123" and "PR EvaLok/schema-org-json-ld#123" summary formats.
+        let valid_qualifier = qualifier.is_empty() || qualifier == MAIN_REPO;
         remaining = &remaining[hash_index + 1..];
+        if !valid_qualifier {
+            continue;
+        }
 
         let digits_len = remaining
             .chars()
-            .take_while(|character| character.is_ascii_digit())
+            .take_while(|ch| ch.is_ascii_digit())
             .count();
         if digits_len == 0 {
             continue;
         }
 
         if let Ok(pr) = remaining[..digits_len].parse::<u64>() {
-            if !pr_numbers.contains(&pr) {
+            if pr > 0 && seen.insert(pr) {
                 pr_numbers.push(pr);
             }
         }
@@ -324,6 +333,15 @@ mod tests {
         );
 
         assert_eq!(pr_numbers, vec![1774, 1777]);
+    }
+
+    #[test]
+    fn extract_pr_numbers_from_summary_ignores_invalid_qualifiers_and_zero() {
+        let pr_numbers = extract_pr_numbers_from_summary(
+            "2 dispatches, 2 merges (PR other/repo#10, PR #0, PR #1777)",
+        );
+
+        assert_eq!(pr_numbers, vec![1777]);
     }
 
     #[test]
