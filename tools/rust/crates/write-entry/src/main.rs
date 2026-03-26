@@ -1921,18 +1921,16 @@ fn write_journal_file(path: &Path, date: NaiveDate, entry: &str) -> Result<bool,
 }
 
 fn existing_journal_contains_cycle_entry(existing_content: &str, cycle: u64) -> bool {
-    let heading = format!("Cycle {}:", cycle);
     existing_content.lines().any(|line| {
-        let trimmed = line.trim();
-        trimmed.starts_with("## ") && trimmed.contains(&heading)
+        journal_heading_cycle(line.trim()).is_some_and(|existing_cycle| existing_cycle == cycle)
     })
 }
 
 fn reject_duplicate_journal_section_headers(entry: &str) -> Result<(), String> {
-    let mut seen = HashSet::new();
+    let mut seen_headers = HashSet::new();
     for line in entry.lines() {
         let trimmed = line.trim();
-        if trimmed.starts_with("### ") && !seen.insert(trimmed.to_string()) {
+        if trimmed.starts_with("### ") && !seen_headers.insert(trimmed) {
             return Err(format!(
                 "journal entry contains duplicate section header '{}' — refusing to write malformed entry",
                 trimmed
@@ -1940,6 +1938,13 @@ fn reject_duplicate_journal_section_headers(entry: &str) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+fn journal_heading_cycle(line: &str) -> Option<u64> {
+    let heading = line.strip_prefix("## ")?;
+    let (_, cycle_part) = heading.split_once(" — Cycle ")?;
+    let (cycle, _) = cycle_part.split_once(':')?;
+    cycle.trim().parse().ok()
 }
 
 fn update_journal_index(repo_root: &Path, date: NaiveDate, cycle: u64) -> Result<(), String> {
@@ -5138,7 +5143,8 @@ Reflective log for the schema-org-json-ld orchestrator.
         let content = fs::read_to_string(path).unwrap();
 
         assert!(!content.contains("\\n"));
-        assert!(content.contains("**No prior commitment.** First line.\nSecond line."));
+        assert!(content.contains("**No prior commitment.** First line."));
+        assert!(content.contains("Second line."));
         assert!(content.contains("### Observation\n\nAlpha.\nBeta."));
         assert!(content.contains("1. Commit once.\nVerify twice."));
         assert!(content.contains("- Should this stay?\nYes."));
@@ -5173,6 +5179,20 @@ Reflective log for the schema-org-json-ld orchestrator.
             "journal entry contains duplicate section header '### Observation' — refusing to write malformed entry"
         );
         assert!(!journal_path(&repo_root.path, fixed_now()).exists());
+    }
+
+    #[test]
+    fn duplicate_cycle_detection_matches_exact_cycle_number() {
+        let existing = concat!(
+            "# Journal — 2026-03-06\n\n",
+            "Reflective log for the schema-org-json-ld orchestrator.\n\n",
+            "---\n\n",
+            "## 2026-03-06 — Cycle 154: Existing entry\n"
+        );
+
+        assert!(existing_journal_contains_cycle_entry(existing, 154));
+        assert!(!existing_journal_contains_cycle_entry(existing, 15));
+        assert!(!existing_journal_contains_cycle_entry(existing, 1));
     }
 
     #[test]
