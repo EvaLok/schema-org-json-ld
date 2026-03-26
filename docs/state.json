@@ -5166,6 +5166,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix: write-entry receipt note should derive exclusion claims from actual receipt filtering logic"
+    },
+    {
+      "dispatched_at": "2026-03-26T05:03:38Z",
+      "issue": 1795,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix: cycle-runner close-out should update worklog state section after review dispatch (C6)"
     }
   ],
   "audit_dropped": [
@@ -5385,17 +5392,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1793 Fix: write-entry receipt note should derive exclusion claims from actual receipt filtering logic (cycle 366)",
-    "dispatch_to_pr_rate": "91.7%",
+    "dispatch_log_latest": "#1795 Fix: cycle-runner close-out should update worklog state section after review dispatch (C6) (cycle 366)",
+    "dispatch_to_pr_rate": "91.5%",
     "failed_dispatches": 1,
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 519,
     "pr_merge_rate": "98.1%",
     "produced_pr": 529,
     "resolved": 576,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 577
+    "total_dispatches": 578
   },
   "cycle_issues": [
     1792
@@ -5678,7 +5685,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 14,
     "issue": 1792,
