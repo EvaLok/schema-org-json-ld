@@ -5713,7 +5713,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 371"
+        "last_refreshed": "cycle 372"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -9375,9 +9375,37 @@
         ],
         "ignored": 0,
         "note": "Processed cycle 370 review. F1 partially addressed by PR #1821 (blocking-severity surfacing). F3 actioned via correct score language commitment."
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "journal-quality",
+          "process-adherence",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 3,
+        "cycle": 371,
+        "deferred": 2,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "process-adherence",
+            "disposition": "deferred"
+          },
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "actioned"
+          }
+        ],
+        "ignored": 0,
+        "note": "F1 process-adherence: fix in-flight via #1825/PR #1826 (auto-pipeline flag, requested rebase to fix stale state files). F2 worklog-accuracy: deferred — Next steps refresh requires write-entry changes. F3 journal-quality: actioned — this cycle's journal will report pipeline state from actual gate result, not aspiration."
       }
     ],
-    "last_review_cycle": 370
+    "last_review_cycle": 371
   },
   "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 370,
