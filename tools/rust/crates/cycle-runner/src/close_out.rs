@@ -3,13 +3,13 @@ use crate::review_body;
 use crate::runner;
 use crate::steps;
 use serde_json::Value;
+use std::fs;
+use std::path::Path;
+use std::process::Command;
 use state_schema::{
     commit_state_json, current_cycle_from_state, read_state_value, transition_cycle_phase,
     write_state_value, StateJson,
 };
-use std::fs;
-use std::path::Path;
-use std::process::Command;
 
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const VERIFY_REVIEW_EVENTS_TIMEOUT_SECS: u64 = 30;
@@ -146,20 +146,23 @@ fn step_c4_1(
     let worklog_detail = if worklog_ok {
         "PASS".to_string()
     } else {
-        format!("FAIL: {}", runner::stderr_text(&worklog_output))
+        format!(
+            "FAIL: {}",
+            runner::stderr_text(&worklog_output)
+        )
     };
 
     let journal_str = journal.to_string_lossy().to_string();
-    let journal_output = runner::run_tool(
-        repo_root,
-        "validate-docs",
-        &["journal", "--file", &journal_str],
-    )?;
+    let journal_output =
+        runner::run_tool(repo_root, "validate-docs", &["journal", "--file", &journal_str])?;
     let journal_ok = journal_output.status.success();
     let journal_detail = if journal_ok {
         "PASS".to_string()
     } else {
-        format!("FAIL: {}", runner::stderr_text(&journal_output))
+        format!(
+            "FAIL: {}",
+            runner::stderr_text(&journal_output)
+        )
     };
 
     let body = format!(
@@ -194,9 +197,7 @@ fn step_c4_5(repo_root: &Path, issue: u64) -> Result<(), String> {
         Ok(entries) => entries
             .map(|entry| {
                 entry
-                    .map_err(|error| {
-                        format!("failed to read entry in {}: {}", adr_dir.display(), error)
-                    })
+                    .map_err(|error| format!("failed to read entry in {}: {}", adr_dir.display(), error))
                     .and_then(|entry| {
                         let file_type = entry.file_type().map_err(|error| {
                             format!(
@@ -206,9 +207,10 @@ fn step_c4_5(repo_root: &Path, issue: u64) -> Result<(), String> {
                             )
                         })?;
                         let path = entry.path();
-                        let name = entry.file_name().into_string().map_err(|_| {
-                            format!("ADR path is not valid UTF-8: {}", path.display())
-                        })?;
+                        let name = entry
+                            .file_name()
+                            .into_string()
+                            .map_err(|_| format!("ADR path is not valid UTF-8: {}", path.display()))?;
                         Ok((name, file_type.is_file()))
                     })
             })
@@ -241,11 +243,7 @@ fn step_c4_7(repo_root: &Path, issue: u64) -> Result<(), String> {
     step_c4_7_with_timeout(repo_root, issue, VERIFY_REVIEW_EVENTS_TIMEOUT_SECS)
 }
 
-fn step_c4_7_with_timeout(
-    repo_root: &Path,
-    issue: u64,
-    timeout_seconds: u64,
-) -> Result<(), String> {
+fn step_c4_7_with_timeout(repo_root: &Path, issue: u64, timeout_seconds: u64) -> Result<(), String> {
     eprintln!("C4.7: Verifying review events...");
 
     let repo_root_str = repo_root.to_string_lossy().to_string();
@@ -261,14 +259,7 @@ fn step_c4_7_with_timeout(
                 "verify-review-events warning: {}\nNon-blocking; C5.5 will still validate state freshness.",
                 error
             );
-            steps::post_step(
-                repo_root,
-                issue,
-                "C4.7",
-                "Verify review events",
-                &body,
-                false,
-            )?;
+            steps::post_step(repo_root, issue, "C4.7", "Verify review events", &body, false)?;
             return Err(error);
         }
     };
@@ -320,14 +311,7 @@ fn step_c4_7_with_timeout(
         )
     };
 
-    steps::post_step(
-        repo_root,
-        issue,
-        "C4.7",
-        "Verify review events",
-        &body,
-        false,
-    )?;
+    steps::post_step(repo_root, issue, "C4.7", "Verify review events", &body, false)?;
 
     if let Some(warning) = warning {
         return Err(warning);
@@ -412,7 +396,12 @@ fn step_c5(repo_root: &Path, issue: u64, cycle: u64, worklog: &Path) -> Result<(
     Ok(())
 }
 
-fn step_c5_1(repo_root: &Path, issue: u64, cycle: u64, worklog: &Path) -> Result<(), String> {
+fn step_c5_1(
+    repo_root: &Path,
+    issue: u64,
+    cycle: u64,
+    worklog: &Path,
+) -> Result<(), String> {
     eprintln!("C5.1: Validating receipts...");
 
     let cycle_str = cycle.to_string();
@@ -460,7 +449,14 @@ fn step_c5_1(repo_root: &Path, issue: u64, cycle: u64, worklog: &Path) -> Result
     };
 
     // Receipt validation is report-only, not a gate
-    steps::post_step(repo_root, issue, "C5.1", "Receipt validation", &body, false)?;
+    steps::post_step(
+        repo_root,
+        issue,
+        "C5.1",
+        "Receipt validation",
+        &body,
+        false,
+    )?;
 
     Ok(())
 }
@@ -480,7 +476,10 @@ fn step_c5_5(repo_root: &Path, issue: u64) -> Result<(bool, String), String> {
             let pipeline_summary = format_pipeline_summary(&report);
             let mut body = format!(
                 "Pipeline: {}\n- exit_code: {}\n- overall: {}\n- has_blocking_findings: {}",
-                pipeline_summary, exit_code, report.overall, report.has_blocking_findings
+                pipeline_summary,
+                exit_code,
+                report.overall,
+                report.has_blocking_findings
             );
             if !stdout.is_empty() {
                 body.push_str(&format!("\n- raw_json: {}", stdout));
@@ -516,7 +515,9 @@ fn step_c5_5(repo_root: &Path, issue: u64) -> Result<(bool, String), String> {
     )?;
 
     if !passed {
-        return Err("Pipeline check failed at C5.5 — fix issues and re-run close-out".to_string());
+        return Err(
+            "Pipeline check failed at C5.5 — fix issues and re-run close-out".to_string(),
+        );
     }
 
     Ok((true, pipeline_summary))
@@ -653,7 +654,9 @@ fn step_c5_6(
     let already_updated = state
         .pointer("/project_mode/consecutive_clean_cycles")
         .and_then(Value::as_array)
-        .is_some_and(|arr| arr.iter().any(|v| v.as_u64() == Some(cycle)));
+        .is_some_and(|arr| {
+            arr.iter().any(|v| v.as_u64() == Some(cycle))
+        });
 
     if already_updated {
         let counter = state
@@ -768,8 +771,10 @@ fn step_c6(repo_root: &Path, issue: u64, cycle: u64) -> Result<ReviewInfo, Strin
     }
 
     // Check stabilization mode
-    let is_stabilization =
-        state.pointer("/project_mode/mode").and_then(Value::as_str) == Some("stabilization");
+    let is_stabilization = state
+        .pointer("/project_mode/mode")
+        .and_then(Value::as_str)
+        == Some("stabilization");
 
     // Generate review body
     let body_content = review_body::generate(repo_root, cycle, issue, is_stabilization)?;
@@ -849,9 +854,8 @@ fn step_c6_5(
         .in_flight
         .ok_or_else(|| "missing copilot_metrics.in_flight in state.json".to_string())
         .and_then(|value| {
-            u64::try_from(value).map_err(|_| {
-                "copilot_metrics.in_flight must be non-negative in state.json".to_string()
-            })
+            u64::try_from(value)
+                .map_err(|_| "copilot_metrics.in_flight must be non-negative in state.json".to_string())
         })?;
     let publish_gate = state
         .publish_gate()?
@@ -909,14 +913,7 @@ fn step_c6_5(
     } else {
         format!("Patched worklog state after C6: {} ({})", worklog_rel, sha)
     };
-    steps::post_step(
-        repo_root,
-        issue,
-        "C6.5",
-        "Refresh worklog state",
-        &body,
-        false,
-    )?;
+    steps::post_step(repo_root, issue, "C6.5", "Refresh worklog state", &body, false)?;
     Ok(())
 }
 
@@ -934,9 +931,7 @@ fn format_copilot_metrics(state: &StateJson) -> Result<String, String> {
         .merged
         .ok_or_else(|| "missing copilot_metrics.merged in state.json".to_string())?;
     if total_dispatches < 0 || produced_pr < 0 || merged < 0 {
-        return Err(
-            "copilot_metrics summary fields must be non-negative in state.json".to_string(),
-        );
+        return Err("copilot_metrics summary fields must be non-negative in state.json".to_string());
     }
     let pr_merge_rate = state
         .copilot_metrics
@@ -1015,7 +1010,10 @@ fn had_tool_dispatches_this_cycle(state: &Value, _cycle: u64) -> bool {
             .unwrap_or("");
         // Only check sessions dispatched after the previous cycle ended
         if !last_cycle_ts.is_empty() && dispatched_at > last_cycle_ts {
-            let title = session.get("title").and_then(Value::as_str).unwrap_or("");
+            let title = session
+                .get("title")
+                .and_then(Value::as_str)
+                .unwrap_or("");
             // Exclude review dispatches (they're mandatory, not "tool" dispatches)
             if !title.starts_with("[Cycle Review]") {
                 return true;
@@ -1056,7 +1054,12 @@ fn parse_dispatch_output(stdout: &str) -> Result<ReviewInfo, String> {
             )
         })?;
 
-    let url = stdout.rsplit(": ").next().unwrap_or("").trim().to_string();
+    let url = stdout
+        .rsplit(": ")
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_string();
 
     Ok(ReviewInfo {
         issue_number: issue_num,
@@ -1857,9 +1860,8 @@ mod tests {
 
         with_path_prefix(&bin_dir, || run(&dir, 123, Some(345), false)).unwrap();
 
-        let worklog =
-            fs::read_to_string(dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"))
-                .unwrap();
+        let worklog = fs::read_to_string(dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"))
+            .unwrap();
         assert!(worklog.contains("## Cycle state"));
         assert!(!worklog.contains("## Pre-dispatch state"));
         assert!(!worklog.contains("Snapshot before review dispatch"));
@@ -1878,8 +1880,7 @@ mod tests {
             .output()
             .unwrap();
         let log = String::from_utf8_lossy(&log_output.stdout);
-        assert!(log
-            .contains("docs(worklog): refresh cycle 345 state after review dispatch [cycle 345]"));
+        assert!(log.contains("docs(worklog): refresh cycle 345 state after review dispatch [cycle 345]"));
 
         let _ = fs::remove_dir_all(&dir);
         let _ = fs::remove_dir_all(&remote);
