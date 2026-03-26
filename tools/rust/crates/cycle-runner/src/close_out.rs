@@ -1333,7 +1333,7 @@ mod tests {
     }
 
     #[test]
-    fn close_out_dry_run_sequence_includes_c6_5_between_c6_and_c7() {
+    fn close_out_dry_run_includes_step_c6_5_between_c6_and_c7() {
         let lines = close_out_dry_run_lines(345, 123);
 
         let c6 = lines

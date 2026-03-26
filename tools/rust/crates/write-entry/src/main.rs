@@ -19,8 +19,7 @@ const JOURNAL_DESCRIPTION: &str = "Reflective log for the schema-org-json-ld orc
 const NOT_PROVIDED: &str = "Not provided.";
 const CYCLE_STATE_HEADING: &str = "## Cycle state";
 const LEGACY_STATE_HEADING: &str = "## Pre-dispatch state";
-const LEGACY_STATE_DISCLAIMER: &str =
-    "*Snapshot before review dispatch — final counters may differ after C6.*";
+const LEGACY_STATE_DISCLAIMER: &str = "*Snapshot before review dispatch — final counters may differ after C6.*";
 const IN_FLIGHT_PREFIX: &str = "- **In-flight agent sessions**: ";
 const PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
 const COPILOT_METRICS_PREFIX: &str = "- **Copilot metrics**: ";
@@ -145,7 +144,7 @@ struct JournalArgs {
 
 #[derive(Parser)]
 struct PatchPipelineArgs {
-    /// Path to the worklog file to patch
+    /// Path to the worklog file to patch (`--worklog` primary; `--worklog-file` accepted as an alias)
     #[arg(long, alias = "worklog-file")]
     worklog: PathBuf,
     /// Replacement pipeline status text
