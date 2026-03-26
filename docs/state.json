@@ -5163,8 +5163,10 @@
     {
       "dispatched_at": "2026-03-26T05:02:42Z",
       "issue": 1793,
+      "merged_at": "2026-03-26T06:31:50Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1794,
+      "status": "merged",
       "title": "Fix: write-entry receipt note should derive exclusion claims from actual receipt filtering logic"
     },
     {
@@ -5402,13 +5404,13 @@
     "closed_without_merge": 8,
     "closed_without_pr": 47,
     "dispatch_log_latest": "#1797 [Cycle Review] Cycle 366 end-of-cycle review (cycle 366)",
-    "dispatch_to_pr_rate": "91.5%",
+    "dispatch_to_pr_rate": "91.7%",
     "failed_dispatches": 1,
-    "in_flight": 2,
-    "merged": 520,
+    "in_flight": 1,
+    "merged": 521,
     "pr_merge_rate": "98.1%",
-    "produced_pr": 530,
-    "resolved": 577,
+    "produced_pr": 531,
+    "resolved": 578,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 579
@@ -5694,7 +5696,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 16,
     "issue": 1799,
