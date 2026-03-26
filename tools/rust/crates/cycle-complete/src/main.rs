@@ -387,12 +387,12 @@ fn session_issue_label(issue: Option<i64>) -> String {
 
 fn cycle_window_start(state: &StateJson) -> Result<DateTime<Utc>, String> {
     let start = state
-        .cycle_phase
-        .phase_entered_at
+        .last_cycle
+        .timestamp
         .as_deref()
-        .or(state.last_cycle.timestamp.as_deref())
+        .or(state.cycle_phase.phase_entered_at.as_deref())
         .ok_or_else(|| {
-            "missing docs/state.json cycle_phase.phase_entered_at and last_cycle.timestamp"
+            "missing docs/state.json last_cycle.timestamp and cycle_phase.phase_entered_at"
                 .to_string()
         })?;
     parse_timestamp(start, "cycle summary window start")
@@ -1287,12 +1287,24 @@ mod tests {
         }
     }
 
-    fn state_with_agent_sessions(agent_sessions: Value) -> StateJson {
+    fn state_with_agent_sessions_at(
+        last_cycle_timestamp: &str,
+        phase_entered_at: &str,
+        agent_sessions: Value,
+    ) -> StateJson {
         let mut state = StateJson::default();
-        state.cycle_phase.phase_entered_at = Some("2026-03-05T04:00:00Z".to_string());
-        state.last_cycle.timestamp = Some("2026-03-05T03:00:00Z".to_string());
+        state.cycle_phase.phase_entered_at = Some(phase_entered_at.to_string());
+        state.last_cycle.timestamp = Some(last_cycle_timestamp.to_string());
         state.agent_sessions = serde_json::from_value(agent_sessions).unwrap();
         state
+    }
+
+    fn state_with_agent_sessions(agent_sessions: Value) -> StateJson {
+        state_with_agent_sessions_at(
+            "2026-03-05T04:00:00Z",
+            "2026-03-05T04:00:00Z",
+            agent_sessions,
+        )
     }
 
     fn temp_repo_root(test_name: &str) -> PathBuf {
@@ -1621,6 +1633,37 @@ mod tests {
         let summary = resolve_summary(None, &state, fixed_now()).unwrap();
 
         assert_eq!(summary, "2 dispatches, 0 merges");
+    }
+
+    #[test]
+    fn resolve_summary_counts_pre_cycle_start_activity_after_previous_cycle_close() {
+        let state = state_with_agent_sessions_at(
+            "2026-03-05T03:00:00Z",
+            "2026-03-05T04:00:00Z",
+            json!([
+                {
+                    "issue": 1804,
+                    "status": "in_flight",
+                    "dispatched_at": "2026-03-05T03:15:00Z"
+                },
+                {
+                    "issue": 1805,
+                    "status": "merged",
+                    "pr": 1801,
+                    "dispatched_at": "2026-03-05T03:29:00Z",
+                    "merged_at": "2026-03-05T03:20:48Z"
+                },
+                {
+                    "issue": 1806,
+                    "status": "in_flight",
+                    "dispatched_at": "2026-03-05T02:45:00Z"
+                }
+            ]),
+        );
+
+        let summary = resolve_summary(None, &state, fixed_now()).unwrap();
+
+        assert_eq!(summary, "2 dispatches, 1 merges (PR #1801)");
     }
 
     #[test]
