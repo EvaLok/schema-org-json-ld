@@ -5604,7 +5604,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 360"
+        "last_refreshed": "cycle 367"
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
@@ -5806,11 +5806,11 @@
         {
           "added_cycle": 209,
           "category": "worklog-accuracy",
-          "chosen_path": "recalibrate",
-          "rationale": "Resolution condition recalibrated per audit #271 (cycle 283). Original condition (zero worklog-accuracy findings) was asymptotically unreachable: the review agent reliably finds timing-inherent drift every cycle (stale pre-dispatch state snapshots, post-worklog commits) because the worklog is structurally written before the review dispatch. Recalibrated condition: only factual worklog errors (wrong links, wrong counts, fabricated data) block resolution. Timing-inherent drift (pre-dispatch snapshots, structural exclusions) is accepted as inherent to the write-then-dispatch architecture. The structural fix (write-entry tool + phased architecture) addresses factual accuracy. Timing drift is a non-defect characteristic of the workflow.",
-          "root_cause": "write-entry defaults to 'Not provided.' for --copilot-metrics, --publish-gate when CLI flags are not passed, instead of reading from state.json. The orchestrator does not always pass these flags. The deeper root cause is that the orchestrator both does the work and writes its own report — no separation of concerns. Secondary root cause: timing-inherent drift where worklog is written before review dispatch, making the state snapshot structurally stale.",
-          "updated_cycle": 283,
-          "verification_cycle": 283
+          "chosen_path": "structural-fix",
+          "rationale": "Structural fix dispatched: PR #1795 adds C6.5 step to cycle-runner close-out that refreshes worklog state section after review dispatch, so published worklog reflects final cycle state rather than pre-dispatch snapshot. Previously recalibrated (cycle 283) to accept timing-inherent drift, but C6.5 eliminates the primary source of stale state. Verification: next cycle using C6.5 should show worklog state matching post-dispatch reality.",
+          "root_cause": "Worklog state section was written before review dispatch (C6), so published counters (in-flight, dispatch count, metrics) were structurally stale. C6.5 patches the worklog after dispatch to reflect final state.",
+          "updated_cycle": 367,
+          "verification_cycle": 367
         },
         {
           "added_cycle": 243,
