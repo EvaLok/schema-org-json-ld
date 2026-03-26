@@ -42,3 +42,5 @@
 | Tool | Receipt | Link |
 |------|---------|------|
 | cycle-start | d7ef3b5 | [d7ef3b5](https://github.com/EvaLok/schema-org-json-ld/commit/d7ef3b56657bd423a437792a8d6abb7b95aea565) |
+| cycle-tagged | d821a49 | [d821a49](https://github.com/EvaLok/schema-org-json-ld/commit/d821a496) |
+| cycle-complete | d15e8d8 | [d15e8d8](https://github.com/EvaLok/schema-org-json-ld/commit/d15e8d8c) |
