@@ -854,7 +854,7 @@ fn apply_worklog_auto_derivations(
             "docs/state.json not found; --auto-issues requires docs/state.json to be present"
                 .to_string()
         })?;
-        let auto_issues = derive_issue_processed_entries(cycle, state)?;
+        let auto_issues = derive_issue_processed_entries(cycle, state, &input.what_was_done)?;
         input.issues_processed = merge_issue_processed(&auto_issues, &input.issues_processed);
     }
 
@@ -938,7 +938,11 @@ fn extract_named_issue_reference(item: &str, label: &str) -> Option<String> {
     }
 }
 
-fn derive_issue_processed_entries(cycle: u64, state: &StateJson) -> Result<Vec<String>, String> {
+fn derive_issue_processed_entries(
+    cycle: u64,
+    state: &StateJson,
+    what_was_done: &[String],
+) -> Result<Vec<String>, String> {
     let start = cycle_window_start(cycle, state, "--auto-issues")?;
     let mut seen = HashSet::new();
     let mut issues = Vec::new();
@@ -993,7 +997,77 @@ fn derive_issue_processed_entries(cycle: u64, state: &StateJson) -> Result<Vec<S
         );
     }
 
+    derive_review_history_issue_processed_entries(cycle, state, &mut issues, &mut seen);
+
+    for item in what_was_done {
+        push_issue_processed_references(&mut issues, &mut seen, item);
+    }
+
     Ok(issues)
+}
+
+fn derive_review_history_issue_processed_entries(
+    cycle: u64,
+    state: &StateJson,
+    issues: &mut Vec<String>,
+    seen: &mut HashSet<String>,
+) {
+    let Some(history) = state
+        .extra
+        .get("review_agent")
+        .and_then(|value| value.get("history"))
+        .and_then(Value::as_array)
+    else {
+        return;
+    };
+
+    for entry in history {
+        if entry.get("cycle").and_then(Value::as_u64) != Some(cycle) {
+            continue;
+        }
+
+        push_issue_processed_numeric_field(issues, seen, entry, "issue");
+        push_issue_processed_numeric_field(issues, seen, entry, "review_issue");
+
+        if let Some(note) = entry.get("note").and_then(Value::as_str) {
+            push_issue_processed_references(issues, seen, note);
+        }
+
+        let Some(finding_dispositions) = entry.get("finding_dispositions").and_then(Value::as_array) else {
+            continue;
+        };
+        for disposition in finding_dispositions {
+            push_issue_processed_numeric_field(issues, seen, disposition, "dispatch_issue");
+            push_issue_processed_numeric_field(issues, seen, disposition, "issue");
+            push_issue_processed_numeric_field(issues, seen, disposition, "review_issue");
+
+            if let Some(note) = disposition.get("note").and_then(Value::as_str) {
+                push_issue_processed_references(issues, seen, note);
+            }
+        }
+    }
+}
+
+fn push_issue_processed_numeric_field(
+    issues: &mut Vec<String>,
+    seen: &mut HashSet<String>,
+    value: &Value,
+    field: &str,
+) {
+    let Some(issue) = value.get(field).and_then(Value::as_u64) else {
+        return;
+    };
+    push_issue_processed_entry(issues, seen, format_issue_processed_entry(issue, None));
+}
+
+fn push_issue_processed_references(
+    issues: &mut Vec<String>,
+    seen: &mut HashSet<String>,
+    text: &str,
+) {
+    for issue in extract_issue_references(text) {
+        push_issue_processed_entry(issues, seen, format_issue_processed_entry(issue, None));
+    }
 }
 
 fn push_issue_processed_entry(issues: &mut Vec<String>, seen: &mut HashSet<String>, item: String) {
@@ -4714,6 +4788,135 @@ mod tests {
         assert!(auto_index < manual_index);
         assert_eq!(content.matches("[QC #160]").count(), 1);
         assert_eq!(content.matches("[audit #315]").count(), 1);
+    }
+
+    #[test]
+    fn worklog_auto_issues_derives_issue_references_from_what_was_done() {
+        let repo_root = TempRepoDir::new("worklog-auto-issues-what-was-done");
+        init_git_repo(&repo_root.path);
+        let start_receipt = create_git_commit_at(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154 [cycle 154]",
+            "2026-03-06T01:00:00Z",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}}
+                ]"#
+            ),
+        );
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "phase": "work",
+                    "phase_entered_at": "2026-03-06T01:00:00Z",
+                    "cycle": 154
+                },
+                "agent_sessions": []
+            }"#,
+        );
+
+        let mut args = worklog_args("Auto issues what was done");
+        args.auto_issues = true;
+        args.done = vec![
+            "Processed cycle 153 review and closed EvaLok/schema-org-json-ld#1803".to_string(),
+            "Merged PR #200".to_string(),
+        ];
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.copilot_metrics = Some("steady".to_string());
+        args.publish_gate = Some("open".to_string());
+        args.in_flight = Some(0);
+
+        let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+        let warnings = apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
+
+        assert!(warnings.is_empty());
+        assert_eq!(input.issues_processed, vec!["#1803"]);
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+        assert!(content.contains(
+            "### Issues processed\n\n- [#1803](https://github.com/EvaLok/schema-org-json-ld/issues/1803)"
+        ));
+        assert!(!content.contains("[#200]("));
+    }
+
+    #[test]
+    fn worklog_auto_issues_derives_current_cycle_review_history_issues() {
+        let repo_root = TempRepoDir::new("worklog-auto-issues-review-history");
+        init_git_repo(&repo_root.path);
+        let start_receipt = create_git_commit_at(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154 [cycle 154]",
+            "2026-03-06T01:00:00Z",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}}
+                ]"#
+            ),
+        );
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "phase": "work",
+                    "phase_entered_at": "2026-03-06T01:00:00Z",
+                    "cycle": 154
+                },
+                "agent_sessions": [],
+                "review_agent": {
+                    "history": [
+                        {
+                            "cycle": 154,
+                            "note": "Processed review #77 and prepared follow-up dispatch",
+                            "finding_dispositions": [
+                                {
+                                    "category": "worklog-accuracy",
+                                    "disposition": "dispatch_created",
+                                    "dispatch_issue": 88
+                                }
+                            ]
+                        },
+                        {
+                            "cycle": 153,
+                            "note": "Prior cycle review #66",
+                            "finding_dispositions": []
+                        }
+                    ]
+                }
+            }"#,
+        );
+
+        let mut args = worklog_args("Auto issues review history");
+        args.auto_issues = true;
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.copilot_metrics = Some("steady".to_string());
+        args.publish_gate = Some("open".to_string());
+        args.in_flight = Some(0);
+
+        let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+        let warnings = apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
+
+        assert!(warnings.is_empty());
+        assert_eq!(input.issues_processed, vec!["#77", "#88"]);
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+        assert!(content.contains("- [#77](https://github.com/EvaLok/schema-org-json-ld/issues/77)"));
+        assert!(content.contains("- [#88](https://github.com/EvaLok/schema-org-json-ld/issues/88)"));
+        assert!(!content.contains("[#66]("));
     }
 
     #[test]
