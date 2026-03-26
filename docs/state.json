@@ -5444,8 +5444,8 @@
   ],
   "cycle_phase": {
     "cycle": 368,
-    "phase": "work",
-    "phase_entered_at": "2026-03-26T08:17:22Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-26T08:31:49Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -5564,7 +5564,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 367"
+        "last_refreshed": "cycle 368"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -5580,7 +5580,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 367"
+        "last_refreshed": "cycle 368"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -5600,7 +5600,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 367"
+        "last_refreshed": "cycle 368"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -5612,7 +5612,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 367"
+        "last_refreshed": "cycle 368"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -5636,11 +5636,11 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 367"
+        "last_refreshed": "cycle 368"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 367"
+        "last_refreshed": "cycle 368"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -5648,7 +5648,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 367"
+        "last_refreshed": "cycle 368"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -5722,13 +5722,13 @@
   },
   "in_flight_sessions": 3,
   "last_cycle": {
-    "duration_minutes": 12,
+    "duration_minutes": 14,
     "issue": 1802,
     "number": 368,
-    "summary": "3 merges (PR #1798, PR #1794, PR #1796), cycle 366 review processed (1 actioned, 2 dispatch_created), cycle 365 history corrected, housekeeping (6 branches deleted), field inventory refreshed",
-    "timestamp": "2026-03-26T08:17:21Z"
+    "summary": "Processed cycle 367 review (3 findings, complacency 2/5). Merged review artifact PR #1801. Fixed journal link to canonical worklog path. Accepted audit #326 Option C (auto-inject --addresses-finding). Dispatched #1804 (C6.5 pipeline field fix) and #1805 (record-dispatch auto-detect). Refreshed 19 stale field inventory entries.",
+    "timestamp": "2026-03-26T08:31:49Z"
   },
-  "last_eva_comment_check": "2026-03-26T08:17:21Z",
+  "last_eva_comment_check": "2026-03-26T08:31:49Z",
   "last_tool_audit_cycle": 353,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
