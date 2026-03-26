@@ -5109,8 +5109,10 @@
     {
       "dispatched_at": "2026-03-26T00:26:06Z",
       "issue": 1779,
+      "merged_at": "2026-03-26T03:07:26Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1780,
+      "status": "merged",
       "title": "Journal duplication guard and escaped newline sanitization"
     },
     {
@@ -5348,13 +5350,13 @@
     "closed_without_merge": 8,
     "closed_without_pr": 47,
     "dispatch_log_latest": "#1783 [Cycle Review] Cycle 364 end-of-cycle review (cycle 364)",
-    "dispatch_to_pr_rate": "91.4%",
+    "dispatch_to_pr_rate": "91.6%",
     "failed_dispatches": 1,
-    "in_flight": 2,
-    "merged": 514,
+    "in_flight": 1,
+    "merged": 515,
     "pr_merge_rate": "98.1%",
-    "produced_pr": 524,
-    "resolved": 571,
+    "produced_pr": 525,
+    "resolved": 572,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 573
@@ -5640,7 +5642,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 19,
     "issue": 1785,
