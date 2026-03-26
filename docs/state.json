@@ -5235,8 +5235,10 @@
     {
       "dispatched_at": "2026-03-26T10:37:23Z",
       "issue": 1813,
+      "merged_at": "2026-03-26T12:20:15Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1814,
+      "status": "merged",
       "title": "Fix cycle-receipts to include record-dispatch commits that precede cycle-complete"
     },
     {
@@ -5468,13 +5470,13 @@
     "closed_without_merge": 8,
     "closed_without_pr": 47,
     "dispatch_log_latest": "#1815 [Cycle Review] Cycle 369 end-of-cycle review (cycle 369)",
-    "dispatch_to_pr_rate": "91.8%",
+    "dispatch_to_pr_rate": "92.0%",
     "failed_dispatches": 1,
-    "in_flight": 1,
-    "merged": 528,
+    "in_flight": 0,
+    "merged": 529,
     "pr_merge_rate": "98.1%",
-    "produced_pr": 538,
-    "resolved": 585,
+    "produced_pr": 539,
+    "resolved": 586,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 586
@@ -5760,7 +5762,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 18,
     "issue": 1817,
