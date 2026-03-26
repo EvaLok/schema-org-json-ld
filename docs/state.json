@@ -5199,8 +5199,10 @@
     {
       "dispatched_at": "2026-03-26T08:29:07Z",
       "issue": 1804,
+      "merged_at": "2026-03-26T10:30:53Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1806,
+      "status": "merged",
       "title": "Fix C6.5 pipeline field in close_out.rs"
     },
     {
@@ -5441,13 +5443,13 @@
     "closed_without_merge": 8,
     "closed_without_pr": 47,
     "dispatch_log_latest": "#1808 [Cycle Review] Cycle 368 end-of-cycle review (cycle 368)",
-    "dispatch_to_pr_rate": "91.8%",
+    "dispatch_to_pr_rate": "91.9%",
     "failed_dispatches": 1,
-    "in_flight": 1,
-    "merged": 525,
+    "in_flight": 0,
+    "merged": 526,
     "pr_merge_rate": "98.1%",
-    "produced_pr": 535,
-    "resolved": 582,
+    "produced_pr": 536,
+    "resolved": 583,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 583
@@ -5733,7 +5735,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 3,
     "issue": 1810,
