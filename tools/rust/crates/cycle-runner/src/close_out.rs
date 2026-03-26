@@ -24,6 +24,7 @@ struct PipelineGateReport {
     overall: String,
     has_blocking_findings: bool,
     warning_count: usize,
+    blocking_warning_count: usize,
     cascade_count: usize,
     blocking_steps: Vec<String>,
 }
@@ -544,6 +545,11 @@ fn parse_pipeline_gate_report(stdout: &str) -> Result<PipelineGateReport, String
         .iter()
         .filter(|step| step.get("status").and_then(Value::as_str) == Some("warn"))
         .count();
+    let blocking_warning_count = steps
+        .iter()
+        .filter(|step| step.get("status").and_then(Value::as_str) == Some("warn"))
+        .filter(|step| step.get("severity").and_then(Value::as_str) == Some("blocking"))
+        .count();
     let cascade_count = steps
         .iter()
         .filter(|step| step.get("status").and_then(Value::as_str) == Some("cascade"))
@@ -558,6 +564,7 @@ fn parse_pipeline_gate_report(stdout: &str) -> Result<PipelineGateReport, String
         overall: overall.to_string(),
         has_blocking_findings,
         warning_count,
+        blocking_warning_count,
         cascade_count,
         blocking_steps,
     })
@@ -567,13 +574,25 @@ fn format_pipeline_summary(report: &PipelineGateReport) -> String {
     let overall = report.overall.to_ascii_uppercase();
     let mut details = Vec::new();
 
-    if report.warning_count > 0 {
-        let suffix = if report.warning_count == 1 {
+    if report.blocking_warning_count > 0 {
+        let suffix = if report.blocking_warning_count == 1 {
+            "blocking warning"
+        } else {
+            "blocking warnings"
+        };
+        details.push(format!("{} {}", report.blocking_warning_count, suffix));
+    }
+
+    let non_blocking_warning_count = report
+        .warning_count
+        .saturating_sub(report.blocking_warning_count);
+    if non_blocking_warning_count > 0 {
+        let suffix = if non_blocking_warning_count == 1 {
             "warning"
         } else {
             "warnings"
         };
-        details.push(format!("{} {}", report.warning_count, suffix));
+        details.push(format!("{} {}", non_blocking_warning_count, suffix));
     }
 
     if report.cascade_count > 0 {
@@ -1348,6 +1367,48 @@ mod tests {
     }
 
     #[test]
+    fn parse_pipeline_gate_report_counts_blocking_warnings_separately() {
+        let report = parse_pipeline_gate_report(
+            r#"{
+                "overall":"pass",
+                "has_blocking_findings":false,
+                "steps":[
+                    {"name":"worklog-dedup","status":"warn","severity":"blocking"},
+                    {"name":"doc-validation","status":"warn","severity":"warning"},
+                    {"name":"review-sync","status":"cascade"}
+                ]
+            }"#,
+        )
+        .unwrap();
+
+        assert_eq!(
+            report,
+            PipelineGateReport {
+                overall: "pass".to_string(),
+                has_blocking_findings: false,
+                warning_count: 2,
+                blocking_warning_count: 1,
+                cascade_count: 1,
+                blocking_steps: Vec::new(),
+            }
+        );
+    }
+
+    #[test]
+    fn format_pipeline_summary_distinguishes_blocking_warnings() {
+        let summary = format_pipeline_summary(&PipelineGateReport {
+            overall: "pass".to_string(),
+            has_blocking_findings: false,
+            warning_count: 3,
+            blocking_warning_count: 1,
+            cascade_count: 0,
+            blocking_steps: Vec::new(),
+        });
+
+        assert_eq!(summary, "PASS (1 blocking warning, 2 warnings)");
+    }
+
+    #[test]
     fn step_c5_5_returns_pipeline_summary_for_warning_pass() {
         let dir = setup_temp_repo("step-c5-5-warning-pass");
         let args_path = dir.join("post-step-args.txt");
@@ -1365,6 +1426,28 @@ mod tests {
         let args = fs::read_to_string(&args_path).unwrap();
         assert!(args.contains("---ARG---\nC5.5\n"));
         assert!(args.contains("Pipeline: PASS (1 warning)"));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn step_c5_5_returns_pipeline_summary_for_blocking_warning_pass() {
+        let dir = setup_temp_repo("step-c5-5-blocking-warning-pass");
+        let args_path = dir.join("post-step-args.txt");
+        write_post_step_capture_script(&dir, &args_path);
+        fs::write(
+            dir.join("tools/pipeline-check"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"overall\":\"pass\",\"has_blocking_findings\":false,\"steps\":[{\"name\":\"worklog-dedup\",\"status\":\"warn\",\"severity\":\"blocking\"},{\"name\":\"doc-validation\",\"status\":\"warn\",\"severity\":\"warning\"}]}'\n",
+        )
+        .unwrap();
+
+        let (passed, summary) = step_c5_5(&dir, 123).unwrap();
+        assert!(passed);
+        assert_eq!(summary, "PASS (1 blocking warning, 1 warning)");
+
+        let args = fs::read_to_string(&args_path).unwrap();
+        assert!(args.contains("---ARG---\nC5.5\n"));
+        assert!(args.contains("Pipeline: PASS (1 blocking warning, 1 warning)"));
 
         let _ = fs::remove_dir_all(&dir);
     }
