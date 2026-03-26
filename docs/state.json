@@ -5613,7 +5613,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 367"
+        "last_refreshed": "cycle 368"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -9159,9 +9159,38 @@
         ],
         "ignored": 0,
         "note": "F1 dispatch_created: PR #1796 merged (C6.5 worklog state refresh). F2 actioned: cycle 365 history dispositions corrected this cycle (7255f50d). F3 dispatch_created: PR #1794 merged (factual receipt note)."
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "journal-quality",
+          "process-adherence",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 367,
+        "deferred": 0,
+        "dispatch_created": 2,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "process-adherence",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "actioned"
+          },
+          {
+            "category": "worklog-accuracy",
+            "disposition": "dispatch_created"
+          }
+        ],
+        "ignored": 0,
+        "note": "F1 dispatch_created: will dispatch close_out.rs C5.5 fail-closed fix. F2 actioned: journal link fixed to canonical path (56a57357). F3 dispatch_created: will dispatch C6.5 pipeline field fix (reads tool_pipeline.status instead of pipeline-check result)."
       }
     ],
-    "last_review_cycle": 366
+    "last_review_cycle": 367
   },
   "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 367,
