@@ -191,6 +191,7 @@ fn reconcile_review_history_dispatch(
     addressed_finding: &AddressedFinding,
     warn: &mut dyn FnMut(&str),
 ) -> Result<(), String> {
+    let finding_zero_based_index = (addressed_finding.index - 1) as usize;
     let history = state
         .pointer_mut("/review_agent/history")
         .and_then(serde_json::Value::as_array_mut)
@@ -227,16 +228,14 @@ fn reconcile_review_history_dispatch(
         ));
     }
 
-    let finding_disposition_path = format!(
-        "/finding_dispositions/{}",
-        addressed_finding.index.saturating_sub(1)
-    );
+    let finding_disposition_path = format!("/finding_dispositions/{}", finding_zero_based_index);
     let finding_disposition = entry
         .pointer(&finding_disposition_path)
         .ok_or_else(|| {
             format!(
-                "review history entry for cycle {} is missing finding_dispositions[{}]",
+                "review history entry for cycle {} is missing finding_dispositions[{}] for finding {}",
                 addressed_finding.cycle,
+                finding_zero_based_index,
                 addressed_finding.index
             )
         })?;
@@ -295,13 +294,14 @@ fn reconcile_review_history_dispatch(
             )
         })?;
     let finding_disposition = finding_dispositions
-        .get_mut(addressed_finding.index.saturating_sub(1) as usize)
+        .get_mut(finding_zero_based_index)
         .and_then(serde_json::Value::as_object_mut)
         .ok_or_else(|| {
             format!(
-                "review history entry for cycle {} finding {} must be an object",
+                "review history entry for cycle {} finding {} (finding_dispositions[{}]) must be an object",
                 addressed_finding.cycle,
-                addressed_finding.index
+                addressed_finding.index,
+                finding_zero_based_index
             )
         })?;
     finding_disposition.insert(
