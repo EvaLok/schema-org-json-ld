@@ -202,45 +202,66 @@ pub fn find_latest_journal(repo_root: &Path) -> Result<PathBuf, String> {
 }
 
 fn get_merged_prs(state: &Value) -> Vec<(u64, String)> {
+    let pr_numbers = state
+        .pointer("/last_cycle/summary")
+        .and_then(Value::as_str)
+        .map(extract_pr_numbers_from_summary)
+        .unwrap_or_default();
+    if pr_numbers.is_empty() {
+        return Vec::new();
+    }
+
     let sessions = match state.get("agent_sessions").and_then(Value::as_array) {
         Some(s) => s,
         None => return Vec::new(),
     };
 
-    // Get the last_cycle timestamp as the boundary for "this cycle"
-    let last_cycle_ts = state
-        .pointer("/last_cycle/timestamp")
-        .and_then(Value::as_str)
-        .unwrap_or("");
-
     let mut merged = Vec::new();
-    for session in sessions {
-        let status = session
-            .get("status")
-            .and_then(Value::as_str)
-            .unwrap_or("");
-        if status != "merged" {
-            continue;
-        }
-        let merged_at = session
-            .get("merged_at")
-            .and_then(Value::as_str)
-            .unwrap_or("");
-        // Include PRs merged after the last cycle completed
-        if !last_cycle_ts.is_empty() && merged_at <= last_cycle_ts {
-            continue;
-        }
-        let pr = session.get("pr").and_then(Value::as_u64).unwrap_or(0);
-        let title = session
-            .get("title")
-            .and_then(Value::as_str)
-            .unwrap_or("")
-            .to_string();
-        if pr > 0 {
+    for pr in pr_numbers {
+        if let Some(session) = sessions
+            .iter()
+            .find(|session| session.get("pr").and_then(Value::as_u64) == Some(pr))
+        {
+            let title = session
+                .get("title")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_string();
             merged.push((pr, title));
         }
     }
     merged
+}
+
+fn extract_pr_numbers_from_summary(summary: &str) -> Vec<u64> {
+    let mut pr_numbers = Vec::new();
+    let mut remaining = summary;
+
+    while let Some(pr_index) = remaining.find("PR ") {
+        remaining = &remaining[pr_index + 3..];
+
+        let Some(hash_index) = remaining.find('#') else {
+            break;
+        };
+        remaining = &remaining[hash_index + 1..];
+
+        let digits_len = remaining
+            .chars()
+            .take_while(|character| character.is_ascii_digit())
+            .count();
+        if digits_len == 0 {
+            continue;
+        }
+
+        if let Ok(pr) = remaining[..digits_len].parse::<u64>() {
+            if !pr_numbers.contains(&pr) {
+                pr_numbers.push(pr);
+            }
+        }
+        remaining = &remaining[digits_len..];
+    }
+
+    pr_numbers
 }
 
 fn get_last_review(state: &Value) -> Option<Value> {
@@ -255,20 +276,24 @@ fn get_last_review(state: &Value) -> Option<Value> {
 mod tests {
     use super::*;
     use serde_json::json;
+    use std::fs;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
-    fn get_merged_prs_filters_by_timestamp() {
+    fn get_merged_prs_reads_prs_from_summary() {
         let state = json!({
             "agent_sessions": [
                 {"status": "merged", "merged_at": "2026-03-01T00:00:00Z", "pr": 100, "title": "old"},
                 {"status": "merged", "merged_at": "2026-03-19T00:00:00Z", "pr": 200, "title": "new"},
                 {"status": "in_flight", "pr": 300, "title": "wip"}
             ],
-            "last_cycle": {"timestamp": "2026-03-18T00:00:00Z"}
+            "last_cycle": {
+                "timestamp": "2026-03-26T03:00:00Z",
+                "summary": "2 dispatches, 2 merges (PR #200, PR #100)"
+            }
         });
         let merged = get_merged_prs(&state);
-        assert_eq!(merged.len(), 1);
-        assert_eq!(merged[0].0, 200);
+        assert_eq!(merged, vec![(200, "new".to_string()), (100, "old".to_string())]);
     }
 
     #[test]
@@ -290,5 +315,75 @@ mod tests {
         // This test would need a full repo setup, so just test the flag logic
         let body_with = "> **OBSERVATION MODE (ADR 0011):**";
         assert!(body_with.contains("OBSERVATION MODE"));
+    }
+
+    #[test]
+    fn extract_pr_numbers_from_summary_supports_repo_qualified_prs() {
+        let pr_numbers = extract_pr_numbers_from_summary(
+            "2 dispatches, 2 merges (PR EvaLok/schema-org-json-ld#1774, PR #1777, PR #1774)",
+        );
+
+        assert_eq!(pr_numbers, vec![1774, 1777]);
+    }
+
+    #[test]
+    fn generate_includes_same_cycle_merges_after_close_out_timestamp() {
+        let dir = setup_temp_repo("same-cycle-merges");
+        fs::create_dir_all(dir.join("docs/worklog/2026-03-26")).unwrap();
+        fs::create_dir_all(dir.join("docs/journal")).unwrap();
+        fs::write(
+            dir.join("docs/state.json"),
+            serde_json::to_string_pretty(&json!({
+                "agent_sessions": [
+                    {
+                        "status": "merged",
+                        "merged_at": "2026-03-26T01:00:00Z",
+                        "pr": 1774,
+                        "title": "Fix first review issue"
+                    },
+                    {
+                        "status": "merged",
+                        "merged_at": "2026-03-26T02:00:00Z",
+                        "pr": 1777,
+                        "title": "Fix second review issue"
+                    }
+                ],
+                "last_cycle": {
+                    "timestamp": "2026-03-26T03:00:00Z",
+                    "summary": "2 dispatches, 2 merges (PR #1774, PR #1777)"
+                }
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        fs::write(
+            dir.join("docs/worklog/2026-03-26/03-00-cycle-364-summary.md"),
+            "worklog",
+        )
+        .unwrap();
+        fs::write(dir.join("docs/journal/2026-03-26.md"), "journal").unwrap();
+
+        let body = generate(&dir, 364, 999, false).unwrap();
+
+        assert!(body.contains(
+            "- **PRs merged**: EvaLok/schema-org-json-ld#1774 (Fix first review issue), EvaLok/schema-org-json-ld#1777 (Fix second review issue)"
+        ));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    fn setup_temp_repo(name: &str) -> std::path::PathBuf {
+        let dir = unique_temp_dir(&format!("cycle-runner-review-body-{name}"));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn unique_temp_dir(prefix: &str) -> std::path::PathBuf {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        std::env::temp_dir().join(format!("{prefix}-{suffix}"))
     }
 }
