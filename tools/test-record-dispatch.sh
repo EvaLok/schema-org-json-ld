@@ -80,7 +80,13 @@ ARGS_LOG="$TMP_DIR/args.log"
 GH_CALLS_LOG="$TMP_DIR/gh-calls.log"
 
 # Test 1: Regex patterns auto-detect review-finding references.
-PATTERN_FIXTURES=$'cycle 367 review finding F1|367:1\nFixes cycle-368 review F2|368:2\naddresses finding 369:3|369:3\nreview finding F4 from cycle 370|370:4'
+PATTERN_FIXTURES="$(cat <<'EOF'
+cycle 367 review finding F1|367:1
+Fixes cycle-368 review F2|368:2
+addresses finding 369:3|369:3
+review finding F4 from cycle 370|370:4
+EOF
+)"
 
 while IFS='|' read -r issue_text expected_ref; do
 	[ -n "$issue_text" ] || continue
@@ -91,6 +97,12 @@ while IFS='|' read -r issue_text expected_ref; do
 
 	run_wrapper "$STDOUT_PATH" "$STDERR_PATH" --repo-root "$TMP_DIR/repo" --issue 123 --title "Example dispatch" || fail "expected auto-detect case '$issue_text' to succeed"
 
+	assert_logged_arg "--repo-root" "$ARGS_LOG"
+	assert_logged_arg "$TMP_DIR/repo" "$ARGS_LOG"
+	assert_logged_arg "--issue" "$ARGS_LOG"
+	assert_logged_arg "123" "$ARGS_LOG"
+	assert_logged_arg "--title" "$ARGS_LOG"
+	assert_logged_arg "Example dispatch" "$ARGS_LOG"
 	assert_logged_arg "--addresses-finding" "$ARGS_LOG"
 	assert_logged_arg "$expected_ref" "$ARGS_LOG"
 	grep -Fq "Auto-detected review finding reference: cycle ${expected_ref%%:*} finding ${expected_ref##*:}" "$STDERR_PATH" || fail "expected auto-detect notice for '$issue_text'"
@@ -105,6 +117,11 @@ STDERR_PATH="$TMP_DIR/explicit.stderr"
 
 run_wrapper "$STDOUT_PATH" "$STDERR_PATH" --repo-root "$TMP_DIR/repo" --issue=124 --title "Explicit dispatch" --addresses-finding=400:5 || fail "expected explicit addresses-finding case to succeed"
 
+assert_logged_arg "--repo-root" "$ARGS_LOG"
+assert_logged_arg "$TMP_DIR/repo" "$ARGS_LOG"
+assert_logged_arg "--issue=124" "$ARGS_LOG"
+assert_logged_arg "--title" "$ARGS_LOG"
+assert_logged_arg "Explicit dispatch" "$ARGS_LOG"
 assert_logged_arg "--addresses-finding=400:5" "$ARGS_LOG"
 assert_no_logged_arg "999:9" "$ARGS_LOG"
 [ ! -s "$GH_CALLS_LOG" ] || fail "expected gh not to be called when --addresses-finding is explicit"
@@ -124,6 +141,26 @@ assert_no_logged_arg "--addresses-finding" "$ARGS_LOG"
 assert_logged_arg 'api repos/EvaLok/schema-org-json-ld/issues/125 --jq .title + " " + (.body // "")' "$GH_CALLS_LOG"
 if grep -Fq "Auto-detected review finding reference:" "$STDERR_PATH"; then
 	fail "did not expect auto-detect notice when gh api fails"
+fi
+
+# Test 4: Non-matching issue text does not inject --addresses-finding.
+GH_OUTPUT="This issue updates docs for cycle 125 without any review finding reference."
+GH_FAIL=0
+STDOUT_PATH="$TMP_DIR/no-match.stdout"
+STDERR_PATH="$TMP_DIR/no-match.stderr"
+
+run_wrapper "$STDOUT_PATH" "$STDERR_PATH" --repo-root "$TMP_DIR/repo" --issue 126 --title "No match dispatch" || fail "expected non-matching issue text to succeed"
+
+assert_logged_arg "--repo-root" "$ARGS_LOG"
+assert_logged_arg "$TMP_DIR/repo" "$ARGS_LOG"
+assert_logged_arg "--issue" "$ARGS_LOG"
+assert_logged_arg "126" "$ARGS_LOG"
+assert_logged_arg "--title" "$ARGS_LOG"
+assert_logged_arg "No match dispatch" "$ARGS_LOG"
+assert_no_logged_arg "--addresses-finding" "$ARGS_LOG"
+assert_logged_arg 'api repos/EvaLok/schema-org-json-ld/issues/126 --jq .title + " " + (.body // "")' "$GH_CALLS_LOG"
+if grep -Fq "Auto-detected review finding reference:" "$STDERR_PATH"; then
+	fail "did not expect auto-detect notice for non-matching issue text"
 fi
 
 echo "PASS"
