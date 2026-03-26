@@ -5173,6 +5173,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix: cycle-runner close-out should update worklog state section after review dispatch (C6)"
+    },
+    {
+      "dispatched_at": "2026-03-26T05:11:36Z",
+      "issue": 1797,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 366 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -5392,17 +5399,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1795 Fix: cycle-runner close-out should update worklog state section after review dispatch (C6) (cycle 366)",
-    "dispatch_to_pr_rate": "91.5%",
+    "dispatch_log_latest": "#1797 [Cycle Review] Cycle 366 end-of-cycle review (cycle 366)",
+    "dispatch_to_pr_rate": "91.4%",
     "failed_dispatches": 1,
-    "in_flight": 2,
+    "in_flight": 3,
     "merged": 519,
     "pr_merge_rate": "98.1%",
     "produced_pr": 529,
     "resolved": 576,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 578
+    "total_dispatches": 579
   },
   "cycle_issues": [
     1792
@@ -5685,7 +5692,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 3,
   "last_cycle": {
     "duration_minutes": 16,
     "issue": 1792,
@@ -9112,7 +9119,7 @@
     ],
     "last_review_cycle": 365
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 365,
   "schema_status": {
     "directory_layout": {
