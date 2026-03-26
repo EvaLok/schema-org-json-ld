@@ -5315,16 +5315,18 @@
     },
     {
       "dispatched_at": "2026-03-26T18:32:29Z",
+      "failure_reason": "repository ruleset violation",
       "issue": 1835,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "Enforce valid phase transition ordering in transition_cycle_phase"
     },
     {
       "dispatched_at": "2026-03-26T18:41:04Z",
+      "failure_reason": "repository ruleset violation",
       "issue": 1836,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "[Cycle Review] Cycle 373 end-of-cycle review"
     }
   ],
@@ -5545,15 +5547,15 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 47,
+    "closed_without_pr": 49,
     "dispatch_log_latest": "#1836 [Cycle Review] Cycle 373 end-of-cycle review (cycle 373)",
     "dispatch_to_pr_rate": "91.8%",
-    "failed_dispatches": 1,
-    "in_flight": 2,
+    "failed_dispatches": 3,
+    "in_flight": 0,
     "merged": 536,
     "pr_merge_rate": "98.2%",
     "produced_pr": 546,
-    "resolved": 593,
+    "resolved": 595,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 595
@@ -5563,8 +5565,8 @@
   ],
   "cycle_phase": {
     "cycle": 374,
-    "phase": "work",
-    "phase_entered_at": "2026-03-26T20:10:36Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-26T20:19:11Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -5662,15 +5664,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 373"
+        "last_refreshed": "cycle 374"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 373"
+        "last_refreshed": "cycle 374"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 373"
+        "last_refreshed": "cycle 374"
       },
       "cycle_issues": {
         "cadence": "every cycle",
@@ -5683,11 +5685,11 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 373"
+        "last_refreshed": "cycle 374"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 363"
+        "last_refreshed": "cycle 374"
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
@@ -5699,7 +5701,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 373"
+        "last_refreshed": "cycle 374"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -5707,7 +5709,7 @@
       },
       "last_tool_audit_cycle": {
         "cadence": "every 10 cycles",
-        "last_refreshed": "cycle 364"
+        "last_refreshed": "cycle 374"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
@@ -5719,7 +5721,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 373"
+        "last_refreshed": "cycle 374"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -5731,7 +5733,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 373"
+        "last_refreshed": "cycle 374"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -5747,19 +5749,19 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 373"
+        "last_refreshed": "cycle 374"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 367"
+        "last_refreshed": "cycle 374"
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 373"
+        "last_refreshed": "cycle 374"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 373"
+        "last_refreshed": "cycle 374"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -5787,11 +5789,11 @@
       },
       "step_comment_acknowledged_gaps": {
         "cadence": "after acknowledging step comment gaps",
-        "last_refreshed": "cycle 363"
+        "last_refreshed": "cycle 374"
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
-        "last_refreshed": "cycle 368"
+        "last_refreshed": "cycle 374"
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
@@ -5839,15 +5841,15 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 0,
   "last_cycle": {
-    "duration_minutes": 13,
+    "duration_minutes": 9,
     "issue": 1837,
     "number": 374,
-    "summary": "1 dispatches, 2 merges (PR #1831, PR #1833)",
-    "timestamp": "2026-03-26T20:10:35Z"
+    "summary": "0 dispatches, 0 merges",
+    "timestamp": "2026-03-26T20:19:11Z"
   },
-  "last_eva_comment_check": "2026-03-26T20:10:35Z",
+  "last_eva_comment_check": "2026-03-26T20:19:11Z",
   "last_tool_audit_cycle": 353,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
@@ -9471,7 +9473,7 @@
     "last_review_cycle": 372
   },
   "review_dispatch_consecutive": 1,
-  "review_events_verified_through_cycle": 372,
+  "review_events_verified_through_cycle": 374,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
@@ -9969,8 +9971,8 @@
     }
   ],
   "test_count": {
-    "last_verified": "cycle 362",
-    "last_verified_note": "php = PHPUnit test count (composer run test-unit). ts = metric-snapshot tool count. Verified cycle 362 via metric-snapshot: 428 PHP, 422 TS, 850 total. No test changes since cycle 345.",
+    "last_verified": "cycle 374",
+    "last_verified_note": "php = PHPUnit test count (composer run test-unit). ts = metric-snapshot tool count. Verified cycle 374 via metric-snapshot: 428 PHP, 422 TS, 850 total. No test changes since cycle 345.",
     "php": 428,
     "total": 850,
     "ts": 422
