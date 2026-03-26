@@ -5222,6 +5222,13 @@
       "pr": 1809,
       "status": "merged",
       "title": "[Cycle Review] Cycle 368 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-26T10:35:30Z",
+      "issue": 1811,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix cycle-complete summary derivation to count pre-cycle-start activity"
     }
   ],
   "audit_dropped": [
@@ -5442,17 +5449,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1808 [Cycle Review] Cycle 368 end-of-cycle review (cycle 368)",
-    "dispatch_to_pr_rate": "91.9%",
+    "dispatch_log_latest": "#1811 Fix cycle-complete summary derivation to count pre-cycle-start activity (cycle 369)",
+    "dispatch_to_pr_rate": "91.8%",
     "failed_dispatches": 1,
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 526,
     "pr_merge_rate": "98.1%",
     "produced_pr": 536,
     "resolved": 583,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 583
+    "total_dispatches": 584
   },
   "cycle_issues": [
     1810
@@ -5735,7 +5742,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 3,
     "issue": 1810,
@@ -9228,7 +9235,8 @@
         ],
         "complacency_score": 2,
         "cycle": 368,
-        "deferred": 3,
+        "deferred": 2,
+        "dispatch_created": 1,
         "finding_count": 3,
         "finding_dispositions": [
           {
@@ -9237,7 +9245,7 @@
           },
           {
             "category": "state-integrity",
-            "disposition": "deferred"
+            "disposition": "dispatch_created"
           },
           {
             "category": "review-accounting",
@@ -9250,7 +9258,7 @@
     ],
     "last_review_cycle": 368
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 367,
   "schema_status": {
     "directory_layout": {
