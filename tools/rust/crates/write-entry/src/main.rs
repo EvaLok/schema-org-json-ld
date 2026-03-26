@@ -706,22 +706,22 @@ fn resolve_pipeline_status(
 
 fn auto_pipeline_status(repo_root: &Path) -> Result<String, String> {
     let output = runner::run_tool(repo_root, "pipeline-check", &[])?;
-    if !output.status.success() {
-        let stderr = runner::stderr_text(&output);
-        let stdout = runner::stdout_text(&output);
-        let detail = match (stdout.is_empty(), stderr.is_empty()) {
-            (false, false) => format!("stdout: {}; stderr: {}", stdout, stderr),
-            (false, true) => format!("stdout: {}", stdout),
-            (true, false) => stderr,
-            (true, true) => "no output".to_string(),
-        };
-        return Err(format!(
-            "pipeline-check failed (exit {}): {}",
-            output.status.code().unwrap_or(-1),
-            detail
-        ));
+    let stdout = runner::stdout_text(&output);
+    if let Ok(summary) = parse_pipeline_check_summary(&stdout) {
+        return Ok(summary);
     }
-    parse_pipeline_check_summary(&runner::stdout_text(&output))
+    let stderr = runner::stderr_text(&output);
+    let detail = match (stdout.is_empty(), stderr.is_empty()) {
+        (false, false) => format!("stdout: {}; stderr: {}", stdout, stderr),
+        (false, true) => format!("stdout: {}", stdout),
+        (true, false) => stderr,
+        (true, true) => "no output".to_string(),
+    };
+    Err(format!(
+        "pipeline-check did not produce a parseable overall summary (exit {}): {}",
+        output.status.code().unwrap_or(-1),
+        detail
+    ))
 }
 
 fn parse_pipeline_check_summary(stdout: &str) -> Result<String, String> {
@@ -5253,7 +5253,7 @@ mod tests {
         let repo_root = TempRepoDir::new("worklog-auto-pipeline");
         write_pipeline_check_script(
             &repo_root.path,
-            "printf 'metric-snapshot: PASS\\nOverall: FAIL (2 blocking, 1 warning)\\n'",
+            "printf 'metric-snapshot: PASS\\nOverall: FAIL (2 blocking, 1 warning)\\n'\nexit 1",
         );
 
         let mut args = worklog_args("Auto pipeline");
@@ -5292,7 +5292,7 @@ mod tests {
         args.in_flight = Some(0);
 
         let error = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap_err();
-        assert!(error.contains("pipeline-check failed"));
+        assert!(error.contains("pipeline-check did not produce a parseable overall summary"));
         assert!(error.contains("pipeline blocked"));
     }
 
