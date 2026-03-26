@@ -31,14 +31,15 @@
 
 ## Cycle state
 
-- **In-flight agent sessions**: 1
-- **Pipeline status**: PASS (3 warnings)
-- **Copilot metrics**: 594 dispatches, 546 PRs produced, 536 merged, 98.2% PR merge rate
+- **In-flight agent sessions**: 2
+- **Pipeline status**: PASS (1 blocking warning, 2 warnings)
+- **Copilot metrics**: 595 dispatches, 546 PRs produced, 536 merged, 98.2% PR merge rate
 - **Publish gate**: published
 
 ## Next steps
 
 1. Review and iterate on PR from [#1835](https://github.com/EvaLok/schema-org-json-ld/issues/1835) (Enforce valid phase transition ordering in transition_cycle_phase) when Copilot completes
+2. Review and iterate on PR from [#1836](https://github.com/EvaLok/schema-org-json-ld/issues/1836) ([Cycle Review] Cycle 373 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
