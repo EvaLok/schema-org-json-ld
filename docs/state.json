@@ -5209,6 +5209,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Auto-detect --addresses-finding in record-dispatch wrapper"
+    },
+    {
+      "dispatched_at": "2026-03-26T08:46:54Z",
+      "issue": 1808,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 368 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -5429,17 +5436,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1805 Auto-detect --addresses-finding in record-dispatch wrapper (cycle 368)",
-    "dispatch_to_pr_rate": "91.6%",
+    "dispatch_log_latest": "#1808 [Cycle Review] Cycle 368 end-of-cycle review (cycle 368)",
+    "dispatch_to_pr_rate": "91.4%",
     "failed_dispatches": 1,
-    "in_flight": 2,
+    "in_flight": 3,
     "merged": 523,
     "pr_merge_rate": "98.1%",
     "produced_pr": 533,
     "resolved": 580,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 582
+    "total_dispatches": 583
   },
   "cycle_issues": [
     1802
@@ -5722,7 +5729,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 3,
   "last_cycle": {
     "duration_minutes": 3,
     "issue": 1802,
@@ -9209,7 +9216,7 @@
     ],
     "last_review_cycle": 367
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 367,
   "schema_status": {
     "directory_layout": {
