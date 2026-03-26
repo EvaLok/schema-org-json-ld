@@ -9094,27 +9094,29 @@
         "note": "F1 deferred: pre-dispatch snapshot design trade-off. F2 dispatch_created: dispatched #1788 (record-dispatch per-finding fix). F3 dispatch_created: dispatched #1786 (review_body.rs timestamp fix). Aggregates corrected in cycle 366 — original record-dispatch had per-finding reconciliation bug (fixed by PR #1789)."
       },
       {
-        "actioned": 0,
+        "actioned": 2,
         "categories": [
           "receipt-accuracy",
           "worklog-accuracy"
         ],
         "complacency_score": 2,
         "cycle": 365,
-        "deferred": 2,
+        "deferred": 0,
         "finding_count": 2,
         "finding_dispositions": [
           {
             "category": "worklog-accuracy",
-            "disposition": "deferred"
+            "disposition": "dispatch_created",
+            "dispatch_issue": 1795
           },
           {
             "category": "receipt-accuracy",
-            "disposition": "deferred"
+            "disposition": "dispatch_created",
+            "dispatch_issue": 1793
           }
         ],
         "ignored": 0,
-        "note": "F1 deferred: pre-dispatch worklog snapshot is a design trade-off requiring write-entry tool changes. F2 deferred: receipt note accuracy requires write-entry tool fix."
+        "note": "F1 dispatch_created: #1795 dispatched in cycle 366 to add C6.5 worklog state refresh. F2 dispatch_created: #1793 dispatched in cycle 366 to fix receipt note derivation."
       }
     ],
     "last_review_cycle": 365
