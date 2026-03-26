@@ -5119,6 +5119,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "validate-docs journal duplicate and escaped newline detection"
+    },
+    {
+      "dispatched_at": "2026-03-26T00:37:27Z",
+      "issue": 1783,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 364 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -5338,17 +5345,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1781 validate-docs journal duplicate and escaped newline detection (cycle 364)",
-    "dispatch_to_pr_rate": "91.4%",
+    "dispatch_log_latest": "#1783 [Cycle Review] Cycle 364 end-of-cycle review (cycle 364)",
+    "dispatch_to_pr_rate": "91.3%",
     "failed_dispatches": 1,
-    "in_flight": 2,
+    "in_flight": 3,
     "merged": 513,
     "pr_merge_rate": "98.1%",
     "produced_pr": 523,
     "resolved": 570,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 572
+    "total_dispatches": 573
   },
   "cycle_issues": [
     1778
@@ -5631,7 +5638,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 3,
   "last_cycle": {
     "duration_minutes": 19,
     "issue": 1778,
@@ -9006,7 +9013,7 @@
     ],
     "last_review_cycle": 363
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 363,
   "schema_status": {
     "directory_layout": {
