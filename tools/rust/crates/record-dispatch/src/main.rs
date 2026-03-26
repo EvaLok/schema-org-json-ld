@@ -139,7 +139,7 @@ fn run_with_runner(
         Err(error) => return Err(error),
     };
     if let Some(addressed_finding) = cli.addresses_finding.as_ref() {
-        reconcile_review_history_dispatch(&mut state_value, addressed_finding)?;
+        reconcile_review_history_dispatch(&mut state_value, addressed_finding, warn)?;
     }
     let current_phase = state_value
         .pointer("/cycle_phase/phase")
@@ -189,7 +189,9 @@ fn run_with_runner(
 fn reconcile_review_history_dispatch(
     state: &mut serde_json::Value,
     addressed_finding: &AddressedFinding,
+    warn: &mut dyn FnMut(&str),
 ) -> Result<(), String> {
+    let finding_zero_based_index = (addressed_finding.index - 1) as usize;
     let history = state
         .pointer_mut("/review_agent/history")
         .and_then(serde_json::Value::as_array_mut)
@@ -226,6 +228,35 @@ fn reconcile_review_history_dispatch(
         ));
     }
 
+    let finding_disposition_path = format!("/finding_dispositions/{}", finding_zero_based_index);
+    let finding_disposition = entry
+        .pointer(&finding_disposition_path)
+        .ok_or_else(|| {
+            format!(
+                "review history entry for cycle {} is missing finding_dispositions[{}] for finding {}",
+                addressed_finding.cycle,
+                finding_zero_based_index,
+                addressed_finding.index
+            )
+        })?;
+    let current_disposition = finding_disposition
+        .get("disposition")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| {
+            format!(
+                "review history entry for cycle {} finding {} is missing a string disposition",
+                addressed_finding.cycle,
+                addressed_finding.index
+            )
+        })?;
+    if current_disposition != "deferred" {
+        warn(&format!(
+            "review history entry for cycle {} finding {} has disposition {:?}; expected \"deferred\", leaving review history unchanged",
+            addressed_finding.cycle, addressed_finding.index, current_disposition
+        ));
+        return Ok(());
+    }
+
     let deferred = entry
         .get("deferred")
         .and_then(serde_json::Value::as_u64)
@@ -253,6 +284,30 @@ fn reconcile_review_history_dispatch(
             addressed_finding.cycle
         )
     })?;
+    let finding_dispositions = entry_object
+        .get_mut("finding_dispositions")
+        .and_then(serde_json::Value::as_array_mut)
+        .ok_or_else(|| {
+            format!(
+                "review history entry for cycle {} is missing an array finding_dispositions",
+                addressed_finding.cycle
+            )
+        })?;
+    let finding_disposition = finding_dispositions
+        .get_mut(finding_zero_based_index)
+        .and_then(serde_json::Value::as_object_mut)
+        .ok_or_else(|| {
+            format!(
+                "review history entry for cycle {} finding {} (finding_dispositions[{}]) must be an object",
+                addressed_finding.cycle,
+                addressed_finding.index,
+                finding_zero_based_index
+            )
+        })?;
+    finding_disposition.insert(
+        "disposition".to_string(),
+        serde_json::json!("dispatch_created"),
+    );
     entry_object.insert("deferred".to_string(), serde_json::json!(deferred - 1));
     entry_object.insert(
         "dispatch_created".to_string(),
@@ -311,7 +366,10 @@ mod tests {
     fn run_reconciles_review_history_when_addresses_finding_is_provided() {
         let repo = TempRepo::new();
         repo.init();
-        repo.set_review_history_entry(164, 3, 2, 0);
+        repo.set_review_history_entry_with_dispositions(
+            164,
+            &["deferred", "deferred", "actioned"],
+        );
 
         run(Cli {
             issue: 602,
@@ -331,6 +389,62 @@ mod tests {
         assert_eq!(
             state.pointer("/review_agent/history/0/dispatch_created"),
             Some(&serde_json::json!(1))
+        );
+        assert_eq!(
+            state.pointer("/review_agent/history/0/finding_dispositions/1/disposition"),
+            Some(&serde_json::json!("dispatch_created"))
+        );
+    }
+
+    #[test]
+    fn run_warns_when_target_finding_is_not_deferred() {
+        let repo = TempRepo::new();
+        repo.init();
+        repo.set_review_history_entry_with_dispositions(
+            164,
+            &["deferred", "actioned", "deferred"],
+        );
+        let mut warnings = Vec::new();
+        let runner = MockRunner::with_error("runner should not be called when bypassing");
+
+        run_with_runner(
+            Cli {
+                issue: 602,
+                title: "Example dispatch".to_string(),
+                model: Some("gpt-5.4".to_string()),
+                review_dispatch: true,
+                addresses_finding: Some("164:2".parse().expect("finding ref should parse")),
+                repo_root: repo.path().to_path_buf(),
+            },
+            &runner,
+            &mut |warning| warnings.push(warning.to_string()),
+        )
+        .expect("non-deferred finding should warn without failing");
+
+        assert_eq!(runner.call_count(), 0);
+        assert!(
+            warnings.contains(&record_dispatch::REVIEW_DISPATCH_WARNING.to_string()),
+            "expected standard review-dispatch warning"
+        );
+        assert!(
+            warnings.iter().any(|warning| warning.contains(
+                "review history entry for cycle 164 finding 2 has disposition \"actioned\""
+            )),
+            "expected warning about non-deferred finding disposition, got {warnings:?}"
+        );
+
+        let state = repo.read_state();
+        assert_eq!(
+            state.pointer("/review_agent/history/0/deferred"),
+            Some(&serde_json::json!(2))
+        );
+        assert_eq!(
+            state.pointer("/review_agent/history/0/dispatch_created"),
+            Some(&serde_json::json!(0))
+        );
+        assert_eq!(
+            state.pointer("/review_agent/history/0/finding_dispositions/1/disposition"),
+            Some(&serde_json::json!("actioned"))
         );
     }
 
@@ -968,6 +1082,59 @@ mod tests {
                         "actioned_failed": 0,
                         "verified_resolved": 0,
                         "ignored": 0
+                    }
+                ]
+            });
+            fs::write(
+                self.path().join("docs/state.json"),
+                serde_json::to_string_pretty(&state).expect("state should serialize"),
+            )
+            .expect("state file should be updated");
+        }
+
+        fn set_review_history_entry_with_dispositions(&self, cycle: u64, dispositions: &[&str]) {
+            let mut actioned = 0_u64;
+            let mut deferred = 0_u64;
+            let mut dispatch_created = 0_u64;
+            let mut actioned_failed = 0_u64;
+            let mut verified_resolved = 0_u64;
+            let mut ignored = 0_u64;
+
+            let finding_dispositions: Vec<serde_json::Value> = dispositions
+                .iter()
+                .map(|disposition| {
+                    match *disposition {
+                        "actioned" => actioned += 1,
+                        "deferred" => deferred += 1,
+                        "dispatch_created" => dispatch_created += 1,
+                        "actioned_failed" => actioned_failed += 1,
+                        "verified_resolved" => verified_resolved += 1,
+                        "ignored" => ignored += 1,
+                        other => panic!("unsupported test disposition {other}"),
+                    }
+
+                    serde_json::json!({
+                        "category": "correctness",
+                        "disposition": disposition,
+                    })
+                })
+                .collect();
+
+            let mut state = self.read_state();
+            state["review_agent"] = serde_json::json!({
+                "history": [
+                    {
+                        "cycle": cycle,
+                        "finding_count": dispositions.len(),
+                        "complacency_score": 0,
+                        "categories": ["correctness"],
+                        "actioned": actioned,
+                        "deferred": deferred,
+                        "dispatch_created": dispatch_created,
+                        "actioned_failed": actioned_failed,
+                        "verified_resolved": verified_resolved,
+                        "ignored": ignored,
+                        "finding_dispositions": finding_dispositions,
                     }
                 ]
             });
