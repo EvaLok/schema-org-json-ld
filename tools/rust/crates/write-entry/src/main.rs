@@ -364,8 +364,18 @@ fn execute_journal(
                 .to_string(),
         );
     }
+    if path.exists() {
+        let existing_content = fs::read_to_string(&path)
+            .map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
+        if existing_journal_contains_cycle_entry(&existing_content, cycle) {
+            return Err(format!(
+                "journal file already contains an entry for cycle {} — refusing to append duplicate",
+                cycle
+            ));
+        }
+    }
     let worklog_link = find_worklog_relative_path(repo_root, cycle)?;
-    let entry = render_journal_entry(
+    let entry = sanitize_escaped_newlines(&render_journal_entry(
         cycle,
         now,
         &args.title,
@@ -373,7 +383,8 @@ fn execute_journal(
         status,
         previous.as_deref(),
         worklog_link.as_deref(),
-    );
+    ));
+    reject_duplicate_journal_section_headers(&entry)?;
     emit_generated_markdown_sha_warnings("journal", &entry, repo_root);
     write_journal_file(&path, now.date_naive(), &entry)?;
     update_journal_index(repo_root, now.date_naive(), cycle)?;
@@ -1909,6 +1920,28 @@ fn write_journal_file(path: &Path, date: NaiveDate, entry: &str) -> Result<bool,
     }
 }
 
+fn existing_journal_contains_cycle_entry(existing_content: &str, cycle: u64) -> bool {
+    let heading = format!("Cycle {}:", cycle);
+    existing_content.lines().any(|line| {
+        let trimmed = line.trim();
+        trimmed.starts_with("## ") && trimmed.contains(&heading)
+    })
+}
+
+fn reject_duplicate_journal_section_headers(entry: &str) -> Result<(), String> {
+    let mut seen = HashSet::new();
+    for line in entry.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("### ") && !seen.insert(trimmed.to_string()) {
+            return Err(format!(
+                "journal entry contains duplicate section header '{}' — refusing to write malformed entry",
+                trimmed
+            ));
+        }
+    }
+    Ok(())
+}
+
 fn update_journal_index(repo_root: &Path, date: NaiveDate, cycle: u64) -> Result<(), String> {
     let journal_index_path = repo_root.join("JOURNAL.md");
     if !journal_index_path.exists() {
@@ -2284,6 +2317,10 @@ fn render_journal_entry(
     }
     lines.push(String::new());
     lines.join("\n")
+}
+
+fn sanitize_escaped_newlines(text: &str) -> String {
+    text.replace("\\n", "\n")
 }
 
 fn strip_cycle_prefix(title: &str) -> &str {
@@ -5024,7 +5061,7 @@ mod tests {
     }
 
     #[test]
-    fn journal_create_and_append_use_separator() {
+    fn journal_rejects_duplicate_cycle_entries_for_same_day() {
         let repo_root = TempRepoDir::new("append");
         let now = fixed_now();
         write_root_journal_index(&repo_root.path, "");
@@ -5059,7 +5096,7 @@ Reflective log for the schema-org-json-ld orchestrator.
         file_args.input_file = Some(write_input_file(&repo_root.path, "journal.json", payload));
 
         execute_journal(&file_args, &repo_root.path, now).unwrap();
-        execute_journal(&file_args, &repo_root.path, now).unwrap();
+        let error = execute_journal(&file_args, &repo_root.path, now).unwrap_err();
 
         let path = journal_path(&repo_root.path, now);
         let content = fs::read_to_string(path).unwrap();
@@ -5070,12 +5107,72 @@ Reflective log for the schema-org-json-ld orchestrator.
         assert!(content.contains(
             "Worklog: [cycle 154](../worklog/2026-03-06/051458-from-convention-to-enforcement.md)"
         ));
+        assert_eq!(content.matches("Cycle 154: From convention to enforcement").count(), 1);
         assert_eq!(
-            content
-                .matches("\n## 2026-03-06 — Cycle 154: From convention to enforcement\n")
-                .count(),
-            2
+            error,
+            "journal file already contains an entry for cycle 154 — refusing to append duplicate"
         );
+    }
+
+    #[test]
+    fn journal_sanitizes_escaped_newlines_before_writing() {
+        let repo_root = TempRepoDir::new("sanitize-newlines");
+        write_root_journal_index(&repo_root.path, "");
+        write_worklog_fixture(&repo_root.path, fixed_now(), 154, "Sanitized newlines");
+        let payload = r#"{
+			"previous_commitment_status":"no_prior_commitment",
+			"previous_commitment_detail":"First line.\nSecond line.",
+			"sections":[{"heading":"Observation","body":"Alpha.\nBeta."}],
+			"concrete_behavior_change":"Commit once.\nVerify twice.",
+			"open_questions":["Should this stay?\nYes."]
+		}"#;
+
+        let mut args = journal_args("Sanitized newlines");
+        args.input_file = Some(write_input_file(
+            &repo_root.path,
+            "journal-sanitize-newlines.json",
+            payload,
+        ));
+
+        let path = execute_journal(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(!content.contains("\\n"));
+        assert!(content.contains("**No prior commitment.** First line.\nSecond line."));
+        assert!(content.contains("### Observation\n\nAlpha.\nBeta."));
+        assert!(content.contains("1. Commit once.\nVerify twice."));
+        assert!(content.contains("- Should this stay?\nYes."));
+    }
+
+    #[test]
+    fn journal_rejects_duplicate_section_headers_within_entry() {
+        let repo_root = TempRepoDir::new("duplicate-section-headers");
+        write_root_journal_index(&repo_root.path, "");
+        write_worklog_fixture(&repo_root.path, fixed_now(), 154, "Duplicate section headings");
+        let payload = r#"{
+			"previous_commitment_status":"no_prior_commitment",
+			"previous_commitment_detail":"No prior commitment recorded.",
+			"sections":[
+				{"heading":"Observation","body":"First."},
+				{"heading":"Observation","body":"Second."}
+			],
+			"concrete_behavior_change":"Keep going.",
+			"open_questions":[]
+		}"#;
+
+        let mut args = journal_args("Duplicate section headings");
+        args.input_file = Some(write_input_file(
+            &repo_root.path,
+            "journal-duplicate-headings.json",
+            payload,
+        ));
+
+        let error = execute_journal(&args, &repo_root.path, fixed_now()).unwrap_err();
+        assert_eq!(
+            error,
+            "journal entry contains duplicate section header '### Observation' — refusing to write malformed entry"
+        );
+        assert!(!journal_path(&repo_root.path, fixed_now()).exists());
     }
 
     #[test]
