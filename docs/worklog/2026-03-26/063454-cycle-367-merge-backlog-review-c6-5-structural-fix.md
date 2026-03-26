@@ -21,12 +21,11 @@
 - **`tools/rust/crates/cycle-runner/src/close_out.rs`**: modified
 - **`tools/rust/crates/write-entry/src/main.rs`**: modified
 
-## Pre-dispatch state
+## Cycle state
 
-*Snapshot before review dispatch — final counters may differ after C6.*
-- **In-flight agent sessions**: 0
-- **Pipeline status**: PASS (3 warnings)
-- **Copilot metrics**: 579 dispatches, 532 PRs produced, 522 merged, 98.1% PR merge rate
+- **In-flight agent sessions**: 1
+- **Pipeline status**: phase_5_active
+- **Copilot metrics**: 580 dispatches, 532 PRs produced, 522 merged, 98.1% PR merge rate
 - **Publish gate**: published
 
 ## Next steps
