@@ -1,0 +1,23 @@
+# Cycle 367 Review
+
+## 1. [process-adherence] The cycle overrode a blocking C5.5 failure and still dispatched the next review as if close-out had passed
+
+**File**: `docs/state.json:5190-5195`
+**Evidence**: `docs/state.json` records a new in-flight review dispatch for issue `#1800`, so the cycle advanced past close-out and opened the next review anyway. But the cycle issue shows C5.5 was a blocking failure, not a warning: issue `#1799` step comment `4132127967` reports `Pipeline: FAIL`, `overall: "fail"`, `has_blocking_findings: true`, and a blocking `doc-validation` failure because the worklog was missing the required state lines and receipts. Despite that, step `C6` immediately dispatched review `#1800`, step `C7` pushed, and step `C8` falsely announced `Pipeline: PASS` in comment `4132156222`. That is a straight override of a blocking gate, not a harmless close-out continuation.
+**Recommendation**: Make `cycle-runner` fail closed after any blocking `C5.5` result. Do not dispatch the next review, push, or post a PASS close-out summary until the blocking artifact problem is repaired and the final gate reruns clean.
+
+## 2. [journal-quality] The journal points readers at a stale legacy worklog copy instead of the patched canonical cycle-367 artifact
+
+**File**: `docs/journal/2026-03-26.md:104-128`
+**Evidence**: The cycle 367 journal entry links `../worklog/2026-03-26/063454-merge-backlog-review-processing-c6-5-structural-fix.md`, not the canonical `063454-cycle-367-merge-backlog-review-c6-5-structural-fix.md` file. Those two files now diverge materially: the linked legacy file still says `## Pre-dispatch state` with `In-flight agent sessions: 0` and `Pipeline status: PASS (3 warnings)` at `docs/worklog/2026-03-26/063454-merge-backlog-review-processing-c6-5-structural-fix.md:24-30`, while the canonical file was later patched at C6.5 to `## Cycle state`, `In-flight agent sessions: 1`, and new counters at `docs/worklog/2026-03-26/063454-cycle-367-merge-backlog-review-c6-5-structural-fix.md:24-29`. The issue history shows why this happened: step `C3` wrote the legacy path, step `C5` froze the canonical path, C5.5 then failed doc validation, and only afterward did commit `ca47644` restore content into the legacy file. So the journal still routes readers to the stale copy rather than the artifact the cycle claims C6.5 refreshed.
+**Recommendation**: Treat the cycle-NNN worklog as the single source of truth. Update journal links to the canonical path, stop restoring content into legacy aliases, and either delete or clearly supersede alternate filenames so readers and validators cannot land on a divergent copy.
+
+## 3. [worklog-accuracy] PR #1796 refreshed the worklog with the wrong pipeline field, so the “fixed” state block still reports an inaccurate status
+
+**File**: `tools/rust/crates/cycle-runner/src/close_out.rs:769-806`
+**Evidence**: The new C6.5 patch step reads `state.tool_pipeline.status` and passes that raw value to `write-entry patch-pipeline` as `--status`. In `docs/state.json`, that field is the long-lived tooling program phase (`"phase_5_active"`) rather than the cycle’s pipeline verdict (`docs/state.json:9671-9722`). The result is visible in the published canonical worklog: `docs/worklog/2026-03-26/063454-cycle-367-merge-backlog-review-c6-5-structural-fix.md:26-29` now reports `Pipeline status: phase_5_active`. That does not match the actual cycle evidence in issue `#1799`: step `1` summarized the early check as `FAIL ... 3 warnings`, and step `C5.5` recorded a final blocking `FAIL`. So the structural fix removed the old stale numbers but replaced the human-meaningful status with an unrelated internal enum.
+**Recommendation**: Patch the worklog from the actual pipeline-check result captured in close-out, or preserve the already-rendered human-readable pipeline summary. Do not reuse `tool_pipeline.status` for per-cycle reporting; it describes the repository’s tooling rollout phase, not whether this cycle’s gate passed.
+
+## Complacency score
+
+**2/5** — The cycle did leave a substantial audit trail: 27 step comments are present on issue `#1799`, and both `bash tools/state-invariants` and `bash tools/metric-snapshot` pass on the current tree. But the cycle still pushed through a blocking C5.5 failure, misreported that failed gate as PASS at C8, and shipped two divergent worklog artifacts immediately after claiming the chronic worklog-accuracy problem was structurally fixed. Because a blocking gate was overridden, the score cannot exceed 3/5; given the false-PASS close-out and stale linked artifact, 2/5 is the more honest assessment.
