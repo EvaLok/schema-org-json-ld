@@ -5226,8 +5226,10 @@
     {
       "dispatched_at": "2026-03-26T10:35:30Z",
       "issue": 1811,
+      "merged_at": "2026-03-26T12:20:12Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1812,
+      "status": "merged",
       "title": "Fix cycle-complete summary derivation to count pre-cycle-start activity"
     },
     {
@@ -5466,13 +5468,13 @@
     "closed_without_merge": 8,
     "closed_without_pr": 47,
     "dispatch_log_latest": "#1815 [Cycle Review] Cycle 369 end-of-cycle review (cycle 369)",
-    "dispatch_to_pr_rate": "91.6%",
+    "dispatch_to_pr_rate": "91.8%",
     "failed_dispatches": 1,
-    "in_flight": 2,
-    "merged": 527,
+    "in_flight": 1,
+    "merged": 528,
     "pr_merge_rate": "98.1%",
-    "produced_pr": 537,
-    "resolved": 584,
+    "produced_pr": 538,
+    "resolved": 585,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 586
@@ -5758,7 +5760,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 18,
     "issue": 1817,
