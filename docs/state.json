@@ -9052,8 +9052,8 @@
         ],
         "complacency_score": 2,
         "cycle": 364,
-        "deferred": 0,
-        "dispatch_created": 3,
+        "deferred": 1,
+        "dispatch_created": 2,
         "finding_count": 3,
         "finding_dispositions": [
           {
@@ -9062,7 +9062,7 @@
           },
           {
             "category": "review-history-accuracy",
-            "disposition": "deferred"
+            "disposition": "dispatch_created"
           },
           {
             "category": "code-quality",
@@ -9070,7 +9070,7 @@
           }
         ],
         "ignored": 0,
-        "note": "F1 deferred: pre-dispatch snapshot design trade-off. F2 deferred: needs same-cycle disposition reconciliation tooling. F3 dispatch: real bug in review_body.rs timestamp boundary."
+        "note": "F1 deferred: pre-dispatch snapshot design trade-off. F2 dispatch_created: dispatched #1788 (record-dispatch per-finding fix). F3 dispatch_created: dispatched #1786 (review_body.rs timestamp fix). Aggregates corrected in cycle 366 — original record-dispatch had per-finding reconciliation bug (fixed by PR #1789)."
       },
       {
         "actioned": 0,
