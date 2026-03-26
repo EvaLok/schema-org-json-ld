@@ -5177,8 +5177,10 @@
     {
       "dispatched_at": "2026-03-26T05:11:36Z",
       "issue": 1797,
+      "merged_at": "2026-03-26T06:31:47Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1798,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 366 end-of-cycle review"
     }
   ],
@@ -5400,13 +5402,13 @@
     "closed_without_merge": 8,
     "closed_without_pr": 47,
     "dispatch_log_latest": "#1797 [Cycle Review] Cycle 366 end-of-cycle review (cycle 366)",
-    "dispatch_to_pr_rate": "91.4%",
+    "dispatch_to_pr_rate": "91.5%",
     "failed_dispatches": 1,
-    "in_flight": 3,
-    "merged": 519,
+    "in_flight": 2,
+    "merged": 520,
     "pr_merge_rate": "98.1%",
-    "produced_pr": 529,
-    "resolved": 576,
+    "produced_pr": 530,
+    "resolved": 577,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 579
@@ -5515,15 +5517,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 366"
+        "last_refreshed": "cycle 367"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 366"
+        "last_refreshed": "cycle 367"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 366"
+        "last_refreshed": "cycle 367"
       },
       "cycle_issues": {
         "cadence": "every cycle",
@@ -5544,7 +5546,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 366"
+        "last_refreshed": "cycle 367"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -5692,7 +5694,7 @@
       }
     }
   },
-  "in_flight_sessions": 3,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 16,
     "issue": 1799,
@@ -9106,13 +9108,13 @@
         "finding_dispositions": [
           {
             "category": "worklog-accuracy",
-            "disposition": "dispatch_created",
-            "dispatch_issue": 1795
+            "dispatch_issue": 1795,
+            "disposition": "dispatch_created"
           },
           {
             "category": "receipt-accuracy",
-            "disposition": "dispatch_created",
-            "dispatch_issue": 1793
+            "dispatch_issue": 1793,
+            "disposition": "dispatch_created"
           }
         ],
         "ignored": 0,
