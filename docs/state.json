@@ -5132,6 +5132,13 @@
       "pr": 1784,
       "status": "merged",
       "title": "[Cycle Review] Cycle 364 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-26T03:13:52Z",
+      "issue": 1786,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix: review_body.rs get_merged_prs uses wrong timestamp boundary"
     }
   ],
   "audit_dropped": [
@@ -5351,17 +5358,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 47,
-    "dispatch_log_latest": "#1783 [Cycle Review] Cycle 364 end-of-cycle review (cycle 364)",
-    "dispatch_to_pr_rate": "91.8%",
+    "dispatch_log_latest": "#1786 Fix: review_body.rs get_merged_prs uses wrong timestamp boundary (cycle 365)",
+    "dispatch_to_pr_rate": "91.6%",
     "failed_dispatches": 1,
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 516,
     "pr_merge_rate": "98.1%",
     "produced_pr": 526,
     "resolved": 573,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 573
+    "total_dispatches": 574
   },
   "cycle_issues": [
     1785
@@ -5644,7 +5651,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 19,
     "issue": 1785,
@@ -9025,8 +9032,8 @@
         ],
         "complacency_score": 2,
         "cycle": 364,
-        "deferred": 2,
-        "dispatch_created": 1,
+        "deferred": 1,
+        "dispatch_created": 2,
         "finding_count": 3,
         "finding_dispositions": [
           {
@@ -9048,7 +9055,7 @@
     ],
     "last_review_cycle": 364
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 363,
   "schema_status": {
     "directory_layout": {
