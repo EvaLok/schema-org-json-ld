@@ -5677,7 +5677,7 @@
       },
       "project_mode": {
         "cadence": "when mode or counter changes",
-        "last_refreshed": "cycle 365"
+        "last_refreshed": "cycle 371"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
@@ -5745,7 +5745,7 @@
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
-        "last_refreshed": "cycle 360"
+        "last_refreshed": "cycle 371"
       },
       "total_enums": {
         "cadence": "after enum additions",
@@ -5785,7 +5785,7 @@
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 365"
+        "last_refreshed": "cycle 371"
       }
     }
   },
