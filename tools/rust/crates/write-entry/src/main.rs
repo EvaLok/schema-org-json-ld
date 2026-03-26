@@ -17,7 +17,13 @@ const AUDIT_ISSUES_URL: &str = "https://github.com/EvaLok/schema-org-json-ld-aud
 const PRIMARY_COMMITS_URL: &str = "https://github.com/EvaLok/schema-org-json-ld/commit";
 const JOURNAL_DESCRIPTION: &str = "Reflective log for the schema-org-json-ld orchestrator.";
 const NOT_PROVIDED: &str = "Not provided.";
+const CYCLE_STATE_HEADING: &str = "## Cycle state";
+const LEGACY_STATE_HEADING: &str = "## Pre-dispatch state";
+const LEGACY_STATE_DISCLAIMER: &str = "*Snapshot before review dispatch — final counters may differ after C6.*";
+const IN_FLIGHT_PREFIX: &str = "- **In-flight agent sessions**: ";
 const PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
+const COPILOT_METRICS_PREFIX: &str = "- **Copilot metrics**: ";
+const PUBLISH_GATE_PREFIX: &str = "- **Publish gate**: ";
 const INFRASTRUCTURE_ROOTS: [&str; 2] = ["tools", ".claude/skills"];
 const INFRASTRUCTURE_FILES: [&str; 4] = [
     "STARTUP_CHECKLIST.md",
@@ -138,12 +144,24 @@ struct JournalArgs {
 
 #[derive(Parser)]
 struct PatchPipelineArgs {
-    /// Path to the worklog file to patch
-    #[arg(long)]
+    /// Path to the worklog file to patch (`--worklog` primary; `--worklog-file` accepted as an alias)
+    #[arg(long, alias = "worklog-file")]
     worklog: PathBuf,
     /// Replacement pipeline status text
     #[arg(long)]
     status: String,
+    /// Replacement in-flight agent session count
+    #[arg(long = "in-flight")]
+    in_flight: Option<u64>,
+    /// Replacement copilot metrics summary text
+    #[arg(long = "copilot-metrics")]
+    copilot_metrics: Option<String>,
+    /// Replacement publish gate summary text
+    #[arg(long = "publish-gate")]
+    publish_gate: Option<String>,
+    /// Replacement current state section title
+    #[arg(long = "section-title")]
+    section_title: Option<String>,
 }
 
 #[derive(Debug)]
@@ -395,12 +413,46 @@ fn execute_patch_pipeline(args: &PatchPipelineArgs, repo_root: &Path) -> Result<
     let worklog_path = resolve_repo_path(repo_root, &args.worklog);
     let content = fs::read_to_string(&worklog_path)
         .map_err(|error| format!("failed to read {}: {}", worklog_path.display(), error))?;
-    let patched = patch_pipeline_status_line(&content, &args.status).ok_or_else(|| {
+    let mut patched = patch_line_value(&content, PIPELINE_STATUS_PREFIX, &args.status).ok_or_else(|| {
         format!(
             "failed to patch {}: pipeline status line not found",
             worklog_path.display()
         )
     })?;
+    if let Some(in_flight) = args.in_flight {
+        patched = patch_line_value(&patched, IN_FLIGHT_PREFIX, &in_flight.to_string()).ok_or_else(|| {
+            format!(
+                "failed to patch {}: in-flight agent sessions line not found",
+                worklog_path.display()
+            )
+        })?;
+    }
+    if let Some(copilot_metrics) = args.copilot_metrics.as_deref() {
+        patched = patch_line_value(&patched, COPILOT_METRICS_PREFIX, copilot_metrics).ok_or_else(|| {
+            format!(
+                "failed to patch {}: copilot metrics line not found",
+                worklog_path.display()
+            )
+        })?;
+    }
+    if let Some(publish_gate) = args.publish_gate.as_deref() {
+        patched = patch_line_value(&patched, PUBLISH_GATE_PREFIX, publish_gate).ok_or_else(|| {
+            format!(
+                "failed to patch {}: publish gate line not found",
+                worklog_path.display()
+            )
+        })?;
+    }
+    if let Some(section_title) = args.section_title.as_deref() {
+        let heading = format!("## {}", section_title.trim());
+        patched = patch_state_heading(&patched, &heading).ok_or_else(|| {
+            format!(
+                "failed to patch {}: state section heading not found",
+                worklog_path.display()
+            )
+        })?;
+        patched = remove_legacy_state_disclaimer(&patched);
+    }
     fs::write(&worklog_path, patched)
         .map_err(|error| format!("failed to write {}: {}", worklog_path.display(), error))?;
     Ok(worklog_path)
@@ -414,8 +466,8 @@ fn resolve_repo_path(repo_root: &Path, path: &Path) -> PathBuf {
     }
 }
 
-fn patch_pipeline_status_line(content: &str, status: &str) -> Option<String> {
-    let start = content.match_indices(PIPELINE_STATUS_PREFIX).find_map(|(index, _)| {
+fn patch_line_value(content: &str, prefix: &str, value: &str) -> Option<String> {
+    let start = content.match_indices(prefix).find_map(|(index, _)| {
         if index == 0 || content.as_bytes().get(index - 1) == Some(&b'\n') {
             Some(index)
         } else {
@@ -436,10 +488,34 @@ fn patch_pipeline_status_line(content: &str, status: &str) -> Option<String> {
     Some(format!(
         "{}{}{}{}",
         &content[..start],
-        PIPELINE_STATUS_PREFIX,
-        status,
+        prefix,
+        value,
         &content[suffix_start..]
     ))
+}
+
+fn patch_state_heading(content: &str, heading: &str) -> Option<String> {
+    for existing in [LEGACY_STATE_HEADING, CYCLE_STATE_HEADING] {
+        if let Some(start) = content.find(existing) {
+            let line_end = content[start..]
+                .find('\n')
+                .map(|offset| start + offset)
+                .unwrap_or(content.len());
+            return Some(format!(
+                "{}{}{}",
+                &content[..start],
+                heading,
+                &content[line_end..]
+            ));
+        }
+    }
+    None
+}
+
+fn remove_legacy_state_disclaimer(content: &str) -> String {
+    content
+        .replace(&format!("\n{}\n", LEGACY_STATE_DISCLAIMER), "\n")
+        .replace(&format!("{}\n\n", LEGACY_STATE_DISCLAIMER), "")
 }
 
 fn resolve_cycle(cycle: Option<u64>, repo_root: &Path) -> Result<u64, String> {
@@ -2128,23 +2204,26 @@ fn render_worklog(cycle: u64, now: DateTime<Utc>, input: &WorklogInput) -> Strin
         }
     }
     lines.push(String::new());
-    lines.push("## Pre-dispatch state".to_string());
+    lines.push(CYCLE_STATE_HEADING.to_string());
     lines.push(String::new());
-    lines.push("*Snapshot before review dispatch — final counters may differ after C6.*".to_string());
     lines.push(format!(
-        "- **In-flight agent sessions**: {}",
+        "{}{}",
+        IN_FLIGHT_PREFIX,
         input.current_state.in_flight_sessions
     ));
     lines.push(format!(
-        "- **Pipeline status**: {}",
+        "{}{}",
+        PIPELINE_STATUS_PREFIX,
         convert_references(&input.current_state.pipeline_status)
     ));
     lines.push(format!(
-        "- **Copilot metrics**: {}",
+        "{}{}",
+        COPILOT_METRICS_PREFIX,
         convert_references(&input.current_state.copilot_metrics)
     ));
     lines.push(format!(
-        "- **Publish gate**: {}",
+        "{}{}",
+        PUBLISH_GATE_PREFIX,
         convert_references(&input.current_state.publish_gate)
     ));
     lines.push(String::new());
@@ -2911,12 +2990,12 @@ mod tests {
         let rendered = render_worklog(154, fixed_now(), &input);
         let what_done = rendered.find("## What was done").unwrap();
         let self_mods = rendered.find("## Self-modifications").unwrap();
-        let current = rendered.find("## Pre-dispatch state").unwrap();
+        let current = rendered.find("## Cycle state").unwrap();
         let next = rendered.find("## Next steps").unwrap();
         assert!(what_done < self_mods);
         assert!(self_mods < current);
         assert!(current < next);
-        assert!(rendered.contains(
+        assert!(!rendered.contains(
             "*Snapshot before review dispatch — final counters may differ after C6.*"
         ));
         assert!(rendered.contains("[#42](https://github.com/EvaLok/schema-org-json-ld/issues/42)"));
@@ -5957,10 +6036,18 @@ Reflective log for the schema-org-json-ld orchestrator.
         let cli = Cli::try_parse_from([
             "write-entry",
             "patch-pipeline",
-            "--worklog",
+            "--worklog-file",
             "docs/worklog/test.md",
             "--status",
             "PASS (9/9)",
+            "--in-flight",
+            "2",
+            "--copilot-metrics",
+            "46 dispatches, 43 PRs produced, 40 merged, 93.0% PR merge rate",
+            "--publish-gate",
+            "published",
+            "--section-title",
+            "Cycle state",
         ])
         .unwrap();
 
@@ -5968,6 +6055,13 @@ Reflective log for the schema-org-json-ld orchestrator.
             Command::PatchPipeline(args) => {
                 assert_eq!(args.worklog, PathBuf::from("docs/worklog/test.md"));
                 assert_eq!(args.status, "PASS (9/9)");
+                assert_eq!(args.in_flight, Some(2));
+                assert_eq!(
+                    args.copilot_metrics.as_deref(),
+                    Some("46 dispatches, 43 PRs produced, 40 merged, 93.0% PR merge rate")
+                );
+                assert_eq!(args.publish_gate.as_deref(), Some("published"));
+                assert_eq!(args.section_title.as_deref(), Some("Cycle state"));
             }
             Command::Worklog(_) | Command::Journal(_) => panic!("expected patch-pipeline command"),
         }
@@ -6035,6 +6129,10 @@ Reflective log for the schema-org-json-ld orchestrator.
             &PatchPipelineArgs {
                 worklog: PathBuf::from("docs/worklog/test.md"),
                 status: "PASS (9/9)".to_string(),
+                in_flight: None,
+                copilot_metrics: None,
+                publish_gate: None,
+                section_title: None,
             },
             &repo_root.path,
         )
@@ -6047,6 +6145,57 @@ Reflective log for the schema-org-json-ld orchestrator.
         assert!(updated.contains("- **Copilot metrics**: stable"));
         assert!(updated.contains("## Next steps"));
         assert_eq!(updated.matches("- **Pipeline status**:").count(), 1);
+    }
+
+    #[test]
+    fn patch_pipeline_updates_state_section_and_removes_pre_dispatch_note() {
+        let repo_root = TempRepoDir::new("patch-pipeline-state-section");
+        let worklog_path = repo_root.path.join("docs/worklog/test.md");
+        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
+        let original = "\
+# Cycle 154 — 2026-03-06 05:14 UTC
+
+## Pre-dispatch state
+
+*Snapshot before review dispatch — final counters may differ after C6.*
+
+- **In-flight agent sessions**: 1
+- **Pipeline status**: FAIL (1/9)
+- **Copilot metrics**: 45 dispatches, 42 PRs produced, 40 merged, 88.9% PR merge rate
+- **Publish gate**: open
+
+## Next steps
+
+1. None.
+";
+        fs::write(&worklog_path, original).unwrap();
+
+        execute_patch_pipeline(
+            &PatchPipelineArgs {
+                worklog: PathBuf::from("docs/worklog/test.md"),
+                status: "PASS (9/9)".to_string(),
+                in_flight: Some(2),
+                copilot_metrics: Some(
+                    "46 dispatches, 43 PRs produced, 40 merged, 93.0% PR merge rate".to_string(),
+                ),
+                publish_gate: Some("published".to_string()),
+                section_title: Some("Cycle state".to_string()),
+            },
+            &repo_root.path,
+        )
+        .unwrap();
+
+        let updated = fs::read_to_string(&worklog_path).unwrap();
+        assert!(updated.contains("## Cycle state"));
+        assert!(!updated.contains("## Pre-dispatch state"));
+        assert!(!updated.contains("Snapshot before review dispatch"));
+        assert!(updated.contains("- **In-flight agent sessions**: 2"));
+        assert!(updated.contains("- **Pipeline status**: PASS (9/9)"));
+        assert!(updated.contains(
+            "- **Copilot metrics**: 46 dispatches, 43 PRs produced, 40 merged, 93.0% PR merge rate"
+        ));
+        assert!(updated.contains("- **Publish gate**: published"));
+        assert!(updated.contains("## Next steps"));
     }
 
     #[test]
@@ -6064,6 +6213,10 @@ Reflective log for the schema-org-json-ld orchestrator.
             &PatchPipelineArgs {
                 worklog: PathBuf::from("docs/worklog/test.md"),
                 status: "PASS (9/9)".to_string(),
+                in_flight: None,
+                copilot_metrics: None,
+                publish_gate: None,
+                section_title: None,
             },
             &repo_root.path,
         )
@@ -6095,6 +6248,10 @@ Reflective log for the schema-org-json-ld orchestrator.
             &PatchPipelineArgs {
                 worklog: PathBuf::from("docs/worklog/test.md"),
                 status: "PASS (2 warnings:\nwarn one\nwarn two)".to_string(),
+                in_flight: None,
+                copilot_metrics: None,
+                publish_gate: None,
+                section_title: None,
             },
             &repo_root.path,
         )
