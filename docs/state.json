@@ -5280,8 +5280,10 @@
     {
       "dispatched_at": "2026-03-26T14:48:35Z",
       "issue": 1825,
+      "merged_at": "2026-03-26T16:36:17Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1826,
+      "status": "merged",
       "title": "Add --auto-pipeline flag to write-entry"
     },
     {
@@ -5513,13 +5515,13 @@
     "closed_without_merge": 8,
     "closed_without_pr": 47,
     "dispatch_log_latest": "#1827 [Cycle Review] Cycle 371 end-of-cycle review (cycle 371)",
-    "dispatch_to_pr_rate": "91.9%",
+    "dispatch_to_pr_rate": "92.0%",
     "failed_dispatches": 1,
-    "in_flight": 1,
-    "merged": 533,
+    "in_flight": 0,
+    "merged": 534,
     "pr_merge_rate": "98.2%",
-    "produced_pr": 543,
-    "resolved": 590,
+    "produced_pr": 544,
+    "resolved": 591,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 591
@@ -5805,7 +5807,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 16,
     "issue": 1829,
