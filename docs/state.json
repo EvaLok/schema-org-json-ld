@@ -5791,7 +5791,8 @@
     "total_dispatches": 608
   },
   "cycle_issues": [
-    1855
+    1855,
+    1858
   ],
   "cycle_phase": {
     "cycle": 380,
@@ -6074,7 +6075,7 @@
   "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 11,
-    "issue": 1855,
+    "issue": 1858,
     "number": 380,
     "summary": "Copilot still blocked (11th consecutive failure). Refreshed 19 stale field inventory entries, backfilled 3 sessions, closed failed review #1851 and connectivity test #1853.",
     "timestamp": "2026-03-27T08:16:33Z"
@@ -6090,7 +6091,7 @@
     "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
     "started_at": "cycle 199"
   },
-  "previous_cycle_issue": 1852,
+  "previous_cycle_issue": 1855,
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
     "burn_in_target": 6,
