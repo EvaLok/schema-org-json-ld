@@ -5956,11 +5956,11 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 382"
+        "last_refreshed": "cycle 385"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 374"
+        "last_refreshed": "cycle 385"
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
