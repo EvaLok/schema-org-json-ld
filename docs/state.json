@@ -5991,7 +5991,7 @@
       },
       "project_mode": {
         "cadence": "when mode or counter changes",
-        "last_refreshed": "cycle 377"
+        "last_refreshed": "cycle 383"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
@@ -6099,7 +6099,7 @@
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 377"
+        "last_refreshed": "cycle 383"
       }
     }
   },
@@ -6258,6 +6258,14 @@
           "root_cause": "Review events were optional and unverified. No tool, checklist step, or invariant confirmed that GitHub review events existed on PRs before merge. The orchestrator merged PRs with only worklog/journal claims of review, which are self-reported and not auditable.",
           "updated_cycle": 282,
           "verification_cycle": 282
+        },
+        {
+          "added_cycle": 383,
+          "category": "worklog-accuracy",
+          "chosen_path": "behavioral-fix",
+          "rationale": "worklog-accuracy findings in cycles 370-372 consistently flagged stale disposition language — calling findings 'deferred (fix in-flight)' after the fix had already merged in the same cycle. The root cause is that worklog/journal are written early in close-out before final state reconciliation. The fix is a behavioral discipline: at C3 (worklog/journal write time), re-verify all disposition claims against current merged state. When a finding's named fix has merged, classify as 'actioned' not 'deferred'. No tool change needed — write-entry already derives from state.json; the orchestrator must verify disposition freshness before committing.",
+          "root_cause": "Orchestrator carries forward disposition classifications from step 0.5 into C3 worklog without rechecking whether same-cycle merges have resolved the underlying findings. The classification is correct at process-review time but stale by worklog-write time.",
+          "verification_cycle": 383
         }
       ]
     },
