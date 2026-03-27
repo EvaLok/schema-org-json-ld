@@ -5826,7 +5826,7 @@
     "merged": 537,
     "pr_merge_rate": "98.0%",
     "produced_pr": 548,
-    "resolved": 612,
+    "resolved": 613,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 613
@@ -9754,7 +9754,7 @@
     "last_review_cycle": 372
   },
   "review_dispatch_consecutive": 0,
-  "review_events_verified_through_cycle": 382,
+  "review_events_verified_through_cycle": 384,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
