@@ -5583,9 +5583,11 @@
     },
     {
       "dispatched_at": "2026-03-27T16:22:15Z",
+      "failed_at": "2026-03-27T16:27:00Z",
+      "failure_reason": "repository ruleset violation",
       "issue": 1868,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "Copilot connectivity test — cycle 383"
     }
   ],
@@ -5812,12 +5814,12 @@
     "closed_without_pr": 63,
     "dispatch_log_latest": "#1868 Copilot connectivity test — cycle 383 (cycle 383)",
     "dispatch_to_pr_rate": "89.5%",
-    "failed_dispatches": 14,
-    "in_flight": 1,
+    "failed_dispatches": 15,
+    "in_flight": 0,
     "merged": 537,
     "pr_merge_rate": "98.0%",
     "produced_pr": 548,
-    "resolved": 611,
+    "resolved": 612,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 612
@@ -6103,7 +6105,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 22,
     "issue": 1867,
