@@ -5786,7 +5786,7 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 9,
-    "closed_without_pr": 59,
+    "closed_without_pr": 61,
     "dispatch_log_latest": "#1859 Copilot connectivity test — cycle 380 (cycle 380)",
     "dispatch_to_pr_rate": "90.0%",
     "failed_dispatches": 12,
@@ -5794,7 +5794,7 @@
     "merged": 537,
     "pr_merge_rate": "98.0%",
     "produced_pr": 548,
-    "resolved": 607,
+    "resolved": 609,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 609
@@ -9715,7 +9715,7 @@
     "last_review_cycle": 372
   },
   "review_dispatch_consecutive": 0,
-  "review_events_verified_through_cycle": 378,
+  "review_events_verified_through_cycle": 380,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
