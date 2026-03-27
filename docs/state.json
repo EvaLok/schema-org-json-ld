@@ -5614,9 +5614,10 @@
     1847
   ],
   "cycle_phase": {
+    "completed_at": "2026-03-27T03:14:30Z",
     "cycle": 377,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-27T03:11:01Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-27T03:14:30Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
