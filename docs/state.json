@@ -5571,7 +5571,7 @@
       "dispatched_at": "2026-03-27T12:16:43Z",
       "issue": 1861,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "Copilot connectivity test — cycle 381"
     }
   ],
@@ -5793,15 +5793,15 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 9,
-    "closed_without_pr": 61,
+    "closed_without_pr": 62,
     "dispatch_log_latest": "#1861 Copilot connectivity test — cycle 381 (cycle 381)",
     "dispatch_to_pr_rate": "89.8%",
-    "failed_dispatches": 12,
-    "in_flight": 1,
+    "failed_dispatches": 13,
+    "in_flight": 0,
     "merged": 537,
     "pr_merge_rate": "98.0%",
     "produced_pr": 548,
-    "resolved": 609,
+    "resolved": 610,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 610
@@ -5810,9 +5810,10 @@
     1860
   ],
   "cycle_phase": {
+    "completed_at": "2026-03-27T12:22:35Z",
     "cycle": 381,
-    "phase": "work",
-    "phase_entered_at": "2026-03-27T12:14:32Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-27T12:22:35Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -5999,7 +6000,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 374"
+        "last_refreshed": "cycle 381"
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
