@@ -10225,6 +10225,15 @@
         "C4.5"
       ],
       "reason": "Inherited cascade from cycle 346. Steps 1 and C4.5 were missing on #1684. Already penalized in cycle 346 pipeline."
+    },
+    {
+      "acknowledged_at": "2026-03-27T14:50:00Z",
+      "cycle": 381,
+      "issue": 1860,
+      "missing_steps": [
+        "C8"
+      ],
+      "reason": "C8 was posted by cycle-runner close-out in non-standard format ('**Step C8 — Cycle 381 complete**' instead of orchestrator signature format). The step exists but the parser cannot detect it. Bug in cycle-runner C8 comment format."
     }
   ],
   "test_count": {
