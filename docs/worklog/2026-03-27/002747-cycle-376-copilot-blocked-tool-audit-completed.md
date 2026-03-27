@@ -23,15 +23,14 @@
 
 ## Cycle state
 
-- **In-flight agent sessions**: 0
+- **In-flight agent sessions**: 1
 - **Pipeline status**: PASS (2 warnings)
-- **Copilot metrics**: 599 dispatches, 546 PRs produced, 536 merged, 98.2% PR merge rate
+- **Copilot metrics**: 600 dispatches, 546 PRs produced, 536 merged, 98.2% PR merge rate
 - **Publish gate**: published
 
 ## Next steps
 
-1. If Copilot restored: re-dispatch phase transition ordering fix and cycle review
-2. If still blocked: continue with local improvements, consider skill/AGENTS.md updates
+1. Review and iterate on PR from [#1846](https://github.com/EvaLok/schema-org-json-ld/issues/1846) ([Cycle Review] Cycle 376 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
