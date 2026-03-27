@@ -5362,6 +5362,13 @@
       "model": "gpt-5.4",
       "status": "failed",
       "title": "[Connectivity Test] Cycle 376 — Copilot agent availability check"
+    },
+    {
+      "dispatched_at": "2026-03-27T00:30:27Z",
+      "issue": 1846,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 376 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -5582,17 +5589,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 53,
-    "dispatch_log_latest": "#1845 [Connectivity Test] Cycle 376 — Copilot agent availability check (cycle 376)",
-    "dispatch_to_pr_rate": "91.2%",
+    "dispatch_log_latest": "#1846 [Cycle Review] Cycle 376 end-of-cycle review (cycle 376)",
+    "dispatch_to_pr_rate": "91.0%",
     "failed_dispatches": 7,
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 536,
     "pr_merge_rate": "98.2%",
     "produced_pr": 546,
     "resolved": 599,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 599
+    "total_dispatches": 600
   },
   "cycle_issues": [
     1844
@@ -5727,7 +5734,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 375"
+        "last_refreshed": "cycle 376"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -5875,7 +5882,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 12,
     "issue": 1844,
@@ -9508,7 +9515,7 @@
     ],
     "last_review_cycle": 372
   },
-  "review_dispatch_consecutive": 3,
+  "review_dispatch_consecutive": 4,
   "review_events_verified_through_cycle": 376,
   "schema_status": {
     "directory_layout": {
