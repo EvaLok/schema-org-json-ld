@@ -5625,13 +5625,12 @@
     "total_dispatches": 603
   },
   "cycle_issues": [
-    1849
+    1852
   ],
   "cycle_phase": {
-    "completed_at": "2026-03-27T05:00:58Z",
-    "cycle": 378,
-    "phase": "complete",
-    "phase_entered_at": "2026-03-27T05:00:58Z"
+    "cycle": 379,
+    "phase": "work",
+    "phase_entered_at": "2026-03-27T06:25:48Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -5741,11 +5740,11 @@
       },
       "cycle_issues": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 378"
+        "last_refreshed": "cycle 379"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
-        "last_refreshed": "cycle 378",
+        "last_refreshed": "cycle 379",
         "notes": "Tracks cycle, phase, phase_entered_at, and completed_at when phase is complete."
       },
       "eva_input_issues.closed_this_cycle": {
@@ -5762,7 +5761,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 378"
+        "last_refreshed": "cycle 379"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -5770,7 +5769,7 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 378"
+        "last_refreshed": "cycle 379"
       },
       "last_tool_audit_cycle": {
         "cadence": "every 10 cycles",
@@ -5778,7 +5777,7 @@
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 378"
+        "last_refreshed": "cycle 379"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -5790,7 +5789,7 @@
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 378"
+        "last_refreshed": "cycle 379"
       },
       "project_mode": {
         "cadence": "when mode or counter changes",
@@ -5909,12 +5908,12 @@
   "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 8,
-    "issue": 1849,
-    "number": 378,
+    "issue": 1852,
+    "number": 379,
     "summary": "Copilot still BLOCKED (10th consecutive failure). Dispatched connectivity test #1850 (failed — ruleset violation). Updated #1839 with running tally. No productive dispatches possible. State maintenance only.",
-    "timestamp": "2026-03-27T04:56:25Z"
+    "timestamp": "2026-03-27T06:25:48Z"
   },
-  "last_eva_comment_check": "2026-03-27T04:56:25Z",
+  "last_eva_comment_check": "2026-03-27T06:25:48Z",
   "last_tool_audit_cycle": 376,
   "open_questions_for_eva": [
     1839
@@ -5925,7 +5924,7 @@
     "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
     "started_at": "cycle 199"
   },
-  "previous_cycle_issue": 1847,
+  "previous_cycle_issue": 1849,
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
     "burn_in_target": 6,
