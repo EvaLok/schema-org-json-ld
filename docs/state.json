@@ -5566,6 +5566,13 @@
       "model": "gpt-5.4",
       "status": "failed",
       "title": "Copilot connectivity test — cycle 380"
+    },
+    {
+      "dispatched_at": "2026-03-27T12:16:43Z",
+      "issue": 1861,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Copilot connectivity test — cycle 381"
     }
   ],
   "audit_dropped": [
@@ -5787,17 +5794,17 @@
   "copilot_metrics": {
     "closed_without_merge": 9,
     "closed_without_pr": 61,
-    "dispatch_log_latest": "#1859 Copilot connectivity test — cycle 380 (cycle 380)",
-    "dispatch_to_pr_rate": "90.0%",
+    "dispatch_log_latest": "#1861 Copilot connectivity test — cycle 381 (cycle 381)",
+    "dispatch_to_pr_rate": "89.8%",
     "failed_dispatches": 12,
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 537,
     "pr_merge_rate": "98.0%",
     "produced_pr": 548,
     "resolved": 609,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 609
+    "total_dispatches": 610
   },
   "cycle_issues": [
     1860
@@ -5903,15 +5910,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 380"
+        "last_refreshed": "cycle 381"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 380"
+        "last_refreshed": "cycle 381"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 380"
+        "last_refreshed": "cycle 381"
       },
       "cycle_issues": {
         "cadence": "every cycle",
@@ -5932,7 +5939,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 380"
+        "last_refreshed": "cycle 381"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -6080,7 +6087,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 3,
     "issue": 1860,
