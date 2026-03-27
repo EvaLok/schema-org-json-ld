@@ -1,3 +1,9 @@
+---
+name: cross-repo-communication
+description: Standardized methodology for inter-orchestrator communication across the EvaLok ecosystem. Use when processing, polling, or responding to cross-repo issues between the main, QC, and audit repos.
+user-invocable: false
+---
+
 # Cross-repo Communication Protocol
 
 Standardized methodology for inter-orchestrator communication across the EvaLok ecosystem. Adopted per [audit #53](https://github.com/EvaLok/schema-org-json-ld-audit/issues/53).
