@@ -5553,16 +5553,18 @@
     },
     {
       "dispatched_at": "2026-03-27T06:45:38Z",
+      "failed_reason": "Repository ruleset violation — 12th consecutive failure",
       "issue": 1854,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "[Cycle Review] Cycle 379 end-of-cycle review"
     },
     {
       "dispatched_at": "2026-03-27T10:23:43Z",
+      "failed_reason": "Repository ruleset violation — 13th consecutive failure",
       "issue": 1859,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "Copilot connectivity test — cycle 380"
     }
   ],
@@ -5787,8 +5789,8 @@
     "closed_without_pr": 59,
     "dispatch_log_latest": "#1859 Copilot connectivity test — cycle 380 (cycle 380)",
     "dispatch_to_pr_rate": "90.0%",
-    "failed_dispatches": 10,
-    "in_flight": 2,
+    "failed_dispatches": 12,
+    "in_flight": 0,
     "merged": 537,
     "pr_merge_rate": "98.0%",
     "produced_pr": 548,
@@ -5803,8 +5805,8 @@
   ],
   "cycle_phase": {
     "cycle": 380,
-    "phase": "work",
-    "phase_entered_at": "2026-03-27T08:16:33Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-27T10:31:36Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -5923,7 +5925,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 379"
+        "last_refreshed": "cycle 380"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -5939,7 +5941,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 379"
+        "last_refreshed": "cycle 380"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -5959,7 +5961,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 379"
+        "last_refreshed": "cycle 380"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -5971,7 +5973,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 379"
+        "last_refreshed": "cycle 380"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -5987,7 +5989,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 379"
+        "last_refreshed": "cycle 380"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -5995,11 +5997,11 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 379"
+        "last_refreshed": "cycle 380"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 379"
+        "last_refreshed": "cycle 380"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -6007,7 +6009,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 379"
+        "last_refreshed": "cycle 380"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -6079,15 +6081,15 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 0,
   "last_cycle": {
-    "duration_minutes": 11,
+    "duration_minutes": 3,
     "issue": 1858,
     "number": 380,
-    "summary": "Copilot still blocked (11th consecutive failure). Refreshed 19 stale field inventory entries, backfilled 3 sessions, closed failed review #1851 and connectivity test #1853.",
-    "timestamp": "2026-03-27T08:16:33Z"
+    "summary": "Copilot still blocked (13th consecutive failure, 8th blocked cycle). Closed audit-inbound #1857, refreshed test_count field, dispatched connectivity test #1859 (failed).",
+    "timestamp": "2026-03-27T10:31:36Z"
   },
-  "last_eva_comment_check": "2026-03-27T08:16:33Z",
+  "last_eva_comment_check": "2026-03-27T10:31:36Z",
   "last_tool_audit_cycle": 376,
   "open_questions_for_eva": [
     1839
