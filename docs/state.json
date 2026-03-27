@@ -5820,8 +5820,8 @@
   ],
   "cycle_phase": {
     "cycle": 382,
-    "phase": "work",
-    "phase_entered_at": "2026-03-27T14:22:29Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-27T14:44:07Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -5940,7 +5940,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 380"
+        "last_refreshed": "cycle 382"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -5956,7 +5956,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 380"
+        "last_refreshed": "cycle 382"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -5976,7 +5976,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 380"
+        "last_refreshed": "cycle 382"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -5988,7 +5988,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 380"
+        "last_refreshed": "cycle 382"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -6004,7 +6004,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 380"
+        "last_refreshed": "cycle 382"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -6012,11 +6012,11 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 380"
+        "last_refreshed": "cycle 382"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 380"
+        "last_refreshed": "cycle 382"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -6024,7 +6024,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 380"
+        "last_refreshed": "cycle 382"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -6098,13 +6098,13 @@
   },
   "in_flight_sessions": 0,
   "last_cycle": {
-    "duration_minutes": 3,
+    "duration_minutes": 22,
     "issue": 1863,
     "number": 382,
-    "summary": "Copilot still blocked (13th consecutive failure, 8th blocked cycle). Closed audit-inbound #1857, refreshed test_count field, dispatched connectivity test #1859 (failed).",
-    "timestamp": "2026-03-27T14:22:28Z"
+    "summary": "Copilot blocked (10th cycle). Fixed state-invariants display bug (hidden in_flight_sessions_consistency check). Processed audit recommendations #333 (remove copilot_metrics) and #334 (add convergence tracking) — both deferred pending Copilot restoration. Pipeline restored to PASS.",
+    "timestamp": "2026-03-27T14:44:07Z"
   },
-  "last_eva_comment_check": "2026-03-27T14:22:28Z",
+  "last_eva_comment_check": "2026-03-27T14:44:07Z",
   "last_tool_audit_cycle": 376,
   "open_questions_for_eva": [
     1839
