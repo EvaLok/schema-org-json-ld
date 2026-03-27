@@ -5836,8 +5836,8 @@
   ],
   "cycle_phase": {
     "cycle": 385,
-    "phase": "work",
-    "phase_entered_at": "2026-03-27T20:11:12Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-27T20:20:04Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -5935,15 +5935,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 384"
+        "last_refreshed": "cycle 385"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 384"
+        "last_refreshed": "cycle 385"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 384"
+        "last_refreshed": "cycle 385"
       },
       "cycle_issues": {
         "cadence": "every cycle",
@@ -5964,7 +5964,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 384"
+        "last_refreshed": "cycle 385"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -5972,7 +5972,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 382"
+        "last_refreshed": "cycle 385"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -5980,7 +5980,7 @@
       },
       "last_tool_audit_cycle": {
         "cadence": "every 10 cycles",
-        "last_refreshed": "cycle 374"
+        "last_refreshed": "cycle 385"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
@@ -5992,7 +5992,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 382"
+        "last_refreshed": "cycle 385"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -6004,7 +6004,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 382"
+        "last_refreshed": "cycle 385"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -6020,7 +6020,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 382"
+        "last_refreshed": "cycle 385"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -6028,11 +6028,11 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 382"
+        "last_refreshed": "cycle 385"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 382"
+        "last_refreshed": "cycle 385"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -6040,7 +6040,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 382"
+        "last_refreshed": "cycle 385"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -6114,13 +6114,13 @@
   },
   "in_flight_sessions": 0,
   "last_cycle": {
-    "duration_minutes": 11,
+    "duration_minutes": 9,
     "issue": 1872,
     "number": 385,
-    "summary": "1 dispatches, 0 merges",
-    "timestamp": "2026-03-27T20:11:12Z"
+    "summary": "0 dispatches, 0 merges — 13th Copilot-blocked cycle",
+    "timestamp": "2026-03-27T20:20:04Z"
   },
-  "last_eva_comment_check": "2026-03-27T20:11:12Z",
+  "last_eva_comment_check": "2026-03-27T20:20:04Z",
   "last_tool_audit_cycle": 376,
   "open_questions_for_eva": [
     1839
