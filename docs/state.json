@@ -3,14 +3,18 @@
     {
       "dispatched_at": "2026-02-24T15:44:29Z",
       "issue": 10,
+      "merged_at": null,
       "model": "unknown",
+      "pr": null,
       "status": "failed",
       "title": "Implement AggregateRating schema type"
     },
     {
       "dispatched_at": "2026-02-24T15:44:45Z",
       "issue": 11,
+      "merged_at": null,
       "model": "unknown",
+      "pr": null,
       "status": "failed",
       "title": "Implement Review and Rating schema types"
     },
@@ -737,6 +741,7 @@
     {
       "dispatched_at": "2026-03-01T13:47:00Z",
       "issue": 303,
+      "merged_at": null,
       "model": "gpt-5.3-codex",
       "note": "Workflow file — Eva must merge. NPM_TOKEN secret also needed.",
       "pr": 305,
@@ -1046,6 +1051,7 @@
     {
       "dispatched_at": "2026-03-05T05:06:55Z",
       "issue": 467,
+      "merged_at": null,
       "model": "unknown",
       "pr": 468,
       "status": "closed",
@@ -1279,8 +1285,10 @@
     {
       "dispatched_at": "2026-03-06T07:58:00Z",
       "issue": 558,
+      "merged_at": null,
       "model": "gpt-5.3-codex",
       "note": "Review agent. Cycle 156 end-of-cycle review. Silent failure — no Copilot work started.",
+      "pr": null,
       "status": "failed",
       "title": "Cycle 156 end-of-cycle review"
     },
@@ -1737,6 +1745,7 @@
     {
       "dispatched_at": "2026-03-07T21:11:17Z",
       "issue": 705,
+      "merged_at": null,
       "model": "gpt-5.3-codex",
       "pr": 706,
       "status": "closed",
@@ -2105,6 +2114,7 @@
     {
       "dispatched_at": "2026-03-08T22:49:07Z",
       "issue": 819,
+      "merged_at": null,
       "model": "gpt-5.4",
       "note": "PR closed due to merge conflicts; changes applied directly to master (commit 5c7d2bb)",
       "pr": 820,
@@ -2479,6 +2489,15 @@
       "pr": 946,
       "status": "merged",
       "title": "Fix write-entry Copilot metrics presentation to show correct denominators"
+    },
+    {
+      "dispatched_at": "2026-03-10T03:10:23Z",
+      "issue": 947,
+      "merged_at": "2026-03-10T04:36:36Z",
+      "model": "unknown",
+      "pr": 948,
+      "status": "merged",
+      "title": "[Cycle Review] Cycle 213 end-of-cycle review"
     },
     {
       "dispatched_at": "2026-03-10T04:41:33Z",
@@ -2943,6 +2962,7 @@
     {
       "dispatched_at": "2026-03-12T03:08:17Z",
       "issue": 1089,
+      "merged_at": null,
       "model": "gpt-5.4",
       "note": "PR closed due to merge conflicts from Phase B/C commits; docs written via write-entry fallback",
       "pr": 1090,
@@ -3094,15 +3114,6 @@
       "title": "Cycle 240 end-of-cycle review"
     },
     {
-      "dispatched_at": "2026-03-13T06:26:03Z",
-      "issue": 1147,
-      "merged_at": "2026-03-13T08:14:15Z",
-      "model": "gpt-5.4",
-      "pr": 1148,
-      "status": "merged",
-      "title": "Cycle 241 end-of-cycle review"
-    },
-    {
       "dispatched_at": "2026-03-13T04:55:00Z",
       "issue": 1141,
       "merged_at": "2026-03-13T06:22:02Z",
@@ -3110,6 +3121,15 @@
       "pr": 1142,
       "status": "merged",
       "title": "Worklog accuracy root cause fix"
+    },
+    {
+      "dispatched_at": "2026-03-13T06:26:03Z",
+      "issue": 1147,
+      "merged_at": "2026-03-13T08:14:15Z",
+      "model": "gpt-5.4",
+      "pr": 1148,
+      "status": "merged",
+      "title": "Cycle 241 end-of-cycle review"
     },
     {
       "dispatched_at": "2026-03-13T06:30:32Z",
@@ -3166,15 +3186,6 @@
       "title": "Cycle 243 end-of-cycle review"
     },
     {
-      "dispatched_at": "2026-03-13T12:20:14Z",
-      "issue": 1169,
-      "merged_at": "2026-03-13T16:21:07Z",
-      "model": "gpt-5.4",
-      "pr": 1170,
-      "status": "merged",
-      "title": "Cycle 244 review"
-    },
-    {
       "dispatched_at": "2026-03-13T14:25:23Z",
       "issue": 1167,
       "merged_at": "2026-03-13T14:34:19Z",
@@ -3182,6 +3193,15 @@
       "pr": 1168,
       "status": "merged",
       "title": "Enhance write-entry worklog to auto-populate receipts and issues-processed sections"
+    },
+    {
+      "dispatched_at": "2026-03-13T12:20:14Z",
+      "issue": 1169,
+      "merged_at": "2026-03-13T16:21:07Z",
+      "model": "gpt-5.4",
+      "pr": 1170,
+      "status": "merged",
+      "title": "Cycle 244 review"
     },
     {
       "dispatched_at": "2026-03-13T14:41:04Z",
@@ -3364,15 +3384,6 @@
       "title": "[Cycle Review] Cycle 256 end-of-cycle review"
     },
     {
-      "dispatched_at": "2026-03-14T14:22:00Z",
-      "issue": 1232,
-      "merged_at": "2026-03-14T16:13:10Z",
-      "model": "gpt-5.4",
-      "pr": 1233,
-      "status": "merged",
-      "title": "Cycle 257 review"
-    },
-    {
       "dispatched_at": "2026-03-14T14:22:06Z",
       "issue": 1228,
       "merged_at": "2026-03-14T16:14:13Z",
@@ -3389,6 +3400,15 @@
       "pr": 1231,
       "status": "merged",
       "title": "Stop auto-copying merged PRs to reviewed in write-entry"
+    },
+    {
+      "dispatched_at": "2026-03-14T14:22:00Z",
+      "issue": 1232,
+      "merged_at": "2026-03-14T16:13:10Z",
+      "model": "gpt-5.4",
+      "pr": 1233,
+      "status": "merged",
+      "title": "Cycle 257 review"
     },
     {
       "dispatched_at": "2026-03-14T16:19:11Z",
@@ -3756,6 +3776,7 @@
     {
       "dispatched_at": "2026-03-16T05:03:48Z",
       "issue": 1339,
+      "merged_at": null,
       "model": "gpt-5.4",
       "note": "PR #1341 closed due to contaminated rebase. Tool code was good — will cherry-pick manually.",
       "pr": 1341,
@@ -3783,6 +3804,7 @@
     {
       "dispatched_at": "2026-03-16T06:49:18Z",
       "issue": 1346,
+      "merged_at": null,
       "model": "gpt-5.4",
       "note": "PR #1347 quality good, merge deferred — not Phase 1 authorized per Eva #1350",
       "pr": 1347,
@@ -3871,15 +3893,6 @@
       "title": "Cycle 280 review"
     },
     {
-      "dispatched_at": "2026-03-16T16:43:52Z",
-      "issue": 1375,
-      "merged_at": "2026-03-16T18:24:23Z",
-      "model": "gpt-5.4",
-      "pr": 1376,
-      "status": "merged",
-      "title": "Cycle 281 review (cycle 281)"
-    },
-    {
       "dispatched_at": "2026-03-16T16:43:57Z",
       "issue": 1373,
       "merged_at": "2026-03-16T18:32:13Z",
@@ -3887,6 +3900,15 @@
       "pr": 1374,
       "status": "merged",
       "title": "Review.contentReferenceTime (PHP + TS)"
+    },
+    {
+      "dispatched_at": "2026-03-16T16:43:52Z",
+      "issue": 1375,
+      "merged_at": "2026-03-16T18:24:23Z",
+      "model": "gpt-5.4",
+      "pr": 1376,
+      "status": "merged",
+      "title": "Cycle 281 review (cycle 281)"
     },
     {
       "dispatched_at": "2026-03-16T18:48:06Z",
@@ -3954,8 +3976,10 @@
     {
       "dispatched_at": "2026-03-17T06:31:51Z",
       "issue": 1405,
+      "merged_at": null,
       "model": "gpt-5.4",
       "note": "PR #1407 closed due to merge conflicts. Redispatched as #1413.",
+      "pr": null,
       "status": "failed",
       "title": "Phase 2 Batch 2: write-entry + cycle-complete + transition fixes"
     },
@@ -3969,15 +3993,6 @@
       "title": "Cycle 288 review"
     },
     {
-      "dispatched_at": "2026-03-17T08:51:24Z",
-      "issue": 1413,
-      "merged_at": "2026-03-17T16:48:00Z",
-      "model": "gpt-5.4",
-      "pr": 1414,
-      "status": "merged",
-      "title": "Phase 2 Batch 2 redispatch"
-    },
-    {
       "dispatched_at": "2026-03-17T08:51:40Z",
       "issue": 1411,
       "merged_at": "2026-03-17T14:40:55Z",
@@ -3985,6 +4000,15 @@
       "pr": 1412,
       "status": "merged",
       "title": "Phase 2 Batch 3 tests"
+    },
+    {
+      "dispatched_at": "2026-03-17T08:51:24Z",
+      "issue": 1413,
+      "merged_at": "2026-03-17T16:48:00Z",
+      "model": "gpt-5.4",
+      "pr": 1414,
+      "status": "merged",
+      "title": "Phase 2 Batch 2 redispatch"
     },
     {
       "dispatched_at": "2026-03-17T08:55:54Z",
@@ -4052,6 +4076,7 @@
     {
       "dispatched_at": "2026-03-18T04:49:42Z",
       "issue": 1440,
+      "merged_at": null,
       "model": "gpt-5.4",
       "pr": 1441,
       "status": "closed_without_merge",
@@ -4240,6 +4265,7 @@
     {
       "dispatched_at": "2026-03-20T00:34:02Z",
       "issue": 1515,
+      "merged_at": null,
       "model": "gpt-5.4",
       "note": "PR #1516 had merge conflicts; review artifact extracted manually and committed directly",
       "pr": 1516,
@@ -4250,6 +4276,7 @@
     {
       "dispatched_at": "2026-03-20T03:21:25Z",
       "issue": 1518,
+      "merged_at": null,
       "model": "gpt-5.4",
       "note": "Review artifact extracted manually; PR had state.json conflicts",
       "pr": 1519,
@@ -4386,161 +4413,207 @@
     {
       "dispatched_at": "2026-03-21T00:30:00Z",
       "issue": 1561,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "[Cycle Review] Cycle 323 end-of-cycle review"
     },
     {
       "dispatched_at": "2026-03-21T03:08:17Z",
       "issue": 1563,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "closed_without_pr",
       "title": "[Cycle Review] Cycle 324 end-of-cycle review"
     },
     {
       "dispatched_at": "2026-03-21T04:45:04Z",
       "issue": 1565,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "closed_without_pr",
       "title": "[Cycle Review] Cycle 325 end-of-cycle review"
     },
     {
       "dispatched_at": "2026-03-21T06:27:41Z",
       "issue": 1568,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "[Cycle Review] Cycle 326 end-of-cycle review"
     },
     {
       "dispatched_at": "2026-03-21T08:16:45Z",
       "issue": 1572,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "[Cycle Review] Cycle 327 end-of-cycle review"
     },
     {
       "dispatched_at": "2026-03-21T10:09:32Z",
       "issue": 1574,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "[Probe] Copilot availability check"
     },
     {
       "dispatched_at": "2026-03-21T12:09:15Z",
       "issue": 1576,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "Copilot availability probe — cycle 328"
     },
     {
       "dispatched_at": "2026-03-21T12:34:27Z",
       "issue": 1578,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "[Cycle Review] Cycle 328 end-of-cycle review"
     },
     {
       "dispatched_at": "2026-03-21T14:20:40Z",
       "issue": 1580,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "[Probe] Copilot availability check - cycle 328 resumed"
     },
     {
       "dispatched_at": "2026-03-21T16:10:36Z",
       "issue": 1582,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "Copilot availability probe - cycle 329"
     },
     {
       "dispatched_at": "2026-03-21T18:18:01Z",
       "issue": 1585,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "Copilot availability probe - cycle 329 (failed)"
     },
     {
       "dispatched_at": "2026-03-21T18:26:34Z",
       "issue": 1586,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "[Cycle Review] Cycle 329 end-of-cycle review"
     },
     {
       "dispatched_at": "2026-03-21T20:08:35Z",
       "issue": 1588,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "closed_without_pr",
       "title": "Copilot availability probe (12th failure)"
     },
     {
       "dispatched_at": "2026-03-21T22:09:36Z",
       "issue": 1590,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "Probe: Copilot availability check (cycle 330)"
     },
     {
       "dispatched_at": "2026-03-22T00:16:19Z",
       "issue": 1592,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "Copilot probe (cycle 331, 14th consecutive failure)"
     },
     {
       "dispatched_at": "2026-03-22T03:05:17Z",
       "issue": 1594,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "Copilot probe (cycle 332, 15th consecutive failure)"
     },
     {
       "dispatched_at": "2026-03-22T03:08:57Z",
       "issue": 1595,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "[Cycle Review] Cycle 332 end-of-cycle review"
     },
     {
       "dispatched_at": "2026-03-22T04:44:57Z",
       "issue": 1597,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "Copilot probe (cycle 332 resumed, 17th consecutive failure)"
     },
     {
       "dispatched_at": "2026-03-22T06:20:53Z",
       "issue": 1599,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "Copilot probe (cycle 333, 18th consecutive test)"
     },
     {
       "dispatched_at": "2026-03-22T06:29:42Z",
       "issue": 1600,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "[Cycle Review] Cycle 333 end-of-cycle review"
     },
     {
       "dispatched_at": "2026-03-22T08:15:31Z",
       "issue": 1603,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "Copilot probe (cycle 333, 19th consecutive test)"
     },
     {
       "dispatched_at": "2026-03-22T10:08:35Z",
       "issue": 1605,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "Copilot probe 20th consecutive failure"
     },
     {
       "dispatched_at": "2026-03-22T12:13:49Z",
       "issue": 1608,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "closed_without_pr",
       "title": "Copilot probe 21st consecutive"
     },
@@ -4549,7 +4622,9 @@
       "dispatched_at": "2026-03-22T14:12:17Z",
       "failure_reason": "repository_ruleset_violation",
       "issue": 1610,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "closed_without_pr",
       "title": "Copilot probe 22"
     },
@@ -4557,7 +4632,9 @@
       "dispatched_at": "2026-03-22T14:21:48Z",
       "failure_reason": "repository_ruleset_violation",
       "issue": 1611,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "closed_without_pr",
       "title": "[Cycle Review] Cycle 334 end-of-cycle review"
     },
@@ -4565,7 +4642,9 @@
       "dispatched_at": "2026-03-22T16:12:52Z",
       "failure_reason": "repository_ruleset_violation",
       "issue": 1613,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "closed_without_pr",
       "title": "Copilot probe: 23rd consecutive failure test"
     },
@@ -4573,14 +4652,18 @@
       "dispatched_at": "2026-03-22T18:14:24Z",
       "failure_reason": "repository_ruleset_violation",
       "issue": 1615,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "closed_without_pr",
       "title": "Copilot connectivity probe — cycle 336 (24th consecutive failure)"
     },
     {
       "dispatched_at": "2026-03-22T20:09:05Z",
       "issue": 1617,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "closed_without_pr",
       "title": "Copilot probe 25th consecutive — failed (ruleset violation)"
     },
@@ -4589,7 +4672,9 @@
       "dispatched_at": "2026-03-22T22:09:47Z",
       "failure_reason": "repository_ruleset_violation",
       "issue": 1619,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "closed_without_pr",
       "title": "Copilot probe #26 (FAQ stub)"
     },
@@ -4598,7 +4683,9 @@
       "dispatched_at": "2026-03-22T22:15:44Z",
       "failure_reason": "repository_ruleset_violation",
       "issue": 1620,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "closed_without_pr",
       "title": "[Cycle Review] Cycle 337 end-of-cycle review"
     },
@@ -4607,55 +4694,70 @@
       "dispatched_at": "2026-03-23T00:17:53Z",
       "failure_reason": "repository_ruleset_violation",
       "issue": 1622,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "closed_without_pr",
       "title": "Copilot probe #28 — cycle 338 availability test"
     },
     {
       "dispatched_at": "2026-03-23T00:24:58Z",
       "issue": 1623,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "[Cycle Review] Cycle 338 end-of-cycle review"
     },
     {
       "dispatched_at": "2026-03-23T03:05:37Z",
       "issue": 1625,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "Copilot probe #29 — cycle 339 availability check"
     },
     {
       "dispatched_at": "2026-03-23T03:15:11Z",
       "issue": 1626,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "[Cycle Review] Cycle 339 end-of-cycle review"
     },
     {
       "dispatched_at": "2026-03-23T04:50:19Z",
       "issue": 1628,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "Copilot probe 30 — availability check"
     },
     {
       "dispatched_at": "2026-03-23T06:27:51Z",
       "issue": 1630,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "Copilot probe 31"
     },
     {
       "dispatched_at": "2026-03-23T08:23:28Z",
       "issue": 1633,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "Copilot probe 32 — failed (ruleset violation)"
     },
     {
       "dispatched_at": "2026-03-23T10:26:59Z",
       "issue": 1635,
+      "merged_at": null,
       "model": "gpt-5.4",
       "pr": null,
       "status": "failed",
@@ -4665,7 +4767,9 @@
       "dispatched_at": "2026-03-23T10:32:46Z",
       "failure_reason": "34th consecutive Copilot ruleset violation",
       "issue": 1636,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "resolved_at": "2026-03-23T12:15:00Z",
       "status": "failed",
       "title": "[Cycle Review] Cycle 341 end-of-cycle review"
@@ -4674,6 +4778,7 @@
       "dispatched_at": "2026-03-23T12:18:00Z",
       "failure_reason": "35th consecutive Copilot ruleset violation",
       "issue": 1638,
+      "merged_at": null,
       "model": "gpt-5.4",
       "pr": null,
       "resolved_at": "2026-03-23T12:20:00Z",
@@ -4683,23 +4788,38 @@
     {
       "dispatched_at": "2026-03-23T12:26:02Z",
       "issue": 1639,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "[Cycle Review] Cycle 342 end-of-cycle review"
     },
     {
       "dispatched_at": "2026-03-23T14:39:02Z",
       "issue": 1652,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "Copilot probe 36 (failed)"
     },
     {
       "dispatched_at": "2026-03-23T14:51:15Z",
       "issue": 1653,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "closed_without_pr",
       "title": "[Cycle Review] Cycle 343 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-23T18:22:21Z",
+      "issue": 1656,
+      "merged_at": null,
+      "model": "unknown",
+      "pr": 1657,
+      "status": "closed",
+      "title": "[Test] Copilot dispatch probe - cycle 344"
     },
     {
       "dispatched_at": "2026-03-23T18:26:00Z",
@@ -5317,7 +5437,9 @@
       "dispatched_at": "2026-03-26T18:32:29Z",
       "failure_reason": "repository ruleset violation",
       "issue": 1835,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "Enforce valid phase transition ordering in transition_cycle_phase"
     },
@@ -5325,15 +5447,28 @@
       "dispatched_at": "2026-03-26T18:41:04Z",
       "failure_reason": "repository ruleset violation",
       "issue": 1836,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "[Cycle Review] Cycle 373 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-26T20:15:44Z",
+      "issue": 1838,
+      "merged_at": null,
+      "model": "unknown",
+      "pr": null,
+      "status": "failed",
+      "title": "[Test] Copilot connectivity check - cycle 374"
     },
     {
       "dispatched_at": "2026-03-26T20:27:42Z",
       "failure_reason": "repository ruleset violation",
       "issue": 1840,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "[Cycle Review] Cycle 374 end-of-cycle review"
     },
@@ -5341,7 +5476,9 @@
       "dispatched_at": "2026-03-26T22:11:48Z",
       "failure_reason": "repository ruleset violation",
       "issue": 1842,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "[Connectivity Test] Cycle 375 — Copilot agent availability check"
     },
@@ -5350,7 +5487,9 @@
       "dispatched_at": "2026-03-26T22:20:49Z",
       "failure_reason": "repository_ruleset_violation",
       "issue": 1843,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "[Cycle Review] Cycle 375 end-of-cycle review"
     },
@@ -5359,7 +5498,9 @@
       "dispatched_at": "2026-03-27T00:21:15Z",
       "failure_reason": "repository_ruleset_violation",
       "issue": 1845,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "[Connectivity Test] Cycle 376 — Copilot agent availability check"
     },
@@ -5367,7 +5508,9 @@
       "dispatched_at": "2026-03-27T00:30:27Z",
       "failure_reason": "repository_ruleset_violation",
       "issue": 1846,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "closed_without_pr",
       "title": "[Cycle Review] Cycle 376 end-of-cycle review"
     },
@@ -5375,28 +5518,36 @@
       "dispatched_at": "2026-03-27T03:07:34Z",
       "failure_reason": "repository_ruleset_violation",
       "issue": 1848,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "closed_without_pr",
       "title": "[Connectivity Test] Cycle 377 — Copilot agent availability check"
     },
     {
       "dispatched_at": "2026-03-27T04:53:17Z",
       "issue": 1850,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "failed",
       "title": "Connectivity Test: Cycle 378 — Copilot agent connectivity test"
     },
     {
       "dispatched_at": "2026-03-27T05:00:53Z",
       "issue": 1851,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "in_flight",
       "title": "[Cycle Review] Cycle 378 end-of-cycle review"
     },
     {
       "dispatched_at": "2026-03-27T06:30:13Z",
       "issue": 1853,
+      "merged_at": null,
       "model": "gpt-5.4",
+      "pr": null,
       "status": "in_flight",
       "title": "Copilot connectivity test — cycle 379"
     }
@@ -5912,7 +6063,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 8,
     "issue": 1852,
