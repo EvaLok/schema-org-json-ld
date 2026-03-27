@@ -13,7 +13,7 @@
 ## 3. [process-adherence] The worklog hides that the cycle proceeded past a failed pipeline gate
 
 **File**: /home/runner/work/schema-org-json-ld/schema-org-json-ld/docs/worklog/2026-03-27/222123-cycle-386-copilot-restored-outage-resolved.md:27-31
-**Evidence**: The published worklog reports `Pipeline status: PASS (3 warnings)`. But issue `#1873` step comments for cycle 386 recorded `Warning: pipeline-check failed: pipeline-check failed with status 1` at Step 0 and `Pipeline check failed (see warnings)` at Step 4 before the cycle continued. That failure matters because the review instructions cap complacency at 3/5 whenever a blocking-level gate is overridden, yet neither the worklog nor the journal explicitly records that an override happened.
+**Evidence**: The published worklog reports `Pipeline status: PASS (3 warnings)`. But issue `#1873` step comments for cycle 386 recorded `Warning: pipeline-check failed: pipeline-check failed with status 1` at Step 0 and `Pipeline check failed (see warnings)` at Step 4 before the cycle continued. That failure matters because the cycle-386 review brief caps complacency at 3/5 whenever a blocking-level gate is overridden, yet neither the worklog nor the journal explicitly records that an override happened.
 **Recommendation**: If a cycle continues after a failed startup gate, record that failure and override explicitly in the worklog/journal so later reviewers can apply the correct complacency cap without reconstructing the issue timeline from comments.
 
 Complacency score: **3/5**.
