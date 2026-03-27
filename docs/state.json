@@ -5550,6 +5550,13 @@
       "pr": null,
       "status": "failed",
       "title": "Copilot connectivity test — cycle 379"
+    },
+    {
+      "dispatched_at": "2026-03-27T06:45:38Z",
+      "issue": 1854,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 379 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -5770,17 +5777,17 @@
   "copilot_metrics": {
     "closed_without_merge": 9,
     "closed_without_pr": 59,
-    "dispatch_log_latest": "#1853 Copilot connectivity test — cycle 379 (cycle 379)",
-    "dispatch_to_pr_rate": "90.3%",
+    "dispatch_log_latest": "#1854 [Cycle Review] Cycle 379 end-of-cycle review (cycle 379)",
+    "dispatch_to_pr_rate": "90.1%",
     "failed_dispatches": 10,
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 537,
     "pr_merge_rate": "98.0%",
     "produced_pr": 548,
     "resolved": 607,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 607
+    "total_dispatches": 608
   },
   "cycle_issues": [
     1852
@@ -6063,7 +6070,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 11,
     "issue": 1852,
@@ -9696,7 +9703,7 @@
     ],
     "last_review_cycle": 372
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 378,
   "schema_status": {
     "directory_layout": {
