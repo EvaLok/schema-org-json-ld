@@ -5557,6 +5557,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "[Cycle Review] Cycle 379 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-27T10:23:43Z",
+      "issue": 1859,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Copilot connectivity test — cycle 380"
     }
   ],
   "audit_dropped": [
@@ -5778,17 +5785,17 @@
   "copilot_metrics": {
     "closed_without_merge": 9,
     "closed_without_pr": 59,
-    "dispatch_log_latest": "#1854 [Cycle Review] Cycle 379 end-of-cycle review (cycle 379)",
-    "dispatch_to_pr_rate": "90.1%",
+    "dispatch_log_latest": "#1859 Copilot connectivity test — cycle 380 (cycle 380)",
+    "dispatch_to_pr_rate": "90.0%",
     "failed_dispatches": 10,
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 537,
     "pr_merge_rate": "98.0%",
     "produced_pr": 548,
     "resolved": 607,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 608
+    "total_dispatches": 609
   },
   "cycle_issues": [
     1855,
@@ -5895,15 +5902,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 379"
+        "last_refreshed": "cycle 380"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 379"
+        "last_refreshed": "cycle 380"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 379"
+        "last_refreshed": "cycle 380"
       },
       "cycle_issues": {
         "cadence": "every cycle",
@@ -5924,7 +5931,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 379"
+        "last_refreshed": "cycle 380"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -6024,7 +6031,7 @@
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
-        "last_refreshed": "cycle 374"
+        "last_refreshed": "cycle 380"
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
@@ -6072,7 +6079,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 11,
     "issue": 1858,
@@ -9705,7 +9712,7 @@
     ],
     "last_review_cycle": 372
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 378,
   "schema_status": {
     "directory_layout": {
@@ -10204,8 +10211,8 @@
     }
   ],
   "test_count": {
-    "last_verified": "cycle 374",
-    "last_verified_note": "php = PHPUnit test count (composer run test-unit). ts = metric-snapshot tool count. Verified cycle 374 via metric-snapshot: 428 PHP, 422 TS, 850 total. No test changes since cycle 345.",
+    "last_verified": "cycle 380",
+    "last_verified_note": "php = PHPUnit test count (composer run test-unit). ts = metric-snapshot tool count. Verified cycle 380 via metric-snapshot: 428 PHP, 422 TS, 850 total. No test changes since cycle 345 (Copilot blocked since cycle 373).",
     "php": 428,
     "total": 850,
     "ts": 422
