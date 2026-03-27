@@ -5596,6 +5596,13 @@
       "model": "gpt-5.4",
       "status": "failed",
       "title": "Copilot connectivity test — cycle 384"
+    },
+    {
+      "dispatched_at": "2026-03-27T22:11:45Z",
+      "issue": 1874,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Connectivity test — cycle 386"
     }
   ],
   "audit_dropped": [
@@ -5819,17 +5826,17 @@
   "copilot_metrics": {
     "closed_without_merge": 9,
     "closed_without_pr": 65,
-    "dispatch_log_latest": "#1870 Copilot connectivity test — cycle 384 (cycle 384)",
-    "dispatch_to_pr_rate": "89.4%",
+    "dispatch_log_latest": "#1874 Connectivity test — cycle 386 (cycle 386)",
+    "dispatch_to_pr_rate": "89.3%",
     "failed_dispatches": 16,
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 537,
     "pr_merge_rate": "98.0%",
     "produced_pr": 548,
     "resolved": 613,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 613
+    "total_dispatches": 614
   },
   "cycle_issues": [
     1873
@@ -5935,15 +5942,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 385"
+        "last_refreshed": "cycle 386"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 385"
+        "last_refreshed": "cycle 386"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 385"
+        "last_refreshed": "cycle 386"
       },
       "cycle_issues": {
         "cadence": "every cycle",
@@ -5964,7 +5971,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 385"
+        "last_refreshed": "cycle 386"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -6112,7 +6119,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 9,
     "issue": 1873,
