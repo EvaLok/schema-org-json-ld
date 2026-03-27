@@ -5539,7 +5539,7 @@
       "merged_at": null,
       "model": "gpt-5.4",
       "pr": null,
-      "status": "in_flight",
+      "status": "failed",
       "title": "[Cycle Review] Cycle 378 end-of-cycle review"
     },
     {
@@ -5548,7 +5548,7 @@
       "merged_at": null,
       "model": "gpt-5.4",
       "pr": null,
-      "status": "in_flight",
+      "status": "failed",
       "title": "Copilot connectivity test — cycle 379"
     }
   ],
@@ -5768,19 +5768,19 @@
     "total_classes_converted": 54
   },
   "copilot_metrics": {
-    "closed_without_merge": 8,
-    "closed_without_pr": 56,
+    "closed_without_merge": 9,
+    "closed_without_pr": 59,
     "dispatch_log_latest": "#1853 Copilot connectivity test — cycle 379 (cycle 379)",
-    "dispatch_to_pr_rate": "90.4%",
+    "dispatch_to_pr_rate": "90.3%",
     "failed_dispatches": 10,
-    "in_flight": 2,
-    "merged": 536,
-    "pr_merge_rate": "98.2%",
-    "produced_pr": 546,
-    "resolved": 602,
+    "in_flight": 0,
+    "merged": 537,
+    "pr_merge_rate": "98.0%",
+    "produced_pr": 548,
+    "resolved": 607,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 604
+    "total_dispatches": 607
   },
   "cycle_issues": [
     1852
