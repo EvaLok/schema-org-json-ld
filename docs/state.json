@@ -5580,6 +5580,13 @@
       "model": "gpt-5.4",
       "status": "failed",
       "title": "Copilot connectivity test — cycle 382"
+    },
+    {
+      "dispatched_at": "2026-03-27T16:22:15Z",
+      "issue": 1868,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Copilot connectivity test — cycle 383"
     }
   ],
   "audit_dropped": [
@@ -5803,17 +5810,17 @@
   "copilot_metrics": {
     "closed_without_merge": 9,
     "closed_without_pr": 63,
-    "dispatch_log_latest": "#1864 Copilot connectivity test — cycle 382 (cycle 382)",
-    "dispatch_to_pr_rate": "89.7%",
+    "dispatch_log_latest": "#1868 Copilot connectivity test — cycle 383 (cycle 383)",
+    "dispatch_to_pr_rate": "89.5%",
     "failed_dispatches": 14,
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 537,
     "pr_merge_rate": "98.0%",
     "produced_pr": 548,
     "resolved": 611,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 611
+    "total_dispatches": 612
   },
   "cycle_issues": [
     1867
@@ -5919,15 +5926,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 382"
+        "last_refreshed": "cycle 383"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 382"
+        "last_refreshed": "cycle 383"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 382"
+        "last_refreshed": "cycle 383"
       },
       "cycle_issues": {
         "cadence": "every cycle",
@@ -5948,7 +5955,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 382"
+        "last_refreshed": "cycle 383"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -6096,7 +6103,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 22,
     "issue": 1867,
