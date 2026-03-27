@@ -5829,13 +5829,13 @@
     "closed_without_merge": 9,
     "closed_without_pr": 65,
     "dispatch_log_latest": "#1874 Connectivity test — cycle 386 (cycle 386)",
-    "dispatch_to_pr_rate": "89.3%",
+    "dispatch_to_pr_rate": "89.4%",
     "failed_dispatches": 16,
-    "in_flight": 1,
-    "merged": 537,
+    "in_flight": 0,
+    "merged": 538,
     "pr_merge_rate": "98.0%",
-    "produced_pr": 548,
-    "resolved": 613,
+    "produced_pr": 549,
+    "resolved": 614,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 614
@@ -5846,7 +5846,7 @@
   "cycle_phase": {
     "cycle": 386,
     "phase": "close_out",
-    "phase_entered_at": "2026-03-27T22:17:14Z"
+    "phase_entered_at": "2026-03-27T22:20:49Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -6121,15 +6121,15 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
-    "duration_minutes": 9,
+    "duration_minutes": 4,
     "issue": 1873,
     "number": 386,
-    "summary": "1 dispatches, 0 merges",
-    "timestamp": "2026-03-27T22:17:14Z"
+    "summary": "Copilot restored after 13-cycle outage. Connectivity test #1874 confirmed operational. Fixed stale fields, derive-metrics, state invariants. Closed outage tracker #1839.",
+    "timestamp": "2026-03-27T22:20:49Z"
   },
-  "last_eva_comment_check": "2026-03-27T22:17:14Z",
+  "last_eva_comment_check": "2026-03-27T22:20:49Z",
   "last_tool_audit_cycle": 376,
   "open_questions_for_eva": [
     1839
@@ -9763,7 +9763,7 @@
     "last_review_cycle": 372
   },
   "review_dispatch_consecutive": 0,
-  "review_events_verified_through_cycle": 384,
+  "review_events_verified_through_cycle": 385,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
