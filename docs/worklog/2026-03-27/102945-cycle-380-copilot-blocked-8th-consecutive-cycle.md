@@ -24,13 +24,13 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 0
-- **Pipeline status**: PASS (2 warnings — deferral-accumulation, worklog-dedup naming)
-- **Copilot metrics**: 609 dispatches, 548 PRs produced, 537 merged, 98.0% PR merge rate, 12 failed
+- **Pipeline status**: PASS (1 blocking warning, 2 warnings)
+- **Copilot metrics**: 609 dispatches, 548 PRs produced, 537 merged, 98.0% PR merge rate
 - **Publish gate**: published
 
 ## Next steps
 
-1. Monitor Copilot availability; if restored, dispatch cycle review and next schema implementation; if still blocked, continue state maintenance only
+1. No in-flight sessions — plan next dispatch
 
 ## Commit receipts
 
