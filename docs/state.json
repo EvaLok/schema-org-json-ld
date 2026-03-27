@@ -5392,6 +5392,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "[Cycle Review] Cycle 378 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-27T06:30:13Z",
+      "issue": 1853,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Copilot connectivity test — cycle 379"
     }
   ],
   "audit_dropped": [
@@ -5612,17 +5619,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 56,
-    "dispatch_log_latest": "#1851 [Cycle Review] Cycle 378 end-of-cycle review (cycle 378)",
-    "dispatch_to_pr_rate": "90.5%",
+    "dispatch_log_latest": "#1853 Copilot connectivity test — cycle 379 (cycle 379)",
+    "dispatch_to_pr_rate": "90.4%",
     "failed_dispatches": 10,
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 536,
     "pr_merge_rate": "98.2%",
     "produced_pr": 546,
     "resolved": 602,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 603
+    "total_dispatches": 604
   },
   "cycle_issues": [
     1852
@@ -5728,15 +5735,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 378"
+        "last_refreshed": "cycle 379"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 378"
+        "last_refreshed": "cycle 379"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 378"
+        "last_refreshed": "cycle 379"
       },
       "cycle_issues": {
         "cadence": "every cycle",
@@ -5757,7 +5764,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 378"
+        "last_refreshed": "cycle 379"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -5905,7 +5912,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 8,
     "issue": 1852,
@@ -9538,7 +9545,7 @@
     ],
     "last_review_cycle": 372
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 378,
   "schema_status": {
     "directory_layout": {
