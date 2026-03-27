@@ -5378,6 +5378,13 @@
       "model": "gpt-5.4",
       "status": "closed_without_pr",
       "title": "[Connectivity Test] Cycle 377 — Copilot agent availability check"
+    },
+    {
+      "dispatched_at": "2026-03-27T04:53:17Z",
+      "issue": 1850,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Connectivity Test: Cycle 378 — Copilot agent connectivity test"
     }
   ],
   "audit_dropped": [
@@ -5598,17 +5605,17 @@
   "copilot_metrics": {
     "closed_without_merge": 8,
     "closed_without_pr": 55,
-    "dispatch_log_latest": "#1848 [Connectivity Test] Cycle 377 — Copilot agent availability check (cycle 377)",
-    "dispatch_to_pr_rate": "90.8%",
+    "dispatch_log_latest": "#1850 Connectivity Test: Cycle 378 — Copilot agent connectivity test (cycle 378)",
+    "dispatch_to_pr_rate": "90.7%",
     "failed_dispatches": 9,
-    "in_flight": 0,
+    "in_flight": 1,
     "merged": 536,
     "pr_merge_rate": "98.2%",
     "produced_pr": 546,
     "resolved": 601,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 601
+    "total_dispatches": 602
   },
   "cycle_issues": [
     1849
@@ -5714,15 +5721,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 377"
+        "last_refreshed": "cycle 378"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 377"
+        "last_refreshed": "cycle 378"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 377"
+        "last_refreshed": "cycle 378"
       },
       "cycle_issues": {
         "cadence": "every cycle",
@@ -5743,7 +5750,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 376"
+        "last_refreshed": "cycle 378"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -5891,7 +5898,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 8,
     "issue": 1849,
@@ -9524,7 +9531,7 @@
     ],
     "last_review_cycle": 372
   },
-  "review_dispatch_consecutive": 4,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 376,
   "schema_status": {
     "directory_layout": {
