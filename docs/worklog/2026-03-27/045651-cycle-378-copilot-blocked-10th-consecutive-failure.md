@@ -21,14 +21,14 @@
 
 ## Cycle state
 
-- **In-flight agent sessions**: 0
-- **Pipeline status**: PASS (3 warnings)
-- **Copilot metrics**: 602 dispatches, 546 PRs produced, 536 merged, 10 failed, 98.2% PR merge rate
+- **In-flight agent sessions**: 1
+- **Pipeline status**: PASS (1 blocking warning, 2 warnings)
+- **Copilot metrics**: 603 dispatches, 546 PRs produced, 536 merged, 98.2% PR merge rate
 - **Publish gate**: published
 
 ## Next steps
 
-1. If Copilot restored: dispatch cycle review and next schema implementation. If still blocked: consider pausing orchestrator cycles until Eva resolves [#1839](https://github.com/EvaLok/schema-org-json-ld/issues/1839)
+1. Review and iterate on PR from [#1851](https://github.com/EvaLok/schema-org-json-ld/issues/1851) ([Cycle Review] Cycle 378 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
