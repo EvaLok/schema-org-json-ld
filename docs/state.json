@@ -5365,10 +5365,19 @@
     },
     {
       "dispatched_at": "2026-03-27T00:30:27Z",
+      "failure_reason": "repository_ruleset_violation",
       "issue": 1846,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed_without_pr",
       "title": "[Cycle Review] Cycle 376 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-27T03:07:34Z",
+      "failure_reason": "repository_ruleset_violation",
+      "issue": 1848,
+      "model": "gpt-5.4",
+      "status": "closed_without_pr",
+      "title": "[Connectivity Test] Cycle 377 — Copilot agent availability check"
     }
   ],
   "audit_dropped": [
@@ -5588,26 +5597,26 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 53,
-    "dispatch_log_latest": "#1846 [Cycle Review] Cycle 376 end-of-cycle review (cycle 376)",
-    "dispatch_to_pr_rate": "91.0%",
-    "failed_dispatches": 7,
-    "in_flight": 1,
+    "closed_without_pr": 55,
+    "dispatch_log_latest": "#1848 [Connectivity Test] Cycle 377 — Copilot agent availability check (cycle 377)",
+    "dispatch_to_pr_rate": "90.8%",
+    "failed_dispatches": 9,
+    "in_flight": 0,
     "merged": 536,
     "pr_merge_rate": "98.2%",
     "produced_pr": 546,
-    "resolved": 599,
+    "resolved": 601,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 600
+    "total_dispatches": 601
   },
   "cycle_issues": [
     1847
   ],
   "cycle_phase": {
     "cycle": 377,
-    "phase": "work",
-    "phase_entered_at": "2026-03-27T03:02:40Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-27T03:11:01Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -5705,15 +5714,15 @@
       },
       "copilot_metrics.dispatch_to_pr_rate": {
         "cadence": "after new dispatches",
-        "last_refreshed": "cycle 376"
+        "last_refreshed": "cycle 377"
       },
       "copilot_metrics.in_flight": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 376"
+        "last_refreshed": "cycle 377"
       },
       "copilot_metrics.pr_merge_rate": {
         "cadence": "after PR merges",
-        "last_refreshed": "cycle 376"
+        "last_refreshed": "cycle 377"
       },
       "cycle_issues": {
         "cadence": "every cycle",
@@ -5726,7 +5735,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 376"
+        "last_refreshed": "cycle 377"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -5742,7 +5751,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 376"
+        "last_refreshed": "cycle 377"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -5762,7 +5771,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 376"
+        "last_refreshed": "cycle 377"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -5770,11 +5779,11 @@
       },
       "project_mode": {
         "cadence": "when mode or counter changes",
-        "last_refreshed": "cycle 371"
+        "last_refreshed": "cycle 377"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 376"
+        "last_refreshed": "cycle 377"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -5790,7 +5799,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 376"
+        "last_refreshed": "cycle 377"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -5798,11 +5807,11 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 376"
+        "last_refreshed": "cycle 377"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 376"
+        "last_refreshed": "cycle 377"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -5878,19 +5887,19 @@
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 371"
+        "last_refreshed": "cycle 377"
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
-    "duration_minutes": 12,
+    "duration_minutes": 8,
     "issue": 1847,
     "number": 377,
-    "summary": "Copilot still blocked by repository ruleset violation. 7th consecutive failure. Connectivity test #1845 failed. Tool audit completed (overdue since cycle 353). State maintenance: closed #1843 and #1845, fixed copilot_metrics invariants.",
-    "timestamp": "2026-03-27T03:02:39Z"
+    "summary": "1 dispatches, 0 merges",
+    "timestamp": "2026-03-27T03:11:01Z"
   },
-  "last_eva_comment_check": "2026-03-27T03:02:39Z",
+  "last_eva_comment_check": "2026-03-27T03:11:01Z",
   "last_tool_audit_cycle": 376,
   "open_questions_for_eva": [
     1839
