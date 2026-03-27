@@ -5578,7 +5578,7 @@
       "dispatched_at": "2026-03-27T14:41:43Z",
       "issue": 1864,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "Copilot connectivity test — cycle 382"
     }
   ],
@@ -5805,7 +5805,7 @@
     "closed_without_pr": 62,
     "dispatch_log_latest": "#1864 Copilot connectivity test — cycle 382 (cycle 382)",
     "dispatch_to_pr_rate": "89.7%",
-    "failed_dispatches": 13,
+    "failed_dispatches": 14,
     "in_flight": 1,
     "merged": 537,
     "pr_merge_rate": "98.0%",
@@ -6096,7 +6096,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 3,
     "issue": 1863,
