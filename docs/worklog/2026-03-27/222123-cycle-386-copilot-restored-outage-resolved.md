@@ -26,16 +26,14 @@
 
 ## Cycle state
 
-- **In-flight agent sessions**: 0
-- **Pipeline status**: PASS (3 warnings)
-- **Copilot metrics**: 614 dispatches, 549 PRs produced, 538 merged, 98.0% PR merge rate
+- **In-flight agent sessions**: 1
+- **Pipeline status**: PASS (1 blocking warning, 2 warnings)
+- **Copilot metrics**: 615 dispatches, 549 PRs produced, 538 merged, 98.0% PR merge rate
 - **Publish gate**: published
 
 ## Next steps
 
-1. Review cycle 386 results via review agent
-2. If Copilot remains operational: dispatch queued pipeline improvements per Eva [#808](https://github.com/EvaLok/schema-org-json-ld/issues/808)
-3. Address chronic worklog-accuracy deferral (3 cycles: 370, 371, 372)
+1. Review and iterate on PR from [#1876](https://github.com/EvaLok/schema-org-json-ld/issues/1876) ([Cycle Review] Cycle 386 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
