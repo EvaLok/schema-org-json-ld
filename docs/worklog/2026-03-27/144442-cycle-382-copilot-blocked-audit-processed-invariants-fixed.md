@@ -26,13 +26,13 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 0
-- **Pipeline status**: PASS (3 warnings)
+- **Pipeline status**: PASS (1 blocking warning, 3 warnings)
 - **Copilot metrics**: 611 dispatches, 548 PRs produced, 537 merged, 98.0% PR merge rate
 - **Publish gate**: published
 
 ## Next steps
 
-1. Monitor Copilot availability; when restored, dispatch [#1865](https://github.com/EvaLok/schema-org-json-ld/issues/1865) (remove copilot_metrics) first, then [#1866](https://github.com/EvaLok/schema-org-json-ld/issues/1866) (add convergence tracking)
+1. No in-flight sessions — plan next dispatch
 
 ## Commit receipts
 
