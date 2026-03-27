@@ -5383,7 +5383,7 @@
       "dispatched_at": "2026-03-27T04:53:17Z",
       "issue": 1850,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "Connectivity Test: Cycle 378 — Copilot agent connectivity test"
     }
   ],
@@ -5604,15 +5604,15 @@
   },
   "copilot_metrics": {
     "closed_without_merge": 8,
-    "closed_without_pr": 55,
-    "dispatch_log_latest": "#1850 Connectivity Test: Cycle 378 — Copilot agent connectivity test (cycle 378)",
+    "closed_without_pr": 56,
+    "dispatch_log_latest": "#1850 [Connectivity Test] Cycle 378 — Copilot agent connectivity test",
     "dispatch_to_pr_rate": "90.7%",
-    "failed_dispatches": 9,
-    "in_flight": 1,
+    "failed_dispatches": 10,
+    "in_flight": 0,
     "merged": 536,
     "pr_merge_rate": "98.2%",
     "produced_pr": 546,
-    "resolved": 601,
+    "resolved": 602,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 602
@@ -5898,7 +5898,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 8,
     "issue": 1849,
