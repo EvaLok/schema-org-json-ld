@@ -5816,13 +5816,12 @@
     "total_dispatches": 611
   },
   "cycle_issues": [
-    1863
+    1867
   ],
   "cycle_phase": {
-    "completed_at": "2026-03-27T14:52:12Z",
-    "cycle": 382,
-    "phase": "complete",
-    "phase_entered_at": "2026-03-27T14:52:12Z"
+    "cycle": 383,
+    "phase": "work",
+    "phase_entered_at": "2026-03-27T16:19:21Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -5932,11 +5931,11 @@
       },
       "cycle_issues": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 382"
+        "last_refreshed": "cycle 383"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
-        "last_refreshed": "cycle 382",
+        "last_refreshed": "cycle 383",
         "notes": "Tracks cycle, phase, phase_entered_at, and completed_at when phase is complete."
       },
       "eva_input_issues.closed_this_cycle": {
@@ -5953,7 +5952,7 @@
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 382"
+        "last_refreshed": "cycle 383"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
@@ -5961,7 +5960,7 @@
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 382"
+        "last_refreshed": "cycle 383"
       },
       "last_tool_audit_cycle": {
         "cadence": "every 10 cycles",
@@ -5969,7 +5968,7 @@
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 382"
+        "last_refreshed": "cycle 383"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -5981,7 +5980,7 @@
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 382"
+        "last_refreshed": "cycle 383"
       },
       "project_mode": {
         "cadence": "when mode or counter changes",
@@ -6100,12 +6099,12 @@
   "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 22,
-    "issue": 1863,
-    "number": 382,
+    "issue": 1867,
+    "number": 383,
     "summary": "Copilot blocked (10th cycle). Fixed state-invariants display bug (hidden in_flight_sessions_consistency check). Processed audit recommendations #333 (remove copilot_metrics) and #334 (add convergence tracking) — both deferred pending Copilot restoration. Pipeline restored to PASS.",
-    "timestamp": "2026-03-27T14:44:07Z"
+    "timestamp": "2026-03-27T16:19:20Z"
   },
-  "last_eva_comment_check": "2026-03-27T14:44:07Z",
+  "last_eva_comment_check": "2026-03-27T16:19:20Z",
   "last_tool_audit_cycle": 376,
   "open_questions_for_eva": [
     1839
@@ -6116,7 +6115,7 @@
     "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
     "started_at": "cycle 199"
   },
-  "previous_cycle_issue": 1860,
+  "previous_cycle_issue": 1863,
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
     "burn_in_target": 6,
