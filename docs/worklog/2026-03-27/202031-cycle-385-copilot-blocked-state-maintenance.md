@@ -25,16 +25,13 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 0
-- **Pipeline status**: PASS (3 warnings, current-cycle-steps expected during close-out)
-- **Copilot metrics**: Blocked: 17 consecutive failures since cycle 373, repository ruleset violation
-- **Publish gate**: published v1.0.2 (no gate action needed)
+- **Pipeline status**: PASS (1 blocking warning, 3 warnings)
+- **Copilot metrics**: 613 dispatches, 548 PRs produced, 537 merged, 98.0% PR merge rate
+- **Publish gate**: published
 
 ## Next steps
 
-1. When Copilot restored: dispatch [#1865](https://github.com/EvaLok/schema-org-json-ld/issues/1865) (remove copilot_metrics)
-2. When Copilot restored: re-dispatch [#1851](https://github.com/EvaLok/schema-org-json-ld/issues/1851) (phase transition ordering fix)
-3. When Copilot restored: process cycle 373 review findings
-4. Monitor [#1839](https://github.com/EvaLok/schema-org-json-ld/issues/1839) for Eva response on Copilot outage
+1. No in-flight sessions — plan next dispatch
 
 ## Commit receipts
 
