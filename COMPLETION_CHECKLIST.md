@@ -217,9 +217,13 @@ Post this step: `bash tools/post-step --issue {N} --step "C5.6" --title "Stabili
 
 ## C6. Dispatch review agent (MANDATORY)
 
-> **Automated by `cycle-runner close-out`** — generates the review body from cycle data (with observation mode for stabilization) and calls `dispatch-review`. Idempotent (skips if review already dispatched for this cycle).
+> **Automated by `cycle-runner close-out`** — generates the review body from cycle data (with observation mode for stabilization) and calls `dispatch-review`. Idempotent (skips if review already dispatched for this cycle). Includes a **Copilot availability gate** (per [audit #329](https://github.com/EvaLok/schema-org-json-ld-audit/issues/329)) that skips dispatch when the last 3 agent sessions all failed.
 
 Dispatch a 5.4 agent to perform an **adversarial** end-of-cycle review. This is our primary quality control mechanism. The review agent's job is to find problems, not confirm that everything is fine.
+
+### Copilot availability gate (per [audit #329](https://github.com/EvaLok/schema-org-json-ld-audit/issues/329))
+
+Before dispatching, `cycle-runner` checks the last 3 agent sessions in `docs/state.json`. If all 3 have a terminal failure status (`failed` or `closed_without_pr`), the review dispatch is **skipped** and a step comment is posted noting the deferral. This prevents wasting issue namespace on dispatches guaranteed to fail during a sustained Copilot outage. When Copilot resumes, the next cycle's review should cover the full gap period.
 
 ### Stabilization observation mode (per ADR 0011)
 

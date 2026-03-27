@@ -89,7 +89,7 @@ pub fn run(
     // C5.6: Stabilization counter
     step_c5_6(repo_root, issue, cycle, pipeline_passed)?;
 
-    // C6: Review dispatch
+    // C6: Review dispatch (may be skipped if Copilot is unavailable)
     let review_info = step_c6(repo_root, issue, cycle)?;
 
     // C6.5: Refresh worklog state after review dispatch
@@ -99,7 +99,7 @@ pub fn run(
     step_c7(repo_root, issue)?;
 
     // C8: Close issue
-    step_c8(repo_root, issue, cycle, &review_info, &pipeline_summary)?;
+    step_c8(repo_root, issue, cycle, review_info.as_ref(), &pipeline_summary)?;
     complete_close_out_phase(repo_root, cycle)?;
     git::push(repo_root).map_err(|error| {
         format!(
@@ -756,7 +756,40 @@ fn step_c5_6(
     Ok(())
 }
 
-fn step_c6(repo_root: &Path, issue: u64, cycle: u64) -> Result<ReviewInfo, String> {
+/// Check whether the Copilot agent is likely available by examining recent
+/// agent session outcomes.  Returns `Ok(true)` when available, `Ok(false)`
+/// when the last `WINDOW` sessions all ended in a failure status.
+fn is_copilot_available(state: &Value) -> bool {
+    const WINDOW: usize = 3;
+
+    let sessions = match state.get("agent_sessions").and_then(Value::as_array) {
+        Some(s) if !s.is_empty() => s,
+        _ => return true, // no history → assume available
+    };
+
+    // Sort by dispatched_at descending (most recent first)
+    let mut sorted: Vec<&Value> = sessions.iter().collect();
+    sorted.sort_by(|a, b| {
+        let ts_a = a.get("dispatched_at").and_then(Value::as_str).unwrap_or("");
+        let ts_b = b.get("dispatched_at").and_then(Value::as_str).unwrap_or("");
+        ts_b.cmp(ts_a)
+    });
+
+    let recent: Vec<&str> = sorted
+        .iter()
+        .take(WINDOW)
+        .filter_map(|s| s.get("status").and_then(Value::as_str))
+        .collect();
+
+    if recent.len() < WINDOW {
+        return true; // not enough history to judge
+    }
+
+    let failure_statuses = ["failed", "closed_without_pr"];
+    !recent.iter().all(|s| failure_statuses.contains(s))
+}
+
+fn step_c6(repo_root: &Path, issue: u64, cycle: u64) -> Result<Option<ReviewInfo>, String> {
     eprintln!("C6: Dispatching review agent...");
 
     // Check if review already dispatched for this cycle (idempotency)
@@ -767,7 +800,17 @@ fn step_c6(repo_root: &Path, issue: u64, cycle: u64) -> Result<ReviewInfo, Strin
             existing.issue_number
         );
         steps::post_step(repo_root, issue, "C6", "Review dispatch", &body, false)?;
-        return Ok(existing);
+        return Ok(Some(existing));
+    }
+
+    // Copilot availability gate (per audit recommendation #329)
+    if !is_copilot_available(&state) {
+        let body = "Review deferred — Copilot agent unavailable \
+                    (last 3 dispatches all failed). \
+                    When Copilot resumes, the next cycle's review should cover the full gap period.";
+        steps::post_step(repo_root, issue, "C6", "Review dispatch", body, false)?;
+        eprintln!("C6: Review skipped — Copilot unavailable");
+        return Ok(None);
     }
 
     // Check stabilization mode
@@ -817,7 +860,7 @@ fn step_c6(repo_root: &Path, issue: u64, cycle: u64) -> Result<ReviewInfo, Strin
     };
     steps::post_step(repo_root, issue, "C6", "Review dispatch", &step_body, false)?;
 
-    Ok(review_info)
+    Ok(Some(review_info))
 }
 
 fn step_c7(repo_root: &Path, issue: u64) -> Result<(), String> {
@@ -997,17 +1040,21 @@ fn step_c8(
     repo_root: &Path,
     issue: u64,
     cycle: u64,
-    review_info: &ReviewInfo,
+    review_info: Option<&ReviewInfo>,
     pipeline_summary: &str,
 ) -> Result<(), String> {
     eprintln!("C8: Closing orchestrator issue...");
 
+    let review_line = match review_info {
+        Some(info) => format!("- Review: dispatched as #{} ({})", info.issue_number, info.issue_url),
+        None => "- Review: deferred (Copilot unavailable)".to_string(),
+    };
     let closing_body = format!(
         "Cycle {} close-out complete.\n\n\
-         - Review: dispatched as #{} ({})\n\
+         {}\n\
          - Pipeline: {}\n\
          - All close-out steps completed by cycle-runner",
-        cycle, review_info.issue_number, review_info.issue_url, pipeline_summary,
+        cycle, review_line, pipeline_summary,
     );
 
     steps::post_step(
@@ -1987,7 +2034,7 @@ mod tests {
                 &dir,
                 123,
                 345,
-                &review_info,
+                Some(&review_info),
                 "FAIL (1 blocking: doc-validation)",
             )
         })
@@ -1999,6 +2046,84 @@ mod tests {
         assert!(args.contains("- Review: dispatched as #1470 (https://github.com/EvaLok/schema-org-json-ld/issues/1470)"));
         assert!(args.contains("- Pipeline: FAIL (1 blocking: doc-validation)"));
         assert!(args.contains("- All close-out steps completed by cycle-runner"));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn copilot_available_when_no_sessions() {
+        let state = json!({"agent_sessions": []});
+        assert!(is_copilot_available(&state));
+    }
+
+    #[test]
+    fn copilot_available_when_recent_success() {
+        let state = json!({
+            "agent_sessions": [
+                {"dispatched_at": "2026-03-27T01:00:00Z", "status": "merged"},
+                {"dispatched_at": "2026-03-27T02:00:00Z", "status": "failed"},
+                {"dispatched_at": "2026-03-27T03:00:00Z", "status": "failed"}
+            ]
+        });
+        assert!(is_copilot_available(&state));
+    }
+
+    #[test]
+    fn copilot_unavailable_when_all_recent_failed() {
+        let state = json!({
+            "agent_sessions": [
+                {"dispatched_at": "2026-03-27T01:00:00Z", "status": "merged"},
+                {"dispatched_at": "2026-03-27T02:00:00Z", "status": "failed"},
+                {"dispatched_at": "2026-03-27T03:00:00Z", "status": "failed"},
+                {"dispatched_at": "2026-03-27T04:00:00Z", "status": "closed_without_pr"}
+            ]
+        });
+        assert!(!is_copilot_available(&state));
+    }
+
+    #[test]
+    fn copilot_available_with_mixed_failure_statuses() {
+        let state = json!({
+            "agent_sessions": [
+                {"dispatched_at": "2026-03-27T02:00:00Z", "status": "failed"},
+                {"dispatched_at": "2026-03-27T03:00:00Z", "status": "in_flight"},
+                {"dispatched_at": "2026-03-27T04:00:00Z", "status": "failed"}
+            ]
+        });
+        assert!(is_copilot_available(&state));
+    }
+
+    #[test]
+    fn step_c8_handles_deferred_review() {
+        let dir = setup_temp_repo("step-c8-deferred");
+        let args_path = dir.join("post-step-args.txt");
+        write_post_step_capture_script(&dir, &args_path);
+
+        let bin_dir = dir.join("bin");
+        fs::create_dir_all(&bin_dir).unwrap();
+        let gh_path = bin_dir.join("gh");
+        fs::write(
+            &gh_path,
+            "#!/usr/bin/env bash\nset -euo pipefail\nif [ \"$1\" = \"issue\" ] && [ \"$2\" = \"close\" ]; then\n  exit 0\nfi\nprintf 'unexpected gh invocation\\n' >&2\nexit 1\n",
+        )
+        .unwrap();
+        make_executable(&gh_path);
+
+        with_path_prefix(&bin_dir, || {
+            step_c8(
+                &dir,
+                123,
+                345,
+                None,
+                "PASS (0 warnings)",
+            )
+        })
+        .unwrap();
+
+        let args = fs::read_to_string(&args_path).unwrap();
+        assert!(args.contains("Cycle 345 close-out complete."));
+        assert!(args.contains("- Review: deferred (Copilot unavailable)"));
+        assert!(args.contains("- Pipeline: PASS (0 warnings)"));
 
         let _ = fs::remove_dir_all(&dir);
     }
