@@ -24,7 +24,8 @@ pub struct StateJson {
     pub typescript_plan: TypescriptPlan,
     pub release: BTreeMap<String, Release>,
     pub constructor_refactoring: Option<ConstructorRefactoring>,
-    pub copilot_metrics: CopilotMetrics,
+    pub dispatch_log_latest: Option<String>,
+    pub in_flight_sessions: Option<i64>,
     pub last_cycle: LastCycle,
     pub cycle_issues: Option<Vec<u64>>,
     pub last_eva_comment_check: Option<String>,
@@ -456,20 +457,6 @@ pub struct TypescriptPlan {
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(default, rename_all = "snake_case")]
-pub struct CopilotMetrics {
-    pub total_dispatches: Option<i64>,
-    pub produced_pr: Option<i64>,
-    pub merged: Option<i64>,
-    pub dispatch_to_pr_rate: Option<String>,
-    pub pr_merge_rate: Option<String>,
-    pub in_flight: Option<i64>,
-    pub dispatch_log_latest: Option<String>,
-    #[serde(flatten)]
-    pub extra: BTreeMap<String, Value>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-#[serde(default, rename_all = "snake_case")]
 pub struct LastCycle {
     pub issue: Option<i64>,
     pub timestamp: Option<String>,
@@ -700,7 +687,7 @@ mod tests {
         let mut state = json!({
             "field_inventory": {
                 "fields": {
-                    "copilot_metrics": {
+                    "in_flight_sessions": {
                         "cadence": "every cycle",
                         "last_refreshed": "cycle 120"
                     }
@@ -708,10 +695,10 @@ mod tests {
             }
         });
 
-        update_freshness(&mut state, "copilot_metrics", 153).expect("update should succeed");
+        update_freshness(&mut state, "in_flight_sessions", 153).expect("update should succeed");
         assert_eq!(
             state
-                .pointer("/field_inventory/fields/copilot_metrics/last_refreshed")
+                .pointer("/field_inventory/fields/in_flight_sessions/last_refreshed")
                 .and_then(|value| value.as_str()),
             Some("cycle 153")
         );
@@ -971,7 +958,7 @@ mod tests {
         let repo = TempRepo::new();
         let state = json!({
             "last_cycle": {"number": 166},
-            "copilot_metrics": {"in_flight": 2}
+            "in_flight_sessions": 2
         });
 
         repo.write_state(&state);
@@ -1278,39 +1265,26 @@ mod tests {
     }
 
     #[test]
-    fn copilot_metrics_deserializes_dispatch_log_latest() {
+    fn dispatch_log_latest_deserializes_at_top_level() {
         let state: StateJson = serde_json::from_value(json!({
-            "copilot_metrics": {
-                "dispatch_log_latest": "#873 Review findings follow-up (cycle 202)"
-            }
+            "dispatch_log_latest": "#873 Review findings follow-up (cycle 202)"
         }))
         .expect("state should deserialize");
 
         assert_eq!(
-            state.copilot_metrics.dispatch_log_latest.as_deref(),
+            state.dispatch_log_latest.as_deref(),
             Some("#873 Review findings follow-up (cycle 202)")
         );
     }
 
     #[test]
-    fn copilot_metrics_deserializes_summary_fields() {
+    fn in_flight_sessions_deserializes_at_top_level() {
         let state: StateJson = serde_json::from_value(json!({
-            "copilot_metrics": {
-                "total_dispatches": 45,
-                "merged": 40,
-                "pr_merge_rate": "88.9%",
-                "in_flight": 3
-            }
+            "in_flight_sessions": 3
         }))
         .expect("state should deserialize");
 
-        assert_eq!(state.copilot_metrics.total_dispatches, Some(45));
-        assert_eq!(state.copilot_metrics.merged, Some(40));
-        assert_eq!(
-            state.copilot_metrics.pr_merge_rate.as_deref(),
-            Some("88.9%")
-        );
-        assert_eq!(state.copilot_metrics.in_flight, Some(3));
+        assert_eq!(state.in_flight_sessions, Some(3));
     }
 
     #[test]

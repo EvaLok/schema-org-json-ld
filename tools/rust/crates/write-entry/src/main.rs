@@ -25,7 +25,6 @@ const NEXT_STEPS_HEADING: &str = "## Next steps";
 const LEGACY_STATE_DISCLAIMER: &str = "*Snapshot before review dispatch — final counters may differ after C6.*";
 const IN_FLIGHT_PREFIX: &str = "- **In-flight agent sessions**: ";
 const PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
-const COPILOT_METRICS_PREFIX: &str = "- **Copilot metrics**: ";
 const PUBLISH_GATE_PREFIX: &str = "- **Publish gate**: ";
 const INFRASTRUCTURE_ROOTS: [&str; 2] = ["tools", ".claude/skills"];
 const INFRASTRUCTURE_FILES: [&str; 4] = [
@@ -109,9 +108,6 @@ struct WorklogArgs {
     /// Auto-derive pipeline summary from tools/pipeline-check
     #[arg(long = "auto-pipeline", default_value_t = false)]
     auto_pipeline: bool,
-    /// Copilot metrics summary for the current state section
-    #[arg(long = "copilot-metrics")]
-    copilot_metrics: Option<String>,
     /// Publish gate summary for the current state section
     #[arg(long = "publish-gate")]
     publish_gate: Option<String>,
@@ -162,9 +158,6 @@ struct PatchPipelineArgs {
     /// Replacement in-flight agent session count
     #[arg(long = "in-flight")]
     in_flight: Option<u64>,
-    /// Replacement copilot metrics summary text
-    #[arg(long = "copilot-metrics")]
-    copilot_metrics: Option<String>,
     /// Replacement publish gate summary text
     #[arg(long = "publish-gate")]
     publish_gate: Option<String>,
@@ -214,8 +207,6 @@ struct CurrentState {
     #[serde(default)]
     in_flight_sessions: u64,
     pipeline_status: String,
-    #[serde(default)]
-    copilot_metrics: String,
     #[serde(default)]
     publish_gate: String,
 }
@@ -439,14 +430,6 @@ fn execute_patch_pipeline(args: &PatchPipelineArgs, repo_root: &Path) -> Result<
             )
         })?;
     }
-    if let Some(copilot_metrics) = args.copilot_metrics.as_deref() {
-        patched = patch_line_value(&patched, COPILOT_METRICS_PREFIX, copilot_metrics).ok_or_else(|| {
-            format!(
-                "failed to patch {}: copilot metrics line not found",
-                worklog_path.display()
-            )
-        })?;
-    }
     if let Some(publish_gate) = args.publish_gate.as_deref() {
         patched = patch_line_value(&patched, PUBLISH_GATE_PREFIX, publish_gate).ok_or_else(|| {
             format!(
@@ -601,13 +584,9 @@ fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<Worklog
             current_state: CurrentState {
                 in_flight_sessions: match args.in_flight {
                     Some(value) => value,
-                    None => state_copilot_in_flight(state.as_ref())?,
+                    None => state_in_flight(state.as_ref())?,
                 },
                 pipeline_status: resolve_pipeline_status(args, repo_root, state.as_ref())?,
-                copilot_metrics: match &args.copilot_metrics {
-                    Some(value) => value.clone(),
-                    None => format_state_copilot_metrics(state.as_ref())?,
-                },
                 publish_gate: match &args.publish_gate {
                     Some(value) => value.clone(),
                     None => state_publish_gate_status(state.as_ref())?,
@@ -629,9 +608,8 @@ fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<Worklog
         prs_reviewed: Vec::new(),
         issues_processed: Vec::new(),
         current_state: CurrentState {
-            in_flight_sessions: state_copilot_in_flight(state.as_ref())?,
+            in_flight_sessions: state_in_flight(state.as_ref())?,
             pipeline_status: resolve_pipeline_status(args, repo_root, state.as_ref())?,
-            copilot_metrics: format_state_copilot_metrics(state.as_ref())?,
             publish_gate: state_publish_gate_status(state.as_ref())?,
         },
         next_steps: resolve_next_steps(args, state.as_ref())?,
@@ -662,7 +640,6 @@ fn validate_worklog_flag_combinations(args: &WorklogArgs) -> Result<(), String> 
 
 fn requires_worklog_state(args: &WorklogArgs) -> bool {
     args.auto_next
-        || args.copilot_metrics.is_none()
         || args.publish_gate.is_none()
         || args.in_flight.is_none()
 }
@@ -676,46 +653,6 @@ fn load_worklog_state(repo_root: &Path, required: bool) -> Result<Option<StateJs
     serde_json::from_value(value)
         .map(Some)
         .map_err(|error| format!("failed to parse docs/state.json: {}", error))
-}
-
-fn format_state_copilot_metrics(state: Option<&StateJson>) -> Result<String, String> {
-    let state = state
-        .ok_or_else(|| "docs/state.json is required to populate copilot metrics".to_string())?;
-    let total_dispatches = state
-        .copilot_metrics
-        .total_dispatches
-        .ok_or_else(|| "missing copilot_metrics.total_dispatches in state.json".to_string())?;
-    if total_dispatches < 0 {
-        return Err(
-            "copilot_metrics.total_dispatches must be non-negative in state.json".to_string(),
-        );
-    }
-    let produced_pr = state
-        .copilot_metrics
-        .produced_pr
-        .ok_or_else(|| "missing copilot_metrics.produced_pr in state.json".to_string())?;
-    if produced_pr < 0 {
-        return Err("copilot_metrics.produced_pr must be non-negative in state.json".to_string());
-    }
-    let merged = state
-        .copilot_metrics
-        .merged
-        .ok_or_else(|| "missing copilot_metrics.merged in state.json".to_string())?;
-    if merged < 0 {
-        return Err("copilot_metrics.merged must be non-negative in state.json".to_string());
-    }
-    let pr_merge_rate = state
-        .copilot_metrics
-        .pr_merge_rate
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| "missing copilot_metrics.pr_merge_rate in state.json".to_string())?;
-
-    Ok(format!(
-        "{} dispatches, {} PRs produced, {} merged, {} PR merge rate",
-        total_dispatches, produced_pr, merged, pr_merge_rate
-    ))
 }
 
 fn state_publish_gate_status(state: Option<&StateJson>) -> Result<String, String> {
@@ -843,16 +780,27 @@ fn parse_pipeline_check_summary(stdout: &str) -> Result<String, String> {
     Ok(summary.to_string())
 }
 
-fn state_copilot_in_flight(state: Option<&StateJson>) -> Result<u64, String> {
+fn state_in_flight(state: Option<&StateJson>) -> Result<u64, String> {
     let state = state.ok_or_else(|| {
         "docs/state.json is required to populate in-flight agent sessions".to_string()
     })?;
-    let in_flight = state
-        .copilot_metrics
-        .in_flight
-        .ok_or_else(|| "missing copilot_metrics.in_flight in state.json".to_string())?;
+    let in_flight = match state.in_flight_sessions {
+        Some(value) => value,
+        None => state
+            .agent_sessions
+            .iter()
+            .filter(|session| {
+                matches!(
+                    session.status.as_deref(),
+                    Some("in_flight") | Some("dispatched")
+                )
+            })
+            .count()
+            .try_into()
+            .map_err(|_| "agent_sessions length should fit within i64".to_string())?,
+    };
     u64::try_from(in_flight)
-        .map_err(|_| "copilot_metrics.in_flight must be non-negative in state.json".to_string())
+        .map_err(|_| "in_flight_sessions must be non-negative in state.json".to_string())
 }
 
 fn validate_worklog_state_placeholders(
@@ -863,29 +811,11 @@ fn validate_worklog_state_placeholders(
         return Ok(());
     };
 
-    if input.current_state.copilot_metrics == NOT_PROVIDED
-        && state_has_copilot_metrics_summary(state)
-    {
-        return Err("copilot metrics cannot be 'Not provided.' when docs/state.json contains copilot_metrics data".to_string());
-    }
-
     if input.current_state.publish_gate == NOT_PROVIDED && state_has_publish_gate_status(state) {
         return Err("publish gate cannot be 'Not provided.' when docs/state.json contains publish_gate.status".to_string());
     }
 
     Ok(())
-}
-
-fn state_has_copilot_metrics_summary(state: &StateJson) -> bool {
-    state.copilot_metrics.total_dispatches.is_some()
-        || state.copilot_metrics.produced_pr.is_some()
-        || state.copilot_metrics.merged.is_some()
-        || state
-            .copilot_metrics
-            .pr_merge_rate
-            .as_deref()
-            .map(str::trim)
-            .is_some_and(|value| !value.is_empty())
 }
 
 fn state_has_publish_gate_status(state: &StateJson) -> bool {
@@ -909,7 +839,6 @@ fn has_inline_worklog_content(args: &WorklogArgs) -> bool {
         || args.auto_next
         || args.pipeline.is_some()
         || args.auto_pipeline
-        || args.copilot_metrics.is_some()
         || args.publish_gate.is_some()
         || args.in_flight.is_some()
         || !args.receipt.is_empty()
@@ -2452,11 +2381,6 @@ fn render_worklog(cycle: u64, now: DateTime<Utc>, input: &WorklogInput) -> Strin
     ));
     lines.push(format!(
         "{}{}",
-        COPILOT_METRICS_PREFIX,
-        convert_references(&input.current_state.copilot_metrics)
-    ));
-    lines.push(format!(
-        "{}{}",
         PUBLISH_GATE_PREFIX,
         convert_references(&input.current_state.publish_gate)
     ));
@@ -3023,7 +2947,6 @@ mod tests {
             auto_next: false,
             pipeline: None,
             auto_pipeline: false,
-            copilot_metrics: None,
             publish_gate: None,
             in_flight: None,
             receipt: Vec::new(),
@@ -3226,7 +3149,6 @@ mod tests {
             current_state: CurrentState {
                 in_flight_sessions: 2,
                 pipeline_status: "5/5 phases pass".to_string(),
-                copilot_metrics: "64 dispatches".to_string(),
                 publish_gate: "Source diverged".to_string(),
             },
             next_steps: vec!["Review PR #543".to_string()],
@@ -3264,7 +3186,6 @@ mod tests {
             current_state: CurrentState {
                 in_flight_sessions: 0,
                 pipeline_status: NOT_PROVIDED.to_string(),
-                copilot_metrics: NOT_PROVIDED.to_string(),
                 publish_gate: NOT_PROVIDED.to_string(),
             },
             next_steps: Vec::new(),
@@ -3661,7 +3582,6 @@ mod tests {
                 "current_state":{
                     "in_flight_sessions":1,
                     "pipeline_status":"PASS (6/6)",
-                    "copilot_metrics":"steady",
                     "publish_gate":"clear"
                 },
                 "next_steps":["Review PR #124"]
@@ -3699,7 +3619,6 @@ mod tests {
         first_args.cycle = Some(100);
         first_args.done = vec!["Initial worklog entry".to_string()];
         first_args.pipeline = Some("PASS (1/1)".to_string());
-        first_args.copilot_metrics = Some("steady".to_string());
         first_args.publish_gate = Some("open".to_string());
         first_args.in_flight = Some(0);
 
@@ -3709,7 +3628,6 @@ mod tests {
         second_args.cycle = Some(100);
         second_args.done = vec!["Corrected worklog entry".to_string()];
         second_args.pipeline = Some("PASS (2/2)".to_string());
-        second_args.copilot_metrics = Some("improved".to_string());
         second_args.publish_gate = Some("clear".to_string());
         second_args.in_flight = Some(1);
 
@@ -3740,7 +3658,6 @@ mod tests {
         first_args.cycle = Some(100);
         first_args.done = vec!["Cycle 100 entry".to_string()];
         first_args.pipeline = Some("PASS (1/1)".to_string());
-        first_args.copilot_metrics = Some("steady".to_string());
         first_args.publish_gate = Some("open".to_string());
         first_args.in_flight = Some(0);
 
@@ -3748,7 +3665,6 @@ mod tests {
         second_args.cycle = Some(101);
         second_args.done = vec!["Cycle 101 entry".to_string()];
         second_args.pipeline = Some("PASS (2/2)".to_string());
-        second_args.copilot_metrics = Some("steady".to_string());
         second_args.publish_gate = Some("open".to_string());
         second_args.in_flight = Some(0);
 
@@ -3772,7 +3688,6 @@ mod tests {
         args.cycle = Some(100);
         args.done = vec!["First worklog entry".to_string()];
         args.pipeline = Some("PASS (1/1)".to_string());
-        args.copilot_metrics = Some("steady".to_string());
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
@@ -3828,7 +3743,6 @@ mod tests {
                     "current_state":{{
                         "in_flight_sessions":0,
                         "pipeline_status":"PASS (6/6)",
-                        "copilot_metrics":"steady",
                         "publish_gate":"open"
                     }},
                     "next_steps":[],
@@ -3901,7 +3815,6 @@ mod tests {
         args.self_modification = vec!["Updated AGENTS.md".to_string()];
         args.next = vec!["Review PR #789".to_string()];
         args.pipeline = Some("PASS (6/6)".to_string());
-        args.copilot_metrics = Some("45 dispatched".to_string());
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(1);
         args.receipt = vec![
@@ -3923,7 +3836,6 @@ mod tests {
         assert!(!content.contains("### Issues processed\n\n- None."));
         assert!(!content.contains("## Self-modifications\n\n- None."));
         assert!(content.contains("- **Pipeline status**: PASS (6/6)"));
-        assert!(content.contains("- **Copilot metrics**: 45 dispatched"));
         assert!(content.contains("- **Publish gate**: open"));
         assert!(content.contains("## Commit receipts"));
         assert!(content.contains(&format!(
@@ -3992,13 +3904,7 @@ mod tests {
             &repo_root.path,
             r#"{
                 "last_cycle": {"number": 154},
-                "copilot_metrics": {
-                    "total_dispatches": 45,
-                    "produced_pr": 42,
-                    "merged": 40,
-                    "pr_merge_rate": "88.9%",
-                    "in_flight": 3
-                },
+
                 "publish_gate": {
                     "status": "published"
                 }
@@ -4016,11 +3922,6 @@ mod tests {
         assert!(content.contains("## Self-modifications\n\n- None."));
         assert!(content.contains("- **Pipeline status**: Not provided."));
         assert!(content.contains("- **In-flight agent sessions**: 3"));
-        assert!(
-            content.contains(
-                "- **Copilot metrics**: 45 dispatches, 42 PRs produced, 40 merged, 88.9% PR merge rate"
-            )
-        );
         assert!(content.contains("- **Publish gate**: published"));
     }
 
@@ -4070,7 +3971,6 @@ mod tests {
         args.auto_self_modifications = true;
         args.auto_receipts = true;
         args.pipeline = Some("PASS (6/6)".to_string());
-        args.copilot_metrics = Some("steady".to_string());
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
@@ -4129,7 +4029,6 @@ mod tests {
         args.done = vec!["Closed EvaLok/schema-org-json-ld#1042".to_string()];
         args.auto_receipts = true;
         args.pipeline = Some("PASS (6/6)".to_string());
-        args.copilot_metrics = Some("steady".to_string());
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
@@ -4165,7 +4064,6 @@ mod tests {
         let mut args = worklog_args("Merged only");
         args.pr_merged = vec![1226];
         args.pipeline = Some("PASS (6/6)".to_string());
-        args.copilot_metrics = Some("steady".to_string());
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
@@ -4199,7 +4097,6 @@ mod tests {
         let mut args = worklog_args("Reviewed only");
         args.pr_reviewed = vec![1226];
         args.pipeline = Some("PASS (6/6)".to_string());
-        args.copilot_metrics = Some("steady".to_string());
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
@@ -4233,7 +4130,6 @@ mod tests {
         args.pr_merged = vec![1226];
         args.pr_reviewed = vec![1226];
         args.pipeline = Some("PASS (6/6)".to_string());
-        args.copilot_metrics = Some("steady".to_string());
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
@@ -4289,7 +4185,6 @@ mod tests {
         args.auto_self_modifications = true;
         args.auto_receipts = true;
         args.pipeline = Some("PASS (6/6)".to_string());
-        args.copilot_metrics = Some("steady".to_string());
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
@@ -4392,7 +4287,6 @@ mod tests {
         args.done = vec!["Closed #42".to_string()];
         args.auto_receipts = true;
         args.pipeline = Some("PASS (6/6)".to_string());
-        args.copilot_metrics = Some("steady".to_string());
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
@@ -4439,7 +4333,6 @@ mod tests {
         args.done = vec!["Closed #42".to_string()];
         args.auto_receipts = true;
         args.pipeline = Some("PASS (6/6)".to_string());
-        args.copilot_metrics = Some("steady".to_string());
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
@@ -4457,7 +4350,6 @@ mod tests {
         args.done = vec!["Closed #42".to_string()];
         args.auto_receipts = true;
         args.pipeline = Some("PASS (6/6)".to_string());
-        args.copilot_metrics = Some("steady".to_string());
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
@@ -4502,7 +4394,6 @@ mod tests {
         args.done = vec!["Closed EvaLok/schema-org-json-ld#1042".to_string()];
         args.auto_self_modifications = true;
         args.pipeline = Some("PASS (6/6)".to_string());
-        args.copilot_metrics = Some("steady".to_string());
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
@@ -4582,8 +4473,6 @@ mod tests {
             "--auto-issues",
             "--pipeline",
             "PASS (6/6)",
-            "--copilot-metrics",
-            "steady",
             "--publish-gate",
             "open",
             "--in-flight",
@@ -4674,8 +4563,6 @@ mod tests {
             "--auto-issues",
             "--pipeline",
             "PASS (6/6)",
-            "--copilot-metrics",
-            "steady",
             "--publish-gate",
             "open",
             "--in-flight",
@@ -4748,8 +4635,6 @@ mod tests {
             "--auto-issues",
             "--pipeline",
             "PASS (6/6)",
-            "--copilot-metrics",
-            "steady",
             "--publish-gate",
             "open",
             "--in-flight",
@@ -4818,8 +4703,6 @@ mod tests {
             "Processed review #77",
             "--pipeline",
             "PASS (6/6)",
-            "--copilot-metrics",
-            "steady",
             "--publish-gate",
             "open",
             "--in-flight",
@@ -4915,8 +4798,6 @@ mod tests {
             "Processed review #77",
             "--pipeline",
             "PASS (6/6)",
-            "--copilot-metrics",
-            "steady",
             "--publish-gate",
             "open",
             "--in-flight",
@@ -5001,7 +4882,6 @@ mod tests {
             "Merged PR #200".to_string(),
         ];
         args.pipeline = Some("PASS (6/6)".to_string());
-        args.copilot_metrics = Some("steady".to_string());
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
@@ -5074,7 +4954,6 @@ mod tests {
         let mut args = worklog_args("Auto issues review history");
         args.auto_issues = true;
         args.pipeline = Some("PASS (6/6)".to_string());
-        args.copilot_metrics = Some("steady".to_string());
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
@@ -5109,8 +4988,6 @@ mod tests {
             "42, 77",
             "--pipeline",
             "PASS (6/6)",
-            "--copilot-metrics",
-            "steady",
             "--publish-gate",
             "open",
             "--in-flight",
@@ -5166,13 +5043,7 @@ mod tests {
             &repo_root.path,
             r#"{
                 "last_cycle": {"number": 154},
-                "copilot_metrics": {
-                    "total_dispatches": 45,
-                    "produced_pr": 42,
-                    "merged": 40,
-                    "pr_merge_rate": "88.9%",
-                    "in_flight": 3
-                },
+
                 "tool_pipeline": {
                     "status": "PASS (6/6)"
                 },
@@ -5294,7 +5165,6 @@ mod tests {
         args.auto_receipts = true;
         args.receipt = vec!["cycle-start:abc1234".to_string()];
         args.pipeline = Some("PASS (6/6)".to_string());
-        args.copilot_metrics = Some("steady".to_string());
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
@@ -5317,13 +5187,7 @@ mod tests {
             &repo_root.path,
             r#"{
                 "last_cycle": {"number": 154},
-                "copilot_metrics": {
-                    "total_dispatches": 45,
-                    "produced_pr": 42,
-                    "merged": 40,
-                    "pr_merge_rate": "88.9%",
-                    "in_flight": 3
-                },
+
                 "publish_gate": {
                     "status": "published"
                 }
@@ -5334,7 +5198,6 @@ mod tests {
         args.cycle = None;
         args.done = vec!["Merged PR #123".to_string()];
         args.pipeline = Some("PASS (6/6)".to_string());
-        args.copilot_metrics = Some("custom metrics".to_string());
         args.publish_gate = Some("pre-publish".to_string());
         args.in_flight = Some(1);
 
@@ -5342,7 +5205,6 @@ mod tests {
         let content = fs::read_to_string(path).unwrap();
         assert!(content.contains("- **Pipeline status**: PASS (6/6)"));
         assert!(content.contains("- **In-flight agent sessions**: 1"));
-        assert!(content.contains("- **Copilot metrics**: custom metrics"));
         assert!(content.contains("- **Publish gate**: pre-publish"));
         assert!(
             !content.contains(
@@ -5363,7 +5225,6 @@ mod tests {
         let mut args = worklog_args("Auto pipeline");
         args.done = vec!["Merged PR #123".to_string()];
         args.auto_pipeline = true;
-        args.copilot_metrics = Some("steady".to_string());
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
@@ -5391,7 +5252,6 @@ mod tests {
         let mut args = worklog_args("Auto pipeline failure");
         args.done = vec!["Merged PR #123".to_string()];
         args.auto_pipeline = true;
-        args.copilot_metrics = Some("steady".to_string());
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
@@ -5412,13 +5272,7 @@ mod tests {
             r#"{
                 "last_cycle": {"number": 154},
                 "tool_pipeline": {"status": "FAIL (state value should not be used)"},
-                "copilot_metrics": {
-                    "total_dispatches": 45,
-                    "produced_pr": 42,
-                    "merged": 40,
-                    "pr_merge_rate": "88.9%",
-                    "in_flight": 3
-                },
+
                 "publish_gate": {
                     "status": "published"
                 }
@@ -5451,13 +5305,7 @@ mod tests {
                 "publish_gate": {
                     "status": "open"
                 },
-                "copilot_metrics": {
-                    "total_dispatches": 12,
-                    "produced_pr": 11,
-                    "merged": 10,
-                    "pr_merge_rate": "90.9%",
-                    "in_flight": 1
-                },
+
                 "agent_sessions": [
                     {
                         "issue": 1825,
@@ -5502,13 +5350,7 @@ mod tests {
                 "publish_gate": {
                     "status": "open"
                 },
-                "copilot_metrics": {
-                    "total_dispatches": 12,
-                    "produced_pr": 11,
-                    "merged": 10,
-                    "pr_merge_rate": "90.9%",
-                    "in_flight": 0
-                },
+
                 "agent_sessions": []
             }"#,
         );
@@ -5543,12 +5385,7 @@ mod tests {
             &repo_root.path,
             r#"{
                 "last_cycle": {"number": 154},
-                "copilot_metrics": {
-                    "total_dispatches": 45,
-                    "merged": 40,
-                    "pr_merge_rate": "88.9%",
-                    "in_flight": 3
-                },
+
                 "publish_gate": {
                     "status": "published"
                 }
@@ -5557,10 +5394,9 @@ mod tests {
 
         let mut args = worklog_args("Placeholder rejected");
         args.done = vec!["Merged PR #123".to_string()];
-        args.copilot_metrics = Some(NOT_PROVIDED.to_string());
 
         let error = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap_err();
-        assert!(error.contains("copilot metrics"));
+        assert!(error.contains("publish gate"));
         assert!(error.contains(NOT_PROVIDED));
     }
 
@@ -5569,7 +5405,6 @@ mod tests {
         let repo_root = TempRepoDir::new("invalid-receipt");
         let mut args = worklog_args("Invalid receipt");
         args.pipeline = Some("PASS (6/6)".to_string());
-        args.copilot_metrics = Some("45 dispatches".to_string());
         args.publish_gate = Some("published".to_string());
         args.in_flight = Some(0);
         args.receipt = vec!["cycle-start:not-a-sha".to_string()];
@@ -5586,7 +5421,6 @@ mod tests {
         args.auto_receipts = true;
         args.receipt = vec!["cycle-start:abc1234".to_string()];
         args.pipeline = Some("PASS (6/6)".to_string());
-        args.copilot_metrics = Some("steady".to_string());
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
@@ -5603,7 +5437,6 @@ mod tests {
         args.auto_self_modifications = true;
         args.self_modification = vec!["AGENTS.md: manual override".to_string()];
         args.pipeline = Some("PASS (6/6)".to_string());
-        args.copilot_metrics = Some("steady".to_string());
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
@@ -5619,7 +5452,6 @@ mod tests {
         args.done = vec!["Closed #42".to_string()];
         args.auto_pipeline = true;
         args.pipeline = Some("PASS (6/6)".to_string());
-        args.copilot_metrics = Some("steady".to_string());
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
@@ -5651,7 +5483,6 @@ mod tests {
         args.done = vec!["Closed #42".to_string()];
         args.auto_receipts = true;
         args.pipeline = Some("PASS (6/6)".to_string());
-        args.copilot_metrics = Some("steady".to_string());
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
@@ -5706,7 +5537,6 @@ mod tests {
         args.done = vec!["Closed #42".to_string()];
         args.auto_self_modifications = true;
         args.pipeline = Some("PASS (6/6)".to_string());
-        args.copilot_metrics = Some("steady".to_string());
         args.publish_gate = Some("open".to_string());
         args.in_flight = Some(0);
 
@@ -6524,8 +6354,6 @@ Reflective log for the schema-org-json-ld orchestrator.
             "Review PR #124",
             "--pipeline",
             "PASS (6/6)",
-            "--copilot-metrics",
-            "45 dispatched",
             "--publish-gate",
             "open",
             "--in-flight",
@@ -6546,7 +6374,6 @@ Reflective log for the schema-org-json-ld orchestrator.
                 assert!(args.self_modification.is_empty());
                 assert_eq!(args.next, vec!["Review PR #124".to_string()]);
                 assert_eq!(args.pipeline.as_deref(), Some("PASS (6/6)"));
-                assert_eq!(args.copilot_metrics.as_deref(), Some("45 dispatched"));
                 assert_eq!(args.publish_gate.as_deref(), Some("open"));
                 assert_eq!(args.in_flight, Some(1));
                 assert_eq!(args.receipt, vec!["cycle-start:abc1234".to_string()]);
@@ -6610,8 +6437,6 @@ Reflective log for the schema-org-json-ld orchestrator.
             "PASS (9/9)",
             "--in-flight",
             "2",
-            "--copilot-metrics",
-            "46 dispatches, 43 PRs produced, 40 merged, 93.0% PR merge rate",
             "--publish-gate",
             "published",
             "--next-steps",
@@ -6626,10 +6451,6 @@ Reflective log for the schema-org-json-ld orchestrator.
                 assert_eq!(args.worklog, PathBuf::from("docs/worklog/test.md"));
                 assert_eq!(args.status, "PASS (9/9)");
                 assert_eq!(args.in_flight, Some(2));
-                assert_eq!(
-                    args.copilot_metrics.as_deref(),
-                    Some("46 dispatches, 43 PRs produced, 40 merged, 93.0% PR merge rate")
-                );
                 assert_eq!(args.publish_gate.as_deref(), Some("published"));
                 assert_eq!(
                     args.next_steps,
@@ -6694,7 +6515,6 @@ Reflective log for the schema-org-json-ld orchestrator.
 
 - **In-flight agent sessions**: 1
 - **Pipeline status**: FAIL (1/9)
-- **Copilot metrics**: stable
 - **Publish gate**: open
 
 ## Next steps
@@ -6708,7 +6528,6 @@ Reflective log for the schema-org-json-ld orchestrator.
                 worklog: PathBuf::from("docs/worklog/test.md"),
                 status: "PASS (9/9)".to_string(),
                 in_flight: None,
-                copilot_metrics: None,
                 publish_gate: None,
                 next_steps: Vec::new(),
                 section_title: None,
@@ -6721,7 +6540,6 @@ Reflective log for the schema-org-json-ld orchestrator.
         let updated = fs::read_to_string(&worklog_path).unwrap();
         assert!(updated.contains("- **Pipeline status**: PASS (9/9)"));
         assert!(updated.contains("- **In-flight agent sessions**: 1"));
-        assert!(updated.contains("- **Copilot metrics**: stable"));
         assert!(updated.contains("## Next steps"));
         assert_eq!(updated.matches("- **Pipeline status**:").count(), 1);
     }
@@ -6740,7 +6558,6 @@ Reflective log for the schema-org-json-ld orchestrator.
 
 - **In-flight agent sessions**: 1
 - **Pipeline status**: FAIL (1/9)
-- **Copilot metrics**: 45 dispatches, 42 PRs produced, 40 merged, 88.9% PR merge rate
 - **Publish gate**: open
 
 ## Next steps
@@ -6754,9 +6571,6 @@ Reflective log for the schema-org-json-ld orchestrator.
                 worklog: PathBuf::from("docs/worklog/test.md"),
                 status: "PASS (9/9)".to_string(),
                 in_flight: Some(2),
-                copilot_metrics: Some(
-                    "46 dispatches, 43 PRs produced, 40 merged, 93.0% PR merge rate".to_string(),
-                ),
                 publish_gate: Some("published".to_string()),
                 next_steps: Vec::new(),
                 section_title: Some("Cycle state".to_string()),
@@ -6771,9 +6585,6 @@ Reflective log for the schema-org-json-ld orchestrator.
         assert!(!updated.contains("Snapshot before review dispatch"));
         assert!(updated.contains("- **In-flight agent sessions**: 2"));
         assert!(updated.contains("- **Pipeline status**: PASS (9/9)"));
-        assert!(updated.contains(
-            "- **Copilot metrics**: 46 dispatches, 43 PRs produced, 40 merged, 93.0% PR merge rate"
-        ));
         assert!(updated.contains("- **Publish gate**: published"));
         assert!(updated.contains("## Next steps"));
     }
@@ -6783,9 +6594,10 @@ Reflective log for the schema-org-json-ld orchestrator.
         let repo_root = TempRepoDir::new("patch-pipeline-missing-pattern");
         let worklog_path = repo_root.path.join("docs/worklog/test.md");
         fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
+        let expected = "# Cycle 154\n\n## Cycle state\n\n- **Publish gate**: open\n";
         fs::write(
             &worklog_path,
-            "# Cycle 154\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **Copilot metrics**: stable\n",
+            expected,
         )
         .unwrap();
 
@@ -6794,7 +6606,6 @@ Reflective log for the schema-org-json-ld orchestrator.
                 worklog: PathBuf::from("docs/worklog/test.md"),
                 status: "PASS (9/9)".to_string(),
                 in_flight: None,
-                copilot_metrics: None,
                 publish_gate: None,
                 next_steps: Vec::new(),
                 section_title: None,
@@ -6810,7 +6621,6 @@ Reflective log for the schema-org-json-ld orchestrator.
                 worklog_path.display()
             )
         );
-        let expected = "# Cycle 154\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **Copilot metrics**: stable\n";
         assert_eq!(fs::read_to_string(&worklog_path).unwrap(), expected);
     }
 
@@ -6830,7 +6640,6 @@ Reflective log for the schema-org-json-ld orchestrator.
                 worklog: PathBuf::from("docs/worklog/test.md"),
                 status: "PASS (2 warnings:\nwarn one\nwarn two)".to_string(),
                 in_flight: None,
-                copilot_metrics: None,
                 publish_gate: None,
                 next_steps: Vec::new(),
                 section_title: None,
@@ -6860,7 +6669,6 @@ Reflective log for the schema-org-json-ld orchestrator.
                 worklog: PathBuf::from("docs/worklog/test.md"),
                 status: "PASS".to_string(),
                 in_flight: None,
-                copilot_metrics: None,
                 publish_gate: None,
                 next_steps: vec![
                     "Review [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) when Copilot completes"
@@ -6894,7 +6702,6 @@ Reflective log for the schema-org-json-ld orchestrator.
                 worklog: PathBuf::from("docs/worklog/test.md"),
                 status: "PASS".to_string(),
                 in_flight: None,
-                copilot_metrics: None,
                 publish_gate: None,
                 next_steps: vec!["No in-flight sessions — plan next dispatch".to_string()],
                 section_title: None,
@@ -6935,7 +6742,6 @@ Reflective log for the schema-org-json-ld orchestrator.
 			"current_state":{
 				"in_flight_sessions":0,
 				"pipeline_status":"pass",
-				"copilot_metrics":"steady",
 				"publish_gate":"clear"
 			},
 			"next_steps":[]

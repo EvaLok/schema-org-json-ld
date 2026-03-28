@@ -893,12 +893,11 @@ fn step_c6_5(
     let state: StateJson = serde_json::from_value(state_value)
         .map_err(|error| format!("failed to parse docs/state.json after C6: {}", error))?;
     let in_flight = state
-        .copilot_metrics
-        .in_flight
-        .ok_or_else(|| "missing copilot_metrics.in_flight in state.json".to_string())
+        .in_flight_sessions
+        .ok_or_else(|| "missing in_flight_sessions in state.json".to_string())
         .and_then(|value| {
             u64::try_from(value)
-                .map_err(|_| "copilot_metrics.in_flight must be non-negative in state.json".to_string())
+                .map_err(|_| "in_flight_sessions must be non-negative in state.json".to_string())
         })?;
     let publish_gate = state
         .publish_gate()?
@@ -908,7 +907,6 @@ fn step_c6_5(
         .filter(|value| !value.is_empty())
         .ok_or_else(|| "missing publish_gate.status in state.json".to_string())?
         .to_string();
-    let copilot_metrics = format_copilot_metrics(&state)?;
     let next_steps = derive_patch_pipeline_next_steps(&state)?;
     let worklog_str = worklog.to_string_lossy().to_string();
     let in_flight_str = in_flight.to_string();
@@ -920,8 +918,6 @@ fn step_c6_5(
         pipeline_summary.to_string(),
         "--in-flight".to_string(),
         in_flight_str,
-        "--copilot-metrics".to_string(),
-        copilot_metrics.clone(),
         "--publish-gate".to_string(),
         publish_gate.clone(),
         "--section-title".to_string(),
@@ -1004,36 +1000,6 @@ fn derive_patch_pipeline_next_steps(state: &StateJson) -> Result<Vec<String>, St
     }
 
     Ok(next_steps)
-}
-
-fn format_copilot_metrics(state: &StateJson) -> Result<String, String> {
-    let total_dispatches = state
-        .copilot_metrics
-        .total_dispatches
-        .ok_or_else(|| "missing copilot_metrics.total_dispatches in state.json".to_string())?;
-    let produced_pr = state
-        .copilot_metrics
-        .produced_pr
-        .ok_or_else(|| "missing copilot_metrics.produced_pr in state.json".to_string())?;
-    let merged = state
-        .copilot_metrics
-        .merged
-        .ok_or_else(|| "missing copilot_metrics.merged in state.json".to_string())?;
-    if total_dispatches < 0 || produced_pr < 0 || merged < 0 {
-        return Err("copilot_metrics summary fields must be non-negative in state.json".to_string());
-    }
-    let pr_merge_rate = state
-        .copilot_metrics
-        .pr_merge_rate
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| "missing copilot_metrics.pr_merge_rate in state.json".to_string())?;
-
-    Ok(format!(
-        "{} dispatches, {} PRs produced, {} merged, {} PR merge rate",
-        total_dispatches, produced_pr, merged, pr_merge_rate
-    ))
 }
 
 fn step_c8(
@@ -1742,13 +1708,7 @@ mod tests {
                 "publish_gate": {
                     "status": "published"
                 },
-                "copilot_metrics": {
-                    "total_dispatches": 1,
-                    "produced_pr": 1,
-                    "merged": 1,
-                    "pr_merge_rate": "100.0%",
-                    "in_flight": 0
-                },
+                "in_flight_sessions": 0,
                 "agent_sessions": []
             }))
             .unwrap(),
@@ -1780,7 +1740,7 @@ mod tests {
         fs::write(
             dir.join("tools/dispatch-review"),
             format!(
-                "#!/usr/bin/env bash\nset -euo pipefail\npython - <<'PY'\nimport json\nfrom pathlib import Path\nstate_path = Path({state_path:?})\nstate = json.loads(state_path.read_text())\nstate['copilot_metrics']['total_dispatches'] = 2\nstate['copilot_metrics']['produced_pr'] = 2\nstate['copilot_metrics']['in_flight'] = 1\nstate['copilot_metrics']['pr_merge_rate'] = '50.0%'\nstate['agent_sessions'] = [{{'issue': 1470, 'title': '[Cycle Review] Cycle 345 end-of-cycle review', 'status': 'in_flight'}}]\nstate_path.write_text(json.dumps(state, indent=2) + '\\n')\nPY\ngit -C {repo:?} add docs/state.json\ngit -C {repo:?} commit -m 'state(record-dispatch): #1470 dispatched [cycle 345]' >/dev/null\nprintf '%s\\n' 'Created review issue #1470 from orchestrator issue #123: https://github.com/EvaLok/schema-org-json-ld/issues/1470'\n",
+                "#!/usr/bin/env bash\nset -euo pipefail\npython - <<'PY'\nimport json\nfrom pathlib import Path\nstate_path = Path({state_path:?})\nstate = json.loads(state_path.read_text())\nstate['dispatch_log_latest'] = '#1470 [Cycle Review] Cycle 345 end-of-cycle review (cycle 345)'\nstate['in_flight_sessions'] = 1\nstate['agent_sessions'] = [{{'issue': 1470, 'title': '[Cycle Review] Cycle 345 end-of-cycle review', 'status': 'in_flight'}}]\nstate_path.write_text(json.dumps(state, indent=2) + '\\n')\nPY\ngit -C {repo:?} add docs/state.json\ngit -C {repo:?} commit -m 'state(record-dispatch): #1470 dispatched [cycle 345]' >/dev/null\nprintf '%s\\n' 'Created review issue #1470 from orchestrator issue #123: https://github.com/EvaLok/schema-org-json-ld/issues/1470'\n",
                 state_path = dir.join("docs/state.json"),
                 repo = dir,
             ),
@@ -1877,13 +1837,7 @@ mod tests {
                 "publish_gate": {
                     "status": "published"
                 },
-                "copilot_metrics": {
-                    "total_dispatches": 1,
-                    "produced_pr": 1,
-                    "merged": 1,
-                    "pr_merge_rate": "100.0%",
-                    "in_flight": 0
-                },
+                "in_flight_sessions": 0,
                 "agent_sessions": []
             }))
             .unwrap(),
@@ -1915,7 +1869,7 @@ mod tests {
         fs::write(
             dir.join("tools/dispatch-review"),
             format!(
-                "#!/usr/bin/env bash\nset -euo pipefail\npython - <<'PY'\nimport json\nfrom pathlib import Path\nstate_path = Path({state_path:?})\nstate = json.loads(state_path.read_text())\nstate['copilot_metrics']['total_dispatches'] = 2\nstate['copilot_metrics']['produced_pr'] = 2\nstate['copilot_metrics']['in_flight'] = 1\nstate['copilot_metrics']['pr_merge_rate'] = '50.0%'\nstate['agent_sessions'] = [{{'issue': 1470, 'title': '[Cycle Review] Cycle 345 end-of-cycle review', 'status': 'in_flight'}}]\nstate_path.write_text(json.dumps(state, indent=2) + '\\n')\nPY\ngit -C {repo:?} add docs/state.json\ngit -C {repo:?} commit -m 'state(record-dispatch): #1470 dispatched [cycle 345]' >/dev/null\nprintf '%s\\n' 'Created review issue #1470 from orchestrator issue #123: https://github.com/EvaLok/schema-org-json-ld/issues/1470'\n",
+                "#!/usr/bin/env bash\nset -euo pipefail\npython - <<'PY'\nimport json\nfrom pathlib import Path\nstate_path = Path({state_path:?})\nstate = json.loads(state_path.read_text())\nstate['dispatch_log_latest'] = '#1470 [Cycle Review] Cycle 345 end-of-cycle review (cycle 345)'\nstate['in_flight_sessions'] = 1\nstate['agent_sessions'] = [{{'issue': 1470, 'title': '[Cycle Review] Cycle 345 end-of-cycle review', 'status': 'in_flight'}}]\nstate_path.write_text(json.dumps(state, indent=2) + '\\n')\nPY\ngit -C {repo:?} add docs/state.json\ngit -C {repo:?} commit -m 'state(record-dispatch): #1470 dispatched [cycle 345]' >/dev/null\nprintf '%s\\n' 'Created review issue #1470 from orchestrator issue #123: https://github.com/EvaLok/schema-org-json-ld/issues/1470'\n",
                 state_path = dir.join("docs/state.json"),
                 repo = dir,
             ),

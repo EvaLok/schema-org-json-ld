@@ -80,7 +80,7 @@ pub fn generate(
     body.push_str("- Is the journal genuine reflection or boilerplate? Does it contain actionable commitments with observable completion conditions?\n\n");
 
     body.push_str("### 4. State.json integrity\n");
-    body.push_str("- Verify copilot_metrics match agent_sessions array (resolved + in_flight == total_dispatches)\n");
+    body.push_str("- Verify in_flight_sessions and dispatch history still match the agent_sessions ledger\n");
     body.push_str("- Check field_inventory freshness markers match reality\n");
     body.push_str("- Run `bash tools/state-invariants` and `bash tools/metric-snapshot`\n\n");
 

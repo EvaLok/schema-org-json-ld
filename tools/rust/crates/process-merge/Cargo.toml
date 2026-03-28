@@ -2,7 +2,7 @@
 name = "process-merge"
 version = "0.1.0"
 edition = "2021"
-description = "Process merged PRs and update copilot_metrics in docs/state.json"
+description = "Process merged PRs and update dispatch session state in docs/state.json"
 
 [dependencies]
 chrono = "0.4"
