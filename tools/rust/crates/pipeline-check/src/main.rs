@@ -2051,7 +2051,10 @@ fn mass_deferral_gate_assessment(repo_root: &Path) -> Result<StepAssessment, Str
             detail,
         });
     }
-    if history_entry.deferred.saturating_mul(4) >= history_entry.finding_count.saturating_mul(3) {
+    if meets_mass_deferral_warning_threshold(
+        history_entry.deferred,
+        history_entry.finding_count,
+    ) {
         return Ok(StepAssessment {
             status: StepStatus::Warn,
             severity: Severity::Warning,
@@ -2064,6 +2067,10 @@ fn mass_deferral_gate_assessment(repo_root: &Path) -> Result<StepAssessment, Str
         severity: Severity::Warning,
         detail,
     })
+}
+
+fn meets_mass_deferral_warning_threshold(deferred: u64, finding_count: u64) -> bool {
+    deferred.saturating_mul(4) >= finding_count.saturating_mul(3)
 }
 
 fn dispatch_finding_reconciliation_status(repo_root: &Path) -> Result<(StepStatus, String), String> {

@@ -10,6 +10,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 const MAX_CATEGORY_LENGTH: usize = 40;
+const DEFERRAL_DEADLINE_CYCLES: u64 = 5;
 const VALID_FINDING_DISPOSITIONS: &[&str] = &[
     "actioned",
     "deferred",
@@ -806,15 +807,13 @@ fn build_state_patch(
 
 fn apply_patch(state: &mut Value, updates: &[PatchUpdate]) -> Result<(), String> {
     for update in updates {
-        if set_value_at_pointer(state, &update.path, update.value.clone()).is_ok() {
-            continue;
+        match set_value_at_pointer(state, &update.path, update.value.clone()) {
+            Ok(_) => continue,
+            Err(_) if insert_missing_top_level_path(state, &update.path, update.value.clone()) => {
+                continue;
+            }
+            Err(error) => return Err(error),
         }
-
-        if insert_missing_top_level_path(state, &update.path, update.value.clone()) {
-            continue;
-        }
-
-        set_value_at_pointer(state, &update.path, update.value.clone())?;
     }
 
     Ok(())
@@ -886,7 +885,7 @@ fn deferred_findings_patch(
             category,
             deferred_cycle: current_cycle,
             deadline_cycle: current_cycle
-                .checked_add(5)
+                .checked_add(DEFERRAL_DEADLINE_CYCLES)
                 .ok_or_else(|| "current cycle overflowed deadline calculation".to_string())?,
             resolved: false,
             resolved_ref: None,
