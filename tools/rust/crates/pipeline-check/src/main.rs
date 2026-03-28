@@ -23,10 +23,12 @@ const MASS_DEFERRAL_GATE_STEP_NAME: &str = "mass-deferral-gate";
 const DISPATCH_FINDING_RECONCILIATION_STEP_NAME: &str = "dispatch-finding-reconciliation";
 const DOC_VALIDATION_STEP_NAME: &str = "doc-validation";
 const WORKLOG_DEDUP_STEP_NAME: &str = "worklog-dedup";
+const WORKLOG_IMMUTABILITY_STEP_NAME: &str = "worklog-immutability";
 const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const CURRENT_CYCLE_STEPS_STEP_NAME: &str = "current-cycle-steps";
+const WORKLOG_PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
-const STEP_NAMES: [&str; 15] = [
+const STEP_NAMES: [&str; 16] = [
     "metric-snapshot",
     "field-inventory",
     "housekeeping-scan",
@@ -40,6 +42,7 @@ const STEP_NAMES: [&str; 15] = [
     DISPATCH_FINDING_RECONCILIATION_STEP_NAME,
     DOC_VALIDATION_STEP_NAME,
     WORKLOG_DEDUP_STEP_NAME,
+    WORKLOG_IMMUTABILITY_STEP_NAME,
     STEP_COMMENTS_STEP_NAME,
     CURRENT_CYCLE_STEPS_STEP_NAME,
 ];
@@ -338,6 +341,9 @@ fn run_pipeline_with_excluded_steps(
     }
     if !is_excluded_step(WORKLOG_DEDUP_STEP_NAME, exclude_steps) {
         steps.push(verify_worklog_dedup(repo_root));
+    }
+    if !is_excluded_step(WORKLOG_IMMUTABILITY_STEP_NAME, exclude_steps) {
+        steps.push(verify_worklog_immutability(repo_root));
     }
     if !is_excluded_step(STEP_COMMENTS_STEP_NAME, exclude_steps) {
         steps.push(verify_step_comments(repo_root, cycle, runner));
@@ -640,6 +646,10 @@ fn verify_doc_validation(
 
 fn verify_worklog_dedup(repo_root: &Path) -> StepReport {
     verify_worklog_dedup_for_date(repo_root, &current_utc_timestamp()[..10])
+}
+
+fn verify_worklog_immutability(repo_root: &Path) -> StepReport {
+    verify_worklog_immutability_for_date(repo_root, &current_utc_timestamp()[..10])
 }
 
 fn verify_doc_validation_for_date(
@@ -1609,6 +1619,29 @@ fn verify_worklog_dedup_for_date(repo_root: &Path, today: &str) -> StepReport {
     }
 }
 
+fn verify_worklog_immutability_for_date(repo_root: &Path, today: &str) -> StepReport {
+    match worklog_immutability_status_for_date(repo_root, today) {
+        Ok((status, detail)) => StepReport {
+            name: WORKLOG_IMMUTABILITY_STEP_NAME,
+            status,
+            severity: Severity::Warning,
+            exit_code: None,
+            detail: Some(detail),
+            findings: None,
+            summary: None,
+        },
+        Err(error) => StepReport {
+            name: WORKLOG_IMMUTABILITY_STEP_NAME,
+            status: StepStatus::Error,
+            severity: Severity::Warning,
+            exit_code: None,
+            detail: Some(error),
+            findings: None,
+            summary: None,
+        },
+    }
+}
+
 fn worklog_dedup_status_for_date(repo_root: &Path, today: &str) -> Result<(StepStatus, String), String> {
     let worklog_dir = repo_root.join("docs/worklog").join(today);
     if !worklog_dir.is_dir() {
@@ -1692,6 +1725,71 @@ fn worklog_dedup_status_for_date(repo_root: &Path, today: &str) -> Result<(StepS
     Ok((StepStatus::Pass, "No duplicate worklog files found".to_string()))
 }
 
+fn worklog_immutability_status_for_date(repo_root: &Path, today: &str) -> Result<(StepStatus, String), String> {
+    let Some(worklog_path) = current_cycle_worklog_entry_for_date(repo_root, today)? else {
+        return Ok((
+            StepStatus::Pass,
+            "skipped: no worklog entry found for the current cycle".to_string(),
+        ));
+    };
+
+    let current_content = fs::read_to_string(&worklog_path)
+        .map_err(|error| format!("failed to read {}: {}", worklog_path.display(), error))?;
+    let Some(current_status) = worklog_pipeline_status_value(&current_content) else {
+        return Ok((
+            StepStatus::Pass,
+            format!(
+                "skipped: {} has no original pipeline status line",
+                worklog_path.display()
+            ),
+        ));
+    };
+
+    let Some((first_commit, original_content)) =
+        first_committed_worklog_content(repo_root, &worklog_path)?
+    else {
+        return Ok((
+            StepStatus::Pass,
+            format!(
+                "skipped: {} has no committed baseline yet",
+                worklog_path.display()
+            ),
+        ));
+    };
+
+    let Some(original_status) = worklog_pipeline_status_value(&original_content) else {
+        return Ok((
+            StepStatus::Pass,
+            format!(
+                "skipped: committed baseline for {} has no original pipeline status line",
+                worklog_path.display()
+            ),
+        ));
+    };
+
+    if original_status == current_status {
+        return Ok((
+            StepStatus::Pass,
+            format!(
+                "Original pipeline status is unchanged for {} (baseline commit {})",
+                worklog_path.display(),
+                short_commit(&first_commit)
+            ),
+        ));
+    }
+
+    Ok((
+        StepStatus::Warn,
+        format!(
+            "Original pipeline status changed in {} from '{}' to '{}' (baseline commit {})",
+            worklog_path.display(),
+            original_status,
+            current_status,
+            short_commit(&first_commit)
+        ),
+    ))
+}
+
 fn is_worklog_entry_filename(file_name: &str) -> bool {
     file_name.ends_with(".md")
         && file_name.len() > 10
@@ -1709,6 +1807,150 @@ fn extract_worklog_cycle_from_filename(file_name: &str) -> Option<u64> {
         .captures(file_name)
         .and_then(|captures| captures.get(1))
         .and_then(|capture| capture.as_str().parse::<u64>().ok())
+}
+
+fn current_cycle_worklog_entry_for_date(repo_root: &Path, today: &str) -> Result<Option<PathBuf>, String> {
+    if let Some(path) = latest_worklog_entry_for_date(repo_root, today)? {
+        return Ok(Some(path));
+    }
+
+    let cycle = current_cycle_from_state(repo_root)?;
+    latest_worklog_entry_for_cycle(repo_root, cycle)
+}
+
+fn latest_worklog_entry_for_cycle(repo_root: &Path, cycle: u64) -> Result<Option<PathBuf>, String> {
+    let worklog_root = repo_root.join("docs/worklog");
+    if !worklog_root.is_dir() {
+        return Ok(None);
+    }
+
+    let dates = fs::read_dir(&worklog_root)
+        .map_err(|error| format!("failed to read {}: {}", worklog_root.display(), error))?;
+    let mut latest = None;
+
+    for date_entry in dates {
+        let date_entry =
+            date_entry.map_err(|error| format!("failed to read {}: {}", worklog_root.display(), error))?;
+        if !date_entry
+            .file_type()
+            .map_err(|error| format!("failed to inspect {}: {}", date_entry.path().display(), error))?
+            .is_dir()
+        {
+            continue;
+        }
+
+        let date_name = match date_entry.file_name().into_string() {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
+        let worklog_entries = fs::read_dir(date_entry.path())
+            .map_err(|error| format!("failed to read {}: {}", date_entry.path().display(), error))?;
+
+        for entry in worklog_entries {
+            let entry =
+                entry.map_err(|error| format!("failed to read {}: {}", date_entry.path().display(), error))?;
+            if !entry
+                .file_type()
+                .map_err(|error| format!("failed to inspect {}: {}", entry.path().display(), error))?
+                .is_file()
+            {
+                continue;
+            }
+
+            let file_name = match entry.file_name().into_string() {
+                Ok(value) => value,
+                Err(_) => continue,
+            };
+            if !is_worklog_entry_filename(&file_name) {
+                continue;
+            }
+            if extract_worklog_cycle_from_filename(&file_name) != Some(cycle) {
+                continue;
+            }
+
+            if latest
+                .as_ref()
+                .is_none_or(|(current_date, current_file, _)| {
+                (&date_name, &file_name) > (current_date, current_file)
+                })
+            {
+                latest = Some((date_name.clone(), file_name, entry.path()));
+            }
+        }
+    }
+
+    Ok(latest.map(|(_, _, path)| path))
+}
+
+fn first_committed_worklog_content(
+    repo_root: &Path,
+    worklog_path: &Path,
+) -> Result<Option<(String, String)>, String> {
+    let repo_relative_path = worklog_path
+        .strip_prefix(repo_root)
+        .map_err(|error| {
+            format!(
+                "failed to relativize {} against {}: {}",
+                worklog_path.display(),
+                repo_root.display(),
+                error
+            )
+        })?
+        .to_string_lossy()
+        .to_string();
+
+    let log_output = Command::new("git")
+        .current_dir(repo_root)
+        .args([
+            "log",
+            "--follow",
+            "--diff-filter=A",
+            "--format=%H",
+            "--",
+            &repo_relative_path,
+        ])
+        .output()
+        .map_err(|error| format!("failed to execute git log: {}", error))?;
+    if !log_output.status.success() {
+        return Err(command_failure_message("git log", &log_output));
+    }
+
+    let Some(first_commit) = String::from_utf8_lossy(&log_output.stdout)
+        .lines()
+        .last()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(str::to_string)
+    else {
+        return Ok(None);
+    };
+
+    let show_output = Command::new("git")
+        .current_dir(repo_root)
+        .arg("show")
+        .arg(format!("{}:{}", first_commit, repo_relative_path))
+        .output()
+        .map_err(|error| format!("failed to execute git show: {}", error))?;
+    if !show_output.status.success() {
+        return Err(command_failure_message("git show", &show_output));
+    }
+
+    Ok(Some((
+        first_commit,
+        String::from_utf8_lossy(&show_output.stdout).into_owned(),
+    )))
+}
+
+fn worklog_pipeline_status_value(content: &str) -> Option<&str> {
+    content
+        .lines()
+        .find_map(|line| line.strip_prefix(WORKLOG_PIPELINE_STATUS_PREFIX))
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+}
+
+fn short_commit(commit: &str) -> &str {
+    commit.get(..7).unwrap_or(commit)
 }
 
 fn verify_disposition_match(repo_root: &Path) -> StepReport {
@@ -2572,6 +2814,32 @@ mod tests {
             .collect()
     }
 
+    fn run_git(root: &Path, args: &[&str]) -> String {
+        let output = Command::new("git").current_dir(root).args(args).output().unwrap();
+        assert!(
+            output.status.success(),
+            "git {:?} failed: {}",
+            args,
+            String::from_utf8_lossy(&output.stderr)
+        );
+        String::from_utf8_lossy(&output.stdout).trim().to_string()
+    }
+
+    fn init_git_repo(root: &Path) {
+        if root.exists() {
+            fs::remove_dir_all(root).unwrap();
+        }
+        fs::create_dir_all(root).unwrap();
+        run_git(root, &["init"]);
+        run_git(root, &["config", "user.name", "Copilot"]);
+        run_git(root, &["config", "user.email", "copilot@example.com"]);
+    }
+
+    fn commit_all(root: &Path, message: &str) {
+        run_git(root, &["add", "."]);
+        run_git(root, &["commit", "-m", message]);
+    }
+
     #[test]
     fn warning_steps_get_warn_status_not_fail() {
         let execution = ExecutionResult {
@@ -3208,7 +3476,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 15);
+        assert_eq!(report.steps.len(), 16);
         assert_eq!(report.steps[0].status, StepStatus::Pass);
         assert_eq!(report.steps[1].status, StepStatus::Pass);
         assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -3238,10 +3506,13 @@ mod tests {
         assert_eq!(report.steps[11].status, StepStatus::Pass);
         assert_eq!(report.steps[12].name, "worklog-dedup");
         assert_eq!(report.steps[12].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].name, "step-comments");
+        assert_eq!(report.steps[13].name, "worklog-immutability");
         assert_eq!(report.steps[13].status, StepStatus::Pass);
-        assert_eq!(report.steps[14].name, "current-cycle-steps");
+        assert_eq!(report.steps[13].severity, Severity::Warning);
+        assert_eq!(report.steps[14].name, "step-comments");
         assert_eq!(report.steps[14].status, StepStatus::Pass);
+        assert_eq!(report.steps[15].name, "current-cycle-steps");
+        assert_eq!(report.steps[15].status, StepStatus::Pass);
     }
 
     #[test]
@@ -3305,7 +3576,7 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 15);
+        assert_eq!(report.steps.len(), 16);
         assert!(report.steps[..5]
             .iter()
             .all(|step| matches!(step.status, StepStatus::Error)));
@@ -3670,9 +3941,11 @@ mod tests {
         assert_eq!(report.steps[11].status, StepStatus::Cascade);
         assert_eq!(report.steps[12].name, "worklog-dedup");
         assert_eq!(report.steps[12].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].name, "step-comments");
+        assert_eq!(report.steps[13].name, "worklog-immutability");
+        assert_eq!(report.steps[13].status, StepStatus::Pass);
+        assert_eq!(report.steps[14].name, "step-comments");
         // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[13].status, StepStatus::Warn);
+        assert_eq!(report.steps[14].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -3807,9 +4080,11 @@ mod tests {
         assert_eq!(report.steps[11].status, StepStatus::Cascade);
         assert_eq!(report.steps[12].name, "worklog-dedup");
         assert_eq!(report.steps[12].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].name, "step-comments");
+        assert_eq!(report.steps[13].name, "worklog-immutability");
+        assert_eq!(report.steps[13].status, StepStatus::Pass);
+        assert_eq!(report.steps[14].name, "step-comments");
         // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[13].status, StepStatus::Warn);
+        assert_eq!(report.steps[14].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -3938,10 +4213,10 @@ mod tests {
         }
 
         let report = run_pipeline(&root, OVERRIDE_CYCLE, &OverrideRunner);
-        assert_eq!(report.steps[13].name, "step-comments");
-        assert_eq!(report.steps[13].status, StepStatus::Warn);
-        assert_eq!(report.steps[13].severity, Severity::Warning);
-        assert!(report.steps[13]
+        assert_eq!(report.steps[14].name, "step-comments");
+        assert_eq!(report.steps[14].status, StepStatus::Warn);
+        assert_eq!(report.steps[14].severity, Severity::Warning);
+        assert!(report.steps[14]
             .detail
             .as_deref()
             .unwrap_or_default()
@@ -4089,8 +4364,10 @@ mod tests {
         assert_eq!(report.steps[11].status, StepStatus::Fail);
         assert_eq!(report.steps[12].name, "worklog-dedup");
         assert_eq!(report.steps[12].status, StepStatus::Pass);
+        assert_eq!(report.steps[13].name, "worklog-immutability");
+        assert_eq!(report.steps[13].status, StepStatus::Pass);
         // Previous-cycle backstop is downgraded to Warn
-        assert_eq!(report.steps[13].status, StepStatus::Warn);
+        assert_eq!(report.steps[14].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -4211,7 +4488,7 @@ mod tests {
             &ExcludeDocValidationRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 14);
+        assert_eq!(report.steps.len(), 15);
         assert!(!report
             .steps
             .iter()
@@ -4346,7 +4623,7 @@ mod tests {
             &UnknownExcludeRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 15);
+        assert_eq!(report.steps.len(), 16);
         assert!(report
             .steps
             .iter()
@@ -4490,11 +4767,15 @@ mod tests {
         );
 
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 14);
+        assert_eq!(report.steps.len(), 15);
         assert!(!report
             .steps
             .iter()
             .any(|step| step.name == "worklog-dedup"));
+        assert!(report
+            .steps
+            .iter()
+            .any(|step| step.name == "worklog-immutability"));
     }
 
     #[test]
@@ -4722,6 +5003,200 @@ mod tests {
         let detail = step.detail.as_deref().unwrap_or_default();
         assert!(detail.contains("No duplicate worklog files found"));
         assert!(detail.contains("notes.md"));
+    }
+
+    #[test]
+    fn worklog_immutability_skips_when_current_cycle_worklog_is_missing() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-worklog-immutability-missing-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410}
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_worklog_immutability_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.name, "worklog-immutability");
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Warning);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("skipped: no worklog entry found for the current cycle")
+        );
+    }
+
+    #[test]
+    fn worklog_immutability_skips_when_worklog_has_no_pipeline_status_line() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-worklog-immutability-no-status-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        fs::write(
+            root.join("docs/worklog/2026-03-09/120000-cycle-410-summary.md"),
+            "# Worklog\n",
+        )
+        .unwrap();
+        commit_all(&root, "add worklog without pipeline status");
+
+        let step = verify_worklog_immutability_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Warning);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("has no original pipeline status line"));
+    }
+
+    #[test]
+    fn worklog_immutability_warns_when_original_pipeline_status_changes() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-worklog-immutability-mutated-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        let worklog = root.join("docs/worklog/2026-03-09/120000-cycle-410-summary.md");
+        fs::write(
+            &worklog,
+            "# Cycle 410\n\n## Pre-dispatch state\n\n- **Pipeline status**: FAIL (4 warnings)\n",
+        )
+        .unwrap();
+        commit_all(&root, "add worklog");
+        fs::write(
+            &worklog,
+            "# Cycle 410\n\n## Pre-dispatch state\n\n- **Pipeline status**: PASS (2 warnings)\n",
+        )
+        .unwrap();
+
+        let step = verify_worklog_immutability_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Warn);
+        assert_eq!(step.severity, Severity::Warning);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("changed"));
+        assert!(detail.contains("FAIL (4 warnings)"));
+        assert!(detail.contains("PASS (2 warnings)"));
+    }
+
+    #[test]
+    fn worklog_immutability_passes_when_post_dispatch_addendum_is_appended() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-worklog-immutability-addendum-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        let worklog = root.join("docs/worklog/2026-03-09/120000-cycle-410-summary.md");
+        fs::write(
+            &worklog,
+            "# Cycle 410\n\n## Pre-dispatch state\n\n- **Pipeline status**: FAIL (4 warnings)\n",
+        )
+        .unwrap();
+        commit_all(&root, "add worklog");
+        fs::write(
+            &worklog,
+            "# Cycle 410\n\n## Pre-dispatch state\n\n- **Pipeline status**: FAIL (4 warnings)\n- **Pipeline status (post-dispatch)**: PASS (2 warnings)\n",
+        )
+        .unwrap();
+
+        let step = verify_worklog_immutability_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Warning);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("unchanged"));
+    }
+
+    #[test]
+    fn worklog_immutability_checks_only_the_latest_worklog_for_the_day() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-worklog-immutability-latest-only-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 411}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        let earlier = root.join("docs/worklog/2026-03-09/120000-cycle-410-summary.md");
+        let latest = root.join("docs/worklog/2026-03-09/120100-cycle-411-summary.md");
+        fs::write(
+            &earlier,
+            "# Cycle 410\n\n## Pre-dispatch state\n\n- **Pipeline status**: FAIL (4 warnings)\n",
+        )
+        .unwrap();
+        fs::write(
+            &latest,
+            "# Cycle 411\n\n## Pre-dispatch state\n\n- **Pipeline status**: PASS (2 warnings)\n",
+        )
+        .unwrap();
+        commit_all(&root, "add same-day worklogs");
+        fs::write(
+            &earlier,
+            "# Cycle 410\n\n## Pre-dispatch state\n\n- **Pipeline status**: PASS (2 warnings)\n",
+        )
+        .unwrap();
+
+        let step = verify_worklog_immutability_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Warning);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("120100-cycle-411-summary.md"));
+        assert!(!detail.contains("120000-cycle-410-summary.md"));
     }
 
     #[test]
