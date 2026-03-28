@@ -24,6 +24,7 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 2
+- **In-flight agent sessions (post-dispatch)**: 3
 - **Pipeline status**: PASS (3 warnings)
 - **Publish gate**: published
 
@@ -31,6 +32,12 @@
 
 1. Review and iterate on PR from [#1928](https://github.com/EvaLok/schema-org-json-ld/issues/1928) (Fix cycle-complete summary derivation from receipts) when Copilot completes
 2. Review and iterate on PR from [#1930](https://github.com/EvaLok/schema-org-json-ld/issues/1930) (Add worklog pipeline-status immutability check) when Copilot completes
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#1928](https://github.com/EvaLok/schema-org-json-ld/issues/1928) (Fix cycle-complete summary derivation from receipts) when Copilot completes
+2. Review and iterate on PR from [#1930](https://github.com/EvaLok/schema-org-json-ld/issues/1930) (Add worklog pipeline-status immutability check) when Copilot completes
+3. Review and iterate on PR from [#1932](https://github.com/EvaLok/schema-org-json-ld/issues/1932) ([Cycle Review] Cycle 397 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
