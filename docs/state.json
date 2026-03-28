@@ -5881,7 +5881,8 @@
     333,
     334,
     336,
-    337
+    337,
+    339
   ],
   "blockers": [
     {
@@ -6245,6 +6246,15 @@
       "deadline_cycle": 396,
       "description": "Pipeline result immutability — treat final C5.5 result as immutable in worklog",
       "issue": 1898
+    },
+    {
+      "accepted_cycle": 394,
+      "audit_issue": 339,
+      "completed": false,
+      "completed_ref": null,
+      "deadline_cycle": 399,
+      "description": "Deferral deadline enforcement — extend deadline tracking pattern to review finding deferrals",
+      "issue": 1912
     }
   ],
   "pre_python_clean_cycles": {
