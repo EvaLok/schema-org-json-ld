@@ -1291,7 +1291,7 @@ mod tests {
     fn write_write_entry_patch_script(dir: &std::path::Path) {
         fs::write(
             dir.join("tools/write-entry"),
-            "#!/usr/bin/env bash\nset -euo pipefail\npython - \"$@\" <<'PY'\nimport sys\nfrom pathlib import Path\nargs = sys.argv[1:]\nif not args or args[0] != 'patch-pipeline':\n    raise SystemExit(f'unexpected write-entry args: {args}')\nvalues = {}\nlist_values = {}\ni = 1\nwhile i < len(args):\n    key = args[i]\n    if key == '--next-steps':\n        if i + 1 >= len(args):\n            raise SystemExit(f'missing value for {key}')\n        list_values.setdefault(key, []).append(args[i + 1])\n        i += 2\n        continue\n    if i + 1 >= len(args):\n        raise SystemExit(f'missing value for {key}')\n    values[key] = args[i + 1]\n    i += 2\nworklog = Path(values['--worklog-file'])\nlines = worklog.read_text().splitlines()\nfor index, line in enumerate(lines):\n    if line == '## Pre-dispatch state':\n        lines[index] = '## ' + values['--section-title']\n        break\nelse:\n    raise SystemExit('missing state heading')\nlines = [line for line in lines if line != '*Snapshot before review dispatch — final counters may differ after C6.*']\nlines = [line for line in lines if not line.startswith('- **Copilot metrics**: ')]\nreplacements = {\n    '- **In-flight agent sessions**: ': values['--in-flight'],\n    '- **Pipeline status**: ': values['--status'],\n    '- **Publish gate**: ': values['--publish-gate'],\n}\nfor prefix, value in replacements.items():\n    for index, line in enumerate(lines):\n        if line.startswith(prefix):\n            lines[index] = prefix + value\n            break\n    else:\n        raise SystemExit(f'missing line for {prefix}')\nif '--next-steps' in list_values:\n    for index, line in enumerate(lines):\n        if line == '## Next steps':\n            next_start = index + 1\n            break\n    else:\n        raise SystemExit('missing next steps heading')\n    next_end = len(lines)\n    for index in range(next_start, len(lines)):\n        if lines[index].startswith('## '):\n            next_end = index\n            break\n    replacement = ['']\n    for step_index, step in enumerate(list_values['--next-steps'], start=1):\n        replacement.append(f'{step_index}. {step}')\n    lines[next_start:next_end] = replacement\nworklog.write_text('\\n'.join(lines) + '\\n')\nprint(worklog)\nPY\n",
+            "#!/usr/bin/env bash\nset -euo pipefail\npython - \"$@\" <<'PY'\nimport sys\nfrom pathlib import Path\nargs = sys.argv[1:]\nif not args or args[0] != 'patch-pipeline':\n    raise SystemExit(f'unexpected write-entry args: {args}')\nvalues = {}\nlist_values = {}\ni = 1\nwhile i < len(args):\n    key = args[i]\n    if key == '--next-steps':\n        if i + 1 >= len(args):\n            raise SystemExit(f'missing value for {key}')\n        list_values.setdefault(key, []).append(args[i + 1])\n        i += 2\n        continue\n    if i + 1 >= len(args):\n        raise SystemExit(f'missing value for {key}')\n    values[key] = args[i + 1]\n    i += 2\nworklog = Path(values['--worklog-file'])\nlines = worklog.read_text().splitlines()\nfor index, line in enumerate(lines):\n    if line == '## Pre-dispatch state':\n        lines[index] = '## ' + values['--section-title']\n        break\nelse:\n    raise SystemExit('missing state heading')\nlines = [line for line in lines if line != '*Snapshot before review dispatch — final counters may differ after C6.*']\nlines = [line for line in lines if not line.startswith('- **Copilot metrics**: ')]\ndef replace_line(prefix, value):\n    for index, line in enumerate(lines):\n        if line.startswith(prefix):\n            lines[index] = prefix + value\n            return\n    raise SystemExit(f'missing line for {prefix}')\ndef patch_pipeline_status(value):\n    prefix = '- **Pipeline status**: '\n    addendum_prefix = '- **Pipeline status (post-dispatch)**: '\n    for index, line in enumerate(lines):\n        if not line.startswith(prefix):\n            continue\n        current = line[len(prefix):].strip()\n        if not current or current == 'Not provided.':\n            lines[index] = prefix + value\n            return\n        if current == value.strip():\n            return\n        for addendum_index, addendum_line in enumerate(lines):\n            if addendum_line.startswith(addendum_prefix):\n                if addendum_line[len(addendum_prefix):].strip() != value.strip():\n                    lines[addendum_index] = addendum_prefix + value\n                return\n        lines.insert(index + 1, addendum_prefix + value)\n        return\n    raise SystemExit(f'missing line for {prefix}')\nreplace_line('- **In-flight agent sessions**: ', values['--in-flight'])\npatch_pipeline_status(values['--status'])\nreplace_line('- **Publish gate**: ', values['--publish-gate'])\nif '--next-steps' in list_values:\n    for index, line in enumerate(lines):\n        if line == '## Next steps':\n            next_start = index + 1\n            break\n    else:\n        raise SystemExit('missing next steps heading')\n    next_end = len(lines)\n    for index in range(next_start, len(lines)):\n        if lines[index].startswith('## '):\n            next_end = index\n            break\n    replacement = ['']\n    for step_index, step in enumerate(list_values['--next-steps'], start=1):\n        replacement.append(f'{step_index}. {step}')\n    lines[next_start:next_end] = replacement\nworklog.write_text('\\n'.join(lines) + '\\n')\nprint(worklog)\nPY\n",
         )
         .unwrap();
     }
@@ -1925,7 +1925,8 @@ mod tests {
         assert!(!worklog.contains("## Pre-dispatch state"));
         assert!(!worklog.contains("Snapshot before review dispatch"));
         assert!(worklog.contains("- **In-flight agent sessions**: 1"));
-        assert!(worklog.contains("- **Pipeline status**: PASS (1 warning)"));
+        assert!(worklog.contains("- **Pipeline status**: PASS"));
+        assert!(worklog.contains("- **Pipeline status (post-dispatch)**: PASS (1 warning)"));
         assert!(!worklog.contains("phase_5_active"));
         assert!(!worklog.contains("- **Copilot metrics**:"));
         assert!(worklog.contains("- **Publish gate**: published"));
@@ -1941,6 +1942,135 @@ mod tests {
             .unwrap();
         let log = String::from_utf8_lossy(&log_output.stdout);
         assert!(log.contains("docs(worklog): refresh cycle 345 state after review dispatch [cycle 345]"));
+
+        let _ = fs::remove_dir_all(&dir);
+        let _ = fs::remove_dir_all(&remote);
+    }
+
+    #[test]
+    fn close_out_run_preserves_existing_failed_pipeline_status_and_adds_post_dispatch_addendum() {
+        let (dir, remote) = setup_temp_repo_with_remote("close-out-worklog-status-immutable");
+        fs::create_dir_all(dir.join("docs/worklog/2026-03-25")).unwrap();
+        fs::create_dir_all(dir.join("docs/journal")).unwrap();
+        fs::write(
+            dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"),
+            "# Cycle 345\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: published\n\n## Next steps\n\n1. None.\n",
+        )
+        .unwrap();
+        fs::write(dir.join("docs/journal/2026-03-25.md"), "# Journal\n").unwrap();
+        fs::write(
+            dir.join("docs/state.json"),
+            serde_json::to_string_pretty(&json!({
+                "cycle_phase": {
+                    "cycle": 345,
+                    "phase": "close_out",
+                    "phase_entered_at": "2026-03-25T00:00:00Z"
+                },
+                "last_cycle": {
+                    "number": 345,
+                    "timestamp": "2026-03-24T00:00:00Z"
+                },
+                "field_inventory": {
+                    "fields": {
+                        "cycle_phase": {
+                            "last_refreshed": "cycle 344"
+                        }
+                    }
+                },
+                "tool_pipeline": {
+                    "status": "phase_5_active"
+                },
+                "publish_gate": {
+                    "status": "published"
+                },
+                "in_flight_sessions": 0,
+                "copilot_metrics": {
+                    "total_dispatches": 1,
+                    "produced_pr": 1,
+                    "merged": 1,
+                    "pr_merge_rate": "100.0%",
+                    "in_flight": 0
+                },
+                "agent_sessions": []
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        let args_path = dir.join("post-step-args.txt");
+        write_post_step_append_capture_script(&dir, &args_path);
+        write_write_entry_patch_script(&dir);
+        fs::write(
+            dir.join("tools/validate-docs"),
+            "#!/usr/bin/env bash\nset -euo pipefail\n",
+        )
+        .unwrap();
+        fs::write(
+            dir.join("tools/verify-review-events"),
+            "#!/usr/bin/env bash\nset -euo pipefail\n",
+        )
+        .unwrap();
+        fs::write(
+            dir.join("tools/receipt-validate"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"result\":\"pass\",\"canonical_receipts\":1,\"worklog_receipts\":1,\"genuinely_missing\":0}'\n",
+        )
+        .unwrap();
+        fs::write(
+            dir.join("tools/pipeline-check"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"overall\":\"pass\",\"has_blocking_findings\":false,\"steps\":[{\"name\":\"doc-validation\",\"status\":\"warn\"}]}'\n",
+        )
+        .unwrap();
+        fs::write(
+            dir.join("tools/dispatch-review"),
+            format!(
+                "#!/usr/bin/env bash\nset -euo pipefail\npython - <<'PY'\nimport json\nfrom pathlib import Path\nstate_path = Path({state_path:?})\nstate = json.loads(state_path.read_text())\nstate['in_flight_sessions'] = 1\nstate['dispatch_log_latest'] = '#1470 [Cycle Review] Cycle 345 end-of-cycle review (cycle 345)'\nstate['agent_sessions'] = [{{'issue': 1470, 'title': '[Cycle Review] Cycle 345 end-of-cycle review', 'status': 'in_flight'}}]\nstate_path.write_text(json.dumps(state, indent=2) + '\\n')\nPY\ngit -C {repo:?} add docs/state.json\ngit -C {repo:?} commit -m 'state(record-dispatch): #1470 dispatched [cycle 345]' >/dev/null\nprintf '%s\\n' 'Created review issue #1470 from orchestrator issue #123: https://github.com/EvaLok/schema-org-json-ld/issues/1470'\n",
+                state_path = dir.join("docs/state.json"),
+                repo = dir,
+            ),
+        )
+        .unwrap();
+
+        Command::new("git")
+            .arg("-C")
+            .arg(&dir)
+            .args(["add", "."])
+            .output()
+            .unwrap();
+        Command::new("git")
+            .arg("-C")
+            .arg(&dir)
+            .args(["commit", "-m", "initial test state"])
+            .output()
+            .unwrap();
+        Command::new("git")
+            .arg("-C")
+            .arg(&dir)
+            .args(["push", "-u", "origin", "master"])
+            .output()
+            .unwrap();
+
+        let bin_dir = dir.join("bin");
+        fs::create_dir_all(&bin_dir).unwrap();
+        let gh_path = bin_dir.join("gh");
+        fs::write(
+            &gh_path,
+            "#!/usr/bin/env bash\nset -euo pipefail\nif [ \"$1\" = \"issue\" ] && [ \"$2\" = \"close\" ]; then\n  exit 0\nfi\nprintf 'unexpected gh invocation\\n' >&2\nexit 1\n",
+        )
+        .unwrap();
+        make_executable(&gh_path);
+
+        with_path_prefix(&bin_dir, || run(&dir, 123, Some(345), false)).unwrap();
+
+        let worklog = fs::read_to_string(dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"))
+            .unwrap();
+        assert!(worklog.contains("- **Pipeline status**: FAIL (1 blocking finding)"));
+        assert!(worklog.contains("- **Pipeline status (post-dispatch)**: PASS (1 warning)"));
+        assert_eq!(worklog.matches("- **Pipeline status**:").count(), 1);
+        assert_eq!(
+            worklog
+                .matches("- **Pipeline status (post-dispatch)**:")
+                .count(),
+            1
+        );
 
         let _ = fs::remove_dir_all(&dir);
         let _ = fs::remove_dir_all(&remote);

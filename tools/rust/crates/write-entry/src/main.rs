@@ -25,6 +25,7 @@ const NEXT_STEPS_HEADING: &str = "## Next steps";
 const LEGACY_STATE_DISCLAIMER: &str = "*Snapshot before review dispatch — final counters may differ after C6.*";
 const IN_FLIGHT_PREFIX: &str = "- **In-flight agent sessions**: ";
 const PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
+const POST_DISPATCH_PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status (post-dispatch)**: ";
 const PUBLISH_GATE_PREFIX: &str = "- **Publish gate**: ";
 const INFRASTRUCTURE_ROOTS: [&str; 2] = ["tools", ".claude/skills"];
 const INFRASTRUCTURE_FILES: [&str; 4] = [
@@ -173,6 +174,13 @@ struct PatchPipelineArgs {
 struct WorklogWriteOutcome {
     path: PathBuf,
     replaced_existing: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum PatchOrAddendumOutcome {
+    ReplacedOriginal,
+    AddedAddendum,
+    Unchanged,
 }
 
 #[derive(Debug, Deserialize)]
@@ -416,7 +424,13 @@ fn execute_patch_pipeline(args: &PatchPipelineArgs, repo_root: &Path) -> Result<
     let worklog_path = resolve_repo_path(repo_root, &args.worklog);
     let content = fs::read_to_string(&worklog_path)
         .map_err(|error| format!("failed to read {}: {}", worklog_path.display(), error))?;
-    let mut patched = patch_line_value(&content, PIPELINE_STATUS_PREFIX, &args.status).ok_or_else(|| {
+    let (mut patched, _) = patch_or_addendum(
+        &content,
+        PIPELINE_STATUS_PREFIX,
+        &args.status,
+        POST_DISPATCH_PIPELINE_STATUS_PREFIX,
+    )
+    .ok_or_else(|| {
         format!(
             "failed to patch {}: pipeline status line not found",
             worklog_path.display()
@@ -473,13 +487,7 @@ fn resolve_repo_path(repo_root: &Path, path: &Path) -> PathBuf {
 }
 
 fn patch_line_value(content: &str, prefix: &str, value: &str) -> Option<String> {
-    let start = content.match_indices(prefix).find_map(|(index, _)| {
-        if index == 0 || content.as_bytes().get(index - 1) == Some(&b'\n') {
-            Some(index)
-        } else {
-            None
-        }
-    })?;
+    let start = find_line_start(content, prefix)?;
     let search = &content[start..];
     let line_end = search
         .find('\n')
@@ -498,6 +506,71 @@ fn patch_line_value(content: &str, prefix: &str, value: &str) -> Option<String> 
         value,
         &content[suffix_start..]
     ))
+}
+
+fn patch_or_addendum(
+    content: &str,
+    prefix: &str,
+    value: &str,
+    addendum_prefix: &str,
+) -> Option<(String, PatchOrAddendumOutcome)> {
+    let current_value = line_value(content, prefix)?;
+    if line_value_needs_replacement(current_value) {
+        return patch_line_value(content, prefix, value)
+            .map(|patched| (patched, PatchOrAddendumOutcome::ReplacedOriginal));
+    }
+    if same_line_value(current_value, value) {
+        return Some((content.to_string(), PatchOrAddendumOutcome::Unchanged));
+    }
+    if let Some(existing_addendum) = line_value(content, addendum_prefix) {
+        if same_line_value(existing_addendum, value) {
+            return Some((content.to_string(), PatchOrAddendumOutcome::Unchanged));
+        }
+        return patch_line_value(content, addendum_prefix, value)
+            .map(|patched| (patched, PatchOrAddendumOutcome::AddedAddendum));
+    }
+    let insert_at = line_end_index(content, find_line_start(content, prefix)?);
+    let separator = if insert_at == content.len() && !content[..insert_at].ends_with('\n') {
+        "\n"
+    } else {
+        ""
+    };
+    Some((
+        format!(
+            "{}{}{}{}{}",
+            &content[..insert_at],
+            separator,
+            addendum_prefix,
+            value,
+            &content[insert_at..]
+        ),
+        PatchOrAddendumOutcome::AddedAddendum,
+    ))
+}
+
+fn find_line_start(content: &str, prefix: &str) -> Option<usize> {
+    content.match_indices(prefix).find_map(|(index, _)| {
+        if index == 0 || content.as_bytes().get(index - 1) == Some(&b'\n') {
+            Some(index)
+        } else {
+            None
+        }
+    })
+}
+
+fn line_value<'a>(content: &'a str, prefix: &str) -> Option<&'a str> {
+    let start = find_line_start(content, prefix)?;
+    let line = line_text(content, start).strip_suffix('\r').unwrap_or(line_text(content, start));
+    line.strip_prefix(prefix)
+}
+
+fn line_value_needs_replacement(value: &str) -> bool {
+    let trimmed = value.trim();
+    trimmed.is_empty() || trimmed == NOT_PROVIDED
+}
+
+fn same_line_value(left: &str, right: &str) -> bool {
+    left.trim() == right.trim()
 }
 
 fn patch_state_heading(content: &str, heading: &str) -> Option<String> {
@@ -6556,7 +6629,7 @@ Reflective log for the schema-org-json-ld orchestrator.
     }
 
     #[test]
-    fn patch_pipeline_replaces_status_and_preserves_other_content() {
+    fn patch_pipeline_replaces_placeholder_status_and_preserves_other_content() {
         let repo_root = TempRepoDir::new("patch-pipeline-success");
         let worklog_path = repo_root.path.join("docs/worklog/test.md");
         fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
@@ -6568,7 +6641,7 @@ Reflective log for the schema-org-json-ld orchestrator.
 *Snapshot before review dispatch — final counters may differ after C6.*
 
 - **In-flight agent sessions**: 1
-- **Pipeline status**: FAIL (1/9)
+- **Pipeline status**: Not provided.
 - **Copilot metrics**: stable
 - **Publish gate**: open
 
@@ -6598,6 +6671,7 @@ Reflective log for the schema-org-json-ld orchestrator.
         assert!(!updated.contains("- **Copilot metrics**:"));
         assert!(updated.contains("## Next steps"));
         assert_eq!(updated.matches("- **Pipeline status**:").count(), 1);
+        assert!(!updated.contains("- **Pipeline status (post-dispatch)**:"));
     }
 
     #[test]
@@ -6613,7 +6687,7 @@ Reflective log for the schema-org-json-ld orchestrator.
 *Snapshot before review dispatch — final counters may differ after C6.*
 
 - **In-flight agent sessions**: 1
-- **Pipeline status**: FAIL (1/9)
+- **Pipeline status**: Not provided.
 - **Copilot metrics**: 45 dispatches, 42 PRs produced, 40 merged, 88.9% PR merge rate
 - **Publish gate**: open
 
@@ -6645,6 +6719,7 @@ Reflective log for the schema-org-json-ld orchestrator.
         assert!(!updated.contains("- **Copilot metrics**:"));
         assert!(updated.contains("- **Publish gate**: published"));
         assert!(updated.contains("## Next steps"));
+        assert!(!updated.contains("- **Pipeline status (post-dispatch)**:"));
     }
 
     #[test]
@@ -6689,7 +6764,7 @@ Reflective log for the schema-org-json-ld orchestrator.
         fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
         fs::write(
             &worklog_path,
-            "# Cycle 154\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **Pipeline status**: FAIL (warnings pending)\n- **Publish gate**: open\n",
+            "# Cycle 154\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **Pipeline status**: Not provided.\n- **Publish gate**: open\n",
         )
         .unwrap();
 
@@ -6709,6 +6784,73 @@ Reflective log for the schema-org-json-ld orchestrator.
         let updated = fs::read_to_string(&worklog_path).unwrap();
         assert!(updated.contains("- **Pipeline status**: PASS (2 warnings:\nwarn one\nwarn two)"));
         assert!(updated.contains("- **Publish gate**: open"));
+        assert!(!updated.contains("- **Pipeline status (post-dispatch)**:"));
+    }
+
+    #[test]
+    fn patch_pipeline_preserves_existing_result_and_adds_post_dispatch_addendum() {
+        let repo_root = TempRepoDir::new("patch-pipeline-addendum");
+        let worklog_path = repo_root.path.join("docs/worklog/test.md");
+        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
+        fs::write(
+            &worklog_path,
+            "# Cycle 154\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: open\n",
+        )
+        .unwrap();
+
+        execute_patch_pipeline(
+            &PatchPipelineArgs {
+                worklog: PathBuf::from("docs/worklog/test.md"),
+                status: "PASS (9/9)".to_string(),
+                in_flight: None,
+                publish_gate: None,
+                next_steps: Vec::new(),
+                section_title: None,
+            },
+            &repo_root.path,
+        )
+        .unwrap();
+
+        let updated = fs::read_to_string(&worklog_path).unwrap();
+        assert!(updated.contains("- **Pipeline status**: FAIL (1 blocking finding)"));
+        assert!(updated.contains("- **Pipeline status (post-dispatch)**: PASS (9/9)"));
+        assert_eq!(updated.matches("- **Pipeline status**:").count(), 1);
+        assert_eq!(
+            updated
+                .matches("- **Pipeline status (post-dispatch)**:")
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn patch_pipeline_skips_post_dispatch_addendum_when_status_matches() {
+        let repo_root = TempRepoDir::new("patch-pipeline-matching-status");
+        let worklog_path = repo_root.path.join("docs/worklog/test.md");
+        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
+        fs::write(
+            &worklog_path,
+            "# Cycle 154\n\n## Cycle state\n\n- **In-flight agent sessions**: 0\n- **Pipeline status**: PASS (9/9)\n- **Publish gate**: open\n",
+        )
+        .unwrap();
+
+        execute_patch_pipeline(
+            &PatchPipelineArgs {
+                worklog: PathBuf::from("docs/worklog/test.md"),
+                status: "PASS (9/9)".to_string(),
+                in_flight: Some(1),
+                publish_gate: None,
+                next_steps: Vec::new(),
+                section_title: None,
+            },
+            &repo_root.path,
+        )
+        .unwrap();
+
+        let updated = fs::read_to_string(&worklog_path).unwrap();
+        assert!(updated.contains("- **Pipeline status**: PASS (9/9)"));
+        assert!(!updated.contains("- **Pipeline status (post-dispatch)**:"));
+        assert!(updated.contains("- **In-flight agent sessions**: 1"));
     }
 
     #[test]
