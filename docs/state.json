@@ -6010,6 +6010,13 @@
       "category": "worklog-accuracy",
       "deadline_cycle": 401,
       "deferred_cycle": 396,
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-396.md"
+    },
+    {
+      "category": "state-integrity",
+      "deadline_cycle": 401,
+      "deferred_cycle": 396,
       "resolved": false
     }
   ],
@@ -6187,7 +6194,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 396"
+        "last_refreshed": "cycle 397"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -10206,9 +10213,38 @@
         ],
         "ignored": 0,
         "note": "Finding 1 & 2: real bugs in process-review deferral logic — dispatching combined fix. Finding 3: past worklog overstatement, deferred — will improve precision in future narratives."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "receipt-integrity",
+          "state-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 3,
+        "cycle": 396,
+        "deferred": 1,
+        "dispatch_created": 2,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "receipt-integrity",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "worklog-accuracy",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "state-integrity",
+            "disposition": "deferred"
+          }
+        ],
+        "ignored": 0,
+        "note": "Finding 1+2: dispatching fix for cycle-complete summary derivation and worklog immutability. Finding 3: deferred — needs new invariant check for field-inventory freshness vs actual values."
       }
     ],
-    "last_review_cycle": 395
+    "last_review_cycle": 396
   },
   "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 392,
