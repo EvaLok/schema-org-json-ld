@@ -66,6 +66,12 @@ struct ReconcileArg {
     status: ReconcileStatus,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct GitReceiptCommit {
+    committed_at: DateTime<Utc>,
+    subject: String,
+}
+
 #[derive(Clone, Copy, Serialize, PartialEq, Eq, Debug)]
 #[serde(rename_all = "lowercase")]
 enum StepStatus {
@@ -226,7 +232,7 @@ fn main() {
     };
 
     let now = Utc::now();
-    let summary = match resolve_summary(cli.summary.as_deref(), &state, now) {
+    let summary = match resolve_summary(cli.summary.as_deref(), &cli.repo_root, &state, now) {
         Ok(summary) => summary,
         Err(error) => {
             eprintln!("Error: {}", error);
@@ -301,6 +307,7 @@ fn validate_cli_flags(cli: &Cli) -> Result<(), String> {
 
 fn resolve_summary(
     provided_summary: Option<&str>,
+    repo_root: &Path,
     state: &StateJson,
     now: DateTime<Utc>,
 ) -> Result<String, String> {
@@ -308,7 +315,7 @@ fn resolve_summary(
         return Ok(summary.to_string());
     }
 
-    derive_cycle_summary(state, now)
+    derive_cycle_summary(repo_root, state, now)
 }
 
 fn read_state_json(repo_root: &Path) -> Result<StateJson, String> {
@@ -318,54 +325,47 @@ fn read_state_json(repo_root: &Path) -> Result<StateJson, String> {
         .map_err(|error| format!("failed to parse {}: {}", state_path.display(), error))
 }
 
-fn derive_cycle_summary(state: &StateJson, now: DateTime<Utc>) -> Result<String, String> {
+fn derive_cycle_summary(
+    repo_root: &Path,
+    state: &StateJson,
+    now: DateTime<Utc>,
+) -> Result<String, String> {
     let cycle_start = cycle_window_start(state)?;
     if cycle_start > now {
         return Err("cycle summary window start is in the future".to_string());
     }
 
+    let commits = read_git_receipt_commits(repo_root, cycle_start, now)?;
     let mut dispatches = 0usize;
     let mut merged_prs = BTreeSet::new();
+    let mut merges = 0usize;
 
-    for session in &state.agent_sessions {
-        let issue_label = session_issue_label(session.issue);
-
-        if let Some(dispatched_at) = session.dispatched_at.as_deref() {
-            let dispatched_at = parse_timestamp(
-                dispatched_at,
-                &format!("agent_sessions {issue_label} dispatched_at"),
-            )?;
-            if timestamp_in_cycle_window(dispatched_at, cycle_start, now) {
-                dispatches += 1;
-            }
-        }
-
-        if session.status.as_deref() != Some("merged") {
+    for commit in commits {
+        if !timestamp_in_cycle_window(commit.committed_at, cycle_start, now) {
             continue;
         }
 
-        let merged_at = session.merged_at.as_deref().ok_or_else(|| {
-            format!("agent_sessions {issue_label} has status merged but is missing merged_at")
-        })?;
-        let merged_at = parse_timestamp(
-            merged_at,
-            &format!("agent_sessions {issue_label} merged_at"),
-        )?;
-        if !timestamp_in_cycle_window(merged_at, cycle_start, now) {
+        if commit.subject.starts_with("state(record-dispatch):") {
+            dispatches += 1;
             continue;
         }
 
-        let pr = session.pr.ok_or_else(|| {
-            format!("agent_sessions {issue_label} merged this cycle is missing pr")
-        })?;
-        if pr <= 0 {
-            return Err(format!("agent_sessions {issue_label} has invalid pr {pr}"));
+        if !commit.subject.starts_with("state(process-merge):") {
+            continue;
         }
-        merged_prs.insert(pr);
+
+        merges += 1;
+        if let Some(pr) = extract_merge_pr_number(&commit.subject) {
+            merged_prs.insert(pr);
+        }
     }
 
-    if merged_prs.is_empty() {
+    if merges == 0 {
         return Ok(format!("{dispatches} dispatches, 0 merges"));
+    }
+
+    if merged_prs.len() != merges {
+        return Ok(format!("{dispatches} dispatches, {merges} merges"));
     }
 
     let merged_list = merged_prs
@@ -374,15 +374,62 @@ fn derive_cycle_summary(state: &StateJson, now: DateTime<Utc>) -> Result<String,
         .collect::<Vec<_>>()
         .join(", ");
     Ok(format!(
-        "{dispatches} dispatches, {} merges ({merged_list})",
-        merged_prs.len()
+        "{dispatches} dispatches, {merges} merges ({merged_list})"
     ))
 }
 
-fn session_issue_label(issue: Option<i64>) -> String {
-    issue
-        .map(|issue| format!("issue {issue}"))
-        .unwrap_or_else(|| "issue <unknown>".to_string())
+fn read_git_receipt_commits(
+    repo_root: &Path,
+    cycle_start: DateTime<Utc>,
+    now: DateTime<Utc>,
+) -> Result<Vec<GitReceiptCommit>, String> {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(repo_root)
+        .args([
+            "log",
+            "--date=iso-strict",
+            "--pretty=format:%cI%x09%s",
+            "--since",
+            &cycle_start.to_rfc3339(),
+            "--until",
+            &now.to_rfc3339(),
+        ])
+        .output()
+        .map_err(|error| format!("failed to execute git log for cycle summary: {}", error))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(format!("git log for cycle summary failed: {}", stderr));
+    }
+
+    String::from_utf8(output.stdout)
+        .map_err(|error| format!("failed to decode git log output as UTF-8: {}", error))?
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .map(parse_git_receipt_line)
+        .collect()
+}
+
+fn parse_git_receipt_line(line: &str) -> Result<GitReceiptCommit, String> {
+    let (timestamp, subject) = line
+        .split_once('\t')
+        .ok_or_else(|| format!("invalid git log line for cycle summary: {}", line))?;
+    Ok(GitReceiptCommit {
+        committed_at: parse_timestamp(timestamp, "git commit timestamp")?,
+        subject: subject.to_string(),
+    })
+}
+
+fn extract_merge_pr_number(subject: &str) -> Option<i64> {
+    let pr_fragment = subject.split("PR #").nth(1)?;
+    let digits: String = pr_fragment
+        .chars()
+        .take_while(|character| character.is_ascii_digit())
+        .collect();
+    if digits.is_empty() {
+        return None;
+    }
+    digits.parse::<i64>().ok().filter(|pr| *pr > 0)
 }
 
 fn cycle_window_start(state: &StateJson) -> Result<DateTime<Utc>, String> {
@@ -1283,24 +1330,15 @@ mod tests {
         }
     }
 
-    fn state_with_agent_sessions_at(
-        last_cycle_timestamp: &str,
-        phase_entered_at: &str,
-        agent_sessions: Value,
-    ) -> StateJson {
+    fn state_with_cycle_window_at(last_cycle_timestamp: &str, phase_entered_at: &str) -> StateJson {
         let mut state = StateJson::default();
         state.cycle_phase.phase_entered_at = Some(phase_entered_at.to_string());
         state.last_cycle.timestamp = Some(last_cycle_timestamp.to_string());
-        state.agent_sessions = serde_json::from_value(agent_sessions).unwrap();
         state
     }
 
-    fn state_with_agent_sessions(agent_sessions: Value) -> StateJson {
-        state_with_agent_sessions_at(
-            "2026-03-05T04:00:00Z",
-            "2026-03-05T04:00:00Z",
-            agent_sessions,
-        )
+    fn state_with_cycle_window() -> StateJson {
+        state_with_cycle_window_at("2026-03-05T04:00:00Z", "2026-03-05T04:00:00Z")
     }
 
     fn temp_repo_root(test_name: &str) -> PathBuf {
@@ -1312,8 +1350,59 @@ mod tests {
             "cycle-complete-{test_name}-{}-{unique}",
             std::process::id()
         ));
-        std::fs::create_dir_all(path.join("docs")).expect("failed to create temp repo docs directory");
+        std::fs::create_dir_all(path.join("docs"))
+            .expect("failed to create temp repo docs directory");
         path
+    }
+
+    fn init_git_repo(repo_root: &Path) {
+        let status = Command::new("git")
+            .arg("-C")
+            .arg(repo_root)
+            .args(["init", "-b", "master"])
+            .status()
+            .expect("git init should run");
+        assert!(status.success(), "git init should succeed");
+
+        for (key, value) in [
+            ("user.name", "Copilot Test"),
+            ("user.email", "copilot@example.com"),
+        ] {
+            let status = Command::new("git")
+                .arg("-C")
+                .arg(repo_root)
+                .args(["config", key, value])
+                .status()
+                .expect("git config should run");
+            assert!(status.success(), "git config should succeed");
+        }
+    }
+
+    fn commit_receipt(
+        repo_root: &Path,
+        file_name: &str,
+        contents: &str,
+        subject: &str,
+        timestamp: &str,
+    ) {
+        std::fs::write(repo_root.join(file_name), contents).expect("test file should write");
+        let add_status = Command::new("git")
+            .arg("-C")
+            .arg(repo_root)
+            .args(["add", file_name])
+            .status()
+            .expect("git add should run");
+        assert!(add_status.success(), "git add should succeed");
+
+        let commit_status = Command::new("git")
+            .arg("-C")
+            .arg(repo_root)
+            .env("GIT_AUTHOR_DATE", timestamp)
+            .env("GIT_COMMITTER_DATE", timestamp)
+            .args(["commit", "-m", subject])
+            .status()
+            .expect("git commit should run");
+        assert!(commit_status.success(), "git commit should succeed");
     }
 
     #[test]
@@ -1602,123 +1691,161 @@ mod tests {
 
     #[test]
     fn resolve_summary_auto_derives_dispatches_with_zero_merges() {
-        let state = state_with_agent_sessions(json!([
-            {
-                "issue": 1,
-                "status": "in_flight",
-                "dispatched_at": "2026-03-05T04:15:00Z"
-            },
-            {
-                "issue": 2,
-                "status": "in_flight",
-                "dispatched_at": "2026-03-05T04:30:00Z"
-            },
-            // Excluded because the dispatch happened before the cycle window start.
-            {
-                "issue": 3,
-                "status": "in_flight",
-                "dispatched_at": "2026-03-05T03:45:00Z"
-            }
-        ]));
+        let repo_root = temp_repo_root("receipt-summary-dispatches");
+        init_git_repo(&repo_root);
+        commit_receipt(
+            &repo_root,
+            "notes.txt",
+            "before window\n",
+            "state(record-dispatch): #3 dispatched before window [cycle 153]",
+            "2026-03-05T03:45:00Z",
+        );
+        commit_receipt(
+            &repo_root,
+            "notes.txt",
+            "dispatch 1\n",
+            "state(record-dispatch): #1 dispatched during work [cycle 153]",
+            "2026-03-05T04:15:00Z",
+        );
+        commit_receipt(
+            &repo_root,
+            "notes.txt",
+            "dispatch 2\n",
+            "state(record-dispatch): #2 dispatched during work [cycle 153]",
+            "2026-03-05T04:30:00Z",
+        );
 
-        let summary = resolve_summary(None, &state, fixed_now()).unwrap();
+        let summary =
+            resolve_summary(None, &repo_root, &state_with_cycle_window(), fixed_now()).unwrap();
 
         assert_eq!(summary, "2 dispatches, 0 merges");
     }
 
     #[test]
     fn resolve_summary_counts_pre_cycle_start_activity_after_previous_cycle_close() {
-        let state = state_with_agent_sessions_at(
-            "2026-03-05T03:00:00Z",
-            "2026-03-05T04:00:00Z",
-            json!([
-                {
-                    "issue": 1804,
-                    "status": "in_flight",
-                    "dispatched_at": "2026-03-05T03:15:00Z"
-                },
-                {
-                    "issue": 1805,
-                    "status": "merged",
-                    "pr": 1801,
-                    "dispatched_at": "2026-03-05T03:29:00Z",
-                    "merged_at": "2026-03-05T03:20:48Z"
-                },
-                {
-                    "issue": 1806,
-                    "status": "in_flight",
-                    "dispatched_at": "2026-03-05T02:45:00Z"
-                }
-            ]),
+        let repo_root = temp_repo_root("receipt-summary-window-start");
+        init_git_repo(&repo_root);
+        commit_receipt(
+            &repo_root,
+            "notes.txt",
+            "before cycle start\n",
+            "state(record-dispatch): #1806 dispatched before cycle start [cycle 153]",
+            "2026-03-05T02:45:00Z",
+        );
+        commit_receipt(
+            &repo_root,
+            "notes.txt",
+            "dispatch\n",
+            "state(record-dispatch): #1804 dispatched during work [cycle 153]",
+            "2026-03-05T03:15:00Z",
+        );
+        commit_receipt(
+            &repo_root,
+            "notes.txt",
+            "merge\n",
+            "state(process-merge): merged PR #1801 [cycle 153]",
+            "2026-03-05T03:20:48Z",
+        );
+        commit_receipt(
+            &repo_root,
+            "notes.txt",
+            "dispatch two\n",
+            "state(record-dispatch): #1805 dispatched during work [cycle 153]",
+            "2026-03-05T03:29:00Z",
         );
 
-        let summary = resolve_summary(None, &state, fixed_now()).unwrap();
+        let state = state_with_cycle_window_at("2026-03-05T03:00:00Z", "2026-03-05T04:00:00Z");
+        let summary = resolve_summary(None, &repo_root, &state, fixed_now()).unwrap();
 
         assert_eq!(summary, "2 dispatches, 1 merges (PR #1801)");
     }
 
     #[test]
     fn resolve_summary_auto_derives_multiple_merges_and_prs() {
-        let state = state_with_agent_sessions(json!([
-            {
-                "issue": 1,
-                "status": "merged",
-                "pr": 44,
-                "dispatched_at": "2026-03-05T04:01:00Z",
-                "merged_at": "2026-03-05T04:20:00Z"
-            },
-            {
-                "issue": 2,
-                "status": "merged",
-                "pr": 42,
-                "dispatched_at": "2026-03-05T04:30:00Z",
-                "merged_at": "2026-03-05T05:00:00Z"
-            },
-            {
-                "issue": 3,
-                "status": "merged",
-                "pr": 50,
-                "dispatched_at": "2026-03-05T03:30:00Z",
-                "merged_at": "2026-03-05T04:45:00Z"
-            },
-            // Counted as a dispatch but excluded from merges because it lands after `fixed_now()`.
-            {
-                "issue": 4,
-                "status": "merged",
-                "pr": 60,
-                "dispatched_at": "2026-03-05T04:35:00Z",
-                "merged_at": "2026-03-05T05:10:00Z"
-            }
-        ]));
+        let repo_root = temp_repo_root("receipt-summary-multiple-merges");
+        init_git_repo(&repo_root);
+        for (contents, subject, timestamp) in [
+            (
+                "dispatch 44\n",
+                "state(record-dispatch): #1 dispatched during work [cycle 153]",
+                "2026-03-05T04:01:00Z",
+            ),
+            (
+                "dispatch 50\n",
+                "state(record-dispatch): #3 dispatched during work [cycle 153]",
+                "2026-03-05T04:10:00Z",
+            ),
+            (
+                "merge 44\n",
+                "state(process-merge): merged PR #44 [cycle 153]",
+                "2026-03-05T04:20:00Z",
+            ),
+            (
+                "dispatch 42\n",
+                "state(record-dispatch): #2 dispatched during work [cycle 153]",
+                "2026-03-05T04:30:00Z",
+            ),
+            (
+                "merge 50\n",
+                "state(process-merge): merged PR #50 [cycle 153]",
+                "2026-03-05T04:45:00Z",
+            ),
+            (
+                "merge 42\n",
+                "state(process-merge): merged PR #42 [cycle 153]",
+                "2026-03-05T05:00:00Z",
+            ),
+            (
+                "after now\n",
+                "state(process-merge): merged PR #60 [cycle 153]",
+                "2026-03-05T05:10:00Z",
+            ),
+        ] {
+            commit_receipt(&repo_root, "notes.txt", contents, subject, timestamp);
+        }
 
-        let summary = resolve_summary(None, &state, fixed_now()).unwrap();
+        let summary =
+            resolve_summary(None, &repo_root, &state_with_cycle_window(), fixed_now()).unwrap();
 
         assert_eq!(summary, "3 dispatches, 3 merges (PR #42, PR #44, PR #50)");
     }
 
     #[test]
     fn resolve_summary_prefers_manual_override() {
-        let summary =
-            resolve_summary(Some("manual summary"), &StateJson::default(), fixed_now()).unwrap();
+        let summary = resolve_summary(
+            Some("manual summary"),
+            Path::new("."),
+            &StateJson::default(),
+            fixed_now(),
+        )
+        .unwrap();
 
         assert_eq!(summary, "manual summary");
     }
 
     #[test]
-    fn resolve_summary_fails_closed_for_merged_session_without_merged_at() {
-        let state = state_with_agent_sessions(json!([
-            {
-                "issue": 7,
-                "status": "merged",
-                "pr": 77,
-                "dispatched_at": "2026-03-05T04:15:00Z"
-            }
-        ]));
+    fn resolve_summary_uses_receipts_even_when_agent_sessions_are_empty() {
+        let repo_root = temp_repo_root("receipt-summary-empty-agent-sessions");
+        init_git_repo(&repo_root);
+        commit_receipt(
+            &repo_root,
+            "notes.txt",
+            "dispatch\n",
+            "state(record-dispatch): #77 dispatched during work [cycle 153]",
+            "2026-03-05T04:15:00Z",
+        );
+        commit_receipt(
+            &repo_root,
+            "notes.txt",
+            "merge\n",
+            "state(process-merge): merged PR #77 [cycle 153]",
+            "2026-03-05T04:25:00Z",
+        );
 
-        let error = resolve_summary(None, &state, fixed_now()).unwrap_err();
+        let summary =
+            resolve_summary(None, &repo_root, &state_with_cycle_window(), fixed_now()).unwrap();
 
-        assert!(error.contains("issue 7"));
-        assert!(error.contains("missing merged_at"));
+        assert_eq!(summary, "1 dispatches, 1 merges (PR #77)");
     }
 
     #[test]

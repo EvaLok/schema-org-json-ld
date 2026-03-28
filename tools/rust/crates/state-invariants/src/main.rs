@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use clap::Parser;
 use serde::Serialize;
 use serde_json::Value;
@@ -5,6 +6,7 @@ use state_schema::{StateJson, VALID_PHASES};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 #[derive(Parser)]
 #[command(name = "state-invariants")]
@@ -41,6 +43,12 @@ struct Report {
     failed: usize,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct GitCommit {
+    committed_at: DateTime<Utc>,
+    subject: String,
+}
+
 fn main() {
     let cli = Cli::parse();
 
@@ -52,7 +60,7 @@ fn main() {
         }
     };
 
-    let report = run_checks(&state);
+    let report = run_checks(&cli.repo_root, &state);
 
     if cli.json {
         match serde_json::to_string_pretty(&report) {
@@ -77,7 +85,7 @@ fn read_state_json(repo_root: &Path) -> Result<StateJson, String> {
         .map_err(|error| format!("failed to parse {}: {}", state_path.display(), error))
 }
 
-fn run_checks(state: &StateJson) -> Report {
+fn run_checks(repo_root: &Path, state: &StateJson) -> Report {
     let checks = vec![
         check_review_agent_pointer(state),
         check_review_history_accounting(state),
@@ -85,6 +93,7 @@ fn run_checks(state: &StateJson) -> Report {
         check_blockers_narrative(state),
         check_publish_gate_consistency(state),
         check_last_cycle_consistency(state),
+        check_last_cycle_summary_receipts(repo_root, state),
         check_future_cycle_freshness(state),
         check_cycle_phase_consistency(state),
         check_chronic_categories(state),
@@ -248,11 +257,21 @@ fn check_review_history_accounting(state: &StateJson) -> CheckResult {
         }
 
         // 5-status fields are optional (default 0) for backward compatibility
-        let actioned_failed = entry.get("actioned_failed").and_then(Value::as_i64).unwrap_or(0);
-        let dispatch_created = entry.get("dispatch_created").and_then(Value::as_i64).unwrap_or(0);
-        let verified_resolved = entry.get("verified_resolved").and_then(Value::as_i64).unwrap_or(0);
+        let actioned_failed = entry
+            .get("actioned_failed")
+            .and_then(Value::as_i64)
+            .unwrap_or(0);
+        let dispatch_created = entry
+            .get("dispatch_created")
+            .and_then(Value::as_i64)
+            .unwrap_or(0);
+        let verified_resolved = entry
+            .get("verified_resolved")
+            .and_then(Value::as_i64)
+            .unwrap_or(0);
 
-        let accounted = actioned + deferred + ignored + actioned_failed + dispatch_created + verified_resolved;
+        let accounted =
+            actioned + deferred + ignored + actioned_failed + dispatch_created + verified_resolved;
         if accounted != finding_count {
             failures.push(format!(
                 "review_agent.history[{}] actioned({}) + deferred({}) + ignored({}) + actioned_failed({}) + dispatch_created({}) + verified_resolved({}) != finding_count({})",
@@ -498,6 +517,151 @@ fn check_last_cycle_consistency(state: &StateJson) -> CheckResult {
     pass("last_cycle_consistency")
 }
 
+fn check_last_cycle_summary_receipts(repo_root: &Path, state: &StateJson) -> CheckResult {
+    let Some(summary) = state.last_cycle.summary.as_deref() else {
+        return warn(
+            "last_cycle_summary_receipts",
+            "missing field: last_cycle.summary",
+        );
+    };
+    if !summary_has_zero_dispatches_and_merges(summary) {
+        return pass("last_cycle_summary_receipts");
+    }
+
+    let cycle = match state.last_cycle.extra.get("number").and_then(Value::as_u64) {
+        Some(value) if value > 0 => value,
+        Some(_) => {
+            return fail(
+                "last_cycle_summary_receipts",
+                "last_cycle.number must be a positive integer to verify receipt-backed summary"
+                    .to_string(),
+            )
+        }
+        None => {
+            return warn(
+                "last_cycle_summary_receipts",
+                "missing field: last_cycle.number",
+            )
+        }
+    };
+
+    match count_receipt_activity_for_cycle(repo_root, cycle) {
+        Ok((dispatches, merges)) if dispatches == 0 && merges == 0 => {
+            pass("last_cycle_summary_receipts")
+        }
+        Ok((dispatches, merges)) => fail(
+            "last_cycle_summary_receipts",
+            format!(
+                "last_cycle.summary reports 0 dispatches and 0 merges, but canonical receipts for cycle {} show {} dispatches and {} merges",
+                cycle, dispatches, merges
+            ),
+        ),
+        Err(error) => fail("last_cycle_summary_receipts", error),
+    }
+}
+
+fn summary_has_zero_dispatches_and_merges(summary: &str) -> bool {
+    summary.trim().starts_with("0 dispatches, 0 merges")
+}
+
+fn count_receipt_activity_for_cycle(
+    repo_root: &Path,
+    cycle: u64,
+) -> Result<(usize, usize), String> {
+    let commits = read_git_commits(repo_root)?;
+    let start = find_cycle_start_timestamp(&commits, cycle).ok_or_else(|| {
+        format!(
+            "could not find cycle-start commit for cycle {} while validating receipt-backed summary",
+            cycle
+        )
+    })?;
+    let end = find_cycle_start_timestamp(&commits, cycle + 1);
+    let candidate_commits: Vec<&GitCommit> = commits
+        .iter()
+        .filter(|commit| commit.committed_at >= start)
+        .filter(|commit| end.is_none_or(|timestamp| commit.committed_at < timestamp))
+        .collect();
+    let cycle_complete_at = candidate_commits
+        .iter()
+        .filter(|commit| commit.subject.starts_with("state(cycle-complete):"))
+        .map(|commit| commit.committed_at)
+        .min();
+
+    let dispatches = candidate_commits
+        .iter()
+        .filter(|commit| commit.subject.starts_with("state(record-dispatch):"))
+        .filter(|commit| {
+            !(cycle_complete_at.is_some_and(|timestamp| commit.committed_at >= timestamp))
+        })
+        .count();
+    let merges = candidate_commits
+        .iter()
+        .filter(|commit| commit.subject.starts_with("state(process-merge):"))
+        .count();
+
+    Ok((dispatches, merges))
+}
+
+fn read_git_commits(repo_root: &Path) -> Result<Vec<GitCommit>, String> {
+    let output = git_command(
+        repo_root,
+        &["log", "--date=iso-strict", "--pretty=format:%cI%x09%s"],
+    )?;
+    output
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .map(parse_git_commit_line)
+        .collect()
+}
+
+fn git_command(repo_root: &Path, args: &[&str]) -> Result<String, String> {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(repo_root)
+        .args(args)
+        .output()
+        .map_err(|error| format!("failed to execute git {}: {}", args.join(" "), error))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(format!("git {} failed: {}", args.join(" "), stderr));
+    }
+
+    String::from_utf8(output.stdout).map_err(|error| {
+        format!(
+            "failed to decode git {} output as UTF-8: {}",
+            args.join(" "),
+            error
+        )
+    })
+}
+
+fn parse_git_commit_line(line: &str) -> Result<GitCommit, String> {
+    let (timestamp, subject) = line
+        .split_once('\t')
+        .ok_or_else(|| format!("invalid git log line (missing timestamp/subject): {}", line))?;
+    Ok(GitCommit {
+        committed_at: parse_timestamp(timestamp, "git commit timestamp")?,
+        subject: subject.to_string(),
+    })
+}
+
+fn parse_timestamp(value: &str, label: &str) -> Result<DateTime<Utc>, String> {
+    DateTime::parse_from_rfc3339(value)
+        .map(|timestamp| timestamp.with_timezone(&Utc))
+        .map_err(|error| format!("invalid {}: {}", label, error))
+}
+
+fn find_cycle_start_timestamp(commits: &[GitCommit], cycle: u64) -> Option<DateTime<Utc>> {
+    let cycle_tag = format!("[cycle {}]", cycle);
+    commits.iter().rev().find_map(|commit| {
+        if commit.subject.starts_with("state(cycle-start):") && commit.subject.contains(&cycle_tag)
+        {
+            return Some(commit.committed_at);
+        }
+        None
+    })
+}
+
 fn check_future_cycle_freshness(state: &StateJson) -> CheckResult {
     let current_cycle_number = match state.last_cycle.extra.get("number").and_then(Value::as_i64) {
         Some(value) => value,
@@ -539,7 +703,12 @@ fn check_future_cycle_freshness(state: &StateJson) -> CheckResult {
 fn check_cycle_phase_consistency(state: &StateJson) -> CheckResult {
     let phase = match state.cycle_phase.phase.as_deref() {
         Some(value) => value,
-        None => return warn("cycle_phase_consistency", "missing field: cycle_phase.phase"),
+        None => {
+            return warn(
+                "cycle_phase_consistency",
+                "missing field: cycle_phase.phase",
+            )
+        }
     };
 
     if !VALID_PHASES.contains(&phase) {
@@ -554,11 +723,21 @@ fn check_cycle_phase_consistency(state: &StateJson) -> CheckResult {
 
     let cycle = match state.cycle_phase.cycle {
         Some(value) => value,
-        None => return warn("cycle_phase_consistency", "missing field: cycle_phase.cycle"),
+        None => {
+            return warn(
+                "cycle_phase_consistency",
+                "missing field: cycle_phase.cycle",
+            )
+        }
     };
     let last_cycle_number = match state.last_cycle.extra.get("number").and_then(Value::as_u64) {
         Some(value) => value,
-        None => return warn("cycle_phase_consistency", "missing field: last_cycle.number"),
+        None => {
+            return warn(
+                "cycle_phase_consistency",
+                "missing field: last_cycle.number",
+            )
+        }
     };
 
     if cycle != last_cycle_number {
@@ -881,7 +1060,12 @@ fn check_chronic_intermediate_state(state: &StateJson) -> CheckResult {
 fn check_pending_audit_deadlines(state: &StateJson) -> CheckResult {
     let current_cycle = match state.last_cycle.extra.get("number").and_then(Value::as_u64) {
         Some(value) => value,
-        None => return warn("pending_audit_deadlines", "missing field: last_cycle.number"),
+        None => {
+            return warn(
+                "pending_audit_deadlines",
+                "missing field: last_cycle.number",
+            )
+        }
     };
 
     let failures: Vec<String> = state
@@ -945,12 +1129,17 @@ fn check_review_events_verified(state: &StateJson) -> CheckResult {
 
     // Cross-check: field_inventory freshness must not claim verification beyond the actual value
     // This catches the chronic pattern of bumping freshness markers without actual verification
-    if let Some(fi) = state.field_inventory.fields
+    if let Some(fi) = state
+        .field_inventory
+        .fields
         .get("review_events_verified_through_cycle")
         .and_then(|entry| entry.get("last_refreshed"))
         .and_then(Value::as_str)
     {
-        if let Some(refreshed_cycle) = fi.strip_prefix("cycle ").and_then(|s| s.parse::<i64>().ok()) {
+        if let Some(refreshed_cycle) = fi
+            .strip_prefix("cycle ")
+            .and_then(|s| s.parse::<i64>().ok())
+        {
             // If freshness claims cycle N but value is < N-1, the freshness marker was bumped without verification
             if verified_through_cycle < refreshed_cycle - 1 {
                 return fail(
@@ -1040,7 +1229,11 @@ fn count_in_flight_agent_sessions(state: &StateJson) -> Result<i64, String> {
 }
 
 fn check_in_flight_sessions_consistency(state: &StateJson) -> CheckResult {
-    let actual = match state.extra.get("in_flight_sessions").and_then(Value::as_i64) {
+    let actual = match state
+        .extra
+        .get("in_flight_sessions")
+        .and_then(Value::as_i64)
+    {
         Some(value) => value,
         None => {
             return warn(
@@ -1155,14 +1348,24 @@ fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
 }
 
 fn check_eva_input_overlap(state: &StateJson) -> CheckResult {
-    let closed_this: HashSet<i64> = state.eva_input_issues.closed_this_cycle.iter().copied().collect();
+    let closed_this: HashSet<i64> = state
+        .eva_input_issues
+        .closed_this_cycle
+        .iter()
+        .copied()
+        .collect();
     let closed_prior: HashSet<i64> = state
         .eva_input_issues
         .closed_prior_cycles
         .iter()
         .copied()
         .collect();
-    let remaining: HashSet<i64> = state.eva_input_issues.remaining_open.iter().copied().collect();
+    let remaining: HashSet<i64> = state
+        .eva_input_issues
+        .remaining_open
+        .iter()
+        .copied()
+        .collect();
 
     let mut problems = Vec::new();
 
@@ -1244,6 +1447,7 @@ fn print_human_report(report: &Report) {
         ("blockers_narrative", "blockers narrative"),
         ("publish_gate_consistency", "publish_gate consistency"),
         ("last_cycle_consistency", "last_cycle consistency"),
+        ("last_cycle_summary_receipts", "last_cycle summary receipts"),
         ("future_cycle_freshness", "future cycle freshness"),
         ("cycle_phase_consistency", "cycle_phase consistency"),
         ("chronic_categories", "chronic categories"),
@@ -1300,6 +1504,69 @@ mod tests {
 
     fn state_from_json(value: Value) -> StateJson {
         serde_json::from_value(value).expect("state should deserialize")
+    }
+
+    fn temp_repo_root(test_name: &str) -> PathBuf {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let repo_root = std::env::temp_dir().join(format!(
+            "state-invariants-{}-{}-{}",
+            test_name,
+            std::process::id(),
+            run_id
+        ));
+        fs::create_dir_all(repo_root.join("docs")).expect("docs directory should exist");
+        repo_root
+    }
+
+    fn init_git_repo(repo_root: &Path) {
+        let status = Command::new("git")
+            .arg("-C")
+            .arg(repo_root)
+            .args(["init", "-b", "master"])
+            .status()
+            .expect("git init should run");
+        assert!(status.success(), "git init should succeed");
+
+        for (key, value) in [
+            ("user.name", "Copilot Test"),
+            ("user.email", "copilot@example.com"),
+        ] {
+            let status = Command::new("git")
+                .arg("-C")
+                .arg(repo_root)
+                .args(["config", key, value])
+                .status()
+                .expect("git config should run");
+            assert!(status.success(), "git config should succeed");
+        }
+    }
+
+    fn commit_receipt(
+        repo_root: &Path,
+        file_name: &str,
+        contents: &str,
+        subject: &str,
+        timestamp: &str,
+    ) {
+        fs::write(repo_root.join(file_name), contents).expect("test file should write");
+        let add_status = Command::new("git")
+            .arg("-C")
+            .arg(repo_root)
+            .args(["add", file_name])
+            .status()
+            .expect("git add should run");
+        assert!(add_status.success(), "git add should succeed");
+
+        let commit_status = Command::new("git")
+            .arg("-C")
+            .arg(repo_root)
+            .env("GIT_AUTHOR_DATE", timestamp)
+            .env("GIT_COMMITTER_DATE", timestamp)
+            .args(["commit", "-m", subject])
+            .status()
+            .expect("git commit should run");
+        assert!(commit_status.success(), "git commit should succeed");
     }
 
     fn minimal_valid_state() -> Value {
@@ -1456,6 +1723,46 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("positive integer"));
+    }
+
+    #[test]
+    fn last_cycle_summary_receipts_fail_when_zero_summary_hides_receipt_activity() {
+        let repo_root = temp_repo_root("summary-receipts-mismatch");
+        init_git_repo(&repo_root);
+        commit_receipt(
+            &repo_root,
+            "notes.txt",
+            "cycle start\n",
+            "state(cycle-start): begin cycle 198 [cycle 198]",
+            "2026-03-09T01:00:00Z",
+        );
+        commit_receipt(
+            &repo_root,
+            "notes.txt",
+            "dispatch\n",
+            "state(record-dispatch): #123 dispatched during work [cycle 198]",
+            "2026-03-09T01:05:00Z",
+        );
+        commit_receipt(
+            &repo_root,
+            "notes.txt",
+            "merge\n",
+            "state(process-merge): merged PR #456 [cycle 198]",
+            "2026-03-09T01:10:00Z",
+        );
+
+        let mut value = minimal_valid_state();
+        value["last_cycle"]["number"] = json!(198);
+        value["last_cycle"]["summary"] = json!("0 dispatches, 0 merges");
+
+        let state = state_from_json(value);
+        let check = check_last_cycle_summary_receipts(&repo_root, &state);
+        assert_eq!(check.status, CheckStatus::Fail);
+
+        let details = check.details.as_deref().unwrap_or_default();
+        assert!(details.contains("cycle 198"));
+        assert!(details.contains("1 dispatches"));
+        assert!(details.contains("1 merges"));
     }
 
     #[test]
@@ -2069,7 +2376,7 @@ mod tests {
         });
 
         let state = state_from_json(value);
-        let report = run_checks(&state);
+        let report = run_checks(Path::new("."), &state);
         let check = report
             .checks
             .iter()
@@ -2170,42 +2477,53 @@ mod tests {
     #[test]
     fn run_checks_includes_chronic_verification_deadline_and_agent_sessions_checks() {
         let state = state_from_json(minimal_valid_state());
-        let report = run_checks(&state);
+        let report = run_checks(Path::new("."), &state);
 
-        assert_eq!(report.checks.len(), 16);
+        assert_eq!(report.checks.len(), 17);
         assert_eq!(
             report.checks.get(7).map(|check| check.name),
+            Some("future_cycle_freshness")
+        );
+        assert_eq!(
+            report.checks.get(8).map(|check| check.name),
             Some("cycle_phase_consistency")
         );
         assert_eq!(
-            report.checks.get(9).map(|check| check.name),
-            Some("chronic_verification_deadline")
+            report.checks.get(6).map(|check| check.name),
+            Some("last_cycle_summary_receipts")
         );
         assert_eq!(
             report.checks.get(10).map(|check| check.name),
-            Some("chronic_intermediate_state")
-        );
-        assert_eq!(
-            report.checks.get(10).map(|check| check.status),
-            Some(CheckStatus::Pass)
+            Some("chronic_verification_deadline")
         );
         assert_eq!(
             report.checks.get(11).map(|check| check.name),
-            Some("review_events_verified")
+            Some("chronic_intermediate_state")
+        );
+        assert_eq!(
+            report.checks.get(11).map(|check| check.status),
+            Some(CheckStatus::Pass)
         );
         assert_eq!(
             report.checks.get(12).map(|check| check.name),
-            Some("in_flight_sessions_consistency")
+            Some("review_events_verified")
         );
         assert_eq!(
             report.checks.get(13).map(|check| check.name),
-            Some("pending_audit_deadlines")
+            Some("in_flight_sessions_consistency")
         );
         assert_eq!(
             report.checks.get(14).map(|check| check.name),
+            Some("pending_audit_deadlines")
+        );
+        assert_eq!(
+            report.checks.get(15).map(|check| check.name),
             Some("agent_sessions_reconciliation")
         );
-        assert_eq!(report.checks.last().map(|check| check.name), Some("eva_input_overlap"));
+        assert_eq!(
+            report.checks.last().map(|check| check.name),
+            Some("eva_input_overlap")
+        );
     }
 
     #[test]
