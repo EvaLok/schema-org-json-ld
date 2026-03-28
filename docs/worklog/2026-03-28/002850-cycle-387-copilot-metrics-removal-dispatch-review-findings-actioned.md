@@ -21,15 +21,15 @@
 
 ## Cycle state
 
-- **In-flight agent sessions**: 1
+- **In-flight agent sessions**: 3
 - **Pipeline status**: PASS (3 warnings)
-- **Copilot metrics**: 616 dispatches, 549 PRs produced, 537 merged, 97.8% PR merge rate
+- **Copilot metrics**: 617 dispatches, 549 PRs produced, 537 merged, 97.8% PR merge rate
 - **Publish gate**: published
 
 ## Next steps
 
-1. Review and iterate on PR from [#1879](https://github.com/EvaLok/schema-org-json-ld/issues/1879) when Copilot completes
-2. Fix pipeline-check current-cycle-steps gate: C-steps should not be required before dispatch
+1. Review and iterate on PR from [#1876](https://github.com/EvaLok/schema-org-json-ld/issues/1876) ([Cycle Review] Cycle 386 end-of-cycle review) when Copilot completes
+2. Review and iterate on PR from [#1881](https://github.com/EvaLok/schema-org-json-ld/issues/1881) ([Cycle Review] Cycle 387 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
