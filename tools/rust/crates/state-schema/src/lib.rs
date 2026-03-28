@@ -44,6 +44,8 @@ pub struct StateJson {
     pub cycle_phase: CyclePhase,
     #[serde(default)]
     pub pending_audit_implementations: Vec<PendingAuditImplementation>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub deferred_findings: Vec<DeferredFinding>,
     pub step_comment_acknowledged_gaps: Option<Vec<StepCommentGap>>,
     #[serde(flatten)]
     pub extra: BTreeMap<String, Value>,
@@ -67,6 +69,19 @@ pub struct PendingAuditImplementation {
     pub completed: bool,
     /// Optional: PR or commit that completed the implementation
     pub completed_ref: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default, rename_all = "snake_case")]
+pub struct DeferredFinding {
+    pub category: String,
+    pub deferred_cycle: u64,
+    pub deadline_cycle: u64,
+    pub resolved: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resolved_ref: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dropped_rationale: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -628,8 +643,8 @@ mod tests {
     use super::{
         commit_state_json, current_cycle_from_state, current_utc_timestamp, default_agent_model,
         read_state_value, set_value_at_pointer, transition_cycle_phase, update_freshness,
-        write_state_value, FindingDisposition, PendingAuditImplementation, ReviewHistoryEntry,
-        StateJson, ToolsConfig, VALID_PHASES,
+        write_state_value, DeferredFinding, FindingDisposition, PendingAuditImplementation,
+        ReviewHistoryEntry, StateJson, ToolsConfig, VALID_PHASES,
     };
     use chrono::DateTime;
     use serde_json::{json, Value};
@@ -1405,6 +1420,42 @@ mod tests {
                 completed: false,
                 completed_ref: None,
             }]
+        );
+    }
+
+    #[test]
+    fn deferred_findings_round_trip_through_state_json() {
+        let state: StateJson = serde_json::from_value(json!({
+            "deferred_findings": [{
+                "category": "review-accounting",
+                "deferred_cycle": 394,
+                "deadline_cycle": 399,
+                "resolved": false
+            }]
+        }))
+        .expect("state should deserialize");
+
+        assert_eq!(
+            state.deferred_findings,
+            vec![DeferredFinding {
+                category: "review-accounting".to_string(),
+                deferred_cycle: 394,
+                deadline_cycle: 399,
+                resolved: false,
+                resolved_ref: None,
+                dropped_rationale: None,
+            }]
+        );
+
+        let value = serde_json::to_value(&state).expect("state should serialize");
+        assert_eq!(
+            value.get("deferred_findings"),
+            Some(&json!([{
+                "category": "review-accounting",
+                "deferred_cycle": 394,
+                "deadline_cycle": 399,
+                "resolved": false
+            }]))
         );
     }
 
