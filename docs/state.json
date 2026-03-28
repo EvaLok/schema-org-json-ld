@@ -6067,7 +6067,7 @@
       },
       "audit_processed": {
         "cadence": "after processing audit issues",
-        "last_refreshed": "cycle 393"
+        "last_refreshed": "cycle 395"
       },
       "blockers": {
         "cadence": "after blocker state changes",
@@ -6084,15 +6084,15 @@
       },
       "dispatch_log_latest": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 394"
+        "last_refreshed": "cycle 395"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 394"
+        "last_refreshed": "cycle 395"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 390"
+        "last_refreshed": "cycle 395"
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
@@ -6104,7 +6104,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 394"
+        "last_refreshed": "cycle 395"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -6156,7 +6156,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 388"
+        "last_refreshed": "cycle 395"
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
@@ -6388,10 +6388,10 @@
           "added_cycle": 209,
           "category": "worklog-accuracy",
           "chosen_path": "structural-fix",
-          "rationale": "Structural fix dispatched: PR #1795 adds C6.5 step to cycle-runner close-out that refreshes worklog state section after review dispatch, so published worklog reflects final cycle state rather than pre-dispatch snapshot. Previously recalibrated (cycle 283) to accept timing-inherent drift, but C6.5 eliminates the primary source of stale state. Verification: next cycle using C6.5 should show worklog state matching post-dispatch reality.",
-          "root_cause": "Worklog state section was written before review dispatch (C6), so published counters (in-flight, dispatch count, metrics) were structurally stale. C6.5 patches the worklog after dispatch to reflect final state.",
-          "updated_cycle": 367,
-          "verification_cycle": 367
+          "rationale": "Third structural fix merged: PR #1914 (cycle 395) extends the addendum pattern to all worklog state fields — in-flight sessions, publish gate, and next steps now use (post-dispatch) addendum lines instead of overwriting pre-dispatch values. Previous fixes: PR #1795 (C6.5 post-dispatch refresh, cycle 367) and PR #1905 (pipeline status immutability, cycle 393). The remaining root cause was mixed-timeline rewriting of non-pipeline fields. Verification: next cycle's review should not contain worklog-accuracy findings related to in-flight, publish gate, or next steps overwriting.",
+          "root_cause": "Worklog state section was written before review dispatch (C6), so published counters were structurally stale. C6.5 patches the worklog after dispatch, but until PR #1914 only pipeline_status used the addendum pattern — other fields were overwritten in place, creating mixed-timeline artifacts.",
+          "updated_cycle": 395,
+          "verification_cycle": 395
         },
         {
           "added_cycle": 243,
