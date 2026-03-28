@@ -5693,6 +5693,13 @@
       "pr": 1902,
       "status": "merged",
       "title": "[Cycle Review] Cycle 391 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-28T10:26:06Z",
+      "issue": 1904,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix pipeline status immutability in cycle-runner close-out"
     }
   ],
   "audit_dropped": [
@@ -5923,7 +5930,7 @@
     "phase": "work",
     "phase_entered_at": "2026-03-28T10:09:49Z"
   },
-  "dispatch_log_latest": "#1901 [Cycle Review] Cycle 391 end-of-cycle review (cycle 391)",
+  "dispatch_log_latest": "#1904 Fix pipeline status immutability in cycle-runner close-out (cycle 392)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6189,7 +6196,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 19,
     "issue": 1903,
@@ -6200,6 +6207,26 @@
   "last_eva_comment_check": "2026-03-28T10:09:49Z",
   "last_tool_audit_cycle": 376,
   "open_questions_for_eva": [],
+  "pending_audit_implementations": [
+    {
+      "accepted_cycle": 391,
+      "audit_issue": 336,
+      "completed": true,
+      "completed_ref": "PR #1900",
+      "deadline_cycle": 396,
+      "description": "Convergence tracking — add deadline enforcement for accepted audit recommendations",
+      "issue": 1897
+    },
+    {
+      "accepted_cycle": 391,
+      "audit_issue": 337,
+      "completed": false,
+      "completed_ref": null,
+      "deadline_cycle": 396,
+      "description": "Pipeline result immutability — treat final C5.5 result as immutable in worklog",
+      "issue": 1898
+    }
+  ],
   "pre_python_clean_cycles": {
     "count": 0,
     "description": "Per Eva directive on #699: 5 consecutive clean cycles (pipeline 5/5 at startup, no bugs, no problems) required before starting Python implementation. Count restarts on any problem.",
@@ -9978,7 +10005,7 @@
     ],
     "last_review_cycle": 391
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 391,
   "schema_status": {
     "directory_layout": {
@@ -10449,26 +10476,6 @@
       "zero_revision_rounds": true
     }
   },
-  "pending_audit_implementations": [
-    {
-      "issue": 1897,
-      "audit_issue": 336,
-      "description": "Convergence tracking — add deadline enforcement for accepted audit recommendations",
-      "accepted_cycle": 391,
-      "deadline_cycle": 396,
-      "completed": true,
-      "completed_ref": "PR #1900"
-    },
-    {
-      "issue": 1898,
-      "audit_issue": 337,
-      "description": "Pipeline result immutability — treat final C5.5 result as immutable in worklog",
-      "accepted_cycle": 391,
-      "deadline_cycle": 396,
-      "completed": false,
-      "completed_ref": null
-    }
-  ],
   "schema_version": 1,
   "step_comment_acknowledged_gaps": [
     {
