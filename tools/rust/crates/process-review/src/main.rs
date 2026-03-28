@@ -3,13 +3,14 @@ use serde::Serialize;
 use serde_json::{json, Value};
 use state_schema::{
     commit_state_json, current_cycle_from_state, read_state_value, set_value_at_pointer,
-    write_state_value, FindingDisposition, StateJson,
+    write_state_value, DeferredFinding, FindingDisposition, StateJson,
 };
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 const MAX_CATEGORY_LENGTH: usize = 40;
+const DEFERRAL_DEADLINE_CYCLES: u64 = 5;
 const VALID_FINDING_DISPOSITIONS: &[&str] = &[
     "actioned",
     "deferred",
@@ -149,7 +150,11 @@ fn run(cli: Cli) -> Result<(), String> {
         }
     })?;
 
-    let patch = build_state_patch(&state_value, parsed_review.cycle, current_cycle, &entry)?;
+    let (patch, warnings) =
+        build_state_patch(&state_value, parsed_review.cycle, current_cycle, &entry)?;
+    for warning in warnings {
+        eprintln!("{}", warning);
+    }
     apply_patch(&mut state_value, &patch)?;
     write_state_value(&cli.repo_root, &state_value)?;
 
@@ -766,7 +771,7 @@ fn build_state_patch(
     review_cycle: u64,
     current_cycle: u64,
     entry: &ReviewHistoryEntry,
-) -> Result<Vec<PatchUpdate>, String> {
+) -> Result<(Vec<PatchUpdate>, Vec<String>), String> {
     let history = state
         .pointer("/review_agent/history")
         .and_then(Value::as_array)
@@ -776,8 +781,10 @@ fn build_state_patch(
     let entry_value = serde_json::to_value(entry)
         .map_err(|error| format!("failed to serialize review history entry: {}", error))?;
     next_history.push(entry_value);
+    let (deferred_findings_patch, warnings) =
+        deferred_findings_patch(state, review_cycle, current_cycle, entry)?;
 
-    Ok(vec![
+    let mut patch = vec![
         PatchUpdate {
             path: "/review_agent/last_review_cycle".to_string(),
             value: json!(review_cycle),
@@ -786,19 +793,134 @@ fn build_state_patch(
             path: "/review_agent/history".to_string(),
             value: Value::Array(next_history),
         },
-        PatchUpdate {
-            path: "/field_inventory/fields/review_agent/last_refreshed".to_string(),
-            value: json!(format!("cycle {}", current_cycle)),
-        },
-    ])
+    ];
+    if let Some(deferred_findings_patch) = deferred_findings_patch {
+        patch.push(deferred_findings_patch);
+    }
+    patch.push(PatchUpdate {
+        path: "/field_inventory/fields/review_agent/last_refreshed".to_string(),
+        value: json!(format!("cycle {}", current_cycle)),
+    });
+
+    Ok((patch, warnings))
 }
 
 fn apply_patch(state: &mut Value, updates: &[PatchUpdate]) -> Result<(), String> {
     for update in updates {
-        set_value_at_pointer(state, &update.path, update.value.clone())?;
+        match set_value_at_pointer(state, &update.path, update.value.clone()) {
+            Ok(_) => continue,
+            Err(_) if insert_missing_top_level_path(state, &update.path, update.value.clone()) => {
+                continue;
+            }
+            Err(error) => return Err(error),
+        }
     }
 
     Ok(())
+}
+
+fn deferred_findings_patch(
+    state: &Value,
+    review_cycle: u64,
+    current_cycle: u64,
+    entry: &ReviewHistoryEntry,
+) -> Result<(Option<PatchUpdate>, Vec<String>), String> {
+    let mut deferred_findings = match state.get("deferred_findings") {
+        Some(Value::Array(_)) => serde_json::from_value::<Vec<DeferredFinding>>(
+            state
+                .get("deferred_findings")
+                .cloned()
+                .expect("deferred_findings presence already checked"),
+        )
+        .map_err(|error| format!("failed to parse deferred_findings from state.json: {}", error))?,
+        Some(_) => return Err("/deferred_findings must be an array when present".to_string()),
+        None => Vec::new(),
+    };
+    let existing_snapshot = deferred_findings.clone();
+    let resolved_ref = format!("docs/reviews/cycle-{}.md", review_cycle);
+
+    let resolved_categories = entry
+        .finding_dispositions
+        .iter()
+        .filter(|disposition| {
+            matches!(
+                disposition.disposition.as_str(),
+                "actioned" | "dispatch_created"
+            )
+        })
+        .map(|disposition| disposition.category.clone())
+        .collect::<BTreeSet<_>>();
+    for category in resolved_categories {
+        if let Some(existing) = deferred_findings
+            .iter_mut()
+            .rev()
+            .find(|finding| finding.category == category && !finding.resolved)
+        {
+            existing.resolved = true;
+            existing.resolved_ref = Some(resolved_ref.clone());
+        }
+    }
+
+    let mut warnings = Vec::new();
+    let deferred_categories = entry
+        .finding_dispositions
+        .iter()
+        .filter(|disposition| disposition.disposition == "deferred")
+        .map(|disposition| disposition.category.clone())
+        .collect::<BTreeSet<_>>();
+    for category in deferred_categories {
+        if deferred_findings.iter().any(|finding| {
+            finding.category == category
+                && !finding.resolved
+                && finding.dropped_rationale.is_none()
+        }) {
+            warnings.push(format!(
+                "warning: category '{}' already has an unresolved deferred finding; keeping the existing entry",
+                category
+            ));
+            continue;
+        }
+
+        deferred_findings.push(DeferredFinding {
+            category,
+            deferred_cycle: current_cycle,
+            deadline_cycle: current_cycle
+                .checked_add(DEFERRAL_DEADLINE_CYCLES)
+                .ok_or_else(|| "current cycle overflowed deadline calculation".to_string())?,
+            resolved: false,
+            resolved_ref: None,
+            dropped_rationale: None,
+        });
+    }
+
+    if state.get("deferred_findings").is_none() && deferred_findings == existing_snapshot {
+        return Ok((None, warnings));
+    }
+
+    let value = serde_json::to_value(&deferred_findings)
+        .map_err(|error| format!("failed to serialize deferred_findings patch: {}", error))?;
+    Ok((
+        Some(PatchUpdate {
+            path: "/deferred_findings".to_string(),
+            value,
+        }),
+        warnings,
+    ))
+}
+
+fn insert_missing_top_level_path(state: &mut Value, path: &str, value: Value) -> bool {
+    let Some(key) = path.strip_prefix('/') else {
+        return false;
+    };
+    if key.contains('/') {
+        return false;
+    }
+
+    let Some(object) = state.as_object_mut() else {
+        return false;
+    };
+    object.insert(key.to_string(), value);
+    true
 }
 
 #[cfg(test)]
@@ -1805,7 +1927,9 @@ mod tests {
             finding_dispositions: Vec::new(),
         };
 
-        let patch = build_state_patch(&state, 163, 163, &entry).expect("patch should build");
+        let (patch, warnings) =
+            build_state_patch(&state, 163, 163, &entry).expect("patch should build");
+        assert!(warnings.is_empty());
         assert_eq!(patch.len(), 3);
         assert_eq!(patch[0].path, "/review_agent/last_review_cycle");
         assert_eq!(patch[1].path, "/review_agent/history");
@@ -1823,6 +1947,138 @@ mod tests {
             history.last().and_then(|value| value.get("cycle")),
             Some(&json!(163))
         );
+    }
+
+    #[test]
+    fn state_patch_generation_tracks_deferred_findings_and_resolves_existing_entries() {
+        let state = json!({
+            "last_cycle": {"number": 163},
+            "review_agent": {
+                "last_review_cycle": 162,
+                "history": []
+            },
+            "deferred_findings": [{
+                "category": "review-accounting",
+                "deferred_cycle": 158,
+                "deadline_cycle": 163,
+                "resolved": false
+            }],
+            "field_inventory": {
+                "fields": {
+                    "review_agent": {"last_refreshed": "cycle 162"}
+                }
+            }
+        });
+
+        let entry = ReviewHistoryEntry {
+            cycle: 163,
+            finding_count: 2,
+            complacency_score: 2,
+            categories: vec![
+                "review-accounting".to_string(),
+                "tooling-contract".to_string(),
+            ],
+            actioned: 1,
+            deferred: 1,
+            dispatch_created: 0,
+            actioned_failed: 0,
+            verified_resolved: 0,
+            ignored: 0,
+            note: None,
+            finding_dispositions: vec![
+                FindingDisposition {
+                    category: "review-accounting".to_string(),
+                    disposition: "actioned".to_string(),
+                },
+                FindingDisposition {
+                    category: "tooling-contract".to_string(),
+                    disposition: "deferred".to_string(),
+                },
+            ],
+        };
+
+        let (patch, warnings) =
+            build_state_patch(&state, 163, 164, &entry).expect("patch should build");
+
+        assert!(warnings.is_empty());
+        assert_eq!(patch.len(), 4);
+        assert_eq!(patch[2].path, "/deferred_findings");
+
+        assert_eq!(
+            patch[2].value,
+            json!([
+                {
+                    "category": "review-accounting",
+                    "deferred_cycle": 158,
+                    "deadline_cycle": 163,
+                    "resolved": true,
+                    "resolved_ref": "docs/reviews/cycle-163.md"
+                },
+                {
+                    "category": "tooling-contract",
+                    "deferred_cycle": 164,
+                    "deadline_cycle": 169,
+                    "resolved": false
+                }
+            ])
+        );
+    }
+
+    #[test]
+    fn state_patch_generation_warns_instead_of_creating_duplicate_unresolved_deferred_entry() {
+        let state = json!({
+            "last_cycle": {"number": 163},
+            "review_agent": {
+                "last_review_cycle": 162,
+                "history": []
+            },
+            "deferred_findings": [{
+                "category": "review-accounting",
+                "deferred_cycle": 160,
+                "deadline_cycle": 165,
+                "resolved": false
+            }],
+            "field_inventory": {
+                "fields": {
+                    "review_agent": {"last_refreshed": "cycle 162"}
+                }
+            }
+        });
+
+        let entry = ReviewHistoryEntry {
+            cycle: 163,
+            finding_count: 1,
+            complacency_score: 2,
+            categories: vec!["review-accounting".to_string()],
+            actioned: 0,
+            deferred: 1,
+            dispatch_created: 0,
+            actioned_failed: 0,
+            verified_resolved: 0,
+            ignored: 0,
+            note: None,
+            finding_dispositions: vec![FindingDisposition {
+                category: "review-accounting".to_string(),
+                disposition: "deferred".to_string(),
+            }],
+        };
+
+        let (patch, warnings) =
+            build_state_patch(&state, 163, 164, &entry).expect("patch should build");
+
+        assert_eq!(patch[2].path, "/deferred_findings");
+        assert_eq!(
+            patch[2].value,
+            json!([{
+                "category": "review-accounting",
+                "deferred_cycle": 160,
+                "deadline_cycle": 165,
+                "resolved": false
+            }])
+        );
+        assert_eq!(warnings.len(), 1);
+        assert!(warnings[0].contains("review-accounting"));
+        assert!(warnings[0].contains("already has an unresolved deferred finding"));
     }
 
     #[test]
