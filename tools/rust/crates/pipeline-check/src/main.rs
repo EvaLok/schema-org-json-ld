@@ -1868,9 +1868,12 @@ fn latest_worklog_entry_for_cycle(repo_root: &Path, cycle: u64) -> Result<Option
                 continue;
             }
 
-            if latest.as_ref().is_none_or(|(current_date, current_file, _): &(String, String, PathBuf)| {
+            if latest
+                .as_ref()
+                .is_none_or(|(current_date, current_file, _)| {
                 (&date_name, &file_name) > (current_date, current_file)
-            }) {
+                })
+            {
                 latest = Some((date_name.clone(), file_name, entry.path()));
             }
         }
