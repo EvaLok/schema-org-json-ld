@@ -24,15 +24,16 @@
 
 ## Cycle state
 
-- **In-flight agent sessions**: 2
-- **Pipeline status**: PASS (2 warnings)
-- **Copilot metrics**: 619 dispatches, 551 PRs produced, 539 merged, 97.8% PR merge rate
+- **In-flight agent sessions**: 4
+- **Pipeline status**: PASS (3 warnings)
+- **Copilot metrics**: 620 dispatches, 551 PRs produced, 539 merged, 97.8% PR merge rate
 - **Publish gate**: published
 
 ## Next steps
 
 1. Review and iterate on PR from [#1876](https://github.com/EvaLok/schema-org-json-ld/issues/1876) ([Cycle Review] Cycle 386 end-of-cycle review) when Copilot completes
 2. Review and iterate on PR from [#1887](https://github.com/EvaLok/schema-org-json-ld/issues/1887) (Remove copilot_metrics from state-schema and all Rust tools) when Copilot completes
+3. Review and iterate on PR from [#1889](https://github.com/EvaLok/schema-org-json-ld/issues/1889) ([Cycle Review] Cycle 389 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
