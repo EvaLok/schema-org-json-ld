@@ -80,10 +80,8 @@ fn read_state_json(repo_root: &Path) -> Result<StateJson, String> {
 fn run_checks(state: &StateJson) -> Report {
     let checks = vec![
         check_review_agent_pointer(state),
-        check_copilot_metrics_math(state),
         check_review_history_accounting(state),
         check_review_history_categories(state),
-        check_copilot_metrics_rates(state),
         check_blockers_narrative(state),
         check_publish_gate_consistency(state),
         check_last_cycle_consistency(state),
@@ -174,86 +172,6 @@ fn check_review_agent_pointer(state: &StateJson) -> CheckResult {
     }
 
     pass("review_agent_pointer")
-}
-
-fn check_copilot_metrics_math(state: &StateJson) -> CheckResult {
-    let total_dispatches = match get_metric_i64(state, "total_dispatches") {
-        Some(value) => value,
-        None => {
-            return warn(
-                "copilot_metrics_math",
-                "missing field: copilot_metrics.total_dispatches",
-            )
-        }
-    };
-    let resolved = match get_metric_i64(state, "resolved") {
-        Some(value) => value,
-        None => {
-            return warn(
-                "copilot_metrics_math",
-                "missing field: copilot_metrics.resolved",
-            )
-        }
-    };
-    let in_flight = match state.copilot_metrics.in_flight {
-        Some(value) => value,
-        None => {
-            return warn(
-                "copilot_metrics_math",
-                "missing field: copilot_metrics.in_flight",
-            )
-        }
-    };
-    let produced_pr = match get_metric_i64(state, "produced_pr") {
-        Some(value) => value,
-        None => {
-            return warn(
-                "copilot_metrics_math",
-                "missing field: copilot_metrics.produced_pr",
-            )
-        }
-    };
-    let merged = match get_metric_i64(state, "merged") {
-        Some(value) => value,
-        None => {
-            return warn(
-                "copilot_metrics_math",
-                "missing field: copilot_metrics.merged",
-            )
-        }
-    };
-    let mut failures = Vec::new();
-    for (name, value) in [
-        ("total_dispatches", total_dispatches),
-        ("resolved", resolved),
-        ("in_flight", in_flight),
-        ("produced_pr", produced_pr),
-        ("merged", merged),
-    ] {
-        if value < 0 {
-            failures.push(format!("{}({}) must be non-negative", name, value));
-        }
-    }
-
-    if produced_pr < merged {
-        failures.push(format!(
-            "produced_pr({}) must be >= merged({})",
-            produced_pr, merged
-        ));
-    }
-
-    if resolved + in_flight != total_dispatches {
-        failures.push(format!(
-            "resolved({}) + in_flight({}) != total_dispatches({})",
-            resolved, in_flight, total_dispatches
-        ));
-    }
-
-    if failures.is_empty() {
-        pass("copilot_metrics_math")
-    } else {
-        fail("copilot_metrics_math", failures.join("; "))
-    }
 }
 
 fn check_review_history_accounting(state: &StateJson) -> CheckResult {
@@ -422,82 +340,6 @@ fn check_review_history_categories(state: &StateJson) -> CheckResult {
         pass("review_history_categories")
     } else {
         fail("review_history_categories", failures.join("; "))
-    }
-}
-
-fn check_copilot_metrics_rates(state: &StateJson) -> CheckResult {
-    let resolved = match get_metric_i64(state, "resolved") {
-        Some(value) => value,
-        None => {
-            return warn(
-                "copilot_metrics_rates",
-                "missing field: copilot_metrics.resolved",
-            )
-        }
-    };
-    let produced_pr = match get_metric_i64(state, "produced_pr") {
-        Some(value) => value,
-        None => {
-            return warn(
-                "copilot_metrics_rates",
-                "missing field: copilot_metrics.produced_pr",
-            )
-        }
-    };
-    let merged = match get_metric_i64(state, "merged") {
-        Some(value) => value,
-        None => {
-            return warn(
-                "copilot_metrics_rates",
-                "missing field: copilot_metrics.merged",
-            )
-        }
-    };
-    let dispatch_to_pr_rate = match state.copilot_metrics.dispatch_to_pr_rate.as_ref() {
-        Some(value) => value,
-        None => {
-            return warn(
-                "copilot_metrics_rates",
-                "missing field: copilot_metrics.dispatch_to_pr_rate",
-            )
-        }
-    };
-    let pr_merge_rate = match state.copilot_metrics.pr_merge_rate.as_ref() {
-        Some(value) => value,
-        None => {
-            return warn(
-                "copilot_metrics_rates",
-                "missing field: copilot_metrics.pr_merge_rate",
-            )
-        }
-    };
-
-    let mut failures = Vec::new();
-
-    validate_rate(
-        "dispatch_to_pr_rate",
-        dispatch_to_pr_rate,
-        produced_pr,
-        resolved,
-        "produced_pr",
-        "resolved",
-        &mut failures,
-    );
-
-    validate_rate(
-        "pr_merge_rate",
-        pr_merge_rate,
-        merged,
-        produced_pr,
-        "merged",
-        "produced_pr",
-        &mut failures,
-    );
-
-    if failures.is_empty() {
-        pass("copilot_metrics_rates")
-    } else {
-        fail("copilot_metrics_rates", failures.join("; "))
     }
 }
 
@@ -747,26 +589,7 @@ fn check_cycle_phase_consistency(state: &StateJson) -> CheckResult {
 }
 
 fn get_metric_i64(state: &StateJson, key: &str) -> Option<i64> {
-    match key {
-        "total_dispatches" => state
-            .copilot_metrics
-            .total_dispatches
-            .or_else(|| state.copilot_metrics.extra.get(key).and_then(Value::as_i64)),
-        "produced_pr" => state
-            .copilot_metrics
-            .produced_pr
-            .or_else(|| state.copilot_metrics.extra.get(key).and_then(Value::as_i64)),
-        "merged" => state
-            .copilot_metrics
-            .merged
-            .or_else(|| state.copilot_metrics.extra.get(key).and_then(Value::as_i64)),
-        "prs_merged" => state.copilot_metrics.extra.get(key).and_then(Value::as_i64),
-        "in_flight" => state
-            .copilot_metrics
-            .in_flight
-            .or_else(|| state.copilot_metrics.extra.get(key).and_then(Value::as_i64)),
-        _ => state.copilot_metrics.extra.get(key).and_then(Value::as_i64),
-    }
+    state.extra.get(key).and_then(Value::as_i64)
 }
 
 fn get_review_history(state: &StateJson) -> Option<&Vec<Value>> {
@@ -775,56 +598,6 @@ fn get_review_history(state: &StateJson) -> Option<&Vec<Value>> {
         .get("review_agent")
         .and_then(|value| value.get("history"))
         .and_then(Value::as_array)
-}
-
-enum RateFormat {
-    Ratio(i64, i64),
-    Percentage(f64),
-}
-
-fn validate_rate(
-    rate_name: &str,
-    rate_value: &str,
-    expected_numerator: i64,
-    expected_denominator: i64,
-    numerator_label: &str,
-    denominator_label: &str,
-    failures: &mut Vec<String>,
-) {
-    match parse_rate(rate_value) {
-        Some(RateFormat::Ratio(n, m)) if n == expected_numerator && m == expected_denominator => {}
-        Some(RateFormat::Ratio(n, m)) => failures.push(format!(
-            "{rate_name}({n}/{m}) != {numerator_label}({expected_numerator})/{denominator_label}({expected_denominator})"
-        )),
-        Some(RateFormat::Percentage(value)) if (0.0..=100.0).contains(&value) => {}
-        Some(RateFormat::Percentage(value)) => {
-            failures.push(format!("{rate_name} percentage out of range: {value}%"))
-        }
-        None => failures.push(format!("{rate_name} has invalid format: {rate_value}")),
-    }
-}
-
-fn parse_rate(value: &str) -> Option<RateFormat> {
-    if let Some(percentage) = parse_percentage(value) {
-        return Some(RateFormat::Percentage(percentage));
-    }
-
-    parse_ratio(value).map(|(numerator, denominator)| RateFormat::Ratio(numerator, denominator))
-}
-
-fn parse_percentage(value: &str) -> Option<f64> {
-    let percentage = value.trim().strip_suffix('%')?.trim().parse::<f64>().ok()?;
-    percentage.is_finite().then_some(percentage)
-}
-
-fn parse_ratio(value: &str) -> Option<(i64, i64)> {
-    let mut parts = value.split('/');
-    let n = parts.next()?.trim().parse::<i64>().ok()?;
-    let m = parts.next()?.trim().parse::<i64>().ok()?;
-    if parts.next().is_some() {
-        return None;
-    }
-    Some((n, m))
 }
 
 fn parse_cycle_marker(value: &str) -> Option<i64> {
@@ -1128,10 +901,10 @@ fn check_review_events_verified(state: &StateJson) -> CheckResult {
             return warn(
                 "review_events_verified",
                 format!(
-                    "missing field: review_events_verified_through_cycle (copilot_metrics.prs_merged={})",
-                    merged_prs
-                ),
-            )
+                "missing field: review_events_verified_through_cycle (merged-related count={})",
+                merged_prs
+            ),
+        )
         }
     };
 
@@ -1242,7 +1015,7 @@ fn count_in_flight_agent_sessions(state: &StateJson) -> Result<i64, String> {
 }
 
 fn check_in_flight_sessions_consistency(state: &StateJson) -> CheckResult {
-    let actual = match state.extra.get("in_flight_sessions").and_then(Value::as_i64) {
+    let actual = match state.in_flight_sessions {
         Some(value) => value,
         None => {
             return warn(
@@ -1271,92 +1044,17 @@ fn check_in_flight_sessions_consistency(state: &StateJson) -> CheckResult {
 }
 
 fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
-    let total_dispatches = match get_metric_i64(state, "total_dispatches") {
-        Some(value) => value,
-        None => {
-            return warn(
-                "agent_sessions_reconciliation",
-                "missing field: copilot_metrics.total_dispatches",
-            )
-        }
-    };
-    let merged = match get_metric_i64(state, "merged") {
-        Some(value) => value,
-        None => {
-            return warn(
-                "agent_sessions_reconciliation",
-                "missing field: copilot_metrics.merged",
-            )
-        }
-    };
-    let in_flight = match state.copilot_metrics.in_flight {
-        Some(value) => value,
-        None => {
-            return warn(
-                "agent_sessions_reconciliation",
-                "missing field: copilot_metrics.in_flight",
-            )
-        }
-    };
-    let resolved = match get_metric_i64(state, "resolved") {
-        Some(value) => value,
-        None => {
-            return warn(
-                "agent_sessions_reconciliation",
-                "missing field: copilot_metrics.resolved",
-            )
-        }
-    };
-    let closed_without_merge = match get_metric_i64(state, "closed_without_merge") {
-        Some(value) => value,
-        None => {
-            return warn(
-                "agent_sessions_reconciliation",
-                "missing field: copilot_metrics.closed_without_merge",
-            )
-        }
-    };
-    let closed_without_pr = match get_metric_i64(state, "closed_without_pr") {
-        Some(value) => value,
-        None => {
-            return warn(
-                "agent_sessions_reconciliation",
-                "missing field: copilot_metrics.closed_without_pr",
-            )
-        }
-    };
-    let produced_pr = match get_metric_i64(state, "produced_pr") {
-        Some(value) => value,
-        None => {
-            return warn(
-                "agent_sessions_reconciliation",
-                "missing field: copilot_metrics.produced_pr",
-            )
-        }
-    };
-
-    let mut merged_expected = 0;
     let in_flight_expected = match count_in_flight_agent_sessions(state) {
         Ok(value) => value,
         Err(error) => return fail("agent_sessions_reconciliation", error),
     };
-    let mut closed_without_merge_expected = 0;
-    let mut closed_without_pr_expected = 0;
-    let mut produced_pr_expected = 0;
     let mut invalid_statuses = Vec::new();
     let mut in_flight_issue_counts: HashMap<i64, usize> = HashMap::new();
     let mut terminal_issues = HashSet::new();
 
     for (index, session) in state.agent_sessions.iter().enumerate() {
-        if session.pr.is_some() {
-            produced_pr_expected += 1;
-        }
-
-        // Match derive-metrics semantics, including the legacy status aliases still present in
-        // docs/state.json during the migration to canonical status names.
         match session.status.as_deref() {
             Some("merged") => {
-                merged_expected += 1;
                 if let Some(issue) = session.issue {
                     terminal_issues.insert(issue);
                 }
@@ -1367,13 +1065,11 @@ fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
                 }
             }
             Some("closed_without_merge") | Some("closed") => {
-                closed_without_merge_expected += 1;
                 if let Some(issue) = session.issue {
                     terminal_issues.insert(issue);
                 }
             }
             Some("closed_without_pr") | Some("failed") => {
-                closed_without_pr_expected += 1;
                 if let Some(issue) = session.issue {
                     terminal_issues.insert(issue);
                 }
@@ -1390,11 +1086,6 @@ fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
     if !invalid_statuses.is_empty() {
         return fail("agent_sessions_reconciliation", invalid_statuses.join("; "));
     }
-
-    let total_dispatches_expected = i64::try_from(state.agent_sessions.len())
-        .expect("agent_sessions length should fit within i64");
-    let resolved_expected = total_dispatches_expected - in_flight_expected;
-
     let mut failures = Vec::new();
     let mut duplicate_in_flight_issues: Vec<i64> = in_flight_issue_counts
         .iter()
@@ -1429,31 +1120,11 @@ fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
         ));
     }
 
-    for (field, expected, actual) in [
-        (
-            "total_dispatches",
-            total_dispatches_expected,
-            total_dispatches,
-        ),
-        ("merged", merged_expected, merged),
-        ("in_flight", in_flight_expected, in_flight),
-        ("resolved", resolved_expected, resolved),
-        (
-            "closed_without_merge",
-            closed_without_merge_expected,
-            closed_without_merge,
-        ),
-        (
-            "closed_without_pr",
-            closed_without_pr_expected,
-            closed_without_pr,
-        ),
-        ("produced_pr", produced_pr_expected, produced_pr),
-    ] {
-        if actual != expected {
+    if let Some(actual) = state.in_flight_sessions {
+        if actual != in_flight_expected {
             failures.push(format!(
-                "{} expected {} from agent_sessions but actual {}",
-                field, expected, actual
+                "in_flight_sessions expected {} from agent_sessions but actual {}",
+                in_flight_expected, actual
             ));
         }
     }
@@ -1550,10 +1221,8 @@ fn print_human_report(report: &Report) {
 
     let labels = [
         ("review_agent_pointer", "review_agent pointer"),
-        ("copilot_metrics_math", "copilot_metrics math"),
         ("review_history_accounting", "review history accounting"),
         ("review_history_categories", "review history categories"),
-        ("copilot_metrics_rates", "copilot_metrics rates"),
         ("blockers_narrative", "blockers narrative"),
         ("publish_gate_consistency", "publish_gate consistency"),
         ("last_cycle_consistency", "last_cycle consistency"),
@@ -1646,18 +1315,8 @@ mod tests {
             "eva_input_issues": {},
             "typescript_plan": {},
             "release": {},
-            "copilot_metrics": {
-                "in_flight": 0,
-                "dispatch_to_pr_rate": "2/3",
-                "pr_merge_rate": "1/2",
-                "total_dispatches": 3,
-                "resolved": 3,
-                "produced_pr": 2,
-                "merged": 1,
-                "prs_merged": 1,
-                "closed_without_merge": 1,
-                "closed_without_pr": 1
-            },
+            "merged": 1,
+            "prs_merged": 1,
             "last_cycle": {
                 "number": 10
             },
@@ -1666,7 +1325,7 @@ mod tests {
             "tool_pipeline": {},
             "field_inventory": {
                 "fields": {
-                    "copilot_metrics": {
+                    "in_flight_sessions": {
                         "last_refreshed": "cycle 10"
                     }
                 }
@@ -1812,35 +1471,6 @@ mod tests {
     }
 
     #[test]
-    fn copilot_math_detects_mismatch() {
-        let mut value = minimal_valid_state();
-        value["copilot_metrics"]["produced_pr"] = json!(0);
-
-        let state = state_from_json(value);
-        let check = check_copilot_metrics_math(&state);
-        assert_eq!(check.status, CheckStatus::Fail);
-        assert!(check
-            .details
-            .as_deref()
-            .unwrap_or_default()
-            .contains("produced_pr"));
-    }
-
-    #[test]
-    fn copilot_math_allows_reviewed_awaiting_eva_sessions_with_prs() {
-        let mut value = minimal_valid_state();
-        value["agent_sessions"][2]["status"] = json!("reviewed_awaiting_eva");
-        value["agent_sessions"][2]["pr"] = json!(203);
-        value["copilot_metrics"]["produced_pr"] = json!(3);
-        value["copilot_metrics"]["closed_without_pr"] = json!(0);
-        value["copilot_metrics"]["reviewed_awaiting_eva"] = json!(1);
-
-        let state = state_from_json(value);
-        let check = check_copilot_metrics_math(&state);
-        assert_eq!(check.status, CheckStatus::Pass);
-    }
-
-    #[test]
     fn review_history_accounting_passes_for_valid_entries() {
         let state = state_from_json(minimal_valid_state());
         let check = check_review_history_accounting(&state);
@@ -1896,62 +1526,11 @@ mod tests {
     }
 
     #[test]
-    fn copilot_metrics_rates_passes_when_rates_match() {
+    fn get_metric_i64_reads_top_level_extra_fields() {
         let state = state_from_json(minimal_valid_state());
-        let check = check_copilot_metrics_rates(&state);
-        assert_eq!(check.status, CheckStatus::Pass);
-    }
 
-    #[test]
-    fn copilot_metrics_rates_detects_mismatch() {
-        let mut value = minimal_valid_state();
-        value["copilot_metrics"]["dispatch_to_pr_rate"] = json!("3/3");
-
-        let state = state_from_json(value);
-        let check = check_copilot_metrics_rates(&state);
-        assert_eq!(check.status, CheckStatus::Fail);
-        assert!(check
-            .details
-            .as_deref()
-            .unwrap_or_default()
-            .contains("dispatch_to_pr_rate"));
-    }
-
-    #[test]
-    fn copilot_metrics_rates_accept_percentage_format() {
-        let mut value = minimal_valid_state();
-        value["copilot_metrics"]["dispatch_to_pr_rate"] = json!("66.7%");
-        value["copilot_metrics"]["pr_merge_rate"] = json!("50.0%");
-
-        let state = state_from_json(value);
-        let check = check_copilot_metrics_rates(&state);
-        assert_eq!(check.status, CheckStatus::Pass);
-    }
-
-    #[test]
-    fn get_metric_i64_prefers_promoted_fields_before_extra() {
-        let mut state = state_from_json(minimal_valid_state());
-        state.copilot_metrics.total_dispatches = Some(3);
-        state
-            .copilot_metrics
-            .extra
-            .insert("total_dispatches".to_string(), json!(99));
-        state.copilot_metrics.merged = Some(1);
-
-        assert_eq!(get_metric_i64(&state, "total_dispatches"), Some(3));
         assert_eq!(get_metric_i64(&state, "merged"), Some(1));
-    }
-
-    #[test]
-    fn get_metric_i64_falls_back_to_extra_when_promoted_field_is_none() {
-        let mut state = state_from_json(minimal_valid_state());
-        state.copilot_metrics.total_dispatches = None;
-        state
-            .copilot_metrics
-            .extra
-            .insert("total_dispatches".to_string(), json!(42));
-
-        assert_eq!(get_metric_i64(&state, "total_dispatches"), Some(42));
+        assert_eq!(get_metric_i64(&state, "prs_merged"), Some(1));
     }
 
     #[test]
@@ -2312,7 +1891,7 @@ mod tests {
     fn review_events_verified_passes_when_verification_is_current() {
         let mut value = minimal_valid_state();
         value["last_cycle"]["number"] = json!(20);
-        value["copilot_metrics"]["prs_merged"] = json!(2);
+        value["prs_merged"] = json!(2);
         value["review_events_verified_through_cycle"] = json!(19);
 
         let state = state_from_json(value);
@@ -2324,7 +1903,7 @@ mod tests {
     fn review_events_verified_fails_on_freshness_drift() {
         let mut value = minimal_valid_state();
         value["last_cycle"]["number"] = json!(20);
-        value["copilot_metrics"]["prs_merged"] = json!(2);
+        value["prs_merged"] = json!(2);
         value["review_events_verified_through_cycle"] = json!(17);
         // Field inventory claims refreshed at cycle 20, but value is 17 (drift)
         value["field_inventory"]["fields"]["review_events_verified_through_cycle"] = json!({
@@ -2343,7 +1922,7 @@ mod tests {
     fn review_events_verified_warns_when_verification_is_stale() {
         let mut value = minimal_valid_state();
         value["last_cycle"]["number"] = json!(20);
-        value["copilot_metrics"]["prs_merged"] = json!(2);
+        value["prs_merged"] = json!(2);
         value["review_events_verified_through_cycle"] = json!(17);
 
         let state = state_from_json(value);
@@ -2429,31 +2008,16 @@ mod tests {
     #[test]
     fn agent_sessions_reconciliation_detects_mismatch() {
         let mut value = minimal_valid_state();
-        value["copilot_metrics"]["merged"] = json!(0);
-        value["copilot_metrics"]["total_dispatches"] = json!(4);
+        value["in_flight_sessions"] = json!(1);
 
         let state = state_from_json(value);
         let check = check_agent_sessions_reconciliation(&state);
         assert_eq!(check.status, CheckStatus::Fail);
 
         let details = check.details.as_deref().unwrap_or_default();
-        assert!(details.contains("total_dispatches"));
-        assert!(details.contains("expected 3"));
-        assert!(details.contains("actual 4"));
-        assert!(details.contains("merged"));
-        assert!(details.contains("expected 1"));
-        assert!(details.contains("actual 0"));
-    }
-
-    #[test]
-    fn agent_sessions_reconciliation_counts_only_non_null_prs() {
-        let mut value = minimal_valid_state();
-        value["agent_sessions"][1]["pr"] = Value::Null;
-        value["copilot_metrics"]["produced_pr"] = json!(1);
-
-        let state = state_from_json(value);
-        let check = check_agent_sessions_reconciliation(&state);
-        assert_eq!(check.status, CheckStatus::Pass);
+        assert!(details.contains("in_flight_sessions"));
+        assert!(details.contains("expected 0"));
+        assert!(details.contains("actual 1"));
     }
 
     #[test]
@@ -2463,11 +2027,7 @@ mod tests {
         value["agent_sessions"][0]["status"] = json!("in_flight");
         value["agent_sessions"][1]["issue"] = json!(999);
         value["agent_sessions"][1]["status"] = json!("in_flight");
-        value["copilot_metrics"]["merged"] = json!(0);
-        value["copilot_metrics"]["in_flight"] = json!(2);
-        value["copilot_metrics"]["resolved"] = json!(1);
-        value["copilot_metrics"]["closed_without_merge"] = json!(0);
-        value["copilot_metrics"]["closed_without_pr"] = json!(1);
+        value["in_flight_sessions"] = json!(2);
 
         let state = state_from_json(value);
         let check = check_agent_sessions_reconciliation(&state);
@@ -2484,9 +2044,7 @@ mod tests {
         value["agent_sessions"][0]["issue"] = json!(777);
         value["agent_sessions"][1]["issue"] = json!(777);
         value["agent_sessions"][1]["status"] = json!("in_flight");
-        value["copilot_metrics"]["in_flight"] = json!(1);
-        value["copilot_metrics"]["resolved"] = json!(2);
-        value["copilot_metrics"]["closed_without_merge"] = json!(0);
+        value["in_flight_sessions"] = json!(1);
 
         let state = state_from_json(value);
         let check = check_agent_sessions_reconciliation(&state);
@@ -2538,33 +2096,33 @@ mod tests {
         let state = state_from_json(minimal_valid_state());
         let report = run_checks(&state);
 
-        assert_eq!(report.checks.len(), 17);
+        assert_eq!(report.checks.len(), 15);
         assert_eq!(
-            report.checks.get(9).map(|check| check.name),
+            report.checks.get(7).map(|check| check.name),
             Some("cycle_phase_consistency")
         );
         assert_eq!(
-            report.checks.get(11).map(|check| check.name),
+            report.checks.get(9).map(|check| check.name),
             Some("chronic_verification_deadline")
         );
         assert_eq!(
-            report.checks.get(12).map(|check| check.name),
+            report.checks.get(10).map(|check| check.name),
             Some("chronic_intermediate_state")
         );
         assert_eq!(
-            report.checks.get(12).map(|check| check.status),
+            report.checks.get(10).map(|check| check.status),
             Some(CheckStatus::Pass)
         );
         assert_eq!(
-            report.checks.get(13).map(|check| check.name),
+            report.checks.get(11).map(|check| check.name),
             Some("review_events_verified")
         );
         assert_eq!(
-            report.checks.get(14).map(|check| check.name),
+            report.checks.get(12).map(|check| check.name),
             Some("in_flight_sessions_consistency")
         );
         assert_eq!(
-            report.checks.get(15).map(|check| check.name),
+            report.checks.get(13).map(|check| check.name),
             Some("agent_sessions_reconciliation")
         );
         assert_eq!(report.checks.last().map(|check| check.name), Some("eva_input_overlap"));
@@ -2575,10 +2133,6 @@ mod tests {
         let mut value = minimal_valid_state();
         value["agent_sessions"][2]["status"] = json!("reviewed_awaiting_eva");
         value["agent_sessions"][2]["pr"] = json!(203);
-        value["copilot_metrics"]["in_flight"] = json!(0);
-        value["copilot_metrics"]["resolved"] = json!(3);
-        value["copilot_metrics"]["closed_without_pr"] = json!(0);
-        value["copilot_metrics"]["produced_pr"] = json!(3);
 
         let state = state_from_json(value);
         let check = check_agent_sessions_reconciliation(&state);

@@ -1338,7 +1338,6 @@ mod tests {
     }
   },
   "agent_sessions": [],
-  "copilot_metrics": {},
   "review_events_verified_through_cycle": 266
 }
 "#,

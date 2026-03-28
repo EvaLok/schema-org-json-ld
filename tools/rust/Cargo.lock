@@ -288,16 +288,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "derive-metrics"
-version = "0.1.0"
-dependencies = [
- "clap",
- "serde",
- "serde_json",
- "state-schema",
-]
-
-[[package]]
 name = "dispatch-review"
 version = "0.1.0"
 dependencies = [

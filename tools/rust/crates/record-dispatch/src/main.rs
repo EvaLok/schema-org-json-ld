@@ -524,17 +524,10 @@ mod tests {
                     { "status": "in_flight" },
                     { "status": "dispatched" }
                 ],
-                "copilot_metrics": {
-                    "total_dispatches": 2,
-                    "in_flight": 2,
-                    "resolved": 0,
-                    "dispatch_log_latest": "#601 old dispatch (cycle 164)"
-                },
+                "dispatch_log_latest": "#601 old dispatch (cycle 164)",
                 "field_inventory": {
                     "fields": {
-                        "copilot_metrics.in_flight": { "last_refreshed": "cycle 163" },
-                        "copilot_metrics.dispatch_to_pr_rate": { "last_refreshed": "cycle 163" },
-                        "copilot_metrics.pr_merge_rate": { "last_refreshed": "cycle 163" }
+                        "in_flight_sessions": { "last_refreshed": "cycle 163" }
                     }
                 }
             }),
@@ -763,7 +756,7 @@ mod tests {
         assert!(warnings.is_empty());
         let state = repo.read_state();
         assert_eq!(
-            state.pointer("/copilot_metrics/in_flight"),
+            state.pointer("/in_flight_sessions"),
             Some(&serde_json::json!(1))
         );
         assert_eq!(
@@ -800,7 +793,7 @@ mod tests {
         assert_eq!(runner.call_count(), 0);
         let state = repo.read_state();
         assert_eq!(
-            state.pointer("/copilot_metrics/in_flight"),
+            state.pointer("/in_flight_sessions"),
             Some(&serde_json::json!(1))
         );
         assert_eq!(
@@ -1004,30 +997,14 @@ mod tests {
                     "phase": phase,
                     "phase_entered_at": "2026-03-07T12:00:00Z"
                 },
-                "copilot_metrics": {
-                    "total_dispatches": 2,
-                    "resolved": 2,
-                    "merged": 1,
-                    "closed_without_pr": 1,
-                    "reviewed_awaiting_eva": 0,
-                    "in_flight": 0,
-                    "produced_pr": 1,
-                    "pr_merge_rate": "100.0%",
-                    "dispatch_to_pr_rate": "50.0%",
-                    "dispatch_log_latest": "#601 Closed change (cycle 164)"
-                },
+                "dispatch_log_latest": "#601 Closed change (cycle 164)",
+                "in_flight_sessions": 0,
                 "field_inventory": {
                     "fields": {
-                        "copilot_metrics.in_flight": {
-                            "last_refreshed": "cycle 163"
-                        },
                         "cycle_phase": {
                             "last_refreshed": "cycle 163"
                         },
-                        "copilot_metrics.pr_merge_rate": {
-                            "last_refreshed": "cycle 163"
-                        },
-                        "copilot_metrics.dispatch_to_pr_rate": {
+                        "in_flight_sessions": {
                             "last_refreshed": "cycle 163"
                         }
                     }

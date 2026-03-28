@@ -125,31 +125,10 @@ pub fn concurrency_warning_message(in_flight: i64) -> String {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DispatchPatch {
-    pub total_dispatches: i64,
-    pub resolved: i64,
-    pub merged: i64,
-    pub closed_without_pr: i64,
-    pub reviewed_awaiting_eva: i64,
     pub in_flight: i64,
-    pub produced_pr: i64,
-    pub pr_merge_rate: String,
-    pub dispatch_to_pr_rate: String,
     pub dispatch_log_latest: String,
     pub agent_session: Value,
     pub current_cycle: u64,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct DerivedMetrics {
-    total_dispatches: i64,
-    resolved: i64,
-    merged: i64,
-    closed_without_pr: i64,
-    reviewed_awaiting_eva: i64,
-    in_flight: i64,
-    produced_pr: i64,
-    pr_merge_rate: String,
-    dispatch_to_pr_rate: String,
 }
 
 pub fn resolve_model(
@@ -178,69 +157,38 @@ pub fn build_dispatch_patch(
         "model": model,
         "status": "in_flight"
     });
-    let derived = derive_metrics_with_new_session(state, &agent_session)?;
-    validate_dispatch_invariant(
-        derived.total_dispatches,
-        derived.resolved,
-        derived.in_flight,
-    )?;
+    let in_flight = derive_in_flight_with_new_session(state, &agent_session)?;
 
     Ok(DispatchPatch {
-        total_dispatches: derived.total_dispatches,
-        resolved: derived.resolved,
-        merged: derived.merged,
-        closed_without_pr: derived.closed_without_pr,
-        reviewed_awaiting_eva: derived.reviewed_awaiting_eva,
-        in_flight: derived.in_flight,
-        produced_pr: derived.produced_pr,
-        pr_merge_rate: derived.pr_merge_rate,
-        dispatch_to_pr_rate: derived.dispatch_to_pr_rate,
+        in_flight,
         dispatch_log_latest: format_dispatch_log(issue, title, current_cycle),
         agent_session,
         current_cycle,
     })
 }
 
-/// Derive the next copilot_metrics values by simulating the addition of a new
-/// in-flight session before mutating docs/state.json.
-///
-/// Returns an error if `agent_sessions` is missing or if any session status is
-/// unsupported, so callers can fail closed before writing state.
-fn derive_metrics_with_new_session(
-    state: &Value,
-    new_session: &Value,
-) -> Result<DerivedMetrics, String> {
+fn derive_in_flight_with_new_session(state: &Value, new_session: &Value) -> Result<i64, String> {
     let mut sessions = state
         .pointer("/agent_sessions")
         .and_then(Value::as_array)
         .cloned()
         .ok_or_else(|| "missing array /agent_sessions in docs/state.json".to_string())?;
     sessions.push(new_session.clone());
-    derive_metrics_from_sessions(&sessions)
+    count_in_flight_sessions(&sessions)
 }
 
-/// Recalculate the derived copilot_metrics block from the agent_sessions
-/// ledger, failing closed on missing or unsupported session statuses.
-fn derive_metrics_from_sessions(sessions: &[Value]) -> Result<DerivedMetrics, String> {
-    let total_dispatches = i64::try_from(sessions.len())
-        .map_err(|_| "agent_sessions length should fit within i64".to_string())?;
-    let mut merged = 0_i64;
-    let mut closed_without_pr = 0_i64;
-    let mut reviewed_awaiting_eva = 0_i64;
+fn count_in_flight_sessions(sessions: &[Value]) -> Result<i64, String> {
     let mut in_flight = 0_i64;
-    let mut produced_pr = 0_i64;
 
     for (index, session) in sessions.iter().enumerate() {
-        if session.get("pr").and_then(Value::as_u64).is_some() {
-            produced_pr += 1;
-        }
-
         match session.get("status").and_then(Value::as_str) {
-            Some("merged") => merged += 1,
-            Some("closed_without_pr") | Some("failed") => closed_without_pr += 1,
-            Some("reviewed_awaiting_eva") => reviewed_awaiting_eva += 1,
             Some("in_flight") | Some("dispatched") => in_flight += 1,
-            Some("closed_without_merge") | Some("closed") => {}
+            Some("merged")
+            | Some("closed_without_merge")
+            | Some("closed")
+            | Some("closed_without_pr")
+            | Some("failed")
+            | Some("reviewed_awaiting_eva") => {}
             Some(status) => {
                 return Err(format!(
                     "agent_sessions[{}].status has unsupported value '{}'",
@@ -251,53 +199,14 @@ fn derive_metrics_from_sessions(sessions: &[Value]) -> Result<DerivedMetrics, St
         }
     }
 
-    let resolved = total_dispatches - in_flight;
-
-    Ok(DerivedMetrics {
-        total_dispatches,
-        resolved,
-        merged,
-        closed_without_pr,
-        reviewed_awaiting_eva,
-        in_flight,
-        produced_pr,
-        pr_merge_rate: format_percentage(merged, produced_pr),
-        dispatch_to_pr_rate: format_percentage(produced_pr, total_dispatches),
-    })
-}
-
-/// Format a ratio as a percentage string with one decimal place.
-///
-/// Returns `0.0%` when the denominator is zero.
-fn format_percentage(numerator: i64, denominator: i64) -> String {
-    if denominator == 0 {
-        return "0.0%".to_string();
-    }
-
-    let percentage = (numerator as f64 / denominator as f64) * 100.0;
-    format!("{:.1}%", percentage)
-}
-
-pub fn validate_dispatch_invariant(
-    total_dispatches: i64,
-    resolved: i64,
-    in_flight: i64,
-) -> Result<(), String> {
-    if resolved + in_flight != total_dispatches {
-        return Err(format!(
-            "invariant violated: resolved({}) + in_flight({}) != total_dispatches({})",
-            resolved, in_flight, total_dispatches
-        ));
-    }
-
-    Ok(())
+    Ok(in_flight)
 }
 
 pub fn format_dispatch_log(issue: u64, title: &str, current_cycle: u64) -> String {
     format!("#{} {} (cycle {})", issue, title, current_cycle)
 }
 
-/// Update `field_inventory.fields[*].last_refreshed` for a metric rewritten in
+/// Update `field_inventory.fields[*].last_refreshed` for a field rewritten in
 /// the current cycle.
 ///
 /// Returns an error if `field_inventory.fields` is missing or if an existing
@@ -364,55 +273,19 @@ pub fn apply_dispatch_patch(state: &mut Value, patch: &DispatchPatch) -> Result<
         ));
     }
 
-    let metrics = state
-        .pointer_mut("/copilot_metrics")
-        .and_then(Value::as_object_mut)
-        .ok_or_else(|| "missing object /copilot_metrics in docs/state.json".to_string())?;
-    metrics.insert(
-        "total_dispatches".to_string(),
-        json!(patch.total_dispatches),
-    );
-    metrics.insert("resolved".to_string(), json!(patch.resolved));
-    metrics.insert("merged".to_string(), json!(patch.merged));
-    metrics.insert(
-        "closed_without_pr".to_string(),
-        json!(patch.closed_without_pr),
-    );
-    metrics.insert(
-        "reviewed_awaiting_eva".to_string(),
-        json!(patch.reviewed_awaiting_eva),
-    );
-    metrics.insert("in_flight".to_string(), json!(patch.in_flight));
-    metrics.insert("produced_pr".to_string(), json!(patch.produced_pr));
-    metrics.insert("pr_merge_rate".to_string(), json!(patch.pr_merge_rate));
-    metrics.insert(
-        "dispatch_to_pr_rate".to_string(),
-        json!(patch.dispatch_to_pr_rate),
-    );
-    metrics.insert(
-        "dispatch_log_latest".to_string(),
-        json!(patch.dispatch_log_latest),
-    );
-    update_field_inventory_last_refreshed(state, "copilot_metrics.in_flight", &cycle_marker)?;
-    update_field_inventory_last_refreshed(
-        state,
-        "copilot_metrics.pr_merge_rate",
-        &cycle_marker,
-    )?;
-    update_field_inventory_last_refreshed(
-        state,
-        "copilot_metrics.dispatch_to_pr_rate",
-        &cycle_marker,
-    )?;
     state
         .pointer_mut("/agent_sessions")
         .and_then(Value::as_array_mut)
         .ok_or_else(|| "missing array /agent_sessions in docs/state.json".to_string())?
         .push(patch.agent_session.clone());
-    state
+    let state_object = state
         .as_object_mut()
-        .ok_or_else(|| "docs/state.json root must be an object".to_string())?
-        .insert("in_flight_sessions".to_string(), json!(patch.in_flight));
+        .ok_or_else(|| "docs/state.json root must be an object".to_string())?;
+    state_object.insert(
+        "dispatch_log_latest".to_string(),
+        json!(patch.dispatch_log_latest),
+    );
+    state_object.insert("in_flight_sessions".to_string(), json!(patch.in_flight));
     update_field_inventory_last_refreshed(state, "in_flight_sessions", &cycle_marker)?;
 
     Ok(())
@@ -595,24 +468,11 @@ mod tests {
                 }
             ],
             "last_cycle": { "number": 164 },
-            "copilot_metrics": {
-                "total_dispatches": 2,
-                "in_flight": 0,
-                "produced_pr": 1,
-                "resolved": 2,
-                "merged": 1,
-                "closed_without_merge": 1,
-                "closed_without_pr": 1,
-                "reviewed_awaiting_eva": 0,
-                "dispatch_to_pr_rate": "50.0%",
-                "pr_merge_rate": "100.0%",
-                "dispatch_log_latest": "#602 Closed change (cycle 164)"
-            },
+            "dispatch_log_latest": "#602 Closed change (cycle 164)",
+            "in_flight_sessions": 0,
             "field_inventory": {
                 "fields": {
-                    "copilot_metrics.pr_merge_rate": { "last_refreshed": "cycle 163" },
-                    "copilot_metrics.dispatch_to_pr_rate": { "last_refreshed": "cycle 163" },
-                    "copilot_metrics.in_flight": { "last_refreshed": "cycle 163" }
+                    "in_flight_sessions": { "last_refreshed": "cycle 163" }
                 }
             }
         })
@@ -630,7 +490,6 @@ mod tests {
             "2026-03-07T13:00:00Z",
         )
         .expect("patch should build");
-        assert_eq!(patch.total_dispatches, 3);
         assert_eq!(patch.in_flight, 1);
         assert_eq!(
             patch.dispatch_log_latest,
@@ -644,12 +503,6 @@ mod tests {
             format_dispatch_log(602, "Example dispatch", 164),
             "#602 Example dispatch (cycle 164)"
         );
-    }
-
-    #[test]
-    fn invariant_validation_fails_when_totals_do_not_match() {
-        let error = validate_dispatch_invariant(86, 82, 3).expect_err("invariant should fail");
-        assert!(error.contains("invariant violated"));
     }
 
     #[test]
@@ -810,35 +663,10 @@ mod tests {
             .as_array()
             .expect("agent_sessions array");
         assert_eq!(sessions.len(), 3);
-        assert_eq!(state["copilot_metrics"]["total_dispatches"], json!(3));
-        assert_eq!(state["copilot_metrics"]["resolved"], json!(2));
-        assert_eq!(state["copilot_metrics"]["merged"], json!(1));
-        assert_eq!(state["copilot_metrics"]["closed_without_pr"], json!(1));
-        assert_eq!(state["copilot_metrics"]["reviewed_awaiting_eva"], json!(0));
-        assert_eq!(state["copilot_metrics"]["produced_pr"], json!(1));
-        assert_eq!(state["copilot_metrics"]["in_flight"], json!(1));
         assert_eq!(state["in_flight_sessions"], json!(1));
-        assert_eq!(state["copilot_metrics"]["pr_merge_rate"], json!("100.0%"));
         assert_eq!(
-            state["copilot_metrics"]["dispatch_log_latest"],
+            state["dispatch_log_latest"],
             json!("#603 Example dispatch (cycle 164)")
-        );
-        assert_eq!(
-            state["copilot_metrics"]["dispatch_to_pr_rate"],
-            json!("33.3%")
-        );
-        assert_eq!(
-            state["field_inventory"]["fields"]["copilot_metrics.in_flight"]["last_refreshed"],
-            json!("cycle 164")
-        );
-        assert_eq!(
-            state["field_inventory"]["fields"]["copilot_metrics.pr_merge_rate"]["last_refreshed"],
-            json!("cycle 164")
-        );
-        assert_eq!(
-            state["field_inventory"]["fields"]["copilot_metrics.dispatch_to_pr_rate"]
-                ["last_refreshed"],
-            json!("cycle 164")
         );
         assert_eq!(
             state["field_inventory"]["fields"]["in_flight_sessions"]["last_refreshed"],
@@ -924,8 +752,8 @@ mod tests {
         assert_eq!(sessions.len(), 3);
         assert_eq!(sessions[2]["issue"], json!(601));
         assert_eq!(sessions[2]["status"], json!("in_flight"));
-        assert_eq!(state["copilot_metrics"]["total_dispatches"], json!(3));
-        assert_eq!(state["copilot_metrics"]["in_flight"], json!(1));
+        assert_eq!(state["dispatch_log_latest"], json!("#601 Redispatched after merge (cycle 164)"));
+        assert_eq!(state["in_flight_sessions"], json!(1));
     }
 
     #[test]
@@ -977,15 +805,7 @@ mod tests {
         // the patch directly so this test can exercise `apply_dispatch_patch`'s
         // duplicate guard for malformed existing session rows.
         let patch = DispatchPatch {
-            total_dispatches: 4,
-            resolved: 2,
-            merged: 1,
-            closed_without_pr: 1,
-            reviewed_awaiting_eva: 0,
             in_flight: 1,
-            produced_pr: 1,
-            pr_merge_rate: "100.0%".to_string(),
-            dispatch_to_pr_rate: "25.0%".to_string(),
             dispatch_log_latest: "#603 Duplicate live dispatch (cycle 164)".to_string(),
             agent_session: json!({
                 "issue": 603,
@@ -1001,43 +821,6 @@ mod tests {
             .expect_err("missing status duplicate should fail closed");
 
         assert!(error.contains("already contains an entry for issue #603"));
-    }
-
-    #[test]
-    fn apply_dispatch_patch_recomputes_missing_derived_metric_fields() {
-        let mut state = sample_state();
-        let model = default_test_model();
-        state["copilot_metrics"]
-            .as_object_mut()
-            .expect("copilot_metrics object")
-            .remove("dispatch_to_pr_rate");
-        state["copilot_metrics"]
-            .as_object_mut()
-            .expect("copilot_metrics object")
-            .remove("pr_merge_rate");
-        let patch = build_dispatch_patch(
-            &state,
-            164,
-            603,
-            "Example dispatch",
-            &model,
-            "2026-03-07T13:00:00Z",
-        )
-        .expect("patch should build");
-
-        apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
-
-        assert_eq!(
-            state["copilot_metrics"]["dispatch_to_pr_rate"],
-            json!("33.3%")
-        );
-        assert_eq!(state["copilot_metrics"]["pr_merge_rate"], json!("100.0%"));
-        assert_eq!(state["copilot_metrics"]["total_dispatches"], json!(3));
-        assert_eq!(state["copilot_metrics"]["in_flight"], json!(1));
-        assert_eq!(
-            state["copilot_metrics"]["dispatch_log_latest"],
-            json!("#603 Example dispatch (cycle 164)")
-        );
     }
 
     #[test]

@@ -893,12 +893,11 @@ fn step_c6_5(
     let state: StateJson = serde_json::from_value(state_value)
         .map_err(|error| format!("failed to parse docs/state.json after C6: {}", error))?;
     let in_flight = state
-        .copilot_metrics
-        .in_flight
-        .ok_or_else(|| "missing copilot_metrics.in_flight in state.json".to_string())
+        .in_flight_sessions
+        .ok_or_else(|| "missing in_flight_sessions in state.json".to_string())
         .and_then(|value| {
             u64::try_from(value)
-                .map_err(|_| "copilot_metrics.in_flight must be non-negative in state.json".to_string())
+                .map_err(|_| "in_flight_sessions must be non-negative in state.json".to_string())
         })?;
     let publish_gate = state
         .publish_gate()?
@@ -908,7 +907,6 @@ fn step_c6_5(
         .filter(|value| !value.is_empty())
         .ok_or_else(|| "missing publish_gate.status in state.json".to_string())?
         .to_string();
-    let copilot_metrics = format_copilot_metrics(&state)?;
     let next_steps = derive_patch_pipeline_next_steps(&state)?;
     let worklog_str = worklog.to_string_lossy().to_string();
     let in_flight_str = in_flight.to_string();
@@ -920,8 +918,6 @@ fn step_c6_5(
         pipeline_summary.to_string(),
         "--in-flight".to_string(),
         in_flight_str,
-        "--copilot-metrics".to_string(),
-        copilot_metrics.clone(),
         "--publish-gate".to_string(),
         publish_gate.clone(),
         "--section-title".to_string(),
@@ -1004,36 +1000,6 @@ fn derive_patch_pipeline_next_steps(state: &StateJson) -> Result<Vec<String>, St
     }
 
     Ok(next_steps)
-}
-
-fn format_copilot_metrics(state: &StateJson) -> Result<String, String> {
-    let total_dispatches = state
-        .copilot_metrics
-        .total_dispatches
-        .ok_or_else(|| "missing copilot_metrics.total_dispatches in state.json".to_string())?;
-    let produced_pr = state
-        .copilot_metrics
-        .produced_pr
-        .ok_or_else(|| "missing copilot_metrics.produced_pr in state.json".to_string())?;
-    let merged = state
-        .copilot_metrics
-        .merged
-        .ok_or_else(|| "missing copilot_metrics.merged in state.json".to_string())?;
-    if total_dispatches < 0 || produced_pr < 0 || merged < 0 {
-        return Err("copilot_metrics summary fields must be non-negative in state.json".to_string());
-    }
-    let pr_merge_rate = state
-        .copilot_metrics
-        .pr_merge_rate
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| "missing copilot_metrics.pr_merge_rate in state.json".to_string())?;
-
-    Ok(format!(
-        "{} dispatches, {} PRs produced, {} merged, {} PR merge rate",
-        total_dispatches, produced_pr, merged, pr_merge_rate
-    ))
 }
 
 fn step_c8(
@@ -1327,7 +1293,7 @@ mod tests {
     fn write_write_entry_patch_script(dir: &std::path::Path) {
         fs::write(
             dir.join("tools/write-entry"),
-            "#!/usr/bin/env bash\nset -euo pipefail\npython - \"$@\" <<'PY'\nimport sys\nfrom pathlib import Path\nargs = sys.argv[1:]\nif not args or args[0] != 'patch-pipeline':\n    raise SystemExit(f'unexpected write-entry args: {args}')\nvalues = {}\nlist_values = {}\ni = 1\nwhile i < len(args):\n    key = args[i]\n    if key == '--next-steps':\n        if i + 1 >= len(args):\n            raise SystemExit(f'missing value for {key}')\n        list_values.setdefault(key, []).append(args[i + 1])\n        i += 2\n        continue\n    if i + 1 >= len(args):\n        raise SystemExit(f'missing value for {key}')\n    values[key] = args[i + 1]\n    i += 2\nworklog = Path(values['--worklog-file'])\nlines = worklog.read_text().splitlines()\nfor index, line in enumerate(lines):\n    if line == '## Pre-dispatch state':\n        lines[index] = '## ' + values['--section-title']\n        break\nelse:\n    raise SystemExit('missing state heading')\nlines = [line for line in lines if line != '*Snapshot before review dispatch — final counters may differ after C6.*']\nreplacements = {\n    '- **In-flight agent sessions**: ': values['--in-flight'],\n    '- **Pipeline status**: ': values['--status'],\n    '- **Copilot metrics**: ': values['--copilot-metrics'],\n    '- **Publish gate**: ': values['--publish-gate'],\n}\nfor prefix, value in replacements.items():\n    for index, line in enumerate(lines):\n        if line.startswith(prefix):\n            lines[index] = prefix + value\n            break\n    else:\n        raise SystemExit(f'missing line for {prefix}')\nif '--next-steps' in list_values:\n    for index, line in enumerate(lines):\n        if line == '## Next steps':\n            next_start = index + 1\n            break\n    else:\n        raise SystemExit('missing next steps heading')\n    next_end = len(lines)\n    for index in range(next_start, len(lines)):\n        if lines[index].startswith('## '):\n            next_end = index\n            break\n    replacement = ['']\n    for step_index, step in enumerate(list_values['--next-steps'], start=1):\n        replacement.append(f'{step_index}. {step}')\n    lines[next_start:next_end] = replacement\nworklog.write_text('\\n'.join(lines) + '\\n')\nprint(worklog)\nPY\n",
+            "#!/usr/bin/env bash\nset -euo pipefail\npython - \"$@\" <<'PY'\nimport sys\nfrom pathlib import Path\nargs = sys.argv[1:]\nif not args or args[0] != 'patch-pipeline':\n    raise SystemExit(f'unexpected write-entry args: {args}')\nvalues = {}\nlist_values = {}\ni = 1\nwhile i < len(args):\n    key = args[i]\n    if key == '--next-steps':\n        if i + 1 >= len(args):\n            raise SystemExit(f'missing value for {key}')\n        list_values.setdefault(key, []).append(args[i + 1])\n        i += 2\n        continue\n    if i + 1 >= len(args):\n        raise SystemExit(f'missing value for {key}')\n    values[key] = args[i + 1]\n    i += 2\nworklog = Path(values['--worklog-file'])\nlines = worklog.read_text().splitlines()\nfor index, line in enumerate(lines):\n    if line == '## Pre-dispatch state':\n        lines[index] = '## ' + values['--section-title']\n        break\nelse:\n    raise SystemExit('missing state heading')\nlines = [line for line in lines if line != '*Snapshot before review dispatch — final counters may differ after C6.*']\nreplacements = {\n    '- **In-flight agent sessions**: ': values['--in-flight'],\n    '- **Pipeline status**: ': values['--status'],\n    '- **Publish gate**: ': values['--publish-gate'],\n}\nfor prefix, value in replacements.items():\n    for index, line in enumerate(lines):\n        if line.startswith(prefix):\n            lines[index] = prefix + value\n            break\n    else:\n        raise SystemExit(f'missing line for {prefix}')\nlines = [line for line in lines if not line.startswith('- **Copilot metrics**: ')]\nif '--next-steps' in list_values:\n    for index, line in enumerate(lines):\n        if line == '## Next steps':\n            next_start = index + 1\n            break\n    else:\n        raise SystemExit('missing next steps heading')\n    next_end = len(lines)\n    for index in range(next_start, len(lines)):\n        if lines[index].startswith('## '):\n            next_end = index\n            break\n    replacement = ['']\n    for step_index, step in enumerate(list_values['--next-steps'], start=1):\n        replacement.append(f'{step_index}. {step}')\n    lines[next_start:next_end] = replacement\nworklog.write_text('\\n'.join(lines) + '\\n')\nprint(worklog)\nPY\n",
         )
         .unwrap();
     }
@@ -1713,7 +1679,7 @@ mod tests {
         fs::create_dir_all(dir.join("docs/journal")).unwrap();
         fs::write(
             dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"),
-            "# Cycle 345\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: PASS\n- **Copilot metrics**: 1 dispatches, 1 PRs produced, 1 merged, 100.0% PR merge rate\n- **Publish gate**: published\n\n## Next steps\n\n1. None.\n",
+            "# Cycle 345\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: PASS\n- **Publish gate**: published\n\n## Next steps\n\n1. None.\n",
         )
         .unwrap();
         fs::write(dir.join("docs/journal/2026-03-25.md"), "# Journal\n").unwrap();
@@ -1742,13 +1708,7 @@ mod tests {
                 "publish_gate": {
                     "status": "published"
                 },
-                "copilot_metrics": {
-                    "total_dispatches": 1,
-                    "produced_pr": 1,
-                    "merged": 1,
-                    "pr_merge_rate": "100.0%",
-                    "in_flight": 0
-                },
+                "in_flight_sessions": 0,
                 "agent_sessions": []
             }))
             .unwrap(),
@@ -1780,7 +1740,7 @@ mod tests {
         fs::write(
             dir.join("tools/dispatch-review"),
             format!(
-                "#!/usr/bin/env bash\nset -euo pipefail\npython - <<'PY'\nimport json\nfrom pathlib import Path\nstate_path = Path({state_path:?})\nstate = json.loads(state_path.read_text())\nstate['copilot_metrics']['total_dispatches'] = 2\nstate['copilot_metrics']['produced_pr'] = 2\nstate['copilot_metrics']['in_flight'] = 1\nstate['copilot_metrics']['pr_merge_rate'] = '50.0%'\nstate['agent_sessions'] = [{{'issue': 1470, 'title': '[Cycle Review] Cycle 345 end-of-cycle review', 'status': 'in_flight'}}]\nstate_path.write_text(json.dumps(state, indent=2) + '\\n')\nPY\ngit -C {repo:?} add docs/state.json\ngit -C {repo:?} commit -m 'state(record-dispatch): #1470 dispatched [cycle 345]' >/dev/null\nprintf '%s\\n' 'Created review issue #1470 from orchestrator issue #123: https://github.com/EvaLok/schema-org-json-ld/issues/1470'\n",
+                "#!/usr/bin/env bash\nset -euo pipefail\npython - <<'PY'\nimport json\nfrom pathlib import Path\nstate_path = Path({state_path:?})\nstate = json.loads(state_path.read_text())\nstate['dispatch_log_latest'] = '#1470 [Cycle Review] Cycle 345 end-of-cycle review (cycle 345)'\nstate['in_flight_sessions'] = 1\nstate['agent_sessions'] = [{{'issue': 1470, 'title': '[Cycle Review] Cycle 345 end-of-cycle review', 'status': 'in_flight'}}]\nstate_path.write_text(json.dumps(state, indent=2) + '\\n')\nPY\ngit -C {repo:?} add docs/state.json\ngit -C {repo:?} commit -m 'state(record-dispatch): #1470 dispatched [cycle 345]' >/dev/null\nprintf '%s\\n' 'Created review issue #1470 from orchestrator issue #123: https://github.com/EvaLok/schema-org-json-ld/issues/1470'\n",
                 state_path = dir.join("docs/state.json"),
                 repo = dir,
             ),
@@ -1848,7 +1808,7 @@ mod tests {
         fs::create_dir_all(dir.join("docs/journal")).unwrap();
         fs::write(
             dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"),
-            "# Cycle 345\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: PASS\n- **Copilot metrics**: 1 dispatches, 1 PRs produced, 1 merged, 100.0% PR merge rate\n- **Publish gate**: published\n\n## Next steps\n\n1. None.\n",
+            "# Cycle 345\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: PASS\n- **Publish gate**: published\n\n## Next steps\n\n1. None.\n",
         )
         .unwrap();
         fs::write(dir.join("docs/journal/2026-03-25.md"), "# Journal\n").unwrap();
@@ -1877,13 +1837,7 @@ mod tests {
                 "publish_gate": {
                     "status": "published"
                 },
-                "copilot_metrics": {
-                    "total_dispatches": 1,
-                    "produced_pr": 1,
-                    "merged": 1,
-                    "pr_merge_rate": "100.0%",
-                    "in_flight": 0
-                },
+                "in_flight_sessions": 0,
                 "agent_sessions": []
             }))
             .unwrap(),
@@ -1915,7 +1869,7 @@ mod tests {
         fs::write(
             dir.join("tools/dispatch-review"),
             format!(
-                "#!/usr/bin/env bash\nset -euo pipefail\npython - <<'PY'\nimport json\nfrom pathlib import Path\nstate_path = Path({state_path:?})\nstate = json.loads(state_path.read_text())\nstate['copilot_metrics']['total_dispatches'] = 2\nstate['copilot_metrics']['produced_pr'] = 2\nstate['copilot_metrics']['in_flight'] = 1\nstate['copilot_metrics']['pr_merge_rate'] = '50.0%'\nstate['agent_sessions'] = [{{'issue': 1470, 'title': '[Cycle Review] Cycle 345 end-of-cycle review', 'status': 'in_flight'}}]\nstate_path.write_text(json.dumps(state, indent=2) + '\\n')\nPY\ngit -C {repo:?} add docs/state.json\ngit -C {repo:?} commit -m 'state(record-dispatch): #1470 dispatched [cycle 345]' >/dev/null\nprintf '%s\\n' 'Created review issue #1470 from orchestrator issue #123: https://github.com/EvaLok/schema-org-json-ld/issues/1470'\n",
+                "#!/usr/bin/env bash\nset -euo pipefail\npython - <<'PY'\nimport json\nfrom pathlib import Path\nstate_path = Path({state_path:?})\nstate = json.loads(state_path.read_text())\nstate['dispatch_log_latest'] = '#1470 [Cycle Review] Cycle 345 end-of-cycle review (cycle 345)'\nstate['in_flight_sessions'] = 1\nstate['agent_sessions'] = [{{'issue': 1470, 'title': '[Cycle Review] Cycle 345 end-of-cycle review', 'status': 'in_flight'}}]\nstate_path.write_text(json.dumps(state, indent=2) + '\\n')\nPY\ngit -C {repo:?} add docs/state.json\ngit -C {repo:?} commit -m 'state(record-dispatch): #1470 dispatched [cycle 345]' >/dev/null\nprintf '%s\\n' 'Created review issue #1470 from orchestrator issue #123: https://github.com/EvaLok/schema-org-json-ld/issues/1470'\n",
                 state_path = dir.join("docs/state.json"),
                 repo = dir,
             ),
@@ -1961,9 +1915,6 @@ mod tests {
         assert!(worklog.contains("- **In-flight agent sessions**: 1"));
         assert!(worklog.contains("- **Pipeline status**: PASS (1 warning)"));
         assert!(!worklog.contains("phase_5_active"));
-        assert!(worklog.contains(
-            "- **Copilot metrics**: 2 dispatches, 2 PRs produced, 1 merged, 50.0% PR merge rate"
-        ));
         assert!(worklog.contains("- **Publish gate**: published"));
         assert!(worklog.contains(
             "## Next steps\n\n1. Review and iterate on PR from [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) ([Cycle Review] Cycle 345 end-of-cycle review) when Copilot completes\n"
