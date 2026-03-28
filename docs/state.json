@@ -5731,8 +5731,10 @@
     {
       "dispatched_at": "2026-03-28T14:21:38Z",
       "issue": 1915,
+      "merged_at": "2026-03-28T16:20:26Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1916,
+      "status": "merged",
       "title": "Deferral deadline enforcement for review findings"
     },
     {
@@ -6240,7 +6242,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 12,
     "issue": 1919,
