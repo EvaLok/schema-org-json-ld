@@ -5675,6 +5675,13 @@
       "pr": 1895,
       "status": "merged",
       "title": "[Cycle Review] Cycle 390 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-28T08:30:11Z",
+      "issue": 1899,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add pending_audit_implementations tracking with pipeline-check enforcement"
     }
   ],
   "audit_dropped": [
@@ -5897,7 +5904,6 @@
     "status": "complete",
     "total_classes_converted": 54
   },
-  "dispatch_log_latest": "#1894 [Cycle Review] Cycle 390 end-of-cycle review (cycle 390)",
   "cycle_issues": [
     1896
   ],
@@ -5906,6 +5912,7 @@
     "phase": "work",
     "phase_entered_at": "2026-03-28T08:11:38Z"
   },
+  "dispatch_log_latest": "#1899 Add pending_audit_implementations tracking with pipeline-check enforcement (cycle 391)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6004,14 +6011,14 @@
         "cadence": "every cycle",
         "last_refreshed": "cycle 391"
       },
-      "dispatch_log_latest": {
-        "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 391"
-      },
       "cycle_phase": {
         "cadence": "every phase transition",
         "last_refreshed": "cycle 391",
         "notes": "Tracks cycle, phase, phase_entered_at, and completed_at when phase is complete."
+      },
+      "dispatch_log_latest": {
+        "cadence": "every dispatch or merge",
+        "last_refreshed": "cycle 391"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
@@ -6171,7 +6178,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 10,
     "issue": 1896,
@@ -9911,7 +9918,7 @@
       }
     ]
   },
-  "review_dispatch_consecutive": 2,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 390,
   "schema_status": {
     "directory_layout": {
