@@ -5609,6 +5609,7 @@
     {
       "dispatched_at": "2026-03-27T22:26:34Z",
       "issue": 1876,
+      "merged_at": "2026-03-28T00:17:45Z",
       "model": "gpt-5.4",
       "pr": 1877,
       "status": "merged",
@@ -5618,7 +5619,8 @@
       "dispatched_at": "2026-03-28T00:26:14Z",
       "issue": 1879,
       "model": "gpt-5.4",
-      "status": "dispatched",
+      "pr": 1880,
+      "status": "closed",
       "title": "Remove copilot_metrics vanity metrics"
     },
     {
@@ -5883,16 +5885,16 @@
     "total_classes_converted": 54
   },
   "copilot_metrics": {
-    "closed_without_merge": 10,
+    "closed_without_merge": 11,
     "closed_without_pr": 65,
     "dispatch_log_latest": "#1892 Make copilot_metrics optional and stop all tools from using it (cycle 390)",
-    "dispatch_to_pr_rate": "89.0%",
+    "dispatch_to_pr_rate": "89.2%",
     "failed_dispatches": 16,
-    "in_flight": 3,
-    "merged": 540,
-    "pr_merge_rate": "97.8%",
-    "produced_pr": 552,
-    "resolved": 617,
+    "in_flight": 1,
+    "merged": 541,
+    "pr_merge_rate": "97.7%",
+    "produced_pr": 554,
+    "resolved": 620,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
     "total_dispatches": 621
@@ -5902,8 +5904,8 @@
   ],
   "cycle_phase": {
     "cycle": 390,
-    "phase": "work",
-    "phase_entered_at": "2026-03-28T06:20:23Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-28T06:31:27Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -6022,11 +6024,11 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 389"
+        "last_refreshed": "cycle 390"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 389"
+        "last_refreshed": "cycle 390"
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
@@ -6038,7 +6040,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 389"
+        "last_refreshed": "cycle 390"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -6058,7 +6060,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 389"
+        "last_refreshed": "cycle 390"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -6066,11 +6068,11 @@
       },
       "project_mode": {
         "cadence": "when mode or counter changes",
-        "last_refreshed": "cycle 389"
+        "last_refreshed": "cycle 390"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 389"
+        "last_refreshed": "cycle 390"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -6086,7 +6088,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 389"
+        "last_refreshed": "cycle 390"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -6094,11 +6096,11 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 389"
+        "last_refreshed": "cycle 390"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 389"
+        "last_refreshed": "cycle 390"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -6106,7 +6108,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 389"
+        "last_refreshed": "cycle 390"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -6174,7 +6176,7 @@
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 389"
+        "last_refreshed": "cycle 390"
       }
     }
   },
@@ -6183,10 +6185,10 @@
     "duration_minutes": 10,
     "issue": 1891,
     "number": 390,
-    "summary": "Processed cycle 388 review findings (2 actioned, 2 deferred). Merged review artifact PR #1885. Closed failed PR #1880 (copilot_metrics removal — merge conflicts). Re-dispatched copilot_metrics removal as #1887 with cleaner spec. Refreshed stale field inventory. 1 dispatch, 1 merge.",
-    "timestamp": "2026-03-28T06:20:22Z"
+    "summary": "1 dispatches, 1 merges (PR #1890)",
+    "timestamp": "2026-03-28T06:30:16Z"
   },
-  "last_eva_comment_check": "2026-03-28T06:20:22Z",
+  "last_eva_comment_check": "2026-03-28T06:30:16Z",
   "last_tool_audit_cycle": 376,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
