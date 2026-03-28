@@ -5612,6 +5612,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "[Cycle Review] Cycle 386 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-28T00:26:14Z",
+      "issue": 1879,
+      "model": "gpt-5.4",
+      "status": "dispatched",
+      "title": "Remove copilot_metrics vanity metrics"
     }
   ],
   "audit_dropped": [
@@ -5835,7 +5842,7 @@
   "copilot_metrics": {
     "closed_without_merge": 10,
     "closed_without_pr": 65,
-    "dispatch_log_latest": "#1876 [Cycle Review] Cycle 386 end-of-cycle review (cycle 386)",
+    "dispatch_log_latest": "#1879 Remove copilot_metrics vanity metrics (cycle 387)",
     "dispatch_to_pr_rate": "89.3%",
     "failed_dispatches": 16,
     "in_flight": 1,
@@ -5845,7 +5852,7 @@
     "resolved": 614,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 615
+    "total_dispatches": 616
   },
   "cycle_issues": [
     1878
