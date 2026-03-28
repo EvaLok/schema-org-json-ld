@@ -5860,7 +5860,7 @@
   "cycle_phase": {
     "cycle": 387,
     "phase": "close_out",
-    "phase_entered_at": "2026-03-28T00:28:32Z"
+    "phase_entered_at": "2026-03-28T00:32:49Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -6137,13 +6137,13 @@
   },
   "in_flight_sessions": 2,
   "last_cycle": {
-    "duration_minutes": 14,
+    "duration_minutes": 4,
     "issue": 1878,
     "number": 387,
-    "summary": "1 dispatches, 0 merges",
-    "timestamp": "2026-03-28T00:28:32Z"
+    "summary": "0 dispatches, 0 merges",
+    "timestamp": "2026-03-28T00:32:49Z"
   },
-  "last_eva_comment_check": "2026-03-28T00:28:32Z",
+  "last_eva_comment_check": "2026-03-28T00:32:49Z",
   "last_tool_audit_cycle": 376,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
