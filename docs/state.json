@@ -5664,6 +5664,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Make copilot_metrics optional and stop all tools from using it"
+    },
+    {
+      "dispatched_at": "2026-03-28T06:44:33Z",
+      "issue": 1894,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 390 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -5887,17 +5894,17 @@
   "copilot_metrics": {
     "closed_without_merge": 12,
     "closed_without_pr": 65,
-    "dispatch_log_latest": "#1892 Make copilot_metrics optional and stop all tools from using it (cycle 390)",
-    "dispatch_to_pr_rate": "89.4%",
+    "dispatch_log_latest": "#1894 [Cycle Review] Cycle 390 end-of-cycle review (cycle 390)",
+    "dispatch_to_pr_rate": "89.2%",
     "failed_dispatches": 16,
-    "in_flight": 1,
+    "in_flight": 2,
     "merged": 541,
     "pr_merge_rate": "97.5%",
     "produced_pr": 555,
     "resolved": 620,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 621
+    "total_dispatches": 622
   },
   "cycle_issues": [
     1891
@@ -6180,7 +6187,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 10,
     "issue": 1891,
@@ -9920,7 +9927,7 @@
       }
     ]
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 390,
   "schema_status": {
     "directory_layout": {
