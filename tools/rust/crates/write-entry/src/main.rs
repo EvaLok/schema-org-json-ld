@@ -22,11 +22,14 @@ const NOT_PROVIDED: &str = "Not provided.";
 const CYCLE_STATE_HEADING: &str = "## Cycle state";
 const LEGACY_STATE_HEADING: &str = "## Pre-dispatch state";
 const NEXT_STEPS_HEADING: &str = "## Next steps";
+const NEXT_STEPS_POST_DISPATCH_HEADING: &str = "## Next steps (post-dispatch)";
 const LEGACY_STATE_DISCLAIMER: &str = "*Snapshot before review dispatch — final counters may differ after C6.*";
 const IN_FLIGHT_PREFIX: &str = "- **In-flight agent sessions**: ";
+const IN_FLIGHT_POST_DISPATCH_PREFIX: &str = "- **In-flight agent sessions (post-dispatch)**: ";
 const PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
 const POST_DISPATCH_PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status (post-dispatch)**: ";
 const PUBLISH_GATE_PREFIX: &str = "- **Publish gate**: ";
+const PUBLISH_GATE_POST_DISPATCH_PREFIX: &str = "- **Publish gate (post-dispatch)**: ";
 const INFRASTRUCTURE_ROOTS: [&str; 2] = ["tools", ".claude/skills"];
 const INFRASTRUCTURE_FILES: [&str; 4] = [
     "STARTUP_CHECKLIST.md",
@@ -437,7 +440,15 @@ fn execute_patch_pipeline(args: &PatchPipelineArgs, repo_root: &Path) -> Result<
         )
     })?;
     if let Some(in_flight) = args.in_flight {
-        patched = patch_line_value(&patched, IN_FLIGHT_PREFIX, &in_flight.to_string()).ok_or_else(|| {
+        let in_flight = in_flight.to_string();
+        patched = patch_or_addendum(
+            &patched,
+            IN_FLIGHT_PREFIX,
+            &in_flight,
+            IN_FLIGHT_POST_DISPATCH_PREFIX,
+        )
+        .map(|(patched, _)| patched)
+        .ok_or_else(|| {
             format!(
                 "failed to patch {}: in-flight agent sessions line not found",
                 worklog_path.display()
@@ -445,7 +456,14 @@ fn execute_patch_pipeline(args: &PatchPipelineArgs, repo_root: &Path) -> Result<
         })?;
     }
     if let Some(publish_gate) = args.publish_gate.as_deref() {
-        patched = patch_line_value(&patched, PUBLISH_GATE_PREFIX, publish_gate).ok_or_else(|| {
+        patched = patch_or_addendum(
+            &patched,
+            PUBLISH_GATE_PREFIX,
+            publish_gate,
+            PUBLISH_GATE_POST_DISPATCH_PREFIX,
+        )
+        .map(|(patched, _)| patched)
+        .ok_or_else(|| {
             format!(
                 "failed to patch {}: publish gate line not found",
                 worklog_path.display()
@@ -464,14 +482,18 @@ fn execute_patch_pipeline(args: &PatchPipelineArgs, repo_root: &Path) -> Result<
     }
     patched = remove_line_with_prefix(&patched, "- **Copilot metrics**: ");
     if !args.next_steps.is_empty() {
-        patched = patch_numbered_section(&patched, NEXT_STEPS_HEADING, &args.next_steps).ok_or_else(
-            || {
-                format!(
-                    "failed to patch {}: next steps section not found",
-                    worklog_path.display()
-                )
-            },
-        )?;
+        patched = patch_or_addendum_numbered_section(
+            &patched,
+            NEXT_STEPS_HEADING,
+            &args.next_steps,
+            NEXT_STEPS_POST_DISPATCH_HEADING,
+        )
+        .ok_or_else(|| {
+            format!(
+                "failed to patch {}: next steps section not found",
+                worklog_path.display()
+            )
+        })?;
     }
     fs::write(&worklog_path, patched)
         .map_err(|error| format!("failed to write {}: {}", worklog_path.display(), error))?;
@@ -538,11 +560,12 @@ fn patch_or_addendum(
     };
     Some((
         format!(
-            "{}{}{}{}{}",
+            "{}{}{}{}{}{}",
             &content[..insert_at],
             separator,
             addendum_prefix,
             value,
+            if insert_at < content.len() { "\n" } else { "" },
             &content[insert_at..]
         ),
         PatchOrAddendumOutcome::AddedAddendum,
@@ -621,13 +644,7 @@ fn remove_line_with_prefix(content: &str, prefix: &str) -> String {
 
 fn patch_numbered_section(content: &str, heading: &str, items: &[String]) -> Option<String> {
     let mut lines: Vec<String> = content.lines().map(ToOwned::to_owned).collect();
-    let heading_index = lines.iter().position(|line| line == heading)?;
-    let section_start = heading_index + 1;
-    let section_end = lines[section_start..]
-        .iter()
-        .position(|line| line.starts_with("## "))
-        .map(|offset| section_start + offset)
-        .unwrap_or(lines.len());
+    let (_, section_start, section_end) = find_numbered_section_bounds(&lines, heading)?;
 
     let mut replacement = vec![String::new()];
     for (index, item) in items.iter().enumerate() {
@@ -644,6 +661,73 @@ fn patch_numbered_section(content: &str, heading: &str, items: &[String]) -> Opt
         patched.push('\n');
     }
     Some(patched)
+}
+
+fn patch_or_addendum_numbered_section(
+    content: &str,
+    heading: &str,
+    items: &[String],
+    addendum_heading: &str,
+) -> Option<String> {
+    let lines: Vec<String> = content.lines().map(ToOwned::to_owned).collect();
+    let (_, section_start, section_end) = find_numbered_section_bounds(&lines, heading)?;
+    if numbered_section_needs_replacement(&lines[section_start..section_end]) {
+        return patch_numbered_section(content, heading, items);
+    }
+    if find_numbered_section_bounds(&lines, addendum_heading).is_some() {
+        return patch_numbered_section(content, addendum_heading, items);
+    }
+
+    let mut patched_lines = lines;
+    let mut insertion = Vec::new();
+    if !patched_lines[section_end - 1].is_empty() {
+        insertion.push(String::new());
+    }
+    insertion.push(addendum_heading.to_string());
+    insertion.push(String::new());
+    for (index, item) in items.iter().enumerate() {
+        insertion.push(format!("{}. {}", index + 1, item));
+    }
+    if section_end < patched_lines.len() {
+        insertion.push(String::new());
+    }
+    patched_lines.splice(section_end..section_end, insertion);
+
+    let mut patched = patched_lines.join("\n");
+    if content.ends_with('\n') {
+        patched.push('\n');
+    }
+    Some(patched)
+}
+
+fn find_numbered_section_bounds(
+    lines: &[String],
+    heading: &str,
+) -> Option<(usize, usize, usize)> {
+    let heading_index = lines.iter().position(|line| line == heading)?;
+    let section_start = heading_index + 1;
+    let section_end = lines[section_start..]
+        .iter()
+        .position(|line| line.starts_with("## "))
+        .map(|offset| section_start + offset)
+        .unwrap_or(lines.len());
+    Some((heading_index, section_start, section_end))
+}
+
+fn numbered_section_needs_replacement(lines: &[String]) -> bool {
+    let entries: Vec<&str> = lines
+        .iter()
+        .map(|line| line.trim())
+        .filter(|line| !line.is_empty())
+        .collect();
+    if entries.is_empty() {
+        return true;
+    }
+    if entries.len() != 1 {
+        return false;
+    }
+    let entry = entries[0].trim_end_matches('.');
+    entry == "Not provided" || entry == "1. Not provided"
 }
 
 fn resolve_cycle(cycle: Option<u64>, repo_root: &Path) -> Result<u64, String> {
@@ -6720,10 +6804,12 @@ Reflective log for the schema-org-json-ld orchestrator.
         assert!(updated.contains("## Cycle state"));
         assert!(!updated.contains("## Pre-dispatch state"));
         assert!(!updated.contains("Snapshot before review dispatch"));
-        assert!(updated.contains("- **In-flight agent sessions**: 2"));
+        assert!(updated.contains("- **In-flight agent sessions**: 1"));
+        assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 2"));
         assert!(updated.contains("- **Pipeline status**: PASS (9/9)"));
         assert!(!updated.contains("- **Copilot metrics**:"));
-        assert!(updated.contains("- **Publish gate**: published"));
+        assert!(updated.contains("- **Publish gate**: open"));
+        assert!(updated.contains("- **Publish gate (post-dispatch)**: published"));
         assert!(updated.contains("## Next steps"));
         assert!(!updated.contains("- **Pipeline status (post-dispatch)**:"));
     }
@@ -6800,7 +6886,7 @@ Reflective log for the schema-org-json-ld orchestrator.
         fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
         fs::write(
             &worklog_path,
-            "# Cycle 154\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: open\n",
+            "# Cycle 154\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: open\n\n## Next steps\n\n1. Plan next dispatch\n",
         )
         .unwrap();
 
@@ -6808,9 +6894,13 @@ Reflective log for the schema-org-json-ld orchestrator.
             &PatchPipelineArgs {
                 worklog: PathBuf::from("docs/worklog/test.md"),
                 status: "PASS (9/9)".to_string(),
-                in_flight: None,
-                publish_gate: None,
-                next_steps: Vec::new(),
+                in_flight: Some(1),
+                publish_gate: Some("published".to_string()),
+                next_steps: vec![
+                    "Review [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) when Copilot completes"
+                        .to_string(),
+                    "Prepare follow-up dispatch".to_string(),
+                ],
                 section_title: None,
             },
             &repo_root.path,
@@ -6818,8 +6908,13 @@ Reflective log for the schema-org-json-ld orchestrator.
         .unwrap();
 
         let updated = fs::read_to_string(&worklog_path).unwrap();
+        assert!(updated.contains("- **In-flight agent sessions**: 0"));
+        assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
         assert!(updated.contains("- **Pipeline status**: FAIL (1 blocking finding)"));
         assert!(updated.contains("- **Pipeline status (post-dispatch)**: PASS (9/9)"));
+        assert!(updated.contains("- **Publish gate**: open"));
+        assert!(updated.contains("- **Publish gate (post-dispatch)**: published"));
+        assert!(updated.contains("## Next steps\n\n1. Plan next dispatch\n\n## Next steps (post-dispatch)\n\n1. Review [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) when Copilot completes\n2. Prepare follow-up dispatch\n"));
         assert_eq!(updated.matches("- **Pipeline status**:").count(), 1);
         assert_eq!(
             updated
@@ -6856,7 +6951,8 @@ Reflective log for the schema-org-json-ld orchestrator.
         let updated = fs::read_to_string(&worklog_path).unwrap();
         assert!(updated.contains("- **Pipeline status**: PASS (9/9)"));
         assert!(!updated.contains("- **Pipeline status (post-dispatch)**:"));
-        assert!(updated.contains("- **In-flight agent sessions**: 1"));
+        assert!(updated.contains("- **In-flight agent sessions**: 0"));
+        assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
     }
 
     #[test]
@@ -6866,7 +6962,7 @@ Reflective log for the schema-org-json-ld orchestrator.
         fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
         fs::write(
             &worklog_path,
-            "# Cycle 154\n\n## Cycle state\n\n- **Pipeline status**: PASS\n\n## Next steps\n\n1. Old next step\n2. Another old step\n",
+            "# Cycle 154\n\n## Cycle state\n\n- **Pipeline status**: PASS\n\n## Next steps\n\nNot provided.\n",
         )
         .unwrap();
 
@@ -6889,7 +6985,7 @@ Reflective log for the schema-org-json-ld orchestrator.
 
         let updated = fs::read_to_string(&worklog_path).unwrap();
         assert!(updated.contains("## Next steps\n\n1. Review [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) when Copilot completes\n2. Prepare follow-up dispatch\n"));
-        assert!(!updated.contains("Old next step"));
+        assert!(!updated.contains("## Next steps (post-dispatch)"));
     }
 
     #[test]
@@ -6917,9 +7013,8 @@ Reflective log for the schema-org-json-ld orchestrator.
         .unwrap();
 
         let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains("## Next steps\n\n1. No in-flight sessions — plan next dispatch\n\n## Commit receipts\n"));
+        assert!(updated.contains("## Next steps\n\n1. Old next step\n\n## Next steps (post-dispatch)\n\n1. No in-flight sessions — plan next dispatch\n\n## Commit receipts\n"));
         assert!(updated.contains("| cycle-start | abc1234 |"));
-        assert!(!updated.contains("Old next step"));
     }
 
     #[test]
