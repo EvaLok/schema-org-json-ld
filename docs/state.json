@@ -5661,8 +5661,10 @@
     {
       "dispatched_at": "2026-03-28T06:28:35Z",
       "issue": 1892,
+      "merged_at": "2026-03-28T08:25:11Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1893,
+      "status": "merged",
       "title": "Make copilot_metrics optional and stop all tools from using it"
     },
     {
@@ -6191,7 +6193,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 10,
     "issue": 1896,
