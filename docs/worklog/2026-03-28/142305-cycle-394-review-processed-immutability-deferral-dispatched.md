@@ -25,7 +25,7 @@
 
 ## Cycle state
 
-- **In-flight agent sessions**: 2
+- **In-flight agent sessions**: 3
 - **Pipeline status**: PASS (3 warnings)
 - **Publish gate**: published
 
@@ -33,6 +33,7 @@
 
 1. Review and iterate on PR from [#1913](https://github.com/EvaLok/schema-org-json-ld/issues/1913) (Full worklog snapshot immutability — extend addendum pattern to all state fields) when Copilot completes
 2. Review and iterate on PR from [#1915](https://github.com/EvaLok/schema-org-json-ld/issues/1915) (Deferral deadline enforcement for review findings) when Copilot completes
+3. Review and iterate on PR from [#1917](https://github.com/EvaLok/schema-org-json-ld/issues/1917) ([Cycle Review] Cycle 394 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
