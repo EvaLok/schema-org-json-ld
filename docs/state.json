@@ -5765,6 +5765,13 @@
       "pr": 1924,
       "status": "merged",
       "title": "Fix process-review deferral deadline anchoring and verified_resolved reconciliation"
+    },
+    {
+      "dispatched_at": "2026-03-28T18:42:12Z",
+      "issue": 1925,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 396 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -6004,7 +6011,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#1923 Fix process-review deferral deadline anchoring and verified_resolved reconciliation (cycle 396)",
+  "dispatch_log_latest": "#1925 [Cycle Review] Cycle 396 end-of-cycle review (cycle 396)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6270,7 +6277,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 5,
     "issue": 1922,
@@ -10201,7 +10208,7 @@
     ],
     "last_review_cycle": 395
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 392,
   "schema_status": {
     "directory_layout": {
