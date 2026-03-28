@@ -5981,9 +5981,10 @@
     1919
   ],
   "cycle_phase": {
+    "completed_at": "2026-03-28T16:32:49Z",
     "cycle": 395,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-28T16:26:54Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-28T16:32:49Z"
   },
   "dispatch_log_latest": "#1920 [Cycle Review] Cycle 395 end-of-cycle review (cycle 395)",
   "eva_input_issues": {
