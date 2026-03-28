@@ -5962,8 +5962,8 @@
   ],
   "cycle_phase": {
     "cycle": 394,
-    "phase": "work",
-    "phase_entered_at": "2026-03-28T14:11:54Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-28T14:24:08Z"
   },
   "dispatch_log_latest": "#1915 Deferral deadline enforcement for review findings (cycle 394)",
   "eva_input_issues": {
@@ -6071,11 +6071,11 @@
       },
       "dispatch_log_latest": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 393"
+        "last_refreshed": "cycle 394"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 393"
+        "last_refreshed": "cycle 394"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -6091,7 +6091,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 393"
+        "last_refreshed": "cycle 394"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -6111,7 +6111,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 393"
+        "last_refreshed": "cycle 394"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -6123,7 +6123,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 393"
+        "last_refreshed": "cycle 394"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -6147,11 +6147,11 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 393"
+        "last_refreshed": "cycle 394"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 393"
+        "last_refreshed": "cycle 394"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -6159,7 +6159,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 393"
+        "last_refreshed": "cycle 394"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -6233,13 +6233,13 @@
   },
   "in_flight_sessions": 2,
   "last_cycle": {
-    "duration_minutes": 16,
+    "duration_minutes": 12,
     "issue": 1911,
     "number": 394,
-    "summary": "2 merges (PR #1905: pipeline immutability fix, PR #1907: cycle 392 review artifact). Completed both audit implementations (#336, #337). Processed cycle 392 review (3 findings: 2 actioned, 1 deferred). Refreshed stale field inventories. Cleaned housekeeping.",
-    "timestamp": "2026-03-28T14:11:53Z"
+    "summary": "2 dispatches, 1 merges (PR #1910)",
+    "timestamp": "2026-03-28T14:24:08Z"
   },
-  "last_eva_comment_check": "2026-03-28T14:11:53Z",
+  "last_eva_comment_check": "2026-03-28T14:24:08Z",
   "last_tool_audit_cycle": 376,
   "open_questions_for_eva": [],
   "pending_audit_implementations": [
