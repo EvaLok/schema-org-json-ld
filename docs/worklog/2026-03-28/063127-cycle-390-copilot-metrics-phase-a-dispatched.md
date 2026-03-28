@@ -23,16 +23,15 @@
 
 ## Cycle state
 
-- **In-flight agent sessions**: 1
-- **Pipeline status**: PASS (3 warnings)
-- **Copilot metrics**: 621 dispatches, 552 PRs produced, 540 merged, 97.8% PR merge rate
+- **In-flight agent sessions**: 2
+- **Pipeline status**: PASS (1 blocking warning, 3 warnings)
+- **Copilot metrics**: 622 dispatches, 555 PRs produced, 541 merged, 97.5% PR merge rate
 - **Publish gate**: published
 
 ## Next steps
 
-1. Review and merge PR from [#1892](https://github.com/EvaLok/schema-org-json-ld/issues/1892) (copilot_metrics Phase A) when Copilot finishes
-2. Execute Phase B: remove copilot_metrics data from state.json after Phase A merges
-3. Dispatch cycle 390 review
+1. Review and iterate on PR from [#1892](https://github.com/EvaLok/schema-org-json-ld/issues/1892) (Make copilot_metrics optional and stop all tools from using it) when Copilot completes
+2. Review and iterate on PR from [#1894](https://github.com/EvaLok/schema-org-json-ld/issues/1894) ([Cycle Review] Cycle 390 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
