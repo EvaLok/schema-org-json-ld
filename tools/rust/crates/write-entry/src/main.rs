@@ -514,7 +514,8 @@ fn patch_or_addendum(
     value: &str,
     addendum_prefix: &str,
 ) -> Option<(String, PatchOrAddendumOutcome)> {
-    let current_value = line_value(content, prefix)?;
+    let line_start = find_line_start(content, prefix)?;
+    let current_value = line_value_from_start(content, line_start, prefix)?;
     if line_value_needs_replacement(current_value) {
         return patch_line_value(content, prefix, value)
             .map(|patched| (patched, PatchOrAddendumOutcome::ReplacedOriginal));
@@ -529,8 +530,8 @@ fn patch_or_addendum(
         return patch_line_value(content, addendum_prefix, value)
             .map(|patched| (patched, PatchOrAddendumOutcome::AddedAddendum));
     }
-    let insert_at = line_end_index(content, find_line_start(content, prefix)?);
-    let separator = if insert_at == content.len() && !content[..insert_at].ends_with('\n') {
+    let insert_at = line_end_index(content, line_start);
+    let separator = if insert_at == content.len() && !content.ends_with('\n') {
         "\n"
     } else {
         ""
@@ -560,7 +561,12 @@ fn find_line_start(content: &str, prefix: &str) -> Option<usize> {
 
 fn line_value<'a>(content: &'a str, prefix: &str) -> Option<&'a str> {
     let start = find_line_start(content, prefix)?;
-    let line = line_text(content, start).strip_suffix('\r').unwrap_or(line_text(content, start));
+    line_value_from_start(content, start, prefix)
+}
+
+fn line_value_from_start<'a>(content: &'a str, start: usize, prefix: &str) -> Option<&'a str> {
+    let line = line_text(content, start);
+    let line = line.strip_suffix('\r').unwrap_or(line);
     line.strip_prefix(prefix)
 }
 
