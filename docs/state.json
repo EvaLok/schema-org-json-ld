@@ -6231,8 +6231,8 @@
     {
       "accepted_cycle": 391,
       "audit_issue": 337,
-      "completed": false,
-      "completed_ref": null,
+      "completed": true,
+      "completed_ref": "PR #1905",
       "deadline_cycle": 396,
       "description": "Pipeline result immutability — treat final C5.5 result as immutable in worklog",
       "issue": 1898
