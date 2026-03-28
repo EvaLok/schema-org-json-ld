@@ -16,6 +16,8 @@
 **Evidence**: Commitment 1 says `Review and iterate on PR from #1879 when Copilot completes`, but `#1879` is currently an issue dispatch, not a PR: `/home/runner/work/schema-org-json-ld/schema-org-json-ld/docs/state.json:5617-5621` shows issue `1879` with status `dispatched` and no `pr` field, and GitHub issue metadata for `#1879` shows an open agent-task issue rather than a pull request. Commitment 2 (`Fix pipeline-check current-cycle-steps gate bug`) identifies a problem area but still lacks an observable done-state such as the exact tool/config change or a validation result that would prove the bug is fixed.
 **Recommendation**: Write commitments against the artifact that actually exists now (issue vs. PR), and include observable completion conditions such as the specific gate behavior expected after the fix and the command/check that must pass.
 
-Complacency score: **3/5**.
+## Complacency score
+
+**3/5**.
 
 Justification: the score is capped at 3/5 because cycle 387 proceeded after a recorded `pipeline-check` failure. The cycle did keep up the step-comment discipline (26 step comments on issue `#1878`), and the canonical receipts, `state-invariants`, and `metric-snapshot` all ran successfully during review. But the cycle still repeated chronic drift in exactly the categories called out last time: state summary accounting is wrong, the worklog masks a failed gate, and the journal commitments are not fully observable.
