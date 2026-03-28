@@ -6028,7 +6028,7 @@
       },
       "audit_processed": {
         "cadence": "after processing audit issues",
-        "last_refreshed": "cycle 382"
+        "last_refreshed": "cycle 393"
       },
       "blockers": {
         "cadence": "after blocker state changes",
@@ -6161,7 +6161,7 @@
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
-        "last_refreshed": "cycle 382"
+        "last_refreshed": "cycle 393"
       },
       "total_enums": {
         "cadence": "after enum additions",
@@ -10010,12 +10010,39 @@
           }
         ],
         "ignored": 0
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "journal-quality",
+          "process-adherence",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 392,
+        "deferred": 1,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "worklog-accuracy",
+            "disposition": "actioned"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "actioned"
+          },
+          {
+            "category": "process-adherence",
+            "disposition": "deferred"
+          }
+        ],
+        "ignored": 0
       }
     ],
     "last_review_cycle": 391
   },
   "review_dispatch_consecutive": 1,
-  "review_events_verified_through_cycle": 391,
+  "review_events_verified_through_cycle": 392,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
