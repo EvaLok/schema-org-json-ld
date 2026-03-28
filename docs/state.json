@@ -5927,8 +5927,8 @@
   ],
   "cycle_phase": {
     "cycle": 392,
-    "phase": "work",
-    "phase_entered_at": "2026-03-28T10:09:49Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-28T10:27:05Z"
   },
   "dispatch_log_latest": "#1904 Fix pipeline status immutability in cycle-runner close-out (cycle 392)",
   "eva_input_issues": {
@@ -6036,11 +6036,11 @@
       },
       "dispatch_log_latest": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 391"
+        "last_refreshed": "cycle 392"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 391"
+        "last_refreshed": "cycle 392"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -6056,7 +6056,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 391"
+        "last_refreshed": "cycle 392"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -6076,7 +6076,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 391"
+        "last_refreshed": "cycle 392"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -6088,7 +6088,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 391"
+        "last_refreshed": "cycle 392"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -6104,7 +6104,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 391"
+        "last_refreshed": "cycle 392"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -6112,11 +6112,11 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 391"
+        "last_refreshed": "cycle 392"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 391"
+        "last_refreshed": "cycle 392"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -6124,7 +6124,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 391"
+        "last_refreshed": "cycle 392"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -6198,13 +6198,13 @@
   },
   "in_flight_sessions": 1,
   "last_cycle": {
-    "duration_minutes": 19,
+    "duration_minutes": 17,
     "issue": 1903,
     "number": 392,
-    "summary": "Merged PR #1895 (cycle 390 review artifact) and PR #1893 (copilot_metrics Phase A removal). Executed Phase B: removed copilot_metrics from state.json, promoted dispatch_log_latest to top-level. Processed 2 audit findings (#336, #337) — both accepted, created audit-inbound issues. Dispatched #1899 (pending_audit_implementations enforcement).",
-    "timestamp": "2026-03-28T10:09:49Z"
+    "summary": "1 dispatches, 2 merges (PR #1900, PR #1902)",
+    "timestamp": "2026-03-28T10:27:05Z"
   },
-  "last_eva_comment_check": "2026-03-28T10:09:49Z",
+  "last_eva_comment_check": "2026-03-28T10:27:05Z",
   "last_tool_audit_cycle": 376,
   "open_questions_for_eva": [],
   "pending_audit_implementations": [
