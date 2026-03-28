@@ -5975,8 +5975,8 @@
   ],
   "cycle_phase": {
     "cycle": 395,
-    "phase": "work",
-    "phase_entered_at": "2026-03-28T16:08:19Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-28T16:26:54Z"
   },
   "dispatch_log_latest": "#1917 [Cycle Review] Cycle 394 end-of-cycle review (cycle 394)",
   "eva_input_issues": {
@@ -6112,7 +6112,7 @@
       },
       "last_tool_audit_cycle": {
         "cadence": "every 10 cycles",
-        "last_refreshed": "cycle 385"
+        "last_refreshed": "cycle 395"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
@@ -6124,7 +6124,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 394"
+        "last_refreshed": "cycle 395"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -6136,7 +6136,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 394"
+        "last_refreshed": "cycle 395"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -6160,11 +6160,11 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 394"
+        "last_refreshed": "cycle 395"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 394"
+        "last_refreshed": "cycle 395"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -6172,7 +6172,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 394"
+        "last_refreshed": "cycle 395"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -6246,13 +6246,13 @@
   },
   "in_flight_sessions": 0,
   "last_cycle": {
-    "duration_minutes": 12,
+    "duration_minutes": 19,
     "issue": 1919,
     "number": 395,
-    "summary": "2 dispatches, 1 merges (PR #1910)",
-    "timestamp": "2026-03-28T16:08:18Z"
+    "summary": "Merged 3 PRs: cycle 394 review artifact, deferral deadline enforcement, worklog snapshot immutability. Processed cycle 394 review (3 findings: 2 actioned, 1 dispatch_created). Refreshed stale field inventory markers. Closed audit-inbound #1912.",
+    "timestamp": "2026-03-28T16:26:54Z"
   },
-  "last_eva_comment_check": "2026-03-28T16:08:18Z",
+  "last_eva_comment_check": "2026-03-28T16:26:54Z",
   "last_tool_audit_cycle": 376,
   "open_questions_for_eva": [],
   "pending_audit_implementations": [
