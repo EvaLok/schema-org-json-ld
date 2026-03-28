@@ -5700,6 +5700,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix pipeline status immutability in cycle-runner close-out"
+    },
+    {
+      "dispatched_at": "2026-03-28T10:33:07Z",
+      "issue": 1906,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 392 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -5930,7 +5937,7 @@
     "phase": "close_out",
     "phase_entered_at": "2026-03-28T10:27:05Z"
   },
-  "dispatch_log_latest": "#1904 Fix pipeline status immutability in cycle-runner close-out (cycle 392)",
+  "dispatch_log_latest": "#1906 [Cycle Review] Cycle 392 end-of-cycle review (cycle 392)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6196,7 +6203,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 17,
     "issue": 1903,
@@ -10005,7 +10012,7 @@
     ],
     "last_review_cycle": 391
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 391,
   "schema_status": {
     "directory_layout": {
