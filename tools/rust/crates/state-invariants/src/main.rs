@@ -1094,12 +1094,6 @@ fn check_review_events_verified(state: &StateJson) -> CheckResult {
         None => return warn("review_events_verified", "missing field: last_cycle.number"),
     };
 
-    let merged_prs = get_extra_i64(state, "prs_merged").unwrap_or(0);
-
-    if merged_prs <= 0 {
-        return pass("review_events_verified");
-    }
-
     let verified_through_cycle = match state
         .extra
         .get("review_events_verified_through_cycle")
@@ -1109,10 +1103,7 @@ fn check_review_events_verified(state: &StateJson) -> CheckResult {
         None => {
             return warn(
                 "review_events_verified",
-                format!(
-                    "missing field: review_events_verified_through_cycle (prs_merged={})",
-                    merged_prs
-                ),
+                "missing field: review_events_verified_through_cycle",
             )
         }
     };
@@ -1127,8 +1118,9 @@ fn check_review_events_verified(state: &StateJson) -> CheckResult {
         );
     }
 
-    // Cross-check: field_inventory freshness must not claim verification beyond the actual value
-    // This catches the chronic pattern of bumping freshness markers without actual verification
+    // Cross-check: field_inventory freshness must not claim verification beyond the actual value.
+    // This runs regardless of whether PRs were merged — the freshness marker should never
+    // drift ahead of the actual verified-through value.
     if let Some(fi) = state
         .field_inventory
         .fields
@@ -1151,6 +1143,12 @@ fn check_review_events_verified(state: &StateJson) -> CheckResult {
                 );
             }
         }
+    }
+
+    let merged_prs = get_extra_i64(state, "prs_merged").unwrap_or(0);
+
+    if merged_prs <= 0 {
+        return pass("review_events_verified");
     }
 
     if current_cycle - verified_through_cycle <= 1 {
