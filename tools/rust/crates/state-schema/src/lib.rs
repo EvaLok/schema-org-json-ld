@@ -42,9 +42,31 @@ pub struct StateJson {
     pub tool_pipeline: ToolPipeline,
     pub field_inventory: FieldInventory,
     pub cycle_phase: CyclePhase,
+    #[serde(default)]
+    pub pending_audit_implementations: Vec<PendingAuditImplementation>,
     pub step_comment_acknowledged_gaps: Option<Vec<StepCommentGap>>,
     #[serde(flatten)]
     pub extra: BTreeMap<String, Value>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default, rename_all = "snake_case")]
+pub struct PendingAuditImplementation {
+    /// The audit-inbound issue number on this repo
+    pub issue: u64,
+    /// The audit-outbound issue number on the audit repo
+    pub audit_issue: Option<u64>,
+    /// Brief description of what needs to be implemented
+    pub description: String,
+    /// Cycle in which the recommendation was accepted
+    pub accepted_cycle: u64,
+    /// Cycle by which implementation must be completed (default: accepted_cycle + 5)
+    pub deadline_cycle: u64,
+    /// Set to true when implementation is complete (PR merged, etc.)
+    #[serde(default)]
+    pub completed: bool,
+    /// Optional: PR or commit that completed the implementation
+    pub completed_ref: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -606,8 +628,8 @@ mod tests {
     use super::{
         commit_state_json, current_cycle_from_state, current_utc_timestamp, default_agent_model,
         read_state_value, set_value_at_pointer, transition_cycle_phase, update_freshness,
-        write_state_value, FindingDisposition, ReviewHistoryEntry, StateJson, ToolsConfig,
-        VALID_PHASES,
+        write_state_value, FindingDisposition, PendingAuditImplementation, ReviewHistoryEntry,
+        StateJson, ToolsConfig, VALID_PHASES,
     };
     use chrono::DateTime;
     use serde_json::{json, Value};
@@ -1355,6 +1377,34 @@ mod tests {
                 .as_ref()
                 .and_then(|metrics| metrics.in_flight),
             Some(3)
+        );
+    }
+
+    #[test]
+    fn pending_audit_implementations_deserialize_with_default_completion_state() {
+        let state: StateJson = serde_json::from_value(json!({
+            "pending_audit_implementations": [{
+                "issue": 1897,
+                "audit_issue": 336,
+                "description": "Add deadline enforcement for accepted audit recommendations",
+                "accepted_cycle": 391,
+                "deadline_cycle": 396
+            }]
+        }))
+        .expect("state should deserialize");
+
+        assert_eq!(
+            state.pending_audit_implementations,
+            vec![PendingAuditImplementation {
+                issue: 1897,
+                audit_issue: Some(336),
+                description:
+                    "Add deadline enforcement for accepted audit recommendations".to_string(),
+                accepted_cycle: 391,
+                deadline_cycle: 396,
+                completed: false,
+                completed_ref: None,
+            }]
         );
     }
 

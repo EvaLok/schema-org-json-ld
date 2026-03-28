@@ -25,6 +25,7 @@ struct Cli {
 const EXCLUDED_TOP_LEVEL: &[&str] = &[
     "schema_version",
     "agent_sessions",
+    "pending_audit_implementations",
     "release",
     "field_inventory",
     "constructor_refactoring",
@@ -393,5 +394,10 @@ mod tests {
         assert_eq!(stale[0].name, "missing-last");
         assert_eq!(stale[0].tier, "after-change");
         assert_eq!(stale[0].gap, 11);
+    }
+
+    #[test]
+    fn excluded_top_level_includes_pending_audit_implementations() {
+        assert!(EXCLUDED_TOP_LEVEL.contains(&"pending_audit_implementations"));
     }
 }

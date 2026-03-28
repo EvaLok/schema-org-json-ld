@@ -92,6 +92,7 @@ fn run_checks(state: &StateJson) -> Report {
         check_chronic_intermediate_state(state),
         check_review_events_verified(state),
         check_in_flight_sessions_consistency(state),
+        check_pending_audit_deadlines(state),
         check_agent_sessions_reconciliation(state),
         check_eva_input_overlap(state),
     ];
@@ -877,6 +878,32 @@ fn check_chronic_intermediate_state(state: &StateJson) -> CheckResult {
     }
 }
 
+fn check_pending_audit_deadlines(state: &StateJson) -> CheckResult {
+    let current_cycle = match state.last_cycle.extra.get("number").and_then(Value::as_u64) {
+        Some(value) => value,
+        None => return warn("pending_audit_deadlines", "missing field: last_cycle.number"),
+    };
+
+    let failures: Vec<String> = state
+        .pending_audit_implementations
+        .iter()
+        .filter(|entry| !entry.completed && current_cycle > entry.deadline_cycle)
+        .map(|entry| {
+            let overdue_cycles = current_cycle - entry.deadline_cycle;
+            format!(
+                "pending audit implementation issue #{} is {} cycles overdue (deadline cycle {}, current cycle {})",
+                entry.issue, overdue_cycles, entry.deadline_cycle, current_cycle
+            )
+        })
+        .collect();
+
+    if failures.is_empty() {
+        pass("pending_audit_deadlines")
+    } else {
+        fail("pending_audit_deadlines", failures.join("; "))
+    }
+}
+
 fn check_review_events_verified(state: &StateJson) -> CheckResult {
     let current_cycle = match state.last_cycle.extra.get("number").and_then(Value::as_i64) {
         Some(value) => value,
@@ -1226,6 +1253,7 @@ fn print_human_report(report: &Report) {
         ),
         ("chronic_intermediate_state", "chronic intermediate state"),
         ("review_events_verified", "review events verified"),
+        ("pending_audit_deadlines", "pending audit deadlines"),
         (
             "agent_sessions_reconciliation",
             "agent_sessions reconciliation",
@@ -1897,6 +1925,52 @@ mod tests {
     }
 
     #[test]
+    fn pending_audit_deadline_fails_when_incomplete_entry_is_overdue() {
+        let mut value = minimal_valid_state();
+        value["last_cycle"]["number"] = json!(20);
+        value["pending_audit_implementations"] = json!([
+            {
+                "issue": 1897,
+                "audit_issue": 336,
+                "description": "Add deadline enforcement for accepted audit recommendations",
+                "accepted_cycle": 14,
+                "deadline_cycle": 17,
+                "completed": false,
+                "completed_ref": null
+            }
+        ]);
+
+        let state = state_from_json(value);
+        let check = check_pending_audit_deadlines(&state);
+        assert_eq!(check.status, CheckStatus::Fail);
+
+        let details = check.details.as_deref().unwrap_or_default();
+        assert!(details.contains("#1897"));
+        assert!(details.contains("3 cycles overdue"));
+    }
+
+    #[test]
+    fn pending_audit_deadline_passes_when_entry_is_completed() {
+        let mut value = minimal_valid_state();
+        value["last_cycle"]["number"] = json!(20);
+        value["pending_audit_implementations"] = json!([
+            {
+                "issue": 1897,
+                "audit_issue": 336,
+                "description": "Add deadline enforcement for accepted audit recommendations",
+                "accepted_cycle": 14,
+                "deadline_cycle": 17,
+                "completed": true,
+                "completed_ref": "PR #1900"
+            }
+        ]);
+
+        let state = state_from_json(value);
+        let check = check_pending_audit_deadlines(&state);
+        assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
     fn review_events_verified_passes_when_verification_is_current() {
         let mut value = minimal_valid_state();
         value["last_cycle"]["number"] = json!(20);
@@ -2098,7 +2172,7 @@ mod tests {
         let state = state_from_json(minimal_valid_state());
         let report = run_checks(&state);
 
-        assert_eq!(report.checks.len(), 15);
+        assert_eq!(report.checks.len(), 16);
         assert_eq!(
             report.checks.get(7).map(|check| check.name),
             Some("cycle_phase_consistency")
@@ -2125,6 +2199,10 @@ mod tests {
         );
         assert_eq!(
             report.checks.get(13).map(|check| check.name),
+            Some("pending_audit_deadlines")
+        );
+        assert_eq!(
+            report.checks.get(14).map(|check| check.name),
             Some("agent_sessions_reconciliation")
         );
         assert_eq!(report.checks.last().map(|check| check.name), Some("eva_input_overlap"));
