@@ -269,21 +269,11 @@ mod tests {
                     "merged_at": "2026-03-02T00:00:00Z"
                 }
             ],
-            "copilot_metrics": {
-                "total_dispatches": 1,
-                "in_flight": 0,
-                "resolved": 1,
-                "merged": 1,
-                "produced_pr": 1,
-                "closed_without_pr": 0,
-                "reviewed_awaiting_eva": 0,
-                "pr_merge_rate": "100.0%",
-                "dispatch_to_pr_rate": "100.0%",
-                "dispatch_log_latest": "#601 old dispatch (cycle 164)"
-            },
+            "in_flight_sessions": 0,
+            "dispatch_log_latest": "#601 old dispatch (cycle 164)",
             "field_inventory": {
                 "fields": {
-                    "copilot_metrics.in_flight": { "last_refreshed": "cycle 163" }
+                    "in_flight_sessions": { "last_refreshed": "cycle 163" }
                 }
             }
         })
@@ -340,14 +330,13 @@ mod tests {
         let sessions = state["agent_sessions"]
             .as_array()
             .expect("agent_sessions should be an array");
-        assert_eq!(state["copilot_metrics"]["total_dispatches"], json!(2));
-        assert_eq!(state["copilot_metrics"]["in_flight"], json!(1));
+        assert_eq!(state["in_flight_sessions"], json!(1));
         assert_eq!(
-            state["copilot_metrics"]["dispatch_log_latest"],
+            state["dispatch_log_latest"],
             json!("#849 [Cycle Review] Cycle 200 end-of-cycle review (cycle 200)")
         );
         assert_eq!(
-            state["field_inventory"]["fields"]["copilot_metrics.in_flight"]["last_refreshed"],
+            state["field_inventory"]["fields"]["in_flight_sessions"]["last_refreshed"],
             json!("cycle 200")
         );
         assert_eq!(sessions.len(), 2);

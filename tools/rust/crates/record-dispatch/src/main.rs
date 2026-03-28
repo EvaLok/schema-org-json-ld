@@ -763,8 +763,12 @@ mod tests {
         assert!(warnings.is_empty());
         let state = repo.read_state();
         assert_eq!(
-            state.pointer("/copilot_metrics/in_flight"),
+            state.pointer("/in_flight_sessions"),
             Some(&serde_json::json!(1))
+        );
+        assert_eq!(
+            state.pointer("/dispatch_log_latest"),
+            Some(&serde_json::json!("#602 Example dispatch (cycle 164)"))
         );
         assert_eq!(
             state.pointer("/agent_sessions/2/issue"),
@@ -800,8 +804,12 @@ mod tests {
         assert_eq!(runner.call_count(), 0);
         let state = repo.read_state();
         assert_eq!(
-            state.pointer("/copilot_metrics/in_flight"),
+            state.pointer("/in_flight_sessions"),
             Some(&serde_json::json!(1))
+        );
+        assert_eq!(
+            state.pointer("/dispatch_log_latest"),
+            Some(&serde_json::json!("#602 Example dispatch (cycle 164)"))
         );
         assert_eq!(
             state.pointer("/review_dispatch_consecutive"),

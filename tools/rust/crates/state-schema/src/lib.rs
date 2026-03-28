@@ -24,10 +24,11 @@ pub struct StateJson {
     pub typescript_plan: TypescriptPlan,
     pub release: BTreeMap<String, Release>,
     pub constructor_refactoring: Option<ConstructorRefactoring>,
-    pub copilot_metrics: CopilotMetrics,
+    pub copilot_metrics: Option<CopilotMetrics>,
     pub last_cycle: LastCycle,
     pub cycle_issues: Option<Vec<u64>>,
     pub last_eva_comment_check: Option<String>,
+    pub dispatch_log_latest: Option<String>,
     pub audit_processed: Vec<i64>,
     pub test_count: TestCount,
     pub total_schema_types: Option<i64>,
@@ -1278,6 +1279,13 @@ mod tests {
     }
 
     #[test]
+    fn copilot_metrics_is_optional() {
+        let state: StateJson = serde_json::from_value(json!({})).expect("state should deserialize");
+
+        assert!(state.copilot_metrics.is_none());
+    }
+
+    #[test]
     fn copilot_metrics_deserializes_dispatch_log_latest() {
         let state: StateJson = serde_json::from_value(json!({
             "copilot_metrics": {
@@ -1287,8 +1295,24 @@ mod tests {
         .expect("state should deserialize");
 
         assert_eq!(
-            state.copilot_metrics.dispatch_log_latest.as_deref(),
+            state
+                .copilot_metrics
+                .as_ref()
+                .and_then(|metrics| metrics.dispatch_log_latest.as_deref()),
             Some("#873 Review findings follow-up (cycle 202)")
+        );
+    }
+
+    #[test]
+    fn top_level_dispatch_log_latest_deserializes() {
+        let state: StateJson = serde_json::from_value(json!({
+            "dispatch_log_latest": "#1889 [Cycle Review] Cycle 389 end-of-cycle review (cycle 389)"
+        }))
+        .expect("state should deserialize");
+
+        assert_eq!(
+            state.dispatch_log_latest.as_deref(),
+            Some("#1889 [Cycle Review] Cycle 389 end-of-cycle review (cycle 389)")
         );
     }
 
@@ -1304,13 +1328,34 @@ mod tests {
         }))
         .expect("state should deserialize");
 
-        assert_eq!(state.copilot_metrics.total_dispatches, Some(45));
-        assert_eq!(state.copilot_metrics.merged, Some(40));
         assert_eq!(
-            state.copilot_metrics.pr_merge_rate.as_deref(),
+            state
+                .copilot_metrics
+                .as_ref()
+                .and_then(|metrics| metrics.total_dispatches),
+            Some(45)
+        );
+        assert_eq!(
+            state
+                .copilot_metrics
+                .as_ref()
+                .and_then(|metrics| metrics.merged),
+            Some(40)
+        );
+        assert_eq!(
+            state
+                .copilot_metrics
+                .as_ref()
+                .and_then(|metrics| metrics.pr_merge_rate.as_deref()),
             Some("88.9%")
         );
-        assert_eq!(state.copilot_metrics.in_flight, Some(3));
+        assert_eq!(
+            state
+                .copilot_metrics
+                .as_ref()
+                .and_then(|metrics| metrics.in_flight),
+            Some(3)
+        );
     }
 
     #[test]

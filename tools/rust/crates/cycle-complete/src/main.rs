@@ -956,10 +956,6 @@ fn field_inventory_entry_due_for_auto_refresh(
         return field_inventory_entry_is_due(entry, cycle, interval);
     }
 
-    if field_name.starts_with("copilot_metrics.") {
-        return field_inventory_entry_needs_refresh(entry, cycle);
-    }
-
     if field_name == "test_count" || cadence.contains("php or ts tests") {
         return cycle_changes.tests_changed() && field_inventory_entry_needs_refresh(entry, cycle);
     }
@@ -1540,11 +1536,6 @@ mod tests {
             "typescript_plan.status".to_string(),
             json!({"last_refreshed": "cycle 120", "cadence": "after plan phase transitions"}),
         );
-        state.field_inventory.fields.insert(
-            "copilot_metrics.in_flight".to_string(),
-            json!({"last_refreshed": "cycle 120", "cadence": "every dispatch or merge"}),
-        );
-
         let patch = build_state_patch(
             153,
             700,
@@ -1567,7 +1558,7 @@ mod tests {
         );
         assert!(!freshness_paths
             .contains(&"/field_inventory/fields/typescript_plan.status/last_refreshed"));
-        assert!(freshness_paths
+        assert!(!freshness_paths
             .contains(&"/field_inventory/fields/copilot_metrics.in_flight/last_refreshed"));
     }
 
