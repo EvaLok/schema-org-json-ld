@@ -969,8 +969,7 @@ fn state_extra_in_flight_sessions(state: Option<&StateJson>) -> Result<u64, Stri
         .get("in_flight_sessions")
         .and_then(Value::as_u64)
         .ok_or_else(|| "missing in_flight_sessions in state.json".to_string())?;
-    u64::try_from(in_flight)
-        .map_err(|_| "in_flight_sessions must fit in u64 in state.json".to_string())
+    Ok(in_flight)
 }
 
 fn validate_worklog_state_placeholders(
