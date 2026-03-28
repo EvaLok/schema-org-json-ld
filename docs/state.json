@@ -5781,6 +5781,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix cycle-complete summary derivation from receipts"
+    },
+    {
+      "dispatched_at": "2026-03-28T20:18:01Z",
+      "issue": 1930,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add worklog pipeline-status immutability check"
     }
   ],
   "audit_dropped": [
@@ -6027,7 +6034,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#1928 Fix cycle-complete summary derivation from receipts (cycle 397)",
+  "dispatch_log_latest": "#1930 Add worklog pipeline-status immutability check (cycle 397)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6293,7 +6300,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 5,
     "issue": 1927,
