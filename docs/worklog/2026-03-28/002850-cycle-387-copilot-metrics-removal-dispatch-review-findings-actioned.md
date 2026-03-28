@@ -22,7 +22,7 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 1
-- **Pipeline status**: FAIL (4 warnings)
+- **Pipeline status**: PASS (3 warnings)
 - **Copilot metrics**: 616 dispatches, 549 PRs produced, 537 merged, 97.8% PR merge rate
 - **Publish gate**: published
 
@@ -40,3 +40,4 @@
 | cycle-start | a772f3a | [a772f3a](https://github.com/EvaLok/schema-org-json-ld/commit/a772f3aea7a873b6802479c938dd4e3892daf4ad) |
 | cycle-tagged | 35bcce8 | [35bcce8](https://github.com/EvaLok/schema-org-json-ld/commit/35bcce8ba2fa146f75609ba2c7137cebc96dee05) |
 | record-dispatch | 3c9bfcd | [3c9bfcd](https://github.com/EvaLok/schema-org-json-ld/commit/3c9bfcd60fd158fc408d377d8831898786c45320) |
+| cycle-complete | e82698b | [e82698b](https://github.com/EvaLok/schema-org-json-ld/commit/e82698b59cb1604494dd9a6240337dafa867573d) |
