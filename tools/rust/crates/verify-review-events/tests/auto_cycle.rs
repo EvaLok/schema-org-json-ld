@@ -134,7 +134,6 @@ fn binary_apply_advances_when_no_prs_need_verification() {
     }
   },
   "agent_sessions": [],
-  "copilot_metrics": {},
   "review_events_verified_through_cycle": 4
 }
 "#,

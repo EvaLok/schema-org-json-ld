@@ -55,18 +55,6 @@ const REFRESH_ONLY_FIELDS: &[RefreshOnlyField] = &[
         reason: "Blocker tracking requires workflow state and human judgment, so this tool only refreshes freshness metadata.",
     },
     RefreshOnlyField {
-        name: "copilot_metrics.dispatch_to_pr_rate",
-        reason: "Copilot metrics are derived by other reporting tools rather than directly verified in this refresher.",
-    },
-    RefreshOnlyField {
-        name: "copilot_metrics.in_flight",
-        reason: "Copilot metrics are derived by other reporting tools rather than directly verified in this refresher.",
-    },
-    RefreshOnlyField {
-        name: "copilot_metrics.pr_merge_rate",
-        reason: "Copilot metrics are derived by other reporting tools rather than directly verified in this refresher.",
-    },
-    RefreshOnlyField {
         name: "cycle_phase",
         reason: "Cycle phase is state-machine metadata maintained by workflow transitions, not recomputed here.",
     },

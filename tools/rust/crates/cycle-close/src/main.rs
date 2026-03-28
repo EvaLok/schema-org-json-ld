@@ -379,7 +379,7 @@ fn summary_items(summary: &str) -> Vec<String> {
 }
 
 fn extract_review_issue_number(state: &StateJson) -> Option<u64> {
-    let latest = state.copilot_metrics.dispatch_log_latest.as_deref()?;
+    let latest = state.dispatch_log_latest.as_deref()?;
     extract_issue_number_from_reference(latest)
 }
 
@@ -1058,9 +1058,7 @@ mod tests {
                 "number": 202,
                 "summary": "Pipeline check: PASS; review findings recorded"
             },
-            "copilot_metrics": {
-                "dispatch_log_latest": "#873 Review findings follow-up (cycle 202)"
-            }
+            "dispatch_log_latest": "#873 Review findings follow-up (cycle 202)"
         })
     }
 

@@ -127,8 +127,6 @@ fn auto_derives_cycle_from_state_json() {
             "PASS",
             "--in-flight",
             "0",
-            "--copilot-metrics",
-            "test",
             "--publish-gate",
             "test",
         ])

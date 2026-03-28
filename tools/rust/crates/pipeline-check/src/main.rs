@@ -15,8 +15,6 @@ use std::sync::LazyLock;
 const HOUSEKEEPING_FINDINGS_KEY: &str = "items_needing_attention";
 const CYCLE_STATUS_IN_FLIGHT_PATH: &str = "/concurrency/in_flight";
 const CYCLE_STATUS_DIRECTIVES_PATH: &str = "/eva_input/comments_since_last_cycle";
-const DERIVE_METRICS_TOOL_NAME: &str = "derive-metrics";
-const DERIVE_METRICS_WRAPPER_PATH: &str = "tools/derive-metrics";
 const ARTIFACT_VERIFY_STEP_NAME: &str = "artifact-verify";
 const DISPOSITION_MATCH_STEP_NAME: &str = "disposition-match";
 const DEFERRAL_ACCUMULATION_STEP_NAME: &str = "deferral-accumulation";
@@ -26,13 +24,12 @@ const WORKLOG_DEDUP_STEP_NAME: &str = "worklog-dedup";
 const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const CURRENT_CYCLE_STEPS_STEP_NAME: &str = "current-cycle-steps";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
-const STEP_NAMES: [&str; 14] = [
+const STEP_NAMES: [&str; 13] = [
     "metric-snapshot",
     "field-inventory",
     "housekeeping-scan",
     "cycle-status",
     "state-invariants",
-    DERIVE_METRICS_TOOL_NAME,
     ARTIFACT_VERIFY_STEP_NAME,
     DISPOSITION_MATCH_STEP_NAME,
     DEFERRAL_ACCUMULATION_STEP_NAME,
@@ -83,20 +80,7 @@ const EXPECTED_STEP_IDS: [&str; 27] = [
 const MIN_CURRENT_CYCLE_FOR_FALLBACK_WARNING: u64 = 1;
 const LAST_CYCLE_NUMBER_PATH: &str = "/last_cycle/number";
 const REVIEW_LAST_CYCLE_PATH: &str = "/review_agent/last_review_cycle";
-const COPILOT_IN_FLIGHT_PATH: &str = "/copilot_metrics/in_flight";
 const BLOCKERS_PATH: &str = "/blockers";
-const DERIVE_METRICS_FIELDS: [&str; 9] = [
-    "total_dispatches",
-    "resolved",
-    "merged",
-    "in_flight",
-    "produced_pr",
-    "closed_without_pr",
-    "reviewed_awaiting_eva",
-    "dispatch_to_pr_rate",
-    "pr_merge_rate",
-];
-const DERIVE_METRICS_RATE_FIELDS: [&str; 2] = ["dispatch_to_pr_rate", "pr_merge_rate"];
 const DEFERRAL_ACCUMULATION_THRESHOLD: usize = 3;
 static REVIEW_FINDING_HEADER_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?m)^## \d+\.").expect("review finding regex should compile"));
@@ -174,7 +158,6 @@ enum ToolKind {
     HousekeepingScan,
     CycleStatus,
     StateInvariants,
-    DeriveMetrics,
 }
 
 struct ExecutionResult {
@@ -318,12 +301,6 @@ fn run_pipeline_with_excluded_steps(
             ],
             kind: ToolKind::StateInvariants,
         },
-        ToolSpec {
-            display_name: DERIVE_METRICS_TOOL_NAME,
-            wrapper_relative_path: DERIVE_METRICS_WRAPPER_PATH,
-            args: vec![],
-            kind: ToolKind::DeriveMetrics,
-        },
     ];
 
     let mut steps = Vec::new();
@@ -395,12 +372,7 @@ fn run_step(repo_root: &Path, spec: &ToolSpec, runner: &dyn CommandRunner) -> St
         }
     };
 
-    match spec.kind {
-        ToolKind::DeriveMetrics => {
-            classify_derive_metrics_step(repo_root, spec.display_name, execution)
-        }
-        _ => classify_step(spec.display_name, &spec.kind, execution),
-    }
+    classify_step(spec.display_name, &spec.kind, execution)
 }
 
 fn classify_step(name: &'static str, kind: &ToolKind, execution: ExecutionResult) -> StepReport {
@@ -520,57 +492,6 @@ fn classify_step(name: &'static str, kind: &ToolKind, execution: ExecutionResult
                 step.detail = Some(format!("invalid JSON output from {}", name));
             }
         }
-        ToolKind::DeriveMetrics => {
-            unreachable!("derive-metrics classification is handled separately")
-        }
-    }
-
-    step
-}
-
-fn classify_derive_metrics_step(
-    repo_root: &Path,
-    name: &'static str,
-    execution: ExecutionResult,
-) -> StepReport {
-    let severity = severity_for_kind(&ToolKind::DeriveMetrics);
-    let mut step = StepReport {
-        name,
-        status: StepStatus::Pass,
-        severity,
-        exit_code: execution.exit_code,
-        detail: None,
-        findings: None,
-        summary: None,
-    };
-
-    if execution.exit_code != Some(0) {
-        step.status = StepStatus::Error;
-        step.detail = Some(format!(
-            "{} exited with unexpected status {:?}",
-            name, execution.exit_code
-        ));
-        return step;
-    }
-
-    let Some(derived_metrics) = parse_json(&execution.stdout) else {
-        step.status = StepStatus::Error;
-        step.detail = Some(format!("invalid JSON output from {}", name));
-        return step;
-    };
-
-    match collect_derive_metrics_mismatches(repo_root, &derived_metrics) {
-        Ok(mismatches) if mismatches.is_empty() => {
-            step.detail = Some("tracked copilot_metrics fields match".to_string());
-        }
-        Ok(mismatches) => {
-            step.status = StepStatus::Fail;
-            step.detail = Some(mismatches.join("; "));
-        }
-        Err(error) => {
-            step.status = StepStatus::Error;
-            step.detail = Some(error);
-        }
     }
 
     step
@@ -578,10 +499,9 @@ fn classify_derive_metrics_step(
 
 fn severity_for_kind(kind: &ToolKind) -> Severity {
     match kind {
-        ToolKind::MetricSnapshot
-        | ToolKind::StateInvariants
-        | ToolKind::CycleStatus
-        | ToolKind::DeriveMetrics => Severity::Blocking,
+        ToolKind::MetricSnapshot | ToolKind::StateInvariants | ToolKind::CycleStatus => {
+            Severity::Blocking
+        }
         ToolKind::FieldInventory | ToolKind::HousekeepingScan => Severity::Warning,
     }
 }
@@ -685,60 +605,6 @@ fn command_failure_message(command: &str, output: &std::process::Output) -> Stri
     } else {
         format!("{command} failed with status {code}: {stderr}")
     }
-}
-
-fn collect_derive_metrics_mismatches(
-    repo_root: &Path,
-    derived_metrics: &Value,
-) -> Result<Vec<String>, String> {
-    let state_value = read_state_value(repo_root)?;
-    let current_metrics = state_value
-        .pointer("/copilot_metrics")
-        .and_then(Value::as_object)
-        .ok_or_else(|| "missing object: /copilot_metrics".to_string())?;
-    let derived_metrics = derived_metrics
-        .as_object()
-        .ok_or_else(|| "derive-metrics output must be a JSON object".to_string())?;
-
-    let mut mismatches = Vec::new();
-    for field in DERIVE_METRICS_FIELDS {
-        if DERIVE_METRICS_RATE_FIELDS.contains(&field) {
-            let expected = derived_metrics
-                .get(field)
-                .and_then(Value::as_str)
-                .ok_or_else(|| format!("derive-metrics output missing string field '{}'", field))?;
-            match current_metrics.get(field).and_then(Value::as_str) {
-                Some(actual) if actual == expected => {}
-                Some(actual) => mismatches.push(format!(
-                    "copilot_metrics.{} expected {} but found {}",
-                    field, expected, actual
-                )),
-                None => mismatches.push(format!(
-                    "copilot_metrics.{} is missing or not a string",
-                    field
-                )),
-            }
-            continue;
-        }
-
-        let expected = derived_metrics
-            .get(field)
-            .and_then(Value::as_i64)
-            .ok_or_else(|| format!("derive-metrics output missing integer field '{}'", field))?;
-        match current_metrics.get(field).and_then(Value::as_i64) {
-            Some(actual) if actual == expected => {}
-            Some(actual) => mismatches.push(format!(
-                "copilot_metrics.{} expected {} but found {}",
-                field, expected, actual
-            )),
-            None => mismatches.push(format!(
-                "copilot_metrics.{} is missing or not an integer",
-                field
-            )),
-        }
-    }
-
-    Ok(mismatches)
 }
 
 fn is_check_passing(check: &Value) -> bool {
@@ -2268,7 +2134,7 @@ fn review_artifact_fallback_warning(
 
 fn copilot_review_fallback_needed(state: &Value) -> bool {
     state
-        .pointer(COPILOT_IN_FLIGHT_PATH)
+        .pointer("/in_flight_sessions")
         .and_then(Value::as_u64)
         .is_some_and(|in_flight| in_flight == 0)
         && state
@@ -2602,307 +2468,6 @@ mod tests {
             step.summary.as_deref(),
             Some("0 in-flight, 0 eva directives")
         );
-    }
-
-    #[test]
-    fn derive_metrics_is_pass_when_tracked_fields_match() {
-        static COUNTER: AtomicU64 = AtomicU64::new(0);
-        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir().join(format!("pipeline-check-derive-match-{}", run_id));
-        fs::create_dir_all(root.join("docs")).unwrap();
-        fs::write(
-            root.join("docs/state.json"),
-            json!({
-                "copilot_metrics": {
-                    "total_dispatches": 4,
-                    "resolved": 3,
-                    "merged": 1,
-                    "in_flight": 1,
-                    "produced_pr": 2,
-                    "closed_without_pr": 1,
-                    "reviewed_awaiting_eva": 1,
-                    "dispatch_to_pr_rate": "50.0%",
-                    "pr_merge_rate": "50.0%"
-                }
-            })
-            .to_string(),
-        )
-        .unwrap();
-
-        struct DeriveMetricsRunner;
-
-        impl CommandRunner for DeriveMetricsRunner {
-            fn run(&self, script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
-                assert_eq!(
-                    script_path.file_name().and_then(|name| name.to_str()),
-                    Some(DERIVE_METRICS_TOOL_NAME)
-                );
-                Ok(ExecutionResult {
-                    exit_code: Some(0),
-                    stdout: json!({
-                        "total_dispatches": 4,
-                        "resolved": 3,
-                        "merged": 1,
-                        "in_flight": 1,
-                        "produced_pr": 2,
-                        "closed_without_pr": 1,
-                        "reviewed_awaiting_eva": 1,
-                        "dispatch_to_pr_rate": "50.0%",
-                        "pr_merge_rate": "50.0%"
-                    })
-                    .to_string(),
-                })
-            }
-
-            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
-                Err("issue comments are not used in derive-metrics test".to_string())
-            }
-        }
-
-        let spec = ToolSpec {
-            display_name: DERIVE_METRICS_TOOL_NAME,
-            wrapper_relative_path: DERIVE_METRICS_WRAPPER_PATH,
-            args: vec![],
-            kind: ToolKind::DeriveMetrics,
-        };
-        let step = run_step(&root, &spec, &DeriveMetricsRunner);
-        assert_eq!(step.status, StepStatus::Pass);
-        assert_eq!(
-            step.detail.as_deref(),
-            Some("tracked copilot_metrics fields match")
-        );
-    }
-
-    #[test]
-    fn derive_metrics_is_fail_when_tracked_fields_diverge() {
-        static COUNTER: AtomicU64 = AtomicU64::new(0);
-        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir().join(format!("pipeline-check-derive-fail-{}", run_id));
-        fs::create_dir_all(root.join("docs")).unwrap();
-        fs::write(
-            root.join("docs/state.json"),
-            json!({
-                "copilot_metrics": {
-                    "total_dispatches": 4,
-                    "resolved": 2,
-                    "merged": 1,
-                    "in_flight": 2,
-                    "produced_pr": 1,
-                    "closed_without_pr": 0,
-                    "reviewed_awaiting_eva": 0,
-                    "dispatch_to_pr_rate": "25.0%",
-                    "pr_merge_rate": "100.0%"
-                }
-            })
-            .to_string(),
-        )
-        .unwrap();
-
-        struct DeriveMetricsRunner;
-
-        impl CommandRunner for DeriveMetricsRunner {
-            fn run(
-                &self,
-                _script_path: &Path,
-                _args: &[String],
-            ) -> Result<ExecutionResult, String> {
-                Ok(ExecutionResult {
-                    exit_code: Some(0),
-                    stdout: json!({
-                        "total_dispatches": 5,
-                        "resolved": 3,
-                        "merged": 1,
-                        "in_flight": 2,
-                        "produced_pr": 2,
-                        "closed_without_pr": 1,
-                        "reviewed_awaiting_eva": 0,
-                        "dispatch_to_pr_rate": "40.0%",
-                        "pr_merge_rate": "50.0%"
-                    })
-                    .to_string(),
-                })
-            }
-
-            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
-                Err("issue comments are not used in derive-metrics test".to_string())
-            }
-        }
-
-        let spec = ToolSpec {
-            display_name: DERIVE_METRICS_TOOL_NAME,
-            wrapper_relative_path: DERIVE_METRICS_WRAPPER_PATH,
-            args: vec![],
-            kind: ToolKind::DeriveMetrics,
-        };
-        let step = run_step(&root, &spec, &DeriveMetricsRunner);
-        assert_eq!(
-            severity_for_kind(&ToolKind::DeriveMetrics),
-            Severity::Blocking
-        );
-        assert_eq!(step.status, StepStatus::Fail);
-        assert!(step
-            .detail
-            .as_deref()
-            .unwrap_or_default()
-            .contains("total_dispatches"));
-        assert!(step
-            .detail
-            .as_deref()
-            .unwrap_or_default()
-            .contains("produced_pr"));
-    }
-
-    #[test]
-    fn derive_metrics_is_fail_when_rate_fields_diverge() {
-        static COUNTER: AtomicU64 = AtomicU64::new(0);
-        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir().join(format!("pipeline-check-derive-rate-fail-{}", run_id));
-        fs::create_dir_all(root.join("docs")).unwrap();
-        fs::write(
-            root.join("docs/state.json"),
-            json!({
-                "copilot_metrics": {
-                    "total_dispatches": 4,
-                    "resolved": 3,
-                    "merged": 1,
-                    "in_flight": 1,
-                    "produced_pr": 2,
-                    "closed_without_pr": 1,
-                    "reviewed_awaiting_eva": 1,
-                    "dispatch_to_pr_rate": "2/4",
-                    "pr_merge_rate": "50.0%"
-                }
-            })
-            .to_string(),
-        )
-        .unwrap();
-
-        struct DeriveMetricsRunner;
-
-        impl CommandRunner for DeriveMetricsRunner {
-            fn run(
-                &self,
-                _script_path: &Path,
-                _args: &[String],
-            ) -> Result<ExecutionResult, String> {
-                Ok(ExecutionResult {
-                    exit_code: Some(0),
-                    stdout: json!({
-                        "total_dispatches": 4,
-                        "resolved": 3,
-                        "merged": 1,
-                        "in_flight": 1,
-                        "produced_pr": 2,
-                        "closed_without_pr": 1,
-                        "reviewed_awaiting_eva": 1,
-                        "dispatch_to_pr_rate": "50.0%",
-                        "pr_merge_rate": "50.0%"
-                    })
-                    .to_string(),
-                })
-            }
-
-            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
-                Err("issue comments are not used in derive-metrics test".to_string())
-            }
-        }
-
-        let spec = ToolSpec {
-            display_name: DERIVE_METRICS_TOOL_NAME,
-            wrapper_relative_path: DERIVE_METRICS_WRAPPER_PATH,
-            args: vec![],
-            kind: ToolKind::DeriveMetrics,
-        };
-        let step = run_step(&root, &spec, &DeriveMetricsRunner);
-        assert_eq!(step.status, StepStatus::Fail);
-        assert!(step
-            .detail
-            .as_deref()
-            .unwrap_or_default()
-            .contains("dispatch_to_pr_rate"));
-        assert!(!step
-            .detail
-            .as_deref()
-            .unwrap_or_default()
-            .contains("pr_merge_rate"));
-    }
-
-    #[test]
-    fn derive_metrics_is_fail_when_pr_merge_rate_diverges() {
-        static COUNTER: AtomicU64 = AtomicU64::new(0);
-        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir().join(format!(
-            "pipeline-check-derive-pr-merge-rate-fail-{}",
-            run_id
-        ));
-        fs::create_dir_all(root.join("docs")).unwrap();
-        fs::write(
-            root.join("docs/state.json"),
-            json!({
-                "copilot_metrics": {
-                    "total_dispatches": 4,
-                    "resolved": 3,
-                    "merged": 1,
-                    "in_flight": 1,
-                    "produced_pr": 2,
-                    "closed_without_pr": 1,
-                    "reviewed_awaiting_eva": 1,
-                    "dispatch_to_pr_rate": "50.0%",
-                    "pr_merge_rate": "1/2"
-                }
-            })
-            .to_string(),
-        )
-        .unwrap();
-
-        struct DeriveMetricsRunner;
-
-        impl CommandRunner for DeriveMetricsRunner {
-            fn run(
-                &self,
-                _script_path: &Path,
-                _args: &[String],
-            ) -> Result<ExecutionResult, String> {
-                Ok(ExecutionResult {
-                    exit_code: Some(0),
-                    stdout: json!({
-                        "total_dispatches": 4,
-                        "resolved": 3,
-                        "merged": 1,
-                        "in_flight": 1,
-                        "produced_pr": 2,
-                        "closed_without_pr": 1,
-                        "reviewed_awaiting_eva": 1,
-                        "dispatch_to_pr_rate": "50.0%",
-                        "pr_merge_rate": "50.0%"
-                    })
-                    .to_string(),
-                })
-            }
-
-            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
-                Err("issue comments are not used in derive-metrics test".to_string())
-            }
-        }
-
-        let spec = ToolSpec {
-            display_name: DERIVE_METRICS_TOOL_NAME,
-            wrapper_relative_path: DERIVE_METRICS_WRAPPER_PATH,
-            args: vec![],
-            kind: ToolKind::DeriveMetrics,
-        };
-        let step = run_step(&root, &spec, &DeriveMetricsRunner);
-        assert_eq!(step.status, StepStatus::Fail);
-        assert!(step
-            .detail
-            .as_deref()
-            .unwrap_or_default()
-            .contains("pr_merge_rate"));
-        assert!(!step
-            .detail
-            .as_deref()
-            .unwrap_or_default()
-            .contains("dispatch_to_pr_rate"));
     }
 
     #[test]
@@ -3445,7 +3010,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 14);
+        assert_eq!(report.steps.len(), 13);
         assert_eq!(report.steps[0].status, StepStatus::Pass);
         assert_eq!(report.steps[1].status, StepStatus::Pass);
         assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -3459,27 +3024,22 @@ mod tests {
             report.steps[4].detail.as_deref(),
             Some("5/5 invariants pass")
         );
+        assert_eq!(report.steps[5].name, "artifact-verify");
         assert_eq!(report.steps[5].status, StepStatus::Pass);
-        assert_eq!(
-            report.steps[5].detail.as_deref(),
-            Some("tracked copilot_metrics fields match")
-        );
-        assert_eq!(report.steps[6].name, "artifact-verify");
+        assert_eq!(report.steps[6].name, "disposition-match");
         assert_eq!(report.steps[6].status, StepStatus::Pass);
-        assert_eq!(report.steps[7].name, "disposition-match");
+        assert_eq!(report.steps[7].name, "deferral-accumulation");
         assert_eq!(report.steps[7].status, StepStatus::Pass);
-        assert_eq!(report.steps[8].name, "deferral-accumulation");
+        assert_eq!(report.steps[8].name, "dispatch-finding-reconciliation");
         assert_eq!(report.steps[8].status, StepStatus::Pass);
-        assert_eq!(report.steps[9].name, "dispatch-finding-reconciliation");
+        assert_eq!(report.steps[9].name, "doc-validation");
         assert_eq!(report.steps[9].status, StepStatus::Pass);
-        assert_eq!(report.steps[10].name, "doc-validation");
+        assert_eq!(report.steps[10].name, "worklog-dedup");
         assert_eq!(report.steps[10].status, StepStatus::Pass);
-        assert_eq!(report.steps[11].name, "worklog-dedup");
+        assert_eq!(report.steps[11].name, "step-comments");
         assert_eq!(report.steps[11].status, StepStatus::Pass);
-        assert_eq!(report.steps[12].name, "step-comments");
+        assert_eq!(report.steps[12].name, "current-cycle-steps");
         assert_eq!(report.steps[12].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].name, "current-cycle-steps");
-        assert_eq!(report.steps[13].status, StepStatus::Pass);
     }
 
     #[test]
@@ -3543,14 +3103,13 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 14);
-        assert!(report.steps[..11]
+        assert_eq!(report.steps.len(), 13);
+        assert!(report.steps[..5]
             .iter()
             .all(|step| matches!(step.status, StepStatus::Error)));
-        assert_eq!(report.steps[11].status, StepStatus::Pass);
-        assert!(report.steps[12..]
+        assert!(report.steps[11..]
             .iter()
-            .all(|step| matches!(step.status, StepStatus::Error)));
+            .all(|step| matches!(step.status, StepStatus::Error | StepStatus::Warn)));
         assert!(report
             .steps
             .iter()
@@ -3905,13 +3464,13 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &CascadeRunner);
-        assert_eq!(report.steps[10].name, "doc-validation");
-        assert_eq!(report.steps[10].status, StepStatus::Cascade);
-        assert_eq!(report.steps[11].name, "worklog-dedup");
-        assert_eq!(report.steps[11].status, StepStatus::Pass);
-        assert_eq!(report.steps[12].name, "step-comments");
+        assert_eq!(report.steps[9].name, "doc-validation");
+        assert_eq!(report.steps[9].status, StepStatus::Cascade);
+        assert_eq!(report.steps[10].name, "worklog-dedup");
+        assert_eq!(report.steps[10].status, StepStatus::Pass);
+        assert_eq!(report.steps[11].name, "step-comments");
         // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[12].status, StepStatus::Warn);
+        assert_eq!(report.steps[11].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -4042,13 +3601,13 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &MultiCauseCascadeRunner);
-        assert_eq!(report.steps[10].name, "doc-validation");
-        assert_eq!(report.steps[10].status, StepStatus::Cascade);
-        assert_eq!(report.steps[11].name, "worklog-dedup");
-        assert_eq!(report.steps[11].status, StepStatus::Pass);
-        assert_eq!(report.steps[12].name, "step-comments");
+        assert_eq!(report.steps[9].name, "doc-validation");
+        assert_eq!(report.steps[9].status, StepStatus::Cascade);
+        assert_eq!(report.steps[10].name, "worklog-dedup");
+        assert_eq!(report.steps[10].status, StepStatus::Pass);
+        assert_eq!(report.steps[11].name, "step-comments");
         // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[12].status, StepStatus::Warn);
+        assert_eq!(report.steps[11].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -4177,19 +3736,23 @@ mod tests {
         }
 
         let report = run_pipeline(&root, OVERRIDE_CYCLE, &OverrideRunner);
-        assert_eq!(report.steps[12].name, "step-comments");
-        assert_eq!(report.steps[12].status, StepStatus::Warn);
-        assert_eq!(report.steps[12].severity, Severity::Warning);
-        assert!(report.steps[12]
+        assert_eq!(report.steps[11].name, "step-comments");
+        assert_eq!(report.steps[11].status, StepStatus::Warn);
+        assert_eq!(report.steps[11].severity, Severity::Warning);
+        assert!(report.steps[11]
             .detail
             .as_deref()
             .unwrap_or_default()
             .contains("missing mandatory [none]"));
-        assert!(report.steps[12]
-            .detail
-            .as_deref()
-            .unwrap_or_default()
-            .contains("missing optional [C5.1]"));
+        assert!(report
+            .steps
+            .iter()
+            .any(|step| {
+                step.detail
+                    .as_deref()
+                    .unwrap_or_default()
+                    .contains("missing optional [C5.1]")
+            }));
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -4320,12 +3883,12 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &IndependentFailureRunner);
-        assert_eq!(report.steps[10].name, "doc-validation");
-        assert_eq!(report.steps[10].status, StepStatus::Fail);
-        assert_eq!(report.steps[11].name, "worklog-dedup");
-        assert_eq!(report.steps[11].status, StepStatus::Pass);
+        assert_eq!(report.steps[9].name, "doc-validation");
+        assert_eq!(report.steps[9].status, StepStatus::Fail);
+        assert_eq!(report.steps[10].name, "worklog-dedup");
+        assert_eq!(report.steps[10].status, StepStatus::Pass);
         // Previous-cycle backstop is downgraded to Warn
-        assert_eq!(report.steps[12].status, StepStatus::Warn);
+        assert_eq!(report.steps[11].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -4446,7 +4009,7 @@ mod tests {
             &ExcludeDocValidationRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 13);
+        assert_eq!(report.steps.len(), 12);
         assert!(!report
             .steps
             .iter()
@@ -4581,7 +4144,7 @@ mod tests {
             &UnknownExcludeRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 14);
+        assert_eq!(report.steps.len(), 13);
         assert!(report
             .steps
             .iter()
@@ -4725,7 +4288,7 @@ mod tests {
         );
 
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 13);
+        assert_eq!(report.steps.len(), 12);
         assert!(!report
             .steps
             .iter()
@@ -5018,7 +4581,7 @@ mod tests {
             json!({
                 "last_cycle": {"number": 210},
                 "review_agent": {"last_review_cycle": 210},
-                "copilot_metrics": {"in_flight": 0},
+                "in_flight_sessions": 0,
                 "blockers": [{"summary": "Copilot outage continues"}]
             })
             .to_string(),
@@ -5060,7 +4623,7 @@ mod tests {
             json!({
                 "last_cycle": {"number": 210},
                 "review_agent": {"last_review_cycle": 208},
-                "copilot_metrics": {"in_flight": 2},
+                "in_flight_sessions": 2,
                 "blockers": [{"summary": "Copilot outage continues"}]
             })
             .to_string(),
@@ -5103,7 +4666,7 @@ mod tests {
             json!({
                 "last_cycle": {"number": 210},
                 "review_agent": {"last_review_cycle": 208},
-                "copilot_metrics": {"in_flight": 0},
+                "in_flight_sessions": 0,
                 "blockers": [{"summary": "Copilot outage continues"}]
             })
             .to_string(),
