@@ -5619,6 +5619,13 @@
       "model": "gpt-5.4",
       "status": "dispatched",
       "title": "Remove copilot_metrics vanity metrics"
+    },
+    {
+      "dispatched_at": "2026-03-28T00:35:14Z",
+      "issue": 1881,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 387 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -5842,17 +5849,17 @@
   "copilot_metrics": {
     "closed_without_merge": 10,
     "closed_without_pr": 65,
-    "dispatch_log_latest": "#1879 Remove copilot_metrics vanity metrics (cycle 387)",
-    "dispatch_to_pr_rate": "89.1%",
+    "dispatch_log_latest": "#1881 [Cycle Review] Cycle 387 end-of-cycle review (cycle 387)",
+    "dispatch_to_pr_rate": "89.0%",
     "failed_dispatches": 16,
-    "in_flight": 2,
+    "in_flight": 3,
     "merged": 537,
     "pr_merge_rate": "97.8%",
     "produced_pr": 549,
     "resolved": 614,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 616
+    "total_dispatches": 617
   },
   "cycle_issues": [
     1878
@@ -6135,7 +6142,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 3,
   "last_cycle": {
     "duration_minutes": 4,
     "issue": 1878,
@@ -9803,7 +9810,7 @@
       }
     ]
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 386,
   "schema_status": {
     "directory_layout": {
