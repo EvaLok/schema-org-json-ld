@@ -44,3 +44,4 @@
 | record-dispatch | b195190 | [b195190](https://github.com/EvaLok/schema-org-json-ld/commit/b195190a19aa334f578472cbeb06223785e8a6e4) |
 | cycle-tagged | 8c609d1 | [8c609d1](https://github.com/EvaLok/schema-org-json-ld/commit/8c609d134426e915ebfd822debfb98fa0998e068) |
 | process-merge | b6fbafa | [b6fbafa](https://github.com/EvaLok/schema-org-json-ld/commit/b6fbafaa33fe79e3f55cc1b350dcccaa07e9d1da) |
+| cycle-complete | 9534a10 | [9534a10](https://github.com/EvaLok/schema-org-json-ld/commit/9534a10fa07b3722f38f9c4fe1accc880a7b16bc) |
