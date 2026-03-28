@@ -30,18 +30,16 @@
 
 - **`tools/rust/crates/check-field-inventory/src/main.rs`**: excluded deprecated copilot_metrics from EXCLUDED_TOP_LEVEL
 
-## Pre-dispatch state
+## Cycle state
 
-*Snapshot before review dispatch — final counters may differ after C6.*
-- **In-flight agent sessions**: 1
-- **Pipeline status**: PASS (3 warnings)
+- **In-flight agent sessions**: 2
+- **Pipeline status**: PASS (1 blocking warning, 3 warnings)
 - **Publish gate**: published
 
 ## Next steps
 
-1. Review and iterate on PR from [#1899](https://github.com/EvaLok/schema-org-json-ld/issues/1899) (pending_audit_implementations enforcement) when Copilot completes
-2. Populate pending_audit_implementations array in state.json with accepted audit items
-3. Dispatch [audit #337](https://github.com/EvaLok/schema-org-json-ld-audit/issues/337) implementation (pipeline result immutability)
+1. Review and iterate on PR from [#1899](https://github.com/EvaLok/schema-org-json-ld/issues/1899) (Add pending_audit_implementations tracking with pipeline-check enforcement) when Copilot completes
+2. Review and iterate on PR from [#1901](https://github.com/EvaLok/schema-org-json-ld/issues/1901) ([Cycle Review] Cycle 391 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
