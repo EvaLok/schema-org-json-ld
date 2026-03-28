@@ -5610,7 +5610,8 @@
       "dispatched_at": "2026-03-27T22:26:34Z",
       "issue": 1876,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1877,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 386 end-of-cycle review"
     },
     {
@@ -5642,7 +5643,8 @@
       "dispatched_at": "2026-03-28T04:46:51Z",
       "issue": 1887,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1888,
+      "status": "closed",
       "title": "Remove copilot_metrics from state-schema and all Rust tools"
     },
     {
@@ -6169,7 +6171,7 @@
       }
     }
   },
-  "in_flight_sessions": 3,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 10,
     "issue": 1891,
