@@ -5884,8 +5884,8 @@
   ],
   "cycle_phase": {
     "cycle": 389,
-    "phase": "work",
-    "phase_entered_at": "2026-03-28T04:38:55Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-28T04:49:23Z"
   },
   "eva_input_issues": {
     "closed_prior_cycles": [
@@ -6004,7 +6004,7 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 388"
+        "last_refreshed": "cycle 389"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -6020,7 +6020,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 388"
+        "last_refreshed": "cycle 389"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -6040,7 +6040,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 388"
+        "last_refreshed": "cycle 389"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -6052,7 +6052,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 388"
+        "last_refreshed": "cycle 389"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -6076,11 +6076,11 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 388"
+        "last_refreshed": "cycle 389"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 388"
+        "last_refreshed": "cycle 389"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -6088,7 +6088,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 388"
+        "last_refreshed": "cycle 389"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -6162,13 +6162,13 @@
   },
   "in_flight_sessions": 3,
   "last_cycle": {
-    "duration_minutes": 11,
+    "duration_minutes": 10,
     "issue": 1886,
     "number": 389,
-    "summary": "Processed cycle 387 review findings (1 actioned, 2 deferred). Merged review artifact PR 1882. Requested revision on PR 1880 (copilot_metrics removal — merge conflicts). Refreshed stale field inventory. 0 dispatches, 1 merge.",
-    "timestamp": "2026-03-28T04:38:54Z"
+    "summary": "Processed cycle 388 review findings (2 actioned, 2 deferred). Merged review artifact PR #1885. Closed failed PR #1880 (copilot_metrics removal — merge conflicts). Re-dispatched copilot_metrics removal as #1887 with cleaner spec. Refreshed stale field inventory. 1 dispatch, 1 merge.",
+    "timestamp": "2026-03-28T04:49:23Z"
   },
-  "last_eva_comment_check": "2026-03-28T04:38:54Z",
+  "last_eva_comment_check": "2026-03-28T04:49:23Z",
   "last_tool_audit_cycle": 376,
   "open_questions_for_eva": [],
   "pre_python_clean_cycles": {
