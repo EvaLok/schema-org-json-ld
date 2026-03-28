@@ -6004,6 +6004,10 @@
         "cadence": "every cycle",
         "last_refreshed": "cycle 391"
       },
+      "dispatch_log_latest": {
+        "cadence": "every dispatch or merge",
+        "last_refreshed": "cycle 391"
+      },
       "cycle_phase": {
         "cadence": "every phase transition",
         "last_refreshed": "cycle 391",

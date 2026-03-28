@@ -28,6 +28,7 @@ const EXCLUDED_TOP_LEVEL: &[&str] = &[
     "release",
     "field_inventory",
     "constructor_refactoring",
+    "copilot_metrics",
 ];
 
 /// schema_status sub-keys excluded from tracking (append-only or static).
