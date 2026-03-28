@@ -565,11 +565,7 @@ fn patch_or_addendum(
             separator,
             addendum_prefix,
             value,
-            if insert_at < content.len() || content.ends_with('\n') {
-                "\n"
-            } else {
-                ""
-            },
+            if insert_at < content.len() { "\n" } else { "" },
             &content[insert_at..]
         ),
         PatchOrAddendumOutcome::AddedAddendum,
@@ -684,7 +680,7 @@ fn patch_or_addendum_numbered_section(
 
     let mut patched_lines = lines;
     let mut insertion = Vec::new();
-    if section_end == 0 || !patched_lines[section_end.saturating_sub(1)].is_empty() {
+    if !patched_lines[section_end - 1].is_empty() {
         insertion.push(String::new());
     }
     insertion.push(addendum_heading.to_string());
