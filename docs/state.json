@@ -583,7 +583,7 @@
       "model": "unknown",
       "pr": 206,
       "status": "merged",
-      "title": "Upgrade PHPStan to level 6 — add missing array type annotations"
+      "title": "Upgrade PHPStan to level 6 \u2014 add missing array type annotations"
     },
     {
       "dispatched_at": "2026-02-27T00:22:30Z",
@@ -743,7 +743,7 @@
       "issue": 303,
       "merged_at": null,
       "model": "gpt-5.3-codex",
-      "note": "Workflow file — Eva must merge. NPM_TOKEN secret also needed.",
+      "note": "Workflow file \u2014 Eva must merge. NPM_TOKEN secret also needed.",
       "pr": 305,
       "status": "reviewed_awaiting_eva",
       "title": "Phase 4b: npm publish workflow"
@@ -861,7 +861,7 @@
       "issue": 374,
       "merged_at": "2026-03-03T11:10:00Z",
       "model": "gpt-5.3-codex",
-      "note": "First high-complexity dispatch per Eva #372. Part 1 (Question/Answer image+video) and Part 3 (README) delivered. Part 2 (test expansion) underdelivered — only 2 types covered with data-provider padding. Follow-up needed for genuine edge-case test expansion.",
+      "note": "First high-complexity dispatch per Eva #372. Part 1 (Question/Answer image+video) and Part 3 (README) delivered. Part 2 (test expansion) underdelivered \u2014 only 2 types covered with data-provider padding. Follow-up needed for genuine edge-case test expansion.",
       "pr": 376,
       "status": "merged",
       "title": "Comprehensive quality sweep: QAPage properties + edge-case tests + README"
@@ -934,7 +934,7 @@
       "issue": 413,
       "merged_at": "2026-03-04T06:20:19Z",
       "model": "gpt-5.3-codex",
-      "note": "8 new edge-case tests: special chars, deep nesting, array @type, schemasToJson, schemaToObject API, mixed scalars, array preservation, propertyMap regression. TS JsonLdGenerator tests: 7→15.",
+      "note": "8 new edge-case tests: special chars, deep nesting, array @type, schemasToJson, schemaToObject API, mixed scalars, array preservation, propertyMap regression. TS JsonLdGenerator tests: 7\u219215.",
       "pr": 414,
       "status": "merged",
       "title": "Expand TS JsonLdGenerator test coverage to match PHP edge cases"
@@ -955,7 +955,7 @@
       "issue": 432,
       "merged_at": "2026-03-04T15:47:00Z",
       "model": "gpt-5.3-codex",
-      "note": "First Rust tool build via Copilot. metric-snapshot automates step 5.11 metric verification. On first run, caught stale core_modules count (2→3).",
+      "note": "First Rust tool build via Copilot. metric-snapshot automates step 5.11 metric verification. On first run, caught stale core_modules count (2\u21923).",
       "pr": 433,
       "status": "merged",
       "title": "Build metric-snapshot Rust tool for automated state.json verification"
@@ -1287,7 +1287,7 @@
       "issue": 558,
       "merged_at": null,
       "model": "gpt-5.3-codex",
-      "note": "Review agent. Cycle 156 end-of-cycle review. Silent failure — no Copilot work started.",
+      "note": "Review agent. Cycle 156 end-of-cycle review. Silent failure \u2014 no Copilot work started.",
       "pr": null,
       "status": "failed",
       "title": "Cycle 156 end-of-cycle review"
@@ -1380,7 +1380,7 @@
       "model": "unknown",
       "pr": 595,
       "status": "merged",
-      "title": "Tool: cycle-start — consolidated startup sequence (Eva directive #591)"
+      "title": "Tool: cycle-start \u2014 consolidated startup sequence (Eva directive #591)"
     },
     {
       "dispatched_at": "2026-03-06T18:22:31Z",
@@ -1389,7 +1389,7 @@
       "model": "unknown",
       "pr": 597,
       "status": "merged",
-      "title": "Tool: process-review — parse review findings and update state.json (#586 step 2b)"
+      "title": "Tool: process-review \u2014 parse review findings and update state.json (#586 step 2b)"
     },
     {
       "dispatched_at": "2026-03-06T19:54:43Z",
@@ -1398,7 +1398,7 @@
       "model": "unknown",
       "pr": 609,
       "status": "merged",
-      "title": "Tool: process-merge — update copilot_metrics when PRs are merged (#586 step 2a)"
+      "title": "Tool: process-merge \u2014 update copilot_metrics when PRs are merged (#586 step 2a)"
     },
     {
       "dispatched_at": "2026-03-06T19:54:47Z",
@@ -1407,7 +1407,7 @@
       "model": "unknown",
       "pr": 610,
       "status": "merged",
-      "title": "Tool: record-dispatch — record new agent dispatches in state.json (#586 step 3c)"
+      "title": "Tool: record-dispatch \u2014 record new agent dispatches in state.json (#586 step 3c)"
     },
     {
       "dispatched_at": "2026-03-06T19:59:01Z",
@@ -1425,7 +1425,7 @@
       "model": "unknown",
       "pr": 609,
       "status": "merged",
-      "title": "Tool: process-merge — update copilot_metrics when PRs are merged (#586 step 2a)"
+      "title": "Tool: process-merge \u2014 update copilot_metrics when PRs are merged (#586 step 2a)"
     },
     {
       "dispatched_at": "2026-03-06T21:14:26Z",
@@ -1434,7 +1434,7 @@
       "model": "unknown",
       "pr": 610,
       "status": "merged",
-      "title": "Tool: record-dispatch — record new agent dispatches in state.json (#586 step 3c)"
+      "title": "Tool: record-dispatch \u2014 record new agent dispatches in state.json (#586 step 3c)"
     },
     {
       "dispatched_at": "2026-03-06T21:18:32Z",
@@ -1452,7 +1452,7 @@
       "model": "unknown",
       "pr": 615,
       "status": "merged",
-      "title": "Tool: process-audit — record audit recommendation processing in state.json (#586 step 2c)"
+      "title": "Tool: process-audit \u2014 record audit recommendation processing in state.json (#586 step 2c)"
     },
     {
       "dispatched_at": "2026-03-06T22:55:18Z",
@@ -1470,7 +1470,7 @@
       "model": "unknown",
       "pr": 620,
       "status": "merged",
-      "title": "Tool: process-eva — record Eva directive processing in state.json (#586 step 2d)"
+      "title": "Tool: process-eva \u2014 record Eva directive processing in state.json (#586 step 2d)"
     },
     {
       "dispatched_at": "2026-03-07T00:27:27Z",
@@ -3778,7 +3778,7 @@
       "issue": 1339,
       "merged_at": null,
       "model": "gpt-5.4",
-      "note": "PR #1341 closed due to contaminated rebase. Tool code was good — will cherry-pick manually.",
+      "note": "PR #1341 closed due to contaminated rebase. Tool code was good \u2014 will cherry-pick manually.",
       "pr": 1341,
       "status": "closed",
       "title": "Backfill merged_at for 16 legacy agent_sessions"
@@ -3806,7 +3806,7 @@
       "issue": 1346,
       "merged_at": null,
       "model": "gpt-5.4",
-      "note": "PR #1347 quality good, merge deferred — not Phase 1 authorized per Eva #1350",
+      "note": "PR #1347 quality good, merge deferred \u2014 not Phase 1 authorized per Eva #1350",
       "pr": 1347,
       "status": "reviewed_awaiting_eva",
       "title": "Add --review-finding flag to record-dispatch"
@@ -4471,7 +4471,7 @@
       "model": "gpt-5.4",
       "pr": null,
       "status": "failed",
-      "title": "Copilot availability probe — cycle 328"
+      "title": "Copilot availability probe \u2014 cycle 328"
     },
     {
       "dispatched_at": "2026-03-21T12:34:27Z",
@@ -4656,7 +4656,7 @@
       "model": "gpt-5.4",
       "pr": null,
       "status": "closed_without_pr",
-      "title": "Copilot connectivity probe — cycle 336 (24th consecutive failure)"
+      "title": "Copilot connectivity probe \u2014 cycle 336 (24th consecutive failure)"
     },
     {
       "dispatched_at": "2026-03-22T20:09:05Z",
@@ -4665,7 +4665,7 @@
       "model": "gpt-5.4",
       "pr": null,
       "status": "closed_without_pr",
-      "title": "Copilot probe 25th consecutive — failed (ruleset violation)"
+      "title": "Copilot probe 25th consecutive \u2014 failed (ruleset violation)"
     },
     {
       "closed_at": "2026-03-22T22:08:30Z",
@@ -4698,7 +4698,7 @@
       "model": "gpt-5.4",
       "pr": null,
       "status": "closed_without_pr",
-      "title": "Copilot probe #28 — cycle 338 availability test"
+      "title": "Copilot probe #28 \u2014 cycle 338 availability test"
     },
     {
       "dispatched_at": "2026-03-23T00:24:58Z",
@@ -4716,7 +4716,7 @@
       "model": "gpt-5.4",
       "pr": null,
       "status": "failed",
-      "title": "Copilot probe #29 — cycle 339 availability check"
+      "title": "Copilot probe #29 \u2014 cycle 339 availability check"
     },
     {
       "dispatched_at": "2026-03-23T03:15:11Z",
@@ -4734,7 +4734,7 @@
       "model": "gpt-5.4",
       "pr": null,
       "status": "failed",
-      "title": "Copilot probe 30 — availability check"
+      "title": "Copilot probe 30 \u2014 availability check"
     },
     {
       "dispatched_at": "2026-03-23T06:27:51Z",
@@ -4752,7 +4752,7 @@
       "model": "gpt-5.4",
       "pr": null,
       "status": "failed",
-      "title": "Copilot probe 32 — failed (ruleset violation)"
+      "title": "Copilot probe 32 \u2014 failed (ruleset violation)"
     },
     {
       "dispatched_at": "2026-03-23T10:26:59Z",
@@ -4761,7 +4761,7 @@
       "model": "gpt-5.4",
       "pr": null,
       "status": "failed",
-      "title": "Copilot probe 33 — failed (ruleset violation)"
+      "title": "Copilot probe 33 \u2014 failed (ruleset violation)"
     },
     {
       "dispatched_at": "2026-03-23T10:32:46Z",
@@ -4783,7 +4783,7 @@
       "pr": null,
       "resolved_at": "2026-03-23T12:20:00Z",
       "status": "failed",
-      "title": "Copilot probe 34 — failed (ruleset violation)"
+      "title": "Copilot probe 34 \u2014 failed (ruleset violation)"
     },
     {
       "dispatched_at": "2026-03-23T12:26:02Z",
@@ -5480,7 +5480,7 @@
       "model": "gpt-5.4",
       "pr": null,
       "status": "failed",
-      "title": "[Connectivity Test] Cycle 375 — Copilot agent availability check"
+      "title": "[Connectivity Test] Cycle 375 \u2014 Copilot agent availability check"
     },
     {
       "closed_cycle": 376,
@@ -5502,7 +5502,7 @@
       "model": "gpt-5.4",
       "pr": null,
       "status": "failed",
-      "title": "[Connectivity Test] Cycle 376 — Copilot agent availability check"
+      "title": "[Connectivity Test] Cycle 376 \u2014 Copilot agent availability check"
     },
     {
       "dispatched_at": "2026-03-27T00:30:27Z",
@@ -5522,7 +5522,7 @@
       "model": "gpt-5.4",
       "pr": null,
       "status": "closed_without_pr",
-      "title": "[Connectivity Test] Cycle 377 — Copilot agent availability check"
+      "title": "[Connectivity Test] Cycle 377 \u2014 Copilot agent availability check"
     },
     {
       "dispatched_at": "2026-03-27T04:53:17Z",
@@ -5531,7 +5531,7 @@
       "model": "gpt-5.4",
       "pr": null,
       "status": "failed",
-      "title": "Connectivity Test: Cycle 378 — Copilot agent connectivity test"
+      "title": "Connectivity Test: Cycle 378 \u2014 Copilot agent connectivity test"
     },
     {
       "dispatched_at": "2026-03-27T05:00:53Z",
@@ -5549,11 +5549,11 @@
       "model": "gpt-5.4",
       "pr": null,
       "status": "failed",
-      "title": "Copilot connectivity test — cycle 379"
+      "title": "Copilot connectivity test \u2014 cycle 379"
     },
     {
       "dispatched_at": "2026-03-27T06:45:38Z",
-      "failed_reason": "Repository ruleset violation — 12th consecutive failure",
+      "failed_reason": "Repository ruleset violation \u2014 12th consecutive failure",
       "issue": 1854,
       "model": "gpt-5.4",
       "status": "failed",
@@ -5561,25 +5561,25 @@
     },
     {
       "dispatched_at": "2026-03-27T10:23:43Z",
-      "failed_reason": "Repository ruleset violation — 13th consecutive failure",
+      "failed_reason": "Repository ruleset violation \u2014 13th consecutive failure",
       "issue": 1859,
       "model": "gpt-5.4",
       "status": "failed",
-      "title": "Copilot connectivity test — cycle 380"
+      "title": "Copilot connectivity test \u2014 cycle 380"
     },
     {
       "dispatched_at": "2026-03-27T12:16:43Z",
       "issue": 1861,
       "model": "gpt-5.4",
       "status": "failed",
-      "title": "Copilot connectivity test — cycle 381"
+      "title": "Copilot connectivity test \u2014 cycle 381"
     },
     {
       "dispatched_at": "2026-03-27T14:41:43Z",
       "issue": 1864,
       "model": "gpt-5.4",
       "status": "failed",
-      "title": "Copilot connectivity test — cycle 382"
+      "title": "Copilot connectivity test \u2014 cycle 382"
     },
     {
       "dispatched_at": "2026-03-27T16:22:15Z",
@@ -5588,14 +5588,14 @@
       "issue": 1868,
       "model": "gpt-5.4",
       "status": "failed",
-      "title": "Copilot connectivity test — cycle 383"
+      "title": "Copilot connectivity test \u2014 cycle 383"
     },
     {
       "dispatched_at": "2026-03-27T18:23:12Z",
       "issue": 1870,
       "model": "gpt-5.4",
       "status": "failed",
-      "title": "Copilot connectivity test — cycle 384"
+      "title": "Copilot connectivity test \u2014 cycle 384"
     },
     {
       "dispatched_at": "2026-03-27T22:11:45Z",
@@ -5603,7 +5603,7 @@
       "model": "gpt-5.4",
       "pr": 1875,
       "status": "closed",
-      "title": "Connectivity test — cycle 386",
+      "title": "Connectivity test \u2014 cycle 386",
       "closed_at": "2026-03-27T22:15:49Z"
     },
     {
@@ -5778,7 +5778,7 @@
       "description": "Phase 4c: npm publish requires Eva to create a GitHub Release (triggers publish-npm.yml workflow)",
       "eva_directive": 329,
       "pr_305_status": "CLOSED. Confirmed superseded by Eva (2026-03-03T20:04Z). Branch deleted.",
-      "pre_publish_checkpoint": "RE-VALIDATION NEEDED (cycle 152). Previous validation: 73d1b1b (QC-ACK #213). Source diverged due to v1.0.1 release blockers fix (PR #529). New QC-REQUEST #535 filed for commit ea8ffff. Schema source unchanged — only build config and version bumped.",
+      "pre_publish_checkpoint": "RE-VALIDATION NEEDED (cycle 152). Previous validation: 73d1b1b (QC-ACK #213). Source diverged due to v1.0.1 release blockers fix (PR #529). New QC-REQUEST #535 filed for commit ea8ffff. Schema source unchanged \u2014 only build config and version bumped.",
       "publish_workflow": "publish-npm.yml pushed by Eva (commit f59a531). Uses OIDC provenance, no NPM_TOKEN needed.",
       "qc_request": 331,
       "qc_validation": "SATISFIED. 73/73 standalone parity (100%). Per audit #73, 73 is the correct denominator (88 - 12 enums - 3 building-block-only = 73).",
@@ -5831,21 +5831,6 @@
     "missed_class_fixed": "WebPageElement (PR #393, merged cycle 113)",
     "status": "complete",
     "total_classes_converted": 54
-  },
-  "copilot_metrics": {
-    "closed_without_merge": 10,
-    "closed_without_pr": 65,
-    "dispatch_log_latest": "#1876 [Cycle Review] Cycle 386 end-of-cycle review (cycle 386)",
-    "dispatch_to_pr_rate": "89.3%",
-    "failed_dispatches": 16,
-    "in_flight": 1,
-    "merged": 537,
-    "pr_merge_rate": "97.8%",
-    "produced_pr": 549,
-    "resolved": 614,
-    "reviewed_awaiting_eva": 2,
-    "revision_rounds": 5,
-    "total_dispatches": 615
   },
   "cycle_issues": [
     1878
@@ -5948,18 +5933,6 @@
       "blockers": {
         "cadence": "after blocker state changes",
         "last_refreshed": "cycle 379"
-      },
-      "copilot_metrics.dispatch_to_pr_rate": {
-        "cadence": "after new dispatches",
-        "last_refreshed": "cycle 386"
-      },
-      "copilot_metrics.in_flight": {
-        "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 386"
-      },
-      "copilot_metrics.pr_merge_rate": {
-        "cadence": "after PR merges",
-        "last_refreshed": "cycle 386"
       },
       "cycle_issues": {
         "cadence": "every cycle",
@@ -6219,7 +6192,7 @@
           "added_cycle": 161,
           "category": "journal-quality",
           "chosen_path": "recalibrate",
-          "rationale": "journal-quality findings in cycles 155-160 were positive/confirmatory (5/5 positive). Recurrence reflects consistent verification of a healthy practice, not a chronic problem. No structural fix needed — the review agent should continue checking journal quality but the category is expected to appear regularly.",
+          "rationale": "journal-quality findings in cycles 155-160 were positive/confirmatory (5/5 positive). Recurrence reflects consistent verification of a healthy practice, not a chronic problem. No structural fix needed \u2014 the review agent should continue checking journal quality but the category is expected to appear regularly.",
           "root_cause": "Review agent consistently evaluates journal quality each cycle. Findings are overwhelmingly positive (confirming reflective, causally-linked entries). The category recurs because journal evaluation is a standing review criterion, not because of a persistent deficiency.",
           "verification_cycle": 161
         },
@@ -6235,7 +6208,7 @@
           "added_cycle": 204,
           "category": "receipt-integrity",
           "chosen_path": "structural-fix",
-          "rationale": "receipt-integrity findings in cycles 197-203 consistently flagged nonexistent SHA hashes and stale metrics in hand-assembled worklog receipt tables. The structural fix has two layers: (1) cycle-receipts tool (merged cycle 200) generates receipts mechanically from git log, and (2) cycle-close enhancement (#884, dispatched cycle 204) will embed receipt tables in closing comments automatically. The root cause is manual assembly — the fix is automation.",
+          "rationale": "receipt-integrity findings in cycles 197-203 consistently flagged nonexistent SHA hashes and stale metrics in hand-assembled worklog receipt tables. The structural fix has two layers: (1) cycle-receipts tool (merged cycle 200) generates receipts mechanically from git log, and (2) cycle-close enhancement (#884, dispatched cycle 204) will embed receipt tables in closing comments automatically. The root cause is manual assembly \u2014 the fix is automation.",
           "root_cause": "Orchestrator hand-assembled receipt tables by copying SHAs from tool output, sometimes recording wrong or stale hashes. The cycle-receipts tool exists but was not consistently used to generate the worklog receipt table.",
           "verification_cycle": 204
         },
@@ -6253,7 +6226,7 @@
           "category": "state-integrity",
           "chosen_path": "structural-fix",
           "rationale": "Re-filed cycle 267 per review cycle 266 F1: previous cross-check only verified freshness-marker/value consistency, not that the value was derived from actual GitHub review events. Third structural fix: dispatch tool to query PR review events from GitHub API and verify review_events_verified_through_cycle against real data. Cycle 268 review identified verify-review-events tool has correctness gaps (accepts any review state, fail-open). Downgraded cycle 269. Cycle 270: PR #1300 merged hardened tool (APPROVED-only filter, self-review rejection, post-merge rejection, fail-closed). Tool re-run verified successfully against cycles 269-270 (marker advanced to 270). Unit tests cover all filtering paths. Code-PR hard case will be naturally tested at next schema implementation merge.",
-          "root_cause": "Three sub-causes: (1) cycle-complete mechanically bumping freshness markers (fixed cycle 243). (2) Orchestrator manually bumping markers without verification (caught by cross-check cycle 266). (3) Cross-check itself is superficial — passes on manually asserted values (identified cycle 266 review F1). (4) verify-review-events tool accepts any review state and fails open on missing PRs (fixed cycle 270, PR #1300).",
+          "root_cause": "Three sub-causes: (1) cycle-complete mechanically bumping freshness markers (fixed cycle 243). (2) Orchestrator manually bumping markers without verification (caught by cross-check cycle 266). (3) Cross-check itself is superficial \u2014 passes on manually asserted values (identified cycle 266 review F1). (4) verify-review-events tool accepts any review state and fails open on missing PRs (fixed cycle 270, PR #1300).",
           "updated_cycle": 282,
           "verification_cycle": 282
         },
@@ -6269,7 +6242,7 @@
           "added_cycle": 250,
           "category": "journal-quality",
           "chosen_path": "structural-fix",
-          "rationale": "journal-quality findings in cycles 244-249 are critical (phantom receipt hashes, premature closure claims, disposition language inaccuracies). Unlike the cycle 161 recalibration (positive confirmatory findings), these are genuine defects. The root cause is manual journal generation — receipt hashes copied from memory, disposition language not validated against authoritative sources. The structural fix is improving write-entry to auto-derive journal receipt data from cycle-receipts output and validate disposition language against state.json. This is the same root cause as chronic worklog-accuracy. Partial fix merged (write-entry PR #1197 cycle 251). Remaining root cause: stale commitments generated before close-out steps complete. Category persists at 3 reviews since cycle 250.",
+          "rationale": "journal-quality findings in cycles 244-249 are critical (phantom receipt hashes, premature closure claims, disposition language inaccuracies). Unlike the cycle 161 recalibration (positive confirmatory findings), these are genuine defects. The root cause is manual journal generation \u2014 receipt hashes copied from memory, disposition language not validated against authoritative sources. The structural fix is improving write-entry to auto-derive journal receipt data from cycle-receipts output and validate disposition language against state.json. This is the same root cause as chronic worklog-accuracy. Partial fix merged (write-entry PR #1197 cycle 251). Remaining root cause: stale commitments generated before close-out steps complete. Category persists at 3 reviews since cycle 250.",
           "root_cause": "Journal follow-through receipts and disposition claims are hand-written by the orchestrator rather than derived from cycle-receipts or state.json. This produces phantom hashes (F3 cycle 249) and premature closure claims (F4 cycle 249).",
           "verification_cycle": 257
         },
@@ -6286,7 +6259,7 @@
           "added_cycle": 383,
           "category": "worklog-accuracy",
           "chosen_path": "behavioral-fix",
-          "rationale": "worklog-accuracy findings in cycles 370-372 consistently flagged stale disposition language — calling findings 'deferred (fix in-flight)' after the fix had already merged in the same cycle. The root cause is that worklog/journal are written early in close-out before final state reconciliation. The fix is a behavioral discipline: at C3 (worklog/journal write time), re-verify all disposition claims against current merged state. When a finding's named fix has merged, classify as 'actioned' not 'deferred'. No tool change needed — write-entry already derives from state.json; the orchestrator must verify disposition freshness before committing.",
+          "rationale": "worklog-accuracy findings in cycles 370-372 consistently flagged stale disposition language \u2014 calling findings 'deferred (fix in-flight)' after the fix had already merged in the same cycle. The root cause is that worklog/journal are written early in close-out before final state reconciliation. The fix is a behavioral discipline: at C3 (worklog/journal write time), re-verify all disposition claims against current merged state. When a finding's named fix has merged, classify as 'actioned' not 'deferred'. No tool change needed \u2014 write-entry already derives from state.json; the orchestrator must verify disposition freshness before committing.",
           "root_cause": "Orchestrator carries forward disposition classifications from step 0.5 into C3 worklog without rechecking whether same-cycle merges have resolved the underlying findings. The classification is correct at process-review time but stale by worklog-write time.",
           "verification_cycle": 383
         }
@@ -6617,7 +6590,7 @@
         "deferred": 2,
         "finding_count": 7,
         "ignored": 5,
-        "note": "Score 2/5 — strong concrete follow-through. Deferred: chronic-category ordering validation (rec 1-2), sentiment-aware counting (rec 3). 5 positive/informational (history completeness verified, invariant correctness confirmed, journal quality genuine, metrics coherent, optimization pressure noted)."
+        "note": "Score 2/5 \u2014 strong concrete follow-through. Deferred: chronic-category ordering validation (rec 1-2), sentiment-aware counting (rec 3). 5 positive/informational (history completeness verified, invariant correctness confirmed, journal quality genuine, metrics coherent, optimization pressure noted)."
       },
       {
         "actioned": 1,
@@ -6635,7 +6608,7 @@
         "deferred": 1,
         "finding_count": 7,
         "ignored": 5,
-        "note": "Score 2/5 — genuine architectural progress on write-side pipeline. Actioned: will include full #586 roadmap in worklog (finding 4). Deferred: split cycle-complete commit orchestration (finding 6 — accepted shipping together). 5 positive/informational (copilot arithmetic PASS, journal quality POSITIVE, directive response well-structured, improvement trend confirmed)."
+        "note": "Score 2/5 \u2014 genuine architectural progress on write-side pipeline. Actioned: will include full #586 roadmap in worklog (finding 4). Deferred: split cycle-complete commit orchestration (finding 6 \u2014 accepted shipping together). 5 positive/informational (copilot arithmetic PASS, journal quality POSITIVE, directive response well-structured, improvement trend confirmed)."
       },
       {
         "actioned": 2,
@@ -6714,7 +6687,7 @@
         "deferred": 1,
         "finding_count": 6,
         "ignored": 1,
-        "note": "Findings: false-green-narrative, dispatch_to_pr_rate, review-history, process-eva-shared-io, publish-gate-divergence, completion-checklist-drift. Actioned 4 (narrative, rate, history, divergence), deferred 1 (process-eva shared I/O — dispatch next), ignored 1 (checklist update — not urgent)."
+        "note": "Findings: false-green-narrative, dispatch_to_pr_rate, review-history, process-eva-shared-io, publish-gate-divergence, completion-checklist-drift. Actioned 4 (narrative, rate, history, divergence), deferred 1 (process-eva shared I/O \u2014 dispatch next), ignored 1 (checklist update \u2014 not urgent)."
       },
       {
         "actioned": 3,
@@ -6802,7 +6775,7 @@
         "deferred": 0,
         "finding_count": 2,
         "ignored": 0,
-        "note": "Actioned: (1) copilot_metrics drift — will dispatch tool improvement to sync agent_sessions array, (2) field-freshness-gap — refreshed review_agent field inventory entry."
+        "note": "Actioned: (1) copilot_metrics drift \u2014 will dispatch tool improvement to sync agent_sessions array, (2) field-freshness-gap \u2014 refreshed review_agent field inventory entry."
       },
       {
         "actioned": 3,
@@ -6832,7 +6805,7 @@
         "deferred": 0,
         "finding_count": 4,
         "ignored": 1,
-        "note": "Finding 1 (worklog-accuracy): ACTIONED — will derive from canonical state. Finding 2 (commit-receipts): ACTIONED — correct receipt c868ea5 noted. Finding 3 (zombie-field-removal): IGNORED — positive finding, no action needed. Finding 4 (ledger-follow-through): ACTIONED — backfill tool run, 132 entries reconciled."
+        "note": "Finding 1 (worklog-accuracy): ACTIONED \u2014 will derive from canonical state. Finding 2 (commit-receipts): ACTIONED \u2014 correct receipt c868ea5 noted. Finding 3 (zombie-field-removal): IGNORED \u2014 positive finding, no action needed. Finding 4 (ledger-follow-through): ACTIONED \u2014 backfill tool run, 132 entries reconciled."
       },
       {
         "actioned": 2,
@@ -6962,7 +6935,7 @@
         "deferred": 3,
         "finding_count": 5,
         "ignored": 0,
-        "note": "ACTIONED: freshness-cadence (fixed eva_input_issues.closed_this_cycle staleness), audit-handoff (closed #744 and #745). DEFERRED: cycle-close-drift (process ordering issue — need to dispatch review before final state write), stale-dispatch-heuristic (dispatched #753 for explicit issue-PR linkage), severity-tier-gap (dispatched #751 for cycle-status exit code on commit-freeze)."
+        "note": "ACTIONED: freshness-cadence (fixed eva_input_issues.closed_this_cycle staleness), audit-handoff (closed #744 and #745). DEFERRED: cycle-close-drift (process ordering issue \u2014 need to dispatch review before final state write), stale-dispatch-heuristic (dispatched #753 for explicit issue-PR linkage), severity-tier-gap (dispatched #751 for cycle-status exit code on commit-freeze)."
       },
       {
         "actioned": 5,
@@ -6980,7 +6953,7 @@
         "deferred": 1,
         "finding_count": 7,
         "ignored": 1,
-        "note": "ACTIONED: cycle-close-drift (reconciled agent_sessions #746/#748), metric-label-drift (fixed as part of reconciliation), freshness-cadence (refreshed pre_python_clean_cycles and publish_gate), premature-clean-cycle-claim (acknowledged — won't claim until pipeline passes), linkage-spec-gap (PR #754 merged with branch-name matching). DEFERRED: severity-tier-gap (PR #752 merged but pipeline-check consumer change needed). IGNORED: incomplete-issue-spec (addressed by successful merge)."
+        "note": "ACTIONED: cycle-close-drift (reconciled agent_sessions #746/#748), metric-label-drift (fixed as part of reconciliation), freshness-cadence (refreshed pre_python_clean_cycles and publish_gate), premature-clean-cycle-claim (acknowledged \u2014 won't claim until pipeline passes), linkage-spec-gap (PR #754 merged with branch-name matching). DEFERRED: severity-tier-gap (PR #752 merged but pipeline-check consumer change needed). IGNORED: incomplete-issue-spec (addressed by successful merge)."
       },
       {
         "actioned": 2,
@@ -7012,7 +6985,7 @@
         "deferred": 1,
         "finding_count": 4,
         "ignored": 2,
-        "note": "Actioned: partial-freshness-fix (refreshed stale eva_input_issues markers). Deferred: review-disposition-drift (will consider adding partial/in-progress disposition labels). Invalid: missing-closing-artifacts (review agent checked filesystem before artifacts committed — race condition). Moot: publish-status-spec-gap (PR #767 made explicit choices)."
+        "note": "Actioned: partial-freshness-fix (refreshed stale eva_input_issues markers). Deferred: review-disposition-drift (will consider adding partial/in-progress disposition labels). Invalid: missing-closing-artifacts (review agent checked filesystem before artifacts committed \u2014 race condition). Moot: publish-status-spec-gap (PR #767 made explicit choices)."
       },
       {
         "actioned": 3,
@@ -7186,7 +7159,7 @@
         "deferred": 3,
         "finding_count": 4,
         "ignored": 0,
-        "note": "Findings: code-quality (check-commitments deferred escalation overstatement), worklog-accuracy (metrics block wrong at commit time), process-adherence (post-step still not covering all steps), merge-discipline (30+ min wait claim inflated to ~9 min). Actioned 1 (merge-discipline — will use actual timestamps). Deferred 3 (code-quality needs tool fix dispatch, worklog-accuracy needs tooling, process-adherence needs mechanical verification)."
+        "note": "Findings: code-quality (check-commitments deferred escalation overstatement), worklog-accuracy (metrics block wrong at commit time), process-adherence (post-step still not covering all steps), merge-discipline (30+ min wait claim inflated to ~9 min). Actioned 1 (merge-discipline \u2014 will use actual timestamps). Deferred 3 (code-quality needs tool fix dispatch, worklog-accuracy needs tooling, process-adherence needs mechanical verification)."
       },
       {
         "actioned": 2,
@@ -7260,7 +7233,7 @@
         "deferred": 2,
         "finding_count": 3,
         "ignored": 0,
-        "note": "Findings: worklog-accuracy (placeholder data in worklog contradicts state.json), state-integrity (chronic-category marked refreshed while deferred — false freshness signal), code-quality (PR #890 partial override bug in write-entry). Actioned 1: state-integrity (performed chronic-category check cycle 207, no chronic categories found). Deferred 2: worklog-accuracy (same root cause as prior — needs mechanical generation), code-quality (write-entry partial override — dispatch to Copilot)."
+        "note": "Findings: worklog-accuracy (placeholder data in worklog contradicts state.json), state-integrity (chronic-category marked refreshed while deferred \u2014 false freshness signal), code-quality (PR #890 partial override bug in write-entry). Actioned 1: state-integrity (performed chronic-category check cycle 207, no chronic categories found). Deferred 2: worklog-accuracy (same root cause as prior \u2014 needs mechanical generation), code-quality (write-entry partial override \u2014 dispatch to Copilot)."
       },
       {
         "actioned": 1,
@@ -7455,7 +7428,7 @@
         "deferred": 2,
         "finding_count": 3,
         "ignored": 0,
-        "note": "Finding 1 (review-quality): deferred — dispatch-review does not use record-dispatch worklog fixup path. Finding 2 (review-ledger-drift): actioned — ran process-review for cycle 219 this cycle (receipt 7261cc1). Finding 3 (cycle-close-state-drift): deferred — requires separating cycle-complete from review-dispatch in close-out comments."
+        "note": "Finding 1 (review-quality): deferred \u2014 dispatch-review does not use record-dispatch worklog fixup path. Finding 2 (review-ledger-drift): actioned \u2014 ran process-review for cycle 219 this cycle (receipt 7261cc1). Finding 3 (cycle-close-state-drift): deferred \u2014 requires separating cycle-complete from review-dispatch in close-out comments."
       },
       {
         "actioned": 3,
@@ -7470,7 +7443,7 @@
         "deferred": 1,
         "finding_count": 4,
         "ignored": 0,
-        "note": "Finding 1 (stale-documentation-snapshot): actioned — will add state-divergence check to check-doc-pr tool. Finding 2 (premature-verification): actioned — reset worklog-accuracy verification_cycle to pending. Finding 3 (state-metric-drift): actioned — will recompute test_count from actual test runner output this cycle. Finding 4 (reflection-gap): deferred — behavioral pattern, journal entries need to extract guardrails from misses."
+        "note": "Finding 1 (stale-documentation-snapshot): actioned \u2014 will add state-divergence check to check-doc-pr tool. Finding 2 (premature-verification): actioned \u2014 reset worklog-accuracy verification_cycle to pending. Finding 3 (state-metric-drift): actioned \u2014 will recompute test_count from actual test runner output this cycle. Finding 4 (reflection-gap): deferred \u2014 behavioral pattern, journal entries need to extract guardrails from misses."
       },
       {
         "actioned": 3,
@@ -7731,7 +7704,7 @@
           {
             "category": "tool-usage",
             "disposition": "deferred",
-            "evidence": "dispatch-docs deprecated in same cycle (ADR 0010) — disposition moot"
+            "evidence": "dispatch-docs deprecated in same cycle (ADR 0010) \u2014 disposition moot"
           }
         ],
         "ignored": 0,
@@ -7754,12 +7727,12 @@
           {
             "category": "worklog-accuracy",
             "disposition": "deferred",
-            "evidence": "retrospective — cycle 237 worklog is immutable; write-entry hardening (PR #1111) should prevent recurrence"
+            "evidence": "retrospective \u2014 cycle 237 worklog is immutable; write-entry hardening (PR #1111) should prevent recurrence"
           },
           {
             "category": "worklog-accuracy",
             "disposition": "deferred",
-            "evidence": "retrospective — receipt table missing ce0ea32, 07cc183; same root cause as F1"
+            "evidence": "retrospective \u2014 receipt table missing ce0ea32, 07cc183; same root cause as F1"
           },
           {
             "category": "journal-quality",
@@ -7902,7 +7875,7 @@
         "deferred": 3,
         "finding_count": 4,
         "ignored": 0,
-        "note": "F1 review-disposition: verified_resolved (cycle 248 regression check) — step 0.5.11 added and functioning, reclassification confirmed in state.json. F2 chronic-response: deferred — structural cross-crate pattern needs design. F3 process-adherence: deferred — cycle 247 review confirmed this still occurs. F4 journal-quality: deferred."
+        "note": "F1 review-disposition: verified_resolved (cycle 248 regression check) \u2014 step 0.5.11 added and functioning, reclassification confirmed in state.json. F2 chronic-response: deferred \u2014 structural cross-crate pattern needs design. F3 process-adherence: deferred \u2014 cycle 247 review confirmed this still occurs. F4 journal-quality: deferred."
       },
       {
         "actioned": 2,
@@ -7917,7 +7890,7 @@
         "deferred": 2,
         "finding_count": 4,
         "ignored": 0,
-        "note": "F1 journal-quality: actioned — write-entry e2e verified this cycle (ran write-entry worklog without --cycle, auto-derived cycle 248 correctly). F2 checklist-quality: actioned — tightened step 0.5.11 to require executable verification for tool/runtime findings. F3 worklog-accuracy: deferred — cycle-receipts tool needs improvement. F4 process-adherence: deferred — recurring close-out step comment gap, will address this cycle."
+        "note": "F1 journal-quality: actioned \u2014 write-entry e2e verified this cycle (ran write-entry worklog without --cycle, auto-derived cycle 248 correctly). F2 checklist-quality: actioned \u2014 tightened step 0.5.11 to require executable verification for tool/runtime findings. F3 worklog-accuracy: deferred \u2014 cycle-receipts tool needs improvement. F4 process-adherence: deferred \u2014 recurring close-out step comment gap, will address this cycle."
       },
       {
         "actioned": 0,
@@ -7933,7 +7906,7 @@
         "deferred": 5,
         "finding_count": 5,
         "ignored": 0,
-        "note": "F1 regression-verification: deferred. F2 agent-session-tracking: deferred. F3 dispatch-quality: deferred. F4 worklog-accuracy: deferred. F5 journal-quality: deferred. All behavioral — will implement during this cycle close-out. Cycle 247 F1/F2 reclassified to actioned_failed."
+        "note": "F1 regression-verification: deferred. F2 agent-session-tracking: deferred. F3 dispatch-quality: deferred. F4 worklog-accuracy: deferred. F5 journal-quality: deferred. All behavioral \u2014 will implement during this cycle close-out. Cycle 247 F1/F2 reclassified to actioned_failed."
       },
       {
         "actioned": 2,
@@ -7948,7 +7921,7 @@
         "deferred": 2,
         "finding_count": 4,
         "ignored": 0,
-        "note": "F1 process-adherence: actioned — adding C2/C4.5 to MANDATORY_STEP_IDS this cycle. F2 worklog-accuracy: deferred — requires write-entry tooling improvement. F3 journal-quality: deferred — same root cause as F2, phantom receipt hashes. F4 complacency-detection: actioned — will not claim chronic closure until checker/checklist/behavior align."
+        "note": "F1 process-adherence: actioned \u2014 adding C2/C4.5 to MANDATORY_STEP_IDS this cycle. F2 worklog-accuracy: deferred \u2014 requires write-entry tooling improvement. F3 journal-quality: deferred \u2014 same root cause as F2, phantom receipt hashes. F4 complacency-detection: actioned \u2014 will not claim chronic closure until checker/checklist/behavior align."
       },
       {
         "actioned": 2,
@@ -7962,7 +7935,7 @@
         "deferred": 1,
         "finding_count": 3,
         "ignored": 0,
-        "note": "F1 worklog-accuracy: actioned_failed — PR #1197 merged but production subject format (PRs #...) not matched, worklog still shows empty PR sections (regression verified cycle 252). F2 state-integrity: actioned_failed — dedup guard too broad, blocks all repeated issue numbers including terminal sessions (regression verified cycle 252). F3 complacency-detection: deferred — narrowing journal claims to match actual dispatch scope."
+        "note": "F1 worklog-accuracy: actioned_failed \u2014 PR #1197 merged but production subject format (PRs #...) not matched, worklog still shows empty PR sections (regression verified cycle 252). F2 state-integrity: actioned_failed \u2014 dedup guard too broad, blocks all repeated issue numbers including terminal sessions (regression verified cycle 252). F3 complacency-detection: deferred \u2014 narrowing journal claims to match actual dispatch scope."
       },
       {
         "actioned": 0,
@@ -7976,7 +7949,7 @@
         "deferred": 3,
         "finding_count": 3,
         "ignored": 0,
-        "note": "F1 worklog-accuracy: deferred — write-entry plural PRs format fix needed (dispatch this cycle). F2 state-integrity: deferred — dedup guard narrowing needed (dispatch this cycle). F3 complacency-detection: deferred — disposition overstatement pattern needs structural fix."
+        "note": "F1 worklog-accuracy: deferred \u2014 write-entry plural PRs format fix needed (dispatch this cycle). F2 state-integrity: deferred \u2014 dedup guard narrowing needed (dispatch this cycle). F3 complacency-detection: deferred \u2014 disposition overstatement pattern needs structural fix."
       },
       {
         "actioned": 2,
@@ -7991,7 +7964,7 @@
         "deferred": 2,
         "finding_count": 4,
         "ignored": 0,
-        "note": "F1 regression-verification: deferred — regression evidence quality needs executable proof recorded in worklog. F2 worklog-accuracy: actioned_failed — PR #1206 merged but receipt table still incomplete in cycle 253 (chicken-and-egg: docs commit creates receipt after worklog generation). Structural fix: write-entry now adds note explaining post-worklog receipts (commit 5b1c0ba). F3 process-adherence: deferred — copilot_metrics hand-edit needs tool-driven repair path. F4 dispatch-quality: verified_resolved — housekeeping-scan no longer flags dispatched issues (terminal-status allowlist working)."
+        "note": "F1 regression-verification: deferred \u2014 regression evidence quality needs executable proof recorded in worklog. F2 worklog-accuracy: actioned_failed \u2014 PR #1206 merged but receipt table still incomplete in cycle 253 (chicken-and-egg: docs commit creates receipt after worklog generation). Structural fix: write-entry now adds note explaining post-worklog receipts (commit 5b1c0ba). F3 process-adherence: deferred \u2014 copilot_metrics hand-edit needs tool-driven repair path. F4 dispatch-quality: verified_resolved \u2014 housekeeping-scan no longer flags dispatched issues (terminal-status allowlist working)."
       },
       {
         "actioned": 0,
@@ -8006,7 +7979,7 @@
         "deferred": 4,
         "finding_count": 4,
         "ignored": 0,
-        "note": "F1 regression-verification: deferred. F2 review-history-accuracy: deferred. F3 worklog-accuracy: actioned_failed — receipt note (5b1c0ba) did not fix defect; cycle 254 review confirmed docs commit 50372e0 still omitted from published receipt table. CHRONIC: 8/8 consecutive reviews. F4 pipeline-gate-override: deferred."
+        "note": "F1 regression-verification: deferred. F2 review-history-accuracy: deferred. F3 worklog-accuracy: actioned_failed \u2014 receipt note (5b1c0ba) did not fix defect; cycle 254 review confirmed docs commit 50372e0 still omitted from published receipt table. CHRONIC: 8/8 consecutive reviews. F4 pipeline-gate-override: deferred."
       },
       {
         "actioned": 0,
@@ -8150,7 +8123,7 @@
         "deferred": 2,
         "finding_count": 4,
         "ignored": 0,
-        "note": "F1 code-quality: actioned (review-evidence chronic downgraded from verified to in-progress this cycle). F2 process-adherence: dispatch_created (process-review 5-status taxonomy upgrade to be dispatched). F3 state-integrity: deferred (structural guardrail for field_inventory refresh — separate dispatch needed). F4 journal-quality: actioned (concrete commitment language applied this cycle)."
+        "note": "F1 code-quality: actioned (review-evidence chronic downgraded from verified to in-progress this cycle). F2 process-adherence: dispatch_created (process-review 5-status taxonomy upgrade to be dispatched). F3 state-integrity: deferred (structural guardrail for field_inventory refresh \u2014 separate dispatch needed). F4 journal-quality: actioned (concrete commitment language applied this cycle)."
       },
       {
         "actioned": 1,
@@ -8341,7 +8314,7 @@
         "deferred": 5,
         "finding_count": 7,
         "ignored": 0,
-        "note": "F1 process-adherence: close-out order reversed — deferred (tool fix blocked by stabilization). F2 pipeline-gate: actioned — state-invariants fixed, pipeline re-verified. F3 worklog-accuracy: deferred (procedural fix). F4 receipt-integrity: deferred (structural tension with post-worklog commits). F5 state-integrity: actioned — closed_without_merge 4→5, pr_merge_rate 99.0→98.8, state-invariants now PASS. F6 review-evidence: deferred (hand-advance discipline). F7 journal-quality: deferred (generate journal after dispositions stable)."
+        "note": "F1 process-adherence: close-out order reversed \u2014 deferred (tool fix blocked by stabilization). F2 pipeline-gate: actioned \u2014 state-invariants fixed, pipeline re-verified. F3 worklog-accuracy: deferred (procedural fix). F4 receipt-integrity: deferred (structural tension with post-worklog commits). F5 state-integrity: actioned \u2014 closed_without_merge 4\u21925, pr_merge_rate 99.0\u219298.8, state-invariants now PASS. F6 review-evidence: deferred (hand-advance discipline). F7 journal-quality: deferred (generate journal after dispositions stable)."
       },
       {
         "actioned": 0,
@@ -8454,7 +8427,7 @@
         "deferred": 3,
         "finding_count": 3,
         "ignored": 0,
-        "note": "STABILIZATION (ADR 0011): All 3 findings deferred per observation mode. F1 receipt-integrity: clean-cycle commit missing from receipt table (recurring from cycle 283). F2 process-adherence: dispatch-time PASS claimed on commit 9d212e0 that still failed invariant 10 — silent fix commit d792142 not documented. F3 state-integrity: review_events_verified_through_cycle advanced to 284 without fresh review evidence from verify-review-events tool."
+        "note": "STABILIZATION (ADR 0011): All 3 findings deferred per observation mode. F1 receipt-integrity: clean-cycle commit missing from receipt table (recurring from cycle 283). F2 process-adherence: dispatch-time PASS claimed on commit 9d212e0 that still failed invariant 10 \u2014 silent fix commit d792142 not documented. F3 state-integrity: review_events_verified_through_cycle advanced to 284 without fresh review evidence from verify-review-events tool."
       },
       {
         "actioned": 0,
@@ -8850,7 +8823,7 @@
         "deferred": 3,
         "finding_count": 3,
         "ignored": 0,
-        "note": "ADR 0011 observation mode — 3 findings deferred: worklog-accuracy (pre-dispatch snapshot drift), journal-quality (duplicate worklog link), process-adherence (step-comment cycle scoping)"
+        "note": "ADR 0011 observation mode \u2014 3 findings deferred: worklog-accuracy (pre-dispatch snapshot drift), journal-quality (duplicate worklog link), process-adherence (step-comment cycle scoping)"
       },
       {
         "actioned": 0,
@@ -8864,7 +8837,7 @@
         "deferred": 4,
         "finding_count": 4,
         "ignored": 0,
-        "note": "ADR 0011 observation mode — all 4 findings deferred for post-stabilization triage"
+        "note": "ADR 0011 observation mode \u2014 all 4 findings deferred for post-stabilization triage"
       },
       {
         "actioned": 0,
@@ -9059,7 +9032,7 @@
         "deferred": 3,
         "finding_count": 3,
         "ignored": 0,
-        "note": "All 3 findings deferred: (1) state-integrity — cycle-close dispatch overwrite needs tool fix, (2) process-adherence — pipeline gate override, (3) journal-quality — compound commitment grading. Finding 1 requires a dispatch to fix cycle-close logic; findings 2 and 3 are behavioral process improvements."
+        "note": "All 3 findings deferred: (1) state-integrity \u2014 cycle-close dispatch overwrite needs tool fix, (2) process-adherence \u2014 pipeline gate override, (3) journal-quality \u2014 compound commitment grading. Finding 1 requires a dispatch to fix cycle-close logic; findings 2 and 3 are behavioral process improvements."
       },
       {
         "actioned": 0,
@@ -9074,7 +9047,7 @@
         "deferred": 5,
         "finding_count": 5,
         "ignored": 0,
-        "note": "All 5 findings valid. F1: narrative/state mismatch on prior review disposition — lesson learned. F2: cycle-runner step-0 bug on resume — needs tool fix. F3: C4.5 checklist misuse — needs process update. F4: journal accuracy on CI timing — lesson learned. F5: receipt scope drift — lesson learned."
+        "note": "All 5 findings valid. F1: narrative/state mismatch on prior review disposition \u2014 lesson learned. F2: cycle-runner step-0 bug on resume \u2014 needs tool fix. F3: C4.5 checklist misuse \u2014 needs process update. F4: journal accuracy on CI timing \u2014 lesson learned. F5: receipt scope drift \u2014 lesson learned."
       },
       {
         "actioned": 3,
@@ -9147,7 +9120,7 @@
         "deferred": 0,
         "finding_count": 3,
         "ignored": 0,
-        "note": "All 3 findings are behavioral: (1) receipt-integrity — will use cycle-receipts output directly; (2) process-adherence — will derive self-modifications from git diff; (3) journal-quality — will evaluate compound commitments item-by-item. Demonstration in this cycle's worklog/journal."
+        "note": "All 3 findings are behavioral: (1) receipt-integrity \u2014 will use cycle-receipts output directly; (2) process-adherence \u2014 will derive self-modifications from git diff; (3) journal-quality \u2014 will evaluate compound commitments item-by-item. Demonstration in this cycle's worklog/journal."
       },
       {
         "actioned": 3,
@@ -9255,7 +9228,7 @@
           }
         ],
         "ignored": 0,
-        "note": "F1 state-integrity: root cause identified (record-dispatch does not sync in_flight_sessions) — dispatching fix this cycle. F2 worklog-accuracy: chronic discipline issue, noted. F3 process-adherence: merge-pr tool has since been validated in production; will ensure future tool merges have CI."
+        "note": "F1 state-integrity: root cause identified (record-dispatch does not sync in_flight_sessions) \u2014 dispatching fix this cycle. F2 worklog-accuracy: chronic discipline issue, noted. F3 process-adherence: merge-pr tool has since been validated in production; will ensure future tool merges have CI."
       },
       {
         "actioned": 0,
@@ -9347,7 +9320,7 @@
           }
         ],
         "ignored": 0,
-        "note": "F1+F3: Root cause is close-out creating post-C5.1 repair commits for review_events_verified_through_cycle. Dispatching fix to add verify-review-events step before C5 in cycle-runner close-out. F2: Structural limitation — worklog frozen at C5 by design (PR 1738). Deferred, requires tool change. F4: Behavioral — journal will be candid about same-cycle contradictions."
+        "note": "F1+F3: Root cause is close-out creating post-C5.1 repair commits for review_events_verified_through_cycle. Dispatching fix to add verify-review-events step before C5 in cycle-runner close-out. F2: Structural limitation \u2014 worklog frozen at C5 by design (PR 1738). Deferred, requires tool change. F4: Behavioral \u2014 journal will be candid about same-cycle contradictions."
       },
       {
         "actioned": 3,
@@ -9381,7 +9354,7 @@
           }
         ],
         "ignored": 0,
-        "note": "F1 actioned: PR #1750 renames heading to Pre-dispatch state. F2 actioned: PR #1748 adds C4.7 verify-review-events to close-out. F3 actioned: PR #1748 runs verify-review-events --apply automatically using correct contract. F4 deferred: structural C3/C5.5 ordering issue — will mark follow-through as unresolved when outcome depends on post-C3 steps."
+        "note": "F1 actioned: PR #1750 renames heading to Pre-dispatch state. F2 actioned: PR #1748 adds C4.7 verify-review-events to close-out. F3 actioned: PR #1748 runs verify-review-events --apply automatically using correct contract. F4 deferred: structural C3/C5.5 ordering issue \u2014 will mark follow-through as unresolved when outcome depends on post-C3 steps."
       },
       {
         "actioned": 1,
@@ -9437,7 +9410,7 @@
           }
         ],
         "ignored": 0,
-        "note": "F1: dispatch worklog receipt auto-generation fix. F2: deferred — same fix addresses it. F3: actioned — stop referencing phantom C4.7 step."
+        "note": "F1: dispatch worklog receipt auto-generation fix. F2: deferred \u2014 same fix addresses it. F3: actioned \u2014 stop referencing phantom C4.7 step."
       },
       {
         "actioned": 1,
@@ -9535,7 +9508,7 @@
           }
         ],
         "ignored": 0,
-        "note": "F1 deferred: pre-dispatch snapshot design trade-off. F2 dispatch_created: dispatched #1788 (record-dispatch per-finding fix). F3 dispatch_created: dispatched #1786 (review_body.rs timestamp fix). Aggregates corrected in cycle 366 — original record-dispatch had per-finding reconciliation bug (fixed by PR #1789)."
+        "note": "F1 deferred: pre-dispatch snapshot design trade-off. F2 dispatch_created: dispatched #1788 (record-dispatch per-finding fix). F3 dispatch_created: dispatched #1786 (review_body.rs timestamp fix). Aggregates corrected in cycle 366 \u2014 original record-dispatch had per-finding reconciliation bug (fixed by PR #1789)."
       },
       {
         "actioned": 2,
@@ -9733,7 +9706,7 @@
           }
         ],
         "ignored": 0,
-        "note": "F1 process-adherence: fix in-flight via #1825/PR #1826 (auto-pipeline flag, requested rebase to fix stale state files). F2 worklog-accuracy: deferred — Next steps refresh requires write-entry changes. F3 journal-quality: actioned — this cycle's journal will report pipeline state from actual gate result, not aspiration."
+        "note": "F1 process-adherence: fix in-flight via #1825/PR #1826 (auto-pipeline flag, requested rebase to fix stale state files). F2 worklog-accuracy: deferred \u2014 Next steps refresh requires write-entry changes. F3 journal-quality: actioned \u2014 this cycle's journal will report pipeline state from actual gate result, not aspiration."
       },
       {
         "actioned": 0,
@@ -10188,13 +10161,13 @@
         "pr": 203
       },
       {
-        "description": "Upgrade PHPStan to level 6 — add missing array type annotations",
+        "description": "Upgrade PHPStan to level 6 \u2014 add missing array type annotations",
         "issue": 205,
         "merged_at": "2026-02-26T23:04:00Z",
         "pr": 206
       },
       {
-        "description": "Upgrade PHPStan to level 9 — add @var annotation for PROPERTY_MAP constant",
+        "description": "Upgrade PHPStan to level 9 \u2014 add @var annotation for PROPERTY_MAP constant",
         "issue": 208,
         "merged_at": "2026-02-27T00:31:02Z",
         "pr": 209
@@ -10300,7 +10273,7 @@
       "missing_steps": [
         "C8"
       ],
-      "reason": "C8 was posted by cycle-runner close-out in non-standard format ('**Step C8 — Cycle 381 complete**' instead of orchestrator signature format). The step exists but the parser cannot detect it. Bug in cycle-runner C8 comment format."
+      "reason": "C8 was posted by cycle-runner close-out in non-standard format ('**Step C8 \u2014 Cycle 381 complete**' instead of orchestrator signature format). The step exists but the parser cannot detect it. Bug in cycle-runner C8 comment format."
     }
   ],
   "test_count": {
@@ -10531,5 +10504,6 @@
     "qc_coordination_issue": 249,
     "qc_validation_strategy": "Aligned. QC repo #98: ts-consumer/ dir, parity testing, begins after Phase 1 merge",
     "status": "complete"
-  }
+  },
+  "dispatch_log_latest": "#1876 [Cycle Review] Cycle 386 end-of-cycle review (cycle 386)"
 }

@@ -3904,6 +3904,7 @@ mod tests {
             &repo_root.path,
             r#"{
                 "last_cycle": {"number": 154},
+                "in_flight_sessions": 3,
 
                 "publish_gate": {
                     "status": "published"
@@ -5043,6 +5044,7 @@ mod tests {
             &repo_root.path,
             r#"{
                 "last_cycle": {"number": 154},
+                "in_flight_sessions": 3,
 
                 "tool_pipeline": {
                     "status": "PASS (6/6)"
@@ -5272,6 +5274,7 @@ mod tests {
             r#"{
                 "last_cycle": {"number": 154},
                 "tool_pipeline": {"status": "FAIL (state value should not be used)"},
+                "in_flight_sessions": 3,
 
                 "publish_gate": {
                     "status": "published"
@@ -5385,6 +5388,7 @@ mod tests {
             &repo_root.path,
             r#"{
                 "last_cycle": {"number": 154},
+                "in_flight_sessions": 3,
 
                 "publish_gate": {
                     "status": "published"
@@ -5394,6 +5398,7 @@ mod tests {
 
         let mut args = worklog_args("Placeholder rejected");
         args.done = vec!["Merged PR #123".to_string()];
+        args.publish_gate = Some(NOT_PROVIDED.to_string());
 
         let error = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap_err();
         assert!(error.contains("publish gate"));

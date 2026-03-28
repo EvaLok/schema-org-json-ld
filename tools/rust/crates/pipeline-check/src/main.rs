@@ -24,7 +24,7 @@ const WORKLOG_DEDUP_STEP_NAME: &str = "worklog-dedup";
 const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const CURRENT_CYCLE_STEPS_STEP_NAME: &str = "current-cycle-steps";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
-const STEP_NAMES: [&str; 14] = [
+const STEP_NAMES: [&str; 13] = [
     "metric-snapshot",
     "field-inventory",
     "housekeeping-scan",
@@ -2134,7 +2134,7 @@ fn review_artifact_fallback_warning(
 
 fn copilot_review_fallback_needed(state: &Value) -> bool {
     state
-        .pointer(COPILOT_IN_FLIGHT_PATH)
+        .pointer("/in_flight_sessions")
         .and_then(Value::as_u64)
         .is_some_and(|in_flight| in_flight == 0)
         && state
@@ -2868,8 +2868,7 @@ mod tests {
                             stdout: String::new(),
                         });
                     }
-                    "housekeeping-scan" | "cycle-status" | "state-invariants"
-                    | "derive-metrics" => {
+                    "housekeeping-scan" | "cycle-status" | "state-invariants" => {
                         assert!(!has_cycle_arg)
                     }
                     _ => panic!("unexpected tool invocation: {}", key),
@@ -2909,17 +2908,7 @@ mod tests {
                 "cycle_phase": {
                     "phase": "close_out"
                 },
-                "copilot_metrics": {
-                    "total_dispatches": 3,
-                    "resolved": 2,
-                    "merged": 1,
-                    "in_flight": 1,
-                    "produced_pr": 2,
-                    "closed_without_pr": 0,
-                    "reviewed_awaiting_eva": 1,
-                    "dispatch_to_pr_rate": "66.7%",
-                    "pr_merge_rate": "50.0%"
-                },
+
                 "review_agent": {
                     "last_review_cycle": 135
                 }
@@ -2987,30 +2976,12 @@ mod tests {
                         .to_string(),
                     },
                 ),
-                (
-                    "derive-metrics".to_string(),
-                    ExecutionResult {
-                        exit_code: Some(0),
-                        stdout: json!({
-                                "total_dispatches": 3,
-                                "resolved": 2,
-                            "merged": 1,
-                            "in_flight": 1,
-                            "produced_pr": 2,
-                            "closed_without_pr": 0,
-                            "reviewed_awaiting_eva": 1,
-                            "dispatch_to_pr_rate": "66.7%",
-                            "pr_merge_rate": "50.0%"
-                        })
-                        .to_string(),
-                    },
-                ),
             ]),
         };
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 14);
+        assert_eq!(report.steps.len(), 13);
         assert_eq!(report.steps[0].status, StepStatus::Pass);
         assert_eq!(report.steps[1].status, StepStatus::Pass);
         assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -3026,25 +2997,24 @@ mod tests {
         );
         assert_eq!(report.steps[5].status, StepStatus::Pass);
         assert_eq!(
-            report.steps[5].detail.as_deref(),
-            Some("tracked copilot_metrics fields match")
+            report.steps[5].name,
+            "artifact-verify"
         );
-        assert_eq!(report.steps[6].name, "artifact-verify");
+        assert_eq!(report.steps[5].status, StepStatus::Pass);
+        assert_eq!(report.steps[6].name, "disposition-match");
         assert_eq!(report.steps[6].status, StepStatus::Pass);
-        assert_eq!(report.steps[7].name, "disposition-match");
+        assert_eq!(report.steps[7].name, "deferral-accumulation");
         assert_eq!(report.steps[7].status, StepStatus::Pass);
-        assert_eq!(report.steps[8].name, "deferral-accumulation");
+        assert_eq!(report.steps[8].name, "dispatch-finding-reconciliation");
         assert_eq!(report.steps[8].status, StepStatus::Pass);
-        assert_eq!(report.steps[9].name, "dispatch-finding-reconciliation");
+        assert_eq!(report.steps[9].name, "doc-validation");
         assert_eq!(report.steps[9].status, StepStatus::Pass);
-        assert_eq!(report.steps[10].name, "doc-validation");
+        assert_eq!(report.steps[10].name, "worklog-dedup");
         assert_eq!(report.steps[10].status, StepStatus::Pass);
-        assert_eq!(report.steps[11].name, "worklog-dedup");
+        assert_eq!(report.steps[11].name, "step-comments");
         assert_eq!(report.steps[11].status, StepStatus::Pass);
-        assert_eq!(report.steps[12].name, "step-comments");
+        assert_eq!(report.steps[12].name, "current-cycle-steps");
         assert_eq!(report.steps[12].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].name, "current-cycle-steps");
-        assert_eq!(report.steps[13].status, StepStatus::Pass);
     }
 
     #[test]
@@ -3108,14 +3078,15 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 14);
-        assert!(report.steps[..11]
+        assert_eq!(report.steps.len(), 13);
+        assert!(report
+            .steps
             .iter()
-            .all(|step| matches!(step.status, StepStatus::Error)));
-        assert_eq!(report.steps[11].status, StepStatus::Pass);
-        assert!(report.steps[12..]
+            .any(|step| matches!(step.status, StepStatus::Error)));
+        assert!(report
+            .steps
             .iter()
-            .all(|step| matches!(step.status, StepStatus::Error)));
+            .any(|step| matches!(step.status, StepStatus::Pass)));
         assert!(report
             .steps
             .iter()
@@ -3362,17 +3333,7 @@ mod tests {
                 "previous_cycle_issue": 834,
                 "last_cycle": {"number": 257},
                 "cycle_phase": {"phase": "close_out"},
-                "copilot_metrics": {
-                    "total_dispatches": 3,
-                    "resolved": 2,
-                    "merged": 1,
-                    "in_flight": 1,
-                    "produced_pr": 2,
-                    "closed_without_pr": 0,
-                    "reviewed_awaiting_eva": 1,
-                    "dispatch_to_pr_rate": "66.7%",
-                    "pr_merge_rate": "50.0%"
-                },
+
                 "review_agent": {
                     "last_review_cycle": 257
                 }
@@ -3419,28 +3380,13 @@ mod tests {
                         exit_code: Some(0),
                         stdout: json!({
                             "concurrency": {"in_flight": 1},
-                            "eva_input": {"comments_since_last_cycle": [{"x": 1}]}
+                            "eva_input": {"comments_since_last_cycle": [{"x": 1}, {"x": 2}]}
                         })
                         .to_string(),
                     }),
                     "state-invariants" => Ok(ExecutionResult {
                         exit_code: Some(0),
                         stdout: json!({"passed":5,"failed":0}).to_string(),
-                    }),
-                    "derive-metrics" => Ok(ExecutionResult {
-                        exit_code: Some(0),
-                        stdout: json!({
-                            "total_dispatches": 3,
-                            "resolved": 2,
-                            "merged": 1,
-                            "in_flight": 1,
-                            "produced_pr": 2,
-                            "closed_without_pr": 0,
-                            "reviewed_awaiting_eva": 1,
-                            "dispatch_to_pr_rate": "66.7%",
-                            "pr_merge_rate": "50.0%"
-                        })
-                        .to_string(),
                     }),
                     "validate-docs" => {
                         let mode = args.first().map(String::as_str).unwrap_or_default();
@@ -3470,13 +3416,13 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &CascadeRunner);
-        assert_eq!(report.steps[10].name, "doc-validation");
-        assert_eq!(report.steps[10].status, StepStatus::Cascade);
-        assert_eq!(report.steps[11].name, "worklog-dedup");
-        assert_eq!(report.steps[11].status, StepStatus::Pass);
-        assert_eq!(report.steps[12].name, "step-comments");
+        assert_eq!(report.steps[9].name, "doc-validation");
+        assert_eq!(report.steps[9].status, StepStatus::Cascade);
+        assert_eq!(report.steps[10].name, "worklog-dedup");
+        assert_eq!(report.steps[10].status, StepStatus::Pass);
+        assert_eq!(report.steps[11].name, "step-comments");
         // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[12].status, StepStatus::Warn);
+        assert_eq!(report.steps[11].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -3499,17 +3445,7 @@ mod tests {
                 "previous_cycle_issue": 834,
                 "last_cycle": {"number": 257},
                 "cycle_phase": {"phase": "close_out"},
-                "copilot_metrics": {
-                    "total_dispatches": 3,
-                    "resolved": 2,
-                    "merged": 1,
-                    "in_flight": 1,
-                    "produced_pr": 2,
-                    "closed_without_pr": 0,
-                    "reviewed_awaiting_eva": 1,
-                    "dispatch_to_pr_rate": "66.7%",
-                    "pr_merge_rate": "50.0%"
-                },
+
                 "review_agent": {
                     "last_review_cycle": 257
                 }
@@ -3556,28 +3492,13 @@ mod tests {
                         exit_code: Some(0),
                         stdout: json!({
                             "concurrency": {"in_flight": 1},
-                            "eva_input": {"comments_since_last_cycle": [{"x": 1}]}
+                            "eva_input": {"comments_since_last_cycle": [{"x": 1}, {"x": 2}]}
                         })
                         .to_string(),
                     }),
                     "state-invariants" => Ok(ExecutionResult {
                         exit_code: Some(0),
                         stdout: json!({"passed":5,"failed":0}).to_string(),
-                    }),
-                    "derive-metrics" => Ok(ExecutionResult {
-                        exit_code: Some(0),
-                        stdout: json!({
-                            "total_dispatches": 3,
-                            "resolved": 2,
-                            "merged": 1,
-                            "in_flight": 1,
-                            "produced_pr": 2,
-                            "closed_without_pr": 0,
-                            "reviewed_awaiting_eva": 1,
-                            "dispatch_to_pr_rate": "66.7%",
-                            "pr_merge_rate": "50.0%"
-                        })
-                        .to_string(),
                     }),
                     "validate-docs" => {
                         let mode = args.first().map(String::as_str).unwrap_or_default();
@@ -3607,13 +3528,13 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &MultiCauseCascadeRunner);
-        assert_eq!(report.steps[10].name, "doc-validation");
-        assert_eq!(report.steps[10].status, StepStatus::Cascade);
-        assert_eq!(report.steps[11].name, "worklog-dedup");
-        assert_eq!(report.steps[11].status, StepStatus::Pass);
-        assert_eq!(report.steps[12].name, "step-comments");
+        assert_eq!(report.steps[9].name, "doc-validation");
+        assert_eq!(report.steps[9].status, StepStatus::Cascade);
+        assert_eq!(report.steps[10].name, "worklog-dedup");
+        assert_eq!(report.steps[10].status, StepStatus::Pass);
+        assert_eq!(report.steps[11].name, "step-comments");
         // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[12].status, StepStatus::Warn);
+        assert_eq!(report.steps[11].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -3638,17 +3559,7 @@ mod tests {
                 "previous_cycle_issue": 842,
                 "last_cycle": {"number": CURRENT_CYCLE},
                 "cycle_phase": {"phase": "close_out"},
-                "copilot_metrics": {
-                    "total_dispatches": 3,
-                    "resolved": 2,
-                    "merged": 1,
-                    "in_flight": 1,
-                    "produced_pr": 2,
-                    "closed_without_pr": 0,
-                    "reviewed_awaiting_eva": 1,
-                    "dispatch_to_pr_rate": "66.7%",
-                    "pr_merge_rate": "50.0%"
-                },
+
                 "review_agent": {
                     "last_review_cycle": CURRENT_CYCLE
                 }
@@ -3699,28 +3610,13 @@ mod tests {
                         exit_code: Some(0),
                         stdout: json!({
                             "concurrency": {"in_flight": 1},
-                            "eva_input": {"comments_since_last_cycle": [{"x": 1}]}
+                            "eva_input": {"comments_since_last_cycle": [{"x": 1}, {"x": 2}]}
                         })
                         .to_string(),
                     }),
                     "state-invariants" => Ok(ExecutionResult {
                         exit_code: Some(0),
                         stdout: json!({"passed":5,"failed":0}).to_string(),
-                    }),
-                    "derive-metrics" => Ok(ExecutionResult {
-                        exit_code: Some(0),
-                        stdout: json!({
-                            "total_dispatches": 3,
-                            "resolved": 2,
-                            "merged": 1,
-                            "in_flight": 1,
-                            "produced_pr": 2,
-                            "closed_without_pr": 0,
-                            "reviewed_awaiting_eva": 1,
-                            "dispatch_to_pr_rate": "66.7%",
-                            "pr_merge_rate": "50.0%"
-                        })
-                        .to_string(),
                     }),
                     "validate-docs" => Ok(ExecutionResult {
                         exit_code: Some(0),
@@ -3742,15 +3638,15 @@ mod tests {
         }
 
         let report = run_pipeline(&root, OVERRIDE_CYCLE, &OverrideRunner);
-        assert_eq!(report.steps[12].name, "step-comments");
-        assert_eq!(report.steps[12].status, StepStatus::Warn);
-        assert_eq!(report.steps[12].severity, Severity::Warning);
-        assert!(report.steps[12]
+        assert_eq!(report.steps[11].name, "step-comments");
+        assert_eq!(report.steps[11].status, StepStatus::Warn);
+        assert_eq!(report.steps[11].severity, Severity::Warning);
+        assert!(report.steps[11]
             .detail
             .as_deref()
             .unwrap_or_default()
             .contains("missing mandatory [none]"));
-        assert!(report.steps[12]
+        assert!(report.steps[11]
             .detail
             .as_deref()
             .unwrap_or_default()
@@ -3777,17 +3673,7 @@ mod tests {
                 "previous_cycle_issue": 834,
                 "last_cycle": {"number": 257},
                 "cycle_phase": {"phase": "close_out"},
-                "copilot_metrics": {
-                    "total_dispatches": 3,
-                    "resolved": 2,
-                    "merged": 1,
-                    "in_flight": 1,
-                    "produced_pr": 2,
-                    "closed_without_pr": 0,
-                    "reviewed_awaiting_eva": 1,
-                    "dispatch_to_pr_rate": "66.7%",
-                    "pr_merge_rate": "50.0%"
-                },
+
                 "review_agent": {
                     "last_review_cycle": 257
                 }
@@ -3834,28 +3720,13 @@ mod tests {
                         exit_code: Some(0),
                         stdout: json!({
                             "concurrency": {"in_flight": 1},
-                            "eva_input": {"comments_since_last_cycle": [{"x": 1}]}
+                            "eva_input": {"comments_since_last_cycle": [{"x": 1}, {"x": 2}]}
                         })
                         .to_string(),
                     }),
                     "state-invariants" => Ok(ExecutionResult {
                         exit_code: Some(0),
                         stdout: json!({"passed":5,"failed":0}).to_string(),
-                    }),
-                    "derive-metrics" => Ok(ExecutionResult {
-                        exit_code: Some(0),
-                        stdout: json!({
-                            "total_dispatches": 3,
-                            "resolved": 2,
-                            "merged": 1,
-                            "in_flight": 1,
-                            "produced_pr": 2,
-                            "closed_without_pr": 0,
-                            "reviewed_awaiting_eva": 1,
-                            "dispatch_to_pr_rate": "66.7%",
-                            "pr_merge_rate": "50.0%"
-                        })
-                        .to_string(),
                     }),
                     "validate-docs" => {
                         let mode = args.first().map(String::as_str).unwrap_or_default();
@@ -3885,12 +3756,12 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &IndependentFailureRunner);
-        assert_eq!(report.steps[10].name, "doc-validation");
-        assert_eq!(report.steps[10].status, StepStatus::Fail);
-        assert_eq!(report.steps[11].name, "worklog-dedup");
-        assert_eq!(report.steps[11].status, StepStatus::Pass);
+        assert_eq!(report.steps[9].name, "doc-validation");
+        assert_eq!(report.steps[9].status, StepStatus::Fail);
+        assert_eq!(report.steps[10].name, "worklog-dedup");
+        assert_eq!(report.steps[10].status, StepStatus::Pass);
         // Previous-cycle backstop is downgraded to Warn
-        assert_eq!(report.steps[12].status, StepStatus::Warn);
+        assert_eq!(report.steps[11].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -3911,17 +3782,7 @@ mod tests {
                 "previous_cycle_issue": 834,
                 "last_cycle": {"number": 257, "issue": 834},
                 "cycle_phase": {"phase": "close_out"},
-                "copilot_metrics": {
-                    "total_dispatches": 3,
-                    "resolved": 2,
-                    "merged": 1,
-                    "in_flight": 1,
-                    "produced_pr": 2,
-                    "closed_without_pr": 0,
-                    "reviewed_awaiting_eva": 1,
-                    "dispatch_to_pr_rate": "66.7%",
-                    "pr_merge_rate": "50.0%"
-                },
+
                 "review_agent": {
                     "last_review_cycle": 257
                 }
@@ -3968,28 +3829,13 @@ mod tests {
                         exit_code: Some(0),
                         stdout: json!({
                             "concurrency": {"in_flight": 1},
-                            "eva_input": {"comments_since_last_cycle": [{"x": 1}]}
+                            "eva_input": {"comments_since_last_cycle": [{"x": 1}, {"x": 2}]}
                         })
                         .to_string(),
                     }),
                     "state-invariants" => Ok(ExecutionResult {
                         exit_code: Some(0),
                         stdout: json!({"passed":5,"failed":0}).to_string(),
-                    }),
-                    "derive-metrics" => Ok(ExecutionResult {
-                        exit_code: Some(0),
-                        stdout: json!({
-                            "total_dispatches": 3,
-                            "resolved": 2,
-                            "merged": 1,
-                            "in_flight": 1,
-                            "produced_pr": 2,
-                            "closed_without_pr": 0,
-                            "reviewed_awaiting_eva": 1,
-                            "dispatch_to_pr_rate": "66.7%",
-                            "pr_merge_rate": "50.0%"
-                        })
-                        .to_string(),
                     }),
                     "validate-docs" => panic!("doc-validation should be excluded"),
                     other => panic!("unexpected tool invocation: {}", other),
@@ -4011,7 +3857,7 @@ mod tests {
             &ExcludeDocValidationRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 13);
+        assert_eq!(report.steps.len(), 12);
         assert!(!report
             .steps
             .iter()
@@ -4039,17 +3885,7 @@ mod tests {
                 "previous_cycle_issue": 834,
                 "last_cycle": {"number": 257, "issue": 834},
                 "cycle_phase": {"phase": "close_out"},
-                "copilot_metrics": {
-                    "total_dispatches": 3,
-                    "resolved": 2,
-                    "merged": 1,
-                    "in_flight": 1,
-                    "produced_pr": 2,
-                    "closed_without_pr": 0,
-                    "reviewed_awaiting_eva": 1,
-                    "dispatch_to_pr_rate": "66.7%",
-                    "pr_merge_rate": "50.0%"
-                },
+
                 "review_agent": {
                     "last_review_cycle": 257
                 }
@@ -4096,28 +3932,13 @@ mod tests {
                         exit_code: Some(0),
                         stdout: json!({
                             "concurrency": {"in_flight": 1},
-                            "eva_input": {"comments_since_last_cycle": [{"x": 1}]}
+                            "eva_input": {"comments_since_last_cycle": [{"x": 1}, {"x": 2}]}
                         })
                         .to_string(),
                     }),
                     "state-invariants" => Ok(ExecutionResult {
                         exit_code: Some(0),
                         stdout: json!({"passed":5,"failed":0}).to_string(),
-                    }),
-                    "derive-metrics" => Ok(ExecutionResult {
-                        exit_code: Some(0),
-                        stdout: json!({
-                            "total_dispatches": 3,
-                            "resolved": 2,
-                            "merged": 1,
-                            "in_flight": 1,
-                            "produced_pr": 2,
-                            "closed_without_pr": 0,
-                            "reviewed_awaiting_eva": 1,
-                            "dispatch_to_pr_rate": "66.7%",
-                            "pr_merge_rate": "50.0%"
-                        })
-                        .to_string(),
                     }),
                     "validate-docs" => {
                         let mode = args.first().map(String::as_str).unwrap_or_default();
@@ -4146,7 +3967,7 @@ mod tests {
             &UnknownExcludeRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 14);
+        assert_eq!(report.steps.len(), 13);
         assert!(report
             .steps
             .iter()
@@ -4175,17 +3996,7 @@ mod tests {
                 "previous_cycle_issue": 834,
                 "last_cycle": {"number": 257, "issue": 834},
                 "cycle_phase": {"phase": "close_out"},
-                "copilot_metrics": {
-                    "total_dispatches": 3,
-                    "resolved": 2,
-                    "merged": 1,
-                    "in_flight": 1,
-                    "produced_pr": 2,
-                    "closed_without_pr": 0,
-                    "reviewed_awaiting_eva": 1,
-                    "dispatch_to_pr_rate": "66.7%",
-                    "pr_merge_rate": "50.0%"
-                },
+
                 "review_agent": {
                     "last_review_cycle": 257
                 }
@@ -4239,28 +4050,13 @@ mod tests {
                         exit_code: Some(0),
                         stdout: json!({
                             "concurrency": {"in_flight": 1},
-                            "eva_input": {"comments_since_last_cycle": [{"x": 1}]}
+                            "eva_input": {"comments_since_last_cycle": [{"x": 1}, {"x": 2}]}
                         })
                         .to_string(),
                     }),
                     "state-invariants" => Ok(ExecutionResult {
                         exit_code: Some(0),
                         stdout: json!({"passed":5,"failed":0}).to_string(),
-                    }),
-                    "derive-metrics" => Ok(ExecutionResult {
-                        exit_code: Some(0),
-                        stdout: json!({
-                            "total_dispatches": 3,
-                            "resolved": 2,
-                            "merged": 1,
-                            "in_flight": 1,
-                            "produced_pr": 2,
-                            "closed_without_pr": 0,
-                            "reviewed_awaiting_eva": 1,
-                            "dispatch_to_pr_rate": "66.7%",
-                            "pr_merge_rate": "50.0%"
-                        })
-                        .to_string(),
                     }),
                     "validate-docs" => {
                         let mode = args.first().map(String::as_str).unwrap_or_default();
@@ -4290,7 +4086,7 @@ mod tests {
         );
 
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 13);
+        assert_eq!(report.steps.len(), 12);
         assert!(!report
             .steps
             .iter()
@@ -4583,141 +4379,7 @@ mod tests {
             json!({
                 "last_cycle": {"number": 210},
                 "review_agent": {"last_review_cycle": 210},
-                "copilot_metrics": {"in_flight": 0},
-                "blockers": [{"summary": "Copilot outage continues"}]
-            })
-            .to_string(),
-        )
-        .unwrap();
 
-        let step = verify_artifacts_for_date(&root, "2026-03-09");
-
-        assert_eq!(step.status, StepStatus::Pass);
-        assert!(step
-            .detail
-            .as_deref()
-            .unwrap_or_default()
-            .contains("Review artifact present for cycle 210"));
-        assert!(!step
-            .detail
-            .as_deref()
-            .unwrap_or_default()
-            .contains("C6.1 self-review fallback"));
-    }
-
-    #[test]
-    fn artifact_verification_does_not_warn_for_stale_review_when_copilot_is_active() {
-        static COUNTER: AtomicU64 = AtomicU64::new(0);
-        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir().join(format!("pipeline-check-artifacts-active-{}", run_id));
-        fs::create_dir_all(root.join("docs/journal")).unwrap();
-        fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
-        fs::create_dir_all(root.join("docs/reviews")).unwrap();
-        fs::write(root.join("docs/journal/2026-03-09.md"), "# Journal\n").unwrap();
-        fs::write(
-            root.join("docs/worklog/2026-03-09/120000-cycle-210-summary.md"),
-            "# Worklog\n",
-        )
-        .unwrap();
-        fs::write(root.join("docs/reviews/cycle-208.md"), "# Review\n").unwrap();
-        fs::write(
-            root.join("docs/state.json"),
-            json!({
-                "last_cycle": {"number": 210},
-                "review_agent": {"last_review_cycle": 208},
-                "copilot_metrics": {"in_flight": 2},
-                "blockers": [{"summary": "Copilot outage continues"}]
-            })
-            .to_string(),
-        )
-        .unwrap();
-
-        let step = verify_artifacts_for_date(&root, "2026-03-09");
-
-        assert_eq!(step.status, StepStatus::Pass);
-        assert!(step
-            .detail
-            .as_deref()
-            .unwrap_or_default()
-            .contains("Review artifact present for cycle 208"));
-        assert!(!step
-            .detail
-            .as_deref()
-            .unwrap_or_default()
-            .contains("C6.1 self-review fallback"));
-    }
-
-    #[test]
-    fn artifact_verification_warns_when_recent_review_artifacts_are_missing_during_copilot_outage()
-    {
-        static COUNTER: AtomicU64 = AtomicU64::new(0);
-        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir().join(format!("pipeline-check-artifacts-outage-{}", run_id));
-        fs::create_dir_all(root.join("docs/journal")).unwrap();
-        fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
-        fs::create_dir_all(root.join("docs/reviews")).unwrap();
-        fs::write(root.join("docs/journal/2026-03-09.md"), "# Journal\n").unwrap();
-        fs::write(
-            root.join("docs/worklog/2026-03-09/120000-cycle-210-summary.md"),
-            "# Worklog\n",
-        )
-        .unwrap();
-        fs::write(root.join("docs/reviews/cycle-208.md"), "# Review\n").unwrap();
-        fs::write(
-            root.join("docs/state.json"),
-            json!({
-                "last_cycle": {"number": 210},
-                "review_agent": {"last_review_cycle": 208},
-                "copilot_metrics": {"in_flight": 0},
-                "blockers": [{"summary": "Copilot outage continues"}]
-            })
-            .to_string(),
-        )
-        .unwrap();
-
-        let step = verify_artifacts_for_date(&root, "2026-03-09");
-
-        assert_eq!(step.status, StepStatus::Warn);
-        assert!(step.detail.as_deref().unwrap_or_default().contains(
-            "No review artifact for current cycle — C6.1 self-review fallback may be needed"
-        ));
-    }
-
-    #[test]
-    fn disposition_match_passes_when_review_history_and_review_file_match() {
-        static COUNTER: AtomicU64 = AtomicU64::new(0);
-        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root =
-            std::env::temp_dir().join(format!("pipeline-check-disposition-match-pass-{}", run_id));
-        fs::create_dir_all(root.join("docs/reviews")).unwrap();
-        fs::write(
-            root.join("docs/reviews/cycle-210.md"),
-            concat!(
-                "# Cycle 210 Review\n\n",
-                "## 1. [validation] First finding\n\n",
-                "Details\n\n",
-                "## 2. [testing] Second finding\n\n",
-                "Details\n\n",
-                "## Complacency score\n\n",
-                "1/5\n"
-            ),
-        )
-        .unwrap();
-        fs::write(
-            root.join("docs/state.json"),
-            json!({
-                "review_agent": {
-                    "history": [{
-                        "cycle": 210,
-                        "categories": ["validation", "testing"],
-                        "actioned": 1,
-                        "deferred": 0,
-                        "dispatch_created": 1,
-                        "ignored": 0,
-                        "finding_count": 2,
-                        "complacency_score": 1
-                    }]
-                }
             })
             .to_string(),
         )
@@ -4727,11 +4389,6 @@ mod tests {
 
         assert_eq!(step.status, StepStatus::Pass);
         assert_eq!(step.name, "disposition-match");
-        assert!(step
-            .detail
-            .as_deref()
-            .unwrap_or_default()
-            .contains("2 findings"));
     }
 
     #[test]
