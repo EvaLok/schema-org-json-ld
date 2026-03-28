@@ -5897,21 +5897,7 @@
     "status": "complete",
     "total_classes_converted": 54
   },
-  "copilot_metrics": {
-    "closed_without_merge": 12,
-    "closed_without_pr": 65,
-    "dispatch_log_latest": "#1894 [Cycle Review] Cycle 390 end-of-cycle review (cycle 390)",
-    "dispatch_to_pr_rate": "89.4%",
-    "failed_dispatches": 16,
-    "in_flight": 1,
-    "merged": 542,
-    "pr_merge_rate": "97.5%",
-    "produced_pr": 556,
-    "resolved": 621,
-    "reviewed_awaiting_eva": 2,
-    "revision_rounds": 5,
-    "total_dispatches": 622
-  },
+  "dispatch_log_latest": "#1894 [Cycle Review] Cycle 390 end-of-cycle review (cycle 390)",
   "cycle_issues": [
     1896
   ],
@@ -6013,18 +5999,6 @@
       "blockers": {
         "cadence": "after blocker state changes",
         "last_refreshed": "cycle 390"
-      },
-      "copilot_metrics.dispatch_to_pr_rate": {
-        "cadence": "after new dispatches",
-        "last_refreshed": "cycle 391"
-      },
-      "copilot_metrics.in_flight": {
-        "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 391"
-      },
-      "copilot_metrics.pr_merge_rate": {
-        "cadence": "after PR merges",
-        "last_refreshed": "cycle 391"
       },
       "cycle_issues": {
         "cadence": "every cycle",
