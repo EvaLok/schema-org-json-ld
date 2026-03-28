@@ -5999,9 +5999,10 @@
     1922
   ],
   "cycle_phase": {
+    "completed_at": "2026-03-28T18:42:16Z",
     "cycle": 396,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-28T18:38:35Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-28T18:42:16Z"
   },
   "deferred_findings": [
     {
