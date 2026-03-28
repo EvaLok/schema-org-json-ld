@@ -5727,6 +5727,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Full worklog snapshot immutability — extend addendum pattern to all state fields"
+    },
+    {
+      "dispatched_at": "2026-03-28T14:21:38Z",
+      "issue": 1915,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Deferral deadline enforcement for review findings"
     }
   ],
   "audit_dropped": [
@@ -5958,7 +5965,7 @@
     "phase": "work",
     "phase_entered_at": "2026-03-28T14:11:54Z"
   },
-  "dispatch_log_latest": "#1913 Full worklog snapshot immutability — extend addendum pattern to all state fields (cycle 394)",
+  "dispatch_log_latest": "#1915 Deferral deadline enforcement for review findings (cycle 394)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6224,7 +6231,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 16,
     "issue": 1911,
@@ -10075,8 +10082,8 @@
         ],
         "complacency_score": 3,
         "cycle": 393,
-        "deferred": 1,
-        "dispatch_created": 1,
+        "deferred": 0,
+        "dispatch_created": 2,
         "finding_count": 3,
         "finding_dispositions": [
           {
@@ -10085,7 +10092,7 @@
           },
           {
             "category": "worklog-accuracy",
-            "disposition": "deferred"
+            "disposition": "dispatch_created"
           },
           {
             "category": "complacency-detection",
