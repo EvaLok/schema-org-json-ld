@@ -1291,7 +1291,7 @@ mod tests {
     fn write_write_entry_patch_script(dir: &std::path::Path) {
         fs::write(
             dir.join("tools/write-entry"),
-            "#!/usr/bin/env bash\nset -euo pipefail\npython - \"$@\" <<'PY'\nimport sys\nfrom pathlib import Path\nargs = sys.argv[1:]\nif not args or args[0] != 'patch-pipeline':\n    raise SystemExit(f'unexpected write-entry args: {args}')\nvalues = {}\nlist_values = {}\ni = 1\nwhile i < len(args):\n    key = args[i]\n    if key == '--next-steps':\n        if i + 1 >= len(args):\n            raise SystemExit(f'missing value for {key}')\n        list_values.setdefault(key, []).append(args[i + 1])\n        i += 2\n        continue\n    if i + 1 >= len(args):\n        raise SystemExit(f'missing value for {key}')\n    values[key] = args[i + 1]\n    i += 2\nworklog = Path(values['--worklog-file'])\nlines = worklog.read_text().splitlines()\nfor index, line in enumerate(lines):\n    if line == '## Pre-dispatch state':\n        lines[index] = '## ' + values['--section-title']\n        break\nelse:\n    raise SystemExit('missing state heading')\nlines = [line for line in lines if line != '*Snapshot before review dispatch — final counters may differ after C6.*']\nlines = [line for line in lines if not line.startswith('- **Copilot metrics**: ')]\ndef replace_line(prefix, value):\n    for index, line in enumerate(lines):\n        if line.startswith(prefix):\n            lines[index] = prefix + value\n            return\n    raise SystemExit(f'missing line for {prefix}')\ndef patch_pipeline_status(value):\n    prefix = '- **Pipeline status**: '\n    addendum_prefix = '- **Pipeline status (post-dispatch)**: '\n    for index, line in enumerate(lines):\n        if not line.startswith(prefix):\n            continue\n        current = line[len(prefix):].strip()\n        if not current or current == 'Not provided.':\n            lines[index] = prefix + value\n            return\n        if current == value.strip():\n            return\n        for addendum_index, addendum_line in enumerate(lines):\n            if addendum_line.startswith(addendum_prefix):\n                if addendum_line[len(addendum_prefix):].strip() != value.strip():\n                    lines[addendum_index] = addendum_prefix + value\n                return\n        lines.insert(index + 1, addendum_prefix + value)\n        return\n    raise SystemExit(f'missing line for {prefix}')\nreplace_line('- **In-flight agent sessions**: ', values['--in-flight'])\npatch_pipeline_status(values['--status'])\nreplace_line('- **Publish gate**: ', values['--publish-gate'])\nif '--next-steps' in list_values:\n    for index, line in enumerate(lines):\n        if line == '## Next steps':\n            next_start = index + 1\n            break\n    else:\n        raise SystemExit('missing next steps heading')\n    next_end = len(lines)\n    for index in range(next_start, len(lines)):\n        if lines[index].startswith('## '):\n            next_end = index\n            break\n    replacement = ['']\n    for step_index, step in enumerate(list_values['--next-steps'], start=1):\n        replacement.append(f'{step_index}. {step}')\n    lines[next_start:next_end] = replacement\nworklog.write_text('\\n'.join(lines) + '\\n')\nprint(worklog)\nPY\n",
+            "#!/usr/bin/env bash\nset -euo pipefail\npython - \"$@\" <<'PY'\nimport sys\nfrom pathlib import Path\nargs = sys.argv[1:]\nif not args or args[0] != 'patch-pipeline':\n    raise SystemExit(f'unexpected write-entry args: {args}')\nvalues = {}\nlist_values = {}\ni = 1\nwhile i < len(args):\n    key = args[i]\n    if key == '--next-steps':\n        if i + 1 >= len(args):\n            raise SystemExit(f'missing value for {key}')\n        list_values.setdefault(key, []).append(args[i + 1])\n        i += 2\n        continue\n    if i + 1 >= len(args):\n        raise SystemExit(f'missing value for {key}')\n    values[key] = args[i + 1]\n    i += 2\nworklog = Path(values['--worklog-file'])\nlines = worklog.read_text().splitlines()\nfor index, line in enumerate(lines):\n    if line == '## Pre-dispatch state':\n        lines[index] = '## ' + values['--section-title']\n        break\nelse:\n    raise SystemExit('missing state heading')\nlines = [line for line in lines if line != '*Snapshot before review dispatch — final counters may differ after C6.*']\nlines = [line for line in lines if not line.startswith('- **Copilot metrics**: ')]\ndef patch_or_addendum(prefix, value, addendum_prefix):\n    for index, line in enumerate(lines):\n        if not line.startswith(prefix):\n            continue\n        current = line[len(prefix):].strip()\n        if not current or current == 'Not provided.':\n            lines[index] = prefix + value\n            return\n        if current == value.strip():\n            return\n        for addendum_index, addendum_line in enumerate(lines):\n            if addendum_line.startswith(addendum_prefix):\n                if addendum_line[len(addendum_prefix):].strip() != value.strip():\n                    lines[addendum_index] = addendum_prefix + value\n                return\n        lines.insert(index + 1, addendum_prefix + value)\n        return\n    raise SystemExit(f'missing line for {prefix}')\ndef section_bounds(heading):\n    for index, line in enumerate(lines):\n        if line == heading:\n            start = index + 1\n            end = len(lines)\n            for next_index in range(start, len(lines)):\n                if lines[next_index].startswith('## '):\n                    end = next_index\n                    break\n            return index, start, end\n    raise SystemExit(f'missing section {heading}')\ndef section_has_placeholder(start, end):\n    entries = [line.strip() for line in lines[start:end] if line.strip()]\n    if not entries:\n        return True\n    if len(entries) == 1 and entries[0] in {'Not provided.', '1. Not provided.'}:\n        return True\n    return False\ndef render_numbered_steps(items):\n    rendered = ['']\n    for step_index, step in enumerate(items, start=1):\n        rendered.append(f'{step_index}. {step}')\n    return rendered\ndef patch_next_steps(items):\n    _, start, end = section_bounds('## Next steps')\n    replacement = render_numbered_steps(items)\n    if section_has_placeholder(start, end):\n        lines[start:end] = replacement\n        return\n    heading = '## Next steps (post-dispatch)'\n    try:\n        _, post_start, post_end = section_bounds(heading)\n        lines[post_start:post_end] = replacement\n    except SystemExit:\n        insertion = []\n        if end == 0 or lines[end - 1] != '':\n            insertion.append('')\n        insertion.append(heading)\n        insertion.extend(replacement)\n        lines[end:end] = insertion\npatch_or_addendum('- **In-flight agent sessions**: ', values['--in-flight'], '- **In-flight agent sessions (post-dispatch)**: ')\npatch_or_addendum('- **Pipeline status**: ', values['--status'], '- **Pipeline status (post-dispatch)**: ')\npatch_or_addendum('- **Publish gate**: ', values['--publish-gate'], '- **Publish gate (post-dispatch)**: ')\nif '--next-steps' in list_values:\n    patch_next_steps(list_values['--next-steps'])\nworklog.write_text('\\n'.join(lines) + '\\n')\nprint(worklog)\nPY\n",
         )
         .unwrap();
     }
@@ -1745,7 +1745,7 @@ mod tests {
         fs::write(
             dir.join("tools/dispatch-review"),
             format!(
-                "#!/usr/bin/env bash\nset -euo pipefail\npython - <<'PY'\nimport json\nfrom pathlib import Path\nstate_path = Path({state_path:?})\nstate = json.loads(state_path.read_text())\nstate['in_flight_sessions'] = 1\nstate['dispatch_log_latest'] = '#1470 [Cycle Review] Cycle 345 end-of-cycle review (cycle 345)'\nstate['agent_sessions'] = [{{'issue': 1470, 'title': '[Cycle Review] Cycle 345 end-of-cycle review', 'status': 'in_flight'}}]\nstate_path.write_text(json.dumps(state, indent=2) + '\\n')\nPY\ngit -C {repo:?} add docs/state.json\ngit -C {repo:?} commit -m 'state(record-dispatch): #1470 dispatched [cycle 345]' >/dev/null\nprintf '%s\\n' 'Created review issue #1470 from orchestrator issue #123: https://github.com/EvaLok/schema-org-json-ld/issues/1470'\n",
+                "#!/usr/bin/env bash\nset -euo pipefail\npython - <<'PY'\nimport json\nfrom pathlib import Path\nstate_path = Path({state_path:?})\nstate = json.loads(state_path.read_text())\nstate['in_flight_sessions'] = 1\nstate['publish_gate']['status'] = 'blocked pending review'\nstate['dispatch_log_latest'] = '#1470 [Cycle Review] Cycle 345 end-of-cycle review (cycle 345)'\nstate['agent_sessions'] = [{{'issue': 1470, 'title': '[Cycle Review] Cycle 345 end-of-cycle review', 'status': 'in_flight'}}]\nstate_path.write_text(json.dumps(state, indent=2) + '\\n')\nPY\ngit -C {repo:?} add docs/state.json\ngit -C {repo:?} commit -m 'state(record-dispatch): #1470 dispatched [cycle 345]' >/dev/null\nprintf '%s\\n' 'Created review issue #1470 from orchestrator issue #123: https://github.com/EvaLok/schema-org-json-ld/issues/1470'\n",
                 state_path = dir.join("docs/state.json"),
                 repo = dir,
             ),
@@ -1924,14 +1924,15 @@ mod tests {
         assert!(worklog.contains("## Cycle state"));
         assert!(!worklog.contains("## Pre-dispatch state"));
         assert!(!worklog.contains("Snapshot before review dispatch"));
-        assert!(worklog.contains("- **In-flight agent sessions**: 1"));
+        assert!(worklog.contains("- **In-flight agent sessions**: 0"));
+        assert!(worklog.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
         assert!(worklog.contains("- **Pipeline status**: PASS"));
         assert!(worklog.contains("- **Pipeline status (post-dispatch)**: PASS (1 warning)"));
         assert!(!worklog.contains("phase_5_active"));
         assert!(!worklog.contains("- **Copilot metrics**:"));
         assert!(worklog.contains("- **Publish gate**: published"));
         assert!(worklog.contains(
-            "## Next steps\n\n1. Review and iterate on PR from [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) ([Cycle Review] Cycle 345 end-of-cycle review) when Copilot completes\n"
+            "## Next steps\n\n1. None.\n\n## Next steps (post-dispatch)\n\n1. Review and iterate on PR from [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) ([Cycle Review] Cycle 345 end-of-cycle review) when Copilot completes\n"
         ));
 
         let log_output = Command::new("git")
@@ -1954,7 +1955,7 @@ mod tests {
         fs::create_dir_all(dir.join("docs/journal")).unwrap();
         fs::write(
             dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"),
-            "# Cycle 345\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: published\n\n## Next steps\n\n1. None.\n",
+            "# Cycle 345\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: published\n\n## Next steps\n\n1. Plan next dispatch\n",
         )
         .unwrap();
         fs::write(dir.join("docs/journal/2026-03-25.md"), "# Journal\n").unwrap();
@@ -2022,7 +2023,7 @@ mod tests {
         fs::write(
             dir.join("tools/dispatch-review"),
             format!(
-                "#!/usr/bin/env bash\nset -euo pipefail\npython - <<'PY'\nimport json\nfrom pathlib import Path\nstate_path = Path({state_path:?})\nstate = json.loads(state_path.read_text())\nstate['in_flight_sessions'] = 1\nstate['dispatch_log_latest'] = '#1470 [Cycle Review] Cycle 345 end-of-cycle review (cycle 345)'\nstate['agent_sessions'] = [{{'issue': 1470, 'title': '[Cycle Review] Cycle 345 end-of-cycle review', 'status': 'in_flight'}}]\nstate_path.write_text(json.dumps(state, indent=2) + '\\n')\nPY\ngit -C {repo:?} add docs/state.json\ngit -C {repo:?} commit -m 'state(record-dispatch): #1470 dispatched [cycle 345]' >/dev/null\nprintf '%s\\n' 'Created review issue #1470 from orchestrator issue #123: https://github.com/EvaLok/schema-org-json-ld/issues/1470'\n",
+                "#!/usr/bin/env bash\nset -euo pipefail\npython - <<'PY'\nimport json\nfrom pathlib import Path\nstate_path = Path({state_path:?})\nstate = json.loads(state_path.read_text())\nstate['in_flight_sessions'] = 1\nstate['publish_gate']['status'] = 'blocked pending review'\nstate['dispatch_log_latest'] = '#1470 [Cycle Review] Cycle 345 end-of-cycle review (cycle 345)'\nstate['agent_sessions'] = [{{'issue': 1470, 'title': '[Cycle Review] Cycle 345 end-of-cycle review', 'status': 'in_flight'}}]\nstate_path.write_text(json.dumps(state, indent=2) + '\\n')\nPY\ngit -C {repo:?} add docs/state.json\ngit -C {repo:?} commit -m 'state(record-dispatch): #1470 dispatched [cycle 345]' >/dev/null\nprintf '%s\\n' 'Created review issue #1470 from orchestrator issue #123: https://github.com/EvaLok/schema-org-json-ld/issues/1470'\n",
                 state_path = dir.join("docs/state.json"),
                 repo = dir,
             ),
@@ -2062,8 +2063,27 @@ mod tests {
 
         let worklog = fs::read_to_string(dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"))
             .unwrap();
+        assert!(worklog.contains("- **In-flight agent sessions**: 0"));
+        assert!(worklog.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
         assert!(worklog.contains("- **Pipeline status**: FAIL (1 blocking finding)"));
         assert!(worklog.contains("- **Pipeline status (post-dispatch)**: PASS (1 warning)"));
+        assert!(worklog.contains("- **Publish gate**: published"));
+        assert!(worklog.contains("- **Publish gate (post-dispatch)**: blocked pending review"));
+        assert!(worklog.contains("## Next steps\n\n1. Plan next dispatch\n\n## Next steps (post-dispatch)\n\n1. Review and iterate on PR from [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) ([Cycle Review] Cycle 345 end-of-cycle review) when Copilot completes\n"));
+        assert_eq!(worklog.matches("- **In-flight agent sessions**:").count(), 1);
+        assert_eq!(
+            worklog
+                .matches("- **In-flight agent sessions (post-dispatch)**:")
+                .count(),
+            1
+        );
+        assert_eq!(worklog.matches("- **Publish gate**:").count(), 1);
+        assert_eq!(
+            worklog
+                .matches("- **Publish gate (post-dispatch)**:")
+                .count(),
+            1
+        );
         assert_eq!(worklog.matches("- **Pipeline status**:").count(), 1);
         assert_eq!(
             worklog
