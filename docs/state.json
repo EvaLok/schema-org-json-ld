@@ -5760,8 +5760,10 @@
     {
       "dispatched_at": "2026-03-28T18:19:12Z",
       "issue": 1923,
+      "merged_at": "2026-03-28T18:30:28Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1924,
+      "status": "merged",
       "title": "Fix process-review deferral deadline anchoring and verified_resolved reconciliation"
     }
   ],
@@ -6268,7 +6270,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 19,
     "issue": 1922,
