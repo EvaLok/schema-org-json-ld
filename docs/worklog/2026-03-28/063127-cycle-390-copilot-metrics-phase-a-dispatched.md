@@ -24,7 +24,7 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 1
-- **Pipeline status**: FAIL (3 warnings: derive-metrics mismatch, state-invariants drift, worklog-dedup)
+- **Pipeline status**: PASS (3 warnings)
 - **Copilot metrics**: 621 dispatches, 552 PRs produced, 540 merged, 97.8% PR merge rate
 - **Publish gate**: published
 
