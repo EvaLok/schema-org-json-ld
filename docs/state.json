@@ -5644,6 +5644,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Remove copilot_metrics from state-schema and all Rust tools"
+    },
+    {
+      "dispatched_at": "2026-03-28T04:53:18Z",
+      "issue": 1889,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 389 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -5867,17 +5874,17 @@
   "copilot_metrics": {
     "closed_without_merge": 10,
     "closed_without_pr": 65,
-    "dispatch_log_latest": "#1887 Remove copilot_metrics from state-schema and all Rust tools (cycle 389)",
-    "dispatch_to_pr_rate": "89.0%",
+    "dispatch_log_latest": "#1889 [Cycle Review] Cycle 389 end-of-cycle review (cycle 389)",
+    "dispatch_to_pr_rate": "88.9%",
     "failed_dispatches": 16,
-    "in_flight": 3,
+    "in_flight": 4,
     "merged": 539,
     "pr_merge_rate": "97.8%",
     "produced_pr": 551,
     "resolved": 616,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 619
+    "total_dispatches": 620
   },
   "cycle_issues": [
     1886
@@ -6160,7 +6167,7 @@
       }
     }
   },
-  "in_flight_sessions": 3,
+  "in_flight_sessions": 4,
   "last_cycle": {
     "duration_minutes": 10,
     "issue": 1886,
@@ -9887,7 +9894,7 @@
       }
     ]
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 388,
   "schema_status": {
     "directory_layout": {
