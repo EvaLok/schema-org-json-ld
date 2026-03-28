@@ -6037,8 +6037,9 @@
     1934
   ],
   "cycle_phase": {
+    "completed_at": "2026-03-28T22:42:13Z",
     "cycle": 398,
-    "phase": "close_out",
+    "phase": "complete",
     "phase_entered_at": "2026-03-28T22:33:49Z"
   },
   "deferred_findings": [
