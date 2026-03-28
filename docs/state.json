@@ -5787,8 +5787,10 @@
     {
       "dispatched_at": "2026-03-28T20:18:01Z",
       "issue": 1930,
+      "merged_at": "2026-03-28T22:21:32Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1931,
+      "status": "merged",
       "title": "Add worklog pipeline-status immutability check"
     },
     {
@@ -6311,7 +6313,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 11,
     "issue": 1934,
