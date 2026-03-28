@@ -5655,6 +5655,13 @@
       "pr": 1890,
       "status": "merged",
       "title": "[Cycle Review] Cycle 389 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-28T06:28:35Z",
+      "issue": 1892,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Make copilot_metrics optional and stop all tools from using it"
     }
   ],
   "audit_dropped": [
@@ -5878,7 +5885,7 @@
   "copilot_metrics": {
     "closed_without_merge": 10,
     "closed_without_pr": 65,
-    "dispatch_log_latest": "#1889 [Cycle Review] Cycle 389 end-of-cycle review (cycle 389)",
+    "dispatch_log_latest": "#1892 Make copilot_metrics optional and stop all tools from using it (cycle 390)",
     "dispatch_to_pr_rate": "89.0%",
     "failed_dispatches": 16,
     "in_flight": 3,
@@ -5888,7 +5895,7 @@
     "resolved": 617,
     "reviewed_awaiting_eva": 2,
     "revision_rounds": 5,
-    "total_dispatches": 620
+    "total_dispatches": 621
   },
   "cycle_issues": [
     1891
@@ -6171,7 +6178,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 10,
     "issue": 1891,
