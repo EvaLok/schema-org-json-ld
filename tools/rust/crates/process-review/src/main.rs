@@ -781,8 +781,7 @@ fn build_state_patch(
     let entry_value = serde_json::to_value(entry)
         .map_err(|error| format!("failed to serialize review history entry: {}", error))?;
     next_history.push(entry_value);
-    let (deferred_findings_patch, warnings) =
-        deferred_findings_patch(state, review_cycle, current_cycle, entry)?;
+    let (deferred_findings_patch, warnings) = deferred_findings_patch(state, review_cycle, entry)?;
 
     let mut patch = vec![
         PatchUpdate {
@@ -822,7 +821,6 @@ fn apply_patch(state: &mut Value, updates: &[PatchUpdate]) -> Result<(), String>
 fn deferred_findings_patch(
     state: &Value,
     review_cycle: u64,
-    current_cycle: u64,
     entry: &ReviewHistoryEntry,
 ) -> Result<(Option<PatchUpdate>, Vec<String>), String> {
     let mut deferred_findings = match state.get("deferred_findings") {
@@ -832,7 +830,12 @@ fn deferred_findings_patch(
                 .cloned()
                 .expect("deferred_findings presence already checked"),
         )
-        .map_err(|error| format!("failed to parse deferred_findings from state.json: {}", error))?,
+        .map_err(|error| {
+            format!(
+                "failed to parse deferred_findings from state.json: {}",
+                error
+            )
+        })?,
         Some(_) => return Err("/deferred_findings must be an array when present".to_string()),
         None => Vec::new(),
     };
@@ -845,7 +848,7 @@ fn deferred_findings_patch(
         .filter(|disposition| {
             matches!(
                 disposition.disposition.as_str(),
-                "actioned" | "dispatch_created"
+                "actioned" | "dispatch_created" | "verified_resolved"
             )
         })
         .map(|disposition| disposition.category.clone())
@@ -870,9 +873,7 @@ fn deferred_findings_patch(
         .collect::<BTreeSet<_>>();
     for category in deferred_categories {
         if deferred_findings.iter().any(|finding| {
-            finding.category == category
-                && !finding.resolved
-                && finding.dropped_rationale.is_none()
+            finding.category == category && !finding.resolved && finding.dropped_rationale.is_none()
         }) {
             warnings.push(format!(
                 "warning: category '{}' already has an unresolved deferred finding; keeping the existing entry",
@@ -883,10 +884,10 @@ fn deferred_findings_patch(
 
         deferred_findings.push(DeferredFinding {
             category,
-            deferred_cycle: current_cycle,
-            deadline_cycle: current_cycle
+            deferred_cycle: review_cycle,
+            deadline_cycle: review_cycle
                 .checked_add(DEFERRAL_DEADLINE_CYCLES)
-                .ok_or_else(|| "current cycle overflowed deadline calculation".to_string())?,
+                .ok_or_else(|| "review cycle overflowed deadline calculation".to_string())?,
             resolved: false,
             resolved_ref: None,
             dropped_rationale: None,
@@ -1950,7 +1951,7 @@ mod tests {
     }
 
     #[test]
-    fn state_patch_generation_tracks_deferred_findings_and_resolves_existing_entries() {
+    fn state_patch_generation_anchors_deferred_findings_to_review_cycle() {
         let state = json!({
             "last_cycle": {"number": 163},
             "review_agent": {
@@ -2016,11 +2017,67 @@ mod tests {
                 },
                 {
                     "category": "tooling-contract",
-                    "deferred_cycle": 164,
-                    "deadline_cycle": 169,
+                    "deferred_cycle": 163,
+                    "deadline_cycle": 168,
                     "resolved": false
                 }
             ])
+        );
+    }
+
+    #[test]
+    fn state_patch_generation_marks_verified_resolved_findings_as_resolved() {
+        let state = json!({
+            "last_cycle": {"number": 164},
+            "review_agent": {
+                "last_review_cycle": 163,
+                "history": []
+            },
+            "deferred_findings": [{
+                "category": "tooling-contract",
+                "deferred_cycle": 163,
+                "deadline_cycle": 168,
+                "resolved": false
+            }],
+            "field_inventory": {
+                "fields": {
+                    "review_agent": {"last_refreshed": "cycle 163"}
+                }
+            }
+        });
+
+        let entry = ReviewHistoryEntry {
+            cycle: 164,
+            finding_count: 1,
+            complacency_score: 2,
+            categories: vec!["tooling-contract".to_string()],
+            actioned: 0,
+            deferred: 0,
+            dispatch_created: 0,
+            actioned_failed: 0,
+            verified_resolved: 1,
+            ignored: 0,
+            note: None,
+            finding_dispositions: vec![FindingDisposition {
+                category: "tooling-contract".to_string(),
+                disposition: "verified_resolved".to_string(),
+            }],
+        };
+
+        let (patch, warnings) =
+            build_state_patch(&state, 164, 165, &entry).expect("patch should build");
+
+        assert!(warnings.is_empty());
+        assert_eq!(patch[2].path, "/deferred_findings");
+        assert_eq!(
+            patch[2].value,
+            json!([{
+                "category": "tooling-contract",
+                "deferred_cycle": 163,
+                "deadline_cycle": 168,
+                "resolved": true,
+                "resolved_ref": "docs/reviews/cycle-164.md"
+            }])
         );
     }
 
