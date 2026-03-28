@@ -591,7 +591,7 @@ fn count_receipt_activity_for_cycle(
         .iter()
         .filter(|commit| commit.subject.starts_with("state(record-dispatch):"))
         .filter(|commit| {
-            !(cycle_complete_at.is_some_and(|timestamp| commit.committed_at >= timestamp))
+            cycle_complete_at.is_none_or(|timestamp| commit.committed_at < timestamp)
         })
         .count();
     let merges = candidate_commits
