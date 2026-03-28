@@ -5697,8 +5697,10 @@
     {
       "dispatched_at": "2026-03-28T10:26:06Z",
       "issue": 1904,
+      "merged_at": "2026-03-28T12:18:52Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1905,
+      "status": "merged",
       "title": "Fix pipeline status immutability in cycle-runner close-out"
     },
     {
@@ -6205,7 +6207,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 17,
     "issue": 1908,
