@@ -5994,7 +5994,7 @@
   "cycle_phase": {
     "cycle": 396,
     "phase": "close_out",
-    "phase_entered_at": "2026-03-28T18:33:31Z"
+    "phase_entered_at": "2026-03-28T18:38:35Z"
   },
   "deferred_findings": [
     {
@@ -6272,13 +6272,13 @@
   },
   "in_flight_sessions": 0,
   "last_cycle": {
-    "duration_minutes": 26,
+    "duration_minutes": 5,
     "issue": 1922,
     "number": 396,
-    "summary": "1 dispatches, 2 merges (PR #1921, PR #1924)",
-    "timestamp": "2026-03-28T18:33:31Z"
+    "summary": "0 dispatches, 0 merges",
+    "timestamp": "2026-03-28T18:38:35Z"
   },
-  "last_eva_comment_check": "2026-03-28T18:33:31Z",
+  "last_eva_comment_check": "2026-03-28T18:38:35Z",
   "last_tool_audit_cycle": 376,
   "open_questions_for_eva": [],
   "pending_audit_implementations": [
