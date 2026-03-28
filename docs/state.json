@@ -9871,6 +9871,19 @@
     "review_history": [
       {
         "actioned_count": 1,
+        "complacency_score": 2,
+        "cycle": 389,
+        "deferred_count": 2,
+        "dispositions": {
+          "journal-quality": "actioned",
+          "review-consumption": "deferred",
+          "worklog-accuracy": "deferred"
+        },
+        "finding_count": 3,
+        "review_pr": 1890
+      },
+      {
+        "actioned_count": 1,
         "complacency_score": 3,
         "cycle": 386,
         "deferred_count": 2,
