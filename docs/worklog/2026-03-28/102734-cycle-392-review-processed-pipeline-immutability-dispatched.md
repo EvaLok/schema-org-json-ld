@@ -32,13 +32,14 @@
 
 ## Cycle state
 
-- **In-flight agent sessions**: 1
-- **Pipeline status**: PASS (2 warnings)
+- **In-flight agent sessions**: 2
+- **Pipeline status**: PASS (3 warnings)
 - **Publish gate**: published
 
 ## Next steps
 
 1. Review and iterate on PR from [#1904](https://github.com/EvaLok/schema-org-json-ld/issues/1904) (Fix pipeline status immutability in cycle-runner close-out) when Copilot completes
+2. Review and iterate on PR from [#1906](https://github.com/EvaLok/schema-org-json-ld/issues/1906) ([Cycle Review] Cycle 392 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
