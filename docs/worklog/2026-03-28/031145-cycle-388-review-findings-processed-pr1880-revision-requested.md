@@ -23,16 +23,15 @@
 
 ## Cycle state
 
-- **In-flight agent sessions**: 1
-- **Pipeline status**: PASS (2 warnings)
-- **Copilot metrics**: 617 dispatches, 550 PRs produced, 538 merged, 97.8% PR merge rate
+- **In-flight agent sessions**: 3
+- **Pipeline status**: PASS (3 warnings)
+- **Copilot metrics**: 618 dispatches, 550 PRs produced, 538 merged, 97.8% PR merge rate
 - **Publish gate**: published
 
 ## Next steps
 
-1. Review and merge PR 1880 when Copilot revision completes (rebase + cosmetic cleanup)
-2. After PR 1880 merges: dispatch cycle-complete summary derivation fix (state-integrity finding from cycle 387 review)
-3. Address deferral-accumulation for worklog-accuracy (3 cycles deferred)
+1. Review and iterate on PR from [#1876](https://github.com/EvaLok/schema-org-json-ld/issues/1876) ([Cycle Review] Cycle 386 end-of-cycle review) when Copilot completes
+2. Review and iterate on PR from [#1884](https://github.com/EvaLok/schema-org-json-ld/issues/1884) ([Cycle Review] Cycle 388 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
