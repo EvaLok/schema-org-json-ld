@@ -5871,6 +5871,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Promote worklog-immutability check from WARN to FAIL in pipeline-check"
+    },
+    {
+      "dispatched_at": "2026-03-29T06:47:07Z",
+      "issue": 1955,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 401 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -6148,7 +6155,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#1953 Promote worklog-immutability check from WARN to FAIL in pipeline-check (cycle 401)",
+  "dispatch_log_latest": "#1955 [Cycle Review] Cycle 401 end-of-cycle review (cycle 401)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6414,12 +6421,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 19,
     "issue": 1952,
     "number": 401,
-    "summary": "1 dispatches, 0 merges",
+    "summary": "2 dispatches, 0 merges",
     "timestamp": "2026-03-29T06:42:11Z"
   },
   "last_eva_comment_check": "2026-03-29T06:42:11Z",
@@ -10508,7 +10515,7 @@
     ],
     "last_review_cycle": 400
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 400,
   "schema_status": {
     "directory_layout": {
