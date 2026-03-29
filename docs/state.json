@@ -5851,6 +5851,15 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Auto-refresh field_inventory markers in cycle-start for Eva-checked fields"
+    },
+    {
+      "dispatched_at": "2026-03-29T03:25:00Z",
+      "issue": 1949,
+      "merged_at": null,
+      "model": "gpt-5.4",
+      "pr": null,
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 400 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -6122,7 +6131,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#1947 Auto-refresh field_inventory markers in cycle-start for Eva-checked fields (cycle 400)",
+  "dispatch_log_latest": "#1949 [Cycle Review] Cycle 400 end-of-cycle review (cycle 400)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6388,12 +6397,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 3,
   "last_cycle": {
     "duration_minutes": 16,
     "issue": 1944,
     "number": 400,
-    "summary": "3 merges (PRs #1943, #1939, #1941), 2 dispatches (#1945, #1947), c399 review processed (6 findings, 5/5 complacency)",
+    "summary": "3 dispatches (#1945, #1947, #1949), 3 merges (PRs #1943, #1939, #1941), c399 review processed (6 findings, 5/5 complacency)",
     "timestamp": "2026-03-29T03:19:09Z"
   },
   "last_eva_comment_check": "2026-03-29T03:19:09Z",
