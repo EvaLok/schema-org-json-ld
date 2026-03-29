@@ -5868,15 +5868,19 @@
     {
       "dispatched_at": "2026-03-29T06:38:40Z",
       "issue": 1953,
+      "merged_at": "2026-03-29T08:16:44Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1954,
+      "status": "merged",
       "title": "Promote worklog-immutability check from WARN to FAIL in pipeline-check"
     },
     {
       "dispatched_at": "2026-03-29T06:47:07Z",
       "issue": 1955,
+      "merged_at": "2026-03-29T08:16:44Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1956,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 401 end-of-cycle review"
     }
   ],
@@ -6274,7 +6278,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 401"
+        "last_refreshed": "cycle 402"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -6310,7 +6314,7 @@
       },
       "project_mode": {
         "cadence": "when mode or counter changes",
-        "last_refreshed": "cycle 396"
+        "last_refreshed": "cycle 402"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
@@ -6334,7 +6338,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 395"
+        "last_refreshed": "cycle 402"
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
@@ -6370,7 +6374,7 @@
       },
       "step_comment_acknowledged_gaps": {
         "cadence": "after acknowledging step comment gaps",
-        "last_refreshed": "cycle 397"
+        "last_refreshed": "cycle 402"
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
@@ -6418,11 +6422,11 @@
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 396"
+        "last_refreshed": "cycle 402"
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 19,
     "issue": 1957,
