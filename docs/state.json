@@ -5889,7 +5889,7 @@
       "merged_at": null,
       "model": "gpt-5.4",
       "pr": null,
-      "status": "in_progress",
+      "status": "in_flight",
       "title": "Fix C4.1 doc-validation empty error text in cycle-runner close-out"
     },
     {
@@ -5898,7 +5898,7 @@
       "merged_at": null,
       "model": "gpt-5.4",
       "pr": null,
-      "status": "in_progress",
+      "status": "in_flight",
       "title": "Add project_mode to REFRESH_ONLY_FIELDS in refresh-field-inventory"
     }
   ],
@@ -6365,7 +6365,7 @@
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 402"
+        "last_refreshed": "cycle 400"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
