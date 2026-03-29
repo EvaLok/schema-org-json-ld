@@ -6288,6 +6288,18 @@
       "deferred_cycle": 404,
       "resolved": true,
       "resolved_ref": "Gate enforcement verified in cycle-runner close-out (close_out.rs step_c5_5 hard error + ? propagation). Cycle 407."
+    },
+    {
+      "category": "journal-quality",
+      "deadline_cycle": 412,
+      "deferred_cycle": 407,
+      "resolved": false
+    },
+    {
+      "category": "state-integrity",
+      "deadline_cycle": 412,
+      "deferred_cycle": 407,
+      "resolved": false
     }
   ],
   "dispatch_log_latest": "#1990 [Cycle Review] Cycle 407 end-of-cycle review (cycle 407)",
@@ -6464,7 +6476,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 407"
+        "last_refreshed": "cycle 408"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -10838,6 +10850,39 @@
         ],
         "ignored": 0,
         "note": "Cycle 406 review (3 findings, complacency 3/5). F1 worklog-accuracy (PASS when gate failed): actioned - will write pipeline status after final gate this cycle. F2 process-adherence (gate override, continued past C5.5 fail): deferred - requires cycle-runner enforcement modification. F3 journal-quality (stale journal, auto-link pattern): actioned - using plain text finding references this cycle."
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "journal-quality",
+          "receipt-verification",
+          "state-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 4,
+        "cycle": 407,
+        "deferred": 2,
+        "finding_count": 4,
+        "finding_dispositions": [
+          {
+            "category": "worklog-accuracy",
+            "disposition": "actioned"
+          },
+          {
+            "category": "receipt-verification",
+            "disposition": "actioned"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "deferred"
+          },
+          {
+            "category": "state-integrity",
+            "disposition": "deferred"
+          }
+        ],
+        "ignored": 0,
+        "note": "F1 worklog-accuracy actioned: pipeline worklog-immutability check now catches this class of rewrite. F2 receipt-verification actioned: PR #1989 in-flight addresses receipt scope transparency. F3 journal-quality deferred: will fix commitment follow-through in cycle 408 journal. F4 state-integrity deferred: gate-override enforcement requires structural changes to cycle-runner."
       }
     ],
     "last_review_cycle": 407
