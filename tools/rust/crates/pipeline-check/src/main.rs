@@ -1790,7 +1790,7 @@ fn worklog_immutability_status_for_date(repo_root: &Path, today: &str) -> Result
     }
 
     Ok((
-        StepStatus::Warn,
+        StepStatus::Fail,
         format!(
             "Original pipeline status changed in {} from '{}' to '{}' (baseline commit {})",
             worklog_path.display(),
@@ -5252,7 +5252,7 @@ mod tests {
 
         let step = verify_worklog_immutability_for_date(&root, "2026-03-09");
 
-        assert_eq!(step.status, StepStatus::Warn);
+        assert_eq!(step.status, StepStatus::Fail);
         assert_eq!(step.severity, Severity::Blocking);
         let detail = step.detail.as_deref().unwrap_or_default();
         assert!(detail.contains("changed"));
