@@ -6134,6 +6134,12 @@
       "deadline_cycle": 404,
       "deferred_cycle": 399,
       "resolved": false
+    },
+    {
+      "category": "journal-quality",
+      "deadline_cycle": 405,
+      "deferred_cycle": 400,
+      "resolved": false
     }
   ],
   "dispatch_log_latest": "#1949 [Cycle Review] Cycle 400 end-of-cycle review (cycle 400)",
@@ -10464,9 +10470,37 @@
         ],
         "ignored": 0,
         "note": "6 findings, 5/5 complacency. 2 dispatch_created (PRs 1939/1941 from c399), 1 actioned (journal-quality behavioral fix), 3 deferred (process-adherence, field-inventory, receipt-scope)"
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "journal-quality",
+          "process-adherence",
+          "state-integrity"
+        ],
+        "complacency_score": 3,
+        "cycle": 400,
+        "deferred": 2,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "process-adherence",
+            "disposition": "deferred"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "deferred"
+          },
+          {
+            "category": "state-integrity",
+            "disposition": "actioned"
+          }
+        ],
+        "ignored": 0,
+        "note": "Finding 3 addressed by PR #1948 (field-inventory auto-refresh merged this cycle). Findings 1-2 are behavioral — noted for future cycles."
       }
     ],
-    "last_review_cycle": 399
+    "last_review_cycle": 400
   },
   "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 399,
