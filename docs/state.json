@@ -5921,15 +5921,19 @@
     {
       "dispatched_at": "2026-03-29T12:25:34Z",
       "issue": 1969,
+      "merged_at": "2026-03-29T14:19:00Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1970,
+      "status": "merged",
       "title": "Fix write-entry duplicate worklog filename"
     },
     {
       "dispatched_at": "2026-03-29T12:30:00Z",
       "issue": 1971,
+      "merged_at": "2026-03-29T14:17:00Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1972,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 404 end-of-cycle review"
     }
   ],
