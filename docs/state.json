@@ -6092,9 +6092,10 @@
     1951
   ],
   "cycle_phase": {
+    "completed_at": "2026-03-29T05:07:30Z",
     "cycle": 400,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-29T03:19:09Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-29T05:07:30Z"
   },
   "deferred_findings": [
     {
