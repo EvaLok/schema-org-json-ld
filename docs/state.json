@@ -5961,6 +5961,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix fail-open compatibility fallback in pipeline-check temporal-ordering"
+    },
+    {
+      "dispatched_at": "2026-03-29T18:28:00Z",
+      "issue": 1983,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "End-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -6529,12 +6536,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 14,
     "issue": 1980,
     "number": 406,
-    "summary": "1 dispatches, 1 merges (PR #1979)",
+    "summary": "2 dispatches, 1 merges (PR #1979)",
     "timestamp": "2026-03-29T18:23:34Z"
   },
   "last_eva_comment_check": "2026-03-29T18:23:34Z",
