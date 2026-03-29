@@ -5935,6 +5935,14 @@
       "pr": 1972,
       "status": "merged",
       "title": "[Cycle Review] Cycle 404 end-of-cycle review"
+    },
+    {
+      "addresses_finding": "404:2",
+      "dispatched_at": "2026-03-29T14:25:00Z",
+      "issue": 1975,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add temporal-ordering check to pipeline-check step-comments verification"
     }
   ],
   "audit_dropped": [
@@ -6504,7 +6512,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 17,
     "issue": 1973,
