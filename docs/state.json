@@ -5828,8 +5828,10 @@
     {
       "dispatched_at": "2026-03-29T00:38:53Z",
       "issue": 1942,
+      "merged_at": "2026-03-29T03:10:49Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1943,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 399 end-of-cycle review"
     }
   ],
@@ -6202,7 +6204,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 399"
+        "last_refreshed": "cycle 400"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -6350,7 +6352,7 @@
       }
     }
   },
-  "in_flight_sessions": 3,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 11,
     "issue": 1944,
@@ -6383,8 +6385,8 @@
     {
       "accepted_cycle": 394,
       "audit_issue": 339,
-      "completed": false,
-      "completed_ref": null,
+      "completed": true,
+      "completed_ref": "PR #1916",
       "deadline_cycle": 399,
       "description": "Deferral deadline enforcement — extend deadline tracking pattern to review finding deferrals",
       "issue": 1912
