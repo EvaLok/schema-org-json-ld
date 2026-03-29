@@ -5882,6 +5882,24 @@
       "pr": 1956,
       "status": "merged",
       "title": "[Cycle Review] Cycle 401 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-29T08:18:31Z",
+      "issue": 1959,
+      "merged_at": null,
+      "model": "gpt-5.4",
+      "pr": null,
+      "status": "in_progress",
+      "title": "Fix C4.1 doc-validation empty error text in cycle-runner close-out"
+    },
+    {
+      "dispatched_at": "2026-03-29T08:19:00Z",
+      "issue": 1961,
+      "merged_at": null,
+      "model": "gpt-5.4",
+      "pr": null,
+      "status": "in_progress",
+      "title": "Add project_mode to REFRESH_ONLY_FIELDS in refresh-field-inventory"
     }
   ],
   "audit_dropped": [
@@ -6161,7 +6179,7 @@
       "resolved_ref": "docs/reviews/cycle-401.md"
     }
   ],
-  "dispatch_log_latest": "#1955 [Cycle Review] Cycle 401 end-of-cycle review (cycle 401)",
+  "dispatch_log_latest": "#1961 Add project_mode to REFRESH_ONLY_FIELDS in refresh-field-inventory (cycle 402)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6427,12 +6445,12 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 19,
     "issue": 1957,
     "number": 402,
-    "summary": "2 dispatches, 0 merges",
+    "summary": "2 merges, 2 dispatches",
     "timestamp": "2026-03-29T08:10:52Z"
   },
   "last_eva_comment_check": "2026-03-29T08:10:52Z",
@@ -10528,7 +10546,8 @@
         ],
         "complacency_score": 3,
         "cycle": 401,
-        "deferred": 1,
+        "deferred": 0,
+        "dispatch_created": 1,
         "finding_count": 4,
         "finding_dispositions": [
           {
@@ -10537,7 +10556,7 @@
           },
           {
             "category": "process-adherence",
-            "disposition": "deferred"
+            "disposition": "dispatch_created"
           },
           {
             "category": "state-integrity",
@@ -10549,7 +10568,7 @@
           }
         ],
         "ignored": 0,
-        "note": "F1 actioned via PR 1954 (immutability WARN to FAIL). F2 deferred pending audit 341 response. F3 actioned via field marker refresh. F4 actioned via behavioral fix."
+        "note": "F1 actioned via PR 1954 (immutability WARN to FAIL). F2 dispatch_created via #1959 (fix C4.1 stdout/stderr mismatch). F3 actioned via field marker refresh. F4 actioned via behavioral fix."
       }
     ],
     "last_review_cycle": 401
