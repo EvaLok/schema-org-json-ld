@@ -2817,6 +2817,8 @@ mod tests {
     use serde_json::json;
     use std::collections::HashMap;
     use std::fs;
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
     use std::sync::atomic::AtomicBool;
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::sync::Mutex;
@@ -3617,6 +3619,88 @@ mod tests {
             state.pointer("/field_inventory/fields/tool_pipeline/last_refreshed"),
             Some(&json!("cycle 399"))
         );
+    }
+
+    #[test]
+    fn refresh_tool_pipeline_inventory_fails_when_state_is_missing() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-refresh-missing-state-{}", run_id));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("docs")).unwrap();
+
+        let error = refresh_tool_pipeline_inventory(&root, 399)
+            .expect_err("missing state file must fail");
+
+        assert!(error.contains("failed to read"));
+        assert!(error.contains("docs/state.json"));
+    }
+
+    #[test]
+    fn refresh_tool_pipeline_inventory_fails_when_tool_pipeline_entry_is_missing() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir()
+            .join(format!("pipeline-check-refresh-missing-field-{}", run_id));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "field_inventory": {
+                    "fields": {}
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let error = refresh_tool_pipeline_inventory(&root, 399)
+            .expect_err("missing tool_pipeline entry must fail");
+
+        assert_eq!(error, "field_inventory entry not found: tool_pipeline");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn refresh_tool_pipeline_inventory_fails_when_state_cannot_be_written() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-refresh-read-only-{}", run_id));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("docs")).unwrap();
+        let state_path = root.join("docs/state.json");
+        fs::write(
+            &state_path,
+            json!({
+                "field_inventory": {
+                    "fields": {
+                        "tool_pipeline": {
+                            "last_refreshed": "cycle 393"
+                        }
+                    }
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let original_docs_permissions = fs::metadata(root.join("docs")).unwrap().permissions();
+        let original_state_permissions = fs::metadata(&state_path).unwrap().permissions();
+
+        fs::set_permissions(root.join("docs"), fs::Permissions::from_mode(0o555)).unwrap();
+        fs::set_permissions(&state_path, fs::Permissions::from_mode(0o444)).unwrap();
+
+        let error = refresh_tool_pipeline_inventory(&root, 399)
+            .expect_err("read-only state file must fail");
+
+        fs::set_permissions(&state_path, original_state_permissions).unwrap();
+        fs::set_permissions(root.join("docs"), original_docs_permissions).unwrap();
+
+        assert!(error.contains("failed to write"));
+        assert!(error.contains("docs/state.json"));
     }
 
     #[test]

@@ -219,7 +219,6 @@ fn run(cli: Cli) -> Result<(), String> {
     let questions_for_eva = gather_questions_for_eva(&mut warnings);
     let open_question_numbers: Vec<u64> =
         questions_for_eva.iter().map(|issue| issue.number).collect();
-    let eva_directives = load_eva_directives(&state_json)?;
     validate_eva_issue_numbers(
         &state_json.eva_input_issues.closed_this_cycle,
         "/eva_input_issues/closed_this_cycle",
@@ -258,6 +257,7 @@ fn run(cli: Cli) -> Result<(), String> {
     let qc_outbound = gather_outbound_issue_numbers(QC_REPO, "qc-outbound", &mut warnings);
     let audit_outbound = gather_outbound_issue_numbers(AUDIT_REPO, "audit-outbound", &mut warnings);
     let publish_gate = summarize_publish_gate(&state);
+    let eva_directives = load_eva_directives(&state_json)?;
 
     let brief = StartupBrief {
         cycle,
@@ -382,7 +382,7 @@ fn load_eva_directives_with<F>(state: &StateJson, mut fetch_title: F) -> Result<
 where
     F: FnMut(u64) -> Result<String, String>,
 {
-    validate_eva_issue_numbers(
+    parse_eva_issue_numbers(
         &state.eva_input_issues.remaining_open,
         "/eva_input_issues/remaining_open",
     )?
@@ -397,7 +397,7 @@ where
         .collect()
 }
 
-fn validate_eva_issue_numbers(issue_numbers: &[i64], field_path: &str) -> Result<Vec<u64>, String> {
+fn parse_eva_issue_numbers(issue_numbers: &[i64], field_path: &str) -> Result<Vec<u64>, String> {
     issue_numbers
         .iter()
         .map(|raw_issue_number| {
@@ -409,6 +409,10 @@ fn validate_eva_issue_numbers(issue_numbers: &[i64], field_path: &str) -> Result
             })
         })
         .collect()
+}
+
+fn validate_eva_issue_numbers(issue_numbers: &[i64], field_path: &str) -> Result<(), String> {
+    parse_eva_issue_numbers(issue_numbers, field_path).map(|_| ())
 }
 
 fn refresh_eva_input_issue_inventory(state: &mut Value, cycle: u64) -> Result<(), String> {
@@ -1775,6 +1779,17 @@ mod tests {
     }
 
     #[test]
+    fn validate_eva_issue_numbers_rejects_negative_remaining_open_entries() {
+        let error = validate_eva_issue_numbers(&[-2], "/eva_input_issues/remaining_open")
+            .expect_err("negative remaining issue numbers must fail");
+
+        assert_eq!(
+            error,
+            "docs/state.json contains invalid /eva_input_issues/remaining_open entry (negative values are not allowed): -2"
+        );
+    }
+
+    #[test]
     fn validate_eva_issue_numbers_rejects_negative_closed_this_cycle_entries() {
         let error = validate_eva_issue_numbers(&[-9], "/eva_input_issues/closed_this_cycle")
             .expect_err("negative closed issue numbers must fail");
@@ -1810,6 +1825,68 @@ mod tests {
         assert_eq!(
             state.pointer("/field_inventory/fields/eva_input_issues.remaining_open/last_refreshed"),
             Some(&json!("cycle 163"))
+        );
+    }
+
+    #[test]
+    fn refresh_eva_input_issue_inventory_rejects_cycles_larger_than_u32() {
+        let mut state = json!({
+            "field_inventory": {
+                "fields": {
+                    "eva_input_issues.closed_this_cycle": {
+                        "last_refreshed": "cycle 150"
+                    },
+                    "eva_input_issues.remaining_open": {
+                        "last_refreshed": "cycle 150"
+                    }
+                }
+            }
+        });
+
+        let error = refresh_eva_input_issue_inventory(&mut state, u64::from(u32::MAX) + 1)
+            .expect_err("overflowing cycle numbers must fail");
+
+        assert_eq!(
+            error,
+            format!(
+                "cycle {} exceeds supported inventory refresh range",
+                u64::from(u32::MAX) + 1
+            )
+        );
+    }
+
+    #[test]
+    fn refresh_eva_input_issue_inventory_fails_when_inventory_is_missing() {
+        let mut state = json!({});
+
+        let error = refresh_eva_input_issue_inventory(&mut state, 163)
+            .expect_err("missing field inventory should fail");
+
+        assert_eq!(error, "missing object: field_inventory.fields");
+    }
+
+    #[test]
+    fn refresh_eva_input_issue_inventory_reports_second_field_failure_after_first_update() {
+        let mut state = json!({
+            "field_inventory": {
+                "fields": {
+                    "eva_input_issues.remaining_open": {
+                        "last_refreshed": "cycle 150"
+                    }
+                }
+            }
+        });
+
+        let error = refresh_eva_input_issue_inventory(&mut state, 163)
+            .expect_err("missing second field should fail");
+
+        assert_eq!(
+            state.pointer("/field_inventory/fields/eva_input_issues.remaining_open/last_refreshed"),
+            Some(&json!("cycle 163"))
+        );
+        assert_eq!(
+            error,
+            "field_inventory entry not found: eva_input_issues.closed_this_cycle"
         );
     }
 
