@@ -127,7 +127,7 @@ pub fn concurrency_warning_message(in_flight: i64) -> String {
 pub struct DispatchPatch {
     pub in_flight: i64,
     pub dispatch_log_latest: String,
-    pub last_cycle_summary: String,
+    pub last_cycle_summary: Option<String>,
     pub agent_session: Value,
     pub current_cycle: u64,
 }
@@ -170,12 +170,12 @@ pub fn build_dispatch_patch(
     })
 }
 
-fn increment_last_cycle_dispatch_count(state: &Value) -> Result<String, String> {
-    let summary = state
-        .pointer("/last_cycle/summary")
-        .and_then(Value::as_str)
-        .ok_or_else(|| "missing string /last_cycle/summary in docs/state.json".to_string())?;
-    increment_dispatch_count(summary)
+fn increment_last_cycle_dispatch_count(state: &Value) -> Result<Option<String>, String> {
+    match state.pointer("/last_cycle/summary") {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::String(summary)) => increment_dispatch_count(summary).map(Some),
+        Some(_) => Err("docs/state.json field /last_cycle/summary must be a string".to_string()),
+    }
 }
 
 fn increment_dispatch_count(summary: &str) -> Result<String, String> {
@@ -347,11 +347,13 @@ pub fn apply_dispatch_patch(state: &mut Value, patch: &DispatchPatch) -> Result<
         .as_object_mut()
         .ok_or_else(|| "docs/state.json root must be an object".to_string())?
         .insert("in_flight_sessions".to_string(), json!(patch.in_flight));
-    state
-        .pointer_mut("/last_cycle")
-        .and_then(Value::as_object_mut)
-        .ok_or_else(|| "missing object /last_cycle in docs/state.json".to_string())?
-        .insert("summary".to_string(), json!(patch.last_cycle_summary));
+    if let Some(summary) = &patch.last_cycle_summary {
+        state
+            .pointer_mut("/last_cycle")
+            .and_then(Value::as_object_mut)
+            .ok_or_else(|| "missing object /last_cycle in docs/state.json".to_string())?
+            .insert("summary".to_string(), json!(summary));
+    }
     update_field_inventory_last_refreshed(state, "in_flight_sessions", &cycle_marker)?;
 
     Ok(())
@@ -577,7 +579,10 @@ mod tests {
             patch.dispatch_log_latest,
             "#602 Example dispatch (cycle 164)"
         );
-        assert_eq!(patch.last_cycle_summary, "1 dispatch, 1 merges (PR #700)");
+        assert_eq!(
+            patch.last_cycle_summary.as_deref(),
+            Some("1 dispatch, 1 merges (PR #700)")
+        );
     }
 
     #[test]
@@ -844,6 +849,29 @@ mod tests {
     }
 
     #[test]
+    fn apply_dispatch_patch_repluralizes_last_cycle_summary_after_second_dispatch() {
+        let mut state = sample_state();
+        state["last_cycle"]["summary"] = json!("1 dispatch, 1 merges (PR #700)");
+        let model = default_test_model();
+        let patch = build_dispatch_patch(
+            &state,
+            164,
+            603,
+            "Example dispatch",
+            &model,
+            "2026-03-07T13:00:00Z",
+        )
+        .expect("patch should build");
+
+        apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
+
+        assert_eq!(
+            state["last_cycle"]["summary"],
+            json!("2 dispatches, 1 merges (PR #700)")
+        );
+    }
+
+    #[test]
     fn apply_dispatch_patch_rejects_duplicate_issue() {
         let mut state = sample_state();
         let model = default_test_model();
@@ -948,7 +976,7 @@ mod tests {
         let patch = DispatchPatch {
             in_flight: 1,
             dispatch_log_latest: "#603 Duplicate live dispatch (cycle 164)".to_string(),
-            last_cycle_summary: "1 dispatch, 1 merges (PR #700)".to_string(),
+            last_cycle_summary: Some("1 dispatch, 1 merges (PR #700)".to_string()),
             agent_session: json!({
                 "issue": 603,
                 "title": "Duplicate live dispatch",
