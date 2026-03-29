@@ -10287,7 +10287,7 @@
         "note": "Finding 1+2: dispatching fix for cycle-complete summary derivation and worklog immutability. Finding 3: deferred — needs new invariant check for field-inventory freshness vs actual values."
       },
       {
-        "actioned": 2,
+        "actioned": 1,
         "categories": [
           "journal-quality",
           "state-integrity",
@@ -10295,12 +10295,12 @@
         ],
         "complacency_score": 2,
         "cycle": 397,
-        "deferred": 1,
+        "deferred": 2,
         "finding_count": 3,
         "finding_dispositions": [
           {
             "category": "worklog-accuracy",
-            "disposition": "actioned"
+            "disposition": "deferred"
           },
           {
             "category": "state-integrity",
@@ -10312,7 +10312,7 @@
           }
         ],
         "ignored": 0,
-        "note": "PR #1931 merged (worklog immutability detection). State-integrity deferred pending field-inventory refresh logic investigation."
+        "note": "PR #1931 merged (worklog immutability detection). State-integrity deferred pending field-inventory refresh logic investigation. [c399 correction: worklog-accuracy reclassified actioned->deferred per c398 review-consumption finding — PR #1931 only warns, does not block]"
       },
       {
         "actioned": 1,
