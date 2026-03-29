@@ -25,13 +25,19 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 0
+- **In-flight agent sessions (post-dispatch)**: 1
 - **Pipeline status**: PASS (4 warnings)
+- **Pipeline status (post-dispatch)**: PASS (1 blocking warning, 3 warnings, 1 cascade)
 - **Publish gate**: published
 
 ## Next steps
 
 1. Process cycle 403 review when review agent completes
 2. Monitor audit-inbound #1958 for audit acknowledgment
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#1966](https://github.com/EvaLok/schema-org-json-ld/issues/1966) ([Cycle Review] Cycle 403 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
