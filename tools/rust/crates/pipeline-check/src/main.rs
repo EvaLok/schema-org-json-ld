@@ -1995,8 +1995,9 @@ fn worklog_immutability_status_for_date(repo_root: &Path, today: &str) -> Result
         ));
     };
 
-    let Some((first_commit, original_content)) =
-        first_committed_worklog_content(repo_root, &worklog_path)?
+    let cycle = current_cycle_from_state(repo_root)?;
+    let Some((baseline_commit, original_content)) =
+        last_cycle_committed_worklog_content(repo_root, &worklog_path, cycle)?
     else {
         return Ok((
             StepStatus::Pass,
@@ -2023,7 +2024,7 @@ fn worklog_immutability_status_for_date(repo_root: &Path, today: &str) -> Result
             format!(
                 "Original pipeline status is unchanged for {} (baseline commit {})",
                 worklog_path.display(),
-                short_commit(&first_commit)
+                short_commit(&baseline_commit)
             ),
         ));
     }
@@ -2035,7 +2036,7 @@ fn worklog_immutability_status_for_date(repo_root: &Path, today: &str) -> Result
             worklog_path.display(),
             original_status,
             current_status,
-            short_commit(&first_commit)
+            short_commit(&baseline_commit)
         ),
     ))
 }
@@ -2132,9 +2133,10 @@ fn latest_worklog_entry_for_cycle(repo_root: &Path, cycle: u64) -> Result<Option
     Ok(latest.map(|(_, _, path)| path))
 }
 
-fn first_committed_worklog_content(
+fn last_cycle_committed_worklog_content(
     repo_root: &Path,
     worklog_path: &Path,
+    cycle: u64,
 ) -> Result<Option<(String, String)>, String> {
     let repo_relative_path = worklog_path
         .strip_prefix(repo_root)
@@ -2149,13 +2151,17 @@ fn first_committed_worklog_content(
         .to_string_lossy()
         .to_string();
 
+    let cycle_tag = format!(r"\[cycle {}\]", cycle);
     let log_output = Command::new("git")
         .current_dir(repo_root)
         .args([
             "log",
             "--follow",
-            "--diff-filter=A",
             "--format=%H",
+            "--grep",
+            &cycle_tag,
+            "-n",
+            "1",
             "--",
             &repo_relative_path,
         ])
@@ -2165,20 +2171,49 @@ fn first_committed_worklog_content(
         return Err(command_failure_message("git log", &log_output));
     }
 
-    let Some(first_commit) = String::from_utf8_lossy(&log_output.stdout)
+    let baseline_commit = String::from_utf8_lossy(&log_output.stdout)
         .lines()
-        .last()
+        .next()
         .map(str::trim)
         .filter(|line| !line.is_empty())
-        .map(str::to_string)
-    else {
-        return Ok(None);
+        .map(str::to_string);
+
+    let baseline_commit = match baseline_commit {
+        Some(commit) => commit,
+        None => {
+            let fallback_output = Command::new("git")
+                .current_dir(repo_root)
+                .args([
+                    "log",
+                    "--follow",
+                    "--diff-filter=A",
+                    "--format=%H",
+                    "--",
+                    &repo_relative_path,
+                ])
+                .output()
+                .map_err(|error| format!("failed to execute git log: {}", error))?;
+            if !fallback_output.status.success() {
+                return Err(command_failure_message("git log", &fallback_output));
+            }
+
+            let Some(first_commit) = String::from_utf8_lossy(&fallback_output.stdout)
+                .lines()
+                .last()
+                .map(str::trim)
+                .filter(|line| !line.is_empty())
+                .map(str::to_string)
+            else {
+                return Ok(None);
+            };
+            first_commit
+        }
     };
 
     let show_output = Command::new("git")
         .current_dir(repo_root)
         .arg("show")
-        .arg(format!("{}:{}", first_commit, repo_relative_path))
+        .arg(format!("{}:{}", baseline_commit, repo_relative_path))
         .output()
         .map_err(|error| format!("failed to execute git show: {}", error))?;
     if !show_output.status.success() {
@@ -2186,7 +2221,7 @@ fn first_committed_worklog_content(
     }
 
     Ok(Some((
-        first_commit,
+        baseline_commit,
         String::from_utf8_lossy(&show_output.stdout).into_owned(),
     )))
 }
@@ -5471,11 +5506,11 @@ mod tests {
     }
 
     #[test]
-    fn worklog_immutability_fails_when_original_pipeline_status_changes() {
+    fn worklog_immutability_falls_back_to_first_commit_when_no_cycle_tag() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root = std::env::temp_dir().join(format!(
-            "pipeline-check-worklog-immutability-mutated-{}",
+            "pipeline-check-worklog-immutability-fallback-{}",
             run_id
         ));
         init_git_repo(&root);
@@ -5512,11 +5547,11 @@ mod tests {
     }
 
     #[test]
-    fn worklog_immutability_passes_when_post_dispatch_addendum_is_appended() {
+    fn worklog_immutability_passes_when_last_cycle_commit_matches_current() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root = std::env::temp_dir().join(format!(
-            "pipeline-check-worklog-immutability-addendum-{}",
+            "pipeline-check-worklog-immutability-last-cycle-match-{}",
             run_id
         ));
         init_git_repo(&root);
@@ -5538,9 +5573,10 @@ mod tests {
         commit_all(&root, "add worklog");
         fs::write(
             &worklog,
-            "# Cycle 410\n\n## Pre-dispatch state\n\n- **Pipeline status**: FAIL (4 warnings)\n- **Pipeline status (post-dispatch)**: PASS (2 warnings)\n",
+            "# Cycle 410\n\n## Pre-dispatch state\n\n- **Pipeline status**: PASS (2 warnings)\n- **Pipeline status (post-dispatch)**: PASS (2 warnings)\n",
         )
         .unwrap();
+        commit_all(&root, "[cycle 410] finalize worklog after review dispatch");
 
         let step = verify_worklog_immutability_for_date(&root, "2026-03-09");
 
@@ -5551,6 +5587,53 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("unchanged"));
+    }
+
+    #[test]
+    fn worklog_immutability_fails_when_modified_after_last_cycle_commit() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-worklog-immutability-after-last-cycle-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        let worklog = root.join("docs/worklog/2026-03-09/120000-cycle-410-summary.md");
+        fs::write(
+            &worklog,
+            "# Cycle 410\n\n## Pre-dispatch state\n\n- **Pipeline status**: FAIL (4 warnings)\n",
+        )
+        .unwrap();
+        commit_all(&root, "add worklog");
+        fs::write(
+            &worklog,
+            "# Cycle 410\n\n## Pre-dispatch state\n\n- **Pipeline status**: PASS (2 warnings)\n- **Pipeline status (post-dispatch)**: PASS (2 warnings)\n",
+        )
+        .unwrap();
+        commit_all(&root, "[cycle 410] finalize worklog after review dispatch");
+        fs::write(
+            &worklog,
+            "# Cycle 410\n\n## Pre-dispatch state\n\n- **Pipeline status**: FAIL (4 warnings)\n- **Pipeline status (post-dispatch)**: PASS (2 warnings)\n",
+        )
+        .unwrap();
+
+        let step = verify_worklog_immutability_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Fail);
+        assert_eq!(step.severity, Severity::Blocking);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("changed"));
+        assert!(detail.contains("PASS (2 warnings)"));
+        assert!(detail.contains("FAIL (4 warnings)"));
     }
 
     #[test]
