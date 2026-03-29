@@ -19,12 +19,19 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 1
+- **In-flight agent sessions (post-dispatch)**: 2
 - **Pipeline status**: PASS (3 warnings)
+- **Pipeline status (post-dispatch)**: PASS (2 blocking warnings, 2 warnings)
 - **Publish gate**: published
 
 ## Next steps
 
 1. Review and iterate on PR from [#1953](https://github.com/EvaLok/schema-org-json-ld/issues/1953) (Promote worklog-immutability check from WARN to FAIL in pipeline-check) when Copilot completes
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#1953](https://github.com/EvaLok/schema-org-json-ld/issues/1953) (Promote worklog-immutability check from WARN to FAIL in pipeline-check) when Copilot completes
+2. Review and iterate on PR from [#1955](https://github.com/EvaLok/schema-org-json-ld/issues/1955) ([Cycle Review] Cycle 401 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
