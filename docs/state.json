@@ -5864,6 +5864,13 @@
       "pr": 1950,
       "status": "merged",
       "title": "[Cycle Review] Cycle 400 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-29T06:38:40Z",
+      "issue": 1953,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Promote worklog-immutability check from WARN to FAIL in pipeline-check"
     }
   ],
   "audit_dropped": [
@@ -6141,7 +6148,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#1949 [Cycle Review] Cycle 400 end-of-cycle review (cycle 400)",
+  "dispatch_log_latest": "#1953 Promote worklog-immutability check from WARN to FAIL in pipeline-check (cycle 401)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6259,7 +6266,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 400"
+        "last_refreshed": "cycle 401"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -6407,12 +6414,12 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 16,
     "issue": 1952,
     "number": 401,
-    "summary": "3 dispatches (#1945, #1947, #1949), 3 merges (PRs #1943, #1939, #1941), c399 review processed (6 findings, 5/5 complacency)",
+    "summary": "1 dispatch, 0 merges",
     "timestamp": "2026-03-29T06:23:33Z"
   },
   "last_eva_comment_check": "2026-03-29T06:23:33Z",
@@ -11006,6 +11013,17 @@
         "C8"
       ],
       "reason": "C8 was posted by cycle-runner close-out in non-standard format ('**Step C8 — Cycle 381 complete**' instead of orchestrator signature format). The step exists but the parser cannot detect it. Bug in cycle-runner C8 comment format."
+    },
+    {
+      "acknowledged_at": "2026-03-29T06:30:00Z",
+      "cycle": 400,
+      "issue": 1951,
+      "missing_steps": [
+        "1",
+        "5",
+        "6"
+      ],
+      "reason": "Cycle 400 ran as a two-session cycle (#1944 + #1951). Steps 1, 5, 6 were not posted on #1951 (the second session issue). Already penalized in cycle 400 pipeline."
     }
   ],
   "test_count": {
