@@ -6174,7 +6174,8 @@
       "category": "field-inventory",
       "deadline_cycle": 404,
       "deferred_cycle": 399,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "field inventory refreshed cycle 404 (test_count, tool_pipeline)"
     },
     {
       "category": "process-adherence",
@@ -6185,7 +6186,7 @@
     },
     {
       "category": "receipt-scope",
-      "deadline_cycle": 404,
+      "deadline_cycle": 409,
       "deferred_cycle": 399,
       "resolved": false
     },
