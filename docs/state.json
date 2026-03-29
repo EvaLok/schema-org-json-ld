@@ -6381,7 +6381,7 @@
         "last_refreshed": "cycle 402"
       },
       "review_events_verified_through_cycle": {
-        "cadence": "every cycle (after verifying review events on merged PRs)",
+        "cadence": "managed by verify-review-events tool only",
         "last_refreshed": "cycle 402"
       },
       "schema_status.google_rich_results_types": {
