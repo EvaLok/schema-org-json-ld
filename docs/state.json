@@ -5900,6 +5900,15 @@
       "pr": null,
       "status": "in_flight",
       "title": "Add project_mode to REFRESH_ONLY_FIELDS in refresh-field-inventory"
+    },
+    {
+      "dispatched_at": "2026-03-29T08:34:00Z",
+      "issue": 1963,
+      "merged_at": null,
+      "model": "gpt-5.4",
+      "pr": null,
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 402 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -6179,7 +6188,7 @@
       "resolved_ref": "docs/reviews/cycle-401.md"
     }
   ],
-  "dispatch_log_latest": "#1961 Add project_mode to REFRESH_ONLY_FIELDS in refresh-field-inventory (cycle 402)",
+  "dispatch_log_latest": "#1963 [Cycle Review] Cycle 402 end-of-cycle review (cycle 402)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6445,12 +6454,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 3,
   "last_cycle": {
     "duration_minutes": 15,
     "issue": 1957,
     "number": 402,
-    "summary": "2 merges, 2 dispatches",
+    "summary": "3 dispatches, 2 merges",
     "timestamp": "2026-03-29T08:26:19Z"
   },
   "last_eva_comment_check": "2026-03-29T08:26:19Z",
@@ -10573,7 +10582,7 @@
     ],
     "last_review_cycle": 401
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 400,
   "schema_status": {
     "directory_layout": {
