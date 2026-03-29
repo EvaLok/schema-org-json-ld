@@ -5968,6 +5968,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "End-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-29T18:32:31Z",
+      "issue": 1985,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 406 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -6270,7 +6277,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#1981 Fix fail-open compatibility fallback in pipeline-check temporal-ordering (cycle 406)",
+  "dispatch_log_latest": "#1985 [Cycle Review] Cycle 406 end-of-cycle review (cycle 406)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6536,12 +6543,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 3,
   "last_cycle": {
     "duration_minutes": 14,
     "issue": 1980,
     "number": 406,
-    "summary": "2 dispatches, 1 merges (PR #1979)",
+    "summary": "3 dispatches, 1 merges (PR #1979)",
     "timestamp": "2026-03-29T18:23:34Z"
   },
   "last_eva_comment_check": "2026-03-29T18:23:34Z",
@@ -10794,7 +10801,7 @@
     ],
     "last_review_cycle": 405
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 402,
   "schema_status": {
     "directory_layout": {
