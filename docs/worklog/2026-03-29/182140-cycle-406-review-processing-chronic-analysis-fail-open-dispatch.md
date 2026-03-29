@@ -21,13 +21,21 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 2
+- **In-flight agent sessions (post-dispatch)**: 3
 - **Pipeline status**: PASS (3 warnings)
+- **Pipeline status (post-dispatch)**: PASS (4 warnings)
 - **Publish gate**: published
 
 ## Next steps
 
 1. Review and iterate on PR from [#1981](https://github.com/EvaLok/schema-org-json-ld/issues/1981) (fail-open fix) when Copilot completes
 2. Monitor temporal-ordering check effectiveness (second cycle with check active)
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#1981](https://github.com/EvaLok/schema-org-json-ld/issues/1981) (Fix fail-open compatibility fallback in pipeline-check temporal-ordering) when Copilot completes
+2. Review and iterate on PR from [#1983](https://github.com/EvaLok/schema-org-json-ld/issues/1983) (End-of-cycle review) when Copilot completes
+3. Review and iterate on PR from [#1985](https://github.com/EvaLok/schema-org-json-ld/issues/1985) ([Cycle Review] Cycle 406 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
