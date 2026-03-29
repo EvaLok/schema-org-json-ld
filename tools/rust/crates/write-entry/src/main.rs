@@ -366,7 +366,7 @@ fn execute_worklog_with_outcome(
     let (path, replaced_existing) = if let Some(existing_path) = find_worklog_for_cycle(repo_root, cycle)? {
         (existing_path, true)
     } else {
-        (worklog_path(repo_root, now, &args.title), false)
+        (worklog_path(repo_root, now, cycle, &args.title), false)
     };
     let content = render_worklog(cycle, now, &input);
     emit_generated_markdown_sha_warnings("worklog", &content, repo_root);
@@ -2201,15 +2201,15 @@ fn default_previous_commitment_detail() -> String {
     "No prior commitment recorded.".to_string()
 }
 
-fn worklog_path(repo_root: &Path, now: DateTime<Utc>, title: &str) -> PathBuf {
+fn worklog_path(repo_root: &Path, now: DateTime<Utc>, cycle: u64, title: &str) -> PathBuf {
     let date = now.format("%Y-%m-%d").to_string();
     let time = now.format("%H%M%S").to_string();
-    let slug = slugify(title);
+    let slug = slugify(strip_cycle_prefix(title));
     repo_root
         .join("docs")
         .join("worklog")
         .join(date)
-        .join(format!("{}-{}.md", time, slug))
+        .join(format!("{}-cycle-{}-{}.md", time, cycle, slug))
 }
 
 fn journal_path(repo_root: &Path, now: DateTime<Utc>) -> PathBuf {
@@ -2736,7 +2736,10 @@ fn sanitize_escaped_newlines(text: &str) -> String {
 
 fn strip_cycle_prefix(title: &str) -> &str {
     let trimmed = title.trim();
-    let Some(remainder) = trimmed.strip_prefix("Cycle ") else {
+    let Some(remainder) = trimmed
+        .strip_prefix("Cycle ")
+        .or_else(|| trimmed.strip_prefix("cycle "))
+    else {
         return title;
     };
     let digits_length = remainder
@@ -2747,7 +2750,13 @@ fn strip_cycle_prefix(title: &str) -> &str {
         return title;
     }
     let suffix = &remainder[digits_length..];
-    suffix.strip_prefix(':').map_or(title, |rest| rest.trim_start())
+    if let Some(rest) = suffix.strip_prefix(':').or_else(|| suffix.strip_prefix('-')) {
+        return rest.trim_start();
+    }
+    if suffix.is_empty() || suffix.chars().next().is_some_and(char::is_whitespace) {
+        return suffix.trim_start();
+    }
+    title
 }
 
 fn journal_commitments(input: &JournalInput) -> Vec<&str> {
@@ -3243,7 +3252,7 @@ mod tests {
         cycle: u64,
         title: &str,
     ) -> PathBuf {
-        let path = worklog_path(repo_root, now, title);
+        let path = worklog_path(repo_root, now, cycle, title);
         write_entry_file(
             &path,
             &format!(
@@ -3293,15 +3302,41 @@ mod tests {
     }
 
     #[test]
-    fn worklog_path_uses_date_time_and_slug() {
+    fn worklog_path_uses_date_time_cycle_and_slug() {
         let repo_root = PathBuf::from("/tmp/example");
-        let path = worklog_path(&repo_root, fixed_now(), "From Convention to Enforcement");
+        let path = worklog_path(&repo_root, fixed_now(), 403, "From Convention to Enforcement");
         assert_eq!(
             path,
             PathBuf::from(
-                "/tmp/example/docs/worklog/2026-03-06/051458-from-convention-to-enforcement.md"
+                "/tmp/example/docs/worklog/2026-03-06/051458-cycle-403-from-convention-to-enforcement.md"
             )
         );
+    }
+
+    #[test]
+    fn worklog_path_strips_redundant_cycle_prefix_from_slug() {
+        let repo_root = PathBuf::from("/tmp/example");
+        let uppercase = worklog_path(
+            &repo_root,
+            fixed_now(),
+            403,
+            "Cycle 403: Three merges review tool audit",
+        );
+        let lowercase = worklog_path(
+            &repo_root,
+            fixed_now(),
+            403,
+            "cycle 403 three merges review tool audit",
+        );
+
+        assert_eq!(
+            uppercase,
+            PathBuf::from(
+                "/tmp/example/docs/worklog/2026-03-06/051458-cycle-403-three-merges-review-tool-audit.md"
+            )
+        );
+        assert_eq!(uppercase, lowercase);
+        assert!(!uppercase.to_string_lossy().contains("cycle-403-cycle-403"));
     }
 
     #[test]
@@ -3869,7 +3904,7 @@ mod tests {
 
         assert_eq!(
             path,
-            worklog_path(&repo_root.path, fixed_now(), "Cycle 100 initial")
+            worklog_path(&repo_root.path, fixed_now(), 100, "Cycle 100 initial")
         );
         assert!(path.exists());
         assert_eq!(files.len(), 1);
@@ -3954,7 +3989,7 @@ mod tests {
         let found = find_worklog_relative_path(&repo_root.path, 155).unwrap();
         assert_eq!(
             found,
-            Some("../worklog/2026-03-07/051458-cycle-two.md".to_string())
+            Some("../worklog/2026-03-07/051458-cycle-155-cycle-two.md".to_string())
         );
         assert!(first.exists());
         assert!(second.exists());
