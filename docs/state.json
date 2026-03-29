@@ -5904,10 +5904,10 @@
     {
       "dispatched_at": "2026-03-29T08:34:00Z",
       "issue": 1963,
-      "merged_at": null,
+      "merged_at": "2026-03-29T10:15:33Z",
       "model": "gpt-5.4",
-      "pr": null,
-      "status": "in_flight",
+      "pr": 1964,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 402 end-of-cycle review"
     }
   ],
@@ -6306,7 +6306,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 402"
+        "last_refreshed": "cycle 403"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -6454,7 +6454,7 @@
       }
     }
   },
-  "in_flight_sessions": 3,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 15,
     "issue": 1965,
