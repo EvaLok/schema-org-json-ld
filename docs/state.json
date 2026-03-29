@@ -6290,7 +6290,7 @@
       "resolved_ref": "Gate enforcement verified in cycle-runner close-out (close_out.rs step_c5_5 hard error + ? propagation). Cycle 407."
     }
   ],
-  "dispatch_log_latest": "#1988 Align write-entry auto-receipts with cycle-complete boundary (cycle 407)",
+  "dispatch_log_latest": "#1990 [Cycle Review] Cycle 407 end-of-cycle review (cycle 407)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6556,12 +6556,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 13,
     "issue": 1987,
     "number": 407,
-    "summary": "2 merges (PR 1986 cycle 406 review, PR 1982 fail-open fix), 1 dispatch (#1988 receipt-scope boundary), cycle 406 review processed (3 findings, 2 actioned, 1 deferred)",
+    "summary": "2 merges (PR 1986 cycle 406 review, PR 1982 fail-open fix), 2 dispatches (#1988 receipt-scope boundary, #1990 cycle 407 review), cycle 406 review processed (3 findings, 2 actioned, 1 deferred)",
     "timestamp": "2026-03-29T20:20:34Z"
   },
   "last_eva_comment_check": "2026-03-29T20:20:34Z",
@@ -10840,7 +10840,7 @@
         "note": "Cycle 406 review (3 findings, complacency 3/5). F1 worklog-accuracy (PASS when gate failed): actioned - will write pipeline status after final gate this cycle. F2 process-adherence (gate override, continued past C5.5 fail): deferred - requires cycle-runner enforcement modification. F3 journal-quality (stale journal, auto-link pattern): actioned - using plain text finding references this cycle."
       }
     ],
-    "last_review_cycle": 406
+    "last_review_cycle": 407
   },
   "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 402,
