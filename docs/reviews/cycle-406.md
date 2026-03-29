@@ -9,7 +9,7 @@
 ## 2. [state-integrity] The chronic-category analysis miscounted `state-integrity`, and the bad number was copied into the state record
 
 **File**: docs/worklog/2026-03-29/182140-cycle-406-review-processing-chronic-analysis-fail-open-dispatch.md:5
-**Evidence**: The worklog says the cycle conducted artifact-backed chronic analysis for four categories and lists `state-integrity 5/7`. A direct count of review headings across `docs/reviews/cycle-399.md`, `cycle-400.md`, `cycle-401.md`, `cycle-402.md`, `cycle-403.md`, and `cycle-405.md` shows `state-integrity` appearing in 6 of the 7 reviews from cycles 399-405, not 5. That incorrect `5/7` value was then propagated into `docs/state.json:6686`, so the persistent state now stores the wrong trend analysis.
+**Evidence**: The worklog says the cycle conducted artifact-backed chronic analysis for four categories and lists `state-integrity 5/7`. A direct count of review headings across `docs/reviews/cycle-399.md`, `cycle-400.md`, `cycle-401.md`, `cycle-402.md`, `cycle-403.md`, `cycle-404.md`, and `cycle-405.md` shows `state-integrity` appearing in 6 of the 7 reviews from cycles 399-405, not 5. That incorrect `5/7` value was then propagated into `docs/state.json:6686`, so the persistent state now stores the wrong trend analysis.
 **Recommendation**: Derive chronic-category counts mechanically from the review corpus instead of hand-transcribing them into the worklog/state update. At minimum, include the exact review set used for each count so mismatches are auditable.
 
 ## 3. [complacency-detection] The cycle claims “per-category concrete output” for all chronic categories, but two updated responses are still narrative-only
