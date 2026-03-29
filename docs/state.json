@@ -6144,9 +6144,10 @@
     1965
   ],
   "cycle_phase": {
+    "completed_at": "2026-03-29T10:30:35Z",
     "cycle": 403,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-29T10:24:10Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-29T10:30:35Z"
   },
   "deferred_findings": [
     {
