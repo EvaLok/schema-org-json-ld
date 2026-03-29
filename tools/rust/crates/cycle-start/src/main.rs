@@ -14,6 +14,8 @@ const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const QC_REPO: &str = "EvaLok/schema-org-json-ld-qc";
 const AUDIT_REPO: &str = "EvaLok/schema-org-json-ld-audit";
 const DEFAULT_STALE_THRESHOLD_SECS: u64 = 7_200;
+const EVA_INPUT_REMAINING_OPEN_PATH: &str = "/eva_input_issues/remaining_open";
+const EVA_INPUT_CLOSED_THIS_CYCLE_PATH: &str = "/eva_input_issues/closed_this_cycle";
 const ORCHESTRATOR_SIGNATURES: [&str; 3] = [
     "[main-orchestrator]",
     "[qc-orchestrator]",
@@ -221,7 +223,7 @@ fn run(cli: Cli) -> Result<(), String> {
         questions_for_eva.iter().map(|issue| issue.number).collect();
     validate_eva_issue_numbers(
         &state_json.eva_input_issues.closed_this_cycle,
-        "/eva_input_issues/closed_this_cycle",
+        EVA_INPUT_CLOSED_THIS_CYCLE_PATH,
     )?;
 
     let patch = build_state_patch(
@@ -384,7 +386,7 @@ where
 {
     parse_eva_issue_numbers(
         &state.eva_input_issues.remaining_open,
-        "/eva_input_issues/remaining_open",
+        EVA_INPUT_REMAINING_OPEN_PATH,
     )?
         .iter()
         .map(|validated_issue_number| {
@@ -1780,7 +1782,7 @@ mod tests {
 
     #[test]
     fn validate_eva_issue_numbers_rejects_negative_remaining_open_entries() {
-        let error = validate_eva_issue_numbers(&[-2], "/eva_input_issues/remaining_open")
+        let error = validate_eva_issue_numbers(&[-2], EVA_INPUT_REMAINING_OPEN_PATH)
             .expect_err("negative remaining issue numbers must fail");
 
         assert_eq!(
@@ -1791,7 +1793,7 @@ mod tests {
 
     #[test]
     fn validate_eva_issue_numbers_rejects_negative_closed_this_cycle_entries() {
-        let error = validate_eva_issue_numbers(&[-9], "/eva_input_issues/closed_this_cycle")
+        let error = validate_eva_issue_numbers(&[-9], EVA_INPUT_CLOSED_THIS_CYCLE_PATH)
             .expect_err("negative closed issue numbers must fail");
 
         assert_eq!(

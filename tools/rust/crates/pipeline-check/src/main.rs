@@ -234,7 +234,7 @@ fn main() {
 
     if cli.refresh_inventory {
         if let Err(error) = refresh_tool_pipeline_inventory(&cli.repo_root, cycle) {
-            eprintln!("Error: {}", error);
+            eprintln!("Error: failed to refresh tool_pipeline inventory: {}", error);
             std::process::exit(2);
         }
     }
