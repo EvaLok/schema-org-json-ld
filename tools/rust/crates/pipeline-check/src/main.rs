@@ -1,4 +1,4 @@
-use chrono::NaiveDate;
+use chrono::{DateTime, NaiveDate, Utc};
 use clap::{builder::PossibleValuesParser, Parser};
 use regex::Regex;
 use serde::Serialize;
@@ -50,6 +50,7 @@ const STEP_NAMES: [&str; 16] = [
 // Steps that have not been posted yet when pipeline-check runs at C5.5.
 // These are excluded from the current-cycle mandatory step check.
 const POST_GATE_STEP_IDS: &[&str] = &["C5.5", "C5.6", "C6", "C6.5", "C7", "C8"];
+const STARTUP_STEP_IDS: &[&str] = &["0", "0.1", "0.5", "0.6", "1", "1.1", "2", "3"];
 const STEP_COMMENT_THRESHOLD: usize = 17;
 const ORCHESTRATOR_SIGNATURE: &str = "> **[main-orchestrator]**";
 const MANDATORY_STEPS: &[(&str, u64)] = &[
@@ -179,6 +180,17 @@ struct ExecutionResult {
 trait CommandRunner {
     fn run(&self, script_path: &Path, args: &[String]) -> Result<ExecutionResult, String>;
     fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String>;
+    fn fetch_issue_comments_with_timestamps(
+        &self,
+        issue: u64,
+    ) -> Result<Vec<(String, String)>, String> {
+        // Legacy/mock runners that only provide concatenated comment bodies fall back to
+        // empty timestamps here. Temporal-ordering checks explicitly ignore empty
+        // timestamps, which preserves existing tests while keeping the new check fail-closed
+        // for real timestamp payloads.
+        self.fetch_issue_comment_bodies(issue)
+            .map(|comment_bodies| vec![(comment_bodies, String::new())])
+    }
 }
 
 struct ProcessRunner;
@@ -212,6 +224,58 @@ impl CommandRunner for ProcessRunner {
         }
 
         Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    }
+
+    fn fetch_issue_comments_with_timestamps(
+        &self,
+        issue: u64,
+    ) -> Result<Vec<(String, String)>, String> {
+        let output = Command::new("gh")
+            .arg("api")
+            .arg(format!("repos/{MAIN_REPO}/issues/{issue}/comments"))
+            .arg("--paginate")
+            .arg("--jq")
+            .arg(".[] | @json")
+            .output()
+            .map_err(|error| format!("failed to execute gh api: {}", error))?;
+
+        if !output.status.success() {
+            return Err(command_failure_message("gh api", &output));
+        }
+
+        String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .map(|line| {
+                let comment: Value = serde_json::from_str(line).map_err(|error| {
+                    format!(
+                        "failed to parse gh api comment payload for issue #{}: {}",
+                        issue, error
+                    )
+                })?;
+                let body = comment
+                    .get("body")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| {
+                        format!(
+                            "gh api comment payload for issue #{} is missing string field 'body'",
+                            issue
+                        )
+                    })?
+                    .to_string();
+                let created_at = comment
+                    .get("created_at")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| {
+                        format!(
+                            "gh api comment payload for issue #{} is missing string field 'created_at'",
+                            issue
+                        )
+                    })?
+                    .to_string();
+                Ok((body, created_at))
+            })
+            .collect()
     }
 }
 
@@ -1010,9 +1074,10 @@ fn verify_current_cycle_step_comments(
         }
     };
     let mut found = BTreeSet::new();
+    let mut step_timestamps = BTreeMap::new();
     for issue in &current_cycle_issues.issues {
-        let issue_found = match fetch_step_comments_for_issue(runner, *issue, cycle) {
-            Ok(found) => found,
+        let comments = match runner.fetch_issue_comments_with_timestamps(*issue) {
+            Ok(comments) => comments,
             Err(error) => {
                 return StepReport {
                     name: CURRENT_CYCLE_STEPS_STEP_NAME,
@@ -1025,9 +1090,28 @@ fn verify_current_cycle_step_comments(
                 };
             }
         };
+        let issue_found = collect_step_comment_ids_from_comments(&comments, cycle);
         found.extend(issue_found);
+        let timestamps = match collect_step_comment_timestamps(&comments, cycle) {
+            Ok(timestamps) => timestamps,
+            Err(error) => {
+                return StepReport {
+                    name: CURRENT_CYCLE_STEPS_STEP_NAME,
+                    status: StepStatus::Error,
+                    severity: Severity::Blocking,
+                    exit_code: None,
+                    detail: Some(error),
+                    findings: None,
+                    summary: None,
+                };
+            }
+        };
+        for (step_id, timestamp) in timestamps {
+            record_earliest_step_timestamp(&mut step_timestamps, step_id, timestamp);
+        }
     }
     let issue_detail = current_cycle_issues.detail;
+    let temporal_warning = assess_temporal_step_ordering(&step_timestamps);
 
     // Check only pre-gate mandatory steps (exclude post-gate steps that haven't been posted yet)
     let pre_gate_mandatory_missing: Vec<&str> = MANDATORY_STEPS
@@ -1044,32 +1128,46 @@ fn verify_current_cycle_step_comments(
     let found_ids = ordered_found_step_ids(&found);
 
     if pre_gate_mandatory_missing.is_empty() {
+        let mut detail = format!(
+            "{}: {} pre-gate mandatory steps present [{}]",
+            issue_detail,
+            found_ids.len(),
+            format_step_id_list(&found_ids)
+        );
+        let mut status = StepStatus::Pass;
+        let mut severity = Severity::Blocking;
+        if let Some(temporal_warning) = temporal_warning {
+            status = StepStatus::Warn;
+            severity = Severity::Warning;
+            detail.push_str("; ");
+            detail.push_str(&temporal_warning.detail);
+        }
         StepReport {
             name: CURRENT_CYCLE_STEPS_STEP_NAME,
-            status: StepStatus::Pass,
-            severity: Severity::Blocking,
+            status,
+            severity,
             exit_code: None,
-            detail: Some(format!(
-                "{}: {} pre-gate mandatory steps present [{}]",
-                issue_detail,
-                found_ids.len(),
-                format_step_id_list(&found_ids)
-            )),
+            detail: Some(detail),
             findings: Some(found_ids.len()),
             summary: None,
         }
     } else {
+        let mut detail = format!(
+            "{}: missing pre-gate mandatory steps [{}]; found [{}]",
+            issue_detail,
+            format_step_id_list(&pre_gate_mandatory_missing),
+            format_step_id_list(&found_ids)
+        );
+        if let Some(temporal_warning) = temporal_warning {
+            detail.push_str("; ");
+            detail.push_str(&temporal_warning.detail);
+        }
         StepReport {
             name: CURRENT_CYCLE_STEPS_STEP_NAME,
             status: StepStatus::Fail,
             severity: Severity::Blocking,
             exit_code: None,
-            detail: Some(format!(
-                "{}: missing pre-gate mandatory steps [{}]; found [{}]",
-                issue_detail,
-                format_step_id_list(&pre_gate_mandatory_missing),
-                format_step_id_list(&found_ids)
-            )),
+            detail: Some(detail),
             findings: Some(found_ids.len()),
             summary: None,
         }
@@ -1151,6 +1249,142 @@ fn fetch_step_comments_for_issue(
     runner
         .fetch_issue_comment_bodies(issue)
         .map(|comment_bodies| collect_step_comment_ids(&comment_bodies, cycle))
+}
+
+fn collect_step_comment_ids_from_comments(
+    comments: &[(String, String)],
+    cycle: u64,
+) -> BTreeSet<&'static str> {
+    let mut found = BTreeSet::new();
+    for (body, _) in comments {
+        found.extend(collect_step_comment_ids(body, cycle));
+    }
+    found
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct TemporalOrderingWarning {
+    detail: String,
+}
+
+fn collect_step_comment_timestamps(
+    comments: &[(String, String)],
+    cycle: u64,
+) -> Result<BTreeMap<String, DateTime<Utc>>, String> {
+    let mut timestamps = BTreeMap::new();
+    for (body, created_at) in comments {
+        if created_at.trim().is_empty() {
+            continue;
+        }
+        let timestamp = DateTime::parse_from_rfc3339(created_at)
+            .map_err(|error| {
+                format!(
+                    "failed to parse issue comment timestamp '{}' as RFC3339: {}",
+                    created_at, error
+                )
+            })?
+            .with_timezone(&Utc);
+        for line in body.lines() {
+            let Some(step_id) = detect_temporal_ordering_step_id(line, cycle) else {
+                continue;
+            };
+            record_earliest_step_timestamp(&mut timestamps, step_id, timestamp);
+        }
+    }
+    Ok(timestamps)
+}
+
+fn detect_temporal_ordering_step_id(line: &str, cycle: u64) -> Option<String> {
+    detect_step_comment_id(line, cycle)
+        .map(str::to_string)
+        .or_else(|| {
+            detect_any_step_comment_token(line, cycle)
+                .filter(|candidate| candidate.starts_with('C'))
+                .map(str::to_string)
+        })
+}
+
+fn record_earliest_step_timestamp(
+    timestamps: &mut BTreeMap<String, DateTime<Utc>>,
+    step_id: String,
+    timestamp: DateTime<Utc>,
+) {
+    timestamps
+        .entry(step_id)
+        .and_modify(|existing| {
+            if timestamp < *existing {
+                *existing = timestamp;
+            }
+        })
+        .or_insert(timestamp);
+}
+
+fn compare_timed_step_entries(
+    left: &(String, DateTime<Utc>),
+    right: &(String, DateTime<Utc>),
+) -> std::cmp::Ordering {
+    left.1.cmp(&right.1).then_with(|| left.0.cmp(&right.0))
+}
+
+fn assess_temporal_step_ordering(
+    step_timestamps: &BTreeMap<String, DateTime<Utc>>,
+) -> Option<TemporalOrderingWarning> {
+    let startup_steps = STARTUP_STEP_IDS
+        .iter()
+        .filter_map(|step| {
+            step_timestamps
+                .get(*step)
+                .copied()
+                .map(|timestamp| ((*step).to_string(), timestamp))
+        })
+        .collect::<Vec<_>>();
+    let close_out_steps = step_timestamps
+        .iter()
+        .filter(|(step, _)| step.starts_with('C'))
+        .map(|(step, timestamp)| (step.clone(), *timestamp))
+        .collect::<Vec<_>>();
+
+    if startup_steps.is_empty() || close_out_steps.is_empty() {
+        return None;
+    }
+
+    let latest_startup = startup_steps.iter().map(|(_, timestamp)| *timestamp).max()?;
+    let earliest_close_out = close_out_steps.iter().map(|(_, timestamp)| *timestamp).min()?;
+    if latest_startup < earliest_close_out {
+        return None;
+    }
+
+    let mut misordered_startup = startup_steps
+        .into_iter()
+        .filter(|(_, timestamp)| *timestamp >= earliest_close_out)
+        .collect::<Vec<_>>();
+    let mut misordered_close_out = close_out_steps
+        .into_iter()
+        .filter(|(_, timestamp)| *timestamp <= latest_startup)
+        .collect::<Vec<_>>();
+    misordered_startup.sort_by(compare_timed_step_entries);
+    misordered_close_out.sort_by(compare_timed_step_entries);
+
+    Some(TemporalOrderingWarning {
+        detail: format!(
+            "temporal ordering warning: startup steps [{}] were posted at or after close-out steps [{}]",
+            format_timed_step_entries(&misordered_startup),
+            format_timed_step_entries(&misordered_close_out)
+        ),
+    })
+}
+
+fn format_timed_step_entries(step_entries: &[(String, DateTime<Utc>)]) -> String {
+    let mut formatted = String::new();
+    for (index, (step_id, timestamp)) in step_entries.iter().enumerate() {
+        if index > 0 {
+            formatted.push_str(", ");
+        }
+        formatted.push_str(step_id);
+        formatted.push('@');
+        formatted.push_str(&timestamp.to_rfc3339());
+    }
+    formatted
 }
 
 fn acknowledged_step_comment_ids(
@@ -2832,6 +3066,18 @@ mod tests {
         step_ids
             .iter()
             .map(|step| format!("> **[main-orchestrator]** | Cycle {cycle} | Step {step}\n"))
+            .collect()
+    }
+
+    fn timestamped_step_comments(entries: &[(&str, &str, u64)]) -> Vec<(String, String)> {
+        entries
+            .iter()
+            .map(|(step, created_at, cycle)| {
+                (
+                    format!("> **[main-orchestrator]** | Cycle {cycle} | Step {step}\n"),
+                    (*created_at).to_string(),
+                )
+            })
             .collect()
     }
 
@@ -8063,6 +8309,308 @@ mod tests {
         let step = verify_current_cycle_step_comments(&root, 301, &Runner);
         assert_eq!(step.status, StepStatus::Pass);
         assert_eq!(step.severity, Severity::Blocking);
+    }
+
+    #[test]
+    fn current_cycle_steps_stays_pass_when_temporal_ordering_is_correct() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-current-cycle-temporal-pass-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "previous_cycle_issue": 954,
+                "last_cycle": {
+                    "number": 301,
+                    "issue": 954
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("body-only fallback should not be used in temporal ordering test");
+            }
+
+            fn fetch_issue_comments_with_timestamps(
+                &self,
+                issue: u64,
+            ) -> Result<Vec<(String, String)>, String> {
+                assert_eq!(issue, 954);
+                let mut comments = timestamped_step_comments(&[
+                    ("0", "2026-03-29T10:00:00Z", 301),
+                    ("0.1", "2026-03-29T10:01:00Z", 301),
+                    ("0.5", "2026-03-29T10:02:00Z", 301),
+                    ("0.6", "2026-03-29T10:03:00Z", 301),
+                    ("1", "2026-03-29T10:04:00Z", 301),
+                    ("1.1", "2026-03-29T10:05:00Z", 301),
+                    ("2", "2026-03-29T10:06:00Z", 301),
+                    ("3", "2026-03-29T10:07:00Z", 301),
+                    ("C1", "2026-03-29T11:00:00Z", 301),
+                    ("C2", "2026-03-29T11:01:00Z", 301),
+                    ("C3", "2026-03-29T11:02:00Z", 301),
+                    ("C4.1", "2026-03-29T11:03:00Z", 301),
+                    ("C4.5", "2026-03-29T11:04:00Z", 301),
+                    ("C5", "2026-03-29T11:05:00Z", 301),
+                    ("C5.1", "2026-03-29T11:06:00Z", 301),
+                ]);
+                comments.extend(
+                    EXPECTED_STEP_IDS
+                        .iter()
+                        .copied()
+                        .filter(|step| !STARTUP_STEP_IDS.contains(step) && !step.starts_with('C'))
+                        .enumerate()
+                        .map(|(index, step)| {
+                            (
+                                format!(
+                                    "> **[main-orchestrator]** | Cycle 301 | Step {step}\n"
+                                ),
+                                format!("2026-03-29T10:{:02}:00Z", index + 8),
+                            )
+                        }),
+                );
+                Ok(comments)
+            }
+        }
+
+        let step = verify_current_cycle_step_comments(&root, 301, &Runner);
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert!(!step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("temporal ordering warning"));
+    }
+
+    #[test]
+    fn current_cycle_steps_warn_when_startup_step_is_posted_after_close_out_step() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-current-cycle-temporal-warn-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "previous_cycle_issue": 955,
+                "last_cycle": {
+                    "number": 301,
+                    "issue": 955
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("body-only fallback should not be used in temporal ordering test");
+            }
+
+            fn fetch_issue_comments_with_timestamps(
+                &self,
+                issue: u64,
+            ) -> Result<Vec<(String, String)>, String> {
+                assert_eq!(issue, 955);
+                let mut comments = timestamped_step_comments(&[
+                    ("0", "2026-03-29T10:00:00Z", 301),
+                    ("0.1", "2026-03-29T10:01:00Z", 301),
+                    ("0.5", "2026-03-29T10:02:00Z", 301),
+                    ("0.6", "2026-03-29T10:03:00Z", 301),
+                    ("1", "2026-03-29T10:04:00Z", 301),
+                    ("1.1", "2026-03-29T10:05:00Z", 301),
+                    ("2", "2026-03-29T10:06:00Z", 301),
+                    ("C1", "2026-03-29T10:30:00Z", 301),
+                    ("C2", "2026-03-29T10:31:00Z", 301),
+                    ("C3", "2026-03-29T10:32:00Z", 301),
+                    ("C4.1", "2026-03-29T10:33:00Z", 301),
+                    ("C4.5", "2026-03-29T10:34:00Z", 301),
+                    ("C5", "2026-03-29T10:35:00Z", 301),
+                    ("C5.1", "2026-03-29T10:36:00Z", 301),
+                    ("3", "2026-03-29T10:45:00Z", 301),
+                ]);
+                comments.extend(
+                    EXPECTED_STEP_IDS
+                        .iter()
+                        .copied()
+                        .filter(|step| {
+                            !STARTUP_STEP_IDS.contains(step) && !step.starts_with('C')
+                        })
+                        .enumerate()
+                        .map(|(index, step)| {
+                            (
+                                format!(
+                                    "> **[main-orchestrator]** | Cycle 301 | Step {step}\n"
+                                ),
+                                format!("2026-03-29T10:{:02}:00Z", index + 7),
+                            )
+                        }),
+                );
+                Ok(comments)
+            }
+        }
+
+        let step = verify_current_cycle_step_comments(&root, 301, &Runner);
+        assert_eq!(step.status, StepStatus::Warn);
+        assert_eq!(step.severity, Severity::Warning);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("temporal ordering warning"));
+        assert!(detail.contains("3@2026-03-29T10:45:00+00:00"));
+        assert!(detail.contains("C1@2026-03-29T10:30:00+00:00"));
+    }
+
+    #[test]
+    fn current_cycle_steps_pass_temporal_check_when_close_out_steps_are_absent() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-current-cycle-temporal-no-closeout-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "previous_cycle_issue": 956,
+                "last_cycle": {
+                    "number": 301,
+                    "issue": 956
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("body-only fallback should not be used in temporal ordering test");
+            }
+
+            fn fetch_issue_comments_with_timestamps(
+                &self,
+                issue: u64,
+            ) -> Result<Vec<(String, String)>, String> {
+                assert_eq!(issue, 956);
+                Ok(timestamped_step_comments(&[
+                    ("0", "2026-03-29T10:00:00Z", 301),
+                    ("0.1", "2026-03-29T10:01:00Z", 301),
+                    ("0.5", "2026-03-29T10:02:00Z", 301),
+                    ("0.6", "2026-03-29T10:03:00Z", 301),
+                    ("1", "2026-03-29T10:04:00Z", 301),
+                    ("1.1", "2026-03-29T10:05:00Z", 301),
+                    ("2", "2026-03-29T10:06:00Z", 301),
+                    ("3", "2026-03-29T10:07:00Z", 301),
+                    ("4", "2026-03-29T10:08:00Z", 301),
+                    ("5", "2026-03-29T10:09:00Z", 301),
+                    ("6", "2026-03-29T10:10:00Z", 301),
+                    ("7", "2026-03-29T10:11:00Z", 301),
+                    ("8", "2026-03-29T10:12:00Z", 301),
+                    ("9", "2026-03-29T10:13:00Z", 301),
+                ]))
+            }
+        }
+
+        let step = verify_current_cycle_step_comments(&root, 301, &Runner);
+        assert_eq!(step.status, StepStatus::Fail);
+        assert_eq!(step.severity, Severity::Blocking);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("missing pre-gate mandatory steps"));
+        assert!(!detail.contains("temporal ordering warning"));
+    }
+
+    #[test]
+    fn current_cycle_steps_error_when_timestamp_is_invalid() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-current-cycle-temporal-invalid-ts-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "previous_cycle_issue": 957,
+                "last_cycle": {
+                    "number": 301,
+                    "issue": 957
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("body-only fallback should not be used in temporal ordering test");
+            }
+
+            fn fetch_issue_comments_with_timestamps(
+                &self,
+                issue: u64,
+            ) -> Result<Vec<(String, String)>, String> {
+                assert_eq!(issue, 957);
+                Ok(timestamped_step_comments(&[("0", "not-a-timestamp", 301)]))
+            }
+        }
+
+        let step = verify_current_cycle_step_comments(&root, 301, &Runner);
+        assert_eq!(step.status, StepStatus::Error);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("failed to parse issue comment timestamp"));
     }
 
     #[test]
