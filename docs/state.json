@@ -5909,6 +5909,13 @@
       "pr": 1964,
       "status": "merged",
       "title": "[Cycle Review] Cycle 402 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-29T10:30:30Z",
+      "issue": 1966,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 403 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -6196,7 +6203,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#1963 [Cycle Review] Cycle 402 end-of-cycle review (cycle 402)",
+  "dispatch_log_latest": "#1966 [Cycle Review] Cycle 403 end-of-cycle review (cycle 403)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6462,12 +6469,12 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 14,
     "issue": 1965,
     "number": 403,
-    "summary": "0 dispatches, 3 merges (PR #1960, PR #1962, PR #1964)",
+    "summary": "1 dispatch, 3 merges (PR #1960, PR #1962, PR #1964)",
     "timestamp": "2026-03-29T10:24:10Z"
   },
   "last_eva_comment_check": "2026-03-29T10:24:10Z",
@@ -10618,7 +10625,7 @@
     ],
     "last_review_cycle": 402
   },
-  "review_dispatch_consecutive": 2,
+  "review_dispatch_consecutive": 3,
   "review_events_verified_through_cycle": 402,
   "schema_status": {
     "directory_layout": {
