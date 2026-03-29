@@ -5844,6 +5844,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix post-cycle-complete receipt filtering in cycle-receipts"
+    },
+    {
+      "dispatched_at": "2026-03-29T03:17:41Z",
+      "issue": 1947,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Auto-refresh field_inventory markers in cycle-start for Eva-checked fields"
     }
   ],
   "audit_dropped": [
@@ -6115,7 +6122,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#1945 Fix post-cycle-complete receipt filtering in cycle-receipts (cycle 400)",
+  "dispatch_log_latest": "#1947 Auto-refresh field_inventory markers in cycle-start for Eva-checked fields (cycle 400)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6381,12 +6388,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 11,
     "issue": 1944,
     "number": 400,
-    "summary": "3 dispatches, 1 merges (PR #1936)",
+    "summary": "4 dispatches, 1 merges (PR #1936)",
     "timestamp": "2026-03-29T03:03:25Z"
   },
   "last_eva_comment_check": "2026-03-29T03:03:25Z",
