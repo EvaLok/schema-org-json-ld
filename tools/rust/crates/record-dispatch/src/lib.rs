@@ -127,6 +127,7 @@ pub fn concurrency_warning_message(in_flight: i64) -> String {
 pub struct DispatchPatch {
     pub in_flight: i64,
     pub dispatch_log_latest: String,
+    pub last_cycle_summary: String,
     pub agent_session: Value,
     pub current_cycle: u64,
 }
@@ -150,6 +151,7 @@ pub fn build_dispatch_patch(
     model: &str,
     dispatched_at: &str,
 ) -> Result<DispatchPatch, String> {
+    let last_cycle_summary = increment_last_cycle_dispatch_count(state)?;
     let agent_session = json!({
         "issue": issue,
         "title": title,
@@ -162,9 +164,65 @@ pub fn build_dispatch_patch(
     Ok(DispatchPatch {
         in_flight,
         dispatch_log_latest: format_dispatch_log(issue, title, current_cycle),
+        last_cycle_summary,
         agent_session,
         current_cycle,
     })
+}
+
+fn increment_last_cycle_dispatch_count(state: &Value) -> Result<String, String> {
+    let summary = state
+        .pointer("/last_cycle/summary")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "missing string /last_cycle/summary in docs/state.json".to_string())?;
+    increment_dispatch_count(summary)
+}
+
+fn increment_dispatch_count(summary: &str) -> Result<String, String> {
+    let digits_len = summary
+        .chars()
+        .take_while(|character| character.is_ascii_digit())
+        .count();
+    if digits_len == 0 {
+        return Err(format!(
+            "last_cycle.summary must start with a dispatch count: {}",
+            summary
+        ));
+    }
+
+    let dispatch_count = summary[..digits_len]
+        .parse::<u64>()
+        .map_err(|error| format!("failed to parse dispatch count in last_cycle.summary: {}", error))?;
+    let remainder = &summary[digits_len..];
+    let remainder = remainder
+        .strip_prefix(" dispatches")
+        .or_else(|| remainder.strip_prefix(" dispatch"))
+        .ok_or_else(|| {
+            format!(
+                "last_cycle.summary must use 'dispatch' or 'dispatches': {}",
+                summary
+            )
+        })?;
+    if !remainder.starts_with(',') {
+        return Err(format!(
+            "last_cycle.summary must preserve the ', …' suffix: {}",
+            summary
+        ));
+    }
+
+    let next_dispatch_count = dispatch_count
+        .checked_add(1)
+        .ok_or_else(|| "dispatch count overflowed u64".to_string())?;
+    let dispatch_label = if next_dispatch_count == 1 {
+        "dispatch"
+    } else {
+        "dispatches"
+    };
+
+    Ok(format!(
+        "{} {}{}",
+        next_dispatch_count, dispatch_label, remainder
+    ))
 }
 
 fn derive_in_flight_with_new_session(state: &Value, new_session: &Value) -> Result<i64, String> {
@@ -289,6 +347,11 @@ pub fn apply_dispatch_patch(state: &mut Value, patch: &DispatchPatch) -> Result<
         .as_object_mut()
         .ok_or_else(|| "docs/state.json root must be an object".to_string())?
         .insert("in_flight_sessions".to_string(), json!(patch.in_flight));
+    state
+        .pointer_mut("/last_cycle")
+        .and_then(Value::as_object_mut)
+        .ok_or_else(|| "missing object /last_cycle in docs/state.json".to_string())?
+        .insert("summary".to_string(), json!(patch.last_cycle_summary));
     update_field_inventory_last_refreshed(state, "in_flight_sessions", &cycle_marker)?;
 
     Ok(())
@@ -470,7 +533,10 @@ mod tests {
                     "status": "closed_without_pr"
                 }
             ],
-            "last_cycle": { "number": 164 },
+            "last_cycle": {
+                "number": 164,
+                "summary": "0 dispatches, 1 merges (PR #700)"
+            },
             "copilot_metrics": {
                 "total_dispatches": 2,
                 "in_flight": 0,
@@ -511,6 +577,7 @@ mod tests {
             patch.dispatch_log_latest,
             "#602 Example dispatch (cycle 164)"
         );
+        assert_eq!(patch.last_cycle_summary, "1 dispatch, 1 merges (PR #700)");
     }
 
     #[test]
@@ -755,6 +822,28 @@ mod tests {
     }
 
     #[test]
+    fn apply_dispatch_patch_updates_last_cycle_summary_dispatch_count() {
+        let mut state = sample_state();
+        let model = default_test_model();
+        let patch = build_dispatch_patch(
+            &state,
+            164,
+            603,
+            "Example dispatch",
+            &model,
+            "2026-03-07T13:00:00Z",
+        )
+        .expect("patch should build");
+
+        apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
+
+        assert_eq!(
+            state["last_cycle"]["summary"],
+            json!("1 dispatch, 1 merges (PR #700)")
+        );
+    }
+
+    #[test]
     fn apply_dispatch_patch_rejects_duplicate_issue() {
         let mut state = sample_state();
         let model = default_test_model();
@@ -859,6 +948,7 @@ mod tests {
         let patch = DispatchPatch {
             in_flight: 1,
             dispatch_log_latest: "#603 Duplicate live dispatch (cycle 164)".to_string(),
+            last_cycle_summary: "1 dispatch, 1 merges (PR #700)".to_string(),
             agent_session: json!({
                 "issue": 603,
                 "title": "Duplicate live dispatch",
