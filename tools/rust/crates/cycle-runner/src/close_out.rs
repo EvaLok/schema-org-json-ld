@@ -148,7 +148,7 @@ fn step_c4_1(
     } else {
         format!(
             "FAIL: {}",
-            runner::stderr_text(&worklog_output)
+            runner::stdout_text(&worklog_output)
         )
     };
 
@@ -161,7 +161,7 @@ fn step_c4_1(
     } else {
         format!(
             "FAIL: {}",
-            runner::stderr_text(&journal_output)
+            runner::stdout_text(&journal_output)
         )
     };
 
@@ -1597,6 +1597,34 @@ mod tests {
 
         assert_eq!(c4_7, c4_5 + 1);
         assert_eq!(c5, c4_7 + 1);
+    }
+
+    #[test]
+    fn step_c4_1_reports_validate_docs_stdout_failures() {
+        let dir = setup_temp_repo("step-c4-1-stdout-failure");
+        let worklog = dir.join("docs/worklog.md");
+        let journal = dir.join("docs/journal.md");
+        fs::write(&worklog, "# Worklog\n").unwrap();
+        fs::write(&journal, "# Journal\n").unwrap();
+
+        let args_path = dir.join("post-step-args.txt");
+        write_post_step_capture_script(&dir, &args_path);
+        fs::write(
+            dir.join("tools/validate-docs"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nif [ \"$1\" = \"worklog\" ]; then\n  printf 'missing receipt summary'\n  exit 1\nfi\nif [ \"$1\" = \"journal\" ]; then\n  printf 'missing commitments section'\n  exit 1\nfi\nprintf 'unexpected validate-docs args\\n' >&2\nexit 1\n",
+        )
+        .unwrap();
+
+        let error = step_c4_1(&dir, 123, 345, &worklog, &journal).unwrap_err();
+        assert!(error.contains("Worklog: FAIL: missing receipt summary"));
+        assert!(error.contains("Journal: FAIL: missing commitments section"));
+
+        let args = fs::read_to_string(&args_path).unwrap();
+        assert!(args.contains("---ARG---\nC4.1\n"));
+        assert!(args.contains("Worklog validation: FAIL: missing receipt summary"));
+        assert!(args.contains("Journal validation: FAIL: missing commitments section"));
+
+        let _ = fs::remove_dir_all(&dir);
     }
 
     #[test]
