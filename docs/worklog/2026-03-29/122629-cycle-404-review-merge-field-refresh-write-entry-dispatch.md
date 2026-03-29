@@ -17,15 +17,20 @@
 
 - **`docs/state.json`**: field inventory refresh, deferral updates, session status fix, review history update
 
-## Cycle state
+## Cycle state (post-dispatch)
 
 - **In-flight agent sessions**: 1
+- **In-flight agent sessions (post-dispatch)**: 2
 - **Pipeline status**: PASS (3 warnings)
 - **Publish gate**: published
 
 ## Next steps
 
 1. Review and iterate on PR from [#1969](https://github.com/EvaLok/schema-org-json-ld/issues/1969) when Copilot completes
+
+## Next steps (post-dispatch)
+
+1. 1. Review and iterate on PR from #1969 when Copilot completes
 
 ## Commit receipts
 

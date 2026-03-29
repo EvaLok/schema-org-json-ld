@@ -5924,6 +5924,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix write-entry duplicate worklog filename"
+    },
+    {
+      "dispatched_at": "2026-03-29T12:30:00Z",
+      "issue": 1971,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 404 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -6219,7 +6226,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#1969 Fix write-entry duplicate worklog filename (cycle 404)",
+  "dispatch_log_latest": "#1971 [Cycle Review] Cycle 404 end-of-cycle review (cycle 404)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6485,12 +6492,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 17,
     "issue": 1968,
     "number": 404,
-    "summary": "1 merge (PR #1967), 1 dispatch (#1969), field inventory refresh, deferral resolution",
+    "summary": "2 dispatches, 1 merge (PR #1967), field inventory refresh, deferral resolution",
     "timestamp": "2026-03-29T12:26:04Z"
   },
   "last_eva_comment_check": "2026-03-29T12:26:04Z",
@@ -10670,7 +10677,7 @@
     ],
     "last_review_cycle": 403
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 402,
   "schema_status": {
     "directory_layout": {
