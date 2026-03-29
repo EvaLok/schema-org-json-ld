@@ -19,7 +19,7 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 1
-- **Pipeline status**: FAIL (4 warnings)
+- **Pipeline status**: PASS (3 warnings)
 - **Publish gate**: published
 
 ## Next steps
