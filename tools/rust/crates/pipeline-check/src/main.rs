@@ -184,10 +184,15 @@ trait CommandRunner {
         &self,
         issue: u64,
     ) -> Result<Vec<(String, String)>, String> {
-        // Legacy/mock runners that only provide concatenated comment bodies fall back to
-        // empty timestamps here. Temporal-ordering checks explicitly ignore empty
-        // timestamps, which preserves existing tests while keeping the new check fail-closed
-        // for real timestamp payloads.
+        // Legacy/mock runners that only provide concatenated comment bodies get empty
+        // timestamps here. Temporal-ordering checks explicitly ignore empty timestamps,
+        // so this compatibility path skips temporal-ordering validation entirely
+        // (fail-open). That is acceptable for tests, but ProcessRunner must always
+        // override this method to provide real timestamps.
+        eprintln!(
+            "warning: CommandRunner::fetch_issue_comments_with_timestamps fell back to \
+             body-only comments for issue #{issue}; temporal-ordering checks will be skipped"
+        );
         self.fetch_issue_comment_bodies(issue)
             .map(|comment_bodies| vec![(comment_bodies, String::new())])
     }
@@ -8390,6 +8395,68 @@ mod tests {
         }
 
         let step = verify_current_cycle_step_comments(&root, 301, &Runner);
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert!(!step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("temporal ordering warning"));
+    }
+
+    #[test]
+    fn current_cycle_steps_body_only_timestamp_fallback_is_fail_open() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-current-cycle-temporal-fallback-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "previous_cycle_issue": 958,
+                "last_cycle": {
+                    "number": 301,
+                    "issue": 958
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+                assert_eq!(issue, 958);
+                let step_ids = EXPECTED_STEP_IDS.iter().copied().collect::<Vec<_>>();
+                Ok(step_comment_bodies(301, &step_ids))
+            }
+        }
+
+        let runner = Runner;
+        let step_ids = EXPECTED_STEP_IDS.iter().copied().collect::<Vec<_>>();
+        let comments = runner.fetch_issue_comments_with_timestamps(958).unwrap();
+        assert_eq!(
+            comments,
+            vec![(step_comment_bodies(301, &step_ids), String::new())]
+        );
+
+        let timestamps = collect_step_comment_timestamps(&comments, 301).unwrap();
+        assert!(timestamps.is_empty());
+        assert!(assess_temporal_step_ordering(&timestamps).is_none());
+
+        let step = verify_current_cycle_step_comments(&root, 301, &runner);
         assert_eq!(step.status, StepStatus::Pass);
         assert_eq!(step.severity, Severity::Blocking);
         assert!(!step
