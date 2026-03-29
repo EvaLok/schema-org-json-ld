@@ -107,9 +107,10 @@ fn run(cli: Cli) -> Result<String, String> {
 ///
 /// Receipt scope stops at the worklog/journal commit that publishes the table.
 /// Later commits such as `state(clean-cycle...)`, `state(stabilization...)`,
-/// and `state(record-dispatch):` entries that occur at or after the first
-/// `state(cycle-complete):` commit must stay out of the canonical table so
-/// later validation does not demand receipts the table could not have listed.
+/// and all other `state(...)` entries after the first `state(cycle-complete):`
+/// boundary must stay out of the canonical table so later validation does not
+/// demand receipts the table could not have listed. The boundary
+/// `state(cycle-complete):` commit itself remains in scope.
 fn collect_receipts(
     repo_root: &Path,
     cycle: u64,
@@ -135,9 +136,7 @@ fn collect_receipts(
     let mut matching_commits: Vec<&GitCommit> = candidate_commits
         .into_iter()
         .filter(|commit| !is_post_receipt_commit(&commit.subject))
-        .filter(|commit| {
-            !is_post_cycle_complete_record_dispatch_commit(commit, cycle_complete_at)
-        })
+        .filter(|commit| !is_post_cycle_complete_state_commit(commit, cycle_complete_at))
         .filter(|commit| matches_receipt_commit(&commit.subject, cycle))
         .collect();
     matching_commits.sort_by_key(|commit| commit.committed_at);
@@ -170,12 +169,28 @@ fn is_cycle_complete_commit(subject: &str) -> bool {
     extract_step(subject).as_deref() == Some("cycle-complete")
 }
 
-fn is_post_cycle_complete_record_dispatch_commit(
+fn is_post_cycle_complete_state_commit(
     commit: &GitCommit,
     cycle_complete_at: Option<DateTime<Utc>>,
 ) -> bool {
-    commit.subject.starts_with("state(record-dispatch):")
-        && cycle_complete_at.is_some_and(|timestamp| commit.committed_at >= timestamp)
+    let Some(timestamp) = cycle_complete_at else {
+        return false;
+    };
+
+    is_state_commit(&commit.subject)
+        && commit.committed_at >= timestamp
+        && !(is_cycle_complete_commit(&commit.subject) && commit.committed_at == timestamp)
+}
+
+fn is_state_commit(subject: &str) -> bool {
+    let Some(remainder) = subject.strip_prefix("state(") else {
+        return false;
+    };
+    let Some((step, suffix)) = remainder.split_once("):") else {
+        return false;
+    };
+
+    !step.trim().is_empty() && !suffix.trim().is_empty()
 }
 
 fn matches_receipt_commit(subject: &str, cycle: u64) -> bool {
@@ -986,6 +1001,93 @@ mod tests {
             vec![
                 "state(cycle-start): begin cycle 198, issue #1 [cycle 198]",
                 "state(record-dispatch): #123 dispatched during work [cycle 198]",
+                "state(cycle-complete): cycle 198 close out [cycle 198]",
+            ]
+        );
+    }
+
+    #[test]
+    fn collect_receipts_excludes_post_complete_other_state_commits() {
+        let repo = TempRepo::new();
+        repo.init_git();
+        repo.write_state(&json!({
+            "last_cycle": {
+                "number": 198,
+                "timestamp": "2026-03-09T01:00:00Z"
+            }
+        }));
+        repo.commit_file_at(
+            "notes.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 198, issue #1 [cycle 198]",
+            "2026-03-09T01:00:00Z",
+        );
+        repo.commit_file_at(
+            "notes.txt",
+            "complete\n",
+            "state(cycle-complete): cycle 198 close out [cycle 198]",
+            "2026-03-09T01:10:00Z",
+        );
+        repo.commit_file_at(
+            "notes.txt",
+            "post-complete verify-review-events\n",
+            "state(verify-review-events): verified review timeline [cycle 198]",
+            "2026-03-09T01:15:00Z",
+        );
+
+        let receipts = collect_receipts(repo.path(), 198, None).expect("receipts should collect");
+        let subjects: Vec<&str> = receipts
+            .iter()
+            .map(|receipt| receipt.commit.as_str())
+            .collect();
+        assert_eq!(
+            subjects,
+            vec![
+                "state(cycle-start): begin cycle 198, issue #1 [cycle 198]",
+                "state(cycle-complete): cycle 198 close out [cycle 198]",
+            ]
+        );
+    }
+
+    #[test]
+    fn collect_receipts_includes_pre_complete_other_state_commits() {
+        let repo = TempRepo::new();
+        repo.init_git();
+        repo.write_state(&json!({
+            "last_cycle": {
+                "number": 198,
+                "timestamp": "2026-03-09T01:00:00Z"
+            }
+        }));
+        repo.commit_file_at(
+            "notes.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 198, issue #1 [cycle 198]",
+            "2026-03-09T01:00:00Z",
+        );
+        repo.commit_file_at(
+            "notes.txt",
+            "pre-complete verify-review-events\n",
+            "state(verify-review-events): verified review timeline [cycle 198]",
+            "2026-03-09T01:05:00Z",
+        );
+        repo.commit_file_at(
+            "notes.txt",
+            "complete\n",
+            "state(cycle-complete): cycle 198 close out [cycle 198]",
+            "2026-03-09T01:10:00Z",
+        );
+
+        let receipts = collect_receipts(repo.path(), 198, None).expect("receipts should collect");
+        let subjects: Vec<&str> = receipts
+            .iter()
+            .map(|receipt| receipt.commit.as_str())
+            .collect();
+        assert_eq!(
+            subjects,
+            vec![
+                "state(cycle-start): begin cycle 198, issue #1 [cycle 198]",
+                "state(verify-review-events): verified review timeline [cycle 198]",
                 "state(cycle-complete): cycle 198 close out [cycle 198]",
             ]
         );
