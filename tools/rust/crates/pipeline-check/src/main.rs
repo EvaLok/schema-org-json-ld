@@ -2151,13 +2151,14 @@ fn last_cycle_committed_worklog_content(
         .to_string_lossy()
         .to_string();
 
-    let cycle_tag = format!(r"\[cycle {}\]", cycle);
+    let cycle_tag = format!("[cycle {}]", cycle);
     let log_output = Command::new("git")
         .current_dir(repo_root)
         .args([
             "log",
             "--follow",
             "--format=%H",
+            "--fixed-strings",
             "--grep",
             &cycle_tag,
             "-n",
@@ -2171,14 +2172,14 @@ fn last_cycle_committed_worklog_content(
         return Err(command_failure_message("git log", &log_output));
     }
 
-    let baseline_commit = String::from_utf8_lossy(&log_output.stdout)
+    let cycle_tagged_commit = String::from_utf8_lossy(&log_output.stdout)
         .lines()
         .next()
         .map(str::trim)
         .filter(|line| !line.is_empty())
         .map(str::to_string);
 
-    let baseline_commit = match baseline_commit {
+    let baseline_commit = match cycle_tagged_commit {
         Some(commit) => commit,
         None => {
             let fallback_output = Command::new("git")
@@ -5577,16 +5578,15 @@ mod tests {
         )
         .unwrap();
         commit_all(&root, "[cycle 410] finalize worklog after review dispatch");
+        let baseline_commit = run_git(&root, &["rev-parse", "HEAD"]);
 
         let step = verify_worklog_immutability_for_date(&root, "2026-03-09");
 
         assert_eq!(step.status, StepStatus::Pass);
         assert_eq!(step.severity, Severity::Blocking);
-        assert!(step
-            .detail
-            .as_deref()
-            .unwrap_or_default()
-            .contains("unchanged"));
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("unchanged"));
+        assert!(detail.contains(&baseline_commit[..7]));
     }
 
     #[test]
@@ -5620,9 +5620,10 @@ mod tests {
         )
         .unwrap();
         commit_all(&root, "[cycle 410] finalize worklog after review dispatch");
+        let baseline_commit = run_git(&root, &["rev-parse", "HEAD"]);
         fs::write(
             &worklog,
-            "# Cycle 410\n\n## Pre-dispatch state\n\n- **Pipeline status**: FAIL (4 warnings)\n- **Pipeline status (post-dispatch)**: PASS (2 warnings)\n",
+            "# Cycle 410\n\n## Pre-dispatch state\n\n- **Pipeline status**: PASS (3 warnings)\n- **Pipeline status (post-dispatch)**: PASS (2 warnings)\n",
         )
         .unwrap();
 
@@ -5633,7 +5634,8 @@ mod tests {
         let detail = step.detail.as_deref().unwrap_or_default();
         assert!(detail.contains("changed"));
         assert!(detail.contains("PASS (2 warnings)"));
-        assert!(detail.contains("FAIL (4 warnings)"));
+        assert!(detail.contains("PASS (3 warnings)"));
+        assert!(detail.contains(&baseline_commit[..7]));
     }
 
     #[test]
