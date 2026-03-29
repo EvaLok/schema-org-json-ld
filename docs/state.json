@@ -5886,10 +5886,10 @@
     {
       "dispatched_at": "2026-03-29T08:18:31Z",
       "issue": 1959,
-      "merged_at": null,
+      "merged_at": "2026-03-29T10:16:13Z",
       "model": "gpt-5.4",
-      "pr": null,
-      "status": "in_flight",
+      "pr": 1960,
+      "status": "merged",
       "title": "Fix C4.1 doc-validation empty error text in cycle-runner close-out"
     },
     {
@@ -6454,7 +6454,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 15,
     "issue": 1965,
