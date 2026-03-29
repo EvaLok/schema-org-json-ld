@@ -1624,7 +1624,7 @@ fn verify_worklog_immutability_for_date(repo_root: &Path, today: &str) -> StepRe
         Ok((status, detail)) => StepReport {
             name: WORKLOG_IMMUTABILITY_STEP_NAME,
             status,
-            severity: Severity::Warning,
+            severity: Severity::Blocking,
             exit_code: None,
             detail: Some(detail),
             findings: None,
@@ -3508,7 +3508,7 @@ mod tests {
         assert_eq!(report.steps[12].status, StepStatus::Pass);
         assert_eq!(report.steps[13].name, "worklog-immutability");
         assert_eq!(report.steps[13].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].severity, Severity::Warning);
+        assert_eq!(report.steps[13].severity, Severity::Blocking);
         assert_eq!(report.steps[14].name, "step-comments");
         assert_eq!(report.steps[14].status, StepStatus::Pass);
         assert_eq!(report.steps[15].name, "current-cycle-steps");
@@ -5027,7 +5027,7 @@ mod tests {
 
         assert_eq!(step.name, "worklog-immutability");
         assert_eq!(step.status, StepStatus::Pass);
-        assert_eq!(step.severity, Severity::Warning);
+        assert_eq!(step.severity, Severity::Blocking);
         assert_eq!(
             step.detail.as_deref(),
             Some("skipped: no worklog entry found for the current cycle")
@@ -5062,7 +5062,7 @@ mod tests {
         let step = verify_worklog_immutability_for_date(&root, "2026-03-09");
 
         assert_eq!(step.status, StepStatus::Pass);
-        assert_eq!(step.severity, Severity::Warning);
+        assert_eq!(step.severity, Severity::Blocking);
         assert!(step
             .detail
             .as_deref()
@@ -5071,7 +5071,7 @@ mod tests {
     }
 
     #[test]
-    fn worklog_immutability_warns_when_original_pipeline_status_changes() {
+    fn worklog_immutability_fails_when_original_pipeline_status_changes() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root = std::env::temp_dir().join(format!(
@@ -5104,7 +5104,7 @@ mod tests {
         let step = verify_worklog_immutability_for_date(&root, "2026-03-09");
 
         assert_eq!(step.status, StepStatus::Warn);
-        assert_eq!(step.severity, Severity::Warning);
+        assert_eq!(step.severity, Severity::Blocking);
         let detail = step.detail.as_deref().unwrap_or_default();
         assert!(detail.contains("changed"));
         assert!(detail.contains("FAIL (4 warnings)"));
@@ -5145,7 +5145,7 @@ mod tests {
         let step = verify_worklog_immutability_for_date(&root, "2026-03-09");
 
         assert_eq!(step.status, StepStatus::Pass);
-        assert_eq!(step.severity, Severity::Warning);
+        assert_eq!(step.severity, Severity::Blocking);
         assert!(step
             .detail
             .as_deref()
@@ -5193,7 +5193,7 @@ mod tests {
         let step = verify_worklog_immutability_for_date(&root, "2026-03-09");
 
         assert_eq!(step.status, StepStatus::Pass);
-        assert_eq!(step.severity, Severity::Warning);
+        assert_eq!(step.severity, Severity::Blocking);
         let detail = step.detail.as_deref().unwrap_or_default();
         assert!(detail.contains("120100-cycle-411-summary.md"));
         assert!(!detail.contains("120000-cycle-410-summary.md"));
