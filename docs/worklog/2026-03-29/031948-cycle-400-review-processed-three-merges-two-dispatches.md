@@ -34,6 +34,7 @@
 
 - **In-flight agent sessions**: 0
 - **Pipeline status**: PASS (5 warnings)
+- **Pipeline status (post-dispatch)**: PASS (2 blocking warnings, 3 warnings)
 - **Publish gate**: published
 
 ## Next steps
@@ -41,6 +42,10 @@
 1. Process any new Eva input or audit recommendations
 2. Consider schema implementation work now that pipeline improvements are merged
 3. Address chronic deferral-accumulation warnings (process-adherence, worklog-accuracy)
+
+## Next steps (post-dispatch)
+
+1. No in-flight sessions — plan next dispatch
 
 ## Commit receipts
 
