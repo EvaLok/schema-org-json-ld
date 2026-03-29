@@ -5850,8 +5850,10 @@
     {
       "dispatched_at": "2026-03-29T03:17:41Z",
       "issue": 1947,
+      "merged_at": "2026-03-29T04:58:31Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1948,
+      "status": "merged",
       "title": "Auto-refresh field_inventory markers in cycle-start for Eva-checked fields"
     },
     {
@@ -6400,7 +6402,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 16,
     "issue": 1951,
