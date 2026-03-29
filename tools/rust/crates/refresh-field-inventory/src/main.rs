@@ -95,6 +95,10 @@ const REFRESH_ONLY_FIELDS: &[RefreshOnlyField] = &[
         reason: "Previous-cycle linkage is workflow metadata maintained by other automation, not recomputed here.",
     },
     RefreshOnlyField {
+        name: "project_mode",
+        reason: "Project mode (normal/stabilization) is maintained by workflow transitions and human directives, not derived from repository contents.",
+    },
+    RefreshOnlyField {
         name: "publish_gate",
         reason: "Publish gate status depends on review workflow decisions and acknowledgements, not local repository inspection alone.",
     },
@@ -672,6 +676,14 @@ mod tests {
         let state = parse_state(json!({}));
 
         assert!(verify_field(repo.path(), &state, "review_agent").is_ok());
+    }
+
+    #[test]
+    fn verify_field_allows_project_mode_as_refresh_only_field() {
+        let repo = create_repo_fixture("verify-project-mode-refresh-only");
+        let state = parse_state(json!({}));
+
+        assert!(verify_field(repo.path(), &state, "project_mode").is_ok());
     }
 
     #[test]
