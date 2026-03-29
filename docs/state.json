@@ -6079,8 +6079,8 @@
   ],
   "cycle_phase": {
     "cycle": 400,
-    "phase": "work",
-    "phase_entered_at": "2026-03-29T03:03:26Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-29T03:19:09Z"
   },
   "deferred_findings": [
     {
@@ -6228,11 +6228,11 @@
       },
       "dispatch_log_latest": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 399"
+        "last_refreshed": "cycle 400"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 399"
+        "last_refreshed": "cycle 400"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
@@ -6248,7 +6248,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 399"
+        "last_refreshed": "cycle 400"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -6268,7 +6268,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 399"
+        "last_refreshed": "cycle 400"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -6280,7 +6280,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 399"
+        "last_refreshed": "cycle 400"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -6304,11 +6304,11 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 399"
+        "last_refreshed": "cycle 400"
       },
       "review_events_verified_through_cycle": {
         "cadence": "every cycle (after verifying review events on merged PRs)",
-        "last_refreshed": "cycle 399"
+        "last_refreshed": "cycle 400"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -6316,7 +6316,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 399"
+        "last_refreshed": "cycle 400"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -6390,13 +6390,13 @@
   },
   "in_flight_sessions": 2,
   "last_cycle": {
-    "duration_minutes": 11,
+    "duration_minutes": 16,
     "issue": 1944,
     "number": 400,
-    "summary": "4 dispatches, 1 merges (PR #1936)",
-    "timestamp": "2026-03-29T03:03:25Z"
+    "summary": "3 merges (PRs #1943, #1939, #1941), 2 dispatches (#1945, #1947), c399 review processed (6 findings, 5/5 complacency)",
+    "timestamp": "2026-03-29T03:19:09Z"
   },
-  "last_eva_comment_check": "2026-03-29T03:03:25Z",
+  "last_eva_comment_check": "2026-03-29T03:19:09Z",
   "last_tool_audit_cycle": 399,
   "open_questions_for_eva": [],
   "pending_audit_implementations": [
