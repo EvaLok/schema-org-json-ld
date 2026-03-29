@@ -6156,7 +6156,8 @@
     "total_classes_converted": 54
   },
   "cycle_issues": [
-    1968
+    1968,
+    1973
   ],
   "cycle_phase": {
     "cycle": 404,
@@ -6495,7 +6496,7 @@
   "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 17,
-    "issue": 1968,
+    "issue": 1973,
     "number": 404,
     "summary": "2 dispatches, 1 merge (PR #1967), field inventory refresh, deferral resolution",
     "timestamp": "2026-03-29T12:26:04Z"
@@ -6538,7 +6539,7 @@
     "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
     "started_at": "cycle 199"
   },
-  "previous_cycle_issue": 1965,
+  "previous_cycle_issue": 1968,
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
     "burn_in_target": 6,
