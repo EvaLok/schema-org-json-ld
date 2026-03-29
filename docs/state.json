@@ -6458,7 +6458,7 @@
       },
       "project_mode": {
         "cadence": "when mode or counter changes",
-        "last_refreshed": "cycle 402"
+        "last_refreshed": "cycle 408"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
@@ -6490,7 +6490,7 @@
       },
       "review_events_verified_through_cycle": {
         "cadence": "managed by verify-review-events tool only",
-        "last_refreshed": "cycle 402"
+        "last_refreshed": "cycle 408"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -6506,7 +6506,7 @@
       },
       "schema_status.planned_next": {
         "cadence": "after planning or completing types",
-        "last_refreshed": "cycle 397"
+        "last_refreshed": "cycle 408"
       },
       "schema_status.property_gap_audit": {
         "cadence": "after property gap fixes",
@@ -6562,11 +6562,11 @@
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
-        "last_refreshed": "cycle 397"
+        "last_refreshed": "cycle 408"
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 402"
+        "last_refreshed": "cycle 408"
       }
     }
   },
@@ -10890,7 +10890,7 @@
     "last_review_cycle": 407
   },
   "review_dispatch_consecutive": 0,
-  "review_events_verified_through_cycle": 402,
+  "review_events_verified_through_cycle": 407,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
