@@ -5895,10 +5895,10 @@
     {
       "dispatched_at": "2026-03-29T08:19:00Z",
       "issue": 1961,
-      "merged_at": null,
+      "merged_at": "2026-03-29T10:15:38Z",
       "model": "gpt-5.4",
-      "pr": null,
-      "status": "in_flight",
+      "pr": 1962,
+      "status": "merged",
       "title": "Add project_mode to REFRESH_ONLY_FIELDS in refresh-field-inventory"
     },
     {
@@ -6454,7 +6454,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 15,
     "issue": 1965,
