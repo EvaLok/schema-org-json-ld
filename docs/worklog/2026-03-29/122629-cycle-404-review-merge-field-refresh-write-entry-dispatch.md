@@ -24,9 +24,14 @@
 
 - **In-flight agent sessions**: 1
 - **Pipeline status**: PASS (3 warnings)
+- **Pipeline status (post-dispatch)**: PASS (1 blocking warning, 3 warnings)
 - **Publish gate**: published
 
 ## Next steps
+
+1. Review and iterate on PR from [#1975](https://github.com/EvaLok/schema-org-json-ld/issues/1975) (Add temporal-ordering check to pipeline-check step-comments verification) when Copilot completes
+
+## Next steps (post-dispatch)
 
 1. Review and iterate on PR from [#1975](https://github.com/EvaLok/schema-org-json-ld/issues/1975) (Add temporal-ordering check to pipeline-check step-comments verification) when Copilot completes
 
