@@ -5913,8 +5913,9 @@
     {
       "dispatched_at": "2026-03-29T10:30:30Z",
       "issue": 1966,
+      "merged_pr": 1967,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "merged",
       "title": "[Cycle Review] Cycle 403 end-of-cycle review"
     }
   ],
@@ -6477,7 +6478,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 14,
     "issue": 1968,
