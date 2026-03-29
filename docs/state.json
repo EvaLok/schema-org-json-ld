@@ -5805,10 +5805,10 @@
     {
       "dispatched_at": "2026-03-28T22:39:00Z",
       "issue": 1935,
-      "merged_at": null,
+      "merged_at": "2026-03-29T00:17:36Z",
       "model": "gpt-5.4",
-      "pr": null,
-      "status": "in_flight",
+      "pr": 1936,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 398 end-of-cycle review"
     }
   ],
@@ -6174,7 +6174,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 398"
+        "last_refreshed": "cycle 399"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -6322,7 +6322,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 27,
     "issue": 1937,
