@@ -5958,8 +5958,10 @@
     {
       "dispatched_at": "2026-03-29T18:17:16Z",
       "issue": 1981,
+      "merged_at": "2026-03-29T20:12:36Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1982,
+      "status": "merged",
       "title": "Fix fail-open compatibility fallback in pipeline-check temporal-ordering"
     },
     {
@@ -6545,7 +6547,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 14,
     "issue": 1987,
