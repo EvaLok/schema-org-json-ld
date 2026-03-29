@@ -6657,9 +6657,10 @@
           "added_cycle": 201,
           "category": "process-adherence",
           "chosen_path": "structural-fix",
-          "rationale": "process-adherence findings in cycles 195-200 consistently flagged missing per-step comments on cycle issues. The structural fix is the post-step tool (merged cycle 200, PR #846) plus the existing STARTUP_CHECKLIST mandate. Cycle 201 is the first cycle using post-step for every step. If the category persists after tool adoption, recalibrate.",
-          "root_cause": "Orchestrator posted batched summary comments instead of individual per-step comments. The post-step tool did not exist until cycle 200, and was not used in its merge cycle due to the adoption gap pattern (audit #160).",
-          "verification_cycle": 201
+          "rationale": "Cycle 406 chronic-category refresh: process-adherence appeared in 5/7 reviews (cycles 399-404). Current findings shifted from missing step comments to gate overrides (advancing past C4.1 FAIL) and retroactive step backfilling. Latest structural fix: temporal-ordering check (PR #1976, cycle 405) detects retroactively posted steps. Cycle 406 is the first validation cycle with this check active. If category persists, investigate gate-override enforcement.",
+          "root_cause": "Three sub-causes: (1) Missing step comments (fixed by post-step tool, cycle 200). (2) Retroactive step posting (addressed by temporal-ordering check, cycle 405). (3) Gate overrides — advancing past blocking C4.1/C5.5 failures (no mechanical enforcement yet).",
+          "updated_cycle": 406,
+          "verification_cycle": 406
         },
         {
           "added_cycle": 204,
@@ -6682,10 +6683,10 @@
           "added_cycle": 243,
           "category": "state-integrity",
           "chosen_path": "structural-fix",
-          "rationale": "Re-filed cycle 267 per review cycle 266 F1: previous cross-check only verified freshness-marker/value consistency, not that the value was derived from actual GitHub review events. Third structural fix: dispatch tool to query PR review events from GitHub API and verify review_events_verified_through_cycle against real data. Cycle 268 review identified verify-review-events tool has correctness gaps (accepts any review state, fail-open). Downgraded cycle 269. Cycle 270: PR #1300 merged hardened tool (APPROVED-only filter, self-review rejection, post-merge rejection, fail-closed). Tool re-run verified successfully against cycles 269-270 (marker advanced to 270). Unit tests cover all filtering paths. Code-PR hard case will be naturally tested at next schema implementation merge.",
-          "root_cause": "Three sub-causes: (1) cycle-complete mechanically bumping freshness markers (fixed cycle 243). (2) Orchestrator manually bumping markers without verification (caught by cross-check cycle 266). (3) Cross-check itself is superficial — passes on manually asserted values (identified cycle 266 review F1). (4) verify-review-events tool accepts any review state and fails open on missing PRs (fixed cycle 270, PR #1300).",
-          "updated_cycle": 282,
-          "verification_cycle": 282
+          "rationale": "Cycle 406 chronic-category refresh: state-integrity appeared in 5/7 reviews (cycles 399-405). Current findings: freshness markers not updated when analysis is performed (cycle 405 F5 — chronic_category_responses.last_refreshed stale). Previous structural fixes addressed review_events verification (cycle 270/282). The field-inventory pipeline check catches stale markers mechanically. Actioned this cycle: updated chronic_category_responses.last_refreshed to cycle 406. All four chronic category response entries updated with current analysis.",
+          "root_cause": "Four sub-causes: (1) cycle-complete mechanically bumping markers (fixed cycle 243). (2) Manual marker bumping without verification (caught by cross-check cycle 266). (3) verify-review-events fail-open (fixed cycle 270). (4) Freshness markers not updated when associated analysis is performed (behavioral, partially caught by field-inventory check).",
+          "updated_cycle": 406,
+          "verification_cycle": 406
         },
         {
           "added_cycle": 246,
@@ -6698,10 +6699,11 @@
         {
           "added_cycle": 250,
           "category": "journal-quality",
-          "chosen_path": "structural-fix",
-          "rationale": "journal-quality findings in cycles 244-249 are critical (phantom receipt hashes, premature closure claims, disposition language inaccuracies). Unlike the cycle 161 recalibration (positive confirmatory findings), these are genuine defects. The root cause is manual journal generation — receipt hashes copied from memory, disposition language not validated against authoritative sources. The structural fix is improving write-entry to auto-derive journal receipt data from cycle-receipts output and validate disposition language against state.json. This is the same root cause as chronic worklog-accuracy. Partial fix merged (write-entry PR #1197 cycle 251). Remaining root cause: stale commitments generated before close-out steps complete. Category persists at 3 reviews since cycle 250.",
-          "root_cause": "Journal follow-through receipts and disposition claims are hand-written by the orchestrator rather than derived from cycle-receipts or state.json. This produces phantom hashes (F3 cycle 249) and premature closure claims (F4 cycle 249).",
-          "verification_cycle": 257
+          "chosen_path": "behavioral-recalibrate",
+          "rationale": "Cycle 406 chronic-category refresh: journal-quality appeared in 6/7 reviews (cycles 399-405). Current findings shifted from phantom receipts (fixed by write-entry PR #1197) to imprecise commitment observables and optimistic self-grading (cycles 399-405). Commitment follow-through claims 'FOLLOWED' when the stated observable was not actually met (cycle 405 F4). No structural fix is possible — this requires behavioral discipline: each commitment must have a binary pass/fail observable grounded in verifiable artifacts (issue URLs, commit SHAs, pipeline output), and grading must be honest against the stated observable.",
+          "root_cause": "Commitment observables are vague or self-referential. The orchestrator defines observables loosely enough that partial completion can be claimed as full completion. Grading is optimistic rather than strict.",
+          "updated_cycle": 406,
+          "verification_cycle": 406
         },
         {
           "added_cycle": 260,
@@ -6716,9 +6718,10 @@
           "added_cycle": 383,
           "category": "worklog-accuracy",
           "chosen_path": "behavioral-fix",
-          "rationale": "worklog-accuracy findings in cycles 370-372 consistently flagged stale disposition language — calling findings 'deferred (fix in-flight)' after the fix had already merged in the same cycle. The root cause is that worklog/journal are written early in close-out before final state reconciliation. The fix is a behavioral discipline: at C3 (worklog/journal write time), re-verify all disposition claims against current merged state. When a finding's named fix has merged, classify as 'actioned' not 'deferred'. No tool change needed — write-entry already derives from state.json; the orchestrator must verify disposition freshness before committing.",
-          "root_cause": "Orchestrator carries forward disposition classifications from step 0.5 into C3 worklog without rechecking whether same-cycle merges have resolved the underlying findings. The classification is correct at process-review time but stale by worklog-write time.",
-          "verification_cycle": 383
+          "rationale": "Cycle 406 chronic-category refresh: worklog-accuracy appeared in 6/7 reviews (cycles 399-405). Remaining sub-causes: (a) Issues processed section semantics unclear (cycle 405 F2), (b) pipeline status records C1 not C5.5 (cycle 405 F3, partially mitigated by C6.5 post-dispatch addendum). Previous behavioral fix for disposition staleness remains in effect. Next verification: check if cycle 406 review flags either sub-cause.",
+          "root_cause": "Two remaining sub-causes: (1) disposition staleness when writing worklog at C3 (original cause, cycle 383), (2) worklog section semantics inconsistency for Issues processed vs narrative closures.",
+          "updated_cycle": 406,
+          "verification_cycle": 406
         }
       ]
     },
@@ -10738,9 +10741,51 @@
         ],
         "ignored": 0,
         "note": "Cycle 404 review processed in resumed session. worklog-accuracy: cannot retroactively fix immutable worklog, committed to accurate C5.5 reporting going forward. process-adherence: behavioral change for gate strictness. journal-quality: actioned by writing full-structure journal this session."
+      },
+      {
+        "actioned": 4,
+        "categories": [
+          "code-quality",
+          "complacency-detection",
+          "journal-quality",
+          "state-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 405,
+        "deferred": 2,
+        "finding_count": 6,
+        "finding_dispositions": [
+          {
+            "category": "code-quality",
+            "disposition": "deferred"
+          },
+          {
+            "category": "worklog-accuracy",
+            "disposition": "actioned"
+          },
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "actioned"
+          },
+          {
+            "category": "state-integrity",
+            "disposition": "actioned"
+          },
+          {
+            "category": "complacency-detection",
+            "disposition": "actioned"
+          }
+        ],
+        "ignored": 0,
+        "note": "Cycle 405 review (6 findings, complacency 2/5). F1 code-quality (fail-open fallback): deferred — dispatched fix as #1981. F2 worklog-accuracy (issues processed contradiction): actioned — will reconcile section semantics in cycle 406 worklog. F3 worklog-accuracy (C1 vs C5.5 pipeline status): deferred — structural timing issue partially mitigated by C6.5 addendum. F4 journal-quality (commitment grading): actioned — strict binary observable grading this cycle. F5 state-integrity (chronic_category freshness): actioned — updated marker to cycle 406. F6 complacency-detection (narrative-only analysis): actioned — produced per-category artifact-backed output with updated state entries."
       }
     ],
-    "last_review_cycle": 404
+    "last_review_cycle": 405
   },
   "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 402,
