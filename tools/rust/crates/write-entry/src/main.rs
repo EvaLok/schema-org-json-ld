@@ -5853,7 +5853,7 @@ Reflective log for the schema-org-json-ld orchestrator.
             content.contains("\n---\n\n## 2026-03-06 — Cycle 154: From convention to enforcement")
         );
         assert!(content.contains(
-            "Worklog: [cycle 154](../worklog/2026-03-06/051458-from-convention-to-enforcement.md)"
+            "Worklog: [cycle 154](../worklog/2026-03-06/051458-cycle-154-from-convention-to-enforcement.md)"
         ));
         assert_eq!(content.matches("Cycle 154: From convention to enforcement").count(), 1);
         assert_eq!(
@@ -5950,7 +5950,7 @@ Reflective log for the schema-org-json-ld orchestrator.
         let path = execute_journal(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
         assert!(content
-            .contains("Worklog: [cycle 154](../worklog/2026-03-06/051458-cycle-reflections.md)"));
+            .contains("Worklog: [cycle 154](../worklog/2026-03-06/051458-cycle-154-cycle-reflections.md)"));
         assert!(content.contains("### Decisions"));
         assert!(content.contains(
             "Chose to defer [#829](https://github.com/EvaLok/schema-org-json-ld/issues/829)"
