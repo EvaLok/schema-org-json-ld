@@ -6272,7 +6272,8 @@
       "category": "worklog-accuracy",
       "deadline_cycle": 408,
       "deferred_cycle": 403,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-406.md"
     },
     {
       "category": "process-adherence",
@@ -6455,7 +6456,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 406"
+        "last_refreshed": "cycle 407"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -10801,9 +10802,37 @@
         ],
         "ignored": 0,
         "note": "Cycle 405 review (6 findings, complacency 2/5). F1 code-quality (fail-open fallback): deferred — dispatched fix as #1981. F2 worklog-accuracy (issues processed contradiction): actioned — will reconcile section semantics in cycle 406 worklog. F3 worklog-accuracy (C1 vs C5.5 pipeline status): deferred — structural timing issue partially mitigated by C6.5 addendum. F4 journal-quality (commitment grading): actioned — strict binary observable grading this cycle. F5 state-integrity (chronic_category freshness): actioned — updated marker to cycle 406. F6 complacency-detection (narrative-only analysis): actioned — produced per-category artifact-backed output with updated state entries."
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "journal-quality",
+          "process-adherence",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 3,
+        "cycle": 406,
+        "deferred": 1,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "worklog-accuracy",
+            "disposition": "actioned"
+          },
+          {
+            "category": "process-adherence",
+            "disposition": "deferred"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "actioned"
+          }
+        ],
+        "ignored": 0,
+        "note": "Cycle 406 review (3 findings, complacency 3/5). F1 worklog-accuracy (PASS when gate failed): actioned - will write pipeline status after final gate this cycle. F2 process-adherence (gate override, continued past C5.5 fail): deferred - requires cycle-runner enforcement modification. F3 journal-quality (stale journal, auto-link pattern): actioned - using plain text finding references this cycle."
       }
     ],
-    "last_review_cycle": 405
+    "last_review_cycle": 406
   },
   "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 402,
