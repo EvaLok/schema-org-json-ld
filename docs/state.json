@@ -5945,6 +5945,13 @@
       "pr": 1976,
       "status": "merged",
       "title": "Add temporal-ordering check to pipeline-check step-comments verification"
+    },
+    {
+      "dispatched_at": "2026-03-29T16:31:52Z",
+      "issue": 1978,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "End-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -6174,9 +6181,10 @@
     1977
   ],
   "cycle_phase": {
+    "completed_at": "2026-03-29T16:31:52Z",
     "cycle": 405,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-29T16:22:36Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-29T16:31:52Z"
   },
   "deferred_findings": [
     {
@@ -6247,7 +6255,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#1971 [Cycle Review] Cycle 404 end-of-cycle review (cycle 404)",
+  "dispatch_log_latest": "#1978 End-of-cycle review (cycle 405)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6513,12 +6521,12 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 13,
     "issue": 1977,
     "number": 405,
-    "summary": "Merged PR #1976 (temporal-ordering check for pipeline-check). Processed housekeeping (3 dead branches deleted, audit-inbound #1974 closed). 0 dispatches (review pending at close-out).",
+    "summary": "1 dispatch, 1 merge: Merged PR #1976 (temporal-ordering check for pipeline-check). Processed housekeeping (3 dead branches deleted, audit-inbound #1974 closed).",
     "timestamp": "2026-03-29T16:22:36Z"
   },
   "last_eva_comment_check": "2026-03-29T16:22:36Z",
@@ -10726,7 +10734,7 @@
     ],
     "last_review_cycle": 404
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 402,
   "schema_status": {
     "directory_layout": {
