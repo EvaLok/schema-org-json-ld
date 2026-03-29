@@ -24,12 +24,18 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 1
+- **In-flight agent sessions (post-dispatch)**: 2
 - **Pipeline status**: PASS (3 warnings)
 - **Publish gate**: published
 
 ## Next steps
 
 1. Review and iterate on PR from [#1993](https://github.com/EvaLok/schema-org-json-ld/issues/1993) when Copilot completes
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#1993](https://github.com/EvaLok/schema-org-json-ld/issues/1993) (Fix worklog-immutability baseline to use last cycle commit instead of first) when Copilot completes
+2. Review and iterate on PR from [#1995](https://github.com/EvaLok/schema-org-json-ld/issues/1995) ([Cycle Review] Cycle 408 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
