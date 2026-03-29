@@ -184,6 +184,10 @@ trait CommandRunner {
         &self,
         issue: u64,
     ) -> Result<Vec<(String, String)>, String> {
+        // Legacy/mock runners that only provide concatenated comment bodies fall back to
+        // empty timestamps here. Temporal-ordering checks explicitly ignore empty
+        // timestamps, which preserves existing tests while keeping the new check fail-closed
+        // for real timestamp payloads.
         self.fetch_issue_comment_bodies(issue)
             .map(|comment_bodies| vec![(comment_bodies, String::new())])
     }
@@ -1273,7 +1277,12 @@ fn collect_step_comment_timestamps(
             continue;
         }
         let timestamp = DateTime::parse_from_rfc3339(created_at)
-            .map_err(|error| format!("invalid issue comment timestamp '{}': {}", created_at, error))?
+            .map_err(|error| {
+                format!(
+                    "failed to parse issue comment timestamp '{}' as RFC3339: {}",
+                    created_at, error
+                )
+            })?
             .with_timezone(&Utc);
         for line in body.lines() {
             let Some(step_id) = detect_temporal_ordering_step_id(line, cycle) else {
@@ -1308,6 +1317,13 @@ fn record_earliest_step_timestamp(
             }
         })
         .or_insert(timestamp);
+}
+
+fn compare_timed_step_entries(
+    left: &(String, DateTime<Utc>),
+    right: &(String, DateTime<Utc>),
+) -> std::cmp::Ordering {
+    left.1.cmp(&right.1).then_with(|| left.0.cmp(&right.0))
 }
 
 fn assess_temporal_step_ordering(
@@ -1346,9 +1362,8 @@ fn assess_temporal_step_ordering(
         .into_iter()
         .filter(|(_, timestamp)| *timestamp <= latest_startup)
         .collect::<Vec<_>>();
-    misordered_startup.sort_by(|left, right| left.1.cmp(&right.1).then_with(|| left.0.cmp(&right.0)));
-    misordered_close_out
-        .sort_by(|left, right| left.1.cmp(&right.1).then_with(|| left.0.cmp(&right.0)));
+    misordered_startup.sort_by(compare_timed_step_entries);
+    misordered_close_out.sort_by(compare_timed_step_entries);
 
     Some(TemporalOrderingWarning {
         detail: format!(
@@ -1360,11 +1375,16 @@ fn assess_temporal_step_ordering(
 }
 
 fn format_timed_step_entries(step_entries: &[(String, DateTime<Utc>)]) -> String {
-    step_entries
-        .iter()
-        .map(|(step_id, timestamp)| format!("{step_id}@{}", timestamp.to_rfc3339()))
-        .collect::<Vec<_>>()
-        .join(", ")
+    let mut formatted = String::new();
+    for (index, (step_id, timestamp)) in step_entries.iter().enumerate() {
+        if index > 0 {
+            formatted.push_str(", ");
+        }
+        formatted.push_str(step_id);
+        formatted.push('@');
+        formatted.push_str(&timestamp.to_rfc3339());
+    }
+    formatted
 }
 
 fn acknowledged_step_comment_ids(
@@ -8590,7 +8610,7 @@ mod tests {
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("invalid issue comment timestamp"));
+            .contains("failed to parse issue comment timestamp"));
     }
 
     #[test]
