@@ -6175,7 +6175,7 @@
   "cycle_phase": {
     "cycle": 404,
     "phase": "close_out",
-    "phase_entered_at": "2026-03-29T12:26:04Z"
+    "phase_entered_at": "2026-03-29T14:29:21Z"
   },
   "deferred_findings": [
     {
@@ -6514,13 +6514,13 @@
   },
   "in_flight_sessions": 1,
   "last_cycle": {
-    "duration_minutes": 17,
+    "duration_minutes": 123,
     "issue": 1973,
     "number": 404,
-    "summary": "2 dispatches, 1 merge (PR #1967), field inventory refresh, deferral resolution",
-    "timestamp": "2026-03-29T12:26:04Z"
+    "summary": "Resumed cycle 404: 2 PR merges (#1970 write-entry fix, #1972 review artifact), review processed (3 findings), audit #343 processed, 1 dispatch (#1975 temporal-ordering check)",
+    "timestamp": "2026-03-29T14:29:21Z"
   },
-  "last_eva_comment_check": "2026-03-29T12:26:04Z",
+  "last_eva_comment_check": "2026-03-29T14:29:21Z",
   "last_tool_audit_cycle": 403,
   "open_questions_for_eva": [],
   "pending_audit_implementations": [
