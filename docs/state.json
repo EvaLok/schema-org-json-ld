@@ -5968,7 +5968,7 @@
       "dispatched_at": "2026-03-29T18:28:00Z",
       "issue": 1983,
       "model": "gpt-5.4",
-      "status": "closed_duplicate",
+      "status": "closed_without_merge",
       "title": "End-of-cycle review"
     },
     {
