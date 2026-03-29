@@ -5817,6 +5817,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Make worklog-immutability pipeline check blocking (FAIL) instead of warning"
+    },
+    {
+      "dispatched_at": "2026-03-29T00:25:12Z",
+      "issue": 1940,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Update last_cycle.summary in record-dispatch to include the dispatch"
     }
   ],
   "audit_dropped": [
@@ -6070,7 +6077,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#1938 Make worklog-immutability pipeline check blocking (FAIL) instead of warning (cycle 399)",
+  "dispatch_log_latest": "#1940 Update last_cycle.summary in record-dispatch to include the dispatch (cycle 399)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6336,7 +6343,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 27,
     "issue": 1937,
