@@ -5940,8 +5940,10 @@
       "addresses_finding": "404:2",
       "dispatched_at": "2026-03-29T14:25:00Z",
       "issue": 1975,
+      "merged_at": "2026-03-29T16:19:20Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1976,
+      "status": "merged",
       "title": "Add temporal-ordering check to pipeline-check step-comments verification"
     }
   ],
@@ -6363,7 +6365,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 404"
+        "last_refreshed": "cycle 405"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -6511,7 +6513,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 123,
     "issue": 1977,
