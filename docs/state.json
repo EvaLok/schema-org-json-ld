@@ -5841,8 +5841,10 @@
     {
       "dispatched_at": "2026-03-29T03:17:29Z",
       "issue": 1945,
+      "merged_at": "2026-03-29T04:58:02Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1946,
+      "status": "merged",
       "title": "Fix post-cycle-complete receipt filtering in cycle-receipts"
     },
     {
@@ -5855,10 +5857,10 @@
     {
       "dispatched_at": "2026-03-29T03:25:00Z",
       "issue": 1949,
-      "merged_at": null,
+      "merged_at": "2026-03-29T04:58:02Z",
       "model": "gpt-5.4",
-      "pr": null,
-      "status": "in_flight",
+      "pr": 1950,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 400 end-of-cycle review"
     }
   ],
@@ -6398,7 +6400,7 @@
       }
     }
   },
-  "in_flight_sessions": 3,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 16,
     "issue": 1951,
