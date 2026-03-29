@@ -5979,6 +5979,13 @@
       "pr": 1986,
       "status": "merged",
       "title": "[Cycle Review] Cycle 406 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-29T20:19:25Z",
+      "issue": 1988,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Align write-entry auto-receipts with cycle-complete boundary"
     }
   ],
   "audit_dropped": [
@@ -6282,7 +6289,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#1985 [Cycle Review] Cycle 406 end-of-cycle review (cycle 406)",
+  "dispatch_log_latest": "#1988 Align write-entry auto-receipts with cycle-complete boundary (cycle 407)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6548,12 +6555,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 14,
     "issue": 1987,
     "number": 407,
-    "summary": "3 dispatches, 1 merges (PR #1979)",
+    "summary": "4 dispatches, 1 merges (PR #1979)",
     "timestamp": "2026-03-29T20:07:36Z"
   },
   "last_eva_comment_check": "2026-03-29T20:07:36Z",
@@ -10582,8 +10589,8 @@
         ],
         "complacency_score": 5,
         "cycle": 399,
-        "deferred": 3,
-        "dispatch_created": 2,
+        "deferred": 2,
+        "dispatch_created": 3,
         "finding_count": 6,
         "finding_dispositions": [
           {
@@ -10608,7 +10615,7 @@
           },
           {
             "category": "receipt-scope",
-            "disposition": "deferred"
+            "disposition": "dispatch_created"
           }
         ],
         "ignored": 0,
@@ -10834,7 +10841,7 @@
     ],
     "last_review_cycle": 406
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 402,
   "schema_status": {
     "directory_layout": {
