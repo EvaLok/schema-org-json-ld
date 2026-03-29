@@ -5993,7 +5993,7 @@
       "dispatched_at": "2026-03-29T22:17:51Z",
       "issue": 1993,
       "model": "gpt-5.4",
-      "status": "dispatched",
+      "status": "in_flight",
       "title": "Fix worklog-immutability baseline to use last cycle commit instead of first"
     }
   ],
