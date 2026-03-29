@@ -44,6 +44,8 @@ const AGENT_SESSION_STATUS_TIMESTAMP_FIELDS: [&str; 5] = [
     "status_changed_at",
     "updated_at",
 ];
+const STATE_CYCLE_PHASE_COMPLETED_AT_LABEL: &str = "docs/state.json cycle_phase.completed_at";
+const STATE_LAST_CYCLE_TIMESTAMP_LABEL: &str = "docs/state.json last_cycle.timestamp";
 
 #[derive(Parser)]
 #[command(name = "write-entry")]
@@ -1435,7 +1437,7 @@ fn cycle_receipt_boundary_timestamp(state: Option<&StateJson>) -> Result<Option<
         .as_deref()
         .map(str::trim)
         .filter(|value| !value.is_empty())
-        .map(|value| ("docs/state.json cycle_phase.completed_at", value))
+        .map(|value| (STATE_CYCLE_PHASE_COMPLETED_AT_LABEL, value))
         .or_else(|| {
             state
                 .last_cycle
@@ -1443,7 +1445,7 @@ fn cycle_receipt_boundary_timestamp(state: Option<&StateJson>) -> Result<Option<
                 .as_deref()
                 .map(str::trim)
                 .filter(|value| !value.is_empty())
-                .map(|value| ("docs/state.json last_cycle.timestamp", value))
+                .map(|value| (STATE_LAST_CYCLE_TIMESTAMP_LABEL, value))
         });
 
     let Some((label, timestamp)) = completed_at else {
