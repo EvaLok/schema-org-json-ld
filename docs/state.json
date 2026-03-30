@@ -6404,6 +6404,19 @@
       "category": "journal-quality",
       "deadline_cycle": 414,
       "deferred_cycle": 409,
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-411.md"
+    },
+    {
+      "category": "state-integrity",
+      "deadline_cycle": 416,
+      "deferred_cycle": 411,
+      "resolved": false
+    },
+    {
+      "category": "test-gap",
+      "deadline_cycle": 416,
+      "deferred_cycle": 411,
       "resolved": false
     }
   ],
@@ -11081,9 +11094,42 @@
         ],
         "ignored": 0,
         "note": "F1: reclassified cycle 409 F2 from actioned to deferred (actioned). F2: fixed resolved_ref to point at fix evidence not complaint artifact (actioned). F3: fixed review_dispatch_consecutive 1→0 (actioned). F4: pipeline status disclosure — behavioral, will apply in future worklogs (deferred)."
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "journal-quality",
+          "state-integrity",
+          "test-gap",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 3,
+        "cycle": 411,
+        "deferred": 3,
+        "finding_count": 4,
+        "finding_dispositions": [
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "actioned"
+          },
+          {
+            "category": "state-integrity",
+            "disposition": "deferred"
+          },
+          {
+            "category": "test-gap",
+            "disposition": "deferred"
+          }
+        ],
+        "ignored": 0,
+        "note": "F2 actioned: will grade correct commitments this cycle. F1/F3/F4 deferred: require policy/tool changes."
       }
     ],
-    "last_review_cycle": 410
+    "last_review_cycle": 411
   },
   "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 407,
