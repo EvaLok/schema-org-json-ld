@@ -23,13 +23,14 @@ const DEFERRAL_DEADLINES_STEP_NAME: &str = "deferral-deadlines";
 const MASS_DEFERRAL_GATE_STEP_NAME: &str = "mass-deferral-gate";
 const DISPATCH_FINDING_RECONCILIATION_STEP_NAME: &str = "dispatch-finding-reconciliation";
 const DOC_VALIDATION_STEP_NAME: &str = "doc-validation";
+const FROZEN_COMMIT_VERIFY_STEP_NAME: &str = "frozen-commit-verify";
 const WORKLOG_DEDUP_STEP_NAME: &str = "worklog-dedup";
 const WORKLOG_IMMUTABILITY_STEP_NAME: &str = "worklog-immutability";
 const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const CURRENT_CYCLE_STEPS_STEP_NAME: &str = "current-cycle-steps";
 const WORKLOG_PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
-const STEP_NAMES: [&str; 16] = [
+const STEP_NAMES: [&str; 17] = [
     "metric-snapshot",
     "field-inventory",
     "housekeeping-scan",
@@ -42,6 +43,7 @@ const STEP_NAMES: [&str; 16] = [
     MASS_DEFERRAL_GATE_STEP_NAME,
     DISPATCH_FINDING_RECONCILIATION_STEP_NAME,
     DOC_VALIDATION_STEP_NAME,
+    FROZEN_COMMIT_VERIFY_STEP_NAME,
     WORKLOG_DEDUP_STEP_NAME,
     WORKLOG_IMMUTABILITY_STEP_NAME,
     STEP_COMMENTS_STEP_NAME,
@@ -419,6 +421,9 @@ fn run_pipeline_with_excluded_steps(
     if !is_excluded_step(DOC_VALIDATION_STEP_NAME, exclude_steps) {
         steps.push(verify_doc_validation(repo_root, pipeline_status, runner));
     }
+    if !is_excluded_step(FROZEN_COMMIT_VERIFY_STEP_NAME, exclude_steps) {
+        steps.push(verify_frozen_commit(repo_root));
+    }
     if !is_excluded_step(WORKLOG_DEDUP_STEP_NAME, exclude_steps) {
         steps.push(verify_worklog_dedup(repo_root));
     }
@@ -732,6 +737,10 @@ fn verify_worklog_immutability(repo_root: &Path) -> StepReport {
     verify_worklog_immutability_for_date(repo_root, &current_utc_timestamp()[..10])
 }
 
+fn verify_frozen_commit(repo_root: &Path) -> StepReport {
+    verify_frozen_commit_for_date(repo_root, &current_utc_timestamp()[..10])
+}
+
 fn verify_doc_validation_for_date(
     repo_root: &Path,
     today: &str,
@@ -915,6 +924,29 @@ fn verify_doc_validation_for_date(
             findings: None,
             summary: None,
         }
+    }
+}
+
+fn verify_frozen_commit_for_date(repo_root: &Path, today: &str) -> StepReport {
+    match frozen_commit_status_for_date(repo_root, today) {
+        Ok((status, detail)) => StepReport {
+            name: FROZEN_COMMIT_VERIFY_STEP_NAME,
+            status,
+            severity: Severity::Blocking,
+            exit_code: None,
+            detail: Some(detail),
+            findings: None,
+            summary: None,
+        },
+        Err(error) => StepReport {
+            name: FROZEN_COMMIT_VERIFY_STEP_NAME,
+            status: StepStatus::Error,
+            severity: Severity::Blocking,
+            exit_code: None,
+            detail: Some(error),
+            findings: None,
+            summary: None,
+        },
     }
 }
 
@@ -1890,6 +1922,91 @@ fn verify_worklog_immutability_for_date(repo_root: &Path, today: &str) -> StepRe
             summary: None,
         },
     }
+}
+
+fn frozen_commit_status_for_date(repo_root: &Path, today: &str) -> Result<(StepStatus, String), String> {
+    let state = read_state_value(repo_root)?;
+    let phase = state.pointer("/cycle_phase/phase").and_then(Value::as_str);
+    if phase != Some("close_out") {
+        return Ok((
+            StepStatus::Pass,
+            "skipped: frozen commit verification only runs during close_out".to_string(),
+        ));
+    }
+
+    let cycle = current_cycle_from_state(repo_root)?;
+    let cycle_tag = format!("[cycle {}]", cycle);
+    let log_output = Command::new("git")
+        .current_dir(repo_root)
+        .args(["log", "--format=%H", "--fixed-strings", "--grep", &cycle_tag, "-n", "1"])
+        .output()
+        .map_err(|error| format!("failed to execute git log: {}", error))?;
+    if !log_output.status.success() {
+        return Err(command_failure_message("git log", &log_output));
+    }
+
+    let Some(commit) = String::from_utf8_lossy(&log_output.stdout)
+        .lines()
+        .next()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(str::to_string)
+    else {
+        return Ok((
+            StepStatus::Pass,
+            format!("skipped: no cycle-tagged commit found for cycle {}", cycle),
+        ));
+    };
+
+    let stat_output = Command::new("git")
+        .current_dir(repo_root)
+        .args(["show", "--stat", "--format=", &commit])
+        .output()
+        .map_err(|error| format!("failed to execute git show: {}", error))?;
+    if !stat_output.status.success() {
+        return Err(command_failure_message("git show", &stat_output));
+    }
+
+    let stat_output = String::from_utf8_lossy(&stat_output.stdout);
+    let has_worklog = stat_output.lines().any(|line| {
+        let trimmed = line.trim_start();
+        trimmed.starts_with("docs/worklog/") && trimmed.contains(".md")
+    });
+    let journal_path = format!("docs/journal/{today}.md");
+    let has_journal = stat_output.lines().any(|line| line.trim_start().starts_with(&journal_path));
+    let has_state = stat_output
+        .lines()
+        .any(|line| line.trim_start().starts_with("docs/state.json"));
+
+    let mut missing = Vec::new();
+    if !has_worklog {
+        missing.push("docs/worklog/**/*.md");
+    }
+    if !has_journal {
+        missing.push(journal_path.as_str());
+    }
+    if !has_state {
+        missing.push("docs/state.json");
+    }
+
+    if missing.is_empty() {
+        return Ok((
+            StepStatus::Pass,
+            format!(
+                "verified frozen commit {} contains worklog, journal, and state artifacts",
+                short_commit(&commit)
+            ),
+        ));
+    }
+
+    Ok((
+        StepStatus::Fail,
+        format!(
+            "frozen commit {} is missing required artifacts: {}",
+            short_commit(&commit),
+            missing.join(", ")
+        ),
+    ))
 }
 
 fn worklog_dedup_status_for_date(repo_root: &Path, today: &str) -> Result<(StepStatus, String), String> {
@@ -3671,7 +3788,7 @@ mod tests {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root = std::env::temp_dir().join(format!("pipeline-check-test-{}", run_id));
-        let _ = fs::remove_dir_all(&root);
+        init_git_repo(&root);
         fs::create_dir_all(root.join("docs")).unwrap();
         fs::write(
             root.join("docs/state.json"),
@@ -3718,6 +3835,7 @@ mod tests {
         .unwrap();
         fs::create_dir_all(root.join("docs/reviews")).unwrap();
         fs::write(root.join("docs/reviews/cycle-135.md"), "review").unwrap();
+        commit_all(&root, "seed pipeline fixture");
 
         let runner = MockRunner {
             expected_cycle: 135,
@@ -3784,7 +3902,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 16);
+        assert_eq!(report.steps.len(), 17);
         assert_eq!(report.steps[0].status, StepStatus::Pass);
         assert_eq!(report.steps[1].status, StepStatus::Pass);
         assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -3812,15 +3930,17 @@ mod tests {
         assert_eq!(report.steps[10].status, StepStatus::Pass);
         assert_eq!(report.steps[11].name, "doc-validation");
         assert_eq!(report.steps[11].status, StepStatus::Pass);
-        assert_eq!(report.steps[12].name, "worklog-dedup");
+        assert_eq!(report.steps[12].name, "frozen-commit-verify");
         assert_eq!(report.steps[12].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].name, "worklog-immutability");
+        assert_eq!(report.steps[13].name, "worklog-dedup");
         assert_eq!(report.steps[13].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].severity, Severity::Blocking);
-        assert_eq!(report.steps[14].name, "step-comments");
+        assert_eq!(report.steps[14].name, "worklog-immutability");
         assert_eq!(report.steps[14].status, StepStatus::Pass);
-        assert_eq!(report.steps[15].name, "current-cycle-steps");
+        assert_eq!(report.steps[14].severity, Severity::Blocking);
+        assert_eq!(report.steps[15].name, "step-comments");
         assert_eq!(report.steps[15].status, StepStatus::Pass);
+        assert_eq!(report.steps[16].name, "current-cycle-steps");
+        assert_eq!(report.steps[16].status, StepStatus::Pass);
     }
 
     #[test]
@@ -4012,13 +4132,13 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 16);
+        assert_eq!(report.steps.len(), 17);
         assert!(report.steps[..5]
             .iter()
             .all(|step| matches!(step.status, StepStatus::Error)));
         assert!(report.steps[13..]
             .iter()
-            .all(|step| matches!(step.status, StepStatus::Error | StepStatus::Warn)));
+            .all(|step| !matches!(step.status, StepStatus::Fail)));
         assert!(report
             .steps
             .iter()
@@ -4255,6 +4375,7 @@ mod tests {
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root =
             std::env::temp_dir().join(format!("pipeline-check-doc-validation-cascade-{}", run_id));
+        init_git_repo(&root);
         let today = &current_utc_timestamp()[..10];
         fs::create_dir_all(root.join("docs/journal")).unwrap();
         fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
@@ -4296,6 +4417,7 @@ mod tests {
         )
         .unwrap();
         fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
+        commit_all(&root, "seed pipeline fixture");
 
         struct CascadeRunner;
 
@@ -4375,13 +4497,15 @@ mod tests {
         let report = run_pipeline(&root, 257, &CascadeRunner);
         assert_eq!(report.steps[11].name, "doc-validation");
         assert_eq!(report.steps[11].status, StepStatus::Cascade);
-        assert_eq!(report.steps[12].name, "worklog-dedup");
+        assert_eq!(report.steps[12].name, "frozen-commit-verify");
         assert_eq!(report.steps[12].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].name, "worklog-immutability");
+        assert_eq!(report.steps[13].name, "worklog-dedup");
         assert_eq!(report.steps[13].status, StepStatus::Pass);
-        assert_eq!(report.steps[14].name, "step-comments");
+        assert_eq!(report.steps[14].name, "worklog-immutability");
+        assert_eq!(report.steps[14].status, StepStatus::Pass);
+        assert_eq!(report.steps[15].name, "step-comments");
         // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[14].status, StepStatus::Warn);
+        assert_eq!(report.steps[15].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -4394,6 +4518,7 @@ mod tests {
             "pipeline-check-doc-validation-multi-cause-{}",
             run_id
         ));
+        init_git_repo(&root);
         let today = &current_utc_timestamp()[..10];
         fs::create_dir_all(root.join("docs/journal")).unwrap();
         fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
@@ -4435,6 +4560,7 @@ mod tests {
         )
         .unwrap();
         fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
+        commit_all(&root, "seed pipeline fixture");
 
         struct MultiCauseCascadeRunner;
 
@@ -4514,13 +4640,15 @@ mod tests {
         let report = run_pipeline(&root, 257, &MultiCauseCascadeRunner);
         assert_eq!(report.steps[11].name, "doc-validation");
         assert_eq!(report.steps[11].status, StepStatus::Cascade);
-        assert_eq!(report.steps[12].name, "worklog-dedup");
+        assert_eq!(report.steps[12].name, "frozen-commit-verify");
         assert_eq!(report.steps[12].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].name, "worklog-immutability");
+        assert_eq!(report.steps[13].name, "worklog-dedup");
         assert_eq!(report.steps[13].status, StepStatus::Pass);
-        assert_eq!(report.steps[14].name, "step-comments");
+        assert_eq!(report.steps[14].name, "worklog-immutability");
+        assert_eq!(report.steps[14].status, StepStatus::Pass);
+        assert_eq!(report.steps[15].name, "step-comments");
         // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[14].status, StepStatus::Warn);
+        assert_eq!(report.steps[15].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -4535,6 +4663,7 @@ mod tests {
             "pipeline-check-step-comments-cycle-override-{}",
             run_id
         ));
+        init_git_repo(&root);
         let today = &current_utc_timestamp()[..10];
         fs::create_dir_all(root.join("docs/journal")).unwrap();
         fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
@@ -4580,6 +4709,7 @@ mod tests {
             "review",
         )
         .unwrap();
+        commit_all(&root, "seed pipeline fixture");
 
         struct OverrideRunner;
 
@@ -4649,10 +4779,10 @@ mod tests {
         }
 
         let report = run_pipeline(&root, OVERRIDE_CYCLE, &OverrideRunner);
-        assert_eq!(report.steps[14].name, "step-comments");
-        assert_eq!(report.steps[14].status, StepStatus::Warn);
-        assert_eq!(report.steps[14].severity, Severity::Warning);
-        assert!(report.steps[14]
+        assert_eq!(report.steps[15].name, "step-comments");
+        assert_eq!(report.steps[15].status, StepStatus::Warn);
+        assert_eq!(report.steps[15].severity, Severity::Warning);
+        assert!(report.steps[15]
             .detail
             .as_deref()
             .unwrap_or_default()
@@ -4678,6 +4808,7 @@ mod tests {
             "pipeline-check-doc-validation-independent-{}",
             run_id
         ));
+        init_git_repo(&root);
         let today = &current_utc_timestamp()[..10];
         fs::create_dir_all(root.join("docs/journal")).unwrap();
         fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
@@ -4719,6 +4850,7 @@ mod tests {
         )
         .unwrap();
         fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
+        commit_all(&root, "seed pipeline fixture");
 
         struct IndependentFailureRunner;
 
@@ -4798,12 +4930,14 @@ mod tests {
         let report = run_pipeline(&root, 257, &IndependentFailureRunner);
         assert_eq!(report.steps[11].name, "doc-validation");
         assert_eq!(report.steps[11].status, StepStatus::Fail);
-        assert_eq!(report.steps[12].name, "worklog-dedup");
+        assert_eq!(report.steps[12].name, "frozen-commit-verify");
         assert_eq!(report.steps[12].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].name, "worklog-immutability");
+        assert_eq!(report.steps[13].name, "worklog-dedup");
         assert_eq!(report.steps[13].status, StepStatus::Pass);
+        assert_eq!(report.steps[14].name, "worklog-immutability");
+        assert_eq!(report.steps[14].status, StepStatus::Pass);
         // Previous-cycle backstop is downgraded to Warn
-        assert_eq!(report.steps[14].status, StepStatus::Warn);
+        assert_eq!(report.steps[15].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -4814,6 +4948,7 @@ mod tests {
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root =
             std::env::temp_dir().join(format!("pipeline-check-exclude-doc-validation-{}", run_id));
+        init_git_repo(&root);
         let today = &current_utc_timestamp()[..10];
         fs::create_dir_all(root.join("docs/journal")).unwrap();
         fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
@@ -4855,6 +4990,7 @@ mod tests {
         )
         .unwrap();
         fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
+        commit_all(&root, "seed pipeline fixture");
 
         struct ExcludeDocValidationRunner;
 
@@ -4924,7 +5060,7 @@ mod tests {
             &ExcludeDocValidationRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 15);
+        assert_eq!(report.steps.len(), 16);
         assert!(!report
             .steps
             .iter()
@@ -4942,6 +5078,7 @@ mod tests {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root = std::env::temp_dir().join(format!("pipeline-check-exclude-unknown-{}", run_id));
+        init_git_repo(&root);
         let today = &current_utc_timestamp()[..10];
         fs::create_dir_all(root.join("docs/journal")).unwrap();
         fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
@@ -4983,6 +5120,7 @@ mod tests {
         )
         .unwrap();
         fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
+        commit_all(&root, "seed pipeline fixture");
 
         struct UnknownExcludeRunner;
 
@@ -5059,7 +5197,7 @@ mod tests {
             &UnknownExcludeRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 16);
+        assert_eq!(report.steps.len(), 17);
         assert!(report
             .steps
             .iter()
@@ -5078,6 +5216,7 @@ mod tests {
             "pipeline-check-exclude-worklog-dedup-{}",
             run_id
         ));
+        init_git_repo(&root);
         let today = &current_utc_timestamp()[..10];
         fs::create_dir_all(root.join("docs/journal")).unwrap();
         fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
@@ -5126,6 +5265,7 @@ mod tests {
         )
         .unwrap();
         fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
+        commit_all(&root, "seed pipeline fixture");
 
         struct ExcludeWorklogDedupRunner;
 
@@ -5203,7 +5343,7 @@ mod tests {
         );
 
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 15);
+        assert_eq!(report.steps.len(), 16);
         assert!(!report
             .steps
             .iter()
@@ -5682,6 +5822,256 @@ mod tests {
         let detail = step.detail.as_deref().unwrap_or_default();
         assert!(detail.contains("120100-cycle-411-summary.md"));
         assert!(!detail.contains("120000-cycle-410-summary.md"));
+    }
+
+    #[test]
+    fn frozen_commit_verify_passes_when_cycle_commit_contains_all_docs() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!("pipeline-check-frozen-commit-pass-{}", run_id));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+        fs::create_dir_all(root.join("docs/journal")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "dispatch"}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        commit_all(&root, "seed state");
+
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "close_out"}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        fs::write(
+            root.join("docs/worklog/2026-03-09/120000-cycle-410-summary.md"),
+            "# Worklog\n",
+        )
+        .unwrap();
+        fs::write(root.join("docs/journal/2026-03-09.md"), "# Journal\n").unwrap();
+        commit_all(&root, "[cycle 410] freeze close-out docs");
+        let baseline_commit = run_git(&root, &["rev-parse", "HEAD"]);
+
+        let step = verify_frozen_commit_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Blocking);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains(&baseline_commit[..7]));
+        assert!(detail.contains("contains worklog, journal, and state artifacts"));
+    }
+
+    #[test]
+    fn frozen_commit_verify_fails_when_worklog_is_missing() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-frozen-commit-missing-worklog-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs/journal")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "dispatch"}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        commit_all(&root, "seed state");
+
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "close_out"}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        fs::write(root.join("docs/journal/2026-03-09.md"), "# Journal\n").unwrap();
+        commit_all(&root, "[cycle 410] freeze close-out docs");
+
+        let step = verify_frozen_commit_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Fail);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("docs/worklog/**/*.md"));
+    }
+
+    #[test]
+    fn frozen_commit_verify_fails_when_journal_is_missing() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-frozen-commit-missing-journal-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "dispatch"}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        commit_all(&root, "seed state");
+
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "close_out"}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        fs::write(
+            root.join("docs/worklog/2026-03-09/120000-cycle-410-summary.md"),
+            "# Worklog\n",
+        )
+        .unwrap();
+        commit_all(&root, "[cycle 410] freeze close-out docs");
+
+        let step = verify_frozen_commit_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Fail);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("docs/journal/2026-03-09.md"));
+    }
+
+    #[test]
+    fn frozen_commit_verify_fails_when_state_json_is_missing() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-frozen-commit-missing-state-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+        fs::create_dir_all(root.join("docs/journal")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "close_out"}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        commit_all(&root, "seed state");
+
+        fs::write(
+            root.join("docs/worklog/2026-03-09/120000-cycle-410-summary.md"),
+            "# Worklog\n",
+        )
+        .unwrap();
+        fs::write(root.join("docs/journal/2026-03-09.md"), "# Journal\n").unwrap();
+        commit_all(&root, "[cycle 410] freeze close-out docs");
+
+        let step = verify_frozen_commit_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Fail);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("docs/state.json"));
+    }
+
+    #[test]
+    fn frozen_commit_verify_skips_when_not_in_close_out_phase() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-frozen-commit-skip-phase-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "dispatch"}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        commit_all(&root, "[cycle 410] freeze close-out docs");
+
+        let step = verify_frozen_commit_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("only runs during close_out"));
+    }
+
+    #[test]
+    fn frozen_commit_verify_skips_when_no_cycle_tagged_commit_exists() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-frozen-commit-skip-no-tag-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+        fs::create_dir_all(root.join("docs/journal")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "close_out"}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        fs::write(
+            root.join("docs/worklog/2026-03-09/120000-cycle-410-summary.md"),
+            "# Worklog\n",
+        )
+        .unwrap();
+        fs::write(root.join("docs/journal/2026-03-09.md"), "# Journal\n").unwrap();
+        commit_all(&root, "freeze close-out docs");
+
+        let step = verify_frozen_commit_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("no cycle-tagged commit found"));
     }
 
     #[test]
