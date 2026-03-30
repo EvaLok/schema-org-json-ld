@@ -4,6 +4,7 @@ import { JsonLdGenerator } from "../../src/JsonLdGenerator";
 import { Article } from "../../src/schema/Article";
 import { Organization } from "../../src/schema/Organization";
 import { Person } from "../../src/schema/Person";
+import { SpeakableSpecification } from "../../src/schema/SpeakableSpecification";
 import { WebPageElement } from "../../src/schema/WebPageElement";
 
 describe("Article", () => {
@@ -103,5 +104,97 @@ describe("Article", () => {
 		) as Record<string, unknown>;
 		const arrayHasPart = arrayObj.hasPart as Record<string, unknown>[];
 		expect(arrayHasPart[0]?.["@type"]).toBe("WebPageElement");
+	});
+
+	it("serializes the speakable property", () => {
+		const schema = new Article({
+			headline: "Speakable article",
+			speakable: new SpeakableSpecification({
+				cssSelector: [".headline", ".article-body"],
+				xpath: "/html/body/main/article",
+			}),
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+		const speakable = obj.speakable as Record<string, unknown>;
+
+		expect(speakable["@type"]).toBe("SpeakableSpecification");
+		expect(speakable.cssSelector).toEqual([".headline", ".article-body"]);
+		expect(speakable.xpath).toBe("/html/body/main/article");
+	});
+
+	it("serializes isAccessibleForFree booleans", () => {
+		const freeArticle = new Article({
+			headline: "Free article",
+			isAccessibleForFree: true,
+		});
+		const freeObj = JSON.parse(
+			JsonLdGenerator.schemaToJson(freeArticle),
+		) as Record<string, unknown>;
+		expect(freeObj.isAccessibleForFree).toBe(true);
+
+		const subscriptionArticle = new Article({
+			headline: "Subscription article",
+			isAccessibleForFree: false,
+		});
+		const subscriptionObj = JSON.parse(
+			JsonLdGenerator.schemaToJson(subscriptionArticle),
+		) as Record<string, unknown>;
+		expect(subscriptionObj.isAccessibleForFree).toBe(false);
+	});
+
+	it("serializes the subscription content scenario", () => {
+		const schema = new Article({
+			headline: "Subscription article",
+			isAccessibleForFree: false,
+			hasPart: [
+				new WebPageElement({
+					isAccessibleForFree: false,
+					cssSelector: ".paywall",
+				}),
+				new WebPageElement({
+					isAccessibleForFree: false,
+					cssSelector: ".subscriber-only",
+				}),
+			],
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+		const hasPart = obj.hasPart as Record<string, unknown>[];
+
+		expect(obj.isAccessibleForFree).toBe(false);
+		expect(hasPart).toHaveLength(2);
+		expect(hasPart[0]?.["@type"]).toBe("WebPageElement");
+		expect(hasPart[0]?.isAccessibleForFree).toBe(false);
+		expect(hasPart[0]?.cssSelector).toBe(".paywall");
+		expect(hasPart[1]?.["@type"]).toBe("WebPageElement");
+		expect(hasPart[1]?.isAccessibleForFree).toBe(false);
+		expect(hasPart[1]?.cssSelector).toBe(".subscriber-only");
+	});
+
+	it("serializes datePublished and dateModified", () => {
+		const schema = new Article({
+			headline: "Dated article",
+			datePublished: "2026-02-24T17:00:00+00:00",
+			dateModified: "2026-02-24T18:00:00+00:00",
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.datePublished).toBe("2026-02-24T17:00:00+00:00");
+		expect(obj.dateModified).toBe("2026-02-24T18:00:00+00:00");
+	});
+
+	it("serializes publisher", () => {
+		const schema = new Article({
+			headline: "Published article",
+			publisher: new Organization({ name: "Example Publisher" }),
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+		const publisher = obj.publisher as Record<string, unknown>;
+
+		expect(publisher["@type"]).toBe("Organization");
+		expect(publisher.name).toBe("Example Publisher");
 	});
 });
