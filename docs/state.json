@@ -6013,6 +6013,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add C5 frozen-commit content verification to pipeline-check"
+    },
+    {
+      "dispatched_at": "2026-03-30T00:40:52Z",
+      "issue": 2000,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 409 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -6339,7 +6346,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#1998 Add C5 frozen-commit content verification to pipeline-check (cycle 409)",
+  "dispatch_log_latest": "#2000 [Cycle Review] Cycle 409 end-of-cycle review (cycle 409)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6605,12 +6612,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 18,
     "issue": 1997,
     "number": 409,
-    "summary": "1 dispatches, 2 merges (PR #1994, PR #1996)",
+    "summary": "2 dispatches, 2 merges (PR #1994, PR #1996)",
     "timestamp": "2026-03-30T00:34:25Z"
   },
   "last_eva_comment_check": "2026-03-30T00:34:25Z",
@@ -10953,7 +10960,7 @@
     ],
     "last_review_cycle": 408
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 407,
   "schema_status": {
     "directory_layout": {
