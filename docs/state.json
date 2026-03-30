@@ -6206,8 +6206,17 @@
     337,
     339,
     341,
-    343
+    343,
+    345
   ],
+  "cycles_since_last_forward_work": {
+    "count": 0,
+    "threshold": 10,
+    "last_forward_cycle": 411,
+    "last_forward_description": "TBD - dispatch pending",
+    "added_in_cycle": 411,
+    "added_per": "audit #345"
+  },
   "blockers": [
     {
       "description": "Phase 4c: npm publish requires Eva to create a GitHub Release (triggers publish-npm.yml workflow)",
