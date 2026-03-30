@@ -24,7 +24,7 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 2
-- **Pipeline status**: FAIL (step-comments cascade from cycle 410 issue #2008; 2 warnings: deferral-accumulation, housekeeping-scan)
+- **Pipeline status**: PASS (3 warnings: deferral-accumulation, housekeeping-scan, step-comments)
 - **Publish gate**: published
 
 ## Next steps
