@@ -3,13 +3,24 @@
 ## 1. [state-integrity] The canonical cycle summary still undercounts the cycle's merged PRs
 
 **File**: docs/state.json:6765-6770
-**Evidence**: The committed state summary says cycle 414 had only `1 merges (PR #2041)`. That is not the full cycle reality. The in-scope git history before `state(cycle-complete)` (`c06f4ae`) also contains `21e93943` (`Allow resume-annotated worklog pipeline status changes in \`pipeline-check\` (#2037)`) and `fc7ed07e` (`Update Rust infrastructure checklist detection to use XML filenames (#2038)`), so the cycle actually merged three PRs before close-out. The journal later admits why the ledger drifted: `process-merge tool failed when agent_sessions entries are missing... PRs were merged via gh directly` (`docs/journal/2026-03-30.md:247-249`). A direct inspection of `docs/state.json` likewise finds the recorded review session for `#2040` and the post-close-out review dispatch `#2043` (`docs/state.json:6101-6113`), but no corresponding `agent_sessions` entries for the orphaned cycle-413 dispatches/issues behind PRs `#2037`/`#2038`.
+**Evidence**: The committed state summary says cycle 414 had only `1 merges (PR #2041)`. That is not the full cycle reality.
+
+- The in-scope git history before `state(cycle-complete)` (`c06f4ae`) also contains `21e93943` (`Allow resume-annotated worklog pipeline status changes in \`pipeline-check\` (#2037)`) and `fc7ed07e` (`Update Rust infrastructure checklist detection to use XML filenames (#2038)`), so the cycle actually merged three PRs before close-out.
+- The journal later admits why the ledger drifted: `process-merge tool failed when agent_sessions entries are missing... PRs were merged via gh directly` (`docs/journal/2026-03-30.md:247-249`).
+- A direct inspection of `docs/state.json` finds the recorded review session for `#2040` and the post-close-out review dispatch `#2043` (`docs/state.json:6101-6113`), but no corresponding `agent_sessions` entries for the orphaned cycle-413 dispatches/issues behind PRs `#2037`/`#2038`.
 **Recommendation**: Fail close-out when merged PRs cannot be reconciled into `agent_sessions`, or teach `cycle-complete`/`process-merge` to backfill orphan merges from GitHub/commit metadata before writing `last_cycle.summary`. The canonical state should not knowingly publish a merge count that is already contradicted by the repository history.
 
-## 2. [receipt-integrity] The published receipt section claims pre-`cycle-complete` scope but still omits two in-scope PR merge commits
+## 2. [receipt-integrity] The published receipt section claims pre-cycle-complete scope but still omits two in-scope PR merge commits
 
 **File**: docs/worklog/2026-03-30/190112-cycle-414-review-processed-3-prs-merged-field-inventory-refreshed.md:43-52
-**Evidence**: The same worklog says the cycle merged three PRs (`docs/worklog/2026-03-30/190112-cycle-414-review-processed-3-prs-merged-field-inventory-refreshed.md:5-11`), but its receipt note narrows the table to `cycle 414 commits before 2026-03-30T19:00:15Z (cycle-complete)` and then reports only `receipt events: 1 merge, 1 review`. The table lists just one merge receipt (`e08fe17`, PR `#2041`) plus state receipts. However, the actual pre-`cycle-complete` commit history for cycle 414 also includes `21e93943` (PR `#2037`) and `fc7ed07e` (PR `#2038`) before `c06f4ae`. Those are not docs or `record-dispatch` commits, so they fall inside the scope note the worklog published. This means the rendered receipt section is still not a truthful inventory of all in-scope cycle commits even after the cycle explicitly called receipt integrity a chronic category.
+**Evidence**: The same worklog says the cycle merged three PRs (`docs/worklog/2026-03-30/190112-cycle-414-review-processed-3-prs-merged-field-inventory-refreshed.md:5-11`), but the receipt section tells a narrower story.
+
+- The note says the table covers `cycle 414 commits before 2026-03-30T19:00:15Z (cycle-complete)` and reports only `receipt events: 1 merge, 1 review`.
+- The table then lists just one merge receipt (`e08fe17`, PR `#2041`) plus state receipts.
+- The actual pre-cycle-complete commit history for cycle 414 also includes `21e93943` (PR `#2037`) and `fc7ed07e` (PR `#2038`) before `c06f4ae`.
+- Those are not docs or `record-dispatch` commits, so they fall inside the scope note the worklog published.
+
+That means the rendered receipt section is still not a truthful inventory of all in-scope cycle commits even after the cycle explicitly called receipt integrity a chronic category.
 **Recommendation**: Make the worklog scope note match the real behavior of `cycle-receipts`. Either include orphan PR merge commits in the generated receipt section, or change the wording so it clearly says the table covers only receipt-bearing/state commits rather than all cycle commits before `cycle-complete`.
 
 ## 3. [journal-quality] The commitment follow-through is internally contradictory instead of honestly recording a mixed outcome
