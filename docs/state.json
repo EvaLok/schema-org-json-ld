@@ -6010,8 +6010,10 @@
     {
       "dispatched_at": "2026-03-30T00:29:04Z",
       "issue": 1998,
+      "merged_at": "2026-03-30T03:12:28Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 1999,
+      "status": "merged",
       "title": "Add C5 frozen-commit content verification to pipeline-check"
     },
     {
@@ -6614,7 +6616,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 18,
     "issue": 2002,
