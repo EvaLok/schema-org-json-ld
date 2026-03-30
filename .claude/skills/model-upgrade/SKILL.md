@@ -18,7 +18,7 @@ Update `"default_model"` to the new preferred model. This is the runtime source 
 
 ### 2. System prompt — dispatch examples
 
-File: `.github/workflows/orchestrator-prompt.md`
+File: `.github/workflows/orchestrator-prompt.xml`
 
 The `agent_assignment` JSON blocks in the "How to dispatch agent tasks" section contain a `"model"` field. Update both examples (create-and-assign, assign-existing).
 
@@ -51,7 +51,7 @@ All tests must pass after the update.
 ## Quick grep to find remaining documentation references
 
 ```bash
-grep -rn '"<old-model>"' .github/workflows/orchestrator-prompt.md tools/config.json
+grep -rn '"<old-model>"' .github/workflows/orchestrator-prompt.xml tools/config.json
 ```
 
 ## Common mistake

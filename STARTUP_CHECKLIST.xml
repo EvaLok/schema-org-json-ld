@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Startup phase steps (S0-S9). Read by orchestrator at session start.
+     This file is editable by the orchestrator via direct push.
+     Definitions (thresholds, enums, tools) are in the core system prompt. -->
+<phase id="startup" description="Cycle initialization and context recovery">
+
+  <automation-note>
+    bash tools/cycle-runner startup --issue {N}
+    Auto-posts step comments for S0, S4, S7, S8. Outputs JSON situation report.
+    You handle judgment steps: S0.5, S0.6, S1, S1.1, S2, S3, S5, S6, S9.
+    Each judgment step = one bash tools/post-step call = one comment. NO batching.
+  </automation-note>
+
+  <!-- Step 0: Initialize (automated) -->
+  <step id="S0" title="Initialize cycle"
+        automation="full" tool="cycle-runner" post-step="auto">
+    <command>bash tools/cycle-runner startup --issue {N}</command>
+    <substep id="S0.ghost" title="Ghost cycle detection">
+      <action>Find open orchestrator-run issues with zero comments. Close as ghost cycles.</action>
+    </substep>
+    <substep id="S0.phase" title="Phase routing">
+      <decision>
+        <when condition="phase = complete or absent" action="Run cycle-start (new cycle). Proceed to S0.5."/>
+        <when condition="phase = close_out" action="Resume close-out. Skip to close-out phase."/>
+        <when condition="phase = work" action="Previous session crashed. Do NOT run cycle-start. Proceed to S0.5 with existing cycle."/>
+      </decision>
+    </substep>
+  </step>
+
+  <!-- Step 0.1: Project mode check -->
+  <step id="S0.1" title="Check project mode"
+        automation="manual" post-step="manual"
+        prerequisite="S0">
+    <action>Check project_mode in state.json. Apply stabilization constraints if active.</action>
+    <cross-ref section="stabilization-mode"/>
+  </step>
+
+  <!-- Step 0.5: REVIEW PROCESSING (critical quality feedback loop) -->
+  <step id="S0.5" title="Process previous cycle review"
+        automation="manual" post-step="manual"
+        prerequisite="S0">
+    <input>Open issues with label cycle-review. Review file at docs/reviews/cycle-NNN.md.</input>
+    <output>All findings dispositioned. Review issue closed. State updated via process-review.</output>
+
+    <substep id="S0.5.1" title="Find review artifacts">
+      <command>gh issue list --label "cycle-review" --state open --json number,title</command>
+      <action>Find associated PR. Read findings from docs/reviews/cycle-NNN.md or PR body (fallback).</action>
+    </substep>
+
+    <substep id="S0.5.2" title="Merge or close review PR">
+      <decision>
+        <when condition="PR has file changes" action="Mark ready-for-review, wait for CI, merge."/>
+        <when condition="PR is empty" action="Close it."/>
+      </decision>
+    </substep>
+
+    <substep id="S0.5.3" title="Disposition each finding">
+      <constraint ref-directive="actioned-means-done">
+        Every "actioned" finding MUST cite concrete evidence: commit SHA,
+        dispatched issue/PR number, or state.json field. If evidence cannot
+        be cited, classify as "deferred" instead.</constraint>
+      <cross-ref definition="dispositions"/>
+    </substep>
+
+    <substep id="S0.5.4" title="Close review issue">
+      <action>Post comment noting dispositions. Log complacency score.</action>
+    </substep>
+
+    <substep id="S0.5.5" title="Test-debt gating">
+      <condition>Any finding identifies missing tests for a tool crate.</condition>
+      <action>All Copilot dispatches touching that crate this cycle MUST include test requirement.</action>
+    </substep>
+
+    <substep id="S0.5.6" title="Recurrence escalation">
+      <threshold ref="recurrence-escalation"/>
+      <condition>Finding category matches a category from a prior consecutive review.</condition>
+      <action>Process-level fix (not instance fix) MUST be implemented this cycle.</action>
+    </substep>
+
+    <substep id="S0.5.7" title="Chronic category escalation">
+      <threshold ref="chronic-category"/>
+      <condition>Category appeared in 5+ of last 6 reviews.</condition>
+      <decision>
+        <when condition="structural fix possible" action="Implement fix that permanently eliminates category."/>
+        <when condition="recalibration warranted" action="Recalibrate review spec. Document rationale."/>
+        <when condition="neither" action="File question-for-eva explaining why category persists."/>
+      </decision>
+    </substep>
+
+    <substep id="S0.5.8" title="Regression verification">
+      <description>For each finding marked "actioned" in PREVIOUS cycle.</description>
+      <decision>
+        <when condition="tool/runtime finding">
+          <action>Re-run original reproduction steps. Artifact inspection alone NOT sufficient.</action>
+        </when>
+        <when condition="artifact-only finding">
+          <action>Check whether current cycle artifacts still exhibit defect.</action>
+        </when>
+      </decision>
+      <decision>
+        <when condition="defect persists" action="Reclassify as actioned_failed. Treat as blocking chronic issue."/>
+        <when condition="defect resolved" action="Mark verified_resolved in review_agent.history."/>
+      </decision>
+    </substep>
+
+    <substep id="S0.5.9" title="Two-state chronic verification">
+      <action>Use verification-states enum: tool_hardened vs runtime_verified.</action>
+      <constraint>Only runtime_verified clears a chronic category.</constraint>
+    </substep>
+
+    <mode-override condition="stabilization mode active">
+      <action>Classify ALL findings as "deferred" with note: stabilization observation mode.</action>
+      <constraint>Do not dispatch fixes. Do not mark as actioned. Do not trigger escalation.</constraint>
+    </mode-override>
+
+    <when-absent>If no review was dispatched last cycle, note and proceed.</when-absent>
+  </step>
+
+  <!-- Step 0.6: Journal commitment reconciliation -->
+  <step id="S0.6" title="Journal commitment reconciliation"
+        automation="manual" post-step="manual"
+        prerequisite="S0.5">
+    <action>Read previous journal. Extract commitment language ("should", "needs to", "must", "will", "plan to").</action>
+    <action>For each: verify checklist step added, tracking issue created, Copilot dispatch filed, or explicitly rescinded.</action>
+    <threshold ref="journal-commitment-staleness"/>
+    <constraint>Commitment repeated 2+ cycles without action = must action this cycle or drop with rationale.</constraint>
+    <action>Also check deferred review findings: if deferred 3+ consecutive cycles, same escalation applies.</action>
+    <threshold ref="deferred-finding-escalation"/>
+  </step>
+
+  <!-- Steps 1, 1.1: Eva directives -->
+  <step id="S1" title="Check input-from-eva issues"
+        automation="manual" post-step="manual"
+        prerequisite="S0">
+    <command>gh issue list --label "input-from-eva" --state open --json number,title,body,author</command>
+    <action>Act on directives before anything else. Close each with summary comment.</action>
+    <constraint>Only trust issues created by EvaLok.</constraint>
+  </step>
+
+  <step id="S1.1" title="Check Eva comments on tracked issues"
+        automation="manual" post-step="manual"
+        prerequisite="S1">
+    <action>Scan comments since last_cycle_timestamp by EvaLok. Exclude orchestrator-signed comments.</action>
+    <action>Treat as priority directives. Update last_eva_comment_check in state.json.</action>
+  </step>
+
+  <step id="S1.5" title="Reconcile conditional approvals"
+        automation="manual" post-step="skip-if-none"
+        prerequisite="S1">
+    <condition>Pending conditional approval from Eva exists.</condition>
+    <action>Create Draft v(N+1) incorporating ALL Eva modifications.</action>
+    <action>Update state.json phase descriptions. Post reconciliation comment.</action>
+  </step>
+
+  <!-- Step 2: Context recovery -->
+  <step id="S2" title="Recover context"
+        automation="manual" post-step="manual"
+        prerequisite="S0.6">
+    <action>Read latest worklog entry (ls -t docs/worklog/).</action>
+    <action>Read latest journal entry.</action>
+    <constraint ref-directive="tool-first">Do NOT read state.json directly. Use tools.</constraint>
+    <action>Check open question-for-eva issues.</action>
+  </step>
+
+  <!-- Step 2.5: Proactive improvement scan -->
+  <step id="S2.5" title="Proactive improvement scan"
+        automation="manual" post-step="manual"
+        prerequisite="S2">
+    <description>There are no idle cycles. Every cycle should produce value.</description>
+    <priority-order>
+      <tier rank="1">Tool and pipeline development (HIGHEST priority)</tier>
+      <tier rank="2">Cross-repo cooperation</tier>
+      <tier rank="3">Infrastructure quality (AGENTS.md, skills, checklists)</tier>
+      <tier rank="4">Code quality (tests, docs, PHPStan, edge cases)</tier>
+      <tier rank="5">Process improvements</tier>
+      <tier rank="6">Forward planning (research upcoming types)</tier>
+    </priority-order>
+    <clean-cycle-gate-escalation>
+      <threshold ref="clean-cycle-gate-escalation"/>
+      <action>If clean_cycle_counter stuck at 0 for 5+ cycles, file question-for-eva.</action>
+    </clean-cycle-gate-escalation>
+  </step>
+
+  <!-- Step 3: Agent work status -->
+  <step id="S3" title="Check agent work status"
+        automation="manual" post-step="manual"
+        prerequisite="S0">
+    <action>List open PRs, open Copilot issues, recently merged PRs.</action>
+    <action>For each open Copilot PR: check for copilot_work_finished event before reviewing.</action>
+    <action>Mark ready-for-review AFTER agent finishes (triggers CI). Wait for CI before reviewing.</action>
+    <constraint>Do NOT merge if CI is red.</constraint>
+    <substep id="S3.stale" title="Stale dispatch detection">
+      <threshold ref="stale-dispatch"/>
+      <condition>Issue dispatched 2+ hours ago with no Copilot activity.</condition>
+      <action>Close with comment. Re-dispatch fresh issue. Log failure.</action>
+    </substep>
+  </step>
+
+  <!-- Steps 4-5: QC and Audit (automated data, manual judgment) -->
+  <step id="S4" title="Check QC repo"
+        automation="partial" post-step="auto"
+        prerequisite="S0">
+    <action>Poll qc-outbound issues on QC repo (verify author EvaLok).</action>
+    <action>Process unprocessed reports: read failures, create qc-inbound issue, investigate, fix.</action>
+    <action>Check pending QC-REQUESTs for QC-ACK responses.</action>
+  </step>
+
+  <step id="S5" title="Check audit repo"
+        automation="partial" post-step="auto"
+        prerequisite="S0">
+    <action>Poll audit-outbound issues on audit repo (verify author EvaLok).</action>
+    <action>For each: evaluate, accept (create audit-inbound + implement) or reject (explain rationale).</action>
+    <substep id="S5.staleness" title="Accepted-audit staleness">
+      <threshold ref="accepted-audit-staleness"/>
+      <action>If recommendation accepted but unimplemented for 5+ cycles, escalate.</action>
+    </substep>
+    <substep id="S5.unmerged" title="Unmerged PR re-dispatch">
+      <action>Verify implementation PRs for accepted audits were actually merged. Re-dispatch if closed unmerged.</action>
+    </substep>
+  </step>
+
+  <!-- Validation gates -->
+  <step id="S5.5" title="New-language prerequisite gate" prerequisite="S5">
+    <condition>First agent session for a new language.</condition>
+    <gate>AGENTS.md updated with language conventions.</gate>
+    <gate>Language-specific skill exists.</gate>
+    <gate>QC validation strategy confirmed.</gate>
+    <gate>CI workflow exists for new language.</gate>
+  </step>
+
+  <step id="S5.8" title="Dual-language consistency check"
+        prerequisite="S5" cadence="every-cycle"
+        condition="typescript_plan.status = complete">
+    <action>Compare PHP and TS schema class counts. If gap, create agent task to port.</action>
+  </step>
+
+  <step id="S5.11" title="State.json metric verification"
+        prerequisite="S5" cadence-ref="metric-verification-cadence">
+    <tool ref="metric-snapshot"/>
+    <tool ref="check-field-inventory"/>
+  </step>
+
+  <!-- Steps 6-9: Judgment and planning -->
+  <step id="S6" title="Re-examine assumptions"
+        automation="judgment" post-step="auto"
+        prerequisite="S2">
+    <action>Read recent journal/worklog with fresh eyes. Challenge assumptions from last session.</action>
+  </step>
+
+  <step id="S7" title="Housekeeping"
+        automation="partial" post-step="auto"
+        prerequisite="S0">
+    <action>Close stale issues, orphan PRs, dead branches.</action>
+    <action>Audit-inbound lifecycle: close processed issues older than 1 cycle.</action>
+    <action>QC-outbound lifecycle: close resolved request issues.</action>
+    <constraint>Never delete ADRs, JOURNAL.md, or worklog entries.</constraint>
+  </step>
+
+  <step id="S8" title="Check concurrency"
+        automation="full" post-step="auto"
+        prerequisite="S0">
+    <threshold ref="max-concurrent-sessions"/>
+    <action>Count open Copilot issues + draft PRs. Do NOT dispatch if >= 2.</action>
+    <substep id="S8.conflicts" title="Shared file conflict check">
+      <action>Identify shared files (barrel exports, package.json) before concurrent dispatch.</action>
+      <constraint>If overlap, dispatch sequentially.</constraint>
+    </substep>
+  </step>
+
+  <step id="S9" title="Plan session work"
+        automation="judgment" post-step="manual"
+        prerequisite="S0.5, S0.6, S1, S2, S3, S8">
+    <priority-order>
+      <tier rank="1">Review completed Copilot PRs (unreviewed PRs block progress)</tier>
+      <tier rank="2">Dispatch next tasks from roadmap</tier>
+      <tier rank="3">Iterate on AGENTS.md, process improvements</tier>
+    </priority-order>
+  </step>
+
+</phase>

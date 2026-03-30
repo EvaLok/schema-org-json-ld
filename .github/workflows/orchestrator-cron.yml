@@ -21,6 +21,6 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "Orchestrator Cycle - $TIMESTAMP" \
             --label "orchestrator-run" \
-            --body "@claude Run your orchestrator cycle. Follow STARTUP_CHECKLIST.md."
+            --body "@claude Run your orchestrator cycle. Follow the startup phase in your system prompt."
         env:
           GH_TOKEN: ${{ secrets.ORCHESTRATOR_PAT }}

@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Close-out phase steps (C1-C8). Read by orchestrator at cycle end.
+     This file is editable by the orchestrator via direct push.
+     Definitions (thresholds, enums, tools) are in the core system prompt. -->
+<phase id="close-out" description="Cycle completion and review dispatch">
+
+  <automation-note>
+    bash tools/cycle-runner close-out --issue {N}
+    Auto-posts steps C4.1, C5, C5.1, C5.5, C5.6, C6, C7, C8.
+    You handle: C1, C2, C3, C4.5 manually before running cycle-runner close-out.
+    Prerequisites: Run cycle-complete, write-entry (worklog + journal), post C4.5.
+    The tool is idempotent. If gate fails, fix and re-run.
+  </automation-note>
+
+  <step id="C1" title="Pipeline verification (early)"
+        automation="manual" post-step="manual">
+    <tool ref="pipeline-check"/>
+    <description>Early check before state modifications. Not the final gate.</description>
+  </step>
+
+  <step id="C2" title="Update state.json via tools"
+        automation="manual" post-step="manual"
+        prerequisite="C1">
+    <constraint ref-directive="tool-first">NEVER manually edit state.json.</constraint>
+    <during-cycle>
+      <event trigger="PR merged" tool="process-merge"/>
+      <event trigger="Copilot task dispatched" tool="record-dispatch"/>
+      <event trigger="Review findings consumed" tool="process-review"/>
+      <event trigger="Audit recommendation processed" tool="process-audit"/>
+      <event trigger="Eva directive processed" tool="process-eva"/>
+    </during-cycle>
+    <at-cycle-end>
+      <action tool="cycle-complete" command="bash tools/cycle-complete --apply --commit --issue N"/>
+      <constraint>Run cycle-complete BEFORE dispatching review agent.</constraint>
+    </at-cycle-end>
+  </step>
+
+  <step id="C3" title="Write documentation entries"
+        automation="semi" post-step="manual"
+        prerequisite="C2">
+    <tool ref="write-entry"/>
+    <action>bash tools/write-entry worklog (with appropriate flags)</action>
+    <action>bash tools/write-entry journal (with appropriate flags)</action>
+  </step>
+
+  <step id="C4.1" title="Validate documentation (BLOCKING GATE)"
+        automation="auto-by-cycle-runner" post-step="auto"
+        prerequisite="C3" gate="true">
+    <tool ref="validate-docs"/>
+    <on-failure>Fix the issue. Re-run validation. Do NOT proceed to C5.</on-failure>
+  </step>
+
+  <step id="C4.5" title="ADR check and doc-validation override"
+        automation="manual" post-step="manual"
+        prerequisite="C3">
+    <description>Check if decisions this cycle warrant ADRs. Post before cycle-runner close-out.</description>
+    <adr-worthy>
+      <criterion>New architectural patterns or significant refactors</criterion>
+      <criterion>Technology choices (languages, tools, frameworks)</criterion>
+      <criterion>Process changes affecting system operation</criterion>
+      <criterion>Design trade-offs with rejected alternatives</criterion>
+    </adr-worthy>
+    <constraint>Must be posted before C5.5 gate runs.</constraint>
+  </step>
+
+  <step id="C5" title="Commit and push docs + state"
+        automation="auto-by-cycle-runner" post-step="auto"
+        prerequisite="C4.1, C4.5" gate="true">
+    <constraint severity="critical">
+      Worklog, journal, and state.json MUST be committed and pushed BEFORE
+      review dispatch (C6). The review agent reads the repo at dispatch time.
+      Uncommitted docs = false positive "missing" findings.</constraint>
+    <sequence>
+      <action order="1">Commit all worklog and journal entries.</action>
+      <action order="2">Commit state.json changes from cycle-complete.</action>
+      <action order="3">Push to master.</action>
+      <action order="4">Verify push succeeded before proceeding.</action>
+    </sequence>
+  </step>
+
+  <step id="C5.1" title="Receipt table validation"
+        automation="auto-by-cycle-runner" post-step="auto"
+        prerequisite="C5">
+    <tool ref="receipt-validate"/>
+    <scope-exclusions reason="Structurally created after worklog is written">
+      <excluded pattern="docs(cycle-N): ...">Docs commit</excluded>
+      <excluded pattern="state(record-dispatch): ...">Record-dispatch commit</excluded>
+      <excluded pattern="state(stabilization/clean-cycle): ...">Stabilization commit</excluded>
+    </scope-exclusions>
+  </step>
+
+  <step id="C5.5" title="Final pipeline gate (BLOCKING GATE)"
+        automation="auto-by-cycle-runner" post-step="auto"
+        prerequisite="C5" gate="true">
+    <tool ref="pipeline-check"/>
+    <constraint>All 5 phases MUST pass before review dispatch.</constraint>
+    <on-failure>Fix before closing cycle. Do not override.</on-failure>
+    <coordination-rule>When deploying format-changing tools: merge downstream
+      consumer update BEFORE applying new tool output.</coordination-rule>
+  </step>
+
+  <step id="C5.6" title="Stabilization counter update"
+        automation="auto-by-cycle-runner" post-step="auto"
+        prerequisite="C5.5"
+        condition="stabilization mode active">
+    <clean-cycle-criteria>
+      <criterion>pipeline-check passed (C5.5 exit 0)</criterion>
+      <criterion>No tool/infrastructure dispatches this cycle</criterion>
+    </clean-cycle-criteria>
+    <decision>
+      <when condition="both criteria met">
+        <action>Increment clean_cycle_counter. Append cycle to consecutive_clean_cycles.</action>
+      </when>
+      <when condition="either fails">
+        <action>Reset clean_cycle_counter to 0. Clear array. Log reason in journal.</action>
+      </when>
+    </decision>
+    <threshold ref="stabilization-target"/>
+  </step>
+
+  <!-- C6: REVIEW DISPATCH (mandatory) -->
+  <step id="C6" title="Dispatch review agent (MANDATORY)"
+        automation="semi" post-step="auto"
+        prerequisite="C5.5" mandatory="true">
+
+    <substep id="C6.availability" title="Copilot availability gate">
+      <threshold ref="copilot-availability-gate"/>
+      <condition>Last 3 agent sessions all failed.</condition>
+      <action>Skip dispatch. Post step comment noting deferral.</action>
+    </substep>
+
+    <review-spec>
+      <adversarial-mandate position="first-paragraph">
+        Your job is to find everything wrong with this cycle's work.
+        Be thorough. Be skeptical. If something looks fine on the surface,
+        dig deeper.
+      </adversarial-mandate>
+
+      <review-targets>
+        <target area="Code changes">Merged PRs, direct pushes. Quality, tests, conventions.</target>
+        <target area="Worklog accuracy">Cross-reference claims against commits, state.json, issue activity.</target>
+        <target area="Journal quality">Genuine reflection or boilerplate? Observable commitments?</target>
+        <target area="State.json integrity">Metrics current? Freshness accurate? Run spot-checks.</target>
+        <target area="Commit receipts">Verify hashes. Receipt scope: through cycle-complete. Docs commit and record-dispatch commit STRUCTURALLY EXCLUDED -- do NOT flag their absence.</target>
+        <target area="Infrastructure consistency">AGENTS.md, skills, checklists consistent with practice?</target>
+        <target area="Process adherence">Followed checklists? Used tools? Check temporal ordering of step comments (created_at timestamps).</target>
+        <target area="Complacency detection">Going through motions? Findings noted but not fixed? Deferrals accumulating?</target>
+      </review-targets>
+
+      <output-format>
+        <template><![CDATA[
+## N. [category-name] Finding title
+
+**File**: path/to/file:line
+**Evidence**: what was observed
+**Recommendation**: concrete action
+        ]]></template>
+        <rule>Category tag MUST appear in heading inside square brackets.</rule>
+        <rule>Complacency score (1-5) justified with evidence.</rule>
+        <scoring-cap>If cycle overrode any FAIL/blocking pipeline gate, max score = 3/5.</scoring-cap>
+        <depth-preference>Three deeply investigated findings with evidence beat ten surface observations.</depth-preference>
+      </output-format>
+
+      <stabilization-overlay condition="stabilization mode active" position="before-adversarial-mandate">
+        OBSERVATION MODE (ADR 0011): Log all findings in standard format.
+        Do NOT classify any as requiring immediate action. All findings logged
+        for post-stabilization triage. Your role is forensic documentation.
+      </stabilization-overlay>
+    </review-spec>
+
+    <dispatch-mechanics>
+      <constraint>Copilot agents CANNOT post issue comments. They create PRs.</constraint>
+      <instruction>Agent must commit findings as docs/reviews/cycle-NNN.md.</instruction>
+      <labels>agent-task, cycle-review</labels>
+      <model>gpt-5.4</model>
+      <content-requirements>
+        <item>Adversarial mandate (first paragraph)</item>
+        <item>Current cycle number and issue link</item>
+        <item>List of PRs merged this cycle</item>
+        <item>Paths to worklog and journal entries</item>
+        <item>Specific areas of concern</item>
+        <item>Output path: docs/reviews/cycle-{N}.md</item>
+      </content-requirements>
+    </dispatch-mechanics>
+  </step>
+
+  <!-- C6.1: Fallback self-review -->
+  <step id="C6.1" title="Fallback self-review"
+        automation="manual" post-step="auto"
+        prerequisite="C6"
+        condition="C6 dispatch failed AND previous also failed">
+    <threshold ref="self-review-trigger"/>
+    <checklist>
+      <item>Receipt verification: run cycle-receipts, verify all.</item>
+      <item>Step comment audit: verify all mandatory steps posted.</item>
+      <item>State.json integrity: run pipeline-check, confirm invariants.</item>
+      <item>Worklog accuracy: cross-reference claims against git history.</item>
+      <item>Complacency check: deferred items accumulating?</item>
+    </checklist>
+    <output-file>docs/reviews/cycle-NNN-self-review.md</output-file>
+    <required-sections>
+      <section>Header: Self-review -- independent review agent unavailable</section>
+      <section>Complacency Score: N/5 with evidence</section>
+      <section>Structured findings in standard format</section>
+      <section>Summary: N findings (A actioned, D deferred, I ignored)</section>
+    </required-sections>
+    <escalation>File question-for-eva after 2 consecutive dispatch failures.</escalation>
+  </step>
+
+  <!-- C7-C8: Final steps -->
+  <step id="C7" title="Commit dispatch state and push"
+        automation="auto-by-cycle-runner" post-step="auto"
+        prerequisite="C6">
+    <action>record-dispatch already committed state change. Push immediately.</action>
+    <constraint>This receipt appears in closing comment but NOT in worklog receipt table.</constraint>
+  </step>
+
+  <step id="C8" title="Close orchestrator issue"
+        automation="auto-by-cycle-runner" post-step="auto"
+        prerequisite="C7">
+    <content>
+      <item>What was accomplished</item>
+      <item>Pipeline status</item>
+      <item>Review agent issue number</item>
+      <item>Commit receipts</item>
+      <item>Next cycle priorities</item>
+    </content>
+  </step>
+
+</phase>
