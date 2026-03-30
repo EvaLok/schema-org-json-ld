@@ -40,4 +40,25 @@ describe("PropertyValue", () => {
 			'{\n  "@context": "https://schema.org/",\n  "@type": "PropertyValue",\n  "name": "weight",\n  "value": "10kg"\n}',
 		);
 	});
+
+	it("serializes empty string fields", () => {
+		const schema = new PropertyValue({ name: "", value: "" });
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.name).toBe("");
+		expect(obj.value).toBe("");
+	});
+
+	it("preserves numeric-like values as strings", () => {
+		const schema = new PropertyValue({
+			name: "identifier",
+			value: "000123",
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.value).toBe("000123");
+		expect(typeof obj.value).toBe("string");
+	});
 });

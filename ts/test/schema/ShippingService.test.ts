@@ -84,4 +84,41 @@ describe("ShippingService", () => {
 		expect(handlingTime["@type"]).toBe("ServicePeriod");
 		expect(validForMemberTier["@type"]).toBe("MemberProgramTier");
 	});
+
+	it("supports a single shipping condition with empty strings", () => {
+		const schema = new ShippingService({
+			shippingConditions: new ShippingConditions({ doesNotShip: false }),
+			name: "",
+			description: "",
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+		const shippingConditions = obj.shippingConditions as Record<
+			string,
+			unknown
+		>;
+
+		expect(shippingConditions["@type"]).toBe("ShippingConditions");
+		expect(shippingConditions.doesNotShip).toBe(false);
+		expect(obj.name).toBe("");
+		expect(obj.description).toBe("");
+	});
+
+	it("serializes nested handlingTime durations", () => {
+		const schema = new ShippingService({
+			shippingConditions: new ShippingConditions({}),
+			handlingTime: new ServicePeriod({
+				duration: new QuantitativeValue({ value: 2, unitCode: "DAY" }),
+			}),
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+		const handlingTime = obj.handlingTime as Record<string, unknown>;
+		const duration = handlingTime.duration as Record<string, unknown>;
+
+		expect(handlingTime["@type"]).toBe("ServicePeriod");
+		expect(duration["@type"]).toBe("QuantitativeValue");
+		expect(duration.value).toBe(2);
+		expect(duration.unitCode).toBe("DAY");
+	});
 });

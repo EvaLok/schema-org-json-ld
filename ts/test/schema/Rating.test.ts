@@ -53,4 +53,32 @@ describe("Rating", () => {
 			'{\n  "@context": "https://schema.org/",\n  "@type": "Rating",\n  "ratingValue": 4.5,\n  "bestRating": 5,\n  "worstRating": 1\n}',
 		);
 	});
+
+	it("serializes zero values", () => {
+		const schema = new Rating({
+			ratingValue: 0,
+			bestRating: 0,
+			worstRating: 0,
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.ratingValue).toBe(0);
+		expect(obj.bestRating).toBe(0);
+		expect(obj.worstRating).toBe(0);
+	});
+
+	it("preserves decimal values", () => {
+		const schema = new Rating({
+			ratingValue: 4.75,
+			bestRating: 5,
+			worstRating: 0.5,
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.ratingValue).toBe(4.75);
+		expect(obj.bestRating).toBe(5);
+		expect(obj.worstRating).toBe(0.5);
+	});
 });

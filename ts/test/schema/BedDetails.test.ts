@@ -29,4 +29,20 @@ describe("BedDetails", () => {
 
 		expect(obj.typeOfBed).toBe("Queen");
 	});
+
+	it("serializes zero beds", () => {
+		const schema = new BedDetails({ numberOfBeds: 0 });
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.numberOfBeds).toBe(0);
+	});
+
+	it("serializes empty string bed types", () => {
+		const schema = new BedDetails({ numberOfBeds: 1, typeOfBed: "" });
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.typeOfBed).toBe("");
+	});
 });

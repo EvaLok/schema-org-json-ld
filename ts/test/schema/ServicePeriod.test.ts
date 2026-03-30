@@ -47,4 +47,29 @@ describe("ServicePeriod", () => {
 		]);
 		expect(obj.cutoffTime).toBe("17:00:00Z");
 	});
+
+	it("omits empty businessDays arrays", () => {
+		const schema = new ServicePeriod({
+			businessDays: [],
+			cutoffTime: "09:00:00",
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj).not.toHaveProperty("businessDays");
+		expect(obj.cutoffTime).toBe("09:00:00");
+	});
+
+	it("serializes zero-valued durations", () => {
+		const schema = new ServicePeriod({
+			duration: new QuantitativeValue({ value: 0, unitCode: "DAY" }),
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+		const duration = obj.duration as Record<string, unknown>;
+
+		expect(duration["@type"]).toBe("QuantitativeValue");
+		expect(duration.value).toBe(0);
+		expect(duration.unitCode).toBe("DAY");
+	});
 });

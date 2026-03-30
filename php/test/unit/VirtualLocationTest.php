@@ -21,6 +21,17 @@ final class VirtualLocationTest extends TestCase {
 		$this->assertFalse(property_exists($obj, 'name'));
 	}
 
+	public function testOptionalFieldsOmittedWhenNull(): void {
+		$virtualLocation = new VirtualLocation(
+			url: 'https://example.com/join',
+			name: null,
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $virtualLocation);
+		$obj = json_decode($json);
+
+		$this->assertFalse(property_exists($obj, 'name'));
+	}
+
 	public function testFullOutput(): void {
 		$virtualLocation = new VirtualLocation(
 			url: 'https://example.com/join',
@@ -32,5 +43,26 @@ final class VirtualLocationTest extends TestCase {
 		$this->assertEquals('VirtualLocation', $obj->{'@type'});
 		$this->assertEquals('https://example.com/join', $obj->url);
 		$this->assertEquals('Virtual Stage', $obj->name);
+	}
+
+	public function testUrlPreservesQueryStringAndFragment(): void {
+		$virtualLocation = new VirtualLocation(
+			url: 'https://example.com/join?slot=main#stage-a',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $virtualLocation);
+		$obj = json_decode($json);
+
+		$this->assertEquals('https://example.com/join?slot=main#stage-a', $obj->url);
+	}
+
+	public function testEmptyStringNameIsSerialized(): void {
+		$virtualLocation = new VirtualLocation(
+			url: 'https://example.com/join',
+			name: '',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $virtualLocation);
+		$obj = json_decode($json);
+
+		$this->assertSame('', $obj->name);
 	}
 }

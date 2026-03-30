@@ -35,4 +35,25 @@ describe("VirtualLocation", () => {
 
 		expect(obj.name).toBe("Main Stage");
 	});
+
+	it("preserves query strings and fragments in url", () => {
+		const schema = new VirtualLocation({
+			url: "https://example.com/live?slot=main#stage-a",
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.url).toBe("https://example.com/live?slot=main#stage-a");
+	});
+
+	it("serializes empty string names", () => {
+		const schema = new VirtualLocation({
+			url: "https://example.com/live",
+			name: "",
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.name).toBe("");
+	});
 });

@@ -57,4 +57,37 @@ describe("ContactPoint", () => {
 			'{\n  "@context": "https://schema.org/",\n  "@type": "ContactPoint",\n  "telephone": "+1-800-123-4567",\n  "email": "support@example.com",\n  "contactType": "customer support",\n  "areaServed": "US",\n  "availableLanguage": "en"\n}',
 		);
 	});
+
+	it("only includes provided fields in partial output", () => {
+		const schema = new ContactPoint({
+			telephone: "+1-800-123-4567",
+			contactType: "customer support",
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.telephone).toBe("+1-800-123-4567");
+		expect(obj.contactType).toBe("customer support");
+		expect(obj).not.toHaveProperty("email");
+		expect(obj).not.toHaveProperty("areaServed");
+		expect(obj).not.toHaveProperty("availableLanguage");
+	});
+
+	it("serializes empty strings for optional fields", () => {
+		const schema = new ContactPoint({
+			telephone: "",
+			email: "",
+			contactType: "",
+			areaServed: "",
+			availableLanguage: "",
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.telephone).toBe("");
+		expect(obj.email).toBe("");
+		expect(obj.contactType).toBe("");
+		expect(obj.areaServed).toBe("");
+		expect(obj.availableLanguage).toBe("");
+	});
 });
