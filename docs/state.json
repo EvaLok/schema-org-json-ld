@@ -6060,6 +6060,15 @@
       "pr": 2015,
       "status": "merged",
       "title": "Expand test coverage for thin schema test files (PHP + TS)"
+    },
+    {
+      "dispatched_at": "2026-03-30T08:37:27Z",
+      "issue": 2019,
+      "merged_at": null,
+      "model": "gpt-5.4",
+      "pr": null,
+      "status": "in_flight",
+      "title": "Expand test coverage for thin schema test files — batch 2 (PHP + TS)"
     }
   ],
   "audit_dropped": [
@@ -6690,7 +6699,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 104,
     "issue": 2018,
