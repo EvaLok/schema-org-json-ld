@@ -6108,8 +6108,10 @@
     {
       "dispatched_at": "2026-03-30T19:03:53Z",
       "issue": 2043,
+      "merged_at": "2026-03-30T20:48:24Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2044,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 414 end-of-cycle review"
     },
     {
