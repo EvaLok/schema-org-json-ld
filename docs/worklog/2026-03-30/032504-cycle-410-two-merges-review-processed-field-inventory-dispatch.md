@@ -24,9 +24,14 @@
 
 - **In-flight agent sessions**: 0
 - **Pipeline status**: PASS (3 warnings)
+- **Pipeline status (post-dispatch)**: PASS (2 warnings)
 - **Publish gate**: published
 
 ## Next steps
+
+1. No in-flight sessions — plan next dispatch
+
+## Next steps (post-dispatch)
 
 1. No in-flight sessions — plan next dispatch
 
