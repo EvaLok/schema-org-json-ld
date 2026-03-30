@@ -6129,6 +6129,13 @@
       "pr": 2049,
       "status": "merged",
       "title": "Backfilled: PR #2049"
+    },
+    {
+      "dispatched_at": "2026-03-30T20:54:09Z",
+      "issue": 2050,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 415 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -6515,7 +6522,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2043 [Cycle Review] Cycle 414 end-of-cycle review (cycle 414)",
+  "dispatch_log_latest": "#2050 [Cycle Review] Cycle 415 end-of-cycle review (cycle 415)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6785,12 +6792,12 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 36,
     "issue": 2045,
     "number": 415,
-    "summary": "0 dispatches, 4 merges",
+    "summary": "1 dispatch, 4 merges",
     "timestamp": "2026-03-30T20:48:58Z"
   },
   "last_eva_comment_check": "2026-03-30T20:48:58Z",
@@ -11317,7 +11324,7 @@
     ],
     "last_review_cycle": 414
   },
-  "review_dispatch_consecutive": 5,
+  "review_dispatch_consecutive": 6,
   "review_events_verified_through_cycle": 414,
   "schema_status": {
     "directory_layout": {
