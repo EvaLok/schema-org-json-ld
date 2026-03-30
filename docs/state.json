@@ -6319,7 +6319,8 @@
     "total_classes_converted": 54
   },
   "cycle_issues": [
-    2023
+    2023,
+    2028
   ],
   "cycle_phase": {
     "cycle": 412,
@@ -6724,7 +6725,7 @@
   "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 15,
-    "issue": 2023,
+    "issue": 2028,
     "number": 412,
     "summary": "2 dispatches, 2 merges. Merged PRs #2022 (review artifact refresh), #2020 (thin test batch 2). Dispatched #2024 (thin test batch 3, 11 types), #2026 (cycle 412 review). Refreshed metrics and field inventory. Closed audit-inbound #2010. Cleaned 4 branches.",
     "timestamp": "2026-03-30T10:45:00Z"
@@ -6767,7 +6768,7 @@
     "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
     "started_at": "cycle 199"
   },
-  "previous_cycle_issue": 2018,
+  "previous_cycle_issue": 2023,
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
     "burn_in_target": 6,
