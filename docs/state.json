@@ -6213,7 +6213,7 @@
     "count": 0,
     "threshold": 10,
     "last_forward_cycle": 411,
-    "last_forward_description": "TBD - dispatch pending",
+    "last_forward_description": "#2011 Article test coverage expansion",
     "added_in_cycle": 411,
     "added_per": "audit #345"
   },
@@ -6388,7 +6388,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2005 [Cycle Review] Cycle 410 end-of-cycle review (cycle 410)",
+  "dispatch_log_latest": "#2011 Expand Article test coverage: speakable, subscription, author variants (cycle 411)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6654,7 +6654,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 104,
     "issue": 2009,
