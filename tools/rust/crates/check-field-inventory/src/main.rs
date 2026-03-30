@@ -265,6 +265,11 @@ fn detect_stale_fields(state: &StateJson, current_cycle: u64) -> Vec<StaleField>
 
 fn cadence_threshold(cadence: &str) -> (&'static str, u64) {
     let normalized = cadence.to_ascii_lowercase();
+    let is_change_triggered = normalized.contains("when")
+        || (normalized.contains("every")
+            && !normalized.contains("cycle")
+            && !normalized.contains("phase"));
+
     if normalized.contains("every phase transition") {
         ("per-phase-transition", 2)
     } else if normalized.contains("every cycle") || normalized.contains("per cycle") {
@@ -273,6 +278,8 @@ fn cadence_threshold(cadence: &str) -> (&'static str, u64) {
         ("periodic", number + 1)
     } else if normalized.contains("after") {
         ("after-change", 10)
+    } else if is_change_triggered {
+        ("change-triggered", 20)
     } else {
         ("default", 5)
     }
@@ -317,10 +324,48 @@ mod tests {
     }
 
     #[test]
+    fn cadence_threshold_classifies_change_triggered_merge_test_updates() {
+        assert_eq!(
+            cadence_threshold("every merge that adds/removes PHP or TS tests"),
+            ("change-triggered", 20)
+        );
+    }
+
+    #[test]
+    fn cadence_threshold_classifies_change_triggered_when_statements() {
+        assert_eq!(
+            cadence_threshold("when mode or counter changes"),
+            ("change-triggered", 20)
+        );
+    }
+
+    #[test]
+    fn cadence_threshold_classifies_change_triggered_merge_file_updates() {
+        assert_eq!(
+            cadence_threshold("every merge that adds/removes TS files"),
+            ("change-triggered", 20)
+        );
+    }
+
+    #[test]
     fn cadence_threshold_classifies_after_change() {
         assert_eq!(cadence_threshold("after changes"), ("after-change", 10));
         assert_eq!(
             cadence_threshold("after schema class additions"),
+            ("after-change", 10)
+        );
+    }
+
+    #[test]
+    fn cadence_threshold_regression_examples_remain_stable() {
+        assert_eq!(cadence_threshold("every cycle"), ("per-cycle", 2));
+        assert_eq!(
+            cadence_threshold("every phase transition"),
+            ("per-phase-transition", 2)
+        );
+        assert_eq!(cadence_threshold("every 10 cycles"), ("periodic", 11));
+        assert_eq!(
+            cadence_threshold("after question creation"),
             ("after-change", 10)
         );
     }
