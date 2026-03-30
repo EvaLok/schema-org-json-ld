@@ -6261,7 +6261,8 @@
     339,
     341,
     343,
-    345
+    345,
+    347
   ],
   "blockers": [
     {
@@ -6556,7 +6557,7 @@
       },
       "audit_processed": {
         "cadence": "after processing audit issues",
-        "last_refreshed": "cycle 402"
+        "last_refreshed": "cycle 413"
       },
       "blockers": {
         "cadence": "after blocker state changes",
