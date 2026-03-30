@@ -10,8 +10,8 @@ const SELF_MODIFICATIONS_HEADING: &str = "## Self-modifications";
 const COMMIT_RECEIPTS_HEADING: &str = "## Commit receipts";
 const CONCRETE_COMMITMENTS_HEADING: &str = "### Concrete commitments for next cycle";
 const INFRASTRUCTURE_PATHS: [&str; 5] = [
-    "STARTUP_CHECKLIST.md",
-    "COMPLETION_CHECKLIST.md",
+    "STARTUP_CHECKLIST.xml",
+    "COMPLETION_CHECKLIST.xml",
     "AGENTS.md",
     ".claude/skills",
     "tools",
