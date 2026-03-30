@@ -6037,8 +6037,10 @@
     {
       "dispatched_at": "2026-03-30T03:30:55Z",
       "issue": 2005,
+      "merged_at": "2026-03-30T05:05:40Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2006,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 410 end-of-cycle review"
     }
   ],
@@ -6632,7 +6634,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 21,
     "issue": 2007,
