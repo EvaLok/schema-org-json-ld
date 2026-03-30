@@ -6111,6 +6111,14 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "[Cycle Review] Cycle 414 end-of-cycle review"
+    },
+    {
+      "backfilled": true,
+      "issue": 2046,
+      "merged_at": "2026-03-30T20:41:00Z",
+      "pr": 2048,
+      "status": "merged",
+      "title": "Backfilled: PR #2048"
     }
   ],
   "audit_dropped": [
