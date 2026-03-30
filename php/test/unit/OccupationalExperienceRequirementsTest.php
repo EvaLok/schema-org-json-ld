@@ -22,4 +22,37 @@ final class OccupationalExperienceRequirementsTest extends TestCase {
 		$this->assertEquals('OccupationalExperienceRequirements', $obj->{'@type'});
 		$this->assertEquals(24, $obj->monthsOfExperience);
 	}
+
+	public function testZeroMonthsOfExperienceIsSerialized(): void {
+		$schema = new OccupationalExperienceRequirements(
+			monthsOfExperience: 0,
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame(0, $obj->monthsOfExperience);
+	}
+
+	public function testOnlyContextTypeAndMonthsOfExperienceAppear(): void {
+		$schema = new OccupationalExperienceRequirements(
+			monthsOfExperience: 18,
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame(
+			['@context', '@type', 'monthsOfExperience'],
+			array_keys(get_object_vars($obj)),
+		);
+	}
+
+	public function testExactMonthsOfExperienceValueRoundTrips(): void {
+		$schema = new OccupationalExperienceRequirements(
+			monthsOfExperience: 7,
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame(7, $obj->monthsOfExperience);
+	}
 }

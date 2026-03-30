@@ -51,4 +51,48 @@ describe("MerchantReturnPolicySeasonalOverride", () => {
 
 		expect(obj.merchantReturnDays).toBe(45);
 	});
+
+	it("omits merchantReturnDays when null in minimal output", () => {
+		const schema = new MerchantReturnPolicySeasonalOverride({
+			startDate: "2026-11-20",
+			endDate: "2026-12-31",
+			returnPolicyCategory:
+				MerchantReturnEnumeration.MerchantReturnFiniteReturnWindow,
+			merchantReturnDays: null,
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj).not.toHaveProperty("merchantReturnDays");
+	});
+
+	it("preserves merchantReturnDays when set to zero", () => {
+		const schema = new MerchantReturnPolicySeasonalOverride({
+			startDate: "2026-12-24",
+			endDate: "2026-12-26",
+			returnPolicyCategory:
+				MerchantReturnEnumeration.MerchantReturnFiniteReturnWindow,
+			merchantReturnDays: 0,
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.merchantReturnDays).toBe(0);
+	});
+
+	it("serializes the enum value as the schema.org URL", () => {
+		const schema = new MerchantReturnPolicySeasonalOverride({
+			startDate: "2026-11-01",
+			endDate: "2026-11-30",
+			returnPolicyCategory:
+				MerchantReturnEnumeration.MerchantReturnFiniteReturnWindow,
+			merchantReturnDays: 30,
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.returnPolicyCategory).toBe(
+			MerchantReturnEnumeration.MerchantReturnFiniteReturnWindow,
+		);
+	});
 });

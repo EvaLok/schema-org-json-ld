@@ -38,4 +38,28 @@ describe("AdministrativeArea", () => {
 			'{\n  "@context": "https://schema.org/",\n  "@type": "AdministrativeArea",\n  "name": "California"\n}',
 		);
 	});
+
+	it("serializes an empty string name", () => {
+		const schema = new AdministrativeArea({ name: "" });
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.name).toBe("");
+	});
+
+	it("only includes @context, @type, and name", () => {
+		const schema = new AdministrativeArea({ name: "Ontario" });
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(Object.keys(obj)).toEqual(["@context", "@type", "name"]);
+	});
+
+	it("preserves the exact name value", () => {
+		const schema = new AdministrativeArea({ name: "Île-de-France" });
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.name).toBe("Île-de-France");
+	});
 });

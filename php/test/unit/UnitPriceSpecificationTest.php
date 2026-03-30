@@ -53,4 +53,50 @@ final class UnitPriceSpecificationTest extends TestCase {
 		$this->assertEquals(1, $obj->referenceQuantity->value);
 		$this->assertEquals('KGM', $obj->referenceQuantity->unitCode);
 	}
+
+	public function testZeroPriceIsSerialized(): void {
+		$schema = new UnitPriceSpecification(
+			price: 0.0,
+			priceCurrency: 'USD',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals(0.0, $obj->price);
+	}
+
+	public function testOnlyRequiredFieldsOmitOptionalNullFields(): void {
+		$schema = new UnitPriceSpecification(
+			price: 4.99,
+			priceCurrency: 'USD',
+			priceType: null,
+			membershipPointsEarned: null,
+			validForMemberTier: null,
+			referenceQuantity: null,
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertFalse(property_exists($obj, 'priceType'));
+		$this->assertFalse(property_exists($obj, 'membershipPointsEarned'));
+		$this->assertFalse(property_exists($obj, 'validForMemberTier'));
+		$this->assertFalse(property_exists($obj, 'referenceQuantity'));
+	}
+
+	public function testReferenceQuantityCarriesCorrectType(): void {
+		$schema = new UnitPriceSpecification(
+			price: 1.99,
+			priceCurrency: 'USD',
+			referenceQuantity: new QuantitativeValue(
+				value: 500,
+				unitCode: 'GRM',
+			),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('QuantitativeValue', $obj->referenceQuantity->{'@type'});
+		$this->assertEquals(500, $obj->referenceQuantity->value);
+		$this->assertEquals('GRM', $obj->referenceQuantity->unitCode);
+	}
 }

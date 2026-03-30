@@ -59,4 +59,40 @@ describe("Place", () => {
 		expect(geo["@type"]).toBe("GeoShape");
 		expect(geo.box).toBe("37.42242 -122.08585 37.42242 -122.08585");
 	});
+
+	it("keeps minimal output to only name, @context, and @type", () => {
+		const schema = new Place({ name: "Main Theater" });
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(Object.keys(obj)).toEqual(["@context", "@type", "name"]);
+	});
+
+	it("serializes GeoShape with the correct nested @type", () => {
+		const schema = new Place({
+			name: "Main Theater",
+			geo: new GeoShape({ box: "52.37 4.89 52.38 4.90" }),
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+		const geo = obj.geo as Record<string, unknown>;
+
+		expect(geo["@type"]).toBe("GeoShape");
+		expect(geo.box).toBe("52.37 4.89 52.38 4.90");
+	});
+
+	it("serializes nested address and geo objects with their respective @type", () => {
+		const schema = new Place({
+			name: "Main Theater",
+			address: new PostalAddress({ streetAddress: "123 Main Street" }),
+			geo: new GeoCoordinates({ latitude: 52.37, longitude: 4.89 }),
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+		const address = obj.address as Record<string, unknown>;
+		const geo = obj.geo as Record<string, unknown>;
+
+		expect(address["@type"]).toBe("PostalAddress");
+		expect(geo["@type"]).toBe("GeoCoordinates");
+	});
 });

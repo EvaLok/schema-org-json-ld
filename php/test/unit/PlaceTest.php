@@ -6,11 +6,27 @@ namespace EvaLok\SchemaOrgJsonLd\Test\Unit;
 
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\GeoCoordinates;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\GeoShape;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\Place;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\PostalAddress;
 use PHPUnit\Framework\TestCase;
 
 final class PlaceTest extends TestCase {
+	public function testMinimalOutputWithNameOnlyOmitsAddressAndGeo(): void {
+		$place = new Place(
+			name: 'Main Theater',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $place);
+		$this->assertIsString($json);
+
+		$obj = json_decode($json);
+		$this->assertEquals('https://schema.org/', $obj->{'@context'});
+		$this->assertEquals('Place', $obj->{'@type'});
+		$this->assertEquals('Main Theater', $obj->name);
+		$this->assertFalse(property_exists($obj, 'address'));
+		$this->assertFalse(property_exists($obj, 'geo'));
+	}
+
 	public function testMinimalOutput(): void {
 		$place = new Place(
 			name: 'Main Theater',
@@ -45,5 +61,35 @@ final class PlaceTest extends TestCase {
 		$this->assertEquals(52.37, $obj->geo->latitude);
 		$this->assertEquals(4.89, $obj->geo->longitude);
 		$this->assertFalse(property_exists($obj, 'address'));
+	}
+
+	public function testWithGeoShape(): void {
+		$place = new Place(
+			name: 'Main Theater',
+			geo: new GeoShape(
+				box: '52.37 4.89 52.38 4.90',
+			),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $place);
+		$obj = json_decode($json);
+
+		$this->assertEquals('GeoShape', $obj->geo->{'@type'});
+		$this->assertEquals('52.37 4.89 52.38 4.90', $obj->geo->box);
+	}
+
+	public function testNestedObjectsCarryCorrectType(): void {
+		$place = new Place(
+			name: 'Main Theater',
+			address: new PostalAddress(streetAddress: '123 Main Street'),
+			geo: new GeoCoordinates(
+				latitude: 52.37,
+				longitude: 4.89,
+			),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $place);
+		$obj = json_decode($json);
+
+		$this->assertEquals('PostalAddress', $obj->address->{'@type'});
+		$this->assertEquals('GeoCoordinates', $obj->geo->{'@type'});
 	}
 }

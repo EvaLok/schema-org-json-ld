@@ -50,4 +50,37 @@ describe("LocationFeatureSpecification", () => {
 		expect(booleanObj.value).toBe(false);
 		expect(stringObj.value).toBe("seasonal");
 	});
+
+	it("preserves false as a serialized value", () => {
+		const schema = new LocationFeatureSpecification({
+			name: "Parking",
+			value: false,
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.value).toBe(false);
+	});
+
+	it("serializes an empty string value", () => {
+		const schema = new LocationFeatureSpecification({
+			name: "Description",
+			value: "",
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.value).toBe("");
+	});
+
+	it("preserves true as a serialized value", () => {
+		const schema = new LocationFeatureSpecification({
+			name: "Accessible",
+			value: true,
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.value).toBe(true);
+	});
 });

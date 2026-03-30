@@ -41,4 +41,46 @@ final class MonetaryAmountTest extends TestCase {
 		$this->assertEquals(15.00, $obj->maxValue);
 		$this->assertEquals('HOUR', $obj->unitText);
 	}
+
+	public function testZeroValueIsSerialized(): void {
+		$schema = new MonetaryAmount(
+			currency: 'USD',
+			value: 0.0,
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals(0.0, $obj->value);
+	}
+
+	public function testMinAndMaxValueCanBeSerializedWithoutValue(): void {
+		$schema = new MonetaryAmount(
+			currency: 'EUR',
+			minValue: 5.0,
+			maxValue: 9.5,
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertFalse(property_exists($obj, 'value'));
+		$this->assertEquals(5.0, $obj->minValue);
+		$this->assertEquals(9.5, $obj->maxValue);
+	}
+
+	public function testNullFieldsAreOmitted(): void {
+		$schema = new MonetaryAmount(
+			currency: 'GBP',
+			value: null,
+			minValue: null,
+			maxValue: null,
+			unitText: null,
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertFalse(property_exists($obj, 'value'));
+		$this->assertFalse(property_exists($obj, 'minValue'));
+		$this->assertFalse(property_exists($obj, 'maxValue'));
+		$this->assertFalse(property_exists($obj, 'unitText'));
+	}
 }

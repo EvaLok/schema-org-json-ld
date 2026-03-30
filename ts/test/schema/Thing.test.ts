@@ -29,4 +29,28 @@ describe("Thing", () => {
 
 		expect(obj.name).toBe("Complete Thing");
 	});
+
+	it("serializes an empty string name", () => {
+		const schema = new Thing({ name: "" });
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.name).toBe("");
+	});
+
+	it("only includes @context, @type, and name", () => {
+		const schema = new Thing({ name: "Widget" });
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(Object.keys(obj)).toEqual(["@context", "@type", "name"]);
+	});
+
+	it("preserves the exact name value", () => {
+		const schema = new Thing({ name: "Thing 42 / sample" });
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.name).toBe("Thing 42 / sample");
+	});
 });
