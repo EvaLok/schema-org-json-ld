@@ -11188,39 +11188,6 @@
         ],
         "complacency_score": 4,
         "cycle": 412,
-        "deferred": 3,
-        "finding_count": 4,
-        "finding_dispositions": [
-          {
-            "category": "worklog-accuracy",
-            "disposition": "deferred"
-          },
-          {
-            "category": "process-adherence",
-            "disposition": "deferred"
-          },
-          {
-            "category": "journal-quality",
-            "disposition": "actioned"
-          },
-          {
-            "category": "infrastructure-consistency",
-            "disposition": "deferred"
-          }
-        ],
-        "ignored": 0,
-        "note": "worklog-accuracy: post-dispatch addendum mechanism not yet built; process-adherence: pipeline gates still fail (worklog-immutability cascade); journal-quality: actioned — cycle 412 journal grades commitments individually; infrastructure-consistency: record-dispatch false positive not yet fixed"
-      },
-      {
-        "actioned": 1,
-        "categories": [
-          "infrastructure-consistency",
-          "journal-quality",
-          "process-adherence",
-          "worklog-accuracy"
-        ],
-        "complacency_score": 4,
-        "cycle": 412,
         "deferred": 2,
         "finding_count": 4,
         "finding_dispositions": [
