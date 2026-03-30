@@ -32,8 +32,8 @@ const PUBLISH_GATE_PREFIX: &str = "- **Publish gate**: ";
 const PUBLISH_GATE_POST_DISPATCH_PREFIX: &str = "- **Publish gate (post-dispatch)**: ";
 const INFRASTRUCTURE_ROOTS: [&str; 2] = ["tools", ".claude/skills"];
 const INFRASTRUCTURE_FILES: [&str; 4] = [
-    "STARTUP_CHECKLIST.md",
-    "COMPLETION_CHECKLIST.md",
+    "STARTUP_CHECKLIST.xml",
+    "COMPLETION_CHECKLIST.xml",
     "AGENTS.md",
     "AGENTS-ts.md",
 ];
@@ -3429,7 +3429,7 @@ mod tests {
         let input = WorklogInput {
             what_was_done: vec!["Fixed #42".to_string()],
             self_modifications: vec![SelfModification {
-                file: "STARTUP_CHECKLIST.md".to_string(),
+                file: "STARTUP_CHECKLIST.xml".to_string(),
                 description: "Updated per audit #117".to_string(),
             }],
             prs_merged: vec![537],
@@ -3631,13 +3631,13 @@ mod tests {
     #[test]
     fn parse_infrastructure_self_modifications_filters_supported_paths() {
         let modifications = parse_infrastructure_self_modifications(
-            "tools/rust/crates/write-entry/src/main.rs\nREADME.md\nSTARTUP_CHECKLIST.md\n.claude/skills/rust-tooling/SKILL.md\nAGENTS-ts.md\n",
+            "tools/rust/crates/write-entry/src/main.rs\nREADME.md\nSTARTUP_CHECKLIST.xml\n.claude/skills/rust-tooling/SKILL.md\nAGENTS-ts.md\n",
         );
 
         assert_eq!(modifications.len(), 4);
         assert_eq!(modifications[0].file, "tools/rust/crates/write-entry/src/main.rs");
         assert_eq!(modifications[0].description, "modified");
-        assert_eq!(modifications[1].file, "STARTUP_CHECKLIST.md");
+        assert_eq!(modifications[1].file, "STARTUP_CHECKLIST.xml");
         assert_eq!(modifications[2].file, ".claude/skills/rust-tooling/SKILL.md");
         assert_eq!(modifications[3].file, "AGENTS-ts.md");
     }
