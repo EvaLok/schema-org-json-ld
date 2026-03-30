@@ -11339,12 +11339,13 @@
         ],
         "complacency_score": 3,
         "cycle": 415,
-        "deferred": 3,
+        "deferred": 2,
+        "dispatch_created": 1,
         "finding_count": 3,
         "finding_dispositions": [
           {
             "category": "worklog-accuracy",
-            "disposition": "deferred"
+            "disposition": "dispatch_created"
           },
           {
             "category": "journal-quality",
