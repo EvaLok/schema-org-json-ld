@@ -6274,7 +6274,7 @@
   "cycle_phase": {
     "cycle": 410,
     "phase": "close_out",
-    "phase_entered_at": "2026-03-30T03:24:34Z"
+    "phase_entered_at": "2026-03-30T05:08:36Z"
   },
   "deferred_findings": [
     {
@@ -6648,13 +6648,13 @@
   },
   "in_flight_sessions": 0,
   "last_cycle": {
-    "duration_minutes": 21,
+    "duration_minutes": 104,
     "issue": 2007,
     "number": 410,
-    "summary": "2 merges (PR #1999 frozen-commit-verify, PR #2001 cycle-409 review), 2 dispatches (#2003 field-inventory fix, #2005 review)",
-    "timestamp": "2026-03-30T03:24:34Z"
+    "summary": "Resumed cycle 410: reviewed and merged PRs #2004 (field-inventory cadence fix) and #2006 (review artifact). Processed 4 review findings (3 actioned, 1 deferred). Fixed state inconsistencies: review_dispatch_consecutive, resolved_ref, cycle 409 F2 reclassification.",
+    "timestamp": "2026-03-30T05:08:36Z"
   },
-  "last_eva_comment_check": "2026-03-30T03:24:34Z",
+  "last_eva_comment_check": "2026-03-30T05:08:36Z",
   "last_tool_audit_cycle": 403,
   "open_questions_for_eva": [],
   "pending_audit_implementations": [
