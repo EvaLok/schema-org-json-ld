@@ -6681,7 +6681,7 @@
     "duration_minutes": 8,
     "issue": 2009,
     "number": 411,
-    "summary": "Cycle 411: Fixed frozen-commit-verify false positive (pipeline-check), processed audit #345 (maintenance loop circuit breaker), dispatched #2011 (Article test coverage expansion — first forward work in 15+ cycles).",
+    "summary": "1 dispatch (#2011 Article test coverage). Fixed frozen-commit-verify false positive, processed audit #345 (maintenance loop circuit breaker). First forward schema work in 15+ cycles.",
     "timestamp": "2026-03-30T06:54:59Z"
   },
   "last_eva_comment_check": "2026-03-30T06:54:59Z",
@@ -11084,7 +11084,7 @@
     ],
     "last_review_cycle": 410
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 407,
   "schema_status": {
     "directory_layout": {
