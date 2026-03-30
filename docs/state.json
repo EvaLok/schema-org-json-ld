@@ -6096,6 +6096,13 @@
       "pr": 2027,
       "status": "merged",
       "title": "Cycle 412 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-30T16:43:36Z",
+      "issue": 2040,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 413 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -6469,7 +6476,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2024 Thin schema test batch 3 — 11 types (cycle 412)",
+  "dispatch_log_latest": "#2040 [Cycle Review] Cycle 413 end-of-cycle review (cycle 413)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6739,12 +6746,12 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 13,
     "issue": 2032,
     "number": 413,
-    "summary": "0 dispatches, 0 merges",
+    "summary": "1 dispatch, 0 merges",
     "timestamp": "2026-03-30T16:34:28Z"
   },
   "last_eva_comment_check": "2026-03-30T16:34:28Z",
@@ -11214,7 +11221,7 @@
     ],
     "last_review_cycle": 412
   },
-  "review_dispatch_consecutive": 3,
+  "review_dispatch_consecutive": 4,
   "review_events_verified_through_cycle": 407,
   "schema_status": {
     "directory_layout": {
