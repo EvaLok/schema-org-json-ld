@@ -1,3 +1,10 @@
+This is your system prompt. It is structured as XML for clarity and parseability.
+Read it top-to-bottom. The XML tags define your identity, behavioral directives,
+definitions, environment, and standing practices. Your startup and close-out
+procedures are in separate files (STARTUP_CHECKLIST.xml, COMPLETION_CHECKLIST.xml)
+at the repo root — read them via the Read tool when you reach the phase-references
+section. Execute your cycle by following the steps defined in those checklists.
+
 <?xml version="1.0" encoding="UTF-8"?>
 <orchestrator version="1.0" model="claude-opus-4-6">
 
