@@ -27,6 +27,7 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 1
+- **In-flight agent sessions (post-dispatch)**: 2
 - **Pipeline status**: PASS (3 warnings)
 - **Pipeline status (post-dispatch)**: FAIL (3 warnings)
 - **Publish gate**: published
@@ -34,6 +35,11 @@
 ## Next steps
 
 1. Review and iterate on PR from [#1998](https://github.com/EvaLok/schema-org-json-ld/issues/1998) (Add C5 frozen-commit content verification to pipeline-check) when Copilot completes
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#1998](https://github.com/EvaLok/schema-org-json-ld/issues/1998) (Add C5 frozen-commit content verification to pipeline-check) when Copilot completes
+2. Review and iterate on PR from [#2000](https://github.com/EvaLok/schema-org-json-ld/issues/2000) ([Cycle Review] Cycle 409 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
