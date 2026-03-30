@@ -6119,6 +6119,14 @@
       "pr": 2048,
       "status": "merged",
       "title": "Backfilled: PR #2048"
+    },
+    {
+      "backfilled": true,
+      "issue": 2047,
+      "merged_at": "2026-03-30T20:46:16Z",
+      "pr": 2049,
+      "status": "merged",
+      "title": "Backfilled: PR #2049"
     }
   ],
   "audit_dropped": [
