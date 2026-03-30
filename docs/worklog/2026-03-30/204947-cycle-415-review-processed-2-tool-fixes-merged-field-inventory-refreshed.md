@@ -34,12 +34,18 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 0
+- **In-flight agent sessions (post-dispatch)**: 1
 - **Pipeline status**: PASS (2 warnings)
+- **Pipeline status (post-dispatch)**: PASS (1 blocking warning, 1 warning)
 - **Publish gate**: published
 
 ## Next steps
 
 1. No in-flight sessions — plan next dispatch
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2050](https://github.com/EvaLok/schema-org-json-ld/issues/2050) ([Cycle Review] Cycle 415 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
