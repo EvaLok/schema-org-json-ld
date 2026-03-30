@@ -265,6 +265,11 @@ fn detect_stale_fields(state: &StateJson, current_cycle: u64) -> Vec<StaleField>
 
 fn cadence_threshold(cadence: &str) -> (&'static str, u64) {
     let normalized = cadence.to_ascii_lowercase();
+    let is_change_triggered = normalized.contains("when")
+        || (normalized.contains("every")
+            && !normalized.contains("cycle")
+            && !normalized.contains("phase"));
+
     if normalized.contains("every phase transition") {
         ("per-phase-transition", 2)
     } else if normalized.contains("every cycle") || normalized.contains("per cycle") {
@@ -273,11 +278,7 @@ fn cadence_threshold(cadence: &str) -> (&'static str, u64) {
         ("periodic", number + 1)
     } else if normalized.contains("after") {
         ("after-change", 10)
-    } else if normalized.contains("when")
-        || (normalized.contains("every")
-            && !normalized.contains("cycle")
-            && !normalized.contains("phase"))
-    {
+    } else if is_change_triggered {
         ("change-triggered", 20)
     } else {
         ("default", 5)
