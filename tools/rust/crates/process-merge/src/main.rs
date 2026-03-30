@@ -247,6 +247,18 @@ fn update_agent_sessions(
                     pr
                 ),
             }
+
+            let mut backfill = serde_json::Map::new();
+            backfill.insert("pr".to_string(), json!(pr));
+            if let Some(issue_number) = issue {
+                backfill.insert("issue".to_string(), json!(issue_number));
+            }
+            backfill.insert("status".to_string(), json!("merged"));
+            backfill.insert("merged_at".to_string(), json!(merged_at));
+            backfill.insert("title".to_string(), json!(format!("Backfilled: PR #{}", pr)));
+            backfill.insert("backfilled".to_string(), json!(true));
+            sessions.push(json!(backfill));
+            eprintln!("Backfilled agent_sessions entry for orphan PR #{}", pr);
         }
     }
 
@@ -442,14 +454,49 @@ mod tests {
     }
 
     #[test]
-    fn update_agent_sessions_warns_but_does_not_fail_when_mapping_is_missing() {
+    fn update_agent_sessions_backfills_when_mapping_is_missing() {
         let mut state = sample_state();
-        let before = state["agent_sessions"].clone();
 
         update_agent_sessions(&mut state, &[700], &[777], "2026-03-07T13:00:00Z")
             .expect("missing session should not fail");
 
-        assert_eq!(state["agent_sessions"], before);
+        let sessions = state["agent_sessions"]
+            .as_array()
+            .expect("agent_sessions array");
+        assert_eq!(sessions.len(), 3);
+
+        let session = sessions[2].as_object().expect("backfilled session object");
+        assert_eq!(session.get("status"), Some(&json!("merged")));
+        assert_eq!(session.get("pr"), Some(&json!(700)));
+        assert_eq!(session.get("issue"), Some(&json!(777)));
+        assert_eq!(session.get("backfilled"), Some(&json!(true)));
+        assert_eq!(
+            session.get("merged_at"),
+            Some(&json!("2026-03-07T13:00:00Z"))
+        );
+    }
+
+    #[test]
+    fn update_agent_sessions_backfills_pr_without_issue_mapping() {
+        let mut state = sample_state();
+
+        update_agent_sessions(&mut state, &[701], &[], "2026-03-07T13:00:00Z")
+            .expect("missing session should backfill without issue");
+
+        let sessions = state["agent_sessions"]
+            .as_array()
+            .expect("agent_sessions array");
+        assert_eq!(sessions.len(), 3);
+
+        let session = sessions[2].as_object().expect("backfilled session object");
+        assert_eq!(session.get("status"), Some(&json!("merged")));
+        assert_eq!(session.get("pr"), Some(&json!(701)));
+        assert_eq!(session.get("issue"), None);
+        assert_eq!(session.get("backfilled"), Some(&json!(true)));
+        assert_eq!(
+            session.get("merged_at"),
+            Some(&json!("2026-03-07T13:00:00Z"))
+        );
     }
 
     #[test]
