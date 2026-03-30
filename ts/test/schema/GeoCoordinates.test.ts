@@ -57,4 +57,40 @@ describe("GeoCoordinates", () => {
 			'{\n  "@context": "https://schema.org/",\n  "@type": "GeoCoordinates",\n  "latitude": 40.7128,\n  "longitude": -74.006\n}',
 		);
 	});
+
+	it("serializes zero latitude and longitude", () => {
+		const schema = new GeoCoordinates({
+			latitude: 0,
+			longitude: 0,
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.latitude).toBe(0);
+		expect(obj.longitude).toBe(0);
+	});
+
+	it("serializes negative coordinates", () => {
+		const schema = new GeoCoordinates({
+			latitude: -33.86882,
+			longitude: -151.20929,
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.latitude).toBe(-33.86882);
+		expect(obj.longitude).toBe(-151.20929);
+	});
+
+	it("serializes high precision coordinates", () => {
+		const schema = new GeoCoordinates({
+			latitude: 12.345678901234,
+			longitude: 98.765432109876,
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.latitude).toBe(12.345678901234);
+		expect(obj.longitude).toBe(98.765432109876);
+	});
 });

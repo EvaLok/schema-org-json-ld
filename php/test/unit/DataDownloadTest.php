@@ -31,4 +31,36 @@ final class DataDownloadTest extends TestCase {
 		$this->assertEquals('https://example.com/data.csv', $obj->contentUrl);
 		$this->assertEquals('text/csv', $obj->encodingFormat);
 	}
+
+	public function testExplicitNullEncodingFormatIsOmitted(): void {
+		$schema = new DataDownload(
+			contentUrl: 'https://example.com/data.csv',
+			encodingFormat: null,
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('https://example.com/data.csv', $obj->contentUrl);
+		$this->assertObjectNotHasProperty('encodingFormat', $obj);
+	}
+
+	public function testEmptyContentUrlIsSerialized(): void {
+		$schema = new DataDownload(contentUrl: '');
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame('', $obj->contentUrl);
+		$this->assertObjectNotHasProperty('encodingFormat', $obj);
+	}
+
+	public function testEmptyEncodingFormatIsSerialized(): void {
+		$schema = new DataDownload(
+			contentUrl: 'https://example.com/data.csv',
+			encodingFormat: '',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame('', $obj->encodingFormat);
+	}
 }

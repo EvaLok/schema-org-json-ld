@@ -35,4 +35,38 @@ describe("BroadcastEvent", () => {
 		expect(obj.startDate).toBe("2026-01-01T12:00:00Z");
 		expect(obj.endDate).toBe("2026-01-01T13:00:00Z");
 	});
+
+	it("serializes false for isLiveBroadcast", () => {
+		const schema = new BroadcastEvent({ isLiveBroadcast: false });
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.isLiveBroadcast).toBe(false);
+		expect(obj).not.toHaveProperty("startDate");
+		expect(obj).not.toHaveProperty("endDate");
+	});
+
+	it("serializes only startDate when endDate is omitted", () => {
+		const schema = new BroadcastEvent({
+			isLiveBroadcast: true,
+			startDate: "2026-01-01T12:00:00Z",
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.startDate).toBe("2026-01-01T12:00:00Z");
+		expect(obj).not.toHaveProperty("endDate");
+	});
+
+	it("serializes only endDate when startDate is omitted", () => {
+		const schema = new BroadcastEvent({
+			isLiveBroadcast: true,
+			endDate: "2026-01-01T13:00:00Z",
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.endDate).toBe("2026-01-01T13:00:00Z");
+		expect(obj).not.toHaveProperty("startDate");
+	});
 });

@@ -35,4 +35,38 @@ final class BroadcastEventTest extends TestCase {
 		$this->assertEquals('2026-02-24T20:00:00+00:00', $obj->startDate);
 		$this->assertEquals('2026-02-24T21:00:00+00:00', $obj->endDate);
 	}
+
+	public function testFalseLiveBroadcastIsSerialized(): void {
+		$schema = new BroadcastEvent(isLiveBroadcast: false);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertFalse($obj->isLiveBroadcast);
+		$this->assertObjectNotHasProperty('startDate', $obj);
+		$this->assertObjectNotHasProperty('endDate', $obj);
+	}
+
+	public function testOnlyStartDateIsSerialized(): void {
+		$schema = new BroadcastEvent(
+			isLiveBroadcast: true,
+			startDate: '2026-02-24T20:00:00+00:00',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('2026-02-24T20:00:00+00:00', $obj->startDate);
+		$this->assertObjectNotHasProperty('endDate', $obj);
+	}
+
+	public function testOnlyEndDateIsSerialized(): void {
+		$schema = new BroadcastEvent(
+			isLiveBroadcast: true,
+			endDate: '2026-02-24T21:00:00+00:00',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('2026-02-24T21:00:00+00:00', $obj->endDate);
+		$this->assertObjectNotHasProperty('startDate', $obj);
+	}
 }
