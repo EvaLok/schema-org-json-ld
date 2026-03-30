@@ -6031,6 +6031,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix check-field-inventory false-positive STALE for change-triggered cadences"
+    },
+    {
+      "dispatched_at": "2026-03-30T03:30:55Z",
+      "issue": 2005,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 410 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -6356,7 +6363,7 @@
       "resolved_ref": "docs/reviews/cycle-409.md"
     }
   ],
-  "dispatch_log_latest": "#2003 Fix check-field-inventory false-positive STALE for change-triggered cadences (cycle 410)",
+  "dispatch_log_latest": "#2005 [Cycle Review] Cycle 410 end-of-cycle review (cycle 410)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6622,12 +6629,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 21,
     "issue": 2002,
     "number": 410,
-    "summary": "2 merges (PR #1999 frozen-commit-verify, PR #2001 cycle-409 review), 1 dispatch (#2003 field-inventory fix), review findings processed",
+    "summary": "2 merges (PR #1999 frozen-commit-verify, PR #2001 cycle-409 review), 2 dispatches (#2003 field-inventory fix, #2005 review)",
     "timestamp": "2026-03-30T03:24:34Z"
   },
   "last_eva_comment_check": "2026-03-30T03:24:34Z",

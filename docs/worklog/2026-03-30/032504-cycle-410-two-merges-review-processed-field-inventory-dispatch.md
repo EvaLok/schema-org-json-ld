@@ -26,12 +26,19 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 1
+- **In-flight agent sessions (post-dispatch)**: 2
 - **Pipeline status**: PASS (3 warnings)
 - **Publish gate**: published
 
 ## Next steps
 
 1. Review and iterate on PR from [#2003](https://github.com/EvaLok/schema-org-json-ld/issues/2003) (Fix check-field-inventory false-positive STALE for change-triggered cadences) when Copilot completes
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2003](https://github.com/EvaLok/schema-org-json-ld/issues/2003) (Fix check-field-inventory false-positive STALE for change-triggered cadences) when Copilot completes
+2. Review and iterate on PR from [#2005](https://github.com/EvaLok/schema-org-json-ld/issues/2005) ([Cycle Review] Cycle 410 end-of-cycle review) when Copilot completes
+3. Fix frozen-commit-verify design issue — step should either skip during C4.1 or accept multi-commit close-out pattern
 
 ## Commit receipts
 
