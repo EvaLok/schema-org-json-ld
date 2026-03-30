@@ -6006,6 +6006,13 @@
       "pr": 1996,
       "status": "merged",
       "title": "[Cycle Review] Cycle 408 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-30T00:29:04Z",
+      "issue": 1998,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add C5 frozen-commit content verification to pipeline-check"
     }
   ],
   "audit_dropped": [
@@ -6279,7 +6286,9 @@
       "category": "receipt-scope",
       "deadline_cycle": 409,
       "deferred_cycle": 399,
-      "resolved": false
+      "resolution_note": "Addressed by PR #1989 (merged cycle 408): write-entry now bounds auto-receipts to cycle-complete timestamp",
+      "resolved": true,
+      "resolved_cycle": 409
     },
     {
       "category": "journal-quality",
@@ -6330,7 +6339,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#1995 [Cycle Review] Cycle 408 end-of-cycle review (cycle 408)",
+  "dispatch_log_latest": "#1998 Add C5 frozen-commit content verification to pipeline-check (cycle 409)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6596,12 +6605,12 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 13,
     "issue": 1997,
     "number": 409,
-    "summary": "2 dispatches, 2 merges (PR #1989, PR #1991)",
+    "summary": "3 dispatches, 2 merges (PR #1989, PR #1991)",
     "timestamp": "2026-03-30T00:16:02Z"
   },
   "last_eva_comment_check": "2026-03-30T00:16:02Z",
@@ -10921,12 +10930,13 @@
         ],
         "complacency_score": 3,
         "cycle": 408,
-        "deferred": 1,
+        "deferred": 0,
+        "dispatch_created": 1,
         "finding_count": 3,
         "finding_dispositions": [
           {
             "category": "worklog-accuracy",
-            "disposition": "deferred"
+            "disposition": "dispatch_created"
           },
           {
             "category": "journal-quality",
@@ -10943,7 +10953,7 @@
     ],
     "last_review_cycle": 408
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 407,
   "schema_status": {
     "directory_layout": {
