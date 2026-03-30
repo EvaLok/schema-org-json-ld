@@ -6483,7 +6483,8 @@
       "category": "worklog-accuracy",
       "deadline_cycle": 415,
       "deferred_cycle": 410,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "dispatch #2053 (write-entry primary in-flight fix)"
     },
     {
       "category": "journal-quality",
@@ -6800,7 +6801,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 40,
     "issue": 2052,
