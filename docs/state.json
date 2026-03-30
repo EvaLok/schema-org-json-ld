@@ -6287,7 +6287,8 @@
     "total_classes_converted": 54
   },
   "cycle_issues": [
-    2009
+    2009,
+    2018
   ],
   "cycle_phase": {
     "cycle": 411,
@@ -6505,14 +6506,14 @@
         "cadence": "every cycle",
         "last_refreshed": "cycle 411"
       },
-      "cycles_since_last_forward_work": {
-        "cadence": "every cycle (reset on forward work dispatch)",
-        "last_refreshed": "cycle 411"
-      },
       "cycle_phase": {
         "cadence": "every phase transition",
         "last_refreshed": "cycle 411",
         "notes": "Tracks cycle, phase, phase_entered_at, and completed_at when phase is complete."
+      },
+      "cycles_since_last_forward_work": {
+        "cadence": "every cycle (reset on forward work dispatch)",
+        "last_refreshed": "cycle 411"
       },
       "dispatch_log_latest": {
         "cadence": "every dispatch or merge",
@@ -6679,7 +6680,7 @@
   "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 8,
-    "issue": 2009,
+    "issue": 2018,
     "number": 411,
     "summary": "1 dispatch (#2011 Article test coverage). Fixed frozen-commit-verify false positive, processed audit #345 (maintenance loop circuit breaker). First forward schema work in 15+ cycles.",
     "timestamp": "2026-03-30T06:54:59Z"
@@ -6722,7 +6723,7 @@
     "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
     "started_at": "cycle 199"
   },
-  "previous_cycle_issue": 2008,
+  "previous_cycle_issue": 2009,
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
     "burn_in_target": 6,
