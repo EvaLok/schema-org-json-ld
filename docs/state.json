@@ -6598,7 +6598,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 413"
+        "last_refreshed": "cycle 414"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -6746,7 +6746,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 13,
     "issue": 2042,
