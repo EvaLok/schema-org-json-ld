@@ -6313,12 +6313,20 @@
       "category": "journal-quality",
       "deadline_cycle": 412,
       "deferred_cycle": 407,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-408.md"
     },
     {
       "category": "state-integrity",
       "deadline_cycle": 412,
       "deferred_cycle": 407,
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-408.md"
+    },
+    {
+      "category": "worklog-accuracy",
+      "deadline_cycle": 413,
+      "deferred_cycle": 408,
       "resolved": false
     }
   ],
@@ -6496,7 +6504,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 408"
+        "last_refreshed": "cycle 409"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -10903,9 +10911,37 @@
         ],
         "ignored": 0,
         "note": "F1 worklog-accuracy actioned: pipeline worklog-immutability check now catches this class of rewrite. F2 receipt-verification actioned: PR #1989 in-flight addresses receipt scope transparency. F3 journal-quality deferred: will fix commitment follow-through in cycle 408 journal. F4 state-integrity deferred: gate-override enforcement requires structural changes to cycle-runner."
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "journal-quality",
+          "state-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 3,
+        "cycle": 408,
+        "deferred": 1,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "actioned"
+          },
+          {
+            "category": "state-integrity",
+            "disposition": "actioned"
+          }
+        ],
+        "ignored": 0,
+        "note": "F1 deferred: underlying baseline fix merged in PR #1994 but C5 gate enforcement is separate work. F2/F3 actioned as behavioral fixes."
       }
     ],
-    "last_review_cycle": 407
+    "last_review_cycle": 408
   },
   "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 407,
