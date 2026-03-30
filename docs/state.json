@@ -6064,17 +6064,19 @@
     {
       "dispatched_at": "2026-03-30T08:37:27Z",
       "issue": 2019,
-      "merged_at": null,
+      "merged_at": "2026-03-30T10:36:59Z",
       "model": "gpt-5.4",
-      "pr": null,
-      "status": "in_flight",
+      "pr": 2020,
+      "status": "merged",
       "title": "Expand test coverage for thin schema test files — batch 2 (PHP + TS)"
     },
     {
       "dispatched_at": "2026-03-30T08:45:54Z",
       "issue": 2021,
+      "merged_at": "2026-03-30T10:36:59Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2022,
+      "status": "merged",
       "title": "Cycle 411 end-of-cycle review"
     }
   ],
@@ -6557,7 +6559,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 411"
+        "last_refreshed": "cycle 412"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -6705,7 +6707,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 104,
     "issue": 2023,
