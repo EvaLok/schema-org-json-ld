@@ -6049,7 +6049,7 @@
       "merged_at": null,
       "model": "gpt-5.4",
       "pr": null,
-      "status": "dispatched",
+      "status": "in_flight",
       "title": "Expand Article test coverage: speakable, subscription, author variants"
     },
     {
