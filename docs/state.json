@@ -6483,11 +6483,11 @@
       },
       "last_tool_audit_cycle": {
         "cadence": "every 10 cycles",
-        "last_refreshed": "cycle 409"
+        "last_refreshed": "cycle 403"
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 410"
+        "last_refreshed": "cycle 388"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
