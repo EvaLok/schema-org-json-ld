@@ -19,4 +19,28 @@ final class DataCatalogTest extends TestCase {
 		$this->assertEquals('DataCatalog', $obj->{'@type'});
 		$this->assertEquals('My Data Catalog', $obj->name);
 	}
+
+	public function testEmptyStringNameIsSerialized(): void {
+		$schema = new DataCatalog(name: '');
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame('', $obj->name);
+	}
+
+	public function testOnlyContextTypeAndNameAreSerialized(): void {
+		$schema = new DataCatalog(name: 'Open Data');
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame(['@context', '@type', 'name'], array_keys(get_object_vars($obj)));
+	}
+
+	public function testNameValueIsPreservedExactly(): void {
+		$schema = new DataCatalog(name: 'Catalog 2026');
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame('Catalog 2026', $obj->name);
+	}
 }

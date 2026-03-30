@@ -32,4 +32,37 @@ final class ShippingRateSettingsTest extends TestCase {
 		$this->assertEquals(0.1, $obj->orderPercentage);
 		$this->assertEquals(0.2, $obj->weightPercentage);
 	}
+
+	public function testOnlyOrderPercentageIsSerialized(): void {
+		$schema = new ShippingRateSettings(orderPercentage: 1.5);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals(1.5, $obj->orderPercentage);
+		$this->assertFalse(property_exists($obj, 'weightPercentage'));
+	}
+
+	public function testZeroValuesAreSerialized(): void {
+		$schema = new ShippingRateSettings(
+			orderPercentage: 0.0,
+			weightPercentage: 0.0,
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals(0.0, $obj->orderPercentage);
+		$this->assertEquals(0.0, $obj->weightPercentage);
+	}
+
+	public function testDecimalPrecisionIsPreserved(): void {
+		$schema = new ShippingRateSettings(
+			orderPercentage: 2.3456,
+			weightPercentage: 7.8912,
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals(2.3456, $obj->orderPercentage);
+		$this->assertEquals(7.8912, $obj->weightPercentage);
+	}
 }

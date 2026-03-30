@@ -41,4 +41,30 @@ describe("GeoShape", () => {
 			'{\n  "@context": "https://schema.org/",\n  "@type": "GeoShape",\n  "box": "37.42242 -122.08585 37.42242 -122.08585"\n}',
 		);
 	});
+
+	it("includes only schema metadata when box is null", () => {
+		const schema = new GeoShape({ box: null });
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(Object.keys(obj)).toEqual(["@context", "@type"]);
+	});
+
+	it("serializes a valid box string", () => {
+		const schema = new GeoShape({
+			box: "-43.5 170.0 -35.0 178.6",
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.box).toBe("-43.5 170.0 -35.0 178.6");
+	});
+
+	it("serializes an empty box string", () => {
+		const schema = new GeoShape({ box: "" });
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.box).toBe("");
+	});
 });

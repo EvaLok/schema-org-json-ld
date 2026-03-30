@@ -36,4 +36,38 @@ describe("DataDownload", () => {
 
 		expect(obj.encodingFormat).toBe("text/csv");
 	});
+
+	it("omits encodingFormat when explicitly null", () => {
+		const schema = new DataDownload({
+			contentUrl: "https://example.com/dataset.csv",
+			encodingFormat: null,
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.contentUrl).toBe("https://example.com/dataset.csv");
+		expect(obj).not.toHaveProperty("encodingFormat");
+	});
+
+	it("serializes an empty contentUrl", () => {
+		const schema = new DataDownload({
+			contentUrl: "",
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.contentUrl).toBe("");
+		expect(obj).not.toHaveProperty("encodingFormat");
+	});
+
+	it("serializes an empty encodingFormat string", () => {
+		const schema = new DataDownload({
+			contentUrl: "https://example.com/dataset.csv",
+			encodingFormat: "",
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.encodingFormat).toBe("");
+	});
 });

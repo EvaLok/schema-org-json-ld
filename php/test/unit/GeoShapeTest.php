@@ -26,4 +26,28 @@ final class GeoShapeTest extends TestCase {
 		$obj = json_decode($json);
 		$this->assertObjectNotHasProperty('box', $obj);
 	}
+
+	public function testMinimalOutputContainsOnlySchemaMetadata(): void {
+		$schema = new GeoShape(box: null);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame(['@context', '@type'], array_keys(get_object_vars($obj)));
+	}
+
+	public function testValidBoxStringIsSerialized(): void {
+		$schema = new GeoShape(box: '37.42242 -122.08585 37.42242 -122.08585');
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame('37.42242 -122.08585 37.42242 -122.08585', $obj->box);
+	}
+
+	public function testEmptyStringBoxIsSerialized(): void {
+		$schema = new GeoShape(box: '');
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame('', $obj->box);
+	}
 }

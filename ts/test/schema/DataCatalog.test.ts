@@ -32,4 +32,28 @@ describe("DataCatalog", () => {
 			'{\n  "@context": "https://schema.org/",\n  "@type": "DataCatalog",\n  "name": "Open Data"\n}',
 		);
 	});
+
+	it("serializes an empty string name", () => {
+		const schema = new DataCatalog({ name: "" });
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.name).toBe("");
+	});
+
+	it("only includes context type and name", () => {
+		const schema = new DataCatalog({ name: "Catalog 2026" });
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(Object.keys(obj)).toEqual(["@context", "@type", "name"]);
+	});
+
+	it("preserves the provided name exactly", () => {
+		const schema = new DataCatalog({ name: "Catalog 2026" });
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.name).toBe("Catalog 2026");
+	});
 });

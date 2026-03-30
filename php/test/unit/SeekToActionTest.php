@@ -23,4 +23,43 @@ final class SeekToActionTest extends TestCase {
 		$this->assertEquals('required name=seek_to_second_number', $obj->{'startOffset-input'});
 		$this->assertObjectNotHasProperty('startOffsetInput', $obj);
 	}
+
+	public function testOutputHasCorrectSchemaType(): void {
+		$schema = new SeekToAction(
+			target: 'https://example.com/watch?v=video&t={seek_to_second_number}',
+			startOffsetInput: 'required name=seek_to_second_number',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame('SeekToAction', $obj->{'@type'});
+	}
+
+	public function testRequiredFieldsSerializeWithMappedPropertyName(): void {
+		$schema = new SeekToAction(
+			target: 'https://example.com/watch?v=video&t={seek_to_second_number}',
+			startOffsetInput: 'required name=seek_to_second_number',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame(
+			['@context', '@type', 'target', 'startOffset-input'],
+			array_keys(get_object_vars($obj)),
+		);
+		$this->assertSame('https://example.com/watch?v=video&t={seek_to_second_number}', $obj->target);
+		$this->assertSame('required name=seek_to_second_number', $obj->{'startOffset-input'});
+	}
+
+	public function testEmptyStringsAreSerialized(): void {
+		$schema = new SeekToAction(
+			target: '',
+			startOffsetInput: '',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame('', $obj->target);
+		$this->assertSame('', $obj->{'startOffset-input'});
+	}
 }
