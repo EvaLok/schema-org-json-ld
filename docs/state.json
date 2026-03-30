@@ -11600,6 +11600,21 @@
         "6"
       ],
       "reason": "Cycle 400 ran as a two-session cycle (#1944 + #1951). Steps 1, 5, 6 were not posted on #1951 (the second session issue). Already penalized in cycle 400 pipeline."
+    },
+    {
+      "acknowledged_at": "2026-03-30T07:00:00Z",
+      "cycle": 410,
+      "issue": 2008,
+      "missing_steps": [
+        "1",
+        "5",
+        "6",
+        "9",
+        "C1",
+        "C2",
+        "C3"
+      ],
+      "reason": "Cycle 410 ran as a three-session cycle (#2002 + #2007 + #2008). Steps 1, 5, 6, 9, C1, C2, C3 were posted on #2002 but not on #2008 (third session). Already penalized as cascade."
     }
   ],
   "test_count": {
