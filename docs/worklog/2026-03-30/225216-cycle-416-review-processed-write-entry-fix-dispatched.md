@@ -24,12 +24,19 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 1
+- **In-flight agent sessions (post-dispatch)**: 2
 - **Pipeline status**: PASS (1 warning)
+- **Pipeline status (post-dispatch)**: PASS (1 blocking warning, 1 warning)
 - **Publish gate**: published
 
 ## Next steps
 
 1. Review and iterate on PR #2054 from [#2053](https://github.com/EvaLok/schema-org-json-ld/issues/2053) (write-entry primary in-flight counter fix) when Copilot completes
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2050](https://github.com/EvaLok/schema-org-json-ld/issues/2050) ([Cycle Review] Cycle 415 end-of-cycle review) when Copilot completes
+2. Review and iterate on PR from [#2055](https://github.com/EvaLok/schema-org-json-ld/issues/2055) ([Cycle Review] Cycle 416 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
