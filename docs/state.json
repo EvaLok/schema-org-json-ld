@@ -11704,9 +11704,9 @@
   "test_count": {
     "last_verified": "cycle 410",
     "last_verified_note": "php = PHPUnit test count (composer run test-unit). ts = metric-snapshot tool count. Verified cycle 410 via metric-snapshot: 428 PHP, 422 TS, 850 total. No test changes since cycle 345. Field_inventory last_refreshed stays at cycle 404 per F3 rule (value unchanged).",
-    "php": 478,
-    "total": 945,
-    "ts": 467
+    "php": 511,
+    "total": 1011,
+    "ts": 500
   },
   "tool_pipeline": {
     "blocks_publish": false,
