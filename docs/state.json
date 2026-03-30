@@ -6269,7 +6269,8 @@
   },
   "cycle_issues": [
     2002,
-    2007
+    2007,
+    2008
   ],
   "cycle_phase": {
     "cycle": 410,
@@ -6649,7 +6650,7 @@
   "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 104,
-    "issue": 2007,
+    "issue": 2008,
     "number": 410,
     "summary": "Resumed cycle 410: reviewed and merged PRs #2004 (field-inventory cadence fix) and #2006 (review artifact). Processed 4 review findings (3 actioned, 1 deferred). Fixed state inconsistencies: review_dispatch_consecutive, resolved_ref, cycle 409 F2 reclassification.",
     "timestamp": "2026-03-30T05:08:36Z"
@@ -6692,7 +6693,7 @@
     "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
     "started_at": "cycle 199"
   },
-  "previous_cycle_issue": 2002,
+  "previous_cycle_issue": 2007,
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
     "burn_in_target": 6,
