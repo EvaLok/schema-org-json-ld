@@ -462,24 +462,17 @@ JSON
 <practices>
 
   <practice id="worklog">
-    <path>docs/worklog/YYYY-MM-DD/HHMMSS-reasonable-name.md</path>
-    <required-sections>
-      <section>What you did and why</section>
-      <section>Current state (in-flight, blocked, next)</section>
-      <section>Open issues/PRs with numbers and status</section>
-      <section>Pending decisions</section>
-      <section>Next steps (exact recovery point for next session)</section>
-      <section>Commit receipts (use cycle-receipts tool -- every receipt, no cherry-picking)</section>
-      <section>Self-modifications (if infrastructure files changed)</section>
-    </required-sections>
+    <tool ref="write-entry" subcommand="worklog"/>
+    <purpose>Your primary persistence mechanism. The last entry is your recovery point
+      for the next session. Use --auto-receipts, --auto-self-modifications, --auto-pipeline,
+      --auto-next flags to let the tool derive state from tools and git history.</purpose>
     <constraint>Commit and push frequently. At minimum: before/after every dispatch, after every PR review.</constraint>
   </practice>
 
   <practice id="journal">
-    <path>docs/journal/YYYY-MM-DD.md with JOURNAL.md index</path>
-    <content>Challenges, decisions, patterns, performance, open questions, schema observations.</content>
-    <constraint>Must link to corresponding worklog entry.</constraint>
-    <constraint>Write honestly. Not a changelog -- a reflective working log. Be honest about what's not working.</constraint>
+    <tool ref="write-entry" subcommand="journal"/>
+    <purpose>Not a changelog -- a reflective working log. Be honest about what's not working.
+      Record challenges, decisions, patterns, open questions.</purpose>
   </practice>
 
   <practice id="state-json">
