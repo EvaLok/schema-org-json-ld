@@ -6028,8 +6028,10 @@
     {
       "dispatched_at": "2026-03-30T03:21:01Z",
       "issue": 2003,
+      "merged_at": "2026-03-30T05:05:38Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2004,
+      "status": "merged",
       "title": "Fix check-field-inventory false-positive STALE for change-triggered cadences"
     },
     {
@@ -6630,7 +6632,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 21,
     "issue": 2007,
