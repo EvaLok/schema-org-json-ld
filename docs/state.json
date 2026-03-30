@@ -6069,6 +6069,13 @@
       "pr": null,
       "status": "in_flight",
       "title": "Expand test coverage for thin schema test files — batch 2 (PHP + TS)"
+    },
+    {
+      "dispatched_at": "2026-03-30T08:45:54Z",
+      "issue": 2021,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 411 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -6300,9 +6307,10 @@
     2018
   ],
   "cycle_phase": {
+    "completed_at": "2026-03-30T08:45:54Z",
     "cycle": 411,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-30T08:38:39Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-30T08:45:54Z"
   },
   "cycles_since_last_forward_work": {
     "added_in_cycle": 411,
@@ -6429,7 +6437,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2014 Expand test coverage for thin schema test files, PHP + TS (cycle 411, duplicate run)",
+  "dispatch_log_latest": "#2021 Cycle 411 end-of-cycle review (cycle 411)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6699,12 +6707,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 104,
     "issue": 2018,
     "number": 411,
-    "summary": "Merged 3 PRs (#2017 review artifact, #2012 Article tests, #2015 thin schema tests). Processed cycle 411 review (1 actioned, 3 deferred). Dispatched #2019 thin test batch 2.",
+    "summary": "2 dispatches, merged 3 PRs (#2017 review, #2012 Article tests, #2015 thin schema tests), processed cycle 411 review (1 actioned, 3 deferred)",
     "timestamp": "2026-03-30T08:38:39Z"
   },
   "last_eva_comment_check": "2026-03-30T08:38:39Z",
@@ -11114,7 +11122,8 @@
         ],
         "complacency_score": 3,
         "cycle": 411,
-        "deferred": 3,
+        "deferred": 2,
+        "dispatch_created": 1,
         "finding_count": 4,
         "finding_dispositions": [
           {
@@ -11131,7 +11140,7 @@
           },
           {
             "category": "test-gap",
-            "disposition": "deferred"
+            "disposition": "dispatch_created"
           }
         ],
         "ignored": 0,
@@ -11140,7 +11149,7 @@
     ],
     "last_review_cycle": 411
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 407,
   "schema_status": {
     "directory_layout": {
