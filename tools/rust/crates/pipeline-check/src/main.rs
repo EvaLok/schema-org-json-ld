@@ -3788,7 +3788,7 @@ mod tests {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root = std::env::temp_dir().join(format!("pipeline-check-test-{}", run_id));
-        let _ = fs::remove_dir_all(&root);
+        init_git_repo(&root);
         fs::create_dir_all(root.join("docs")).unwrap();
         fs::write(
             root.join("docs/state.json"),
@@ -3835,6 +3835,7 @@ mod tests {
         .unwrap();
         fs::create_dir_all(root.join("docs/reviews")).unwrap();
         fs::write(root.join("docs/reviews/cycle-135.md"), "review").unwrap();
+        commit_all(&root, "seed pipeline fixture");
 
         let runner = MockRunner {
             expected_cycle: 135,
@@ -3901,7 +3902,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 16);
+        assert_eq!(report.steps.len(), 17);
         assert_eq!(report.steps[0].status, StepStatus::Pass);
         assert_eq!(report.steps[1].status, StepStatus::Pass);
         assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -3929,15 +3930,17 @@ mod tests {
         assert_eq!(report.steps[10].status, StepStatus::Pass);
         assert_eq!(report.steps[11].name, "doc-validation");
         assert_eq!(report.steps[11].status, StepStatus::Pass);
-        assert_eq!(report.steps[12].name, "worklog-dedup");
+        assert_eq!(report.steps[12].name, "frozen-commit-verify");
         assert_eq!(report.steps[12].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].name, "worklog-immutability");
+        assert_eq!(report.steps[13].name, "worklog-dedup");
         assert_eq!(report.steps[13].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].severity, Severity::Blocking);
-        assert_eq!(report.steps[14].name, "step-comments");
+        assert_eq!(report.steps[14].name, "worklog-immutability");
         assert_eq!(report.steps[14].status, StepStatus::Pass);
-        assert_eq!(report.steps[15].name, "current-cycle-steps");
+        assert_eq!(report.steps[14].severity, Severity::Blocking);
+        assert_eq!(report.steps[15].name, "step-comments");
         assert_eq!(report.steps[15].status, StepStatus::Pass);
+        assert_eq!(report.steps[16].name, "current-cycle-steps");
+        assert_eq!(report.steps[16].status, StepStatus::Pass);
     }
 
     #[test]
@@ -4129,13 +4132,13 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 16);
+        assert_eq!(report.steps.len(), 17);
         assert!(report.steps[..5]
             .iter()
             .all(|step| matches!(step.status, StepStatus::Error)));
         assert!(report.steps[13..]
             .iter()
-            .all(|step| matches!(step.status, StepStatus::Error | StepStatus::Warn)));
+            .all(|step| !matches!(step.status, StepStatus::Fail)));
         assert!(report
             .steps
             .iter()
@@ -4372,6 +4375,7 @@ mod tests {
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root =
             std::env::temp_dir().join(format!("pipeline-check-doc-validation-cascade-{}", run_id));
+        init_git_repo(&root);
         let today = &current_utc_timestamp()[..10];
         fs::create_dir_all(root.join("docs/journal")).unwrap();
         fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
@@ -4413,6 +4417,7 @@ mod tests {
         )
         .unwrap();
         fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
+        commit_all(&root, "seed pipeline fixture");
 
         struct CascadeRunner;
 
@@ -4492,13 +4497,15 @@ mod tests {
         let report = run_pipeline(&root, 257, &CascadeRunner);
         assert_eq!(report.steps[11].name, "doc-validation");
         assert_eq!(report.steps[11].status, StepStatus::Cascade);
-        assert_eq!(report.steps[12].name, "worklog-dedup");
+        assert_eq!(report.steps[12].name, "frozen-commit-verify");
         assert_eq!(report.steps[12].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].name, "worklog-immutability");
+        assert_eq!(report.steps[13].name, "worklog-dedup");
         assert_eq!(report.steps[13].status, StepStatus::Pass);
-        assert_eq!(report.steps[14].name, "step-comments");
+        assert_eq!(report.steps[14].name, "worklog-immutability");
+        assert_eq!(report.steps[14].status, StepStatus::Pass);
+        assert_eq!(report.steps[15].name, "step-comments");
         // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[14].status, StepStatus::Warn);
+        assert_eq!(report.steps[15].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -4511,6 +4518,7 @@ mod tests {
             "pipeline-check-doc-validation-multi-cause-{}",
             run_id
         ));
+        init_git_repo(&root);
         let today = &current_utc_timestamp()[..10];
         fs::create_dir_all(root.join("docs/journal")).unwrap();
         fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
@@ -4552,6 +4560,7 @@ mod tests {
         )
         .unwrap();
         fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
+        commit_all(&root, "seed pipeline fixture");
 
         struct MultiCauseCascadeRunner;
 
@@ -4631,13 +4640,15 @@ mod tests {
         let report = run_pipeline(&root, 257, &MultiCauseCascadeRunner);
         assert_eq!(report.steps[11].name, "doc-validation");
         assert_eq!(report.steps[11].status, StepStatus::Cascade);
-        assert_eq!(report.steps[12].name, "worklog-dedup");
+        assert_eq!(report.steps[12].name, "frozen-commit-verify");
         assert_eq!(report.steps[12].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].name, "worklog-immutability");
+        assert_eq!(report.steps[13].name, "worklog-dedup");
         assert_eq!(report.steps[13].status, StepStatus::Pass);
-        assert_eq!(report.steps[14].name, "step-comments");
+        assert_eq!(report.steps[14].name, "worklog-immutability");
+        assert_eq!(report.steps[14].status, StepStatus::Pass);
+        assert_eq!(report.steps[15].name, "step-comments");
         // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[14].status, StepStatus::Warn);
+        assert_eq!(report.steps[15].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -4652,6 +4663,7 @@ mod tests {
             "pipeline-check-step-comments-cycle-override-{}",
             run_id
         ));
+        init_git_repo(&root);
         let today = &current_utc_timestamp()[..10];
         fs::create_dir_all(root.join("docs/journal")).unwrap();
         fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
@@ -4697,6 +4709,7 @@ mod tests {
             "review",
         )
         .unwrap();
+        commit_all(&root, "seed pipeline fixture");
 
         struct OverrideRunner;
 
@@ -4766,10 +4779,10 @@ mod tests {
         }
 
         let report = run_pipeline(&root, OVERRIDE_CYCLE, &OverrideRunner);
-        assert_eq!(report.steps[14].name, "step-comments");
-        assert_eq!(report.steps[14].status, StepStatus::Warn);
-        assert_eq!(report.steps[14].severity, Severity::Warning);
-        assert!(report.steps[14]
+        assert_eq!(report.steps[15].name, "step-comments");
+        assert_eq!(report.steps[15].status, StepStatus::Warn);
+        assert_eq!(report.steps[15].severity, Severity::Warning);
+        assert!(report.steps[15]
             .detail
             .as_deref()
             .unwrap_or_default()
@@ -4795,6 +4808,7 @@ mod tests {
             "pipeline-check-doc-validation-independent-{}",
             run_id
         ));
+        init_git_repo(&root);
         let today = &current_utc_timestamp()[..10];
         fs::create_dir_all(root.join("docs/journal")).unwrap();
         fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
@@ -4836,6 +4850,7 @@ mod tests {
         )
         .unwrap();
         fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
+        commit_all(&root, "seed pipeline fixture");
 
         struct IndependentFailureRunner;
 
@@ -4915,12 +4930,14 @@ mod tests {
         let report = run_pipeline(&root, 257, &IndependentFailureRunner);
         assert_eq!(report.steps[11].name, "doc-validation");
         assert_eq!(report.steps[11].status, StepStatus::Fail);
-        assert_eq!(report.steps[12].name, "worklog-dedup");
+        assert_eq!(report.steps[12].name, "frozen-commit-verify");
         assert_eq!(report.steps[12].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].name, "worklog-immutability");
+        assert_eq!(report.steps[13].name, "worklog-dedup");
         assert_eq!(report.steps[13].status, StepStatus::Pass);
+        assert_eq!(report.steps[14].name, "worklog-immutability");
+        assert_eq!(report.steps[14].status, StepStatus::Pass);
         // Previous-cycle backstop is downgraded to Warn
-        assert_eq!(report.steps[14].status, StepStatus::Warn);
+        assert_eq!(report.steps[15].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -4931,6 +4948,7 @@ mod tests {
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root =
             std::env::temp_dir().join(format!("pipeline-check-exclude-doc-validation-{}", run_id));
+        init_git_repo(&root);
         let today = &current_utc_timestamp()[..10];
         fs::create_dir_all(root.join("docs/journal")).unwrap();
         fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
@@ -4972,6 +4990,7 @@ mod tests {
         )
         .unwrap();
         fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
+        commit_all(&root, "seed pipeline fixture");
 
         struct ExcludeDocValidationRunner;
 
@@ -5041,7 +5060,7 @@ mod tests {
             &ExcludeDocValidationRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 15);
+        assert_eq!(report.steps.len(), 16);
         assert!(!report
             .steps
             .iter()
@@ -5059,6 +5078,7 @@ mod tests {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root = std::env::temp_dir().join(format!("pipeline-check-exclude-unknown-{}", run_id));
+        init_git_repo(&root);
         let today = &current_utc_timestamp()[..10];
         fs::create_dir_all(root.join("docs/journal")).unwrap();
         fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
@@ -5100,6 +5120,7 @@ mod tests {
         )
         .unwrap();
         fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
+        commit_all(&root, "seed pipeline fixture");
 
         struct UnknownExcludeRunner;
 
@@ -5176,7 +5197,7 @@ mod tests {
             &UnknownExcludeRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 16);
+        assert_eq!(report.steps.len(), 17);
         assert!(report
             .steps
             .iter()
@@ -5195,6 +5216,7 @@ mod tests {
             "pipeline-check-exclude-worklog-dedup-{}",
             run_id
         ));
+        init_git_repo(&root);
         let today = &current_utc_timestamp()[..10];
         fs::create_dir_all(root.join("docs/journal")).unwrap();
         fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
@@ -5243,6 +5265,7 @@ mod tests {
         )
         .unwrap();
         fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
+        commit_all(&root, "seed pipeline fixture");
 
         struct ExcludeWorklogDedupRunner;
 
@@ -5320,7 +5343,7 @@ mod tests {
         );
 
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 15);
+        assert_eq!(report.steps.len(), 16);
         assert!(!report
             .steps
             .iter()
