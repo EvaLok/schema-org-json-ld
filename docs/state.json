@@ -6518,7 +6518,7 @@
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 388"
+        "last_refreshed": "cycle 410"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
