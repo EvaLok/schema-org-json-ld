@@ -6665,7 +6665,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 406"
+        "last_refreshed": "cycle 414"
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
@@ -6673,7 +6673,7 @@
       },
       "review_events_verified_through_cycle": {
         "cadence": "managed by verify-review-events tool only",
-        "last_refreshed": "cycle 408"
+        "last_refreshed": "cycle 414"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -6701,7 +6701,7 @@
       },
       "step_comment_acknowledged_gaps": {
         "cadence": "after acknowledging step comment gaps",
-        "last_refreshed": "cycle 402"
+        "last_refreshed": "cycle 414"
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
@@ -6898,18 +6898,18 @@
           "added_cycle": 209,
           "category": "worklog-accuracy",
           "chosen_path": "structural-fix",
-          "rationale": "Third structural fix merged: PR #1914 (cycle 395) extends the addendum pattern to all worklog state fields — in-flight sessions, publish gate, and next steps now use (post-dispatch) addendum lines instead of overwriting pre-dispatch values. Previous fixes: PR #1795 (C6.5 post-dispatch refresh, cycle 367) and PR #1905 (pipeline status immutability, cycle 393). The remaining root cause was mixed-timeline rewriting of non-pipeline fields. Verification: next cycle's review should not contain worklog-accuracy findings related to in-flight, publish gate, or next steps overwriting.",
-          "root_cause": "Worklog state section was written before review dispatch (C6), so published counters were structurally stale. C6.5 patches the worklog after dispatch, but until PR #1914 only pipeline_status used the addendum pattern — other fields were overwritten in place, creating mixed-timeline artifacts.",
-          "updated_cycle": 395,
+          "rationale": "Cycle 414 chronic-category refresh: worklog-accuracy appeared in 6/6 reviews (cycles 408-413). Despite structural fixes (PR #1914 addendum pattern, PR #1795 C6.5 refresh, PR #1905 immutability), findings persist because write-entry captures pre-dispatch state and C6.5 refresh only patches pipeline_status addendum, not the primary in-flight sessions line. Cycle 413 review F1 confirmed: worklog says 0 in-flight but state.json has 1 post-dispatch. Root cause remains structural: write-entry needs to re-derive in-flight count from state.json after dispatch. Deferred: requires tool modification to write-entry crate.",
+          "root_cause": "Worklog state section was written before review dispatch (C6), so published counters were structurally stale. C6.5 patches the worklog after dispatch, but the primary cycle-state line (in-flight sessions) is not re-derived from committed state.json. The addendum pattern (post-dispatch lines) was intended to solve this but doesn't update the primary line.",
+          "updated_cycle": 414,
           "verification_cycle": 395
         },
         {
           "added_cycle": 243,
           "category": "state-integrity",
           "chosen_path": "structural-fix",
-          "rationale": "Cycle 406 chronic-category refresh: state-integrity appeared in 5/7 reviews (cycles 399-405). Current findings: freshness markers not updated when analysis is performed (cycle 405 F5 — chronic_category_responses.last_refreshed stale). Previous structural fixes addressed review_events verification (cycle 270/282). The field-inventory pipeline check catches stale markers mechanically. Actioned this cycle: updated chronic_category_responses.last_refreshed to cycle 406. All four chronic category response entries updated with current analysis.",
+          "rationale": "Cycle 414 chronic-category refresh: state-integrity appeared in 5/6 reviews (cycles 408-413). Cycle 413 review F3: field-inventory freshness markers stale for chronic_category_responses (cycle 406) and step_comment_acknowledged_gaps (cycle 402). Root cause persists: freshness markers are not updated in the same commit as the analysis that validates them. The field-inventory pipeline check catches staleness mechanically, but the orchestrator must manually update markers after performing analysis. Actioned this cycle: updated all chronic category response entries and refreshed stale field-inventory markers.",
           "root_cause": "Four sub-causes: (1) cycle-complete mechanically bumping markers (fixed cycle 243). (2) Manual marker bumping without verification (caught by cross-check cycle 266). (3) verify-review-events fail-open (fixed cycle 270). (4) Freshness markers not updated when associated analysis is performed (behavioral, partially caught by field-inventory check).",
-          "updated_cycle": 406,
+          "updated_cycle": 414,
           "verification_cycle": 406
         },
         {
@@ -11257,7 +11257,7 @@
     "last_review_cycle": 413
   },
   "review_dispatch_consecutive": 4,
-  "review_events_verified_through_cycle": 407,
+  "review_events_verified_through_cycle": 414,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
