@@ -6249,9 +6249,10 @@
     1997
   ],
   "cycle_phase": {
+    "completed_at": "2026-03-30T00:40:56Z",
     "cycle": 409,
-    "phase": "close_out",
-    "phase_entered_at": "2026-03-30T00:34:25Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-03-30T00:40:56Z"
   },
   "deferred_findings": [
     {
