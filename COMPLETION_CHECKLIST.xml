@@ -169,18 +169,11 @@
     </review-spec>
 
     <dispatch-mechanics>
-      <constraint>Copilot agents CANNOT post issue comments. They create PRs.</constraint>
-      <instruction>Agent must commit findings as docs/reviews/cycle-NNN.md.</instruction>
-      <labels>agent-task, cycle-review</labels>
-      <model>gpt-5.4</model>
-      <content-requirements>
-        <item>Adversarial mandate (first paragraph)</item>
-        <item>Current cycle number and issue link</item>
-        <item>List of PRs merged this cycle</item>
-        <item>Paths to worklog and journal entries</item>
-        <item>Specific areas of concern</item>
-        <item>Output path: docs/reviews/cycle-{N}.md</item>
-      </content-requirements>
+      <tool command="bash tools/dispatch-review --cycle N --issue N --body-file /tmp/review-body.md"/>
+      <note>The tool handles issue creation, labels (agent-task, cycle-review), model
+        selection, and agent assignment. Write the review body to a temp file first,
+        then pass it via --body-file. Use --dry-run to preview.</note>
+      <constraint>Agent must commit findings as docs/reviews/cycle-NNN.md (agents cannot post issue comments).</constraint>
     </dispatch-mechanics>
   </step>
 

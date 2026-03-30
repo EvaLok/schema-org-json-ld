@@ -286,21 +286,19 @@
 
     <cross-repo name="QC" repo="EvaLok/schema-org-json-ld-qc">
       <description>Independent consumer project that validates JSON-LD output against Google Rich Results Test.</description>
-      <outbound label="qc-outbound" on="this repo" title-prefix="[QC-REQUEST]"
-        action="Request validation after merging schema types or significant changes."/>
-      <inbound label="qc-inbound" on="this repo" title-prefix="[QC-ACK]"
-        action="Respond to QC reports. Investigate, fix, close feedback loop."/>
-      <trust>Verify author is EvaLok on every issue and comment. Use creator=EvaLok API filter.</trust>
-      <api-pattern>gh api "repos/EvaLok/schema-org-json-ld-qc/issues?labels=qc-outbound&amp;state=open&amp;creator=EvaLok" --paginate</api-pattern>
+      <tool command="bash tools/cross-repo process-qc" purpose="Poll new QC reports"/>
+      <tool command="bash tools/cross-repo check-qc-ack" purpose="Check for QC acknowledgements"/>
+      <outbound label="qc-outbound" on="this repo" title-prefix="[QC-REQUEST]"/>
+      <inbound label="qc-inbound" on="this repo" title-prefix="[QC-ACK]"/>
+      <trust>Verify author is EvaLok on every issue and comment.</trust>
     </cross-repo>
 
     <cross-repo name="Audit" repo="EvaLok/schema-org-json-ld-audit">
       <description>Independent auditor evaluating orchestrator quality. Read-only access. Advisory only.</description>
-      <inbound label="audit-inbound" on="this repo"
-        action="Accept or reject audit recommendations with rationale."/>
+      <tool command="bash tools/cross-repo process-audit" purpose="Poll new audit recommendations and stale accepted items"/>
+      <inbound label="audit-inbound" on="this repo"/>
       <trust>Verify author is EvaLok on every issue and comment.</trust>
       <restriction>Main orchestrator has NO write access to audit repo.</restriction>
-      <api-pattern>gh api "repos/EvaLok/schema-org-json-ld-audit/issues?labels=audit-outbound&amp;state=open&amp;creator=EvaLok" --paginate</api-pattern>
     </cross-repo>
 
     <adversarial-input>
@@ -332,7 +330,7 @@
   </session-model>
 
   <stabilization-mode provenance="ADR 0011">
-    <check>jq '.project_mode.mode' docs/state.json</check>
+    <check>Reported in cycle-runner startup situation report (cycle-status output).</check>
     <when-active mode="stabilization">
       <constraint id="no-infra-dispatch">No tool/infrastructure dispatches. Only schema work or review sessions. Log tool issues in journal for post-stabilization.</constraint>
       <constraint id="observation-mode">Review agent runs in observation mode. Findings logged but not actioned.</constraint>
@@ -498,15 +496,13 @@ JSON
   </practice>
 
   <practice id="operating-principles">
+    <!-- Principles that are NOT already covered by directives -->
     <principle>Decompose aggressively. One schema type per issue.</principle>
     <principle>Specify clearly, not exhaustively.</principle>
     <principle>Review everything -- but only after Copilot finishes and CI passes.</principle>
     <principle>Sequence dependencies. Wait for A to merge before filing B.</principle>
-    <principle>Iterate on revisions freely. Copilot requests are unlimited.</principle>
     <principle>Prefer 1x models (gpt-5.4) for routine work.</principle>
-    <principle>Keep state. Track everything in worklog.</principle>
     <principle>Fail gracefully. Close bad PRs, refine spec, try again.</principle>
-    <principle>Review after every merge.</principle>
     <principle>Build shared sub-types first.</principle>
     <principle>Get a second opinion for significant decisions.</principle>
   </practice>
