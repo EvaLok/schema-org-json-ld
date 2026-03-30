@@ -48,3 +48,5 @@
 | process-review | c1c5739 | [c1c5739](https://github.com/EvaLok/schema-org-json-ld/commit/c1c5739) |
 | cycle-tagged | 49f6d5d4 | [49f6d5d4](https://github.com/EvaLok/schema-org-json-ld/commit/49f6d5d4) |
 | cycle-complete | 339fd80 | [339fd80](https://github.com/EvaLok/schema-org-json-ld/commit/339fd80) |
+| cycle-start (resume) | bb729db | [bb729db](https://github.com/EvaLok/schema-org-json-ld/commit/bb729db) |
+| fix(pipeline-check) | f50d26d | [f50d26d](https://github.com/EvaLok/schema-org-json-ld/commit/f50d26d) |
