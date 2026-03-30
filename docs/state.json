@@ -6085,6 +6085,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Thin schema test batch 3 — 11 types"
+    },
+    {
+      "dispatched_at": "2026-03-30T10:48:00Z",
+      "issue": 2026,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Cycle 412 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -6714,12 +6721,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 15,
     "issue": 2023,
     "number": 412,
-    "summary": "Merged 2 PRs (#2022 review artifact refresh, #2020 thin test batch 2). Dispatched #2024 thin test batch 3 (11 types). Refreshed metrics and stale field inventory. Closed audit-inbound #2010. Cleaned 4 stale branches.",
+    "summary": "2 dispatches, 2 merges. Merged PRs #2022 (review artifact refresh), #2020 (thin test batch 2). Dispatched #2024 (thin test batch 3, 11 types), #2026 (cycle 412 review). Refreshed metrics and field inventory. Closed audit-inbound #2010. Cleaned 4 branches.",
     "timestamp": "2026-03-30T10:45:00Z"
   },
   "last_eva_comment_check": "2026-03-30T10:45:00Z",
