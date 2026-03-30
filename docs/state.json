@@ -6365,7 +6365,13 @@
       "deadline_cycle": 413,
       "deferred_cycle": 408,
       "resolved": true,
-      "resolved_ref": "docs/reviews/cycle-409.md"
+      "resolved_ref": "docs/worklog/2026-03-30/032504-cycle-410-two-merges-review-processed-field-inventory-dispatch.md"
+    },
+    {
+      "category": "worklog-accuracy",
+      "deadline_cycle": 415,
+      "deferred_cycle": 410,
+      "resolved": false
     }
   ],
   "dispatch_log_latest": "#2005 [Cycle Review] Cycle 410 end-of-cycle review (cycle 410)",
@@ -10980,7 +10986,7 @@
         "note": "F1 deferred: underlying baseline fix merged in PR #1994 but C5 gate enforcement is separate work. F2/F3 actioned as behavioral fixes."
       },
       {
-        "actioned": 3,
+        "actioned": 2,
         "categories": [
           "journal-quality",
           "state-integrity",
@@ -10988,7 +10994,7 @@
         ],
         "complacency_score": 2,
         "cycle": 409,
-        "deferred": 0,
+        "deferred": 1,
         "finding_count": 3,
         "finding_dispositions": [
           {
@@ -10997,7 +11003,7 @@
           },
           {
             "category": "journal-quality",
-            "disposition": "actioned"
+            "disposition": "deferred"
           },
           {
             "category": "state-integrity",
@@ -11005,12 +11011,44 @@
           }
         ],
         "ignored": 0,
-        "note": "F1: behavioral fix — generate self-modifications from scoped infra diff only. F2: behavioral fix — don't claim actioned until state proves it. F3: fix overstated field_inventory freshness markers this cycle."
+        "note": "F1: behavioral fix — generate self-modifications from scoped infra diff only (actioned). F2: behavioral — don't claim actioned until state proves it (deferred: not yet verified in committed artifacts). F3: fix overstated field_inventory freshness markers (actioned)."
+      },
+      {
+        "actioned": 3,
+        "categories": [
+          "review-consumption",
+          "state-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 410,
+        "deferred": 1,
+        "finding_count": 4,
+        "finding_dispositions": [
+          {
+            "category": "review-consumption",
+            "disposition": "actioned"
+          },
+          {
+            "category": "review-consumption",
+            "disposition": "actioned"
+          },
+          {
+            "category": "state-integrity",
+            "disposition": "actioned"
+          },
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred"
+          }
+        ],
+        "ignored": 0,
+        "note": "F1: reclassified cycle 409 F2 from actioned to deferred (actioned). F2: fixed resolved_ref to point at fix evidence not complaint artifact (actioned). F3: fixed review_dispatch_consecutive 1→0 (actioned). F4: pipeline status disclosure — behavioral, will apply in future worklogs (deferred)."
       }
     ],
-    "last_review_cycle": 409
+    "last_review_cycle": 410
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 407,
   "schema_status": {
     "directory_layout": {
