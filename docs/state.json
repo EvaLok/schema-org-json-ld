@@ -6046,19 +6046,19 @@
     {
       "dispatched_at": "2026-03-30T06:53:24Z",
       "issue": 2011,
-      "merged_at": null,
+      "merged_at": "2026-03-30T08:34:16Z",
       "model": "gpt-5.4",
-      "pr": null,
-      "status": "in_flight",
+      "pr": 2012,
+      "status": "merged",
       "title": "Expand Article test coverage: speakable, subscription, author variants"
     },
     {
       "dispatched_at": "2026-03-30T06:58:00Z",
       "issue": 2014,
-      "merged_at": null,
+      "merged_at": "2026-03-30T08:34:16Z",
       "model": "gpt-5.4",
-      "pr": null,
-      "status": "in_flight",
+      "pr": 2015,
+      "status": "merged",
       "title": "Expand test coverage for thin schema test files (PHP + TS)"
     }
   ],
@@ -6690,7 +6690,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 8,
     "issue": 2018,
