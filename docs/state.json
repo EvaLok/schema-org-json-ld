@@ -6051,6 +6051,15 @@
       "pr": null,
       "status": "dispatched",
       "title": "Expand Article test coverage: speakable, subscription, author variants"
+    },
+    {
+      "dispatched_at": "2026-03-30T06:58:00Z",
+      "issue": 2014,
+      "merged_at": null,
+      "model": "gpt-5.4",
+      "pr": null,
+      "status": "dispatched",
+      "title": "Expand test coverage for thin schema test files (PHP + TS)"
     }
   ],
   "audit_dropped": [
@@ -6397,7 +6406,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2011 Expand Article test coverage: speakable, subscription, author variants (cycle 411)",
+  "dispatch_log_latest": "#2014 Expand test coverage for thin schema test files, PHP + TS (cycle 411, duplicate run)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6667,7 +6676,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 8,
     "issue": 2009,
