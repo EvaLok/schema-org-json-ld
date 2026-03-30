@@ -6082,15 +6082,19 @@
     {
       "dispatched_at": "2026-03-30T10:42:37Z",
       "issue": 2024,
+      "merged_at": "2026-03-30T12:22:30Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2025,
+      "status": "merged",
       "title": "Thin schema test batch 3 — 11 types"
     },
     {
       "dispatched_at": "2026-03-30T10:48:00Z",
       "issue": 2026,
+      "merged_at": "2026-03-30T12:22:30Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2027,
+      "status": "merged",
       "title": "Cycle 412 end-of-cycle review"
     }
   ],
@@ -6722,7 +6726,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 15,
     "issue": 2028,
