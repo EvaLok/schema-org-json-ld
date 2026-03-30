@@ -1455,6 +1455,10 @@ fn print_human_report(report: &Report) {
         ),
         ("chronic_intermediate_state", "chronic intermediate state"),
         ("review_events_verified", "review events verified"),
+        (
+            "in_flight_sessions_consistency",
+            "in_flight_sessions consistency",
+        ),
         ("pending_audit_deadlines", "pending audit deadlines"),
         (
             "agent_sessions_reconciliation",
