@@ -27,6 +27,7 @@
 
 - **In-flight agent sessions**: 1
 - **Pipeline status**: FAIL (3 warnings)
+- **Pipeline status (post-dispatch)**: PASS (3 warnings)
 - **Publish gate**: published
 
 ## Next steps
