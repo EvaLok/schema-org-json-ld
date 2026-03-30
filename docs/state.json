@@ -6642,7 +6642,7 @@
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
-        "last_refreshed": "cycle 404"
+        "last_refreshed": "cycle 411"
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
@@ -11667,9 +11667,9 @@
   "test_count": {
     "last_verified": "cycle 410",
     "last_verified_note": "php = PHPUnit test count (composer run test-unit). ts = metric-snapshot tool count. Verified cycle 410 via metric-snapshot: 428 PHP, 422 TS, 850 total. No test changes since cycle 345. Field_inventory last_refreshed stays at cycle 404 per F3 rule (value unchanged).",
-    "php": 428,
-    "total": 850,
-    "ts": 422
+    "php": 454,
+    "total": 897,
+    "ts": 443
   },
   "tool_pipeline": {
     "blocks_publish": false,
