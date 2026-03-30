@@ -305,7 +305,10 @@ fn main() {
 
     if cli.refresh_inventory {
         if let Err(error) = refresh_tool_pipeline_inventory(&cli.repo_root, cycle) {
-            eprintln!("Error: failed to refresh tool_pipeline inventory: {}", error);
+            eprintln!(
+                "Error: failed to refresh tool_pipeline inventory: {}",
+                error
+            );
             std::process::exit(2);
         }
     }
@@ -1385,8 +1388,14 @@ fn assess_temporal_step_ordering(
         return None;
     }
 
-    let latest_startup = startup_steps.iter().map(|(_, timestamp)| *timestamp).max()?;
-    let earliest_close_out = close_out_steps.iter().map(|(_, timestamp)| *timestamp).min()?;
+    let latest_startup = startup_steps
+        .iter()
+        .map(|(_, timestamp)| *timestamp)
+        .max()?;
+    let earliest_close_out = close_out_steps
+        .iter()
+        .map(|(_, timestamp)| *timestamp)
+        .min()?;
     if latest_startup < earliest_close_out {
         return None;
     }
@@ -1924,7 +1933,10 @@ fn verify_worklog_immutability_for_date(repo_root: &Path, today: &str) -> StepRe
     }
 }
 
-fn frozen_commit_status_for_date(repo_root: &Path, today: &str) -> Result<(StepStatus, String), String> {
+fn frozen_commit_status_for_date(
+    repo_root: &Path,
+    today: &str,
+) -> Result<(StepStatus, String), String> {
     let state = read_state_value(repo_root)?;
     let phase = state.pointer("/cycle_phase/phase").and_then(Value::as_str);
     if phase != Some("close_out") {
@@ -1938,7 +1950,15 @@ fn frozen_commit_status_for_date(repo_root: &Path, today: &str) -> Result<(StepS
     let cycle_tag = format!("[cycle {}]", cycle);
     let log_output = Command::new("git")
         .current_dir(repo_root)
-        .args(["log", "--format=%H", "--fixed-strings", "--grep", &cycle_tag, "-n", "1"])
+        .args([
+            "log",
+            "--format=%H",
+            "--fixed-strings",
+            "--grep",
+            &cycle_tag,
+            "-n",
+            "1",
+        ])
         .output()
         .map_err(|error| format!("failed to execute git log: {}", error))?;
     if !log_output.status.success() {
@@ -1962,7 +1982,16 @@ fn frozen_commit_status_for_date(repo_root: &Path, today: &str) -> Result<(StepS
     // This handles resumed cycles where docs were committed before the frozen commit.
     let tree_output = Command::new("git")
         .current_dir(repo_root)
-        .args(["ls-tree", "-r", "--name-only", &commit, "--", "docs/worklog/", "docs/journal/", "docs/state.json"])
+        .args([
+            "ls-tree",
+            "-r",
+            "--name-only",
+            &commit,
+            "--",
+            "docs/worklog/",
+            "docs/journal/",
+            "docs/state.json",
+        ])
         .output()
         .map_err(|error| format!("failed to execute git ls-tree: {}", error))?;
     if !tree_output.status.success() {
@@ -1970,9 +1999,9 @@ fn frozen_commit_status_for_date(repo_root: &Path, today: &str) -> Result<(StepS
     }
 
     let tree_listing = String::from_utf8_lossy(&tree_output.stdout);
-    let has_worklog = tree_listing.lines().any(|line| {
-        line.starts_with("docs/worklog/") && line.ends_with(".md")
-    });
+    let has_worklog = tree_listing
+        .lines()
+        .any(|line| line.starts_with("docs/worklog/") && line.ends_with(".md"));
     let journal_path = format!("docs/journal/{today}.md");
     let has_journal = tree_listing.lines().any(|line| line == journal_path);
     let has_state = tree_listing.lines().any(|line| line == "docs/state.json");
@@ -2008,10 +2037,16 @@ fn frozen_commit_status_for_date(repo_root: &Path, today: &str) -> Result<(StepS
     ))
 }
 
-fn worklog_dedup_status_for_date(repo_root: &Path, today: &str) -> Result<(StepStatus, String), String> {
+fn worklog_dedup_status_for_date(
+    repo_root: &Path,
+    today: &str,
+) -> Result<(StepStatus, String), String> {
     let worklog_dir = repo_root.join("docs/worklog").join(today);
     if !worklog_dir.is_dir() {
-        return Ok((StepStatus::Pass, "No duplicate worklog files found".to_string()));
+        return Ok((
+            StepStatus::Pass,
+            "No duplicate worklog files found".to_string(),
+        ));
     }
 
     let entries = fs::read_dir(&worklog_dir)
@@ -2088,10 +2123,16 @@ fn worklog_dedup_status_for_date(repo_root: &Path, today: &str) -> Result<(StepS
         ));
     }
 
-    Ok((StepStatus::Pass, "No duplicate worklog files found".to_string()))
+    Ok((
+        StepStatus::Pass,
+        "No duplicate worklog files found".to_string(),
+    ))
 }
 
-fn worklog_immutability_status_for_date(repo_root: &Path, today: &str) -> Result<(StepStatus, String), String> {
+fn worklog_immutability_status_for_date(
+    repo_root: &Path,
+    today: &str,
+) -> Result<(StepStatus, String), String> {
     let Some(worklog_path) = current_cycle_worklog_entry_for_date(repo_root, today)? else {
         return Ok((
             StepStatus::Pass,
@@ -2145,6 +2186,21 @@ fn worklog_immutability_status_for_date(repo_root: &Path, today: &str) -> Result
         ));
     }
 
+    if current_status.contains("resolved by resume")
+        || current_status.contains("first-session baseline was")
+    {
+        return Ok((
+            StepStatus::Pass,
+            format!(
+                "Pipeline status change allowed (resume-annotated) in {} from '{}' to '{}' (baseline commit {})",
+                worklog_path.display(),
+                original_status,
+                current_status,
+                short_commit(&baseline_commit)
+            ),
+        ));
+    }
+
     Ok((
         StepStatus::Fail,
         format!(
@@ -2176,7 +2232,10 @@ fn extract_worklog_cycle_from_filename(file_name: &str) -> Option<u64> {
         .and_then(|capture| capture.as_str().parse::<u64>().ok())
 }
 
-fn current_cycle_worklog_entry_for_date(repo_root: &Path, today: &str) -> Result<Option<PathBuf>, String> {
+fn current_cycle_worklog_entry_for_date(
+    repo_root: &Path,
+    today: &str,
+) -> Result<Option<PathBuf>, String> {
     if let Some(path) = latest_worklog_entry_for_date(repo_root, today)? {
         return Ok(Some(path));
     }
@@ -2196,11 +2255,17 @@ fn latest_worklog_entry_for_cycle(repo_root: &Path, cycle: u64) -> Result<Option
     let mut latest = None;
 
     for date_entry in dates {
-        let date_entry =
-            date_entry.map_err(|error| format!("failed to read {}: {}", worklog_root.display(), error))?;
+        let date_entry = date_entry
+            .map_err(|error| format!("failed to read {}: {}", worklog_root.display(), error))?;
         if !date_entry
             .file_type()
-            .map_err(|error| format!("failed to inspect {}: {}", date_entry.path().display(), error))?
+            .map_err(|error| {
+                format!(
+                    "failed to inspect {}: {}",
+                    date_entry.path().display(),
+                    error
+                )
+            })?
             .is_dir()
         {
             continue;
@@ -2210,15 +2275,19 @@ fn latest_worklog_entry_for_cycle(repo_root: &Path, cycle: u64) -> Result<Option
             Ok(value) => value,
             Err(_) => continue,
         };
-        let worklog_entries = fs::read_dir(date_entry.path())
-            .map_err(|error| format!("failed to read {}: {}", date_entry.path().display(), error))?;
+        let worklog_entries = fs::read_dir(date_entry.path()).map_err(|error| {
+            format!("failed to read {}: {}", date_entry.path().display(), error)
+        })?;
 
         for entry in worklog_entries {
-            let entry =
-                entry.map_err(|error| format!("failed to read {}: {}", date_entry.path().display(), error))?;
+            let entry = entry.map_err(|error| {
+                format!("failed to read {}: {}", date_entry.path().display(), error)
+            })?;
             if !entry
                 .file_type()
-                .map_err(|error| format!("failed to inspect {}: {}", entry.path().display(), error))?
+                .map_err(|error| {
+                    format!("failed to inspect {}: {}", entry.path().display(), error)
+                })?
                 .is_file()
             {
                 continue;
@@ -2238,7 +2307,7 @@ fn latest_worklog_entry_for_cycle(repo_root: &Path, cycle: u64) -> Result<Option
             if latest
                 .as_ref()
                 .is_none_or(|(current_date, current_file, _)| {
-                (&date_name, &file_name) > (current_date, current_file)
+                    (&date_name, &file_name) > (current_date, current_file)
                 })
             {
                 latest = Some((date_name.clone(), file_name, entry.path()));
@@ -2623,7 +2692,10 @@ fn deferral_deadlines_status(repo_root: &Path) -> Result<(StepStatus, String), S
         .filter(|finding| !finding.resolved && finding.dropped_rationale.is_none())
         .collect::<Vec<_>>();
     if active_findings.is_empty() {
-        return Ok((StepStatus::Pass, "no active deferred findings are due".to_string()));
+        return Ok((
+            StepStatus::Pass,
+            "no active deferred findings are due".to_string(),
+        ));
     }
 
     let overdue = active_findings
@@ -2658,7 +2730,10 @@ fn deferral_deadlines_status(repo_root: &Path) -> Result<(StepStatus, String), S
         return Ok((StepStatus::Warn, due_this_cycle.join("; ")));
     }
 
-    Ok((StepStatus::Pass, "no active deferred findings are due".to_string()))
+    Ok((
+        StepStatus::Pass,
+        "no active deferred findings are due".to_string(),
+    ))
 }
 
 fn mass_deferral_gate_assessment(repo_root: &Path) -> Result<StepAssessment, String> {
@@ -2695,10 +2770,7 @@ fn mass_deferral_gate_assessment(repo_root: &Path) -> Result<StepAssessment, Str
             detail,
         });
     }
-    if meets_mass_deferral_warning_threshold(
-        history_entry.deferred,
-        history_entry.finding_count,
-    ) {
+    if meets_mass_deferral_warning_threshold(history_entry.deferred, history_entry.finding_count) {
         return Ok(StepAssessment {
             status: StepStatus::Warn,
             severity: Severity::Warning,
@@ -2717,10 +2789,15 @@ fn meets_mass_deferral_warning_threshold(deferred: u64, finding_count: u64) -> b
     deferred.saturating_mul(4) >= finding_count.saturating_mul(3)
 }
 
-fn dispatch_finding_reconciliation_status(repo_root: &Path) -> Result<(StepStatus, String), String> {
+fn dispatch_finding_reconciliation_status(
+    repo_root: &Path,
+) -> Result<(StepStatus, String), String> {
     let current_cycle = current_cycle_from_state(repo_root)?;
     let Some(previous_cycle) = current_cycle.checked_sub(1) else {
-        return Ok((StepStatus::Pass, "cycle 0 has no previous review cycle".to_string()));
+        return Ok((
+            StepStatus::Pass,
+            "cycle 0 has no previous review cycle".to_string(),
+        ));
     };
 
     let state_value = read_state_value(repo_root)?;
@@ -2896,7 +2973,9 @@ fn format_cycle_list(cycles: &[u64]) -> String {
 }
 
 fn count_review_findings(review_content: &str) -> Result<u64, String> {
-    let count = REVIEW_FINDING_HEADER_REGEX.find_iter(review_content).count();
+    let count = REVIEW_FINDING_HEADER_REGEX
+        .find_iter(review_content)
+        .count();
     u64::try_from(count).map_err(|error| format!("review finding count overflow: {}", error))
 }
 
@@ -3239,7 +3318,11 @@ mod tests {
     }
 
     fn run_git(root: &Path, args: &[&str]) -> String {
-        let output = Command::new("git").current_dir(root).args(args).output().unwrap();
+        let output = Command::new("git")
+            .current_dir(root)
+            .args(args)
+            .output()
+            .unwrap();
         assert!(
             output.status.success(),
             "git {:?} failed: {}",
@@ -3971,13 +4054,9 @@ mod tests {
 
     #[test]
     fn cli_accepts_refresh_inventory_flag() {
-        let cli = Cli::try_parse_from([
-            "pipeline-check",
-            "--repo-root",
-            ".",
-            "--refresh-inventory",
-        ])
-        .unwrap();
+        let cli =
+            Cli::try_parse_from(["pipeline-check", "--repo-root", ".", "--refresh-inventory"])
+                .unwrap();
 
         assert!(cli.refresh_inventory);
     }
@@ -4036,8 +4115,8 @@ mod tests {
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(root.join("docs")).unwrap();
 
-        let error = refresh_tool_pipeline_inventory(&root, 399)
-            .expect_err("missing state file must fail");
+        let error =
+            refresh_tool_pipeline_inventory(&root, 399).expect_err("missing state file must fail");
 
         assert!(error.contains("failed to read"));
         assert!(error.contains("docs/state.json"));
@@ -4047,8 +4126,8 @@ mod tests {
     fn refresh_tool_pipeline_inventory_fails_when_tool_pipeline_entry_is_missing() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir()
-            .join(format!("pipeline-check-refresh-missing-field-{}", run_id));
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-refresh-missing-field-{}", run_id));
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(root.join("docs")).unwrap();
         fs::write(
@@ -4786,15 +4865,12 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("missing mandatory [none]"));
-        assert!(report
-            .steps
-            .iter()
-            .any(|step| {
-                step.detail
-                    .as_deref()
-                    .unwrap_or_default()
-                    .contains("missing optional [C5.1]")
-            }));
+        assert!(report.steps.iter().any(|step| {
+            step.detail
+                .as_deref()
+                .unwrap_or_default()
+                .contains("missing optional [C5.1]")
+        }));
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -5201,20 +5277,15 @@ mod tests {
             .steps
             .iter()
             .any(|step| step.name == "doc-validation"));
-        assert!(report
-            .steps
-            .iter()
-            .any(|step| step.name == "worklog-dedup"));
+        assert!(report.steps.iter().any(|step| step.name == "worklog-dedup"));
     }
 
     #[test]
     fn run_pipeline_omits_worklog_dedup_when_excluded() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir().join(format!(
-            "pipeline-check-exclude-worklog-dedup-{}",
-            run_id
-        ));
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-exclude-worklog-dedup-{}", run_id));
         init_git_repo(&root);
         let today = &current_utc_timestamp()[..10];
         fs::create_dir_all(root.join("docs/journal")).unwrap();
@@ -5343,10 +5414,7 @@ mod tests {
 
         assert_eq!(report.overall, StepStatus::Pass);
         assert_eq!(report.steps.len(), 16);
-        assert!(!report
-            .steps
-            .iter()
-            .any(|step| step.name == "worklog-dedup"));
+        assert!(!report.steps.iter().any(|step| step.name == "worklog-dedup"));
         assert!(report
             .steps
             .iter()
@@ -5477,10 +5545,8 @@ mod tests {
     fn worklog_dedup_passes_with_one_file_per_cycle() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir().join(format!(
-            "pipeline-check-worklog-dedup-unique-{}",
-            run_id
-        ));
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-worklog-dedup-unique-{}", run_id));
         fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
         fs::write(
             root.join("docs/worklog/2026-03-09/120000-cycle-210-summary.md"),
@@ -5512,10 +5578,8 @@ mod tests {
     fn worklog_dedup_fails_when_cycle_has_multiple_files() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir().join(format!(
-            "pipeline-check-worklog-dedup-duplicate-{}",
-            run_id
-        ));
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-worklog-dedup-duplicate-{}", run_id));
         fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
         fs::write(
             root.join("docs/worklog/2026-03-09/120000-cycle-354-summary.md"),
@@ -5560,10 +5624,8 @@ mod tests {
     fn worklog_dedup_warns_without_blocking_when_only_legacy_name_is_extra() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir().join(format!(
-            "pipeline-check-worklog-dedup-mixed-{}",
-            run_id
-        ));
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-worklog-dedup-mixed-{}", run_id));
         fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
         fs::write(
             root.join("docs/worklog/2026-03-09/120000-cycle-354-summary.md"),
@@ -5729,6 +5791,128 @@ mod tests {
     }
 
     #[test]
+    fn worklog_immutability_passes_when_resume_annotation_documents_change() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-worklog-immutability-resume-annotated-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        let worklog = root.join("docs/worklog/2026-03-09/120000-cycle-410-summary.md");
+        fs::write(
+            &worklog,
+            "# Cycle 410\n\n## Pre-dispatch state\n\n- **Pipeline status**: FAIL (4 warnings)\n",
+        )
+        .unwrap();
+        commit_all(&root, "add worklog");
+        let baseline_commit = run_git(&root, &["rev-parse", "HEAD"]);
+        fs::write(
+            &worklog,
+            "# Cycle 410\n\n## Pre-dispatch state\n\n- **Pipeline status**: PASS (2 warnings) — first-session baseline was FAIL (4 warnings); resolved by resume\n",
+        )
+        .unwrap();
+
+        let step = verify_worklog_immutability_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Blocking);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("resume-annotated"));
+        assert!(detail.contains("FAIL (4 warnings)"));
+        assert!(detail.contains("resolved by resume"));
+        assert!(detail.contains(&baseline_commit[..7]));
+    }
+
+    #[test]
+    fn worklog_immutability_fails_when_status_change_lacks_resume_annotation() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-worklog-immutability-unannotated-change-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        let worklog = root.join("docs/worklog/2026-03-09/120000-cycle-410-summary.md");
+        fs::write(
+            &worklog,
+            "# Cycle 410\n\n## Pre-dispatch state\n\n- **Pipeline status**: FAIL (4 warnings)\n",
+        )
+        .unwrap();
+        commit_all(&root, "add worklog");
+        let baseline_commit = run_git(&root, &["rev-parse", "HEAD"]);
+        fs::write(
+            &worklog,
+            "# Cycle 410\n\n## Pre-dispatch state\n\n- **Pipeline status**: PASS (2 warnings)\n",
+        )
+        .unwrap();
+
+        let step = verify_worklog_immutability_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Fail);
+        assert_eq!(step.severity, Severity::Blocking);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("changed"));
+        assert!(detail.contains("FAIL (4 warnings)"));
+        assert!(detail.contains("PASS (2 warnings)"));
+        assert!(detail.contains(&baseline_commit[..7]));
+    }
+
+    #[test]
+    fn worklog_immutability_passes_when_status_exactly_matches_baseline() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-worklog-immutability-exact-match-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        let worklog = root.join("docs/worklog/2026-03-09/120000-cycle-410-summary.md");
+        fs::write(
+            &worklog,
+            "# Cycle 410\n\n## Pre-dispatch state\n\n- **Pipeline status**: FAIL (4 warnings)\n",
+        )
+        .unwrap();
+        commit_all(&root, "add worklog");
+        let baseline_commit = run_git(&root, &["rev-parse", "HEAD"]);
+
+        let step = verify_worklog_immutability_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Blocking);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("unchanged"));
+        assert!(detail.contains(&baseline_commit[..7]));
+    }
+
+    #[test]
     fn worklog_immutability_fails_when_modified_after_last_cycle_commit() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -5827,7 +6011,8 @@ mod tests {
     fn frozen_commit_verify_passes_when_cycle_commit_contains_all_docs() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir().join(format!("pipeline-check-frozen-commit-pass-{}", run_id));
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-frozen-commit-pass-{}", run_id));
         init_git_repo(&root);
         fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
         fs::create_dir_all(root.join("docs/journal")).unwrap();
@@ -5983,6 +6168,7 @@ mod tests {
         .unwrap();
         commit_all(&root, "seed state");
 
+        fs::remove_file(root.join("docs/state.json")).unwrap();
         fs::write(
             root.join("docs/worklog/2026-03-09/120000-cycle-410-summary.md"),
             "# Worklog\n",
@@ -5990,6 +6176,15 @@ mod tests {
         .unwrap();
         fs::write(root.join("docs/journal/2026-03-09.md"), "# Journal\n").unwrap();
         commit_all(&root, "[cycle 410] freeze close-out docs");
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "close_out"}
+            })
+            .to_string(),
+        )
+        .unwrap();
 
         let step = verify_frozen_commit_for_date(&root, "2026-03-09");
 
@@ -6827,10 +7022,8 @@ mod tests {
     fn deferral_deadlines_warn_when_finding_is_due_this_cycle() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir().join(format!(
-            "pipeline-check-deferral-deadlines-due-{}",
-            run_id
-        ));
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-deferral-deadlines-due-{}", run_id));
         fs::create_dir_all(root.join("docs")).unwrap();
         fs::write(
             root.join("docs/state.json"),
@@ -6884,17 +7077,18 @@ mod tests {
         let step = verify_deferral_deadlines(&root);
 
         assert_eq!(step.status, StepStatus::Pass);
-        assert_eq!(step.detail.as_deref(), Some("no active deferred findings are due"));
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("no active deferred findings are due")
+        );
     }
 
     #[test]
     fn mass_deferral_gate_warns_at_seventy_five_percent() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir().join(format!(
-            "pipeline-check-mass-deferral-gate-warn-{}",
-            run_id
-        ));
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-mass-deferral-gate-warn-{}", run_id));
         fs::create_dir_all(root.join("docs")).unwrap();
         fs::write(
             root.join("docs/state.json"),
@@ -6929,10 +7123,8 @@ mod tests {
     fn mass_deferral_gate_fails_at_one_hundred_percent() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir().join(format!(
-            "pipeline-check-mass-deferral-gate-fail-{}",
-            run_id
-        ));
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-mass-deferral-gate-fail-{}", run_id));
         fs::create_dir_all(root.join("docs")).unwrap();
         fs::write(
             root.join("docs/state.json"),
@@ -8857,9 +9049,7 @@ mod tests {
                         .enumerate()
                         .map(|(index, step)| {
                             (
-                                format!(
-                                    "> **[main-orchestrator]** | Cycle 301 | Step {step}\n"
-                                ),
+                                format!("> **[main-orchestrator]** | Cycle 301 | Step {step}\n"),
                                 format!("2026-03-29T10:{:02}:00Z", index + 8),
                             )
                         }),
@@ -9003,15 +9193,11 @@ mod tests {
                     EXPECTED_STEP_IDS
                         .iter()
                         .copied()
-                        .filter(|step| {
-                            !STARTUP_STEP_IDS.contains(step) && !step.starts_with('C')
-                        })
+                        .filter(|step| !STARTUP_STEP_IDS.contains(step) && !step.starts_with('C'))
                         .enumerate()
                         .map(|(index, step)| {
                             (
-                                format!(
-                                    "> **[main-orchestrator]** | Cycle 301 | Step {step}\n"
-                                ),
+                                format!("> **[main-orchestrator]** | Cycle 301 | Step {step}\n"),
                                 format!("2026-03-29T10:{:02}:00Z", index + 7),
                             )
                         }),
