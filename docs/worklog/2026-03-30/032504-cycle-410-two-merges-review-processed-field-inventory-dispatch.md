@@ -18,7 +18,7 @@
 
 ## Self-modifications
 
-- None.
+- `tools/rust/crates/pipeline-check/src/main.rs`: Fixed frozen-commit-verify false positive — replaced `git show --stat` (checks single commit diff) with `git ls-tree` (checks commit tree) so artifacts from earlier commits in the same cycle are found during resume scenarios.
 
 ## Cycle state
 

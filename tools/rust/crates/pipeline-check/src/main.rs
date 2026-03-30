@@ -1958,25 +1958,24 @@ fn frozen_commit_status_for_date(repo_root: &Path, today: &str) -> Result<(StepS
         ));
     };
 
-    let stat_output = Command::new("git")
+    // Use git ls-tree to check the commit's tree (not diff) for artifacts.
+    // This handles resumed cycles where docs were committed before the frozen commit.
+    let tree_output = Command::new("git")
         .current_dir(repo_root)
-        .args(["show", "--stat", "--format=", &commit])
+        .args(["ls-tree", "-r", "--name-only", &commit, "--", "docs/worklog/", "docs/journal/", "docs/state.json"])
         .output()
-        .map_err(|error| format!("failed to execute git show: {}", error))?;
-    if !stat_output.status.success() {
-        return Err(command_failure_message("git show", &stat_output));
+        .map_err(|error| format!("failed to execute git ls-tree: {}", error))?;
+    if !tree_output.status.success() {
+        return Err(command_failure_message("git ls-tree", &tree_output));
     }
 
-    let stat_output = String::from_utf8_lossy(&stat_output.stdout);
-    let has_worklog = stat_output.lines().any(|line| {
-        let trimmed = line.trim_start();
-        trimmed.starts_with("docs/worklog/") && trimmed.contains(".md")
+    let tree_listing = String::from_utf8_lossy(&tree_output.stdout);
+    let has_worklog = tree_listing.lines().any(|line| {
+        line.starts_with("docs/worklog/") && line.ends_with(".md")
     });
     let journal_path = format!("docs/journal/{today}.md");
-    let has_journal = stat_output.lines().any(|line| line.trim_start().starts_with(&journal_path));
-    let has_state = stat_output
-        .lines()
-        .any(|line| line.trim_start().starts_with("docs/state.json"));
+    let has_journal = tree_listing.lines().any(|line| line == journal_path);
+    let has_state = tree_listing.lines().any(|line| line == "docs/state.json");
 
     let mut missing = Vec::new();
     if !has_worklog {
