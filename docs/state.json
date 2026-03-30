@@ -6372,6 +6372,12 @@
       "deadline_cycle": 415,
       "deferred_cycle": 410,
       "resolved": false
+    },
+    {
+      "category": "journal-quality",
+      "deadline_cycle": 414,
+      "deferred_cycle": 409,
+      "resolved": false
     }
   ],
   "dispatch_log_latest": "#2005 [Cycle Review] Cycle 410 end-of-cycle review (cycle 410)",
