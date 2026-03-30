@@ -6042,6 +6042,15 @@
       "pr": 2006,
       "status": "merged",
       "title": "[Cycle Review] Cycle 410 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-30T06:53:24Z",
+      "issue": 2011,
+      "merged_at": null,
+      "model": "gpt-5.4",
+      "pr": null,
+      "status": "dispatched",
+      "title": "Expand Article test coverage: speakable, subscription, author variants"
     }
   ],
   "audit_dropped": [
@@ -6485,6 +6494,10 @@
       },
       "cycle_issues": {
         "cadence": "every cycle",
+        "last_refreshed": "cycle 411"
+      },
+      "cycles_since_last_forward_work": {
+        "cadence": "every cycle (reset on forward work dispatch)",
         "last_refreshed": "cycle 411"
       },
       "cycle_phase": {
