@@ -35,4 +35,37 @@ final class LocationFeatureSpecificationTest extends TestCase {
 		$this->assertEquals('rating', $obj->name);
 		$this->assertEquals('5 stars', $obj->value);
 	}
+
+	public function testFalseValueIsSerialized(): void {
+		$schema = new LocationFeatureSpecification(
+			name: 'parking',
+			value: false,
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertFalse($obj->value);
+	}
+
+	public function testEmptyStringValueIsSerialized(): void {
+		$schema = new LocationFeatureSpecification(
+			name: 'description',
+			value: '',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame('', $obj->value);
+	}
+
+	public function testTrueValueIsSerialized(): void {
+		$schema = new LocationFeatureSpecification(
+			name: 'accessible',
+			value: true,
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertTrue($obj->value);
+	}
 }

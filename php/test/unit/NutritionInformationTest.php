@@ -47,4 +47,55 @@ final class NutritionInformationTest extends TestCase {
 		$this->assertEquals('4 grams', $obj->proteinContent);
 		$this->assertEquals('1 cup', $obj->servingSize);
 	}
+
+	public function testSingleFieldOutputOmitsRemainingNullFields(): void {
+		$schema = new NutritionInformation(
+			proteinContent: '12 grams',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame('12 grams', $obj->proteinContent);
+		$this->assertFalse(property_exists($obj, 'calories'));
+		$this->assertFalse(property_exists($obj, 'fatContent'));
+		$this->assertFalse(property_exists($obj, 'servingSize'));
+	}
+
+	public function testEmptyStringFieldIsSerialized(): void {
+		$schema = new NutritionInformation(
+			calories: '',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame('', $obj->calories);
+	}
+
+	public function testNullFieldsAreOmittedFromOutput(): void {
+		$schema = new NutritionInformation(
+			calories: null,
+			fatContent: null,
+			saturatedFatContent: null,
+			cholesterolContent: null,
+			sodiumContent: null,
+			carbohydrateContent: null,
+			fiberContent: null,
+			sugarContent: null,
+			proteinContent: null,
+			servingSize: null,
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertFalse(property_exists($obj, 'calories'));
+		$this->assertFalse(property_exists($obj, 'fatContent'));
+		$this->assertFalse(property_exists($obj, 'saturatedFatContent'));
+		$this->assertFalse(property_exists($obj, 'cholesterolContent'));
+		$this->assertFalse(property_exists($obj, 'sodiumContent'));
+		$this->assertFalse(property_exists($obj, 'carbohydrateContent'));
+		$this->assertFalse(property_exists($obj, 'fiberContent'));
+		$this->assertFalse(property_exists($obj, 'sugarContent'));
+		$this->assertFalse(property_exists($obj, 'proteinContent'));
+		$this->assertFalse(property_exists($obj, 'servingSize'));
+	}
 }

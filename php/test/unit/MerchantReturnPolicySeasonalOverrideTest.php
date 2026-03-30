@@ -27,4 +27,46 @@ final class MerchantReturnPolicySeasonalOverrideTest extends TestCase {
 		$this->assertEquals('https://schema.org/MerchantReturnFiniteReturnWindow', $obj->returnPolicyCategory);
 		$this->assertEquals(60, $obj->merchantReturnDays);
 	}
+
+	public function testMinimalOutputOmitsNullMerchantReturnDays(): void {
+		$schema = new MerchantReturnPolicySeasonalOverride(
+			startDate: '2026-11-15',
+			endDate: '2027-01-15',
+			returnPolicyCategory: MerchantReturnEnumeration::MerchantReturnFiniteReturnWindow,
+			merchantReturnDays: null,
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertFalse(property_exists($obj, 'merchantReturnDays'));
+	}
+
+	public function testZeroMerchantReturnDaysIsSerialized(): void {
+		$schema = new MerchantReturnPolicySeasonalOverride(
+			startDate: '2026-12-24',
+			endDate: '2026-12-26',
+			returnPolicyCategory: MerchantReturnEnumeration::MerchantReturnFiniteReturnWindow,
+			merchantReturnDays: 0,
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame(0, $obj->merchantReturnDays);
+	}
+
+	public function testEnumSerializesToSchemaUrl(): void {
+		$schema = new MerchantReturnPolicySeasonalOverride(
+			startDate: '2026-11-01',
+			endDate: '2026-11-30',
+			returnPolicyCategory: MerchantReturnEnumeration::MerchantReturnFiniteReturnWindow,
+			merchantReturnDays: 30,
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame(
+			MerchantReturnEnumeration::MerchantReturnFiniteReturnWindow->value,
+			$obj->returnPolicyCategory,
+		);
+	}
 }

@@ -63,4 +63,46 @@ describe("MonetaryAmount", () => {
 			'{\n  "@context": "https://schema.org/",\n  "@type": "MonetaryAmount",\n  "currency": "USD",\n  "value": 10.5,\n  "minValue": 5,\n  "maxValue": 20,\n  "unitText": "per item"\n}',
 		);
 	});
+
+	it("preserves value when set to zero", () => {
+		const schema = new MonetaryAmount({
+			currency: "USD",
+			value: 0,
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.value).toBe(0);
+	});
+
+	it("serializes minValue and maxValue without value", () => {
+		const schema = new MonetaryAmount({
+			currency: "EUR",
+			minValue: 5,
+			maxValue: 9.5,
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj).not.toHaveProperty("value");
+		expect(obj.minValue).toBe(5);
+		expect(obj.maxValue).toBe(9.5);
+	});
+
+	it("omits null fields from output", () => {
+		const schema = new MonetaryAmount({
+			currency: "GBP",
+			value: null,
+			minValue: null,
+			maxValue: null,
+			unitText: null,
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj).not.toHaveProperty("value");
+		expect(obj).not.toHaveProperty("minValue");
+		expect(obj).not.toHaveProperty("maxValue");
+		expect(obj).not.toHaveProperty("unitText");
+	});
 });

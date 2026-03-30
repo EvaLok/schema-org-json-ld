@@ -28,6 +28,34 @@ final class HowToSectionTest extends TestCase {
 		$this->assertEquals('Dice the onions.', $obj->itemListElement[0]->text);
 	}
 
+	public function testEmptyNameIsSerialized(): void {
+		$schema = new HowToSection(
+			name: '',
+			itemListElement: [
+				new HowToStep(text: 'Whisk the eggs.'),
+			],
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame('', $obj->name);
+		$this->assertCount(1, $obj->itemListElement);
+	}
+
+	public function testSingleStepArraySerializationPreservesLength(): void {
+		$schema = new HowToSection(
+			name: 'Mix ingredients',
+			itemListElement: [
+				new HowToStep(text: 'Combine flour and water.'),
+			],
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertCount(1, $obj->itemListElement);
+		$this->assertEquals('Combine flour and water.', $obj->itemListElement[0]->text);
+	}
+
 	public function testMultipleStepsInItemListElement(): void {
 		$schema = new HowToSection(
 			name: 'Assemble the pie',
@@ -45,5 +73,20 @@ final class HowToSectionTest extends TestCase {
 		$this->assertEquals('Roll out the dough.', $obj->itemListElement[0]->text);
 		$this->assertEquals('HowToStep', $obj->itemListElement[1]->{'@type'});
 		$this->assertEquals('Fill with the prepared mixture.', $obj->itemListElement[1]->text);
+	}
+
+	public function testNestedHowToStepsSerializeWithCorrectType(): void {
+		$schema = new HowToSection(
+			name: 'Finish the recipe',
+			itemListElement: [
+				new HowToStep(text: 'Plate the dish.'),
+				new HowToStep(text: 'Serve immediately.'),
+			],
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('HowToStep', $obj->itemListElement[0]->{'@type'});
+		$this->assertEquals('HowToStep', $obj->itemListElement[1]->{'@type'});
 	}
 }

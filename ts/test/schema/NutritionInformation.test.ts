@@ -90,4 +90,55 @@ describe("NutritionInformation", () => {
 		expect(obj.proteinContent).toBe("12 g");
 		expect(obj.servingSize).toBe("1 cup");
 	});
+
+	it("serializes a single populated field and omits the rest", () => {
+		const schema = new NutritionInformation({
+			proteinContent: "12 g",
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.proteinContent).toBe("12 g");
+		expect(obj).not.toHaveProperty("calories");
+		expect(obj).not.toHaveProperty("fatContent");
+		expect(obj).not.toHaveProperty("servingSize");
+	});
+
+	it("serializes an empty string field", () => {
+		const schema = new NutritionInformation({
+			calories: "",
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.calories).toBe("");
+	});
+
+	it("omits explicitly null fields from the output", () => {
+		const schema = new NutritionInformation({
+			calories: null,
+			fatContent: null,
+			saturatedFatContent: null,
+			cholesterolContent: null,
+			sodiumContent: null,
+			carbohydrateContent: null,
+			fiberContent: null,
+			sugarContent: null,
+			proteinContent: null,
+			servingSize: null,
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj).not.toHaveProperty("calories");
+		expect(obj).not.toHaveProperty("fatContent");
+		expect(obj).not.toHaveProperty("saturatedFatContent");
+		expect(obj).not.toHaveProperty("cholesterolContent");
+		expect(obj).not.toHaveProperty("sodiumContent");
+		expect(obj).not.toHaveProperty("carbohydrateContent");
+		expect(obj).not.toHaveProperty("fiberContent");
+		expect(obj).not.toHaveProperty("sugarContent");
+		expect(obj).not.toHaveProperty("proteinContent");
+		expect(obj).not.toHaveProperty("servingSize");
+	});
 });

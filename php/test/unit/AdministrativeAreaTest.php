@@ -19,4 +19,28 @@ final class AdministrativeAreaTest extends TestCase {
 		$this->assertEquals('AdministrativeArea', $obj->{'@type'});
 		$this->assertEquals('California', $obj->name);
 	}
+
+	public function testEmptyStringNameIsSerialized(): void {
+		$schema = new AdministrativeArea(name: '');
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame('', $obj->name);
+	}
+
+	public function testOnlyContextTypeAndNameAppear(): void {
+		$schema = new AdministrativeArea(name: 'Ontario');
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame(['@context', '@type', 'name'], array_keys(get_object_vars($obj)));
+	}
+
+	public function testExactNameValueRoundTrips(): void {
+		$schema = new AdministrativeArea(name: 'Île-de-France');
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame('Île-de-France', $obj->name);
+	}
 }

@@ -64,4 +64,48 @@ describe("UnitPriceSpecification", () => {
 		expect(validForMemberTier["@type"]).toBe("MemberProgramTier");
 		expect(referenceQuantity["@type"]).toBe("QuantitativeValue");
 	});
+
+	it("preserves price when set to zero", () => {
+		const schema = new UnitPriceSpecification({
+			price: 0,
+			priceCurrency: "USD",
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.price).toBe(0);
+	});
+
+	it("omits optional fields when only required fields are provided", () => {
+		const schema = new UnitPriceSpecification({
+			price: 19.99,
+			priceCurrency: "USD",
+			priceType: null,
+			membershipPointsEarned: null,
+			validForMemberTier: null,
+			referenceQuantity: null,
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj).not.toHaveProperty("priceType");
+		expect(obj).not.toHaveProperty("membershipPointsEarned");
+		expect(obj).not.toHaveProperty("validForMemberTier");
+		expect(obj).not.toHaveProperty("referenceQuantity");
+	});
+
+	it("serializes nested referenceQuantity with the correct @type", () => {
+		const schema = new UnitPriceSpecification({
+			price: 1.99,
+			priceCurrency: "USD",
+			referenceQuantity: new QuantitativeValue({ value: 500, unitCode: "GRM" }),
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+		const referenceQuantity = obj.referenceQuantity as Record<string, unknown>;
+
+		expect(referenceQuantity["@type"]).toBe("QuantitativeValue");
+		expect(referenceQuantity.value).toBe(500);
+		expect(referenceQuantity.unitCode).toBe("GRM");
+	});
 });
