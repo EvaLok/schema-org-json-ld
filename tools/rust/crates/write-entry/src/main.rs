@@ -441,7 +441,14 @@ fn execute_patch_pipeline(args: &PatchPipelineArgs, repo_root: &Path) -> Result<
             worklog_path.display()
         )
     })?;
-    if let Some(in_flight) = args.in_flight {
+    let in_flight_value = match args.in_flight {
+        Some(in_flight) => Some(in_flight),
+        None => {
+            let state = load_worklog_state(repo_root, false).ok().flatten();
+            state_extra_in_flight_sessions(state.as_ref()).ok()
+        }
+    };
+    if let Some(in_flight) = in_flight_value {
         let in_flight = in_flight.to_string();
         patched = patch_or_addendum(
             &patched,
@@ -6987,6 +6994,77 @@ Reflective log for the schema-org-json-ld orchestrator.
         assert!(updated.contains("- **Publish gate (post-dispatch)**: published"));
         assert!(updated.contains("## Next steps"));
         assert!(!updated.contains("- **Pipeline status (post-dispatch)**:"));
+    }
+
+    #[test]
+    fn patch_pipeline_auto_derives_in_flight_from_state_json() {
+        let repo_root = TempRepoDir::new("patch-pipeline-auto-in-flight");
+        let worklog_path = repo_root.path.join("docs/worklog/test.md");
+        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "in_flight_sessions": 1
+            }"#,
+        );
+        fs::write(
+            &worklog_path,
+            "# Cycle 154\n\n## Cycle state\n\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: open\n",
+        )
+        .unwrap();
+
+        execute_patch_pipeline(
+            &PatchPipelineArgs {
+                worklog: PathBuf::from("docs/worklog/test.md"),
+                status: "PASS (9/9)".to_string(),
+                in_flight: None,
+                publish_gate: None,
+                next_steps: Vec::new(),
+                section_title: None,
+            },
+            &repo_root.path,
+        )
+        .unwrap();
+
+        let updated = fs::read_to_string(&worklog_path).unwrap();
+        assert!(updated.contains("- **In-flight agent sessions**: 0"));
+        assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
+    }
+
+    #[test]
+    fn patch_pipeline_explicit_in_flight_overrides_state_json() {
+        let repo_root = TempRepoDir::new("patch-pipeline-explicit-in-flight");
+        let worklog_path = repo_root.path.join("docs/worklog/test.md");
+        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "in_flight_sessions": 1
+            }"#,
+        );
+        fs::write(
+            &worklog_path,
+            "# Cycle 154\n\n## Cycle state\n\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: open\n",
+        )
+        .unwrap();
+
+        execute_patch_pipeline(
+            &PatchPipelineArgs {
+                worklog: PathBuf::from("docs/worklog/test.md"),
+                status: "PASS (9/9)".to_string(),
+                in_flight: Some(2),
+                publish_gate: None,
+                next_steps: Vec::new(),
+                section_title: None,
+            },
+            &repo_root.path,
+        )
+        .unwrap();
+
+        let updated = fs::read_to_string(&worklog_path).unwrap();
+        assert!(updated.contains("- **In-flight agent sessions**: 0"));
+        assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 2"));
+        assert!(!updated.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
     }
 
     #[test]
