@@ -24,7 +24,9 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 0
+- **In-flight agent sessions (post-dispatch)**: 1
 - **Pipeline status**: PASS (4 warnings: field-inventory, housekeeping-scan, step-comments, mass-deferral-gate)
+- **Pipeline status (post-dispatch)**: PASS (4 warnings)
 - **Publish gate**: published
 
 ## Next steps
@@ -32,6 +34,10 @@
 1. Review and merge PRs from #2035 (worklog-immutability fix) and #2036 (XML filename update) when Copilot finishes
 2. Dispatch thin test batch 4 (deferred from this cycle)
 3. Record dispatches in state.json after pipeline clears
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2040](https://github.com/EvaLok/schema-org-json-ld/issues/2040) ([Cycle Review] Cycle 413 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
