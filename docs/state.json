@@ -11210,6 +11210,39 @@
         ],
         "ignored": 0,
         "note": "worklog-accuracy: post-dispatch addendum mechanism not yet built; process-adherence: pipeline gates still fail (worklog-immutability cascade); journal-quality: actioned — cycle 412 journal grades commitments individually; infrastructure-consistency: record-dispatch false positive not yet fixed"
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "infrastructure-consistency",
+          "journal-quality",
+          "process-adherence",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 4,
+        "cycle": 412,
+        "deferred": 2,
+        "finding_count": 4,
+        "finding_dispositions": [
+          {
+            "category": "worklog-accuracy",
+            "disposition": "ignored"
+          },
+          {
+            "category": "process-adherence",
+            "disposition": "deferred"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "actioned"
+          },
+          {
+            "category": "infrastructure-consistency",
+            "disposition": "deferred"
+          }
+        ],
+        "ignored": 1,
+        "note": "Re-processed: worklog-accuracy reclassified from deferred to ignored per 3-cycle escalation threshold. Rationale: worklog accurately reports pre-dispatch state by design. Post-dispatch state changes are structural (record-dispatch modifies state.json after worklog commit). Closing comment and state.json are authoritative for final values."
       }
     ],
     "last_review_cycle": 412
