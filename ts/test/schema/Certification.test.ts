@@ -48,4 +48,38 @@ describe("Certification", () => {
 		expect(obj.certificationIdentification).toBe("CSA-12345");
 		expect(certificationRating["@type"]).toBe("Rating");
 	});
+
+	it("serializes nested rating fields", () => {
+		const schema = new Certification({
+			name: "AWS Certified Solutions Architect",
+			issuedBy: new Organization({ name: "AWS" }),
+			certificationRating: new Rating({
+				ratingValue: 5,
+				bestRating: 5,
+				worstRating: 1,
+			}),
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+		const certificationRating = obj.certificationRating as Record<
+			string,
+			unknown
+		>;
+
+		expect(certificationRating["@type"]).toBe("Rating");
+		expect(certificationRating.bestRating).toBe(5);
+		expect(certificationRating.worstRating).toBe(1);
+	});
+
+	it("serializes empty string certification identification", () => {
+		const schema = new Certification({
+			name: "AWS Certified Solutions Architect",
+			issuedBy: new Organization({ name: "AWS" }),
+			certificationIdentification: "",
+		});
+		const json = JsonLdGenerator.schemaToJson(schema);
+		const obj = JSON.parse(json) as Record<string, unknown>;
+
+		expect(obj.certificationIdentification).toBe("");
+	});
 });

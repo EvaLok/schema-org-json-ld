@@ -8,6 +8,7 @@ use EvaLok\SchemaOrgJsonLd\v1\Enum\FulfillmentTypeEnumeration;
 use EvaLok\SchemaOrgJsonLd\v1\Enum\TierBenefitEnumeration;
 use EvaLok\SchemaOrgJsonLd\v1\JsonLdGenerator;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\MemberProgramTier;
+use EvaLok\SchemaOrgJsonLd\v1\Schema\QuantitativeValue;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ServicePeriod;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ShippingConditions;
 use EvaLok\SchemaOrgJsonLd\v1\Schema\ShippingService;
@@ -27,6 +28,25 @@ final class ShippingServiceTest extends TestCase {
 		$this->assertEquals('ShippingConditions', $obj->shippingConditions->{'@type'});
 		$this->assertFalse(property_exists($obj, 'name'));
 		$this->assertFalse(property_exists($obj, 'description'));
+	}
+
+	public function testOptionalFieldsOmittedWhenNull(): void {
+		$schema = new ShippingService(
+			shippingConditions: new ShippingConditions(),
+			name: null,
+			description: null,
+			fulfillmentType: null,
+			handlingTime: null,
+			validForMemberTier: null,
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertFalse(property_exists($obj, 'name'));
+		$this->assertFalse(property_exists($obj, 'description'));
+		$this->assertFalse(property_exists($obj, 'fulfillmentType'));
+		$this->assertFalse(property_exists($obj, 'handlingTime'));
+		$this->assertFalse(property_exists($obj, 'validForMemberTier'));
 	}
 
 	public function testFullOutput(): void {
@@ -54,5 +74,39 @@ final class ShippingServiceTest extends TestCase {
 		$this->assertEquals('Gold', $obj->validForMemberTier->name);
 		$this->assertFalse($obj->shippingConditions[0]->doesNotShip);
 		$this->assertTrue($obj->shippingConditions[1]->doesNotShip);
+	}
+
+	public function testSingleShippingConditionPreservesEmptyStrings(): void {
+		$schema = new ShippingService(
+			shippingConditions: new ShippingConditions(doesNotShip: false),
+			name: '',
+			description: '',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('ShippingConditions', $obj->shippingConditions->{'@type'});
+		$this->assertSame('', $obj->name);
+		$this->assertSame('', $obj->description);
+		$this->assertFalse($obj->shippingConditions->doesNotShip);
+	}
+
+	public function testHandlingTimeSerializesNestedDuration(): void {
+		$schema = new ShippingService(
+			shippingConditions: new ShippingConditions(),
+			handlingTime: new ServicePeriod(
+				duration: new QuantitativeValue(
+					value: 2,
+					unitCode: 'DAY',
+				),
+			),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('ServicePeriod', $obj->handlingTime->{'@type'});
+		$this->assertEquals('QuantitativeValue', $obj->handlingTime->duration->{'@type'});
+		$this->assertSame(2, $obj->handlingTime->duration->value);
+		$this->assertEquals('DAY', $obj->handlingTime->duration->unitCode);
 	}
 }

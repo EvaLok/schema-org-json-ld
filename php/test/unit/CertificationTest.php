@@ -27,6 +27,20 @@ final class CertificationTest extends TestCase {
 		$this->assertEquals('EU Energy Labelling Authority', $obj->issuedBy->name);
 	}
 
+	public function testOptionalFieldsOmittedWhenNull(): void {
+		$schema = new Certification(
+			name: 'EPREL',
+			issuedBy: new Organization(name: 'EU Energy Labelling Authority'),
+			certificationIdentification: null,
+			certificationRating: null,
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertFalse(property_exists($obj, 'certificationIdentification'));
+		$this->assertFalse(property_exists($obj, 'certificationRating'));
+	}
+
 	public function testFullOutput(): void {
 		$schema = new Certification(
 			name: 'Vehicle_CO2_Class',
@@ -40,5 +54,35 @@ final class CertificationTest extends TestCase {
 		$this->assertEquals('ABC-12345', $obj->certificationIdentification);
 		$this->assertEquals('Rating', $obj->certificationRating->{'@type'});
 		$this->assertEquals(4.5, $obj->certificationRating->ratingValue);
+	}
+
+	public function testCertificationRatingSerializesNestedFields(): void {
+		$schema = new Certification(
+			name: 'Vehicle_CO2_Class',
+			issuedBy: new Organization(name: 'National Transport Authority'),
+			certificationRating: new Rating(
+				ratingValue: 4.5,
+				bestRating: 5,
+				worstRating: 1,
+			),
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertEquals('Rating', $obj->certificationRating->{'@type'});
+		$this->assertEquals(5, $obj->certificationRating->bestRating);
+		$this->assertEquals(1, $obj->certificationRating->worstRating);
+	}
+
+	public function testEmptyStringIdentificationIsSerialized(): void {
+		$schema = new Certification(
+			name: 'Vehicle_CO2_Class',
+			issuedBy: new Organization(name: 'National Transport Authority'),
+			certificationIdentification: '',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame('', $obj->certificationIdentification);
 	}
 }

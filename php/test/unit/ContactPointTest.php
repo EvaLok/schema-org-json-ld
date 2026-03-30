@@ -48,4 +48,37 @@ final class ContactPointTest extends TestCase {
 		$this->assertEquals('US', $obj->areaServed);
 		$this->assertEquals('en', $obj->availableLanguage);
 	}
+
+	public function testPartialOutputOnlyIncludesProvidedFields(): void {
+		$contactPoint = new ContactPoint(
+			telephone: '+1-800-555-1212',
+			contactType: 'customer support',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $contactPoint);
+		$obj = json_decode($json);
+
+		$this->assertEquals('+1-800-555-1212', $obj->telephone);
+		$this->assertEquals('customer support', $obj->contactType);
+		$this->assertFalse(property_exists($obj, 'email'));
+		$this->assertFalse(property_exists($obj, 'areaServed'));
+		$this->assertFalse(property_exists($obj, 'availableLanguage'));
+	}
+
+	public function testEmptyStringsAreSerialized(): void {
+		$contactPoint = new ContactPoint(
+			telephone: '',
+			email: '',
+			contactType: '',
+			areaServed: '',
+			availableLanguage: '',
+		);
+		$json = JsonLdGenerator::SchemaToJson(schema: $contactPoint);
+		$obj = json_decode($json);
+
+		$this->assertSame('', $obj->telephone);
+		$this->assertSame('', $obj->email);
+		$this->assertSame('', $obj->contactType);
+		$this->assertSame('', $obj->areaServed);
+		$this->assertSame('', $obj->availableLanguage);
+	}
 }

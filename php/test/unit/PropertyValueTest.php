@@ -50,4 +50,30 @@ final class PropertyValueTest extends TestCase {
 
 		$this->assertCount(4, get_object_vars($obj));
 	}
+
+	public function testEmptyStringsAreSerialized(): void {
+		$schema = new PropertyValue(
+			name: '',
+			value: '',
+		);
+
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame('', $obj->name);
+		$this->assertSame('', $obj->value);
+	}
+
+	public function testNumericLikeValueRemainsString(): void {
+		$schema = new PropertyValue(
+			name: 'identifier',
+			value: '000123',
+		);
+
+		$json = JsonLdGenerator::SchemaToJson(schema: $schema);
+		$obj = json_decode($json);
+
+		$this->assertSame('000123', $obj->value);
+		$this->assertIsString($obj->value);
+	}
 }
