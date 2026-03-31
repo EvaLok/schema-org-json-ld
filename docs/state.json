@@ -6197,6 +6197,13 @@
       "pr": 2064,
       "status": "merged",
       "title": "Backfilled: PR #2064"
+    },
+    {
+      "dispatched_at": "2026-03-31T05:05:39Z",
+      "issue": 2068,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix process-review: update-in-place for duplicate review.history cycle entries"
     }
   ],
   "audit_dropped": [
@@ -6608,7 +6615,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2065 [Cycle Review] Cycle 418 end-of-cycle review (cycle 418)",
+  "dispatch_log_latest": "#2068 Fix process-review: update-in-place for duplicate review.history cycle entries (cycle 419)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6878,12 +6885,12 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 27,
     "issue": 2067,
     "number": 419,
-    "summary": "1 dispatch, 1 merges (PR #2059)",
+    "summary": "2 dispatches, 1 merges (PR #2059)",
     "timestamp": "2026-03-31T04:48:19Z"
   },
   "last_eva_comment_check": "2026-03-31T04:48:19Z",
@@ -11502,8 +11509,8 @@
         ],
         "complacency_score": 3,
         "cycle": 418,
-        "deferred": 2,
-        "dispatch_created": 1,
+        "deferred": 1,
+        "dispatch_created": 2,
         "finding_count": 3,
         "finding_dispositions": [
           {
@@ -11512,7 +11519,7 @@
           },
           {
             "category": "state-integrity",
-            "disposition": "deferred"
+            "disposition": "dispatch_created"
           },
           {
             "category": "journal-quality",
@@ -11525,7 +11532,7 @@
     ],
     "last_review_cycle": 418
   },
-  "review_dispatch_consecutive": 9,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 414,
   "schema_status": {
     "directory_layout": {
