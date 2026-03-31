@@ -136,7 +136,8 @@ fn validate_worklog(
         failures.push(failure);
     }
 
-    match fetch_cycle_receipts(repo_root, cycle) {
+    let cycle_receipt_through = find_cycle_complete_timestamp(repo_root, cycle)?;
+    match fetch_cycle_receipts(repo_root, cycle, Some(cycle_receipt_through.as_str())) {
         Ok(expected_receipts) => {
             match validate_receipt_completeness(repo_root, cycle, &content, &expected_receipts) {
                 Ok(receipt_failures) => failures.extend(receipt_failures),
@@ -234,18 +235,23 @@ fn validate_in_flight_count(content: &str, expected: usize) -> Option<String> {
     ))
 }
 
-fn fetch_cycle_receipts(repo_root: &Path, cycle: u64) -> Result<Vec<ReceiptEntry>, String> {
-    let output = run_wrapper(
-        repo_root,
-        "tools/cycle-receipts",
-        &[
-            "--cycle".to_string(),
-            cycle.to_string(),
-            "--json".to_string(),
-            "--repo-root".to_string(),
-            repo_root.display().to_string(),
-        ],
-    )?;
+fn fetch_cycle_receipts(
+    repo_root: &Path,
+    cycle: u64,
+    through: Option<&str>,
+) -> Result<Vec<ReceiptEntry>, String> {
+    let mut args = vec![
+        "--cycle".to_string(),
+        cycle.to_string(),
+        "--json".to_string(),
+    ];
+    if let Some(timestamp) = through {
+        args.push("--through".to_string());
+        args.push(timestamp.to_string());
+    }
+    args.push("--repo-root".to_string());
+    args.push(repo_root.display().to_string());
+    let output = run_wrapper(repo_root, "tools/cycle-receipts", &args)?;
     serde_json::from_str::<Vec<ReceiptEntry>>(&output)
         .map_err(|error| format!("failed to parse cycle-receipts JSON: {}", error))
 }
@@ -408,6 +414,33 @@ fn find_cycle_complete_commit(repo_root: &Path, cycle: u64) -> Result<String, St
     }
 
     Ok(commit.to_string())
+}
+
+fn find_cycle_complete_timestamp(repo_root: &Path, cycle: u64) -> Result<String, String> {
+    let pattern = format!(r"\[cycle {}\]", cycle);
+    let output = run_git(
+        repo_root,
+        &[
+            "log".to_string(),
+            "-n".to_string(),
+            "1".to_string(),
+            "--format=%cI".to_string(),
+            "--grep".to_string(),
+            "^state(cycle-complete):".to_string(),
+            "--grep".to_string(),
+            pattern,
+            "--all-match".to_string(),
+        ],
+    )?;
+    let timestamp = output.trim();
+    if timestamp.is_empty() {
+        return Err(format!(
+            "could not find cycle-complete timestamp for cycle {}; verify the cycle number is correct and that the cycle has completed; fetch more history if this is a shallow clone",
+            cycle
+        ));
+    }
+
+    Ok(timestamp.to_string())
 }
 
 fn is_ancestor_commit(repo_root: &Path, ancestor: &str, descendant: &str) -> Result<bool, String> {
@@ -1116,6 +1149,38 @@ mod tests {
         assert_eq!(failures.len(), 1);
         assert!(failures[0].contains("required receipt(s)"));
         assert!(failures[0].contains(&required_receipt));
+    }
+
+    #[test]
+    fn fetch_cycle_receipts_passes_through_timestamp() {
+        let repo = TestRepo::new();
+        repo.init();
+        repo.commit(
+            "notes/complete.txt",
+            "complete\n",
+            "state(cycle-complete): close cycle [cycle 226]",
+        );
+        let tools_dir = repo.path().join("tools");
+        fs::create_dir_all(&tools_dir).expect("create tools dir");
+        let args_log = repo.path().join("cycle-receipts-args.txt");
+        fs::write(
+            tools_dir.join("cycle-receipts"),
+            format!(
+                "#!/usr/bin/env bash\nprintf '%s\\n' \"$@\" > \"{}\"\nprintf '%s\n' '[{{\"receipt\":\"abc1234\",\"url\":\"https://example.test/abc1234\"}}]'\n",
+                args_log.display()
+            ),
+        )
+        .expect("write cycle-receipts wrapper");
+
+        let through = find_cycle_complete_timestamp(repo.path(), 226)
+            .expect("cycle-complete timestamp should resolve");
+        let receipts = fetch_cycle_receipts(repo.path(), 226, Some(through.as_str()))
+            .expect("receipt fetch should succeed");
+        let argv = fs::read_to_string(args_log).expect("read args log");
+
+        assert_eq!(receipts.len(), 1);
+        assert!(argv.contains("--through"));
+        assert!(argv.contains(&through));
     }
 
     #[test]

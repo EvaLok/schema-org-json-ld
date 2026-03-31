@@ -31,8 +31,12 @@ struct Cli {
     cycle: u64,
 
     /// Only include commits made strictly before this RFC3339 timestamp
-    #[arg(long)]
+    #[arg(long, conflicts_with = "through")]
     before: Option<String>,
+
+    /// Only include commits made at or before this RFC3339 timestamp
+    #[arg(long)]
+    through: Option<String>,
 
     /// Output receipts as JSON
     #[arg(long)]
@@ -93,7 +97,12 @@ fn run(cli: Cli) -> Result<String, String> {
         .as_deref()
         .map(|value| parse_timestamp(value, "--before"))
         .transpose()?;
-    let entries = collect_receipts(&cli.repo_root, cli.cycle, before)?;
+    let through = cli
+        .through
+        .as_deref()
+        .map(|value| parse_timestamp(value, "--through"))
+        .transpose()?;
+    let entries = collect_receipts(&cli.repo_root, cli.cycle, before, through)?;
     if cli.json {
         return serde_json::to_string_pretty(&entries)
             .map_err(|error| format!("failed to serialize JSON output: {}", error));
@@ -103,7 +112,7 @@ fn run(cli: Cli) -> Result<String, String> {
 }
 
 /// Collect receipt-bearing commits for the requested cycle, optionally capping
-/// the window to commits strictly before `before`.
+/// the window to commits strictly before `before` or at/through `through`.
 ///
 /// Receipt scope stops at the worklog/journal commit that publishes the table.
 /// Later commits such as `state(clean-cycle...)`, `state(stabilization...)`,
@@ -115,6 +124,7 @@ fn collect_receipts(
     repo_root: &Path,
     cycle: u64,
     before: Option<DateTime<Utc>>,
+    through: Option<DateTime<Utc>>,
 ) -> Result<Vec<ReceiptEntry>, String> {
     let current_cycle = current_cycle_from_state(repo_root)?;
     let state = read_state_json(repo_root)?;
@@ -126,6 +136,7 @@ fn collect_receipts(
         .filter(|commit| commit.committed_at >= window.start)
         .filter(|commit| window.end.is_none_or(|end| commit.committed_at < end))
         .filter(|commit| before.is_none_or(|timestamp| commit.committed_at < timestamp))
+        .filter(|commit| through.is_none_or(|timestamp| commit.committed_at <= timestamp))
         .collect();
     let cycle_complete_at = candidate_commits
         .iter()
@@ -457,6 +468,7 @@ fn escape_markdown_cell(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use clap::Parser;
     use serde_json::json;
     use std::env;
     use std::ffi::OsStr;
@@ -700,7 +712,8 @@ mod tests {
             "2026-03-09T01:20:00Z",
         );
 
-        let receipts = collect_receipts(repo.path(), 198, None).expect("receipts should collect");
+        let receipts =
+            collect_receipts(repo.path(), 198, None, None).expect("receipts should collect");
         let subjects: Vec<&str> = receipts
             .iter()
             .map(|receipt| receipt.commit.as_str())
@@ -744,7 +757,8 @@ mod tests {
             "2026-03-09T01:20:00Z",
         );
 
-        let receipts = collect_receipts(repo.path(), 198, None).expect("receipts should collect");
+        let receipts =
+            collect_receipts(repo.path(), 198, None, None).expect("receipts should collect");
         let subjects: Vec<&str> = receipts
             .iter()
             .map(|receipt| receipt.commit.as_str())
@@ -782,7 +796,8 @@ mod tests {
             "2026-03-09T01:10:00Z",
         );
 
-        let receipts = collect_receipts(repo.path(), 198, None).expect("receipts should collect");
+        let receipts =
+            collect_receipts(repo.path(), 198, None, None).expect("receipts should collect");
 
         assert_eq!(receipts.len(), 2);
         assert_eq!(receipts[0].step, "cycle-start");
@@ -833,7 +848,8 @@ mod tests {
             "2026-03-09T02:10:00Z",
         );
 
-        let receipts = collect_receipts(repo.path(), 198, None).expect("receipts should collect");
+        let receipts =
+            collect_receipts(repo.path(), 198, None, None).expect("receipts should collect");
         let subjects: Vec<&str> = receipts
             .iter()
             .map(|receipt| receipt.commit.as_str())
@@ -885,8 +901,8 @@ mod tests {
 
         let before = parse_timestamp("2026-03-09T01:20:00Z", "test timestamp")
             .expect("timestamp should parse");
-        let receipts =
-            collect_receipts(repo.path(), 198, Some(before)).expect("receipts should collect");
+        let receipts = collect_receipts(repo.path(), 198, Some(before), None)
+            .expect("receipts should collect");
         let subjects: Vec<&str> = receipts
             .iter()
             .map(|receipt| receipt.commit.as_str())
@@ -898,6 +914,77 @@ mod tests {
                 "state(process-review): current receipt",
             ]
         );
+    }
+
+    #[test]
+    fn collect_receipts_through_includes_exact_boundary() {
+        let repo = TempRepo::new();
+        repo.init_git();
+        repo.write_state(&json!({
+            "last_cycle": {
+                "number": 198,
+                "timestamp": "2026-03-09T01:00:00Z"
+            }
+        }));
+        repo.commit_file_at(
+            "notes.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 198, issue #1 [cycle 198]",
+            "2026-03-09T01:00:00Z",
+        );
+        repo.commit_file_at(
+            "notes.txt",
+            "older\n",
+            "state(process-review): current receipt",
+            "2026-03-09T01:10:00Z",
+        );
+        repo.commit_file_at(
+            "notes.txt",
+            "tagged\n",
+            "docs: worklog touch [cycle 198]",
+            "2026-03-09T01:20:00Z",
+        );
+        repo.commit_file_at(
+            "notes.txt",
+            "later\n",
+            "state(cycle-complete): cycle 198 close out [cycle 198]",
+            "2026-03-09T01:30:00Z",
+        );
+
+        let through = parse_timestamp("2026-03-09T01:20:00Z", "test timestamp")
+            .expect("timestamp should parse");
+        let receipts = collect_receipts(repo.path(), 198, None, Some(through))
+            .expect("receipts should collect");
+        let subjects: Vec<&str> = receipts
+            .iter()
+            .map(|receipt| receipt.commit.as_str())
+            .collect();
+        assert_eq!(
+            subjects,
+            vec![
+                "state(cycle-start): begin cycle 198, issue #1 [cycle 198]",
+                "state(process-review): current receipt",
+                "docs: worklog touch [cycle 198]",
+            ]
+        );
+    }
+
+    #[test]
+    fn cli_rejects_before_and_through_together() {
+        let error = Cli::try_parse_from([
+            "cycle-receipts",
+            "--cycle",
+            "198",
+            "--before",
+            "2026-03-09T01:20:00Z",
+            "--through",
+            "2026-03-09T01:20:00Z",
+        ])
+        .expect_err("cli should reject conflicting boundary flags");
+
+        let rendered = error.to_string();
+        assert!(rendered.contains("--before"));
+        assert!(rendered.contains("--through"));
     }
 
     #[test]
@@ -941,7 +1028,8 @@ mod tests {
             "2026-03-09T01:35:00Z",
         );
 
-        let receipts = collect_receipts(repo.path(), 198, None).expect("receipts should collect");
+        let receipts =
+            collect_receipts(repo.path(), 198, None, None).expect("receipts should collect");
         let subjects: Vec<&str> = receipts
             .iter()
             .map(|receipt| receipt.commit.as_str())
@@ -991,7 +1079,8 @@ mod tests {
             "2026-03-09T01:15:00Z",
         );
 
-        let receipts = collect_receipts(repo.path(), 198, None).expect("receipts should collect");
+        let receipts =
+            collect_receipts(repo.path(), 198, None, None).expect("receipts should collect");
         let subjects: Vec<&str> = receipts
             .iter()
             .map(|receipt| receipt.commit.as_str())
@@ -1035,7 +1124,8 @@ mod tests {
             "2026-03-09T01:15:00Z",
         );
 
-        let receipts = collect_receipts(repo.path(), 198, None).expect("receipts should collect");
+        let receipts =
+            collect_receipts(repo.path(), 198, None, None).expect("receipts should collect");
         let subjects: Vec<&str> = receipts
             .iter()
             .map(|receipt| receipt.commit.as_str())
@@ -1078,7 +1168,8 @@ mod tests {
             "2026-03-09T01:10:00Z",
         );
 
-        let receipts = collect_receipts(repo.path(), 198, None).expect("receipts should collect");
+        let receipts =
+            collect_receipts(repo.path(), 198, None, None).expect("receipts should collect");
         let subjects: Vec<&str> = receipts
             .iter()
             .map(|receipt| receipt.commit.as_str())
