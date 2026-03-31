@@ -37,12 +37,18 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 0
+- **In-flight agent sessions (post-dispatch)**: 1
 - **Pipeline status**: PASS (3 warnings; preliminary C1 was FAIL due to deferral-accumulation, resolved by reclassifying journal-quality cycle 424 from deferred to actioned)
+- **Pipeline status (post-dispatch)**: PASS (3 warnings)
 - **Publish gate**: published
 
-## Next steps
+## Next steps (pre-dispatch)
 
 1. No in-flight sessions — plan next dispatch
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2105](https://github.com/EvaLok/schema-org-json-ld/issues/2105) ([Cycle Review] Cycle 425 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
