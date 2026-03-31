@@ -41,6 +41,11 @@
     <tool ref="write-entry"/>
     <action>bash tools/write-entry worklog (with appropriate flags)</action>
     <action>bash tools/write-entry journal (with appropriate flags)</action>
+    <constraint id="pipeline-status-preliminary">The pipeline status written here
+      reflects the C1 early check, not the final C5.5 gate. If C5.5 later fails,
+      the worklog must be amended to preserve both results (original C1 result and
+      C5.5 failure) rather than silently rewriting to show only the repaired narrative.
+      Recurrence escalation: process-adherence in cycles 420-421.</constraint>
   </step>
 
   <step id="C4.1" title="Validate documentation (BLOCKING GATE)"
