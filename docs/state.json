@@ -6153,6 +6153,14 @@
       "pr": 2056,
       "status": "merged",
       "title": "[Cycle Review] Cycle 416 end-of-cycle review"
+    },
+    {
+      "backfilled": true,
+      "issue": 2053,
+      "merged_at": "2026-03-31T00:32:42Z",
+      "pr": 2054,
+      "status": "merged",
+      "title": "Backfilled: PR #2054"
     }
   ],
   "audit_dropped": [
@@ -6813,7 +6821,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 40,
     "issue": 2057,
