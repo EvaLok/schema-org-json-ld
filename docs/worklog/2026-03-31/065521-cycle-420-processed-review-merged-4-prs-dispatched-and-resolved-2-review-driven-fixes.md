@@ -32,12 +32,18 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 0
+- **In-flight agent sessions (post-dispatch)**: 1
 - **Pipeline status**: PASS (2 warnings) — first-session baseline was FAIL (1 warning); resolved by resume
+- **Pipeline status (post-dispatch)**: PASS (2 warnings)
 - **Publish gate**: published
 
-## Next steps
+## Next steps (pre-dispatch)
 
 1. No in-flight sessions — plan next dispatch
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2077](https://github.com/EvaLok/schema-org-json-ld/issues/2077) ([Cycle Review] Cycle 420 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
