@@ -58,6 +58,7 @@ struct ValidationReport {
     canonical_receipts: usize,
     structurally_excluded: usize,
     genuinely_missing: usize,
+    out_of_scope: usize,
     missing_details: Vec<MissingDetail>,
     excluded_details: Vec<MissingDetail>,
     validation_errors: Vec<String>,
@@ -154,9 +155,15 @@ fn compare_receipts(
 ) -> ValidationReport {
     let mut missing_details = Vec::new();
     let mut excluded_details = Vec::new();
+    let mut validation_errors = validation_errors;
     let worklog_receipt_set = worklog_receipts
         .iter()
         .map(|entry| entry.short_sha.clone())
+        .collect::<BTreeSet<_>>();
+    let canonical_receipt_set = canonical_receipts
+        .iter()
+        .map(|entry| entry.receipt.trim().to_ascii_lowercase())
+        .filter(|receipt| !receipt.is_empty())
         .collect::<BTreeSet<_>>();
 
     for entry in canonical_receipts {
@@ -176,6 +183,19 @@ fn compare_receipts(
         }
     }
 
+    let mut out_of_scope = 0;
+    for entry in worklog_receipts {
+        if canonical_receipt_set.contains(&entry.short_sha) {
+            continue;
+        }
+
+        out_of_scope += 1;
+        validation_errors.push(format!(
+            "FAIL: Worklog contains out-of-scope receipt {} not found in canonical cycle receipts",
+            entry.short_sha
+        ));
+    }
+
     let result = if missing_details.is_empty() && validation_errors.is_empty() {
         "PASS"
     } else {
@@ -188,6 +208,7 @@ fn compare_receipts(
         canonical_receipts: canonical_receipts.len(),
         structurally_excluded: excluded_details.len(),
         genuinely_missing: missing_details.len(),
+        out_of_scope,
         missing_details,
         excluded_details,
         validation_errors,
@@ -222,6 +243,10 @@ fn render_human(report: &ValidationReport) -> String {
     output.push_str(&format!(
         "  Genuinely missing:     {}\n",
         report.genuinely_missing
+    ));
+    output.push_str(&format!(
+        "  Out of scope:          {}\n",
+        report.out_of_scope
     ));
 
     if !report.missing_details.is_empty() {
@@ -605,6 +630,80 @@ mod tests {
                 subject: "state(cycle-complete): close cycle [cycle 255]".to_string(),
             }]
         );
+    }
+
+    #[test]
+    fn fails_when_worklog_contains_out_of_scope_receipt() {
+        let worklog_receipts = vec![
+            WorklogReceiptEntry {
+                short_sha: "aaaaaaa".to_string(),
+                full_sha: None,
+            },
+            WorklogReceiptEntry {
+                short_sha: "bbbbbbb".to_string(),
+                full_sha: None,
+            },
+            WorklogReceiptEntry {
+                short_sha: "ccccccc".to_string(),
+                full_sha: None,
+            },
+            WorklogReceiptEntry {
+                short_sha: "xxxxxxx".to_string(),
+                full_sha: None,
+            },
+        ];
+        let report = compare_receipts(
+            255,
+            &worklog_receipts,
+            &canonical_entries(&[
+                ("aaaaaaa", "state(cycle-start): begin cycle [cycle 255]"),
+                ("bbbbbbb", "state(process-merge): merge PR [cycle 255]"),
+                ("ccccccc", "state(cycle-complete): close cycle [cycle 255]"),
+            ]),
+            Vec::new(),
+        );
+
+        assert_eq!(report.result, "FAIL");
+        assert_eq!(report.out_of_scope, 1);
+        assert_eq!(
+            report.validation_errors,
+            vec![
+                "FAIL: Worklog contains out-of-scope receipt xxxxxxx not found in canonical cycle receipts"
+                    .to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn passes_when_all_worklog_receipts_are_in_canonical_set() {
+        let worklog_receipts = vec![
+            WorklogReceiptEntry {
+                short_sha: "aaaaaaa".to_string(),
+                full_sha: None,
+            },
+            WorklogReceiptEntry {
+                short_sha: "bbbbbbb".to_string(),
+                full_sha: None,
+            },
+            WorklogReceiptEntry {
+                short_sha: "ccccccc".to_string(),
+                full_sha: None,
+            },
+        ];
+        let report = compare_receipts(
+            255,
+            &worklog_receipts,
+            &canonical_entries(&[
+                ("aaaaaaa", "state(cycle-start): begin cycle [cycle 255]"),
+                ("bbbbbbb", "state(process-merge): merge PR [cycle 255]"),
+                ("ccccccc", "state(cycle-complete): close cycle [cycle 255]"),
+            ]),
+            Vec::new(),
+        );
+
+        assert_eq!(report.result, "PASS");
+        assert_eq!(report.out_of_scope, 0);
+        assert!(report.validation_errors.is_empty());
     }
 
     #[test]
