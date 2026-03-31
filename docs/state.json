@@ -6518,7 +6518,8 @@
       "category": "infrastructure-consistency",
       "deadline_cycle": 417,
       "deferred_cycle": 412,
-      "resolved": false
+      "resolved": false,
+      "dropped_rationale": "One-off false positive in record-dispatch auto-detection (review body contained finding-like text). Tool has worked correctly in subsequent cycles 413-416 without manual fallback."
     },
     {
       "category": "process-adherence",
