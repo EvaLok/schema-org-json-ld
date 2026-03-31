@@ -780,8 +780,23 @@ fn build_state_patch(
     let mut next_history = history.clone();
     let entry_value = serde_json::to_value(entry)
         .map_err(|error| format!("failed to serialize review history entry: {}", error))?;
-    next_history.push(entry_value);
-    let (deferred_findings_patch, warnings) = deferred_findings_patch(state, review_cycle, entry)?;
+
+    let existing_index = next_history.iter().position(|item| {
+        item.get("cycle").and_then(Value::as_u64) == Some(entry.cycle)
+    });
+
+    let (deferred_findings_patch, mut warnings) =
+        deferred_findings_patch(state, review_cycle, entry)?;
+
+    if let Some(index) = existing_index {
+        next_history[index] = entry_value;
+        warnings.push(format!(
+            "warning: cycle {} history entry already existed; replaced with updated dispositions",
+            entry.cycle
+        ));
+    } else {
+        next_history.push(entry_value);
+    }
 
     let mut patch = vec![
         PatchUpdate {
@@ -1947,6 +1962,114 @@ mod tests {
         assert_eq!(
             history.last().and_then(|value| value.get("cycle")),
             Some(&json!(163))
+        );
+    }
+
+    #[test]
+    fn state_patch_updates_in_place_when_cycle_already_exists() {
+        let state = json!({
+            "last_cycle": {"number": 163},
+            "review_agent": {
+                "last_review_cycle": 163,
+                "history": [
+                    {"cycle": 162, "finding_count": 5, "complacency_score": 2, "categories": ["a"], "actioned": 2, "deferred": 2, "ignored": 1},
+                    {"cycle": 163, "finding_count": 3, "complacency_score": 2, "categories": ["state-consistency"], "actioned": 0, "deferred": 3, "ignored": 0}
+                ]
+            },
+            "field_inventory": {
+                "fields": {
+                    "review_agent": {"last_refreshed": "cycle 162"}
+                }
+            }
+        });
+
+        let entry = ReviewHistoryEntry {
+            cycle: 163,
+            finding_count: 3,
+            complacency_score: 2,
+            categories: vec!["state-consistency".to_string()],
+            actioned: 0,
+            deferred: 1,
+            dispatch_created: 2,
+            actioned_failed: 0,
+            verified_resolved: 0,
+            ignored: 0,
+            note: Some("Updated dispositions after dispatches created".to_string()),
+            finding_dispositions: Vec::new(),
+        };
+
+        let (patch, warnings) =
+            build_state_patch(&state, 163, 163, &entry).expect("patch should build");
+
+        assert_eq!(warnings.len(), 1);
+        assert!(
+            warnings[0].contains("cycle 163 history entry already existed"),
+            "expected duplicate warning, got: {:?}",
+            warnings[0]
+        );
+
+        let history = patch[1]
+            .value
+            .as_array()
+            .expect("history value should be array");
+
+        // Should still be 2 entries (in-place replacement, not appended)
+        assert_eq!(history.len(), 2, "history length should not grow on duplicate");
+
+        let updated = history
+            .iter()
+            .find(|e| e.get("cycle").and_then(Value::as_u64) == Some(163))
+            .expect("cycle 163 entry must be present");
+        assert_eq!(updated.get("deferred").and_then(Value::as_u64), Some(1));
+        assert_eq!(
+            updated.get("dispatch_created").and_then(Value::as_u64),
+            Some(2)
+        );
+    }
+
+    #[test]
+    fn state_patch_emits_warning_message_on_duplicate_cycle() {
+        let state = json!({
+            "last_cycle": {"number": 200},
+            "review_agent": {
+                "last_review_cycle": 200,
+                "history": [
+                    {"cycle": 200, "finding_count": 1, "complacency_score": 1, "categories": ["x"], "actioned": 1, "deferred": 0, "ignored": 0}
+                ]
+            },
+            "field_inventory": {
+                "fields": {
+                    "review_agent": {"last_refreshed": "cycle 199"}
+                }
+            }
+        });
+
+        let entry = ReviewHistoryEntry {
+            cycle: 200,
+            finding_count: 1,
+            complacency_score: 1,
+            categories: vec!["x".to_string()],
+            actioned: 0,
+            deferred: 1,
+            dispatch_created: 0,
+            actioned_failed: 0,
+            verified_resolved: 0,
+            ignored: 0,
+            note: None,
+            finding_dispositions: Vec::new(),
+        };
+
+        let (_patch, warnings) =
+            build_state_patch(&state, 200, 200, &entry).expect("patch should build");
+
+        assert_eq!(warnings.len(), 1);
+        assert!(
+            warnings[0].contains("200"),
+            "warning must reference the cycle number"
+        );
+        assert!(
+            warnings[0].contains("replaced"),
+            "warning must say entry was replaced"
         );
     }
 
