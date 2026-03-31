@@ -6223,6 +6223,14 @@
       "pr": 2075,
       "status": "merged",
       "title": "Backfilled: PR #2075"
+    },
+    {
+      "backfilled": true,
+      "issue": 2074,
+      "merged_at": "2026-03-31T06:52:25Z",
+      "pr": 2076,
+      "status": "merged",
+      "title": "Backfilled: PR #2076"
     }
   ],
   "audit_dropped": [
