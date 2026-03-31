@@ -6215,6 +6215,14 @@
       "pr": 2071,
       "status": "merged",
       "title": "[Cycle Review] Cycle 419 end-of-cycle review"
+    },
+    {
+      "backfilled": true,
+      "issue": 2073,
+      "merged_at": "2026-03-31T06:52:04Z",
+      "pr": 2075,
+      "status": "merged",
+      "title": "Backfilled: PR #2075"
     }
   ],
   "audit_dropped": [
