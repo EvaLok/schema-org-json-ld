@@ -372,7 +372,11 @@ fn find_latest_worklog_file(repo_root: &Path) -> Result<Option<PathBuf>, String>
                 .map_err(|error| format!("failed to read {}: {}", path.display(), error))?
                 .modified()
                 .map_err(|error| {
-                    format!("failed to read modification time for {}: {}", path.display(), error)
+                    format!(
+                        "failed to read modification time for {}: {}",
+                        path.display(),
+                        error
+                    )
                 })?;
             let should_replace = latest
                 .as_ref()
@@ -612,10 +616,7 @@ mod tests {
             .expect("tracking should update cleanly");
 
         assert_eq!(state["review_dispatch_consecutive"], json!(3));
-        assert_eq!(
-            warning,
-            Some(review_dispatch_consecutive_warning(3))
-        );
+        assert_eq!(warning, Some(review_dispatch_consecutive_warning(3)));
     }
 
     #[test]
@@ -923,7 +924,8 @@ mod tests {
     fn apply_dispatch_patch_sets_top_level_dispatch_log_latest_without_copilot_metrics() {
         let mut state = sample_state();
         let model = default_test_model();
-        state.as_object_mut()
+        state
+            .as_object_mut()
             .expect("state object")
             .remove("copilot_metrics");
         let patch = build_dispatch_patch(
@@ -989,6 +991,64 @@ mod tests {
         let updated = fs::read_to_string(&worklog_path).expect("worklog should be readable");
         assert!(updated.contains("- **In-flight agent sessions**: 1"));
         assert!(!updated.contains("- **In-flight agent sessions**: 0"));
+    }
+
+    #[test]
+    fn apply_dispatch_patch_and_worklog_fixup_keep_canonical_in_flight_line_in_sync() {
+        let repo_root = temp_repo_root("record-dispatch-worklog-sync");
+        let worklog_dir = repo_root.join("docs/worklog/2026-03-10");
+        fs::create_dir_all(&worklog_dir).expect("worklog dir should exist");
+        let worklog_path = worklog_dir.join("142511-cycle.md");
+        fs::write(
+            &worklog_path,
+            concat!(
+                "# Cycle 164 — 2026-03-10 14:25 UTC\n\n",
+                "## Pre-dispatch state\n\n",
+                "*Snapshot before review dispatch — final counters may differ after C6.*\n",
+                "- **In-flight agent sessions**: 0\n",
+                "- **Pipeline status**: PASS (8/8)\n\n",
+                "## Post-dispatch addendum\n\n",
+                "- **In-flight agent sessions**: 99\n"
+            ),
+        )
+        .expect("worklog should be written");
+
+        let mut state = sample_state();
+        let model = default_test_model();
+        let patch = build_dispatch_patch(
+            &state,
+            164,
+            603,
+            "Example dispatch",
+            &model,
+            "2026-03-07T13:00:00Z",
+        )
+        .expect("patch should build");
+        apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
+
+        let outcome = fixup_latest_worklog_in_flight(&repo_root, patch.in_flight)
+            .expect("worklog fixup should succeed");
+
+        assert_eq!(outcome, WorklogFixupOutcome::Updated(worklog_path.clone()));
+        assert_eq!(state["in_flight_sessions"], json!(1));
+
+        let updated = fs::read_to_string(&worklog_path).expect("worklog should be readable");
+        let canonical_line = updated
+            .lines()
+            .find(|line| line.starts_with(IN_FLIGHT_WORKLOG_PREFIX))
+            .expect("canonical in-flight line should exist");
+        assert_eq!(canonical_line, "- **In-flight agent sessions**: 1");
+        assert!(updated.contains("## Post-dispatch addendum"));
+        assert!(updated.contains("- **In-flight agent sessions**: 99"));
+
+        let canonical_in_flight = canonical_line
+            .rsplit_once(": ")
+            .and_then(|(_, value)| value.parse::<i64>().ok())
+            .expect("canonical in-flight line should end with a number");
+        assert_eq!(
+            canonical_in_flight,
+            state["in_flight_sessions"].as_i64().unwrap()
+        );
     }
 
     #[test]

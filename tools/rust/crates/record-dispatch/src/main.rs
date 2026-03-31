@@ -1,8 +1,9 @@
 use clap::Parser;
 use record_dispatch::{
     apply_dispatch_patch, build_dispatch_patch, concurrency_warning_message,
-    dispatch_commit_message, enforce_pipeline_gate, resolve_model, update_review_dispatch_tracking,
-    CommandRunner, PipelineGateError, ProcessRunner,
+    dispatch_commit_message, enforce_pipeline_gate, fixup_latest_worklog_in_flight, resolve_model,
+    update_review_dispatch_tracking, CommandRunner, PipelineGateError, ProcessRunner,
+    WorklogFixupOutcome,
 };
 use state_schema::{
     commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
@@ -156,6 +157,14 @@ fn run_with_runner(
 
     let commit_message = dispatch_commit_message(cli.issue, patch.current_cycle);
     let receipt = commit_state_json(&cli.repo_root, &commit_message)?;
+    match fixup_latest_worklog_in_flight(&cli.repo_root, patch.in_flight)? {
+        WorklogFixupOutcome::Updated(path) => {
+            println!("Worklog in-flight count updated in {}", path.display());
+        }
+        WorklogFixupOutcome::NotFound => {
+            warn("Latest worklog not found; skipping in-flight count fixup");
+        }
+    }
     if already_recorded {
         if phase_transitioned {
             println!(
@@ -229,24 +238,19 @@ fn reconcile_review_history_dispatch(
     }
 
     let finding_disposition_path = format!("/finding_dispositions/{}", finding_zero_based_index);
-    let finding_disposition = entry
-        .pointer(&finding_disposition_path)
-        .ok_or_else(|| {
-            format!(
-                "review history entry for cycle {} is missing finding_dispositions[{}] for finding {}",
-                addressed_finding.cycle,
-                finding_zero_based_index,
-                addressed_finding.index
-            )
-        })?;
+    let finding_disposition = entry.pointer(&finding_disposition_path).ok_or_else(|| {
+        format!(
+            "review history entry for cycle {} is missing finding_dispositions[{}] for finding {}",
+            addressed_finding.cycle, finding_zero_based_index, addressed_finding.index
+        )
+    })?;
     let current_disposition = finding_disposition
         .get("disposition")
         .and_then(serde_json::Value::as_str)
         .ok_or_else(|| {
             format!(
                 "review history entry for cycle {} finding {} is missing a string disposition",
-                addressed_finding.cycle,
-                addressed_finding.index
+                addressed_finding.cycle, addressed_finding.index
             )
         })?;
     if current_disposition != "deferred" {
@@ -366,10 +370,7 @@ mod tests {
     fn run_reconciles_review_history_when_addresses_finding_is_provided() {
         let repo = TempRepo::new();
         repo.init();
-        repo.set_review_history_entry_with_dispositions(
-            164,
-            &["deferred", "deferred", "actioned"],
-        );
+        repo.set_review_history_entry_with_dispositions(164, &["deferred", "deferred", "actioned"]);
 
         run(Cli {
             issue: 602,
@@ -400,10 +401,7 @@ mod tests {
     fn run_warns_when_target_finding_is_not_deferred() {
         let repo = TempRepo::new();
         repo.init();
-        repo.set_review_history_entry_with_dispositions(
-            164,
-            &["deferred", "actioned", "deferred"],
-        );
+        repo.set_review_history_entry_with_dispositions(164, &["deferred", "actioned", "deferred"]);
         let mut warnings = Vec::new();
         let runner = MockRunner::with_error("runner should not be called when bypassing");
 
@@ -549,7 +547,7 @@ mod tests {
     }
 
     #[test]
-    fn run_leaves_worklog_unchanged_and_commits_only_state_json() {
+    fn run_updates_latest_worklog_in_flight_and_commits_only_state_json() {
         let repo = TempRepo::new();
         repo.init();
         let older_worklog = repo.write_worklog("2026-03-09", "235959-older.md", 0);
@@ -568,7 +566,8 @@ mod tests {
 
         let latest_content =
             fs::read_to_string(&latest_worklog).expect("latest worklog should be readable");
-        assert!(latest_content.contains("- **In-flight agent sessions**: 0"));
+        assert!(latest_content.contains("- **In-flight agent sessions**: 1"));
+        assert!(!latest_content.contains("- **In-flight agent sessions**: 0"));
         let older_content =
             fs::read_to_string(&older_worklog).expect("older worklog should be readable");
         assert!(older_content.contains("- **In-flight agent sessions**: 0"));
@@ -584,6 +583,15 @@ mod tests {
         assert!(stdout.contains("state(record-dispatch): #602 dispatched [cycle 164]"));
         assert!(stdout.contains("docs/state.json"));
         assert!(!stdout.contains("docs/worklog/2026-03-10/142511-current.md"));
+        let status = Command::new("git")
+            .arg("-C")
+            .arg(repo.path())
+            .args(["status", "--short"])
+            .output()
+            .expect("git status should execute");
+        assert!(status.status.success());
+        let status_stdout = String::from_utf8_lossy(&status.stdout);
+        assert!(status_stdout.contains(" M docs/worklog/2026-03-10/142511-current.md"));
 
         let state: serde_json::Value = serde_json::from_str(
             &fs::read_to_string(repo.path().join("docs/state.json"))
@@ -744,6 +752,7 @@ mod tests {
     fn run_proceeds_when_pipeline_check_passes() {
         let repo = TempRepo::new();
         repo.init();
+        repo.write_worklog("2026-03-10", "142511-current.md", 0);
         let mut warnings = Vec::new();
 
         run_with_runner(
@@ -780,6 +789,7 @@ mod tests {
     fn review_dispatch_bypasses_check_with_warning() {
         let repo = TempRepo::new();
         repo.init();
+        repo.write_worklog("2026-03-10", "142511-current.md", 0);
         let mut warnings = Vec::new();
         let runner = MockRunner::with_error("runner should not be called when skipping");
 
@@ -880,6 +890,7 @@ mod tests {
     fn non_review_dispatch_resets_consecutive_bypass_counter() {
         let repo = TempRepo::new();
         repo.init();
+        repo.write_worklog("2026-03-10", "142511-current.md", 0);
         repo.set_review_dispatch_consecutive(2);
         let mut warnings = Vec::new();
         let runner = MockRunner::with_exit_code(Some(0));
