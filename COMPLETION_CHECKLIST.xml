@@ -46,6 +46,13 @@
       the worklog must be amended to preserve both results (original C1 result and
       C5.5 failure) rather than silently rewriting to show only the repaired narrative.
       Recurrence escalation: process-adherence in cycles 420-421.</constraint>
+    <constraint id="commitment-observability">Journal commitments MUST reference
+      checks and conditions that exist today and are directly observable at grading
+      time. Each commitment specifies: (1) the exact command or artifact to check,
+      (2) the expected outcome. Grade against stated observable condition — do not
+      defer a commitment whose condition is already checkable. Do not reference
+      pipeline phases or tool outputs that do not yet exist.
+      Recurrence escalation: journal-quality in cycles 420-421.</constraint>
   </step>
 
   <step id="C4.1" title="Validate documentation (BLOCKING GATE)"
