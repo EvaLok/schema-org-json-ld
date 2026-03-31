@@ -6565,13 +6565,15 @@
       "category": "receipt-verification",
       "deadline_cycle": 422,
       "deferred_cycle": 417,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-417.md"
     },
     {
       "category": "worklog-accuracy",
       "deadline_cycle": 422,
       "deferred_cycle": 417,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-417.md"
     }
   ],
   "dispatch_log_latest": "#2058 [Cycle Review] Cycle 417 end-of-cycle review (cycle 417)",
@@ -11429,6 +11431,35 @@
         ],
         "ignored": 0,
         "note": "3 findings, complacency 3/5 (capped). worklog-accuracy chronic continues. receipt-integrity deferral deadline due this cycle."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "journal-quality",
+          "receipt-verification",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 3,
+        "cycle": 417,
+        "deferred": 1,
+        "dispatch_created": 2,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "worklog-accuracy",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "receipt-verification",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "deferred"
+          }
+        ],
+        "ignored": 0,
+        "note": "Updated dispositions: 2 findings have dispatches (#2061, #2063). Initial classification was all-deferred due to process timing (process-review called before dispatching)."
       }
     ],
     "last_review_cycle": 417
