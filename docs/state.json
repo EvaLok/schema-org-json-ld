@@ -6511,7 +6511,8 @@
       "category": "test-gap",
       "deadline_cycle": 416,
       "deferred_cycle": 411,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "dispatches #2011/#2014/#2019/#2024 (test batches 1-3 + Article tests merged cycles 411-414)"
     },
     {
       "category": "infrastructure-consistency",
