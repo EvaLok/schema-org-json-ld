@@ -32,7 +32,7 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 0
-- **Pipeline status**: FAIL (1 warning)
+- **Pipeline status**: PASS (2 warnings) — first-session baseline was FAIL (1 warning); resolved by resume
 - **Publish gate**: published
 
 ## Next steps
