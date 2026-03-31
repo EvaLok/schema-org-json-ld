@@ -434,6 +434,7 @@ fn execute_patch_pipeline(args: &PatchPipelineArgs, repo_root: &Path) -> Result<
         PIPELINE_STATUS_PREFIX,
         &args.status,
         POST_DISPATCH_PIPELINE_STATUS_PREFIX,
+        false,
     )
     .ok_or_else(|| {
         format!(
@@ -471,6 +472,7 @@ fn execute_patch_pipeline(args: &PatchPipelineArgs, repo_root: &Path) -> Result<
             IN_FLIGHT_PREFIX,
             &in_flight,
             IN_FLIGHT_POST_DISPATCH_PREFIX,
+            true,
         )
         .map(|(patched, _)| patched)
         .ok_or_else(|| {
@@ -486,6 +488,7 @@ fn execute_patch_pipeline(args: &PatchPipelineArgs, repo_root: &Path) -> Result<
             PUBLISH_GATE_PREFIX,
             publish_gate,
             PUBLISH_GATE_POST_DISPATCH_PREFIX,
+            false,
         )
         .map(|(patched, _)| patched)
         .ok_or_else(|| {
@@ -560,9 +563,35 @@ fn patch_or_addendum(
     prefix: &str,
     value: &str,
     addendum_prefix: &str,
+    force_replace: bool,
 ) -> Option<(String, PatchOrAddendumOutcome)> {
     let line_start = find_line_start(content, prefix)?;
     let current_value = line_value_from_start(content, line_start, prefix)?;
+    if force_replace {
+        let primary_replaced = !same_line_value(current_value, value);
+        let patched = if primary_replaced {
+            patch_line_value(content, prefix, value)?
+        } else {
+            content.to_string()
+        };
+        if let Some(existing_addendum) = line_value(&patched, addendum_prefix) {
+            if same_line_value(existing_addendum, value) {
+                let outcome = if primary_replaced {
+                    PatchOrAddendumOutcome::ReplacedOriginal
+                } else {
+                    PatchOrAddendumOutcome::Unchanged
+                };
+                return Some((patched, outcome));
+            }
+            return patch_line_value(&patched, addendum_prefix, value)
+                .map(|patched| (patched, PatchOrAddendumOutcome::AddedAddendum));
+        }
+        let line_start = find_line_start(&patched, prefix)?;
+        return Some((
+            insert_addendum_after_line(&patched, line_start, addendum_prefix, value),
+            PatchOrAddendumOutcome::AddedAddendum,
+        ));
+    }
     if line_value_needs_replacement(current_value) {
         return patch_line_value(content, prefix, value)
             .map(|patched| (patched, PatchOrAddendumOutcome::ReplacedOriginal));
@@ -577,24 +606,33 @@ fn patch_or_addendum(
         return patch_line_value(content, addendum_prefix, value)
             .map(|patched| (patched, PatchOrAddendumOutcome::AddedAddendum));
     }
+    Some((
+        insert_addendum_after_line(content, line_start, addendum_prefix, value),
+        PatchOrAddendumOutcome::AddedAddendum,
+    ))
+}
+
+fn insert_addendum_after_line(
+    content: &str,
+    line_start: usize,
+    addendum_prefix: &str,
+    value: &str,
+) -> String {
     let insert_at = line_end_index(content, line_start);
     let separator = if insert_at == content.len() && !content.ends_with('\n') {
         "\n"
     } else {
         ""
     };
-    Some((
-        format!(
-            "{}{}{}{}{}{}",
-            &content[..insert_at],
-            separator,
-            addendum_prefix,
-            value,
-            if insert_at < content.len() { "\n" } else { "" },
-            &content[insert_at..]
-        ),
-        PatchOrAddendumOutcome::AddedAddendum,
-    ))
+    format!(
+        "{}{}{}{}{}{}",
+        &content[..insert_at],
+        separator,
+        addendum_prefix,
+        value,
+        if insert_at < content.len() { "\n" } else { "" },
+        &content[insert_at..]
+    )
 }
 
 fn find_line_start(content: &str, prefix: &str) -> Option<usize> {
@@ -7002,7 +7040,7 @@ Reflective log for the schema-org-json-ld orchestrator.
         assert!(updated.contains("## Cycle state"));
         assert!(!updated.contains("## Pre-dispatch state"));
         assert!(!updated.contains("Snapshot before review dispatch"));
-        assert!(updated.contains("- **In-flight agent sessions**: 1"));
+        assert!(updated.contains("- **In-flight agent sessions**: 2"));
         assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 2"));
         assert!(updated.contains("- **Pipeline status**: PASS (9/9)"));
         assert!(!updated.contains("- **Copilot metrics**:"));
@@ -7043,7 +7081,42 @@ Reflective log for the schema-org-json-ld orchestrator.
         .unwrap();
 
         let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains("- **In-flight agent sessions**: 0"));
+        assert!(updated.contains("- **In-flight agent sessions**: 1"));
+        assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
+    }
+
+    #[test]
+    fn patch_pipeline_adds_post_dispatch_in_flight_when_primary_matches_state_json() {
+        let repo_root = TempRepoDir::new("patch-pipeline-matching-in-flight");
+        let worklog_path = repo_root.path.join("docs/worklog/test.md");
+        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "in_flight_sessions": 1
+            }"#,
+        );
+        fs::write(
+            &worklog_path,
+            "# Cycle 154\n\n## Cycle state\n\n- **In-flight agent sessions**: 1\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: open\n",
+        )
+        .unwrap();
+
+        execute_patch_pipeline(
+            &PatchPipelineArgs {
+                worklog: PathBuf::from("docs/worklog/test.md"),
+                status: "PASS (9/9)".to_string(),
+                in_flight: None,
+                publish_gate: None,
+                next_steps: Vec::new(),
+                section_title: None,
+            },
+            &repo_root.path,
+        )
+        .unwrap();
+
+        let updated = fs::read_to_string(&worklog_path).unwrap();
+        assert!(updated.contains("- **In-flight agent sessions**: 1"));
         assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
     }
 
@@ -7078,7 +7151,7 @@ Reflective log for the schema-org-json-ld orchestrator.
         .unwrap();
 
         let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains("- **In-flight agent sessions**: 0"));
+        assert!(updated.contains("- **In-flight agent sessions**: 2"));
         assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 2"));
         assert!(!updated.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
     }
@@ -7209,7 +7282,7 @@ Reflective log for the schema-org-json-ld orchestrator.
         .unwrap();
 
         let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains("- **In-flight agent sessions**: 0"));
+        assert!(updated.contains("- **In-flight agent sessions**: 1"));
         assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
         assert!(updated.contains("- **Pipeline status**: FAIL (1 blocking finding)"));
         assert!(updated.contains("- **Pipeline status (post-dispatch)**: PASS (9/9)"));
@@ -7252,7 +7325,7 @@ Reflective log for the schema-org-json-ld orchestrator.
         let updated = fs::read_to_string(&worklog_path).unwrap();
         assert!(updated.contains("- **Pipeline status**: PASS (9/9)"));
         assert!(!updated.contains("- **Pipeline status (post-dispatch)**:"));
-        assert!(updated.contains("- **In-flight agent sessions**: 0"));
+        assert!(updated.contains("- **In-flight agent sessions**: 1"));
         assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
     }
 
