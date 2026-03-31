@@ -23,12 +23,18 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 1
+- **In-flight agent sessions (post-dispatch)**: 2
 - **Pipeline status**: PASS (3 warnings)
 - **Publish gate**: published
 
-## Next steps
+## Next steps (pre-dispatch)
 
 1. Review and iterate on PR from [#2081](https://github.com/EvaLok/schema-org-json-ld/issues/2081) (cycle-receipts inclusive boundary fix (--through flag)) when Copilot completes
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2081](https://github.com/EvaLok/schema-org-json-ld/issues/2081) (cycle-receipts inclusive boundary fix (--through flag)) when Copilot completes
+2. Review and iterate on PR from [#2083](https://github.com/EvaLok/schema-org-json-ld/issues/2083) ([Cycle Review] Cycle 421 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
