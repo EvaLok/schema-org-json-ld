@@ -6646,7 +6646,8 @@
       "category": "journal-quality",
       "deadline_cycle": 424,
       "deferred_cycle": 419,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-419.md"
     }
   ],
   "dispatch_log_latest": "#2070 [Cycle Review] Cycle 419 end-of-cycle review (cycle 419)",
@@ -11491,7 +11492,7 @@
         "note": "Finding 1: receipt-validate fix dispatched as #2063/PR #2064 (addresses SHA verification). Finding 2: deferred - process-review needs update-in-place for duplicate history entries, dispatch slots full. Finding 3: deferred - behavioral fix planned for this cycle journal."
       },
       {
-        "actioned": 2,
+        "actioned": 3,
         "categories": [
           "code-quality",
           "journal-quality",
@@ -11500,7 +11501,7 @@
         ],
         "complacency_score": 3,
         "cycle": 419,
-        "deferred": 2,
+        "deferred": 1,
         "finding_count": 4,
         "finding_dispositions": [
           {
@@ -11517,11 +11518,11 @@
           },
           {
             "category": "journal-quality",
-            "disposition": "deferred"
+            "disposition": "actioned"
           }
         ],
         "ignored": 0,
-        "note": "F1 code-quality: actioned — PR #2075 merged (receipt-validate bidirectional check, receipt: 67b3a5c). F2 worklog-accuracy: actioned — PR #2076 merged (write-entry pre-dispatch preservation, receipt: 53773c8). F3 state-integrity: deferred (note-authoring recommendation). F4 journal-quality: deferred (behavioral, tracker entry from cycle 414 resolved separately)."
+        "note": "F1 code-quality: actioned — PR #2075 merged (receipt: 67b3a5c). F2 worklog-accuracy: actioned — PR #2076 merged (receipt: 53773c8). F3 state-integrity: deferred (note-authoring recommendation). F4 journal-quality: actioned — resolved overdue deferred_findings entry (receipt: 2cf72b5), cycle 420 journal verifies tracker state before claims."
       }
     ],
     "last_review_cycle": 419
