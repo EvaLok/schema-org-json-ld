@@ -484,8 +484,21 @@ fn section_mentions_path(section: &str, path: &str) -> bool {
 
 fn fetch_pipeline_report(repo_root: &Path, cycle: u64) -> Result<PipelineReport, String> {
     let args = pipeline_check_args(repo_root, cycle);
-    let output = run_wrapper(repo_root, "tools/pipeline-check", &args)?;
-    serde_json::from_str::<PipelineReport>(&output)
+    let script_path = repo_root.join("tools/pipeline-check");
+    let output = ProcessCommand::new("bash")
+        .arg(&script_path)
+        .args(&args)
+        .output()
+        .map_err(|error| format!("failed to execute {}: {}", script_path.display(), error))?;
+    // pipeline-check exits 1 on FAIL but still outputs valid JSON — parse stdout regardless
+    let stdout = String::from_utf8(output.stdout).map_err(|error| {
+        format!(
+            "failed to decode {} output as UTF-8: {}",
+            script_path.display(),
+            error
+        )
+    })?;
+    serde_json::from_str::<PipelineReport>(&stdout)
         .map_err(|error| format!("failed to parse pipeline-check JSON: {}", error))
 }
 
