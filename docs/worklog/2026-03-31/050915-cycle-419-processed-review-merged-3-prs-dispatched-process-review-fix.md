@@ -30,13 +30,20 @@
 
 ## Cycle state
 
-- **In-flight agent sessions**: 1
+- **In-flight agent sessions**: 2
+- **In-flight agent sessions (post-dispatch)**: 2
 - **Pipeline status**: PASS (3 warnings)
+- **Pipeline status (post-dispatch)**: PASS (1 blocking warning, 2 warnings)
 - **Publish gate**: published
 
-## Next steps
+## Next steps (pre-dispatch)
 
 1. Review and iterate on PR from [#2068](https://github.com/EvaLok/schema-org-json-ld/issues/2068) (Fix process-review: update-in-place for duplicate review.history cycle entries) when Copilot completes
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2068](https://github.com/EvaLok/schema-org-json-ld/issues/2068) (Fix process-review: update-in-place for duplicate review.history cycle entries) when Copilot completes
+2. Review and iterate on PR from [#2070](https://github.com/EvaLok/schema-org-json-ld/issues/2070) ([Cycle Review] Cycle 419 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
