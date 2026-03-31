@@ -473,7 +473,7 @@ fn execute_patch_pipeline(args: &PatchPipelineArgs, repo_root: &Path) -> Result<
             IN_FLIGHT_PREFIX,
             &in_flight,
             IN_FLIGHT_POST_DISPATCH_PREFIX,
-            true,
+            false,
         )
         .map(|(patched, _)| patched)
         .ok_or_else(|| {
@@ -7069,7 +7069,7 @@ Reflective log for the schema-org-json-ld orchestrator.
         assert!(updated.contains("## Cycle state"));
         assert!(!updated.contains("## Pre-dispatch state"));
         assert!(!updated.contains("Snapshot before review dispatch"));
-        assert!(updated.contains("- **In-flight agent sessions**: 2"));
+        assert!(updated.contains("- **In-flight agent sessions**: 1"));
         assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 2"));
         assert!(updated.contains("- **Pipeline status**: PASS (9/9)"));
         assert!(!updated.contains("- **Copilot metrics**:"));
@@ -7110,7 +7110,7 @@ Reflective log for the schema-org-json-ld orchestrator.
         .unwrap();
 
         let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains("- **In-flight agent sessions**: 1"));
+        assert!(updated.contains("- **In-flight agent sessions**: 0"));
         assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
     }
 
@@ -7146,7 +7146,7 @@ Reflective log for the schema-org-json-ld orchestrator.
 
         let updated = fs::read_to_string(&worklog_path).unwrap();
         assert!(updated.contains("- **In-flight agent sessions**: 1"));
-        assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
+        assert!(!updated.contains("- **In-flight agent sessions (post-dispatch)**:"));
     }
 
     #[test]
@@ -7180,9 +7180,39 @@ Reflective log for the schema-org-json-ld orchestrator.
         .unwrap();
 
         let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains("- **In-flight agent sessions**: 2"));
+        assert!(updated.contains("- **In-flight agent sessions**: 0"));
         assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 2"));
         assert!(!updated.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
+    }
+
+    #[test]
+    fn patch_pipeline_preserves_pre_dispatch_in_flight_value_during_refresh() {
+        let repo_root = TempRepoDir::new("patch-pipeline-preserve-pre-dispatch-in-flight");
+        let worklog_path = repo_root.path.join("docs/worklog/test.md");
+        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
+        fs::write(
+            &worklog_path,
+            "# Cycle 154\n\n## Pre-dispatch state\n\n- **In-flight agent sessions**: 1\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: open\n",
+        )
+        .unwrap();
+
+        execute_patch_pipeline(
+            &PatchPipelineArgs {
+                worklog: PathBuf::from("docs/worklog/test.md"),
+                status: "PASS (9/9)".to_string(),
+                in_flight: Some(2),
+                publish_gate: None,
+                next_steps: Vec::new(),
+                section_title: None,
+            },
+            &repo_root.path,
+        )
+        .unwrap();
+
+        let updated = fs::read_to_string(&worklog_path).unwrap();
+        assert!(updated.contains("- **In-flight agent sessions**: 1"));
+        assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 2"));
+        assert_eq!(updated.matches("- **In-flight agent sessions**: 1").count(), 1);
     }
 
     #[test]
@@ -7311,7 +7341,7 @@ Reflective log for the schema-org-json-ld orchestrator.
         .unwrap();
 
         let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains("- **In-flight agent sessions**: 1"));
+        assert!(updated.contains("- **In-flight agent sessions**: 0"));
         assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
         assert!(updated.contains("- **Pipeline status**: FAIL (1 blocking finding)"));
         assert!(updated.contains("- **Pipeline status (post-dispatch)**: PASS (9/9)"));
@@ -7355,8 +7385,38 @@ Reflective log for the schema-org-json-ld orchestrator.
         let updated = fs::read_to_string(&worklog_path).unwrap();
         assert!(updated.contains("- **Pipeline status**: PASS (9/9)"));
         assert!(!updated.contains("- **Pipeline status (post-dispatch)**:"));
-        assert!(updated.contains("- **In-flight agent sessions**: 1"));
+        assert!(updated.contains("- **In-flight agent sessions**: 0"));
         assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
+    }
+
+    #[test]
+    fn patch_pipeline_replaces_placeholder_in_flight_value() {
+        let repo_root = TempRepoDir::new("patch-pipeline-placeholder-in-flight");
+        let worklog_path = repo_root.path.join("docs/worklog/test.md");
+        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
+        fs::write(
+            &worklog_path,
+            "# Cycle 154\n\n## Cycle state\n\n- **In-flight agent sessions**: Not provided.\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: open\n",
+        )
+        .unwrap();
+
+        execute_patch_pipeline(
+            &PatchPipelineArgs {
+                worklog: PathBuf::from("docs/worklog/test.md"),
+                status: "PASS (9/9)".to_string(),
+                in_flight: Some(2),
+                publish_gate: None,
+                next_steps: Vec::new(),
+                section_title: None,
+            },
+            &repo_root.path,
+        )
+        .unwrap();
+
+        let updated = fs::read_to_string(&worklog_path).unwrap();
+        assert!(updated.contains("- **In-flight agent sessions**: 2"));
+        assert!(!updated.contains("- **In-flight agent sessions**: Not provided."));
+        assert!(!updated.contains("- **In-flight agent sessions (post-dispatch)**:"));
     }
 
     #[test]
