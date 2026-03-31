@@ -6641,6 +6641,12 @@
       "deadline_cycle": 423,
       "deferred_cycle": 418,
       "resolved": false
+    },
+    {
+      "category": "journal-quality",
+      "deadline_cycle": 424,
+      "deferred_cycle": 419,
+      "resolved": false
     }
   ],
   "dispatch_log_latest": "#2070 [Cycle Review] Cycle 419 end-of-cycle review (cycle 419)",
@@ -11485,7 +11491,7 @@
         "note": "Finding 1: receipt-validate fix dispatched as #2063/PR #2064 (addresses SHA verification). Finding 2: deferred - process-review needs update-in-place for duplicate history entries, dispatch slots full. Finding 3: deferred - behavioral fix planned for this cycle journal."
       },
       {
-        "actioned": 0,
+        "actioned": 2,
         "categories": [
           "code-quality",
           "journal-quality",
@@ -11495,16 +11501,15 @@
         "complacency_score": 3,
         "cycle": 419,
         "deferred": 2,
-        "dispatch_created": 2,
         "finding_count": 4,
         "finding_dispositions": [
           {
             "category": "code-quality",
-            "disposition": "dispatch_created"
+            "disposition": "actioned"
           },
           {
             "category": "worklog-accuracy",
-            "disposition": "dispatch_created"
+            "disposition": "actioned"
           },
           {
             "category": "state-integrity",
@@ -11516,7 +11521,7 @@
           }
         ],
         "ignored": 0,
-        "note": "F1 code-quality: dispatched #2073 (receipt-validate bidirectional check). F2 worklog-accuracy: dispatched #2074 (write-entry pre-dispatch immutability). F3 state-integrity: deferred (note accuracy needs mechanical derivation, partially addressed by #2069). F4 journal-quality: deferred (behavioral, journal must distinguish tracker state from behavior change)."
+        "note": "F1 code-quality: actioned — PR #2075 merged (receipt-validate bidirectional check, receipt: 67b3a5c). F2 worklog-accuracy: actioned — PR #2076 merged (write-entry pre-dispatch preservation, receipt: 53773c8). F3 state-integrity: deferred (note-authoring recommendation). F4 journal-quality: deferred (behavioral, tracker entry from cycle 414 resolved separately)."
       }
     ],
     "last_review_cycle": 419
