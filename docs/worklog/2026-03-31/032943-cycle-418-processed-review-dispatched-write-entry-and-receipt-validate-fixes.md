@@ -24,15 +24,21 @@
 
 ## Cycle state
 
-- **In-flight agent sessions**: 0
+- **In-flight agent sessions**: 1
+- **In-flight agent sessions (post-dispatch)**: 1
 - **In-flight agent sessions (note)**: state.json reports 0, but 2 dispatches (#2061, #2063) are active on GitHub. Tooling gap: dispatches via gh api are not recorded in state.json agent_sessions.
 - **Pipeline status**: PASS (3 warnings)
+- **Pipeline status (post-dispatch)**: PASS (1 blocking warning, 2 warnings)
 - **Publish gate**: published
 
 ## Next steps
 
 1. Review and iterate on PR from [#2061](https://github.com/EvaLok/schema-org-json-ld/issues/2061) (write-entry pre-dispatch next-steps labeling) when Copilot completes
 2. Review and iterate on PR from [#2063](https://github.com/EvaLok/schema-org-json-ld/issues/2063) (receipt-validate full SHA verification) when Copilot completes
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2065](https://github.com/EvaLok/schema-org-json-ld/issues/2065) ([Cycle Review] Cycle 418 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
