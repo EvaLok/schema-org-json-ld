@@ -6301,6 +6301,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add audit-inbound dedup check to cross-repo tool"
+    },
+    {
+      "dispatched_at": "2026-03-31T16:40:46Z",
+      "issue": 2100,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Wire up fixup_latest_worklog_in_flight in record-dispatch main"
     }
   ],
   "audit_dropped": [
@@ -6755,7 +6762,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2098 Add audit-inbound dedup check to cross-repo tool (cycle 424)",
+  "dispatch_log_latest": "#2100 Wire up fixup_latest_worklog_in_flight in record-dispatch main (cycle 424)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7028,7 +7035,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 19,
     "issue": 2097,
