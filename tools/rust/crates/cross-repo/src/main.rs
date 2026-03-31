@@ -5,9 +5,11 @@ use state_schema::{
     check_version, current_cycle_from_state, read_state_value, PublishGate, StateJson,
 };
 use std::collections::HashSet;
-use std::fs;
+use std::fs::{self, OpenOptions};
+use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const QC_REPO: &str = "EvaLok/schema-org-json-ld-qc";
@@ -15,6 +17,7 @@ const AUDIT_REPO: &str = "EvaLok/schema-org-json-ld-audit";
 const TRUSTED_AUTHOR: &str = "EvaLok";
 const BODY_PREVIEW_LIMIT: usize = 200;
 const STALE_CYCLE_THRESHOLD: u64 = 5;
+const MAX_TEMP_INPUT_ATTEMPTS: usize = 100;
 const NO_STDERR_PLACEHOLDER: &str = "<no stderr>";
 const PACKAGE_AFFECTING_PATHS: &[&str] = &[
     "php/src/",
@@ -745,11 +748,7 @@ fn find_duplicate_audit_inbound_issue(
 ) -> Option<u64> {
     issues
         .iter()
-        .find(|issue| {
-            let accepted_references = extract_accepted_audit_references(issue);
-            accepted_references.contains(&audit_number)
-                || extract_referenced_audit_numbers(issue).contains(&audit_number)
-        })
+        .find(|issue| extract_all_audit_references(issue).contains(&audit_number))
         .map(|issue| issue.number)
 }
 
@@ -774,7 +773,7 @@ fn extract_accepted_audit_references(issue: &AuditInboundIssue) -> Vec<u64> {
     references
 }
 
-fn extract_referenced_audit_numbers(issue: &AuditInboundIssue) -> Vec<u64> {
+fn extract_all_audit_references(issue: &AuditInboundIssue) -> Vec<u64> {
     let mut references = split_audit_sections(&issue.body)
         .into_iter()
         .map(|(audit_number, _)| audit_number)
@@ -1316,10 +1315,6 @@ fn write_create_audit_inbound_input(
     title: &str,
     body: &str,
 ) -> Result<PathBuf, String> {
-    let input_path = std::env::temp_dir().join(format!(
-        ".create-audit-inbound-{}.json",
-        std::process::id()
-    ));
     let payload = serde_json::json!({
         "title": title,
         "body": body,
@@ -1327,14 +1322,60 @@ fn write_create_audit_inbound_input(
     });
     let payload_bytes = serde_json::to_vec(&payload)
         .map_err(|error| format!("failed to serialize audit-inbound issue payload: {}", error))?;
-    fs::write(&input_path, payload_bytes).map_err(|error| {
-        format!(
-            "failed to write temporary issue payload {}: {}",
-            input_path.display(),
-            error
-        )
-    })?;
-    Ok(input_path)
+    let seed = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| format!("failed to build temporary payload timestamp: {}", error))?
+        .as_nanos();
+
+    for attempt in 0..MAX_TEMP_INPUT_ATTEMPTS {
+        let input_path = std::env::temp_dir().join(format!(
+            ".create-audit-inbound-{}-{}-{}.json",
+            std::process::id(),
+            seed,
+            attempt
+        ));
+        match OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&input_path)
+        {
+            Ok(mut file) => {
+                if let Err(error) = file.write_all(&payload_bytes) {
+                    let cleanup_result = fs::remove_file(&input_path).map_err(|cleanup_error| {
+                        format!(
+                            "failed to remove incomplete issue payload {}: {}",
+                            input_path.display(),
+                            cleanup_error
+                        )
+                    });
+                    return match cleanup_result {
+                        Ok(()) => Err(format!(
+                            "failed to write temporary issue payload {}: {}",
+                            input_path.display(),
+                            error
+                        )),
+                        Err(cleanup_error) => Err(format!(
+                            "failed to write temporary issue payload {}: {}; {}",
+                            input_path.display(),
+                            error,
+                            cleanup_error
+                        )),
+                    };
+                }
+                return Ok(input_path);
+            }
+            Err(error) if error.kind() == ErrorKind::AlreadyExists => continue,
+            Err(error) => {
+                return Err(format!(
+                    "failed to create temporary issue payload {}: {}",
+                    input_path.display(),
+                    error
+                ));
+            }
+        }
+    }
+
+    Err("failed to allocate a unique temporary issue payload path".to_string())
 }
 
 fn create_audit_inbound_issue(
