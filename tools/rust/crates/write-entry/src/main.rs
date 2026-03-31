@@ -22,6 +22,7 @@ const NOT_PROVIDED: &str = "Not provided.";
 const CYCLE_STATE_HEADING: &str = "## Cycle state";
 const LEGACY_STATE_HEADING: &str = "## Pre-dispatch state";
 const NEXT_STEPS_HEADING: &str = "## Next steps";
+const NEXT_STEPS_PRE_DISPATCH_HEADING: &str = "## Next steps (pre-dispatch)";
 const NEXT_STEPS_POST_DISPATCH_HEADING: &str = "## Next steps (post-dispatch)";
 const LEGACY_STATE_DISCLAIMER: &str = "*Snapshot before review dispatch — final counters may differ after C6.*";
 const IN_FLIGHT_PREFIX: &str = "- **In-flight agent sessions**: ";
@@ -733,15 +734,19 @@ fn patch_or_addendum_numbered_section(
     addendum_heading: &str,
 ) -> Option<String> {
     let lines: Vec<String> = content.lines().map(ToOwned::to_owned).collect();
-    let (_, section_start, section_end) = find_numbered_section_bounds(&lines, heading)?;
+    let (heading_index, section_start, section_end, primary_heading) =
+        find_primary_numbered_section_bounds(&lines, heading)?;
     if numbered_section_needs_replacement(&lines[section_start..section_end]) {
-        return patch_numbered_section(content, heading, items);
+        return patch_numbered_section(content, primary_heading, items);
     }
     if find_numbered_section_bounds(&lines, addendum_heading).is_some() {
         return patch_numbered_section(content, addendum_heading, items);
     }
 
     let mut patched_lines = lines;
+    if primary_heading == NEXT_STEPS_HEADING {
+        patched_lines[heading_index] = NEXT_STEPS_PRE_DISPATCH_HEADING.to_string();
+    }
     let mut insertion = Vec::new();
     if !patched_lines[section_end - 1].is_empty() {
         insertion.push(String::new());
@@ -761,6 +766,30 @@ fn patch_or_addendum_numbered_section(
         patched.push('\n');
     }
     Some(patched)
+}
+
+fn find_primary_numbered_section_bounds<'a>(
+    lines: &[String],
+    heading: &'a str,
+) -> Option<(usize, usize, usize, &'a str)> {
+    if let Some((heading_index, section_start, section_end)) =
+        find_numbered_section_bounds(lines, heading)
+    {
+        return Some((heading_index, section_start, section_end, heading));
+    }
+    if heading == NEXT_STEPS_HEADING {
+        return find_numbered_section_bounds(lines, NEXT_STEPS_PRE_DISPATCH_HEADING).map(
+            |(heading_index, section_start, section_end)| {
+                (
+                    heading_index,
+                    section_start,
+                    section_end,
+                    NEXT_STEPS_PRE_DISPATCH_HEADING,
+                )
+            },
+        );
+    }
+    None
 }
 
 fn find_numbered_section_bounds(
@@ -7288,7 +7317,7 @@ Reflective log for the schema-org-json-ld orchestrator.
         assert!(updated.contains("- **Pipeline status (post-dispatch)**: PASS (9/9)"));
         assert!(updated.contains("- **Publish gate**: open"));
         assert!(updated.contains("- **Publish gate (post-dispatch)**: published"));
-        assert!(updated.contains("## Next steps\n\n1. Plan next dispatch\n\n## Next steps (post-dispatch)\n\n1. Review [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) when Copilot completes\n2. Prepare follow-up dispatch\n"));
+        assert!(updated.contains("## Next steps (pre-dispatch)\n\n1. Plan next dispatch\n\n## Next steps (post-dispatch)\n\n1. Review [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) when Copilot completes\n2. Prepare follow-up dispatch\n"));
         assert_eq!(updated.matches("- **Pipeline status**:").count(), 1);
         assert_eq!(
             updated
@@ -7296,6 +7325,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 .count(),
             1
         );
+        assert_eq!(updated.matches("## Next steps (pre-dispatch)").count(), 1);
     }
 
     #[test]
@@ -7387,8 +7417,40 @@ Reflective log for the schema-org-json-ld orchestrator.
         .unwrap();
 
         let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains("## Next steps\n\n1. Old next step\n\n## Next steps (post-dispatch)\n\n1. No in-flight sessions — plan next dispatch\n\n## Commit receipts\n"));
+        assert!(updated.contains("## Next steps (pre-dispatch)\n\n1. Old next step\n\n## Next steps (post-dispatch)\n\n1. No in-flight sessions — plan next dispatch\n\n## Commit receipts\n"));
         assert!(updated.contains("| cycle-start | abc1234 |"));
+        assert_eq!(updated.matches("- **Pipeline status**: PASS").count(), 1);
+        assert!(!updated.contains("- **Pipeline status (post-dispatch)**:"));
+    }
+
+    #[test]
+    fn patch_pipeline_updates_existing_post_dispatch_next_steps_without_double_rename() {
+        let repo_root = TempRepoDir::new("patch-pipeline-next-steps-pre-dispatch");
+        let worklog_path = repo_root.path.join("docs/worklog/test.md");
+        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
+        fs::write(
+            &worklog_path,
+            "# Cycle 154\n\n## Cycle state\n\n- **Pipeline status**: PASS\n\n## Next steps (pre-dispatch)\n\n1. Old next step\n\n## Next steps (post-dispatch)\n\n1. Old review step\n",
+        )
+        .unwrap();
+
+        execute_patch_pipeline(
+            &PatchPipelineArgs {
+                worklog: PathBuf::from("docs/worklog/test.md"),
+                status: "PASS".to_string(),
+                in_flight: None,
+                publish_gate: None,
+                next_steps: vec!["Review updated PR when Copilot completes".to_string()],
+                section_title: None,
+            },
+            &repo_root.path,
+        )
+        .unwrap();
+
+        let updated = fs::read_to_string(&worklog_path).unwrap();
+        assert!(updated.contains("## Next steps (pre-dispatch)\n\n1. Old next step\n\n## Next steps (post-dispatch)\n\n1. Review updated PR when Copilot completes\n"));
+        assert_eq!(updated.matches("## Next steps (pre-dispatch)").count(), 1);
+        assert_eq!(updated.matches("## Next steps (post-dispatch)").count(), 1);
     }
 
     #[test]
