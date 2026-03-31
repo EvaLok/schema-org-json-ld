@@ -6679,13 +6679,15 @@
       "category": "journal-quality",
       "deadline_cycle": 425,
       "deferred_cycle": 420,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-421.md"
     },
     {
       "category": "process-adherence",
       "deadline_cycle": 425,
       "deferred_cycle": 420,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-421.md"
     },
     {
       "category": "worklog-accuracy",
@@ -6873,7 +6875,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 421"
+        "last_refreshed": "cycle 422"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -11597,9 +11599,37 @@
         ],
         "ignored": 0,
         "note": "Updated dispositions: worklog-accuracy reclassified to dispatch_created after dispatching #2081 (cycle-receipts inclusive boundary fix). process-adherence and journal-quality remain deferred."
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "journal-quality",
+          "process-adherence",
+          "state-integrity"
+        ],
+        "complacency_score": 3,
+        "cycle": 421,
+        "deferred": 1,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "process-adherence",
+            "disposition": "actioned"
+          },
+          {
+            "category": "state-integrity",
+            "disposition": "deferred"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "actioned"
+          }
+        ],
+        "ignored": 0,
+        "note": "Recurrence escalation: process-adherence and journal-quality both appeared in cycles 420-421. Process-level fixes committed: COMPLETION_CHECKLIST C3 constraints (08d2237c, ebfe0a45). state-integrity deferred — requires record-dispatch code change, dispatch slots full."
       }
     ],
-    "last_review_cycle": 420
+    "last_review_cycle": 421
   },
   "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 420,
