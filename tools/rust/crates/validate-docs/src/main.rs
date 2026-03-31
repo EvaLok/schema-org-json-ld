@@ -49,6 +49,10 @@ struct WorklogArgs {
     /// Pipeline status to validate against instead of invoking pipeline-check
     #[arg(long)]
     pipeline_status: Option<String>,
+
+    /// Commit to use as the upper bound when diffing infrastructure changes
+    #[arg(long)]
+    worklog_commit: Option<String>,
 }
 
 #[derive(Debug, Parser)]
@@ -100,6 +104,7 @@ fn main() {
             &args.file,
             args.cycle,
             args.pipeline_status.as_deref(),
+            args.worklog_commit.as_deref(),
         ),
         Command::Journal(args) => validate_journal(&args.file),
     };
@@ -125,6 +130,7 @@ fn validate_worklog(
     file: &Path,
     cycle: u64,
     pipeline_status: Option<&str>,
+    worklog_commit: Option<&str>,
 ) -> Result<Vec<String>, String> {
     let content = fs::read_to_string(file)
         .map_err(|error| format!("failed to read {}: {}", file.display(), error))?;
@@ -149,7 +155,8 @@ fn validate_worklog(
         Err(error) => failures.push(format!("unable to validate commit receipts: {}", error)),
     }
 
-    match changed_infrastructure_paths(repo_root, cycle) {
+    let diff_end_commit = resolve_worklog_commit(repo_root, file, worklog_commit)?;
+    match changed_infrastructure_paths(repo_root, cycle, diff_end_commit.as_deref()) {
         Ok(changed_paths) => {
             if let Some(finding) = validate_self_modifications_section(&content, &changed_paths) {
                 match finding {
@@ -340,12 +347,20 @@ fn is_short_hex(value: &str) -> bool {
     value.len() >= 7 && value.chars().all(|character| character.is_ascii_hexdigit())
 }
 
-fn changed_infrastructure_paths(repo_root: &Path, cycle: u64) -> Result<Vec<String>, String> {
+fn changed_infrastructure_paths(
+    repo_root: &Path,
+    cycle: u64,
+    end_commit: Option<&str>,
+) -> Result<Vec<String>, String> {
     let start_commit = find_cycle_start_commit(repo_root, cycle)?;
+    let diff_range = match end_commit {
+        Some(commit) => format!("{start_commit}..{commit}"),
+        None => format!("{start_commit}..HEAD"),
+    };
     let mut args = vec![
         "diff".to_string(),
         "--name-only".to_string(),
-        start_commit,
+        diff_range,
         "--".to_string(),
     ];
     args.extend(INFRASTRUCTURE_PATHS.iter().map(|path| path.to_string()));
@@ -360,6 +375,42 @@ fn changed_infrastructure_paths(repo_root: &Path, cycle: u64) -> Result<Vec<Stri
     paths.sort();
     paths.dedup();
     Ok(paths)
+}
+
+fn resolve_worklog_commit(
+    repo_root: &Path,
+    file: &Path,
+    worklog_commit: Option<&str>,
+) -> Result<Option<String>, String> {
+    match worklog_commit {
+        Some(commit) => Ok(Some(commit.to_string())),
+        None => find_last_modifying_commit(repo_root, file),
+    }
+}
+
+fn find_last_modifying_commit(repo_root: &Path, file: &Path) -> Result<Option<String>, String> {
+    let pathspec = file
+        .strip_prefix(repo_root)
+        .unwrap_or(file)
+        .to_string_lossy()
+        .into_owned();
+    let output = run_git(
+        repo_root,
+        &[
+            "log".to_string(),
+            "-n".to_string(),
+            "1".to_string(),
+            "--format=%H".to_string(),
+            "--".to_string(),
+            pathspec,
+        ],
+    )?;
+    let commit = output.trim();
+    if commit.is_empty() {
+        return Ok(None);
+    }
+
+    Ok(Some(commit.to_string()))
 }
 
 fn find_cycle_start_commit(repo_root: &Path, cycle: u64) -> Result<String, String> {
@@ -1184,6 +1235,76 @@ mod tests {
     }
 
     #[test]
+    fn ignores_infrastructure_changes_committed_after_worklog_commit() {
+        let repo = TestRepo::new();
+        repo.init();
+        repo.write_file("docs/state.json", "{}\n");
+        let cycle_complete_receipt = repo.commit(
+            "notes/complete.txt",
+            "complete\n",
+            "state(cycle-complete): close cycle [cycle 226]",
+        );
+        install_cycle_receipts_wrapper(&repo, &[&cycle_complete_receipt]);
+        let worklog_path = repo.path().join("docs/worklog/2026-03-31/020304-cycle-226-summary.md");
+        if let Some(parent) = worklog_path.parent() {
+            fs::create_dir_all(parent).expect("create worklog parent");
+        }
+        let worklog_content = valid_worklog_content(&[&cycle_complete_receipt], "- None.\n");
+        fs::write(&worklog_path, &worklog_content).expect("write worklog");
+        repo.commit(
+            "docs/worklog/2026-03-31/020304-cycle-226-summary.md",
+            &worklog_content,
+            "docs(worklog): add cycle 226 worklog",
+        );
+        repo.commit(
+            "tools/validate-docs",
+            "#!/usr/bin/env bash\nexit 0\n",
+            "fix(validate-docs): post-worklog tool change",
+        );
+
+        let failures = validate_worklog(repo.path(), &worklog_path, 226, Some("pass"), None)
+            .expect("worklog validation should succeed");
+
+        assert!(failures.is_empty(), "unexpected failures: {failures:?}");
+    }
+
+    #[test]
+    fn requires_documenting_infrastructure_changes_committed_before_worklog_commit() {
+        let repo = TestRepo::new();
+        repo.init();
+        repo.write_file("docs/state.json", "{}\n");
+        repo.commit(
+            "tools/validate-docs",
+            "#!/usr/bin/env bash\nexit 0\n",
+            "fix(validate-docs): pre-worklog tool change",
+        );
+        let cycle_complete_receipt = repo.commit(
+            "notes/complete.txt",
+            "complete\n",
+            "state(cycle-complete): close cycle [cycle 226]",
+        );
+        install_cycle_receipts_wrapper(&repo, &[&cycle_complete_receipt]);
+        let worklog_path = repo.path().join("docs/worklog/2026-03-31/020304-cycle-226-summary.md");
+        if let Some(parent) = worklog_path.parent() {
+            fs::create_dir_all(parent).expect("create worklog parent");
+        }
+        let worklog_content = valid_worklog_content(&[&cycle_complete_receipt], "- None.\n");
+        fs::write(&worklog_path, &worklog_content).expect("write worklog");
+        repo.commit(
+            "docs/worklog/2026-03-31/020304-cycle-226-summary.md",
+            &worklog_content,
+            "docs(worklog): add cycle 226 worklog",
+        );
+
+        let failures = validate_worklog(repo.path(), &worklog_path, 226, Some("pass"), None)
+            .expect("worklog validation should succeed");
+
+        assert_eq!(failures.len(), 1, "unexpected failures: {failures:?}");
+        assert!(failures[0].contains("self-modifications section says None"));
+        assert!(failures[0].contains("tools/validate-docs"));
+    }
+
+    #[test]
     fn detects_self_modification_false_negative() {
         let content = "\
 ## Self-modifications
@@ -1528,6 +1649,42 @@ Observed something.
             ));
         }
         content
+    }
+
+    fn valid_worklog_content(receipts: &[&str], self_modifications: &str) -> String {
+        format!(
+            "\
+## Pre-dispatch state
+
+- **In-flight agent sessions**: 0
+- **Pipeline status**: PASS
+
+{}
+
+## Self-modifications
+
+{}",
+            receipts_table(receipts),
+            self_modifications
+        )
+    }
+
+    fn install_cycle_receipts_wrapper(repo: &TestRepo, receipts: &[&str]) {
+        let tools_dir = repo.path().join("tools");
+        fs::create_dir_all(&tools_dir).expect("create tools dir");
+        let json = format!(
+            "[{}]",
+            receipts
+                .iter()
+                .map(|receipt| format!(r#"{{"receipt":"{receipt}","url":"https://example.test/{receipt}"}}"#))
+                .collect::<Vec<_>>()
+                .join(",")
+        );
+        fs::write(
+            tools_dir.join("cycle-receipts"),
+            format!("#!/usr/bin/env bash\nprintf '%s\n' '{json}'\n"),
+        )
+        .expect("write cycle-receipts wrapper");
     }
 
     fn git_success<I, S>(repo_root: &Path, args: I)
