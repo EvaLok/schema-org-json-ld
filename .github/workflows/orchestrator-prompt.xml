@@ -200,8 +200,8 @@ section. Execute your cycle by following the steps defined in those checklists.
       context="Do not dispatch if this many sessions are in-flight"/>
     <threshold id="session-timeout" value="75" unit="minutes"
       context="GitHub Actions job timeout"/>
-    <threshold id="cron-interval" value="120" unit="minutes"
-      context="Cycles run every 2 hours"/>
+    <threshold id="cron-interval" value="240" unit="minutes"
+      context="Cycles run every 4 hours"/>
     <threshold id="agent-timeout" value="60" unit="minutes"
       context="Copilot coding agent timeout"/>
     <threshold id="stale-dispatch" value="2" unit="hours"
