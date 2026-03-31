@@ -1413,8 +1413,8 @@ mod tests {
             vec![PendingAuditImplementation {
                 issue: 1897,
                 audit_issue: Some(336),
-                description: "Add deadline enforcement for accepted audit recommendations"
-                    .to_string(),
+                description:
+                    "Add deadline enforcement for accepted audit recommendations".to_string(),
                 accepted_cycle: 391,
                 deadline_cycle: 396,
                 completed: false,

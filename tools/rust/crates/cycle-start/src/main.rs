@@ -388,15 +388,15 @@ where
         &state.eva_input_issues.remaining_open,
         EVA_INPUT_REMAINING_OPEN_PATH,
     )?
-    .iter()
-    .map(|validated_issue_number| {
-        let title = fetch_title(*validated_issue_number)?;
-        Ok(format!(
-            "{}#{} ({})",
-            MAIN_REPO, validated_issue_number, title
-        ))
-    })
-    .collect()
+        .iter()
+        .map(|validated_issue_number| {
+            let title = fetch_title(*validated_issue_number)?;
+            Ok(format!(
+                "{}#{} ({})",
+                MAIN_REPO, validated_issue_number, title
+            ))
+        })
+        .collect()
 }
 
 fn parse_eva_issue_numbers(issue_numbers: &[i64], field_path: &str) -> Result<Vec<u64>, String> {
@@ -1817,12 +1817,11 @@ mod tests {
             }
         });
 
-        refresh_eva_input_issue_inventory(&mut state, 163).expect("refresh should succeed");
+        refresh_eva_input_issue_inventory(&mut state, 163)
+            .expect("refresh should succeed");
 
         assert_eq!(
-            state.pointer(
-                "/field_inventory/fields/eva_input_issues.closed_this_cycle/last_refreshed"
-            ),
+            state.pointer("/field_inventory/fields/eva_input_issues.closed_this_cycle/last_refreshed"),
             Some(&json!("cycle 163"))
         );
         assert_eq!(

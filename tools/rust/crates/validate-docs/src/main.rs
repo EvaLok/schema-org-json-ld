@@ -1245,9 +1245,7 @@ mod tests {
             "state(cycle-complete): close cycle [cycle 226]",
         );
         install_cycle_receipts_wrapper(&repo, &[&cycle_complete_receipt]);
-        let worklog_path = repo
-            .path()
-            .join("docs/worklog/2026-03-31/020304-cycle-226-summary.md");
+        let worklog_path = repo.path().join("docs/worklog/2026-03-31/020304-cycle-226-summary.md");
         if let Some(parent) = worklog_path.parent() {
             fs::create_dir_all(parent).expect("create worklog parent");
         }
@@ -1286,9 +1284,7 @@ mod tests {
             "state(cycle-complete): close cycle [cycle 226]",
         );
         install_cycle_receipts_wrapper(&repo, &[&cycle_complete_receipt]);
-        let worklog_path = repo
-            .path()
-            .join("docs/worklog/2026-03-31/020304-cycle-226-summary.md");
+        let worklog_path = repo.path().join("docs/worklog/2026-03-31/020304-cycle-226-summary.md");
         if let Some(parent) = worklog_path.parent() {
             fs::create_dir_all(parent).expect("create worklog parent");
         }
@@ -1680,9 +1676,7 @@ Observed something.
             "[{}]",
             receipts
                 .iter()
-                .map(|receipt| format!(
-                    r#"{{"receipt":"{receipt}","url":"https://example.test/{receipt}"}}"#
-                ))
+                .map(|receipt| format!(r#"{{"receipt":"{receipt}","url":"https://example.test/{receipt}"}}"#))
                 .collect::<Vec<_>>()
                 .join(",")
         );

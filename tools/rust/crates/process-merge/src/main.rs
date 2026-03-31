@@ -142,7 +142,12 @@ fn get_top_level_i64(state: &Value, field: &str) -> Result<i64, String> {
     state
         .pointer(&format!("/{}", field))
         .and_then(Value::as_i64)
-        .ok_or_else(|| format!("missing numeric /{} in docs/state.json", field))
+        .ok_or_else(|| {
+            format!(
+                "missing numeric /{} in docs/state.json",
+                field
+            )
+        })
 }
 
 fn compute_update(state: &Value, cycle: u64, prs: &[u64]) -> Result<MergeUpdate, String> {
@@ -250,10 +255,7 @@ fn update_agent_sessions(
             }
             backfill.insert("status".to_string(), json!("merged"));
             backfill.insert("merged_at".to_string(), json!(merged_at));
-            backfill.insert(
-                "title".to_string(),
-                json!(format!("Backfilled: PR #{}", pr)),
-            );
+            backfill.insert("title".to_string(), json!(format!("Backfilled: PR #{}", pr)));
             backfill.insert("backfilled".to_string(), json!(true));
             sessions.push(json!(backfill));
             eprintln!("Backfilled agent_sessions entry for orphan PR #{}", pr);
