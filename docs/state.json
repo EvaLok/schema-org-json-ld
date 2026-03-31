@@ -6525,7 +6525,8 @@
       "category": "process-adherence",
       "deadline_cycle": 417,
       "deferred_cycle": 412,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "PRs #2037/#2038 (cycle 414): cycle-runner gate enforcement structural fix"
     },
     {
       "category": "receipt-integrity",
