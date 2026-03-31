@@ -6603,7 +6603,8 @@
       "category": "journal-quality",
       "deadline_cycle": 419,
       "deferred_cycle": 414,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "Behavioral fix (cycle 418+): per-commitment MET/NOT MET grading replaces contradictory umbrella labels. Verified in cycles 418-419 journals. Tooling gap: no tool to resolve deferred_findings outside process-review."
     },
     {
       "category": "receipt-verification",
