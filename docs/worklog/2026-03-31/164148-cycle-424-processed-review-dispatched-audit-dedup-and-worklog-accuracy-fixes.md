@@ -31,13 +31,21 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 2
+- **In-flight agent sessions (post-dispatch)**: 3
 - **Pipeline status**: PASS (3 warnings, preliminary C1 check; current-cycle-steps FAIL expected during close-out)
+- **Pipeline status (post-dispatch)**: PASS (3 warnings)
 - **Publish gate**: published
 
-## Next steps
+## Next steps (pre-dispatch)
 
 1. Review and iterate on PR from [#2098](https://github.com/EvaLok/schema-org-json-ld/issues/2098) (Add audit-inbound dedup check to cross-repo tool) when Copilot completes
 2. Review and iterate on PR from [#2100](https://github.com/EvaLok/schema-org-json-ld/issues/2100) (Wire up fixup_latest_worklog_in_flight in record-dispatch main) when Copilot completes
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2098](https://github.com/EvaLok/schema-org-json-ld/issues/2098) (Add audit-inbound dedup check to cross-repo tool) when Copilot completes
+2. Review and iterate on PR from [#2100](https://github.com/EvaLok/schema-org-json-ld/issues/2100) (Wire up fixup_latest_worklog_in_flight in record-dispatch main) when Copilot completes
+3. Review and iterate on PR from [#2102](https://github.com/EvaLok/schema-org-json-ld/issues/2102) ([Cycle Review] Cycle 424 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
