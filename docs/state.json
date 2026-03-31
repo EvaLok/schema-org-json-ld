@@ -6578,7 +6578,8 @@
       "category": "receipt-integrity",
       "deadline_cycle": 418,
       "deferred_cycle": 413,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "PR #2064 (cycle 419): receipt-validate now verifies full 40-char commit SHAs from worklog URLs"
     },
     {
       "category": "journal-quality",
