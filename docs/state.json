@@ -6201,8 +6201,10 @@
     {
       "dispatched_at": "2026-03-31T05:05:39Z",
       "issue": 2068,
+      "merged_at": "2026-03-31T06:33:36Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2069,
+      "status": "merged",
       "title": "Fix process-review: update-in-place for duplicate review.history cycle entries"
     },
     {
@@ -6894,7 +6896,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 20,
     "issue": 2072,
