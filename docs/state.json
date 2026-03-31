@@ -6172,6 +6172,13 @@
       "pr": 2059,
       "status": "merged",
       "title": "[Cycle Review] Cycle 417 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-03-31T03:35:15Z",
+      "issue": 2065,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 418 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -6576,7 +6583,7 @@
       "resolved_ref": "docs/reviews/cycle-417.md"
     }
   ],
-  "dispatch_log_latest": "#2058 [Cycle Review] Cycle 417 end-of-cycle review (cycle 417)",
+  "dispatch_log_latest": "#2065 [Cycle Review] Cycle 418 end-of-cycle review (cycle 418)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -6846,12 +6853,12 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 27,
     "issue": 2060,
     "number": 418,
-    "summary": "0 dispatches, 1 merges (PR #2059)",
+    "summary": "1 dispatch, 1 merges (PR #2059)",
     "timestamp": "2026-03-31T03:29:07Z"
   },
   "last_eva_comment_check": "2026-03-31T03:29:07Z",
@@ -11464,7 +11471,7 @@
     ],
     "last_review_cycle": 417
   },
-  "review_dispatch_consecutive": 8,
+  "review_dispatch_consecutive": 9,
   "review_events_verified_through_cycle": 414,
   "schema_status": {
     "directory_layout": {
