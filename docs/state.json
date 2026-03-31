@@ -6675,7 +6675,8 @@
       "category": "worklog-accuracy",
       "deadline_cycle": 425,
       "deferred_cycle": 420,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-420.md"
     }
   ],
   "dispatch_log_latest": "#2077 [Cycle Review] Cycle 420 end-of-cycle review (cycle 420)",
@@ -11561,7 +11562,8 @@
         ],
         "complacency_score": 3,
         "cycle": 420,
-        "deferred": 3,
+        "deferred": 2,
+        "dispatch_created": 1,
         "finding_count": 3,
         "finding_dispositions": [
           {
@@ -11570,7 +11572,7 @@
           },
           {
             "category": "worklog-accuracy",
-            "disposition": "deferred"
+            "disposition": "dispatch_created"
           },
           {
             "category": "journal-quality",
@@ -11578,7 +11580,7 @@
           }
         ],
         "ignored": 0,
-        "note": "All 3 findings deferred: process-adherence needs write-entry tool fix for pipeline status append; worklog-accuracy needs cycle-receipts timestamp boundary fix; journal-quality behavioral fix to be applied this cycle"
+        "note": "Updated dispositions: worklog-accuracy reclassified to dispatch_created after dispatching #2081 (cycle-receipts inclusive boundary fix). process-adherence and journal-quality remain deferred."
       }
     ],
     "last_review_cycle": 420
