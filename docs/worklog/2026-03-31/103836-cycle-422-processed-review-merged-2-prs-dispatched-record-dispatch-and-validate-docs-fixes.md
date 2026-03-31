@@ -31,13 +31,21 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 2
+- **In-flight agent sessions (post-dispatch)**: 3
 - **Pipeline status**: PASS (3 warnings, preliminary C1 check; current-cycle-steps FAIL expected during close-out)
+- **Pipeline status (post-dispatch)**: PASS (3 warnings)
 - **Publish gate**: published
 
-## Next steps
+## Next steps (pre-dispatch)
 
 1. Review and iterate on PR from [#2086](https://github.com/EvaLok/schema-org-json-ld/issues/2086) (record-dispatch freeze fix) when Copilot completes
 2. Review and iterate on PR from [#2087](https://github.com/EvaLok/schema-org-json-ld/issues/2087) (validate-docs resume-aware self-modifications) when Copilot completes
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2086](https://github.com/EvaLok/schema-org-json-ld/issues/2086) (record-dispatch freeze fix) when Copilot completes
+2. Review and iterate on PR from [#2087](https://github.com/EvaLok/schema-org-json-ld/issues/2087) (validate-docs resume-aware self-modifications) when Copilot completes
+3. Review and iterate on PR from [#2090](https://github.com/EvaLok/schema-org-json-ld/issues/2090) ([Cycle Review] Cycle 422 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
