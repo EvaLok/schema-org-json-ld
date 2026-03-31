@@ -760,7 +760,7 @@ mod tests {
     #[test]
     fn apply_dispatch_patch_leaves_last_cycle_summary_unchanged() {
         let mut state = sample_state();
-        let original_summary = state["last_cycle"]["summary"].clone();
+        let original_last_cycle = state["last_cycle"].clone();
         let model = default_test_model();
         let patch = build_dispatch_patch(
             &state,
@@ -774,14 +774,14 @@ mod tests {
 
         apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
 
-        assert_eq!(state["last_cycle"]["summary"], original_summary);
+        assert_eq!(state["last_cycle"], original_last_cycle);
     }
 
     #[test]
-    fn apply_dispatch_patch_preserves_singular_last_cycle_summary() {
+    fn apply_dispatch_patch_preserves_custom_last_cycle_summary() {
         let mut state = sample_state();
         state["last_cycle"]["summary"] = json!("1 dispatch, 1 merges (PR #700)");
-        let original_summary = state["last_cycle"]["summary"].clone();
+        let original_last_cycle = state["last_cycle"].clone();
         let model = default_test_model();
         let patch = build_dispatch_patch(
             &state,
@@ -795,7 +795,7 @@ mod tests {
 
         apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
 
-        assert_eq!(state["last_cycle"]["summary"], original_summary);
+        assert_eq!(state["last_cycle"], original_last_cycle);
     }
 
     #[test]
