@@ -162,7 +162,7 @@ fn run_with_runner(
             println!("Worklog in-flight count updated in {}", path.display());
         }
         WorklogFixupOutcome::NotFound => {
-            warn("Warning: latest worklog not found; skipping in-flight count fixup");
+            warn("Latest worklog not found; skipping in-flight count fixup");
         }
     }
     if already_recorded {
