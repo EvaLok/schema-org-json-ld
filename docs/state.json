@@ -6271,8 +6271,10 @@
     {
       "dispatched_at": "2026-03-31T10:36:33Z",
       "issue": 2087,
+      "merged_at": "2026-03-31T12:33:39Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2088,
+      "status": "merged",
       "title": "validate-docs resume-aware self-modifications"
     },
     {
@@ -7001,7 +7003,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 16,
     "issue": 2092,
