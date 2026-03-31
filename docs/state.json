@@ -6148,8 +6148,10 @@
     {
       "dispatched_at": "2026-03-30T23:00:24Z",
       "issue": 2055,
+      "merged_at": "2026-03-31T00:32:13Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2056,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 416 end-of-cycle review"
     }
   ],
@@ -6518,8 +6520,8 @@
       "category": "infrastructure-consistency",
       "deadline_cycle": 417,
       "deferred_cycle": 412,
-      "resolved": false,
-      "dropped_rationale": "One-off false positive in record-dispatch auto-detection (review body contained finding-like text). Tool has worked correctly in subsequent cycles 413-416 without manual fallback."
+      "dropped_rationale": "One-off false positive in record-dispatch auto-detection (review body contained finding-like text). Tool has worked correctly in subsequent cycles 413-416 without manual fallback.",
+      "resolved": false
     },
     {
       "category": "process-adherence",
@@ -6663,7 +6665,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 416"
+        "last_refreshed": "cycle 417"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -6811,7 +6813,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 40,
     "issue": 2057,
