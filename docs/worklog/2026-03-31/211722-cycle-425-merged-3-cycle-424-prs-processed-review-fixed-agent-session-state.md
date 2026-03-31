@@ -37,8 +37,7 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 0
-- **Pipeline status**: FAIL (2 warnings)
-- **Pipeline status (post-dispatch)**: PASS (3 warnings, 1 cascade; preliminary C1 check was FAIL due to deferral-accumulation, resolved by reclassifying journal-quality cycle 424 from deferred to actioned)
+- **Pipeline status**: PASS (3 warnings; preliminary C1 was FAIL due to deferral-accumulation, resolved by reclassifying journal-quality cycle 424 from deferred to actioned)
 - **Publish gate**: published
 
 ## Next steps
