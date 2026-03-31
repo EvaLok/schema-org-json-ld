@@ -6818,14 +6818,19 @@
       1461,
       1463,
       1464,
-      1488
+      1488,
+      2096
     ],
-    "closed_this_cycle": [],
+    "closed_this_cycle": [
+      2096
+    ],
     "remaining_open": [
       436,
       699,
       808,
-      809
+      809,
+      2039,
+      2095
     ]
   },
   "field_inventory": {
