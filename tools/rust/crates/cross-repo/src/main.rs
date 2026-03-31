@@ -1,10 +1,11 @@
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use state_schema::{
     check_version, current_cycle_from_state, read_state_value, PublishGate, StateJson,
 };
 use std::collections::HashSet;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -48,6 +49,23 @@ enum CrossRepoCommand {
     CheckQcAck,
     /// List new audit recommendations and stale accepted items
     ProcessAudit,
+    /// Create an audit-inbound issue if one does not already reference the audit recommendation
+    CreateAuditInbound(CreateAuditInboundArgs),
+}
+
+#[derive(Debug, Args)]
+struct CreateAuditInboundArgs {
+    /// Audit recommendation number being responded to
+    #[arg(long)]
+    audit_number: u64,
+
+    /// Issue title
+    #[arg(long)]
+    title: String,
+
+    /// Path to a file containing the issue body
+    #[arg(long)]
+    body_file: PathBuf,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -178,6 +196,13 @@ struct CheckQcAckReport {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+struct CreateAuditInboundReport {
+    duplicate: bool,
+    issue_number: u64,
+    audit_number: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 struct ProcessingSummary {
     new_count: usize,
     skipped_untrusted_count: usize,
@@ -213,20 +238,26 @@ fn main() {
 
 fn execute(cli: &Cli, runner: &dyn CommandRunner) -> Result<String, String> {
     validate_repo_root(&cli.repo_root)?;
-    let state = read_state(&cli.repo_root)?;
 
-    match cli.command {
+    match &cli.command {
         CrossRepoCommand::ProcessQc => {
+            let state = read_state(&cli.repo_root)?;
             let report = process_qc(&cli.repo_root, &state, runner)?;
             render_output(&report, cli.json, print_qc_report)
         }
         CrossRepoCommand::CheckQcAck => {
+            let state = read_state(&cli.repo_root)?;
             let report = check_qc_ack(&cli.repo_root, &state, runner)?;
             render_output(&report, cli.json, print_qc_ack_report)
         }
         CrossRepoCommand::ProcessAudit => {
+            let state = read_state(&cli.repo_root)?;
             let report = process_audit(&cli.repo_root, &state, runner)?;
             render_output(&report, cli.json, print_audit_report)
+        }
+        CrossRepoCommand::CreateAuditInbound(args) => {
+            let report = create_audit_inbound(&cli.repo_root, args, runner)?;
+            render_output(&report, cli.json, print_create_audit_inbound_report)
         }
     }
 }
@@ -356,6 +387,55 @@ fn process_audit(
     })
 }
 
+fn create_audit_inbound(
+    repo_root: &Path,
+    args: &CreateAuditInboundArgs,
+    runner: &dyn CommandRunner,
+) -> Result<CreateAuditInboundReport, String> {
+    let body = fs::read_to_string(&args.body_file).map_err(|error| {
+        format!(
+            "failed to read issue body file {}: {}",
+            args.body_file.display(),
+            error
+        )
+    })?;
+    let existing_issues = fetch_all_audit_inbound_issues(repo_root, runner)?;
+    if let Some(issue_number) =
+        find_duplicate_audit_inbound_issue(&existing_issues.trusted, args.audit_number)
+    {
+        return Ok(CreateAuditInboundReport {
+            duplicate: true,
+            issue_number,
+            audit_number: args.audit_number,
+        });
+    }
+
+    let input_path = write_create_audit_inbound_input(&args.title, &body)?;
+    let create_result = create_audit_inbound_issue(repo_root, runner, &input_path);
+    let cleanup_result = fs::remove_file(&input_path).map_err(|error| {
+        format!(
+            "failed to remove temporary issue payload {}: {}",
+            input_path.display(),
+            error
+        )
+    });
+
+    let issue_number = match (create_result, cleanup_result) {
+        (Ok(issue_number), Ok(())) => issue_number,
+        (Ok(_), Err(error)) => return Err(error),
+        (Err(error), Ok(())) => return Err(error),
+        (Err(error), Err(cleanup_error)) => {
+            return Err(format!("{}; {}", error, cleanup_error));
+        }
+    };
+
+    Ok(CreateAuditInboundReport {
+        duplicate: false,
+        issue_number,
+        audit_number: args.audit_number,
+    })
+}
+
 fn read_state(repo_root: &Path) -> Result<StateJson, String> {
     let value = read_state_value(repo_root)?;
     let state: StateJson = serde_json::from_value(value)
@@ -414,6 +494,27 @@ fn fetch_open_audit_inbound_issues(
 ) -> Result<ParsedIssues<AuditInboundIssue>, String> {
     let api_path = format!(
         "repos/{}/issues?labels=audit-inbound&state=open&sort=created&direction=asc&per_page=100",
+        MAIN_REPO
+    );
+    let value = gh_json(
+        repo_root,
+        runner,
+        &[
+            "api".to_string(),
+            api_path,
+            "--paginate".to_string(),
+            "--slurp".to_string(),
+        ],
+    )?;
+    parse_audit_inbound_issues(value)
+}
+
+fn fetch_all_audit_inbound_issues(
+    repo_root: &Path,
+    runner: &dyn CommandRunner,
+) -> Result<ParsedIssues<AuditInboundIssue>, String> {
+    let api_path = format!(
+        "repos/{}/issues?labels=audit-inbound&state=all&per_page=100",
         MAIN_REPO
     );
     let value = gh_json(
@@ -638,6 +739,20 @@ fn detect_stale_accepted(
     Ok(stale)
 }
 
+fn find_duplicate_audit_inbound_issue(
+    issues: &[AuditInboundIssue],
+    audit_number: u64,
+) -> Option<u64> {
+    issues
+        .iter()
+        .find(|issue| {
+            let accepted_references = extract_accepted_audit_references(issue);
+            accepted_references.contains(&audit_number)
+                || extract_referenced_audit_numbers(issue).contains(&audit_number)
+        })
+        .map(|issue| issue.number)
+}
+
 fn extract_accepted_audit_references(issue: &AuditInboundIssue) -> Vec<u64> {
     let sections = split_audit_sections(&issue.body);
     let mut references = Vec::new();
@@ -650,6 +765,28 @@ fn extract_accepted_audit_references(issue: &AuditInboundIssue) -> Vec<u64> {
 
     if references.is_empty() && contains_word(&issue.body, "accepted") {
         if let Some(audit_number) = extract_audit_number(&issue.body) {
+            references.push(audit_number);
+        }
+    }
+
+    references.sort_unstable();
+    references.dedup();
+    references
+}
+
+fn extract_referenced_audit_numbers(issue: &AuditInboundIssue) -> Vec<u64> {
+    let mut references = split_audit_sections(&issue.body)
+        .into_iter()
+        .map(|(audit_number, _)| audit_number)
+        .collect::<Vec<_>>();
+
+    for text in [issue.title.as_str(), issue.body.as_str()] {
+        if let Some(audit_number) = extract_audit_number(text) {
+            references.push(audit_number);
+        }
+        if let Some(audit_number) =
+            extract_number_after_marker(text, &format!("{}#", AUDIT_REPO).to_ascii_lowercase())
+        {
             references.push(audit_number);
         }
     }
@@ -1151,6 +1288,20 @@ fn print_audit_report(report: &ProcessAuditReport) -> String {
     lines.join("\n")
 }
 
+fn print_create_audit_inbound_report(report: &CreateAuditInboundReport) -> String {
+    if report.duplicate {
+        format!(
+            "Duplicate detected: audit-inbound issue #{} already references audit #{}. Skipping creation.",
+            report.issue_number, report.audit_number
+        )
+    } else {
+        format!(
+            "Created audit-inbound issue #{} for audit #{}",
+            report.issue_number, report.audit_number
+        )
+    }
+}
+
 fn validate_repo_root(repo_root: &Path) -> Result<(), String> {
     if !repo_root.exists() {
         return Err(format!(
@@ -1159,6 +1310,54 @@ fn validate_repo_root(repo_root: &Path) -> Result<(), String> {
         ));
     }
     Ok(())
+}
+
+fn write_create_audit_inbound_input(
+    title: &str,
+    body: &str,
+) -> Result<PathBuf, String> {
+    let input_path = std::env::temp_dir().join(format!(
+        ".create-audit-inbound-{}.json",
+        std::process::id()
+    ));
+    let payload = serde_json::json!({
+        "title": title,
+        "body": body,
+        "labels": ["audit-inbound"],
+    });
+    let payload_bytes = serde_json::to_vec(&payload)
+        .map_err(|error| format!("failed to serialize audit-inbound issue payload: {}", error))?;
+    fs::write(&input_path, payload_bytes).map_err(|error| {
+        format!(
+            "failed to write temporary issue payload {}: {}",
+            input_path.display(),
+            error
+        )
+    })?;
+    Ok(input_path)
+}
+
+fn create_audit_inbound_issue(
+    repo_root: &Path,
+    runner: &dyn CommandRunner,
+    input_path: &Path,
+) -> Result<u64, String> {
+    let response = gh_json(
+        repo_root,
+        runner,
+        &[
+            "api".to_string(),
+            format!("repos/{}/issues", MAIN_REPO),
+            "--method".to_string(),
+            "POST".to_string(),
+            "--input".to_string(),
+            input_path.display().to_string(),
+        ],
+    )?;
+    response
+        .get("number")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| "created issue response missing number".to_string())
 }
 
 #[cfg(test)]
@@ -1258,6 +1457,7 @@ mod tests {
         assert!(help.contains("process-qc"));
         assert!(help.contains("check-qc-ack"));
         assert!(help.contains("process-audit"));
+        assert!(help.contains("create-audit-inbound"));
     }
 
     #[test]
@@ -1499,6 +1699,151 @@ mod tests {
             .expect_err("invalid pending request should fail closed");
 
         assert!(error.contains("unsupported shape"));
+    }
+
+    #[test]
+    fn create_audit_inbound_skips_duplicate_issue() {
+        let repo = TempRepo::new(&sample_state());
+        let body_file = repo.path().join("audit-body.md");
+        fs::write(
+            &body_file,
+            "Responding to https://github.com/EvaLok/schema-org-json-ld-audit/issues/348",
+        )
+        .expect("body file should be written");
+        let runner = MockRunner::with_results(
+            vec![],
+            vec![ok_json(json!([[
+                audit_inbound_issue_json(
+                    812,
+                    "[Audit] Existing response",
+                    "Responding to https://github.com/EvaLok/schema-org-json-ld-audit/issues/348",
+                    TRUSTED_AUTHOR
+                )
+            ]]))],
+        );
+        let cli = Cli {
+            repo_root: repo.path().to_path_buf(),
+            json: false,
+            command: CrossRepoCommand::CreateAuditInbound(CreateAuditInboundArgs {
+                audit_number: 348,
+                title: "test".to_string(),
+                body_file,
+            }),
+        };
+
+        let output = execute(&cli, &runner).expect("duplicate create should succeed");
+
+        assert_eq!(
+            output,
+            "Duplicate detected: audit-inbound issue #812 already references audit #348. Skipping creation."
+        );
+        assert_eq!(runner.gh_calls().len(), 1);
+        assert_eq!(
+            runner.gh_calls()[0],
+            vec![
+                "api".to_string(),
+                format!(
+                    "repos/{}/issues?labels=audit-inbound&state=all&per_page=100",
+                    MAIN_REPO
+                ),
+                "--paginate".to_string(),
+                "--slurp".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn create_audit_inbound_creates_issue_when_no_duplicate_exists() {
+        let repo = TempRepo::new(&sample_state());
+        let body_file = repo.path().join("audit-body.md");
+        fs::write(
+            &body_file,
+            "Responding to https://github.com/EvaLok/schema-org-json-ld-audit/issues/9999",
+        )
+        .expect("body file should be written");
+        let runner = MockRunner::with_results(
+            vec![],
+            vec![
+                ok_json(json!([[
+                    audit_inbound_issue_json(
+                        812,
+                        "[Audit] Existing response",
+                        "Responding to https://github.com/EvaLok/schema-org-json-ld-audit/issues/348",
+                        TRUSTED_AUTHOR
+                    )
+                ]])),
+                ok_json(json!({
+                    "number": 913
+                })),
+            ],
+        );
+        let cli = Cli {
+            repo_root: repo.path().to_path_buf(),
+            json: false,
+            command: CrossRepoCommand::CreateAuditInbound(CreateAuditInboundArgs {
+                audit_number: 9999,
+                title: "test".to_string(),
+                body_file,
+            }),
+        };
+
+        let output = execute(&cli, &runner).expect("issue creation should succeed");
+
+        assert_eq!(output, "Created audit-inbound issue #913 for audit #9999");
+        assert_eq!(runner.gh_calls().len(), 2);
+        assert_eq!(runner.gh_calls()[1][0], "api");
+        assert_eq!(
+            runner.gh_calls()[1][1],
+            format!("repos/{}/issues", MAIN_REPO)
+        );
+        assert_eq!(runner.gh_calls()[1][2], "--method");
+        assert_eq!(runner.gh_calls()[1][3], "POST");
+        assert_eq!(runner.gh_calls()[1][4], "--input");
+        assert!(
+            !Path::new(&runner.gh_calls()[1][5]).exists(),
+            "temporary input file should be cleaned up"
+        );
+    }
+
+    #[test]
+    fn create_audit_inbound_checks_closed_issue_references_too() {
+        let repo = TempRepo::new(&sample_state());
+        let body_file = repo.path().join("audit-body.md");
+        fs::write(&body_file, "Responding to audit #501").expect("body file should be written");
+        let runner = MockRunner::with_results(
+            vec![],
+            vec![ok_json(json!([[
+                audit_inbound_issue_json(
+                    920,
+                    "[Audit] Closed response",
+                    "Previously handled in audit #501.",
+                    TRUSTED_AUTHOR
+                )
+            ]]))],
+        );
+        let cli = Cli {
+            repo_root: repo.path().to_path_buf(),
+            json: false,
+            command: CrossRepoCommand::CreateAuditInbound(CreateAuditInboundArgs {
+                audit_number: 501,
+                title: "test".to_string(),
+                body_file,
+            }),
+        };
+
+        let output = execute(&cli, &runner).expect("closed duplicate should succeed");
+
+        assert_eq!(
+            output,
+            "Duplicate detected: audit-inbound issue #920 already references audit #501. Skipping creation."
+        );
+        assert_eq!(
+            runner.gh_calls()[0][1],
+            format!(
+                "repos/{}/issues?labels=audit-inbound&state=all&per_page=100",
+                MAIN_REPO
+            )
+        );
     }
 
     fn sample_state() -> Value {
