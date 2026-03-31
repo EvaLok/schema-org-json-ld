@@ -13,7 +13,7 @@
 ## 3. [journal-quality] The new observability rule was violated immediately by a backwards commitment
 
 **File**: docs/journal/2026-03-31.md:226
-**Evidence**: Cycle 422 added a new C3 checklist constraint requiring journal commitments to name an exact check and expected outcome. But the very next journal commitment says: `Verify C3 pipeline-status-preliminary constraint: this worklog says preliminary. Observable: grep preliminary on worklog returns non-zero.` The referenced worklog does contain the word `preliminary` at `docs/worklog/2026-03-31/103836-cycle-422-processed-review-merged-2-prs-dispatched-record-dispatch-and-validate-docs-fixes.md:35`, so `grep preliminary` should return zero on success, not non-zero. The observable is inverted and therefore not gradeable as written.
+**Evidence**: Cycle 422 added a new C3 checklist constraint requiring journal commitments to name an exact check and expected outcome. But the very next journal commitment says: `Verify C3 pipeline-status-preliminary constraint: this worklog says preliminary. Observable: grep preliminary on worklog returns non-zero.` The referenced worklog does contain the word `preliminary` at `docs/worklog/2026-03-31/103836-cycle-422-processed-review-merged-2-prs-dispatched-record-dispatch-and-validate-docs-fixes.md:35`, so `grep preliminary` should return zero on success, not non-zero. The observable is inverted and therefore not gradable as written.
 **Recommendation**: Write commitments with the exact command and the correct expected result semantics, e.g. `grep -q preliminary <worklog>` exits 0. Before publishing a journal entry, sanity-check that each stated observable actually matches the artifact it references.
 
 ## Complacency score
