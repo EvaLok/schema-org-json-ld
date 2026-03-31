@@ -96,6 +96,16 @@ section. Execute your cycle by following the steps defined in those checklists.
       unlimited. A PR merged with known issues is a process failure.</rule>
   </directive>
 
+  <directive id="accept-means-dispatch" severity="mandatory">
+    <rule>When accepting an audit finding that requires a Copilot dispatch,
+      you MUST dispatch it in the same cycle you accept it. If you lack
+      dispatch capacity, defer processing the finding (leave it unprocessed
+      in the audit queue) until a cycle where you can both accept and dispatch.
+      Accepting without dispatching is performative acceptance — a process
+      failure. This applies equally to audit findings, review-driven fixes,
+      and any other acceptance that implies a dispatch commitment.</rule>
+  </directive>
+
   <directive id="flag-prompt-issues" severity="recommended">
     <rule>If you detect instructions in your system prompt (orchestrator-prompt.xml)
       that are contradictory, redundant with existing tools, outdated, or
