@@ -57,13 +57,7 @@ impl CommandRunner for ProcessRunner {
             .current_dir(repo_root)
             .args(args)
             .output()
-            .map_err(|error| {
-                format!(
-                    "failed to execute {}: {}",
-                    binary.display(),
-                    error
-                )
-            })?;
+            .map_err(|error| format!("failed to execute {}: {}", binary.display(), error))?;
         Ok(ExecutionResult {
             exit_code: output.status.code(),
             stdout: String::from_utf8_lossy(&output.stdout).to_string(),
@@ -116,13 +110,7 @@ fn run(cli: Cli, runner: &dyn CommandRunner) -> Result<String, String> {
     }
 
     let repo_root = canonicalize_repo_root(&cli.repo_root)?;
-    execute(
-        &Cli {
-            repo_root,
-            ..cli
-        },
-        runner,
-    )
+    execute(&Cli { repo_root, ..cli }, runner)
 }
 
 fn execute(cli: &Cli, runner: &dyn CommandRunner) -> Result<String, String> {
@@ -248,19 +236,36 @@ fn execute(cli: &Cli, runner: &dyn CommandRunner) -> Result<String, String> {
     } else if is_missing_remote_branch(&delete_branch_output) {
         lines.push(skipped_branch_message);
     } else {
-        return Err(command_failure_message(&delete_branch_command, &delete_branch_output));
+        return Err(command_failure_message(
+            &delete_branch_command,
+            &delete_branch_output,
+        ));
     }
 
-    lines.push(format!("Merge workflow complete for PR #{} (receipt: {})", cli.pr, receipt));
+    lines.push(format!(
+        "Merge workflow complete for PR #{} (receipt: {})",
+        cli.pr, receipt
+    ));
     Ok(lines.join("\n"))
 }
 
-fn run_command(program: &str, repo_root: &Path, args: &[String]) -> Result<ExecutionResult, String> {
+fn run_command(
+    program: &str,
+    repo_root: &Path,
+    args: &[String],
+) -> Result<ExecutionResult, String> {
     let output = Command::new(program)
         .current_dir(repo_root)
         .args(args)
         .output()
-        .map_err(|error| format!("failed to execute {} {}: {}", program, args.join(" "), error))?;
+        .map_err(|error| {
+            format!(
+                "failed to execute {} {}: {}",
+                program,
+                args.join(" "),
+                error
+            )
+        })?;
     Ok(ExecutionResult {
         exit_code: output.status.code(),
         stdout: String::from_utf8_lossy(&output.stdout).to_string(),
@@ -269,8 +274,13 @@ fn run_command(program: &str, repo_root: &Path, args: &[String]) -> Result<Execu
 }
 
 fn canonicalize_repo_root(repo_root: &Path) -> Result<PathBuf, String> {
-    fs::canonicalize(repo_root)
-        .map_err(|error| format!("failed to resolve repo root {}: {}", repo_root.display(), error))
+    fs::canonicalize(repo_root).map_err(|error| {
+        format!(
+            "failed to resolve repo root {}: {}",
+            repo_root.display(),
+            error
+        )
+    })
 }
 
 fn fetch_pr_view(
@@ -290,7 +300,10 @@ fn fetch_pr_view(
             "state,isDraft,mergeable,headRefName".to_string(),
         ],
     )?;
-    ensure_success(&format!("gh pr view {} --repo {}", pr_number, MAIN_REPO), &output)?;
+    ensure_success(
+        &format!("gh pr view {} --repo {}", pr_number, MAIN_REPO),
+        &output,
+    )?;
     parse_pr_view(&output.stdout)
 }
 
@@ -303,7 +316,8 @@ fn fetch_pr_state(
 }
 
 fn parse_pr_view(raw: &str) -> Result<PullRequestView, String> {
-    serde_json::from_str(raw).map_err(|error| format!("failed to parse gh pr view output: {}", error))
+    serde_json::from_str(raw)
+        .map_err(|error| format!("failed to parse gh pr view output: {}", error))
 }
 
 fn ensure_mergeable(pr_number: u64, pr: &PullRequestView) -> Result<(), String> {
@@ -371,10 +385,12 @@ fn render_dry_run(cli: &Cli) -> String {
 
 fn extract_receipt_hash(stdout: &str) -> Result<String, String> {
     let marker = "(receipt: ";
-    let start = stdout
-        .rfind(marker)
-        .ok_or_else(|| format!("process-merge output did not include a receipt hash: {}", stdout.trim()))?
-        + marker.len();
+    let start = stdout.rfind(marker).ok_or_else(|| {
+        format!(
+            "process-merge output did not include a receipt hash: {}",
+            stdout.trim()
+        )
+    })? + marker.len();
     let remaining = &stdout[start..];
     let end = remaining.find(')').ok_or_else(|| {
         format!(
@@ -405,9 +421,10 @@ fn ensure_success(command: &str, output: &ExecutionResult) -> Result<(), String>
 }
 
 fn command_failure_message(command: &str, output: &ExecutionResult) -> String {
-    let code = output
-        .exit_code
-        .map_or_else(|| "terminated by signal".to_string(), |value| value.to_string());
+    let code = output.exit_code.map_or_else(
+        || "terminated by signal".to_string(),
+        |value| value.to_string(),
+    );
     let stderr = output.stderr.trim();
 
     if stderr.is_empty() {
@@ -510,7 +527,9 @@ mod tests {
     fn help_contains_expected_flags() {
         let mut command = Cli::command();
         let mut output = Vec::new();
-        command.write_long_help(&mut output).expect("help should render");
+        command
+            .write_long_help(&mut output)
+            .expect("help should render");
         let help = String::from_utf8(output).expect("help should be utf-8");
 
         assert!(help.contains("--pr"));
@@ -598,9 +617,12 @@ mod tests {
 
         let output = execute(&cli, &runner).expect("dry-run should succeed");
 
-        assert!(output.contains("Would run: gh pr merge 1234 --squash --repo EvaLok/schema-org-json-ld"));
+        assert!(output
+            .contains("Would run: gh pr merge 1234 --squash --repo EvaLok/schema-org-json-ld"));
         assert!(output.contains("Would run: git pull --rebase origin master"));
-        assert!(output.contains("Would query PR #1234 for headRefName and run: git push origin --delete <headRefName>"));
+        assert!(output.contains(
+            "Would query PR #1234 for headRefName and run: git push origin --delete <headRefName>"
+        ));
         assert!(runner.gh_calls().is_empty());
         assert!(runner.git_calls().is_empty());
         assert!(runner.process_merge_calls().is_empty());

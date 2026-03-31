@@ -188,7 +188,12 @@ fn check_review_agent_pointer(state: &StateJson) -> CheckResult {
 fn check_review_history_no_duplicate_cycles(state: &StateJson) -> CheckResult {
     let review_agent = match state.extra.get("review_agent") {
         Some(value) => value,
-        None => return warn("review_history_no_duplicate_cycles", "missing field: review_agent"),
+        None => {
+            return warn(
+                "review_history_no_duplicate_cycles",
+                "missing field: review_agent",
+            )
+        }
     };
 
     let history = match review_agent.get("history").and_then(Value::as_array) {
@@ -642,9 +647,7 @@ fn count_receipt_activity_for_cycle(
     let dispatches = candidate_commits
         .iter()
         .filter(|commit| commit.subject.starts_with("state(record-dispatch):"))
-        .filter(|commit| {
-            cycle_complete_at.is_none_or(|timestamp| commit.committed_at < timestamp)
-        })
+        .filter(|commit| cycle_complete_at.is_none_or(|timestamp| commit.committed_at < timestamp))
         .count();
     let merges = candidate_commits
         .iter()
@@ -1794,11 +1797,7 @@ mod tests {
         let check = check_review_history_no_duplicate_cycles(&state);
         assert_eq!(check.status, CheckStatus::Fail);
         assert!(
-            check
-                .details
-                .as_deref()
-                .unwrap_or_default()
-                .contains("9"),
+            check.details.as_deref().unwrap_or_default().contains("9"),
             "failure details must mention the duplicated cycle number"
         );
     }
