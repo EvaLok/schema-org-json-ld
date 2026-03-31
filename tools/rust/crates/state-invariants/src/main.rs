@@ -3,7 +3,7 @@ use clap::Parser;
 use serde::Serialize;
 use serde_json::Value;
 use state_schema::{StateJson, VALID_PHASES};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -88,6 +88,7 @@ fn read_state_json(repo_root: &Path) -> Result<StateJson, String> {
 fn run_checks(repo_root: &Path, state: &StateJson) -> Report {
     let checks = vec![
         check_review_agent_pointer(state),
+        check_review_history_no_duplicate_cycles(state),
         check_review_history_accounting(state),
         check_review_history_categories(state),
         check_blockers_narrative(state),
@@ -182,6 +183,57 @@ fn check_review_agent_pointer(state: &StateJson) -> CheckResult {
     }
 
     pass("review_agent_pointer")
+}
+
+fn check_review_history_no_duplicate_cycles(state: &StateJson) -> CheckResult {
+    let review_agent = match state.extra.get("review_agent") {
+        Some(value) => value,
+        None => return warn("review_history_no_duplicate_cycles", "missing field: review_agent"),
+    };
+
+    let history = match review_agent.get("history").and_then(Value::as_array) {
+        Some(history) => history,
+        None => {
+            return warn(
+                "review_history_no_duplicate_cycles",
+                "missing field: review_agent.history",
+            )
+        }
+    };
+
+    let mut seen: HashMap<i64, usize> = HashMap::new();
+    let mut duplicates: BTreeSet<i64> = BTreeSet::new();
+
+    for (index, entry) in history.iter().enumerate() {
+        let cycle = match entry.get("cycle").and_then(Value::as_i64) {
+            Some(cycle) => cycle,
+            None => {
+                return warn(
+                    "review_history_no_duplicate_cycles",
+                    format!("missing field: review_agent.history[{}].cycle", index),
+                )
+            }
+        };
+        if seen.insert(cycle, index).is_some() {
+            duplicates.insert(cycle);
+        }
+    }
+
+    if duplicates.is_empty() {
+        return pass("review_history_no_duplicate_cycles");
+    }
+
+    fail(
+        "review_history_no_duplicate_cycles",
+        format!(
+            "duplicate review.history cycle(s) found: {}",
+            duplicates
+                .iter()
+                .map(|c| c.to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+    )
 }
 
 fn check_review_history_accounting(state: &StateJson) -> CheckResult {
@@ -1440,6 +1492,10 @@ fn print_human_report(report: &Report) {
 
     let labels = [
         ("review_agent_pointer", "review_agent pointer"),
+        (
+            "review_history_no_duplicate_cycles",
+            "review history no duplicate cycles",
+        ),
         ("review_history_accounting", "review history accounting"),
         ("review_history_categories", "review history categories"),
         ("blockers_narrative", "blockers narrative"),
@@ -1710,6 +1766,59 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("must match latest history entry"));
+    }
+
+    #[test]
+    fn review_history_no_duplicate_cycles_passes_for_unique_cycles() {
+        let mut value = minimal_valid_state();
+        value["review_agent"]["history"] = json!([
+            {"cycle": 9, "finding_count": 1, "actioned": 1, "deferred": 0, "ignored": 0, "complacency_score": 1, "categories": ["a"]},
+            {"cycle": 10, "finding_count": 1, "actioned": 0, "deferred": 1, "ignored": 0, "complacency_score": 2, "categories": ["b"]}
+        ]);
+
+        let state = state_from_json(value);
+        let check = check_review_history_no_duplicate_cycles(&state);
+        assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn review_history_no_duplicate_cycles_fails_for_duplicate_cycle() {
+        let mut value = minimal_valid_state();
+        value["review_agent"]["history"] = json!([
+            {"cycle": 9, "finding_count": 1, "actioned": 0, "deferred": 1, "ignored": 0, "complacency_score": 1, "categories": ["a"]},
+            {"cycle": 10, "finding_count": 1, "actioned": 0, "deferred": 1, "ignored": 0, "complacency_score": 1, "categories": ["b"]},
+            {"cycle": 9, "finding_count": 2, "actioned": 1, "deferred": 1, "ignored": 0, "complacency_score": 2, "categories": ["a"]}
+        ]);
+
+        let state = state_from_json(value);
+        let check = check_review_history_no_duplicate_cycles(&state);
+        assert_eq!(check.status, CheckStatus::Fail);
+        assert!(
+            check
+                .details
+                .as_deref()
+                .unwrap_or_default()
+                .contains("9"),
+            "failure details must mention the duplicated cycle number"
+        );
+    }
+
+    #[test]
+    fn review_history_no_duplicate_cycles_reports_all_duplicates() {
+        let mut value = minimal_valid_state();
+        value["review_agent"]["history"] = json!([
+            {"cycle": 5, "finding_count": 1, "actioned": 0, "deferred": 1, "ignored": 0, "complacency_score": 1, "categories": ["a"]},
+            {"cycle": 7, "finding_count": 1, "actioned": 0, "deferred": 1, "ignored": 0, "complacency_score": 1, "categories": ["b"]},
+            {"cycle": 5, "finding_count": 1, "actioned": 1, "deferred": 0, "ignored": 0, "complacency_score": 1, "categories": ["a"]},
+            {"cycle": 7, "finding_count": 1, "actioned": 1, "deferred": 0, "ignored": 0, "complacency_score": 1, "categories": ["b"]}
+        ]);
+
+        let state = state_from_json(value);
+        let check = check_review_history_no_duplicate_cycles(&state);
+        assert_eq!(check.status, CheckStatus::Fail);
+        let details = check.details.as_deref().unwrap_or_default();
+        assert!(details.contains("5"), "must mention cycle 5");
+        assert!(details.contains("7"), "must mention cycle 7");
     }
 
     #[test]
@@ -2481,45 +2590,45 @@ mod tests {
         let state = state_from_json(minimal_valid_state());
         let report = run_checks(Path::new("."), &state);
 
-        assert_eq!(report.checks.len(), 17);
+        assert_eq!(report.checks.len(), 18);
         assert_eq!(
-            report.checks.get(7).map(|check| check.name),
+            report.checks.get(8).map(|check| check.name),
             Some("future_cycle_freshness")
         );
         assert_eq!(
-            report.checks.get(8).map(|check| check.name),
+            report.checks.get(9).map(|check| check.name),
             Some("cycle_phase_consistency")
         );
         assert_eq!(
-            report.checks.get(6).map(|check| check.name),
+            report.checks.get(7).map(|check| check.name),
             Some("last_cycle_summary_receipts")
         );
         assert_eq!(
-            report.checks.get(10).map(|check| check.name),
+            report.checks.get(11).map(|check| check.name),
             Some("chronic_verification_deadline")
         );
         assert_eq!(
-            report.checks.get(11).map(|check| check.name),
+            report.checks.get(12).map(|check| check.name),
             Some("chronic_intermediate_state")
         );
         assert_eq!(
-            report.checks.get(11).map(|check| check.status),
+            report.checks.get(12).map(|check| check.status),
             Some(CheckStatus::Pass)
         );
         assert_eq!(
-            report.checks.get(12).map(|check| check.name),
+            report.checks.get(13).map(|check| check.name),
             Some("review_events_verified")
         );
         assert_eq!(
-            report.checks.get(13).map(|check| check.name),
+            report.checks.get(14).map(|check| check.name),
             Some("in_flight_sessions_consistency")
         );
         assert_eq!(
-            report.checks.get(14).map(|check| check.name),
+            report.checks.get(15).map(|check| check.name),
             Some("pending_audit_deadlines")
         );
         assert_eq!(
-            report.checks.get(15).map(|check| check.name),
+            report.checks.get(16).map(|check| check.name),
             Some("agent_sessions_reconciliation")
         );
         assert_eq!(
