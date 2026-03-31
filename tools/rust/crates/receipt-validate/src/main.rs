@@ -3,15 +3,9 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::fs;
-#[cfg(test)]
-use std::io::ErrorKind;
-#[cfg(test)]
-use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::OnceLock;
-#[cfg(test)]
-use std::time::{SystemTime, UNIX_EPOCH};
 
 const RECEIPT_HEADER_PATTERN_STR: &str = r"^\|\s*Tool\s*\|\s*Receipt\s*\|\s*Link\s*\|\s*$";
 const RECEIPT_SEPARATOR_PATTERN_STR: &str = r"^\|\s*-+\s*\|\s*-+\s*\|\s*-+\s*\|\s*$";
@@ -39,7 +33,7 @@ struct Cli {
     json: bool,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 struct CanonicalReceiptEntry {
     receipt: String,
     commit: String,
@@ -300,6 +294,9 @@ fn extract_receipt_from_row(row: &str) -> Result<Option<WorklogReceiptEntry>, St
         return Ok(None);
     };
 
+    // The Link column is the canonical location for the worklog's GitHub commit URL.
+    // Fall back to the whole row so older or slightly malformed markdown still gets checked
+    // when the URL is present outside the expected third column.
     let full_sha = cells
         .get(2)
         .and_then(|cell| extract_full_sha_from_cell(cell))
@@ -371,6 +368,10 @@ fn git_commit_exists(repo_root: &Path, sha: &str) -> Result<bool, String> {
 
     let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
     match output.status.code() {
+        // git cat-file reports missing objects via a non-zero exit and a "not a valid object"
+        // style message, but uses the same exit code for broader git failures. Treat only the
+        // known missing-object messages as validation failures; surface everything else as an
+        // execution error so the tool fails closed when it cannot reliably verify the link.
         Some(128) | Some(129)
             if stderr.contains("Not a valid object name")
                 || stderr.contains("could not get object info") =>
@@ -447,6 +448,10 @@ fn receipt_url_pattern() -> &'static Regex {
 mod tests {
     use super::*;
     use std::env;
+    use std::io::ErrorKind;
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     fn canonical_entries(entries: &[(&str, &str)]) -> Vec<CanonicalReceiptEntry> {
         entries
@@ -666,6 +671,12 @@ mod tests {
             Some(full_sha.to_string())
         );
         assert_eq!(
+            extract_full_sha_from_cell(
+                "[link](https://github.com/EvaLok/schema-org-json-ld/commit/4E64161D6675ca2aac5915527f39b891af1bbe68)"
+            ),
+            expected
+        );
+        assert_eq!(
             extract_full_sha_from_cell(&format!(
                 "[link](https://github.com/EvaLok/schema-org-json-ld/commit/{full_sha}#diff)"
             )),
@@ -706,7 +717,7 @@ mod tests {
         repo.init();
         let (short_sha, _full_sha) =
             repo.commit("notes/valid.txt", "valid\n", "state(cycle-complete): close cycle [cycle 1]");
-        let broken_full_sha = format!("{short_sha}d2b1e2c26e40bff92f8f4e0210f3e0fd2");
+        let broken_full_sha = format!("{short_sha}{}", "0".repeat(33));
         repo.write_cycle_receipts(&[(&short_sha, "state(cycle-complete): close cycle [cycle 1]")]);
         let worklog_path = repo.write_worklog(&format!(
             "## Commit receipts\n\n| Tool | Receipt | Link |\n|------|---------|------|\n| cycle-complete | {short_sha} | [link](https://github.com/EvaLok/schema-org-json-ld/commit/{broken_full_sha}) |\n"
@@ -773,10 +784,18 @@ mod tests {
 
         fn init(&self) {
             git_success(&self.path, ["init"]);
-            git_success(&self.path, ["config", "user.name", "Receipt Validate Tests"]);
             git_success(
                 &self.path,
-                ["config", "user.email", "receipt-validate-tests@example.com"],
+                ["config", "--local", "user.name", "Receipt Validate Tests"],
+            );
+            git_success(
+                &self.path,
+                [
+                    "config",
+                    "--local",
+                    "user.email",
+                    "receipt-validate-tests@example.com",
+                ],
             );
             self.write_file("README.md", "test repo\n");
             git_success(&self.path, ["add", "--", "README.md"]);
@@ -810,9 +829,11 @@ mod tests {
             let json = serde_json::to_string(
                 &entries
                     .iter()
-                    .map(|(receipt, commit)| CanonicalReceiptEntry {
-                        receipt: (*receipt).to_string(),
-                        commit: (*commit).to_string(),
+                    .map(|(receipt, commit)| {
+                        serde_json::json!({
+                            "receipt": receipt,
+                            "commit": commit,
+                        })
                     })
                     .collect::<Vec<_>>(),
             )
@@ -822,10 +843,13 @@ mod tests {
                 format!("#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\\n' '{json}'\n"),
             )
             .expect("write cycle-receipts wrapper");
+            #[cfg(unix)]
             let mut permissions = fs::metadata(&wrapper)
                 .expect("wrapper metadata")
                 .permissions();
+            #[cfg(unix)]
             permissions.set_mode(0o755);
+            #[cfg(unix)]
             fs::set_permissions(&wrapper, permissions).expect("set wrapper permissions");
         }
 
