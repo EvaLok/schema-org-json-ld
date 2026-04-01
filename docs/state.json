@@ -6346,6 +6346,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add --refresh-unchanged flag to metric-snapshot for stale after-change markers"
+    },
+    {
+      "dispatched_at": "2026-04-01T00:50:37Z",
+      "issue": 2112,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 426 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -6808,7 +6815,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2105 [Cycle Review] Cycle 425 end-of-cycle review (cycle 425)",
+  "dispatch_log_latest": "#2112 [Cycle Review] Cycle 426 end-of-cycle review (cycle 426)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7081,7 +7088,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 27,
     "issue": 2107,
@@ -11861,7 +11868,7 @@
     ],
     "last_review_cycle": 425
   },
-  "review_dispatch_consecutive": 2,
+  "review_dispatch_consecutive": 3,
   "review_events_verified_through_cycle": 420,
   "schema_status": {
     "directory_layout": {
