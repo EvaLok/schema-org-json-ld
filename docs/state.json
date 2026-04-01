@@ -6425,6 +6425,13 @@
       "pr": 2136,
       "status": "merged",
       "title": "[Cycle Review] Cycle 430 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-04-01T20:39:28Z",
+      "issue": 2142,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 431 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -6932,7 +6939,7 @@
       "resolved_ref": "docs/reviews/cycle-430.md"
     }
   ],
-  "dispatch_log_latest": "#2135 [Cycle Review] Cycle 430 end-of-cycle review (cycle 430)",
+  "dispatch_log_latest": "#2142 [Cycle Review] Cycle 431 end-of-cycle review (cycle 431)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7205,7 +7212,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 20,
     "issue": 2137,
@@ -12102,7 +12109,7 @@
     ],
     "last_review_cycle": 430
   },
-  "review_dispatch_consecutive": 3,
+  "review_dispatch_consecutive": 4,
   "review_events_verified_through_cycle": 420,
   "schema_status": {
     "directory_layout": {
