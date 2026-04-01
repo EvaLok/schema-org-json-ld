@@ -31,12 +31,19 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 1
+- **In-flight agent sessions (post-dispatch)**: 2
 - **Pipeline status**: PASS (3 warnings: stale field inventory, deferral-accumulation, step-comments)
+- **Pipeline status (post-dispatch)**: PASS (3 warnings)
 - **Publish gate**: published
 
-## Next steps
+## Next steps (pre-dispatch)
 
 1. Review and iterate on PR from [#2110](https://github.com/EvaLok/schema-org-json-ld/issues/2110) (Add --refresh-unchanged flag to metric-snapshot for stale after-change markers) when Copilot completes
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2110](https://github.com/EvaLok/schema-org-json-ld/issues/2110) (Add --refresh-unchanged flag to metric-snapshot for stale after-change markers) when Copilot completes
+2. Review and iterate on PR from [#2112](https://github.com/EvaLok/schema-org-json-ld/issues/2112) ([Cycle Review] Cycle 426 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
