@@ -21,6 +21,10 @@
 - [#2138](https://github.com/EvaLok/schema-org-json-ld/issues/2138): write-entry audit links (dispatched)
 - [#2140](https://github.com/EvaLok/schema-org-json-ld/issues/2140): C5.5 blocking warnings (dispatched)
 
+### Issues processed (post-dispatch)
+
+- [#2142](https://github.com/EvaLok/schema-org-json-ld/issues/2142): [Cycle Review] Cycle 431 end-of-cycle review (in_flight)
+
 ## Self-modifications
 
 - **`COMPLETION_CHECKLIST.xml`**: added final-state-accuracy constraint to C3
@@ -28,13 +32,18 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 0
+- **In-flight agent sessions (post-dispatch)**: 1
 - **Pipeline status**: PASS (3 warnings)
 - **Publish gate**: published
 
-## Next steps
+## Next steps (pre-dispatch)
 
 1. Review and iterate on PR from [#2138](https://github.com/EvaLok/schema-org-json-ld/issues/2138) (write-entry audit issue links) when Copilot completes
 2. Review and iterate on PR from [#2140](https://github.com/EvaLok/schema-org-json-ld/issues/2140) (C5.5 blocking warning gate) when Copilot completes
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2142](https://github.com/EvaLok/schema-org-json-ld/issues/2142) ([Cycle Review] Cycle 431 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
