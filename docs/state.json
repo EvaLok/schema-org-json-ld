@@ -6888,7 +6888,8 @@
       "category": "journal-quality",
       "deadline_cycle": 430,
       "deferred_cycle": 425,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-430.md"
     },
     {
       "category": "worklog-accuracy",
@@ -12070,7 +12071,7 @@
         "note": "state-integrity actioned: merge-pr for PR #2127 backfilled #2126 into agent_sessions (receipt: 75ab802). Session reconciliation committed 1a925dc. worklog-accuracy and field-inventory deferred (maintenance loop, audit #355). Complacency 2/5."
       },
       {
-        "actioned": 0,
+        "actioned": 1,
         "categories": [
           "journal-quality",
           "process-adherence",
@@ -12078,7 +12079,7 @@
         ],
         "complacency_score": 2,
         "cycle": 430,
-        "deferred": 1,
+        "deferred": 0,
         "dispatch_created": 2,
         "finding_count": 3,
         "finding_dispositions": [
@@ -12088,7 +12089,7 @@
           },
           {
             "category": "journal-quality",
-            "disposition": "deferred"
+            "disposition": "actioned"
           },
           {
             "category": "process-adherence",
@@ -12096,7 +12097,7 @@
           }
         ],
         "ignored": 0,
-        "note": "Corrected dispositions: worklog-accuracy fix dispatched as #2138, process-adherence fix dispatched as #2140. journal-quality remains deferred (process practice improvement)."
+        "note": "Final dispositions: worklog-accuracy dispatched #2138, journal-quality actioned via 8ce1aeb1 (C3 final-state-accuracy constraint), process-adherence dispatched #2140."
       }
     ],
     "last_review_cycle": 430
