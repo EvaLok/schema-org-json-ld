@@ -6920,13 +6920,15 @@
       "category": "worklog-accuracy",
       "deadline_cycle": 434,
       "deferred_cycle": 429,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-430.md"
     },
     {
       "category": "process-adherence",
       "deadline_cycle": 435,
       "deferred_cycle": 430,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-430.md"
     }
   ],
   "dispatch_log_latest": "#2135 [Cycle Review] Cycle 430 end-of-cycle review (cycle 430)",
@@ -12076,12 +12078,13 @@
         ],
         "complacency_score": 2,
         "cycle": 430,
-        "deferred": 3,
+        "deferred": 1,
+        "dispatch_created": 2,
         "finding_count": 3,
         "finding_dispositions": [
           {
             "category": "worklog-accuracy",
-            "disposition": "deferred"
+            "disposition": "dispatch_created"
           },
           {
             "category": "journal-quality",
@@ -12089,11 +12092,11 @@
           },
           {
             "category": "process-adherence",
-            "disposition": "deferred"
+            "disposition": "dispatch_created"
           }
         ],
         "ignored": 0,
-        "note": "All 3 deferred: (1) worklog-accuracy issue links need write-entry tool change to track issue origin repo, no dispatch slots; (2) journal-quality stale narrative is a process practice improvement for this cycle; (3) process-adherence blocking warning tolerance overlaps with audit #354 pipeline gate fix."
+        "note": "Corrected dispositions: worklog-accuracy fix dispatched as #2138, process-adherence fix dispatched as #2140. journal-quality remains deferred (process practice improvement)."
       }
     ],
     "last_review_cycle": 430
