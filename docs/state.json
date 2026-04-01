@@ -6397,6 +6397,14 @@
       "pr": 2129,
       "status": "merged",
       "title": "[Cycle Review] Cycle 429 end-of-cycle review"
+    },
+    {
+      "backfilled": true,
+      "issue": 2126,
+      "merged_at": "2026-04-01T16:28:09Z",
+      "pr": 2127,
+      "status": "merged",
+      "title": "Backfilled: PR #2127"
     }
   ],
   "audit_dropped": [
@@ -7167,7 +7175,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 37,
     "issue": 2130,
