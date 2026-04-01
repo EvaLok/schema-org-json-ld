@@ -6,9 +6,9 @@
 
   <automation-note>
     bash tools/cycle-runner close-out --issue {N}
-    Auto-posts steps C4.1, C5, C5.1, C5.5, C5.6, C6, C7, C8.
-    You handle: C1, C2, C3, C4.5 manually before running cycle-runner close-out.
-    Prerequisites: Run cycle-complete, write-entry (worklog + journal), post C4.5.
+    Auto-posts steps C4.1, C4.5, C5, C5.1, C5.5, C5.6, C6, C7, C8.
+    You handle: C1, C2, C3 manually before running cycle-runner close-out.
+    Prerequisites: Run cycle-complete, write-entry (worklog + journal).
     The tool is idempotent. If gate fails, fix and re-run.
   </automation-note>
 
@@ -62,10 +62,10 @@
     <on-failure>Fix the issue. Re-run validation. Do NOT proceed to C5.</on-failure>
   </step>
 
-  <step id="C4.5" title="ADR check and doc-validation override"
-        automation="manual" post-step="manual"
-        prerequisite="C3">
-    <description>Check if decisions this cycle warrant ADRs. Post before cycle-runner close-out.</description>
+  <step id="C4.5" title="ADR check"
+        automation="auto-by-cycle-runner" post-step="auto"
+        prerequisite="C4.1">
+    <description>Check if decisions this cycle warrant ADRs. Runs after C4.1 validation.</description>
     <adr-worthy>
       <criterion>New architectural patterns or significant refactors</criterion>
       <criterion>Technology choices (languages, tools, frameworks)</criterion>
