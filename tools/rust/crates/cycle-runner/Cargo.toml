@@ -6,6 +6,7 @@ description = "Top-level orchestrator cycle automation: startup and close-out se
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
+chrono = "0.4.44"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 state-schema = { path = "../state-schema" }
