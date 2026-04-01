@@ -216,7 +216,9 @@ fn count_in_flight_sessions(state: &StateJson) -> usize {
 }
 
 fn validate_in_flight_count(content: &str, expected: usize) -> Option<String> {
-    let reported = match extract_markdown_value(content, "In-flight agent sessions") {
+    let reported = match extract_markdown_value(content, "In-flight agent sessions (post-dispatch)")
+        .or_else(|| extract_markdown_value(content, "In-flight agent sessions"))
+    {
         Some(reported) => reported,
         None => return Some(
             "worklog is missing the 'In-flight agent sessions' line in the Pre-dispatch state section"
@@ -1005,6 +1007,30 @@ mod tests {
         let failure = validate_in_flight_count(content, 1).expect("expected mismatch");
         assert!(failure.contains("worklog reports 4"));
         assert!(failure.contains("state.json has 1"));
+    }
+
+    #[test]
+    fn prefers_post_dispatch_in_flight_value_when_present() {
+        let content = "\
+## Pre-dispatch state
+
+- **In-flight agent sessions**: 2
+- **In-flight agent sessions (post-dispatch)**: 3
+";
+        assert_eq!(validate_in_flight_count(content, 3), None);
+    }
+
+    #[test]
+    fn detects_post_dispatch_in_flight_mismatch() {
+        let content = "\
+## Pre-dispatch state
+
+- **In-flight agent sessions**: 2
+- **In-flight agent sessions (post-dispatch)**: 3
+";
+        let failure = validate_in_flight_count(content, 4).expect("expected mismatch");
+        assert!(failure.contains("worklog reports 3"));
+        assert!(failure.contains("state.json has 4"));
     }
 
     #[test]
