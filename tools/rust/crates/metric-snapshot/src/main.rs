@@ -27,6 +27,10 @@ struct Cli {
     /// Apply auto-fixable state.json mismatches and update freshness markers
     #[arg(long)]
     fix: bool,
+
+    /// Refresh stale after-change freshness markers for checks that already match
+    #[arg(long)]
+    refresh_unchanged: bool,
 }
 
 struct CheckResult {
@@ -45,12 +49,12 @@ fn main() {
     let mut state = read_state_file(&state_path);
     let mut checks = build_checks(&cli.repo_root, &state);
 
-    if cli.fix {
+    if cli.fix || cli.refresh_unchanged {
         let cycle = resolve_fix_cycle(cli.cycle, &cli.repo_root).unwrap_or_else(|error| {
             eprintln!("Error: {}", error);
             process::exit(2);
         });
-        match apply_fixes(&state_path, &checks, cycle) {
+        match apply_fixes(&state_path, &checks, cycle, cli.refresh_unchanged) {
             Ok(updated) if updated > 0 => {
                 state = read_state_file(&state_path);
                 checks = build_checks(&cli.repo_root, &state);
@@ -204,14 +208,15 @@ struct FixUpdate {
     freshness_field: &'static str,
 }
 
-fn apply_fixes(state_path: &Path, checks: &[CheckResult], cycle: i64) -> Result<usize, String> {
+fn apply_fixes(
+    state_path: &Path,
+    checks: &[CheckResult],
+    cycle: i64,
+    refresh_unchanged: bool,
+) -> Result<usize, String> {
     let cycle = u32::try_from(cycle).map_err(|_| "cycle must fit in u32 range".to_string())?;
     let mut state_value = read_state_value(state_path)?;
     let updates = collect_fix_updates(checks);
-    if updates.is_empty() {
-        return Ok(0);
-    }
-
     let mut changed_fields = BTreeSet::new();
     let mut changed_count = 0_usize;
 
@@ -222,18 +227,31 @@ fn apply_fixes(state_path: &Path, checks: &[CheckResult], cycle: i64) -> Result<
         }
     }
 
+    let refresh_fields = if refresh_unchanged {
+        collect_refreshable_unchanged_fields(&state_value, checks, i64::from(cycle))?
+    } else {
+        BTreeSet::new()
+    };
+    let refresh_only_count = refresh_fields
+        .iter()
+        .filter(|field_name| !changed_fields.contains(*field_name))
+        .count();
+    changed_fields.extend(refresh_fields);
+
+    if changed_fields.is_empty() {
+        return Ok(0);
+    }
+
     for field_name in changed_fields {
         update_freshness(&mut state_value, field_name, cycle)?;
     }
 
-    if changed_count > 0 {
-        let serialized = serde_json::to_string_pretty(&state_value)
-            .map_err(|error| format!("failed to serialize state.json: {}", error))?;
-        fs::write(state_path, format!("{}\n", serialized))
-            .map_err(|error| format!("failed to write {}: {}", state_path.display(), error))?;
-    }
+    let serialized = serde_json::to_string_pretty(&state_value)
+        .map_err(|error| format!("failed to serialize state.json: {}", error))?;
+    fs::write(state_path, format!("{}\n", serialized))
+        .map_err(|error| format!("failed to write {}: {}", state_path.display(), error))?;
 
-    Ok(changed_count)
+    Ok(changed_count + refresh_only_count)
 }
 
 fn read_state_value(path: &Path) -> Result<Value, String> {
@@ -290,6 +308,63 @@ fn fix_target_for_check(check_name: &str) -> Option<(&'static str, &'static str)
         "phpstan_level" => Some(("/schema_status/phpstan_level", "phpstan_level")),
         _ => None,
     }
+}
+
+fn collect_refreshable_unchanged_fields(
+    state: &Value,
+    checks: &[CheckResult],
+    current_cycle: i64,
+) -> Result<BTreeSet<&'static str>, String> {
+    let mut refreshable = BTreeSet::new();
+
+    for check in checks {
+        if !check.pass {
+            continue;
+        }
+
+        let Some((_, freshness_field)) = fix_target_for_check(check.name) else {
+            continue;
+        };
+
+        if field_has_stale_after_change_marker(state, freshness_field, current_cycle)? {
+            refreshable.insert(freshness_field);
+        }
+    }
+
+    Ok(refreshable)
+}
+
+fn field_has_stale_after_change_marker(
+    state: &Value,
+    field_name: &str,
+    current_cycle: i64,
+) -> Result<bool, String> {
+    let field_pointer = format!(
+        "/field_inventory/fields/{}",
+        field_name.replace('~', "~0").replace('/', "~1")
+    );
+    let field = state
+        .pointer(&field_pointer)
+        .ok_or_else(|| format!("field_inventory entry not found: {}", field_name))?;
+    let cadence = field
+        .get("cadence")
+        .and_then(Value::as_str)
+        .ok_or_else(|| format!("field_inventory cadence missing or invalid: {}", field_name))?;
+
+    if !cadence.to_ascii_lowercase().contains("after") {
+        return Ok(false);
+    }
+
+    let threshold = staleness_threshold(cadence);
+    let last_cycle = field
+        .get("last_refreshed")
+        .and_then(Value::as_str)
+        .and_then(parse_cycle_number);
+
+    Ok(match last_cycle {
+        Some(last_cycle) => current_cycle.saturating_sub(last_cycle) > threshold,
+        None => true,
+    })
 }
 
 fn read_state_file(path: &Path) -> StateJson {
@@ -1172,8 +1247,9 @@ fn value_to_display(value: &Value) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        check, collect_fix_updates, count_php_tests_in_content, count_ts_tests_in_content,
-        get_i64_from_map, get_i64_from_option, get_typescript_stats, is_php_test_method_line,
+        apply_fixes, check, collect_fix_updates, collect_refreshable_unchanged_fields,
+        count_php_tests_in_content, count_ts_tests_in_content, get_i64_from_map,
+        get_i64_from_option, get_typescript_stats, is_php_test_method_line,
         is_ts_test_method_line, parse_cycle_number, read_state_file, set_value_at_pointer,
         staleness_threshold, CheckResult,
     };
@@ -1350,6 +1426,126 @@ it('direct test', () => {});
         assert_eq!(updates[0].pointer, "/test_count/php");
         assert_eq!(updates[0].freshness_field, "test_count");
         assert_eq!(updates[0].value, json!(441));
+    }
+
+    #[test]
+    fn collect_refreshable_unchanged_fields_only_includes_stale_after_change_checks() {
+        let state = json!({
+            "field_inventory": {
+                "fields": {
+                    "total_schema_classes": {
+                        "cadence": "after schema class additions",
+                        "last_refreshed": "cycle 100"
+                    },
+                    "phpstan_level": {
+                        "cadence": "after PHPStan config changes",
+                        "last_refreshed": "cycle 111"
+                    },
+                    "test_count": {
+                        "cadence": "every merge that adds/removes PHP or TS tests",
+                        "last_refreshed": "cycle 100"
+                    },
+                    "total_enums": {
+                        "cadence": "after enum additions",
+                        "last_refreshed": "cycle 100"
+                    }
+                }
+            }
+        });
+        let checks = vec![
+            CheckResult {
+                name: "php_schema_classes",
+                label: "PHP schema classes",
+                actual: json!(89),
+                expected: json!(89),
+                pass: true,
+                note: None,
+            },
+            CheckResult {
+                name: "phpstan_level",
+                label: "PHPStan level",
+                actual: json!("max"),
+                expected: json!("max"),
+                pass: true,
+                note: None,
+            },
+            CheckResult {
+                name: "test_count_total",
+                label: "Total test count",
+                actual: json!(1),
+                expected: json!(1),
+                pass: true,
+                note: None,
+            },
+            CheckResult {
+                name: "php_enum_classes",
+                label: "PHP enum classes",
+                actual: json!(12),
+                expected: json!(12),
+                pass: false,
+                note: None,
+            },
+        ];
+
+        let refreshable = collect_refreshable_unchanged_fields(&state, &checks, 121)
+            .expect("should identify stale after-change fields with passing checks");
+
+        assert_eq!(refreshable.len(), 1);
+        assert!(refreshable.contains("total_schema_classes"));
+    }
+
+    #[test]
+    fn apply_fixes_refreshes_stale_after_change_markers_for_unchanged_checks() {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock must be after unix epoch")
+            .as_nanos();
+        let temp_dir = std::env::temp_dir().join(format!("metric-snapshot-refresh-{suffix}"));
+        fs::create_dir_all(&temp_dir).expect("temp dir should be created");
+
+        let state_path = temp_dir.join("state.json");
+        fs::write(
+            &state_path,
+            r#"{
+  "total_schema_classes": 89,
+  "field_inventory": {
+    "fields": {
+      "total_schema_classes": {
+        "cadence": "after schema class additions",
+        "last_refreshed": "cycle 100"
+      }
+    }
+  }
+}"#,
+        )
+        .expect("state fixture should be written");
+
+        let checks = vec![CheckResult {
+            name: "php_schema_classes",
+            label: "PHP schema classes",
+            actual: json!(89),
+            expected: json!(89),
+            pass: true,
+            note: None,
+        }];
+
+        let updated = apply_fixes(&state_path, &checks, 121, true)
+            .expect("should refresh stale after-change marker for passing check");
+        assert_eq!(updated, 1);
+
+        let refreshed = read_state_file(&state_path);
+        assert_eq!(
+            refreshed
+                .field_inventory
+                .fields
+                .get("total_schema_classes")
+                .and_then(|value| value.get("last_refreshed"))
+                .and_then(|value| value.as_str()),
+            Some("cycle 121")
+        );
+        assert_eq!(refreshed.total_schema_classes, Some(89));
+
+        fs::remove_dir_all(temp_dir).expect("temp dir should be removed");
     }
 
     #[test]
