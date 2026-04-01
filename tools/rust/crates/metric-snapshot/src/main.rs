@@ -1487,8 +1487,8 @@ it('direct test', () => {});
             },
         ];
 
-        let refreshable =
-            collect_refreshable_unchanged_fields(&state, &checks, 121).expect("refresh scan works");
+        let refreshable = collect_refreshable_unchanged_fields(&state, &checks, 121)
+            .expect("should identify stale after-change fields with passing checks");
 
         assert_eq!(refreshable.len(), 1);
         assert!(refreshable.contains("total_schema_classes"));
@@ -1529,8 +1529,8 @@ it('direct test', () => {});
             note: None,
         }];
 
-        let updated =
-            apply_fixes(&state_path, &checks, 121, true).expect("refresh should succeed");
+        let updated = apply_fixes(&state_path, &checks, 121, true)
+            .expect("should refresh stale after-change marker for passing check");
         assert_eq!(updated, 1);
 
         let refreshed = read_state_file(&state_path);
