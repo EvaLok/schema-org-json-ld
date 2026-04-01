@@ -6376,20 +6376,20 @@
       "title": "Backfilled: PR #2116"
     },
     {
+      "closed_reason": "Copilot service unavailable, closed as stale in cycle 429",
       "dispatched_at": "2026-04-01T08:41:03Z",
       "issue": 2123,
       "model": "gpt-5.4",
       "status": "failed",
-      "title": "Make C5.5 pipeline gate record initial FAIL for dual-result reporting (audit #354)",
-      "closed_reason": "Copilot service unavailable, closed as stale in cycle 429"
+      "title": "Make C5.5 pipeline gate record initial FAIL for dual-result reporting (audit #354)"
     },
     {
+      "closed_reason": "Copilot service unavailable, closed as stale in cycle 429",
       "dispatched_at": "2026-04-01T08:45:50Z",
       "issue": 2124,
       "model": "gpt-5.4",
       "status": "failed",
-      "title": "[Cycle Review] Cycle 428 end-of-cycle review",
-      "closed_reason": "Copilot service unavailable, closed as stale in cycle 429"
+      "title": "[Cycle Review] Cycle 428 end-of-cycle review"
     },
     {
       "dispatched_at": "2026-04-01T13:00:43Z",
@@ -12594,6 +12594,14 @@
   },
   "tool_pipeline": {
     "blocks_publish": false,
+    "c5_5_initial_result": {
+      "cycle": 430,
+      "exit_code": 1,
+      "has_blocking_findings": true,
+      "overall": "fail",
+      "result": "FAIL",
+      "summary": "FAIL (1 blocking warning, 4 warnings, 1 blocking: mass-deferral-gate)"
+    },
     "eva_directive": 436,
     "phases": [
       {
