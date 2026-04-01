@@ -6896,7 +6896,8 @@
       "category": "state-integrity",
       "deadline_cycle": 432,
       "deferred_cycle": 427,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "Actioned in cycle 430: merge-pr backfilled #2126 (receipt: 75ab802), session reconciliation committed 1a925dc"
     },
     {
       "category": "field-inventory",
@@ -12022,7 +12023,7 @@
         "note": "worklog-accuracy: PR #2116 from dispatch #2115 addresses root cause (Issues processed refresh). state-integrity: 18 stale field-inventory markers need check targets added. code-change-quality: metric-snapshot missing-entry failure mode needs fix, deferred due to full dispatch slots."
       },
       {
-        "actioned": 0,
+        "actioned": 1,
         "categories": [
           "field-inventory",
           "state-integrity",
@@ -12030,7 +12031,7 @@
         ],
         "complacency_score": 2,
         "cycle": 429,
-        "deferred": 3,
+        "deferred": 2,
         "finding_count": 3,
         "finding_dispositions": [
           {
@@ -12039,7 +12040,7 @@
           },
           {
             "category": "state-integrity",
-            "disposition": "deferred"
+            "disposition": "actioned"
           },
           {
             "category": "field-inventory",
@@ -12047,7 +12048,7 @@
           }
         ],
         "ignored": 0,
-        "note": "All 3 findings deferred: dispatch slots full, maintenance loop (audit #355). Complacency 2/5."
+        "note": "state-integrity actioned: merge-pr for PR #2127 backfilled #2126 into agent_sessions (receipt: 75ab802). Session reconciliation committed 1a925dc. worklog-accuracy and field-inventory deferred (maintenance loop, audit #355). Complacency 2/5."
       }
     ],
     "last_review_cycle": 429
