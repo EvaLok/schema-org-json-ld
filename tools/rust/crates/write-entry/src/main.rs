@@ -1782,19 +1782,25 @@ fn push_issue_processed_references(
 fn extract_inline_named_issue_references(text: &str, label: &str) -> Vec<u64> {
     let normalized_label = label.to_ascii_lowercase();
     let mut references = Vec::new();
+    let mut tokens = text.split_whitespace();
+    let Some(mut previous) = tokens.next() else {
+        return references;
+    };
 
-    for window in text.split_whitespace().collect::<Vec<_>>().windows(2) {
-        let current = window[0]
+    for current_token in tokens {
+        let normalized_previous = previous
             .trim_matches(|character: char| !character.is_ascii_alphanumeric())
             .to_ascii_lowercase();
-        if current != normalized_label {
+        if normalized_previous != normalized_label {
+            previous = current_token;
             continue;
         }
 
-        let reference = window[1]
-            .trim_start_matches(|character: char| !matches!(character, '#'))
-            .strip_prefix('#')
-            .unwrap_or_default();
+        let reference = current_token.trim_start_matches(|character: char| !matches!(character, '#'));
+        let Some(reference) = reference.strip_prefix('#') else {
+            previous = current_token;
+            continue;
+        };
         let digits = reference
             .chars()
             .take_while(|character| character.is_ascii_digit())
@@ -1802,6 +1808,8 @@ fn extract_inline_named_issue_references(text: &str, label: &str) -> Vec<u64> {
         if let Ok(issue) = digits.parse::<u64>() {
             references.push(issue);
         }
+
+        previous = current_token;
     }
 
     references
