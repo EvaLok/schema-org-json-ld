@@ -6366,6 +6366,14 @@
       "pr": 2118,
       "status": "merged",
       "title": "[Cycle Review] Cycle 427 end-of-cycle review"
+    },
+    {
+      "backfilled": true,
+      "issue": 2115,
+      "merged_at": "2026-04-01T08:36:39Z",
+      "pr": 2116,
+      "status": "merged",
+      "title": "Backfilled: PR #2116"
     }
   ],
   "audit_dropped": [
