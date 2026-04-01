@@ -9,6 +9,7 @@ ensure_binary "metric-snapshot"
 # Parse flags from args (non-destructive scan)
 has_repo_root=false
 has_fix=false
+has_refresh_unchanged=false
 cycle_num=""
 prev=""
 for arg in "$@"; do
@@ -18,6 +19,9 @@ for arg in "$@"; do
 			;;
 		--fix)
 			has_fix=true
+			;;
+		--refresh-unchanged)
+			has_refresh_unchanged=true
 			;;
 		--cycle=*)
 			cycle_num="${arg#--cycle=}"
@@ -37,8 +41,12 @@ else
 fi
 
 # After --fix, commit state.json changes and output the receipt hash
-if [ "$has_fix" = true ] && [ -n "$cycle_num" ]; then
-	RECEIPT=$(bash "$SCRIPT_DIR/commit-state-change" --tool-name "metric-snapshot" --summary "auto-fix metric mismatches" --cycle "$cycle_num" 2>&1) || true
+if { [ "$has_fix" = true ] || [ "$has_refresh_unchanged" = true ]; } && [ -n "$cycle_num" ]; then
+	summary="auto-fix metric mismatches"
+	if [ "$has_fix" != true ] && [ "$has_refresh_unchanged" = true ]; then
+		summary="refresh unchanged metric freshness markers"
+	fi
+	RECEIPT=$(bash "$SCRIPT_DIR/commit-state-change" --tool-name "metric-snapshot" --summary "$summary" --cycle "$cycle_num" 2>&1) || true
 	if echo "$RECEIPT" | grep -qE '^[0-9a-f]{7}$'; then
 		echo "commit-receipt: $RECEIPT"
 	elif [ -n "$RECEIPT" ]; then
