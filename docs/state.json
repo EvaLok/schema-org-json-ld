@@ -6330,6 +6330,20 @@
       "pr": 2106,
       "status": "merged",
       "title": "[Cycle Review] Cycle 425 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-04-01T00:36:33Z",
+      "issue": 2108,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix validate-docs to read post-dispatch in-flight value as authoritative"
+    },
+    {
+      "dispatched_at": "2026-04-01T00:37:05Z",
+      "issue": 2110,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add --refresh-unchanged flag to metric-snapshot for stale after-change markers"
     }
   ],
   "audit_dropped": [
@@ -7065,7 +7079,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 64,
     "issue": 2107,
