@@ -1,0 +1,21 @@
+## 1. [worklog-accuracy] Post-dispatch worklog still omitted the review dispatch it was already describing
+
+**File**: docs/worklog/2026-04-01/054306-cycle-427-processed-review-merged-metric-snapshot-fix-dispatched-write-entry-improvement.md:20-24
+**Evidence**: The `Issues processed` section lists only `#2095` and `#2115`, but the same worklog's post-dispatch next steps already tell the reader to "Review and iterate on PR from [#2117]" at line 44. `docs/state.json:6361-6366` and `docs/state.json:6835` show that `#2117` had already been dispatched and recorded as the latest cycle-427 dispatch, so the published artifact again mixes pre-dispatch and post-dispatch reality. This is the exact stale-section class that issue `#2115` exists to fix.
+**Recommendation**: Treat post-dispatch worklog refresh as all-or-nothing. Once the artifact mentions `#2117`, regenerate `Issues processed` from the same post-dispatch snapshot or clearly split the section into pre-dispatch and post-dispatch variants.
+
+## 2. [state-integrity] Cycle 427 closed with most stale field-inventory debt untouched despite the refresh-tool merge
+
+**File**: docs/state.json:7026-7077
+**Evidence**: The cycle merged `metric-snapshot --refresh-unchanged` and the worklog notes that only 4 freshness markers were refreshed (`docs/worklog/2026-04-01/054306-cycle-427-processed-review-merged-metric-snapshot-fix-dispatched-write-entry-improvement.md:6`). The state file shows the larger debt remained: `review_events_verified_through_cycle` is still frozen at `cycle 420` (lines 7026-7029), `schema_status.phpstan_max_assessment`, `property_gap_audit`, and `remaining_audit_findings` are still at `cycle 412` (lines 7038-7052), `step_comment_acknowledged_gaps` is at `cycle 414` (lines 7054-7057), `tool_pipeline` is at `cycle 415` (lines 7062-7065), and `total_schema_types` remains at `cycle 412` (lines 7074-7077). A fresh `bash tools/pipeline-check --cycle 427 --json` still reports `field-inventory: WARN` with 18 stale fields.
+**Recommendation**: Do not treat PR `#2111` as effective closure for the state-integrity chronic. Either extend refresh coverage to the remaining stale field families or explicitly refresh the unresolved entries during close-out before claiming the category was materially improved.
+
+## 3. [code-change-quality] `metric-snapshot --refresh-unchanged` aborts on missing inventory mappings and the new tests never exercise that contract
+
+**File**: tools/rust/crates/metric-snapshot/src/main.rs:313-368
+**Evidence**: `collect_refreshable_unchanged_fields()` walks every passing mapped check and immediately calls `field_has_stale_after_change_marker()`, which returns `Err("field_inventory entry not found: ...")` when the mapped inventory entry is absent instead of skipping that check. That is weaker than PR `#2111`'s stated selection rule that refresh applies only when "the mapped `field_inventory` entry exists." I reproduced the merged behavior by deleting `field_inventory.fields.phpstan_level` in a temporary repo copy and running `cargo run -q -p metric-snapshot --manifest-path tools/rust/Cargo.toml -- --repo-root /tmp/cycle427-metric-repro --refresh-unchanged --cycle 427`, which failed with `Error applying fixes: field_inventory entry not found: phpstan_level`. The new tests at `tools/rust/crates/metric-snapshot/src/main.rs:1431-1545` cover only happy-path fixtures where every mapped entry exists, so the failure mode shipped untested.
+**Recommendation**: Make missing or malformed refresh-only inventory entries non-fatal for `--refresh-unchanged` (skip them and optionally warn), and add a regression test proving the tool keeps going when a mapped freshness entry is absent.
+
+## Complacency score
+
+**3/5** — Cycle 427 did real work: the full PHP/TypeScript validation suites pass, the receipt table matches `cycle-receipts`, and the cycle issue had the expected step-comment coverage. But the cycle still published the same stale worklog section pattern that had just been reviewed as chronic, left 18 stale field-inventory markers after merging a targeted refresh tool, and shipped an untested failure mode in the only substantive code change. That is earnest activity with incomplete closure, not clean execution.
