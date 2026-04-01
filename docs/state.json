@@ -6361,8 +6361,10 @@
     {
       "dispatched_at": "2026-04-01T05:49:02Z",
       "issue": 2117,
+      "merged_at": "2026-04-01T08:31:52Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2118,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 427 end-of-cycle review"
     }
   ],
@@ -6957,7 +6959,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 427"
+        "last_refreshed": "cycle 428"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -7105,7 +7107,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 45,
     "issue": 2119,
