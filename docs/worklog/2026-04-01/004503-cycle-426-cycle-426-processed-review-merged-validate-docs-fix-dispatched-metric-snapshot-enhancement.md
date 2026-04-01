@@ -31,7 +31,7 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 1
-- **Pipeline status**: FAIL (5 warnings; current-cycle-steps FAIL due to missing close-out steps during validation)
+- **Pipeline status**: PASS (3 warnings: stale field inventory, deferral-accumulation, step-comments)
 - **Publish gate**: published
 
 ## Next steps
