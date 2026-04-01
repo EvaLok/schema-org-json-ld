@@ -6334,8 +6334,10 @@
     {
       "dispatched_at": "2026-04-01T00:36:33Z",
       "issue": 2108,
+      "merged_at": "2026-04-01T00:43:06Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2109,
+      "status": "merged",
       "title": "Fix validate-docs to read post-dispatch in-flight value as authoritative"
     },
     {
@@ -7079,7 +7081,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 64,
     "issue": 2107,
