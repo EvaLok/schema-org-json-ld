@@ -6411,8 +6411,10 @@
     {
       "dispatched_at": "2026-04-01T16:35:48Z",
       "issue": 2131,
+      "merged_at": "2026-04-01T20:23:26Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2132,
+      "status": "merged",
       "title": "Fix write-entry pipeline status: use pipeline-check JSON output (audit #357)"
     },
     {
@@ -7200,7 +7202,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 17,
     "issue": 2137,
