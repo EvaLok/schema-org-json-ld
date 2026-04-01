@@ -2,17 +2,25 @@ use crate::git;
 use crate::review_body;
 use crate::runner;
 use crate::steps;
+use chrono::{DateTime, FixedOffset, Utc};
 use serde_json::Value;
+use state_schema::{
+    commit_state_json, current_cycle_from_state, read_state_value, transition_cycle_phase,
+    write_state_value, AgentSession, StateJson,
+};
 use std::fs;
 use std::path::Path;
 use std::process::Command;
-use state_schema::{
-    commit_state_json, current_cycle_from_state, read_state_value, transition_cycle_phase,
-    write_state_value, StateJson,
-};
 
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const VERIFY_REVIEW_EVENTS_TIMEOUT_SECS: u64 = 30;
+const PATCH_PIPELINE_ACTIVITY_TIMESTAMP_FIELDS: [&str; 5] = [
+    "closed_at",
+    "resolved_at",
+    "completed_at",
+    "status_changed_at",
+    "updated_at",
+];
 
 struct ReviewInfo {
     issue_number: u64,
@@ -99,7 +107,13 @@ pub fn run(
     step_c7(repo_root, issue)?;
 
     // C8: Close issue
-    step_c8(repo_root, issue, cycle, review_info.as_ref(), &pipeline_summary)?;
+    step_c8(
+        repo_root,
+        issue,
+        cycle,
+        review_info.as_ref(),
+        &pipeline_summary,
+    )?;
     complete_close_out_phase(repo_root, cycle)?;
     git::push(repo_root).map_err(|error| {
         format!(
@@ -146,23 +160,20 @@ fn step_c4_1(
     let worklog_detail = if worklog_ok {
         "PASS".to_string()
     } else {
-        format!(
-            "FAIL: {}",
-            runner::stdout_text(&worklog_output)
-        )
+        format!("FAIL: {}", runner::stdout_text(&worklog_output))
     };
 
     let journal_str = journal.to_string_lossy().to_string();
-    let journal_output =
-        runner::run_tool(repo_root, "validate-docs", &["journal", "--file", &journal_str])?;
+    let journal_output = runner::run_tool(
+        repo_root,
+        "validate-docs",
+        &["journal", "--file", &journal_str],
+    )?;
     let journal_ok = journal_output.status.success();
     let journal_detail = if journal_ok {
         "PASS".to_string()
     } else {
-        format!(
-            "FAIL: {}",
-            runner::stdout_text(&journal_output)
-        )
+        format!("FAIL: {}", runner::stdout_text(&journal_output))
     };
 
     let body = format!(
@@ -197,7 +208,9 @@ fn step_c4_5(repo_root: &Path, issue: u64) -> Result<(), String> {
         Ok(entries) => entries
             .map(|entry| {
                 entry
-                    .map_err(|error| format!("failed to read entry in {}: {}", adr_dir.display(), error))
+                    .map_err(|error| {
+                        format!("failed to read entry in {}: {}", adr_dir.display(), error)
+                    })
                     .and_then(|entry| {
                         let file_type = entry.file_type().map_err(|error| {
                             format!(
@@ -207,10 +220,9 @@ fn step_c4_5(repo_root: &Path, issue: u64) -> Result<(), String> {
                             )
                         })?;
                         let path = entry.path();
-                        let name = entry
-                            .file_name()
-                            .into_string()
-                            .map_err(|_| format!("ADR path is not valid UTF-8: {}", path.display()))?;
+                        let name = entry.file_name().into_string().map_err(|_| {
+                            format!("ADR path is not valid UTF-8: {}", path.display())
+                        })?;
                         Ok((name, file_type.is_file()))
                     })
             })
@@ -243,7 +255,11 @@ fn step_c4_7(repo_root: &Path, issue: u64) -> Result<(), String> {
     step_c4_7_with_timeout(repo_root, issue, VERIFY_REVIEW_EVENTS_TIMEOUT_SECS)
 }
 
-fn step_c4_7_with_timeout(repo_root: &Path, issue: u64, timeout_seconds: u64) -> Result<(), String> {
+fn step_c4_7_with_timeout(
+    repo_root: &Path,
+    issue: u64,
+    timeout_seconds: u64,
+) -> Result<(), String> {
     eprintln!("C4.7: Verifying review events...");
 
     let repo_root_str = repo_root.to_string_lossy().to_string();
@@ -259,7 +275,14 @@ fn step_c4_7_with_timeout(repo_root: &Path, issue: u64, timeout_seconds: u64) ->
                 "verify-review-events warning: {}\nNon-blocking; C5.5 will still validate state freshness.",
                 error
             );
-            steps::post_step(repo_root, issue, "C4.7", "Verify review events", &body, false)?;
+            steps::post_step(
+                repo_root,
+                issue,
+                "C4.7",
+                "Verify review events",
+                &body,
+                false,
+            )?;
             return Err(error);
         }
     };
@@ -311,7 +334,14 @@ fn step_c4_7_with_timeout(repo_root: &Path, issue: u64, timeout_seconds: u64) ->
         )
     };
 
-    steps::post_step(repo_root, issue, "C4.7", "Verify review events", &body, false)?;
+    steps::post_step(
+        repo_root,
+        issue,
+        "C4.7",
+        "Verify review events",
+        &body,
+        false,
+    )?;
 
     if let Some(warning) = warning {
         return Err(warning);
@@ -396,12 +426,7 @@ fn step_c5(repo_root: &Path, issue: u64, cycle: u64, worklog: &Path) -> Result<(
     Ok(())
 }
 
-fn step_c5_1(
-    repo_root: &Path,
-    issue: u64,
-    cycle: u64,
-    worklog: &Path,
-) -> Result<(), String> {
+fn step_c5_1(repo_root: &Path, issue: u64, cycle: u64, worklog: &Path) -> Result<(), String> {
     eprintln!("C5.1: Validating receipts...");
 
     let cycle_str = cycle.to_string();
@@ -449,14 +474,7 @@ fn step_c5_1(
     };
 
     // Receipt validation is report-only, not a gate
-    steps::post_step(
-        repo_root,
-        issue,
-        "C5.1",
-        "Receipt validation",
-        &body,
-        false,
-    )?;
+    steps::post_step(repo_root, issue, "C5.1", "Receipt validation", &body, false)?;
 
     Ok(())
 }
@@ -476,10 +494,7 @@ fn step_c5_5(repo_root: &Path, issue: u64) -> Result<(bool, String), String> {
             let pipeline_summary = format_pipeline_summary(&report);
             let mut body = format!(
                 "Pipeline: {}\n- exit_code: {}\n- overall: {}\n- has_blocking_findings: {}",
-                pipeline_summary,
-                exit_code,
-                report.overall,
-                report.has_blocking_findings
+                pipeline_summary, exit_code, report.overall, report.has_blocking_findings
             );
             if !stdout.is_empty() {
                 body.push_str(&format!("\n- raw_json: {}", stdout));
@@ -515,9 +530,7 @@ fn step_c5_5(repo_root: &Path, issue: u64) -> Result<(bool, String), String> {
     )?;
 
     if !passed {
-        return Err(
-            "Pipeline check failed at C5.5 — fix issues and re-run close-out".to_string(),
-        );
+        return Err("Pipeline check failed at C5.5 — fix issues and re-run close-out".to_string());
     }
 
     Ok((true, pipeline_summary))
@@ -654,9 +667,7 @@ fn step_c5_6(
     let already_updated = state
         .pointer("/project_mode/consecutive_clean_cycles")
         .and_then(Value::as_array)
-        .is_some_and(|arr| {
-            arr.iter().any(|v| v.as_u64() == Some(cycle))
-        });
+        .is_some_and(|arr| arr.iter().any(|v| v.as_u64() == Some(cycle)));
 
     if already_updated {
         let counter = state
@@ -814,10 +825,8 @@ fn step_c6(repo_root: &Path, issue: u64, cycle: u64) -> Result<Option<ReviewInfo
     }
 
     // Check stabilization mode
-    let is_stabilization = state
-        .pointer("/project_mode/mode")
-        .and_then(Value::as_str)
-        == Some("stabilization");
+    let is_stabilization =
+        state.pointer("/project_mode/mode").and_then(Value::as_str) == Some("stabilization");
 
     // Generate review body
     let body_content = review_body::generate(repo_root, cycle, issue, is_stabilization)?;
@@ -906,6 +915,7 @@ fn step_c6_5(
         .ok_or_else(|| "missing publish_gate.status in state.json".to_string())?
         .to_string();
     let next_steps = derive_patch_pipeline_next_steps(&state)?;
+    let issues_processed = derive_patch_pipeline_issues_processed(&state, cycle)?;
     let worklog_str = worklog.to_string_lossy().to_string();
     let in_flight_str = in_flight.to_string();
     let mut patch_args = vec![
@@ -920,6 +930,8 @@ fn step_c6_5(
         publish_gate.clone(),
         "--section-title".to_string(),
         "Cycle state".to_string(),
+        "--issues-processed".to_string(),
+        issues_processed,
     ];
     for next_step in &next_steps {
         patch_args.push("--next-steps".to_string());
@@ -927,11 +939,7 @@ fn step_c6_5(
     }
     let patch_args_refs: Vec<&str> = patch_args.iter().map(String::as_str).collect();
 
-    let output = runner::run_tool(
-        repo_root,
-        "write-entry",
-        &patch_args_refs,
-    )?;
+    let output = runner::run_tool(repo_root, "write-entry", &patch_args_refs)?;
     if !output.status.success() {
         return Err(format!(
             "write-entry patch-pipeline failed at C6.5: {}",
@@ -957,7 +965,14 @@ fn step_c6_5(
     } else {
         format!("Patched worklog state after C6: {} ({})", worklog_rel, sha)
     };
-    steps::post_step(repo_root, issue, "C6.5", "Refresh worklog state", &body, false)?;
+    steps::post_step(
+        repo_root,
+        issue,
+        "C6.5",
+        "Refresh worklog state",
+        &body,
+        false,
+    )?;
     Ok(())
 }
 
@@ -1000,6 +1015,134 @@ fn derive_patch_pipeline_next_steps(state: &StateJson) -> Result<Vec<String>, St
     Ok(next_steps)
 }
 
+fn derive_patch_pipeline_issues_processed(state: &StateJson, cycle: u64) -> Result<String, String> {
+    let cycle_start = patch_pipeline_cycle_start(state, cycle)?;
+    let mut entries = Vec::new();
+
+    for session in &state.agent_sessions {
+        if !patch_pipeline_session_active_this_cycle(session, cycle_start)? {
+            continue;
+        }
+        let issue = session
+            .issue
+            .ok_or_else(|| {
+                "agent_sessions[].issue is required for active sessions during C6.5 issues refresh"
+                    .to_string()
+            })
+            .and_then(|value| {
+                u64::try_from(value).map_err(|_| {
+                    "agent_sessions[].issue must be a positive integer for active sessions during C6.5 issues refresh"
+                        .to_string()
+                })
+            })?;
+        let title = session
+            .title
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| {
+                format!(
+                    "agent_sessions[issue={}].title is required for active sessions during C6.5 issues refresh",
+                    issue
+                )
+            })?;
+        let status = session
+            .status
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| {
+                format!(
+                    "agent_sessions[issue={}].status is required for active sessions during C6.5 issues refresh",
+                    issue
+                )
+            })?;
+        validate_patch_pipeline_issue_field(title, "title", issue)?;
+        validate_patch_pipeline_issue_field(status, "status", issue)?;
+        entries.push(format!("{issue};{title};{status}"));
+    }
+
+    Ok(entries.join("|"))
+}
+
+fn patch_pipeline_cycle_start(state: &StateJson, cycle: u64) -> Result<DateTime<Utc>, String> {
+    let state_cycle = state.cycle_phase.cycle.ok_or_else(|| {
+        "missing docs/state.json cycle_phase.cycle for C6.5 issues refresh".to_string()
+    })?;
+    if state_cycle != cycle {
+        return Err(format!(
+            "docs/state.json cycle_phase.cycle {} does not match close-out cycle {} for C6.5 issues refresh",
+            state_cycle, cycle
+        ));
+    }
+    let phase_entered_at = state
+        .cycle_phase
+        .phase_entered_at
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| {
+            "missing docs/state.json cycle_phase.phase_entered_at for C6.5 issues refresh"
+                .to_string()
+        })?;
+    parse_patch_pipeline_timestamp(
+        phase_entered_at,
+        "docs/state.json cycle_phase.phase_entered_at",
+    )
+}
+
+fn patch_pipeline_session_active_this_cycle(
+    session: &AgentSession,
+    cycle_start: DateTime<Utc>,
+) -> Result<bool, String> {
+    if let Some(timestamp) = session.dispatched_at.as_deref() {
+        if parse_patch_pipeline_timestamp(timestamp, "agent_sessions[].dispatched_at")?
+            >= cycle_start
+        {
+            return Ok(true);
+        }
+    }
+    if let Some(timestamp) = session.merged_at.as_deref() {
+        if parse_patch_pipeline_timestamp(timestamp, "agent_sessions[].merged_at")? >= cycle_start {
+            return Ok(true);
+        }
+    }
+    for field in PATCH_PIPELINE_ACTIVITY_TIMESTAMP_FIELDS {
+        let Some(value) = session.extra.get(field) else {
+            continue;
+        };
+        let Some(timestamp) = value.as_str() else {
+            return Err(format!(
+                "agent_sessions[].{} must be a string timestamp",
+                field
+            ));
+        };
+        if parse_patch_pipeline_timestamp(timestamp, &format!("agent_sessions[].{}", field))?
+            >= cycle_start
+        {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
+}
+
+fn parse_patch_pipeline_timestamp(value: &str, label: &str) -> Result<DateTime<Utc>, String> {
+    DateTime::parse_from_rfc3339(value)
+        .map(|timestamp: DateTime<FixedOffset>| timestamp.with_timezone(&Utc))
+        .map_err(|error| format!("invalid {} '{}': {}", label, value, error))
+}
+
+fn validate_patch_pipeline_issue_field(value: &str, field: &str, issue: u64) -> Result<(), String> {
+    if value.contains('|') || value.contains(';') {
+        return Err(format!(
+            "agent_sessions[issue={}].{} must not contain '|' or ';' for C6.5 issues refresh",
+            issue, field
+        ));
+    }
+    Ok(())
+}
+
 fn step_c8(
     repo_root: &Path,
     issue: u64,
@@ -1010,7 +1153,10 @@ fn step_c8(
     eprintln!("C8: Closing orchestrator issue...");
 
     let review_line = match review_info {
-        Some(info) => format!("- Review: dispatched as #{} ({})", info.issue_number, info.issue_url),
+        Some(info) => format!(
+            "- Review: dispatched as #{} ({})",
+            info.issue_number, info.issue_url
+        ),
         None => "- Review: deferred (Copilot unavailable)".to_string(),
     };
     let closing_body = format!(
@@ -1067,10 +1213,7 @@ fn had_tool_dispatches_this_cycle(state: &Value, _cycle: u64) -> bool {
             .unwrap_or("");
         // Only check sessions dispatched after the previous cycle ended
         if !last_cycle_ts.is_empty() && dispatched_at > last_cycle_ts {
-            let title = session
-                .get("title")
-                .and_then(Value::as_str)
-                .unwrap_or("");
+            let title = session.get("title").and_then(Value::as_str).unwrap_or("");
             // Exclude review dispatches (they're mandatory, not "tool" dispatches)
             if !title.starts_with("[Cycle Review]") {
                 return true;
@@ -1111,12 +1254,7 @@ fn parse_dispatch_output(stdout: &str) -> Result<ReviewInfo, String> {
             )
         })?;
 
-    let url = stdout
-        .rsplit(": ")
-        .next()
-        .unwrap_or("")
-        .trim()
-        .to_string();
+    let url = stdout.rsplit(": ").next().unwrap_or("").trim().to_string();
 
     Ok(ReviewInfo {
         issue_number: issue_num,
@@ -1238,6 +1376,44 @@ mod tests {
         assert!(find_existing_review_dispatch(&state, 999).is_none());
     }
 
+    #[test]
+    fn derive_patch_pipeline_issues_processed_uses_active_cycle_sessions() {
+        let state: StateJson = serde_json::from_value(json!({
+            "cycle_phase": {
+                "cycle": 345,
+                "phase_entered_at": "2026-03-25T00:00:00Z"
+            },
+            "agent_sessions": [
+                {
+                    "issue": 1200,
+                    "title": "Dispatched this cycle",
+                    "status": "merged",
+                    "dispatched_at": "2026-03-25T01:00:00Z"
+                },
+                {
+                    "issue": 1201,
+                    "title": "Closed this cycle",
+                    "status": "closed_without_pr",
+                    "dispatched_at": "2026-03-24T01:00:00Z",
+                    "closed_at": "2026-03-25T02:00:00Z"
+                },
+                {
+                    "issue": 1199,
+                    "title": "Old session",
+                    "status": "merged",
+                    "dispatched_at": "2026-03-24T01:00:00Z"
+                }
+            ]
+        }))
+        .unwrap();
+
+        let issues = derive_patch_pipeline_issues_processed(&state, 345).unwrap();
+        assert_eq!(
+            issues,
+            "1200;Dispatched this cycle;merged|1201;Closed this cycle;closed_without_pr"
+        );
+    }
+
     fn setup_temp_repo(name: &str) -> std::path::PathBuf {
         let dir = unique_temp_dir(&format!("cycle-runner-close-out-{}", name));
         let _ = fs::remove_dir_all(&dir);
@@ -1291,7 +1467,160 @@ mod tests {
     fn write_write_entry_patch_script(dir: &std::path::Path) {
         fs::write(
             dir.join("tools/write-entry"),
-            "#!/usr/bin/env bash\nset -euo pipefail\npython - \"$@\" <<'PY'\nimport sys\nfrom pathlib import Path\nargs = sys.argv[1:]\nif not args or args[0] != 'patch-pipeline':\n    raise SystemExit(f'unexpected write-entry args: {args}')\nvalues = {}\nlist_values = {}\ni = 1\nwhile i < len(args):\n    key = args[i]\n    if key == '--next-steps':\n        if i + 1 >= len(args):\n            raise SystemExit(f'missing value for {key}')\n        list_values.setdefault(key, []).append(args[i + 1])\n        i += 2\n        continue\n    if i + 1 >= len(args):\n        raise SystemExit(f'missing value for {key}')\n    values[key] = args[i + 1]\n    i += 2\nworklog = Path(values['--worklog-file'])\nlines = worklog.read_text().splitlines()\nfor index, line in enumerate(lines):\n    if line == '## Pre-dispatch state':\n        lines[index] = '## ' + values['--section-title']\n        break\nelse:\n    raise SystemExit('missing state heading')\nlines = [line for line in lines if line != '*Snapshot before review dispatch — final counters may differ after C6.*']\nlines = [line for line in lines if not line.startswith('- **Copilot metrics**: ')]\ndef patch_or_addendum(prefix, value, addendum_prefix):\n    for index, line in enumerate(lines):\n        if not line.startswith(prefix):\n            continue\n        current = line[len(prefix):].strip()\n        if not current or current == 'Not provided.':\n            lines[index] = prefix + value\n            return\n        if current == value.strip():\n            return\n        for addendum_index, addendum_line in enumerate(lines):\n            if addendum_line.startswith(addendum_prefix):\n                if addendum_line[len(addendum_prefix):].strip() != value.strip():\n                    lines[addendum_index] = addendum_prefix + value\n                return\n        lines.insert(index + 1, addendum_prefix + value)\n        return\n    raise SystemExit(f'missing line for {prefix}')\ndef section_bounds(heading):\n    for index, line in enumerate(lines):\n        if line == heading:\n            start = index + 1\n            end = len(lines)\n            for next_index in range(start, len(lines)):\n                if lines[next_index].startswith('## '):\n                    end = next_index\n                    break\n            return index, start, end\n    raise SystemExit(f'missing section {heading}')\ndef section_has_placeholder(start, end):\n    entries = [line.strip() for line in lines[start:end] if line.strip()]\n    if not entries:\n        return True\n    if len(entries) == 1 and entries[0] in {'Not provided.', '1. Not provided.'}:\n        return True\n    return False\ndef render_numbered_steps(items):\n    rendered = ['']\n    for step_index, step in enumerate(items, start=1):\n        rendered.append(f'{step_index}. {step}')\n    return rendered\ndef patch_next_steps(items):\n    _, start, end = section_bounds('## Next steps')\n    replacement = render_numbered_steps(items)\n    if section_has_placeholder(start, end):\n        lines[start:end] = replacement\n        return\n    heading = '## Next steps (post-dispatch)'\n    try:\n        _, post_start, post_end = section_bounds(heading)\n        lines[post_start:post_end] = replacement\n    except SystemExit:\n        insertion = []\n        if end == 0 or lines[end - 1] != '':\n            insertion.append('')\n        insertion.append(heading)\n        insertion.extend(replacement)\n        lines[end:end] = insertion\npatch_or_addendum('- **In-flight agent sessions**: ', values['--in-flight'], '- **In-flight agent sessions (post-dispatch)**: ')\npatch_or_addendum('- **Pipeline status**: ', values['--status'], '- **Pipeline status (post-dispatch)**: ')\npatch_or_addendum('- **Publish gate**: ', values['--publish-gate'], '- **Publish gate (post-dispatch)**: ')\nif '--next-steps' in list_values:\n    patch_next_steps(list_values['--next-steps'])\nworklog.write_text('\\n'.join(lines) + '\\n')\nprint(worklog)\nPY\n",
+            r#"#!/usr/bin/env bash
+set -euo pipefail
+python - "$@" <<'PY'
+import sys
+from pathlib import Path
+
+ISSUES_URL = 'https://github.com/EvaLok/schema-org-json-ld/issues'
+
+args = sys.argv[1:]
+if not args or args[0] != 'patch-pipeline':
+    raise SystemExit(f'unexpected write-entry args: {args}')
+values = {}
+list_values = {}
+i = 1
+while i < len(args):
+    key = args[i]
+    if key == '--next-steps':
+        if i + 1 >= len(args):
+            raise SystemExit(f'missing value for {key}')
+        list_values.setdefault(key, []).append(args[i + 1])
+        i += 2
+        continue
+    if i + 1 >= len(args):
+        raise SystemExit(f'missing value for {key}')
+    values[key] = args[i + 1]
+    i += 2
+worklog = Path(values['--worklog-file'])
+lines = worklog.read_text().splitlines()
+for index, line in enumerate(lines):
+    if line == '## Pre-dispatch state':
+        lines[index] = '## ' + values['--section-title']
+        break
+else:
+    raise SystemExit('missing state heading')
+lines = [line for line in lines if line != '*Snapshot before review dispatch — final counters may differ after C6.*']
+lines = [line for line in lines if not line.startswith('- **Copilot metrics**: ')]
+
+def patch_or_addendum(prefix, value, addendum_prefix):
+    for index, line in enumerate(lines):
+        if not line.startswith(prefix):
+            continue
+        current = line[len(prefix):].strip()
+        if not current or current == 'Not provided.':
+            lines[index] = prefix + value
+            return
+        if current == value.strip():
+            return
+        for addendum_index, addendum_line in enumerate(lines):
+            if addendum_line.startswith(addendum_prefix):
+                if addendum_line[len(addendum_prefix):].strip() != value.strip():
+                    lines[addendum_index] = addendum_prefix + value
+                return
+        lines.insert(index + 1, addendum_prefix + value)
+        return
+    raise SystemExit(f'missing line for {prefix}')
+
+def section_bounds(heading):
+    for index, line in enumerate(lines):
+        if line == heading:
+            start = index + 1
+            end = len(lines)
+            for next_index in range(start, len(lines)):
+                if lines[next_index].startswith('## ') or lines[next_index].startswith('### '):
+                    end = next_index
+                    break
+            return index, start, end
+    raise SystemExit(f'missing section {heading}')
+
+def section_entries(start, end):
+    return [line.strip() for line in lines[start:end] if line.strip()]
+
+def section_has_placeholder(start, end):
+    entries = section_entries(start, end)
+    if not entries:
+        return True
+    if len(entries) == 1 and entries[0] in {'Not provided.', '1. Not provided.', '- None.', 'None.'}:
+        return True
+    return False
+
+def render_numbered_steps(items):
+    rendered = ['']
+    for step_index, step in enumerate(items, start=1):
+        rendered.append(f'{step_index}. {step}')
+    return rendered
+
+def render_issues(raw):
+    if not raw.strip():
+        return ['- None.']
+    rendered = []
+    for entry in raw.split('|'):
+        parts = entry.split(';')
+        if len(parts) != 3:
+            raise SystemExit(f'invalid issues processed entry: {entry}')
+        issue, title, status = [part.strip() for part in parts]
+        rendered.append(f'- [#{issue}]({ISSUES_URL}/{issue}): {title} ({status})')
+    return rendered
+
+def patch_next_steps(items):
+    _, start, end = section_bounds('## Next steps')
+    replacement = render_numbered_steps(items)
+    if section_has_placeholder(start, end):
+        lines[start:end] = replacement
+        return
+    heading = '## Next steps (post-dispatch)'
+    try:
+        _, post_start, post_end = section_bounds(heading)
+        lines[post_start:post_end] = replacement
+    except SystemExit:
+        insertion = []
+        if end == 0 or lines[end - 1] != '':
+            insertion.append('')
+        insertion.append(heading)
+        insertion.extend(replacement)
+        lines[end:end] = insertion
+
+def patch_issues_processed(raw):
+    _, start, end = section_bounds('### Issues processed')
+    replacement = ['']
+    replacement.extend(render_issues(raw))
+    if end < len(lines):
+        replacement.append('')
+    current = section_entries(start, end)
+    expected = [line for line in replacement if line]
+    if section_has_placeholder(start, end):
+        lines[start:end] = replacement
+        return
+    if current == expected:
+        return
+    heading = '### Issues processed (post-dispatch)'
+    try:
+        _, post_start, post_end = section_bounds(heading)
+        if section_entries(post_start, post_end) == expected:
+            return
+        lines[post_start:post_end] = replacement
+    except SystemExit:
+        insertion = []
+        if end == 0 or lines[end - 1] != '':
+            insertion.append('')
+        insertion.append(heading)
+        insertion.extend(replacement)
+        if end < len(lines):
+            insertion.append('')
+        lines[end:end] = insertion
+
+patch_or_addendum('- **In-flight agent sessions**: ', values['--in-flight'], '- **In-flight agent sessions (post-dispatch)**: ')
+patch_or_addendum('- **Pipeline status**: ', values['--status'], '- **Pipeline status (post-dispatch)**: ')
+patch_or_addendum('- **Publish gate**: ', values['--publish-gate'], '- **Publish gate (post-dispatch)**: ')
+patch_issues_processed(values['--issues-processed'])
+if '--next-steps' in list_values:
+    patch_next_steps(list_values['--next-steps'])
+worklog.write_text('\n'.join(lines) + '\n')
+print(worklog)
+PY
+"#,
         )
         .unwrap();
     }
@@ -1705,7 +2034,7 @@ mod tests {
         fs::create_dir_all(dir.join("docs/journal")).unwrap();
         fs::write(
             dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"),
-            "# Cycle 345\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: PASS\n- **Publish gate**: published\n\n## Next steps\n\n1. None.\n",
+            "# Cycle 345\n\n### Issues processed\n\n- None.\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: PASS\n- **Publish gate**: published\n\n## Next steps\n\n1. None.\n",
         )
         .unwrap();
         fs::write(dir.join("docs/journal/2026-03-25.md"), "# Journal\n").unwrap();
@@ -1773,7 +2102,7 @@ mod tests {
         fs::write(
             dir.join("tools/dispatch-review"),
             format!(
-                "#!/usr/bin/env bash\nset -euo pipefail\npython - <<'PY'\nimport json\nfrom pathlib import Path\nstate_path = Path({state_path:?})\nstate = json.loads(state_path.read_text())\nstate['in_flight_sessions'] = 1\nstate['publish_gate']['status'] = 'blocked pending review'\nstate['dispatch_log_latest'] = '#1470 [Cycle Review] Cycle 345 end-of-cycle review (cycle 345)'\nstate['agent_sessions'] = [{{'issue': 1470, 'title': '[Cycle Review] Cycle 345 end-of-cycle review', 'status': 'in_flight'}}]\nstate_path.write_text(json.dumps(state, indent=2) + '\\n')\nPY\ngit -C {repo:?} add docs/state.json\ngit -C {repo:?} commit -m 'state(record-dispatch): #1470 dispatched [cycle 345]' >/dev/null\nprintf '%s\\n' 'Created review issue #1470 from orchestrator issue #123: https://github.com/EvaLok/schema-org-json-ld/issues/1470'\n",
+                "#!/usr/bin/env bash\nset -euo pipefail\npython - <<'PY'\nimport json\nfrom pathlib import Path\nstate_path = Path({state_path:?})\nstate = json.loads(state_path.read_text())\nstate['in_flight_sessions'] = 1\nstate['publish_gate']['status'] = 'blocked pending review'\nstate['dispatch_log_latest'] = '#1470 [Cycle Review] Cycle 345 end-of-cycle review (cycle 345)'\nstate['agent_sessions'] = [{{'issue': 1470, 'title': '[Cycle Review] Cycle 345 end-of-cycle review', 'status': 'in_flight', 'dispatched_at': '2026-03-25T03:00:00Z'}}]\nstate_path.write_text(json.dumps(state, indent=2) + '\\n')\nPY\ngit -C {repo:?} add docs/state.json\ngit -C {repo:?} commit -m 'state(record-dispatch): #1470 dispatched [cycle 345]' >/dev/null\nprintf '%s\\n' 'Created review issue #1470 from orchestrator issue #123: https://github.com/EvaLok/schema-org-json-ld/issues/1470'\n",
                 state_path = dir.join("docs/state.json"),
                 repo = dir,
             ),
@@ -1841,7 +2170,7 @@ mod tests {
         fs::create_dir_all(dir.join("docs/journal")).unwrap();
         fs::write(
             dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"),
-            "# Cycle 345\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: PASS\n- **Publish gate**: published\n\n## Next steps\n\n1. None.\n",
+            "# Cycle 345\n\n### Issues processed\n\n- None.\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: PASS\n- **Publish gate**: published\n\n## Next steps\n\n1. None.\n",
         )
         .unwrap();
         fs::write(dir.join("docs/journal/2026-03-25.md"), "# Journal\n").unwrap();
@@ -1909,7 +2238,7 @@ mod tests {
         fs::write(
             dir.join("tools/dispatch-review"),
             format!(
-                "#!/usr/bin/env bash\nset -euo pipefail\npython - <<'PY'\nimport json\nfrom pathlib import Path\nstate_path = Path({state_path:?})\nstate = json.loads(state_path.read_text())\nstate['in_flight_sessions'] = 1\nstate['dispatch_log_latest'] = '#1470 [Cycle Review] Cycle 345 end-of-cycle review (cycle 345)'\nstate['agent_sessions'] = [{{'issue': 1470, 'title': '[Cycle Review] Cycle 345 end-of-cycle review', 'status': 'in_flight'}}]\nstate_path.write_text(json.dumps(state, indent=2) + '\\n')\nPY\ngit -C {repo:?} add docs/state.json\ngit -C {repo:?} commit -m 'state(record-dispatch): #1470 dispatched [cycle 345]' >/dev/null\nprintf '%s\\n' 'Created review issue #1470 from orchestrator issue #123: https://github.com/EvaLok/schema-org-json-ld/issues/1470'\n",
+                "#!/usr/bin/env bash\nset -euo pipefail\npython - <<'PY'\nimport json\nfrom pathlib import Path\nstate_path = Path({state_path:?})\nstate = json.loads(state_path.read_text())\nstate['in_flight_sessions'] = 1\nstate['dispatch_log_latest'] = '#1470 [Cycle Review] Cycle 345 end-of-cycle review (cycle 345)'\nstate['agent_sessions'] = [{{'issue': 1470, 'title': '[Cycle Review] Cycle 345 end-of-cycle review', 'status': 'in_flight', 'dispatched_at': '2026-03-25T03:00:00Z'}}]\nstate_path.write_text(json.dumps(state, indent=2) + '\\n')\nPY\ngit -C {repo:?} add docs/state.json\ngit -C {repo:?} commit -m 'state(record-dispatch): #1470 dispatched [cycle 345]' >/dev/null\nprintf '%s\\n' 'Created review issue #1470 from orchestrator issue #123: https://github.com/EvaLok/schema-org-json-ld/issues/1470'\n",
                 state_path = dir.join("docs/state.json"),
                 repo = dir,
             ),
@@ -1947,11 +2276,15 @@ mod tests {
 
         with_path_prefix(&bin_dir, || run(&dir, 123, Some(345), false)).unwrap();
 
-        let worklog = fs::read_to_string(dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"))
-            .unwrap();
+        let worklog =
+            fs::read_to_string(dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"))
+                .unwrap();
         assert!(worklog.contains("## Cycle state"));
         assert!(!worklog.contains("## Pre-dispatch state"));
         assert!(!worklog.contains("Snapshot before review dispatch"));
+        assert!(worklog.contains(
+            "### Issues processed\n\n- [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470): [Cycle Review] Cycle 345 end-of-cycle review (in_flight)\n\n## Cycle state"
+        ));
         assert!(worklog.contains("- **In-flight agent sessions**: 0"));
         assert!(worklog.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
         assert!(worklog.contains("- **Pipeline status**: PASS"));
@@ -1970,7 +2303,8 @@ mod tests {
             .output()
             .unwrap();
         let log = String::from_utf8_lossy(&log_output.stdout);
-        assert!(log.contains("docs(worklog): refresh cycle 345 state after review dispatch [cycle 345]"));
+        assert!(log
+            .contains("docs(worklog): refresh cycle 345 state after review dispatch [cycle 345]"));
 
         let _ = fs::remove_dir_all(&dir);
         let _ = fs::remove_dir_all(&remote);
@@ -1983,7 +2317,7 @@ mod tests {
         fs::create_dir_all(dir.join("docs/journal")).unwrap();
         fs::write(
             dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"),
-            "# Cycle 345\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: published\n\n## Next steps\n\n1. Plan next dispatch\n",
+            "# Cycle 345\n\n### Issues processed\n\n- None.\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: published\n\n## Next steps\n\n1. Plan next dispatch\n",
         )
         .unwrap();
         fs::write(dir.join("docs/journal/2026-03-25.md"), "# Journal\n").unwrap();
@@ -2051,7 +2385,7 @@ mod tests {
         fs::write(
             dir.join("tools/dispatch-review"),
             format!(
-                "#!/usr/bin/env bash\nset -euo pipefail\npython - <<'PY'\nimport json\nfrom pathlib import Path\nstate_path = Path({state_path:?})\nstate = json.loads(state_path.read_text())\nstate['in_flight_sessions'] = 1\nstate['publish_gate']['status'] = 'blocked pending review'\nstate['dispatch_log_latest'] = '#1470 [Cycle Review] Cycle 345 end-of-cycle review (cycle 345)'\nstate['agent_sessions'] = [{{'issue': 1470, 'title': '[Cycle Review] Cycle 345 end-of-cycle review', 'status': 'in_flight'}}]\nstate_path.write_text(json.dumps(state, indent=2) + '\\n')\nPY\ngit -C {repo:?} add docs/state.json\ngit -C {repo:?} commit -m 'state(record-dispatch): #1470 dispatched [cycle 345]' >/dev/null\nprintf '%s\\n' 'Created review issue #1470 from orchestrator issue #123: https://github.com/EvaLok/schema-org-json-ld/issues/1470'\n",
+                "#!/usr/bin/env bash\nset -euo pipefail\npython - <<'PY'\nimport json\nfrom pathlib import Path\nstate_path = Path({state_path:?})\nstate = json.loads(state_path.read_text())\nstate['in_flight_sessions'] = 1\nstate['publish_gate']['status'] = 'blocked pending review'\nstate['dispatch_log_latest'] = '#1470 [Cycle Review] Cycle 345 end-of-cycle review (cycle 345)'\nstate['agent_sessions'] = [{{'issue': 1470, 'title': '[Cycle Review] Cycle 345 end-of-cycle review', 'status': 'in_flight', 'dispatched_at': '2026-03-25T03:00:00Z'}}]\nstate_path.write_text(json.dumps(state, indent=2) + '\\n')\nPY\ngit -C {repo:?} add docs/state.json\ngit -C {repo:?} commit -m 'state(record-dispatch): #1470 dispatched [cycle 345]' >/dev/null\nprintf '%s\\n' 'Created review issue #1470 from orchestrator issue #123: https://github.com/EvaLok/schema-org-json-ld/issues/1470'\n",
                 state_path = dir.join("docs/state.json"),
                 repo = dir,
             ),
@@ -2089,8 +2423,12 @@ mod tests {
 
         with_path_prefix(&bin_dir, || run(&dir, 123, Some(345), false)).unwrap();
 
-        let worklog = fs::read_to_string(dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"))
-            .unwrap();
+        let worklog =
+            fs::read_to_string(dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"))
+                .unwrap();
+        assert!(worklog.contains(
+            "### Issues processed\n\n- [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470): [Cycle Review] Cycle 345 end-of-cycle review (in_flight)\n\n## Cycle state"
+        ));
         assert!(worklog.contains("- **In-flight agent sessions**: 0"));
         assert!(worklog.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
         assert!(worklog.contains("- **Pipeline status**: FAIL (1 blocking finding)"));
@@ -2098,7 +2436,10 @@ mod tests {
         assert!(worklog.contains("- **Publish gate**: published"));
         assert!(worklog.contains("- **Publish gate (post-dispatch)**: blocked pending review"));
         assert!(worklog.contains("## Next steps\n\n1. Plan next dispatch\n\n## Next steps (post-dispatch)\n\n1. Review and iterate on PR from [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) ([Cycle Review] Cycle 345 end-of-cycle review) when Copilot completes\n"));
-        assert_eq!(worklog.matches("- **In-flight agent sessions**:").count(), 1);
+        assert_eq!(
+            worklog.matches("- **In-flight agent sessions**:").count(),
+            1
+        );
         assert_eq!(
             worklog
                 .matches("- **In-flight agent sessions (post-dispatch)**:")
@@ -2252,13 +2593,7 @@ mod tests {
         make_executable(&gh_path);
 
         with_path_prefix(&bin_dir, || {
-            step_c8(
-                &dir,
-                123,
-                345,
-                None,
-                "PASS (0 warnings)",
-            )
+            step_c8(&dir, 123, 345, None, "PASS (0 warnings)")
         })
         .unwrap();
 
