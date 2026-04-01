@@ -6343,8 +6343,10 @@
     {
       "dispatched_at": "2026-04-01T00:37:05Z",
       "issue": 2110,
+      "merged_at": "2026-04-01T05:35:00Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2111,
+      "status": "merged",
       "title": "Add --refresh-unchanged flag to metric-snapshot for stale after-change markers"
     },
     {
@@ -7096,7 +7098,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 27,
     "issue": 2114,
