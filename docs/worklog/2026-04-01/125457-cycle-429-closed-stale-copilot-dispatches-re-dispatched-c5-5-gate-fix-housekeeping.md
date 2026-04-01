@@ -21,6 +21,10 @@
 - [#2120](https://github.com/EvaLok/schema-org-json-ld/issues/2120)
 - [#2121](https://github.com/EvaLok/schema-org-json-ld/issues/2121)
 
+### Issues processed (post-dispatch)
+
+- [#2128](https://github.com/EvaLok/schema-org-json-ld/issues/2128): [Cycle Review] Cycle 429 end-of-cycle review (in_flight)
+
 ## Self-modifications
 
 - None.
@@ -28,14 +32,21 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 2
+- **In-flight agent sessions (post-dispatch)**: 3
 - **In-flight agent sessions (note)**: state.json reports 2; actual is 1 (#2126 only — #2123 and #2124 closed as stale this cycle, state.json not yet reconciled)
 - **Pipeline status**: PASS (3 warnings)
 - **Publish gate**: published
 
-## Next steps
+## Next steps (pre-dispatch)
 
 1. Review and iterate on PR #2127 from [#2126](https://github.com/EvaLok/schema-org-json-ld/issues/2126) (C5.5 gate fix re-dispatch of #2123, audit #354) when Copilot completes
 2. Re-dispatch cycle 428 review when slot available
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2123](https://github.com/EvaLok/schema-org-json-ld/issues/2123) (Make C5.5 pipeline gate record initial FAIL for dual-result reporting (audit #354)) when Copilot completes
+2. Review and iterate on PR from [#2124](https://github.com/EvaLok/schema-org-json-ld/issues/2124) ([Cycle Review] Cycle 428 end-of-cycle review) when Copilot completes
+3. Review and iterate on PR from [#2128](https://github.com/EvaLok/schema-org-json-ld/issues/2128) ([Cycle Review] Cycle 429 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
