@@ -1139,9 +1139,9 @@ fn format_in_flight_next_step(session: &AgentSession) -> Result<String, String> 
 }
 
 fn auto_pipeline_status(repo_root: &Path) -> Result<String, String> {
-    let output = runner::run_tool(repo_root, "pipeline-check", &[])?;
+    let output = runner::run_tool(repo_root, "pipeline-check", &["--json"])?;
     let stdout = runner::stdout_text(&output);
-    if let Ok(summary) = parse_pipeline_check_summary(&stdout) {
+    if let Ok(summary) = parse_pipeline_check_report(&stdout).map(|report| format_pipeline_status(&report)) {
         return Ok(summary);
     }
     let stderr = runner::stderr_text(&output);
@@ -1158,26 +1158,99 @@ fn auto_pipeline_status(repo_root: &Path) -> Result<String, String> {
     ))
 }
 
-fn parse_pipeline_check_summary(stdout: &str) -> Result<String, String> {
-    let summary_line = stdout
-        .lines()
-        .rev()
-        .find(|line| !line.trim().is_empty())
-        .map(str::trim)
-        .ok_or_else(|| "pipeline-check produced no stdout".to_string())?;
-    let summary = summary_line
-        .strip_prefix("Overall: ")
-        .ok_or_else(|| {
-            format!(
-                "pipeline-check summary line missing `Overall:` prefix: {}",
-                summary_line
-            )
-        })?
-        .trim();
-    if summary.is_empty() {
-        return Err("pipeline-check overall summary was empty".to_string());
+#[derive(Debug, Deserialize)]
+struct PipelineCheckReport {
+    overall: String,
+    has_blocking_findings: bool,
+    #[serde(default)]
+    steps: Vec<PipelineCheckStep>,
+}
+
+#[derive(Debug, Deserialize)]
+struct PipelineCheckStep {
+    status: String,
+    #[serde(default)]
+    severity: Option<String>,
+    #[serde(default)]
+    name: Option<String>,
+}
+
+fn parse_pipeline_check_report(stdout: &str) -> Result<PipelineCheckReport, String> {
+    serde_json::from_str(stdout)
+        .map_err(|error| format!("failed to parse pipeline-check JSON: {}", error))
+}
+
+fn format_pipeline_status(report: &PipelineCheckReport) -> String {
+    let overall = report.overall.to_ascii_uppercase();
+    let mut details = Vec::new();
+
+    let warning_count = report
+        .steps
+        .iter()
+        .filter(|step| step.status == "warn")
+        .count();
+    let blocking_warning_count = report
+        .steps
+        .iter()
+        .filter(|step| step.status == "warn" && step.severity.as_deref() == Some("blocking"))
+        .count();
+    let cascade_count = report
+        .steps
+        .iter()
+        .filter(|step| step.status == "cascade")
+        .count();
+    let blocking_steps: Vec<&str> = report
+        .steps
+        .iter()
+        .filter(|step| step.status == "fail")
+        .filter_map(|step| step.name.as_deref())
+        .collect();
+
+    if blocking_warning_count > 0 {
+        let suffix = if blocking_warning_count == 1 {
+            "blocking warning"
+        } else {
+            "blocking warnings"
+        };
+        details.push(format!("{} {}", blocking_warning_count, suffix));
     }
-    Ok(summary.to_string())
+
+    let non_blocking_warning_count = warning_count.saturating_sub(blocking_warning_count);
+    if non_blocking_warning_count > 0 {
+        let suffix = if non_blocking_warning_count == 1 {
+            "warning"
+        } else {
+            "warnings"
+        };
+        details.push(format!("{} {}", non_blocking_warning_count, suffix));
+    }
+
+    if cascade_count > 0 {
+        let suffix = if cascade_count == 1 {
+            "cascade"
+        } else {
+            "cascades"
+        };
+        details.push(format!("{} {}", cascade_count, suffix));
+    }
+
+    if report.has_blocking_findings {
+        if blocking_steps.is_empty() {
+            details.push("blocking findings".to_string());
+        } else {
+            details.push(format!(
+                "{} blocking: {}",
+                blocking_steps.len(),
+                blocking_steps.join(", ")
+            ));
+        }
+    }
+
+    if details.is_empty() {
+        overall
+    } else {
+        format!("{} ({})", overall, details.join(", "))
+    }
 }
 
 fn state_extra_in_flight_sessions(state: Option<&StateJson>) -> Result<u64, String> {
@@ -5895,22 +5968,29 @@ mod tests {
     }
 
     #[test]
-    fn worklog_auto_pipeline_uses_pipeline_check_summary() {
-        let repo_root = TempRepoDir::new("worklog-auto-pipeline");
+    fn auto_pipeline_status_uses_pass_prefix_for_warning_only_json_report() {
+        let repo_root = TempRepoDir::new("worklog-auto-pipeline-pass");
         write_pipeline_check_script(
             &repo_root.path,
-            "printf 'metric-snapshot: PASS\\nOverall: FAIL (2 blocking, 1 warning)\\n'\nexit 1",
+            "printf '%s\\n' '{\"overall\":\"pass\",\"has_blocking_findings\":false,\"steps\":[{\"status\":\"warn\"}]}'",
         );
 
-        let mut args = worklog_args("Auto pipeline");
-        args.done = vec!["Merged PR #123".to_string()];
-        args.auto_pipeline = true;
-        args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
+        let status = auto_pipeline_status(&repo_root.path).unwrap();
+        assert!(status.starts_with("PASS"));
+        assert_eq!(status, "PASS (1 warning)");
+    }
 
-        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
-        let content = fs::read_to_string(path).unwrap();
-        assert!(content.contains("- **Pipeline status**: FAIL (2 blocking, 1 warning)"));
+    #[test]
+    fn auto_pipeline_status_uses_fail_prefix_for_blocking_json_report() {
+        let repo_root = TempRepoDir::new("worklog-auto-pipeline-fail");
+        write_pipeline_check_script(
+            &repo_root.path,
+            "printf '%s\\n' '{\"overall\":\"fail\",\"has_blocking_findings\":true,\"steps\":[{\"name\":\"field-inventory\",\"status\":\"fail\"}]}'\nexit 1",
+        );
+
+        let status = auto_pipeline_status(&repo_root.path).unwrap();
+        assert!(status.starts_with("FAIL"));
+        assert_eq!(status, "FAIL (1 blocking: field-inventory)");
     }
 
     #[test]
@@ -5945,7 +6025,7 @@ mod tests {
         let repo_root = TempRepoDir::new("worklog-auto-pipeline-only-inline");
         write_pipeline_check_script(
             &repo_root.path,
-            "printf 'cycle-status: PASS\\nOverall: PASS (3 warnings)\\n'",
+            "printf '%s\\n' '{\"overall\":\"pass\",\"has_blocking_findings\":false,\"steps\":[{\"status\":\"warn\"},{\"status\":\"warn\"},{\"status\":\"warn\"}]}'",
         );
         write_state_file(
             &repo_root.path,
