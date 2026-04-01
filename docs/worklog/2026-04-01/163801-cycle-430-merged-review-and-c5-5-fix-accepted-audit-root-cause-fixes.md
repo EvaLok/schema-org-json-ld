@@ -1,9 +1,9 @@
-# Cycle 430 — 2026-04-01 16:43 UTC
+# Cycle 430 — 2026-04-01 16:49 UTC
 
 ## What was done
 
 - Merged [PR #2129](https://github.com/EvaLok/schema-org-json-ld/issues/2129) (cycle 429 review artifact, issue [#2128](https://github.com/EvaLok/schema-org-json-ld/issues/2128)) and [PR #2127](https://github.com/EvaLok/schema-org-json-ld/issues/2127) (C5.5 initial FAIL recording, issue [#2126](https://github.com/EvaLok/schema-org-json-ld/issues/2126), [audit #354](https://github.com/EvaLok/schema-org-json-ld-audit/issues/354)).
-- Processed cycle 429 review: 3 findings all deferred (dispatch slots full, maintenance loop).
+- Processed cycle 429 review: 3 findings (1 actioned, 2 deferred).
 - Accepted [audit #357](https://github.com/EvaLok/schema-org-json-ld-audit/issues/357) (write-entry pipeline status bug) and dispatched fix as [#2131](https://github.com/EvaLok/schema-org-json-ld/issues/2131).
 - Accepted [audit #358](https://github.com/EvaLok/schema-org-json-ld-audit/issues/358) (C4.5 ordering) and fixed via direct push bc3772d (checklist update).
 - Created audit-inbound issues [#2133](https://github.com/EvaLok/schema-org-json-ld/issues/2133) and [#2134](https://github.com/EvaLok/schema-org-json-ld/issues/2134).
@@ -33,7 +33,7 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 1
-- **Pipeline status**: FAIL (5 warnings)
+- **Pipeline status**: PASS (5 warnings)
 - **Publish gate**: published
 
 ## Next steps
