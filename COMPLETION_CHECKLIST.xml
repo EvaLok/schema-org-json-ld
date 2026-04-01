@@ -53,6 +53,12 @@
       defer a commitment whose condition is already checkable. Do not reference
       pipeline phases or tool outputs that do not yet exist.
       Recurrence escalation: journal-quality in cycles 420-421.</constraint>
+    <constraint id="final-state-accuracy">Journal decision summaries MUST reflect
+      the FINAL disposition state, not the initial S0.5 assessment. If review
+      finding dispositions change during the cycle (e.g., a deferred finding is
+      later actioned or dispatched), the journal must report the final counts.
+      Verify against state.json review_agent.history before writing.
+      Recurrence escalation: journal-quality in cycle 430.</constraint>
   </step>
 
   <step id="C4.1" title="Validate documentation (BLOCKING GATE)"
