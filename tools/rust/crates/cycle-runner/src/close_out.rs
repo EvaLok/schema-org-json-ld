@@ -488,7 +488,7 @@ fn step_c5_5(repo_root: &Path, issue: u64) -> Result<(bool, String), String> {
     let stderr = runner::stderr_text(&output);
     let exit_code = output.status.code().unwrap_or(-1);
 
-    let (passed, pipeline_summary, body) = match parse_pipeline_gate_report(&stdout) {
+    let (passed, pipeline_summary, body, initial_result) = match parse_pipeline_gate_report(&stdout) {
         Ok(report) => {
             let passed = exit_ok && report.overall == "pass" && !report.has_blocking_findings;
             let pipeline_summary = format_pipeline_summary(&report);
@@ -502,7 +502,16 @@ fn step_c5_5(repo_root: &Path, issue: u64) -> Result<(bool, String), String> {
             if !stderr.is_empty() {
                 body.push_str(&format!("\n- stderr: {}", stderr));
             }
-            (passed, pipeline_summary, body)
+            let initial_result = (!passed).then(|| {
+                serde_json::json!({
+                    "result": "FAIL",
+                    "summary": pipeline_summary,
+                    "exit_code": exit_code,
+                    "overall": report.overall,
+                    "has_blocking_findings": report.has_blocking_findings,
+                })
+            });
+            (passed, pipeline_summary, body, initial_result)
         }
         Err(parse_error) => {
             let pipeline_summary = "FAIL (invalid pipeline-check JSON)".to_string();
@@ -516,9 +525,23 @@ fn step_c5_5(repo_root: &Path, issue: u64) -> Result<(bool, String), String> {
             if !stderr.is_empty() {
                 body.push_str(&format!("\n- stderr: {}", stderr));
             }
-            (false, pipeline_summary, body)
+            (
+                false,
+                pipeline_summary.clone(),
+                body,
+                Some(serde_json::json!({
+                    "result": "FAIL",
+                    "summary": pipeline_summary,
+                    "exit_code": exit_code,
+                    "json_parse_error": parse_error,
+                })),
+            )
         }
     };
+
+    if let Some(initial_result) = initial_result {
+        record_initial_c5_5_failure(repo_root, initial_result)?;
+    }
 
     steps::post_step(
         repo_root,
@@ -534,6 +557,37 @@ fn step_c5_5(repo_root: &Path, issue: u64) -> Result<(bool, String), String> {
     }
 
     Ok((true, pipeline_summary))
+}
+
+fn record_initial_c5_5_failure(repo_root: &Path, mut initial_result: Value) -> Result<(), String> {
+    let cycle = current_cycle_from_state(repo_root)?;
+    let mut state = read_state_value(repo_root)?;
+    let initial_result_object = initial_result
+        .as_object_mut()
+        .ok_or_else(|| "initial C5.5 result must be a JSON object".to_string())?;
+    initial_result_object.insert("cycle".to_string(), serde_json::json!(cycle));
+
+    if state
+        .pointer("/tool_pipeline/c5_5_initial_result/cycle")
+        .and_then(Value::as_u64)
+        == Some(cycle)
+    {
+        return Ok(());
+    }
+
+    let tool_pipeline = state
+        .get_mut("tool_pipeline")
+        .and_then(Value::as_object_mut)
+        .ok_or_else(|| "missing object /tool_pipeline in docs/state.json".to_string())?;
+    tool_pipeline.insert("c5_5_initial_result".to_string(), initial_result);
+    write_state_value(repo_root, &state)?;
+
+    let commit_message = format!(
+        "state(pipeline): record initial C5.5 FAIL for cycle {} [cycle {}]",
+        cycle, cycle
+    );
+    commit_state_json(repo_root, &commit_message)?;
+    Ok(())
 }
 
 fn parse_pipeline_gate_report(stdout: &str) -> Result<PipelineGateReport, String> {
@@ -1680,6 +1734,35 @@ PY
         std::env::temp_dir().join(format!("{}-{}", prefix, suffix))
     }
 
+    fn write_minimal_close_out_state(dir: &std::path::Path, cycle: u64) {
+        fs::write(
+            dir.join("docs/state.json"),
+            serde_json::to_string_pretty(&json!({
+                "cycle_phase": {
+                    "cycle": cycle,
+                    "phase": "close_out",
+                    "phase_entered_at": "2026-03-25T00:00:00Z"
+                },
+                "last_cycle": {
+                    "number": cycle,
+                    "timestamp": "2026-03-24T00:00:00Z"
+                },
+                "field_inventory": {
+                    "fields": {
+                        "cycle_phase": {
+                            "last_refreshed": format!("cycle {}", cycle.saturating_sub(1))
+                        }
+                    }
+                },
+                "tool_pipeline": {
+                    "status": "phase_5_active"
+                }
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+    }
+
     #[test]
     fn complete_close_out_phase_transitions_state_and_commits_expected_message() {
         let dir = setup_temp_repo("complete-phase");
@@ -1732,6 +1815,7 @@ PY
         let dir = setup_temp_repo("step-c5-5-overall-fail");
         let args_path = dir.join("post-step-args.txt");
         write_post_step_capture_script(&dir, &args_path);
+        write_minimal_close_out_state(&dir, 345);
         fs::write(
             dir.join("tools/pipeline-check"),
             "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"overall\":\"fail\",\"has_blocking_findings\":false}'\n",
@@ -1748,6 +1832,31 @@ PY
         assert!(args.contains("---ARG---\nC5.5\n"));
         assert!(args.contains("overall: fail"));
         assert!(args.contains("has_blocking_findings: false"));
+
+        let state = state_schema::read_state_value(&dir).unwrap();
+        assert_eq!(
+            state.pointer("/tool_pipeline/c5_5_initial_result"),
+            Some(&json!({
+                "cycle": 345,
+                "result": "FAIL",
+                "summary": "FAIL",
+                "exit_code": 0,
+                "overall": "fail",
+                "has_blocking_findings": false
+            }))
+        );
+
+        let log_output = Command::new("git")
+            .arg("-C")
+            .arg(&dir)
+            .args(["log", "-1", "--pretty=%s"])
+            .output()
+            .unwrap();
+        assert!(log_output.status.success());
+        assert_eq!(
+            String::from_utf8(log_output.stdout).unwrap().trim(),
+            "state(pipeline): record initial C5.5 FAIL for cycle 345 [cycle 345]"
+        );
 
         let _ = fs::remove_dir_all(&dir);
     }
@@ -1799,6 +1908,7 @@ PY
         let dir = setup_temp_repo("step-c5-5-warning-pass");
         let args_path = dir.join("post-step-args.txt");
         write_post_step_capture_script(&dir, &args_path);
+        write_minimal_close_out_state(&dir, 345);
         fs::write(
             dir.join("tools/pipeline-check"),
             "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"overall\":\"pass\",\"has_blocking_findings\":false,\"steps\":[{\"name\":\"doc-validation\",\"status\":\"warn\"}]}'\n",
@@ -1813,6 +1923,9 @@ PY
         assert!(args.contains("---ARG---\nC5.5\n"));
         assert!(args.contains("Pipeline: PASS (1 warning)"));
 
+        let state = state_schema::read_state_value(&dir).unwrap();
+        assert_eq!(state.pointer("/tool_pipeline/c5_5_initial_result"), None);
+
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -1821,6 +1934,7 @@ PY
         let dir = setup_temp_repo("step-c5-5-blocking-warning-pass");
         let args_path = dir.join("post-step-args.txt");
         write_post_step_capture_script(&dir, &args_path);
+        write_minimal_close_out_state(&dir, 345);
         fs::write(
             dir.join("tools/pipeline-check"),
             "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"overall\":\"pass\",\"has_blocking_findings\":false,\"steps\":[{\"name\":\"worklog-dedup\",\"status\":\"warn\",\"severity\":\"blocking\"},{\"name\":\"doc-validation\",\"status\":\"warn\",\"severity\":\"warning\"}]}'\n",
@@ -1843,6 +1957,7 @@ PY
         let dir = setup_temp_repo("step-c5-5-blocking");
         let args_path = dir.join("post-step-args.txt");
         write_post_step_capture_script(&dir, &args_path);
+        write_minimal_close_out_state(&dir, 345);
         fs::write(
             dir.join("tools/pipeline-check"),
             "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"overall\":\"pass\",\"has_blocking_findings\":true}'\n",
@@ -1867,6 +1982,7 @@ PY
         let dir = setup_temp_repo("step-c5-5-unexpected-overall");
         let args_path = dir.join("post-step-args.txt");
         write_post_step_capture_script(&dir, &args_path);
+        write_minimal_close_out_state(&dir, 345);
         fs::write(
             dir.join("tools/pipeline-check"),
             "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"overall\":\"warning\",\"has_blocking_findings\":false}'\n",
