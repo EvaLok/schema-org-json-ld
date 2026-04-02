@@ -6497,15 +6497,19 @@
     {
       "dispatched_at": "2026-04-02T08:45:05Z",
       "issue": 2159,
+      "merged_at": "2026-04-02T12:30:56Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2160,
+      "status": "merged",
       "title": "Fix write-entry format_pipeline_status to prevent PASS/FAIL divergence from pipeline-check"
     },
     {
       "dispatched_at": "2026-04-02T08:58:23Z",
       "issue": 2161,
+      "merged_at": "2026-04-02T12:23:10Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2162,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 434 end-of-cycle review"
     },
     {
