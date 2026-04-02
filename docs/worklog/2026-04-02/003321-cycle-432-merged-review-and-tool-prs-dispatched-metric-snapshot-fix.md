@@ -31,7 +31,7 @@
 
 ## Cycle state
 
-- **In-flight agent sessions**: 0
+- **In-flight agent sessions**: 1
 - **In-flight agent sessions (post-dispatch)**: 1
 - **Pipeline status**: PASS (4 warnings)
 - **Pipeline status (post-dispatch)**: PASS (3 warnings)
