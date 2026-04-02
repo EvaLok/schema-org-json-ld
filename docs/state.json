@@ -6543,6 +6543,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix forward-work counter in cycle-complete and add state-invariants"
+    },
+    {
+      "dispatched_at": "2026-04-02T16:33:02Z",
+      "issue": 2170,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Preserve gate failure history in write-entry worklog output"
     }
   ],
   "audit_dropped": [
@@ -7089,7 +7096,7 @@
       "resolved_ref": "docs/reviews/cycle-434.md"
     }
   ],
-  "dispatch_log_latest": "#2168 Fix forward-work counter in cycle-complete and add state-invariants (cycle 436)",
+  "dispatch_log_latest": "#2170 Preserve gate failure history in write-entry worklog output (cycle 436)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7362,7 +7369,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 19,
     "issue": 2166,
