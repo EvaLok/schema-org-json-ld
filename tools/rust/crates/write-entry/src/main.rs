@@ -987,12 +987,7 @@ fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<Worklog
                     None => state_extra_in_flight_sessions(state.as_ref())?,
                 },
                 pipeline_status: resolve_pipeline_status(args, repo_root, state.as_ref())?,
-                prior_gate_failures: args
-                    .prior_gate_failures
-                    .iter()
-                    .map(|failure| failure.trim().to_string())
-                    .filter(|failure| !failure.is_empty())
-                    .collect(),
+                prior_gate_failures: resolve_prior_gate_failures(args),
                 publish_gate: match &args.publish_gate {
                     Some(value) => value.clone(),
                     None => state_publish_gate_status(state.as_ref())?,
@@ -1016,12 +1011,7 @@ fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<Worklog
         current_state: CurrentState {
             in_flight_sessions: state_extra_in_flight_sessions(state.as_ref())?,
             pipeline_status: resolve_pipeline_status(args, repo_root, state.as_ref())?,
-            prior_gate_failures: args
-                .prior_gate_failures
-                .iter()
-                .map(|failure| failure.trim().to_string())
-                .filter(|failure| !failure.is_empty())
-                .collect(),
+            prior_gate_failures: resolve_prior_gate_failures(args),
             publish_gate: state_publish_gate_status(state.as_ref())?,
         },
         next_steps: resolve_next_steps(args, state.as_ref())?,
@@ -1099,6 +1089,14 @@ fn resolve_pipeline_status(
         return auto_pipeline_status(repo_root);
     }
     Ok(state_pipeline_status(state))
+}
+
+fn resolve_prior_gate_failures(args: &WorklogArgs) -> Vec<String> {
+    args.prior_gate_failures
+        .iter()
+        .map(|failure| failure.trim().to_string())
+        .filter(|failure| !failure.is_empty())
+        .collect()
 }
 
 fn resolve_next_steps(
