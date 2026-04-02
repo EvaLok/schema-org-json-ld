@@ -28,7 +28,9 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 0
+- **In-flight agent sessions (post-dispatch)**: 1
 - **Pipeline status**: FAIL (1 blocking warning, 4 warnings, 2 blocking: frozen-commit-verify, current-cycle-steps)
+- **Pipeline status (post-dispatch)**: PASS (4 warnings)
 - **Publish gate**: published
 
 ## Next steps
