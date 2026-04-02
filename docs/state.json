@@ -6536,6 +6536,13 @@
       "pr": 2165,
       "status": "merged",
       "title": "Backfilled: PR #2165"
+    },
+    {
+      "dispatched_at": "2026-04-02T16:32:42Z",
+      "issue": 2168,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix forward-work counter in cycle-complete and add state-invariants"
     }
   ],
   "audit_dropped": [
@@ -7082,7 +7089,7 @@
       "resolved_ref": "docs/reviews/cycle-434.md"
     }
   ],
-  "dispatch_log_latest": "#2164 [Cycle Review] Cycle 435 end-of-cycle review (cycle 435)",
+  "dispatch_log_latest": "#2168 Fix forward-work counter in cycle-complete and add state-invariants (cycle 436)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7355,7 +7362,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 19,
     "issue": 2166,
