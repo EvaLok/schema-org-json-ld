@@ -1170,8 +1170,6 @@ struct PipelineCheckReport {
 struct PipelineCheckStep {
     status: String,
     #[serde(default)]
-    severity: Option<String>,
-    #[serde(default)]
     name: Option<String>,
 }
 
@@ -1189,40 +1187,18 @@ fn format_pipeline_status(report: &PipelineCheckReport) -> String {
         .iter()
         .filter(|step| step.status == "warn")
         .count();
-    let blocking_warning_count = report
-        .steps
-        .iter()
-        .filter(|step| step.status == "warn" && step.severity.as_deref() == Some("blocking"))
-        .count();
     let cascade_count = report
         .steps
         .iter()
         .filter(|step| step.status == "cascade")
         .count();
-    let blocking_steps: Vec<&str> = report
-        .steps
-        .iter()
-        .filter(|step| step.status == "fail")
-        .filter_map(|step| step.name.as_deref())
-        .collect();
-
-    if blocking_warning_count > 0 {
-        let suffix = if blocking_warning_count == 1 {
-            "blocking warning"
-        } else {
-            "blocking warnings"
-        };
-        details.push(format!("{} {}", blocking_warning_count, suffix));
-    }
-
-    let non_blocking_warning_count = warning_count.saturating_sub(blocking_warning_count);
-    if non_blocking_warning_count > 0 {
-        let suffix = if non_blocking_warning_count == 1 {
+    if warning_count > 0 {
+        let suffix = if warning_count == 1 {
             "warning"
         } else {
             "warnings"
         };
-        details.push(format!("{} {}", non_blocking_warning_count, suffix));
+        details.push(format!("{} {}", warning_count, suffix));
     }
 
     if cascade_count > 0 {
@@ -1235,6 +1211,12 @@ fn format_pipeline_status(report: &PipelineCheckReport) -> String {
     }
 
     if report.has_blocking_findings {
+        let blocking_steps: Vec<&str> = report
+            .steps
+            .iter()
+            .filter(|step| step.status == "fail")
+            .filter_map(|step| step.name.as_deref())
+            .collect();
         if blocking_steps.is_empty() {
             details.push("blocking findings".to_string());
         } else {
@@ -6246,6 +6228,106 @@ mod tests {
         let status = auto_pipeline_status(&repo_root.path).unwrap();
         assert!(status.starts_with("FAIL"));
         assert_eq!(status, "FAIL (1 blocking: field-inventory)");
+    }
+
+    #[test]
+    fn format_pipeline_status_keeps_pass_prefix_for_non_blocking_warning_report() {
+        let report = PipelineCheckReport {
+            overall: "pass".to_string(),
+            has_blocking_findings: false,
+            steps: vec![
+                PipelineCheckStep {
+                    status: "warn".to_string(),
+                    name: Some("field-inventory".to_string()),
+                },
+                PipelineCheckStep {
+                    status: "warn".to_string(),
+                    name: Some("step-comments".to_string()),
+                },
+            ],
+        };
+
+        let status = format_pipeline_status(&report);
+        assert!(status.starts_with("PASS"));
+        assert_eq!(status, "PASS (2 warnings)");
+    }
+
+    #[test]
+    fn format_pipeline_status_keeps_fail_prefix_for_blocking_findings_report() {
+        let report = PipelineCheckReport {
+            overall: "fail".to_string(),
+            has_blocking_findings: true,
+            steps: vec![PipelineCheckStep {
+                status: "fail".to_string(),
+                name: Some("field-inventory".to_string()),
+            }],
+        };
+
+        let status = format_pipeline_status(&report);
+        assert!(status.starts_with("FAIL"));
+        assert_eq!(status, "FAIL (1 blocking: field-inventory)");
+    }
+
+    #[test]
+    fn format_pipeline_status_keeps_pass_prefix_for_mixed_warning_severities() {
+        let report = PipelineCheckReport {
+            overall: "pass".to_string(),
+            has_blocking_findings: false,
+            steps: vec![
+                PipelineCheckStep {
+                    status: "pass".to_string(),
+                    name: Some("validate-docs".to_string()),
+                },
+                PipelineCheckStep {
+                    status: "warn".to_string(),
+                    name: Some("field-inventory".to_string()),
+                },
+                PipelineCheckStep {
+                    status: "warn".to_string(),
+                    name: Some("step-comments".to_string()),
+                },
+            ],
+        };
+
+        let status = format_pipeline_status(&report);
+        assert!(status.starts_with("PASS"));
+        assert_eq!(status, "PASS (2 warnings)");
+    }
+
+    #[test]
+    fn format_pipeline_status_prefix_matches_report_overall() {
+        let reports = [
+            PipelineCheckReport {
+                overall: "pass".to_string(),
+                has_blocking_findings: false,
+                steps: vec![],
+            },
+            PipelineCheckReport {
+                overall: "fail".to_string(),
+                has_blocking_findings: true,
+                steps: vec![PipelineCheckStep {
+                    status: "fail".to_string(),
+                    name: Some("field-inventory".to_string()),
+                }],
+            },
+            PipelineCheckReport {
+                overall: "warn".to_string(),
+                has_blocking_findings: false,
+                steps: vec![PipelineCheckStep {
+                    status: "warn".to_string(),
+                    name: Some("step-comments".to_string()),
+                }],
+            },
+        ];
+
+        for report in reports {
+            let status = format_pipeline_status(&report);
+            assert!(
+                status.starts_with(&report.overall.to_ascii_uppercase()),
+                "expected {status:?} to start with {:?}",
+                report.overall.to_ascii_uppercase()
+            );
+        }
     }
 
     #[test]
