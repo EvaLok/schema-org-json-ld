@@ -12268,14 +12268,15 @@
           "process-adherence",
           "state-integrity"
         ],
+        "actioned": 1,
         "complacency_score": 3,
         "cycle": 433,
-        "deferred": 3,
+        "deferred": 2,
         "finding_count": 3,
         "finding_dispositions": [
           {
             "category": "process-adherence",
-            "disposition": "deferred"
+            "disposition": "actioned"
           },
           {
             "category": "journal-quality",
