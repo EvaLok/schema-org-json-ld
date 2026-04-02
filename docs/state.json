@@ -6467,6 +6467,13 @@
       "pr": 2146,
       "status": "merged",
       "title": "Backfilled: PR #2146"
+    },
+    {
+      "dispatched_at": "2026-04-02T05:02:43Z",
+      "issue": 2152,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Build dispatch-task tool: atomic Copilot issue creation + state recording"
     }
   ],
   "audit_dropped": [
@@ -6994,7 +7001,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2147 [Cycle Review] Cycle 432 end-of-cycle review (cycle 432)",
+  "dispatch_log_latest": "#2152 Build dispatch-task tool: atomic Copilot issue creation + state recording (cycle 433)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7267,7 +7274,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 17,
     "issue": 2149,
@@ -12224,7 +12231,7 @@
     ],
     "last_review_cycle": 432
   },
-  "review_dispatch_consecutive": 5,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 420,
   "schema_status": {
     "directory_layout": {
