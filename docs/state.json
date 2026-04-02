@@ -6471,15 +6471,19 @@
     {
       "dispatched_at": "2026-04-02T05:02:43Z",
       "issue": 2152,
+      "merged_at": "2026-04-02T08:39:51Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2151,
+      "status": "merged",
       "title": "Build dispatch-task tool: atomic Copilot issue creation + state recording"
     },
     {
       "dispatched_at": "2026-04-02T05:07:59Z",
       "issue": 2154,
+      "merged_at": "2026-04-02T08:39:51Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2155,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 433 end-of-cycle review"
     },
     {
