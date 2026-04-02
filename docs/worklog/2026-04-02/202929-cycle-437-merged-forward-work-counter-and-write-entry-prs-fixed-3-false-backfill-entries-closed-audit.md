@@ -23,6 +23,10 @@
 - 2168 (forward-work counter, closed via PR merge)
 - 2170 (write-entry gate history, closed via PR merge)
 
+### Issues processed (post-dispatch)
+
+- [#2175](https://github.com/EvaLok/schema-org-json-ld/issues/2175): [Cycle Review] Cycle 437 end-of-cycle review (in_flight)
+
 ## Self-modifications
 
 - **`tools/rust/crates/cycle-complete/src/main.rs`**: modified
@@ -32,13 +36,18 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 0
+- **In-flight agent sessions (post-dispatch)**: 1
 - **Pipeline status**: PASS (2 warnings)
 - **Pipeline status (C1 early check)**: FAIL (2 warnings, 2 blocking: doc-validation, current-cycle-steps)
 - **Publish gate**: published
 
-## Next steps
+## Next steps (pre-dispatch)
 
 1. No in-flight sessions — plan next dispatch
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2175](https://github.com/EvaLok/schema-org-json-ld/issues/2175) ([Cycle Review] Cycle 437 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
