@@ -7008,7 +7008,8 @@
       "category": "field-inventory",
       "deadline_cycle": 434,
       "deferred_cycle": 429,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "dispatch_log_latest marker now at cycle 434 via metric-snapshot refresh tooling. Overdue 1 cycle; resolved cycle 435."
     },
     {
       "category": "worklog-accuracy",
