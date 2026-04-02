@@ -14,7 +14,7 @@
 
 ## 3. [journal-quality] The journal and review history claim three dispatched fixes, but the cycle only created two agent-task issues
 
-**File**: docs/journal/2026-04-02.md:152-180
+**File**: docs/journal/2026-04-02.md:152-176
 **Evidence**: The journal says cycle 436 had `all three chronic categories dispatched as process-level fixes` and `all chronic categories have active dispatches simultaneously`. But issue `#2166` step `2.5` says there were only `2 dispatch slots available`, and step `9` plans only two Copilot dispatches: `#2168` and `#2170`. Those are the only agent-task issues created, and their bodies cover forward-work/state-invariants and write-entry gate history respectively; neither dispatch includes the claimed third fix, `journal post-dispatch refresh`. The frozen review-history entry repeats the same overclaim with `dispatch_created: 3` and a note listing `journal post-dispatch refresh` as dispatched (`docs/state.json:12384-12410`).
 **Recommendation**: Only claim a category was dispatched when there is a concrete issue or PR with acceptance criteria for that fix. If one dispatch is meant to cover multiple categories, say which issue does so and make that scope explicit in the issue body and review-history note.
 
