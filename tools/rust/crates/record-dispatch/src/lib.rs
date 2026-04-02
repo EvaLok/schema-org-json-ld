@@ -12,14 +12,12 @@ pub const PIPELINE_GATE_FAILURE_MESSAGE: &str =
     "Cannot dispatch: pipeline-check failed. Fix failures before dispatching.";
 pub const REVIEW_DISPATCH_WARNING: &str =
     "Pipeline gate bypassed for review dispatch (--review-dispatch)";
-const PIPELINE_CHECK_ARGS: [&str; 7] = [
+const PIPELINE_CHECK_ARGS: [&str; 5] = [
     "tools/pipeline-check",
     "--exclude-step",
     "step-comments",
     "--exclude-step",
     "current-cycle-steps",
-    "--exclude-step",
-    "worklog-immutability",
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
