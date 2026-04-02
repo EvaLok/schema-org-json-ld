@@ -49,6 +49,8 @@ struct GitCommit {
     subject: String,
 }
 
+const BACKFILL_TITLE_PREFIX: &str = "Backfilled:";
+
 fn main() {
     let cli = Cli::parse();
 
@@ -1334,7 +1336,7 @@ fn check_forward_work_counter_consistency(state: &StateJson) -> CheckResult {
         }
     };
 
-    let actual_count = match forward_work.get("count").and_then(Value::as_i64) {
+    let actual_count = match forward_work.get("count").and_then(Value::as_u64) {
         Some(value) => value,
         None => {
             return warn(
@@ -1344,7 +1346,7 @@ fn check_forward_work_counter_consistency(state: &StateJson) -> CheckResult {
         }
     };
 
-    let last_forward_cycle = match forward_work.get("last_forward_cycle").and_then(Value::as_i64) {
+    let last_forward_cycle = match forward_work.get("last_forward_cycle").and_then(Value::as_u64) {
         Some(value) if value > 0 => value,
         _ => {
             return warn(
@@ -1461,7 +1463,7 @@ fn check_backfill_session_title_pr_match(state: &StateJson) -> CheckResult {
         let Some(title) = session.title.as_deref() else {
             continue;
         };
-        if !title.starts_with("Backfilled:") {
+        if !title.starts_with(BACKFILL_TITLE_PREFIX) {
             continue;
         }
 
@@ -1582,17 +1584,19 @@ fn fail(name: &'static str, details: impl Into<String>) -> CheckResult {
     }
 }
 
-fn current_state_cycle_number(state: &StateJson) -> Option<i64> {
+fn current_state_cycle_number(state: &StateJson) -> Option<u64> {
     state
         .extra
         .get("current_cycle")
         .and_then(|value| value.get("number"))
-        .and_then(Value::as_i64)
-        .or_else(|| state.cycle_phase.cycle.and_then(|value| i64::try_from(value).ok()))
-        .or_else(|| state.last_cycle.extra.get("number").and_then(Value::as_i64))
+        .and_then(Value::as_u64)
+        .or(state.cycle_phase.cycle)
+        .or_else(|| state.last_cycle.extra.get("number").and_then(Value::as_u64))
 }
 
 fn extract_backfill_pr_number(title: &str) -> Option<i64> {
+    // Accept both "Backfilled: PR #2162" and "Backfilled: PR owner/repo#2162" by
+    // reading the numeric suffix after the first '#'.
     let (_, suffix) = title.split_once('#')?;
     let digits: String = suffix
         .chars()

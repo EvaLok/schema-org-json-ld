@@ -613,9 +613,15 @@ fn build_forward_work_counter_update(cycle: u64, state: &StateJson) -> Option<Pa
         Some(last_forward_cycle) if last_forward_cycle > 0 => {
             cycle.saturating_sub(last_forward_cycle)
         }
+        Some(0) => {
+            eprintln!(
+                "Warning: cycles_since_last_forward_work.last_forward_cycle is 0; setting count to 0"
+            );
+            0
+        }
         _ => {
             eprintln!(
-                "Warning: cycles_since_last_forward_work.last_forward_cycle missing or 0; setting count to 0"
+                "Warning: cycles_since_last_forward_work.last_forward_cycle is missing; setting count to 0"
             );
             0
         }
@@ -1951,7 +1957,12 @@ mod tests {
 
         let changed_paths =
             apply_state_patch(&mut raw_state, &patch).expect("state patch should apply cleanly");
-        assert_eq!(changed_paths.len(), 13);
+        let expected_changed_path_count = 13;
+        assert_eq!(changed_paths.len(), expected_changed_path_count);
+        assert!(changed_paths.contains(&"/cycles_since_last_forward_work/count".to_string()));
+        assert!(changed_paths.contains(
+            &"/field_inventory/fields/cycles_since_last_forward_work/last_refreshed".to_string()
+        ));
         assert_eq!(
             raw_state
                 .pointer("/last_cycle/number")
