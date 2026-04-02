@@ -6978,7 +6978,8 @@
       "category": "state-integrity",
       "deadline_cycle": 436,
       "deferred_cycle": 431,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-432.md"
     },
     {
       "category": "worklog-accuracy",
@@ -12189,7 +12190,7 @@
         "note": "worklog-accuracy: self-modifications auto-derivation not yet in write-entry. journal-quality: actioned via COMPLETION_CHECKLIST.xml final-state-accuracy constraint (8ce1aeb1). state-integrity: tool_pipeline staleness is cadence calibration issue for after-change fields."
       },
       {
-        "actioned": 0,
+        "actioned": 2,
         "categories": [
           "journal-quality",
           "state-integrity",
@@ -12197,7 +12198,7 @@
         ],
         "complacency_score": 2,
         "cycle": 432,
-        "deferred": 4,
+        "deferred": 2,
         "finding_count": 4,
         "finding_dispositions": [
           {
@@ -12210,15 +12211,15 @@
           },
           {
             "category": "state-integrity",
-            "disposition": "deferred"
+            "disposition": "actioned"
           },
           {
             "category": "state-integrity",
-            "disposition": "deferred"
+            "disposition": "actioned"
           }
         ],
         "ignored": 0,
-        "note": "All 4 deferred: findings 1-3 share root cause (dispatch #2145 not recorded via record-dispatch despite real dispatch). Finding 4 field-inventory staleness chronic. Recurrence escalation: worklog-accuracy, journal-quality, state-integrity consecutive in cycles 431-432. Process-level fixes required — will address after freeing dispatch capacity from stale sessions."
+        "note": "Re-processed: findings 3-4 actioned (PR #2146 merged a496895; field inventory refreshed e6be001). Findings 1-2 deferred (past worklog/journal immutable)."
       }
     ],
     "last_review_cycle": 432
