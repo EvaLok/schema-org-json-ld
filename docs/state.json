@@ -6523,8 +6523,10 @@
     {
       "dispatched_at": "2026-04-02T12:40:50Z",
       "issue": 2164,
+      "merged_at": "2026-04-02T16:32:19Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2165,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 435 end-of-cycle review"
     },
     {
