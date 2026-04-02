@@ -1564,6 +1564,7 @@ fn derive_issue_processed_entries(
     what_was_done: &[String],
 ) -> Result<Vec<String>, String> {
     let start = cycle_window_start(cycle, state, "--auto-issues")?;
+    let audit_issue_numbers = derive_audit_issue_numbers(state);
     let mut seen = HashSet::new();
     let mut issues = Vec::new();
 
@@ -1606,6 +1607,24 @@ fn derive_issue_processed_entries(
                 ),
             );
         }
+        let mut session_audit_issue_numbers = Vec::new();
+        if let Some(audit_inbound) = session
+            .extra
+            .get("audit_inbound")
+            .and_then(Value::as_i64)
+            .and_then(|value| u64::try_from(value).ok())
+        {
+            session_audit_issue_numbers.push(audit_inbound);
+        }
+        if let Some(note) = session.extra.get("note").and_then(Value::as_str) {
+            push_issue_processed_references(
+                &mut issues,
+                &mut seen,
+                note,
+                &audit_issue_numbers,
+                &session_audit_issue_numbers,
+            );
+        }
     }
 
     for issue in state
@@ -1621,18 +1640,59 @@ fn derive_issue_processed_entries(
         );
     }
 
-    derive_review_history_issue_processed_entries(cycle, state, &mut issues, &mut seen);
+    derive_review_history_issue_processed_entries(
+        cycle,
+        state,
+        &audit_issue_numbers,
+        &mut issues,
+        &mut seen,
+    );
 
     for item in what_was_done {
-        push_issue_processed_references(&mut issues, &mut seen, item);
+        push_issue_processed_references(&mut issues, &mut seen, item, &audit_issue_numbers, &[]);
     }
 
     Ok(issues)
 }
 
+fn derive_audit_issue_numbers(state: &StateJson) -> HashSet<u64> {
+    let mut audit_issue_numbers = state
+        .pending_audit_implementations
+        .iter()
+        .filter_map(|recommendation| recommendation.audit_issue)
+        .collect::<HashSet<_>>();
+
+    let Some(recommendations) = state
+        .extra
+        .get("audit_tracking")
+        .and_then(|value| value.get("recommendations"))
+        .and_then(Value::as_array)
+    else {
+        return audit_issue_numbers;
+    };
+
+    for recommendation in recommendations {
+        if let Some(audit_issue) = recommendation
+            .get("audit_issue")
+            .and_then(Value::as_u64)
+            .or_else(|| {
+                recommendation
+                    .get("audit_issue")
+                    .and_then(Value::as_i64)
+                    .and_then(|value| u64::try_from(value).ok())
+            })
+        {
+            audit_issue_numbers.insert(audit_issue);
+        }
+    }
+
+    audit_issue_numbers
+}
+
 fn derive_review_history_issue_processed_entries(
     cycle: u64,
     state: &StateJson,
+    audit_issue_numbers: &HashSet<u64>,
     issues: &mut Vec<String>,
     seen: &mut HashSet<String>,
 ) {
@@ -1654,7 +1714,7 @@ fn derive_review_history_issue_processed_entries(
         push_issue_processed_numeric_field(issues, seen, entry, "review_issue");
 
         if let Some(note) = entry.get("note").and_then(Value::as_str) {
-            push_issue_processed_references(issues, seen, note);
+            push_issue_processed_references(issues, seen, note, audit_issue_numbers, &[]);
         }
 
         let Some(finding_dispositions) =
@@ -1668,7 +1728,7 @@ fn derive_review_history_issue_processed_entries(
             push_issue_processed_numeric_field(issues, seen, disposition, "review_issue");
 
             if let Some(note) = disposition.get("note").and_then(Value::as_str) {
-                push_issue_processed_references(issues, seen, note);
+                push_issue_processed_references(issues, seen, note, audit_issue_numbers, &[]);
             }
         }
     }
@@ -1690,10 +1750,69 @@ fn push_issue_processed_references(
     issues: &mut Vec<String>,
     seen: &mut HashSet<String>,
     text: &str,
+    audit_issue_numbers: &HashSet<u64>,
+    additional_audit_issue_numbers: &[u64],
 ) {
-    for issue in extract_issue_references(text) {
-        push_issue_processed_entry(issues, seen, format_issue_processed_entry(issue, None));
+    let explicit_audit_references = extract_inline_named_issue_references(text, "audit")
+        .into_iter()
+        .chain(extract_inline_named_issue_references(text, "Audit"))
+        .collect::<HashSet<_>>();
+
+    for issue in &explicit_audit_references {
+        push_issue_processed_entry(
+            issues,
+            seen,
+            format_named_issue_processed_entry("audit", *issue, None),
+        );
     }
+
+    for issue in extract_issue_references(text) {
+        let item = if explicit_audit_references.contains(&issue)
+            || additional_audit_issue_numbers.contains(&issue)
+            || audit_issue_numbers.contains(&issue)
+        {
+            format_named_issue_processed_entry("audit", issue, None)
+        } else {
+            format_issue_processed_entry(issue, None)
+        };
+        push_issue_processed_entry(issues, seen, item);
+    }
+}
+
+fn extract_inline_named_issue_references(text: &str, label: &str) -> Vec<u64> {
+    let normalized_label = label.to_ascii_lowercase();
+    let mut references = Vec::new();
+    let mut tokens = text.split_whitespace();
+    let Some(mut previous) = tokens.next() else {
+        return references;
+    };
+
+    for current_token in tokens {
+        let normalized_previous = previous
+            .trim_matches(|character: char| !character.is_ascii_alphanumeric())
+            .to_ascii_lowercase();
+        if normalized_previous != normalized_label {
+            previous = current_token;
+            continue;
+        }
+
+        let reference = current_token.trim_start_matches(|character: char| !matches!(character, '#'));
+        let Some(reference) = reference.strip_prefix('#') else {
+            previous = current_token;
+            continue;
+        };
+        let digits = reference
+            .chars()
+            .take_while(|character| character.is_ascii_digit())
+            .collect::<String>();
+        if let Ok(issue) = digits.parse::<u64>() {
+            references.push(issue);
+        }
+
+        previous = current_token;
+    }
+
+    references
 }
 
 fn push_issue_processed_entry(issues: &mut Vec<String>, seen: &mut HashSet<String>, item: String) {
@@ -5583,6 +5702,142 @@ mod tests {
         assert!(auto_index < manual_index);
         assert_eq!(content.matches("[QC #160]").count(), 1);
         assert_eq!(content.matches("[audit #315]").count(), 1);
+    }
+
+    #[test]
+    fn worklog_auto_issues_prefixes_audit_tracking_references_from_session_notes() {
+        let repo_root = TempRepoDir::new("worklog-auto-issues-audit-tracking-notes");
+        init_git_repo(&repo_root.path);
+        let start_receipt = create_git_commit_at(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154 [cycle 154]",
+            "2026-03-06T01:00:00Z",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}}
+                ]"#
+            ),
+        );
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "phase": "work",
+                    "phase_entered_at": "2026-03-06T01:00:00Z",
+                    "cycle": 154
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 42,
+                        "status": "merged",
+                        "merged_at": "2026-03-06T02:00:00Z",
+                        "note": "Validated fix against #357 before merge",
+                        "title": "Audit follow-up merged"
+                    }
+                ],
+                "audit_tracking": {
+                    "recommendations": [
+                        {
+                            "issue": 42,
+                            "audit_issue": 357,
+                            "description": "Verify the audit evidence link"
+                        }
+                    ]
+                }
+            }"#,
+        );
+
+        let mut args = worklog_args("Auto issues audit tracking notes");
+        args.auto_issues = true;
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.publish_gate = Some("open".to_string());
+        args.in_flight = Some(0);
+
+        let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+        let warnings =
+            apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
+
+        assert!(warnings.is_empty());
+        assert_eq!(
+            input.issues_processed,
+            vec!["#42: Audit follow-up merged", "audit #357"]
+        );
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+        assert!(content.contains(
+            "- [#42](https://github.com/EvaLok/schema-org-json-ld/issues/42): Audit follow-up merged"
+        ));
+        assert!(content.contains(
+            "- [audit #357](https://github.com/EvaLok/schema-org-json-ld-audit/issues/357)"
+        ));
+    }
+
+    #[test]
+    fn worklog_auto_issues_keeps_regular_main_repo_references_bare() {
+        let repo_root = TempRepoDir::new("worklog-auto-issues-main-repo-bare");
+        init_git_repo(&repo_root.path);
+        let start_receipt = create_git_commit_at(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154 [cycle 154]",
+            "2026-03-06T01:00:00Z",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}}
+                ]"#
+            ),
+        );
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "phase": "work",
+                    "phase_entered_at": "2026-03-06T01:00:00Z",
+                    "cycle": 154
+                },
+                "agent_sessions": [],
+                "audit_tracking": {
+                    "recommendations": [
+                        {
+                            "issue": 42,
+                            "audit_issue": 357,
+                            "description": "Verify the audit evidence link"
+                        }
+                    ]
+                }
+            }"#,
+        );
+
+        let mut args = worklog_args("Auto issues main repo references");
+        args.auto_issues = true;
+        args.done = vec!["Closed follow-up issue #42 after validation".to_string()];
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.publish_gate = Some("open".to_string());
+        args.in_flight = Some(0);
+
+        let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+        let warnings =
+            apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
+
+        assert!(warnings.is_empty());
+        assert_eq!(input.issues_processed, vec!["#42"]);
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+        assert!(content.contains("- [#42](https://github.com/EvaLok/schema-org-json-ld/issues/42)"));
+        assert!(!content.contains("[audit #42]"));
     }
 
     #[test]
