@@ -580,6 +580,9 @@ fn build_state_patch(
             value: json!(timestamp),
         },
     ];
+    if let Some(update) = build_forward_work_counter_update(cycle, state) {
+        updates.push(update);
+    }
 
     let mut freshness_updates = build_freshness_updates(cycle, &updates, state, cycle_changes);
     if !agent_session_reconciliation.updates.is_empty() {
@@ -599,6 +602,29 @@ fn build_state_patch(
             })
             .collect(),
     }
+}
+
+fn build_forward_work_counter_update(cycle: u64, state: &StateJson) -> Option<PatchUpdate> {
+    let forward_work = state.extra.get("cycles_since_last_forward_work")?;
+
+    let last_forward_cycle = forward_work.get("last_forward_cycle").and_then(Value::as_u64);
+
+    let count = match last_forward_cycle {
+        Some(last_forward_cycle) if last_forward_cycle > 0 => {
+            cycle.saturating_sub(last_forward_cycle)
+        }
+        _ => {
+            eprintln!(
+                "Warning: cycles_since_last_forward_work.last_forward_cycle missing or 0; setting count to 0"
+            );
+            0
+        }
+    };
+
+    Some(PatchUpdate {
+        path: "/cycles_since_last_forward_work/count".to_string(),
+        value: json!(count),
+    })
 }
 
 fn collect_cycle_changes(repo_root: &Path, cycle: u64) -> Result<CycleChanges, String> {
@@ -1851,6 +1877,12 @@ mod tests {
     #[test]
     fn apply_state_patch_applies_all_updates_and_freshness_markers() {
         let mut state = StateJson::default();
+        state.extra.insert(
+            "cycles_since_last_forward_work".to_string(),
+            json!({
+                "last_forward_cycle": 128
+            }),
+        );
         state.field_inventory.fields.insert(
             "last_cycle".to_string(),
             json!({"last_refreshed": "cycle 120"}),
@@ -1870,6 +1902,10 @@ mod tests {
         state.field_inventory.fields.insert(
             "review_agent".to_string(),
             json!({"cadence": "every cycle (updated when consuming review findings)", "last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "cycles_since_last_forward_work".to_string(),
+            json!({"cadence": "when mode or counter changes", "last_refreshed": "cycle 120"}),
         );
 
         let patch = build_state_patch(
@@ -1897,20 +1933,25 @@ mod tests {
             "review_agent": {
                 "total_reviews_processed": 12
             },
+            "cycles_since_last_forward_work": {
+                "last_forward_cycle": 128,
+                "count": 0
+            },
             "field_inventory": {
                 "fields": {
                     "last_cycle": {"last_refreshed": "cycle 120"},
                     "last_cycle.duration_minutes": {"last_refreshed": "cycle 120"},
                     "last_eva_comment_check": {"last_refreshed": "cycle 120"},
                     "publish_gate": {"cadence": "every cycle when set (divergence check)", "last_refreshed": "cycle 120"},
-                    "review_agent": {"cadence": "every cycle (updated when consuming review findings)", "last_refreshed": "cycle 120"}
+                    "review_agent": {"cadence": "every cycle (updated when consuming review findings)", "last_refreshed": "cycle 120"},
+                    "cycles_since_last_forward_work": {"cadence": "when mode or counter changes", "last_refreshed": "cycle 120"}
                 }
             }
         });
 
         let changed_paths =
             apply_state_patch(&mut raw_state, &patch).expect("state patch should apply cleanly");
-        assert_eq!(changed_paths.len(), 11);
+        assert_eq!(changed_paths.len(), 13);
         assert_eq!(
             raw_state
                 .pointer("/last_cycle/number")
@@ -1965,6 +2006,55 @@ mod tests {
                 .and_then(Value::as_str),
             Some("cycle 153")
         );
+        assert_eq!(
+            raw_state
+                .pointer("/cycles_since_last_forward_work/count")
+                .and_then(Value::as_u64),
+            Some(25)
+        );
+        assert_eq!(
+            raw_state
+                .pointer("/field_inventory/fields/cycles_since_last_forward_work/last_refreshed")
+                .and_then(Value::as_str),
+            Some("cycle 153")
+        );
+    }
+
+    #[test]
+    fn forward_work_counter_is_computed_from_current_and_last_forward_cycle() {
+        let mut state = StateJson::default();
+        state.extra.insert(
+            "cycles_since_last_forward_work".to_string(),
+            json!({
+                "last_forward_cycle": 411
+            }),
+        );
+
+        let update = build_forward_work_counter_update(436, &state).expect("update should exist");
+        assert_eq!(update.path, "/cycles_since_last_forward_work/count");
+        assert_eq!(update.value, json!(25));
+    }
+
+    #[test]
+    fn forward_work_counter_defaults_to_zero_when_last_forward_cycle_missing_or_zero() {
+        let mut missing = StateJson::default();
+        missing.extra.insert(
+            "cycles_since_last_forward_work".to_string(),
+            json!({}),
+        );
+        let missing_update =
+            build_forward_work_counter_update(436, &missing).expect("update should exist");
+        assert_eq!(missing_update.value, json!(0));
+
+        let mut zero = StateJson::default();
+        zero.extra.insert(
+            "cycles_since_last_forward_work".to_string(),
+            json!({
+                "last_forward_cycle": 0
+            }),
+        );
+        let zero_update = build_forward_work_counter_update(436, &zero).expect("update should exist");
+        assert_eq!(zero_update.value, json!(0));
     }
 
     #[test]
