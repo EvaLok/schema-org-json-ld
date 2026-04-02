@@ -12710,12 +12710,12 @@
   "tool_pipeline": {
     "blocks_publish": false,
     "c5_5_initial_result": {
-      "cycle": 430,
-      "exit_code": 1,
-      "has_blocking_findings": true,
-      "overall": "fail",
+      "cycle": 432,
+      "exit_code": 0,
+      "has_blocking_findings": false,
+      "overall": "pass",
       "result": "FAIL",
-      "summary": "FAIL (1 blocking warning, 4 warnings, 1 blocking: mass-deferral-gate)"
+      "summary": "PASS (1 blocking warning, 3 warnings, 1 cascade)"
     },
     "eva_directive": 436,
     "phases": [
