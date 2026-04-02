@@ -2,7 +2,7 @@
 
 ## 1. [worklog-accuracy] The published worklog again hides a same-cycle C4.1 documentation failure
 
-**File**: docs/worklog/2026-04-02/163420-cycle-436-processed-review-and-audit-dispatched-forward-work-counter-and-write-entry-fixes.md:24-29
+**File**: docs/worklog/2026-04-02/163420-cycle-436-processed-review-and-audit-dispatched-forward-work-counter-and-write-entry-fixes.md:26-29
 **Evidence**: The frozen worklog records only `Pipeline status: PASS (3 warnings)` plus the earlier `Pipeline status (C1 early check): FAIL (...)`. But issue `#2166` step `C4.1` comment `4179064696` logged a later blocking documentation failure: `Worklog validation: FAIL: pipeline status mismatch: worklog reports 'FAIL (3 warnings, 2 blocking: doc-validation, current-cycle-steps)', pipeline-check overall is 'pass'`. That failure happened after C3 wrote the artifact and before C5 froze it, yet the published worklog does not disclose it.
 **Recommendation**: Preserve C4.1/C5.5 failures in the published worklog whenever the artifact is regenerated after a failed close-out gate. The frozen artifact should show the actual close-out path, not only the final clean status.
 
