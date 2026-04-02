@@ -20,6 +20,10 @@
 - [#2140](https://github.com/EvaLok/schema-org-json-ld/issues/2140)
 - [#2145](https://github.com/EvaLok/schema-org-json-ld/issues/2145)
 
+### Issues processed (post-dispatch)
+
+- [#2147](https://github.com/EvaLok/schema-org-json-ld/issues/2147): [Cycle Review] Cycle 432 end-of-cycle review (in_flight)
+
 ## Self-modifications
 
 - **`tools/rust/crates/cycle-runner/src/close_out.rs`**: modified
@@ -28,13 +32,19 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 0
+- **In-flight agent sessions (post-dispatch)**: 1
 - **Pipeline status**: PASS (4 warnings)
+- **Pipeline status (post-dispatch)**: PASS (3 warnings)
 - **Pipeline status (C1 early check)**: FAIL (1 blocking warning, 4 warnings, 2 blocking: frozen-commit-verify, current-cycle-steps) — resolved by marking code-change-quality deferral as dispatched (#2145)
 - **Publish gate**: published
 
-## Next steps
+## Next steps (pre-dispatch)
 
 1. Review and iterate on PR from [#2145](https://github.com/EvaLok/schema-org-json-ld/issues/2145) (metric-snapshot missing-entry fix) when Copilot completes
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2147](https://github.com/EvaLok/schema-org-json-ld/issues/2147) ([Cycle Review] Cycle 432 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
