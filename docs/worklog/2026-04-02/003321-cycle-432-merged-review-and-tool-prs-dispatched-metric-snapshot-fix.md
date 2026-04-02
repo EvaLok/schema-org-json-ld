@@ -28,9 +28,8 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 0
-- **In-flight agent sessions (post-dispatch)**: 1
-- **Pipeline status**: FAIL (1 blocking warning, 4 warnings, 2 blocking: frozen-commit-verify, current-cycle-steps)
-- **Pipeline status (post-dispatch)**: PASS (4 warnings)
+- **Pipeline status**: PASS (4 warnings)
+- **Pipeline status (C1 early check)**: FAIL (1 blocking warning, 4 warnings, 2 blocking: frozen-commit-verify, current-cycle-steps) — resolved by marking code-change-quality deferral as dispatched (#2145)
 - **Publish gate**: published
 
 ## Next steps
