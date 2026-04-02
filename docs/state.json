@@ -6927,7 +6927,8 @@
       "category": "code-change-quality",
       "deadline_cycle": 432,
       "deferred_cycle": 427,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "Dispatched #2145 (cycle 432)"
     },
     {
       "category": "state-integrity",
