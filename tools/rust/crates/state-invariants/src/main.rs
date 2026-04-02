@@ -49,6 +49,8 @@ struct GitCommit {
     subject: String,
 }
 
+const BACKFILL_TITLE_PREFIX: &str = "Backfilled:";
+
 fn main() {
     let cli = Cli::parse();
 
@@ -102,8 +104,10 @@ fn run_checks(repo_root: &Path, state: &StateJson) -> Report {
         check_chronic_intermediate_state(state),
         check_review_events_verified(state),
         check_in_flight_sessions_consistency(state),
+        check_forward_work_counter_consistency(state),
         check_pending_audit_deadlines(state),
         check_agent_sessions_reconciliation(state),
+        check_backfill_session_title_pr_match(state),
         check_eva_input_overlap(state),
     ];
 
@@ -1311,6 +1315,61 @@ fn check_in_flight_sessions_consistency(state: &StateJson) -> CheckResult {
     }
 }
 
+fn check_forward_work_counter_consistency(state: &StateJson) -> CheckResult {
+    let current_cycle = match current_state_cycle_number(state) {
+        Some(value) => value,
+        None => {
+            return warn(
+                "forward_work_counter_consistency",
+                "missing field: current_cycle.number, cycle_phase.cycle, or last_cycle.number",
+            )
+        }
+    };
+
+    let forward_work = match state.extra.get("cycles_since_last_forward_work") {
+        Some(value) => value,
+        None => {
+            return warn(
+                "forward_work_counter_consistency",
+                "missing field: cycles_since_last_forward_work",
+            )
+        }
+    };
+
+    let actual_count = match forward_work.get("count").and_then(Value::as_u64) {
+        Some(value) => value,
+        None => {
+            return warn(
+                "forward_work_counter_consistency",
+                "missing field: cycles_since_last_forward_work.count",
+            )
+        }
+    };
+
+    let last_forward_cycle = match forward_work.get("last_forward_cycle").and_then(Value::as_u64) {
+        Some(value) if value > 0 => value,
+        _ => {
+            return warn(
+                "forward_work_counter_consistency",
+                "missing field: cycles_since_last_forward_work.last_forward_cycle",
+            )
+        }
+    };
+
+    let expected_count = current_cycle - last_forward_cycle;
+    if actual_count == expected_count {
+        pass("forward_work_counter_consistency")
+    } else {
+        fail(
+            "forward_work_counter_consistency",
+            format!(
+                "cycles_since_last_forward_work.count expected {} from current cycle {} and last_forward_cycle {} but actual {}",
+                expected_count, current_cycle, last_forward_cycle, actual_count
+            ),
+        )
+    }
+}
+
 fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
     if let Err(error) = count_in_flight_agent_sessions(state) {
         return fail("agent_sessions_reconciliation", error);
@@ -1394,6 +1453,45 @@ fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
         pass("agent_sessions_reconciliation")
     } else {
         fail("agent_sessions_reconciliation", failures.join("; "))
+    }
+}
+
+fn check_backfill_session_title_pr_match(state: &StateJson) -> CheckResult {
+    let mut failures = Vec::new();
+
+    for (index, session) in state.agent_sessions.iter().enumerate() {
+        let Some(title) = session.title.as_deref() else {
+            continue;
+        };
+        if !title.starts_with(BACKFILL_TITLE_PREFIX) {
+            continue;
+        }
+
+        let Some(title_pr) = extract_backfill_pr_number(title) else {
+            failures.push(format!(
+                "agent_sessions[{}] title '{}' does not contain a parsable PR number",
+                index, title
+            ));
+            continue;
+        };
+
+        match session.pr {
+            Some(session_pr) if session_pr == title_pr => {}
+            Some(session_pr) => failures.push(format!(
+                "agent_sessions[{}] title '{}' encodes PR #{} but pr field is {}",
+                index, title, title_pr, session_pr
+            )),
+            None => failures.push(format!(
+                "agent_sessions[{}] title '{}' encodes PR #{} but pr field is null",
+                index, title, title_pr
+            )),
+        }
+    }
+
+    if failures.is_empty() {
+        pass("backfill_session_title_pr_match")
+    } else {
+        fail("backfill_session_title_pr_match", failures.join("; "))
     }
 }
 
@@ -1486,6 +1584,31 @@ fn fail(name: &'static str, details: impl Into<String>) -> CheckResult {
     }
 }
 
+fn current_state_cycle_number(state: &StateJson) -> Option<u64> {
+    state
+        .extra
+        .get("current_cycle")
+        .and_then(|value| value.get("number"))
+        .and_then(Value::as_u64)
+        .or(state.cycle_phase.cycle)
+        .or_else(|| state.last_cycle.extra.get("number").and_then(Value::as_u64))
+}
+
+fn extract_backfill_pr_number(title: &str) -> Option<i64> {
+    // Accept both "Backfilled: PR #2162" and "Backfilled: PR owner/repo#2162" by
+    // reading the numeric suffix after the first '#'.
+    let (_, suffix) = title.split_once('#')?;
+    let digits: String = suffix
+        .chars()
+        .take_while(|character| character.is_ascii_digit())
+        .collect();
+    if digits.is_empty() {
+        None
+    } else {
+        digits.parse::<i64>().ok().filter(|value| *value > 0)
+    }
+}
+
 fn print_human_report(report: &Report) {
     println!("State Invariants Check");
     println!();
@@ -1515,10 +1638,18 @@ fn print_human_report(report: &Report) {
             "in_flight_sessions_consistency",
             "in_flight_sessions consistency",
         ),
+        (
+            "forward_work_counter_consistency",
+            "forward_work counter consistency",
+        ),
         ("pending_audit_deadlines", "pending audit deadlines"),
         (
             "agent_sessions_reconciliation",
             "agent_sessions reconciliation",
+        ),
+        (
+            "backfill_session_title_pr_match",
+            "backfill session title validation",
         ),
         ("eva_input_overlap", "eva_input overlap"),
     ];
@@ -2550,6 +2681,82 @@ mod tests {
     }
 
     #[test]
+    fn forward_work_counter_consistency_passes_when_count_matches_gap() {
+        let mut value = minimal_valid_state();
+        value["last_cycle"]["number"] = json!(436);
+        value["cycles_since_last_forward_work"] = json!({
+            "count": 25,
+            "last_forward_cycle": 411
+        });
+
+        let state = state_from_json(value);
+        let check = check_forward_work_counter_consistency(&state);
+        assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn forward_work_counter_consistency_fails_when_count_diverges() {
+        let mut value = minimal_valid_state();
+        value["last_cycle"]["number"] = json!(436);
+        value["cycles_since_last_forward_work"] = json!({
+            "count": 0,
+            "last_forward_cycle": 411
+        });
+
+        let state = state_from_json(value);
+        let check = check_forward_work_counter_consistency(&state);
+        assert_eq!(check.status, CheckStatus::Fail);
+
+        let details = check.details.as_deref().unwrap_or_default();
+        assert!(details.contains("expected 25"));
+        assert!(details.contains("actual 0"));
+    }
+
+    #[test]
+    fn backfill_session_title_pr_match_passes_when_title_matches_pr() {
+        let mut value = minimal_valid_state();
+        value["agent_sessions"] = json!([
+            {
+                "issue": 101,
+                "title": "Backfilled: PR #2162",
+                "status": "merged",
+                "pr": 2162
+            },
+            {
+                "issue": 102,
+                "title": "Backfilled: PR EvaLok/schema-org-json-ld#2165",
+                "status": "merged",
+                "pr": 2165
+            }
+        ]);
+
+        let state = state_from_json(value);
+        let check = check_backfill_session_title_pr_match(&state);
+        assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn backfill_session_title_pr_match_fails_when_title_pr_differs() {
+        let mut value = minimal_valid_state();
+        value["agent_sessions"] = json!([
+            {
+                "issue": 101,
+                "title": "Backfilled: PR EvaLok/schema-org-json-ld#2162",
+                "status": "merged",
+                "pr": 2163
+            }
+        ]);
+
+        let state = state_from_json(value);
+        let check = check_backfill_session_title_pr_match(&state);
+        assert_eq!(check.status, CheckStatus::Fail);
+
+        let details = check.details.as_deref().unwrap_or_default();
+        assert!(details.contains("encodes PR #2162"));
+        assert!(details.contains("2163"));
+    }
+
+    #[test]
     fn eva_input_overlap_passes_when_issue_sets_are_disjoint() {
         let mut value = minimal_valid_state();
         value["eva_input_issues"] = json!({
@@ -2586,11 +2793,11 @@ mod tests {
     }
 
     #[test]
-    fn run_checks_includes_chronic_verification_deadline_and_agent_sessions_checks() {
+    fn run_checks_includes_forward_work_and_backfill_checks() {
         let state = state_from_json(minimal_valid_state());
         let report = run_checks(Path::new("."), &state);
 
-        assert_eq!(report.checks.len(), 18);
+        assert_eq!(report.checks.len(), 20);
         assert_eq!(
             report.checks.get(8).map(|check| check.name),
             Some("future_cycle_freshness")
@@ -2625,11 +2832,19 @@ mod tests {
         );
         assert_eq!(
             report.checks.get(15).map(|check| check.name),
-            Some("pending_audit_deadlines")
+            Some("forward_work_counter_consistency")
         );
         assert_eq!(
             report.checks.get(16).map(|check| check.name),
+            Some("pending_audit_deadlines")
+        );
+        assert_eq!(
+            report.checks.get(17).map(|check| check.name),
             Some("agent_sessions_reconciliation")
+        );
+        assert_eq!(
+            report.checks.get(18).map(|check| check.name),
+            Some("backfill_session_title_pr_match")
         );
         assert_eq!(
             report.checks.last().map(|check| check.name),
