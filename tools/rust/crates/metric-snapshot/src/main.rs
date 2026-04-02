@@ -343,13 +343,24 @@ fn field_has_stale_after_change_marker(
         "/field_inventory/fields/{}",
         field_name.replace('~', "~0").replace('/', "~1")
     );
-    let field = state
-        .pointer(&field_pointer)
-        .ok_or_else(|| format!("field_inventory entry not found: {}", field_name))?;
+    let Some(field) = state.pointer(&field_pointer) else {
+        eprintln!(
+            "Warning: skipping refresh for missing field_inventory entry: {}",
+            field_name
+        );
+        return Ok(false);
+    };
     let cadence = field
         .get("cadence")
         .and_then(Value::as_str)
-        .ok_or_else(|| format!("field_inventory cadence missing or invalid: {}", field_name))?;
+        .map(str::trim);
+    let Some(cadence) = cadence.filter(|cadence| !cadence.is_empty()) else {
+        eprintln!(
+            "Warning: skipping refresh for missing or invalid field_inventory cadence: {}",
+            field_name
+        );
+        return Ok(false);
+    };
 
     if !cadence.to_ascii_lowercase().contains("after") {
         return Ok(false);
@@ -1492,6 +1503,57 @@ it('direct test', () => {});
 
         assert_eq!(refreshable.len(), 1);
         assert!(refreshable.contains("total_schema_classes"));
+    }
+
+    #[test]
+    fn collect_refreshable_unchanged_fields_skips_missing_inventory_entries() {
+        let state = json!({
+            "field_inventory": {
+                "fields": {
+                    "total_schema_classes": {
+                        "cadence": "after schema class additions",
+                        "last_refreshed": "cycle 100"
+                    },
+                    "test_count": {
+                        "cadence": "every merge that adds/removes PHP or TS tests",
+                        "last_refreshed": "cycle 100"
+                    }
+                }
+            }
+        });
+        let checks = vec![
+            CheckResult {
+                name: "php_schema_classes",
+                label: "PHP schema classes",
+                actual: json!(89),
+                expected: json!(89),
+                pass: true,
+                note: None,
+            },
+            CheckResult {
+                name: "phpstan_level",
+                label: "PHPStan level",
+                actual: json!("max"),
+                expected: json!("max"),
+                pass: true,
+                note: None,
+            },
+            CheckResult {
+                name: "test_count_total",
+                label: "Total test count",
+                actual: json!(1),
+                expected: json!(1),
+                pass: true,
+                note: None,
+            },
+        ];
+
+        let refreshable = collect_refreshable_unchanged_fields(&state, &checks, 121)
+            .expect("missing field_inventory entries should be skipped, not fatal");
+
+        assert_eq!(refreshable.len(), 1);
+        assert!(refreshable.contains("total_schema_classes"));
+        assert!(!refreshable.contains("phpstan_level"));
     }
 
     #[test]
