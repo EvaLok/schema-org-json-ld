@@ -32,6 +32,7 @@ const IN_FLIGHT_PREFIX: &str = "- **In-flight agent sessions**: ";
 const IN_FLIGHT_POST_DISPATCH_PREFIX: &str = "- **In-flight agent sessions (post-dispatch)**: ";
 const PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
 const POST_DISPATCH_PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status (post-dispatch)**: ";
+const CLOSE_OUT_GATE_FAILURES_PREFIX: &str = "- **Close-out gate failures**: ";
 const PUBLISH_GATE_PREFIX: &str = "- **Publish gate**: ";
 const PUBLISH_GATE_POST_DISPATCH_PREFIX: &str = "- **Publish gate (post-dispatch)**: ";
 const INFRASTRUCTURE_ROOTS: [&str; 2] = ["tools", ".claude/skills"];
@@ -115,6 +116,9 @@ struct WorklogArgs {
     /// Pipeline summary for the current state section
     #[arg(long)]
     pipeline: Option<String>,
+    /// Close-out gate failure descriptions (comma-separated)
+    #[arg(long = "prior-gate-failures", value_delimiter = ',')]
+    prior_gate_failures: Vec<String>,
     /// Auto-derive pipeline summary from tools/pipeline-check
     #[arg(long = "auto-pipeline", default_value_t = false)]
     auto_pipeline: bool,
@@ -227,6 +231,8 @@ struct CurrentState {
     #[serde(default)]
     in_flight_sessions: u64,
     pipeline_status: String,
+    #[serde(default)]
+    prior_gate_failures: Vec<String>,
     #[serde(default)]
     publish_gate: String,
 }
@@ -981,6 +987,7 @@ fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<Worklog
                     None => state_extra_in_flight_sessions(state.as_ref())?,
                 },
                 pipeline_status: resolve_pipeline_status(args, repo_root, state.as_ref())?,
+                prior_gate_failures: resolve_prior_gate_failures(args),
                 publish_gate: match &args.publish_gate {
                     Some(value) => value.clone(),
                     None => state_publish_gate_status(state.as_ref())?,
@@ -1004,6 +1011,7 @@ fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<Worklog
         current_state: CurrentState {
             in_flight_sessions: state_extra_in_flight_sessions(state.as_ref())?,
             pipeline_status: resolve_pipeline_status(args, repo_root, state.as_ref())?,
+            prior_gate_failures: resolve_prior_gate_failures(args),
             publish_gate: state_publish_gate_status(state.as_ref())?,
         },
         next_steps: resolve_next_steps(args, state.as_ref())?,
@@ -1081,6 +1089,14 @@ fn resolve_pipeline_status(
         return auto_pipeline_status(repo_root);
     }
     Ok(state_pipeline_status(state))
+}
+
+fn resolve_prior_gate_failures(args: &WorklogArgs) -> Vec<String> {
+    args.prior_gate_failures
+        .iter()
+        .map(|failure| failure.trim().to_string())
+        .filter(|failure| !failure.is_empty())
+        .collect()
 }
 
 fn resolve_next_steps(
@@ -3107,6 +3123,13 @@ fn render_worklog(cycle: u64, now: DateTime<Utc>, input: &WorklogInput) -> Strin
         PIPELINE_STATUS_PREFIX,
         convert_references(&input.current_state.pipeline_status)
     ));
+    for failure in &input.current_state.prior_gate_failures {
+        lines.push(format!(
+            "{}{}",
+            CLOSE_OUT_GATE_FAILURES_PREFIX,
+            convert_references(failure)
+        ));
+    }
     lines.push(format!(
         "{}{}",
         PUBLISH_GATE_PREFIX,
@@ -3686,6 +3709,7 @@ mod tests {
             next: Vec::new(),
             auto_next: false,
             pipeline: None,
+            prior_gate_failures: Vec::new(),
             auto_pipeline: false,
             publish_gate: None,
             in_flight: None,
@@ -3927,6 +3951,7 @@ mod tests {
             current_state: CurrentState {
                 in_flight_sessions: 2,
                 pipeline_status: "5/5 phases pass".to_string(),
+                prior_gate_failures: Vec::new(),
                 publish_gate: "Source diverged".to_string(),
             },
             next_steps: vec!["Review PR #543".to_string()],
@@ -3963,6 +3988,7 @@ mod tests {
             current_state: CurrentState {
                 in_flight_sessions: 0,
                 pipeline_status: NOT_PROVIDED.to_string(),
+                prior_gate_failures: Vec::new(),
                 publish_gate: NOT_PROVIDED.to_string(),
             },
             next_steps: Vec::new(),
@@ -3973,6 +3999,86 @@ mod tests {
         let rendered = render_worklog(154, fixed_now(), &input);
         assert!(rendered.contains("\n## Self-modifications\n\n- Updated AGENTS.md\n"));
         assert!(!rendered.contains("**`Updated AGENTS.md`**:"));
+    }
+
+    #[test]
+    fn worklog_template_omits_close_out_gate_failures_when_none_provided() {
+        let input = WorklogInput {
+            what_was_done: Vec::new(),
+            self_modifications: Vec::new(),
+            prs_merged: Vec::new(),
+            prs_reviewed: Vec::new(),
+            issues_processed: Vec::new(),
+            current_state: CurrentState {
+                in_flight_sessions: 0,
+                pipeline_status: "PASS (3 warnings)".to_string(),
+                prior_gate_failures: Vec::new(),
+                publish_gate: "clear".to_string(),
+            },
+            next_steps: Vec::new(),
+            receipts: Vec::new(),
+            receipt_note: None,
+        };
+
+        let rendered = render_worklog(154, fixed_now(), &input);
+
+        assert!(!rendered.contains(CLOSE_OUT_GATE_FAILURES_PREFIX));
+    }
+
+    #[test]
+    fn worklog_template_renders_close_out_gate_failures_after_pipeline_status_lines() {
+        let input = WorklogInput {
+            what_was_done: Vec::new(),
+            self_modifications: Vec::new(),
+            prs_merged: Vec::new(),
+            prs_reviewed: Vec::new(),
+            issues_processed: Vec::new(),
+            current_state: CurrentState {
+                in_flight_sessions: 0,
+                pipeline_status:
+                    "PASS (3 warnings)\n- **Pipeline status (C1 early check)**: FAIL (state-invariants: stale)"
+                        .to_string(),
+                prior_gate_failures: vec!["C4.1 FAIL: pipeline status mismatch".to_string()],
+                publish_gate: "clear".to_string(),
+            },
+            next_steps: Vec::new(),
+            receipts: Vec::new(),
+            receipt_note: None,
+        };
+
+        let rendered = render_worklog(154, fixed_now(), &input);
+        let pipeline = rendered.find("- **Pipeline status**: PASS (3 warnings)").unwrap();
+        let early_check = rendered
+            .find("- **Pipeline status (C1 early check)**: FAIL (state-invariants: stale)")
+            .unwrap();
+        let gate_failure = rendered
+            .find("- **Close-out gate failures**: C4.1 FAIL: pipeline status mismatch")
+            .unwrap();
+        let publish_gate = rendered.find("- **Publish gate**: clear").unwrap();
+
+        assert!(pipeline < early_check);
+        assert!(early_check < gate_failure);
+        assert!(gate_failure < publish_gate);
+    }
+
+    #[test]
+    fn execute_worklog_renders_multiple_close_out_gate_failures() {
+        let repo_root = TempRepoDir::new("worklog-prior-gate-failures");
+        let mut args = worklog_args("Gate failures");
+        args.done = vec!["Regenerated worklog after gate failures".to_string()];
+        args.pipeline = Some("PASS (3 warnings)".to_string());
+        args.prior_gate_failures = vec![
+            "C4.1 FAIL: mismatch".to_string(),
+            "C5.5 FAIL: doc-validation".to_string(),
+        ];
+        args.publish_gate = Some("clear".to_string());
+        args.in_flight = Some(0);
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains("- **Close-out gate failures**: C4.1 FAIL: mismatch"));
+        assert!(content.contains("- **Close-out gate failures**: C5.5 FAIL: doc-validation"));
     }
 
     #[test]
@@ -7596,6 +7702,8 @@ Reflective log for the schema-org-json-ld orchestrator.
             "Closed EvaLok/schema-org-json-ld#924 (cycle review)",
             "--self-modification",
             "Updated AGENTS.md",
+            "--prior-gate-failures",
+            "C4.1 FAIL: mismatch,C5.5 FAIL: doc-validation",
         ])
         .unwrap();
 
@@ -7618,6 +7726,13 @@ Reflective log for the schema-org-json-ld orchestrator.
                 assert_eq!(
                     args.self_modification,
                     vec!["Updated AGENTS.md".to_string()]
+                );
+                assert_eq!(
+                    args.prior_gate_failures,
+                    vec![
+                        "C4.1 FAIL: mismatch".to_string(),
+                        "C5.5 FAIL: doc-validation".to_string()
+                    ]
                 );
             }
             Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
