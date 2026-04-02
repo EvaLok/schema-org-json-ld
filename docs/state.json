@@ -6493,6 +6493,13 @@
       "pr": 2151,
       "status": "merged",
       "title": "Backfilled: PR #2155"
+    },
+    {
+      "dispatched_at": "2026-04-02T08:45:05Z",
+      "issue": 2159,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix write-entry format_pipeline_status to prevent PASS/FAIL divergence from pipeline-check"
     }
   ],
   "audit_dropped": [
@@ -7034,7 +7041,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2154 [Cycle Review] Cycle 433 end-of-cycle review (cycle 433)",
+  "dispatch_log_latest": "#2159 Fix write-entry format_pipeline_status to prevent PASS/FAIL divergence from pipeline-check (cycle 434)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7307,7 +7314,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 19,
     "issue": 2156,
@@ -12262,13 +12269,12 @@
         "note": "Re-processed: findings 3-4 actioned (PR #2146 merged a496895; field inventory refreshed e6be001). Findings 1-2 deferred (past worklog/journal immutable)."
       },
       {
-        "actioned": 0,
+        "actioned": 1,
         "categories": [
           "journal-quality",
           "process-adherence",
           "state-integrity"
         ],
-        "actioned": 1,
         "complacency_score": 3,
         "cycle": 433,
         "deferred": 2,
