@@ -7053,7 +7053,8 @@
       "category": "state-integrity",
       "deadline_cycle": 438,
       "deferred_cycle": 433,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-434.md"
     }
   ],
   "dispatch_log_latest": "#2161 [Cycle Review] Cycle 434 end-of-cycle review (cycle 434)",
@@ -7237,7 +7238,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 434"
+        "last_refreshed": "cycle 435"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -12310,10 +12311,38 @@
           }
         ],
         "ignored": 0,
-        "note": "All 3 findings deferred: (1) worklog-immutability exclusion needs root cause investigation before removal, (2) journal accuracy is behavioral learning for future cycles, (3) stale field-inventory markers need targeted refresh tool runs. Dispatch slots full this cycle."
+        "note": "1 actioned, 1 dispatch_created, 1 deferred: (1) process-adherence actioned — restored worklog-immutability gate (commit d0c4a1a), (2) journal-quality dispatch_created — dispatched write-entry fix #2159 (audit #360), (3) state-integrity deferred — stale field-inventory markers. Note corrected cycle 435 per review finding #2."
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "journal-quality",
+          "state-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 3,
+        "cycle": 434,
+        "deferred": 2,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred"
+          },
+          {
+            "category": "state-integrity",
+            "disposition": "actioned"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "deferred"
+          }
+        ],
+        "ignored": 0,
+        "note": "1 actioned (state-integrity: fixed contradictory cycle 433 note), 2 deferred (worklog-accuracy: C4.1 failure preservation needs write-entry changes; journal-quality: past journal immutable, behavioral). Complacency 3/5."
       }
     ],
-    "last_review_cycle": 433
+    "last_review_cycle": 434
   },
   "review_dispatch_consecutive": 3,
   "review_events_verified_through_cycle": 434,
