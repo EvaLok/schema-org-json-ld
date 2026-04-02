@@ -12842,12 +12842,12 @@
   "tool_pipeline": {
     "blocks_publish": false,
     "c5_5_initial_result": {
-      "cycle": 432,
+      "cycle": 434,
       "exit_code": 0,
       "has_blocking_findings": false,
       "overall": "pass",
       "result": "FAIL",
-      "summary": "PASS (1 blocking warning, 3 warnings, 1 cascade)"
+      "summary": "PASS (1 blocking warning, 3 warnings)"
     },
     "eva_directive": 436,
     "phases": [
