@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(echo *)",
-      "Bash(cat *)"
+      "Bash(cat *)",
+      "Bash(ls *)",
+      "Bash(test *)",
+      "Read"
     ]
   },
   "hooks": {

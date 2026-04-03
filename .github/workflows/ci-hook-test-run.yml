@@ -26,3 +26,13 @@ jobs:
             3. Report what you see - if the file contains HOOK_FIRED, hooks are working
           claude_args: |
             --settings .github/workflows/ci-hook-test-settings.json --model claude-sonnet-4-6
+
+      - name: Verify hook evidence
+        run: |
+          if [ -f /tmp/ci-hook-evidence.txt ]; then
+            echo "PASS: Hook evidence file found"
+            wc -l < /tmp/ci-hook-evidence.txt
+          else
+            echo "FAIL: No hook evidence file at /tmp/ci-hook-evidence.txt"
+            exit 1
+          fi
