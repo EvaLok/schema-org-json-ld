@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo *)",
+      "Bash(cat *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo HOOK_FIRED >> /tmp/ci-hook-evidence.txt"
+          }
+        ]
+      }
+    ]
+  }
+}

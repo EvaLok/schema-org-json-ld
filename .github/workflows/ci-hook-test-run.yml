@@ -1,0 +1,28 @@
+name: CI Hook Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-hooks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Claude with hooks
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            This is a test to check if Claude Code hooks work in CI.
+            1. Run `echo hello` using Bash
+            2. Run `cat /tmp/ci-hook-evidence.txt` using Bash
+            3. Report what you see - if the file contains HOOK_FIRED, hooks are working
+          claude_args: |
+            --settings .github/workflows/ci-hook-test-settings.json --model claude-sonnet-4-6
