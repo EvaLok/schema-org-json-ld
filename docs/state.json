@@ -13111,12 +13111,12 @@
   "tool_pipeline": {
     "blocks_publish": false,
     "c5_5_initial_result": {
-      "cycle": 438,
-      "exit_code": 0,
-      "has_blocking_findings": false,
-      "overall": "pass",
+      "cycle": 439,
+      "exit_code": 1,
+      "has_blocking_findings": true,
+      "overall": "fail",
       "result": "FAIL",
-      "summary": "PASS (1 blocking warning, 3 warnings, 1 cascade)"
+      "summary": "FAIL (2 warnings, 1 blocking: state-invariants)"
     },
     "eva_directive": 436,
     "phases": [
