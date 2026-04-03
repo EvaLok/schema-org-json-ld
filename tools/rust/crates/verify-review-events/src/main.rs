@@ -273,6 +273,13 @@ fn collect_pull_requests(
             continue;
         }
 
+        // Skip sessions that can be ruled out of the checked range using
+        // only local data (session.extra.cycle or session.merged_at).
+        // This avoids ~644 unnecessary GitHub API calls per run.
+        if is_outside_checked_range(session, checked_cycles, &cycle_windows) {
+            continue;
+        }
+
         let details = fetch_pull_request_details(repo_root, number)?;
         let Some(cycle) =
             infer_session_cycle(session, &cycle_windows, details.merged_at.as_deref())?
@@ -478,6 +485,33 @@ fn infer_session_cycle(
         .iter()
         .find(|window| timestamp_in_window(merged_at, window))
         .map(|window| window.cycle))
+}
+
+/// Check whether a session can be ruled out of the checked cycle range using
+/// only local data. Returns true if the session definitely belongs to a cycle
+/// outside the checked range and can be skipped without an API call.
+fn is_outside_checked_range(
+    session: &AgentSession,
+    checked_cycles: &[u64],
+    cycle_windows: &[CycleWindow],
+) -> bool {
+    // If session has an explicit cycle field, check directly.
+    if let Some(cycle) = session.extra.get("cycle").and_then(Value::as_u64) {
+        return !checked_cycles.contains(&cycle);
+    }
+    // If session has a local merged_at, check against the window bounds.
+    // If merged_at is before the earliest window start, the session predates
+    // the checked range and can be skipped.
+    if let Some(merged_at_raw) = session_merged_at(session) {
+        if let Ok(merged_at) = parse_timestamp(merged_at_raw, "agent_sessions[].merged_at") {
+            if let Some(earliest_start) = cycle_windows.iter().map(|w| w.start).min() {
+                if merged_at < earliest_start {
+                    return true;
+                }
+            }
+        }
+    }
+    false
 }
 
 fn merged_session_label(session: &AgentSession, suffix: &str) -> String {
