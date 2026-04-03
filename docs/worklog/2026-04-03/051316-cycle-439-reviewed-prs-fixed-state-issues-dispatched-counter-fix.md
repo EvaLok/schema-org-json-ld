@@ -33,7 +33,7 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 1
-- **Pipeline status**: FAIL (2 warnings, 4 blocking: state-invariants, doc-validation, worklog-immutability, current-cycle-steps)
+- **Pipeline status**: PASS (2 warnings); first-session baseline was FAIL (2 warnings, 4 blocking: state-invariants, doc-validation, worklog-immutability, current-cycle-steps)
 - **Publish gate**: published
 
 ## Next steps
