@@ -7253,13 +7253,15 @@
       "category": "process-adherence",
       "deadline_cycle": 447,
       "deferred_cycle": 442,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-442.md"
     },
     {
       "category": "worklog-accuracy",
       "deadline_cycle": 447,
       "deferred_cycle": 442,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-442.md"
     }
   ],
   "dispatch_log_latest": "#2198 [Cycle Review] Cycle 442 end-of-cycle review (cycle 442)",
@@ -12719,7 +12721,7 @@
         "note": "Re-dispositioned: worklog-accuracy actioned (PRs #2179/59c6cbe and #2191/0ef66ac merged — gate failure preservation and C5.5 re-verification). journal-quality deferred (behavioral: build journal from final state). reflection-quality ignored (non-standard category, substance covered by journal-quality). Complacency: 2/5."
       },
       {
-        "actioned": 0,
+        "actioned": 2,
         "categories": [
           "journal-quality",
           "process-adherence",
@@ -12727,16 +12729,16 @@
         ],
         "complacency_score": 2,
         "cycle": 442,
-        "deferred": 3,
+        "deferred": 1,
         "finding_count": 3,
         "finding_dispositions": [
           {
             "category": "process-adherence",
-            "disposition": "deferred"
+            "disposition": "actioned"
           },
           {
             "category": "worklog-accuracy",
-            "disposition": "deferred"
+            "disposition": "actioned"
           },
           {
             "category": "journal-quality",
@@ -12744,7 +12746,7 @@
           }
         ],
         "ignored": 0,
-        "note": "All 3 findings deferred: C4.1 gate-override pattern. PRs #2179/#2191 merged to fix tooling but cycle 442 still exhibited the defect. Cycle 443 is the first validation cycle."
+        "note": "Re-dispositioned after C5.5 evidence: doc-validation PASS (C4.1 fix validated), worklog accurately records FAIL with no contradictory narrative. journal-quality stays deferred pending external validation."
       }
     ],
     "last_review_cycle": 442
