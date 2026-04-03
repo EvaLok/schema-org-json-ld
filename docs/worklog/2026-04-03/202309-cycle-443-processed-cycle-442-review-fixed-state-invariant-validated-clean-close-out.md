@@ -19,8 +19,8 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 0
-- **Pipeline status**: FAIL (2 warnings, 3 blocking: mass-deferral-gate, doc-validation, current-cycle-steps)
-- **Pipeline status (post-dispatch)**: PASS (2 warnings: deferral-accumulation, step-comments)
+- **Pipeline status**: PASS (2 warnings: deferral-accumulation, step-comments)
+- **Close-out gate failures**: C1 early check FAIL (mass-deferral-gate at 100% deferral, current-cycle-steps incomplete); resolved at C5.5 after re-dispositioning cycle 442 findings with validation evidence
 - **Publish gate**: published
 
 ## Next steps
