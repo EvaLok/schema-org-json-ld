@@ -159,8 +159,14 @@ fn detect_prior_gate_failures(repo_root: &Path, issue: u64) -> Vec<String> {
     let comment_bodies = stdout
         .lines()
         .filter(|line| !line.trim().is_empty())
-        .map(|line| {
-            serde_json::from_str::<String>(line).unwrap_or_else(|_| line.trim().to_string())
+        .map(|line| match serde_json::from_str::<String>(line) {
+            Ok(body) => body,
+            Err(error) => {
+                eprintln!(
+                    "Warning: unable to parse gh api comment body as JSON string, using raw output: {error}"
+                );
+                line.trim().to_string()
+            }
         })
         .collect::<Vec<_>>();
 
@@ -208,9 +214,13 @@ fn parse_c4_1_gate_failure(body: &str) -> Option<String> {
     match (worklog_failure, journal_failure) {
         (Some(worklog), None) => Some(worklog),
         (None, Some(journal)) => Some(journal),
-        (Some(worklog), Some(journal)) => Some(format!("worklog: {worklog}; journal: {journal}")),
+        (Some(worklog), Some(journal)) => Some(format_combined_c4_1_gate_failure(&worklog, &journal)),
         (None, None) => None,
     }
+}
+
+fn format_combined_c4_1_gate_failure(worklog: &str, journal: &str) -> String {
+    format!("worklog: {worklog}; journal: {journal}")
 }
 
 fn parse_c5_5_gate_failure(body: &str) -> Option<String> {
