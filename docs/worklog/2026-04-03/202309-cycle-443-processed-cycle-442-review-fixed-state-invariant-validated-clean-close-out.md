@@ -12,6 +12,10 @@
 
 - [#2198](https://github.com/EvaLok/schema-org-json-ld/issues/2198): Cycle 442 review closed
 
+### Issues processed (post-dispatch)
+
+- [#2201](https://github.com/EvaLok/schema-org-json-ld/issues/2201): [Cycle Review] Cycle 443 end-of-cycle review (in_flight)
+
 ## Self-modifications
 
 - **`docs/reviews/cycle-442.md`**: Normalized complacency score heading format
@@ -19,13 +23,19 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 0
+- **In-flight agent sessions (post-dispatch)**: 1
 - **Pipeline status**: PASS (2 warnings: deferral-accumulation, step-comments)
+- **Pipeline status (post-dispatch)**: PASS (2 warnings)
 - **Close-out gate failures**: C1 early check FAIL (mass-deferral-gate at 100% deferral, current-cycle-steps incomplete); resolved at C5.5 after re-dispositioning cycle 442 findings with validation evidence
 - **Publish gate**: published
 
-## Next steps
+## Next steps (pre-dispatch)
 
 1. No in-flight sessions — plan next dispatch
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2201](https://github.com/EvaLok/schema-org-json-ld/issues/2201) ([Cycle Review] Cycle 443 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
