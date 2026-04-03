@@ -7211,7 +7211,8 @@
       "category": "worklog-accuracy",
       "deadline_cycle": 443,
       "deferred_cycle": 438,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-441.md"
     },
     {
       "category": "state-integrity",
@@ -12661,7 +12662,7 @@
         "note": "F1 process-adherence: PR #2191 addresses C4.1/C5.5 gate enforcement. F2 state-integrity: stale field markers need verification runs. F3 worklog-accuracy: write-entry post-dispatch line wrap bug."
       },
       {
-        "actioned": 0,
+        "actioned": 1,
         "categories": [
           "journal-quality",
           "reflection-quality",
@@ -12669,12 +12670,12 @@
         ],
         "complacency_score": 2,
         "cycle": 441,
-        "deferred": 3,
+        "deferred": 1,
         "finding_count": 3,
         "finding_dispositions": [
           {
             "category": "worklog-accuracy",
-            "disposition": "deferred"
+            "disposition": "actioned"
           },
           {
             "category": "journal-quality",
@@ -12682,11 +12683,11 @@
           },
           {
             "category": "reflection-quality",
-            "disposition": "deferred"
+            "disposition": "ignored"
           }
         ],
-        "ignored": 0,
-        "note": "worklog-accuracy recurrence (cycles 440-441): PRs #2179 and #2191 merged in c441 as process-level fix; verifying effectiveness this cycle. journal-quality and reflection-quality: behavioral fix - build journal from final frozen state. Complacency score: 2/5."
+        "ignored": 1,
+        "note": "Re-dispositioned: worklog-accuracy actioned (PRs #2179/59c6cbe and #2191/0ef66ac merged — gate failure preservation and C5.5 re-verification). journal-quality deferred (behavioral: build journal from final state). reflection-quality ignored (non-standard category, substance covered by journal-quality). Complacency: 2/5."
       }
     ],
     "last_review_cycle": 441
