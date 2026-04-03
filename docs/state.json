@@ -6634,6 +6634,14 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "[Cycle Review] Cycle 441 end-of-cycle review"
+    },
+    {
+      "backfilled": true,
+      "issue": 2197,
+      "merged_at": "2026-04-03T16:16:26Z",
+      "pr": 2196,
+      "status": "merged",
+      "title": "Backfilled: PR #2196"
     }
   ],
   "audit_dropped": [
@@ -7335,7 +7343,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 441"
+        "last_refreshed": "cycle 442"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -7483,7 +7491,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 16,
     "issue": 2197,
