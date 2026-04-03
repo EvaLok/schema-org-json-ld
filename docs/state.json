@@ -6613,8 +6613,10 @@
     {
       "dispatched_at": "2026-04-03T08:29:28Z",
       "issue": 2190,
+      "merged_at": "2026-04-03T12:17:12Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2191,
+      "status": "merged",
       "title": "Fix close-out pipeline reliability: scope C4.1 validation and enforce C5.5 retry (audit #365, #366)"
     },
     {
@@ -7474,7 +7476,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 14,
     "issue": 2194,
