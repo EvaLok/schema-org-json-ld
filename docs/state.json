@@ -6661,6 +6661,13 @@
       "pr": 2199,
       "status": "merged",
       "title": "Backfilled: PR #2199"
+    },
+    {
+      "dispatched_at": "2026-04-03T20:29:20Z",
+      "issue": 2201,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 443 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -7264,7 +7271,7 @@
       "resolved_ref": "docs/reviews/cycle-442.md"
     }
   ],
-  "dispatch_log_latest": "#2198 [Cycle Review] Cycle 442 end-of-cycle review (cycle 442)",
+  "dispatch_log_latest": "#2201 [Cycle Review] Cycle 443 end-of-cycle review (cycle 443)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7537,7 +7544,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 13,
     "issue": 2200,
@@ -12751,7 +12758,7 @@
     ],
     "last_review_cycle": 442
   },
-  "review_dispatch_consecutive": 11,
+  "review_dispatch_consecutive": 12,
   "review_events_verified_through_cycle": 443,
   "schema_status": {
     "directory_layout": {
