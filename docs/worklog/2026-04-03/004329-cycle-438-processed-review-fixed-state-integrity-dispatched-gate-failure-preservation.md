@@ -22,6 +22,10 @@
 - [#2175](https://github.com/EvaLok/schema-org-json-ld/issues/2175)
 - [#2178](https://github.com/EvaLok/schema-org-json-ld/issues/2178)
 
+### Issues processed (post-dispatch)
+
+- [#2180](https://github.com/EvaLok/schema-org-json-ld/issues/2180): [Cycle Review] Cycle 438 end-of-cycle review (in_flight)
+
 ## Self-modifications
 
 - None.
@@ -29,12 +33,19 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 1
+- **In-flight agent sessions (post-dispatch)**: 2
 - **Pipeline status**: PASS (4 warnings)
+- **Pipeline status (post-dispatch)**: PASS (3 warnings)
 - **Publish gate**: published
 
-## Next steps
+## Next steps (pre-dispatch)
 
 1. Review and iterate on PR from [#2178](https://github.com/EvaLok/schema-org-json-ld/issues/2178) (Preserve close-out gate failures in worklog via cycle-runner and write-entry patch-pipeline) when Copilot completes
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2178](https://github.com/EvaLok/schema-org-json-ld/issues/2178) (Preserve close-out gate failures in worklog via cycle-runner and write-entry patch-pipeline) when Copilot completes
+2. Review and iterate on PR from [#2180](https://github.com/EvaLok/schema-org-json-ld/issues/2180) ([Cycle Review] Cycle 438 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
