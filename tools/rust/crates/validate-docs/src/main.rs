@@ -95,6 +95,19 @@ enum SelfModificationFinding {
     Warning(String),
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct WorklogValidationOptions {
+    exclude_post_c3_fields: bool,
+}
+
+impl Default for WorklogValidationOptions {
+    fn default() -> Self {
+        Self {
+            exclude_post_c3_fields: true,
+        }
+    }
+}
+
 fn main() {
     let cli = Cli::parse();
 
@@ -132,14 +145,40 @@ fn validate_worklog(
     pipeline_status: Option<&str>,
     worklog_commit: Option<&str>,
 ) -> Result<Vec<String>, String> {
+    validate_worklog_with_options(
+        repo_root,
+        file,
+        cycle,
+        pipeline_status,
+        worklog_commit,
+        WorklogValidationOptions::default(),
+    )
+}
+
+fn validate_worklog_with_options(
+    repo_root: &Path,
+    file: &Path,
+    cycle: u64,
+    pipeline_status: Option<&str>,
+    worklog_commit: Option<&str>,
+    options: WorklogValidationOptions,
+) -> Result<Vec<String>, String> {
     let content = fs::read_to_string(file)
         .map_err(|error| format!("failed to read {}: {}", file.display(), error))?;
     let state = read_state_json(repo_root)?;
     let mut failures = Vec::new();
 
-    let expected_in_flight = count_in_flight_sessions(&state);
-    if let Some(failure) = validate_in_flight_count(&content, expected_in_flight) {
+    if let Some(failure) = validate_in_flight_count_line(&content) {
         failures.push(failure);
+    }
+    if !options.exclude_post_c3_fields {
+        // The worklog is written at C3, before review dispatch mutates docs/state.json during
+        // C5-C7. When callers opt into full validation we still compare the numeric value, but
+        // close-out validation defaults to skipping this inherently stale state-vs-worklog check.
+        let expected_in_flight = count_in_flight_sessions(&state);
+        if let Some(failure) = validate_in_flight_count(&content, expected_in_flight) {
+            failures.push(failure);
+        }
     }
 
     let cycle_receipt_through = find_cycle_complete_timestamp(repo_root, cycle)?;
@@ -170,13 +209,22 @@ fn validate_worklog(
         Err(error) => failures.push(format!("unable to validate self-modifications: {}", error)),
     }
 
-    match resolve_pipeline_status(repo_root, cycle, pipeline_status, fetch_pipeline_report) {
-        Ok(overall) => {
-            if let Some(failure) = validate_pipeline_status(&content, &overall) {
-                failures.push(failure);
+    if let Some(failure) = validate_pipeline_status_line(&content) {
+        failures.push(failure);
+    }
+    let pipeline_status_is_preliminary = worklog_marks_pipeline_status_as_preliminary(&content);
+    if !options.exclude_post_c3_fields || !pipeline_status_is_preliminary {
+        // C5.5 runs after the C3 snapshot is written. If the worklog explicitly marks the
+        // pre-dispatch pipeline line as preliminary, comparing it against the final gate result
+        // would turn a known timing gap into a deterministic validation failure.
+        match resolve_pipeline_status(repo_root, cycle, pipeline_status, fetch_pipeline_report) {
+            Ok(overall) => {
+                if let Some(failure) = validate_pipeline_status(&content, &overall) {
+                    failures.push(failure);
+                }
             }
+            Err(error) => failures.push(format!("unable to validate pipeline status: {}", error)),
         }
-        Err(error) => failures.push(format!("unable to validate pipeline status: {}", error)),
     }
 
     Ok(failures)
@@ -215,24 +263,34 @@ fn count_in_flight_sessions(state: &StateJson) -> usize {
         .count()
 }
 
-fn validate_in_flight_count(content: &str, expected: usize) -> Option<String> {
+fn parse_in_flight_count(content: &str) -> Result<usize, String> {
     let reported = match extract_markdown_value(content, "In-flight agent sessions (post-dispatch)")
         .or_else(|| extract_markdown_value(content, "In-flight agent sessions"))
     {
         Some(reported) => reported,
-        None => return Some(
+        None => {
+            return Err(
             "worklog is missing the 'In-flight agent sessions' line in the Pre-dispatch state section"
                 .to_string(),
-        ),
+            )
+        }
     };
-    let parsed = match reported.parse::<usize>() {
-        Ok(parsed) => parsed,
-        Err(_) => {
-            return Some(format!(
+    reported.parse::<usize>().map_err(|_| {
+        format!(
                 "in-flight agent sessions line must contain an integer count, found '{}'",
                 reported
-            ))
-        }
+            )
+    })
+}
+
+fn validate_in_flight_count_line(content: &str) -> Option<String> {
+    parse_in_flight_count(content).err()
+}
+
+fn validate_in_flight_count(content: &str, expected: usize) -> Option<String> {
+    let parsed = match parse_in_flight_count(content) {
+        Ok(parsed) => parsed,
+        Err(failure) => return Some(failure),
     };
     if parsed == expected {
         return None;
@@ -617,15 +675,38 @@ where
     }
 }
 
+fn pipeline_status_value(content: &str) -> Result<String, String> {
+    let reported = extract_markdown_value(content, "Pipeline status").ok_or_else(|| {
+        "worklog is missing the 'Pipeline status' line in the Pre-dispatch state section"
+            .to_string()
+    })?;
+    if reported.starts_with("PASS") || reported.starts_with("FAIL") {
+        Ok(reported.to_string())
+    } else {
+        Err(format!(
+            "pipeline status line must start with PASS or FAIL, found '{}'",
+            reported
+        ))
+    }
+}
+
+fn validate_pipeline_status_line(content: &str) -> Option<String> {
+    pipeline_status_value(content).err()
+}
+
+fn worklog_marks_pipeline_status_as_preliminary(content: &str) -> bool {
+    content.lines().any(|line| {
+        let trimmed = line.trim();
+        trimmed.contains("Snapshot before review dispatch")
+            && trimmed.contains("final counters may differ after C6")
+    })
+}
+
 fn validate_pipeline_status(content: &str, overall: &str) -> Option<String> {
-    let reported =
-        match extract_markdown_value(content, "Pipeline status") {
-            Some(reported) => reported,
-            None => return Some(
-                "worklog is missing the 'Pipeline status' line in the Pre-dispatch state section"
-                    .to_string(),
-            ),
-        };
+    let reported = match pipeline_status_value(content) {
+        Ok(reported) => reported,
+        Err(failure) => return Some(failure),
+    };
     let expected = if overall.eq_ignore_ascii_case("pass") {
         "PASS"
     } else {
@@ -1045,6 +1126,17 @@ mod tests {
     }
 
     #[test]
+    fn preliminary_pipeline_status_note_skips_final_status_comparison() {
+        let content = "\
+## Pre-dispatch state
+
+*Snapshot before review dispatch — final counters may differ after C6.*
+- **Pipeline status**: PASS (8/8)
+";
+        assert!(worklog_marks_pipeline_status_as_preliminary(content));
+    }
+
+    #[test]
     fn provided_pipeline_status_skips_fetching_pipeline_report() {
         let fetch_called = std::cell::Cell::new(false);
         let status =
@@ -1323,6 +1415,121 @@ mod tests {
         );
 
         let failures = validate_worklog(repo.path(), &worklog_path, 226, Some("pass"), None)
+            .expect("worklog validation should succeed");
+
+        assert_eq!(failures.len(), 1, "unexpected failures: {failures:?}");
+        assert!(failures[0].contains("self-modifications section says None"));
+        assert!(failures[0].contains("tools/validate-docs"));
+    }
+
+    #[test]
+    fn excludes_post_c3_field_mismatches_from_worklog_validation() {
+        let repo = TestRepo::new();
+        repo.init();
+        repo.write_file(
+            "docs/state.json",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "agent_sessions": [
+                    { "status": "in_flight" },
+                    { "status": "in_flight" }
+                ]
+            }))
+            .expect("serialize state")
+            .as_str(),
+        );
+        let cycle_complete_receipt = repo.commit(
+            "notes/complete.txt",
+            "complete\n",
+            "state(cycle-complete): close cycle [cycle 226]",
+        );
+        install_cycle_receipts_wrapper(&repo, &[&cycle_complete_receipt]);
+        let worklog_path = repo.path().join("docs/worklog/2026-03-31/020304-cycle-226-summary.md");
+        if let Some(parent) = worklog_path.parent() {
+            fs::create_dir_all(parent).expect("create worklog parent");
+        }
+        let worklog_content = format!(
+            "\
+## Pre-dispatch state
+
+*Snapshot before review dispatch — final counters may differ after C6.*
+- **In-flight agent sessions**: 0
+- **Pipeline status**: PASS
+
+{}
+
+## Self-modifications
+
+- None.
+",
+            receipts_table(&[&cycle_complete_receipt]),
+        );
+        fs::write(&worklog_path, &worklog_content).expect("write worklog");
+        repo.commit(
+            "docs/worklog/2026-03-31/020304-cycle-226-summary.md",
+            &worklog_content,
+            "docs(worklog): add cycle 226 worklog",
+        );
+
+        let failures = validate_worklog(repo.path(), &worklog_path, 226, Some("fail"), None)
+            .expect("worklog validation should succeed");
+
+        assert!(failures.is_empty(), "unexpected failures: {failures:?}");
+    }
+
+    #[test]
+    fn still_reports_pre_c3_mismatches_when_post_c3_fields_are_excluded() {
+        let repo = TestRepo::new();
+        repo.init();
+        repo.write_file(
+            "docs/state.json",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "agent_sessions": [
+                    { "status": "in_flight" },
+                    { "status": "in_flight" }
+                ]
+            }))
+            .expect("serialize state")
+            .as_str(),
+        );
+        repo.commit(
+            "tools/validate-docs",
+            "#!/usr/bin/env bash\nexit 0\n",
+            "fix(validate-docs): pre-worklog tool change",
+        );
+        let cycle_complete_receipt = repo.commit(
+            "notes/complete.txt",
+            "complete\n",
+            "state(cycle-complete): close cycle [cycle 226]",
+        );
+        install_cycle_receipts_wrapper(&repo, &[&cycle_complete_receipt]);
+        let worklog_path = repo.path().join("docs/worklog/2026-03-31/020304-cycle-226-summary.md");
+        if let Some(parent) = worklog_path.parent() {
+            fs::create_dir_all(parent).expect("create worklog parent");
+        }
+        let worklog_content = format!(
+            "\
+## Pre-dispatch state
+
+*Snapshot before review dispatch — final counters may differ after C6.*
+- **In-flight agent sessions**: 0
+- **Pipeline status**: PASS
+
+{}
+
+## Self-modifications
+
+- None.
+",
+            receipts_table(&[&cycle_complete_receipt]),
+        );
+        fs::write(&worklog_path, &worklog_content).expect("write worklog");
+        repo.commit(
+            "docs/worklog/2026-03-31/020304-cycle-226-summary.md",
+            &worklog_content,
+            "docs(worklog): add cycle 226 worklog",
+        );
+
+        let failures = validate_worklog(repo.path(), &worklog_path, 226, Some("fail"), None)
             .expect("worklog validation should succeed");
 
         assert_eq!(failures.len(), 1, "unexpected failures: {failures:?}");
