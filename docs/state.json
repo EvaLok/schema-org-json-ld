@@ -6648,8 +6648,10 @@
     {
       "dispatched_at": "2026-04-03T16:37:56Z",
       "issue": 2198,
+      "merged_at": "2026-04-03T20:20:03Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2199,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 442 end-of-cycle review"
     },
     {
