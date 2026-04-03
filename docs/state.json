@@ -7193,6 +7193,12 @@
       "deadline_cycle": 443,
       "deferred_cycle": 438,
       "resolved": false
+    },
+    {
+      "category": "state-integrity",
+      "deadline_cycle": 445,
+      "deferred_cycle": 440,
+      "resolved": false
     }
   ],
   "dispatch_log_latest": "#2192 [Cycle Review] Cycle 440 end-of-cycle review (cycle 440)",
@@ -7376,7 +7382,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 440"
+        "last_refreshed": "cycle 441"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -12593,9 +12599,38 @@
         ],
         "ignored": 1,
         "note": "F1 worklog-accuracy: deferred — worklog omitted state repair commit 2a96a48, behavioral improvement. F2 journal-quality: ignored — behavioral finding (journal overclaiming), not fixable by tooling; addressed through temporal ordering awareness (write journal after state repairs). Dropping from deferral tracking. F3 state-integrity: actioned — removed duplicate backfilled PR #2176 entry (commit c0b6c0d4)."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "process-adherence",
+          "state-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 3,
+        "cycle": 440,
+        "deferred": 2,
+        "dispatch_created": 1,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "process-adherence",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "state-integrity",
+            "disposition": "deferred"
+          },
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred"
+          }
+        ],
+        "ignored": 0,
+        "note": "F1 process-adherence: PR #2191 addresses C4.1/C5.5 gate enforcement. F2 state-integrity: stale field markers need verification runs. F3 worklog-accuracy: write-entry post-dispatch line wrap bug."
       }
     ],
-    "last_review_cycle": 438
+    "last_review_cycle": 440
   },
   "review_dispatch_consecutive": 9,
   "review_events_verified_through_cycle": 434,
