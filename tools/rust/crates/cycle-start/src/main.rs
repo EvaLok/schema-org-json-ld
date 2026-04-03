@@ -235,6 +235,7 @@ fn run(cli: Cli) -> Result<(), String> {
     );
     apply_state_patch(&mut state, &patch)?;
     refresh_eva_input_issue_inventory(&mut state, cycle)?;
+    update_forward_work_counter(&mut state, cycle);
 
     // Set cycle_phase for the new work phase
     transition_cycle_phase(&mut state, cycle, "work")?;
@@ -530,6 +531,29 @@ fn apply_state_patch(state: &mut Value, patch: &[PatchUpdate]) -> Result<(), Str
         set_or_insert_value_at_pointer(state, &update.path, update.value.clone())?;
     }
     Ok(())
+}
+
+fn update_forward_work_counter(state: &mut Value, cycle: u64) {
+    let last_forward_cycle = state
+        .pointer("/cycles_since_last_forward_work/last_forward_cycle")
+        .and_then(Value::as_u64);
+
+    let count = match last_forward_cycle {
+        Some(lfc) if lfc > 0 => cycle.saturating_sub(lfc),
+        Some(0) => {
+            eprintln!("Warning: cycles_since_last_forward_work.last_forward_cycle is 0; setting count to 0");
+            0
+        }
+        _ => return, // Field doesn't exist; skip silently
+    };
+
+    if let Some(obj) = state.pointer_mut("/cycles_since_last_forward_work/count") {
+        *obj = json!(count);
+    }
+    // Update field inventory freshness
+    if let Some(obj) = state.pointer_mut("/field_inventory/fields/cycles_since_last_forward_work/last_refreshed") {
+        *obj = json!(format!("cycle {}", cycle));
+    }
 }
 
 fn update_cycle_issues_for_resume(
@@ -2106,5 +2130,60 @@ mod tests {
         assert_eq!(attempts.get(), 2);
         assert_eq!(read_phase(repo.path()), "complete");
         assert_eq!(git_commit_count(repo.path()), 2);
+    }
+
+    #[test]
+    fn forward_work_counter_computed_from_cycle_and_last_forward_cycle() {
+        let mut state = json!({
+            "cycles_since_last_forward_work": {
+                "last_forward_cycle": 411,
+                "count": 0
+            },
+            "field_inventory": {
+                "fields": {
+                    "cycles_since_last_forward_work": {
+                        "last_refreshed": "cycle 430"
+                    }
+                }
+            }
+        });
+        update_forward_work_counter(&mut state, 440);
+        assert_eq!(
+            state.pointer("/cycles_since_last_forward_work/count").and_then(Value::as_u64),
+            Some(29)
+        );
+        assert_eq!(
+            state.pointer("/field_inventory/fields/cycles_since_last_forward_work/last_refreshed").and_then(Value::as_str),
+            Some("cycle 440")
+        );
+    }
+
+    #[test]
+    fn forward_work_counter_noop_when_field_missing() {
+        let mut state = json!({"other": "data"});
+        update_forward_work_counter(&mut state, 440);
+        assert!(state.pointer("/cycles_since_last_forward_work").is_none());
+    }
+
+    #[test]
+    fn forward_work_counter_zero_when_last_forward_cycle_is_zero() {
+        let mut state = json!({
+            "cycles_since_last_forward_work": {
+                "last_forward_cycle": 0,
+                "count": 5
+            },
+            "field_inventory": {
+                "fields": {
+                    "cycles_since_last_forward_work": {
+                        "last_refreshed": "cycle 430"
+                    }
+                }
+            }
+        });
+        update_forward_work_counter(&mut state, 440);
+        assert_eq!(
+            state.pointer("/cycles_since_last_forward_work/count").and_then(Value::as_u64),
+            Some(0)
+        );
     }
 }
