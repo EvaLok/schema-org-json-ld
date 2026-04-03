@@ -13176,6 +13176,12 @@
   },
   "tool_pipeline": {
     "blocks_publish": false,
+    "c5_5_gate": {
+      "cycle": 441,
+      "needs_reverify": false,
+      "pipeline_summary": "PASS (3 warnings)",
+      "status": "PASS"
+    },
     "c5_5_initial_result": {
       "cycle": 439,
       "exit_code": 1,
