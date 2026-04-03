@@ -235,6 +235,7 @@ fn run(cli: Cli) -> Result<(), String> {
     );
     apply_state_patch(&mut state, &patch)?;
     refresh_eva_input_issue_inventory(&mut state, cycle)?;
+    update_forward_work_counter(&mut state, cycle)?;
 
     // Set cycle_phase for the new work phase
     transition_cycle_phase(&mut state, cycle, "work")?;
@@ -422,6 +423,27 @@ fn refresh_eva_input_issue_inventory(state: &mut Value, cycle: u64) -> Result<()
         .map_err(|_| format!("cycle {} exceeds supported inventory refresh range", cycle))?;
     update_freshness(state, "eva_input_issues.remaining_open", cycle)?;
     update_freshness(state, "eva_input_issues.closed_this_cycle", cycle)?;
+    Ok(())
+}
+
+fn update_forward_work_counter(state: &mut Value, cycle: u64) -> Result<(), String> {
+    let last_forward_cycle = state
+        .pointer("/cycles_since_last_forward_work/last_forward_cycle")
+        .and_then(Value::as_u64);
+
+    let count = match last_forward_cycle {
+        Some(last_forward_cycle) if last_forward_cycle > 0 => cycle.saturating_sub(last_forward_cycle),
+        _ => return Ok(()),
+    };
+
+    let Some(current_count) = state.pointer_mut("/cycles_since_last_forward_work/count") else {
+        return Ok(());
+    };
+    *current_count = json!(count);
+
+    let cycle = u32::try_from(cycle)
+        .map_err(|_| format!("cycle {} exceeds supported inventory refresh range", cycle))?;
+    update_freshness(state, "cycles_since_last_forward_work", cycle)?;
     Ok(())
 }
 
@@ -1889,6 +1911,189 @@ mod tests {
         assert_eq!(
             error,
             "field_inventory entry not found: eva_input_issues.closed_this_cycle"
+        );
+    }
+
+    #[test]
+    fn update_forward_work_counter_computes_count_and_refreshes_inventory() {
+        let mut state = json!({
+            "cycles_since_last_forward_work": {
+                "count": 27,
+                "last_forward_cycle": 411
+            },
+            "field_inventory": {
+                "fields": {
+                    "cycles_since_last_forward_work": {
+                        "last_refreshed": "cycle 438"
+                    }
+                }
+            }
+        });
+
+        update_forward_work_counter(&mut state, 439).expect("forward work refresh should succeed");
+
+        assert_eq!(
+            state.pointer("/cycles_since_last_forward_work/count"),
+            Some(&json!(28))
+        );
+        assert_eq!(
+            state.pointer("/field_inventory/fields/cycles_since_last_forward_work/last_refreshed"),
+            Some(&json!("cycle 439"))
+        );
+    }
+
+    #[test]
+    fn update_forward_work_counter_is_noop_when_section_is_missing() {
+        let mut state = json!({
+            "field_inventory": {
+                "fields": {
+                    "cycles_since_last_forward_work": {
+                        "last_refreshed": "cycle 438"
+                    }
+                }
+            }
+        });
+        let original = state.clone();
+
+        update_forward_work_counter(&mut state, 439).expect("missing section should be a no-op");
+
+        assert_eq!(state, original);
+    }
+
+    #[test]
+    fn update_forward_work_counter_is_noop_when_last_forward_cycle_is_zero_or_missing() {
+        let mut zero = json!({
+            "cycles_since_last_forward_work": {
+                "count": 27,
+                "last_forward_cycle": 0
+            },
+            "field_inventory": {
+                "fields": {
+                    "cycles_since_last_forward_work": {
+                        "last_refreshed": "cycle 438"
+                    }
+                }
+            }
+        });
+        let zero_original = zero.clone();
+
+        update_forward_work_counter(&mut zero, 439)
+            .expect("zero last_forward_cycle should be a no-op");
+
+        assert_eq!(zero, zero_original);
+
+        let mut missing = json!({
+            "cycles_since_last_forward_work": {
+                "count": 27
+            },
+            "field_inventory": {
+                "fields": {
+                    "cycles_since_last_forward_work": {
+                        "last_refreshed": "cycle 438"
+                    }
+                }
+            }
+        });
+        let missing_original = missing.clone();
+
+        update_forward_work_counter(&mut missing, 439)
+            .expect("missing last_forward_cycle should be a no-op");
+
+        assert_eq!(missing, missing_original);
+    }
+
+    #[test]
+    fn cycle_start_flow_updates_forward_work_counter() {
+        let mut state = json!({
+            "last_cycle": {
+                "number": 438,
+                "issue": 2010,
+                "timestamp": "2026-03-13T02:00:00Z"
+            },
+            "last_eva_comment_check": "2026-03-13T02:00:00Z",
+            "open_questions_for_eva": [],
+            "cycle_issues": [2010],
+            "previous_cycle_issue": 2009,
+            "eva_input_issues": {
+                "remaining_open": [],
+                "closed_this_cycle": []
+            },
+            "cycles_since_last_forward_work": {
+                "count": 27,
+                "last_forward_cycle": 411
+            },
+            "cycle_phase": {
+                "phase": "complete",
+                "phase_entered_at": "2026-03-13T04:00:00Z",
+                "cycle": 438
+            },
+            "field_inventory": {
+                "fields": {
+                    "cycle_phase": {
+                        "cadence": "every phase transition",
+                        "last_refreshed": "cycle 438"
+                    },
+                    "last_cycle": {
+                        "cadence": "every cycle",
+                        "last_refreshed": "cycle 438"
+                    },
+                    "last_eva_comment_check": {
+                        "cadence": "every cycle",
+                        "last_refreshed": "cycle 438"
+                    },
+                    "open_questions_for_eva": {
+                        "cadence": "every cycle",
+                        "last_refreshed": "cycle 438"
+                    },
+                    "cycle_issues": {
+                        "cadence": "every cycle",
+                        "last_refreshed": "cycle 438"
+                    },
+                    "previous_cycle_issue": {
+                        "cadence": "every cycle",
+                        "last_refreshed": "cycle 438"
+                    },
+                    "eva_input_issues.remaining_open": {
+                        "cadence": "after Eva issue processing",
+                        "last_refreshed": "cycle 438"
+                    },
+                    "eva_input_issues.closed_this_cycle": {
+                        "cadence": "every cycle (reset even when no closures)",
+                        "last_refreshed": "cycle 438"
+                    },
+                    "cycles_since_last_forward_work": {
+                        "cadence": "every cycle (reset on forward work dispatch)",
+                        "last_refreshed": "cycle 438"
+                    }
+                }
+            }
+        });
+
+        let cycle = derive_cycle_from_state(&state).expect("cycle should derive");
+        let patch = build_state_patch(
+            cycle,
+            2011,
+            state.pointer("/last_cycle/issue").and_then(Value::as_u64),
+            "2026-03-14T02:00:00Z",
+            &[],
+        );
+
+        apply_state_patch(&mut state, &patch).expect("state patch should apply");
+        refresh_eva_input_issue_inventory(&mut state, cycle)
+            .expect("eva input inventory refresh should succeed");
+        update_forward_work_counter(&mut state, cycle)
+            .expect("forward work counter refresh should succeed");
+        transition_cycle_phase(&mut state, cycle, "work")
+            .expect("cycle phase transition should succeed");
+
+        assert_eq!(cycle, 439);
+        assert_eq!(
+            state.pointer("/cycles_since_last_forward_work/count"),
+            Some(&json!(28))
+        );
+        assert_eq!(
+            state.pointer("/field_inventory/fields/cycles_since_last_forward_work/last_refreshed"),
+            Some(&json!("cycle 439"))
         );
     }
 
