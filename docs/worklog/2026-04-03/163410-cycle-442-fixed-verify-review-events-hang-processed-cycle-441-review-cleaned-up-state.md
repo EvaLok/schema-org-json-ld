@@ -12,6 +12,10 @@
 
 - [#2095](https://github.com/EvaLok/schema-org-json-ld/issues/2095): Eva input closed this cycle
 
+### Issues processed (post-dispatch)
+
+- [#2198](https://github.com/EvaLok/schema-org-json-ld/issues/2198): [Cycle Review] Cycle 442 end-of-cycle review (in_flight)
+
 ## Self-modifications
 
 - **`tools/rust/crates/verify-review-events/src/main.rs`**: modified
@@ -19,13 +23,18 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 0
+- **In-flight agent sessions (post-dispatch)**: 1
 - **Pipeline status**: PASS (2 warnings)
 - **Close-out gate failures**: C4.1 FAIL: pipeline status initially captured as FAIL at C3 (doc-validation and current-cycle-steps were blocking before docs commit); patched to PASS after C5.5 verification
 - **Publish gate**: published
 
-## Next steps
+## Next steps (pre-dispatch)
 
 1. No in-flight sessions — plan next dispatch
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2198](https://github.com/EvaLok/schema-org-json-ld/issues/2198) ([Cycle Review] Cycle 442 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
