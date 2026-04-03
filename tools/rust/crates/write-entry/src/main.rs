@@ -175,8 +175,8 @@ struct PatchPipelineArgs {
     /// Replacement publish gate summary text
     #[arg(long = "publish-gate")]
     publish_gate: Option<String>,
-    /// Replacement next steps content as numbered entries
-    #[arg(long = "next-steps", value_delimiter = ',')]
+    /// Replacement next steps content as numbered entries (pass flag once per entry)
+    #[arg(long = "next-steps")]
     next_steps: Vec<String>,
     /// Replacement issues processed content as NUMBER;TITLE;STATUS entries joined with `|`
     #[arg(long = "issues-processed")]
@@ -7807,7 +7807,9 @@ Reflective log for the schema-org-json-ld orchestrator.
             "--publish-gate",
             "published",
             "--next-steps",
-            "Review [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) when Copilot completes,Prepare follow-up dispatch",
+            "Review [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) when Copilot completes",
+            "--next-steps",
+            "Prepare follow-up dispatch",
             "--issues-processed",
             "123;some title;closed|456;other;in-flight",
             "--prior-gate-failures",
