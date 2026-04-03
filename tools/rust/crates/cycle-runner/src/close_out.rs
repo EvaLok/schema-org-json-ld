@@ -771,12 +771,10 @@ fn record_initial_c5_5_failure(
 fn record_c5_5_pass(repo_root: &Path, cycle: u64, pipeline_summary: &str) -> Result<(), String> {
     let mut state = read_state_value(repo_root)?;
     if let Some(existing) = state.pointer("/tool_pipeline/c5_5_gate") {
-        if existing.get("cycle").and_then(Value::as_u64) == Some(cycle)
-            && existing.get("status").and_then(Value::as_str) == Some("PASS")
-            && existing.get("needs_reverify").and_then(Value::as_bool) == Some(false)
-            && existing.get("pipeline_summary").and_then(Value::as_str) == Some(pipeline_summary)
-        {
-            return Ok(());
+        if let Some(recorded_pass) = parse_recorded_c5_5_pass(existing, cycle) {
+            if recorded_pass.pipeline_summary == pipeline_summary {
+                return Ok(());
+            }
         }
     }
 
@@ -805,17 +803,20 @@ fn record_c5_5_pass(repo_root: &Path, cycle: u64, pipeline_summary: &str) -> Res
 
 fn recorded_c5_5_pass(repo_root: &Path, cycle: u64) -> Result<Option<RecordedC5_5Pass>, String> {
     let state = read_state_value(repo_root)?;
-    let Some(gate) = state.pointer("/tool_pipeline/c5_5_gate") else {
-        return Ok(None);
-    };
+    Ok(state
+        .pointer("/tool_pipeline/c5_5_gate")
+        .and_then(|gate| parse_recorded_c5_5_pass(gate, cycle)))
+}
+
+fn parse_recorded_c5_5_pass(gate: &Value, cycle: u64) -> Option<RecordedC5_5Pass> {
     if gate.get("cycle").and_then(Value::as_u64) != Some(cycle) {
-        return Ok(None);
+        return None;
     }
     if gate.get("status").and_then(Value::as_str) != Some("PASS") {
-        return Ok(None);
+        return None;
     }
     if gate.get("needs_reverify").and_then(Value::as_bool) != Some(false) {
-        return Ok(None);
+        return None;
     }
     let pipeline_summary = gate
         .get("pipeline_summary")
@@ -824,32 +825,32 @@ fn recorded_c5_5_pass(repo_root: &Path, cycle: u64) -> Result<Option<RecordedC5_
         .filter(|value| !value.is_empty())
         .unwrap_or("PASS")
         .to_string();
-    Ok(Some(RecordedC5_5Pass { pipeline_summary }))
+    Some(RecordedC5_5Pass { pipeline_summary })
 }
 
 fn ensure_c5_5_allows_c6(repo_root: &Path, cycle: u64) -> Result<(), String> {
     let state = read_state_value(repo_root)?;
     let Some(gate) = state.pointer("/tool_pipeline/c5_5_gate") else {
         return Err(format!(
-            "Cannot proceed to C6: no C5.5 result recorded for cycle {}. Re-run close-out so pipeline-check can pass first.",
+            "Cannot proceed to C6: no C5.5 result recorded for cycle {}. Re-run close-out to execute and pass C5.5 pipeline-check first.",
             cycle
         ));
     };
     if gate.get("cycle").and_then(Value::as_u64) != Some(cycle) {
         return Err(format!(
-            "Cannot proceed to C6: C5.5 was not re-verified for cycle {}. Re-run close-out so pipeline-check can pass first.",
+            "Cannot proceed to C6: C5.5 was not re-verified for cycle {}. Re-run close-out to execute and pass C5.5 pipeline-check first.",
             cycle
         ));
     }
     if gate.get("needs_reverify").and_then(Value::as_bool) == Some(true) {
         return Err(format!(
-            "Cannot proceed to C6: C5.5 previously failed for cycle {} and still needs re-verification. Re-run close-out so pipeline-check can pass first.",
+            "Cannot proceed to C6: C5.5 previously failed for cycle {} and still needs re-verification. Re-run close-out to execute and pass C5.5 pipeline-check first.",
             cycle
         ));
     }
     if gate.get("status").and_then(Value::as_str) != Some("PASS") {
         return Err(format!(
-            "Cannot proceed to C6: C5.5 has not recorded a PASS for cycle {}. Re-run close-out so pipeline-check can pass first.",
+            "Cannot proceed to C6: C5.5 has not recorded a PASS for cycle {}. Re-run close-out to execute and pass C5.5 pipeline-check first.",
             cycle
         ));
     }

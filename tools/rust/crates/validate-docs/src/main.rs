@@ -9,6 +9,8 @@ use std::process::Command as ProcessCommand;
 const SELF_MODIFICATIONS_HEADING: &str = "## Self-modifications";
 const COMMIT_RECEIPTS_HEADING: &str = "## Commit receipts";
 const CONCRETE_COMMITMENTS_HEADING: &str = "### Concrete commitments for next cycle";
+const PRE_DISPATCH_SNAPSHOT_NOTE: &str =
+    "*Snapshot before review dispatch — final counters may differ after C6.*";
 const INFRASTRUCTURE_PATHS: [&str; 5] = [
     "STARTUP_CHECKLIST.xml",
     "COMPLETION_CHECKLIST.xml",
@@ -212,8 +214,8 @@ fn validate_worklog_with_options(
     if let Some(failure) = validate_pipeline_status_line(&content) {
         failures.push(failure);
     }
-    let pipeline_status_is_preliminary = worklog_marks_pipeline_status_as_preliminary(&content);
-    if !options.exclude_post_c3_fields || !pipeline_status_is_preliminary {
+    let is_preliminary = worklog_marks_pipeline_status_as_preliminary(&content);
+    if !options.exclude_post_c3_fields || !is_preliminary {
         // C5.5 runs after the C3 snapshot is written. If the worklog explicitly marks the
         // pre-dispatch pipeline line as preliminary, comparing it against the final gate result
         // would turn a known timing gap into a deterministic validation failure.
@@ -695,11 +697,10 @@ fn validate_pipeline_status_line(content: &str) -> Option<String> {
 }
 
 fn worklog_marks_pipeline_status_as_preliminary(content: &str) -> bool {
-    content.lines().any(|line| {
-        let trimmed = line.trim();
-        trimmed.contains("Snapshot before review dispatch")
-            && trimmed.contains("final counters may differ after C6")
-    })
+    content
+        .lines()
+        .take(50)
+        .any(|line| line.trim() == PRE_DISPATCH_SNAPSHOT_NOTE)
 }
 
 fn validate_pipeline_status(content: &str, overall: &str) -> Option<String> {
