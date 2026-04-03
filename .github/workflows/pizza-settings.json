@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash .github/workflows/pizza/*)",
+      "Bash(cat *)",
+      "Bash(ls *)",
+      "Read"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .github/workflows/pizza/gate-check.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

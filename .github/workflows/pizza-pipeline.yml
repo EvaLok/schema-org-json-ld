@@ -1,0 +1,50 @@
+name: Pizza Pipeline (Hook-Driven PoC)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  make-pizza:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Make scripts executable
+        run: chmod +x .github/workflows/pizza/*.sh
+
+      - name: Run Claude with pizza pipeline hooks
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            You are making a pizza. Complete these 4 phases IN ORDER.
+            For each phase, run the phase script, then sign off.
+
+            Phase 1 — DOUGH:
+              bash .github/workflows/pizza/phase-dough.sh
+              bash .github/workflows/pizza/signoff.sh dough
+
+            Phase 2 — SAUCE:
+              bash .github/workflows/pizza/phase-sauce.sh
+              bash .github/workflows/pizza/signoff.sh sauce
+
+            Phase 3 — TOPPINGS:
+              bash .github/workflows/pizza/phase-toppings.sh
+              bash .github/workflows/pizza/signoff.sh toppings
+
+            Phase 4 — COOK:
+              bash .github/workflows/pizza/phase-cook.sh
+              bash .github/workflows/pizza/signoff.sh cook
+
+            After all 4 phases, run: cat /tmp/pizza/build.log
+          claude_args: |
+            --settings .github/workflows/pizza-settings.json --model claude-sonnet-4-6
+
+      - name: Verify pipeline
+        run: bash .github/workflows/pizza/verify.sh
