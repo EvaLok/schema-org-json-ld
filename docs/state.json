@@ -6575,14 +6575,6 @@
       "title": "[Cycle Review] Cycle 437 end-of-cycle review"
     },
     {
-      "backfilled": true,
-      "issue": 2177,
-      "merged_at": "2026-04-03T00:30:22Z",
-      "pr": 2176,
-      "status": "merged",
-      "title": "Backfilled: PR #2176"
-    },
-    {
       "dispatched_at": "2026-04-03T00:42:15Z",
       "issue": 2178,
       "model": "gpt-5.4",
