@@ -7124,7 +7124,8 @@
       "category": "process-adherence",
       "deadline_cycle": 438,
       "deferred_cycle": 433,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "cycle 433 review_history shows disposition actioned (not deferred); stale deferred_findings entry"
     },
     {
       "category": "state-integrity",
