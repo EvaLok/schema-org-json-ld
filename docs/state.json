@@ -6594,16 +6594,20 @@
     },
     {
       "dispatched_at": "2026-04-03T04:57:00Z",
+      "failed_at": "2026-04-03T08:20:00Z",
+      "failure_reason": "Stale dispatch: 3.2h with no Copilot activity",
       "issue": 2183,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "Auto-increment forward_work counter in cycle-start"
     },
     {
       "dispatched_at": "2026-04-03T05:22:33Z",
+      "failed_at": "2026-04-03T08:20:00Z",
+      "failure_reason": "Stale dispatch: 2.9h with no Copilot activity",
       "issue": 2185,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "[Cycle Review] Cycle 439 end-of-cycle review"
     }
   ],
@@ -7446,7 +7450,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 27,
     "issue": 2187,
