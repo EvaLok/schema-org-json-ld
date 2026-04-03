@@ -25,6 +25,10 @@
 - [#2189](https://github.com/EvaLok/schema-org-json-ld/issues/2189): audit-inbound (accept audit #366)
 - [#2190](https://github.com/EvaLok/schema-org-json-ld/issues/2190): Dispatched (close-out pipeline reliability fix)
 
+### Issues processed (post-dispatch)
+
+- [#2192](https://github.com/EvaLok/schema-org-json-ld/issues/2192): [Cycle Review] Cycle 440 end-of-cycle review (in_flight)
+
 ## Self-modifications
 
 - **`tools/rust/crates/cycle-start/src/main.rs`**: modified
@@ -32,12 +36,20 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 1
+- **In-flight agent sessions (post-dispatch)**: 2
 - **Pipeline status**: PASS (4 warnings); first-session baseline was FAIL (4 warnings, 2 blocking: doc-validation, current-cycle-steps)
+- **Pipeline status (post-dispatch)**: PASS (4 warnings)
 - **Publish gate**: published
 
-## Next steps
+## Next steps (pre-dispatch)
 
 1. Review and iterate on PR from [#2190](https://github.com/EvaLok/schema-org-json-ld/issues/2190) (Fix close-out pipeline reliability: scope C4.1 validation and enforce C5.5 retry ([audit #365](https://github.com/EvaLok/schema-org-json-ld-audit/issues/365), [#366](https://github.com/EvaLok/schema-org-json-ld/issues/366))) when Copilot completes
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2190](https://github.com/EvaLok/schema-org-json-ld/issues/2190) (Fix close-out pipeline reliability: scope C4.1 validation and enforce C5.5 retry (audit #365
+2.  #366)) when Copilot completes
+3. Review and iterate on PR from [#2192](https://github.com/EvaLok/schema-org-json-ld/issues/2192) ([Cycle Review] Cycle 440 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
