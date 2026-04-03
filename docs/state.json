@@ -12451,7 +12451,7 @@
         "note": "All 3 categories recurring in consecutive reviews (434-435), triggering recurrence escalation. Process-level fixes dispatched: (1) write-entry gate failure history preservation, (2) state-invariants backfill title validation, (3) journal post-dispatch refresh. Specific state-integrity data fix (backfill title mismatch) bundled in dispatch."
       },
       {
-        "actioned": 0,
+        "actioned": 1,
         "categories": [
           "journal-quality",
           "state-integrity",
@@ -12459,7 +12459,7 @@
         ],
         "complacency_score": 2,
         "cycle": 436,
-        "deferred": 2,
+        "deferred": 1,
         "dispatch_created": 1,
         "finding_count": 3,
         "finding_dispositions": [
@@ -12469,7 +12469,7 @@
           },
           {
             "category": "state-integrity",
-            "disposition": "deferred"
+            "disposition": "actioned"
           },
           {
             "category": "journal-quality",
@@ -12477,7 +12477,7 @@
           }
         ],
         "ignored": 0,
-        "note": "Finding 1: dispatch_created via #2170/PR #2171 (write-entry gate history). Finding 2: deferred — false backfill in agent_sessions needs manual correction, no tool available. Finding 3: deferred — journal overclaim is immutable, behavioral fix for future."
+        "note": "Finding 1: dispatch_created via #2170/PR #2171 (write-entry gate history). Finding 2: actioned — state-integrity backfill corruption fixed via commits 9947d08 and 129788c6. Finding 3: deferred — journal overclaim is immutable, behavioral fix for future. RETROACTIVE UPDATE cycle 438: state-integrity upgraded deferred→actioned per cycle 437 evidence."
       },
       {
         "actioned": 0,
@@ -12509,7 +12509,7 @@
         "note": "Finding 1: dispatch_created — write-entry needs further enhancement to preserve ALL close-out gate failures (C4.1/C5.x), not just C1. PR #2171 was partial. Finding 2: deferred — journal narrative is frozen; root cause is state reconciliation gap (finding 3). Behavioral fix: ensure accuracy in future journals. Finding 3: dispatch_created — process-review needs retroactive disposition reconciliation. Chronic escalation: all 3 categories in 5+ of last 6 reviews. Structural fix: state reconciliation tool dispatch addresses root cause."
       }
     ],
-    "last_review_cycle": 437
+    "last_review_cycle": 436
   },
   "review_dispatch_consecutive": 6,
   "review_events_verified_through_cycle": 434,
