@@ -6581,6 +6581,13 @@
       "pr": 2176,
       "status": "merged",
       "title": "Backfilled: PR #2176"
+    },
+    {
+      "dispatched_at": "2026-04-03T00:42:15Z",
+      "issue": 2178,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Preserve close-out gate failures in worklog via cycle-runner and write-entry patch-pipeline"
     }
   ],
   "audit_dropped": [
@@ -7140,7 +7147,7 @@
       "resolved_ref": "docs/reviews/cycle-437.md"
     }
   ],
-  "dispatch_log_latest": "#2175 [Cycle Review] Cycle 437 end-of-cycle review (cycle 437)",
+  "dispatch_log_latest": "#2178 Preserve close-out gate failures in worklog via cycle-runner and write-entry patch-pipeline (cycle 438)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7413,7 +7420,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 17,
     "issue": 2177,
