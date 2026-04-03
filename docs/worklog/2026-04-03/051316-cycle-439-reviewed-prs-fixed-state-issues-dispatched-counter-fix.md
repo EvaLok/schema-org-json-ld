@@ -25,6 +25,10 @@
 - [#2095](https://github.com/EvaLok/schema-org-json-ld/issues/2095): Eva input closed this cycle
 - [#2183](https://github.com/EvaLok/schema-org-json-ld/issues/2183)
 
+### Issues processed (post-dispatch)
+
+- [#2185](https://github.com/EvaLok/schema-org-json-ld/issues/2185): [Cycle Review] Cycle 439 end-of-cycle review (in_flight)
+
 ## Self-modifications
 
 - **`tools/rust/crates/cycle-runner/src/close_out.rs`**: modified
@@ -33,12 +37,19 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 1
+- **In-flight agent sessions (post-dispatch)**: 2
 - **Pipeline status**: PASS (2 warnings); first-session baseline was FAIL (2 warnings, 4 blocking: state-invariants, doc-validation, worklog-immutability, current-cycle-steps)
+- **Pipeline status (post-dispatch)**: PASS (2 warnings)
 - **Publish gate**: published
 
-## Next steps
+## Next steps (pre-dispatch)
 
 1. Review and iterate on PR from [#2183](https://github.com/EvaLok/schema-org-json-ld/issues/2183) (Auto-increment forward_work counter in cycle-start) when Copilot completes
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2183](https://github.com/EvaLok/schema-org-json-ld/issues/2183) (Auto-increment forward_work counter in cycle-start) when Copilot completes
+2. Review and iterate on PR from [#2185](https://github.com/EvaLok/schema-org-json-ld/issues/2185) ([Cycle Review] Cycle 439 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
