@@ -20,6 +20,7 @@
 
 - **In-flight agent sessions**: 0
 - **Pipeline status**: FAIL (2 warnings, 3 blocking: mass-deferral-gate, doc-validation, current-cycle-steps)
+- **Pipeline status (post-dispatch)**: PASS (2 warnings: deferral-accumulation, step-comments)
 - **Publish gate**: published
 
 ## Next steps
