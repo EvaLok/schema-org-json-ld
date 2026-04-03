@@ -37,6 +37,11 @@ struct PipelineGateReport {
     blocking_steps: Vec<String>,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct RecordedC5_5Pass {
+    pipeline_summary: String,
+}
+
 pub fn run(
     repo_root: &Path,
     issue: u64,
@@ -94,10 +99,12 @@ pub fn run(
     step_c5_1(repo_root, issue, cycle, &worklog)?;
 
     // C5.5: Pipeline check — GATE
-    let (pipeline_passed, pipeline_summary) = step_c5_5(repo_root, issue)?;
+    let (pipeline_passed, pipeline_summary) = step_c5_5(repo_root, issue, cycle)?;
 
     // C5.6: Stabilization counter
     step_c5_6(repo_root, issue, cycle, pipeline_passed)?;
+
+    ensure_c5_5_allows_c6(repo_root, cycle)?;
 
     // C6: Review dispatch (may be skipped if Copilot is unavailable)
     let review_info = step_c6(repo_root, issue, cycle)?;
@@ -600,7 +607,23 @@ fn step_c5_1(repo_root: &Path, issue: u64, cycle: u64, worklog: &Path) -> Result
     Ok(())
 }
 
-fn step_c5_5(repo_root: &Path, issue: u64) -> Result<(bool, String), String> {
+fn step_c5_5(repo_root: &Path, issue: u64, cycle: u64) -> Result<(bool, String), String> {
+    if let Some(recorded_pass) = recorded_c5_5_pass(repo_root, cycle)? {
+        let body = format!(
+            "Pipeline: {}\n- reused_recorded_pass: true\n- cycle: {}",
+            recorded_pass.pipeline_summary, cycle
+        );
+        steps::post_step(
+            repo_root,
+            issue,
+            "C5.5",
+            "Final pipeline gate",
+            &body,
+            false,
+        )?;
+        return Ok((true, recorded_pass.pipeline_summary));
+    }
+
     eprintln!("C5.5: Final pipeline gate...");
 
     let output = runner::run_tool(repo_root, "pipeline-check", &["--json"])?;
@@ -682,7 +705,7 @@ fn step_c5_5(repo_root: &Path, issue: u64) -> Result<(bool, String), String> {
     };
 
     if let Some(initial_result) = initial_result {
-        record_initial_c5_5_failure(repo_root, initial_result)?;
+        record_initial_c5_5_failure(repo_root, cycle, initial_result)?;
     }
 
     steps::post_step(
@@ -698,11 +721,16 @@ fn step_c5_5(repo_root: &Path, issue: u64) -> Result<(bool, String), String> {
         return Err("Pipeline check failed at C5.5 — fix issues and re-run close-out".to_string());
     }
 
+    record_c5_5_pass(repo_root, cycle, &pipeline_summary)?;
+
     Ok((true, pipeline_summary))
 }
 
-fn record_initial_c5_5_failure(repo_root: &Path, mut initial_result: Value) -> Result<(), String> {
-    let cycle = current_cycle_from_state(repo_root)?;
+fn record_initial_c5_5_failure(
+    repo_root: &Path,
+    cycle: u64,
+    mut initial_result: Value,
+) -> Result<(), String> {
     let mut state = read_state_value(repo_root)?;
     let initial_result_object = initial_result
         .as_object_mut()
@@ -722,6 +750,14 @@ fn record_initial_c5_5_failure(repo_root: &Path, mut initial_result: Value) -> R
         .and_then(Value::as_object_mut)
         .ok_or_else(|| "missing object /tool_pipeline in docs/state.json".to_string())?;
     tool_pipeline.insert("c5_5_initial_result".to_string(), initial_result);
+    tool_pipeline.insert(
+        "c5_5_gate".to_string(),
+        serde_json::json!({
+            "cycle": cycle,
+            "status": "FAIL",
+            "needs_reverify": true,
+        }),
+    );
     write_state_value(repo_root, &state)?;
 
     let commit_message = format!(
@@ -729,6 +765,95 @@ fn record_initial_c5_5_failure(repo_root: &Path, mut initial_result: Value) -> R
         cycle, cycle
     );
     commit_state_json(repo_root, &commit_message)?;
+    Ok(())
+}
+
+fn record_c5_5_pass(repo_root: &Path, cycle: u64, pipeline_summary: &str) -> Result<(), String> {
+    let mut state = read_state_value(repo_root)?;
+    if let Some(existing) = state.pointer("/tool_pipeline/c5_5_gate") {
+        if let Some(recorded_pass) = parse_recorded_c5_5_pass(existing, cycle) {
+            if recorded_pass.pipeline_summary == pipeline_summary {
+                return Ok(());
+            }
+        }
+    }
+
+    let tool_pipeline = state
+        .get_mut("tool_pipeline")
+        .and_then(Value::as_object_mut)
+        .ok_or_else(|| "missing object /tool_pipeline in docs/state.json".to_string())?;
+    tool_pipeline.insert(
+        "c5_5_gate".to_string(),
+        serde_json::json!({
+            "cycle": cycle,
+            "status": "PASS",
+            "needs_reverify": false,
+            "pipeline_summary": pipeline_summary,
+        }),
+    );
+    write_state_value(repo_root, &state)?;
+
+    let commit_message = format!(
+        "state(pipeline): record C5.5 PASS for cycle {} [cycle {}]",
+        cycle, cycle
+    );
+    commit_state_json(repo_root, &commit_message)?;
+    Ok(())
+}
+
+fn recorded_c5_5_pass(repo_root: &Path, cycle: u64) -> Result<Option<RecordedC5_5Pass>, String> {
+    let state = read_state_value(repo_root)?;
+    Ok(state
+        .pointer("/tool_pipeline/c5_5_gate")
+        .and_then(|gate| parse_recorded_c5_5_pass(gate, cycle)))
+}
+
+fn parse_recorded_c5_5_pass(gate: &Value, cycle: u64) -> Option<RecordedC5_5Pass> {
+    if gate.get("cycle").and_then(Value::as_u64) != Some(cycle) {
+        return None;
+    }
+    if gate.get("status").and_then(Value::as_str) != Some("PASS") {
+        return None;
+    }
+    if gate.get("needs_reverify").and_then(Value::as_bool) != Some(false) {
+        return None;
+    }
+    let pipeline_summary = gate
+        .get("pipeline_summary")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("PASS")
+        .to_string();
+    Some(RecordedC5_5Pass { pipeline_summary })
+}
+
+fn ensure_c5_5_allows_c6(repo_root: &Path, cycle: u64) -> Result<(), String> {
+    let state = read_state_value(repo_root)?;
+    let Some(gate) = state.pointer("/tool_pipeline/c5_5_gate") else {
+        return Err(format!(
+            "Cannot proceed to C6: no C5.5 result recorded for cycle {}. Re-run close-out to execute and pass C5.5 pipeline-check first.",
+            cycle
+        ));
+    };
+    if gate.get("cycle").and_then(Value::as_u64) != Some(cycle) {
+        return Err(format!(
+            "Cannot proceed to C6: C5.5 was not re-verified for cycle {}. Re-run close-out to execute and pass C5.5 pipeline-check first.",
+            cycle
+        ));
+    }
+    if gate.get("needs_reverify").and_then(Value::as_bool) == Some(true) {
+        return Err(format!(
+            "Cannot proceed to C6: C5.5 previously failed for cycle {} and still needs re-verification. Re-run close-out to execute and pass C5.5 pipeline-check first.",
+            cycle
+        ));
+    }
+    if gate.get("status").and_then(Value::as_str) != Some("PASS") {
+        return Err(format!(
+            "Cannot proceed to C6: C5.5 has not recorded a PASS for cycle {}. Re-run close-out to execute and pass C5.5 pipeline-check first.",
+            cycle
+        ));
+    }
     Ok(())
 }
 
@@ -2010,7 +2135,7 @@ PY
         )
         .unwrap();
 
-        let error = step_c5_5(&dir, 123).unwrap_err();
+        let error = step_c5_5(&dir, 123, 345).unwrap_err();
         assert_eq!(
             error,
             "Pipeline check failed at C5.5 — fix issues and re-run close-out"
@@ -2103,7 +2228,7 @@ PY
         )
         .unwrap();
 
-        let (passed, summary) = step_c5_5(&dir, 123).unwrap();
+        let (passed, summary) = step_c5_5(&dir, 123, 345).unwrap();
         assert!(passed);
         assert_eq!(summary, "PASS (1 warning)");
 
@@ -2129,7 +2254,7 @@ PY
         )
         .unwrap();
 
-        let error = step_c5_5(&dir, 123).unwrap_err();
+        let error = step_c5_5(&dir, 123, 345).unwrap_err();
         assert_eq!(
             error,
             "Pipeline check failed at C5.5 — fix issues and re-run close-out"
@@ -2170,7 +2295,7 @@ PY
         )
         .unwrap();
 
-        let error = step_c5_5(&dir, 123).unwrap_err();
+        let error = step_c5_5(&dir, 123, 345).unwrap_err();
         assert_eq!(
             error,
             "Pipeline check failed at C5.5 — fix issues and re-run close-out"
@@ -2197,7 +2322,7 @@ PY
         )
         .unwrap();
 
-        let (passed, summary) = step_c5_5(&dir, 123).unwrap();
+        let (passed, summary) = step_c5_5(&dir, 123, 345).unwrap();
         assert!(passed);
         assert_eq!(summary, "PASS (1 warning, 1 cascade)");
 
@@ -2225,7 +2350,7 @@ PY
         )
         .unwrap();
 
-        let error = step_c5_5(&dir, 123).unwrap_err();
+        let error = step_c5_5(&dir, 123, 345).unwrap_err();
         assert_eq!(
             error,
             "Pipeline check failed at C5.5 — fix issues and re-run close-out"
@@ -2236,6 +2361,121 @@ PY
         assert!(args.contains("has_blocking_findings: false"));
         assert!(args.contains("blocking_warning_count: 0"));
         assert!(args.contains("gate_failure_reason: overall status is not pass"));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn c5_5_fail_blocks_progression_to_c6() {
+        let dir = setup_temp_repo("step-c5-5-blocks-c6");
+        let args_path = dir.join("post-step-args.txt");
+        write_post_step_capture_script(&dir, &args_path);
+        write_minimal_close_out_state(&dir, 345);
+        fs::write(
+            dir.join("tools/pipeline-check"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"overall\":\"fail\",\"has_blocking_findings\":false}'\n",
+        )
+        .unwrap();
+
+        let error = step_c5_5(&dir, 123, 345).unwrap_err();
+        assert_eq!(
+            error,
+            "Pipeline check failed at C5.5 — fix issues and re-run close-out"
+        );
+
+        let gate_error = ensure_c5_5_allows_c6(&dir, 345).unwrap_err();
+        assert!(gate_error.contains("needs re-verification"));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn c5_5_pass_after_previous_fail_allows_progression_to_c6() {
+        let dir = setup_temp_repo("step-c5-5-pass-after-fail");
+        let args_path = dir.join("post-step-args.txt");
+        write_post_step_capture_script(&dir, &args_path);
+        write_minimal_close_out_state(&dir, 345);
+        fs::write(
+            dir.join("tools/pipeline-check"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"overall\":\"fail\",\"has_blocking_findings\":false}'\n",
+        )
+        .unwrap();
+
+        step_c5_5(&dir, 123, 345).unwrap_err();
+
+        fs::write(
+            dir.join("tools/pipeline-check"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"overall\":\"pass\",\"has_blocking_findings\":false}'\n",
+        )
+        .unwrap();
+
+        let (passed, summary) = step_c5_5(&dir, 123, 345).unwrap();
+        assert!(passed);
+        assert_eq!(summary, "PASS");
+        ensure_c5_5_allows_c6(&dir, 345).unwrap();
+
+        let state = state_schema::read_state_value(&dir).unwrap();
+        assert_eq!(
+            state.pointer("/tool_pipeline/c5_5_gate"),
+            Some(&json!({
+                "cycle": 345,
+                "status": "PASS",
+                "needs_reverify": false,
+                "pipeline_summary": "PASS"
+            }))
+        );
+        assert_eq!(
+            state.pointer("/tool_pipeline/c5_5_initial_result"),
+            Some(&json!({
+                "cycle": 345,
+                "result": "FAIL",
+                "summary": "FAIL",
+                "exit_code": 0,
+                "overall": "fail",
+                "has_blocking_findings": false
+            }))
+        );
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn c5_5_pass_is_reused_without_rerunning_pipeline_check() {
+        let dir = setup_temp_repo("step-c5-5-pass-reuse");
+        let args_path = dir.join("post-step-args.txt");
+        let invocation_count = dir.join("pipeline-check-count.txt");
+        write_post_step_capture_script(&dir, &args_path);
+        write_minimal_close_out_state(&dir, 345);
+        fs::write(
+            dir.join("tools/pipeline-check"),
+            format!(
+                "#!/usr/bin/env bash\nset -euo pipefail\ncount_file={count_file:?}\ncount=0\nif [ -f \"$count_file\" ]; then\n  count=$(cat \"$count_file\")\nfi\ncount=$((count + 1))\nprintf '%s' \"$count\" > \"$count_file\"\nprintf '%s\n' '{{\"overall\":\"pass\",\"has_blocking_findings\":false}}'\n",
+                count_file = invocation_count
+            ),
+        )
+        .unwrap();
+
+        let (passed, summary) = step_c5_5(&dir, 123, 345).unwrap();
+        assert!(passed);
+        assert_eq!(summary, "PASS");
+
+        fs::write(
+            dir.join("tools/pipeline-check"),
+            "#!/usr/bin/env bash\nset -euo pipefail\necho 'pipeline-check should not rerun after PASS' >&2\nexit 1\n",
+        )
+        .unwrap();
+
+        let (passed, summary) = step_c5_5(&dir, 123, 345).unwrap();
+        assert!(passed);
+        assert_eq!(summary, "PASS");
+        assert_eq!(
+            fs::read_to_string(&invocation_count).unwrap(),
+            "1",
+            "pipeline-check should only run once after PASS is recorded"
+        );
+
+        let args = fs::read_to_string(&args_path).unwrap();
+        assert!(args.contains("reused_recorded_pass: true"));
 
         let _ = fs::remove_dir_all(&dir);
     }
