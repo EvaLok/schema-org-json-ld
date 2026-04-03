@@ -418,11 +418,16 @@ fn validate_eva_issue_numbers(issue_numbers: &[i64], field_path: &str) -> Result
     parse_eva_issue_numbers(issue_numbers, field_path).map(|_| ())
 }
 
-fn refresh_eva_input_issue_inventory(state: &mut Value, cycle: u64) -> Result<(), String> {
+fn refresh_inventory_field(state: &mut Value, field_name: &str, cycle: u64) -> Result<(), String> {
     let cycle = u32::try_from(cycle)
         .map_err(|_| format!("cycle {} exceeds supported inventory refresh range", cycle))?;
-    update_freshness(state, "eva_input_issues.remaining_open", cycle)?;
-    update_freshness(state, "eva_input_issues.closed_this_cycle", cycle)?;
+    update_freshness(state, field_name, cycle)?;
+    Ok(())
+}
+
+fn refresh_eva_input_issue_inventory(state: &mut Value, cycle: u64) -> Result<(), String> {
+    refresh_inventory_field(state, "eva_input_issues.remaining_open", cycle)?;
+    refresh_inventory_field(state, "eva_input_issues.closed_this_cycle", cycle)?;
     Ok(())
 }
 
@@ -441,9 +446,7 @@ fn update_forward_work_counter(state: &mut Value, cycle: u64) -> Result<(), Stri
     };
     *current_count = json!(count);
 
-    let cycle = u32::try_from(cycle)
-        .map_err(|_| format!("cycle {} exceeds supported inventory refresh range", cycle))?;
-    update_freshness(state, "cycles_since_last_forward_work", cycle)?;
+    refresh_inventory_field(state, "cycles_since_last_forward_work", cycle)?;
     Ok(())
 }
 
