@@ -1,0 +1,19 @@
+## 1. [process-adherence] Cycle 442 crossed a blocking C4.1 FAIL and still closed as if the gate had been clean
+
+**File**: docs/worklog/2026-04-03/163410-cycle-442-fixed-verify-review-events-hang-processed-cycle-441-review-cleaned-up-state.md:27-29
+**Evidence**: The final worklog says `Pipeline status: PASS (2 warnings)`, then keeps `Close-out gate failures: C4.1 FAIL ...`, then says `Publish gate: published`. The public issue thread for `#2197` shows the same sequence: Step `C4.1` posted `Worklog validation: FAIL` (`#issuecomment-4184186907`), the cycle still advanced through `C4.5`, `C5`, `C5.1`, `C5.5`, `C6`, and `C8`, and only then patched the worklog at `C6.5` (`#issuecomment-4184194953`). That is another blocking-gate override, not a clean close-out.
+**Recommendation**: Treat a blocking `C4.1` failure as unresolved until the repaired gate result is explicitly rerun and the artifact is fixed before publication. Do not describe the cycle as a published PASS while the same state block still records an open blocking failure.
+
+## 2. [worklog-accuracy] Cycle 441's worklog-accuracy finding was marked actioned even though cycle 442 immediately reproduced the same contradiction
+
+**File**: docs/state.json:12672-12697
+**Evidence**: `review_agent.history` records cycle 441 as `actioned: 1`, with `worklog-accuracy` specifically marked `actioned` and justified as fixed by PRs `#2179`/`#2191`. But cycle 442's own worklog repeats the same contradictory pattern the prior review objected to: `Pipeline status: PASS (2 warnings)` alongside `Close-out gate failures: C4.1 FAIL` and `Publish gate: published` (`docs/worklog/2026-04-03/163410-cycle-442-fixed-verify-review-events-hang-processed-cycle-441-review-cleaned-up-state.md:27-29`). The issue thread also shows the worklog needed a post-dispatch patch at `C6.5` after the failure had already been posted. This is not evidence that the category was actioned; it is evidence that the defect pattern recurred on the first claimed validation cycle.
+**Recommendation**: Do not upgrade chronic findings to `actioned` just because fix PRs merged. Keep them deferred until a subsequent cycle completes without reproducing the failure mode the review called out.
+
+## 3. [journal-quality] The journal celebrates the direct-push pattern while omitting the same-cycle gate failure and repair churn
+
+**File**: docs/journal/2026-04-03.md:189-207
+**Evidence**: The cycle 442 journal says the fix was `another direct push success`, says the pattern `continues to outperform Copilot dispatch`, and concludes `The pattern works` with four success conditions. Its `What fell short` section only criticizes the initial lazy `S0.5` dispositions. But the same cycle's worklog records a blocking `C4.1` FAIL and a later `C6.5` worklog patch (`docs/worklog/2026-04-03/163410-cycle-442-fixed-verify-review-events-hang-processed-cycle-441-review-cleaned-up-state.md:27-37`), and the issue thread shows that repair happened after dispatch. The reflection therefore grades the cycle on the code fix while sidestepping the messy close-out that should dominate an end-of-cycle retrospective.
+**Recommendation**: When a cycle needs a blocking-gate recovery and post-dispatch artifact repair, make that the center of `What fell short` and avoid declaring the workflow pattern validated. Reflection should grade the whole cycle, not only the successful code change inside it.
+
+Complacency score: **2/5**. The cycle did land a real fix and kept receipts/step comments available, but it still overrode a blocking `C4.1` failure, prematurely declared the prior worklog-accuracy finding actioned, and wrote a journal that treated the cycle as a pattern success instead of a still-dirty close-out. The score is capped below 3 because the cycle crossed a blocking gate and continued anyway.
