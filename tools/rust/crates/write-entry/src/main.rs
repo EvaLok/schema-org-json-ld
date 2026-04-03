@@ -181,6 +181,9 @@ struct PatchPipelineArgs {
     /// Replacement issues processed content as NUMBER;TITLE;STATUS entries joined with `|`
     #[arg(long = "issues-processed")]
     issues_processed: Option<String>,
+    /// Close-out gate failure descriptions (comma-separated)
+    #[arg(long = "prior-gate-failures", value_delimiter = ',')]
+    prior_gate_failures: Vec<String>,
     /// Replacement current state section title
     #[arg(long = "section-title")]
     section_title: Option<String>,
@@ -523,6 +526,14 @@ fn execute_patch_pipeline(args: &PatchPipelineArgs, repo_root: &Path) -> Result<
         patched = remove_legacy_state_disclaimer(&patched);
     }
     patched = remove_line_with_prefix(&patched, "- **Copilot metrics**: ");
+    if !args.prior_gate_failures.is_empty() {
+        patched = patch_prior_gate_failures(&patched, &args.prior_gate_failures).ok_or_else(|| {
+            format!(
+                "failed to patch {}: cycle state section not found",
+                worklog_path.display()
+            )
+        })?;
+    }
     if let Some(issues_processed) = args.issues_processed.as_deref() {
         let issues_processed = parse_patch_pipeline_issues_processed(issues_processed)?;
         patched = patch_or_addendum_bullet_section(
@@ -732,6 +743,49 @@ fn remove_line_with_prefix(content: &str, prefix: &str) -> String {
         output.pop();
     }
     output
+}
+
+fn patch_prior_gate_failures(content: &str, failures: &[String]) -> Option<String> {
+    let mut lines: Vec<String> = content.lines().map(ToOwned::to_owned).collect();
+    let (_, section_start, mut section_end) =
+        find_bullet_section_bounds(&lines, CYCLE_STATE_HEADING)
+            .or_else(|| find_bullet_section_bounds(&lines, LEGACY_STATE_HEADING))?;
+
+    let removed = lines[section_start..section_end]
+        .iter()
+        .filter(|line| line.starts_with(CLOSE_OUT_GATE_FAILURES_PREFIX))
+        .count();
+    let retained = lines[section_start..section_end]
+        .iter()
+        .filter(|line| !line.starts_with(CLOSE_OUT_GATE_FAILURES_PREFIX))
+        .cloned()
+        .collect::<Vec<_>>();
+    lines.splice(
+        section_start..section_end,
+        retained,
+    );
+    section_end = section_end.saturating_sub(removed);
+
+    let insert_at = lines[section_start..section_end]
+        .iter()
+        .rposition(|line| {
+            line.starts_with(PIPELINE_STATUS_PREFIX)
+                || line.starts_with(POST_DISPATCH_PIPELINE_STATUS_PREFIX)
+        })
+        .map(|index| section_start + index + 1)
+        .unwrap_or(section_start);
+
+    let rendered: Vec<String> = failures
+        .iter()
+        .map(|failure| format!("{}{}", CLOSE_OUT_GATE_FAILURES_PREFIX, failure))
+        .collect();
+    lines.splice(insert_at..insert_at, rendered);
+
+    let mut patched = lines.join("\n");
+    if content.ends_with('\n') {
+        patched.push('\n');
+    }
+    Some(patched)
 }
 
 fn patch_numbered_section(content: &str, heading: &str, items: &[String]) -> Option<String> {
@@ -7756,6 +7810,8 @@ Reflective log for the schema-org-json-ld orchestrator.
             "Review [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) when Copilot completes,Prepare follow-up dispatch",
             "--issues-processed",
             "123;some title;closed|456;other;in-flight",
+            "--prior-gate-failures",
+            "C4.1 FAIL: mismatch,C5.5 FAIL: pipeline gate",
             "--section-title",
             "Cycle state",
         ])
@@ -7778,6 +7834,13 @@ Reflective log for the schema-org-json-ld orchestrator.
                 assert_eq!(
                     args.issues_processed.as_deref(),
                     Some("123;some title;closed|456;other;in-flight")
+                );
+                assert_eq!(
+                    args.prior_gate_failures,
+                    vec![
+                        "C4.1 FAIL: mismatch".to_string(),
+                        "C5.5 FAIL: pipeline gate".to_string()
+                    ]
                 );
                 assert_eq!(args.section_title.as_deref(), Some("Cycle state"));
             }
@@ -7851,6 +7914,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 publish_gate: None,
                 next_steps: Vec::new(),
                 issues_processed: None,
+                prior_gate_failures: Vec::new(),
                 section_title: None,
             },
             &repo_root.path,
@@ -7898,6 +7962,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 publish_gate: Some("published".to_string()),
                 next_steps: Vec::new(),
                 issues_processed: None,
+                prior_gate_failures: Vec::new(),
                 section_title: Some("Cycle state".to_string()),
             },
             &repo_root.path,
@@ -7943,6 +8008,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 publish_gate: None,
                 next_steps: Vec::new(),
                 issues_processed: None,
+                prior_gate_failures: Vec::new(),
                 section_title: None,
             },
             &repo_root.path,
@@ -7979,6 +8045,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 publish_gate: None,
                 next_steps: Vec::new(),
                 issues_processed: None,
+                prior_gate_failures: Vec::new(),
                 section_title: None,
             },
             &repo_root.path,
@@ -8015,6 +8082,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 publish_gate: None,
                 next_steps: Vec::new(),
                 issues_processed: None,
+                prior_gate_failures: Vec::new(),
                 section_title: None,
             },
             &repo_root.path,
@@ -8046,6 +8114,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 publish_gate: None,
                 next_steps: Vec::new(),
                 issues_processed: None,
+                prior_gate_failures: Vec::new(),
                 section_title: None,
             },
             &repo_root.path,
@@ -8082,6 +8151,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 publish_gate: None,
                 next_steps: Vec::new(),
                 issues_processed: None,
+                prior_gate_failures: Vec::new(),
                 section_title: None,
             },
             &repo_root.path,
@@ -8113,6 +8183,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 publish_gate: None,
                 next_steps: Vec::new(),
                 issues_processed: None,
+                prior_gate_failures: Vec::new(),
                 section_title: None,
             },
             &repo_root.path,
@@ -8149,6 +8220,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 publish_gate: None,
                 next_steps: Vec::new(),
                 issues_processed: None,
+                prior_gate_failures: Vec::new(),
                 section_title: None,
             },
             &repo_root.path,
@@ -8159,6 +8231,109 @@ Reflective log for the schema-org-json-ld orchestrator.
         assert!(updated.contains("- **Pipeline status**: PASS (2 warnings:\nwarn one\nwarn two)"));
         assert!(updated.contains("- **Publish gate**: open"));
         assert!(!updated.contains("- **Pipeline status (post-dispatch)**:"));
+    }
+
+    #[test]
+    fn patch_pipeline_adds_prior_gate_failures_to_cycle_state() {
+        let repo_root = TempRepoDir::new("patch-pipeline-prior-gate-failures");
+        let worklog_path = repo_root.path.join("docs/worklog/test.md");
+        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
+        fs::write(
+            &worklog_path,
+            "# Cycle 154\n\n## Cycle state\n\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: open\n",
+        )
+        .unwrap();
+
+        execute_patch_pipeline(
+            &PatchPipelineArgs {
+                worklog: PathBuf::from("docs/worklog/test.md"),
+                status: "PASS (9/9)".to_string(),
+                in_flight: Some(1),
+                publish_gate: None,
+                next_steps: Vec::new(),
+                issues_processed: None,
+                prior_gate_failures: vec![
+                    "C4.1 FAIL: mismatch".to_string(),
+                    "C5.5 FAIL: pipeline gate".to_string(),
+                ],
+                section_title: None,
+            },
+            &repo_root.path,
+        )
+        .unwrap();
+
+        let updated = fs::read_to_string(&worklog_path).unwrap();
+        assert!(updated.contains("- **Close-out gate failures**: C4.1 FAIL: mismatch"));
+        assert!(updated.contains("- **Close-out gate failures**: C5.5 FAIL: pipeline gate"));
+        let pipeline = updated.find("- **Pipeline status**: FAIL (1 blocking finding)").unwrap();
+        let gate_failure = updated
+            .find("- **Close-out gate failures**: C4.1 FAIL: mismatch")
+            .unwrap();
+        let publish_gate = updated.find("- **Publish gate**: open").unwrap();
+        assert!(pipeline < gate_failure);
+        assert!(gate_failure < publish_gate);
+    }
+
+    #[test]
+    fn patch_pipeline_without_prior_gate_failures_does_not_add_failure_lines() {
+        let repo_root = TempRepoDir::new("patch-pipeline-no-prior-gate-failures");
+        let worklog_path = repo_root.path.join("docs/worklog/test.md");
+        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
+        fs::write(
+            &worklog_path,
+            "# Cycle 154\n\n## Cycle state\n\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: open\n",
+        )
+        .unwrap();
+
+        execute_patch_pipeline(
+            &PatchPipelineArgs {
+                worklog: PathBuf::from("docs/worklog/test.md"),
+                status: "PASS (9/9)".to_string(),
+                in_flight: Some(1),
+                publish_gate: None,
+                next_steps: Vec::new(),
+                issues_processed: None,
+                prior_gate_failures: Vec::new(),
+                section_title: None,
+            },
+            &repo_root.path,
+        )
+        .unwrap();
+
+        let updated = fs::read_to_string(&worklog_path).unwrap();
+        assert!(!updated.contains(CLOSE_OUT_GATE_FAILURES_PREFIX));
+    }
+
+    #[test]
+    fn patch_pipeline_replaces_existing_prior_gate_failures_on_repatch() {
+        let repo_root = TempRepoDir::new("patch-pipeline-repatch-prior-gate-failures");
+        let worklog_path = repo_root.path.join("docs/worklog/test.md");
+        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
+        fs::write(
+            &worklog_path,
+            "# Cycle 154\n\n## Cycle state\n\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Close-out gate failures**: C4.1 FAIL: stale reason\n- **Publish gate**: open\n",
+        )
+        .unwrap();
+
+        execute_patch_pipeline(
+            &PatchPipelineArgs {
+                worklog: PathBuf::from("docs/worklog/test.md"),
+                status: "PASS (9/9)".to_string(),
+                in_flight: Some(1),
+                publish_gate: None,
+                next_steps: Vec::new(),
+                issues_processed: None,
+                prior_gate_failures: vec!["C5.5 FAIL: pipeline gate".to_string()],
+                section_title: None,
+            },
+            &repo_root.path,
+        )
+        .unwrap();
+
+        let updated = fs::read_to_string(&worklog_path).unwrap();
+        assert!(!updated.contains("C4.1 FAIL: stale reason"));
+        assert!(updated.contains("- **Close-out gate failures**: C5.5 FAIL: pipeline gate"));
+        assert_eq!(updated.matches(CLOSE_OUT_GATE_FAILURES_PREFIX).count(), 1);
     }
 
     #[test]
@@ -8184,6 +8359,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                     "Prepare follow-up dispatch".to_string(),
                 ],
                 issues_processed: None,
+                prior_gate_failures: Vec::new(),
                 section_title: None,
             },
             &repo_root.path,
@@ -8227,6 +8403,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 publish_gate: None,
                 next_steps: Vec::new(),
                 issues_processed: None,
+                prior_gate_failures: Vec::new(),
                 section_title: None,
             },
             &repo_root.path,
@@ -8259,6 +8436,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 publish_gate: None,
                 next_steps: Vec::new(),
                 issues_processed: None,
+                prior_gate_failures: Vec::new(),
                 section_title: None,
             },
             &repo_root.path,
@@ -8294,6 +8472,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                     "Prepare follow-up dispatch".to_string(),
                 ],
                 issues_processed: None,
+                prior_gate_failures: Vec::new(),
                 section_title: None,
             },
             &repo_root.path,
@@ -8324,6 +8503,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 publish_gate: None,
                 next_steps: Vec::new(),
                 issues_processed: Some("123;some title;closed|456;other;in-flight".to_string()),
+                prior_gate_failures: Vec::new(),
                 section_title: None,
             },
             &repo_root.path,
@@ -8356,6 +8536,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 publish_gate: None,
                 next_steps: Vec::new(),
                 issues_processed: Some("123;some title;closed|456;other;in-flight".to_string()),
+                prior_gate_failures: Vec::new(),
                 section_title: None,
             },
             &repo_root.path,
@@ -8375,6 +8556,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 publish_gate: None,
                 next_steps: Vec::new(),
                 issues_processed: Some("123;some title;closed|456;other;in-flight".to_string()),
+                prior_gate_failures: Vec::new(),
                 section_title: None,
             },
             &repo_root.path,
@@ -8409,6 +8591,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 publish_gate: None,
                 next_steps: vec!["No in-flight sessions — plan next dispatch".to_string()],
                 issues_processed: None,
+                prior_gate_failures: Vec::new(),
                 section_title: None,
             },
             &repo_root.path,
@@ -8441,6 +8624,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 publish_gate: None,
                 next_steps: vec!["Review updated PR when Copilot completes".to_string()],
                 issues_processed: None,
+                prior_gate_failures: Vec::new(),
                 section_title: None,
             },
             &repo_root.path,
