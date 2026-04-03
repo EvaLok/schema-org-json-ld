@@ -6616,6 +6616,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix close-out pipeline reliability: scope C4.1 validation and enforce C5.5 retry (audit #365, #366)"
+    },
+    {
+      "dispatched_at": "2026-04-03T08:35:11Z",
+      "issue": 2192,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 440 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -7186,7 +7193,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2190 Fix close-out pipeline reliability: scope C4.1 validation and enforce C5.5 retry (audit #365, #366) (cycle 440)",
+  "dispatch_log_latest": "#2192 [Cycle Review] Cycle 440 end-of-cycle review (cycle 440)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7459,7 +7466,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 14,
     "issue": 2187,
@@ -12588,7 +12595,7 @@
     ],
     "last_review_cycle": 438
   },
-  "review_dispatch_consecutive": 8,
+  "review_dispatch_consecutive": 9,
   "review_events_verified_through_cycle": 434,
   "schema_status": {
     "directory_layout": {
