@@ -7141,7 +7141,9 @@
       "category": "journal-quality",
       "deadline_cycle": 441,
       "deferred_cycle": 436,
-      "resolved": false
+      "dropped_rationale": "Behavioral finding (journal overclaiming resolution). Root cause is temporal: journal written before all state repairs complete. PR #2179 merged cycle 439 addresses worklog-level gate failure preservation. Journal overclaim pattern addressed by explicit process awareness — be factual about partial containment, not celebratory.",
+      "resolved": true,
+      "resolved_ref": "Dropped: behavioral fix, not toolable. PR #2179 addresses related worklog pattern."
     },
     {
       "category": "state-integrity",
