@@ -6565,10 +6565,13 @@
       "title": "[Cycle Review] Cycle 436 end-of-cycle review"
     },
     {
+      "completed_at": "2026-04-03T00:28:00Z",
       "dispatched_at": "2026-04-02T20:33:58Z",
       "issue": 2175,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2176,
+      "result": "merged",
+      "status": "completed",
       "title": "[Cycle Review] Cycle 437 end-of-cycle review"
     },
     {
