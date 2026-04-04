@@ -13340,18 +13340,17 @@
   "tool_pipeline": {
     "blocks_publish": false,
     "c5_5_gate": {
-      "cycle": 443,
-      "needs_reverify": false,
-      "pipeline_summary": "PASS (2 warnings)",
-      "status": "PASS"
+      "cycle": 444,
+      "needs_reverify": true,
+      "status": "FAIL"
     },
     "c5_5_initial_result": {
-      "cycle": 443,
+      "cycle": 444,
       "exit_code": 1,
       "has_blocking_findings": true,
       "overall": "fail",
       "result": "FAIL",
-      "summary": "FAIL (2 warnings, 1 blocking: mass-deferral-gate)"
+      "summary": "FAIL (3 warnings, 1 cascade, 1 blocking: current-cycle-steps)"
     },
     "eva_directive": 436,
     "phases": [
