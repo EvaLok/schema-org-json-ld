@@ -12,6 +12,10 @@
 
 - [#2201](https://github.com/EvaLok/schema-org-json-ld/issues/2201): Cycle 443 review closed
 
+### Issues processed (post-dispatch)
+
+- [#2204](https://github.com/EvaLok/schema-org-json-ld/issues/2204): [Cycle Review] Cycle 444 end-of-cycle review (in_flight)
+
 ## Self-modifications
 
 - **`COMPLETION_CHECKLIST.xml`**: modified
@@ -19,14 +23,19 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 0
+- **In-flight agent sessions (post-dispatch)**: 1
 - **Pipeline status**: FAIL (4 warnings, 2 blocking: frozen-commit-verify, current-cycle-steps)
+- **Pipeline status (post-dispatch)**: PASS (4 warnings)
 
-*Snapshot before review dispatch — final counters may differ after C6.*
 - **Publish gate**: published
 
-## Next steps
+## Next steps (pre-dispatch)
 
 1. No in-flight sessions — plan next dispatch
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2204](https://github.com/EvaLok/schema-org-json-ld/issues/2204) ([Cycle Review] Cycle 444 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
