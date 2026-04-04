@@ -24,6 +24,7 @@ const PIPELINE_CHECK_ARGS: [&str; 5] = [
 pub enum PipelineGateError {
     Failed,
     ExecutionFailed(String),
+    ReviewDispatchBlocked(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -57,6 +58,7 @@ pub fn enforce_pipeline_gate(
     runner: &dyn CommandRunner,
 ) -> Result<Option<&'static str>, PipelineGateError> {
     if review_dispatch {
+        enforce_review_dispatch_gate(repo_root)?;
         return Ok(Some(REVIEW_DISPATCH_WARNING));
     }
 
@@ -68,6 +70,56 @@ pub fn enforce_pipeline_gate(
         Some(0) => Ok(None),
         _ => Err(PipelineGateError::Failed),
     }
+}
+
+fn enforce_review_dispatch_gate(repo_root: &Path) -> Result<(), PipelineGateError> {
+    let state = read_state_json(repo_root).map_err(PipelineGateError::ReviewDispatchBlocked)?;
+    let gate = state.pointer("/tool_pipeline/c5_5_gate").ok_or_else(|| {
+        PipelineGateError::ReviewDispatchBlocked(
+            "Cannot dispatch review: no C5.5 gate result found in state.json".to_string(),
+        )
+    })?;
+    let status = gate.get("status").and_then(Value::as_str).ok_or_else(|| {
+        PipelineGateError::ReviewDispatchBlocked(
+            "Cannot dispatch review: invalid C5.5 gate status in state.json".to_string(),
+        )
+    })?;
+    let cycle = gate.get("cycle").and_then(Value::as_u64).ok_or_else(|| {
+        PipelineGateError::ReviewDispatchBlocked(
+            "Cannot dispatch review: invalid C5.5 gate cycle in state.json".to_string(),
+        )
+    })?;
+    if status != "PASS" {
+        return Err(PipelineGateError::ReviewDispatchBlocked(format!(
+            "Cannot dispatch review: C5.5 gate status is {} (cycle {})",
+            status, cycle
+        )));
+    }
+
+    let needs_reverify = gate
+        .get("needs_reverify")
+        .and_then(Value::as_bool)
+        .ok_or_else(|| {
+            PipelineGateError::ReviewDispatchBlocked(
+                "Cannot dispatch review: invalid C5.5 gate needs_reverify in state.json"
+                    .to_string(),
+            )
+        })?;
+    if needs_reverify {
+        return Err(PipelineGateError::ReviewDispatchBlocked(
+            "Cannot dispatch review: C5.5 gate needs re-verification".to_string(),
+        ));
+    }
+
+    Ok(())
+}
+
+fn read_state_json(repo_root: &Path) -> Result<Value, String> {
+    let path = repo_root.join("docs/state.json");
+    let contents = fs::read_to_string(&path)
+        .map_err(|error| format!("Cannot dispatch review: failed to read {}: {}", path.display(), error))?;
+    serde_json::from_str(&contents)
+        .map_err(|error| format!("Cannot dispatch review: failed to parse {}: {}", path.display(), error))
 }
 
 pub fn update_review_dispatch_tracking(
