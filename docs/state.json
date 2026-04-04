@@ -6713,8 +6713,8 @@
     {
       "backfilled": true,
       "issue": 2215,
-      "merged_at": "2026-04-04T12:14:57Z",
-      "pr": 2214,
+      "merged_at": "2026-04-04T12:26:00Z",
+      "pr": 2212,
       "status": "merged",
       "title": "Backfilled: PR #2214"
     }
@@ -7629,7 +7629,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 22,
     "issue": 2215,
