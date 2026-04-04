@@ -1214,29 +1214,34 @@ fn resolve_auto_gate_history(state: Option<&StateJson>, cycle: u64) -> Result<Ve
 }
 
 fn merge_prior_gate_failures(auto_failures: &[String], manual_failures: &[String]) -> Vec<String> {
-    let mut merged: Vec<String> = Vec::new();
+    let mut merged: Vec<(String, String)> = Vec::new();
     for failure in auto_failures.iter().chain(manual_failures.iter()) {
         let prefix = prior_gate_failure_prefix(failure);
         if let Some(index) = merged
             .iter()
-            .position(|existing| prior_gate_failure_prefix(existing) == prefix)
+            .position(|(existing_prefix, _)| existing_prefix == &prefix)
         {
-            merged[index] = failure.clone();
+            merged[index] = (prefix, failure.clone());
         } else {
-            merged.push(failure.clone());
+            merged.push((prefix, failure.clone()));
         }
     }
     merged
+        .into_iter()
+        .map(|(_, failure)| failure)
+        .collect()
 }
 
-fn prior_gate_failure_prefix(failure: &str) -> &str {
+fn prior_gate_failure_prefix(failure: &str) -> String {
     failure
         .split_once(':')
         .map(|(prefix, _)| prefix)
         .unwrap_or(failure)
         .split_whitespace()
         .next()
-        .unwrap_or("")
+        .filter(|prefix| !prefix.is_empty())
+        .map(ToOwned::to_owned)
+        .unwrap_or_else(|| failure.trim().to_string())
 }
 
 fn resolve_next_steps(
