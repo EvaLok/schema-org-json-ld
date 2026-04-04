@@ -6695,6 +6695,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "write-entry auto-gate-history flag"
+    },
+    {
+      "dispatched_at": "2026-04-04T08:33:10Z",
+      "issue": 2211,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "record-dispatch C5.5 structural gate"
     }
   ],
   "audit_dropped": [
@@ -7315,7 +7322,7 @@
       "resolved_ref": "docs/reviews/cycle-445.md"
     }
   ],
-  "dispatch_log_latest": "#2210 write-entry auto-gate-history flag (cycle 446)",
+  "dispatch_log_latest": "#2211 record-dispatch C5.5 structural gate (cycle 446)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7588,7 +7595,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 12,
     "issue": 2209,
@@ -12867,8 +12874,8 @@
         ],
         "complacency_score": 3,
         "cycle": 445,
-        "deferred": 1,
-        "dispatch_created": 2,
+        "deferred": 0,
+        "dispatch_created": 3,
         "finding_count": 3,
         "finding_dispositions": [
           {
@@ -12881,7 +12888,7 @@
           },
           {
             "category": "journal-quality",
-            "disposition": "deferred"
+            "disposition": "dispatch_created"
           }
         ],
         "ignored": 0,
