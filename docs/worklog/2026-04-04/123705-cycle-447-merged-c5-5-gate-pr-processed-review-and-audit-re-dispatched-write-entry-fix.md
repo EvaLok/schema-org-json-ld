@@ -22,6 +22,10 @@
 - audit#372: Accepted (lifecycle regression)
 - 2219: Dispatched (write-entry auto-gate-history re-dispatch)
 
+### Issues processed (post-dispatch)
+
+- [#2221](https://github.com/EvaLok/schema-org-json-ld/issues/2221): [Cycle Review] Cycle 447 end-of-cycle review (in_flight)
+
 ## Self-modifications
 
 - **`docs/state.json`**: Fixed 3 stale sessions, removed corrupt backfill, updated review disposition
@@ -29,12 +33,19 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 1
+- **In-flight agent sessions (post-dispatch)**: 2
 - **Pipeline status**: PASS (4 warnings: housekeeping, deferral-accumulation, mass-deferral-gate, dispatch-finding-reconciliation)
+- **Pipeline status (post-dispatch)**: PASS (4 warnings)
 - **Publish gate**: published
 
-## Next steps
+## Next steps (pre-dispatch)
 
 1. Review and iterate on PR from [#2219](https://github.com/EvaLok/schema-org-json-ld/issues/2219) (Add --auto-gate-history flag to write-entry (re-dispatch)) when Copilot completes
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2219](https://github.com/EvaLok/schema-org-json-ld/issues/2219) (Add --auto-gate-history flag to write-entry (re-dispatch)) when Copilot completes
+2. Review and iterate on PR from [#2221](https://github.com/EvaLok/schema-org-json-ld/issues/2221) ([Cycle Review] Cycle 447 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
