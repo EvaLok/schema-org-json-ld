@@ -1016,7 +1016,6 @@ fn resolve_cycle(cycle: Option<u64>, repo_root: &Path) -> Result<u64, String> {
 
 fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<WorklogInput, String> {
     validate_worklog_flag_combinations(args)?;
-    let cycle = resolve_cycle(args.cycle, repo_root)?;
     if let Some(path) = &args.input_file {
         if has_inline_worklog_content(args) {
             return Err(
@@ -1045,7 +1044,7 @@ fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<Worklog
                     None => state_extra_in_flight_sessions(state.as_ref())?,
                 },
                 pipeline_status: resolve_pipeline_status(args, repo_root, state.as_ref())?,
-                prior_gate_failures: resolve_prior_gate_failures(args, state.as_ref(), cycle)?,
+                prior_gate_failures: resolve_prior_gate_failures(args, repo_root, state.as_ref())?,
                 publish_gate: match &args.publish_gate {
                     Some(value) => value.clone(),
                     None => state_publish_gate_status(state.as_ref())?,
@@ -1069,7 +1068,7 @@ fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<Worklog
         current_state: CurrentState {
             in_flight_sessions: state_extra_in_flight_sessions(state.as_ref())?,
             pipeline_status: resolve_pipeline_status(args, repo_root, state.as_ref())?,
-            prior_gate_failures: resolve_prior_gate_failures(args, state.as_ref(), cycle)?,
+            prior_gate_failures: resolve_prior_gate_failures(args, repo_root, state.as_ref())?,
             publish_gate: state_publish_gate_status(state.as_ref())?,
         },
         next_steps: resolve_next_steps(args, state.as_ref())?,
@@ -1151,10 +1150,11 @@ fn resolve_pipeline_status(
 
 fn resolve_prior_gate_failures(
     args: &WorklogArgs,
+    repo_root: &Path,
     state: Option<&StateJson>,
-    cycle: u64,
 ) -> Result<Vec<String>, String> {
     let auto_failures = if args.auto_gate_history {
+        let cycle = resolve_cycle(args.cycle, repo_root)?;
         resolve_auto_gate_history(state, cycle)?
     } else {
         Vec::new()
@@ -1178,20 +1178,10 @@ fn resolve_auto_gate_history(state: Option<&StateJson>, cycle: u64) -> Result<Ve
         return Ok(Vec::new());
     };
 
-    if initial_result
-        .get("cycle")
-        .and_then(Value::as_u64)
-        .filter(|initial_cycle| *initial_cycle == cycle)
-        .is_none()
-    {
+    if !cycle_matches(initial_result, cycle) {
         return Ok(Vec::new());
     }
-    if gate
-        .get("cycle")
-        .and_then(Value::as_u64)
-        .filter(|gate_cycle| *gate_cycle == cycle)
-        .is_none()
-    {
+    if !cycle_matches(gate, cycle) {
         return Ok(Vec::new());
     }
     if initial_result.get("result").and_then(Value::as_str).map(str::trim) != Some("FAIL") {
@@ -1211,6 +1201,10 @@ fn resolve_auto_gate_history(state: Option<&StateJson>, cycle: u64) -> Result<Ve
         })?;
 
     Ok(vec![format!("C5.5 initial FAIL: {summary}")])
+}
+
+fn cycle_matches(value: &Value, cycle: u64) -> bool {
+    value.get("cycle").and_then(Value::as_u64) == Some(cycle)
 }
 
 fn merge_prior_gate_failures(auto_failures: &[String], manual_failures: &[String]) -> Vec<String> {
