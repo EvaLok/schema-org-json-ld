@@ -6693,30 +6693,26 @@
       "dispatched_at": "2026-04-04T08:32:53Z",
       "issue": 2210,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed_without_pr",
       "title": "write-entry auto-gate-history flag"
     },
     {
       "dispatched_at": "2026-04-04T08:33:10Z",
       "issue": 2211,
+      "merged_at": "2026-04-04T12:26:00Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2212,
+      "status": "merged",
       "title": "record-dispatch C5.5 structural gate"
     },
     {
       "dispatched_at": "2026-04-04T08:40:50Z",
       "issue": 2213,
+      "merged_at": "2026-04-04T12:14:30Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
-      "title": "[Cycle Review] Cycle 446 end-of-cycle review"
-    },
-    {
-      "backfilled": true,
-      "issue": 2215,
-      "merged_at": "2026-04-04T12:26:00Z",
-      "pr": 2212,
+      "pr": 2214,
       "status": "merged",
-      "title": "Backfilled: PR #2214"
+      "title": "[Cycle Review] Cycle 446 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -7630,7 +7626,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 22,
     "issue": 2215,
@@ -12939,12 +12935,13 @@
         ],
         "complacency_score": 3,
         "cycle": 446,
-        "deferred": 4,
+        "deferred": 3,
+        "dispatch_created": 1,
         "finding_count": 4,
         "finding_dispositions": [
           {
             "category": "worklog-accuracy",
-            "disposition": "deferred"
+            "disposition": "dispatch_created"
           },
           {
             "category": "state-integrity",
@@ -12960,7 +12957,7 @@
           }
         ],
         "ignored": 0,
-        "note": "4 findings deferred. worklog-accuracy (chronic 6/6) and journal-quality (chronic 6/6) require process-level fixes — will dispatch during work phase after freeing capacity. state-integrity and field-inventory deferred pending dispatch capacity."
+        "note": "worklog-accuracy: dispatch_created (#2219, re-dispatch of #2210). state-integrity, journal-quality, field-inventory: deferred pending capacity."
       }
     ],
     "last_review_cycle": 446
