@@ -7302,7 +7302,8 @@
       "category": "worklog-accuracy",
       "deadline_cycle": 449,
       "deferred_cycle": 444,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-445.md"
     }
   ],
   "dispatch_log_latest": "#2207 [Cycle Review] Cycle 445 end-of-cycle review (cycle 445)",
@@ -7486,7 +7487,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 445"
+        "last_refreshed": "cycle 446"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -12849,9 +12850,38 @@
         ],
         "ignored": 0,
         "note": "state-integrity: removed ghost session #2203 (8f332e11). field-inventory: refreshed 19 stale markers (8f332e11). worklog-accuracy: deferred pending write-entry tool label fix. journal-quality: deferred, will demonstrate compliance this cycle."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "journal-quality",
+          "process-adherence",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 3,
+        "cycle": 445,
+        "deferred": 1,
+        "dispatch_created": 2,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "worklog-accuracy",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "process-adherence",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "deferred"
+          }
+        ],
+        "ignored": 0,
+        "note": "worklog-accuracy: dispatching write-entry tool fix for step-labeled gate history preservation. process-adherence: dispatching C2 summary generation from cycle-complete/receipt data. journal-quality: deferred — this cycle journal will commit to dispatched write-entry fix as primary closure; chronic category (5/6), will file question-for-eva if it recurs after tool dispatch lands."
       }
     ],
-    "last_review_cycle": 444
+    "last_review_cycle": 445
   },
   "review_dispatch_consecutive": 14,
   "review_events_verified_through_cycle": 445,
