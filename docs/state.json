@@ -13440,18 +13440,17 @@
   "tool_pipeline": {
     "blocks_publish": false,
     "c5_5_gate": {
-      "cycle": 445,
-      "needs_reverify": false,
-      "pipeline_summary": "PASS (2 warnings)",
-      "status": "PASS"
+      "cycle": 446,
+      "needs_reverify": true,
+      "status": "FAIL"
     },
     "c5_5_initial_result": {
-      "cycle": 444,
-      "exit_code": 1,
-      "has_blocking_findings": true,
-      "overall": "fail",
+      "cycle": 446,
+      "exit_code": 0,
+      "has_blocking_findings": false,
+      "overall": "pass",
       "result": "FAIL",
-      "summary": "FAIL (3 warnings, 1 cascade, 1 blocking: current-cycle-steps)"
+      "summary": "PASS (1 blocking warning, 2 warnings)"
     },
     "eva_directive": 436,
     "phases": [
