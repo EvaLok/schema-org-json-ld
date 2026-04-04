@@ -119,6 +119,9 @@ struct WorklogArgs {
     /// Close-out gate failure descriptions (comma-separated)
     #[arg(long = "prior-gate-failures", value_delimiter = ',')]
     prior_gate_failures: Vec<String>,
+    /// Auto-derive close-out gate failure history from docs/state.json
+    #[arg(long = "auto-gate-history", default_value_t = false)]
+    auto_gate_history: bool,
     /// Auto-derive pipeline summary from tools/pipeline-check
     #[arg(long = "auto-pipeline", default_value_t = false)]
     auto_pipeline: bool,
@@ -1041,7 +1044,7 @@ fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<Worklog
                     None => state_extra_in_flight_sessions(state.as_ref())?,
                 },
                 pipeline_status: resolve_pipeline_status(args, repo_root, state.as_ref())?,
-                prior_gate_failures: resolve_prior_gate_failures(args),
+                prior_gate_failures: resolve_prior_gate_failures(args, repo_root, state.as_ref())?,
                 publish_gate: match &args.publish_gate {
                     Some(value) => value.clone(),
                     None => state_publish_gate_status(state.as_ref())?,
@@ -1065,7 +1068,7 @@ fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<Worklog
         current_state: CurrentState {
             in_flight_sessions: state_extra_in_flight_sessions(state.as_ref())?,
             pipeline_status: resolve_pipeline_status(args, repo_root, state.as_ref())?,
-            prior_gate_failures: resolve_prior_gate_failures(args),
+            prior_gate_failures: resolve_prior_gate_failures(args, repo_root, state.as_ref())?,
             publish_gate: state_publish_gate_status(state.as_ref())?,
         },
         next_steps: resolve_next_steps(args, state.as_ref())?,
@@ -1095,7 +1098,7 @@ fn validate_worklog_flag_combinations(args: &WorklogArgs) -> Result<(), String> 
 }
 
 fn requires_worklog_state(args: &WorklogArgs) -> bool {
-    args.auto_next || args.publish_gate.is_none() || args.in_flight.is_none()
+    args.auto_next || args.auto_gate_history || args.publish_gate.is_none() || args.in_flight.is_none()
 }
 
 fn load_worklog_state(repo_root: &Path, required: bool) -> Result<Option<StateJson>, String> {
@@ -1145,12 +1148,94 @@ fn resolve_pipeline_status(
     Ok(state_pipeline_status(state))
 }
 
-fn resolve_prior_gate_failures(args: &WorklogArgs) -> Vec<String> {
-    args.prior_gate_failures
+fn resolve_prior_gate_failures(
+    args: &WorklogArgs,
+    repo_root: &Path,
+    state: Option<&StateJson>,
+) -> Result<Vec<String>, String> {
+    let auto_failures = if args.auto_gate_history {
+        let cycle = resolve_cycle(args.cycle, repo_root)?;
+        resolve_auto_gate_history(state, cycle)?
+    } else {
+        Vec::new()
+    };
+    let manual_failures = args
+        .prior_gate_failures
         .iter()
         .map(|failure| failure.trim().to_string())
         .filter(|failure| !failure.is_empty())
+        .collect::<Vec<_>>();
+    Ok(merge_prior_gate_failures(&auto_failures, &manual_failures))
+}
+
+fn resolve_auto_gate_history(state: Option<&StateJson>, cycle: u64) -> Result<Vec<String>, String> {
+    let state =
+        state.ok_or_else(|| "docs/state.json is required to populate gate history".to_string())?;
+    let Some(initial_result) = state.tool_pipeline.extra.get("c5_5_initial_result") else {
+        return Ok(Vec::new());
+    };
+    let Some(gate) = state.tool_pipeline.extra.get("c5_5_gate") else {
+        return Ok(Vec::new());
+    };
+
+    if !cycle_matches(initial_result, cycle) {
+        return Ok(Vec::new());
+    }
+    if !cycle_matches(gate, cycle) {
+        return Ok(Vec::new());
+    }
+    if initial_result.get("result").and_then(Value::as_str).map(str::trim) != Some("FAIL") {
+        return Ok(Vec::new());
+    }
+    if gate.get("status").and_then(Value::as_str).map(str::trim) != Some("PASS") {
+        return Ok(Vec::new());
+    }
+
+    let summary = initial_result
+        .get("summary")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|summary| !summary.is_empty())
+        .ok_or_else(|| {
+            "missing tool_pipeline.c5_5_initial_result.summary in state.json".to_string()
+        })?;
+
+    Ok(vec![format!("C5.5 initial FAIL: {summary}")])
+}
+
+fn cycle_matches(value: &Value, cycle: u64) -> bool {
+    value.get("cycle").and_then(Value::as_u64) == Some(cycle)
+}
+
+fn merge_prior_gate_failures(auto_failures: &[String], manual_failures: &[String]) -> Vec<String> {
+    let mut merged: Vec<(String, String)> = Vec::new();
+    for failure in auto_failures.iter().chain(manual_failures.iter()) {
+        let prefix = prior_gate_failure_prefix(failure);
+        if let Some(index) = merged
+            .iter()
+            .position(|(existing_prefix, _)| existing_prefix == &prefix)
+        {
+            merged[index] = (prefix, failure.clone());
+        } else {
+            merged.push((prefix, failure.clone()));
+        }
+    }
+    merged
+        .into_iter()
+        .map(|(_, failure)| failure)
         .collect()
+}
+
+fn prior_gate_failure_prefix(failure: &str) -> String {
+    failure
+        .split_once(':')
+        .map(|(prefix, _)| prefix)
+        .unwrap_or(failure)
+        .split_whitespace()
+        .next()
+        .filter(|prefix| !prefix.is_empty())
+        .map(ToOwned::to_owned)
+        .unwrap_or_else(|| failure.trim().to_string())
 }
 
 fn resolve_next_steps(
@@ -1352,6 +1437,7 @@ fn has_inline_worklog_content(args: &WorklogArgs) -> bool {
         || !args.next.is_empty()
         || args.auto_next
         || args.pipeline.is_some()
+        || args.auto_gate_history
         || args.auto_pipeline
         || args.publish_gate.is_some()
         || args.in_flight.is_some()
@@ -3764,6 +3850,7 @@ mod tests {
             auto_next: false,
             pipeline: None,
             prior_gate_failures: Vec::new(),
+            auto_gate_history: false,
             auto_pipeline: false,
             publish_gate: None,
             in_flight: None,
@@ -4133,6 +4220,137 @@ mod tests {
 
         assert!(content.contains("- **Close-out gate failures**: C4.1 FAIL: mismatch"));
         assert!(content.contains("- **Close-out gate failures**: C5.5 FAIL: doc-validation"));
+    }
+
+    #[test]
+    fn auto_gate_history_reads_c5_5_initial_failure() {
+        let repo_root = TempRepoDir::new("worklog-auto-gate-history");
+        write_state_file(
+            &repo_root.path,
+            r#"{
+  "tool_pipeline": {
+    "c5_5_initial_result": {
+      "cycle": 154,
+      "result": "FAIL",
+      "summary": "PASS (1 blocking warning, 2 warnings)"
+    },
+    "c5_5_gate": {
+      "cycle": 154,
+      "status": "PASS"
+    }
+  }
+}"#,
+        );
+
+        let mut args = worklog_args("Auto gate history");
+        args.auto_gate_history = true;
+        args.pipeline = Some("PASS (2 warnings)".to_string());
+        args.publish_gate = Some("clear".to_string());
+        args.in_flight = Some(0);
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains(
+            "- **Close-out gate failures**: C5.5 initial FAIL: PASS (1 blocking warning, 2 warnings)"
+        ));
+    }
+
+    #[test]
+    fn auto_gate_history_merges_with_cli_input() {
+        let repo_root = TempRepoDir::new("worklog-auto-gate-history-merge");
+        write_state_file(
+            &repo_root.path,
+            r#"{
+  "tool_pipeline": {
+    "c5_5_initial_result": {
+      "cycle": 154,
+      "result": "FAIL",
+      "summary": "PASS (1 blocking warning, 2 warnings)"
+    },
+    "c5_5_gate": {
+      "cycle": 154,
+      "status": "PASS"
+    }
+  }
+}"#,
+        );
+
+        let mut args = worklog_args("Merged gate history");
+        args.auto_gate_history = true;
+        args.prior_gate_failures = vec![
+            "C4.1 FAIL: mismatch".to_string(),
+            "C5.5 FAIL: manual detail".to_string(),
+        ];
+        args.pipeline = Some("PASS (2 warnings)".to_string());
+        args.publish_gate = Some("clear".to_string());
+        args.in_flight = Some(0);
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains("- **Close-out gate failures**: C4.1 FAIL: mismatch"));
+        assert!(content.contains("- **Close-out gate failures**: C5.5 FAIL: manual detail"));
+        assert!(!content.contains("C5.5 initial FAIL: PASS (1 blocking warning, 2 warnings)"));
+    }
+
+    #[test]
+    fn auto_gate_history_empty_when_no_failures() {
+        let repo_root = TempRepoDir::new("worklog-auto-gate-history-empty");
+        write_state_file(
+            &repo_root.path,
+            r#"{
+  "tool_pipeline": {
+    "c5_5_gate": {
+      "cycle": 154,
+      "status": "PASS"
+    }
+  }
+}"#,
+        );
+
+        let mut args = worklog_args("No gate history");
+        args.auto_gate_history = true;
+        args.pipeline = Some("PASS (2 warnings)".to_string());
+        args.publish_gate = Some("clear".to_string());
+        args.in_flight = Some(0);
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(!content.contains(CLOSE_OUT_GATE_FAILURES_PREFIX));
+    }
+
+    #[test]
+    fn auto_gate_history_ignores_stale_cycle() {
+        let repo_root = TempRepoDir::new("worklog-auto-gate-history-stale-cycle");
+        write_state_file(
+            &repo_root.path,
+            r#"{
+  "tool_pipeline": {
+    "c5_5_initial_result": {
+      "cycle": 153,
+      "result": "FAIL",
+      "summary": "PASS (1 blocking warning, 2 warnings)"
+    },
+    "c5_5_gate": {
+      "cycle": 154,
+      "status": "PASS"
+    }
+  }
+}"#,
+        );
+
+        let mut args = worklog_args("Stale gate history");
+        args.auto_gate_history = true;
+        args.pipeline = Some("PASS (2 warnings)".to_string());
+        args.publish_gate = Some("clear".to_string());
+        args.in_flight = Some(0);
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(!content.contains(CLOSE_OUT_GATE_FAILURES_PREFIX));
     }
 
     #[test]
@@ -7746,6 +7964,7 @@ Reflective log for the schema-org-json-ld orchestrator.
             "--auto-issues",
             "--auto-next",
             "--auto-pipeline",
+            "--auto-gate-history",
             "--auto-self-modifications",
             "--auto-receipts",
             "--done",
@@ -7770,6 +7989,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 assert!(args.auto_issues);
                 assert!(args.auto_next);
                 assert!(args.auto_pipeline);
+                assert!(args.auto_gate_history);
                 assert!(args.auto_self_modifications);
                 assert!(args.auto_receipts);
                 assert_eq!(args.pr_reviewed, vec![123]);
