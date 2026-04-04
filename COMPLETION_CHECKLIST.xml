@@ -46,6 +46,17 @@
       the worklog must be amended to preserve both results (original C1 result and
       C5.5 failure) rather than silently rewriting to show only the repaired narrative.
       Recurrence escalation: process-adherence in cycles 420-421.</constraint>
+    <constraint id="gate-failure-honesty" severity="mandatory">
+      When ANY blocking gate (C4.1 or C5.5) fails during a cycle, the worklog
+      pipeline status MUST record the initial failure, even if a re-run later
+      succeeds. Format: "Pipeline status: FAIL→PASS (C5.5 initially failed:
+      [reason]; resolved by [action])". The journal "What fell short" section
+      MUST center the gate failure as the primary shortcoming, not bury it.
+      Commitments referencing C5.5 outcomes MUST NOT be graded as "Followed"
+      until C5.5 has actually been run and passed — grading against the C1
+      early check is insufficient.
+      Recurrence escalation: all three categories in cycles 442-443.
+    </constraint>
     <constraint id="commitment-observability">Journal commitments MUST reference
       checks and conditions that exist today and are directly observable at grading
       time. Each commitment specifies: (1) the exact command or artifact to check,
@@ -115,6 +126,17 @@
     <on-failure>Fix before closing cycle. Do not override.</on-failure>
     <coordination-rule>When deploying format-changing tools: merge downstream
       consumer update BEFORE applying new tool output.</coordination-rule>
+    <constraint id="no-retroactive-clearing" severity="mandatory">
+      If C5.5 fails, you may fix the underlying issue and re-run close-out.
+      However, re-dispositioning prior-cycle review findings specifically to
+      clear a blocking gate (e.g., changing "deferred" to "actioned" on a
+      prior review to pass mass-deferral-gate) is PROHIBITED. Prior-cycle
+      dispositions are frozen once the cycle that set them has completed.
+      Any disposition change to a prior cycle requires a process-review
+      --note explaining why the original disposition was incorrect, separate
+      from gate-clearing motivation.
+      Recurrence escalation: process-adherence + worklog-accuracy in cycles 442-443.
+    </constraint>
   </step>
 
   <step id="C5.6" title="Stabilization counter update"
