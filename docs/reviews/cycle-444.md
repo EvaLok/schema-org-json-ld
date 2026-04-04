@@ -3,13 +3,21 @@
 ## 1. [state-integrity] Ghost merged session was recorded against the cycle issue itself
 
 **File**: docs/state.json:6674
-**Evidence**: `agent_sessions` contains a backfilled merged entry for issue `2203` pointing at PR `2202`, even though issue `2203` is the main cycle issue and the actual review dispatch was issue `2201` -> PR `2202`. Commit `b69d6737a9125b6f8d4a6051731e04b3186f329b` inserted the `2203` backfill, and commit `b98da96b041964d609fe279c03124aae52381549` later merged `2201` as well, leaving both records in place. The ledger now shows two merged sessions for one PR.
+**Evidence**:
+- `agent_sessions` contains a backfilled merged entry for issue `2203` pointing at PR `2202`, even though issue `2203` is the main cycle issue and the actual review dispatch was issue `2201` -> PR `2202`.
+- Commit `b69d6737a9125b6f8d4a6051731e04b3186f329b` inserted the false `2203` backfill.
+- Commit `b98da96b041964d609fe279c03124aae52381549` later merged `2201` as well, leaving both records in place.
+- The ledger now shows two merged sessions for one PR.
 **Recommendation**: Remove the false `2203` backfill, repair any summaries derived from it, and harden merge-recording so it cannot backfill the active cycle issue as if it were a Copilot session.
 
 ## 2. [worklog-accuracy] The worklog still presents a preliminary C1 snapshot as the cycle pipeline status
 
 **File**: docs/worklog/2026-04-04/002947-cycle-444-processed-cycle-443-review-actioned-all-3-recurring-findings-with-process-level-checklist-constraints.md:27
-**Evidence**: The worklog says `Pipeline status: FAIL (4 warnings, 2 blocking: frozen-commit-verify, current-cycle-steps)` and later adds `Pipeline status (post-dispatch): PASS (4 warnings)`. But step comment `4185801982` explicitly says that FAIL line was only the C1 preliminary result, and step comment `4185804608` shows the actual C5.5 gate failed for `current-cycle-steps` with `doc-validation` cascading while `frozen-commit-verify` passed. The earlier “snapshot before review dispatch” clarification was removed in commit `c3e6384f034b7f3d2ac5dc3f9c84e2c7fa2fa4ad`, so the final worklog now blurs preliminary and final gate states.
+**Evidence**:
+- The worklog says `Pipeline status: FAIL (4 warnings, 2 blocking: frozen-commit-verify, current-cycle-steps)` and later adds `Pipeline status (post-dispatch): PASS (4 warnings)`.
+- Step comment `4185801982` explicitly says that FAIL line was only the C1 preliminary result.
+- Step comment `4185804608` shows the actual C5.5 gate failed for `current-cycle-steps` with `doc-validation` cascading while `frozen-commit-verify` passed.
+- The earlier “snapshot before review dispatch” clarification was removed in commit `c3e6384f034b7f3d2ac5dc3f9c84e2c7fa2fa4ad`, so the final worklog now blurs preliminary and final gate states.
 **Recommendation**: Label pipeline results by exact step (`C1`, `C5.5`, `post-dispatch`) and preserve the true C5.5 failure reason instead of collapsing different checkpoints into a generic `Pipeline status` line.
 
 ## 3. [field-inventory] Freshness markers do not match the state they are supposed to describe
