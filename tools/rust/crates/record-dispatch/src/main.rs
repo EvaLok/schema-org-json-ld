@@ -90,6 +90,9 @@ fn run_with_runner(
     let pipeline_warning = match enforce_pipeline_gate(&cli.repo_root, cli.review_dispatch, runner)
     {
         Ok(warning) => warning,
+        Err(PipelineGateError::ReviewDispatchBlocked(message)) => {
+            return Err(message);
+        }
         Err(PipelineGateError::ExecutionFailed(detail)) => {
             eprintln!("pipeline-check execution error: {detail}");
             return Err(record_dispatch::PIPELINE_GATE_FAILURE_MESSAGE.to_string());
@@ -786,12 +789,76 @@ mod tests {
     }
 
     #[test]
-    fn review_dispatch_bypasses_check_with_warning() {
+    fn review_dispatch_blocked_when_c5_5_gate_not_pass() {
+        let repo = TempRepo::new();
+        repo.init();
+        repo.set_c5_5_gate("FAIL", false, 164);
+        let before = repo.read_state();
+        let mut warnings = Vec::new();
+        let runner = MockRunner::with_error("runner should not be called for review dispatch");
+
+        let error = run_with_runner(
+            Cli {
+                issue: 602,
+                title: "Example dispatch".to_string(),
+                model: Some("gpt-5.4".to_string()),
+                review_dispatch: true,
+                addresses_finding: None,
+                repo_root: repo.path().to_path_buf(),
+            },
+            &runner,
+            &mut |warning| warnings.push(warning.to_string()),
+        )
+        .expect_err("failing C5.5 gate should block review dispatch");
+
+        assert_eq!(
+            error,
+            "Cannot dispatch review: C5.5 gate status is FAIL (cycle 164)"
+        );
+        assert!(warnings.is_empty());
+        assert_eq!(runner.call_count(), 0);
+        assert_eq!(repo.read_state(), before);
+    }
+
+    #[test]
+    fn review_dispatch_blocked_when_c5_5_gate_needs_reverify() {
+        let repo = TempRepo::new();
+        repo.init();
+        repo.set_c5_5_gate("PASS", true, 164);
+        let before = repo.read_state();
+        let mut warnings = Vec::new();
+        let runner = MockRunner::with_error("runner should not be called for review dispatch");
+
+        let error = run_with_runner(
+            Cli {
+                issue: 602,
+                title: "Example dispatch".to_string(),
+                model: Some("gpt-5.4".to_string()),
+                review_dispatch: true,
+                addresses_finding: None,
+                repo_root: repo.path().to_path_buf(),
+            },
+            &runner,
+            &mut |warning| warnings.push(warning.to_string()),
+        )
+        .expect_err("needs_reverify should block review dispatch");
+
+        assert_eq!(
+            error,
+            "Cannot dispatch review: C5.5 gate needs re-verification"
+        );
+        assert!(warnings.is_empty());
+        assert_eq!(runner.call_count(), 0);
+        assert_eq!(repo.read_state(), before);
+    }
+
+    #[test]
+    fn review_dispatch_allowed_when_c5_5_gate_pass() {
         let repo = TempRepo::new();
         repo.init();
         repo.write_worklog("2026-03-10", "142511-current.md", 0);
         let mut warnings = Vec::new();
-        let runner = MockRunner::with_error("runner should not be called when skipping");
+        let runner = MockRunner::with_error("runner should not be called for review dispatch");
 
         run_with_runner(
             Cli {
@@ -805,7 +872,7 @@ mod tests {
             &runner,
             &mut |warning| warnings.push(warning.to_string()),
         )
-        .expect("review-dispatch flag should bypass pipeline gate");
+        .expect("passing C5.5 gate should allow review dispatch");
 
         assert_eq!(
             warnings,
@@ -825,6 +892,38 @@ mod tests {
             state.pointer("/review_dispatch_consecutive"),
             Some(&serde_json::json!(1))
         );
+    }
+
+    #[test]
+    fn review_dispatch_blocked_when_c5_5_gate_missing() {
+        let repo = TempRepo::new();
+        repo.init();
+        repo.remove_c5_5_gate();
+        let before = repo.read_state();
+        let mut warnings = Vec::new();
+        let runner = MockRunner::with_error("runner should not be called for review dispatch");
+
+        let error = run_with_runner(
+            Cli {
+                issue: 602,
+                title: "Example dispatch".to_string(),
+                model: Some("gpt-5.4".to_string()),
+                review_dispatch: true,
+                addresses_finding: None,
+                repo_root: repo.path().to_path_buf(),
+            },
+            &runner,
+            &mut |warning| warnings.push(warning.to_string()),
+        )
+        .expect_err("missing C5.5 gate should block review dispatch");
+
+        assert_eq!(
+            error,
+            "Cannot dispatch review: no C5.5 gate result found in state.json"
+        );
+        assert!(warnings.is_empty());
+        assert_eq!(runner.call_count(), 0);
+        assert_eq!(repo.read_state(), before);
     }
 
     #[test]
@@ -884,6 +983,37 @@ mod tests {
             state.pointer("/review_dispatch_consecutive"),
             Some(&serde_json::json!(3))
         );
+    }
+
+    #[test]
+    fn review_dispatch_fails_closed_when_state_json_is_invalid() {
+        let repo = TempRepo::new();
+        repo.init();
+        fs::write(repo.path().join("docs/state.json"), "{invalid json")
+            .expect("invalid state should be written");
+        let mut warnings = Vec::new();
+        let runner = MockRunner::with_error("runner should not be called for review dispatch");
+
+        let error = run_with_runner(
+            Cli {
+                issue: 602,
+                title: "Example dispatch".to_string(),
+                model: Some("gpt-5.4".to_string()),
+                review_dispatch: true,
+                addresses_finding: None,
+                repo_root: repo.path().to_path_buf(),
+            },
+            &runner,
+            &mut |warning| warnings.push(warning.to_string()),
+        )
+        .expect_err("invalid state.json should fail closed");
+
+        assert!(
+            error.contains("Cannot dispatch review: failed to parse"),
+            "unexpected error: {error}"
+        );
+        assert!(warnings.is_empty());
+        assert_eq!(runner.call_count(), 0);
     }
 
     #[test]
@@ -1053,13 +1183,16 @@ mod tests {
                 },
                 "review_agent": {
                     "history": []
+                },
+                "tool_pipeline": {
+                    "c5_5_gate": {
+                        "cycle": 164,
+                        "status": "PASS",
+                        "needs_reverify": false
+                    }
                 }
             });
-            fs::write(
-                self.path().join("docs/state.json"),
-                serde_json::to_string_pretty(&state).expect("state file should serialize"),
-            )
-            .expect("state file should be written");
+            self.write_state_value(&state);
         }
 
         fn read_state(&self) -> serde_json::Value {
@@ -1073,11 +1206,28 @@ mod tests {
         fn set_review_dispatch_consecutive(&self, count: u64) {
             let mut state = self.read_state();
             state["review_dispatch_consecutive"] = serde_json::json!(count);
-            fs::write(
-                self.path().join("docs/state.json"),
-                serde_json::to_string_pretty(&state).expect("state should serialize"),
-            )
-            .expect("state file should be updated");
+            self.write_state_value(&state);
+        }
+
+        fn set_c5_5_gate(&self, status: &str, needs_reverify: bool, cycle: u64) {
+            let mut state = self.read_state();
+            state["tool_pipeline"]["c5_5_gate"] = serde_json::json!({
+                "cycle": cycle,
+                "status": status,
+                "needs_reverify": needs_reverify
+            });
+            self.write_state_value(&state);
+        }
+
+        fn remove_c5_5_gate(&self) {
+            let mut state = self.read_state();
+            if let Some(tool_pipeline) = state
+                .get_mut("tool_pipeline")
+                .and_then(serde_json::Value::as_object_mut)
+            {
+                tool_pipeline.remove("c5_5_gate");
+            }
+            self.write_state_value(&state);
         }
 
         fn set_review_history_entry(
@@ -1104,11 +1254,7 @@ mod tests {
                     }
                 ]
             });
-            fs::write(
-                self.path().join("docs/state.json"),
-                serde_json::to_string_pretty(&state).expect("state should serialize"),
-            )
-            .expect("state file should be updated");
+            self.write_state_value(&state);
         }
 
         fn set_review_history_entry_with_dispositions(&self, cycle: u64, dispositions: &[&str]) {
@@ -1157,11 +1303,7 @@ mod tests {
                     }
                 ]
             });
-            fs::write(
-                self.path().join("docs/state.json"),
-                serde_json::to_string_pretty(&state).expect("state should serialize"),
-            )
-            .expect("state file should be updated");
+            self.write_state_value(&state);
         }
 
         fn write_worklog(&self, date: &str, name: &str, in_flight: i64) -> PathBuf {
@@ -1185,6 +1327,14 @@ mod tests {
             let commit_message = format!("add worklog {}", name);
             git_success(self.path(), ["commit", "-m", commit_message.as_str()]);
             path
+        }
+
+        fn write_state_value(&self, state: &serde_json::Value) {
+            fs::write(
+                self.path().join("docs/state.json"),
+                serde_json::to_string_pretty(state).expect("state should serialize"),
+            )
+            .expect("state file should be updated");
         }
     }
 
