@@ -7378,8 +7378,7 @@
       1461,
       1463,
       1464,
-      1488,
-      2122
+      1488
     ],
     "closed_this_cycle": [
       2122
@@ -7592,9 +7591,7 @@
   },
   "last_eva_comment_check": "2026-04-04T08:12:00Z",
   "last_tool_audit_cycle": 403,
-  "open_questions_for_eva": [
-    2122
-  ],
+  "open_questions_for_eva": [],
   "pending_audit_implementations": [
     {
       "accepted_cycle": 391,
