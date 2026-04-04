@@ -19,7 +19,7 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 0
-- **Pipeline status**: FAIL (4 warnings, 2 blocking: frozen-commit-verify, current-cycle-steps)
+- **Pipeline status**: PASS (4 warnings: field-inventory, deferral-accumulation, step-comments, current-cycle-steps temporal ordering)
 - **Publish gate**: published
 
 ## Next steps
