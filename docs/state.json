@@ -6715,6 +6715,7 @@
       "title": "[Cycle Review] Cycle 446 end-of-cycle review"
     },
     {
+      "addresses_finding": "446:0",
       "dispatched_at": "2026-04-04T12:34:44Z",
       "issue": 2219,
       "model": "gpt-5.4",
