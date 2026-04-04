@@ -22,7 +22,7 @@
 
 ## Cycle state
 
-- **In-flight agent sessions**: 0
+- **In-flight agent sessions**: 2
 - **In-flight agent sessions (post-dispatch)**: 1
 - **Pipeline status**: PASS (2 warnings: deferral-accumulation, step-comments)
 - **Pipeline status (post-dispatch)**: PASS (2 warnings)
