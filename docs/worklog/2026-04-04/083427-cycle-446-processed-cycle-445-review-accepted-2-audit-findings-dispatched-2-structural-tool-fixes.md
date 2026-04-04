@@ -23,6 +23,10 @@
 - 2207: Cycle 445 review closed, findings dispositioned
 - 2122: question-for-eva closed (Eva responded)
 
+### Issues processed (post-dispatch)
+
+- [#2213](https://github.com/EvaLok/schema-org-json-ld/issues/2213): [Cycle Review] Cycle 446 end-of-cycle review (in_flight)
+
 ## Self-modifications
 
 - None.
@@ -30,14 +34,22 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 2
+- **In-flight agent sessions (post-dispatch)**: 3
 - **Pipeline status**: PASS (3 warnings: deferral-accumulation, deferral-deadlines, dispatch-finding-reconciliation)
+- **Pipeline status (post-dispatch)**: PASS (2 warnings)
 - **Close-out gate history**: C1 preliminary: FAIL (2 blocking: doc-validation, current-cycle-steps — expected during early close-out)
 - **Publish gate**: published
 
-## Next steps
+## Next steps (pre-dispatch)
 
 1. Review and iterate on PR from [#2210](https://github.com/EvaLok/schema-org-json-ld/issues/2210) (write-entry auto-gate-history flag) when Copilot completes
 2. Review and iterate on PR from [#2211](https://github.com/EvaLok/schema-org-json-ld/issues/2211) (record-dispatch C5.5 structural gate) when Copilot completes
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2210](https://github.com/EvaLok/schema-org-json-ld/issues/2210) (write-entry auto-gate-history flag) when Copilot completes
+2. Review and iterate on PR from [#2211](https://github.com/EvaLok/schema-org-json-ld/issues/2211) (record-dispatch C5.5 structural gate) when Copilot completes
+3. Review and iterate on PR from [#2213](https://github.com/EvaLok/schema-org-json-ld/issues/2213) ([Cycle Review] Cycle 446 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
