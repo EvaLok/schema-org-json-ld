@@ -1192,11 +1192,7 @@ mod tests {
                     }
                 }
             });
-            fs::write(
-                self.path().join("docs/state.json"),
-                serde_json::to_string_pretty(&state).expect("state file should serialize"),
-            )
-            .expect("state file should be written");
+            self.write_state_value(&state);
         }
 
         fn read_state(&self) -> serde_json::Value {
@@ -1210,11 +1206,7 @@ mod tests {
         fn set_review_dispatch_consecutive(&self, count: u64) {
             let mut state = self.read_state();
             state["review_dispatch_consecutive"] = serde_json::json!(count);
-            fs::write(
-                self.path().join("docs/state.json"),
-                serde_json::to_string_pretty(&state).expect("state should serialize"),
-            )
-            .expect("state file should be updated");
+            self.write_state_value(&state);
         }
 
         fn set_c5_5_gate(&self, status: &str, needs_reverify: bool, cycle: u64) {
@@ -1224,11 +1216,7 @@ mod tests {
                 "status": status,
                 "needs_reverify": needs_reverify
             });
-            fs::write(
-                self.path().join("docs/state.json"),
-                serde_json::to_string_pretty(&state).expect("state should serialize"),
-            )
-            .expect("state file should be updated");
+            self.write_state_value(&state);
         }
 
         fn remove_c5_5_gate(&self) {
@@ -1239,11 +1227,7 @@ mod tests {
             {
                 tool_pipeline.remove("c5_5_gate");
             }
-            fs::write(
-                self.path().join("docs/state.json"),
-                serde_json::to_string_pretty(&state).expect("state should serialize"),
-            )
-            .expect("state file should be updated");
+            self.write_state_value(&state);
         }
 
         fn set_review_history_entry(
@@ -1270,11 +1254,7 @@ mod tests {
                     }
                 ]
             });
-            fs::write(
-                self.path().join("docs/state.json"),
-                serde_json::to_string_pretty(&state).expect("state should serialize"),
-            )
-            .expect("state file should be updated");
+            self.write_state_value(&state);
         }
 
         fn set_review_history_entry_with_dispositions(&self, cycle: u64, dispositions: &[&str]) {
@@ -1323,11 +1303,7 @@ mod tests {
                     }
                 ]
             });
-            fs::write(
-                self.path().join("docs/state.json"),
-                serde_json::to_string_pretty(&state).expect("state should serialize"),
-            )
-            .expect("state file should be updated");
+            self.write_state_value(&state);
         }
 
         fn write_worklog(&self, date: &str, name: &str, in_flight: i64) -> PathBuf {
@@ -1351,6 +1327,14 @@ mod tests {
             let commit_message = format!("add worklog {}", name);
             git_success(self.path(), ["commit", "-m", commit_message.as_str()]);
             path
+        }
+
+        fn write_state_value(&self, state: &serde_json::Value) {
+            fs::write(
+                self.path().join("docs/state.json"),
+                serde_json::to_string_pretty(state).expect("state should serialize"),
+            )
+            .expect("state file should be updated");
         }
     }
 
