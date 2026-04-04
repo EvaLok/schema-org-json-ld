@@ -6702,6 +6702,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "record-dispatch C5.5 structural gate"
+    },
+    {
+      "dispatched_at": "2026-04-04T08:40:50Z",
+      "issue": 2213,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 446 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -7324,7 +7331,7 @@
       "resolved_ref": "docs/reviews/cycle-445.md"
     }
   ],
-  "dispatch_log_latest": "#2211 record-dispatch C5.5 structural gate (cycle 446)",
+  "dispatch_log_latest": "#2213 [Cycle Review] Cycle 446 end-of-cycle review (cycle 446)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7597,7 +7604,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 3,
   "last_cycle": {
     "duration_minutes": 22,
     "issue": 2209,
@@ -12899,7 +12906,7 @@
     ],
     "last_review_cycle": 445
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 446,
   "schema_status": {
     "directory_layout": {
