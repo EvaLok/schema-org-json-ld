@@ -6,8 +6,13 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const REPO: &str = "EvaLok/schema-org-json-ld";
+const REPO_OWNER: &str = "EvaLok";
+const REPO_NAME: &str = "schema-org-json-ld";
 const AGENT_ISSUE_ASSIGNEE: &str = "copilot-swe-agent[bot]";
-const AGENT_PR_AUTHOR: &str = "copilot-swe-agent[bot]";
+// `gh pr list --json author` returns Copilot bot login as `app/copilot-swe-agent`,
+// not `copilot-swe-agent[bot]` (which is the form returned by the issues API and used
+// for assignee filtering). The two formats coexist in the GitHub API surface.
+const AGENT_PR_AUTHOR: &str = "app/copilot-swe-agent";
 
 #[derive(Parser)]
 #[command(name = "housekeeping-scan")]
@@ -120,10 +125,18 @@ fn scan_stale_agent_issues(now: DateTime<Utc>, draft_prs: &[DraftPrInfo]) -> Res
     let items = value
         .as_array()
         .ok_or_else(|| "unexpected response for stale agent issues query".to_string())?;
-    Ok(find_stale_agent_issues(items, draft_prs, now))
+    Ok(find_stale_agent_issues(items, draft_prs, now, &fetch_open_linked_prs))
 }
 
-fn find_stale_agent_issues(items: &[Value], draft_prs: &[DraftPrInfo], now: DateTime<Utc>) -> Vec<Finding> {
+fn find_stale_agent_issues<F>(
+    items: &[Value],
+    draft_prs: &[DraftPrInfo],
+    now: DateTime<Utc>,
+    open_linked_prs: &F,
+) -> Vec<Finding>
+where
+    F: Fn(u64) -> Result<bool, String>,
+{
     items
         .iter()
         .filter(|issue| issue.get("pull_request").is_none())
@@ -137,6 +150,24 @@ fn find_stale_agent_issues(items: &[Value], draft_prs: &[DraftPrInfo], now: Date
             if has_linked_draft_pr(number, draft_prs) {
                 return None;
             }
+            // Branch-name matching only catches PRs whose branches encode the issue
+            // number. For Copilot dispatches with arbitrary branch names (e.g.
+            // `copilot/add-ghost-cycle-detection` for issue #2240), GitHub still tracks
+            // the dispatch link via the issue's `closedByPullRequestsReferences`
+            // GraphQL connection. Consult that authoritative link before flagging the
+            // issue as stale; fail closed (treat as stale) only if the GraphQL probe
+            // fails outright, since false positives here generate noisy review-step
+            // findings while a missed flag is recoverable next cycle.
+            match open_linked_prs(number) {
+                Ok(true) => return None,
+                Ok(false) => {}
+                Err(e) => {
+                    eprintln!(
+                        "warning: failed to check open linked PRs for issue #{}: {}",
+                        number, e
+                    );
+                }
+            }
             Some(Finding {
                 identifier: format!("#{}", number),
                 age: format_duration(age),
@@ -145,6 +176,34 @@ fn find_stale_agent_issues(items: &[Value], draft_prs: &[DraftPrInfo], now: Date
             })
         })
         .collect()
+}
+
+/// Production linkage probe used by `scan_stale_agent_issues`. Calls the GitHub
+/// GraphQL `closedByPullRequestsReferences` connection on the issue, returning
+/// `true` when at least one referencing PR is currently OPEN. The connection
+/// returns the same set of PRs that GitHub displays under the issue's
+/// "Development" sidebar, which catches Copilot dispatches whose branch names
+/// don't include the issue number.
+fn fetch_open_linked_prs(issue_number: u64) -> Result<bool, String> {
+    let query = format!(
+        r#"query {{ repository(owner:"{owner}", name:"{name}") {{ issue(number:{number}) {{ closedByPullRequestsReferences(first:20, includeClosedPrs:false) {{ nodes {{ number state }} }} }} }} }}"#,
+        owner = REPO_OWNER,
+        name = REPO_NAME,
+        number = issue_number,
+    );
+    let value = gh_json(&["api", "graphql", "-f", &format!("query={}", query)])?;
+    let nodes = value
+        .pointer("/data/repository/issue/closedByPullRequestsReferences/nodes")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            format!(
+                "unexpected GraphQL response for issue #{} closedByPullRequestsReferences",
+                issue_number
+            )
+        })?;
+    Ok(nodes
+        .iter()
+        .any(|node| node.get("state").and_then(Value::as_str) == Some("OPEN")))
 }
 
 fn scan_open_copilot_draft_prs() -> Result<Vec<DraftPrInfo>, String> {
@@ -496,6 +555,22 @@ mod tests {
     use super::*;
     use serde_json::json;
 
+    fn no_open_linked_prs(_: u64) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn always_linked(_: u64) -> Result<bool, String> {
+        Ok(true)
+    }
+
+    fn linked_for(numbers: Vec<u64>) -> impl Fn(u64) -> Result<bool, String> {
+        move |n| Ok(numbers.contains(&n))
+    }
+
+    fn linkage_probe_failure(_: u64) -> Result<bool, String> {
+        Err("graphql failure".to_string())
+    }
+
     #[test]
     fn stale_agent_issues_only_flags_over_two_hours() {
         let now = parse_time("2026-03-04T12:00:00Z").unwrap();
@@ -504,7 +579,7 @@ mod tests {
             json!({"number": 2, "created_at": "2026-03-04T11:30:00Z"}),
             json!({"number": 3, "created_at": "2026-03-04T09:00:00Z", "pull_request": {}}),
         ];
-        let findings = find_stale_agent_issues(&issues, &[], now);
+        let findings = find_stale_agent_issues(&issues, &[], now, &no_open_linked_prs);
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].identifier, "#1");
     }
@@ -519,9 +594,42 @@ mod tests {
             created_at: parse_time("2026-03-04T10:00:00Z").unwrap(),
         }];
 
-        let findings = find_stale_agent_issues(&issues, &draft_prs, now);
+        let findings = find_stale_agent_issues(&issues, &draft_prs, now, &no_open_linked_prs);
 
         assert!(findings.is_empty());
+    }
+
+    #[test]
+    fn stale_agent_issue_excluded_when_graphql_reports_open_linked_pr() {
+        // Regression for cycle 450: PR branch name had no issue number token,
+        // so branch matching missed the link, but GitHub's
+        // closedByPullRequestsReferences still showed the PR as open. The
+        // GraphQL linkage probe must be consulted before flagging.
+        let now = parse_time("2026-03-04T12:00:00Z").unwrap();
+        let issues = vec![json!({"number": 2240, "created_at": "2026-03-04T09:00:00Z"})];
+        let findings =
+            find_stale_agent_issues(&issues, &[], now, &linked_for(vec![2240]));
+        assert!(findings.is_empty());
+    }
+
+    #[test]
+    fn stale_agent_issue_excluded_when_any_open_pr_is_linked() {
+        let now = parse_time("2026-03-04T12:00:00Z").unwrap();
+        let issues = vec![json!({"number": 5, "created_at": "2026-03-04T09:00:00Z"})];
+        let findings = find_stale_agent_issues(&issues, &[], now, &always_linked);
+        assert!(findings.is_empty());
+    }
+
+    #[test]
+    fn stale_agent_issue_flagged_when_graphql_probe_fails_open() {
+        // GraphQL probe failure must NOT silently exclude the issue. Fail
+        // closed: the issue is flagged so the orchestrator investigates,
+        // and the warning is logged for diagnostics.
+        let now = parse_time("2026-03-04T12:00:00Z").unwrap();
+        let issues = vec![json!({"number": 5, "created_at": "2026-03-04T09:00:00Z"})];
+        let findings = find_stale_agent_issues(&issues, &[], now, &linkage_probe_failure);
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].identifier, "#5");
     }
 
     #[test]
@@ -529,7 +637,7 @@ mod tests {
         let now = parse_time("2026-03-04T12:00:00Z").unwrap();
         let issues = vec![json!({"number": 1, "created_at": "2026-03-04T09:00:00Z"})];
 
-        let findings = find_stale_agent_issues(&issues, &[], now);
+        let findings = find_stale_agent_issues(&issues, &[], now, &no_open_linked_prs);
 
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].identifier, "#1");
@@ -545,7 +653,7 @@ mod tests {
             created_at: parse_time("2026-03-04T10:00:00Z").unwrap(),
         }];
 
-        let findings = find_stale_agent_issues(&issues, &draft_prs, now);
+        let findings = find_stale_agent_issues(&issues, &draft_prs, now, &no_open_linked_prs);
 
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].identifier, "#746");
@@ -561,7 +669,7 @@ mod tests {
             created_at: parse_time("2026-03-04T10:00:00Z").unwrap(),
         }];
 
-        let findings = find_stale_agent_issues(&issues, &draft_prs, now);
+        let findings = find_stale_agent_issues(&issues, &draft_prs, now, &no_open_linked_prs);
 
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].identifier, "#746");
@@ -588,7 +696,7 @@ mod tests {
             },
         ];
 
-        let findings = find_stale_agent_issues(&issues, &draft_prs, now);
+        let findings = find_stale_agent_issues(&issues, &draft_prs, now, &no_open_linked_prs);
 
         assert_eq!(findings.len(), 2);
         assert_eq!(
@@ -602,7 +710,7 @@ mod tests {
         let prs = vec![json!({
             "number": 10,
             "isDraft": true,
-            "author": { "login": "copilot-swe-agent[bot]" },
+            "author": { "login": "app/copilot-swe-agent" },
             "createdAt": "2026-03-04T10:00:00Z"
         })];
 
@@ -630,16 +738,23 @@ mod tests {
 
     #[test]
     fn copilot_draft_pr_match_uses_bot_login() {
+        // `gh pr list --json author` exposes the Copilot bot login as
+        // `app/copilot-swe-agent`. The previous test asserted the
+        // `copilot-swe-agent[bot]` form, which silently caused the
+        // Copilot draft PR list to be empty in production and broke
+        // both the orphan-draft-PR scan and the stale-agent-issue
+        // exclusion. Cycle 450 regression: ensure the active form is
+        // accepted and the legacy bracketed form is rejected.
         let copilot_draft = json!({
-            "isDraft": true,
-            "author": { "login": "copilot-swe-agent[bot]" }
-        });
-        let wrong_author = json!({
             "isDraft": true,
             "author": { "login": "app/copilot-swe-agent" }
         });
+        let legacy_form = json!({
+            "isDraft": true,
+            "author": { "login": "copilot-swe-agent[bot]" }
+        });
         assert!(is_copilot_draft_pr(&copilot_draft));
-        assert!(!is_copilot_draft_pr(&wrong_author));
+        assert!(!is_copilot_draft_pr(&legacy_form));
     }
 
     #[test]
