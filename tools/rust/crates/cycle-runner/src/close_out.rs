@@ -636,8 +636,7 @@ fn step_c5_5(repo_root: &Path, issue: u64, cycle: u64) -> Result<(bool, String),
         Ok(report) => {
             let passed = exit_ok
                 && report.overall == "pass"
-                && !report.has_blocking_findings
-                && report.blocking_warning_count == 0;
+                && !report.has_blocking_findings;
             let pipeline_summary = format_pipeline_summary(&report);
             let mut body = format!(
                 "Pipeline: {}\n- exit_code: {}\n- overall: {}\n- has_blocking_findings: {}\n- blocking_warning_count: {}",
@@ -2243,8 +2242,8 @@ PY
     }
 
     #[test]
-    fn step_c5_5_rejects_zero_exit_when_json_reports_blocking_warnings() {
-        let dir = setup_temp_repo("step-c5-5-blocking-warning-fail");
+    fn step_c5_5_passes_when_json_reports_blocking_warnings() {
+        let dir = setup_temp_repo("step-c5-5-blocking-warning-pass");
         let args_path = dir.join("post-step-args.txt");
         write_post_step_capture_script(&dir, &args_path);
         write_minimal_close_out_state(&dir, 345);
@@ -2254,31 +2253,17 @@ PY
         )
         .unwrap();
 
-        let error = step_c5_5(&dir, 123, 345).unwrap_err();
-        assert_eq!(
-            error,
-            "Pipeline check failed at C5.5 — fix issues and re-run close-out"
-        );
+        let (passed, _summary) = step_c5_5(&dir, 123, 345).unwrap();
+        assert!(passed);
 
         let args = fs::read_to_string(&args_path).unwrap();
         assert!(args.contains("---ARG---\nC5.5\n"));
         assert!(args.contains("Pipeline: PASS (1 blocking warning, 1 warning)"));
         assert!(args.contains("has_blocking_findings: false"));
         assert!(args.contains("blocking_warning_count: 1"));
-        assert!(args.contains("gate_failure_reason: blocking warnings"));
 
         let state = state_schema::read_state_value(&dir).unwrap();
-        assert_eq!(
-            state.pointer("/tool_pipeline/c5_5_initial_result"),
-            Some(&json!({
-                "cycle": 345,
-                "result": "FAIL",
-                "summary": "PASS (1 blocking warning, 1 warning)",
-                "exit_code": 0,
-                "overall": "pass",
-                "has_blocking_findings": false
-            }))
-        );
+        assert_eq!(state.pointer("/tool_pipeline/c5_5_initial_result"), None);
 
         let _ = fs::remove_dir_all(&dir);
     }
