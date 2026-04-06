@@ -7559,7 +7559,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 441"
+        "last_refreshed": "cycle 448"
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
@@ -7792,10 +7792,10 @@
           "added_cycle": 209,
           "category": "worklog-accuracy",
           "chosen_path": "structural-fix",
-          "rationale": "Cycle 414 chronic-category refresh: worklog-accuracy appeared in 6/6 reviews (cycles 408-413). Despite structural fixes (PR #1914 addendum pattern, PR #1795 C6.5 refresh, PR #1905 immutability), findings persist because write-entry captures pre-dispatch state and C6.5 refresh only patches pipeline_status addendum, not the primary in-flight sessions line. Cycle 413 review F1 confirmed: worklog says 0 in-flight but state.json has 1 post-dispatch. Root cause remains structural: write-entry needs to re-derive in-flight count from state.json after dispatch. Deferred: requires tool modification to write-entry crate.",
+          "rationale": "Cycle 448 chronic-category refresh: worklog-accuracy 6/6 reviews. PR #2220 (auto-gate-history) adds structural gate failure auto-derivation. Remaining: pipeline warning names, self-modifications from cycle diff.",
           "root_cause": "Worklog state section was written before review dispatch (C6), so published counters were structurally stale. C6.5 patches the worklog after dispatch, but the primary cycle-state line (in-flight sessions) is not re-derived from committed state.json. The addendum pattern (post-dispatch lines) was intended to solve this but doesn't update the primary line.",
-          "updated_cycle": 414,
-          "verification_cycle": 395
+          "updated_cycle": 448,
+          "verification_cycle": 448
         },
         {
           "added_cycle": 243,
@@ -7818,10 +7818,10 @@
           "added_cycle": 250,
           "category": "journal-quality",
           "chosen_path": "behavioral-recalibrate",
-          "rationale": "Cycle 406 chronic-category refresh: journal-quality appeared in 6/7 reviews (cycles 399-405). Current findings shifted from phantom receipts (fixed by write-entry PR #1197) to imprecise commitment observables and optimistic self-grading (cycles 399-405). Commitment follow-through claims 'FOLLOWED' when the stated observable was not actually met (cycle 405 F4). No structural fix is possible — this requires behavioral discipline: each commitment must have a binary pass/fail observable grounded in verifiable artifacts (issue URLs, commit SHAs, pipeline output), and grading must be honest against the stated observable.",
+          "rationale": "Cycle 448 refresh: journal-quality 6/6 reviews. Commitment grading criteria shift. Strategy: fix worklog-accuracy first, then reassess.",
           "root_cause": "Commitment observables are vague or self-referential. The orchestrator defines observables loosely enough that partial completion can be claimed as full completion. Grading is optimistic rather than strict.",
-          "updated_cycle": 406,
-          "verification_cycle": 406
+          "updated_cycle": 448,
+          "verification_cycle": 448
         },
         {
           "added_cycle": 260,
@@ -7836,10 +7836,10 @@
           "added_cycle": 383,
           "category": "worklog-accuracy",
           "chosen_path": "behavioral-fix",
-          "rationale": "Cycle 406 chronic-category refresh: worklog-accuracy appeared in 6/7 reviews (cycles 399-405). Remaining sub-causes: (a) Issues processed section semantics unclear (cycle 405 F2), (b) pipeline status records C1 not C5.5 (cycle 405 F3, partially mitigated by C6.5 post-dispatch addendum). Previous behavioral fix for disposition staleness remains in effect. Next verification: check if cycle 406 review flags either sub-cause.",
+          "rationale": "Cycle 448 refresh: sub-causes (warning names, self-modifications) remain. PR #2220 merged. Dispatch for remaining blocked by mass-deferral-gate.",
           "root_cause": "Two remaining sub-causes: (1) disposition staleness when writing worklog at C3 (original cause, cycle 383), (2) worklog section semantics inconsistency for Issues processed vs narrative closures.",
-          "updated_cycle": 406,
-          "verification_cycle": 406
+          "updated_cycle": 448,
+          "verification_cycle": 448
         }
       ]
     },
