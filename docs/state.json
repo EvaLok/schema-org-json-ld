@@ -7537,7 +7537,7 @@
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
-        "last_refreshed": "cycle 439"
+        "last_refreshed": "cycle 450"
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
@@ -7549,7 +7549,7 @@
       },
       "project_mode": {
         "cadence": "when mode or counter changes",
-        "last_refreshed": "cycle 441"
+        "last_refreshed": "cycle 450"
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
@@ -7613,7 +7613,7 @@
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
-        "last_refreshed": "cycle 441"
+        "last_refreshed": "cycle 450"
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
@@ -7621,11 +7621,11 @@
       },
       "total_enums": {
         "cadence": "after enum additions",
-        "last_refreshed": "cycle 439"
+        "last_refreshed": "cycle 450"
       },
       "total_schema_classes": {
         "cadence": "after schema class additions",
-        "last_refreshed": "cycle 439"
+        "last_refreshed": "cycle 450"
       },
       "total_schema_types": {
         "cadence": "after schema type additions",
@@ -7657,7 +7657,7 @@
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 441"
+        "last_refreshed": "cycle 450"
       }
     }
   },
@@ -7808,9 +7808,9 @@
           "added_cycle": 209,
           "category": "worklog-accuracy",
           "chosen_path": "structural-fix",
-          "rationale": "Cycle 448 chronic-category refresh: worklog-accuracy 6/6 reviews. PR #2220 (auto-gate-history) adds structural gate failure auto-derivation. Remaining: pipeline warning names, self-modifications from cycle diff.",
-          "root_cause": "Worklog state section was written before review dispatch (C6), so published counters were structurally stale. C6.5 patches the worklog after dispatch, but the primary cycle-state line (in-flight sessions) is not re-derived from committed state.json. The addendum pattern (post-dispatch lines) was intended to solve this but doesn't update the primary line.",
-          "updated_cycle": 448,
+          "rationale": "Cycle 450 refresh: worklog-accuracy 6/6 reviews persists. PR #2220 (auto-gate-history) handles gate failure history aggregation but does NOT enforce that the current cycle's own C5.5 result is recorded before worklog freeze. Cycle 449 review F1 confirmed the gap: the worklog froze with pipeline summary 'PASS (4 warnings)' before any cycle 449 C5.5 state existed (state still held cycle 448 FAIL). Remaining sub-causes: (a) freeze-before-state-write ordering (NEW from F1), (b) pipeline warning names, (c) self-modifications from cycle diff.",
+          "root_cause": "Worklog state section was written before review dispatch (C6), so published counters were structurally stale. C6.5 patches the worklog after dispatch, but the primary cycle-state line (in-flight sessions) is not re-derived from committed state.json. The addendum pattern (post-dispatch lines) was intended to solve this but doesn't update the primary line. Cycle 449 F1 added a fourth manifestation: the pipeline summary was frozen before the current-cycle pipeline state was written.",
+          "updated_cycle": 450,
           "verification_cycle": 448
         },
         {
@@ -7833,11 +7833,11 @@
         {
           "added_cycle": 250,
           "category": "journal-quality",
-          "chosen_path": "behavioral-recalibrate",
-          "rationale": "Cycle 448 refresh: journal-quality 6/6 reviews. Commitment grading criteria shift. Strategy: fix worklog-accuracy first, then reassess.",
-          "root_cause": "Commitment observables are vague or self-referential. The orchestrator defines observables loosely enough that partial completion can be claimed as full completion. Grading is optimistic rather than strict.",
-          "updated_cycle": 448,
-          "verification_cycle": 448
+          "chosen_path": "structural-fix",
+          "rationale": "Cycle 450 refresh: journal-quality 6/6 reviews continues. Cycle 449 review F2 specifically flagged the cycle dropping its overdue journal-quality deferral from the forward plan when the rewrite swapped the action item for a review issue link. Behavioral fix alone is insufficient — the orchestrator keeps dropping deferred-finding commitments under workload pressure. Structural path: write-entry must enforce that any unresolved deferred_finding from state.json is repeated as a forward-plan commitment until resolved. Tool fix dispatch will be filed once concurrency frees. Cycle 450 demonstrates manual compliance by explicitly carrying forward a journal-quality discipline commitment with observable completion condition tied to the next-cycle review.",
+          "root_cause": "Two layers: (1) Behavioral — orchestrator drops deferred-finding commitments from worklog/journal forward plans when they collide with newer work, leaving overdue debt invisible. Cycle 449 instance: the original cycle 449 worklog carried 'Address journal-quality deferral deadline' but a later refresh removed it. (2) Tooling gap — write-entry has no mechanism to require unresolved deferred_findings to remain as forward-plan items.",
+          "updated_cycle": 450,
+          "verification_cycle": 450
         },
         {
           "added_cycle": 260,
