@@ -1,0 +1,43 @@
+name: Rust CI
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'tools/rust/**'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'tools/rust/**'
+
+jobs:
+  rust:
+    name: Check and Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            tools/rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('tools/rust/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Check
+        run: cargo check --manifest-path tools/rust/Cargo.toml
+
+      - name: Test
+        run: cargo test --manifest-path tools/rust/Cargo.toml
