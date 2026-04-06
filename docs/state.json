@@ -13555,17 +13555,17 @@
   "tool_pipeline": {
     "blocks_publish": false,
     "c5_5_gate": {
-      "cycle": 448,
+      "cycle": 449,
       "needs_reverify": true,
       "status": "FAIL"
     },
     "c5_5_initial_result": {
-      "cycle": 448,
-      "exit_code": 1,
-      "has_blocking_findings": true,
-      "overall": "fail",
+      "cycle": 449,
+      "exit_code": 0,
+      "has_blocking_findings": false,
+      "overall": "pass",
       "result": "FAIL",
-      "summary": "FAIL (3 warnings, 1 blocking: mass-deferral-gate)"
+      "summary": "PASS (1 blocking warning, 3 warnings)"
     },
     "eva_directive": 436,
     "phases": [
