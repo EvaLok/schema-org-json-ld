@@ -100,6 +100,7 @@ fn run_checks(repo_root: &Path, state: &StateJson) -> Report {
         check_future_cycle_freshness(state),
         check_cycle_phase_consistency(state),
         check_chronic_categories(state),
+        check_chronic_category_responses_freshness(state),
         check_chronic_verification_deadline(state),
         check_chronic_intermediate_state(state),
         check_review_events_verified(state),
@@ -601,6 +602,12 @@ fn check_last_cycle_summary_receipts(repo_root: &Path, state: &StateJson) -> Che
         }
     };
 
+    if state.cycle_phase.cycle == Some(cycle)
+        && state.cycle_phase.phase.as_deref().map(str::trim) != Some("complete")
+    {
+        return pass("last_cycle_summary_receipts");
+    }
+
     match count_receipt_activity_for_cycle(repo_root, cycle) {
         Ok((dispatches, merges)) if dispatches == 0 && merges == 0 => {
             pass("last_cycle_summary_receipts")
@@ -913,6 +920,102 @@ fn check_chronic_categories(state: &StateJson) -> CheckResult {
                 untracked.join(", ")
             ),
         )
+    }
+}
+
+fn check_chronic_category_responses_freshness(state: &StateJson) -> CheckResult {
+    let review_agent = match state.extra.get("review_agent") {
+        Some(value) => value,
+        None => {
+            return warn(
+                "chronic_category_responses freshness",
+                "missing field: review_agent",
+            )
+        }
+    };
+
+    let entries = match review_agent
+        .get("chronic_category_responses")
+        .and_then(|value| value.get("entries"))
+        .and_then(Value::as_array)
+    {
+        Some(entries) => entries,
+        None => return pass("chronic_category_responses freshness"),
+    };
+
+    if entries.is_empty() {
+        return pass("chronic_category_responses freshness");
+    }
+
+    let last_refreshed = match state
+        .field_inventory
+        .fields
+        .get("review_agent.chronic_category_responses")
+        .and_then(|value| value.get("last_refreshed"))
+        .and_then(Value::as_str)
+    {
+        Some(value) => value,
+        None => {
+            return warn(
+                "chronic_category_responses freshness",
+                "missing field: field_inventory.fields.review_agent.chronic_category_responses.last_refreshed",
+            )
+        }
+    };
+    let refreshed_cycle = match parse_cycle_marker(last_refreshed) {
+        Some(value) => value,
+        None => {
+            return warn(
+                "chronic_category_responses freshness",
+                format!(
+                    "field_inventory.fields.review_agent.chronic_category_responses.last_refreshed has invalid format '{}'",
+                    last_refreshed
+                ),
+            )
+        }
+    };
+
+    let mut failures = Vec::new();
+    for (entry_index, entry) in entries.iter().enumerate() {
+        let category = match entry.get("category").and_then(Value::as_str) {
+            Some(value) => value,
+            None => {
+                return warn(
+                    "chronic_category_responses freshness",
+                    format!(
+                        "missing field: review_agent.chronic_category_responses.entries[{}].category",
+                        entry_index
+                    ),
+                )
+            }
+        };
+        let Some(updated_cycle_value) = entry.get("updated_cycle") else {
+            continue;
+        };
+        let updated_cycle = match updated_cycle_value.as_i64() {
+            Some(value) => value,
+            None => {
+                return warn(
+                    "chronic_category_responses freshness",
+                    format!(
+                        "invalid field: review_agent.chronic_category_responses.entries[{}].updated_cycle must be a number",
+                        entry_index
+                    ),
+                )
+            }
+        };
+        if updated_cycle > refreshed_cycle {
+            failures.push(format!(
+                "category '{}' updated_cycle({}) exceeds field_inventory.fields.review_agent.chronic_category_responses.last_refreshed({})",
+                category, updated_cycle, refreshed_cycle
+            ));
+        }
+    }
+
+    if failures.is_empty() {
+        pass("chronic_category_responses freshness")
+    } else {
+        fail("chronic_category_responses freshness", failures.join("; "))
     }
 }
 
@@ -1629,6 +1732,10 @@ fn print_human_report(report: &Report) {
         ("cycle_phase_consistency", "cycle_phase consistency"),
         ("chronic_categories", "chronic categories"),
         (
+            "chronic_category_responses freshness",
+            "chronic_category_responses freshness",
+        ),
+        (
             "chronic_verification_deadline",
             "chronic verification deadline",
         ),
@@ -2008,6 +2115,38 @@ mod tests {
     }
 
     #[test]
+    fn last_cycle_summary_receipts_skips_validation_for_open_current_cycle() {
+        let repo_root = temp_repo_root("summary-receipts-open-cycle");
+        init_git_repo(&repo_root);
+        commit_receipt(
+            &repo_root,
+            "notes.txt",
+            "cycle start\n",
+            "state(cycle-start): begin cycle 198 [cycle 198]",
+            "2026-03-09T01:00:00Z",
+        );
+        commit_receipt(
+            &repo_root,
+            "notes.txt",
+            "merge\n",
+            "state(process-merge): merged PR #456 [cycle 198]",
+            "2026-03-09T01:10:00Z",
+        );
+
+        let mut value = minimal_valid_state();
+        value["last_cycle"]["number"] = json!(198);
+        value["last_cycle"]["summary"] = json!("0 dispatches, 0 merges");
+        value["cycle_phase"] = json!({
+            "cycle": 198,
+            "phase": "work"
+        });
+
+        let state = state_from_json(value);
+        let check = check_last_cycle_summary_receipts(&repo_root, &state);
+        assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
     fn cycle_phase_consistency_passes_for_valid_phase() {
         let mut value = minimal_valid_state();
         value["cycle_phase"] = json!({
@@ -2239,6 +2378,80 @@ mod tests {
 
         let state = state_from_json(value);
         let check = check_chronic_categories(&state);
+        assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn chronic_category_responses_freshness_passes_when_entries_are_not_newer_than_marker() {
+        let mut value = minimal_valid_state();
+        value["field_inventory"]["fields"]["review_agent.chronic_category_responses"] = json!({
+            "last_refreshed": "cycle 10"
+        });
+        value["review_agent"]["chronic_category_responses"] = json!({
+            "entries": [
+                {
+                    "category": "worklog-accuracy",
+                    "updated_cycle": 9
+                },
+                {
+                    "category": "journal-quality",
+                    "updated_cycle": 10
+                }
+            ]
+        });
+
+        let state = state_from_json(value);
+        let check = check_chronic_category_responses_freshness(&state);
+
+        assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn chronic_category_responses_freshness_fails_when_entry_is_newer_than_marker() {
+        let mut value = minimal_valid_state();
+        value["field_inventory"]["fields"]["review_agent.chronic_category_responses"] = json!({
+            "last_refreshed": "cycle 448"
+        });
+        value["review_agent"]["chronic_category_responses"] = json!({
+            "entries": [
+                {
+                    "category": "process-adherence",
+                    "updated_cycle": 450
+                }
+            ]
+        });
+
+        let state = state_from_json(value);
+        let check = check_chronic_category_responses_freshness(&state);
+
+        assert_eq!(check.status, CheckStatus::Fail);
+        let details = check.details.as_deref().unwrap_or_default();
+        assert!(details.contains("process-adherence"));
+        assert!(details.contains("450"));
+        assert!(details.contains("448"));
+    }
+
+    #[test]
+    fn chronic_category_responses_freshness_ignores_legacy_entries_without_updated_cycle() {
+        let mut value = minimal_valid_state();
+        value["field_inventory"]["fields"]["review_agent.chronic_category_responses"] = json!({
+            "last_refreshed": "cycle 450"
+        });
+        value["review_agent"]["chronic_category_responses"] = json!({
+            "entries": [
+                {
+                    "category": "code-quality"
+                },
+                {
+                    "category": "journal-quality",
+                    "updated_cycle": 450
+                }
+            ]
+        });
+
+        let state = state_from_json(value);
+        let check = check_chronic_category_responses_freshness(&state);
+
         assert_eq!(check.status, CheckStatus::Pass);
     }
 
@@ -2797,7 +3010,7 @@ mod tests {
         let state = state_from_json(minimal_valid_state());
         let report = run_checks(Path::new("."), &state);
 
-        assert_eq!(report.checks.len(), 20);
+        assert_eq!(report.checks.len(), 21);
         assert_eq!(
             report.checks.get(8).map(|check| check.name),
             Some("future_cycle_freshness")
@@ -2812,38 +3025,42 @@ mod tests {
         );
         assert_eq!(
             report.checks.get(11).map(|check| check.name),
-            Some("chronic_verification_deadline")
+            Some("chronic_category_responses freshness")
         );
         assert_eq!(
             report.checks.get(12).map(|check| check.name),
-            Some("chronic_intermediate_state")
-        );
-        assert_eq!(
-            report.checks.get(12).map(|check| check.status),
-            Some(CheckStatus::Pass)
+            Some("chronic_verification_deadline")
         );
         assert_eq!(
             report.checks.get(13).map(|check| check.name),
-            Some("review_events_verified")
+            Some("chronic_intermediate_state")
+        );
+        assert_eq!(
+            report.checks.get(13).map(|check| check.status),
+            Some(CheckStatus::Pass)
         );
         assert_eq!(
             report.checks.get(14).map(|check| check.name),
-            Some("in_flight_sessions_consistency")
+            Some("review_events_verified")
         );
         assert_eq!(
             report.checks.get(15).map(|check| check.name),
-            Some("forward_work_counter_consistency")
+            Some("in_flight_sessions_consistency")
         );
         assert_eq!(
             report.checks.get(16).map(|check| check.name),
-            Some("pending_audit_deadlines")
+            Some("forward_work_counter_consistency")
         );
         assert_eq!(
             report.checks.get(17).map(|check| check.name),
-            Some("agent_sessions_reconciliation")
+            Some("pending_audit_deadlines")
         );
         assert_eq!(
             report.checks.get(18).map(|check| check.name),
+            Some("agent_sessions_reconciliation")
+        );
+        assert_eq!(
+            report.checks.get(19).map(|check| check.name),
             Some("backfill_session_title_pr_match")
         );
         assert_eq!(
