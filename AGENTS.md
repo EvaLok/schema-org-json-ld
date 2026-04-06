@@ -281,6 +281,17 @@ When building or modifying Rust tools (`tools/rust/crates/`), also verify:
 
 See `.claude/skills/tool-creation-guidelines/SKILL.md` for the full tool quality assurance guidelines.
 
+### Cross-crate enum safety (per audit #377)
+
+When adding or modifying enum variants in shared crates (especially `state-schema`), you MUST update all match statements across the workspace:
+
+1. After adding a new variant, run `cargo build --workspace` (in `tools/rust/`) to find non-exhaustive pattern errors
+2. Grep the workspace for all `match` statements on the modified enum
+3. Update each match arm in every consuming crate
+4. Include `cargo build --workspace` in your test plan
+
+PR #2212 added `ReviewDispatchBlocked` to `PipelineGateError` but only handled it in `record-dispatch`, breaking `dispatch-task` and causing 17+ hours of outage.
+
 ## Advanced Patterns
 
 ### Array `@type` (multiple types)
