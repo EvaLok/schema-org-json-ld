@@ -285,6 +285,7 @@ struct CycleReceiptJsonEntry {
     tool: String,
     #[serde(alias = "hash")]
     receipt: String,
+    // Retained for compatibility with cycle-receipts JSON and test-only legacy parsing helpers.
     #[cfg_attr(not(test), allow(dead_code))]
     #[serde(default, alias = "message")]
     commit: String,
@@ -2629,11 +2630,11 @@ fn cycle_receipt_entries_to_receipts(
 #[cfg(test)]
 fn derive_prs_from_cycle_receipts_output(json: &str) -> Result<Vec<u64>, String> {
     let entries = parse_cycle_receipt_entries_output(json)?;
-    Ok(derive_prs_from_receipt_entries(&entries))
+    Ok(derive_prs_from_receipt_entries_test_helper(&entries))
 }
 
 #[cfg(test)]
-fn derive_prs_from_receipt_entries(entries: &[CycleReceiptJsonEntry]) -> Vec<u64> {
+fn derive_prs_from_receipt_entries_test_helper(entries: &[CycleReceiptJsonEntry]) -> Vec<u64> {
     let mut seen = HashSet::new();
     let mut prs = Vec::new();
 
@@ -4768,7 +4769,7 @@ mod tests {
     }
 
     #[test]
-    fn derive_prs_from_cycle_receipt_entries_uses_cycle_bounded_agent_sessions() {
+    fn derive_prs_from_agent_sessions_filters_by_cycle_boundary() {
         let state: StateJson = serde_json::from_value(json!({
             "cycle_phase": {
                 "cycle": 154,
