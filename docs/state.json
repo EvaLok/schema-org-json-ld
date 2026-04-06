@@ -6750,6 +6750,7 @@
       "title": "[Cycle Review] Cycle 450 end-of-cycle review"
     },
     {
+      "addresses_finding": "450:1",
       "dispatched_at": "2026-04-06T23:30:13Z",
       "issue": 2250,
       "model": "gpt-5.4",
@@ -7383,7 +7384,8 @@
       "category": "field-inventory",
       "deadline_cycle": 451,
       "deferred_cycle": 446,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "actioned cycle 451 — tool_pipeline.last_refreshed bumped from cycle 445 to cycle 451; structural follow-up tracked in #2250 (chronic_category_responses freshness invariant pattern can be generalized to tool_pipeline)"
     },
     {
       "category": "state-integrity",
@@ -7635,7 +7637,7 @@
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
-        "last_refreshed": "cycle 445"
+        "last_refreshed": "cycle 451"
       },
       "total_enums": {
         "cadence": "after enum additions",
