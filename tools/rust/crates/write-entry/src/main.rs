@@ -284,8 +284,6 @@ struct CycleReceiptJsonEntry {
     tool: String,
     #[serde(alias = "hash")]
     receipt: String,
-    #[serde(default, alias = "message")]
-    _commit: String,
     #[serde(default)]
     url: Option<String>,
     #[serde(default)]
@@ -4683,28 +4681,24 @@ mod tests {
             CycleReceiptJsonEntry {
                 tool: "process-merge".to_string(),
                 receipt: "aaaaaaa".to_string(),
-                _commit: "state(process-merge): PR #1 merged [cycle 360]".to_string(),
                 url: None,
                 _aliases: Vec::new(),
             },
             CycleReceiptJsonEntry {
                 tool: "process-merge".to_string(),
                 receipt: "bbbbbbb".to_string(),
-                _commit: "state(process-merge): PR #2 merged [cycle 360]".to_string(),
                 url: None,
                 _aliases: Vec::new(),
             },
             CycleReceiptJsonEntry {
                 tool: "process-review".to_string(),
                 receipt: "ccccccc".to_string(),
-                _commit: "state(process-review): review consumed [cycle 360]".to_string(),
                 url: None,
                 _aliases: Vec::new(),
             },
             CycleReceiptJsonEntry {
                 tool: "cycle-complete".to_string(),
                 receipt: "ddddddd".to_string(),
-                _commit: "Merged cycle 359 review; Dispatched EvaLok/schema-org-json-ld#1760; review consumed".to_string(),
                 url: None,
                 _aliases: Vec::new(),
             },
@@ -5705,7 +5699,6 @@ mod tests {
         let entries = vec![CycleReceiptJsonEntry {
             tool: "record-dispatch".to_string(),
             receipt: "abcdef1".to_string(),
-            _commit: "state(record-dispatch): #42 dispatched [cycle 154]".to_string(),
             url: Some(
                 "https://github.com/EvaLok/schema-org-json-ld/commit/abcdef1234567890".to_string(),
             ),

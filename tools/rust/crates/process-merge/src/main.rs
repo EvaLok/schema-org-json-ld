@@ -3,7 +3,7 @@ use clap::Parser;
 use serde_json::{json, Value};
 use state_schema::{
     commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
-    set_value_at_pointer, write_state_value, AgentSession, StateJson,
+    set_value_at_pointer, write_state_value,
 };
 use std::path::PathBuf;
 
@@ -267,33 +267,33 @@ fn update_agent_sessions(
 }
 
 fn sync_last_cycle_summary(state: &mut Value, current_cycle: u64) -> Result<(), String> {
-    let parsed_state: StateJson = serde_json::from_value(state.clone())
-        .map_err(|error| format!("failed to parse docs/state.json for last_cycle.summary sync: {}", error))?;
-    let Some(last_cycle_number) = parsed_state.last_cycle.extra.get("number").and_then(Value::as_u64)
-    else {
+    let Some(last_cycle_number) = state.pointer("/last_cycle/number").and_then(Value::as_u64) else {
         return Ok(());
     };
     if last_cycle_number != current_cycle {
         return Ok(());
     }
 
-    let last_cycle_timestamp = parsed_state
-        .last_cycle
-        .timestamp
-        .as_deref()
+    let last_cycle_timestamp = state
+        .pointer("/last_cycle/timestamp")
+        .and_then(Value::as_str)
         .ok_or_else(|| "missing docs/state.json last_cycle.timestamp for last_cycle.summary sync".to_string())?;
     let cycle_start = parse_timestamp(last_cycle_timestamp, "docs/state.json last_cycle.timestamp")?;
+    let sessions = state
+        .pointer("/agent_sessions")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "missing array /agent_sessions in docs/state.json".to_string())?;
     let mut dispatches = 0usize;
     let mut merges = 0usize;
-    for session in &parsed_state.agent_sessions {
-        if let Some(dispatched_at) = session.dispatched_at.as_deref() {
+    for session in sessions {
+        if let Some(dispatched_at) = session.get("dispatched_at").and_then(Value::as_str) {
             if parse_timestamp(dispatched_at, "agent_sessions[].dispatched_at")? >= cycle_start
                 && !is_review_dispatch_session(session)
             {
                 dispatches += 1;
             }
         }
-        if let Some(merged_at) = session.merged_at.as_deref() {
+        if let Some(merged_at) = session.get("merged_at").and_then(Value::as_str) {
             if parse_timestamp(merged_at, "agent_sessions[].merged_at")? >= cycle_start {
                 merges += 1;
             }
@@ -317,15 +317,14 @@ fn parse_timestamp(value: &str, label: &str) -> Result<chrono::DateTime<chrono::
         .map_err(|error| format!("invalid {}: {}", label, error))
 }
 
-fn is_review_dispatch_session(session: &AgentSession) -> bool {
+fn is_review_dispatch_session(session: &Value) -> bool {
     session
-        .extra
         .get("review_dispatch")
         .and_then(Value::as_bool)
         .unwrap_or(false)
         || session
-            .title
-            .as_deref()
+            .get("title")
+            .and_then(Value::as_str)
             .is_some_and(|title| title.contains("[Cycle Review]"))
 }
 

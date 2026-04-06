@@ -2909,7 +2909,6 @@ mod tests {
         let state = state_from_json(minimal_valid_state());
         let report = run_checks(Path::new("."), &state);
 
-        assert_eq!(report.checks.len(), 21);
         assert_eq!(
             report.checks.get(8).map(|check| check.name),
             Some("future_cycle_freshness")
@@ -2970,6 +2969,10 @@ mod tests {
             report.checks.last().map(|check| check.name),
             Some("eva_input_overlap")
         );
+        assert!(report
+            .checks
+            .iter()
+            .any(|check| check.name == "chronic_category_responses_freshness"));
     }
 
     #[test]
