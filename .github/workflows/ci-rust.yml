@@ -4,13 +4,9 @@ on:
   push:
     branches:
       - master
-    paths:
-      - 'tools/rust/**'
   pull_request:
     branches:
       - master
-    paths:
-      - 'tools/rust/**'
 
 jobs:
   rust:
