@@ -6718,8 +6718,10 @@
       "addresses_finding": "446:0",
       "dispatched_at": "2026-04-04T12:34:44Z",
       "issue": 2219,
+      "merged_at": "2026-04-06T07:48:45Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2220,
+      "status": "merged",
       "title": "Add --auto-gate-history flag to write-entry (re-dispatch)"
     },
     {
@@ -7643,7 +7645,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 28,
     "issue": 2234,
