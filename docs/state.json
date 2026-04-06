@@ -6756,6 +6756,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Tool fix: write-entry/state-invariants/process-merge — chronic worklog-accuracy + journal-quality + state-integrity structural fixes"
+    },
+    {
+      "dispatched_at": "2026-04-06T23:42:48Z",
+      "issue": 2252,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 451 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -7408,7 +7415,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2250 Tool fix: write-entry/state-invariants/process-merge — chronic worklog-accuracy + journal-quality + state-integrity structural fixes (cycle 451)",
+  "dispatch_log_latest": "#2252 [Cycle Review] Cycle 451 end-of-cycle review (cycle 451)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7681,7 +7688,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 3,
   "last_cycle": {
     "duration_minutes": 26,
     "issue": 2247,
@@ -13101,7 +13108,7 @@
     ],
     "last_review_cycle": 450
   },
-  "review_dispatch_consecutive": 3,
+  "review_dispatch_consecutive": 4,
   "review_events_verified_through_cycle": 451,
   "schema_status": {
     "directory_layout": {
