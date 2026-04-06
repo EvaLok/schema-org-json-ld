@@ -602,6 +602,8 @@ fn check_last_cycle_summary_receipts(repo_root: &Path, state: &StateJson) -> Che
         }
     };
 
+    // Open cycles can legitimately accumulate new receipt activity after the summary is written,
+    // so only enforce receipt-backed zero summaries once the cycle is marked complete.
     if state.cycle_phase.cycle == Some(cycle)
         && state.cycle_phase.phase.as_deref().map(str::trim) != Some("complete")
     {

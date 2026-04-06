@@ -1274,12 +1274,13 @@ fn auto_next_steps(state: Option<&StateJson>) -> Result<Vec<String>, String> {
         state.ok_or_else(|| "docs/state.json is required to populate next steps".to_string())?;
     let mut next_steps = Vec::new();
 
-    for finding in &state.deferred_findings {
-        if finding.resolved || finding.dropped_rationale.is_some() {
-            continue;
-        }
-        next_steps.push(format_deferred_finding_next_step(finding));
-    }
+    next_steps.extend(
+        state
+            .deferred_findings
+            .iter()
+            .filter(|finding| !finding.resolved && finding.dropped_rationale.is_none())
+            .map(format_deferred_finding_next_step),
+    );
 
     for session in &state.agent_sessions {
         if session.status.as_deref().map(str::trim) != Some("in_flight") {
