@@ -18,6 +18,6 @@
 **Evidence**: The quoted commitment on line 133 says success is either both PRs merged **or**, if blocked, the blocked work is re-dispatched with refined specs. The journal then marks the commitment `Not followed` because `#2211` merged and `#2210` was re-dispatched as `#2219`, treating re-dispatch itself as failure. The same cycle 447 journal later notes that `#2219` reused the same spec, which is the real reason the fallback condition was not fully met. By grading against a different criterion than the stated observable, the entry blurs whether commitments are actually being satisfied.
 **Recommendation**: Grade commitments strictly against the observable as written; if spec refinement is required, state that requirement in the commitment text and cite it explicitly in the follow-through assessment.
 
-## Complacency score: 3/5
+## Complacency score
 
-Structural work did land this cycle (`#2212` merged, receipts resolve, state-invariants and metric-snapshot pass), so this was not a no-op review loop. But the cycle still misreported its own warning set, omitted merged tool changes from the worklog narrative, and judged commitment follow-through with moving criteria. That is too much self-audit drift to justify a score above 3.
+3/5. Structural work did land this cycle (`#2212` merged, receipts resolve, state-invariants and metric-snapshot pass), so this was not a no-op review loop. But the cycle still misreported its own warning set, omitted merged tool changes from the worklog narrative, and judged commitment follow-through with moving criteria. That is too much self-audit drift to justify a score above 3.
