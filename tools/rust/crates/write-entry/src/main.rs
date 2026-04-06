@@ -2608,14 +2608,9 @@ fn cycle_receipt_entries_to_receipts(
 }
 
 #[cfg(test)]
-fn derive_prs_from_cycle_receipts_output(
-    state_json: &str,
-    cycle: u64,
-    json: &str,
-) -> Result<Vec<u64>, String> {
+fn derive_prs_from_cycle_receipts_output(state_json: &str, cycle: u64) -> Result<Vec<u64>, String> {
     let state = serde_json::from_str::<StateJson>(state_json)
         .map_err(|error| format!("invalid state JSON: {}", error))?;
-    let _entries = parse_cycle_receipt_entries_output(json)?;
     derive_prs_from_cycle_receipt_entries(&state, cycle)
 }
 
@@ -4757,12 +4752,6 @@ mod tests {
                 ]
             }"#,
             154,
-            r#"[
-                {"step":"cycle-start","receipt":"abc1234","commit":"state(cycle-start): begin cycle 154 [cycle 154]"},
-                {"step":"process-merge","receipt":"def5678","commit":"state(process-merge): PR #537, PR #543 merged [cycle 154]"},
-                {"tool":"process-merge","hash":"fedcba9","message":"state(process-merge): PRs EvaLok/schema-org-json-ld#1199, EvaLok/schema-org-json-ld#1197 merged [cycle 251]"},
-                {"step":"process-merge","receipt":"7654321","commit":"state(process-merge): PRs EvaLok/schema-org-json-ld#100 merged [cycle 50]"}
-            ]"#,
         )
         .unwrap();
 
@@ -4789,10 +4778,6 @@ mod tests {
                 ]
             }"#,
             154,
-            r#"[
-                {"step":"cycle-start","receipt":"abc1234","commit":"state(cycle-start): begin cycle 154 [cycle 154]"},
-                {"step":"process-merge","receipt":"def5678","commit":"state(process-merge): PR #237, PR #240 merged [cycle 154]"}
-            ]"#,
         )
         .unwrap();
 
@@ -4815,9 +4800,6 @@ mod tests {
                 ]
             }"#,
             154,
-            r#"[
-                {"step":"cycle-start","receipt":"abc1234","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}
-            ]"#,
         )
         .unwrap();
 
@@ -4839,9 +4821,6 @@ mod tests {
                 ]
             }"#,
             154,
-            r#"[
-                {"step":"cycle-start","receipt":"abc1234","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}
-            ]"#,
         )
         .unwrap_err();
 
