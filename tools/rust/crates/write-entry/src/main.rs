@@ -137,6 +137,9 @@ struct WorklogArgs {
     /// Auto-derive commit receipts from tools/cycle-receipts
     #[arg(long = "auto-receipts", default_value_t = false)]
     auto_receipts: bool,
+    /// Render the generated worklog to stdout without writing a file
+    #[arg(long = "dry-run", default_value_t = false)]
+    dry_run: bool,
 }
 
 #[derive(Parser)]
@@ -282,7 +285,7 @@ struct CycleReceiptJsonEntry {
     #[serde(alias = "hash")]
     receipt: String,
     #[serde(default, alias = "message")]
-    commit: String,
+    _commit: String,
     #[serde(default)]
     url: Option<String>,
     #[serde(default)]
@@ -310,22 +313,34 @@ fn main() {
     let now = Utc::now();
 
     match cli.command {
-        Command::Worklog(args) => match execute_worklog_with_outcome(&args, &repo_root, now) {
-            Ok(outcome) => {
-                if outcome.replaced_existing {
-                    println!(
-                        "Worklog updated: {} (replaced existing)",
-                        outcome.path.display()
-                    );
-                } else {
-                    println!("Worklog created: {}", outcome.path.display());
+        Command::Worklog(args) => {
+            if args.dry_run {
+                match render_worklog_output(&args, &repo_root, now) {
+                    Ok(content) => println!("{}", content),
+                    Err(error) => {
+                        eprintln!("Error: {}", error);
+                        std::process::exit(1);
+                    }
+                }
+            } else {
+                match execute_worklog_with_outcome(&args, &repo_root, now) {
+                    Ok(outcome) => {
+                        if outcome.replaced_existing {
+                            println!(
+                                "Worklog updated: {} (replaced existing)",
+                                outcome.path.display()
+                            );
+                        } else {
+                            println!("Worklog created: {}", outcome.path.display());
+                        }
+                    }
+                    Err(error) => {
+                        eprintln!("Error: {}", error);
+                        std::process::exit(1);
+                    }
                 }
             }
-            Err(error) => {
-                eprintln!("Error: {}", error);
-                std::process::exit(1);
-            }
-        },
+        }
         Command::Journal(args) => match execute_journal(&args, &repo_root, now) {
             Ok(path) => println!("{}", path.display()),
             Err(error) => {
@@ -378,25 +393,42 @@ fn execute_worklog_with_outcome(
     repo_root: &Path,
     now: DateTime<Utc>,
 ) -> Result<WorklogWriteOutcome, String> {
-    let cycle = resolve_cycle(args.cycle, repo_root)?;
-    let mut input = resolve_worklog_input(args, repo_root)?;
-    emit_worklog_auto_derivation_warnings(apply_worklog_auto_derivations(
-        args, repo_root, cycle, &mut input,
-    )?);
-    emit_unresolved_receipt_warnings(&mut input.receipts, repo_root)?;
+    let (cycle, content) = render_worklog_output_with_cycle(args, repo_root, now)?;
     let (path, replaced_existing) =
         if let Some(existing_path) = find_worklog_for_cycle(repo_root, cycle)? {
             (existing_path, true)
         } else {
             (worklog_path(repo_root, now, cycle, &args.title), false)
         };
-    let content = render_worklog(cycle, now, &input);
-    emit_generated_markdown_sha_warnings("worklog", &content, repo_root);
     write_entry_file(&path, &content)?;
     Ok(WorklogWriteOutcome {
         path,
         replaced_existing,
     })
+}
+
+fn render_worklog_output(
+    args: &WorklogArgs,
+    repo_root: &Path,
+    now: DateTime<Utc>,
+) -> Result<String, String> {
+    render_worklog_output_with_cycle(args, repo_root, now).map(|(_, content)| content)
+}
+
+fn render_worklog_output_with_cycle(
+    args: &WorklogArgs,
+    repo_root: &Path,
+    now: DateTime<Utc>,
+) -> Result<(u64, String), String> {
+    let cycle = resolve_cycle(args.cycle, repo_root)?;
+    let mut input = resolve_worklog_input(args, repo_root)?;
+    emit_worklog_auto_derivation_warnings(apply_worklog_auto_derivations(
+        args, repo_root, cycle, &mut input,
+    )?);
+    emit_unresolved_receipt_warnings(&mut input.receipts, repo_root)?;
+    let content = render_worklog(cycle, now, &input);
+    emit_generated_markdown_sha_warnings("worklog", &content, repo_root);
+    Ok((cycle, content))
 }
 
 fn execute_journal(
@@ -1256,6 +1288,16 @@ fn auto_next_steps(state: Option<&StateJson>) -> Result<Vec<String>, String> {
         state.ok_or_else(|| "docs/state.json is required to populate next steps".to_string())?;
     let mut next_steps = Vec::new();
 
+    for finding in &state.deferred_findings {
+        if finding.resolved || finding.dropped_rationale.is_some() {
+            continue;
+        }
+        next_steps.push(format!(
+            "Address deferred finding: {} (deferred cycle {}, deadline cycle {}) — must be actioned, dispatched, or explicitly dropped this cycle",
+            finding.category, finding.deferred_cycle, finding.deadline_cycle
+        ));
+    }
+
     for session in &state.agent_sessions {
         if session.status.as_deref().map(str::trim) != Some("in_flight") {
             continue;
@@ -1615,12 +1657,16 @@ fn apply_worklog_auto_derivations(
             .expect("BUG: cycle_receipt_entries should be Some when auto_receipts is true");
         let receipts = cycle_receipt_entries_to_receipts(entries)?;
         input.receipts = receipts;
-        let derived_prs = derive_prs_from_cycle_receipt_entries(entries);
+        let state = state.as_ref().ok_or_else(|| {
+            "docs/state.json not found; --auto-receipts requires docs/state.json to derive merged PRs"
+                .to_string()
+        })?;
+        let derived_prs = derive_prs_from_cycle_receipt_entries(state, cycle)?;
         input.prs_merged = merge_numbered_refs(&input.prs_merged, &derived_prs);
         input.receipt_note = Some(
             match derive_receipt_scope_note(
                 cycle,
-                state.as_ref(),
+                Some(state),
                 entries,
                 cycle_receipt_through.as_deref(),
             ) {
@@ -2291,35 +2337,6 @@ fn extract_issue_references(item: &str) -> Vec<u64> {
     issues
 }
 
-fn extract_pr_references(item: &str) -> Vec<u64> {
-    let mut prs = Vec::new();
-    let bytes = item.as_bytes();
-    let mut index = 0;
-
-    while index < bytes.len() {
-        if bytes[index] != b'#' {
-            index += 1;
-            continue;
-        }
-
-        let start = index + 1;
-        let mut end = start;
-        while end < bytes.len() && bytes[end].is_ascii_digit() {
-            end += 1;
-        }
-
-        if end > start && issue_reference_looks_like_pr(item, index) {
-            if let Ok(pr) = item[start..end].parse::<u64>() {
-                prs.push(pr);
-            }
-        }
-
-        index = if end > start { end } else { index + 1 };
-    }
-
-    prs
-}
-
 fn issue_reference_looks_like_pr(item: &str, hash_index: usize) -> bool {
     let prefix = item[..hash_index].trim_end();
     let mut tokens = prefix.rsplit(|character: char| !character.is_ascii_alphabetic());
@@ -2591,28 +2608,50 @@ fn cycle_receipt_entries_to_receipts(
 }
 
 #[cfg(test)]
-fn derive_prs_from_cycle_receipts_output(json: &str) -> Result<Vec<u64>, String> {
-    let entries = parse_cycle_receipt_entries_output(json)?;
-    Ok(derive_prs_from_cycle_receipt_entries(&entries))
+fn derive_prs_from_cycle_receipts_output(
+    state_json: &str,
+    cycle: u64,
+    json: &str,
+) -> Result<Vec<u64>, String> {
+    let state = serde_json::from_str::<StateJson>(state_json)
+        .map_err(|error| format!("invalid state JSON: {}", error))?;
+    let _entries = parse_cycle_receipt_entries_output(json)?;
+    derive_prs_from_cycle_receipt_entries(&state, cycle)
 }
 
-fn derive_prs_from_cycle_receipt_entries(entries: &[CycleReceiptJsonEntry]) -> Vec<u64> {
+fn derive_prs_from_cycle_receipt_entries(state: &StateJson, cycle: u64) -> Result<Vec<u64>, String> {
+    let start = cycle_window_start(cycle, state, "receipt-backed PR derivation")?;
     let mut seen = HashSet::new();
     let mut prs = Vec::new();
 
-    for entry in entries {
-        if !entry.tool.eq_ignore_ascii_case("process-merge") {
+    for (index, session) in state.agent_sessions.iter().enumerate() {
+        let Some(merged_at) = session.merged_at.as_deref() else {
+            continue;
+        };
+        if parse_timestamp(merged_at, "agent_sessions[].merged_at")? < start {
             continue;
         }
-
-        for pr in extract_pr_references(&entry.commit) {
-            if seen.insert(pr) {
-                prs.push(pr);
-            }
+        let Some(pr) = session.pr else {
+            continue;
+        };
+        let pr = u64::try_from(pr).map_err(|_| {
+            format!(
+                "agent_sessions[{}].pr must be a positive integer for receipt-backed PR derivation",
+                index
+            )
+        })?;
+        if pr == 0 {
+            return Err(format!(
+                "agent_sessions[{}].pr must be a positive integer for receipt-backed PR derivation",
+                index
+            ));
+        }
+        if seen.insert(pr) {
+            prs.push(pr);
         }
     }
 
-    prs
+    Ok(prs)
 }
 
 #[cfg(test)]
@@ -3856,6 +3895,7 @@ mod tests {
             in_flight: None,
             receipt: Vec::new(),
             auto_receipts: false,
+            dry_run: false,
         }
     }
 
@@ -4648,28 +4688,28 @@ mod tests {
             CycleReceiptJsonEntry {
                 tool: "process-merge".to_string(),
                 receipt: "aaaaaaa".to_string(),
-                commit: "state(process-merge): PR #1 merged [cycle 360]".to_string(),
+                _commit: "state(process-merge): PR #1 merged [cycle 360]".to_string(),
                 url: None,
                 _aliases: Vec::new(),
             },
             CycleReceiptJsonEntry {
                 tool: "process-merge".to_string(),
                 receipt: "bbbbbbb".to_string(),
-                commit: "state(process-merge): PR #2 merged [cycle 360]".to_string(),
+                _commit: "state(process-merge): PR #2 merged [cycle 360]".to_string(),
                 url: None,
                 _aliases: Vec::new(),
             },
             CycleReceiptJsonEntry {
                 tool: "process-review".to_string(),
                 receipt: "ccccccc".to_string(),
-                commit: "state(process-review): review consumed [cycle 360]".to_string(),
+                _commit: "state(process-review): review consumed [cycle 360]".to_string(),
                 url: None,
                 _aliases: Vec::new(),
             },
             CycleReceiptJsonEntry {
                 tool: "cycle-complete".to_string(),
                 receipt: "ddddddd".to_string(),
-                commit: "Merged cycle 359 review; Dispatched EvaLok/schema-org-json-ld#1760; review consumed".to_string(),
+                _commit: "Merged cycle 359 review; Dispatched EvaLok/schema-org-json-ld#1760; review consumed".to_string(),
                 url: None,
                 _aliases: Vec::new(),
             },
@@ -4682,8 +4722,41 @@ mod tests {
     }
 
     #[test]
-    fn derive_prs_from_cycle_receipts_output_uses_process_merge_entries() {
+    fn derive_prs_from_cycle_receipts_output_uses_cycle_bounded_agent_sessions() {
         let prs = derive_prs_from_cycle_receipts_output(
+            r#"{
+                "cycle_phase": {
+                    "cycle": 154,
+                    "phase_entered_at": "2026-03-06T01:00:00Z"
+                },
+                "agent_sessions": [
+                    {
+                        "pr": 537,
+                        "merged_at": "2026-03-06T01:00:01Z"
+                    },
+                    {
+                        "pr": 543,
+                        "merged_at": "2026-03-06T01:00:02Z"
+                    },
+                    {
+                        "pr": 1199,
+                        "merged_at": "2026-03-06T01:00:03Z"
+                    },
+                    {
+                        "pr": 1197,
+                        "merged_at": "2026-03-06T01:00:04Z"
+                    },
+                    {
+                        "pr": 100,
+                        "merged_at": "2026-03-06T01:00:05Z"
+                    },
+                    {
+                        "pr": 999,
+                        "merged_at": "2026-03-06T00:59:59Z"
+                    }
+                ]
+            }"#,
+            154,
             r#"[
                 {"step":"cycle-start","receipt":"abc1234","commit":"state(cycle-start): begin cycle 154 [cycle 154]"},
                 {"step":"process-merge","receipt":"def5678","commit":"state(process-merge): PR #537, PR #543 merged [cycle 154]"},
@@ -4694,6 +4767,85 @@ mod tests {
         .unwrap();
 
         assert_eq!(prs, vec![537, 543, 1199, 1197, 100]);
+    }
+
+    #[test]
+    fn derive_prs_from_cycle_receipts_output_excludes_pre_cycle_merges() {
+        let prs = derive_prs_from_cycle_receipts_output(
+            r#"{
+                "cycle_phase": {
+                    "cycle": 154,
+                    "phase_entered_at": "2026-03-06T01:00:00Z"
+                },
+                "agent_sessions": [
+                    {
+                        "pr": 237,
+                        "merged_at": "2026-03-06T00:59:59Z"
+                    },
+                    {
+                        "pr": 240,
+                        "merged_at": "2026-03-06T01:00:01Z"
+                    }
+                ]
+            }"#,
+            154,
+            r#"[
+                {"step":"cycle-start","receipt":"abc1234","commit":"state(cycle-start): begin cycle 154 [cycle 154]"},
+                {"step":"process-merge","receipt":"def5678","commit":"state(process-merge): PR #237, PR #240 merged [cycle 154]"}
+            ]"#,
+        )
+        .unwrap();
+
+        assert_eq!(prs, vec![240]);
+    }
+
+    #[test]
+    fn derive_prs_from_cycle_receipts_output_returns_empty_when_no_sessions_merged_in_window() {
+        let prs = derive_prs_from_cycle_receipts_output(
+            r#"{
+                "cycle_phase": {
+                    "cycle": 154,
+                    "phase_entered_at": "2026-03-06T01:00:00Z"
+                },
+                "agent_sessions": [
+                    {
+                        "pr": 237,
+                        "merged_at": "2026-03-06T00:59:59Z"
+                    }
+                ]
+            }"#,
+            154,
+            r#"[
+                {"step":"cycle-start","receipt":"abc1234","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}
+            ]"#,
+        )
+        .unwrap();
+
+        assert!(prs.is_empty());
+    }
+
+    #[test]
+    fn derive_prs_from_cycle_receipts_output_errors_when_cycle_window_cannot_be_resolved() {
+        let error = derive_prs_from_cycle_receipts_output(
+            r#"{
+                "cycle_phase": {
+                    "cycle": 155
+                },
+                "agent_sessions": [
+                    {
+                        "pr": 240,
+                        "merged_at": "2026-03-06T01:00:01Z"
+                    }
+                ]
+            }"#,
+            154,
+            r#"[
+                {"step":"cycle-start","receipt":"abc1234","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}
+            ]"#,
+        )
+        .unwrap_err();
+
+        assert!(error.contains("requested cycle 154"));
     }
 
     #[test]
@@ -4754,7 +4906,12 @@ mod tests {
         write_state_file(
             &repo_root.path,
             r#"{
-                "last_cycle": {"number": 154}
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "cycle": 154,
+                    "phase_entered_at": "2026-03-06T01:00:00Z"
+                },
+                "agent_sessions": []
             }"#,
         );
         let payload_path = repo_root.path.join("worklog.json");
@@ -4897,6 +5054,17 @@ mod tests {
     fn worklog_cycle_mode_replaces_input_file_receipts_with_canonical_output() {
         let repo_root = TempRepoDir::new("worklog-input-file-cycle-receipts");
         init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "cycle": 154,
+                    "phase_entered_at": "2026-03-06T01:00:00Z"
+                },
+                "agent_sessions": []
+            }"#,
+        );
         let start_receipt = create_git_commit_with_message(
             &repo_root.path,
             "notes/start.txt",
@@ -4987,7 +5155,12 @@ mod tests {
         write_state_file(
             &repo_root.path,
             r#"{
-                "last_cycle": {"number": 154}
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "cycle": 154,
+                    "phase_entered_at": "2026-03-06T01:00:00Z"
+                },
+                "agent_sessions": []
             }"#,
         );
         let first_receipt = create_git_commit(&repo_root.path, "first.txt", "first");
@@ -5126,6 +5299,17 @@ mod tests {
     fn worklog_auto_derives_self_modifications_receipts_and_issues_processed() {
         let repo_root = TempRepoDir::new("worklog-auto-derives");
         init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "cycle": 154,
+                    "phase_entered_at": "2026-03-06T01:00:00Z"
+                },
+                "agent_sessions": []
+            }"#,
+        );
         let start_receipt = create_git_commit_with_message(
             &repo_root.path,
             "notes/start.txt",
@@ -5190,13 +5374,31 @@ mod tests {
     }
 
     #[test]
-    fn worklog_auto_derives_pr_sections_from_process_merge_receipts() {
+    fn worklog_auto_derives_pr_sections_from_cycle_bounded_agent_sessions() {
         let repo_root = TempRepoDir::new("worklog-auto-derives-prs");
         init_git_repo(&repo_root.path);
         write_state_file(
             &repo_root.path,
             r#"{
-                "last_cycle": {"number": 154}
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "cycle": 154,
+                    "phase_entered_at": "2026-03-06T01:00:00Z"
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 1041,
+                        "pr": 237,
+                        "merged_at": "2026-03-06T00:59:59Z",
+                        "status": "merged"
+                    },
+                    {
+                        "issue": 1042,
+                        "pr": 240,
+                        "merged_at": "2026-03-06T01:00:01Z",
+                        "status": "merged"
+                    }
+                ]
             }"#,
         );
         let start_receipt = create_git_commit_with_message(
@@ -5234,10 +5436,10 @@ mod tests {
 
         assert!(content.contains("### PRs merged"));
         assert!(
-            content.contains("[PR #237](https://github.com/EvaLok/schema-org-json-ld/issues/237)")
+            content.contains("[PR #240](https://github.com/EvaLok/schema-org-json-ld/issues/240)")
         );
         assert!(
-            content.contains("[PR #240](https://github.com/EvaLok/schema-org-json-ld/issues/240)")
+            !content.contains("[PR #237](https://github.com/EvaLok/schema-org-json-ld/issues/237)")
         );
         assert!(!content.contains("### PRs reviewed"));
         assert!(!content.contains("### PRs merged\n\n- None."));
@@ -5352,7 +5554,12 @@ mod tests {
         write_state_file(
             &repo_root.path,
             r#"{
-                "last_cycle": {"number": 154}
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "cycle": 154,
+                    "phase_entered_at": "2026-03-06T01:00:00Z"
+                },
+                "agent_sessions": []
             }"#,
         );
         let start_receipt = create_git_commit_with_message(
@@ -5519,7 +5726,7 @@ mod tests {
         let entries = vec![CycleReceiptJsonEntry {
             tool: "record-dispatch".to_string(),
             receipt: "abcdef1".to_string(),
-            commit: "state(record-dispatch): #42 dispatched [cycle 154]".to_string(),
+            _commit: "state(record-dispatch): #42 dispatched [cycle 154]".to_string(),
             url: Some(
                 "https://github.com/EvaLok/schema-org-json-ld/commit/abcdef1234567890".to_string(),
             ),
@@ -6795,6 +7002,20 @@ mod tests {
                     "pr_merge_rate": "90.9%",
                     "in_flight": 1
                 },
+                "deferred_findings": [
+                    {
+                        "category": "process-adherence",
+                        "deferred_cycle": 149,
+                        "deadline_cycle": 154,
+                        "resolved": false
+                    },
+                    {
+                        "category": "journal-quality",
+                        "deferred_cycle": 150,
+                        "deadline_cycle": 155,
+                        "resolved": false
+                    }
+                ],
                 "agent_sessions": [
                     {
                         "issue": 1825,
@@ -6818,6 +7039,10 @@ mod tests {
         assert_eq!(
             input.next_steps,
             vec![
+                "Address deferred finding: process-adherence (deferred cycle 149, deadline cycle 154) — must be actioned, dispatched, or explicitly dropped this cycle"
+                    .to_string(),
+                "Address deferred finding: journal-quality (deferred cycle 150, deadline cycle 155) — must be actioned, dispatched, or explicitly dropped this cycle"
+                    .to_string(),
                 "Review and iterate on PR from #1825 (Add --auto-pipeline flag to write-entry) when Copilot completes"
                     .to_string()
             ]
@@ -6860,6 +7085,99 @@ mod tests {
             input.next_steps,
             vec!["No in-flight sessions — plan next dispatch".to_string()]
         );
+    }
+
+    #[test]
+    fn worklog_auto_next_excludes_dropped_deferred_findings() {
+        let repo_root = TempRepoDir::new("worklog-auto-next-dropped-finding");
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "cycle_phase": {
+                    "cycle": 154
+                },
+                "in_flight_sessions": 0,
+                "tool_pipeline": {
+                    "status": "PASS (6/6)"
+                },
+                "publish_gate": {
+                    "status": "open"
+                },
+                "copilot_metrics": {
+                    "total_dispatches": 12,
+                    "produced_pr": 11,
+                    "merged": 10,
+                    "pr_merge_rate": "90.9%",
+                    "in_flight": 0
+                },
+                "deferred_findings": [
+                    {
+                        "category": "process-adherence",
+                        "deferred_cycle": 149,
+                        "deadline_cycle": 154,
+                        "resolved": false,
+                        "dropped_rationale": "superseded by broader fix"
+                    }
+                ],
+                "agent_sessions": []
+            }"#,
+        );
+
+        let mut args = worklog_args("Auto next dropped finding");
+        args.auto_next = true;
+
+        let input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+
+        assert_eq!(
+            input.next_steps,
+            vec!["No in-flight sessions — plan next dispatch".to_string()]
+        );
+    }
+
+    #[test]
+    fn worklog_dry_run_renders_markdown_without_writing_file() {
+        let repo_root = TempRepoDir::new("worklog-dry-run");
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "cycle": 154
+                },
+                "in_flight_sessions": 0,
+                "tool_pipeline": {
+                    "status": "PASS (6/6)"
+                },
+                "publish_gate": {
+                    "status": "open"
+                },
+                "copilot_metrics": {
+                    "total_dispatches": 12,
+                    "produced_pr": 11,
+                    "merged": 10,
+                    "pr_merge_rate": "90.9%",
+                    "in_flight": 0
+                },
+                "deferred_findings": [
+                    {
+                        "category": "journal-quality",
+                        "deferred_cycle": 150,
+                        "deadline_cycle": 155,
+                        "resolved": false
+                    }
+                ],
+                "agent_sessions": []
+            }"#,
+        );
+
+        let mut args = worklog_args("Dry run");
+        args.dry_run = true;
+        args.auto_next = true;
+
+        let content = render_worklog_output(&args, &repo_root.path, fixed_now()).unwrap();
+
+        assert!(content.contains("Address deferred finding: journal-quality"));
+        assert!(!repo_root.path.join("docs/worklog").exists());
     }
 
     #[test]
@@ -6967,6 +7285,17 @@ mod tests {
     fn worklog_auto_receipts_use_cycle_receipts_urls() {
         let repo_root = TempRepoDir::new("worklog-auto-receipts-urls");
         init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "cycle": 154,
+                    "phase_entered_at": "2026-03-06T01:00:00Z"
+                },
+                "agent_sessions": []
+            }"#,
+        );
         let start_receipt = create_git_commit_with_message(
             &repo_root.path,
             "notes/start.txt",
@@ -7967,6 +8296,7 @@ Reflective log for the schema-org-json-ld orchestrator.
             "--auto-gate-history",
             "--auto-self-modifications",
             "--auto-receipts",
+            "--dry-run",
             "--done",
             "did stuff",
             "--pr-reviewed",
@@ -7992,6 +8322,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 assert!(args.auto_gate_history);
                 assert!(args.auto_self_modifications);
                 assert!(args.auto_receipts);
+                assert!(args.dry_run);
                 assert_eq!(args.pr_reviewed, vec![123]);
                 assert_eq!(
                     args.issue_processed,
