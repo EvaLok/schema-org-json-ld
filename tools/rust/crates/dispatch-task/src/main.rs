@@ -190,6 +190,9 @@ fn run_with_runners(
     let pipeline_warning =
         match enforce_pipeline_gate(&cli.repo_root, false, pipeline_runner) {
             Ok(warning) => warning,
+            Err(PipelineGateError::ReviewDispatchBlocked(message)) => {
+                return Err(message);
+            }
             Err(PipelineGateError::ExecutionFailed(detail)) => {
                 eprintln!("pipeline-check execution error: {detail}");
                 return Err(record_dispatch::PIPELINE_GATE_FAILURE_MESSAGE.to_string());
