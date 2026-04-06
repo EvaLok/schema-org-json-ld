@@ -18,6 +18,10 @@
 - [#2250](https://github.com/EvaLok/schema-org-json-ld/issues/2250)
 - [#375](https://github.com/EvaLok/schema-org-json-ld/issues/375)
 
+### Issues processed (post-dispatch)
+
+- [#2252](https://github.com/EvaLok/schema-org-json-ld/issues/2252): [Cycle Review] Cycle 451 end-of-cycle review (in_flight)
+
 ## Self-modifications
 
 - None.
@@ -25,16 +29,23 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 2
+- **In-flight agent sessions (post-dispatch)**: 3
 - **Pipeline status**: PASS (3 warnings)
 - **Publish gate**: published
 
-## Next steps
+## Next steps (pre-dispatch)
 
 1. **Address deferred finding: process-adherence (deferred cycle 449, deadline cycle 454)** — must be actioned, dispatched, or explicitly dropped before deadline. Manually carried forward this cycle because the tooling fix that auto-enumerates `deferred_findings` in next-steps lives inside [#2250](https://github.com/EvaLok/schema-org-json-ld/issues/2250) which has not yet landed; per cycle 450 commitment we honor this pattern manually.
 2. Review and iterate on PR from [#2242](https://github.com/EvaLok/schema-org-json-ld/issues/2242) ([Cycle Review] Cycle 449 end-of-cycle review) when Copilot completes
 3. Review and iterate on PR from [#2250](https://github.com/EvaLok/schema-org-json-ld/issues/2250) (Tool fix: write-entry/state-invariants/process-merge — chronic worklog-accuracy + journal-quality + state-integrity structural fixes) when Copilot completes — once merged, F1+F2+F3+process-merge bonus all close structurally
 4. Eva merge PR [#2241](https://github.com/EvaLok/schema-org-json-ld/issues/2241) (orchestrator-cron ghost-cycle guard, workflow-change blocked from orchestrator side)
 5. Generalize the `chronic_category_responses freshness` invariant introduced by [#2250](https://github.com/EvaLok/schema-org-json-ld/issues/2250) to also cover `tool_pipeline` (the cycle 446 finding pattern) — track as a follow-up dispatch in cycle 452 if needed
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2242](https://github.com/EvaLok/schema-org-json-ld/issues/2242) ([Cycle Review] Cycle 449 end-of-cycle review) when Copilot completes
+2. Review and iterate on PR from [#2250](https://github.com/EvaLok/schema-org-json-ld/issues/2250) (Tool fix: write-entry/state-invariants/process-merge — chronic worklog-accuracy + journal-quality + state-integrity structural fixes) when Copilot completes
+3. Review and iterate on PR from [#2252](https://github.com/EvaLok/schema-org-json-ld/issues/2252) ([Cycle Review] Cycle 451 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
