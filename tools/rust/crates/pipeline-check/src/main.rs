@@ -2765,8 +2765,8 @@ fn mass_deferral_gate_assessment(repo_root: &Path) -> Result<StepAssessment, Str
     );
     if history_entry.deferred == history_entry.finding_count {
         return Ok(StepAssessment {
-            status: StepStatus::Fail,
-            severity: Severity::Blocking,
+            status: StepStatus::Warn,
+            severity: Severity::Warning,
             detail,
         });
     }
@@ -7120,7 +7120,7 @@ mod tests {
     }
 
     #[test]
-    fn mass_deferral_gate_fails_at_one_hundred_percent() {
+    fn mass_deferral_gate_warns_at_one_hundred_percent() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root =
@@ -7147,8 +7147,8 @@ mod tests {
 
         let step = verify_mass_deferral_gate(&root);
 
-        assert_eq!(step.status, StepStatus::Fail);
-        assert_eq!(step.severity, Severity::Blocking);
+        assert_eq!(step.status, StepStatus::Warn);
+        assert_eq!(step.severity, Severity::Warning);
         let detail = step.detail.as_deref().unwrap_or_default();
         assert!(detail.contains("4 of 4"));
         assert!(detail.contains("100.0%"));
