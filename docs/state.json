@@ -13553,18 +13553,17 @@
   "tool_pipeline": {
     "blocks_publish": false,
     "c5_5_gate": {
-      "cycle": 447,
-      "needs_reverify": false,
-      "pipeline_summary": "PASS (4 warnings)",
-      "status": "PASS"
+      "cycle": 448,
+      "needs_reverify": true,
+      "status": "FAIL"
     },
     "c5_5_initial_result": {
-      "cycle": 446,
-      "exit_code": 0,
-      "has_blocking_findings": false,
-      "overall": "pass",
+      "cycle": 448,
+      "exit_code": 1,
+      "has_blocking_findings": true,
+      "overall": "fail",
       "result": "FAIL",
-      "summary": "PASS (1 blocking warning, 2 warnings)"
+      "summary": "FAIL (3 warnings, 1 blocking: mass-deferral-gate)"
     },
     "eva_directive": 436,
     "phases": [
