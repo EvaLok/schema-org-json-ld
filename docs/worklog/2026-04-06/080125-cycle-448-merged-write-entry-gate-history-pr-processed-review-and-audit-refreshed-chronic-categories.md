@@ -35,11 +35,18 @@
 
 - **In-flight agent sessions**: 0
 - **Pipeline status**: FAIL (4 warnings, 3 blocking: mass-deferral-gate, frozen-commit-verify, current-cycle-steps)
+- **Pipeline status (post-dispatch)**: FAIL (C5.5 FAIL: mass-deferral-gate 100% deferral — blocked review dispatch)
+- **Close-out gate failures**: C5.5 FAIL: mass-deferral-gate 100% honest deferral blocked review dispatch and record-dispatch
 - **Publish gate**: published
 
-## Next steps
+## Next steps (pre-dispatch)
 
 1. No in-flight sessions — plan next dispatch
+
+## Next steps (post-dispatch)
+
+1. Dispatch audit #375 workflow-change task (deferred from this cycle)
+2. Address mass-deferral-gate design tension — file question-for-eva
 
 ## Commit receipts
 
