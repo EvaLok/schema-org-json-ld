@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
-const PROCESS_MERGE_BINARY: &str = "tools/rust/target/release/process-merge";
+const PROCESS_MERGE_WRAPPER: &str = "tools/process-merge";
 
 #[derive(Debug, Parser)]
 #[command(name = "merge-pr")]
@@ -52,23 +52,10 @@ impl CommandRunner for ProcessRunner {
     }
 
     fn process_merge(&self, repo_root: &Path, args: &[String]) -> Result<ExecutionResult, String> {
-        let binary = repo_root.join(PROCESS_MERGE_BINARY);
-        let output = Command::new(&binary)
-            .current_dir(repo_root)
-            .args(args)
-            .output()
-            .map_err(|error| {
-                format!(
-                    "failed to execute {}: {}",
-                    binary.display(),
-                    error
-                )
-            })?;
-        Ok(ExecutionResult {
-            exit_code: output.status.code(),
-            stdout: String::from_utf8_lossy(&output.stdout).to_string(),
-            stderr: String::from_utf8_lossy(&output.stderr).to_string(),
-        })
+        let wrapper = repo_root.join(PROCESS_MERGE_WRAPPER);
+        let mut bash_args = vec![wrapper.display().to_string()];
+        bash_args.extend_from_slice(args);
+        run_command("bash", repo_root, &bash_args)
     }
 }
 
@@ -116,13 +103,7 @@ fn run(cli: Cli, runner: &dyn CommandRunner) -> Result<String, String> {
     }
 
     let repo_root = canonicalize_repo_root(&cli.repo_root)?;
-    execute(
-        &Cli {
-            repo_root,
-            ..cli
-        },
-        runner,
-    )
+    execute(&Cli { repo_root, ..cli }, runner)
 }
 
 fn execute(cli: &Cli, runner: &dyn CommandRunner) -> Result<String, String> {
@@ -248,19 +229,36 @@ fn execute(cli: &Cli, runner: &dyn CommandRunner) -> Result<String, String> {
     } else if is_missing_remote_branch(&delete_branch_output) {
         lines.push(skipped_branch_message);
     } else {
-        return Err(command_failure_message(&delete_branch_command, &delete_branch_output));
+        return Err(command_failure_message(
+            &delete_branch_command,
+            &delete_branch_output,
+        ));
     }
 
-    lines.push(format!("Merge workflow complete for PR #{} (receipt: {})", cli.pr, receipt));
+    lines.push(format!(
+        "Merge workflow complete for PR #{} (receipt: {})",
+        cli.pr, receipt
+    ));
     Ok(lines.join("\n"))
 }
 
-fn run_command(program: &str, repo_root: &Path, args: &[String]) -> Result<ExecutionResult, String> {
+fn run_command(
+    program: &str,
+    repo_root: &Path,
+    args: &[String],
+) -> Result<ExecutionResult, String> {
     let output = Command::new(program)
         .current_dir(repo_root)
         .args(args)
         .output()
-        .map_err(|error| format!("failed to execute {} {}: {}", program, args.join(" "), error))?;
+        .map_err(|error| {
+            format!(
+                "failed to execute {} {}: {}",
+                program,
+                args.join(" "),
+                error
+            )
+        })?;
     Ok(ExecutionResult {
         exit_code: output.status.code(),
         stdout: String::from_utf8_lossy(&output.stdout).to_string(),
@@ -269,8 +267,13 @@ fn run_command(program: &str, repo_root: &Path, args: &[String]) -> Result<Execu
 }
 
 fn canonicalize_repo_root(repo_root: &Path) -> Result<PathBuf, String> {
-    fs::canonicalize(repo_root)
-        .map_err(|error| format!("failed to resolve repo root {}: {}", repo_root.display(), error))
+    fs::canonicalize(repo_root).map_err(|error| {
+        format!(
+            "failed to resolve repo root {}: {}",
+            repo_root.display(),
+            error
+        )
+    })
 }
 
 fn fetch_pr_view(
@@ -290,7 +293,10 @@ fn fetch_pr_view(
             "state,isDraft,mergeable,headRefName".to_string(),
         ],
     )?;
-    ensure_success(&format!("gh pr view {} --repo {}", pr_number, MAIN_REPO), &output)?;
+    ensure_success(
+        &format!("gh pr view {} --repo {}", pr_number, MAIN_REPO),
+        &output,
+    )?;
     parse_pr_view(&output.stdout)
 }
 
@@ -303,7 +309,8 @@ fn fetch_pr_state(
 }
 
 fn parse_pr_view(raw: &str) -> Result<PullRequestView, String> {
-    serde_json::from_str(raw).map_err(|error| format!("failed to parse gh pr view output: {}", error))
+    serde_json::from_str(raw)
+        .map_err(|error| format!("failed to parse gh pr view output: {}", error))
 }
 
 fn ensure_mergeable(pr_number: u64, pr: &PullRequestView) -> Result<(), String> {
@@ -354,8 +361,8 @@ fn render_dry_run(cli: &Cli) -> String {
     ));
     lines.push("Would run: git pull --rebase origin master".to_string());
     lines.push(format!(
-        "Would run: {} --prs {} --issues {} --repo-root {}",
-        cli.repo_root.join(PROCESS_MERGE_BINARY).display(),
+        "Would run: bash {} --prs {} --issues {} --repo-root {}",
+        cli.repo_root.join(PROCESS_MERGE_WRAPPER).display(),
         cli.pr,
         cli.issue,
         cli.repo_root.display()
@@ -371,10 +378,12 @@ fn render_dry_run(cli: &Cli) -> String {
 
 fn extract_receipt_hash(stdout: &str) -> Result<String, String> {
     let marker = "(receipt: ";
-    let start = stdout
-        .rfind(marker)
-        .ok_or_else(|| format!("process-merge output did not include a receipt hash: {}", stdout.trim()))?
-        + marker.len();
+    let start = stdout.rfind(marker).ok_or_else(|| {
+        format!(
+            "process-merge output did not include a receipt hash: {}",
+            stdout.trim()
+        )
+    })? + marker.len();
     let remaining = &stdout[start..];
     let end = remaining.find(')').ok_or_else(|| {
         format!(
@@ -405,9 +414,10 @@ fn ensure_success(command: &str, output: &ExecutionResult) -> Result<(), String>
 }
 
 fn command_failure_message(command: &str, output: &ExecutionResult) -> String {
-    let code = output
-        .exit_code
-        .map_or_else(|| "terminated by signal".to_string(), |value| value.to_string());
+    let code = output.exit_code.map_or_else(
+        || "terminated by signal".to_string(),
+        |value| value.to_string(),
+    );
     let stderr = output.stderr.trim();
 
     if stderr.is_empty() {
@@ -510,7 +520,9 @@ mod tests {
     fn help_contains_expected_flags() {
         let mut command = Cli::command();
         let mut output = Vec::new();
-        command.write_long_help(&mut output).expect("help should render");
+        command
+            .write_long_help(&mut output)
+            .expect("help should render");
         let help = String::from_utf8(output).expect("help should be utf-8");
 
         assert!(help.contains("--pr"));
@@ -598,9 +610,17 @@ mod tests {
 
         let output = execute(&cli, &runner).expect("dry-run should succeed");
 
-        assert!(output.contains("Would run: gh pr merge 1234 --squash --repo EvaLok/schema-org-json-ld"));
+        assert!(output
+            .contains("Would run: gh pr merge 1234 --squash --repo EvaLok/schema-org-json-ld"));
         assert!(output.contains("Would run: git pull --rebase origin master"));
-        assert!(output.contains("Would query PR #1234 for headRefName and run: git push origin --delete <headRefName>"));
+        assert!(output.contains(&format!(
+            "Would run: bash {} --prs 1234 --issues 5678 --repo-root {}",
+            repo_root.join(PROCESS_MERGE_WRAPPER).display(),
+            repo_root.display()
+        )));
+        assert!(output.contains(
+            "Would query PR #1234 for headRefName and run: git push origin --delete <headRefName>"
+        ));
         assert!(runner.gh_calls().is_empty());
         assert!(runner.git_calls().is_empty());
         assert!(runner.process_merge_calls().is_empty());
@@ -653,5 +673,37 @@ mod tests {
         assert_eq!(runner.gh_calls().len(), 1);
         assert_eq!(runner.git_calls().len(), 3);
         assert_eq!(runner.process_merge_calls().len(), 1);
+    }
+
+    #[test]
+    fn process_runner_invokes_process_merge_via_bash_wrapper() {
+        let repo_root = std::env::temp_dir().join("merge-pr-process-runner-wrapper");
+        let tools_dir = repo_root.join("tools");
+        fs::create_dir_all(&tools_dir).expect("tools dir should exist");
+        fs::write(
+            tools_dir.join("process-merge"),
+            "#!/usr/bin/env bash\nprintf 'wrapper:%s\\n' \"$0\"\nprintf 'args:%s\\n' \"$*\"\n",
+        )
+        .expect("wrapper should be written");
+
+        let runner = ProcessRunner;
+        let result = runner
+            .process_merge(
+                &repo_root,
+                &[
+                    "--prs".to_string(),
+                    "123".to_string(),
+                    "--issues".to_string(),
+                    "456".to_string(),
+                ],
+            )
+            .expect("process-merge wrapper should execute");
+
+        assert_eq!(result.exit_code, Some(0));
+        assert!(result.stdout.contains("wrapper:"));
+        assert!(result
+            .stdout
+            .contains(&repo_root.join("tools/process-merge").display().to_string()));
+        assert!(result.stdout.contains("args:--prs 123 --issues 456"));
     }
 }
