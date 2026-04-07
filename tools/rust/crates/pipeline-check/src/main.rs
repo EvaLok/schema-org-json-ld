@@ -29,6 +29,8 @@ const WORKLOG_IMMUTABILITY_STEP_NAME: &str = "worklog-immutability";
 const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const CURRENT_CYCLE_STEPS_STEP_NAME: &str = "current-cycle-steps";
 const WORKLOG_PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
+const GATE_FAILURE_HONESTY_PREFIX: &str = "FAIL→PASS (";
+const GATE_FAILURE_HONESTY_MARKER: &str = "initially failed";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const STEP_NAMES: [&str; 17] = [
     "metric-snapshot",
@@ -2152,10 +2154,11 @@ fn worklog_immutability_status_for_date(
         ));
     };
 
-    // Use the cycle from the worklog filename so the baseline lookup tracks
-    // the worklog's owning cycle, not the orchestrator's current cycle. Without
-    // this, an early-startup pipeline-check (current cycle has no commits yet)
-    // falls back to the first-ADD commit of a previous cycle's worklog and
+    // Use the cycle from the worklog filename (for example,
+    // HHMMSS-cycle-NNN-summary.md) so the baseline lookup tracks the worklog's
+    // owning cycle, not the orchestrator's current cycle. Without this, an
+    // early-startup pipeline-check (current cycle has no commits yet) falls
+    // back to the first-ADD commit of a previous cycle's worklog and
     // misreports the C5 freeze (a legitimate mutation by the cycle that owns
     // the file) as a post-publish violation.
     let worklog_cycle = worklog_path
@@ -2223,8 +2226,8 @@ fn worklog_immutability_status_for_date(
     // legitimate way for the freeze step to record both the original FAIL and the
     // final PASS in a single immutable line.
     if original_status.starts_with("FAIL")
-        && current_status.starts_with("FAIL→PASS")
-        && current_status.contains("initially failed")
+        && current_status.starts_with(GATE_FAILURE_HONESTY_PREFIX)
+        && current_status.contains(GATE_FAILURE_HONESTY_MARKER)
     {
         return Ok((
             StepStatus::Pass,
