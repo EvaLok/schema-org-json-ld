@@ -6811,8 +6811,10 @@
       "addresses_finding": "453:1",
       "dispatched_at": "2026-04-07T07:53:24Z",
       "issue": 2265,
+      "merged_at": "2026-04-07T09:42:16Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2266,
+      "status": "merged",
       "title": "Tool fix: align worklog with C5.5 final state and remove C6.5 post-dispatch refresh (chronic worklog-accuracy 6/6 + audit #382)"
     },
     {
@@ -7621,7 +7623,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 454"
+        "last_refreshed": "cycle 455"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -7769,12 +7771,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 30,
     "issue": 2269,
     "number": 455,
-    "summary": "1 dispatches, 2 merges (PR #2261, PR #2263)",
+    "summary": "0 dispatches, 1 merges",
     "timestamp": "2026-04-07T09:25:35Z"
   },
   "last_eva_comment_check": "2026-04-07T09:25:35Z",
