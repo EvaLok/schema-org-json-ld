@@ -2884,12 +2884,7 @@ fn is_review_dispatch_session(session: &state_schema::AgentSession) -> bool {
 }
 
 fn session_has_addresses_finding(session: &state_schema::AgentSession) -> bool {
-    // AgentSession flattens unknown state.json keys into `extra`, so a
-    // top-level JSON field like `addresses_finding` is accessed here.
-    session
-        .extra
-        .get("addresses_finding")
-        .is_some_and(|value| !value.is_null())
+    !session.addresses_finding_refs().is_empty()
 }
 
 fn format_dispatch_candidate(session: &state_schema::AgentSession) -> String {
@@ -7271,6 +7266,72 @@ mod tests {
             step.detail.as_deref(),
             Some(
                 "review cycle 350 has dispatch_created findings and all current-cycle non-review dispatches set addresses_finding"
+            )
+        );
+    }
+
+    #[test]
+    fn dispatch_finding_reconciliation_accepts_plural_addresses_findings() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-dispatch-finding-reconciliation-plural-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {
+                    "number": 450,
+                    "timestamp": "2026-03-10T00:00:00Z"
+                },
+                "cycle_phase": {
+                    "cycle": 451
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 902,
+                        "title": "Address coupled review findings",
+                        "dispatched_at": "2026-03-10T12:00:00Z",
+                        "status": "in_flight",
+                        "addresses_findings": ["450:1", "450:2"]
+                    }
+                ],
+                "review_agent": {
+                    "history": [{
+                        "cycle": 450,
+                        "categories": ["state-integrity", "tooling-contract"],
+                        "actioned": 0,
+                        "deferred": 0,
+                        "dispatch_created": 2,
+                        "ignored": 0,
+                        "finding_count": 2,
+                        "complacency_score": 2,
+                        "finding_dispositions": [
+                            {
+                                "category": "state-integrity",
+                                "disposition": "dispatch_created"
+                            },
+                            {
+                                "category": "tooling-contract",
+                                "disposition": "dispatch_created"
+                            }
+                        ]
+                    }]
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_dispatch_finding_reconciliation(&root);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some(
+                "review cycle 450 has dispatch_created findings and all current-cycle non-review dispatches set addresses_finding"
             )
         );
     }

@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{ArgAction, Parser};
 use record_dispatch::{
     apply_dispatch_patch, build_dispatch_patch, concurrency_warning_message,
     dispatch_commit_message, enforce_pipeline_gate, fixup_latest_worklog_in_flight, resolve_model,
@@ -10,6 +10,7 @@ use state_schema::{
     commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
     write_state_value,
 };
+use std::collections::BTreeSet;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
@@ -37,8 +38,8 @@ struct Cli {
     labels: Vec<String>,
 
     /// Review finding this dispatch addresses, in CYCLE:INDEX format
-    #[arg(long)]
-    addresses_finding: Option<AddressedFinding>,
+    #[arg(long, action = ArgAction::Append)]
+    addresses_finding: Vec<AddressedFinding>,
 
     /// Repository root path
     #[arg(long, default_value = ".")]
@@ -75,6 +76,12 @@ impl std::str::FromStr for AddressedFinding {
             return Err("--addresses-finding index must be greater than zero".to_string());
         }
         Ok(Self { cycle, index })
+    }
+}
+
+impl AddressedFinding {
+    fn finding_ref(&self) -> String {
+        format!("{}:{}", self.cycle, self.index)
     }
 }
 
@@ -158,12 +165,9 @@ fn main() {
 fn run(cli: Cli) -> Result<(), String> {
     let pipeline_runner = ProcessRunner;
     let api_runner = ProcessGithubApiRunner;
-    run_with_runners(
-        cli,
-        &pipeline_runner,
-        &api_runner,
-        &mut |warning| eprintln!("{warning}"),
-    )
+    run_with_runners(cli, &pipeline_runner, &api_runner, &mut |warning| {
+        eprintln!("{warning}")
+    })
 }
 
 fn run_with_runners(
@@ -187,20 +191,19 @@ fn run_with_runners(
     }
 
     // Validate pipeline gate before creating the issue.
-    let pipeline_warning =
-        match enforce_pipeline_gate(&cli.repo_root, false, pipeline_runner) {
-            Ok(warning) => warning,
-            Err(PipelineGateError::ReviewDispatchBlocked(message)) => {
-                return Err(message);
-            }
-            Err(PipelineGateError::ExecutionFailed(detail)) => {
-                eprintln!("pipeline-check execution error: {detail}");
-                return Err(record_dispatch::PIPELINE_GATE_FAILURE_MESSAGE.to_string());
-            }
-            Err(PipelineGateError::Failed) => {
-                return Err(record_dispatch::PIPELINE_GATE_FAILURE_MESSAGE.to_string());
-            }
-        };
+    let pipeline_warning = match enforce_pipeline_gate(&cli.repo_root, false, pipeline_runner) {
+        Ok(warning) => warning,
+        Err(PipelineGateError::ReviewDispatchBlocked(message)) => {
+            return Err(message);
+        }
+        Err(PipelineGateError::ExecutionFailed(detail)) => {
+            eprintln!("pipeline-check execution error: {detail}");
+            return Err(record_dispatch::PIPELINE_GATE_FAILURE_MESSAGE.to_string());
+        }
+        Err(PipelineGateError::Failed) => {
+            return Err(record_dispatch::PIPELINE_GATE_FAILURE_MESSAGE.to_string());
+        }
+    };
     if let Some(warning) = pipeline_warning {
         warn(warning);
     }
@@ -214,7 +217,7 @@ fn run_with_runners(
         created_issue.number,
         &cli.title,
         &model,
-        cli.addresses_finding.as_ref(),
+        &cli.addresses_finding,
         warn,
     ) {
         Ok(receipt) => {
@@ -247,7 +250,7 @@ fn record_dispatch_state(
     issue: u64,
     title: &str,
     model: &str,
-    addresses_finding: Option<&AddressedFinding>,
+    addresses_finding: &[AddressedFinding],
     warn: &mut dyn FnMut(&str),
 ) -> Result<String, String> {
     let dispatched_at = current_utc_timestamp();
@@ -271,9 +274,9 @@ fn record_dispatch_state(
     )?;
     apply_dispatch_patch(&mut state_value, &patch)?;
 
-    if let Some(finding) = addresses_finding {
-        reconcile_review_history_dispatch(&mut state_value, finding, warn)?;
-    }
+    let addresses_finding = dedupe_addressed_findings(addresses_finding);
+    set_session_addresses_findings(&mut state_value, issue, &addresses_finding)?;
+    reconcile_review_history_dispatches(&mut state_value, &addresses_finding, warn)?;
 
     // NOTE: dispatch-task does NOT perform the close_out → complete phase
     // transition.  Phase transitions are exclusively the responsibility of the
@@ -301,6 +304,80 @@ fn record_dispatch_state(
     push_to_origin_master(repo_root)?;
 
     Ok(receipt)
+}
+
+/// Deduplicate repeated finding references while preserving the first
+/// occurrence order from the CLI. Uniqueness is defined by the
+/// `(cycle, index)` pair.
+fn dedupe_addressed_findings(addresses_finding: &[AddressedFinding]) -> Vec<AddressedFinding> {
+    let mut deduped = Vec::new();
+    let mut seen = BTreeSet::new();
+    for finding in addresses_finding {
+        if seen.insert((finding.cycle, finding.index)) {
+            deduped.push(finding.clone());
+        }
+    }
+    deduped
+}
+
+fn set_session_addresses_findings(
+    state: &mut Value,
+    issue: u64,
+    addresses_finding: &[AddressedFinding],
+) -> Result<(), String> {
+    let issue_i64 = i64::try_from(issue)
+        .map_err(|error| format!("issue #{issue} exceeds i64 range: {error}"))?;
+    let session = state
+        .pointer_mut("/agent_sessions")
+        .and_then(Value::as_array_mut)
+        .ok_or_else(|| "missing array /agent_sessions in docs/state.json".to_string())?
+        .iter_mut()
+        .rev()
+        .find(|session| session.get("issue").and_then(Value::as_i64) == Some(issue_i64))
+        .ok_or_else(|| format!("agent_sessions does not contain an entry for issue #{issue}"))?;
+    let session_object = session
+        .as_object_mut()
+        .ok_or_else(|| format!("agent_sessions entry for issue #{issue} must be an object"))?;
+
+    match addresses_finding {
+        [] => {
+            session_object.remove("addresses_finding");
+            session_object.remove("addresses_findings");
+        }
+        [finding] => {
+            session_object.remove("addresses_findings");
+            session_object.insert(
+                "addresses_finding".to_string(),
+                serde_json::json!(finding.finding_ref()),
+            );
+        }
+        findings => {
+            session_object.remove("addresses_finding");
+            session_object.insert(
+                "addresses_findings".to_string(),
+                serde_json::json!(findings
+                    .iter()
+                    .map(AddressedFinding::finding_ref)
+                    .collect::<Vec<_>>()),
+            );
+        }
+    }
+
+    Ok(())
+}
+
+/// Reconcile review history for every addressed finding reference attached to
+/// the dispatch by delegating to the existing singular reconciliation helper.
+fn reconcile_review_history_dispatches(
+    state: &mut Value,
+    addressed_findings: &[AddressedFinding],
+    warn: &mut dyn FnMut(&str),
+) -> Result<(), String> {
+    for addressed_finding in addressed_findings {
+        reconcile_review_history_dispatch(state, addressed_finding, warn)?;
+    }
+
+    Ok(())
 }
 
 fn build_issue_payload(title: &str, body: &str, labels: &[String], model: &str) -> IssuePayload {
@@ -354,9 +431,7 @@ fn reconcile_review_history_dispatch(
 
     let entry = history
         .iter_mut()
-        .find(|entry| {
-            entry.get("cycle").and_then(Value::as_u64) == Some(addressed_finding.cycle)
-        })
+        .find(|entry| entry.get("cycle").and_then(Value::as_u64) == Some(addressed_finding.cycle))
         .ok_or_else(|| {
             format!(
                 "review history entry for cycle {} was not found in docs/state.json",
@@ -458,10 +533,7 @@ fn reconcile_review_history_dispatch(
         "disposition".to_string(),
         serde_json::json!("dispatch_created"),
     );
-    entry_object.insert(
-        "deferred".to_string(),
-        serde_json::json!(deferred - 1),
-    );
+    entry_object.insert("deferred".to_string(), serde_json::json!(deferred - 1));
     entry_object.insert(
         "dispatch_created".to_string(),
         serde_json::json!(dispatch_created + 1),
@@ -529,14 +601,9 @@ mod tests {
 
     #[test]
     fn default_label_is_agent_task() {
-        let cli = Cli::try_parse_from([
-            "dispatch-task",
-            "--title",
-            "T",
-            "--body-file",
-            "/dev/null",
-        ])
-        .expect("CLI should parse without --label");
+        let cli =
+            Cli::try_parse_from(["dispatch-task", "--title", "T", "--body-file", "/dev/null"])
+                .expect("CLI should parse without --label");
         assert_eq!(cli.labels, vec!["agent-task"]);
     }
 
@@ -575,7 +642,7 @@ mod tests {
                 body_file,
                 model: Some("gpt-5.4".to_string()),
                 labels: vec!["agent-task".to_string()],
-                addresses_finding: None,
+                addresses_finding: Vec::new(),
                 repo_root: repo.path().to_path_buf(),
                 dry_run: true,
             },
@@ -614,7 +681,7 @@ mod tests {
                 body_file,
                 model: Some("gpt-5.4".to_string()),
                 labels: vec!["agent-task".to_string()],
-                addresses_finding: None,
+                addresses_finding: Vec::new(),
                 repo_root: repo.path().to_path_buf(),
                 dry_run: true,
             },
@@ -645,6 +712,117 @@ mod tests {
         let finding: AddressedFinding = "164:2".parse().expect("should parse");
         assert_eq!(finding.cycle, 164);
         assert_eq!(finding.index, 2);
+    }
+
+    #[test]
+    fn addresses_finding_cli_accepts_multiple_values() {
+        let cli = Cli::try_parse_from([
+            "dispatch-task",
+            "--title",
+            "T",
+            "--body-file",
+            "/dev/null",
+            "--addresses-finding",
+            "450:1",
+            "--addresses-finding",
+            "450:2",
+        ])
+        .expect("CLI should parse repeated --addresses-finding");
+
+        let mut state = json!({
+            "agent_sessions": [{
+                "issue": 901
+            }]
+        });
+
+        let addresses_finding = dedupe_addressed_findings(&cli.addresses_finding);
+        set_session_addresses_findings(&mut state, 901, &addresses_finding)
+            .expect("session linkage should be written");
+
+        assert_eq!(
+            state.pointer("/agent_sessions/0/addresses_findings"),
+            Some(&json!(["450:1", "450:2"]))
+        );
+        assert_eq!(state.pointer("/agent_sessions/0/addresses_finding"), None);
+    }
+
+    #[test]
+    fn addresses_finding_cli_keeps_singular_field_for_one_value() {
+        let cli = Cli::try_parse_from([
+            "dispatch-task",
+            "--title",
+            "T",
+            "--body-file",
+            "/dev/null",
+            "--addresses-finding",
+            "450:1",
+        ])
+        .expect("CLI should parse one --addresses-finding");
+
+        let mut state = json!({
+            "agent_sessions": [{
+                "issue": 901
+            }]
+        });
+
+        let addresses_finding = dedupe_addressed_findings(&cli.addresses_finding);
+        set_session_addresses_findings(&mut state, 901, &addresses_finding)
+            .expect("session linkage should be written");
+
+        assert_eq!(
+            state.pointer("/agent_sessions/0/addresses_finding"),
+            Some(&json!("450:1"))
+        );
+        assert_eq!(state.pointer("/agent_sessions/0/addresses_findings"), None);
+    }
+
+    #[test]
+    fn reconcile_review_history_dispatches_updates_all_referenced_deferred_findings() {
+        let mut state = json!({
+            "review_agent": {
+                "history": [{
+                    "cycle": 450,
+                    "deferred": 2,
+                    "dispatch_created": 0,
+                    "finding_count": 2,
+                    "finding_dispositions": [
+                        {
+                            "category": "state-integrity",
+                            "disposition": "deferred"
+                        },
+                        {
+                            "category": "tooling-contract",
+                            "disposition": "deferred"
+                        }
+                    ]
+                }]
+            }
+        });
+
+        let addressed_findings = vec![
+            "450:1".parse().expect("first finding should parse"),
+            "450:2".parse().expect("second finding should parse"),
+        ];
+
+        reconcile_review_history_dispatches(&mut state, &addressed_findings, &mut |_| {})
+            .expect("review history should reconcile");
+
+        assert_eq!(
+            state.pointer("/review_agent/history/0/deferred"),
+            Some(&json!(0))
+        );
+        assert_eq!(
+            state.pointer("/review_agent/history/0/dispatch_created"),
+            Some(&json!(2))
+        );
+        assert_eq!(
+            state.pointer("/review_agent/history/0/finding_dispositions/0/disposition"),
+            Some(&json!("dispatch_created"))
+        );
+        assert_eq!(
+            state.pointer("/review_agent/history/0/finding_dispositions/1/disposition"),
+            Some(&json!("dispatch_created"))
+        );
     }
 
     #[test]
@@ -727,10 +905,7 @@ mod tests {
             self.write_default_state();
             self.write_config("gpt-5.4");
             git_success(self.path(), ["init"]);
-            git_success(
-                self.path(),
-                ["config", "user.name", "Dispatch Task Tests"],
-            );
+            git_success(self.path(), ["config", "user.name", "Dispatch Task Tests"]);
             git_success(
                 self.path(),
                 ["config", "user.email", "dispatch-task-tests@example.com"],
@@ -820,5 +995,4 @@ mod tests {
             String::from_utf8_lossy(&output.stderr)
         );
     }
-
 }
