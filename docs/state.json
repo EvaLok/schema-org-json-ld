@@ -13700,9 +13700,9 @@
   "tool_pipeline": {
     "blocks_publish": false,
     "c5_5_gate": {
-      "cycle": 451,
+      "cycle": 452,
       "needs_reverify": false,
-      "pipeline_summary": "PASS (3 warnings)",
+      "pipeline_summary": "PASS (3 warnings, 1 cascade)",
       "status": "PASS"
     },
     "c5_5_initial_result": {
