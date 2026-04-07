@@ -13850,8 +13850,9 @@
     "blocks_publish": false,
     "c5_5_gate": {
       "cycle": 455,
-      "needs_reverify": true,
-      "status": "FAIL"
+      "needs_reverify": false,
+      "pipeline_summary": "PASS (2 warnings)",
+      "status": "PASS"
     },
     "c5_5_initial_result": {
       "cycle": 455,
