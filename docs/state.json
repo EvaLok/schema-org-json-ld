@@ -6820,8 +6820,10 @@
     {
       "dispatched_at": "2026-04-07T08:13:41Z",
       "issue": 2267,
+      "merged_at": "2026-04-07T09:44:30Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2268,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 454 end-of-cycle review"
     }
   ],
@@ -7771,12 +7773,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 30,
     "issue": 2269,
     "number": 455,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-07T09:25:35Z"
   },
   "last_eva_comment_check": "2026-04-07T09:25:35Z",
