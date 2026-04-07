@@ -7681,7 +7681,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 454"
+        "last_refreshed": "cycle 455"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -13274,9 +13274,37 @@
         ],
         "ignored": 0,
         "note": "F1 worklog-accuracy: actioned via corrective edit to cycle 453 worklog (collapsed FAIL/(post-dispatch)PASS into canonical FAIL→PASS form per C3 gate-failure-honesty); validate-docs now passes against published cycle 453 artifact. Commit 107a0868. F2 journal-quality: actioned via cycle 454 journal which centers the cycle 453 C4.1 failure narrative AND structural fix added in same commit. F3 process-adherence: actioned via new C5 no-post-c5-mutation constraint in COMPLETION_CHECKLIST.xml that explicitly forbids post-C5.5 worklog/journal mutation (recurrence escalation cited). All three findings shared the same root cause (post-dispatch worklog refresh) so a single structural fix addresses all three. Chronic categories (worklog-accuracy 6/6, journal-quality 6/6) remain pending verified_resolved status until cycle 455+ confirms no regression."
+      },
+      {
+        "actioned": 2,
+        "categories": [
+          "journal-quality",
+          "process-adherence",
+          "state-integrity"
+        ],
+        "complacency_score": 2,
+        "cycle": 454,
+        "deferred": 1,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "process-adherence",
+            "disposition": "actioned"
+          },
+          {
+            "category": "state-integrity",
+            "disposition": "deferred"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "actioned"
+          }
+        ],
+        "ignored": 0,
+        "note": "F1 corrected via one-time edit + structural fix #2266 merged this cycle (C5/C5.5 reordering, C6.5 patch-pipeline removed). F2 deferred — backfill-sessions only handles closed sessions; orphan #2240 still tracked outside agent_sessions ledger; will reconcile naturally when Eva merges #2241. F3 commitment rewritten to use grep -RF."
       }
     ],
-    "last_review_cycle": 453
+    "last_review_cycle": 454
   },
   "review_dispatch_consecutive": 7,
   "review_events_verified_through_cycle": 454,
