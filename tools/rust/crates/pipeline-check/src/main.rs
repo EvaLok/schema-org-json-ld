@@ -2152,9 +2152,24 @@ fn worklog_immutability_status_for_date(
         ));
     };
 
-    let cycle = current_cycle_from_state(repo_root)?;
+    // Use the cycle from the worklog filename so the baseline lookup tracks
+    // the worklog's owning cycle, not the orchestrator's current cycle. Without
+    // this, an early-startup pipeline-check (current cycle has no commits yet)
+    // falls back to the first-ADD commit of a previous cycle's worklog and
+    // misreports the C5 freeze (a legitimate mutation by the cycle that owns
+    // the file) as a post-publish violation.
+    let worklog_cycle = worklog_path
+        .file_name()
+        .and_then(|file_name| file_name.to_str())
+        .and_then(extract_worklog_cycle_from_filename)
+        .ok_or_else(|| {
+            format!(
+                "could not extract cycle from worklog filename {}",
+                worklog_path.display()
+            )
+        })?;
     let Some((baseline_commit, original_content)) =
-        last_cycle_committed_worklog_content(repo_root, &worklog_path, cycle)?
+        last_cycle_committed_worklog_content(repo_root, &worklog_path, worklog_cycle)?
     else {
         return Ok((
             StepStatus::Pass,
