@@ -204,6 +204,8 @@ fn build_agent_session(
         issue: Some(issue_number),
         title: Some(issue.title.clone()),
         dispatched_at: Some(issue.created_at.clone()),
+        addresses_finding: None,
+        addresses_findings: None,
         model: Some(DEFAULT_MODEL.to_string()),
         status: Some(status),
         pr,

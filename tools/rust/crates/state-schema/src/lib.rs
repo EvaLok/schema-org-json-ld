@@ -467,12 +467,35 @@ pub struct AgentSession {
     pub issue: Option<i64>,
     pub title: Option<String>,
     pub dispatched_at: Option<String>,
+    pub addresses_finding: Option<String>,
+    pub addresses_findings: Option<Vec<String>>,
     pub model: Option<String>,
     pub status: Option<String>,
     pub pr: Option<i64>,
     pub merged_at: Option<String>,
     #[serde(flatten)]
     pub extra: BTreeMap<String, Value>,
+}
+
+impl AgentSession {
+    pub fn addresses_finding_refs(&self) -> Vec<&str> {
+        let mut finding_refs = Vec::new();
+
+        if let Some(addresses_finding) = self.addresses_finding.as_deref() {
+            finding_refs.push(addresses_finding);
+        }
+
+        if let Some(addresses_findings) = self.addresses_findings.as_ref() {
+            for addresses_finding in addresses_findings {
+                let addresses_finding = addresses_finding.as_str();
+                if !finding_refs.contains(&addresses_finding) {
+                    finding_refs.push(addresses_finding);
+                }
+            }
+        }
+
+        finding_refs
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -643,8 +666,8 @@ mod tests {
     use super::{
         commit_state_json, current_cycle_from_state, current_utc_timestamp, default_agent_model,
         read_state_value, set_value_at_pointer, transition_cycle_phase, update_freshness,
-        write_state_value, DeferredFinding, FindingDisposition, PendingAuditImplementation,
-        ReviewHistoryEntry, StateJson, ToolsConfig, VALID_PHASES,
+        write_state_value, AgentSession, DeferredFinding, FindingDisposition,
+        PendingAuditImplementation, ReviewHistoryEntry, StateJson, ToolsConfig, VALID_PHASES,
     };
     use chrono::DateTime;
     use serde_json::{json, Value};
@@ -837,6 +860,48 @@ mod tests {
                 "disposition": "actioned"
             }]))
         );
+    }
+
+    #[test]
+    fn agent_session_addresses_finding_refs_returns_singular_value() {
+        let session = AgentSession {
+            addresses_finding: Some("450:1".to_string()),
+            ..AgentSession::default()
+        };
+
+        assert_eq!(session.addresses_finding_refs(), vec!["450:1"]);
+    }
+
+    #[test]
+    fn agent_session_addresses_finding_refs_returns_plural_values() {
+        let session = AgentSession {
+            addresses_findings: Some(vec!["450:1".to_string(), "450:2".to_string()]),
+            ..AgentSession::default()
+        };
+
+        assert_eq!(session.addresses_finding_refs(), vec!["450:1", "450:2"]);
+    }
+
+    #[test]
+    fn agent_session_addresses_finding_refs_dedupes_union_of_both_fields() {
+        let session = AgentSession {
+            addresses_finding: Some("450:1".to_string()),
+            addresses_findings: Some(vec![
+                "450:1".to_string(),
+                "450:2".to_string(),
+                "450:2".to_string(),
+            ]),
+            ..AgentSession::default()
+        };
+
+        assert_eq!(session.addresses_finding_refs(), vec!["450:1", "450:2"]);
+    }
+
+    #[test]
+    fn agent_session_addresses_finding_refs_returns_empty_when_unset() {
+        let session = AgentSession::default();
+
+        assert!(session.addresses_finding_refs().is_empty());
     }
 
     #[test]
@@ -1413,8 +1478,8 @@ mod tests {
             vec![PendingAuditImplementation {
                 issue: 1897,
                 audit_issue: Some(336),
-                description:
-                    "Add deadline enforcement for accepted audit recommendations".to_string(),
+                description: "Add deadline enforcement for accepted audit recommendations"
+                    .to_string(),
                 accepted_cycle: 391,
                 deadline_cycle: 396,
                 completed: false,
