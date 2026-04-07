@@ -2,7 +2,7 @@
 
 ## 1. [journal-quality] The journal retrofits extra commitment criteria and still marks the carry-forward as “Followed”
 
-**File**: `docs/journal/2026-04-07.md:206-209,243-255`
+**File**: `docs/journal/2026-04-07.md:206-209,243-255` (as reviewed at `4798d3cb`)
 **Evidence**:
 - The quoted prior commitment at lines 206-207 promises only two observable checks under commitment 1: `(a)` the cycle 457 close-out should publish `FAIL→PASS`, and `(b)` `record-dispatch` should update `last_cycle.summary`; commitment 2 is the separate field-inventory verifier.
 - The same entry immediately says `**Followed.**` and claims “Cycle 456 commitment 1 had 4 sub-criteria,” then later grades invented `(c)` and `(d)` items at lines 245-251 that do not appear in the quoted commitment.
@@ -11,7 +11,7 @@
 
 ## 2. [process-adherence] The cycle still bypassed `dispatch-task` and had to clean up a duplicate issue/PR pair
 
-**File**: `docs/journal/2026-04-07.md:215-227`
+**File**: `docs/journal/2026-04-07.md:215-227` (as reviewed at `4798d3cb`)
 **Evidence**:
 - The journal says the structural-fix dispatch “took two attempts”: a raw `gh api` call created issue `#2282`, then `dispatch-task` created `#2284`; line 223 explicitly says the first call bypassed `state.json::agent_sessions`.
 - GitHub issue `#2282` exists as a closed `agent-task`, and draft PR `#2283` exists as a closed, unmerged Copilot PR spawned from that abandoned dispatch attempt.
@@ -20,7 +20,7 @@
 
 ## 3. [test-gap] The `refresh-field-inventory` hotfix shipped without a field-specific regression for the new refresh-only entry
 
-**File**: `tools/rust/crates/refresh-field-inventory/src/main.rs:122-126,677-717`
+**File**: `tools/rust/crates/refresh-field-inventory/src/main.rs:122-126,677-717` (as reviewed at `69c94378`)
 **Evidence**:
 - Commit `69c94378` added `step_comment_acknowledged_gaps` to `REFRESH_ONLY_FIELDS`; that constant edit is the whole functional change the cycle uses to claim the chronic field-inventory warning was cleared.
 - The adjacent tests still only assert explicit refresh-only handling for `review_agent` and `project_mode`, plus generic uniqueness/documented-reason coverage for the list as a whole.
