@@ -4431,6 +4431,10 @@ mod tests {
             fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
                 Err("failed to fetch issue comments".to_string())
             }
+
+            fn fetch_audit_inbound_issues(&self) -> Result<Vec<AuditInboundIssue>, String> {
+                Err("audit-inbound issue fetch failed".to_string())
+            }
         }
 
         static COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -6914,6 +6918,22 @@ mod tests {
         assert_eq!(
             step.summary.as_deref(),
             Some("2/2 audit dispositions acknowledged")
+        );
+    }
+
+    #[test]
+    fn parse_audit_issue_number_rejects_negative_values() {
+        assert_eq!(
+            parse_audit_issue_number(-1),
+            Err("invalid negative audit_processed entry: -1".to_string())
+        );
+    }
+
+    #[test]
+    fn parse_audit_issue_number_rejects_zero() {
+        assert_eq!(
+            parse_audit_issue_number(0),
+            Err("invalid audit_processed entry: 0".to_string())
         );
     }
 
