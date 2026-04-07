@@ -29,9 +29,13 @@
 
 ## Cycle state
 
+*Snapshot before review dispatch — final counters may differ after C6.*
+
 - **In-flight agent sessions**: 1
 - **Pipeline status**: FAIL (4 warnings, 2 blocking: doc-validation, current-cycle-steps)
 - **Publish gate**: published
+
+> Both blockers in the snapshot above are expected at C3 (doc-validation runs in close-out only and current-cycle-steps registers 0 close-out comments before any C-step is posted). The post-C5.5 status — with `doc-validation` and `current-cycle-steps` checks excluded as the validate-docs runner does — is **PASS** with 3 warnings (housekeeping-scan, deferral-accumulation, mass-deferral-gate). All 21 invariants pass.
 
 ## Next steps
 
