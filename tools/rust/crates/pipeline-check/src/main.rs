@@ -2216,6 +2216,28 @@ fn worklog_immutability_status_for_date(
         ));
     }
 
+    // Allow gate-failure-honesty annotated transitions: cycle-runner C5 freeze
+    // rewrites a stale FAIL line to a "FAIL→PASS (... initially failed: ...; resolved by ...)"
+    // form when tool_pipeline.c5_5_initial_result recorded the prior failure. This
+    // is the COMPLETION_CHECKLIST.xml gate-failure-honesty constraint and is the
+    // legitimate way for the freeze step to record both the original FAIL and the
+    // final PASS in a single immutable line.
+    if original_status.starts_with("FAIL")
+        && current_status.starts_with("FAIL→PASS")
+        && current_status.contains("initially failed")
+    {
+        return Ok((
+            StepStatus::Pass,
+            format!(
+                "Pipeline status change allowed (gate-failure-honesty annotated) in {} from '{}' to '{}' (baseline commit {})",
+                worklog_path.display(),
+                original_status,
+                current_status,
+                short_commit(&baseline_commit)
+            ),
+        ));
+    }
+
     Ok((
         StepStatus::Fail,
         format!(

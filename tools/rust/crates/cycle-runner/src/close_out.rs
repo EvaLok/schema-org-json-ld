@@ -77,7 +77,7 @@ pub fn run(
     eprintln!("Worklog: {}", worklog.display());
     eprintln!("Journal: {}", journal.display());
 
-    let prior_gate_failures = detect_prior_gate_failures(repo_root, issue);
+    let prior_gate_failures = detect_prior_gate_failures(repo_root, issue, cycle);
 
     // C4.1: Validate docs — GATE
     step_c4_1(repo_root, issue, cycle, &worklog, &journal)?;
@@ -138,7 +138,38 @@ pub fn run(
     Ok(())
 }
 
-fn detect_prior_gate_failures(repo_root: &Path, issue: u64) -> Vec<String> {
+fn detect_prior_gate_failures(repo_root: &Path, issue: u64, cycle: u64) -> Vec<String> {
+    let mut failures = Vec::new();
+
+    // State-based source of truth: tool_pipeline.c5_5_initial_result records the
+    // first C5.5 failure for the current cycle (set by record_initial_c5_5_failure).
+    // This is what survives the F2 dispatch (#2274) — comment parsing is unreliable
+    // because the orchestrator's posted comment shape does not match the parsers.
+    if let Ok(state) = read_state_value(repo_root) {
+        if let Some(initial) = state.pointer("/tool_pipeline/c5_5_initial_result") {
+            let cycle_match = initial
+                .get("cycle")
+                .and_then(Value::as_u64)
+                .map(|c| c == cycle)
+                .unwrap_or(false);
+            let result_fail = initial
+                .get("result")
+                .and_then(Value::as_str)
+                .map(|s| s.eq_ignore_ascii_case("FAIL"))
+                .unwrap_or(false);
+            if cycle_match && result_fail {
+                if let Some(summary) = initial
+                    .get("summary")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                {
+                    failures.push(format!("C5.5 FAIL: {summary}"));
+                }
+            }
+        }
+    }
+
     let comments_path = format!("repos/{}/issues/{}/comments", MAIN_REPO, issue);
     let output = match Command::new("gh")
         .current_dir(repo_root)
@@ -148,14 +179,14 @@ fn detect_prior_gate_failures(repo_root: &Path, issue: u64) -> Vec<String> {
         Ok(output) => output,
         Err(error) => {
             eprintln!("Warning: unable to query prior gate failures from issue comments: {error}");
-            return Vec::new();
+            return failures;
         }
     };
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
         eprintln!("Warning: unable to query prior gate failures from issue comments: {stderr}");
-        return Vec::new();
+        return failures;
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -173,7 +204,12 @@ fn detect_prior_gate_failures(repo_root: &Path, issue: u64) -> Vec<String> {
         })
         .collect::<Vec<_>>();
 
-    parse_prior_gate_failures_from_comment_bodies(comment_bodies.iter().map(String::as_str))
+    for failure in parse_prior_gate_failures_from_comment_bodies(comment_bodies.iter().map(String::as_str)) {
+        if !failures.contains(&failure) {
+            failures.push(failure);
+        }
+    }
+    failures
 }
 
 fn parse_prior_gate_failures_from_comment_bodies<'a>(
@@ -2260,7 +2296,7 @@ mod tests {
         );
         make_executable(&gh_path);
 
-        let failures = with_path_prefix(&bin_dir, || detect_prior_gate_failures(&dir, 123));
+        let failures = with_path_prefix(&bin_dir, || detect_prior_gate_failures(&dir, 123, 345));
 
         assert_eq!(
             failures,
@@ -2283,7 +2319,7 @@ mod tests {
         );
         make_executable(&gh_path);
 
-        let failures = with_path_prefix(&bin_dir, || detect_prior_gate_failures(&dir, 123));
+        let failures = with_path_prefix(&bin_dir, || detect_prior_gate_failures(&dir, 123, 345));
 
         assert_eq!(
             failures,
@@ -2306,7 +2342,7 @@ mod tests {
         );
         make_executable(&gh_path);
 
-        let failures = with_path_prefix(&bin_dir, || detect_prior_gate_failures(&dir, 123));
+        let failures = with_path_prefix(&bin_dir, || detect_prior_gate_failures(&dir, 123, 345));
 
         assert!(failures.is_empty());
         let _ = fs::remove_dir_all(&dir);
