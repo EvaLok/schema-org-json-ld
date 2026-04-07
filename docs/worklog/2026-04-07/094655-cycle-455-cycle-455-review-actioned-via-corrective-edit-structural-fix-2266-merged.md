@@ -31,12 +31,11 @@
 - **`tools/rust/crates/validate-docs/src/main.rs`**: modified
 - **`tools/rust/crates/write-entry/src/main.rs`**: modified
 
-## Pre-dispatch state
+## Cycle state
 
-*Snapshot before review dispatch — final counters may differ after C6.*
 
 - **In-flight agent sessions**: 0
-- **Pipeline status**: FAIL (2 warnings, 2 blocking: doc-validation, current-cycle-steps)
+- **Pipeline status**: PASS (2 warnings)
 - **Publish gate**: published
 
 ## Next steps
