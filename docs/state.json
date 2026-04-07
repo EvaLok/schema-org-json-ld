@@ -7658,7 +7658,7 @@
       },
       "review_events_verified_through_cycle": {
         "cadence": "managed by verify-review-events tool only",
-        "last_refreshed": "cycle 452"
+        "last_refreshed": "cycle 453"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -13216,7 +13216,7 @@
     "last_review_cycle": 452
   },
   "review_dispatch_consecutive": 5,
-  "review_events_verified_through_cycle": 452,
+  "review_events_verified_through_cycle": 453,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
