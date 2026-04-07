@@ -141,6 +141,19 @@
     <on-failure>Fix before closing cycle. Do not override.</on-failure>
     <coordination-rule>When deploying format-changing tools: merge downstream
       consumer update BEFORE applying new tool output.</coordination-rule>
+    <constraint id="rerun-step-comment-refresh" severity="mandatory">
+      When C5.5 is re-run after a mid-cycle fix and the new pipeline status
+      differs from the previously-posted C5.5 step comment, a NEW C5.5 step
+      comment titled "Step C5.5 (rerun, supersedes prior)" MUST be posted to
+      the orchestrator issue. This ensures the issue thread reflects the FINAL
+      gate state, not the pre-fix failure narrative. The cycle-runner close-out
+      automation may post this; the orchestrator must verify the comment is
+      present after a rerun before continuing to C6.
+      Recurrence escalation: cycle 449 F3 process-adherence (deferred 5 cycles,
+      deadline cycle 454). Behavioral fix in lieu of tool dispatch — when the
+      audit #382 worklog freeze-ordering fix lands, C5.5 reruns should become
+      much rarer, but the discipline remains required.
+    </constraint>
     <constraint id="no-retroactive-clearing" severity="mandatory">
       If C5.5 fails, you may fix the underlying issue and re-run close-out.
       However, re-dispositioning prior-cycle review findings specifically to
