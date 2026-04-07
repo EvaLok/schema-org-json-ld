@@ -5866,6 +5866,54 @@ mod tests {
     }
 
     #[test]
+    fn worklog_immutability_passes_when_gate_failure_honesty_documents_fail_to_fail_pass() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-worklog-immutability-gate-failure-honesty-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        let worklog = root.join("docs/worklog/2026-03-09/120000-cycle-410-summary.md");
+        let initial_status = "FAIL (2 warnings, 1 blocking: current-cycle-steps)";
+        fs::write(
+            &worklog,
+            format!(
+                "# Cycle 410\n\n## Pre-dispatch state\n\n- **Pipeline status**: {initial_status}\n"
+            ),
+        )
+        .unwrap();
+        commit_all(&root, "add worklog");
+        let baseline_commit = run_git(&root, &["rev-parse", "HEAD"]);
+        fs::write(
+            &worklog,
+            format!(
+                "# Cycle 410\n\n## Cycle state\n\n- **Pipeline status**: FAIL→PASS (C5.5 initially failed: {initial_status}; resolved by re-running close-out after fixes)\n"
+            ),
+        )
+        .unwrap();
+
+        let step = verify_worklog_immutability_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Blocking);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("gate-failure-honesty annotated"));
+        assert!(detail.contains(initial_status));
+        assert!(detail.contains("FAIL→PASS"));
+        assert!(detail.contains(&baseline_commit[..7]));
+    }
+
+    #[test]
     fn worklog_immutability_fails_when_status_change_lacks_resume_annotation() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
