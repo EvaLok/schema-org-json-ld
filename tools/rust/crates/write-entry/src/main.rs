@@ -5,8 +5,6 @@ use clap::{Parser, Subcommand};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 use state_schema::{current_cycle_from_state, read_state_value, AgentSession, StateJson};
-#[cfg(test)]
-use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fs;
@@ -22,19 +20,13 @@ const NOT_PROVIDED: &str = "Not provided.";
 const CYCLE_STATE_HEADING: &str = "## Cycle state";
 const LEGACY_STATE_HEADING: &str = "## Pre-dispatch state";
 const NEXT_STEPS_HEADING: &str = "## Next steps";
-const NEXT_STEPS_PRE_DISPATCH_HEADING: &str = "## Next steps (pre-dispatch)";
-const NEXT_STEPS_POST_DISPATCH_HEADING: &str = "## Next steps (post-dispatch)";
 const ISSUES_PROCESSED_HEADING: &str = "### Issues processed";
-const ISSUES_PROCESSED_POST_DISPATCH_HEADING: &str = "### Issues processed (post-dispatch)";
 const LEGACY_STATE_DISCLAIMER: &str =
     "*Snapshot before review dispatch — final counters may differ after C6.*";
 const IN_FLIGHT_PREFIX: &str = "- **In-flight agent sessions**: ";
-const IN_FLIGHT_POST_DISPATCH_PREFIX: &str = "- **In-flight agent sessions (post-dispatch)**: ";
 const PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
-const POST_DISPATCH_PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status (post-dispatch)**: ";
 const CLOSE_OUT_GATE_FAILURES_PREFIX: &str = "- **Close-out gate failures**: ";
 const PUBLISH_GATE_PREFIX: &str = "- **Publish gate**: ";
-const PUBLISH_GATE_POST_DISPATCH_PREFIX: &str = "- **Publish gate (post-dispatch)**: ";
 const INFRASTRUCTURE_ROOTS: [&str; 2] = ["tools", ".claude/skills"];
 const INFRASTRUCTURE_FILES: [&str; 4] = [
     "STARTUP_CHECKLIST.xml",
@@ -68,8 +60,6 @@ enum Command {
     Worklog(WorklogArgs),
     /// Generate or append a journal entry file
     Journal(JournalArgs),
-    /// Patch the pipeline status line in an existing worklog entry file
-    PatchPipeline(PatchPipelineArgs),
 }
 
 #[derive(Parser)]
@@ -167,45 +157,10 @@ struct JournalArgs {
     previous_commitment_detail: Option<String>,
 }
 
-#[derive(Parser)]
-struct PatchPipelineArgs {
-    /// Path to the worklog file to patch (`--worklog` primary; `--worklog-file` accepted as an alias)
-    #[arg(long, alias = "worklog-file")]
-    worklog: PathBuf,
-    /// Replacement pipeline status text
-    #[arg(long)]
-    status: String,
-    /// Replacement in-flight agent session count
-    #[arg(long = "in-flight")]
-    in_flight: Option<u64>,
-    /// Replacement publish gate summary text
-    #[arg(long = "publish-gate")]
-    publish_gate: Option<String>,
-    /// Replacement next steps content as numbered entries (pass flag once per entry)
-    #[arg(long = "next-steps")]
-    next_steps: Vec<String>,
-    /// Replacement issues processed content as NUMBER;TITLE;STATUS entries joined with `|`
-    #[arg(long = "issues-processed")]
-    issues_processed: Option<String>,
-    /// Close-out gate failure descriptions (comma-separated)
-    #[arg(long = "prior-gate-failures", value_delimiter = ',')]
-    prior_gate_failures: Vec<String>,
-    /// Replacement current state section title
-    #[arg(long = "section-title")]
-    section_title: Option<String>,
-}
-
 #[derive(Debug)]
 struct WorklogWriteOutcome {
     path: PathBuf,
     replaced_existing: bool,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum PatchOrAddendumOutcome {
-    ReplacedOriginal,
-    AddedAddendum,
-    Unchanged,
 }
 
 #[derive(Debug, Deserialize)]
@@ -244,6 +199,8 @@ struct CurrentState {
     prior_gate_failures: Vec<String>,
     #[serde(default)]
     publish_gate: String,
+    #[serde(default)]
+    preliminary: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -346,13 +303,6 @@ fn main() {
                 std::process::exit(1);
             }
         },
-        Command::PatchPipeline(args) => match execute_patch_pipeline(&args, &repo_root) {
-            Ok(path) => println!("{}", path.display()),
-            Err(error) => {
-                eprintln!("Error: {}", error);
-                std::process::exit(1);
-            }
-        },
     }
 }
 
@@ -419,7 +369,7 @@ fn render_worklog_output_with_cycle(
     now: DateTime<Utc>,
 ) -> Result<(u64, String), String> {
     let cycle = resolve_cycle(args.cycle, repo_root)?;
-    let mut input = resolve_worklog_input(args, repo_root)?;
+    let mut input = resolve_worklog_input_for_cycle(args, repo_root, cycle)?;
     emit_worklog_auto_derivation_warnings(apply_worklog_auto_derivations(
         args, repo_root, cycle, &mut input,
     )?);
@@ -475,568 +425,6 @@ fn execute_journal(
     Ok(path)
 }
 
-fn execute_patch_pipeline(args: &PatchPipelineArgs, repo_root: &Path) -> Result<PathBuf, String> {
-    let worklog_path = resolve_repo_path(repo_root, &args.worklog);
-    let content = fs::read_to_string(&worklog_path)
-        .map_err(|error| format!("failed to read {}: {}", worklog_path.display(), error))?;
-    let (mut patched, _) = patch_or_addendum(
-        &content,
-        PIPELINE_STATUS_PREFIX,
-        &args.status,
-        POST_DISPATCH_PIPELINE_STATUS_PREFIX,
-        false,
-    )
-    .ok_or_else(|| {
-        format!(
-            "failed to patch {}: pipeline status line not found",
-            worklog_path.display()
-        )
-    })?;
-    let in_flight_value = match args.in_flight {
-        Some(in_flight) => Some(in_flight),
-        None => match load_worklog_state(repo_root, false) {
-            Ok(Some(state)) => match state_extra_in_flight_sessions(Some(&state)) {
-                Ok(in_flight) => Some(in_flight),
-                Err(error) => {
-                    eprintln!(
-                        "Warning: unable to derive in-flight agent sessions from docs/state.json: {}",
-                        error
-                    );
-                    None
-                }
-            },
-            Ok(None) => None,
-            Err(error) => {
-                eprintln!(
-                    "Warning: unable to load docs/state.json for patch-pipeline in-flight count: {}",
-                    error
-                );
-                None
-            }
-        },
-    };
-    if let Some(in_flight) = in_flight_value {
-        let in_flight = in_flight.to_string();
-        patched = patch_or_addendum(
-            &patched,
-            IN_FLIGHT_PREFIX,
-            &in_flight,
-            IN_FLIGHT_POST_DISPATCH_PREFIX,
-            false,
-        )
-        .map(|(patched, _)| patched)
-        .ok_or_else(|| {
-            format!(
-                "failed to patch {}: in-flight agent sessions line not found",
-                worklog_path.display()
-            )
-        })?;
-    }
-    if let Some(publish_gate) = args.publish_gate.as_deref() {
-        patched = patch_or_addendum(
-            &patched,
-            PUBLISH_GATE_PREFIX,
-            publish_gate,
-            PUBLISH_GATE_POST_DISPATCH_PREFIX,
-            false,
-        )
-        .map(|(patched, _)| patched)
-        .ok_or_else(|| {
-            format!(
-                "failed to patch {}: publish gate line not found",
-                worklog_path.display()
-            )
-        })?;
-    }
-    if let Some(section_title) = args.section_title.as_deref() {
-        let heading = format!("## {}", section_title.trim());
-        patched = patch_state_heading(&patched, &heading).ok_or_else(|| {
-            format!(
-                "failed to patch {}: state section heading not found",
-                worklog_path.display()
-            )
-        })?;
-        patched = remove_legacy_state_disclaimer(&patched);
-    }
-    patched = remove_line_with_prefix(&patched, "- **Copilot metrics**: ");
-    if !args.prior_gate_failures.is_empty() {
-        patched = patch_prior_gate_failures(&patched, &args.prior_gate_failures).ok_or_else(|| {
-            format!(
-                "failed to patch {}: cycle state section not found",
-                worklog_path.display()
-            )
-        })?;
-    }
-    if let Some(issues_processed) = args.issues_processed.as_deref() {
-        let issues_processed = parse_patch_pipeline_issues_processed(issues_processed)?;
-        patched = patch_or_addendum_bullet_section(
-            &patched,
-            ISSUES_PROCESSED_HEADING,
-            &issues_processed,
-            ISSUES_PROCESSED_POST_DISPATCH_HEADING,
-        )
-        .ok_or_else(|| {
-            format!(
-                "failed to patch {}: issues processed section not found",
-                worklog_path.display()
-            )
-        })?;
-    }
-    if !args.next_steps.is_empty() {
-        patched = patch_or_addendum_numbered_section(
-            &patched,
-            NEXT_STEPS_HEADING,
-            &args.next_steps,
-            NEXT_STEPS_POST_DISPATCH_HEADING,
-        )
-        .ok_or_else(|| {
-            format!(
-                "failed to patch {}: next steps section not found",
-                worklog_path.display()
-            )
-        })?;
-    }
-    fs::write(&worklog_path, patched)
-        .map_err(|error| format!("failed to write {}: {}", worklog_path.display(), error))?;
-    Ok(worklog_path)
-}
-
-fn resolve_repo_path(repo_root: &Path, path: &Path) -> PathBuf {
-    if path.is_absolute() {
-        path.to_path_buf()
-    } else {
-        repo_root.join(path)
-    }
-}
-
-fn patch_line_value(content: &str, prefix: &str, value: &str) -> Option<String> {
-    let start = find_line_start(content, prefix)?;
-    let search = &content[start..];
-    let line_end = search
-        .find('\n')
-        .map(|offset| start + offset)
-        .unwrap_or(content.len());
-    let suffix_start = if line_end > start && content.as_bytes().get(line_end - 1) == Some(&b'\r') {
-        line_end - 1
-    } else {
-        line_end
-    };
-
-    Some(format!(
-        "{}{}{}{}",
-        &content[..start],
-        prefix,
-        value,
-        &content[suffix_start..]
-    ))
-}
-
-fn patch_or_addendum(
-    content: &str,
-    prefix: &str,
-    value: &str,
-    addendum_prefix: &str,
-    force_replace: bool,
-) -> Option<(String, PatchOrAddendumOutcome)> {
-    let line_start = find_line_start(content, prefix)?;
-    let current_value = line_value_from_start(content, line_start, prefix)?;
-    if force_replace {
-        let primary_replaced = !same_line_value(current_value, value);
-        let patched = if primary_replaced {
-            patch_line_value(content, prefix, value)?
-        } else {
-            content.to_string()
-        };
-        if let Some(existing_addendum) = line_value(&patched, addendum_prefix) {
-            if same_line_value(existing_addendum, value) {
-                let outcome = if primary_replaced {
-                    PatchOrAddendumOutcome::ReplacedOriginal
-                } else {
-                    PatchOrAddendumOutcome::Unchanged
-                };
-                return Some((patched, outcome));
-            }
-            return patch_line_value(&patched, addendum_prefix, value)
-                .map(|patched| (patched, PatchOrAddendumOutcome::AddedAddendum));
-        }
-        let line_start = find_line_start(&patched, prefix)?;
-        return Some((
-            insert_addendum_after_line(&patched, line_start, addendum_prefix, value),
-            PatchOrAddendumOutcome::AddedAddendum,
-        ));
-    }
-    if line_value_needs_replacement(current_value) {
-        return patch_line_value(content, prefix, value)
-            .map(|patched| (patched, PatchOrAddendumOutcome::ReplacedOriginal));
-    }
-    if same_line_value(current_value, value) {
-        return Some((content.to_string(), PatchOrAddendumOutcome::Unchanged));
-    }
-    if let Some(existing_addendum) = line_value(content, addendum_prefix) {
-        if same_line_value(existing_addendum, value) {
-            return Some((content.to_string(), PatchOrAddendumOutcome::Unchanged));
-        }
-        return patch_line_value(content, addendum_prefix, value)
-            .map(|patched| (patched, PatchOrAddendumOutcome::AddedAddendum));
-    }
-    Some((
-        insert_addendum_after_line(content, line_start, addendum_prefix, value),
-        PatchOrAddendumOutcome::AddedAddendum,
-    ))
-}
-
-fn insert_addendum_after_line(
-    content: &str,
-    line_start: usize,
-    addendum_prefix: &str,
-    value: &str,
-) -> String {
-    let insert_at = line_end_index(content, line_start);
-    let separator = if insert_at == content.len() && !content.ends_with('\n') {
-        "\n"
-    } else {
-        ""
-    };
-    format!(
-        "{}{}{}{}{}{}",
-        &content[..insert_at],
-        separator,
-        addendum_prefix,
-        value,
-        if insert_at < content.len() { "\n" } else { "" },
-        &content[insert_at..]
-    )
-}
-
-fn find_line_start(content: &str, prefix: &str) -> Option<usize> {
-    content.match_indices(prefix).find_map(|(index, _)| {
-        if index == 0 || content.as_bytes().get(index - 1) == Some(&b'\n') {
-            Some(index)
-        } else {
-            None
-        }
-    })
-}
-
-fn line_value<'a>(content: &'a str, prefix: &str) -> Option<&'a str> {
-    let start = find_line_start(content, prefix)?;
-    line_value_from_start(content, start, prefix)
-}
-
-fn line_value_from_start<'a>(content: &'a str, start: usize, prefix: &str) -> Option<&'a str> {
-    let line = line_text(content, start);
-    let line = line.strip_suffix('\r').unwrap_or(line);
-    line.strip_prefix(prefix)
-}
-
-fn line_value_needs_replacement(value: &str) -> bool {
-    let trimmed = value.trim();
-    trimmed.is_empty() || trimmed == NOT_PROVIDED
-}
-
-fn same_line_value(left: &str, right: &str) -> bool {
-    left.trim() == right.trim()
-}
-
-fn patch_state_heading(content: &str, heading: &str) -> Option<String> {
-    for existing in [LEGACY_STATE_HEADING, CYCLE_STATE_HEADING] {
-        if let Some(start) = content.find(existing) {
-            let line_end = content[start..]
-                .find('\n')
-                .map(|offset| start + offset)
-                .unwrap_or(content.len());
-            return Some(format!(
-                "{}{}{}",
-                &content[..start],
-                heading,
-                &content[line_end..]
-            ));
-        }
-    }
-    None
-}
-
-fn remove_legacy_state_disclaimer(content: &str) -> String {
-    content
-        .replace(&format!("\n{}\n", LEGACY_STATE_DISCLAIMER), "\n")
-        .replace(&format!("{}\n\n", LEGACY_STATE_DISCLAIMER), "")
-}
-
-fn remove_line_with_prefix(content: &str, prefix: &str) -> String {
-    let mut output = String::new();
-    for line in content.split_inclusive('\n') {
-        let trimmed = line.strip_suffix('\n').unwrap_or(line);
-        let trimmed = trimmed.strip_suffix('\r').unwrap_or(trimmed);
-        if trimmed.starts_with(prefix) {
-            continue;
-        }
-        output.push_str(line);
-    }
-    if !content.ends_with('\n') && output.ends_with('\n') {
-        output.pop();
-    }
-    output
-}
-
-fn patch_prior_gate_failures(content: &str, failures: &[String]) -> Option<String> {
-    let mut lines: Vec<String> = content.lines().map(ToOwned::to_owned).collect();
-    let (_, section_start, mut section_end) =
-        find_bullet_section_bounds(&lines, CYCLE_STATE_HEADING)
-            .or_else(|| find_bullet_section_bounds(&lines, LEGACY_STATE_HEADING))?;
-
-    let removed = lines[section_start..section_end]
-        .iter()
-        .filter(|line| line.starts_with(CLOSE_OUT_GATE_FAILURES_PREFIX))
-        .count();
-    let retained = lines[section_start..section_end]
-        .iter()
-        .filter(|line| !line.starts_with(CLOSE_OUT_GATE_FAILURES_PREFIX))
-        .cloned()
-        .collect::<Vec<_>>();
-    lines.splice(
-        section_start..section_end,
-        retained,
-    );
-    section_end = section_end.saturating_sub(removed);
-
-    let insert_at = lines[section_start..section_end]
-        .iter()
-        .rposition(|line| {
-            line.starts_with(PIPELINE_STATUS_PREFIX)
-                || line.starts_with(POST_DISPATCH_PIPELINE_STATUS_PREFIX)
-        })
-        .map(|index| section_start + index + 1)
-        .unwrap_or(section_start);
-
-    let rendered: Vec<String> = failures
-        .iter()
-        .map(|failure| format!("{}{}", CLOSE_OUT_GATE_FAILURES_PREFIX, failure))
-        .collect();
-    lines.splice(insert_at..insert_at, rendered);
-
-    let mut patched = lines.join("\n");
-    if content.ends_with('\n') {
-        patched.push('\n');
-    }
-    Some(patched)
-}
-
-fn patch_numbered_section(content: &str, heading: &str, items: &[String]) -> Option<String> {
-    let mut lines: Vec<String> = content.lines().map(ToOwned::to_owned).collect();
-    let (_, section_start, section_end) = find_numbered_section_bounds(&lines, heading)?;
-
-    let mut replacement = vec![String::new()];
-    for (index, item) in items.iter().enumerate() {
-        replacement.push(format!("{}. {}", index + 1, item));
-    }
-    if section_end < lines.len() {
-        replacement.push(String::new());
-    }
-
-    lines.splice(section_start..section_end, replacement);
-
-    let mut patched = lines.join("\n");
-    if content.ends_with('\n') {
-        patched.push('\n');
-    }
-    Some(patched)
-}
-
-fn patch_or_addendum_numbered_section(
-    content: &str,
-    heading: &str,
-    items: &[String],
-    addendum_heading: &str,
-) -> Option<String> {
-    let lines: Vec<String> = content.lines().map(ToOwned::to_owned).collect();
-    let (heading_index, section_start, section_end, primary_heading) =
-        find_primary_numbered_section_bounds(&lines, heading)?;
-    if numbered_section_needs_replacement(&lines[section_start..section_end]) {
-        return patch_numbered_section(content, primary_heading, items);
-    }
-    if find_numbered_section_bounds(&lines, addendum_heading).is_some() {
-        return patch_numbered_section(content, addendum_heading, items);
-    }
-
-    let mut patched_lines = lines;
-    if primary_heading == NEXT_STEPS_HEADING {
-        patched_lines[heading_index] = NEXT_STEPS_PRE_DISPATCH_HEADING.to_string();
-    }
-    let mut insertion = Vec::new();
-    if !patched_lines[section_end - 1].is_empty() {
-        insertion.push(String::new());
-    }
-    insertion.push(addendum_heading.to_string());
-    insertion.push(String::new());
-    for (index, item) in items.iter().enumerate() {
-        insertion.push(format!("{}. {}", index + 1, item));
-    }
-    if section_end < patched_lines.len() {
-        insertion.push(String::new());
-    }
-    patched_lines.splice(section_end..section_end, insertion);
-
-    let mut patched = patched_lines.join("\n");
-    if content.ends_with('\n') {
-        patched.push('\n');
-    }
-    Some(patched)
-}
-
-fn patch_bullet_section(content: &str, heading: &str, items: &[String]) -> Option<String> {
-    let mut lines: Vec<String> = content.lines().map(ToOwned::to_owned).collect();
-    let (_, section_start, section_end) = find_bullet_section_bounds(&lines, heading)?;
-
-    let mut replacement = vec![String::new()];
-    replacement.extend(render_bullet_list(items));
-    if section_end < lines.len() {
-        replacement.push(String::new());
-    }
-
-    lines.splice(section_start..section_end, replacement);
-
-    let mut patched = lines.join("\n");
-    if content.ends_with('\n') {
-        patched.push('\n');
-    }
-    Some(patched)
-}
-
-fn patch_or_addendum_bullet_section(
-    content: &str,
-    heading: &str,
-    items: &[String],
-    addendum_heading: &str,
-) -> Option<String> {
-    let lines: Vec<String> = content.lines().map(ToOwned::to_owned).collect();
-    let (_, section_start, section_end) = find_bullet_section_bounds(&lines, heading)?;
-    let rendered = render_bullet_list(items);
-
-    if bullet_section_needs_replacement(&lines[section_start..section_end]) {
-        return patch_bullet_section(content, heading, items);
-    }
-    if bullet_section_matches(&lines[section_start..section_end], &rendered) {
-        return Some(content.to_string());
-    }
-    if let Some((_, addendum_start, addendum_end)) =
-        find_bullet_section_bounds(&lines, addendum_heading)
-    {
-        if bullet_section_matches(&lines[addendum_start..addendum_end], &rendered) {
-            return Some(content.to_string());
-        }
-        return patch_bullet_section(content, addendum_heading, items);
-    }
-
-    let mut patched_lines = lines;
-    let mut insertion = Vec::new();
-    if !patched_lines[section_end - 1].is_empty() {
-        insertion.push(String::new());
-    }
-    insertion.push(addendum_heading.to_string());
-    insertion.push(String::new());
-    insertion.extend(rendered);
-    if section_end < patched_lines.len() {
-        insertion.push(String::new());
-    }
-    patched_lines.splice(section_end..section_end, insertion);
-
-    let mut patched = patched_lines.join("\n");
-    if content.ends_with('\n') {
-        patched.push('\n');
-    }
-    Some(patched)
-}
-
-fn find_primary_numbered_section_bounds<'a>(
-    lines: &[String],
-    heading: &'a str,
-) -> Option<(usize, usize, usize, &'a str)> {
-    if let Some((heading_index, section_start, section_end)) =
-        find_numbered_section_bounds(lines, heading)
-    {
-        return Some((heading_index, section_start, section_end, heading));
-    }
-    if heading == NEXT_STEPS_HEADING {
-        return find_numbered_section_bounds(lines, NEXT_STEPS_PRE_DISPATCH_HEADING).map(
-            |(heading_index, section_start, section_end)| {
-                (
-                    heading_index,
-                    section_start,
-                    section_end,
-                    NEXT_STEPS_PRE_DISPATCH_HEADING,
-                )
-            },
-        );
-    }
-    None
-}
-
-fn find_numbered_section_bounds(lines: &[String], heading: &str) -> Option<(usize, usize, usize)> {
-    let heading_index = lines.iter().position(|line| line == heading)?;
-    let section_start = heading_index + 1;
-    let section_end = lines[section_start..]
-        .iter()
-        .position(|line| line.starts_with("## "))
-        .map(|offset| section_start + offset)
-        .unwrap_or(lines.len());
-    Some((heading_index, section_start, section_end))
-}
-
-fn find_bullet_section_bounds(lines: &[String], heading: &str) -> Option<(usize, usize, usize)> {
-    let heading_index = lines.iter().position(|line| line == heading)?;
-    let section_start = heading_index + 1;
-    let section_end = lines[section_start..]
-        .iter()
-        .position(|line| line.starts_with("## ") || line.starts_with("### "))
-        .map(|offset| section_start + offset)
-        .unwrap_or(lines.len());
-    Some((heading_index, section_start, section_end))
-}
-
-fn numbered_section_needs_replacement(lines: &[String]) -> bool {
-    let entries: Vec<&str> = lines
-        .iter()
-        .map(|line| line.trim())
-        .filter(|line| !line.is_empty())
-        .collect();
-    if entries.is_empty() {
-        return true;
-    }
-    if entries.len() != 1 {
-        return false;
-    }
-    let entry = entries[0].trim_end_matches('.');
-    entry == "Not provided" || entry == "1. Not provided"
-}
-
-fn bullet_section_needs_replacement(lines: &[String]) -> bool {
-    let entries: Vec<&str> = lines
-        .iter()
-        .map(|line| line.trim())
-        .filter(|line| !line.is_empty())
-        .collect();
-    if entries.is_empty() {
-        return true;
-    }
-    if entries.len() != 1 {
-        return false;
-    }
-    matches!(
-        entries[0],
-        "- None." | "- Not provided." | "None." | "Not provided."
-    )
-}
-
-fn bullet_section_matches(lines: &[String], rendered: &[String]) -> bool {
-    let existing: Vec<&str> = lines
-        .iter()
-        .map(|line| line.trim())
-        .filter(|line| !line.is_empty())
-        .collect();
-    let expected: Vec<&str> = rendered.iter().map(String::as_str).collect();
-    existing == expected
-}
-
 fn resolve_cycle(cycle: Option<u64>, repo_root: &Path) -> Result<u64, String> {
     match cycle {
         Some(cycle) => Ok(cycle),
@@ -1044,7 +432,17 @@ fn resolve_cycle(cycle: Option<u64>, repo_root: &Path) -> Result<u64, String> {
     }
 }
 
+#[cfg(test)]
 fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<WorklogInput, String> {
+    let cycle = resolve_cycle(args.cycle, repo_root)?;
+    resolve_worklog_input_for_cycle(args, repo_root, cycle)
+}
+
+fn resolve_worklog_input_for_cycle(
+    args: &WorklogArgs,
+    repo_root: &Path,
+    cycle: u64,
+) -> Result<WorklogInput, String> {
     validate_worklog_flag_combinations(args)?;
     if let Some(path) = &args.input_file {
         if has_inline_worklog_content(args) {
@@ -1073,12 +471,13 @@ fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<Worklog
                     Some(value) => value,
                     None => state_extra_in_flight_sessions(state.as_ref())?,
                 },
-                pipeline_status: resolve_pipeline_status(args, repo_root, state.as_ref())?,
+                pipeline_status: resolve_pipeline_status(args, repo_root, cycle, state.as_ref())?,
                 prior_gate_failures: resolve_prior_gate_failures(args, repo_root, state.as_ref())?,
                 publish_gate: match &args.publish_gate {
                     Some(value) => value.clone(),
                     None => state_publish_gate_status(state.as_ref())?,
                 },
+                preliminary: worklog_state_is_preliminary(state.as_ref(), cycle),
             },
             next_steps: resolve_next_steps(args, state.as_ref())?,
             receipts: parse_receipts(&args.receipt)?,
@@ -1097,9 +496,10 @@ fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<Worklog
         issues_processed: Vec::new(),
         current_state: CurrentState {
             in_flight_sessions: state_extra_in_flight_sessions(state.as_ref())?,
-            pipeline_status: resolve_pipeline_status(args, repo_root, state.as_ref())?,
+            pipeline_status: resolve_pipeline_status(args, repo_root, cycle, state.as_ref())?,
             prior_gate_failures: resolve_prior_gate_failures(args, repo_root, state.as_ref())?,
             publish_gate: state_publish_gate_status(state.as_ref())?,
+            preliminary: worklog_state_is_preliminary(state.as_ref(), cycle),
         },
         next_steps: resolve_next_steps(args, state.as_ref())?,
         receipts: Vec::new(),
@@ -1128,7 +528,10 @@ fn validate_worklog_flag_combinations(args: &WorklogArgs) -> Result<(), String> 
 }
 
 fn requires_worklog_state(args: &WorklogArgs) -> bool {
-    args.auto_next || args.auto_gate_history || args.publish_gate.is_none() || args.in_flight.is_none()
+    args.auto_next
+        || args.auto_gate_history
+        || args.publish_gate.is_none()
+        || args.in_flight.is_none()
 }
 
 fn load_worklog_state(repo_root: &Path, required: bool) -> Result<Option<StateJson>, String> {
@@ -1167,6 +570,7 @@ fn state_pipeline_status(state: Option<&StateJson>) -> String {
 fn resolve_pipeline_status(
     args: &WorklogArgs,
     repo_root: &Path,
+    cycle: u64,
     state: Option<&StateJson>,
 ) -> Result<String, String> {
     if let Some(pipeline) = &args.pipeline {
@@ -1175,7 +579,37 @@ fn resolve_pipeline_status(
     if args.auto_pipeline {
         return auto_pipeline_status(repo_root);
     }
+    if let Some(frozen_status) = frozen_c5_5_pipeline_status(state, cycle) {
+        return Ok(frozen_status);
+    }
     Ok(state_pipeline_status(state))
+}
+
+fn frozen_c5_5_pipeline_status(state: Option<&StateJson>, cycle: u64) -> Option<String> {
+    let gate = state?.tool_pipeline.extra.get("c5_5_gate")?;
+    if !cycle_matches(gate, cycle) {
+        return None;
+    }
+    if gate.get("needs_reverify").and_then(Value::as_bool) == Some(true) {
+        return None;
+    }
+
+    let status = gate.get("status").and_then(Value::as_str).map(str::trim)?;
+    match status {
+        "PASS" | "FAIL" => gate
+            .get("pipeline_summary")
+            .or_else(|| gate.get("summary"))
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(ToOwned::to_owned)
+            .or_else(|| Some(status.to_string())),
+        _ => None,
+    }
+}
+
+fn worklog_state_is_preliminary(state: Option<&StateJson>, cycle: u64) -> bool {
+    frozen_c5_5_pipeline_status(state, cycle).is_none()
 }
 
 fn resolve_prior_gate_failures(
@@ -1214,7 +648,12 @@ fn resolve_auto_gate_history(state: Option<&StateJson>, cycle: u64) -> Result<Ve
     if !cycle_matches(gate, cycle) {
         return Ok(Vec::new());
     }
-    if initial_result.get("result").and_then(Value::as_str).map(str::trim) != Some("FAIL") {
+    if initial_result
+        .get("result")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        != Some("FAIL")
+    {
         return Ok(Vec::new());
     }
     if gate.get("status").and_then(Value::as_str).map(str::trim) != Some("PASS") {
@@ -1250,10 +689,7 @@ fn merge_prior_gate_failures(auto_failures: &[String], manual_failures: &[String
             merged.push((prefix, failure.clone()));
         }
     }
-    merged
-        .into_iter()
-        .map(|(_, failure)| failure)
-        .collect()
+    merged.into_iter().map(|(_, failure)| failure).collect()
 }
 
 fn prior_gate_failure_prefix(failure: &str) -> String {
@@ -1336,7 +772,9 @@ fn format_in_flight_next_step(session: &AgentSession) -> Result<String, String> 
 fn auto_pipeline_status(repo_root: &Path) -> Result<String, String> {
     let output = runner::run_tool(repo_root, "pipeline-check", &["--json"])?;
     let stdout = runner::stdout_text(&output);
-    if let Ok(summary) = parse_pipeline_check_report(&stdout).map(|report| format_pipeline_status(&report)) {
+    if let Ok(summary) =
+        parse_pipeline_check_report(&stdout).map(|report| format_pipeline_status(&report))
+    {
         return Ok(summary);
     }
     let stderr = runner::stderr_text(&output);
@@ -1532,57 +970,6 @@ fn parse_issue_processed_numbers(values: &[String]) -> Result<Vec<String>, Strin
     }
 
     Ok(issues)
-}
-
-fn parse_patch_pipeline_issues_processed(value: &str) -> Result<Vec<String>, String> {
-    let trimmed = value.trim();
-    if trimmed.is_empty() {
-        return Ok(Vec::new());
-    }
-
-    trimmed
-        .split('|')
-        .map(|entry| {
-            let parts: Vec<&str> = entry.split(';').collect();
-            if parts.len() != 3 {
-                return Err(format!(
-                    "patch-pipeline --issues-processed entry '{}' must use NUMBER;TITLE;STATUS format",
-                    entry
-                ));
-            }
-
-            let issue = parts[0].trim().parse::<u64>().map_err(|_| {
-                format!(
-                    "patch-pipeline --issues-processed issue '{}' is not a valid positive integer",
-                    parts[0].trim()
-                )
-            })?;
-            if issue == 0 {
-                return Err(
-                    "patch-pipeline --issues-processed issue '0' is not a valid positive integer"
-                        .to_string(),
-                );
-            }
-
-            let title = parts[1].trim();
-            if title.is_empty() {
-                return Err(format!(
-                    "patch-pipeline --issues-processed entry '{}' is missing TITLE",
-                    entry
-                ));
-            }
-
-            let status = parts[2].trim();
-            if status.is_empty() {
-                return Err(format!(
-                    "patch-pipeline --issues-processed entry '{}' is missing STATUS",
-                    entry
-                ));
-            }
-
-            Ok(format!("#{issue}: {title} ({status})"))
-        })
-        .collect()
 }
 
 fn emit_worklog_auto_derivation_warnings(warnings: Vec<String>) {
@@ -1978,7 +1365,8 @@ fn extract_inline_named_issue_references(text: &str, label: &str) -> Vec<u64> {
             continue;
         }
 
-        let reference = current_token.trim_start_matches(|character: char| !matches!(character, '#'));
+        let reference =
+            current_token.trim_start_matches(|character: char| !matches!(character, '#'));
         let Some(reference) = reference.strip_prefix('#') else {
             previous = current_token;
             continue;
@@ -2582,12 +1970,6 @@ fn parse_cycle_receipt_entries_output(json: &str) -> Result<Vec<CycleReceiptJson
         .map_err(|error| format!("invalid cycle-receipts JSON output: {}", error))
 }
 
-#[cfg(test)]
-fn parse_cycle_receipts_output(json: &str) -> Result<Vec<CommitReceipt>, String> {
-    let entries = parse_cycle_receipt_entries_output(json)?;
-    cycle_receipt_entries_to_receipts(&entries)
-}
-
 fn cycle_receipt_entries_to_receipts(
     entries: &[CycleReceiptJsonEntry],
 ) -> Result<Vec<CommitReceipt>, String> {
@@ -2605,14 +1987,10 @@ fn cycle_receipt_entries_to_receipts(
         .collect()
 }
 
-#[cfg(test)]
-fn derive_prs_from_cycle_receipts_output(state_json: &str, cycle: u64) -> Result<Vec<u64>, String> {
-    let state = serde_json::from_str::<StateJson>(state_json)
-        .map_err(|error| format!("invalid state JSON: {}", error))?;
-    derive_prs_from_cycle_receipt_entries(&state, cycle)
-}
-
-fn derive_prs_from_cycle_receipt_entries(state: &StateJson, cycle: u64) -> Result<Vec<u64>, String> {
+fn derive_prs_from_cycle_receipt_entries(
+    state: &StateJson,
+    cycle: u64,
+) -> Result<Vec<u64>, String> {
     let start = cycle_window_start(cycle, state, "receipt-backed PR derivation")?;
     let mut seen = HashSet::new();
     let mut prs = Vec::new();
@@ -2645,51 +2023,6 @@ fn derive_prs_from_cycle_receipt_entries(state: &StateJson, cycle: u64) -> Resul
     }
 
     Ok(prs)
-}
-
-#[cfg(test)]
-fn merge_receipts(
-    auto_receipts: Vec<CommitReceipt>,
-    manual_receipts: &[CommitReceipt],
-) -> Vec<CommitReceipt> {
-    let manual_indexes_by_tool =
-        manual_receipts
-            .iter()
-            .enumerate()
-            .fold(HashMap::new(), |mut indexes, (index, receipt)| {
-                indexes
-                    .entry(receipt.tool.to_ascii_lowercase())
-                    .or_insert_with(Vec::new)
-                    .push(index);
-                indexes
-            });
-    let mut used_manual_by_tool = HashMap::<String, usize>::new();
-    let mut used_manual_indexes = HashSet::new();
-
-    let mut merged = Vec::new();
-    for receipt in auto_receipts {
-        let tool_key = receipt.tool.to_ascii_lowercase();
-        let manual_position = *used_manual_by_tool.get(&tool_key).unwrap_or(&0);
-        if let Some(manual_index) = manual_indexes_by_tool
-            .get(&tool_key)
-            .and_then(|indexes| indexes.get(manual_position))
-            .copied()
-        {
-            merged.push(manual_receipts[manual_index].clone());
-            used_manual_indexes.insert(manual_index);
-            used_manual_by_tool.insert(tool_key, manual_position + 1);
-        } else {
-            merged.push(receipt);
-        }
-    }
-
-    for (index, receipt) in manual_receipts.iter().enumerate() {
-        if !used_manual_indexes.contains(&index) {
-            merged.push(receipt.clone());
-        }
-    }
-
-    merged
 }
 
 fn parse_self_modifications(values: &[String]) -> Result<Vec<SelfModification>, String> {
@@ -3262,7 +2595,7 @@ fn render_worklog(cycle: u64, now: DateTime<Utc>, input: &WorklogInput) -> Strin
         ));
         lines.push(String::new());
     }
-    lines.push("### Issues processed".to_string());
+    lines.push(ISSUES_PROCESSED_HEADING.to_string());
     lines.push(String::new());
     lines.extend(render_bullet_list(&input.issues_processed));
     lines.push(String::new());
@@ -3284,8 +2617,19 @@ fn render_worklog(cycle: u64, now: DateTime<Utc>, input: &WorklogInput) -> Strin
         }
     }
     lines.push(String::new());
-    lines.push(CYCLE_STATE_HEADING.to_string());
+    lines.push(
+        if input.current_state.preliminary {
+            LEGACY_STATE_HEADING
+        } else {
+            CYCLE_STATE_HEADING
+        }
+        .to_string(),
+    );
     lines.push(String::new());
+    if input.current_state.preliminary {
+        lines.push(LEGACY_STATE_DISCLAIMER.to_string());
+        lines.push(String::new());
+    }
     lines.push(format!(
         "{}{}",
         IN_FLIGHT_PREFIX, input.current_state.in_flight_sessions
@@ -3293,7 +2637,7 @@ fn render_worklog(cycle: u64, now: DateTime<Utc>, input: &WorklogInput) -> Strin
     lines.push(format!(
         "{}{}",
         PIPELINE_STATUS_PREFIX,
-        convert_references(&input.current_state.pipeline_status)
+        convert_references(&render_pipeline_status_summary(&input.current_state))
     ));
     for failure in &input.current_state.prior_gate_failures {
         lines.push(format!(
@@ -3308,7 +2652,7 @@ fn render_worklog(cycle: u64, now: DateTime<Utc>, input: &WorklogInput) -> Strin
         convert_references(&input.current_state.publish_gate)
     ));
     lines.push(String::new());
-    lines.push("## Next steps".to_string());
+    lines.push(NEXT_STEPS_HEADING.to_string());
     lines.push(String::new());
     if input.next_steps.is_empty() {
         lines.push("1. None.".to_string());
@@ -3352,6 +2696,35 @@ fn render_worklog(cycle: u64, now: DateTime<Utc>, input: &WorklogInput) -> Strin
     }
     lines.push(String::new());
     lines.join("\n")
+}
+
+fn render_pipeline_status_summary(current_state: &CurrentState) -> String {
+    let pipeline_status = current_state.pipeline_status.trim();
+    if current_state.prior_gate_failures.is_empty() || !pipeline_status.starts_with("PASS") {
+        return current_state.pipeline_status.clone();
+    }
+
+    let mut details = current_state
+        .prior_gate_failures
+        .iter()
+        .map(|failure| summarize_prior_gate_failure(failure))
+        .collect::<Vec<_>>();
+    details.push("resolved by re-running close-out after fixes".to_string());
+
+    format!("FAIL→PASS ({})", details.join("; "))
+}
+
+fn summarize_prior_gate_failure(failure: &str) -> String {
+    if let Some(reason) = failure.strip_prefix("C4.1 FAIL:").map(str::trim) {
+        return format!("C4.1 initially failed: {}", reason);
+    }
+    if let Some(reason) = failure.strip_prefix("C5.5 FAIL:").map(str::trim) {
+        return format!("C5.5 initially failed: {}", reason);
+    }
+    if let Some(reason) = failure.strip_prefix("C5.5 initial FAIL:").map(str::trim) {
+        return format!("C5.5 initially failed: {}", reason);
+    }
+    format!("blocking gate initially failed: {}", failure.trim())
 }
 
 fn format_receipt_display(receipt: &CommitReceipt) -> String {
@@ -3807,8 +3180,6 @@ fn parse_digits(chars: &[char], start: usize) -> (String, usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
-    use std::collections::BTreeMap;
     use std::process::Command as ProcessCommand;
     use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -4127,6 +3498,7 @@ mod tests {
                 pipeline_status: "5/5 phases pass".to_string(),
                 prior_gate_failures: Vec::new(),
                 publish_gate: "Source diverged".to_string(),
+                preliminary: false,
             },
             next_steps: vec!["Review PR #543".to_string()],
             receipts: Vec::new(),
@@ -4164,6 +3536,7 @@ mod tests {
                 pipeline_status: NOT_PROVIDED.to_string(),
                 prior_gate_failures: Vec::new(),
                 publish_gate: NOT_PROVIDED.to_string(),
+                preliminary: false,
             },
             next_steps: Vec::new(),
             receipts: Vec::new(),
@@ -4188,6 +3561,7 @@ mod tests {
                 pipeline_status: "PASS (3 warnings)".to_string(),
                 prior_gate_failures: Vec::new(),
                 publish_gate: "clear".to_string(),
+                preliminary: false,
             },
             next_steps: Vec::new(),
             receipts: Vec::new(),
@@ -4209,11 +3583,10 @@ mod tests {
             issues_processed: Vec::new(),
             current_state: CurrentState {
                 in_flight_sessions: 0,
-                pipeline_status:
-                    "PASS (3 warnings)\n- **Pipeline status (C1 early check)**: FAIL (state-invariants: stale)"
-                        .to_string(),
+                pipeline_status: "PASS (3 warnings)".to_string(),
                 prior_gate_failures: vec!["C4.1 FAIL: pipeline status mismatch".to_string()],
                 publish_gate: "clear".to_string(),
+                preliminary: false,
             },
             next_steps: Vec::new(),
             receipts: Vec::new(),
@@ -4221,17 +3594,15 @@ mod tests {
         };
 
         let rendered = render_worklog(154, fixed_now(), &input);
-        let pipeline = rendered.find("- **Pipeline status**: PASS (3 warnings)").unwrap();
-        let early_check = rendered
-            .find("- **Pipeline status (C1 early check)**: FAIL (state-invariants: stale)")
+        let pipeline = rendered
+            .find("- **Pipeline status**: FAIL→PASS (C4.1 initially failed: pipeline status mismatch; resolved by re-running close-out after fixes)")
             .unwrap();
         let gate_failure = rendered
             .find("- **Close-out gate failures**: C4.1 FAIL: pipeline status mismatch")
             .unwrap();
         let publish_gate = rendered.find("- **Publish gate**: clear").unwrap();
 
-        assert!(pipeline < early_check);
-        assert!(early_check < gate_failure);
+        assert!(pipeline < gate_failure);
         assert!(gate_failure < publish_gate);
     }
 
@@ -4430,801 +3801,6 @@ mod tests {
     }
 
     #[test]
-    fn parse_patch_pipeline_issues_processed_validates_entries() {
-        assert_eq!(
-            parse_patch_pipeline_issues_processed("123;some title;closed|456;other;in-flight")
-                .unwrap(),
-            vec![
-                "#123: some title (closed)".to_string(),
-                "#456: other (in-flight)".to_string()
-            ]
-        );
-        assert!(parse_patch_pipeline_issues_processed("")
-            .unwrap()
-            .is_empty());
-
-        let format_error = parse_patch_pipeline_issues_processed("123;missing status").unwrap_err();
-        assert!(format_error.contains("NUMBER;TITLE;STATUS format"));
-
-        let zero_error = parse_patch_pipeline_issues_processed("0;title;closed").unwrap_err();
-        assert!(zero_error.contains("positive integer"));
-    }
-
-    #[test]
-    fn format_issue_processed_entry_uses_optional_title() {
-        assert_eq!(
-            format_issue_processed_entry(42, Some("Merged this cycle")),
-            "#42: Merged this cycle"
-        );
-        assert_eq!(format_issue_processed_entry(43, Some("   ")), "#43");
-        assert_eq!(format_issue_processed_entry(44, None), "#44");
-    }
-
-    #[test]
-    fn agent_session_status_changed_at_reads_validates_and_rejects_invalid_extra_fields() {
-        let mut session = AgentSession {
-            issue: Some(42),
-            ..AgentSession::default()
-        };
-        assert_eq!(agent_session_status_changed_at(&session).unwrap(), None);
-
-        session.extra.insert(
-            "status_changed_at".to_string(),
-            json!("2026-03-06T03:00:00Z"),
-        );
-        assert_eq!(
-            agent_session_status_changed_at(&session)
-                .unwrap()
-                .unwrap()
-                .to_rfc3339(),
-            "2026-03-06T03:00:00+00:00"
-        );
-
-        let mut non_string = AgentSession {
-            extra: BTreeMap::from([("updated_at".to_string(), json!(123))]),
-            ..AgentSession::default()
-        };
-        let error = agent_session_status_changed_at(&non_string).unwrap_err();
-        assert!(error.contains("agent_sessions[].updated_at must be a string timestamp"));
-
-        non_string.extra = BTreeMap::from([("updated_at".to_string(), json!("not-a-timestamp"))]);
-        let error = agent_session_status_changed_at(&non_string).unwrap_err();
-        assert!(error.contains("invalid agent_sessions[].updated_at"));
-    }
-
-    #[test]
-    fn agent_session_had_activity_since_checks_each_timestamp_source() {
-        let cycle_start = parse_timestamp("2026-03-06T01:00:00Z", "cycle start").unwrap();
-
-        let dispatched = AgentSession {
-            dispatched_at: Some("2026-03-06T01:05:00Z".to_string()),
-            ..AgentSession::default()
-        };
-        assert!(agent_session_had_activity_since(&dispatched, cycle_start).unwrap());
-
-        let merged = AgentSession {
-            merged_at: Some("2026-03-06T02:00:00Z".to_string()),
-            ..AgentSession::default()
-        };
-        assert!(agent_session_had_activity_since(&merged, cycle_start).unwrap());
-
-        let status_changed = AgentSession {
-            extra: BTreeMap::from([(
-                "status_changed_at".to_string(),
-                json!("2026-03-06T03:00:00Z"),
-            )]),
-            ..AgentSession::default()
-        };
-        assert!(agent_session_had_activity_since(&status_changed, cycle_start).unwrap());
-
-        let prior = AgentSession {
-            dispatched_at: Some("2026-03-05T23:00:00Z".to_string()),
-            ..AgentSession::default()
-        };
-        assert!(!agent_session_had_activity_since(&prior, cycle_start).unwrap());
-
-        let empty = AgentSession::default();
-        assert!(!agent_session_had_activity_since(&empty, cycle_start).unwrap());
-
-        let invalid = AgentSession {
-            merged_at: Some("invalid".to_string()),
-            ..AgentSession::default()
-        };
-        let error = agent_session_had_activity_since(&invalid, cycle_start).unwrap_err();
-        assert!(error.contains("invalid agent_sessions[].merged_at"));
-
-        let invalid_status_changed = AgentSession {
-            extra: BTreeMap::from([("status_changed_at".to_string(), json!(5))]),
-            ..AgentSession::default()
-        };
-        let error =
-            agent_session_had_activity_since(&invalid_status_changed, cycle_start).unwrap_err();
-        assert!(error.contains("agent_sessions[].status_changed_at must be a string timestamp"));
-    }
-
-    #[test]
-    fn parse_self_modifications_reject_empty_descriptions() {
-        let error = parse_self_modifications(&["   ".to_string()]).unwrap_err();
-        assert!(error.contains("self-modification description cannot be empty"));
-    }
-
-    #[test]
-    fn parse_infrastructure_self_modifications_filters_supported_paths() {
-        let modifications = parse_infrastructure_self_modifications(
-            "tools/rust/crates/write-entry/src/main.rs\nREADME.md\nSTARTUP_CHECKLIST.xml\n.claude/skills/rust-tooling/SKILL.md\nAGENTS-ts.md\n",
-        );
-
-        assert_eq!(modifications.len(), 4);
-        assert_eq!(
-            modifications[0].file,
-            "tools/rust/crates/write-entry/src/main.rs"
-        );
-        assert_eq!(modifications[0].description, "modified");
-        assert_eq!(modifications[1].file, "STARTUP_CHECKLIST.xml");
-        assert_eq!(
-            modifications[2].file,
-            ".claude/skills/rust-tooling/SKILL.md"
-        );
-        assert_eq!(modifications[3].file, "AGENTS-ts.md");
-    }
-
-    #[test]
-    fn parse_cycle_receipts_output_supports_current_and_legacy_json_fields() {
-        let receipts = parse_cycle_receipts_output(
-            r#"[
-                {"step":"cycle-start","receipt":"abc1234","commit":"start"},
-                {"tool":"process-merge","hash":"def5678","message":"merge"}
-            ]"#,
-        )
-        .unwrap();
-
-        assert_eq!(receipts.len(), 2);
-        assert_eq!(receipts[0].tool, "cycle-start");
-        assert_eq!(receipts[0].receipt, "abc1234");
-        assert_eq!(receipts[1].tool, "process-merge");
-        assert_eq!(receipts[1].receipt, "def5678");
-    }
-
-    #[test]
-    fn merge_receipts_preserves_duplicate_manual_overrides_by_occurrence() {
-        let merged = merge_receipts(
-            vec![
-                CommitReceipt {
-                    tool: "cycle-start".to_string(),
-                    receipt: "aaaaaaa".to_string(),
-                    url: None,
-                    unresolved: false,
-                },
-                CommitReceipt {
-                    tool: "process-merge".to_string(),
-                    receipt: "bbbbbbb".to_string(),
-                    url: None,
-                    unresolved: false,
-                },
-                CommitReceipt {
-                    tool: "process-merge".to_string(),
-                    receipt: "ccccccc".to_string(),
-                    url: None,
-                    unresolved: false,
-                },
-            ],
-            &[
-                CommitReceipt {
-                    tool: "process-merge".to_string(),
-                    receipt: "1111111".to_string(),
-                    url: None,
-                    unresolved: false,
-                },
-                CommitReceipt {
-                    tool: "process-merge".to_string(),
-                    receipt: "2222222".to_string(),
-                    url: None,
-                    unresolved: false,
-                },
-            ],
-        );
-
-        assert_eq!(merged.len(), 3);
-        assert_eq!(merged[0].tool, "cycle-start");
-        assert_eq!(merged[0].receipt, "aaaaaaa");
-        assert_eq!(merged[1].tool, "process-merge");
-        assert_eq!(merged[1].receipt, "1111111");
-        assert_eq!(merged[2].tool, "process-merge");
-        assert_eq!(merged[2].receipt, "2222222");
-    }
-
-    #[test]
-    fn merge_receipts_keeps_single_override_behavior_and_appends_manual_only_tools() {
-        let merged = merge_receipts(
-            vec![
-                CommitReceipt {
-                    tool: "cycle-start".to_string(),
-                    receipt: "aaaaaaa".to_string(),
-                    url: None,
-                    unresolved: false,
-                },
-                CommitReceipt {
-                    tool: "process-merge".to_string(),
-                    receipt: "bbbbbbb".to_string(),
-                    url: None,
-                    unresolved: false,
-                },
-            ],
-            &[
-                CommitReceipt {
-                    tool: "process-merge".to_string(),
-                    receipt: "1111111".to_string(),
-                    url: None,
-                    unresolved: false,
-                },
-                CommitReceipt {
-                    tool: "manual".to_string(),
-                    receipt: "2222222".to_string(),
-                    url: None,
-                    unresolved: false,
-                },
-            ],
-        );
-
-        assert_eq!(merged.len(), 3);
-        assert_eq!(merged[0].tool, "cycle-start");
-        assert_eq!(merged[0].receipt, "aaaaaaa");
-        assert_eq!(merged[1].tool, "process-merge");
-        assert_eq!(merged[1].receipt, "1111111");
-        assert_eq!(merged[2].tool, "manual");
-        assert_eq!(merged[2].receipt, "2222222");
-    }
-
-    #[test]
-    fn summarize_receipt_events_counts_only_authoritative_tool_names() {
-        let summary = summarize_receipt_events(&[
-            CycleReceiptJsonEntry {
-                tool: "process-merge".to_string(),
-                receipt: "aaaaaaa".to_string(),
-                url: None,
-                _aliases: Vec::new(),
-            },
-            CycleReceiptJsonEntry {
-                tool: "process-merge".to_string(),
-                receipt: "bbbbbbb".to_string(),
-                url: None,
-                _aliases: Vec::new(),
-            },
-            CycleReceiptJsonEntry {
-                tool: "process-review".to_string(),
-                receipt: "ccccccc".to_string(),
-                url: None,
-                _aliases: Vec::new(),
-            },
-            CycleReceiptJsonEntry {
-                tool: "cycle-complete".to_string(),
-                receipt: "ddddddd".to_string(),
-                url: None,
-                _aliases: Vec::new(),
-            },
-        ]);
-
-        assert_eq!(
-            summary.as_deref(),
-            Some("receipt events: 2 merges, 1 review")
-        );
-    }
-
-    #[test]
-    fn derive_prs_from_cycle_receipts_output_uses_cycle_bounded_agent_sessions() {
-        let prs = derive_prs_from_cycle_receipts_output(
-            r#"{
-                "cycle_phase": {
-                    "cycle": 154,
-                    "phase_entered_at": "2026-03-06T01:00:00Z"
-                },
-                "agent_sessions": [
-                    {
-                        "pr": 537,
-                        "merged_at": "2026-03-06T01:00:01Z"
-                    },
-                    {
-                        "pr": 543,
-                        "merged_at": "2026-03-06T01:00:02Z"
-                    },
-                    {
-                        "pr": 1199,
-                        "merged_at": "2026-03-06T01:00:03Z"
-                    },
-                    {
-                        "pr": 1197,
-                        "merged_at": "2026-03-06T01:00:04Z"
-                    },
-                    {
-                        "pr": 100,
-                        "merged_at": "2026-03-06T01:00:05Z"
-                    },
-                    {
-                        "pr": 999,
-                        "merged_at": "2026-03-06T00:59:59Z"
-                    }
-                ]
-            }"#,
-            154,
-        )
-        .unwrap();
-
-        assert_eq!(prs, vec![537, 543, 1199, 1197, 100]);
-    }
-
-    #[test]
-    fn derive_prs_from_cycle_receipts_output_excludes_pre_cycle_merges() {
-        let prs = derive_prs_from_cycle_receipts_output(
-            r#"{
-                "cycle_phase": {
-                    "cycle": 154,
-                    "phase_entered_at": "2026-03-06T01:00:00Z"
-                },
-                "agent_sessions": [
-                    {
-                        "pr": 237,
-                        "merged_at": "2026-03-06T00:59:59Z"
-                    },
-                    {
-                        "pr": 240,
-                        "merged_at": "2026-03-06T01:00:01Z"
-                    }
-                ]
-            }"#,
-            154,
-        )
-        .unwrap();
-
-        assert_eq!(prs, vec![240]);
-    }
-
-    #[test]
-    fn derive_prs_from_cycle_receipts_output_returns_empty_when_no_sessions_merged_in_window() {
-        let prs = derive_prs_from_cycle_receipts_output(
-            r#"{
-                "cycle_phase": {
-                    "cycle": 154,
-                    "phase_entered_at": "2026-03-06T01:00:00Z"
-                },
-                "agent_sessions": [
-                    {
-                        "pr": 237,
-                        "merged_at": "2026-03-06T00:59:59Z"
-                    }
-                ]
-            }"#,
-            154,
-        )
-        .unwrap();
-
-        assert!(prs.is_empty());
-    }
-
-    #[test]
-    fn derive_prs_from_cycle_receipts_output_errors_when_cycle_window_cannot_be_resolved() {
-        let error = derive_prs_from_cycle_receipts_output(
-            r#"{
-                "cycle_phase": {
-                    "cycle": 155
-                },
-                "agent_sessions": [
-                    {
-                        "pr": 240,
-                        "merged_at": "2026-03-06T01:00:01Z"
-                    }
-                ]
-            }"#,
-            154,
-        )
-        .unwrap_err();
-
-        assert!(error.contains("requested cycle 154"));
-    }
-
-    #[test]
-    fn issue_reference_looks_like_pr_accepts_singular_and_plural_tokens() {
-        for subject in [
-            "state(process-merge): PR EvaLok/schema-org-json-ld#537 merged [cycle 154]",
-            "state(process-merge): pr EvaLok/schema-org-json-ld#537 merged [cycle 154]",
-            "state(process-merge): PRs EvaLok/schema-org-json-ld#537 merged [cycle 154]",
-            "state(process-merge): prs EvaLok/schema-org-json-ld#537 merged [cycle 154]",
-        ] {
-            let hash_index = subject.find('#').unwrap();
-            assert!(issue_reference_looks_like_pr(subject, hash_index));
-        }
-    }
-
-    #[test]
-    fn issue_reference_looks_like_pr_rejects_issue_tokens() {
-        for subject in [
-            "state(cycle-start): issue EvaLok/schema-org-json-ld#537 tracked [cycle 154]",
-            "state(cycle-start): issues EvaLok/schema-org-json-ld#537, EvaLok/schema-org-json-ld#538 tracked [cycle 154]",
-        ] {
-            for (hash_index, character) in subject.char_indices() {
-                if character == '#' {
-                    assert!(!issue_reference_looks_like_pr(subject, hash_index));
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn parse_cycle_receipts_output_rejects_invalid_json_shape() {
-        let error = parse_cycle_receipts_output(r#"{"step":"cycle-start","receipt":"abc1234"}"#)
-            .unwrap_err();
-
-        assert!(error.contains("invalid cycle-receipts JSON output"));
-    }
-
-    #[test]
-    fn parse_git_history_line_rejects_non_full_sha_values() {
-        let error =
-            parse_git_history_line("abc1234\t2026-03-06T01:05:00Z\tstate(cycle-start): start")
-                .unwrap_err();
-
-        assert!(error.contains("git sha must be 40 characters"));
-    }
-
-    #[test]
-    fn worklog_reads_json_from_input_file() {
-        let repo_root = TempRepoDir::new("worklog-input-file");
-        init_git_repo(&repo_root.path);
-        let receipt = create_git_commit(&repo_root.path, "notes/input-file.txt", "input\n");
-        write_cycle_receipts_script(
-            &repo_root.path,
-            &format!(
-                r#"[{{"step":"manual","receipt":"{receipt}","commit":"Add notes/input-file.txt"}}]"#
-            ),
-        );
-        write_state_file(
-            &repo_root.path,
-            r#"{
-                "last_cycle": {"number": 154},
-                "cycle_phase": {
-                    "cycle": 154,
-                    "phase_entered_at": "2026-03-06T01:00:00Z"
-                },
-                "agent_sessions": []
-            }"#,
-        );
-        let payload_path = repo_root.path.join("worklog.json");
-        fs::write(
-            &payload_path,
-            r#"{
-                "what_was_done":["Merged PR #123"],
-                "self_modifications":[],
-                "prs_merged":[123],
-                "prs_reviewed":[],
-                "issues_processed":[546, "Closed #924 (cycle review)"],
-                "current_state":{
-                    "in_flight_sessions":1,
-                    "pipeline_status":"PASS (6/6)",
-                    "copilot_metrics":"steady",
-                    "publish_gate":"clear"
-                },
-                "next_steps":["Review PR #124"]
-            }"#,
-        )
-        .unwrap();
-        let mut args = worklog_args("Input file");
-        args.cycle = None;
-        args.input_file = Some(payload_path);
-
-        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
-        let content = fs::read_to_string(path).unwrap();
-        assert!(
-            content.contains("[PR #123](https://github.com/EvaLok/schema-org-json-ld/issues/123)")
-        );
-        assert!(content.contains("[#546](https://github.com/EvaLok/schema-org-json-ld/issues/546)"));
-        assert!(content.contains(
-            "Closed [#924](https://github.com/EvaLok/schema-org-json-ld/issues/924) (cycle review)"
-        ));
-        assert!(content.contains(
-            "1. Review [PR #124](https://github.com/EvaLok/schema-org-json-ld/issues/124)"
-        ));
-    }
-
-    #[test]
-    fn execute_worklog_overwrites_existing_cycle_file() {
-        let repo_root = TempRepoDir::new("worklog-overwrite-existing-cycle");
-        let date_dir = repo_root
-            .path
-            .join("docs")
-            .join("worklog")
-            .join("2026-03-06");
-
-        let mut first_args = worklog_args("Cycle 100 initial");
-        first_args.cycle = Some(100);
-        first_args.done = vec!["Initial worklog entry".to_string()];
-        first_args.pipeline = Some("PASS (1/1)".to_string());
-        first_args.publish_gate = Some("open".to_string());
-        first_args.in_flight = Some(0);
-
-        let first_path = execute_worklog(&first_args, &repo_root.path, fixed_now()).unwrap();
-
-        let mut second_args = worklog_args("Cycle 100 corrected");
-        second_args.cycle = Some(100);
-        second_args.done = vec!["Corrected worklog entry".to_string()];
-        second_args.pipeline = Some("PASS (2/2)".to_string());
-        second_args.publish_gate = Some("clear".to_string());
-        second_args.in_flight = Some(1);
-
-        let second_path = execute_worklog(&second_args, &repo_root.path, fixed_now()).unwrap();
-        let files: Vec<_> = fs::read_dir(&date_dir)
-            .unwrap()
-            .map(|entry| entry.unwrap().path())
-            .collect();
-        let content = fs::read_to_string(&second_path).unwrap();
-
-        assert_eq!(first_path, second_path);
-        assert_eq!(files.len(), 1);
-        assert!(content.contains("Corrected worklog entry"));
-        assert!(content.contains("- **Pipeline status**: PASS (2/2)"));
-        assert!(!content.contains("Initial worklog entry"));
-    }
-
-    #[test]
-    fn execute_worklog_creates_new_file_for_different_cycle() {
-        let repo_root = TempRepoDir::new("worklog-different-cycle");
-        let date_dir = repo_root
-            .path
-            .join("docs")
-            .join("worklog")
-            .join("2026-03-06");
-
-        let mut first_args = worklog_args("Cycle 100");
-        first_args.cycle = Some(100);
-        first_args.done = vec!["Cycle 100 entry".to_string()];
-        first_args.pipeline = Some("PASS (1/1)".to_string());
-        first_args.publish_gate = Some("open".to_string());
-        first_args.in_flight = Some(0);
-
-        let mut second_args = worklog_args("Cycle 101");
-        second_args.cycle = Some(101);
-        second_args.done = vec!["Cycle 101 entry".to_string()];
-        second_args.pipeline = Some("PASS (2/2)".to_string());
-        second_args.publish_gate = Some("open".to_string());
-        second_args.in_flight = Some(0);
-
-        let first_path = execute_worklog(&first_args, &repo_root.path, fixed_now()).unwrap();
-        let second_path = execute_worklog(&second_args, &repo_root.path, fixed_now()).unwrap();
-        let files: Vec<_> = fs::read_dir(&date_dir)
-            .unwrap()
-            .map(|entry| entry.unwrap().path())
-            .collect();
-
-        assert_ne!(first_path, second_path);
-        assert_eq!(files.len(), 2);
-        assert!(first_path.exists());
-        assert!(second_path.exists());
-    }
-
-    #[test]
-    fn execute_worklog_creates_new_file_when_none_exists() {
-        let repo_root = TempRepoDir::new("worklog-create-when-missing");
-        let mut args = worklog_args("Cycle 100 initial");
-        args.cycle = Some(100);
-        args.done = vec!["First worklog entry".to_string()];
-        args.pipeline = Some("PASS (1/1)".to_string());
-        args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
-
-        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
-        let files: Vec<_> = fs::read_dir(path.parent().unwrap())
-            .unwrap()
-            .map(|entry| entry.unwrap().path())
-            .collect();
-
-        assert_eq!(
-            path,
-            worklog_path(&repo_root.path, fixed_now(), 100, "Cycle 100 initial")
-        );
-        assert!(path.exists());
-        assert_eq!(files.len(), 1);
-    }
-
-    #[test]
-    fn worklog_cycle_mode_replaces_input_file_receipts_with_canonical_output() {
-        let repo_root = TempRepoDir::new("worklog-input-file-cycle-receipts");
-        init_git_repo(&repo_root.path);
-        write_state_file(
-            &repo_root.path,
-            r#"{
-                "last_cycle": {"number": 154},
-                "cycle_phase": {
-                    "cycle": 154,
-                    "phase_entered_at": "2026-03-06T01:00:00Z"
-                },
-                "agent_sessions": []
-            }"#,
-        );
-        let start_receipt = create_git_commit_with_message(
-            &repo_root.path,
-            "notes/start.txt",
-            "start\n",
-            "state(cycle-start): begin cycle 154 [cycle 154]",
-        );
-        let canonical_receipt = create_git_commit_with_message(
-            &repo_root.path,
-            "tools/rust/crates/write-entry/src/main.rs",
-            "changed\n",
-            "state(process-merge): canonical receipt [cycle 154]",
-        );
-        write_cycle_receipts_script(
-            &repo_root.path,
-            &format!(
-                r#"[
-                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}},
-                    {{"step":"process-merge","receipt":"{canonical_receipt}","commit":"state(process-merge): canonical receipt [cycle 154]"}}
-                ]"#
-            ),
-        );
-        let payload_path = repo_root.path.join("worklog-cycle.json");
-        fs::write(
-            &payload_path,
-            r#"{
-                    "what_was_done":["Checked #42"],
-                    "self_modifications":[],
-                    "prs_merged":[],
-                    "prs_reviewed":[],
-                    "issues_processed":[],
-                    "current_state":{
-                        "in_flight_sessions":0,
-                        "pipeline_status":"PASS (6/6)",
-                        "copilot_metrics":"steady",
-                        "publish_gate":"open"
-                    },
-                    "next_steps":[],
-                    "receipts":[{"tool":"manual","receipt":"deadbee"}]
-                }"#,
-        )
-        .unwrap();
-        let mut args = worklog_args("Input file canonical receipts");
-        args.input_file = Some(payload_path);
-        args.auto_receipts = true;
-
-        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
-        let content = fs::read_to_string(path).unwrap();
-
-        assert!(content.contains(&format!(
-            "| cycle-start | {} | [{}](https://github.com/EvaLok/schema-org-json-ld/commit/{}) |",
-            start_receipt, start_receipt, start_receipt
-        )));
-        assert!(content.contains(&format!(
-            "| process-merge | {} | [{}](https://github.com/EvaLok/schema-org-json-ld/commit/{}) |",
-            canonical_receipt, canonical_receipt, canonical_receipt
-        )));
-        assert!(!content.contains("| manual | deadbee |"));
-    }
-
-    #[test]
-    fn find_worklog_relative_path_matches_cycle_and_returns_none_when_missing() {
-        let repo_root = TempRepoDir::new("find-worklog");
-        let first = write_worklog_fixture(&repo_root.path, fixed_now(), 154, "Cycle one");
-        let second = write_worklog_fixture(
-            &repo_root.path,
-            fixed_now_on("2026-03-07"),
-            155,
-            "Cycle two",
-        );
-
-        let found = find_worklog_relative_path(&repo_root.path, 155).unwrap();
-        assert_eq!(
-            found,
-            Some("../worklog/2026-03-07/051458-cycle-155-cycle-two.md".to_string())
-        );
-        assert!(first.exists());
-        assert!(second.exists());
-        assert_eq!(
-            find_worklog_relative_path(&repo_root.path, 999).unwrap(),
-            None
-        );
-    }
-
-    #[test]
-    fn worklog_inline_flags_render_receipts_table() {
-        let repo_root = TempRepoDir::new("worklog-inline-flags");
-        init_git_repo(&repo_root.path);
-        write_state_file(
-            &repo_root.path,
-            r#"{
-                "last_cycle": {"number": 154},
-                "cycle_phase": {
-                    "cycle": 154,
-                    "phase_entered_at": "2026-03-06T01:00:00Z"
-                },
-                "agent_sessions": []
-            }"#,
-        );
-        let first_receipt = create_git_commit(&repo_root.path, "first.txt", "first");
-        let second_receipt = create_git_commit(&repo_root.path, "second.txt", "second");
-        let mut args = worklog_args("Inline flags");
-        args.cycle = None;
-        args.done = vec!["Merged PR #123".to_string()];
-        args.pr_merged = vec![123, 456];
-        args.pr_reviewed = vec![789];
-        args.issue_processed =
-            vec!["Closed EvaLok/schema-org-json-ld#924 (cycle review)".to_string()];
-        args.self_modification = vec!["Updated AGENTS.md".to_string()];
-        args.next = vec!["Review PR #789".to_string()];
-        args.pipeline = Some("PASS (6/6)".to_string());
-        args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(1);
-        args.receipt = vec![
-            format!("cycle-start:{first_receipt}"),
-            format!("process-merge:{second_receipt}"),
-        ];
-
-        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
-        let content = fs::read_to_string(path).unwrap();
-        assert!(content.contains(
-            "- Merged [PR #123](https://github.com/EvaLok/schema-org-json-ld/issues/123)"
-        ));
-        assert!(content
-            .contains("- [PR #789](https://github.com/EvaLok/schema-org-json-ld/issues/789)"));
-        assert!(content.contains("- Closed EvaLok/schema-org-json-ld#924 (cycle review)"));
-        assert!(content.contains("- Updated AGENTS.md"));
-        assert!(!content.contains("### PRs reviewed\n\n- None."));
-        assert!(!content.contains("### Issues processed\n\n- None."));
-        assert!(!content.contains("## Self-modifications\n\n- None."));
-        assert!(content.contains("- **Pipeline status**: PASS (6/6)"));
-        assert!(!content.contains("- **Copilot metrics**:"));
-        assert!(content.contains("- **Publish gate**: open"));
-        assert!(content.contains("## Commit receipts"));
-        assert!(content.contains(&format!(
-            "| cycle-start | {} | [{}](https://github.com/EvaLok/schema-org-json-ld/commit/{}) |",
-            first_receipt, first_receipt, first_receipt
-        )));
-        assert!(content.contains(&format!(
-            "| process-merge | {} | [{}](https://github.com/EvaLok/schema-org-json-ld/commit/{}) |",
-            second_receipt, second_receipt, second_receipt
-        )));
-    }
-
-    #[test]
-    fn unresolved_receipt_sha_is_rejected() {
-        let repo_root = TempRepoDir::new("worklog-unresolved-receipt");
-        let mut receipts = parse_receipts(&["cycle-start:deadbee".to_string()]).unwrap();
-
-        let error = validate_receipt_shas(&mut receipts, &repo_root.path).unwrap_err();
-        assert_eq!(error, "unresolvable receipt SHA for cycle-start: deadbee");
-    }
-
-    #[test]
-    fn generated_markdown_sha_validation_accepts_resolvable_hashes() {
-        let repo_root = TempRepoDir::new("generated-markdown-valid-sha");
-        init_git_repo(&repo_root.path);
-        let valid_sha = create_git_commit(&repo_root.path, "notes/valid.txt", "valid\n");
-
-        let warnings = validate_generated_markdown_shas(
-            "worklog",
-            &format!("Resolved receipt `{valid_sha}` appears in the entry."),
-            &repo_root.path,
-        );
-
-        assert!(warnings.unwrap().is_empty());
-    }
-
-    #[test]
-    fn generated_markdown_sha_validation_warns_on_unresolved_hashes() {
-        let repo_root = TempRepoDir::new("generated-markdown-invalid-sha");
-        init_git_repo(&repo_root.path);
-        let valid_sha = create_git_commit(&repo_root.path, "notes/valid.txt", "valid\n");
-
-        let warnings = validate_generated_markdown_shas(
-            "journal",
-            &format!("Valid `{valid_sha}` and phantom `deadbee0` receipts are noted."),
-            &repo_root.path,
-        )
-        .unwrap();
-
-        assert_eq!(
-            warnings,
-            vec!["WARNING: generated journal references unresolved commit SHA: deadbee0"]
-        );
-    }
-
-    #[test]
     fn worklog_inline_flags_auto_populate_status_from_state() {
         let repo_root = TempRepoDir::new("worklog-auto-populate");
         init_git_repo(&repo_root.path);
@@ -5262,10 +3838,49 @@ mod tests {
         assert!(!content.contains("### PRs reviewed"));
         assert!(content.contains("### Issues processed\n\n- None."));
         assert!(content.contains("## Self-modifications\n\n- None."));
+        assert!(content.contains("## Pre-dispatch state"));
+        assert!(content.contains(LEGACY_STATE_DISCLAIMER));
         assert!(content.contains("- **Pipeline status**: Not provided."));
         assert!(content.contains("- **In-flight agent sessions**: 3"));
         assert!(!content.contains("- **Copilot metrics**:"));
         assert!(content.contains("- **Publish gate**: published"));
+        assert!(!content.contains("post-dispatch"));
+    }
+
+    #[test]
+    fn worklog_inline_flags_use_frozen_c5_5_state_when_present() {
+        let repo_root = TempRepoDir::new("worklog-c5-5-frozen-state");
+        init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "in_flight_sessions": 0,
+                "publish_gate": {
+                    "status": "published"
+                },
+                "tool_pipeline": {
+                    "status": "phase_5_active",
+                    "c5_5_gate": {
+                        "cycle": 154,
+                        "status": "PASS",
+                        "needs_reverify": false,
+                        "pipeline_summary": "PASS (6/6)"
+                    }
+                }
+            }"#,
+        );
+
+        let mut args = worklog_args("Frozen state");
+        args.cycle = Some(154);
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains("## Cycle state"));
+        assert!(!content.contains(LEGACY_STATE_DISCLAIMER));
+        assert!(content.contains("- **Pipeline status**: PASS (6/6)"));
+        assert!(!content.contains("post-dispatch"));
     }
 
     #[test]
@@ -5873,7 +4488,7 @@ mod tests {
         .unwrap();
         let args = match cli.command {
             Command::Worklog(args) => args,
-            Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
+            Command::Journal(_) => panic!("expected worklog command"),
         };
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
@@ -5963,7 +4578,7 @@ mod tests {
         .unwrap();
         let args = match cli.command {
             Command::Worklog(args) => args,
-            Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
+            Command::Journal(_) => panic!("expected worklog command"),
         };
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
@@ -6037,7 +4652,7 @@ mod tests {
         .unwrap();
         let args = match cli.command {
             Command::Worklog(args) => args,
-            Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
+            Command::Journal(_) => panic!("expected worklog command"),
         };
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
@@ -6105,7 +4720,7 @@ mod tests {
         .unwrap();
         let args = match cli.command {
             Command::Worklog(args) => args,
-            Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
+            Command::Journal(_) => panic!("expected worklog command"),
         };
 
         let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
@@ -6203,7 +4818,7 @@ mod tests {
         .unwrap();
         let args = match cli.command {
             Command::Worklog(args) => args,
-            Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
+            Command::Journal(_) => panic!("expected worklog command"),
         };
 
         let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
@@ -6534,7 +5149,7 @@ mod tests {
         .unwrap();
         let args = match cli.command {
             Command::Worklog(args) => args,
-            Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
+            Command::Journal(_) => panic!("expected worklog command"),
         };
 
         let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
@@ -6623,7 +5238,7 @@ mod tests {
         .unwrap();
         let args = match cli.command {
             Command::Worklog(args) => args,
-            Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
+            Command::Journal(_) => panic!("expected worklog command"),
         };
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
@@ -8186,7 +6801,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 assert_eq!(args.title, "test");
                 assert!(args.input_file.is_none());
             }
-            Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
+            Command::Journal(_) => panic!("expected worklog command"),
         }
     }
 
@@ -8200,7 +6815,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 assert!(args.done.is_empty());
                 assert!(args.receipt.is_empty());
             }
-            Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
+            Command::Journal(_) => panic!("expected worklog command"),
         }
     }
 
@@ -8249,7 +6864,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 assert_eq!(args.in_flight, Some(1));
                 assert_eq!(args.receipt, vec!["cycle-start:abc1234".to_string()]);
             }
-            Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
+            Command::Journal(_) => panic!("expected worklog command"),
         }
     }
 
@@ -8312,854 +6927,8 @@ Reflective log for the schema-org-json-ld orchestrator.
                     ]
                 );
             }
-            Command::Journal(_) | Command::PatchPipeline(_) => panic!("expected worklog command"),
+            Command::Journal(_) => panic!("expected worklog command"),
         }
-    }
-
-    #[test]
-    fn cli_parses_patch_pipeline_arguments() {
-        let cli = Cli::try_parse_from([
-            "write-entry",
-            "patch-pipeline",
-            "--worklog-file",
-            "docs/worklog/test.md",
-            "--status",
-            "PASS (9/9)",
-            "--in-flight",
-            "2",
-            "--publish-gate",
-            "published",
-            "--next-steps",
-            "Review [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) when Copilot completes",
-            "--next-steps",
-            "Prepare follow-up dispatch",
-            "--issues-processed",
-            "123;some title;closed|456;other;in-flight",
-            "--prior-gate-failures",
-            "C4.1 FAIL: mismatch,C5.5 FAIL: pipeline gate",
-            "--section-title",
-            "Cycle state",
-        ])
-        .unwrap();
-
-        match cli.command {
-            Command::PatchPipeline(args) => {
-                assert_eq!(args.worklog, PathBuf::from("docs/worklog/test.md"));
-                assert_eq!(args.status, "PASS (9/9)");
-                assert_eq!(args.in_flight, Some(2));
-                assert_eq!(args.publish_gate.as_deref(), Some("published"));
-                assert_eq!(
-                    args.next_steps,
-                    vec![
-                        "Review [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) when Copilot completes"
-                            .to_string(),
-                        "Prepare follow-up dispatch".to_string()
-                    ]
-                );
-                assert_eq!(
-                    args.issues_processed.as_deref(),
-                    Some("123;some title;closed|456;other;in-flight")
-                );
-                assert_eq!(
-                    args.prior_gate_failures,
-                    vec![
-                        "C4.1 FAIL: mismatch".to_string(),
-                        "C5.5 FAIL: pipeline gate".to_string()
-                    ]
-                );
-                assert_eq!(args.section_title.as_deref(), Some("Cycle state"));
-            }
-            Command::Worklog(_) | Command::Journal(_) => panic!("expected patch-pipeline command"),
-        }
-    }
-
-    #[test]
-    fn cli_parses_journal_input_file_and_inline_flags() {
-        let cli = Cli::try_parse_from([
-            "write-entry",
-            "journal",
-            "--title",
-            "test",
-            "--input-file",
-            "/tmp/journal.json",
-            "--section",
-            "Decision::Defer #829",
-            "--commitment",
-            "Dispatch #830 next cycle",
-            "--previous-commitment-status",
-            "followed",
-            "--previous-commitment-detail",
-            "Done.",
-        ])
-        .unwrap();
-
-        match cli.command {
-            Command::Journal(args) => {
-                assert_eq!(args.input_file, Some(PathBuf::from("/tmp/journal.json")));
-                assert_eq!(args.section, vec!["Decision::Defer #829".to_string()]);
-                assert_eq!(
-                    args.commitment,
-                    vec!["Dispatch #830 next cycle".to_string()]
-                );
-                assert_eq!(args.previous_commitment_status.as_deref(), Some("followed"));
-                assert_eq!(args.previous_commitment_detail.as_deref(), Some("Done."));
-            }
-            Command::Worklog(_) | Command::PatchPipeline(_) => panic!("expected journal command"),
-        }
-    }
-
-    #[test]
-    fn patch_pipeline_replaces_placeholder_status_and_preserves_other_content() {
-        let repo_root = TempRepoDir::new("patch-pipeline-success");
-        let worklog_path = repo_root.path.join("docs/worklog/test.md");
-        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
-        let original = "\
-# Cycle 154 — 2026-03-06 05:14 UTC
-
-## Pre-dispatch state
-
-*Snapshot before review dispatch — final counters may differ after C6.*
-
-- **In-flight agent sessions**: 1
-- **Pipeline status**: Not provided.
-- **Copilot metrics**: stable
-- **Publish gate**: open
-
-## Next steps
-
-1. None.
-";
-        fs::write(&worklog_path, original).unwrap();
-
-        let result = execute_patch_pipeline(
-            &PatchPipelineArgs {
-                worklog: PathBuf::from("docs/worklog/test.md"),
-                status: "PASS (9/9)".to_string(),
-                in_flight: None,
-                publish_gate: None,
-                next_steps: Vec::new(),
-                issues_processed: None,
-                prior_gate_failures: Vec::new(),
-                section_title: None,
-            },
-            &repo_root.path,
-        )
-        .unwrap();
-
-        assert_eq!(result, worklog_path);
-        let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains("- **Pipeline status**: PASS (9/9)"));
-        assert!(updated.contains("- **In-flight agent sessions**: 1"));
-        assert!(!updated.contains("- **Copilot metrics**:"));
-        assert!(updated.contains("## Next steps"));
-        assert_eq!(updated.matches("- **Pipeline status**:").count(), 1);
-        assert!(!updated.contains("- **Pipeline status (post-dispatch)**:"));
-    }
-
-    #[test]
-    fn patch_pipeline_updates_state_section_and_removes_pre_dispatch_note() {
-        let repo_root = TempRepoDir::new("patch-pipeline-state-section");
-        let worklog_path = repo_root.path.join("docs/worklog/test.md");
-        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
-        let original = "\
-# Cycle 154 — 2026-03-06 05:14 UTC
-
-## Pre-dispatch state
-
-*Snapshot before review dispatch — final counters may differ after C6.*
-
-- **In-flight agent sessions**: 1
-- **Pipeline status**: Not provided.
-- **Copilot metrics**: 45 dispatches, 42 PRs produced, 40 merged, 88.9% PR merge rate
-- **Publish gate**: open
-
-## Next steps
-
-1. None.
-";
-        fs::write(&worklog_path, original).unwrap();
-
-        execute_patch_pipeline(
-            &PatchPipelineArgs {
-                worklog: PathBuf::from("docs/worklog/test.md"),
-                status: "PASS (9/9)".to_string(),
-                in_flight: Some(2),
-                publish_gate: Some("published".to_string()),
-                next_steps: Vec::new(),
-                issues_processed: None,
-                prior_gate_failures: Vec::new(),
-                section_title: Some("Cycle state".to_string()),
-            },
-            &repo_root.path,
-        )
-        .unwrap();
-
-        let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains("## Cycle state"));
-        assert!(!updated.contains("## Pre-dispatch state"));
-        assert!(!updated.contains("Snapshot before review dispatch"));
-        assert!(updated.contains("- **In-flight agent sessions**: 1"));
-        assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 2"));
-        assert!(updated.contains("- **Pipeline status**: PASS (9/9)"));
-        assert!(!updated.contains("- **Copilot metrics**:"));
-        assert!(updated.contains("- **Publish gate**: open"));
-        assert!(updated.contains("- **Publish gate (post-dispatch)**: published"));
-        assert!(updated.contains("## Next steps"));
-        assert!(!updated.contains("- **Pipeline status (post-dispatch)**:"));
-    }
-
-    #[test]
-    fn patch_pipeline_auto_derives_in_flight_from_state_json() {
-        let repo_root = TempRepoDir::new("patch-pipeline-auto-in-flight");
-        let worklog_path = repo_root.path.join("docs/worklog/test.md");
-        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
-        write_state_file(
-            &repo_root.path,
-            r#"{
-                "in_flight_sessions": 1
-            }"#,
-        );
-        fs::write(
-            &worklog_path,
-            "# Cycle 154\n\n## Cycle state\n\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: open\n",
-        )
-        .unwrap();
-
-        execute_patch_pipeline(
-            &PatchPipelineArgs {
-                worklog: PathBuf::from("docs/worklog/test.md"),
-                status: "PASS (9/9)".to_string(),
-                in_flight: None,
-                publish_gate: None,
-                next_steps: Vec::new(),
-                issues_processed: None,
-                prior_gate_failures: Vec::new(),
-                section_title: None,
-            },
-            &repo_root.path,
-        )
-        .unwrap();
-
-        let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains("- **In-flight agent sessions**: 0"));
-        assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
-    }
-
-    #[test]
-    fn patch_pipeline_adds_post_dispatch_in_flight_when_primary_matches_state_json() {
-        let repo_root = TempRepoDir::new("patch-pipeline-matching-in-flight");
-        let worklog_path = repo_root.path.join("docs/worklog/test.md");
-        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
-        write_state_file(
-            &repo_root.path,
-            r#"{
-                "in_flight_sessions": 1
-            }"#,
-        );
-        fs::write(
-            &worklog_path,
-            "# Cycle 154\n\n## Cycle state\n\n- **In-flight agent sessions**: 1\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: open\n",
-        )
-        .unwrap();
-
-        execute_patch_pipeline(
-            &PatchPipelineArgs {
-                worklog: PathBuf::from("docs/worklog/test.md"),
-                status: "PASS (9/9)".to_string(),
-                in_flight: None,
-                publish_gate: None,
-                next_steps: Vec::new(),
-                issues_processed: None,
-                prior_gate_failures: Vec::new(),
-                section_title: None,
-            },
-            &repo_root.path,
-        )
-        .unwrap();
-
-        let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains("- **In-flight agent sessions**: 1"));
-        assert!(!updated.contains("- **In-flight agent sessions (post-dispatch)**:"));
-    }
-
-    #[test]
-    fn patch_pipeline_explicit_in_flight_overrides_state_json() {
-        let repo_root = TempRepoDir::new("patch-pipeline-explicit-in-flight");
-        let worklog_path = repo_root.path.join("docs/worklog/test.md");
-        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
-        write_state_file(
-            &repo_root.path,
-            r#"{
-                "in_flight_sessions": 1
-            }"#,
-        );
-        fs::write(
-            &worklog_path,
-            "# Cycle 154\n\n## Cycle state\n\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: open\n",
-        )
-        .unwrap();
-
-        execute_patch_pipeline(
-            &PatchPipelineArgs {
-                worklog: PathBuf::from("docs/worklog/test.md"),
-                status: "PASS (9/9)".to_string(),
-                in_flight: Some(2),
-                publish_gate: None,
-                next_steps: Vec::new(),
-                issues_processed: None,
-                prior_gate_failures: Vec::new(),
-                section_title: None,
-            },
-            &repo_root.path,
-        )
-        .unwrap();
-
-        let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains("- **In-flight agent sessions**: 0"));
-        assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 2"));
-        assert!(!updated.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
-    }
-
-    #[test]
-    fn patch_pipeline_preserves_pre_dispatch_in_flight_value_during_refresh() {
-        let repo_root = TempRepoDir::new("patch-pipeline-preserve-pre-dispatch-in-flight");
-        let worklog_path = repo_root.path.join("docs/worklog/test.md");
-        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
-        fs::write(
-            &worklog_path,
-            "# Cycle 154\n\n## Pre-dispatch state\n\n- **In-flight agent sessions**: 1\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: open\n",
-        )
-        .unwrap();
-
-        execute_patch_pipeline(
-            &PatchPipelineArgs {
-                worklog: PathBuf::from("docs/worklog/test.md"),
-                status: "PASS (9/9)".to_string(),
-                in_flight: Some(2),
-                publish_gate: None,
-                next_steps: Vec::new(),
-                issues_processed: None,
-                prior_gate_failures: Vec::new(),
-                section_title: None,
-            },
-            &repo_root.path,
-        )
-        .unwrap();
-
-        let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains("- **In-flight agent sessions**: 1"));
-        assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 2"));
-        assert_eq!(
-            updated.matches("- **In-flight agent sessions**: 1").count(),
-            1
-        );
-    }
-
-    #[test]
-    fn patch_pipeline_skips_in_flight_patch_when_state_json_is_unparseable() {
-        let repo_root = TempRepoDir::new("patch-pipeline-invalid-state");
-        let worklog_path = repo_root.path.join("docs/worklog/test.md");
-        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
-        fs::create_dir_all(repo_root.path.join("docs")).unwrap();
-        fs::write(repo_root.path.join("docs/state.json"), "{not valid json").unwrap();
-        fs::write(
-            &worklog_path,
-            "# Cycle 154\n\n## Cycle state\n\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: open\n",
-        )
-        .unwrap();
-
-        execute_patch_pipeline(
-            &PatchPipelineArgs {
-                worklog: PathBuf::from("docs/worklog/test.md"),
-                status: "PASS (9/9)".to_string(),
-                in_flight: None,
-                publish_gate: None,
-                next_steps: Vec::new(),
-                issues_processed: None,
-                prior_gate_failures: Vec::new(),
-                section_title: None,
-            },
-            &repo_root.path,
-        )
-        .unwrap();
-
-        let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains("- **In-flight agent sessions**: 0"));
-        assert!(!updated.contains("- **In-flight agent sessions (post-dispatch)**:"));
-        assert!(updated.contains("- **Pipeline status (post-dispatch)**: PASS (9/9)"));
-    }
-
-    #[test]
-    fn patch_pipeline_returns_error_when_pipeline_status_line_is_missing() {
-        let repo_root = TempRepoDir::new("patch-pipeline-missing-pattern");
-        let worklog_path = repo_root.path.join("docs/worklog/test.md");
-        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
-        fs::write(
-            &worklog_path,
-            "# Cycle 154\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **Copilot metrics**: stable\n",
-        )
-        .unwrap();
-
-        let error = execute_patch_pipeline(
-            &PatchPipelineArgs {
-                worklog: PathBuf::from("docs/worklog/test.md"),
-                status: "PASS (9/9)".to_string(),
-                in_flight: None,
-                publish_gate: None,
-                next_steps: Vec::new(),
-                issues_processed: None,
-                prior_gate_failures: Vec::new(),
-                section_title: None,
-            },
-            &repo_root.path,
-        )
-        .unwrap_err();
-
-        assert_eq!(
-            error,
-            format!(
-                "failed to patch {}: pipeline status line not found",
-                worklog_path.display()
-            )
-        );
-        let expected = "# Cycle 154\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **Copilot metrics**: stable\n";
-        assert_eq!(fs::read_to_string(&worklog_path).unwrap(), expected);
-    }
-
-    #[test]
-    fn patch_pipeline_supports_multiline_status() {
-        let repo_root = TempRepoDir::new("patch-pipeline-multiline");
-        let worklog_path = repo_root.path.join("docs/worklog/test.md");
-        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
-        fs::write(
-            &worklog_path,
-            "# Cycle 154\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **Pipeline status**: Not provided.\n- **Publish gate**: open\n",
-        )
-        .unwrap();
-
-        execute_patch_pipeline(
-            &PatchPipelineArgs {
-                worklog: PathBuf::from("docs/worklog/test.md"),
-                status: "PASS (2 warnings:\nwarn one\nwarn two)".to_string(),
-                in_flight: None,
-                publish_gate: None,
-                next_steps: Vec::new(),
-                issues_processed: None,
-                prior_gate_failures: Vec::new(),
-                section_title: None,
-            },
-            &repo_root.path,
-        )
-        .unwrap();
-
-        let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains("- **Pipeline status**: PASS (2 warnings:\nwarn one\nwarn two)"));
-        assert!(updated.contains("- **Publish gate**: open"));
-        assert!(!updated.contains("- **Pipeline status (post-dispatch)**:"));
-    }
-
-    #[test]
-    fn patch_pipeline_adds_prior_gate_failures_to_cycle_state() {
-        let repo_root = TempRepoDir::new("patch-pipeline-prior-gate-failures");
-        let worklog_path = repo_root.path.join("docs/worklog/test.md");
-        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
-        fs::write(
-            &worklog_path,
-            "# Cycle 154\n\n## Cycle state\n\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: open\n",
-        )
-        .unwrap();
-
-        execute_patch_pipeline(
-            &PatchPipelineArgs {
-                worklog: PathBuf::from("docs/worklog/test.md"),
-                status: "PASS (9/9)".to_string(),
-                in_flight: Some(1),
-                publish_gate: None,
-                next_steps: Vec::new(),
-                issues_processed: None,
-                prior_gate_failures: vec![
-                    "C4.1 FAIL: mismatch".to_string(),
-                    "C5.5 FAIL: pipeline gate".to_string(),
-                ],
-                section_title: None,
-            },
-            &repo_root.path,
-        )
-        .unwrap();
-
-        let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains("- **Close-out gate failures**: C4.1 FAIL: mismatch"));
-        assert!(updated.contains("- **Close-out gate failures**: C5.5 FAIL: pipeline gate"));
-        let pipeline = updated.find("- **Pipeline status**: FAIL (1 blocking finding)").unwrap();
-        let gate_failure = updated
-            .find("- **Close-out gate failures**: C4.1 FAIL: mismatch")
-            .unwrap();
-        let publish_gate = updated.find("- **Publish gate**: open").unwrap();
-        assert!(pipeline < gate_failure);
-        assert!(gate_failure < publish_gate);
-    }
-
-    #[test]
-    fn patch_pipeline_without_prior_gate_failures_does_not_add_failure_lines() {
-        let repo_root = TempRepoDir::new("patch-pipeline-no-prior-gate-failures");
-        let worklog_path = repo_root.path.join("docs/worklog/test.md");
-        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
-        fs::write(
-            &worklog_path,
-            "# Cycle 154\n\n## Cycle state\n\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: open\n",
-        )
-        .unwrap();
-
-        execute_patch_pipeline(
-            &PatchPipelineArgs {
-                worklog: PathBuf::from("docs/worklog/test.md"),
-                status: "PASS (9/9)".to_string(),
-                in_flight: Some(1),
-                publish_gate: None,
-                next_steps: Vec::new(),
-                issues_processed: None,
-                prior_gate_failures: Vec::new(),
-                section_title: None,
-            },
-            &repo_root.path,
-        )
-        .unwrap();
-
-        let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(!updated.contains(CLOSE_OUT_GATE_FAILURES_PREFIX));
-    }
-
-    #[test]
-    fn patch_pipeline_replaces_existing_prior_gate_failures_on_repatch() {
-        let repo_root = TempRepoDir::new("patch-pipeline-repatch-prior-gate-failures");
-        let worklog_path = repo_root.path.join("docs/worklog/test.md");
-        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
-        fs::write(
-            &worklog_path,
-            "# Cycle 154\n\n## Cycle state\n\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Close-out gate failures**: C4.1 FAIL: stale reason\n- **Publish gate**: open\n",
-        )
-        .unwrap();
-
-        execute_patch_pipeline(
-            &PatchPipelineArgs {
-                worklog: PathBuf::from("docs/worklog/test.md"),
-                status: "PASS (9/9)".to_string(),
-                in_flight: Some(1),
-                publish_gate: None,
-                next_steps: Vec::new(),
-                issues_processed: None,
-                prior_gate_failures: vec!["C5.5 FAIL: pipeline gate".to_string()],
-                section_title: None,
-            },
-            &repo_root.path,
-        )
-        .unwrap();
-
-        let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(!updated.contains("C4.1 FAIL: stale reason"));
-        assert!(updated.contains("- **Close-out gate failures**: C5.5 FAIL: pipeline gate"));
-        assert_eq!(updated.matches(CLOSE_OUT_GATE_FAILURES_PREFIX).count(), 1);
-    }
-
-    #[test]
-    fn patch_pipeline_preserves_existing_result_and_adds_post_dispatch_addendum() {
-        let repo_root = TempRepoDir::new("patch-pipeline-addendum");
-        let worklog_path = repo_root.path.join("docs/worklog/test.md");
-        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
-        fs::write(
-            &worklog_path,
-            "# Cycle 154\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: open\n\n## Next steps\n\n1. Plan next dispatch\n",
-        )
-        .unwrap();
-
-        execute_patch_pipeline(
-            &PatchPipelineArgs {
-                worklog: PathBuf::from("docs/worklog/test.md"),
-                status: "PASS (9/9)".to_string(),
-                in_flight: Some(1),
-                publish_gate: Some("published".to_string()),
-                next_steps: vec![
-                    "Review [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) when Copilot completes"
-                        .to_string(),
-                    "Prepare follow-up dispatch".to_string(),
-                ],
-                issues_processed: None,
-                prior_gate_failures: Vec::new(),
-                section_title: None,
-            },
-            &repo_root.path,
-        )
-        .unwrap();
-
-        let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains("- **In-flight agent sessions**: 0"));
-        assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
-        assert!(updated.contains("- **Pipeline status**: FAIL (1 blocking finding)"));
-        assert!(updated.contains("- **Pipeline status (post-dispatch)**: PASS (9/9)"));
-        assert!(updated.contains("- **Publish gate**: open"));
-        assert!(updated.contains("- **Publish gate (post-dispatch)**: published"));
-        assert!(updated.contains("## Next steps (pre-dispatch)\n\n1. Plan next dispatch\n\n## Next steps (post-dispatch)\n\n1. Review [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) when Copilot completes\n2. Prepare follow-up dispatch\n"));
-        assert_eq!(updated.matches("- **Pipeline status**:").count(), 1);
-        assert_eq!(
-            updated
-                .matches("- **Pipeline status (post-dispatch)**:")
-                .count(),
-            1
-        );
-        assert_eq!(updated.matches("## Next steps (pre-dispatch)").count(), 1);
-    }
-
-    #[test]
-    fn patch_pipeline_skips_post_dispatch_addendum_when_status_matches() {
-        let repo_root = TempRepoDir::new("patch-pipeline-matching-status");
-        let worklog_path = repo_root.path.join("docs/worklog/test.md");
-        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
-        fs::write(
-            &worklog_path,
-            "# Cycle 154\n\n## Cycle state\n\n- **In-flight agent sessions**: 0\n- **Pipeline status**: PASS (9/9)\n- **Publish gate**: open\n",
-        )
-        .unwrap();
-
-        execute_patch_pipeline(
-            &PatchPipelineArgs {
-                worklog: PathBuf::from("docs/worklog/test.md"),
-                status: "PASS (9/9)".to_string(),
-                in_flight: Some(1),
-                publish_gate: None,
-                next_steps: Vec::new(),
-                issues_processed: None,
-                prior_gate_failures: Vec::new(),
-                section_title: None,
-            },
-            &repo_root.path,
-        )
-        .unwrap();
-
-        let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains("- **Pipeline status**: PASS (9/9)"));
-        assert!(!updated.contains("- **Pipeline status (post-dispatch)**:"));
-        assert!(updated.contains("- **In-flight agent sessions**: 0"));
-        assert!(updated.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
-    }
-
-    #[test]
-    fn patch_pipeline_replaces_placeholder_in_flight_value() {
-        let repo_root = TempRepoDir::new("patch-pipeline-placeholder-in-flight");
-        let worklog_path = repo_root.path.join("docs/worklog/test.md");
-        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
-        fs::write(
-            &worklog_path,
-            "# Cycle 154\n\n## Cycle state\n\n- **In-flight agent sessions**: Not provided.\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: open\n",
-        )
-        .unwrap();
-
-        execute_patch_pipeline(
-            &PatchPipelineArgs {
-                worklog: PathBuf::from("docs/worklog/test.md"),
-                status: "PASS (9/9)".to_string(),
-                in_flight: Some(2),
-                publish_gate: None,
-                next_steps: Vec::new(),
-                issues_processed: None,
-                prior_gate_failures: Vec::new(),
-                section_title: None,
-            },
-            &repo_root.path,
-        )
-        .unwrap();
-
-        let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains("- **In-flight agent sessions**: 2"));
-        assert!(!updated.contains("- **In-flight agent sessions**: Not provided."));
-        assert!(!updated.contains("- **In-flight agent sessions (post-dispatch)**:"));
-    }
-
-    #[test]
-    fn patch_pipeline_replaces_next_steps_section() {
-        let repo_root = TempRepoDir::new("patch-pipeline-next-steps");
-        let worklog_path = repo_root.path.join("docs/worklog/test.md");
-        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
-        fs::write(
-            &worklog_path,
-            "# Cycle 154\n\n## Cycle state\n\n- **Pipeline status**: PASS\n\n## Next steps\n\nNot provided.\n",
-        )
-        .unwrap();
-
-        execute_patch_pipeline(
-            &PatchPipelineArgs {
-                worklog: PathBuf::from("docs/worklog/test.md"),
-                status: "PASS".to_string(),
-                in_flight: None,
-                publish_gate: None,
-                next_steps: vec![
-                    "Review [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) when Copilot completes"
-                        .to_string(),
-                    "Prepare follow-up dispatch".to_string(),
-                ],
-                issues_processed: None,
-                prior_gate_failures: Vec::new(),
-                section_title: None,
-            },
-            &repo_root.path,
-        )
-        .unwrap();
-
-        let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains("## Next steps\n\n1. Review [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) when Copilot completes\n2. Prepare follow-up dispatch\n"));
-        assert!(!updated.contains("## Next steps (post-dispatch)"));
-    }
-
-    #[test]
-    fn patch_pipeline_replaces_placeholder_issues_processed_section() {
-        let repo_root = TempRepoDir::new("patch-pipeline-issues-processed-placeholder");
-        let worklog_path = repo_root.path.join("docs/worklog/test.md");
-        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
-        fs::write(
-            &worklog_path,
-            "# Cycle 154\n\n### Issues processed\n\n- None.\n\n## Cycle state\n\n- **Pipeline status**: PASS\n",
-        )
-        .unwrap();
-
-        execute_patch_pipeline(
-            &PatchPipelineArgs {
-                worklog: PathBuf::from("docs/worklog/test.md"),
-                status: "PASS".to_string(),
-                in_flight: None,
-                publish_gate: None,
-                next_steps: Vec::new(),
-                issues_processed: Some("123;some title;closed|456;other;in-flight".to_string()),
-                prior_gate_failures: Vec::new(),
-                section_title: None,
-            },
-            &repo_root.path,
-        )
-        .unwrap();
-
-        let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains(
-            "### Issues processed\n\n- [#123](https://github.com/EvaLok/schema-org-json-ld/issues/123): some title (closed)\n- [#456](https://github.com/EvaLok/schema-org-json-ld/issues/456): other (in-flight)\n"
-        ));
-        assert!(!updated.contains("### Issues processed (post-dispatch)"));
-    }
-
-    #[test]
-    fn patch_pipeline_adds_post_dispatch_issues_processed_addendum_when_content_changes() {
-        let repo_root = TempRepoDir::new("patch-pipeline-issues-processed-addendum");
-        let worklog_path = repo_root.path.join("docs/worklog/test.md");
-        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
-        fs::write(
-            &worklog_path,
-            "# Cycle 154\n\n### Issues processed\n\n- [#123](https://github.com/EvaLok/schema-org-json-ld/issues/123): some title (open)\n\n## Cycle state\n\n- **Pipeline status**: PASS\n",
-        )
-        .unwrap();
-
-        execute_patch_pipeline(
-            &PatchPipelineArgs {
-                worklog: PathBuf::from("docs/worklog/test.md"),
-                status: "PASS".to_string(),
-                in_flight: None,
-                publish_gate: None,
-                next_steps: Vec::new(),
-                issues_processed: Some("123;some title;closed|456;other;in-flight".to_string()),
-                prior_gate_failures: Vec::new(),
-                section_title: None,
-            },
-            &repo_root.path,
-        )
-        .unwrap();
-
-        let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains(
-            "### Issues processed\n\n- [#123](https://github.com/EvaLok/schema-org-json-ld/issues/123): some title (open)\n\n### Issues processed (post-dispatch)\n\n- [#123](https://github.com/EvaLok/schema-org-json-ld/issues/123): some title (closed)\n- [#456](https://github.com/EvaLok/schema-org-json-ld/issues/456): other (in-flight)\n\n## Cycle state"
-        ));
-
-        execute_patch_pipeline(
-            &PatchPipelineArgs {
-                worklog: PathBuf::from("docs/worklog/test.md"),
-                status: "PASS".to_string(),
-                in_flight: None,
-                publish_gate: None,
-                next_steps: Vec::new(),
-                issues_processed: Some("123;some title;closed|456;other;in-flight".to_string()),
-                prior_gate_failures: Vec::new(),
-                section_title: None,
-            },
-            &repo_root.path,
-        )
-        .unwrap();
-
-        let unchanged = fs::read_to_string(&worklog_path).unwrap();
-        assert_eq!(
-            unchanged
-                .matches("### Issues processed (post-dispatch)")
-                .count(),
-            1
-        );
-    }
-
-    #[test]
-    fn patch_pipeline_preserves_sections_after_next_steps() {
-        let repo_root = TempRepoDir::new("patch-pipeline-next-steps-preserve");
-        let worklog_path = repo_root.path.join("docs/worklog/test.md");
-        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
-        fs::write(
-            &worklog_path,
-            "# Cycle 154\n\n## Cycle state\n\n- **Pipeline status**: PASS\n\n## Next steps\n\n1. Old next step\n\n## Commit receipts\n\n| tool | sha |\n| --- | --- |\n| cycle-start | abc1234 |\n",
-        )
-        .unwrap();
-
-        execute_patch_pipeline(
-            &PatchPipelineArgs {
-                worklog: PathBuf::from("docs/worklog/test.md"),
-                status: "PASS".to_string(),
-                in_flight: None,
-                publish_gate: None,
-                next_steps: vec!["No in-flight sessions — plan next dispatch".to_string()],
-                issues_processed: None,
-                prior_gate_failures: Vec::new(),
-                section_title: None,
-            },
-            &repo_root.path,
-        )
-        .unwrap();
-
-        let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains("## Next steps (pre-dispatch)\n\n1. Old next step\n\n## Next steps (post-dispatch)\n\n1. No in-flight sessions — plan next dispatch\n\n## Commit receipts\n"));
-        assert!(updated.contains("| cycle-start | abc1234 |"));
-        assert_eq!(updated.matches("- **Pipeline status**: PASS").count(), 1);
-        assert!(!updated.contains("- **Pipeline status (post-dispatch)**:"));
-    }
-
-    #[test]
-    fn patch_pipeline_updates_existing_post_dispatch_next_steps_without_double_rename() {
-        let repo_root = TempRepoDir::new("patch-pipeline-next-steps-pre-dispatch");
-        let worklog_path = repo_root.path.join("docs/worklog/test.md");
-        fs::create_dir_all(worklog_path.parent().unwrap()).unwrap();
-        fs::write(
-            &worklog_path,
-            "# Cycle 154\n\n## Cycle state\n\n- **Pipeline status**: PASS\n\n## Next steps (pre-dispatch)\n\n1. Old next step\n\n## Next steps (post-dispatch)\n\n1. Old review step\n",
-        )
-        .unwrap();
-
-        execute_patch_pipeline(
-            &PatchPipelineArgs {
-                worklog: PathBuf::from("docs/worklog/test.md"),
-                status: "PASS".to_string(),
-                in_flight: None,
-                publish_gate: None,
-                next_steps: vec!["Review updated PR when Copilot completes".to_string()],
-                issues_processed: None,
-                prior_gate_failures: Vec::new(),
-                section_title: None,
-            },
-            &repo_root.path,
-        )
-        .unwrap();
-
-        let updated = fs::read_to_string(&worklog_path).unwrap();
-        assert!(updated.contains("## Next steps (pre-dispatch)\n\n1. Old next step\n\n## Next steps (post-dispatch)\n\n1. Review updated PR when Copilot completes\n"));
-        assert_eq!(updated.matches("## Next steps (pre-dispatch)").count(), 1);
-        assert_eq!(updated.matches("## Next steps (post-dispatch)").count(), 1);
     }
 
     #[test]

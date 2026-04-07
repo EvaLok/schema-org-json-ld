@@ -2,11 +2,10 @@ use crate::git;
 use crate::review_body;
 use crate::runner;
 use crate::steps;
-use chrono::{DateTime, FixedOffset, Utc};
 use serde_json::Value;
 use state_schema::{
     commit_state_json, current_cycle_from_state, read_state_value, transition_cycle_phase,
-    write_state_value, AgentSession, StateJson,
+    write_state_value,
 };
 use std::fs;
 use std::path::Path;
@@ -14,13 +13,12 @@ use std::process::Command;
 
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const VERIFY_REVIEW_EVENTS_TIMEOUT_SECS: u64 = 30;
-const PATCH_PIPELINE_ACTIVITY_TIMESTAMP_FIELDS: [&str; 5] = [
-    "closed_at",
-    "resolved_at",
-    "completed_at",
-    "status_changed_at",
-    "updated_at",
-];
+const CYCLE_STATE_HEADING: &str = "## Cycle state";
+const PRE_DISPATCH_STATE_HEADING: &str = "## Pre-dispatch state";
+const PRE_DISPATCH_SNAPSHOT_NOTE: &str =
+    "*Snapshot before review dispatch — final counters may differ after C6.*";
+const PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
+const CLOSE_OUT_GATE_FAILURES_PREFIX: &str = "- **Close-out gate failures**: ";
 
 struct ReviewInfo {
     issue_number: u64,
@@ -92,14 +90,22 @@ pub fn run(
         eprintln!("C4.7 warning: {}", warn);
     }
 
-    // C5: Commit and push docs
-    step_c5(repo_root, issue, cycle, &worklog)?;
+    // C5.5: Pipeline check — GATE
+    let (pipeline_passed, pipeline_summary) = step_c5_5(repo_root, issue, cycle)?;
+
+    // C5: Freeze worklog from C5.5 and commit/push docs
+    step_c5(
+        repo_root,
+        issue,
+        cycle,
+        &worklog,
+        &journal,
+        &pipeline_summary,
+        &prior_gate_failures,
+    )?;
 
     // C5.1: Receipt validation (report only)
     step_c5_1(repo_root, issue, cycle, &worklog)?;
-
-    // C5.5: Pipeline check — GATE
-    let (pipeline_passed, pipeline_summary) = step_c5_5(repo_root, issue, cycle)?;
 
     // C5.6: Stabilization counter
     step_c5_6(repo_root, issue, cycle, pipeline_passed)?;
@@ -108,16 +114,6 @@ pub fn run(
 
     // C6: Review dispatch (may be skipped if Copilot is unavailable)
     let review_info = step_c6(repo_root, issue, cycle)?;
-
-    // C6.5: Refresh worklog state after review dispatch
-    step_c6_5(
-        repo_root,
-        issue,
-        cycle,
-        &worklog,
-        &pipeline_summary,
-        &prior_gate_failures,
-    )?;
 
     // C7: Push
     step_c7(repo_root, issue)?;
@@ -221,7 +217,9 @@ fn parse_c4_1_gate_failure(body: &str) -> Option<String> {
     match (worklog_failure, journal_failure) {
         (Some(worklog), None) => Some(worklog),
         (None, Some(journal)) => Some(journal),
-        (Some(worklog), Some(journal)) => Some(format_combined_c4_1_gate_failure(&worklog, &journal)),
+        (Some(worklog), Some(journal)) => {
+            Some(format_combined_c4_1_gate_failure(&worklog, &journal))
+        }
         (None, None) => None,
     }
 }
@@ -267,18 +265,21 @@ fn complete_close_out_phase(repo_root: &Path, cycle: u64) -> Result<(), String> 
     Ok(())
 }
 
-fn step_c4_1(
+struct DocsValidationResult {
+    worklog_ok: bool,
+    worklog_detail: String,
+    journal_ok: bool,
+    journal_detail: String,
+}
+
+fn validate_docs(
     repo_root: &Path,
-    issue: u64,
     cycle: u64,
     worklog: &Path,
     journal: &Path,
-) -> Result<(), String> {
-    eprintln!("C4.1: Validating documentation...");
-
+) -> Result<DocsValidationResult, String> {
     let worklog_str = worklog.to_string_lossy().to_string();
     let cycle_str = cycle.to_string();
-
     let worklog_output = runner::run_tool(
         repo_root,
         "validate-docs",
@@ -304,9 +305,27 @@ fn step_c4_1(
         format!("FAIL: {}", runner::stdout_text(&journal_output))
     };
 
+    Ok(DocsValidationResult {
+        worklog_ok,
+        worklog_detail,
+        journal_ok,
+        journal_detail,
+    })
+}
+
+fn step_c4_1(
+    repo_root: &Path,
+    issue: u64,
+    cycle: u64,
+    worklog: &Path,
+    journal: &Path,
+) -> Result<(), String> {
+    eprintln!("C4.1: Validating documentation...");
+    let validation = validate_docs(repo_root, cycle, worklog, journal)?;
+
     let body = format!(
         "Worklog validation: {}\nJournal validation: {}",
-        worklog_detail, journal_detail
+        validation.worklog_detail, validation.journal_detail
     );
     steps::post_step(
         repo_root,
@@ -317,11 +336,11 @@ fn step_c4_1(
         false,
     )?;
 
-    if !worklog_ok || !journal_ok {
+    if !validation.worklog_ok || !validation.journal_ok {
         return Err(format!(
             "Documentation validation failed at C4.1 — fix issues and re-run close-out.\n\
              Worklog: {}\nJournal: {}",
-            worklog_detail, journal_detail
+            validation.worklog_detail, validation.journal_detail
         ));
     }
 
@@ -516,8 +535,25 @@ fn parse_verify_review_events_safe_to_advance_to(stdout: &str) -> Result<u64, St
     ))
 }
 
-fn step_c5(repo_root: &Path, issue: u64, cycle: u64, worklog: &Path) -> Result<(), String> {
-    eprintln!("C5: Committing and pushing docs...");
+fn step_c5(
+    repo_root: &Path,
+    issue: u64,
+    cycle: u64,
+    worklog: &Path,
+    journal: &Path,
+    pipeline_summary: &str,
+    prior_gate_failures: &[String],
+) -> Result<(), String> {
+    eprintln!("C5: Freezing worklog from final C5.5 state, validating docs, and pushing...");
+
+    freeze_worklog_at_c5_5(worklog, pipeline_summary, prior_gate_failures)?;
+    let validation = validate_docs(repo_root, cycle, worklog, journal)?;
+    if !validation.worklog_ok || !validation.journal_ok {
+        return Err(format!(
+            "Documentation validation failed after freezing C5.5 state.\nWorklog: {}\nJournal: {}",
+            validation.worklog_detail, validation.journal_detail
+        ));
+    }
 
     let message = format!(
         "docs(cycle-{}): worklog, journal, and state updates [cycle {}]",
@@ -539,7 +575,7 @@ fn step_c5(repo_root: &Path, issue: u64, cycle: u64, worklog: &Path) -> Result<(
         .and_then(|path| path.to_str())
         .unwrap_or("worklog");
     let push_body = format!(
-        "{}\nPushed to origin/master\nWorklog frozen at C5 commit time: {}",
+        "{}\nWorklog validation: PASS\nJournal validation: PASS\nPushed to origin/master\nWorklog frozen from C5.5 final gate state: {}",
         body, worklog_rel
     );
     steps::post_step(
@@ -552,6 +588,91 @@ fn step_c5(repo_root: &Path, issue: u64, cycle: u64, worklog: &Path) -> Result<(
     )?;
 
     Ok(())
+}
+
+fn freeze_worklog_at_c5_5(
+    worklog: &Path,
+    pipeline_summary: &str,
+    prior_gate_failures: &[String],
+) -> Result<(), String> {
+    let content = fs::read_to_string(worklog)
+        .map_err(|error| format!("failed to read {}: {}", worklog.display(), error))?;
+    let frozen = freeze_worklog_content(&content, pipeline_summary, prior_gate_failures)?;
+    fs::write(worklog, frozen)
+        .map_err(|error| format!("failed to write {}: {}", worklog.display(), error))
+}
+
+fn freeze_worklog_content(
+    content: &str,
+    pipeline_summary: &str,
+    prior_gate_failures: &[String],
+) -> Result<String, String> {
+    let final_pipeline_status =
+        format_frozen_pipeline_status(pipeline_summary, prior_gate_failures);
+    let mut updated = Vec::new();
+    let mut replaced_pipeline = false;
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed == PRE_DISPATCH_STATE_HEADING {
+            updated.push(CYCLE_STATE_HEADING.to_string());
+            continue;
+        }
+        if trimmed == PRE_DISPATCH_SNAPSHOT_NOTE {
+            continue;
+        }
+        if line.starts_with(CLOSE_OUT_GATE_FAILURES_PREFIX) {
+            continue;
+        }
+        if line.starts_with(PIPELINE_STATUS_PREFIX) {
+            updated.push(format!(
+                "{}{}",
+                PIPELINE_STATUS_PREFIX, final_pipeline_status
+            ));
+            for failure in prior_gate_failures {
+                updated.push(format!("{}{}", CLOSE_OUT_GATE_FAILURES_PREFIX, failure));
+            }
+            replaced_pipeline = true;
+            continue;
+        }
+        updated.push(line.to_string());
+    }
+
+    if !replaced_pipeline {
+        return Err("worklog is missing the Pipeline status line needed for C5 freeze".to_string());
+    }
+
+    let mut frozen = updated.join("\n");
+    if content.ends_with('\n') {
+        frozen.push('\n');
+    }
+    Ok(frozen)
+}
+
+fn format_frozen_pipeline_status(pipeline_summary: &str, prior_gate_failures: &[String]) -> String {
+    if prior_gate_failures.is_empty() || !pipeline_summary.trim().starts_with("PASS") {
+        return pipeline_summary.to_string();
+    }
+
+    let mut details = prior_gate_failures
+        .iter()
+        .map(|failure| summarize_prior_gate_failure(failure))
+        .collect::<Vec<_>>();
+    details.push("resolved by re-running close-out after fixes".to_string());
+    format!("FAIL→PASS ({})", details.join("; "))
+}
+
+fn summarize_prior_gate_failure(failure: &str) -> String {
+    if let Some(reason) = failure.strip_prefix("C4.1 FAIL:").map(str::trim) {
+        return format!("C4.1 initially failed: {}", reason);
+    }
+    if let Some(reason) = failure.strip_prefix("C5.5 FAIL:").map(str::trim) {
+        return format!("C5.5 initially failed: {}", reason);
+    }
+    if let Some(reason) = failure.strip_prefix("C5.5 initial FAIL:").map(str::trim) {
+        return format!("C5.5 initially failed: {}", reason);
+    }
+    format!("blocking gate initially failed: {}", failure.trim())
 }
 
 fn step_c5_1(repo_root: &Path, issue: u64, cycle: u64, worklog: &Path) -> Result<(), String> {
@@ -632,11 +753,10 @@ fn step_c5_5(repo_root: &Path, issue: u64, cycle: u64) -> Result<(bool, String),
     let stderr = runner::stderr_text(&output);
     let exit_code = output.status.code().unwrap_or(-1);
 
-    let (passed, pipeline_summary, body, initial_result) = match parse_pipeline_gate_report(&stdout) {
+    let (passed, pipeline_summary, body, initial_result) = match parse_pipeline_gate_report(&stdout)
+    {
         Ok(report) => {
-            let passed = exit_ok
-                && report.overall == "pass"
-                && !report.has_blocking_findings;
+            let passed = exit_ok && report.overall == "pass" && !report.has_blocking_findings;
             let pipeline_summary = format_pipeline_summary(&report);
             let mut body = format!(
                 "Pipeline: {}\n- exit_code: {}\n- overall: {}\n- has_blocking_findings: {}\n- blocking_warning_count: {}",
@@ -1209,265 +1329,6 @@ fn step_c7(repo_root: &Path, issue: u64) -> Result<(), String> {
     Ok(())
 }
 
-fn step_c6_5(
-    repo_root: &Path,
-    issue: u64,
-    cycle: u64,
-    worklog: &Path,
-    pipeline_summary: &str,
-    prior_gate_failures: &[String],
-) -> Result<(), String> {
-    eprintln!("C6.5: Refreshing worklog state after review dispatch...");
-
-    let state_value = read_state_value(repo_root)?;
-    let state: StateJson = serde_json::from_value(state_value)
-        .map_err(|error| format!("failed to parse docs/state.json after C6: {}", error))?;
-    let in_flight = state
-        .extra
-        .get("in_flight_sessions")
-        .and_then(serde_json::Value::as_u64)
-        .ok_or_else(|| "missing in_flight_sessions in state.json".to_string())?;
-    let publish_gate = state
-        .publish_gate()?
-        .status
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| "missing publish_gate.status in state.json".to_string())?
-        .to_string();
-    let next_steps = derive_patch_pipeline_next_steps(&state)?;
-    let issues_processed = derive_patch_pipeline_issues_processed(&state, cycle)?;
-    let worklog_str = worklog.to_string_lossy().to_string();
-    let in_flight_str = in_flight.to_string();
-    let mut patch_args = vec![
-        "patch-pipeline".to_string(),
-        "--worklog-file".to_string(),
-        worklog_str.clone(),
-        "--status".to_string(),
-        pipeline_summary.to_string(),
-        "--in-flight".to_string(),
-        in_flight_str,
-        "--publish-gate".to_string(),
-        publish_gate.clone(),
-        "--section-title".to_string(),
-        "Cycle state".to_string(),
-        "--issues-processed".to_string(),
-        issues_processed,
-    ];
-    if !prior_gate_failures.is_empty() {
-        patch_args.push("--prior-gate-failures".to_string());
-        patch_args.push(prior_gate_failures.join(","));
-    }
-    for next_step in &next_steps {
-        patch_args.push("--next-steps".to_string());
-        patch_args.push(next_step.clone());
-    }
-    let patch_args_refs: Vec<&str> = patch_args.iter().map(String::as_str).collect();
-
-    let output = runner::run_tool(repo_root, "write-entry", &patch_args_refs)?;
-    if !output.status.success() {
-        return Err(format!(
-            "write-entry patch-pipeline failed at C6.5: {}",
-            runner::stderr_text(&output)
-        ));
-    }
-
-    let worklog_rel = worklog
-        .strip_prefix(repo_root)
-        .ok()
-        .and_then(|path| path.to_str())
-        .unwrap_or("worklog");
-    let sha = git::add_and_commit(
-        repo_root,
-        &[worklog_rel],
-        &format!(
-            "docs(worklog): refresh cycle {} state after review dispatch [cycle {}]",
-            cycle, cycle
-        ),
-    )?;
-    let body = if sha.is_empty() {
-        format!("Worklog state already current: {}", worklog_rel)
-    } else {
-        format!("Patched worklog state after C6: {} ({})", worklog_rel, sha)
-    };
-    steps::post_step(
-        repo_root,
-        issue,
-        "C6.5",
-        "Refresh worklog state",
-        &body,
-        false,
-    )?;
-    Ok(())
-}
-
-fn derive_patch_pipeline_next_steps(state: &StateJson) -> Result<Vec<String>, String> {
-    let mut next_steps = Vec::new();
-
-    for session in &state.agent_sessions {
-        if session.status.as_deref().map(str::trim) != Some("in_flight") {
-            continue;
-        }
-        let issue = session
-            .issue
-            .ok_or_else(|| {
-                "agent_sessions[].issue is required for in-flight sessions during C6.5 refresh"
-                    .to_string()
-            })
-            .and_then(|value| {
-                u64::try_from(value).map_err(|_| {
-                    "agent_sessions[].issue must be a positive integer for in-flight sessions during C6.5 refresh"
-                        .to_string()
-                })
-            })?;
-        let title = session
-            .title
-            .as_deref()
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-            .map(|value| format!(" ({})", value))
-            .unwrap_or_default();
-        next_steps.push(format!(
-            "Review and iterate on PR from [#{}](https://github.com/{}/issues/{}){} when Copilot completes",
-            issue, MAIN_REPO, issue, title
-        ));
-    }
-
-    if next_steps.is_empty() {
-        next_steps.push("No in-flight sessions — plan next dispatch".to_string());
-    }
-
-    Ok(next_steps)
-}
-
-fn derive_patch_pipeline_issues_processed(state: &StateJson, cycle: u64) -> Result<String, String> {
-    let cycle_start = patch_pipeline_cycle_start(state, cycle)?;
-    let mut entries = Vec::new();
-
-    for session in &state.agent_sessions {
-        if !patch_pipeline_session_active_this_cycle(session, cycle_start)? {
-            continue;
-        }
-        let issue = session
-            .issue
-            .ok_or_else(|| {
-                "agent_sessions[].issue is required for active sessions during C6.5 issues refresh"
-                    .to_string()
-            })
-            .and_then(|value| {
-                u64::try_from(value).map_err(|_| {
-                    "agent_sessions[].issue must be a positive integer for active sessions during C6.5 issues refresh"
-                        .to_string()
-                })
-            })?;
-        let title = session
-            .title
-            .as_deref()
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-            .ok_or_else(|| {
-                format!(
-                    "agent_sessions[issue={}].title is required for active sessions during C6.5 issues refresh",
-                    issue
-                )
-            })?;
-        let status = session
-            .status
-            .as_deref()
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-            .ok_or_else(|| {
-                format!(
-                    "agent_sessions[issue={}].status is required for active sessions during C6.5 issues refresh",
-                    issue
-                )
-            })?;
-        validate_patch_pipeline_issue_field(title, "title", issue)?;
-        validate_patch_pipeline_issue_field(status, "status", issue)?;
-        entries.push(format!("{issue};{title};{status}"));
-    }
-
-    Ok(entries.join("|"))
-}
-
-fn patch_pipeline_cycle_start(state: &StateJson, cycle: u64) -> Result<DateTime<Utc>, String> {
-    let state_cycle = state.cycle_phase.cycle.ok_or_else(|| {
-        "missing docs/state.json cycle_phase.cycle for C6.5 issues refresh".to_string()
-    })?;
-    if state_cycle != cycle {
-        return Err(format!(
-            "docs/state.json cycle_phase.cycle {} does not match close-out cycle {} for C6.5 issues refresh",
-            state_cycle, cycle
-        ));
-    }
-    let phase_entered_at = state
-        .cycle_phase
-        .phase_entered_at
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| {
-            "missing docs/state.json cycle_phase.phase_entered_at for C6.5 issues refresh"
-                .to_string()
-        })?;
-    parse_patch_pipeline_timestamp(
-        phase_entered_at,
-        "docs/state.json cycle_phase.phase_entered_at",
-    )
-}
-
-fn patch_pipeline_session_active_this_cycle(
-    session: &AgentSession,
-    cycle_start: DateTime<Utc>,
-) -> Result<bool, String> {
-    if let Some(timestamp) = session.dispatched_at.as_deref() {
-        if parse_patch_pipeline_timestamp(timestamp, "agent_sessions[].dispatched_at")?
-            >= cycle_start
-        {
-            return Ok(true);
-        }
-    }
-    if let Some(timestamp) = session.merged_at.as_deref() {
-        if parse_patch_pipeline_timestamp(timestamp, "agent_sessions[].merged_at")? >= cycle_start {
-            return Ok(true);
-        }
-    }
-    for field in PATCH_PIPELINE_ACTIVITY_TIMESTAMP_FIELDS {
-        let Some(value) = session.extra.get(field) else {
-            continue;
-        };
-        let Some(timestamp) = value.as_str() else {
-            return Err(format!(
-                "agent_sessions[].{} must be a string timestamp",
-                field
-            ));
-        };
-        if parse_patch_pipeline_timestamp(timestamp, &format!("agent_sessions[].{}", field))?
-            >= cycle_start
-        {
-            return Ok(true);
-        }
-    }
-
-    Ok(false)
-}
-
-fn parse_patch_pipeline_timestamp(value: &str, label: &str) -> Result<DateTime<Utc>, String> {
-    DateTime::parse_from_rfc3339(value)
-        .map(|timestamp: DateTime<FixedOffset>| timestamp.with_timezone(&Utc))
-        .map_err(|error| format!("invalid {} '{}': {}", label, value, error))
-}
-
-fn validate_patch_pipeline_issue_field(value: &str, field: &str, issue: u64) -> Result<(), String> {
-    if value.contains('|') || value.contains(';') {
-        return Err(format!(
-            "agent_sessions[issue={}].{} must not contain '|' or ';' for C6.5 issues refresh",
-            issue, field
-        ));
-    }
-    Ok(())
-}
-
 fn step_c8(
     repo_root: &Path,
     issue: u64,
@@ -1501,7 +1362,6 @@ fn step_c8(
         false,
     )?;
 
-    // Close the issue
     let issue_str = issue.to_string();
     let output = Command::new("gh")
         .args(["issue", "close", &issue_str, "-R", MAIN_REPO])
@@ -1510,7 +1370,6 @@ fn step_c8(
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-        // Already closed is fine
         if !stderr.contains("already closed") {
             return Err(format!("gh issue close failed: {}", stderr));
         }
@@ -1536,10 +1395,8 @@ fn had_tool_dispatches_this_cycle(state: &Value, _cycle: u64) -> bool {
             .get("dispatched_at")
             .and_then(Value::as_str)
             .unwrap_or("");
-        // Only check sessions dispatched after the previous cycle ended
         if !last_cycle_ts.is_empty() && dispatched_at > last_cycle_ts {
             let title = session.get("title").and_then(Value::as_str).unwrap_or("");
-            // Exclude review dispatches (they're mandatory, not "tool" dispatches)
             if !title.starts_with("[Cycle Review]") {
                 return true;
             }
@@ -1567,7 +1424,6 @@ fn find_existing_review_dispatch(state: &Value, cycle: u64) -> Option<ReviewInfo
 }
 
 fn parse_dispatch_output(stdout: &str) -> Result<ReviewInfo, String> {
-    // Format: "Created review issue #NNN from orchestrator issue #NNN: URL"
     let issue_num = stdout
         .strip_prefix("Created review issue #")
         .and_then(|s| s.split_whitespace().next())
@@ -1606,13 +1462,12 @@ fn close_out_dry_run_lines(cycle: u64, issue: u64) -> Vec<String> {
         "[dry-run] C4.1: validate-docs worklog + journal (GATE)".to_string(),
         "[dry-run] C4.5: scan doc/adr/ and post ADR check step".to_string(),
         "[dry-run] C4.7: verify-review-events --apply (best-effort, non-blocking)".to_string(),
-        "[dry-run] C5:   git add docs/ && git commit && git push (worklog frozen at this point)"
+        "[dry-run] C5.5: pipeline-check (GATE)".to_string(),
+        "[dry-run] C5:   freeze worklog from C5.5 state, re-run validate-docs, git add docs/ && git commit && git push"
             .to_string(),
         "[dry-run] C5.1: receipt-validate (report only)".to_string(),
-        "[dry-run] C5.5: pipeline-check (GATE)".to_string(),
         "[dry-run] C5.6: stabilization counter update (if applicable)".to_string(),
         "[dry-run] C6:   generate review body + dispatch-review".to_string(),
-        "[dry-run] C6.5: refresh worklog state from updated docs/state.json".to_string(),
         "[dry-run] C7:   git push".to_string(),
         format!("[dry-run] C8:   close issue #{}", issue),
     ]
@@ -1701,44 +1556,6 @@ mod tests {
         assert!(find_existing_review_dispatch(&state, 999).is_none());
     }
 
-    #[test]
-    fn derive_patch_pipeline_issues_processed_uses_active_cycle_sessions() {
-        let state: StateJson = serde_json::from_value(json!({
-            "cycle_phase": {
-                "cycle": 345,
-                "phase_entered_at": "2026-03-25T00:00:00Z"
-            },
-            "agent_sessions": [
-                {
-                    "issue": 1200,
-                    "title": "Dispatched this cycle",
-                    "status": "merged",
-                    "dispatched_at": "2026-03-25T01:00:00Z"
-                },
-                {
-                    "issue": 1201,
-                    "title": "Closed this cycle",
-                    "status": "closed_without_pr",
-                    "dispatched_at": "2026-03-24T01:00:00Z",
-                    "closed_at": "2026-03-25T02:00:00Z"
-                },
-                {
-                    "issue": 1199,
-                    "title": "Old session",
-                    "status": "merged",
-                    "dispatched_at": "2026-03-24T01:00:00Z"
-                }
-            ]
-        }))
-        .unwrap();
-
-        let issues = derive_patch_pipeline_issues_processed(&state, 345).unwrap();
-        assert_eq!(
-            issues,
-            "1200;Dispatched this cycle;merged|1201;Closed this cycle;closed_without_pr"
-        );
-    }
-
     fn setup_temp_repo(name: &str) -> std::path::PathBuf {
         let dir = unique_temp_dir(&format!("cycle-runner-close-out-{}", name));
         let _ = fs::remove_dir_all(&dir);
@@ -1785,183 +1602,6 @@ mod tests {
                 "#!/usr/bin/env bash\nset -euo pipefail\n{{\nfor arg in \"$@\"; do\nprintf -- '---ARG---\\n%s\\n' \"$arg\"\ndone\n}} >> {}\n",
                 output_path
             ),
-        )
-        .unwrap();
-    }
-
-    fn write_write_entry_patch_script(dir: &std::path::Path) {
-        fs::write(
-            dir.join("tools/write-entry"),
-            r#"#!/usr/bin/env bash
-set -euo pipefail
-python - "$@" <<'PY'
-import sys
-from pathlib import Path
-
-ISSUES_URL = 'https://github.com/EvaLok/schema-org-json-ld/issues'
-
-args = sys.argv[1:]
-if not args or args[0] != 'patch-pipeline':
-    raise SystemExit(f'unexpected write-entry args: {args}')
-values = {}
-list_values = {}
-i = 1
-while i < len(args):
-    key = args[i]
-    if key == '--next-steps':
-        if i + 1 >= len(args):
-            raise SystemExit(f'missing value for {key}')
-        list_values.setdefault(key, []).append(args[i + 1])
-        i += 2
-        continue
-    if i + 1 >= len(args):
-        raise SystemExit(f'missing value for {key}')
-    values[key] = args[i + 1]
-    i += 2
-worklog = Path(values['--worklog-file'])
-lines = worklog.read_text().splitlines()
-for index, line in enumerate(lines):
-    if line == '## Pre-dispatch state':
-        lines[index] = '## ' + values['--section-title']
-        break
-else:
-    raise SystemExit('missing state heading')
-lines = [line for line in lines if line != '*Snapshot before review dispatch — final counters may differ after C6.*']
-lines = [line for line in lines if not line.startswith('- **Copilot metrics**: ')]
-
-def patch_or_addendum(prefix, value, addendum_prefix):
-    for index, line in enumerate(lines):
-        if not line.startswith(prefix):
-            continue
-        current = line[len(prefix):].strip()
-        if not current or current == 'Not provided.':
-            lines[index] = prefix + value
-            return
-        if current == value.strip():
-            return
-        for addendum_index, addendum_line in enumerate(lines):
-            if addendum_line.startswith(addendum_prefix):
-                if addendum_line[len(addendum_prefix):].strip() != value.strip():
-                    lines[addendum_index] = addendum_prefix + value
-                return
-        lines.insert(index + 1, addendum_prefix + value)
-        return
-    raise SystemExit(f'missing line for {prefix}')
-
-def section_bounds(heading):
-    for index, line in enumerate(lines):
-        if line == heading:
-            start = index + 1
-            end = len(lines)
-            for next_index in range(start, len(lines)):
-                if lines[next_index].startswith('## ') or lines[next_index].startswith('### '):
-                    end = next_index
-                    break
-            return index, start, end
-    raise SystemExit(f'missing section {heading}')
-
-def section_entries(start, end):
-    return [line.strip() for line in lines[start:end] if line.strip()]
-
-def section_has_placeholder(start, end):
-    entries = section_entries(start, end)
-    if not entries:
-        return True
-    if len(entries) == 1 and entries[0] in {'Not provided.', '1. Not provided.', '- None.', 'None.'}:
-        return True
-    return False
-
-def render_numbered_steps(items):
-    rendered = ['']
-    for step_index, step in enumerate(items, start=1):
-        rendered.append(f'{step_index}. {step}')
-    return rendered
-
-def render_issues(raw):
-    if not raw.strip():
-        return ['- None.']
-    rendered = []
-    for entry in raw.split('|'):
-        parts = entry.split(';')
-        if len(parts) != 3:
-            raise SystemExit(f'invalid issues processed entry: {entry}')
-        issue, title, status = [part.strip() for part in parts]
-        rendered.append(f'- [#{issue}]({ISSUES_URL}/{issue}): {title} ({status})')
-    return rendered
-
-def patch_next_steps(items):
-    _, start, end = section_bounds('## Next steps')
-    replacement = render_numbered_steps(items)
-    if section_has_placeholder(start, end):
-        lines[start:end] = replacement
-        return
-    heading = '## Next steps (post-dispatch)'
-    try:
-        _, post_start, post_end = section_bounds(heading)
-        lines[post_start:post_end] = replacement
-    except SystemExit:
-        insertion = []
-        if end == 0 or lines[end - 1] != '':
-            insertion.append('')
-        insertion.append(heading)
-        insertion.extend(replacement)
-        lines[end:end] = insertion
-
-def patch_issues_processed(raw):
-    _, start, end = section_bounds('### Issues processed')
-    replacement = ['']
-    replacement.extend(render_issues(raw))
-    if end < len(lines):
-        replacement.append('')
-    current = section_entries(start, end)
-    expected = [line for line in replacement if line]
-    if section_has_placeholder(start, end):
-        lines[start:end] = replacement
-        return
-    if current == expected:
-        return
-    heading = '### Issues processed (post-dispatch)'
-    try:
-        _, post_start, post_end = section_bounds(heading)
-        if section_entries(post_start, post_end) == expected:
-            return
-        lines[post_start:post_end] = replacement
-    except SystemExit:
-        insertion = []
-        if end == 0 or lines[end - 1] != '':
-            insertion.append('')
-        insertion.append(heading)
-        insertion.extend(replacement)
-        if end < len(lines):
-            insertion.append('')
-        lines[end:end] = insertion
-
-def patch_prior_gate_failures(raw):
-    failures = [item.strip() for item in raw.split(',') if item.strip()]
-    state_heading = '## ' + values['--section-title']
-    _, start, end = section_bounds(state_heading)
-    filtered = [line for line in lines[start:end] if not line.startswith('- **Close-out gate failures**: ')]
-    lines[start:end] = filtered
-    _, start, end = section_bounds(state_heading)
-    insert_at = end
-    for index in range(start, end):
-        if lines[index].startswith('- **Pipeline status'):
-            insert_at = index + 1
-    rendered = [f'- **Close-out gate failures**: {failure}' for failure in failures]
-    lines[insert_at:insert_at] = rendered
-
-patch_or_addendum('- **In-flight agent sessions**: ', values['--in-flight'], '- **In-flight agent sessions (post-dispatch)**: ')
-patch_or_addendum('- **Pipeline status**: ', values['--status'], '- **Pipeline status (post-dispatch)**: ')
-if '--prior-gate-failures' in values:
-    patch_prior_gate_failures(values['--prior-gate-failures'])
-patch_or_addendum('- **Publish gate**: ', values['--publish-gate'], '- **Publish gate (post-dispatch)**: ')
-patch_issues_processed(values['--issues-processed'])
-if '--next-steps' in list_values:
-    patch_next_steps(list_values['--next-steps'])
-worklog.write_text('\n'.join(lines) + '\n')
-print(worklog)
-PY
-"#,
         )
         .unwrap();
     }
@@ -2466,28 +2106,28 @@ PY
     }
 
     #[test]
-    fn close_out_dry_run_includes_step_c6_5_between_c6_and_c7() {
+    fn close_out_dry_run_places_c5_5_before_c5() {
         let lines = close_out_dry_run_lines(345, 123);
 
-        let c6 = lines
+        let c4_7 = lines
             .iter()
-            .position(|line| line.contains("[dry-run] C6:"))
-            .expect("C6 dry-run line should exist");
-        let c6_5 = lines
+            .position(|line| line.contains("[dry-run] C4.7:"))
+            .expect("C4.7 dry-run line should exist");
+        let c5_5 = lines
             .iter()
-            .position(|line| line.contains("[dry-run] C6.5:"))
-            .expect("C6.5 dry-run line should exist");
-        let c7 = lines
+            .position(|line| line.contains("[dry-run] C5.5:"))
+            .expect("C5.5 dry-run line should exist");
+        let c5 = lines
             .iter()
-            .position(|line| line.contains("[dry-run] C7:"))
-            .expect("C7 dry-run line should exist");
+            .position(|line| line.contains("[dry-run] C5:"))
+            .expect("C5 dry-run line should exist");
 
-        assert_eq!(c6_5, c6 + 1);
-        assert_eq!(c7, c6_5 + 1);
+        assert_eq!(c5_5, c4_7 + 1);
+        assert_eq!(c5, c5_5 + 1);
     }
 
     #[test]
-    fn close_out_dry_run_includes_c4_7_between_c4_5_and_c5() {
+    fn close_out_dry_run_includes_c4_7_between_c4_5_and_c5_5() {
         let lines = close_out_dry_run_lines(345, 123);
 
         let c4_5 = lines
@@ -2498,13 +2138,13 @@ PY
             .iter()
             .position(|line| line.contains("[dry-run] C4.7:"))
             .expect("C4.7 dry-run line should exist");
-        let c5 = lines
+        let c5_5 = lines
             .iter()
-            .position(|line| line.contains("[dry-run] C5:"))
-            .expect("C5 dry-run line should exist");
+            .position(|line| line.contains("[dry-run] C5.5:"))
+            .expect("C5.5 dry-run line should exist");
 
         assert_eq!(c4_7, c4_5 + 1);
-        assert_eq!(c5, c4_7 + 1);
+        assert_eq!(c5_5, c4_7 + 1);
     }
 
     #[test]
@@ -2622,7 +2262,10 @@ PY
 
         let failures = with_path_prefix(&bin_dir, || detect_prior_gate_failures(&dir, 123));
 
-        assert_eq!(failures, vec!["C4.1 FAIL: mismatch in receipts".to_string()]);
+        assert_eq!(
+            failures,
+            vec!["C4.1 FAIL: mismatch in receipts".to_string()]
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -2642,7 +2285,10 @@ PY
 
         let failures = with_path_prefix(&bin_dir, || detect_prior_gate_failures(&dir, 123));
 
-        assert_eq!(failures, vec!["C5.5 FAIL: doc-validation stale".to_string()]);
+        assert_eq!(
+            failures,
+            vec!["C5.5 FAIL: doc-validation stale".to_string()]
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -2663,77 +2309,6 @@ PY
         let failures = with_path_prefix(&bin_dir, || detect_prior_gate_failures(&dir, 123));
 
         assert!(failures.is_empty());
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn step_c6_5_passes_prior_gate_failures_to_write_entry() {
-        let dir = setup_temp_repo("step-c6-5-prior-gate-failures");
-        fs::create_dir_all(dir.join("docs/worklog/2026-03-25")).unwrap();
-        fs::write(
-            dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"),
-            "# Cycle 345\n\n### Issues processed\n\n- None.\n\n## Cycle state\n\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: published\n\n## Next steps\n\n1. None.\n",
-        )
-        .unwrap();
-        fs::write(
-            dir.join("docs/state.json"),
-            serde_json::to_string_pretty(&json!({
-                "cycle_phase": {
-                    "cycle": 345,
-                    "phase": "close_out",
-                    "phase_entered_at": "2026-03-25T00:00:00Z"
-                },
-                "publish_gate": { "status": "blocked pending review" },
-                "in_flight_sessions": 1,
-                "agent_sessions": [
-                    {
-                        "issue": 1470,
-                        "title": "[Cycle Review] Cycle 345 end-of-cycle review",
-                        "status": "in_flight",
-                        "dispatched_at": "2026-03-25T03:00:00Z"
-                    }
-                ]
-            }))
-            .unwrap(),
-        )
-        .unwrap();
-        let worklog = dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md");
-        let args_path = dir.join("write-entry-args.txt");
-        let args_path_quoted = shell_single_quote(&args_path);
-        fs::write(
-            dir.join("tools/write-entry"),
-            format!(
-                "#!/usr/bin/env bash\nset -euo pipefail\n{{\nfor arg in \"$@\"; do\nprintf '%s\\n' \"$arg\"\ndone\n}} > {args_path_quoted}\npython - \"$@\" <<'PY'\nimport sys\nfrom pathlib import Path\nargs = sys.argv[1:]\nfor index, arg in enumerate(args):\n    if arg == '--worklog-file' and index + 1 < len(args):\n        worklog = Path(args[index + 1])\n        worklog.write_text(worklog.read_text() + '\\n<!-- patched -->\\n')\n        break\nprint(worklog)\nPY\n",
-            ),
-        )
-        .unwrap();
-        write_post_step_capture_script(&dir, &dir.join("post-step-args.txt"));
-        Command::new("git")
-            .arg("-C")
-            .arg(&dir)
-            .args(["add", "."])
-            .output()
-            .unwrap();
-        Command::new("git")
-            .arg("-C")
-            .arg(&dir)
-            .args(["commit", "-m", "initial test state"])
-            .output()
-            .unwrap();
-
-        step_c6_5(
-            &dir,
-            123,
-            345,
-            &worklog,
-            "PASS (1 warning)",
-            &["C4.1 FAIL: mismatch".to_string(), "C5.5 FAIL: doc-validation".to_string()],
-        )
-        .unwrap();
-
-        let args = fs::read_to_string(&args_path).unwrap();
-        assert!(args.contains("--prior-gate-failures"));
-        assert!(args.contains("C4.1 FAIL: mismatch,C5.5 FAIL: doc-validation"));
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -2788,7 +2363,6 @@ PY
         .unwrap();
         let args_path = dir.join("post-step-args.txt");
         write_post_step_append_capture_script(&dir, &args_path);
-        write_write_entry_patch_script(&dir);
         fs::write(
             dir.join("tools/validate-docs"),
             "#!/usr/bin/env bash\nset -euo pipefail\n",
@@ -2854,11 +2428,11 @@ PY
         let args = fs::read_to_string(&args_path).unwrap();
         let c4_5 = args.find("---ARG---\nC4.5\n").unwrap();
         let c4_7 = args.find("---ARG---\nC4.7\n").unwrap();
+        let c5_5 = args.find("---ARG---\nC5.5\n").unwrap();
         let c5 = args.find("---ARG---\nC5\n").unwrap();
-        let c6_5 = args.find("---ARG---\nC6.5\n").unwrap();
         assert!(c4_5 < c4_7);
-        assert!(c4_7 < c5);
-        assert!(c5 < c6_5);
+        assert!(c4_7 < c5_5);
+        assert!(c5_5 < c5);
         assert!(args.contains("simulated verify-review-events failure"));
         assert!(args.contains("---ARG---\nC5.5\n"));
         assert!(args.contains("Cycle 345 close-out complete."));
@@ -2875,8 +2449,8 @@ PY
     }
 
     #[test]
-    fn close_out_run_patches_worklog_state_after_review_dispatch() {
-        let (dir, remote) = setup_temp_repo_with_remote("close-out-worklog-state-patch");
+    fn close_out_run_freezes_worklog_from_c5_5_and_skips_post_dispatch_sections() {
+        let (dir, remote) = setup_temp_repo_with_remote("close-out-worklog-freeze");
         fs::create_dir_all(dir.join("docs/worklog/2026-03-25")).unwrap();
         fs::create_dir_all(dir.join("docs/journal")).unwrap();
         fs::write(
@@ -2925,7 +2499,6 @@ PY
         .unwrap();
         let args_path = dir.join("post-step-args.txt");
         write_post_step_append_capture_script(&dir, &args_path);
-        write_write_entry_patch_script(&dir);
         fs::write(
             dir.join("tools/validate-docs"),
             "#!/usr/bin/env bash\nset -euo pipefail\n",
@@ -2994,22 +2567,12 @@ PY
         assert!(worklog.contains("## Cycle state"));
         assert!(!worklog.contains("## Pre-dispatch state"));
         assert!(!worklog.contains("Snapshot before review dispatch"));
-        assert!(worklog.contains(
-            "### Issues processed\n\n- [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470): [Cycle Review] Cycle 345 end-of-cycle review (in_flight)\n\n## Cycle state"
-        ));
         assert!(worklog.contains("- **In-flight agent sessions**: 0"));
-        assert!(worklog.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
-        assert!(worklog.contains("- **Pipeline status**: PASS"));
-        assert!(worklog.contains("- **Pipeline status (post-dispatch)**: PASS (1 warning)"));
-        assert!(worklog.contains(
-            "- **Close-out gate failures**: C4.1 FAIL: mismatch in receipts"
-        ));
-        assert!(!worklog.contains("phase_5_active"));
-        assert!(!worklog.contains("- **Copilot metrics**:"));
+        assert!(worklog.contains("- **Pipeline status**: FAIL→PASS (C4.1 initially failed: mismatch in receipts; resolved by re-running close-out after fixes)"));
+        assert!(worklog.contains("- **Close-out gate failures**: C4.1 FAIL: mismatch in receipts"));
         assert!(worklog.contains("- **Publish gate**: published"));
-        assert!(worklog.contains(
-            "## Next steps\n\n1. None.\n\n## Next steps (post-dispatch)\n\n1. Review and iterate on PR from [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) ([Cycle Review] Cycle 345 end-of-cycle review) when Copilot completes\n"
-        ));
+        assert!(worklog.contains("## Next steps\n\n1. None.\n"));
+        assert!(!worklog.contains("post-dispatch"));
 
         let log_output = Command::new("git")
             .arg("-C")
@@ -3018,16 +2581,15 @@ PY
             .output()
             .unwrap();
         let log = String::from_utf8_lossy(&log_output.stdout);
-        assert!(log
-            .contains("docs(worklog): refresh cycle 345 state after review dispatch [cycle 345]"));
+        assert!(!log.contains("refresh cycle 345 state after review dispatch"));
 
         let _ = fs::remove_dir_all(&dir);
         let _ = fs::remove_dir_all(&remote);
     }
 
     #[test]
-    fn close_out_run_preserves_existing_failed_pipeline_status_and_adds_post_dispatch_addendum() {
-        let (dir, remote) = setup_temp_repo_with_remote("close-out-worklog-status-immutable");
+    fn close_out_run_replaces_early_fail_with_final_c5_5_pass_before_c5() {
+        let (dir, remote) = setup_temp_repo_with_remote("close-out-worklog-final-pass");
         fs::create_dir_all(dir.join("docs/worklog/2026-03-25")).unwrap();
         fs::create_dir_all(dir.join("docs/journal")).unwrap();
         fs::write(
@@ -3076,7 +2638,6 @@ PY
         .unwrap();
         let args_path = dir.join("post-step-args.txt");
         write_post_step_append_capture_script(&dir, &args_path);
-        write_write_entry_patch_script(&dir);
         fs::write(
             dir.join("tools/validate-docs"),
             "#!/usr/bin/env bash\nset -euo pipefail\n",
@@ -3137,40 +2698,13 @@ PY
         let worklog =
             fs::read_to_string(dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"))
                 .unwrap();
-        assert!(worklog.contains(
-            "### Issues processed\n\n- [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470): [Cycle Review] Cycle 345 end-of-cycle review (in_flight)\n\n## Cycle state"
-        ));
         assert!(worklog.contains("- **In-flight agent sessions**: 0"));
-        assert!(worklog.contains("- **In-flight agent sessions (post-dispatch)**: 1"));
-        assert!(worklog.contains("- **Pipeline status**: FAIL (1 blocking finding)"));
-        assert!(worklog.contains("- **Pipeline status (post-dispatch)**: PASS (1 warning)"));
+        assert!(worklog.contains("- **Pipeline status**: PASS (1 warning)"));
+        assert!(!worklog.contains("- **Pipeline status**: FAIL (1 blocking finding)"));
         assert!(worklog.contains("- **Publish gate**: published"));
-        assert!(worklog.contains("- **Publish gate (post-dispatch)**: blocked pending review"));
-        assert!(worklog.contains("## Next steps\n\n1. Plan next dispatch\n\n## Next steps (post-dispatch)\n\n1. Review and iterate on PR from [#1470](https://github.com/EvaLok/schema-org-json-ld/issues/1470) ([Cycle Review] Cycle 345 end-of-cycle review) when Copilot completes\n"));
-        assert_eq!(
-            worklog.matches("- **In-flight agent sessions**:").count(),
-            1
-        );
-        assert_eq!(
-            worklog
-                .matches("- **In-flight agent sessions (post-dispatch)**:")
-                .count(),
-            1
-        );
-        assert_eq!(worklog.matches("- **Publish gate**:").count(), 1);
-        assert_eq!(
-            worklog
-                .matches("- **Publish gate (post-dispatch)**:")
-                .count(),
-            1
-        );
+        assert!(!worklog.contains("post-dispatch"));
         assert_eq!(worklog.matches("- **Pipeline status**:").count(), 1);
-        assert_eq!(
-            worklog
-                .matches("- **Pipeline status (post-dispatch)**:")
-                .count(),
-            1
-        );
+        assert!(worklog.contains("## Next steps\n\n1. Plan next dispatch\n"));
 
         let _ = fs::remove_dir_all(&dir);
         let _ = fs::remove_dir_all(&remote);
