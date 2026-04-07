@@ -6774,8 +6774,10 @@
       "addresses_finding": "451:3",
       "dispatched_at": "2026-04-07T03:31:27Z",
       "issue": 2255,
+      "merged_at": "2026-04-07T05:16:16Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2256,
+      "status": "merged",
       "title": "Tool fix: agent_sessions multi-finding linkage — close cycle 451 review F3 state-integrity finding"
     },
     {
@@ -7729,12 +7731,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 33,
     "issue": 2259,
     "number": 453,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-07T04:48:29Z"
   },
   "last_eva_comment_check": "2026-04-07T04:48:29Z",
