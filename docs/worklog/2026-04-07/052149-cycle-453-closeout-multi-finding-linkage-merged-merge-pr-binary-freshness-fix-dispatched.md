@@ -29,7 +29,7 @@
 
 ## Cycle state
 
-- **In-flight agent sessions**: 2
+- **In-flight agent sessions**: 1
 - **Pipeline status**: FAIL→PASS (C4.1 initially failed: pipeline status mismatch — worklog C3 snapshot wrote the C1 early-check status while C5.5 produced a different result; resolved by treating doc-validation/current-cycle-steps as expected pre-gate blockers and re-running pipeline-check post-C5.5 which produced PASS with 3 warnings, all 21 invariants passing)
 - **Publish gate**: published
 
