@@ -541,6 +541,8 @@ mod tests {
             issue: Some(667),
             title: Some("already tracked".to_string()),
             dispatched_at: Some("2026-03-07T12:14:00Z".to_string()),
+            addresses_finding: None,
+            addresses_findings: None,
             model: Some("gpt-5.3-codex".to_string()),
             status: Some("merged".to_string()),
             pr: Some(668),
