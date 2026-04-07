@@ -6771,6 +6771,7 @@
       "title": "[Cycle Review] Cycle 451 end-of-cycle review"
     },
     {
+      "addresses_finding": "451:3",
       "dispatched_at": "2026-04-07T03:31:27Z",
       "issue": 2255,
       "model": "gpt-5.4",
