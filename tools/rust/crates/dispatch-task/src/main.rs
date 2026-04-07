@@ -10,6 +10,7 @@ use state_schema::{
     commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
     write_state_value,
 };
+use std::collections::BTreeSet;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
@@ -307,8 +308,9 @@ fn record_dispatch_state(
 
 fn dedupe_addressed_findings(addresses_finding: &[AddressedFinding]) -> Vec<AddressedFinding> {
     let mut deduped = Vec::new();
+    let mut seen = BTreeSet::new();
     for finding in addresses_finding {
-        if !deduped.contains(finding) {
+        if seen.insert((finding.cycle, finding.index)) {
             deduped.push(finding.clone());
         }
     }
@@ -334,18 +336,20 @@ fn set_session_addresses_findings(
         .as_object_mut()
         .ok_or_else(|| format!("agent_sessions entry for issue #{issue} must be an object"))?;
 
-    session_object.remove("addresses_finding");
-    session_object.remove("addresses_findings");
-
     match addresses_finding {
-        [] => {}
+        [] => {
+            session_object.remove("addresses_finding");
+            session_object.remove("addresses_findings");
+        }
         [finding] => {
+            session_object.remove("addresses_findings");
             session_object.insert(
                 "addresses_finding".to_string(),
                 serde_json::json!(finding.finding_ref()),
             );
         }
         findings => {
+            session_object.remove("addresses_finding");
             session_object.insert(
                 "addresses_findings".to_string(),
                 serde_json::json!(findings
