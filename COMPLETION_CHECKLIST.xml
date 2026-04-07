@@ -99,6 +99,21 @@
       Worklog, journal, and state.json MUST be committed and pushed BEFORE
       review dispatch (C6). The review agent reads the repo at dispatch time.
       Uncommitted docs = false positive "missing" findings.</constraint>
+    <constraint id="no-post-c5-mutation" severity="mandatory">
+      The published worklog and journal files MUST NOT be mutated after
+      C5.5 passes. The artifact validated at the gate is the artifact that
+      gets reviewed. Adding "(post-dispatch)" sections, refreshing in-flight
+      counts, appending new "Issues processed" entries, or any other content
+      change after C5.5 is PROHIBITED. Anything that happens post-dispatch
+      belongs in the NEXT cycle's worklog, not as an amendment to the
+      already-validated published cycle. The only permitted exception is a
+      one-time corrective revert in a later cycle when the published file
+      fails doc-validation (which itself must include a clear corrective
+      note explaining the edit). Routine "post-dispatch refresh" is forbidden.
+      Recurrence escalation: worklog-accuracy + process-adherence + journal-quality
+      in cycle 453 (cycle 453 review F1+F2+F3 — all three findings shared the
+      same root cause: post-dispatch worklog refresh that broke doc-validation).
+    </constraint>
     <sequence>
       <action order="1">Commit all worklog and journal entries.</action>
       <action order="2">Commit state.json changes from cycle-complete.</action>
