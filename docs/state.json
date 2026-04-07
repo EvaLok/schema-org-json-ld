@@ -6855,6 +6855,13 @@
       "pr": 2277,
       "status": "merged",
       "title": "[Cycle Review] Cycle 456 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-04-07T23:35:35Z",
+      "issue": 2284,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Tool: pipeline-check audit-inbound-lifecycle step (audit #385 structural fix)"
     }
   ],
   "audit_dropped": [
@@ -7550,7 +7557,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2276 [Cycle Review] Cycle 456 end-of-cycle review (cycle 456)",
+  "dispatch_log_latest": "#2284 Tool: pipeline-check audit-inbound-lifecycle step (audit #385 structural fix) (cycle 457)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7823,7 +7830,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 39,
     "issue": 2278,
