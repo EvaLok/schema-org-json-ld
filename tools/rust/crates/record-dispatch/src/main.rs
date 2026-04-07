@@ -609,6 +609,10 @@ mod tests {
             state.pointer("/cycle_phase/cycle"),
             Some(&serde_json::json!(164))
         );
+        assert_eq!(
+            state.pointer("/last_cycle/summary"),
+            Some(&serde_json::json!("1 dispatches, 0 merges"))
+        );
         assert_ne!(
             state
                 .pointer("/cycle_phase/phase_entered_at")
@@ -1146,7 +1150,8 @@ mod tests {
                     }
                 ],
                 "last_cycle": {
-                    "number": 164
+                    "number": 164,
+                    "summary": "0 dispatches, 0 merges"
                 },
                 "cycle_phase": {
                     "cycle": 164,

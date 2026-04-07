@@ -116,10 +116,20 @@ fn enforce_review_dispatch_gate(repo_root: &Path) -> Result<(), PipelineGateErro
 
 fn read_state_json(repo_root: &Path) -> Result<Value, String> {
     let path = repo_root.join("docs/state.json");
-    let contents = fs::read_to_string(&path)
-        .map_err(|error| format!("Cannot dispatch review: failed to read {}: {}", path.display(), error))?;
-    serde_json::from_str(&contents)
-        .map_err(|error| format!("Cannot dispatch review: failed to parse {}: {}", path.display(), error))
+    let contents = fs::read_to_string(&path).map_err(|error| {
+        format!(
+            "Cannot dispatch review: failed to read {}: {}",
+            path.display(),
+            error
+        )
+    })?;
+    serde_json::from_str(&contents).map_err(|error| {
+        format!(
+            "Cannot dispatch review: failed to parse {}: {}",
+            path.display(),
+            error
+        )
+    })
 }
 
 pub fn update_review_dispatch_tracking(
@@ -342,8 +352,38 @@ pub fn apply_dispatch_patch(state: &mut Value, patch: &DispatchPatch) -> Result<
         .ok_or_else(|| "docs/state.json root must be an object".to_string())?
         .insert("in_flight_sessions".to_string(), json!(patch.in_flight));
     update_field_inventory_last_refreshed(state, "in_flight_sessions", &cycle_marker)?;
+    sync_last_cycle_summary_after_dispatch(state, patch.current_cycle)?;
 
     Ok(())
+}
+
+fn sync_last_cycle_summary_after_dispatch(
+    state: &mut Value,
+    current_cycle: u64,
+) -> Result<(), String> {
+    let Some(last_cycle) = state
+        .pointer_mut("/last_cycle")
+        .and_then(Value::as_object_mut)
+    else {
+        return Ok(());
+    };
+    if last_cycle.get("number").and_then(Value::as_u64) != Some(current_cycle) {
+        return Ok(());
+    }
+    let Some(summary) = last_cycle.get("summary").and_then(Value::as_str) else {
+        return Ok(());
+    };
+    let Some(updated_summary) = increment_last_cycle_dispatch_count(summary) else {
+        return Ok(());
+    };
+    last_cycle.insert("summary".to_string(), json!(updated_summary));
+    Ok(())
+}
+
+fn increment_last_cycle_dispatch_count(summary: &str) -> Option<String> {
+    let (dispatches, remainder) = summary.split_once(" dispatches, ")?;
+    let dispatches = dispatches.parse::<u64>().ok()?;
+    Some(format!("{} dispatches, {}", dispatches + 1, remainder))
 }
 
 pub fn dispatch_commit_message(issue: u64, current_cycle: u64) -> String {
@@ -470,6 +510,8 @@ fn replace_in_flight_line(content: &str, in_flight: i64) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
     use std::{
         env,
         ffi::OsString,
@@ -477,8 +519,6 @@ mod tests {
         sync::{Mutex, OnceLock},
         time::{SystemTime, UNIX_EPOCH},
     };
-    #[cfg(unix)]
-    use std::os::unix::fs::PermissionsExt;
 
     fn env_lock() -> &'static Mutex<()> {
         static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -811,8 +851,31 @@ mod tests {
     }
 
     #[test]
-    fn apply_dispatch_patch_leaves_last_cycle_summary_unchanged() {
+    fn apply_dispatch_patch_updates_last_cycle_summary_for_current_cycle_dispatch() {
         let mut state = sample_state();
+        let model = default_test_model();
+        let patch = build_dispatch_patch(
+            &state,
+            164,
+            603,
+            "Example dispatch",
+            &model,
+            "2026-03-07T13:00:00Z",
+        )
+        .expect("patch should build");
+
+        apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
+
+        assert_eq!(
+            state["last_cycle"]["summary"],
+            json!("1 dispatches, 1 merges (PR #700)")
+        );
+    }
+
+    #[test]
+    fn apply_dispatch_patch_preserves_custom_last_cycle_summary() {
+        let mut state = sample_state();
+        state["last_cycle"]["summary"] = json!("1 dispatch, 1 merges (PR #700)");
         let original_last_cycle = state["last_cycle"].clone();
         let model = default_test_model();
         let patch = build_dispatch_patch(
@@ -831,9 +894,9 @@ mod tests {
     }
 
     #[test]
-    fn apply_dispatch_patch_preserves_custom_last_cycle_summary() {
+    fn apply_dispatch_patch_leaves_last_cycle_summary_unchanged_for_other_cycle() {
         let mut state = sample_state();
-        state["last_cycle"]["summary"] = json!("1 dispatch, 1 merges (PR #700)");
+        state["last_cycle"]["number"] = json!(163);
         let original_last_cycle = state["last_cycle"].clone();
         let model = default_test_model();
         let patch = build_dispatch_patch(
