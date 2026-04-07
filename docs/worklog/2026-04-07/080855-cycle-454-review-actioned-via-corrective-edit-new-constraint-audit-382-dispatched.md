@@ -24,6 +24,10 @@
 - [#2263](https://github.com/EvaLok/schema-org-json-ld/issues/2263) (merged)
 - [#2265](https://github.com/EvaLok/schema-org-json-ld/issues/2265) ([audit #382](https://github.com/EvaLok/schema-org-json-ld-audit/issues/382) dispatched)
 
+### Issues processed (post-dispatch)
+
+- [#2267](https://github.com/EvaLok/schema-org-json-ld/issues/2267): [Cycle Review] Cycle 454 end-of-cycle review (in_flight)
+
 ## Self-modifications
 
 - **`COMPLETION_CHECKLIST.xml`**: added `no-post-c5-mutation` constraint to C5 (commit 107a0868) and `rerun-step-comment-refresh` constraint to C5.5 (commit b7b584ca). Both reference cycle 453 / cycle 449 as the recurrence escalation.
@@ -32,16 +36,23 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 1
+- **In-flight agent sessions (post-dispatch)**: 2
 - **Pipeline status**: PASS (2 warnings: deferral-accumulation historical 370-392, step-comments [#2259](https://github.com/EvaLok/schema-org-json-ld/issues/2259) missing optional 10)
+- **Pipeline status (post-dispatch)**: PASS (2 warnings)
 - **Publish gate**: published
 
-## Next steps
+## Next steps (pre-dispatch)
 
 1. Review and iterate on PR from [#2265](https://github.com/EvaLok/schema-org-json-ld/issues/2265) ([audit #382](https://github.com/EvaLok/schema-org-json-ld-audit/issues/382) structural fix: align worklog with C5.5 final state, remove C6.5 + fixup_latest_worklog_in_flight) when Copilot completes
 2. Review and iterate on PR from cycle 454 review when Copilot completes
 3. Address state-integrity follow-up: in_flight_sessions vs open Copilot-assigned issues drift ([#2240](https://github.com/EvaLok/schema-org-json-ld/issues/2240) stale orphan from 2026-04-06 has no agent_sessions entry)
 4. Address state-integrity follow-up: last_cycle.cycle is null after cycle-complete (cycle 452 F2 finding recurrence)
 5. Address OIDC token exchange auth papercut on `gh run rerun` for claude-review (recurring across cycles)
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2265](https://github.com/EvaLok/schema-org-json-ld/issues/2265) (Tool fix: align worklog with C5.5 final state and remove C6.5 post-dispatch refresh (chronic worklog-accuracy 6/6 + audit #382)) when Copilot completes
+2. Review and iterate on PR from [#2267](https://github.com/EvaLok/schema-org-json-ld/issues/2267) ([Cycle Review] Cycle 454 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
