@@ -51,7 +51,7 @@ const STEP_NAMES: [&str; 17] = [
 ];
 // Steps that have not been posted yet when pipeline-check runs at C5.5.
 // These are excluded from the current-cycle mandatory step check.
-const POST_GATE_STEP_IDS: &[&str] = &["C5.5", "C5.6", "C6", "C6.5", "C7", "C8"];
+const POST_GATE_STEP_IDS: &[&str] = &["C5.5", "C5.6", "C6", "C7", "C8"];
 const STARTUP_STEP_IDS: &[&str] = &["0", "0.1", "0.5", "0.6", "1", "1.1", "2", "3"];
 const STEP_COMMENT_THRESHOLD: usize = 17;
 const ORCHESTRATOR_SIGNATURE: &str = "> **[main-orchestrator]**";

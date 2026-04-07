@@ -8,7 +8,9 @@
     bash tools/cycle-runner close-out --issue {N}
     Auto-posts steps C4.1, C4.5, C5, C5.1, C5.5, C5.6, C6, C7, C8.
     You handle: C1, C2, C3 manually before running cycle-runner close-out.
-    Prerequisites: Run cycle-complete, write-entry (worklog + journal).
+    Prerequisites: Run cycle-complete, write-entry worklog, and write-entry journal.
+    The C3 worklog is a preliminary pre-dispatch snapshot until cycle-runner freezes
+    it from the recorded C5.5 gate state during C5.
     The tool is idempotent. If gate fails, fix and re-run.
   </automation-note>
 
@@ -35,17 +37,19 @@
     </at-cycle-end>
   </step>
 
-  <step id="C3" title="Write documentation entries"
+  <step id="C3" title="Draft documentation entries"
         automation="semi" post-step="manual"
         prerequisite="C2">
     <tool ref="write-entry"/>
     <action>bash tools/write-entry worklog (with appropriate flags)</action>
     <action>bash tools/write-entry journal (with appropriate flags)</action>
     <constraint id="pipeline-status-preliminary">The pipeline status written here
-      reflects the C1 early check, not the final C5.5 gate. If C5.5 later fails,
-      the worklog must be amended to preserve both results (original C1 result and
-      C5.5 failure) rather than silently rewriting to show only the repaired narrative.
-      Recurrence escalation: process-adherence in cycles 420-421.</constraint>
+      is PRELIMINARY. The worklog must render the pre-dispatch snapshot note and
+      MUST NOT be treated as the published/final artifact yet. Cycle-runner freezes
+      the worklog from docs/state.json::tool_pipeline.c5_5_gate during C5, re-runs
+      validate-docs, and only then commits/pushes the published cycle artifact.
+      Recurrence escalation: process-adherence in cycles 420-421 and chronic
+      worklog-accuracy through cycle 453.</constraint>
     <constraint id="gate-failure-honesty" severity="mandatory">
       When ANY blocking gate (C4.1 or C5.5) fails during a cycle, the worklog
       pipeline status MUST record the initial failure, even if a re-run later
@@ -92,9 +96,9 @@
     <constraint>Must be posted before C5.5 gate runs.</constraint>
   </step>
 
-  <step id="C5" title="Commit and push docs + state"
+  <step id="C5" title="Freeze docs from C5.5 and push"
         automation="auto-by-cycle-runner" post-step="auto"
-        prerequisite="C4.1, C4.5" gate="true">
+        prerequisite="C4.1, C4.5, C5.5" gate="true">
     <constraint severity="critical">
       Worklog, journal, and state.json MUST be committed and pushed BEFORE
       review dispatch (C6). The review agent reads the repo at dispatch time.
@@ -115,10 +119,10 @@
       same root cause: post-dispatch worklog refresh that broke doc-validation).
     </constraint>
     <sequence>
-      <action order="1">Commit all worklog and journal entries.</action>
-      <action order="2">Commit state.json changes from cycle-complete.</action>
-      <action order="3">Push to master.</action>
-      <action order="4">Verify push succeeded before proceeding.</action>
+      <action order="1">Rewrite/freeze the worklog from docs/state.json::c5_5_gate.</action>
+      <action order="2">Re-run validate-docs on the frozen worklog/journal and abort if it fails.</action>
+      <action order="3">Commit all worklog and journal entries.</action>
+      <action order="4">Push docs + state commits to master and verify success before proceeding.</action>
     </sequence>
   </step>
 
@@ -135,7 +139,7 @@
 
   <step id="C5.5" title="Final pipeline gate (BLOCKING GATE)"
         automation="auto-by-cycle-runner" post-step="auto"
-        prerequisite="C5" gate="true">
+        prerequisite="C4.1, C4.5" gate="true">
     <tool ref="pipeline-check"/>
     <constraint>All 5 phases MUST pass before review dispatch.</constraint>
     <on-failure>Fix before closing cycle. Do not override.</on-failure>
