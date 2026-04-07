@@ -389,15 +389,15 @@ where
         &state.eva_input_issues.remaining_open,
         EVA_INPUT_REMAINING_OPEN_PATH,
     )?
-    .iter()
-    .map(|validated_issue_number| {
-        let title = fetch_title(*validated_issue_number)?;
-        Ok(format!(
-            "{}#{} ({})",
-            MAIN_REPO, validated_issue_number, title
-        ))
-    })
-    .collect()
+        .iter()
+        .map(|validated_issue_number| {
+            let title = fetch_title(*validated_issue_number)?;
+            Ok(format!(
+                "{}#{} ({})",
+                MAIN_REPO, validated_issue_number, title
+            ))
+        })
+        .collect()
 }
 
 fn parse_eva_issue_numbers(issue_numbers: &[i64], field_path: &str) -> Result<Vec<u64>, String> {
@@ -551,9 +551,7 @@ fn update_forward_work_counter(state: &mut Value, cycle: u64) {
         *obj = json!(count);
     }
     // Update field inventory freshness
-    if let Some(obj) =
-        state.pointer_mut("/field_inventory/fields/cycles_since_last_forward_work/last_refreshed")
-    {
+    if let Some(obj) = state.pointer_mut("/field_inventory/fields/cycles_since_last_forward_work/last_refreshed") {
         *obj = json!(format!("cycle {}", cycle));
     }
 }
@@ -1843,12 +1841,11 @@ mod tests {
             }
         });
 
-        refresh_eva_input_issue_inventory(&mut state, 163).expect("refresh should succeed");
+        refresh_eva_input_issue_inventory(&mut state, 163)
+            .expect("refresh should succeed");
 
         assert_eq!(
-            state.pointer(
-                "/field_inventory/fields/eva_input_issues.closed_this_cycle/last_refreshed"
-            ),
+            state.pointer("/field_inventory/fields/eva_input_issues.closed_this_cycle/last_refreshed"),
             Some(&json!("cycle 163"))
         );
         assert_eq!(
@@ -2152,15 +2149,11 @@ mod tests {
         });
         update_forward_work_counter(&mut state, 440);
         assert_eq!(
-            state
-                .pointer("/cycles_since_last_forward_work/count")
-                .and_then(Value::as_u64),
+            state.pointer("/cycles_since_last_forward_work/count").and_then(Value::as_u64),
             Some(29)
         );
         assert_eq!(
-            state
-                .pointer("/field_inventory/fields/cycles_since_last_forward_work/last_refreshed")
-                .and_then(Value::as_str),
+            state.pointer("/field_inventory/fields/cycles_since_last_forward_work/last_refreshed").and_then(Value::as_str),
             Some("cycle 440")
         );
     }
@@ -2189,9 +2182,7 @@ mod tests {
         });
         update_forward_work_counter(&mut state, 440);
         assert_eq!(
-            state
-                .pointer("/cycles_since_last_forward_work/count")
-                .and_then(Value::as_u64),
+            state.pointer("/cycles_since_last_forward_work/count").and_then(Value::as_u64),
             Some(0)
         );
     }

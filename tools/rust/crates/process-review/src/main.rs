@@ -781,9 +781,9 @@ fn build_state_patch(
     let entry_value = serde_json::to_value(entry)
         .map_err(|error| format!("failed to serialize review history entry: {}", error))?;
 
-    let existing_index = next_history
-        .iter()
-        .position(|item| item.get("cycle").and_then(Value::as_u64) == Some(entry.cycle));
+    let existing_index = next_history.iter().position(|item| {
+        item.get("cycle").and_then(Value::as_u64) == Some(entry.cycle)
+    });
 
     let (deferred_findings_patch, mut warnings) =
         deferred_findings_patch(state, review_cycle, entry)?;
@@ -2014,11 +2014,7 @@ mod tests {
             .expect("history value should be array");
 
         // Should still be 2 entries (in-place replacement, not appended)
-        assert_eq!(
-            history.len(),
-            2,
-            "history length should not grow on duplicate"
-        );
+        assert_eq!(history.len(), 2, "history length should not grow on duplicate");
 
         let updated = history
             .iter()

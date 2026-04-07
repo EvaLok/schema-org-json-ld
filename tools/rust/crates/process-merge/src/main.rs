@@ -143,7 +143,12 @@ fn get_top_level_i64(state: &Value, field: &str) -> Result<i64, String> {
     state
         .pointer(&format!("/{}", field))
         .and_then(Value::as_i64)
-        .ok_or_else(|| format!("missing numeric /{} in docs/state.json", field))
+        .ok_or_else(|| {
+            format!(
+                "missing numeric /{} in docs/state.json",
+                field
+            )
+        })
 }
 
 fn compute_update(state: &Value, cycle: u64, prs: &[u64]) -> Result<MergeUpdate, String> {
@@ -251,10 +256,7 @@ fn update_agent_sessions(
             }
             backfill.insert("status".to_string(), json!("merged"));
             backfill.insert("merged_at".to_string(), json!(merged_at));
-            backfill.insert(
-                "title".to_string(),
-                json!(format!("Backfilled: PR #{}", pr)),
-            );
+            backfill.insert("title".to_string(), json!(format!("Backfilled: PR #{}", pr)));
             backfill.insert("backfilled".to_string(), json!(true));
             sessions.push(json!(backfill));
             eprintln!("Backfilled agent_sessions entry for orphan PR #{}", pr);
@@ -265,8 +267,7 @@ fn update_agent_sessions(
 }
 
 fn sync_last_cycle_summary(state: &mut Value, current_cycle: u64) -> Result<(), String> {
-    let Some(last_cycle_number) = state.pointer("/last_cycle/number").and_then(Value::as_u64)
-    else {
+    let Some(last_cycle_number) = state.pointer("/last_cycle/number").and_then(Value::as_u64) else {
         return Ok(());
     };
     if last_cycle_number != current_cycle {
@@ -276,11 +277,8 @@ fn sync_last_cycle_summary(state: &mut Value, current_cycle: u64) -> Result<(), 
     let last_cycle_timestamp = state
         .pointer("/last_cycle/timestamp")
         .and_then(Value::as_str)
-        .ok_or_else(|| {
-            "missing docs/state.json last_cycle.timestamp for last_cycle.summary sync".to_string()
-        })?;
-    let cycle_start =
-        parse_timestamp(last_cycle_timestamp, "docs/state.json last_cycle.timestamp")?;
+        .ok_or_else(|| "missing docs/state.json last_cycle.timestamp for last_cycle.summary sync".to_string())?;
+    let cycle_start = parse_timestamp(last_cycle_timestamp, "docs/state.json last_cycle.timestamp")?;
     let sessions = state
         .pointer("/agent_sessions")
         .and_then(Value::as_array)
@@ -569,13 +567,7 @@ mod tests {
             .expect("git init");
         assert!(status.success());
         let status = Command::new("git")
-            .args([
-                "-C",
-                repo_root.to_str().unwrap(),
-                "config",
-                "user.name",
-                "Test User",
-            ])
+            .args(["-C", repo_root.to_str().unwrap(), "config", "user.name", "Test User"])
             .status()
             .expect("git config user.name");
         assert!(status.success());
@@ -652,10 +644,7 @@ mod tests {
         .expect("process-merge should succeed");
 
         let state = read_repo_state(&repo_root);
-        assert_eq!(
-            state["last_cycle"]["summary"],
-            json!("0 dispatches, 1 merges")
-        );
+        assert_eq!(state["last_cycle"]["summary"], json!("0 dispatches, 1 merges"));
     }
 
     #[test]
@@ -711,10 +700,7 @@ mod tests {
         .expect("process-merge should succeed");
 
         let state = read_repo_state(&repo_root);
-        assert_eq!(
-            state["last_cycle"]["summary"],
-            json!("1 dispatches, 1 merges")
-        );
+        assert_eq!(state["last_cycle"]["summary"], json!("1 dispatches, 1 merges"));
     }
 
     #[test]
@@ -762,10 +748,7 @@ mod tests {
         .expect("process-merge should succeed");
 
         let state = read_repo_state(&repo_root);
-        assert_eq!(
-            state["last_cycle"]["summary"],
-            json!("keep existing summary")
-        );
+        assert_eq!(state["last_cycle"]["summary"], json!("keep existing summary"));
     }
 
     #[test]
