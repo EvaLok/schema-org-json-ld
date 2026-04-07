@@ -24,7 +24,7 @@
 ## Cycle state
 
 
-- **In-flight agent sessions**: 1
+- **In-flight agent sessions**: 2
 - **Pipeline status**: FAIL→PASS (C5.5 initially failed: FAIL (3 warnings, 1 blocking: current-cycle-steps); resolved by re-running close-out after fixes)
 - **Close-out gate failures**: C5.5 FAIL: FAIL (3 warnings, 1 blocking: current-cycle-steps)
 - **Publish gate**: published

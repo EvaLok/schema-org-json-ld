@@ -209,7 +209,14 @@
         automation="partial" post-step="auto"
         prerequisite="S0">
     <action>Poll audit-outbound issues on audit repo (verify author EvaLok).</action>
-    <action>For each: evaluate, accept (create audit-inbound + implement) or reject (explain rationale).</action>
+    <action>For each: evaluate, then accept or reject.</action>
+    <substep id="S5.inbound-mandatory" title="Audit-inbound issue creation (mandatory)">
+      <constraint severity="mandatory">For EVERY audit-outbound that is processed (accepted OR rejected), an audit-inbound issue MUST be created on this repo with the title prefix `[audit-inbound]` and a body containing the audit number `#N`. This is the formal cross-repo response channel — it must be machine-checkable, not narration-dependent. Acceptance dispatches and rejection rationales recorded only in step comments are NOT a substitute.</constraint>
+      <action>Create the audit-inbound issue in the same step where the audit is dispatched or rejected. Close the issue immediately after creation if no further action is needed (the formal record is the open-then-closed lifecycle, not the open state).</action>
+      <action>If accepting and dispatching: file the audit-inbound issue alongside (not instead of) the dispatch issue. Reference both the audit number and the dispatch issue.</action>
+      <action>If rejecting: file the audit-inbound issue with the rejection rationale.</action>
+      <provenance>Established by audit #372 (cycle 446-447). Reinforced by audit #385 (cycle 457) after a behavioral-only fix decayed within 8 cycles. The structural enforcement (pipeline-check `audit-inbound-lifecycle`) is the durable answer; this checklist substep is the procedural backstop.</provenance>
+    </substep>
     <substep id="S5.staleness" title="Accepted-audit staleness">
       <threshold ref="accepted-audit-staleness"/>
       <action>If recommendation accepted but unimplemented for 5+ cycles, escalate.</action>
