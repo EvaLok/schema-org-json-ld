@@ -1,7 +1,7 @@
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -480,15 +480,18 @@ pub struct AgentSession {
 impl AgentSession {
     pub fn addresses_finding_refs(&self) -> Vec<&str> {
         let mut finding_refs = Vec::new();
+        let mut seen = BTreeSet::new();
 
         if let Some(addresses_finding) = self.addresses_finding.as_deref() {
-            finding_refs.push(addresses_finding);
+            if seen.insert(addresses_finding) {
+                finding_refs.push(addresses_finding);
+            }
         }
 
         if let Some(addresses_findings) = self.addresses_findings.as_ref() {
             for addresses_finding in addresses_findings {
                 let addresses_finding = addresses_finding.as_str();
-                if !finding_refs.contains(&addresses_finding) {
+                if seen.insert(addresses_finding) {
                     finding_refs.push(addresses_finding);
                 }
             }

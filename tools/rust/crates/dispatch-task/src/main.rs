@@ -306,6 +306,9 @@ fn record_dispatch_state(
     Ok(receipt)
 }
 
+/// Deduplicate repeated finding references while preserving the first
+/// occurrence order from the CLI. Uniqueness is defined by the
+/// `(cycle, index)` pair.
 fn dedupe_addressed_findings(addresses_finding: &[AddressedFinding]) -> Vec<AddressedFinding> {
     let mut deduped = Vec::new();
     let mut seen = BTreeSet::new();
@@ -363,6 +366,8 @@ fn set_session_addresses_findings(
     Ok(())
 }
 
+/// Reconcile review history for every addressed finding reference attached to
+/// the dispatch by delegating to the existing singular reconciliation helper.
 fn reconcile_review_history_dispatches(
     state: &mut Value,
     addressed_findings: &[AddressedFinding],
