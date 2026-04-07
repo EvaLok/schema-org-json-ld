@@ -6769,6 +6769,13 @@
       "pr": 2253,
       "status": "merged",
       "title": "[Cycle Review] Cycle 451 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-04-07T03:31:27Z",
+      "issue": 2255,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Tool fix: agent_sessions multi-finding linkage — close cycle 451 review F3 state-integrity finding"
     }
   ],
   "audit_dropped": [
@@ -7427,7 +7434,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2252 [Cycle Review] Cycle 451 end-of-cycle review (cycle 451)",
+  "dispatch_log_latest": "#2255 Tool fix: agent_sessions multi-finding linkage — close cycle 451 review F3 state-integrity finding (cycle 452)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7700,7 +7707,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 26,
     "issue": 2254,
@@ -13126,8 +13133,8 @@
         ],
         "complacency_score": 2,
         "cycle": 451,
-        "deferred": 1,
-        "dispatch_created": 2,
+        "deferred": 0,
+        "dispatch_created": 3,
         "finding_count": 3,
         "finding_dispositions": [
           {
@@ -13140,7 +13147,7 @@
           },
           {
             "category": "state-integrity",
-            "disposition": "deferred"
+            "disposition": "dispatch_created"
           }
         ],
         "ignored": 0,
