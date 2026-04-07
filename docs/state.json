@@ -6806,6 +6806,14 @@
       "pr": 2263,
       "status": "merged",
       "title": "[Cycle Review] Cycle 453 end-of-cycle review"
+    },
+    {
+      "addresses_finding": "453:1",
+      "dispatched_at": "2026-04-07T07:53:24Z",
+      "issue": 2265,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Tool fix: align worklog with C5.5 final state and remove C6.5 post-dispatch refresh (chronic worklog-accuracy 6/6 + audit #382)"
     }
   ],
   "audit_dropped": [
@@ -7479,7 +7487,7 @@
       "resolved_ref": "docs/reviews/cycle-453.md"
     }
   ],
-  "dispatch_log_latest": "#2262 [Cycle Review] Cycle 453 end-of-cycle review (cycle 453)",
+  "dispatch_log_latest": "#2265 Tool fix: align worklog with C5.5 final state and remove C6.5 post-dispatch refresh (chronic worklog-accuracy 6/6 + audit #382) (cycle 454)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7752,7 +7760,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 33,
     "issue": 2264,
