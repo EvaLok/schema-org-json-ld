@@ -22,6 +22,10 @@
 - [#2255](https://github.com/EvaLok/schema-org-json-ld/issues/2255)
 - [#2243](https://github.com/EvaLok/schema-org-json-ld/issues/2243)
 
+### Issues processed (post-dispatch)
+
+- [#2257](https://github.com/EvaLok/schema-org-json-ld/issues/2257): [Cycle Review] Cycle 452 end-of-cycle review (in_flight)
+
 ## Self-modifications
 
 - **`tools/rust/crates/process-merge/src/main.rs`**: modified
@@ -31,14 +35,21 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 1
+- **In-flight agent sessions (post-dispatch)**: 2
 - **Pipeline status**: FAIL (4 warnings, 2 blocking: frozen-commit-verify, current-cycle-steps)
+- **Pipeline status (post-dispatch)**: PASS (3 warnings, 1 cascade)
 - **Publish gate**: published
 
-## Next steps
+## Next steps (pre-dispatch)
 
 1. Address deferred finding: process-adherence (deferred cycle 449, deadline cycle 454) — must be actioned, dispatched, or explicitly dropped this cycle
 2. Address deferred finding: state-integrity (deferred cycle 451, deadline cycle 456) — must be actioned, dispatched, or explicitly dropped this cycle
 3. Review and iterate on PR from [#2255](https://github.com/EvaLok/schema-org-json-ld/issues/2255) (Tool fix: agent_sessions multi-finding linkage — close cycle 451 review F3 state-integrity finding) when Copilot completes
+
+## Next steps (post-dispatch)
+
+1. Review and iterate on PR from [#2255](https://github.com/EvaLok/schema-org-json-ld/issues/2255) (Tool fix: agent_sessions multi-finding linkage — close cycle 451 review F3 state-integrity finding) when Copilot completes
+2. Review and iterate on PR from [#2257](https://github.com/EvaLok/schema-org-json-ld/issues/2257) ([Cycle Review] Cycle 452 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
