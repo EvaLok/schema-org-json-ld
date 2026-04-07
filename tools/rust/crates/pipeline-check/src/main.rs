@@ -18,6 +18,7 @@ const CYCLE_STATUS_IN_FLIGHT_PATH: &str = "/concurrency/in_flight";
 const CYCLE_STATUS_DIRECTIVES_PATH: &str = "/eva_input/comments_since_last_cycle";
 const ARTIFACT_VERIFY_STEP_NAME: &str = "artifact-verify";
 const DISPOSITION_MATCH_STEP_NAME: &str = "disposition-match";
+const AUDIT_INBOUND_LIFECYCLE_STEP_NAME: &str = "audit-inbound-lifecycle";
 const DEFERRAL_ACCUMULATION_STEP_NAME: &str = "deferral-accumulation";
 const DEFERRAL_DEADLINES_STEP_NAME: &str = "deferral-deadlines";
 const MASS_DEFERRAL_GATE_STEP_NAME: &str = "mass-deferral-gate";
@@ -30,7 +31,7 @@ const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const CURRENT_CYCLE_STEPS_STEP_NAME: &str = "current-cycle-steps";
 const WORKLOG_PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
-const STEP_NAMES: [&str; 17] = [
+const STEP_NAMES: [&str; 18] = [
     "metric-snapshot",
     "field-inventory",
     "housekeeping-scan",
@@ -38,6 +39,7 @@ const STEP_NAMES: [&str; 17] = [
     "state-invariants",
     ARTIFACT_VERIFY_STEP_NAME,
     DISPOSITION_MATCH_STEP_NAME,
+    AUDIT_INBOUND_LIFECYCLE_STEP_NAME,
     DEFERRAL_ACCUMULATION_STEP_NAME,
     DEFERRAL_DEADLINES_STEP_NAME,
     MASS_DEFERRAL_GATE_STEP_NAME,
@@ -179,9 +181,19 @@ struct ExecutionResult {
     stdout: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct AuditInboundIssue {
+    title: String,
+    body: String,
+    state: String,
+}
+
 trait CommandRunner {
     fn run(&self, script_path: &Path, args: &[String]) -> Result<ExecutionResult, String>;
     fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String>;
+    fn fetch_audit_inbound_issues(&self) -> Result<Vec<AuditInboundIssue>, String> {
+        Err("audit-inbound issue search is unavailable for this runner".to_string())
+    }
     fn fetch_issue_comments_with_timestamps(
         &self,
         issue: u64,
@@ -231,6 +243,54 @@ impl CommandRunner for ProcessRunner {
         }
 
         Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    }
+
+    fn fetch_audit_inbound_issues(&self) -> Result<Vec<AuditInboundIssue>, String> {
+        let output = Command::new("gh")
+            .arg("api")
+            .arg("-X")
+            .arg("GET")
+            .arg("search/issues")
+            .arg("--paginate")
+            .arg("-f")
+            .arg(format!("q=repo:{MAIN_REPO} label:audit-inbound is:issue"))
+            .arg("-f")
+            .arg("per_page=100")
+            .arg("--jq")
+            .arg(".items[] | @json")
+            .output()
+            .map_err(|error| format!("failed to execute gh api: {}", error))?;
+
+        if !output.status.success() {
+            return Err(command_failure_message("gh api", &output));
+        }
+
+        String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .map(|line| {
+                let issue: Value = serde_json::from_str(line)
+                    .map_err(|error| format!("failed to parse gh api issue payload: {}", error))?;
+                let title = issue
+                    .get("title")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| {
+                        "gh api issue payload is missing string field 'title'".to_string()
+                    })?
+                    .to_string();
+                let body = issue
+                    .get("body")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string();
+                let state = issue
+                    .get("state")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string();
+                Ok(AuditInboundIssue { title, body, state })
+            })
+            .collect()
     }
 
     fn fetch_issue_comments_with_timestamps(
@@ -407,6 +467,9 @@ fn run_pipeline_with_excluded_steps(
     }
     if !is_excluded_step(DISPOSITION_MATCH_STEP_NAME, exclude_steps) {
         steps.push(verify_disposition_match(repo_root));
+    }
+    if !is_excluded_step(AUDIT_INBOUND_LIFECYCLE_STEP_NAME, exclude_steps) {
+        steps.push(verify_audit_inbound_lifecycle(repo_root, runner));
     }
     if !is_excluded_step(DEFERRAL_ACCUMULATION_STEP_NAME, exclude_steps) {
         steps.push(verify_deferral_accumulation(repo_root));
@@ -2484,6 +2547,29 @@ fn verify_disposition_match(repo_root: &Path) -> StepReport {
     }
 }
 
+fn verify_audit_inbound_lifecycle(repo_root: &Path, runner: &dyn CommandRunner) -> StepReport {
+    match audit_inbound_lifecycle_status(repo_root, runner) {
+        Ok((status, detail, summary)) => StepReport {
+            name: AUDIT_INBOUND_LIFECYCLE_STEP_NAME,
+            status,
+            severity: Severity::Blocking,
+            exit_code: None,
+            detail: Some(detail),
+            findings: None,
+            summary,
+        },
+        Err(error) => StepReport {
+            name: AUDIT_INBOUND_LIFECYCLE_STEP_NAME,
+            status: StepStatus::Error,
+            severity: Severity::Blocking,
+            exit_code: None,
+            detail: Some(error),
+            findings: None,
+            summary: None,
+        },
+    }
+}
+
 fn verify_deferral_accumulation(repo_root: &Path) -> StepReport {
     match deferral_accumulation_assessment(repo_root) {
         Ok(assessment) => StepReport {
@@ -2633,6 +2719,92 @@ fn disposition_match_status(repo_root: &Path) -> Result<(StepStatus, String), St
 
     details.push("history finding_count and dispositions match review file".to_string());
     Ok((StepStatus::Pass, details.join("; ")))
+}
+
+fn audit_inbound_lifecycle_status(
+    repo_root: &Path,
+    runner: &dyn CommandRunner,
+) -> Result<(StepStatus, String, Option<String>), String> {
+    let state_value = read_state_value(repo_root)?;
+    let state: StateJson = serde_json::from_value(state_value)
+        .map_err(|error| format!("failed to parse state.json: {}", error))?;
+    let audit_numbers = state
+        .audit_processed
+        .into_iter()
+        .map(parse_audit_issue_number)
+        .collect::<Result<Vec<_>, _>>()?;
+
+    if audit_numbers.is_empty() {
+        return Ok((
+            StepStatus::Pass,
+            "no audit dispositions to verify".to_string(),
+            Some("0/0 audit dispositions acknowledged".to_string()),
+        ));
+    }
+
+    let audit_inbound_issues = runner.fetch_audit_inbound_issues()?;
+    let missing = audit_numbers
+        .iter()
+        .copied()
+        .filter(|audit_number| {
+            !audit_inbound_issues
+                .iter()
+                .any(|issue| audit_inbound_issue_matches(issue, *audit_number))
+        })
+        .collect::<Vec<_>>();
+    let summary = Some(format!(
+        "{}/{} audit dispositions acknowledged",
+        audit_numbers.len().saturating_sub(missing.len()),
+        audit_numbers.len()
+    ));
+
+    if missing.is_empty() {
+        return Ok((
+            StepStatus::Pass,
+            format!(
+                "matched {} audit disposition(s) against {} audit-inbound issue(s)",
+                audit_numbers.len(),
+                audit_inbound_issues.len()
+            ),
+            summary,
+        ));
+    }
+
+    Ok((
+        StepStatus::Fail,
+        missing
+            .iter()
+            .map(|audit_number| {
+                format!(
+                    "#{} missing audit-inbound issue; suggested title: {}",
+                    audit_number,
+                    suggested_audit_inbound_title(*audit_number)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n"),
+        summary,
+    ))
+}
+
+fn parse_audit_issue_number(audit_number: i64) -> Result<u64, String> {
+    let audit_number = u64::try_from(audit_number)
+        .map_err(|_| format!("invalid negative audit_processed entry: {}", audit_number))?;
+    if audit_number == 0 {
+        return Err("invalid audit_processed entry: 0".to_string());
+    }
+
+    Ok(audit_number)
+}
+
+fn audit_inbound_issue_matches(issue: &AuditInboundIssue, audit_number: u64) -> bool {
+    let audit_reference = format!("#{}", audit_number);
+    issue.title.contains("[audit-inbound]")
+        && (issue.title.contains(&audit_reference) || issue.body.contains(&audit_reference))
+}
+
+fn suggested_audit_inbound_title(audit_number: u64) -> String {
+    format!("[audit-inbound] Acknowledge audit #{}", audit_number)
 }
 
 struct StepAssessment {
@@ -3349,6 +3521,19 @@ mod tests {
             .collect()
     }
 
+    fn write_state_json(root: &Path, value: Value) {
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(root.join("docs/state.json"), value.to_string()).unwrap();
+    }
+
+    fn audit_inbound_issue(title: &str, body: &str, state: &str) -> AuditInboundIssue {
+        AuditInboundIssue {
+            title: title.to_string(),
+            body: body.to_string(),
+            state: state.to_string(),
+        }
+    }
+
     fn run_git(root: &Path, args: &[&str]) -> String {
         let output = Command::new("git")
             .current_dir(root)
@@ -3897,6 +4082,10 @@ mod tests {
                 bodies.push_str(&step_comment_bodies(135, &EXPECTED_STEP_IDS));
                 Ok(bodies)
             }
+
+            fn fetch_audit_inbound_issues(&self) -> Result<Vec<AuditInboundIssue>, String> {
+                Ok(vec![])
+            }
         }
 
         static COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -4016,7 +4205,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 17);
+        assert_eq!(report.steps.len(), 18);
         assert_eq!(report.steps[0].status, StepStatus::Pass);
         assert_eq!(report.steps[1].status, StepStatus::Pass);
         assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -4034,27 +4223,33 @@ mod tests {
         assert_eq!(report.steps[5].status, StepStatus::Pass);
         assert_eq!(report.steps[6].name, "disposition-match");
         assert_eq!(report.steps[6].status, StepStatus::Pass);
-        assert_eq!(report.steps[7].name, "deferral-accumulation");
+        assert_eq!(report.steps[7].name, "audit-inbound-lifecycle");
         assert_eq!(report.steps[7].status, StepStatus::Pass);
-        assert_eq!(report.steps[8].name, "deferral-deadlines");
+        assert_eq!(
+            report.steps[7].detail.as_deref(),
+            Some("no audit dispositions to verify")
+        );
+        assert_eq!(report.steps[8].name, "deferral-accumulation");
         assert_eq!(report.steps[8].status, StepStatus::Pass);
-        assert_eq!(report.steps[9].name, "mass-deferral-gate");
+        assert_eq!(report.steps[9].name, "deferral-deadlines");
         assert_eq!(report.steps[9].status, StepStatus::Pass);
-        assert_eq!(report.steps[10].name, "dispatch-finding-reconciliation");
+        assert_eq!(report.steps[10].name, "mass-deferral-gate");
         assert_eq!(report.steps[10].status, StepStatus::Pass);
-        assert_eq!(report.steps[11].name, "doc-validation");
+        assert_eq!(report.steps[11].name, "dispatch-finding-reconciliation");
         assert_eq!(report.steps[11].status, StepStatus::Pass);
-        assert_eq!(report.steps[12].name, "frozen-commit-verify");
+        assert_eq!(report.steps[12].name, "doc-validation");
         assert_eq!(report.steps[12].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].name, "worklog-dedup");
+        assert_eq!(report.steps[13].name, "frozen-commit-verify");
         assert_eq!(report.steps[13].status, StepStatus::Pass);
-        assert_eq!(report.steps[14].name, "worklog-immutability");
+        assert_eq!(report.steps[14].name, "worklog-dedup");
         assert_eq!(report.steps[14].status, StepStatus::Pass);
-        assert_eq!(report.steps[14].severity, Severity::Blocking);
-        assert_eq!(report.steps[15].name, "step-comments");
+        assert_eq!(report.steps[15].name, "worklog-immutability");
         assert_eq!(report.steps[15].status, StepStatus::Pass);
-        assert_eq!(report.steps[16].name, "current-cycle-steps");
+        assert_eq!(report.steps[15].severity, Severity::Blocking);
+        assert_eq!(report.steps[16].name, "step-comments");
         assert_eq!(report.steps[16].status, StepStatus::Pass);
+        assert_eq!(report.steps[17].name, "current-cycle-steps");
+        assert_eq!(report.steps[17].status, StepStatus::Pass);
     }
 
     #[test]
@@ -4242,11 +4437,11 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 17);
+        assert_eq!(report.steps.len(), 18);
         assert!(report.steps[..5]
             .iter()
             .all(|step| matches!(step.status, StepStatus::Error)));
-        assert!(report.steps[13..]
+        assert!(report.steps[14..]
             .iter()
             .all(|step| !matches!(step.status, StepStatus::Fail)));
         assert!(report
@@ -4605,17 +4800,17 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &CascadeRunner);
-        assert_eq!(report.steps[11].name, "doc-validation");
-        assert_eq!(report.steps[11].status, StepStatus::Cascade);
-        assert_eq!(report.steps[12].name, "frozen-commit-verify");
-        assert_eq!(report.steps[12].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].name, "worklog-dedup");
+        assert_eq!(report.steps[12].name, "doc-validation");
+        assert_eq!(report.steps[12].status, StepStatus::Cascade);
+        assert_eq!(report.steps[13].name, "frozen-commit-verify");
         assert_eq!(report.steps[13].status, StepStatus::Pass);
-        assert_eq!(report.steps[14].name, "worklog-immutability");
+        assert_eq!(report.steps[14].name, "worklog-dedup");
         assert_eq!(report.steps[14].status, StepStatus::Pass);
-        assert_eq!(report.steps[15].name, "step-comments");
+        assert_eq!(report.steps[15].name, "worklog-immutability");
+        assert_eq!(report.steps[15].status, StepStatus::Pass);
+        assert_eq!(report.steps[16].name, "step-comments");
         // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[15].status, StepStatus::Warn);
+        assert_eq!(report.steps[16].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -4748,17 +4943,17 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &MultiCauseCascadeRunner);
-        assert_eq!(report.steps[11].name, "doc-validation");
-        assert_eq!(report.steps[11].status, StepStatus::Cascade);
-        assert_eq!(report.steps[12].name, "frozen-commit-verify");
-        assert_eq!(report.steps[12].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].name, "worklog-dedup");
+        assert_eq!(report.steps[12].name, "doc-validation");
+        assert_eq!(report.steps[12].status, StepStatus::Cascade);
+        assert_eq!(report.steps[13].name, "frozen-commit-verify");
         assert_eq!(report.steps[13].status, StepStatus::Pass);
-        assert_eq!(report.steps[14].name, "worklog-immutability");
+        assert_eq!(report.steps[14].name, "worklog-dedup");
         assert_eq!(report.steps[14].status, StepStatus::Pass);
-        assert_eq!(report.steps[15].name, "step-comments");
+        assert_eq!(report.steps[15].name, "worklog-immutability");
+        assert_eq!(report.steps[15].status, StepStatus::Pass);
+        assert_eq!(report.steps[16].name, "step-comments");
         // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[15].status, StepStatus::Warn);
+        assert_eq!(report.steps[16].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -4889,10 +5084,10 @@ mod tests {
         }
 
         let report = run_pipeline(&root, OVERRIDE_CYCLE, &OverrideRunner);
-        assert_eq!(report.steps[15].name, "step-comments");
-        assert_eq!(report.steps[15].status, StepStatus::Warn);
-        assert_eq!(report.steps[15].severity, Severity::Warning);
-        assert!(report.steps[15]
+        assert_eq!(report.steps[16].name, "step-comments");
+        assert_eq!(report.steps[16].status, StepStatus::Warn);
+        assert_eq!(report.steps[16].severity, Severity::Warning);
+        assert!(report.steps[16]
             .detail
             .as_deref()
             .unwrap_or_default()
@@ -5035,16 +5230,16 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &IndependentFailureRunner);
-        assert_eq!(report.steps[11].name, "doc-validation");
-        assert_eq!(report.steps[11].status, StepStatus::Fail);
-        assert_eq!(report.steps[12].name, "frozen-commit-verify");
-        assert_eq!(report.steps[12].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].name, "worklog-dedup");
+        assert_eq!(report.steps[12].name, "doc-validation");
+        assert_eq!(report.steps[12].status, StepStatus::Fail);
+        assert_eq!(report.steps[13].name, "frozen-commit-verify");
         assert_eq!(report.steps[13].status, StepStatus::Pass);
-        assert_eq!(report.steps[14].name, "worklog-immutability");
+        assert_eq!(report.steps[14].name, "worklog-dedup");
         assert_eq!(report.steps[14].status, StepStatus::Pass);
+        assert_eq!(report.steps[15].name, "worklog-immutability");
+        assert_eq!(report.steps[15].status, StepStatus::Pass);
         // Previous-cycle backstop is downgraded to Warn
-        assert_eq!(report.steps[15].status, StepStatus::Warn);
+        assert_eq!(report.steps[16].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -5167,7 +5362,7 @@ mod tests {
             &ExcludeDocValidationRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 16);
+        assert_eq!(report.steps.len(), 17);
         assert!(!report
             .steps
             .iter()
@@ -5304,7 +5499,7 @@ mod tests {
             &UnknownExcludeRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 17);
+        assert_eq!(report.steps.len(), 18);
         assert!(report
             .steps
             .iter()
@@ -5445,7 +5640,7 @@ mod tests {
         );
 
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 16);
+        assert_eq!(report.steps.len(), 17);
         assert!(!report.steps.iter().any(|step| step.name == "worklog-dedup"));
         assert!(report
             .steps
@@ -6508,6 +6703,214 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("2 findings"));
+    }
+
+    #[test]
+    fn audit_inbound_lifecycle_passes_when_all_processed_entries_have_matches() {
+        struct AuditInboundRunner {
+            fetch_count: AtomicU64,
+            issues: Vec<AuditInboundIssue>,
+        }
+
+        impl CommandRunner for AuditInboundRunner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("wrapper commands are not used in audit-inbound-lifecycle test");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("issue comments are not used in audit-inbound-lifecycle test");
+            }
+
+            fn fetch_audit_inbound_issues(&self) -> Result<Vec<AuditInboundIssue>, String> {
+                self.fetch_count.fetch_add(1, Ordering::Relaxed);
+                Ok(self.issues.clone())
+            }
+        }
+
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-audit-inbound-lifecycle-pass-{}",
+            run_id
+        ));
+        write_state_json(&root, json!({"audit_processed": [382, 383, 385]}));
+
+        let runner = AuditInboundRunner {
+            fetch_count: AtomicU64::new(0),
+            issues: vec![
+                audit_inbound_issue("[audit-inbound] Acknowledge audit #382", "", "open"),
+                audit_inbound_issue("[audit-inbound] Acknowledge audit #383", "", "open"),
+                audit_inbound_issue(
+                    "[audit-inbound] Lifecycle regression follow-up",
+                    "Tracks audit #385 remediation.",
+                    "open",
+                ),
+            ],
+        };
+
+        let step = verify_audit_inbound_lifecycle(&root, &runner);
+
+        assert_eq!(step.name, "audit-inbound-lifecycle");
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert_eq!(
+            step.summary.as_deref(),
+            Some("3/3 audit dispositions acknowledged")
+        );
+        assert_eq!(runner.fetch_count.load(Ordering::Relaxed), 1);
+    }
+
+    #[test]
+    fn audit_inbound_lifecycle_fails_when_processed_entry_has_no_matching_issue() {
+        struct AuditInboundRunner {
+            issues: Vec<AuditInboundIssue>,
+        }
+
+        impl CommandRunner for AuditInboundRunner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("wrapper commands are not used in audit-inbound-lifecycle test");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("issue comments are not used in audit-inbound-lifecycle test");
+            }
+
+            fn fetch_audit_inbound_issues(&self) -> Result<Vec<AuditInboundIssue>, String> {
+                Ok(self.issues.clone())
+            }
+        }
+
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-audit-inbound-lifecycle-missing-{}",
+            run_id
+        ));
+        write_state_json(&root, json!({"audit_processed": [382, 383, 385]}));
+
+        let step = verify_audit_inbound_lifecycle(
+            &root,
+            &AuditInboundRunner {
+                issues: vec![
+                    audit_inbound_issue("[audit-inbound] Acknowledge audit #382", "", "open"),
+                    audit_inbound_issue("[audit-inbound] Acknowledge audit #385", "", "closed"),
+                ],
+            },
+        );
+
+        assert_eq!(step.status, StepStatus::Fail);
+        assert!(step.detail.as_deref().unwrap_or_default().contains("#383"));
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("[audit-inbound] Acknowledge audit #383"));
+        assert_eq!(
+            step.summary.as_deref(),
+            Some("2/3 audit dispositions acknowledged")
+        );
+    }
+
+    #[test]
+    fn audit_inbound_lifecycle_passes_when_audit_processed_is_empty() {
+        struct AuditInboundRunner;
+
+        impl CommandRunner for AuditInboundRunner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("wrapper commands are not used in audit-inbound-lifecycle test");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("issue comments are not used in audit-inbound-lifecycle test");
+            }
+
+            fn fetch_audit_inbound_issues(&self) -> Result<Vec<AuditInboundIssue>, String> {
+                panic!(
+                    "audit-inbound issue search should be skipped when audit_processed is empty"
+                );
+            }
+        }
+
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-audit-inbound-lifecycle-empty-{}",
+            run_id
+        ));
+        write_state_json(&root, json!({"audit_processed": []}));
+
+        let step = verify_audit_inbound_lifecycle(&root, &AuditInboundRunner);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("no audit dispositions to verify")
+        );
+        assert_eq!(
+            step.summary.as_deref(),
+            Some("0/0 audit dispositions acknowledged")
+        );
+    }
+
+    #[test]
+    fn audit_inbound_lifecycle_matches_open_and_closed_issues() {
+        struct AuditInboundRunner {
+            issues: Vec<AuditInboundIssue>,
+        }
+
+        impl CommandRunner for AuditInboundRunner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("wrapper commands are not used in audit-inbound-lifecycle test");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("issue comments are not used in audit-inbound-lifecycle test");
+            }
+
+            fn fetch_audit_inbound_issues(&self) -> Result<Vec<AuditInboundIssue>, String> {
+                Ok(self.issues.clone())
+            }
+        }
+
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-audit-inbound-lifecycle-open-closed-{}",
+            run_id
+        ));
+        write_state_json(&root, json!({"audit_processed": [382, 383]}));
+
+        let step = verify_audit_inbound_lifecycle(
+            &root,
+            &AuditInboundRunner {
+                issues: vec![
+                    audit_inbound_issue("[audit-inbound] Acknowledge audit #382", "", "open"),
+                    audit_inbound_issue("[audit-inbound] Acknowledge audit #383", "", "closed"),
+                ],
+            },
+        );
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(
+            step.summary.as_deref(),
+            Some("2/2 audit dispositions acknowledged")
+        );
     }
 
     #[test]
