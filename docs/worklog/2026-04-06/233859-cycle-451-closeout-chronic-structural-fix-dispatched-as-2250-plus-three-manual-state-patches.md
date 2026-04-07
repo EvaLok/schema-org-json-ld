@@ -28,7 +28,7 @@
 
 ## Cycle state
 
-- **In-flight agent sessions**: 2
+- **In-flight agent sessions**: 1
 - **In-flight agent sessions (post-dispatch)**: 3
 - **Pipeline status**: PASS (3 warnings)
 - **Publish gate**: published
