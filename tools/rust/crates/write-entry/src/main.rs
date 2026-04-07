@@ -5,8 +5,6 @@ use clap::{Parser, Subcommand};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 use state_schema::{current_cycle_from_state, read_state_value, AgentSession, StateJson};
-#[cfg(test)]
-use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fs;
@@ -434,7 +432,7 @@ fn resolve_cycle(cycle: Option<u64>, repo_root: &Path) -> Result<u64, String> {
     }
 }
 
-#[allow(dead_code)]
+#[cfg(test)]
 fn resolve_worklog_input(args: &WorklogArgs, repo_root: &Path) -> Result<WorklogInput, String> {
     let cycle = resolve_cycle(args.cycle, repo_root)?;
     resolve_worklog_input_for_cycle(args, repo_root, cycle)
@@ -1972,13 +1970,6 @@ fn parse_cycle_receipt_entries_output(json: &str) -> Result<Vec<CycleReceiptJson
         .map_err(|error| format!("invalid cycle-receipts JSON output: {}", error))
 }
 
-#[cfg(test)]
-#[allow(dead_code)]
-fn parse_cycle_receipts_output(json: &str) -> Result<Vec<CommitReceipt>, String> {
-    let entries = parse_cycle_receipt_entries_output(json)?;
-    cycle_receipt_entries_to_receipts(&entries)
-}
-
 fn cycle_receipt_entries_to_receipts(
     entries: &[CycleReceiptJsonEntry],
 ) -> Result<Vec<CommitReceipt>, String> {
@@ -1994,14 +1985,6 @@ fn cycle_receipt_entries_to_receipts(
             Ok(parsed_receipt)
         })
         .collect()
-}
-
-#[cfg(test)]
-#[allow(dead_code)]
-fn derive_prs_from_cycle_receipts_output(state_json: &str, cycle: u64) -> Result<Vec<u64>, String> {
-    let state = serde_json::from_str::<StateJson>(state_json)
-        .map_err(|error| format!("invalid state JSON: {}", error))?;
-    derive_prs_from_cycle_receipt_entries(&state, cycle)
 }
 
 fn derive_prs_from_cycle_receipt_entries(
@@ -2040,52 +2023,6 @@ fn derive_prs_from_cycle_receipt_entries(
     }
 
     Ok(prs)
-}
-
-#[cfg(test)]
-#[allow(dead_code)]
-fn merge_receipts(
-    auto_receipts: Vec<CommitReceipt>,
-    manual_receipts: &[CommitReceipt],
-) -> Vec<CommitReceipt> {
-    let manual_indexes_by_tool =
-        manual_receipts
-            .iter()
-            .enumerate()
-            .fold(HashMap::new(), |mut indexes, (index, receipt)| {
-                indexes
-                    .entry(receipt.tool.to_ascii_lowercase())
-                    .or_insert_with(Vec::new)
-                    .push(index);
-                indexes
-            });
-    let mut used_manual_by_tool = HashMap::<String, usize>::new();
-    let mut used_manual_indexes = HashSet::new();
-
-    let mut merged = Vec::new();
-    for receipt in auto_receipts {
-        let tool_key = receipt.tool.to_ascii_lowercase();
-        let manual_position = *used_manual_by_tool.get(&tool_key).unwrap_or(&0);
-        if let Some(manual_index) = manual_indexes_by_tool
-            .get(&tool_key)
-            .and_then(|indexes| indexes.get(manual_position))
-            .copied()
-        {
-            merged.push(manual_receipts[manual_index].clone());
-            used_manual_indexes.insert(manual_index);
-            used_manual_by_tool.insert(tool_key, manual_position + 1);
-        } else {
-            merged.push(receipt);
-        }
-    }
-
-    for (index, receipt) in manual_receipts.iter().enumerate() {
-        if !used_manual_indexes.contains(&index) {
-            merged.push(receipt.clone());
-        }
-    }
-
-    merged
 }
 
 fn parse_self_modifications(values: &[String]) -> Result<Vec<SelfModification>, String> {
