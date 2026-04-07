@@ -6836,6 +6836,11 @@
       "title": "[Cycle Review] Cycle 455 end-of-cycle review"
     },
     {
+      "addresses_findings": [
+        "455:1",
+        "455:2",
+        "455:4"
+      ],
       "dispatched_at": "2026-04-07T21:51:41Z",
       "issue": 2274,
       "model": "gpt-5.4",
