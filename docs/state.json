@@ -6846,6 +6846,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Tool fix: cycle 455 review F2 + F4 — close_out parser broken; record-dispatch leaves last_cycle.summary stale"
+    },
+    {
+      "dispatched_at": "2026-04-07T22:10:50Z",
+      "issue": 2276,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 456 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -7522,7 +7529,7 @@
       "resolved_ref": "docs/reviews/cycle-453.md"
     }
   ],
-  "dispatch_log_latest": "#2274 Tool fix: cycle 455 review F2 + F4 — close_out parser broken; record-dispatch leaves last_cycle.summary stale (cycle 456)",
+  "dispatch_log_latest": "#2276 [Cycle Review] Cycle 456 end-of-cycle review (cycle 456)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7795,7 +7802,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 39,
     "issue": 2273,
@@ -13362,7 +13369,7 @@
     ],
     "last_review_cycle": 455
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 456,
   "schema_status": {
     "directory_layout": {
