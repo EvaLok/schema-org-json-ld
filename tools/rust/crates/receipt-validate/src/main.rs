@@ -782,7 +782,9 @@ mod tests {
             Some(full_sha.to_string())
         );
         assert_eq!(
-            extract_full_sha_from_cell("https://github.com/other/repo/commit/4e64161d6675ca2aac5915527f39b891af1bbe68"),
+            extract_full_sha_from_cell(
+                "https://github.com/other/repo/commit/4e64161d6675ca2aac5915527f39b891af1bbe68"
+            ),
             None
         );
     }
@@ -791,8 +793,11 @@ mod tests {
     fn run_passes_with_correct_full_sha_urls() {
         let repo = TestRepo::new("receipt-validate-correct-full-sha");
         repo.init();
-        let (short_sha, full_sha) =
-            repo.commit("notes/valid.txt", "valid\n", "state(cycle-complete): close cycle [cycle 1]");
+        let (short_sha, full_sha) = repo.commit(
+            "notes/valid.txt",
+            "valid\n",
+            "state(cycle-complete): close cycle [cycle 1]",
+        );
         repo.write_cycle_receipts(&[(&short_sha, "state(cycle-complete): close cycle [cycle 1]")]);
         let worklog_path = repo.write_worklog(&format!(
             "## Commit receipts\n\n| Tool | Receipt | Link |\n|------|---------|------|\n| cycle-complete | {short_sha} | [link](https://github.com/EvaLok/schema-org-json-ld/commit/{full_sha}) |\n"
@@ -814,8 +819,11 @@ mod tests {
     fn run_fails_with_broken_full_sha_url() {
         let repo = TestRepo::new("receipt-validate-broken-full-sha");
         repo.init();
-        let (short_sha, _full_sha) =
-            repo.commit("notes/valid.txt", "valid\n", "state(cycle-complete): close cycle [cycle 1]");
+        let (short_sha, _full_sha) = repo.commit(
+            "notes/valid.txt",
+            "valid\n",
+            "state(cycle-complete): close cycle [cycle 1]",
+        );
         let broken_full_sha = format!("{short_sha}{}", "0".repeat(33));
         repo.write_cycle_receipts(&[(&short_sha, "state(cycle-complete): close cycle [cycle 1]")]);
         let worklog_path = repo.write_worklog(&format!(
@@ -843,8 +851,11 @@ mod tests {
     fn run_keeps_short_sha_only_validation_backwards_compatible() {
         let repo = TestRepo::new("receipt-validate-short-only");
         repo.init();
-        let (short_sha, _full_sha) =
-            repo.commit("notes/valid.txt", "valid\n", "state(cycle-complete): close cycle [cycle 1]");
+        let (short_sha, _full_sha) = repo.commit(
+            "notes/valid.txt",
+            "valid\n",
+            "state(cycle-complete): close cycle [cycle 1]",
+        );
         repo.write_cycle_receipts(&[(&short_sha, "state(cycle-complete): close cycle [cycle 1]")]);
         let worklog_path = repo.write_worklog(&format!(
             "## Commit receipts\n\n| Tool | Receipt | Link |\n|------|---------|------|\n| cycle-complete | {short_sha} | plain text |\n"
@@ -909,14 +920,15 @@ mod tests {
             let short_sha = git_stdout(&self.path, ["rev-parse", "--short=7", "HEAD"])
                 .trim()
                 .to_string();
-            let full_sha = git_stdout(&self.path, ["rev-parse", "HEAD"]).trim().to_string();
+            let full_sha = git_stdout(&self.path, ["rev-parse", "HEAD"])
+                .trim()
+                .to_string();
             (short_sha, full_sha)
         }
 
         fn write_worklog(&self, contents: &str) -> PathBuf {
             let path = self.path.join("docs/worklog.md");
-            fs::create_dir_all(path.parent().expect("worklog parent"))
-                .expect("create worklog dir");
+            fs::create_dir_all(path.parent().expect("worklog parent")).expect("create worklog dir");
             fs::write(&path, contents).expect("write worklog");
             path
         }

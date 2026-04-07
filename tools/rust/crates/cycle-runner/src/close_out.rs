@@ -204,7 +204,9 @@ fn detect_prior_gate_failures(repo_root: &Path, issue: u64, cycle: u64) -> Vec<S
         })
         .collect::<Vec<_>>();
 
-    for failure in parse_prior_gate_failures_from_comment_bodies(comment_bodies.iter().map(String::as_str)) {
+    for failure in
+        parse_prior_gate_failures_from_comment_bodies(comment_bodies.iter().map(String::as_str))
+    {
         if !failures.contains(&failure) {
             failures.push(failure);
         }

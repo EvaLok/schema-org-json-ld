@@ -2787,14 +2787,18 @@ fn audit_inbound_lifecycle_status(
     ))
 }
 
-fn parse_audit_issue_number(audit_number: i64) -> Result<u64, String> {
-    let audit_number = u64::try_from(audit_number)
-        .map_err(|_| format!("invalid negative audit_processed entry: {}", audit_number))?;
-    if audit_number == 0 {
+fn parse_audit_issue_number(audit_number_signed: i64) -> Result<u64, String> {
+    let audit_number_unsigned = u64::try_from(audit_number_signed).map_err(|_| {
+        format!(
+            "invalid negative audit_processed entry: {}",
+            audit_number_signed
+        )
+    })?;
+    if audit_number_unsigned == 0 {
         return Err("invalid audit_processed entry: 0".to_string());
     }
 
-    Ok(audit_number)
+    Ok(audit_number_unsigned)
 }
 
 fn audit_inbound_issue_matches(issue: &AuditInboundIssue, audit_number: u64) -> bool {

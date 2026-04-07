@@ -803,7 +803,10 @@ mod tests {
         assert_eq!(receipts[0].step, "cycle-start");
         assert_eq!(receipts[0].aliases, vec![FALLBACK_STEP.to_string()]);
         assert_eq!(receipts[1].step, "process-merge");
-        assert_eq!(receipts[1].commit, "state(process-merge): merged PR #1 [cycle 198]");
+        assert_eq!(
+            receipts[1].commit,
+            "state(process-merge): merged PR #1 [cycle 198]"
+        );
         assert_eq!(receipts[1].aliases, vec![FALLBACK_STEP.to_string()]);
     }
 
@@ -1217,7 +1220,8 @@ mod tests {
             },
         ];
 
-        let start = find_cycle_start_timestamp(&commits, 347).expect("start timestamp should exist");
+        let start =
+            find_cycle_start_timestamp(&commits, 347).expect("start timestamp should exist");
 
         assert_eq!(
             start,
