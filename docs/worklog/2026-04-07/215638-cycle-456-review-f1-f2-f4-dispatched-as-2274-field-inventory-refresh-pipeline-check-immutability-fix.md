@@ -21,12 +21,12 @@
 
 - **`tools/rust/crates/pipeline-check/src/main.rs`**: modified
 
-## Pre-dispatch state
+## Cycle state
 
-*Snapshot before review dispatch — final counters may differ after C6.*
 
 - **In-flight agent sessions**: 1
-- **Pipeline status**: FAIL (3 warnings, 2 blocking: doc-validation, current-cycle-steps)
+- **Pipeline status**: FAIL→PASS (C5.5 initially failed: FAIL (3 warnings, 1 blocking: current-cycle-steps); resolved by re-running close-out after fixes)
+- **Close-out gate failures**: C5.5 FAIL: FAIL (3 warnings, 1 blocking: current-cycle-steps)
 - **Publish gate**: published
 
 ## Next steps
