@@ -6795,6 +6795,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Tool fix: route merge-pr's process-merge invocation through the bash wrapper for source-freshness rebuild"
+    },
+    {
+      "dispatched_at": "2026-04-07T05:29:56Z",
+      "issue": 2262,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 453 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -7465,7 +7472,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2260 Tool fix: route merge-pr's process-merge invocation through the bash wrapper for source-freshness rebuild (cycle 453)",
+  "dispatch_log_latest": "#2262 [Cycle Review] Cycle 453 end-of-cycle review (cycle 453)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7738,7 +7745,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 33,
     "issue": 2259,
@@ -13215,7 +13222,7 @@
     ],
     "last_review_cycle": 452
   },
-  "review_dispatch_consecutive": 5,
+  "review_dispatch_consecutive": 6,
   "review_events_verified_through_cycle": 453,
   "schema_status": {
     "directory_layout": {
