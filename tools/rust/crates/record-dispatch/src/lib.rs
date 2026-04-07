@@ -116,20 +116,10 @@ fn enforce_review_dispatch_gate(repo_root: &Path) -> Result<(), PipelineGateErro
 
 fn read_state_json(repo_root: &Path) -> Result<Value, String> {
     let path = repo_root.join("docs/state.json");
-    let contents = fs::read_to_string(&path).map_err(|error| {
-        format!(
-            "Cannot dispatch review: failed to read {}: {}",
-            path.display(),
-            error
-        )
-    })?;
-    serde_json::from_str(&contents).map_err(|error| {
-        format!(
-            "Cannot dispatch review: failed to parse {}: {}",
-            path.display(),
-            error
-        )
-    })
+    let contents = fs::read_to_string(&path)
+        .map_err(|error| format!("Cannot dispatch review: failed to read {}: {}", path.display(), error))?;
+    serde_json::from_str(&contents)
+        .map_err(|error| format!("Cannot dispatch review: failed to parse {}: {}", path.display(), error))
 }
 
 pub fn update_review_dispatch_tracking(
@@ -480,8 +470,6 @@ fn replace_in_flight_line(content: &str, in_flight: i64) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[cfg(unix)]
-    use std::os::unix::fs::PermissionsExt;
     use std::{
         env,
         ffi::OsString,
@@ -489,6 +477,8 @@ mod tests {
         sync::{Mutex, OnceLock},
         time::{SystemTime, UNIX_EPOCH},
     };
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
 
     fn env_lock() -> &'static Mutex<()> {
         static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
