@@ -73,6 +73,7 @@ fn run(cli: Cli) -> Result<(), String> {
     let patch = build_patch(&update)?;
     apply_patch(&mut state, &patch)?;
     update_agent_sessions(&mut state, &cli.prs, &issues, &merged_at)?;
+    sync_last_cycle_summary(&mut state, current_cycle)?;
     write_state_value(&cli.repo_root, &state)?;
 
     let commit_message = format!(
@@ -265,6 +266,68 @@ fn update_agent_sessions(
     Ok(())
 }
 
+fn sync_last_cycle_summary(state: &mut Value, current_cycle: u64) -> Result<(), String> {
+    let Some(last_cycle_number) = state.pointer("/last_cycle/number").and_then(Value::as_u64) else {
+        return Ok(());
+    };
+    if last_cycle_number != current_cycle {
+        return Ok(());
+    }
+
+    let last_cycle_timestamp = state
+        .pointer("/last_cycle/timestamp")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "missing docs/state.json last_cycle.timestamp for last_cycle.summary sync".to_string())?;
+    let cycle_start = parse_timestamp(last_cycle_timestamp, "docs/state.json last_cycle.timestamp")?;
+    let sessions = state
+        .pointer("/agent_sessions")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "missing array /agent_sessions in docs/state.json".to_string())?;
+    let mut dispatches = 0usize;
+    let mut merges = 0usize;
+    for session in sessions {
+        if let Some(dispatched_at) = session.get("dispatched_at").and_then(Value::as_str) {
+            if parse_timestamp(dispatched_at, "agent_sessions[].dispatched_at")? >= cycle_start
+                && !is_review_dispatch_session(session)
+            {
+                dispatches += 1;
+            }
+        }
+        if let Some(merged_at) = session.get("merged_at").and_then(Value::as_str) {
+            if parse_timestamp(merged_at, "agent_sessions[].merged_at")? >= cycle_start {
+                merges += 1;
+            }
+        }
+    }
+
+    let last_cycle = state
+        .pointer_mut("/last_cycle")
+        .and_then(Value::as_object_mut)
+        .ok_or_else(|| "missing object /last_cycle in docs/state.json".to_string())?;
+    last_cycle.insert(
+        "summary".to_string(),
+        json!(format!("{dispatches} dispatches, {merges} merges")),
+    );
+    Ok(())
+}
+
+fn parse_timestamp(value: &str, label: &str) -> Result<chrono::DateTime<chrono::Utc>, String> {
+    DateTime::parse_from_rfc3339(value)
+        .map(|timestamp| timestamp.with_timezone(&chrono::Utc))
+        .map_err(|error| format!("invalid {}: {}", label, error))
+}
+
+fn is_review_dispatch_session(session: &Value) -> bool {
+    session
+        .get("review_dispatch")
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
+        || session
+            .get("title")
+            .and_then(Value::as_str)
+            .is_some_and(|title| title.contains("[Cycle Review]"))
+}
+
 fn format_pr_list(prs: &[u64]) -> String {
     let formatted: Vec<String> = prs.iter().map(|pr| format!("#{}", pr)).collect();
     if formatted.len() == 1 {
@@ -280,7 +343,10 @@ mod tests {
     use clap::error::ErrorKind;
     use clap::CommandFactory;
     use state_schema::default_agent_model;
+    use std::fs;
     use std::path::PathBuf;
+    use std::process::Command;
+    use std::sync::atomic::{AtomicU64, Ordering};
 
     fn repo_root() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../..")
@@ -311,7 +377,14 @@ mod tests {
                 }
             ],
             "in_flight_sessions": 3,
-            "last_cycle": {"number": 164},
+            "last_cycle": {
+                "number": 164,
+                "timestamp": "2026-03-05T09:00:00Z",
+                "summary": "0 dispatches, 0 merges"
+            },
+            "cycle_phase": {
+                "cycle": 164
+            },
             "copilot_metrics": {
                 "closed_without_merge": 1,
                 "closed_without_pr": 1,
@@ -474,6 +547,208 @@ mod tests {
             session.get("merged_at"),
             Some(&json!("2026-03-07T13:00:00Z"))
         );
+    }
+
+    fn temp_repo_path(name: &str) -> PathBuf {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        std::env::temp_dir().join(format!("process-merge-{name}-{run_id}"))
+    }
+
+    fn init_git_repo(repo_root: &PathBuf) {
+        if repo_root.exists() {
+            fs::remove_dir_all(repo_root).expect("remove old temp repo");
+        }
+        fs::create_dir_all(repo_root).expect("repo root directory");
+        let status = Command::new("git")
+            .arg("init")
+            .arg(repo_root)
+            .status()
+            .expect("git init");
+        assert!(status.success());
+        let status = Command::new("git")
+            .args(["-C", repo_root.to_str().unwrap(), "config", "user.name", "Test User"])
+            .status()
+            .expect("git config user.name");
+        assert!(status.success());
+        let status = Command::new("git")
+            .args([
+                "-C",
+                repo_root.to_str().unwrap(),
+                "config",
+                "user.email",
+                "test@example.com",
+            ])
+            .status()
+            .expect("git config user.email");
+        assert!(status.success());
+    }
+
+    fn write_repo_state(repo_root: &PathBuf, state: Value) {
+        fs::create_dir_all(repo_root.join("docs")).expect("docs dir");
+        fs::write(
+            repo_root.join("docs/state.json"),
+            format!("{}\n", serde_json::to_string_pretty(&state).unwrap()),
+        )
+        .expect("write state.json");
+    }
+
+    fn read_repo_state(repo_root: &PathBuf) -> Value {
+        serde_json::from_str(
+            &fs::read_to_string(repo_root.join("docs/state.json")).expect("read state.json"),
+        )
+        .expect("parse state.json")
+    }
+
+    #[test]
+    fn run_updates_last_cycle_summary_for_current_cycle_merge() {
+        let repo_root = temp_repo_path("summary-current-cycle");
+        init_git_repo(&repo_root);
+        let model = default_test_model();
+        write_repo_state(
+            &repo_root,
+            json!({
+                "agent_sessions": [
+                    {
+                        "issue": 667,
+                        "title": "Dispatched issue 667",
+                        "model": model,
+                        "status": "in_flight"
+                    }
+                ],
+                "in_flight_sessions": 1,
+                "last_cycle": {
+                    "number": 164,
+                    "timestamp": "2026-03-05T09:00:00Z",
+                    "summary": "0 dispatches, 0 merges"
+                },
+                "cycle_phase": {
+                    "cycle": 164
+                },
+                "field_inventory": {
+                    "fields": {
+                        "in_flight_sessions": {
+                            "last_refreshed": "cycle 163"
+                        }
+                    }
+                }
+            }),
+        );
+
+        run(Cli {
+            prs: vec![700],
+            issues: vec![IssueValue::Number(667)],
+            merged_at: Some("2026-03-05T12:00:00Z".to_string()),
+            repo_root: repo_root.clone(),
+        })
+        .expect("process-merge should succeed");
+
+        let state = read_repo_state(&repo_root);
+        assert_eq!(state["last_cycle"]["summary"], json!("0 dispatches, 1 merges"));
+    }
+
+    #[test]
+    fn run_counts_existing_current_cycle_dispatches_in_last_cycle_summary() {
+        let repo_root = temp_repo_path("summary-with-dispatch");
+        init_git_repo(&repo_root);
+        let model = default_test_model();
+        write_repo_state(
+            &repo_root,
+            json!({
+                "agent_sessions": [
+                    {
+                        "issue": 667,
+                        "title": "Implement feature",
+                        "dispatched_at": "2026-03-05T10:00:00Z",
+                        "model": model.clone(),
+                        "status": "in_flight"
+                    },
+                    {
+                        "issue": 668,
+                        "title": "[Cycle Review] review session",
+                        "dispatched_at": "2026-03-05T10:05:00Z",
+                        "model": model,
+                        "status": "reviewed_awaiting_eva",
+                        "review_dispatch": true
+                    }
+                ],
+                "in_flight_sessions": 1,
+                "last_cycle": {
+                    "number": 164,
+                    "timestamp": "2026-03-05T09:00:00Z",
+                    "summary": "0 dispatches, 0 merges"
+                },
+                "cycle_phase": {
+                    "cycle": 164
+                },
+                "field_inventory": {
+                    "fields": {
+                        "in_flight_sessions": {
+                            "last_refreshed": "cycle 163"
+                        }
+                    }
+                }
+            }),
+        );
+
+        run(Cli {
+            prs: vec![700],
+            issues: vec![IssueValue::Number(667)],
+            merged_at: Some("2026-03-05T12:00:00Z".to_string()),
+            repo_root: repo_root.clone(),
+        })
+        .expect("process-merge should succeed");
+
+        let state = read_repo_state(&repo_root);
+        assert_eq!(state["last_cycle"]["summary"], json!("1 dispatches, 1 merges"));
+    }
+
+    #[test]
+    fn run_leaves_last_cycle_summary_unchanged_when_last_cycle_number_differs() {
+        let repo_root = temp_repo_path("summary-mismatched-cycle");
+        init_git_repo(&repo_root);
+        let model = default_test_model();
+        write_repo_state(
+            &repo_root,
+            json!({
+                "agent_sessions": [
+                    {
+                        "issue": 667,
+                        "title": "Implement feature",
+                        "dispatched_at": "2026-03-05T10:00:00Z",
+                        "model": model,
+                        "status": "in_flight"
+                    }
+                ],
+                "in_flight_sessions": 1,
+                "last_cycle": {
+                    "number": 163,
+                    "timestamp": "2026-03-05T09:00:00Z",
+                    "summary": "keep existing summary"
+                },
+                "cycle_phase": {
+                    "cycle": 164
+                },
+                "field_inventory": {
+                    "fields": {
+                        "in_flight_sessions": {
+                            "last_refreshed": "cycle 163"
+                        }
+                    }
+                }
+            }),
+        );
+
+        run(Cli {
+            prs: vec![700],
+            issues: vec![IssueValue::Number(667)],
+            merged_at: Some("2026-03-05T12:00:00Z".to_string()),
+            repo_root: repo_root.clone(),
+        })
+        .expect("process-merge should succeed");
+
+        let state = read_repo_state(&repo_root);
+        assert_eq!(state["last_cycle"]["summary"], json!("keep existing summary"));
     }
 
     #[test]
