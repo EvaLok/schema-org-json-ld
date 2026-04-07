@@ -123,6 +123,10 @@ const REFRESH_ONLY_FIELDS: &[RefreshOnlyField] = &[
         reason: "Review agent chronic-category responses require human judgment and are not auto-verified here.",
     },
     RefreshOnlyField {
+        name: "step_comment_acknowledged_gaps",
+        reason: "Step comment gap acknowledgements are workflow metadata refreshed when the orchestrator audits step coverage gaps; not derived from repository contents.",
+    },
+    RefreshOnlyField {
         name: "schema_status.google_rich_results_types",
         reason: "Schema status planning/audit metadata is maintained by other workflows, not verified by this refresher.",
     },
