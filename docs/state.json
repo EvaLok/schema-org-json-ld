@@ -6903,8 +6903,10 @@
     {
       "dispatched_at": "2026-04-08T07:44:12Z",
       "issue": 2298,
+      "merged_at": "2026-04-08T09:39:43Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2299,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 459 end-of-cycle review"
     },
     {
@@ -7895,7 +7897,7 @@
     "duration_minutes": 33,
     "issue": 2300,
     "number": 460,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-08T09:25:15Z"
   },
   "last_eva_comment_check": "2026-04-08T09:25:15Z",
