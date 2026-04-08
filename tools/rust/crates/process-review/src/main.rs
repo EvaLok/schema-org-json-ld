@@ -36,9 +36,10 @@ const BUILTIN_KNOWN_CATEGORIES: &[&str] = &[
 #[derive(Parser, Debug)]
 #[command(name = "process-review")]
 struct Cli {
-    /// Path to the review file (e.g. docs/reviews/cycle-162.md)
+    /// Optional path to the review file (e.g. docs/reviews/cycle-162.md); may
+    /// be omitted when running only --update-chronic-category refreshes
     #[arg(long)]
-    review_file: PathBuf,
+    review_file: Option<PathBuf>,
 
     /// Repository root path
     #[arg(long, default_value = ".")]
@@ -79,6 +80,22 @@ struct Cli {
     /// Optional note for the review history entry
     #[arg(long)]
     note: Option<String>,
+
+    /// Chronic category id(s) to refresh after a structural fix lands
+    #[arg(long = "update-chronic-category")]
+    update_chronic_categories: Vec<String>,
+
+    /// Pull request number(s) that addressed the chronic category
+    #[arg(long = "update-chronic-pr")]
+    update_chronic_prs: Vec<u64>,
+
+    /// Cycle the chronic refresh landed in
+    #[arg(long = "update-chronic-cycle")]
+    update_chronic_cycle: Option<u64>,
+
+    /// Optional human-readable rationale appended to refreshed chronic entries
+    #[arg(long = "update-chronic-rationale")]
+    update_chronic_rationale: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -116,6 +133,20 @@ struct PatchUpdate {
     value: Value,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ReviewRunSummary {
+    cycle: u64,
+    complacency_score: u64,
+    finding_count: u64,
+    categories: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ChronicUpdateSummary {
+    updated_entries: usize,
+    categories: Vec<String>,
+}
+
 fn is_zero(value: &u64) -> bool {
     *value == 0
 }
@@ -129,16 +160,13 @@ fn main() {
 }
 
 fn run(cli: Cli) -> Result<(), String> {
-    let review_path = resolve_review_path(&cli.repo_root, &cli.review_file);
-    let review_content = fs::read_to_string(&review_path)
-        .map_err(|error| format!("failed to read {}: {}", review_path.display(), error))?;
-
-    let parsed_review = parse_review(&review_path, &review_content, cli.lenient)?;
-    let finding_dispositions = validate_dispositions(&cli, &parsed_review)?;
-    for warning in validate_categories(&cli.repo_root, &parsed_review.categories)? {
-        eprintln!("{}", warning);
+    let has_review_processing = cli.review_file.is_some();
+    let has_chronic_update = !cli.update_chronic_categories.is_empty();
+    if !has_review_processing && !has_chronic_update {
+        return Err(
+            "either --review-file or --update-chronic-category must be provided".to_string(),
+        );
     }
-    let entry = build_history_entry(&parsed_review, &cli, finding_dispositions);
 
     let mut state_value = read_state_value(&cli.repo_root)?;
     let current_cycle = current_cycle_from_state(&cli.repo_root).map_err(|error| {
@@ -149,33 +177,111 @@ fn run(cli: Cli) -> Result<(), String> {
             error
         }
     })?;
+    let original_state_value = state_value.clone();
 
-    let (patch, warnings) =
-        build_state_patch(&state_value, parsed_review.cycle, current_cycle, &entry)?;
-    for warning in warnings {
-        eprintln!("{}", warning);
-    }
-    apply_patch(&mut state_value, &patch)?;
-    write_state_value(&cli.repo_root, &state_value)?;
+    let review_summary = if let Some(review_file) = cli.review_file.as_ref() {
+        let review_path = resolve_review_path(&cli.repo_root, review_file);
+        let review_content = fs::read_to_string(&review_path)
+            .map_err(|error| format!("failed to read {}: {}", review_path.display(), error))?;
 
-    let commit_message = format!(
-        "state(process-review): cycle {} review consumed, score {}/5 [cycle {}]",
-        parsed_review.cycle, parsed_review.complacency_score, current_cycle
-    );
-    let receipt = commit_state_json(&cli.repo_root, &commit_message)?;
+        let parsed_review = parse_review(&review_path, &review_content, cli.lenient)?;
+        let finding_dispositions = validate_dispositions(&cli, &parsed_review)?;
+        for warning in validate_categories(&cli.repo_root, &parsed_review.categories)? {
+            eprintln!("{}", warning);
+        }
+        let entry = build_history_entry(&parsed_review, &cli, finding_dispositions);
 
-    println!(
-        "Review processed: cycle {}, score {}/5, {} findings",
-        parsed_review.cycle, parsed_review.complacency_score, parsed_review.finding_count
-    );
-    if parsed_review.categories.is_empty() {
-        println!("Categories: (none parsed)");
+        let (patch, warnings) =
+            build_state_patch(&state_value, parsed_review.cycle, current_cycle, &entry)?;
+        for warning in warnings {
+            eprintln!("{}", warning);
+        }
+        apply_patch(&mut state_value, &patch)?;
+
+        Some(ReviewRunSummary {
+            cycle: parsed_review.cycle,
+            complacency_score: parsed_review.complacency_score,
+            finding_count: parsed_review.finding_count,
+            categories: parsed_review.categories,
+        })
     } else {
-        println!("Categories: {}", parsed_review.categories.join(", "));
+        None
+    };
+
+    let chronic_update_summary = if has_chronic_update {
+        Some(update_chronic_category_responses(
+            &mut state_value,
+            &cli.update_chronic_categories,
+            &cli.update_chronic_prs,
+            cli.update_chronic_cycle.unwrap_or(current_cycle),
+            cli.update_chronic_rationale.as_deref(),
+        )?)
+    } else {
+        None
+    };
+
+    let receipt = if state_value != original_state_value {
+        write_state_value(&cli.repo_root, &state_value)?;
+        let commit_message = build_commit_message(
+            review_summary.as_ref(),
+            chronic_update_summary.as_ref(),
+            current_cycle,
+        );
+        Some(commit_state_json(&cli.repo_root, &commit_message)?)
+    } else {
+        None
+    };
+
+    if let Some(review_summary) = review_summary.as_ref() {
+        println!(
+            "Review processed: cycle {}, score {}/5, {} findings",
+            review_summary.cycle, review_summary.complacency_score, review_summary.finding_count
+        );
+        if review_summary.categories.is_empty() {
+            println!("Categories: (none parsed)");
+        } else {
+            println!("Categories: {}", review_summary.categories.join(", "));
+        }
     }
-    println!("History entry added (receipt: {})", receipt);
+    if let Some(chronic_update_summary) = chronic_update_summary.as_ref() {
+        println!(
+            "Updated {} chronic_category_responses entries for categories: {}",
+            chronic_update_summary.updated_entries,
+            chronic_update_summary.categories.join(", ")
+        );
+    }
+    match (review_summary.is_some(), receipt.as_deref()) {
+        (true, Some(receipt)) => println!("History entry added (receipt: {})", receipt),
+        (false, Some(receipt)) => println!("State updated (receipt: {})", receipt),
+        (_, None) => println!("No state changes needed"),
+    }
 
     Ok(())
+}
+
+fn build_commit_message(
+    review_summary: Option<&ReviewRunSummary>,
+    chronic_update_summary: Option<&ChronicUpdateSummary>,
+    current_cycle: u64,
+) -> String {
+    match (review_summary, chronic_update_summary) {
+        (Some(review_summary), Some(chronic_update_summary)) => format!(
+            "state(process-review): cycle {} review consumed + refreshed chronic categories {} [cycle {}]",
+            review_summary.cycle,
+            chronic_update_summary.categories.join(", "),
+            current_cycle
+        ),
+        (Some(review_summary), None) => format!(
+            "state(process-review): cycle {} review consumed, score {}/5 [cycle {}]",
+            review_summary.cycle, review_summary.complacency_score, current_cycle
+        ),
+        (None, Some(chronic_update_summary)) => format!(
+            "state(process-review): refreshed chronic categories {} [cycle {}]",
+            chronic_update_summary.categories.join(", "),
+            current_cycle
+        ),
+        (None, None) => format!("state(process-review): no-op [cycle {}]", current_cycle),
+    }
 }
 
 fn validate_dispositions(
@@ -781,9 +887,9 @@ fn build_state_patch(
     let entry_value = serde_json::to_value(entry)
         .map_err(|error| format!("failed to serialize review history entry: {}", error))?;
 
-    let existing_index = next_history.iter().position(|item| {
-        item.get("cycle").and_then(Value::as_u64) == Some(entry.cycle)
-    });
+    let existing_index = next_history
+        .iter()
+        .position(|item| item.get("cycle").and_then(Value::as_u64) == Some(entry.cycle));
 
     let (deferred_findings_patch, mut warnings) =
         deferred_findings_patch(state, review_cycle, entry)?;
@@ -831,6 +937,123 @@ fn apply_patch(state: &mut Value, updates: &[PatchUpdate]) -> Result<(), String>
     }
 
     Ok(())
+}
+
+fn update_chronic_category_responses(
+    state: &mut Value,
+    categories: &[String],
+    prs: &[u64],
+    cycle: u64,
+    rationale_text: Option<&str>,
+) -> Result<ChronicUpdateSummary, String> {
+    let requested_categories = categories.iter().cloned().collect::<BTreeSet<_>>();
+    let requested_category_list = requested_categories.iter().cloned().collect::<Vec<_>>();
+    let entries = state
+        .pointer_mut("/review_agent/chronic_category_responses/entries")
+        .and_then(Value::as_array_mut)
+        .ok_or_else(|| {
+            "missing /review_agent/chronic_category_responses/entries array in docs/state.json"
+                .to_string()
+        })?;
+
+    let rationale_suffix = chronic_refresh_rationale(cycle, prs, rationale_text);
+    let idempotence_marker = format!("Cycle {}: refreshed via PR(s)", cycle);
+    let mut updated_entries = 0usize;
+    let mut matched_categories = BTreeSet::new();
+
+    for (entry_index, entry) in entries.iter_mut().enumerate() {
+        let entry_object = entry.as_object_mut().ok_or_else(|| {
+            format!(
+                "review_agent.chronic_category_responses.entries[{}] must be an object",
+                entry_index
+            )
+        })?;
+        let Some(category) = entry_object.get("category").and_then(Value::as_str) else {
+            continue;
+        };
+        if !requested_categories.contains(category) {
+            continue;
+        }
+
+        matched_categories.insert(category.to_string());
+        updated_entries += 1;
+        entry_object.insert("updated_cycle".to_string(), json!(cycle));
+        entry_object.insert("verification_cycle".to_string(), json!(cycle));
+
+        let existing_rationale = match entry_object.get("rationale") {
+            Some(Value::String(value)) => Some(value.clone()),
+            Some(Value::Null) | None => None,
+            Some(_) => {
+                return Err(format!(
+                    "review_agent.chronic_category_responses.entries[{}].rationale must be a string when present",
+                    entry_index
+                ))
+            }
+        };
+        if existing_rationale
+            .as_deref()
+            .map(|value| value.contains(&idempotence_marker))
+            .unwrap_or(false)
+        {
+            continue;
+        }
+
+        let next_rationale = match existing_rationale
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            Some(existing) => format!("{} | {}", existing, rationale_suffix),
+            None => rationale_suffix.clone(),
+        };
+        entry_object.insert("rationale".to_string(), Value::String(next_rationale));
+    }
+
+    let missing_categories = requested_categories
+        .difference(&matched_categories)
+        .cloned()
+        .collect::<Vec<_>>();
+    if !missing_categories.is_empty() {
+        return Err(format!(
+            "no chronic_category_responses entries found for categories: {}",
+            missing_categories.join(", ")
+        ));
+    }
+
+    set_value_at_pointer(
+        state,
+        "/field_inventory/fields/review_agent.chronic_category_responses/last_refreshed",
+        json!(format!("cycle {}", cycle)),
+    )?;
+
+    Ok(ChronicUpdateSummary {
+        updated_entries,
+        categories: requested_category_list,
+    })
+}
+
+fn chronic_refresh_rationale(cycle: u64, prs: &[u64], rationale_text: Option<&str>) -> String {
+    let mut rationale = format!("Cycle {}: refreshed via PR(s)", cycle);
+    if !prs.is_empty() {
+        let refs = prs
+            .iter()
+            .map(|pr| format!("#{}", pr))
+            .collect::<Vec<_>>()
+            .join(", ");
+        rationale.push(' ');
+        rationale.push('[');
+        rationale.push_str(&refs);
+        rationale.push(']');
+    }
+    if let Some(text) = rationale_text
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        rationale.push_str(" — ");
+        rationale.push_str(text);
+    }
+
+    rationale
 }
 
 fn deferred_findings_patch(
@@ -1018,6 +1241,10 @@ mod tests {
         assert!(help.contains("--disposition"));
         assert!(help.contains("--lenient"));
         assert!(help.contains("--note"));
+        assert!(help.contains("--update-chronic-category"));
+        assert!(help.contains("--update-chronic-pr"));
+        assert!(help.contains("--update-chronic-cycle"));
+        assert!(help.contains("--update-chronic-rationale"));
     }
 
     #[test]
@@ -1059,6 +1286,27 @@ mod tests {
                 "process-integrity:actioned_failed".to_string()
             ]
         );
+    }
+
+    #[test]
+    fn cli_accepts_update_chronic_without_review_file() {
+        let cli = Cli::parse_from([
+            "process-review",
+            "--update-chronic-category",
+            "worklog-accuracy",
+            "--update-chronic-pr",
+            "2266",
+            "--update-chronic-cycle",
+            "460",
+        ]);
+
+        assert_eq!(cli.review_file, None);
+        assert_eq!(
+            cli.update_chronic_categories,
+            vec!["worklog-accuracy".to_string()]
+        );
+        assert_eq!(cli.update_chronic_prs, vec![2266]);
+        assert_eq!(cli.update_chronic_cycle, Some(460));
     }
 
     #[test]
@@ -2014,7 +2262,11 @@ mod tests {
             .expect("history value should be array");
 
         // Should still be 2 entries (in-place replacement, not appended)
-        assert_eq!(history.len(), 2, "history length should not grow on duplicate");
+        assert_eq!(
+            history.len(),
+            2,
+            "history length should not grow on duplicate"
+        );
 
         let updated = history
             .iter()
@@ -2262,6 +2514,212 @@ mod tests {
     }
 
     #[test]
+    fn update_chronic_category_bumps_verification_cycle() {
+        let mut state = chronic_state_fixture(json!([{
+            "category": "foo",
+            "chosen_path": "structural-fix",
+            "rationale": "existing",
+            "updated_cycle": 448,
+            "verification_cycle": 448
+        }]));
+
+        let summary =
+            update_chronic_category_responses(&mut state, &["foo".to_string()], &[], 500, None)
+                .expect("update should succeed");
+
+        assert_eq!(summary.updated_entries, 1);
+        let entry = &state["review_agent"]["chronic_category_responses"]["entries"][0];
+        assert_eq!(entry["updated_cycle"], json!(500));
+        assert_eq!(entry["verification_cycle"], json!(500));
+    }
+
+    #[test]
+    fn update_chronic_category_handles_multiple_entries_per_category() {
+        let mut state = chronic_state_fixture(json!([
+            {
+                "category": "worklog-accuracy",
+                "chosen_path": "structural-fix",
+                "rationale": "existing structural",
+                "updated_cycle": 448,
+                "verification_cycle": 448
+            },
+            {
+                "category": "worklog-accuracy",
+                "chosen_path": "behavioral-fix",
+                "rationale": "existing behavioral",
+                "updated_cycle": 448,
+                "verification_cycle": 448
+            }
+        ]));
+
+        let summary = update_chronic_category_responses(
+            &mut state,
+            &["worklog-accuracy".to_string()],
+            &[],
+            500,
+            None,
+        )
+        .expect("update should succeed");
+
+        assert_eq!(summary.updated_entries, 2);
+        let entries = state["review_agent"]["chronic_category_responses"]["entries"]
+            .as_array()
+            .expect("entries should be an array");
+        assert!(entries
+            .iter()
+            .all(|entry| entry["updated_cycle"] == json!(500)));
+        assert!(entries
+            .iter()
+            .all(|entry| entry["verification_cycle"] == json!(500)));
+    }
+
+    #[test]
+    fn update_chronic_category_appends_pr_to_rationale() {
+        let mut state = chronic_state_fixture(json!([{
+            "category": "foo",
+            "chosen_path": "structural-fix",
+            "rationale": "existing",
+            "updated_cycle": 448,
+            "verification_cycle": 448
+        }]));
+
+        update_chronic_category_responses(
+            &mut state,
+            &["foo".to_string()],
+            &[1234],
+            500,
+            Some("text"),
+        )
+        .expect("update should succeed");
+
+        assert_eq!(
+            state["review_agent"]["chronic_category_responses"]["entries"][0]["rationale"],
+            json!("existing | Cycle 500: refreshed via PR(s) [#1234] — text")
+        );
+    }
+
+    #[test]
+    fn update_chronic_category_is_idempotent() {
+        let mut state = chronic_state_fixture(json!([{
+            "category": "foo",
+            "chosen_path": "structural-fix",
+            "rationale": "existing",
+            "updated_cycle": 448,
+            "verification_cycle": 448
+        }]));
+
+        update_chronic_category_responses(
+            &mut state,
+            &["foo".to_string()],
+            &[1234],
+            500,
+            Some("text"),
+        )
+        .expect("first update should succeed");
+        let once = state.clone();
+
+        update_chronic_category_responses(
+            &mut state,
+            &["foo".to_string()],
+            &[1234],
+            500,
+            Some("text"),
+        )
+        .expect("second update should succeed");
+
+        assert_eq!(state, once);
+    }
+
+    #[test]
+    fn update_chronic_category_bumps_field_inventory_marker() {
+        let mut state = chronic_state_fixture(json!([{
+            "category": "foo",
+            "chosen_path": "structural-fix",
+            "rationale": "existing",
+            "updated_cycle": 448,
+            "verification_cycle": 448
+        }]));
+
+        update_chronic_category_responses(&mut state, &["foo".to_string()], &[], 500, None)
+            .expect("update should succeed");
+
+        assert_eq!(
+            state["field_inventory"]["fields"]["review_agent.chronic_category_responses"]
+                ["last_refreshed"],
+            json!("cycle 500")
+        );
+    }
+
+    #[test]
+    fn update_chronic_category_does_nothing_when_no_flags() {
+        let chronic_entries = json!([{
+            "category": "worklog-accuracy",
+            "chosen_path": "structural-fix",
+            "rationale": "existing",
+            "updated_cycle": 448,
+            "verification_cycle": 448
+        }]);
+        let state = json!({
+            "last_cycle": {"number": 500},
+            "cycle_phase": {"cycle": 500},
+            "review_agent": {
+                "last_review_cycle": 499,
+                "history": [],
+                "chronic_category_responses": {
+                    "entries": chronic_entries
+                }
+            },
+            "field_inventory": {
+                "fields": {
+                    "review_agent": {"last_refreshed": "cycle 499"},
+                    "review_agent.chronic_category_responses": {"last_refreshed": "cycle 448"}
+                }
+            }
+        });
+        let repo_root = write_temp_state_repo(state.clone());
+        init_temp_git_repo(&repo_root);
+        let review_dir = repo_root.join("docs/reviews");
+        fs::create_dir_all(&review_dir).expect("review directory should exist");
+        fs::write(
+            review_dir.join("cycle-500.md"),
+            r#"# Cycle 500 Review
+
+## Findings
+
+1. **[review-accounting] Review accounting finding**
+
+## Complacency score
+
+2/5
+"#,
+        )
+        .expect("review file should be written");
+
+        let cli = Cli::parse_from([
+            "process-review",
+            "--repo-root",
+            repo_root.to_str().expect("repo path should be valid UTF-8"),
+            "--review-file",
+            "docs/reviews/cycle-500.md",
+            "--actioned",
+            "1",
+        ]);
+
+        run(cli).expect("review-only run should succeed");
+
+        let updated_state = read_state_value(&repo_root).expect("state should be readable");
+        assert_eq!(
+            updated_state.pointer("/review_agent/chronic_category_responses"),
+            state.pointer("/review_agent/chronic_category_responses")
+        );
+        assert_eq!(
+            updated_state
+                .pointer("/field_inventory/fields/review_agent.chronic_category_responses"),
+            state.pointer("/field_inventory/fields/review_agent.chronic_category_responses")
+        );
+    }
+
+    #[test]
     fn parse_review_extracts_cycle_from_filename() {
         let path = Path::new("docs/reviews/cycle-162.md");
         let parsed = parse_review(path, SAMPLE_REVIEW, true).expect("parse should succeed");
@@ -2459,5 +2917,54 @@ Category: Review Accounting
         )
         .expect("state.json should be written");
         repo_root
+    }
+
+    fn chronic_state_fixture(entries: Value) -> Value {
+        json!({
+            "last_cycle": {"number": 500},
+            "cycle_phase": {"cycle": 500},
+            "review_agent": {
+                "last_review_cycle": 499,
+                "history": [],
+                "chronic_category_responses": {
+                    "entries": entries
+                }
+            },
+            "field_inventory": {
+                "fields": {
+                    "review_agent": {"last_refreshed": "cycle 499"},
+                    "review_agent.chronic_category_responses": {"last_refreshed": "cycle 448"}
+                }
+            }
+        })
+    }
+
+    fn init_temp_git_repo(repo_root: &Path) {
+        let status = std::process::Command::new("git")
+            .arg("-C")
+            .arg(repo_root)
+            .arg("init")
+            .status()
+            .expect("git init should execute");
+        assert!(status.success(), "git init should succeed");
+
+        let email_status = std::process::Command::new("git")
+            .arg("-C")
+            .arg(repo_root)
+            .args(["config", "user.email", "copilot@example.com"])
+            .status()
+            .expect("git config user.email should execute");
+        assert!(
+            email_status.success(),
+            "git config user.email should succeed"
+        );
+
+        let name_status = std::process::Command::new("git")
+            .arg("-C")
+            .arg(repo_root)
+            .args(["config", "user.name", "Copilot"])
+            .status()
+            .expect("git config user.name should execute");
+        assert!(name_status.success(), "git config user.name should succeed");
     }
 }
