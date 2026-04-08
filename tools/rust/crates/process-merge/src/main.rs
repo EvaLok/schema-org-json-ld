@@ -143,12 +143,7 @@ fn get_top_level_i64(state: &Value, field: &str) -> Result<i64, String> {
     state
         .pointer(&format!("/{}", field))
         .and_then(Value::as_i64)
-        .ok_or_else(|| {
-            format!(
-                "missing numeric /{} in docs/state.json",
-                field
-            )
-        })
+        .ok_or_else(|| format!("missing numeric /{} in docs/state.json", field))
 }
 
 fn compute_update(state: &Value, cycle: u64, prs: &[u64]) -> Result<MergeUpdate, String> {
@@ -217,27 +212,26 @@ fn update_agent_sessions(
 
     for (index, pr) in prs.iter().enumerate() {
         let issue = issues.get(index).copied();
-        let mut matched = false;
-        for session in sessions.iter_mut() {
-            let Some(object) = session.as_object_mut() else {
-                continue;
+        let matching_indexes = find_matching_agent_session_indexes(sessions, *pr, issue);
+        let matched_index = if !matching_indexes.is_empty() {
+            collapse_agent_session_duplicates(sessions, &matching_indexes)?
+        } else if let Some(fallback_index) = find_single_unlinked_in_flight_session(sessions) {
+            fallback_index
+        } else {
+            usize::MAX
+        };
+
+        if matched_index != usize::MAX {
+            let Some(object) = sessions
+                .get_mut(matched_index)
+                .and_then(Value::as_object_mut)
+            else {
+                return Err("agent_sessions entry must be an object".to_string());
             };
-
-            let existing_pr = object.get("pr").and_then(Value::as_u64);
-            let existing_issue = object.get("issue").and_then(Value::as_u64);
-
-            if existing_pr == Some(*pr)
-                || issue.is_some_and(|issue_number| existing_issue == Some(issue_number))
-            {
-                object.insert("status".to_string(), json!("merged"));
-                object.insert("merged_at".to_string(), json!(merged_at));
-                object.insert("pr".to_string(), json!(pr));
-                matched = true;
-                break;
-            }
-        }
-
-        if !matched {
+            object.insert("status".to_string(), json!("merged"));
+            object.insert("merged_at".to_string(), json!(merged_at));
+            object.insert("pr".to_string(), json!(pr));
+        } else {
             match issue {
                 Some(issue_number) => eprintln!(
                     "Warning: no agent_sessions entry found for PR #{} (issue #{})",
@@ -256,7 +250,10 @@ fn update_agent_sessions(
             }
             backfill.insert("status".to_string(), json!("merged"));
             backfill.insert("merged_at".to_string(), json!(merged_at));
-            backfill.insert("title".to_string(), json!(format!("Backfilled: PR #{}", pr)));
+            backfill.insert(
+                "title".to_string(),
+                json!(format!("Backfilled: PR #{}", pr)),
+            );
             backfill.insert("backfilled".to_string(), json!(true));
             sessions.push(json!(backfill));
             eprintln!("Backfilled agent_sessions entry for orphan PR #{}", pr);
@@ -266,8 +263,174 @@ fn update_agent_sessions(
     Ok(())
 }
 
+fn find_matching_agent_session_indexes(
+    sessions: &[Value],
+    pr: u64,
+    issue: Option<u64>,
+) -> Vec<usize> {
+    let pr_matches = sessions
+        .iter()
+        .enumerate()
+        .filter_map(|(index, session)| {
+            (session.get("pr").and_then(Value::as_u64) == Some(pr)).then_some(index)
+        })
+        .collect::<Vec<_>>();
+    if !pr_matches.is_empty() {
+        return pr_matches;
+    }
+
+    issue
+        .map(|issue_number| {
+            sessions
+                .iter()
+                .enumerate()
+                .filter_map(|(index, session)| {
+                    (session.get("issue").and_then(Value::as_u64) == Some(issue_number))
+                        .then_some(index)
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn find_single_unlinked_in_flight_session(sessions: &[Value]) -> Option<usize> {
+    let live_session_indexes = sessions
+        .iter()
+        .enumerate()
+        .filter_map(|(index, session)| {
+            session
+                .get("status")
+                .and_then(Value::as_str)
+                .filter(|status| matches!(*status, "in_flight" | "dispatched"))
+                .map(|_| index)
+        })
+        .collect::<Vec<_>>();
+    if live_session_indexes.len() != 1 {
+        return None;
+    }
+
+    let candidates = sessions
+        .iter()
+        .enumerate()
+        .filter_map(|(index, session)| {
+            let status = session.get("status").and_then(Value::as_str)?;
+            let is_live = matches!(status, "in_flight" | "dispatched");
+            let has_pr = session.get("pr").is_some_and(|value| !value.is_null());
+            let is_backfilled = session
+                .get("backfilled")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
+            (is_live && !has_pr && !is_backfilled).then_some(index)
+        })
+        .collect::<Vec<_>>();
+    (candidates.len() == 1).then_some(candidates[0])
+}
+
+fn collapse_agent_session_duplicates(
+    sessions: &mut Vec<Value>,
+    indexes: &[usize],
+) -> Result<usize, String> {
+    let Some(mut canonical_index) = earliest_dispatched_session_index(sessions, indexes)? else {
+        return Err("agent_sessions duplicate collapse requires at least one entry".to_string());
+    };
+    let mut duplicate_indexes = indexes
+        .iter()
+        .copied()
+        .filter(|index| *index != canonical_index)
+        .collect::<Vec<_>>();
+    duplicate_indexes.sort_unstable_by(|left, right| right.cmp(left));
+
+    for duplicate_index in duplicate_indexes {
+        let duplicate = sessions.remove(duplicate_index);
+        if duplicate_index < canonical_index {
+            canonical_index -= 1;
+        }
+        let Some(canonical) = sessions
+            .get_mut(canonical_index)
+            .and_then(Value::as_object_mut)
+        else {
+            return Err("agent_sessions entry must be an object".to_string());
+        };
+        let Some(duplicate_object) = duplicate.as_object() else {
+            return Err("agent_sessions entry must be an object".to_string());
+        };
+        merge_agent_session_fields(canonical, duplicate_object);
+    }
+
+    Ok(canonical_index)
+}
+
+fn earliest_dispatched_session_index(
+    sessions: &[Value],
+    indexes: &[usize],
+) -> Result<Option<usize>, String> {
+    let mut canonical: Option<(usize, Option<DateTime<chrono::Utc>>)> = None;
+    for index in indexes {
+        let session = sessions
+            .get(*index)
+            .ok_or_else(|| "agent_sessions entry index out of range".to_string())?;
+        let dispatched_at = session
+            .get("dispatched_at")
+            .and_then(Value::as_str)
+            .map(|value| parse_timestamp(value, "agent_sessions[].dispatched_at"))
+            .transpose()?;
+        canonical = match canonical {
+            None => Some((*index, dispatched_at)),
+            Some((best_index, best_timestamp)) => {
+                if dispatched_timestamp_is_earlier(dispatched_at, best_timestamp) {
+                    Some((*index, dispatched_at))
+                } else {
+                    Some((best_index, best_timestamp))
+                }
+            }
+        };
+    }
+
+    Ok(canonical.map(|(index, _)| index))
+}
+
+fn dispatched_timestamp_is_earlier(
+    candidate: Option<DateTime<chrono::Utc>>,
+    current: Option<DateTime<chrono::Utc>>,
+) -> bool {
+    match (candidate, current) {
+        (Some(candidate), Some(current)) => candidate < current,
+        (Some(_), None) => true,
+        _ => false,
+    }
+}
+
+fn merge_agent_session_fields(
+    canonical: &mut serde_json::Map<String, Value>,
+    duplicate: &serde_json::Map<String, Value>,
+) {
+    for (key, value) in duplicate {
+        if key == "backfilled" || !value_is_present(value) {
+            continue;
+        }
+        let should_copy = canonical
+            .get(key)
+            .map(|existing| !value_is_present(existing))
+            .unwrap_or(true);
+        if should_copy {
+            canonical.insert(key.clone(), value.clone());
+        }
+    }
+}
+
+fn value_is_present(value: &Value) -> bool {
+    match value {
+        Value::Null => false,
+        Value::String(text) => !text.trim().is_empty(),
+        Value::Array(items) => !items.is_empty(),
+        Value::Object(entries) => !entries.is_empty(),
+        _ => true,
+    }
+}
+
 fn sync_last_cycle_summary(state: &mut Value, current_cycle: u64) -> Result<(), String> {
-    let Some(last_cycle_number) = state.pointer("/last_cycle/number").and_then(Value::as_u64) else {
+    let Some(last_cycle_number) = state.pointer("/last_cycle/number").and_then(Value::as_u64)
+    else {
         return Ok(());
     };
     if last_cycle_number != current_cycle {
@@ -277,8 +440,11 @@ fn sync_last_cycle_summary(state: &mut Value, current_cycle: u64) -> Result<(), 
     let last_cycle_timestamp = state
         .pointer("/last_cycle/timestamp")
         .and_then(Value::as_str)
-        .ok_or_else(|| "missing docs/state.json last_cycle.timestamp for last_cycle.summary sync".to_string())?;
-    let cycle_start = parse_timestamp(last_cycle_timestamp, "docs/state.json last_cycle.timestamp")?;
+        .ok_or_else(|| {
+            "missing docs/state.json last_cycle.timestamp for last_cycle.summary sync".to_string()
+        })?;
+    let cycle_start =
+        parse_timestamp(last_cycle_timestamp, "docs/state.json last_cycle.timestamp")?;
     let sessions = state
         .pointer("/agent_sessions")
         .and_then(Value::as_array)
@@ -567,7 +733,13 @@ mod tests {
             .expect("git init");
         assert!(status.success());
         let status = Command::new("git")
-            .args(["-C", repo_root.to_str().unwrap(), "config", "user.name", "Test User"])
+            .args([
+                "-C",
+                repo_root.to_str().unwrap(),
+                "config",
+                "user.name",
+                "Test User",
+            ])
             .status()
             .expect("git config user.name");
         assert!(status.success());
@@ -644,7 +816,10 @@ mod tests {
         .expect("process-merge should succeed");
 
         let state = read_repo_state(&repo_root);
-        assert_eq!(state["last_cycle"]["summary"], json!("0 dispatches, 1 merges"));
+        assert_eq!(
+            state["last_cycle"]["summary"],
+            json!("0 dispatches, 1 merges")
+        );
     }
 
     #[test]
@@ -700,7 +875,10 @@ mod tests {
         .expect("process-merge should succeed");
 
         let state = read_repo_state(&repo_root);
-        assert_eq!(state["last_cycle"]["summary"], json!("1 dispatches, 1 merges"));
+        assert_eq!(
+            state["last_cycle"]["summary"],
+            json!("1 dispatches, 1 merges")
+        );
     }
 
     #[test]
@@ -748,7 +926,10 @@ mod tests {
         .expect("process-merge should succeed");
 
         let state = read_repo_state(&repo_root);
-        assert_eq!(state["last_cycle"]["summary"], json!("keep existing summary"));
+        assert_eq!(
+            state["last_cycle"]["summary"],
+            json!("keep existing summary")
+        );
     }
 
     #[test]
@@ -772,6 +953,34 @@ mod tests {
             session.get("merged_at"),
             Some(&json!("2026-03-07T13:00:00Z"))
         );
+    }
+
+    #[test]
+    fn update_agent_sessions_reuses_existing_in_flight_row_when_issue_mapping_is_wrong() {
+        let model = default_test_model();
+        let mut state = json!({
+            "agent_sessions": [
+                {
+                    "issue": 2298,
+                    "title": "Real originating session",
+                    "dispatched_at": "2026-04-08T08:00:00Z",
+                    "model": model,
+                    "status": "in_flight"
+                }
+            ]
+        });
+
+        update_agent_sessions(&mut state, &[2299], &[2300], "2026-04-08T09:00:00Z")
+            .expect("wrong issue mapping should still update the existing session");
+
+        let sessions = state["agent_sessions"]
+            .as_array()
+            .expect("agent_sessions array");
+        assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions[0]["issue"], json!(2298));
+        assert_eq!(sessions[0]["pr"], json!(2299));
+        assert_eq!(sessions[0]["status"], json!("merged"));
+        assert_eq!(sessions[0]["merged_at"], json!("2026-04-08T09:00:00Z"));
     }
 
     #[test]
