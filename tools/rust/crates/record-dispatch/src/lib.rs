@@ -314,32 +314,40 @@ pub fn apply_dispatch_patch(state: &mut Value, patch: &DispatchPatch) -> Result<
         .get("issue")
         .and_then(Value::as_u64)
         .ok_or_else(|| "agent_session missing 'issue' field".to_string())?;
-    let duplicate = state
-        .pointer("/agent_sessions")
-        .and_then(Value::as_array)
-        .ok_or_else(|| "missing array /agent_sessions in docs/state.json".to_string())?
-        .iter()
-        .any(|s| {
-            s.get("issue").and_then(Value::as_u64) == Some(new_issue)
-                && s.get("status")
-                    .and_then(Value::as_str)
-                    // Missing status must fail closed as a potentially live
-                    // session, so duplicate dispatches stay blocked.
-                    .map(|status| !is_terminal_status(status))
-                    .unwrap_or(true)
-        });
-    if duplicate {
-        return Err(format!(
-            "agent_sessions already contains an entry for issue #{}; refusing to create duplicate",
-            new_issue
-        ));
-    }
-
-    state
+    let sessions = state
         .pointer_mut("/agent_sessions")
         .and_then(Value::as_array_mut)
-        .ok_or_else(|| "missing array /agent_sessions in docs/state.json".to_string())?
-        .push(patch.agent_session.clone());
+        .ok_or_else(|| "missing array /agent_sessions in docs/state.json".to_string())?;
+    let mut updated_existing = false;
+    let live_duplicate_index = sessions.iter().position(|session| {
+        if session.get("issue").and_then(Value::as_u64) != Some(new_issue) {
+            return false;
+        }
+        session
+            .get("status")
+            .and_then(Value::as_str)
+            .map(|status| !is_terminal_status(status))
+            .unwrap_or(true)
+    });
+    if let Some(existing_index) = live_duplicate_index {
+        let existing_session = sessions
+            .get_mut(existing_index)
+            .ok_or_else(|| "agent_sessions entry index out of range".to_string())?;
+        if existing_session
+            .get("status")
+            .and_then(Value::as_str)
+            .is_none()
+        {
+            return Err(format!(
+                "agent_sessions already contains an entry for issue #{}; refusing to create duplicate",
+                new_issue
+            ));
+        }
+        merge_duplicate_dispatch_session(existing_session, &patch.agent_session, new_issue)?;
+        updated_existing = true;
+    } else {
+        sessions.push(patch.agent_session.clone());
+    }
     state
         .as_object_mut()
         .ok_or_else(|| "docs/state.json root must be an object".to_string())?
@@ -352,9 +360,96 @@ pub fn apply_dispatch_patch(state: &mut Value, patch: &DispatchPatch) -> Result<
         .ok_or_else(|| "docs/state.json root must be an object".to_string())?
         .insert("in_flight_sessions".to_string(), json!(patch.in_flight));
     update_field_inventory_last_refreshed(state, "in_flight_sessions", &cycle_marker)?;
-    sync_last_cycle_summary_after_dispatch(state, patch.current_cycle)?;
+    if !updated_existing {
+        sync_last_cycle_summary_after_dispatch(state, patch.current_cycle)?;
+    }
 
     Ok(())
+}
+
+fn merge_duplicate_dispatch_session(
+    existing_session: &mut Value,
+    incoming_session: &Value,
+    issue: u64,
+) -> Result<(), String> {
+    let existing = existing_session
+        .as_object_mut()
+        .ok_or_else(|| "agent_sessions entry must be an object".to_string())?;
+    let incoming = incoming_session
+        .as_object()
+        .ok_or_else(|| "agent_session patch must be an object".to_string())?;
+
+    merge_optional_session_field(existing, incoming, "model");
+    merge_optional_session_field(existing, incoming, "title");
+    merge_addresses_finding(existing, incoming, issue)?;
+
+    Ok(())
+}
+
+fn merge_optional_session_field(
+    existing: &mut serde_json::Map<String, Value>,
+    incoming: &serde_json::Map<String, Value>,
+    field: &str,
+) {
+    let Some(incoming_value) = incoming.get(field) else {
+        return;
+    };
+    if !session_value_present(incoming_value) {
+        return;
+    }
+    let should_copy = existing
+        .get(field)
+        .map(|value| !session_value_present(value))
+        .unwrap_or(true);
+    if should_copy {
+        existing.insert(field.to_string(), incoming_value.clone());
+    }
+}
+
+fn merge_addresses_finding(
+    existing: &mut serde_json::Map<String, Value>,
+    incoming: &serde_json::Map<String, Value>,
+    issue: u64,
+) -> Result<(), String> {
+    let Some(incoming_value) = incoming.get("addresses_finding") else {
+        return Ok(());
+    };
+    let incoming_ref = incoming_value
+        .as_str()
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    let Some(incoming_ref) = incoming_ref else {
+        return Ok(());
+    };
+    let existing_ref = existing
+        .get("addresses_finding")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    if let Some(existing_ref) = existing_ref {
+        if existing_ref != incoming_ref {
+            return Err(format!(
+                "agent_sessions issue #{} has conflicting addresses_finding values: '{}' vs '{}'",
+                issue, existing_ref, incoming_ref
+            ));
+        }
+        return Ok(());
+    }
+    existing.insert(
+        "addresses_finding".to_string(),
+        Value::String(incoming_ref.to_string()),
+    );
+    Ok(())
+}
+
+fn session_value_present(value: &Value) -> bool {
+    match value {
+        Value::Null => false,
+        Value::String(text) => !text.trim().is_empty(),
+        Value::Array(values) => !values.is_empty(),
+        Value::Object(entries) => !entries.is_empty(),
+        _ => true,
+    }
 }
 
 fn sync_last_cycle_summary_after_dispatch(
@@ -950,9 +1045,69 @@ mod tests {
         )
         .expect("patch should build");
 
-        let error = apply_dispatch_patch(&mut state, &patch)
-            .expect_err("duplicate issue should be rejected");
-        assert!(error.contains("already contains an entry for issue #601"));
+        apply_dispatch_patch(&mut state, &patch)
+            .expect("duplicate in-flight issue should be updated in place");
+
+        let sessions = state["agent_sessions"]
+            .as_array()
+            .expect("agent_sessions array");
+        let matching = sessions
+            .iter()
+            .filter(|session| session.get("issue").and_then(Value::as_u64) == Some(601))
+            .collect::<Vec<_>>();
+        assert_eq!(matching.len(), 2);
+        assert_eq!(matching[1]["title"], json!("Live duplicate"));
+        assert_eq!(
+            state["last_cycle"]["summary"],
+            json!("0 dispatches, 1 merges (PR #700)")
+        );
+    }
+
+    #[test]
+    fn apply_dispatch_patch_updates_existing_issue_with_addresses_finding() {
+        let mut state = sample_state();
+        let model = default_test_model();
+        state["agent_sessions"]
+            .as_array_mut()
+            .expect("agent_sessions array")
+            .push(json!({
+                "issue": 2301,
+                "title": "Post-step recovery",
+                "dispatched_at": "2026-03-07T13:00:00Z",
+                "model": model.clone(),
+                "status": "in_flight"
+            }));
+        let patch = DispatchPatch {
+            in_flight: 1,
+            dispatch_log_latest: "#2301 Post-step recovery (cycle 164)".to_string(),
+            agent_session: json!({
+                "issue": 2301,
+                "title": "Post-step recovery",
+                "dispatched_at": "2026-03-07T13:00:00Z",
+                "model": model,
+                "status": "in_flight",
+                "addresses_finding": "459:2"
+            }),
+            current_cycle: 164,
+        };
+
+        apply_dispatch_patch(&mut state, &patch)
+            .expect("duplicate recovery should update in place");
+
+        let sessions = state["agent_sessions"]
+            .as_array()
+            .expect("agent_sessions array");
+        let matching = sessions
+            .iter()
+            .filter(|session| session.get("issue").and_then(Value::as_u64) == Some(2301))
+            .collect::<Vec<_>>();
+        assert_eq!(matching.len(), 1);
+        assert_eq!(matching[0]["issue"], json!(2301));
+        assert_eq!(matching[0]["addresses_finding"], json!("459:2"));
+        assert_eq!(
+            state["last_cycle"]["summary"],
+            json!("0 dispatches, 1 merges (PR #700)")
+        );
     }
 
     #[test]
@@ -1005,11 +1160,14 @@ mod tests {
         )
         .expect("patch should build");
 
-        let error = apply_dispatch_patch(&mut state, &patch)
-            .expect_err("duplicate live issue should be rejected");
+        apply_dispatch_patch(&mut state, &patch)
+            .expect("duplicate live issue should update the existing row");
 
-        assert!(error.contains("already contains an entry for issue #602"));
-        assert_eq!(state, original);
+        assert_eq!(state["agent_sessions"], original["agent_sessions"]);
+        assert_eq!(
+            state["last_cycle"]["summary"],
+            original["last_cycle"]["summary"]
+        );
     }
 
     #[test]

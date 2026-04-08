@@ -4,7 +4,9 @@ use chrono::{DateTime, NaiveDate, Utc};
 use clap::{Parser, Subcommand};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
-use state_schema::{current_cycle_from_state, read_state_value, AgentSession, StateJson};
+use state_schema::{
+    current_cycle_from_state, read_state_value, AgentSession, DeferredFinding, StateJson,
+};
 use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fs;
@@ -167,6 +169,8 @@ struct WorklogWriteOutcome {
 struct WorklogInput {
     #[serde(default)]
     what_was_done: Vec<String>,
+    #[serde(default)]
+    deferred_findings: Vec<DeferredFinding>,
     #[serde(default)]
     self_modifications: Vec<SelfModification>,
     #[serde(default)]
@@ -459,6 +463,7 @@ fn resolve_worklog_input_for_cycle(
         let state = load_worklog_state(repo_root, requires_worklog_state(args))?;
         let input = WorklogInput {
             what_was_done: args.done.clone(),
+            deferred_findings: Vec::new(),
             self_modifications: parse_self_modifications(&args.self_modification)?,
             prs_merged: args.pr_merged.clone(),
             prs_reviewed: args.pr_reviewed.clone(),
@@ -490,6 +495,7 @@ fn resolve_worklog_input_for_cycle(
     let state = load_worklog_state(repo_root, true)?;
     let input = WorklogInput {
         what_was_done: Vec::new(),
+        deferred_findings: Vec::new(),
         self_modifications: Vec::new(),
         prs_merged: Vec::new(),
         prs_reviewed: Vec::new(),
@@ -722,14 +728,8 @@ fn auto_next_steps(state: Option<&StateJson>) -> Result<Vec<String>, String> {
         state.ok_or_else(|| "docs/state.json is required to populate next steps".to_string())?;
     let mut next_steps = Vec::new();
 
-    for finding in &state.deferred_findings {
-        if finding.resolved || finding.dropped_rationale.is_some() {
-            continue;
-        }
-        next_steps.push(format!(
-            "Address deferred finding: {} (deferred cycle {}, deadline cycle {}) — must be actioned, dispatched, or explicitly dropped this cycle",
-            finding.category, finding.deferred_cycle, finding.deadline_cycle
-        ));
+    for finding in active_deferred_findings(&state.deferred_findings) {
+        next_steps.push(format_deferred_finding_next_step(finding));
     }
 
     for session in &state.agent_sessions {
@@ -744,6 +744,37 @@ fn auto_next_steps(state: Option<&StateJson>) -> Result<Vec<String>, String> {
     }
 
     Ok(next_steps)
+}
+
+fn active_deferred_findings(
+    findings: &[DeferredFinding],
+) -> impl Iterator<Item = &DeferredFinding> {
+    findings
+        .iter()
+        .filter(|finding| !finding.resolved && finding.dropped_rationale.is_none())
+}
+
+fn deferred_finding_deadline_text(finding: &DeferredFinding) -> String {
+    format!(
+        "deferred cycle {}, deadline cycle {}",
+        finding.deferred_cycle, finding.deadline_cycle
+    )
+}
+
+fn format_deferred_finding_summary_item(finding: &DeferredFinding) -> String {
+    format!(
+        "Deferred finding remains open: {} ({})",
+        finding.category,
+        deferred_finding_deadline_text(finding)
+    )
+}
+
+fn format_deferred_finding_next_step(finding: &DeferredFinding) -> String {
+    format!(
+        "Address deferred finding: {} ({}) — must be actioned, dispatched, or explicitly dropped this cycle",
+        finding.category,
+        deferred_finding_deadline_text(finding)
+    )
 }
 
 fn format_in_flight_next_step(session: &AgentSession) -> Result<String, String> {
@@ -2570,10 +2601,25 @@ fn render_worklog(cycle: u64, now: DateTime<Utc>, input: &WorklogInput) -> Strin
     lines.push("## What was done".to_string());
     lines.push(String::new());
     if input.what_was_done.is_empty() {
-        lines.push("- None.".to_string());
+        if input.deferred_findings.is_empty() {
+            lines.push("- None.".to_string());
+        } else {
+            for finding in active_deferred_findings(&input.deferred_findings) {
+                lines.push(format!(
+                    "- {}",
+                    convert_references(&format_deferred_finding_summary_item(finding))
+                ));
+            }
+        }
     } else {
         for item in &input.what_was_done {
             lines.push(format!("- {}", convert_references(item)));
+        }
+        for finding in active_deferred_findings(&input.deferred_findings) {
+            lines.push(format!(
+                "- {}",
+                convert_references(&format_deferred_finding_summary_item(finding))
+            ));
         }
     }
     lines.push(String::new());
@@ -3486,6 +3532,7 @@ mod tests {
     fn worklog_template_keeps_required_section_order() {
         let input = WorklogInput {
             what_was_done: vec!["Fixed #42".to_string()],
+            deferred_findings: Vec::new(),
             self_modifications: vec![SelfModification {
                 file: "STARTUP_CHECKLIST.xml".to_string(),
                 description: "Updated per audit #117".to_string(),
@@ -3524,6 +3571,7 @@ mod tests {
     fn worklog_template_renders_plain_self_modification_when_description_empty() {
         let input = WorklogInput {
             what_was_done: Vec::new(),
+            deferred_findings: Vec::new(),
             self_modifications: vec![SelfModification {
                 file: "Updated AGENTS.md".to_string(),
                 description: String::new(),
@@ -3549,9 +3597,50 @@ mod tests {
     }
 
     #[test]
+    fn worklog_deferred_finding_summary_and_next_steps_share_deadline_text() {
+        let finding = DeferredFinding {
+            category: "worklog-accuracy".to_string(),
+            deferred_cycle: 456,
+            deadline_cycle: 461,
+            resolved: false,
+            resolved_ref: None,
+            dropped_rationale: None,
+        };
+        let summary_item = format_deferred_finding_summary_item(&finding);
+        let next_step = format_deferred_finding_next_step(&finding);
+        let deadline_text = deferred_finding_deadline_text(&finding);
+        let input = WorklogInput {
+            what_was_done: Vec::new(),
+            deferred_findings: vec![finding],
+            self_modifications: Vec::new(),
+            prs_merged: Vec::new(),
+            prs_reviewed: Vec::new(),
+            issues_processed: Vec::new(),
+            current_state: CurrentState {
+                in_flight_sessions: 0,
+                pipeline_status: "PASS (3 warnings)".to_string(),
+                prior_gate_failures: Vec::new(),
+                publish_gate: "clear".to_string(),
+                preliminary: false,
+            },
+            next_steps: vec![next_step.clone()],
+            receipts: Vec::new(),
+            receipt_note: None,
+        };
+
+        let rendered = render_worklog(154, fixed_now(), &input);
+
+        assert!(rendered.contains(&summary_item));
+        assert!(rendered.contains(&next_step));
+        assert_eq!(summary_item.matches(&deadline_text).count(), 1);
+        assert_eq!(next_step.matches(&deadline_text).count(), 1);
+    }
+
+    #[test]
     fn worklog_template_omits_close_out_gate_failures_when_none_provided() {
         let input = WorklogInput {
             what_was_done: Vec::new(),
+            deferred_findings: Vec::new(),
             self_modifications: Vec::new(),
             prs_merged: Vec::new(),
             prs_reviewed: Vec::new(),
@@ -3577,6 +3666,7 @@ mod tests {
     fn worklog_template_renders_close_out_gate_failures_after_pipeline_status_lines() {
         let input = WorklogInput {
             what_was_done: Vec::new(),
+            deferred_findings: Vec::new(),
             self_modifications: Vec::new(),
             prs_merged: Vec::new(),
             prs_reviewed: Vec::new(),
