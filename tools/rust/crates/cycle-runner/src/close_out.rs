@@ -2360,7 +2360,13 @@ mod tests {
             .output()
             .unwrap();
 
-        run(&dir, 123, Some(345), false).unwrap();
+        let bin_dir = dir.join("bin");
+        fs::create_dir_all(&bin_dir).unwrap();
+        let gh_path = bin_dir.join("gh");
+        write_gh_script(&gh_path, 123, &[], true);
+        make_executable(&gh_path);
+
+        with_path_prefix(&bin_dir, || run(&dir, 123, Some(345), false)).unwrap();
 
         let args = fs::read_to_string(&args_path).unwrap();
         let c4_5 = args.find("---ARG---\nC4.5\n").unwrap();
@@ -2490,7 +2496,13 @@ mod tests {
             .output()
             .unwrap();
 
-        run(&dir, 123, Some(345), false).unwrap();
+        let bin_dir = dir.join("bin");
+        fs::create_dir_all(&bin_dir).unwrap();
+        let gh_path = bin_dir.join("gh");
+        write_gh_script(&gh_path, 123, &[], true);
+        make_executable(&gh_path);
+
+        with_path_prefix(&bin_dir, || run(&dir, 123, Some(345), false)).unwrap();
 
         let worklog =
             fs::read_to_string(dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"))
@@ -2629,7 +2641,13 @@ mod tests {
             .output()
             .unwrap();
 
-        run(&dir, 123, Some(345), false).unwrap();
+        let bin_dir = dir.join("bin");
+        fs::create_dir_all(&bin_dir).unwrap();
+        let gh_path = bin_dir.join("gh");
+        write_gh_script(&gh_path, 123, &[], true);
+        make_executable(&gh_path);
+
+        with_path_prefix(&bin_dir, || run(&dir, 123, Some(345), false)).unwrap();
 
         let worklog =
             fs::read_to_string(dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"))
@@ -2758,7 +2776,13 @@ mod tests {
             .output()
             .unwrap();
 
-        run(&dir, 123, Some(345), false).unwrap();
+        let bin_dir = dir.join("bin");
+        fs::create_dir_all(&bin_dir).unwrap();
+        let gh_path = bin_dir.join("gh");
+        write_gh_script(&gh_path, 123, &[], true);
+        make_executable(&gh_path);
+
+        with_path_prefix(&bin_dir, || run(&dir, 123, Some(345), false)).unwrap();
 
         let worklog =
             fs::read_to_string(dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"))
