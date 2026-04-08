@@ -6878,6 +6878,14 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Tool: pipeline-check audit-inbound-lifecycle step (re-dispatch of #2284, audit #385 structural fix)"
+    },
+    {
+      "addresses_finding": "455:2",
+      "dispatched_at": "2026-04-08T03:23:20Z",
+      "issue": 2291,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Tool fix: cycle 455 review F2 + F4 — close_out parser broken; record-dispatch leaves last_cycle.summary stale (re-dispatch of #2274)"
     }
   ],
   "audit_dropped": [
@@ -7579,7 +7587,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2289 Tool: pipeline-check audit-inbound-lifecycle step (re-dispatch of #2284, audit #385 structural fix) (cycle 458)",
+  "dispatch_log_latest": "#2291 Tool fix: cycle 455 review F2 + F4 — close_out parser broken; record-dispatch leaves last_cycle.summary stale (re-dispatch of #2274) (cycle 458)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7852,7 +7860,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 28,
     "issue": 2288,
