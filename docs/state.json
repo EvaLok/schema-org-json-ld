@@ -6916,6 +6916,21 @@
       "pr": 2299,
       "status": "merged",
       "title": "Backfilled: PR #2299"
+    },
+    {
+      "dispatched_at": "2026-04-08T09:40:44Z",
+      "issue": 2301,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Tool: post-step body validation plus body-stdin flag (cycle 459 F2 plus audit 387 fix)"
+    },
+    {
+      "addresses_finding": "459:3",
+      "dispatched_at": "2026-04-08T09:42:31Z",
+      "issue": 2304,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Tool: process-review chronic_category_responses auto-update + pipeline-check currency gate (cycle 459 F3 plus audit 388 fix)"
     }
   ],
   "audit_dropped": [
@@ -7101,7 +7116,9 @@
     377,
     382,
     383,
-    385
+    385,
+    387,
+    388
   ],
   "blockers": [
     {
@@ -7619,7 +7636,7 @@
       "resolved_ref": "docs/reviews/cycle-458.md"
     }
   ],
-  "dispatch_log_latest": "#2298 [Cycle Review] Cycle 459 end-of-cycle review (cycle 459)",
+  "dispatch_log_latest": "#2304 Tool: process-review chronic_category_responses auto-update + pipeline-check currency gate (cycle 459 F3 plus audit 388 fix) (cycle 460)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7711,7 +7728,7 @@
       },
       "audit_processed": {
         "cadence": "after processing audit issues",
-        "last_refreshed": "cycle 457"
+        "last_refreshed": "cycle 460"
       },
       "blockers": {
         "cadence": "after blocker state changes",
@@ -7800,7 +7817,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 459"
+        "last_refreshed": "cycle 460"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -7892,12 +7909,12 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 33,
     "issue": 2300,
     "number": 460,
-    "summary": "0 dispatches, 2 merges",
+    "summary": "2 dispatches, 2 merges",
     "timestamp": "2026-04-08T09:25:15Z"
   },
   "last_eva_comment_check": "2026-04-08T09:25:15Z",
@@ -13546,11 +13563,45 @@
         ],
         "ignored": 0,
         "note": "F2 (state-integrity) actioned via refresh-field-inventory --cycle 459 (commit 409bee38). F3 (process-adherence) actioned via pipeline-check POST_GATE_STEP_IDS C5/C5.1 + regression test (commit bfe6929c). F4 (journal-quality, chronic 5/6) actioned via validate-docs validate_open_questions_consistency + 3 tests (commit bfe6929c). F1 (worklog-accuracy) deferred to cycle 460 — capacity-blocked behind in-flight #2291/PR #2292."
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "code-quality",
+          "process-adherence",
+          "state-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 459,
+        "deferred": 1,
+        "dispatch_created": 2,
+        "finding_count": 4,
+        "finding_dispositions": [
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred"
+          },
+          {
+            "category": "process-adherence",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "state-integrity",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "code-quality",
+            "disposition": "actioned"
+          }
+        ],
+        "ignored": 0,
+        "note": "F1 (worklog-accuracy) deferred to cycle 461 — capacity-blocked behind audit-driven dispatches; deadline cycle 461 with cycle 456 deferrals. F2 (process-adherence) → dispatch #2301 (post-step body validation + --body-stdin), also resolves audit #387. F3 (state-integrity) → dispatch (process-review chronic_category_responses auto-update), also resolves audit #388. F4 (code-quality) → actioned via cycle 459 hotfix commit 647e88d (audit-inbound-lifecycle baseline + legacy ack matchers)."
       }
     ],
-    "last_review_cycle": 458
+    "last_review_cycle": 459
   },
-  "review_dispatch_consecutive": 4,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 459,
   "schema_status": {
     "directory_layout": {
