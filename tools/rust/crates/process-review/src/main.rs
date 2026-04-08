@@ -36,7 +36,8 @@ const BUILTIN_KNOWN_CATEGORIES: &[&str] = &[
 #[derive(Parser, Debug)]
 #[command(name = "process-review")]
 struct Cli {
-    /// Path to the review file (e.g. docs/reviews/cycle-162.md)
+    /// Optional path to the review file (e.g. docs/reviews/cycle-162.md); may
+    /// be omitted when running only --update-chronic-category refreshes
     #[arg(long)]
     review_file: Option<PathBuf>,
 
