@@ -6844,7 +6844,7 @@
       "dispatched_at": "2026-04-07T21:51:41Z",
       "issue": 2274,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "Tool fix: cycle 455 review F2 + F4 — close_out parser broken; record-dispatch leaves last_cycle.summary stale"
     },
     {
@@ -6860,7 +6860,7 @@
       "dispatched_at": "2026-04-07T23:35:35Z",
       "issue": 2284,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "failed",
       "title": "Tool: pipeline-check audit-inbound-lifecycle step (audit #385 structural fix)"
     },
     {
@@ -7845,7 +7845,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 28,
     "issue": 2288,
