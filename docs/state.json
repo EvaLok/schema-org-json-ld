@@ -6923,6 +6923,14 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Tool: post-step body validation plus body-stdin flag (cycle 459 F2 plus audit 387 fix)"
+    },
+    {
+      "addresses_finding": "459:3",
+      "dispatched_at": "2026-04-08T09:42:31Z",
+      "issue": 2304,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Tool: process-review chronic_category_responses auto-update + pipeline-check currency gate (cycle 459 F3 plus audit 388 fix)"
     }
   ],
   "audit_dropped": [
@@ -7626,7 +7634,7 @@
       "resolved_ref": "docs/reviews/cycle-458.md"
     }
   ],
-  "dispatch_log_latest": "#2301 Tool: post-step body validation plus body-stdin flag (cycle 459 F2 plus audit 387 fix) (cycle 460)",
+  "dispatch_log_latest": "#2304 Tool: process-review chronic_category_responses auto-update + pipeline-check currency gate (cycle 459 F3 plus audit 388 fix) (cycle 460)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7899,12 +7907,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 33,
     "issue": 2300,
     "number": 460,
-    "summary": "1 dispatch, 2 merges",
+    "summary": "2 dispatches, 2 merges",
     "timestamp": "2026-04-08T09:25:15Z"
   },
   "last_eva_comment_check": "2026-04-08T09:25:15Z",
