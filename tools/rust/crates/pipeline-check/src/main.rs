@@ -26,6 +26,7 @@ const AUDIT_INBOUND_LIFECYCLE_STEP_NAME: &str = "audit-inbound-lifecycle";
 /// Cycle 459 hotfix: PR #2290 initially checked all historical audits and
 /// flagged 111 missing, blocking C5.5.
 const AUDIT_INBOUND_LIFECYCLE_BASELINE_AUDIT: u64 = 372;
+const CHRONIC_CATEGORY_CURRENCY_STEP_NAME: &str = "chronic-category-currency";
 const DEFERRAL_ACCUMULATION_STEP_NAME: &str = "deferral-accumulation";
 const DEFERRAL_DEADLINES_STEP_NAME: &str = "deferral-deadlines";
 const MASS_DEFERRAL_GATE_STEP_NAME: &str = "mass-deferral-gate";
@@ -38,12 +39,13 @@ const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const CURRENT_CYCLE_STEPS_STEP_NAME: &str = "current-cycle-steps";
 const WORKLOG_PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
-const STEP_NAMES: [&str; 18] = [
+const STEP_NAMES: [&str; 19] = [
     "metric-snapshot",
     "field-inventory",
     "housekeeping-scan",
     "cycle-status",
     "state-invariants",
+    CHRONIC_CATEGORY_CURRENCY_STEP_NAME,
     ARTIFACT_VERIFY_STEP_NAME,
     DISPOSITION_MATCH_STEP_NAME,
     AUDIT_INBOUND_LIFECYCLE_STEP_NAME,
@@ -471,6 +473,9 @@ fn run_pipeline_with_excluded_steps(
             .filter(|spec| !is_excluded_step(spec.display_name, exclude_steps))
             .map(|spec| run_step(repo_root, spec, runner)),
     );
+    if !is_excluded_step(CHRONIC_CATEGORY_CURRENCY_STEP_NAME, exclude_steps) {
+        steps.push(verify_chronic_category_currency(repo_root));
+    }
     if !is_excluded_step(ARTIFACT_VERIFY_STEP_NAME, exclude_steps) {
         steps.push(verify_artifacts(repo_root));
     }
@@ -2602,6 +2607,29 @@ fn verify_deferral_accumulation(repo_root: &Path) -> StepReport {
     }
 }
 
+fn verify_chronic_category_currency(repo_root: &Path) -> StepReport {
+    match chronic_category_currency_status(repo_root) {
+        Ok((status, detail)) => StepReport {
+            name: CHRONIC_CATEGORY_CURRENCY_STEP_NAME,
+            status,
+            severity: Severity::Blocking,
+            exit_code: None,
+            detail: Some(detail),
+            findings: None,
+            summary: None,
+        },
+        Err(error) => StepReport {
+            name: CHRONIC_CATEGORY_CURRENCY_STEP_NAME,
+            status: StepStatus::Error,
+            severity: Severity::Blocking,
+            exit_code: None,
+            detail: Some(error),
+            findings: None,
+            summary: None,
+        },
+    }
+}
+
 fn verify_deferral_deadlines(repo_root: &Path) -> StepReport {
     match deferral_deadlines_status(repo_root) {
         Ok((status, detail)) => StepReport {
@@ -2863,6 +2891,69 @@ fn find_audit_word_token(text: &str, audit_issue: u64) -> bool {
         start = end;
     }
     false
+}
+
+fn chronic_category_currency_status(repo_root: &Path) -> Result<(StepStatus, String), String> {
+    let current_cycle = current_cycle_from_state(repo_root)?;
+    let state_value = read_state_value(repo_root)?;
+    let state: StateJson = serde_json::from_value(state_value)
+        .map_err(|error| format!("failed to parse state.json: {}", error))?;
+    let review_agent = state.review_agent()?;
+    let Some(entries) = review_agent
+        .chronic_category_responses
+        .as_ref()
+        .and_then(|value| value.get("entries"))
+        .and_then(Value::as_array)
+    else {
+        return Ok((
+            StepStatus::Pass,
+            "no structural-fix chronic category responses exceed currency threshold".to_string(),
+        ));
+    };
+
+    let mut warnings = Vec::new();
+    let mut failures = Vec::new();
+    for entry in entries {
+        if entry.get("chosen_path").and_then(Value::as_str) != Some("structural-fix") {
+            continue;
+        }
+        let Some(verification_cycle) = entry.get("verification_cycle").and_then(Value::as_u64)
+        else {
+            continue;
+        };
+        let gap = current_cycle.saturating_sub(verification_cycle);
+        if gap <= 10 {
+            continue;
+        }
+
+        let category = entry
+            .get("category")
+            .and_then(Value::as_str)
+            .unwrap_or("<unknown>");
+        let detail = format!(
+            "{} entry verification_cycle {} is {} cycles stale (current cycle {}) — refresh after structural fix lands",
+            category, verification_cycle, gap, current_cycle
+        );
+        if gap > 15 {
+            failures.push(detail);
+        } else {
+            warnings.push(detail);
+        }
+    }
+
+    if !failures.is_empty() {
+        let mut details = failures;
+        details.extend(warnings);
+        return Ok((StepStatus::Fail, details.join("; ")));
+    }
+    if !warnings.is_empty() {
+        return Ok((StepStatus::Warn, warnings.join("; ")));
+    }
+
+    Ok((
+        StepStatus::Pass,
+        "no structural-fix chronic category responses exceed currency threshold".to_string(),
+    ))
 }
 
 fn deferral_accumulation_assessment(repo_root: &Path) -> Result<StepAssessment, String> {
@@ -3553,6 +3644,16 @@ mod tests {
         PathBuf::from("/repo")
     }
 
+    fn write_temp_pipeline_repo(prefix: &str, state: Value) -> PathBuf {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!("{}-{}", prefix, run_id));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(root.join("docs/state.json"), state.to_string()).unwrap();
+        root
+    }
+
     /// Build mock orchestrator step comment bodies for tests from a list of step IDs.
     fn step_comment_bodies(cycle: u64, step_ids: &[&str]) -> String {
         step_ids
@@ -4240,7 +4341,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 18);
+        assert_eq!(report.steps.len(), 19);
         assert_eq!(report.steps[0].status, StepStatus::Pass);
         assert_eq!(report.steps[1].status, StepStatus::Pass);
         assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -4254,33 +4355,35 @@ mod tests {
             report.steps[4].detail.as_deref(),
             Some("5/5 invariants pass")
         );
-        assert_eq!(report.steps[5].name, "artifact-verify");
+        assert_eq!(report.steps[5].name, CHRONIC_CATEGORY_CURRENCY_STEP_NAME);
         assert_eq!(report.steps[5].status, StepStatus::Pass);
-        assert_eq!(report.steps[6].name, "disposition-match");
+        assert_eq!(report.steps[6].name, "artifact-verify");
         assert_eq!(report.steps[6].status, StepStatus::Pass);
-        assert_eq!(report.steps[7].name, "audit-inbound-lifecycle");
+        assert_eq!(report.steps[7].name, "disposition-match");
         assert_eq!(report.steps[7].status, StepStatus::Pass);
-        assert_eq!(report.steps[8].name, "deferral-accumulation");
+        assert_eq!(report.steps[8].name, "audit-inbound-lifecycle");
         assert_eq!(report.steps[8].status, StepStatus::Pass);
-        assert_eq!(report.steps[9].name, "deferral-deadlines");
+        assert_eq!(report.steps[9].name, "deferral-accumulation");
         assert_eq!(report.steps[9].status, StepStatus::Pass);
-        assert_eq!(report.steps[10].name, "mass-deferral-gate");
+        assert_eq!(report.steps[10].name, "deferral-deadlines");
         assert_eq!(report.steps[10].status, StepStatus::Pass);
-        assert_eq!(report.steps[11].name, "dispatch-finding-reconciliation");
+        assert_eq!(report.steps[11].name, "mass-deferral-gate");
         assert_eq!(report.steps[11].status, StepStatus::Pass);
-        assert_eq!(report.steps[12].name, "doc-validation");
+        assert_eq!(report.steps[12].name, "dispatch-finding-reconciliation");
         assert_eq!(report.steps[12].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].name, "frozen-commit-verify");
+        assert_eq!(report.steps[13].name, "doc-validation");
         assert_eq!(report.steps[13].status, StepStatus::Pass);
-        assert_eq!(report.steps[14].name, "worklog-dedup");
+        assert_eq!(report.steps[14].name, "frozen-commit-verify");
         assert_eq!(report.steps[14].status, StepStatus::Pass);
-        assert_eq!(report.steps[15].name, "worklog-immutability");
+        assert_eq!(report.steps[15].name, "worklog-dedup");
         assert_eq!(report.steps[15].status, StepStatus::Pass);
-        assert_eq!(report.steps[15].severity, Severity::Blocking);
-        assert_eq!(report.steps[16].name, "step-comments");
+        assert_eq!(report.steps[16].name, "worklog-immutability");
         assert_eq!(report.steps[16].status, StepStatus::Pass);
-        assert_eq!(report.steps[17].name, "current-cycle-steps");
+        assert_eq!(report.steps[16].severity, Severity::Blocking);
+        assert_eq!(report.steps[17].name, "step-comments");
         assert_eq!(report.steps[17].status, StepStatus::Pass);
+        assert_eq!(report.steps[18].name, "current-cycle-steps");
+        assert_eq!(report.steps[18].status, StepStatus::Pass);
     }
 
     #[test]
@@ -4468,8 +4571,8 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 18);
-        assert!(report.steps[..5]
+        assert_eq!(report.steps.len(), 19);
+        assert!(report.steps[..6]
             .iter()
             .all(|step| matches!(step.status, StepStatus::Error)));
         assert!(report.steps[13..]
@@ -4831,17 +4934,17 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &CascadeRunner);
-        assert_eq!(report.steps[12].name, "doc-validation");
-        assert_eq!(report.steps[12].status, StepStatus::Cascade);
-        assert_eq!(report.steps[13].name, "frozen-commit-verify");
-        assert_eq!(report.steps[13].status, StepStatus::Pass);
-        assert_eq!(report.steps[14].name, "worklog-dedup");
+        assert_eq!(report.steps[13].name, "doc-validation");
+        assert_eq!(report.steps[13].status, StepStatus::Cascade);
+        assert_eq!(report.steps[14].name, "frozen-commit-verify");
         assert_eq!(report.steps[14].status, StepStatus::Pass);
-        assert_eq!(report.steps[15].name, "worklog-immutability");
+        assert_eq!(report.steps[15].name, "worklog-dedup");
         assert_eq!(report.steps[15].status, StepStatus::Pass);
-        assert_eq!(report.steps[16].name, "step-comments");
+        assert_eq!(report.steps[16].name, "worklog-immutability");
+        assert_eq!(report.steps[16].status, StepStatus::Pass);
+        assert_eq!(report.steps[17].name, "step-comments");
         // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[16].status, StepStatus::Warn);
+        assert_eq!(report.steps[17].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -4974,17 +5077,17 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &MultiCauseCascadeRunner);
-        assert_eq!(report.steps[12].name, "doc-validation");
-        assert_eq!(report.steps[12].status, StepStatus::Cascade);
-        assert_eq!(report.steps[13].name, "frozen-commit-verify");
-        assert_eq!(report.steps[13].status, StepStatus::Pass);
-        assert_eq!(report.steps[14].name, "worklog-dedup");
+        assert_eq!(report.steps[13].name, "doc-validation");
+        assert_eq!(report.steps[13].status, StepStatus::Cascade);
+        assert_eq!(report.steps[14].name, "frozen-commit-verify");
         assert_eq!(report.steps[14].status, StepStatus::Pass);
-        assert_eq!(report.steps[15].name, "worklog-immutability");
+        assert_eq!(report.steps[15].name, "worklog-dedup");
         assert_eq!(report.steps[15].status, StepStatus::Pass);
-        assert_eq!(report.steps[16].name, "step-comments");
+        assert_eq!(report.steps[16].name, "worklog-immutability");
+        assert_eq!(report.steps[16].status, StepStatus::Pass);
+        assert_eq!(report.steps[17].name, "step-comments");
         // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[16].status, StepStatus::Warn);
+        assert_eq!(report.steps[17].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Pass);
         assert!(!report.has_blocking_findings);
     }
@@ -5115,10 +5218,10 @@ mod tests {
         }
 
         let report = run_pipeline(&root, OVERRIDE_CYCLE, &OverrideRunner);
-        assert_eq!(report.steps[16].name, "step-comments");
-        assert_eq!(report.steps[16].status, StepStatus::Warn);
-        assert_eq!(report.steps[16].severity, Severity::Warning);
-        assert!(report.steps[16]
+        assert_eq!(report.steps[17].name, "step-comments");
+        assert_eq!(report.steps[17].status, StepStatus::Warn);
+        assert_eq!(report.steps[17].severity, Severity::Warning);
+        assert!(report.steps[17]
             .detail
             .as_deref()
             .unwrap_or_default()
@@ -5261,16 +5364,16 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &IndependentFailureRunner);
-        assert_eq!(report.steps[12].name, "doc-validation");
-        assert_eq!(report.steps[12].status, StepStatus::Fail);
-        assert_eq!(report.steps[13].name, "frozen-commit-verify");
-        assert_eq!(report.steps[13].status, StepStatus::Pass);
-        assert_eq!(report.steps[14].name, "worklog-dedup");
+        assert_eq!(report.steps[13].name, "doc-validation");
+        assert_eq!(report.steps[13].status, StepStatus::Fail);
+        assert_eq!(report.steps[14].name, "frozen-commit-verify");
         assert_eq!(report.steps[14].status, StepStatus::Pass);
-        assert_eq!(report.steps[15].name, "worklog-immutability");
+        assert_eq!(report.steps[15].name, "worklog-dedup");
         assert_eq!(report.steps[15].status, StepStatus::Pass);
+        assert_eq!(report.steps[16].name, "worklog-immutability");
+        assert_eq!(report.steps[16].status, StepStatus::Pass);
         // Previous-cycle backstop is downgraded to Warn
-        assert_eq!(report.steps[16].status, StepStatus::Warn);
+        assert_eq!(report.steps[17].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -5393,7 +5496,7 @@ mod tests {
             &ExcludeDocValidationRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 17);
+        assert_eq!(report.steps.len(), 18);
         assert!(!report
             .steps
             .iter()
@@ -5530,7 +5633,7 @@ mod tests {
             &UnknownExcludeRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 18);
+        assert_eq!(report.steps.len(), 19);
         assert!(report
             .steps
             .iter()
@@ -5671,7 +5774,7 @@ mod tests {
         );
 
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 17);
+        assert_eq!(report.steps.len(), 18);
         assert!(!report.steps.iter().any(|step| step.name == "worklog-dedup"));
         assert!(report
             .steps
@@ -7334,11 +7437,7 @@ mod tests {
         let step = verify_audit_inbound_lifecycle(&root, &Runner);
 
         assert_eq!(step.status, StepStatus::Fail);
-        assert!(step
-            .detail
-            .as_deref()
-            .unwrap_or_default()
-            .contains("#382"));
+        assert!(step.detail.as_deref().unwrap_or_default().contains("#382"));
     }
 
     #[test]
@@ -7786,6 +7885,120 @@ mod tests {
         assert_eq!(
             step.detail.as_deref(),
             Some("no active deferred findings are due")
+        );
+    }
+
+    #[test]
+    fn chronic_category_currency_warns_at_eleven_cycle_gap() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-chronic-category-currency-warn",
+            json!({
+                "last_cycle": {"number": 111},
+                "review_agent": {
+                    "history": [],
+                    "chronic_category_responses": {
+                        "entries": [{
+                            "category": "worklog-accuracy",
+                            "chosen_path": "structural-fix",
+                            "verification_cycle": 100
+                        }]
+                    }
+                }
+            }),
+        );
+
+        let step = verify_chronic_category_currency(&root);
+
+        assert_eq!(step.name, CHRONIC_CATEGORY_CURRENCY_STEP_NAME);
+        assert_eq!(step.status, StepStatus::Warn);
+        assert_eq!(step.severity, Severity::Blocking);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("worklog-accuracy"));
+        assert!(detail.contains("verification_cycle 100"));
+        assert!(detail.contains("11 cycles stale"));
+    }
+
+    #[test]
+    fn chronic_category_currency_fails_at_sixteen_cycle_gap() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-chronic-category-currency-fail",
+            json!({
+                "last_cycle": {"number": 116},
+                "review_agent": {
+                    "history": [],
+                    "chronic_category_responses": {
+                        "entries": [{
+                            "category": "worklog-accuracy",
+                            "chosen_path": "structural-fix",
+                            "verification_cycle": 100
+                        }]
+                    }
+                }
+            }),
+        );
+
+        let step = verify_chronic_category_currency(&root);
+
+        assert_eq!(step.status, StepStatus::Fail);
+        assert_eq!(step.severity, Severity::Blocking);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("16 cycles stale"));
+        assert!(detail.contains("current cycle 116"));
+    }
+
+    #[test]
+    fn chronic_category_currency_skips_behavioral_fix_entries() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-chronic-category-currency-behavioral",
+            json!({
+                "last_cycle": {"number": 200},
+                "review_agent": {
+                    "history": [],
+                    "chronic_category_responses": {
+                        "entries": [{
+                            "category": "worklog-accuracy",
+                            "chosen_path": "behavioral-fix",
+                            "verification_cycle": 100
+                        }]
+                    }
+                }
+            }),
+        );
+
+        let step = verify_chronic_category_currency(&root);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("no structural-fix chronic category responses exceed currency threshold")
+        );
+    }
+
+    #[test]
+    fn chronic_category_currency_passes_when_within_threshold() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-chronic-category-currency-pass",
+            json!({
+                "last_cycle": {"number": 105},
+                "review_agent": {
+                    "history": [],
+                    "chronic_category_responses": {
+                        "entries": [{
+                            "category": "worklog-accuracy",
+                            "chosen_path": "structural-fix",
+                            "verification_cycle": 100
+                        }]
+                    }
+                }
+            }),
+        );
+
+        let step = verify_chronic_category_currency(&root);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("no structural-fix chronic category responses exceed currency threshold")
         );
     }
 
