@@ -652,10 +652,7 @@ fn dispatch_log_cycle(dispatch_log_latest: &str) -> Option<u64> {
 }
 
 fn current_dispatch_log_cycle(state: &StateJson) -> Option<u64> {
-    state
-        .dispatch_log_latest
-        .as_deref()
-        .and_then(dispatch_log_cycle)
+    state.dispatch_log_latest.as_deref().and_then(dispatch_log_cycle)
 }
 
 fn count_receipt_activity_for_cycle(

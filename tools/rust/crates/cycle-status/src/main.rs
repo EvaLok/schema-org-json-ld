@@ -423,17 +423,17 @@ fn gather_eva_escalations(errors: &mut Vec<String>) -> EvaEscalations {
                     let Some(issue) = to_question_for_eva_issue(item) else {
                         continue;
                     };
-                    let has_eva_response =
-                        match issue_has_eva_response(issue.number, &issue.created_at) {
-                            Ok(has_response) => has_response,
-                            Err(error) => {
-                                errors.push(format!(
-                                    "Eva response query failed for question-for-eva #{}: {}",
-                                    issue.number, error
-                                ));
-                                false
-                            }
-                        };
+                    let has_eva_response = match issue_has_eva_response(issue.number, &issue.created_at)
+                    {
+                        Ok(has_response) => has_response,
+                        Err(error) => {
+                            errors.push(format!(
+                                "Eva response query failed for question-for-eva #{}: {}",
+                                issue.number, error
+                            ));
+                            false
+                        }
+                    };
                     match classify_eva_escalation(&issue, now, has_eva_response) {
                         Ok(summary) => summaries.push(summary),
                         Err(error) => errors.push(format!(
@@ -1326,12 +1326,7 @@ fn is_eva_or_orchestrator_author(login: &str) -> bool {
 
 fn issue_has_eva_response(issue_number: u64, issue_created_at: &str) -> Result<bool, String> {
     let issue_created_at = DateTime::parse_from_rfc3339(issue_created_at)
-        .map_err(|error| {
-            format!(
-                "invalid issue created_at timestamp {:?}: {}",
-                issue_created_at, error
-            )
-        })?
+        .map_err(|error| format!("invalid issue created_at timestamp {:?}: {}", issue_created_at, error))?
         .with_timezone(&Utc);
     let comments_path = format!(
         "repos/{}/issues/{}/comments?sort=created&direction=desc&per_page=100",
@@ -1379,12 +1374,7 @@ fn classify_eva_escalation(
     has_eva_response: bool,
 ) -> Result<EvaEscalationIssueSummary, String> {
     let created_at = DateTime::parse_from_rfc3339(&issue.created_at)
-        .map_err(|error| {
-            format!(
-                "invalid created_at timestamp {:?}: {}",
-                issue.created_at, error
-            )
-        })?
+        .map_err(|error| format!("invalid created_at timestamp {:?}: {}", issue.created_at, error))?
         .with_timezone(&Utc);
     let age = now.signed_duration_since(created_at);
     let age_hours = age.num_minutes() as f64 / 60.0;
@@ -1803,12 +1793,12 @@ mod tests {
             &concurrency,
         );
 
-        assert!(action_items
-            .iter()
-            .any(|item| { item == "Stale question-for-eva #3001 (52h without response)" }));
-        assert!(action_items
-            .iter()
-            .any(|item| { item == "URGENT: question-for-eva #3002 has no Eva response for 27h" }));
+        assert!(action_items.iter().any(|item| {
+            item == "Stale question-for-eva #3001 (52h without response)"
+        }));
+        assert!(action_items.iter().any(|item| {
+            item == "URGENT: question-for-eva #3002 has no Eva response for 27h"
+        }));
     }
 
     #[test]
