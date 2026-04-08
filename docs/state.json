@@ -6931,6 +6931,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Tool: process-review chronic_category_responses auto-update + pipeline-check currency gate (cycle 459 F3 plus audit 388 fix)"
+    },
+    {
+      "dispatched_at": "2026-04-08T09:58:54Z",
+      "issue": 2307,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 460 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -7636,7 +7643,7 @@
       "resolved_ref": "docs/reviews/cycle-458.md"
     }
   ],
-  "dispatch_log_latest": "#2304 Tool: process-review chronic_category_responses auto-update + pipeline-check currency gate (cycle 459 F3 plus audit 388 fix) (cycle 460)",
+  "dispatch_log_latest": "#2307 [Cycle Review] Cycle 460 end-of-cycle review (cycle 460)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7909,12 +7916,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 3,
   "last_cycle": {
     "duration_minutes": 26,
     "issue": 2300,
     "number": 460,
-    "summary": "2 dispatches, 2 merges",
+    "summary": "3 dispatches, 2 merges",
     "timestamp": "2026-04-08T09:51:19Z"
   },
   "last_eva_comment_check": "2026-04-08T09:51:19Z",
@@ -13601,7 +13608,7 @@
     ],
     "last_review_cycle": 459
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 460,
   "schema_status": {
     "directory_layout": {
