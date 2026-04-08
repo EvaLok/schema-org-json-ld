@@ -9,6 +9,7 @@ use std::process::Command as ProcessCommand;
 const SELF_MODIFICATIONS_HEADING: &str = "## Self-modifications";
 const COMMIT_RECEIPTS_HEADING: &str = "## Commit receipts";
 const CONCRETE_COMMITMENTS_HEADING: &str = "### Concrete commitments for next cycle";
+const OPEN_QUESTIONS_HEADING: &str = "### Open questions";
 const PRE_DISPATCH_SNAPSHOT_NOTE: &str =
     "*Snapshot before review dispatch — final counters may differ after C6.*";
 const INFRASTRUCTURE_PATHS: [&str; 5] = [
@@ -243,6 +244,9 @@ fn validate_journal(file: &Path) -> Result<Vec<String>, String> {
     failures.extend(validate_no_escaped_newlines(&content));
     failures.extend(validate_worklog_links(&content, file));
     if let Some(failure) = validate_commitment_section(&content) {
+        failures.push(failure);
+    }
+    if let Some(failure) = validate_open_questions_consistency(&content) {
         failures.push(failure);
     }
 
@@ -904,6 +908,45 @@ fn validate_commitment_section(content: &str) -> Option<String> {
         "journal entry is missing a non-empty 'Concrete commitments for next cycle' section"
             .to_string()
     })
+}
+
+/// Detects the journal-quality contradiction caught by cycle 458 review F4:
+/// the entry body says it filed a question-for-eva, but the trailing
+/// "Open questions" section claims there are none.
+///
+/// Pure text check, no GitHub queries — chronic-category structural fix.
+fn validate_open_questions_consistency(content: &str) -> Option<String> {
+    let section = extract_section_body(content, OPEN_QUESTIONS_HEADING)?;
+
+    let bullet_lines: Vec<&str> = section
+        .lines()
+        .map(normalize_line)
+        .filter(|line| !line.is_empty())
+        .collect();
+    if bullet_lines.is_empty() {
+        return None;
+    }
+    let says_none = bullet_lines.iter().all(|line| reports_no_self_modifications(line));
+    if !says_none {
+        return None;
+    }
+
+    let body_before = match content.find(OPEN_QUESTIONS_HEADING) {
+        Some(idx) => &content[..idx],
+        None => return None,
+    };
+    let lowered = body_before.to_lowercase();
+    let mentions_filing = lowered.contains("filed question-for-eva")
+        || lowered.contains("filing question-for-eva")
+        || lowered.contains("file question-for-eva");
+    if !mentions_filing {
+        return None;
+    }
+
+    Some(
+        "journal entry's 'Open questions' section says 'None' but the body references filing a question-for-eva — list the open question or rephrase the body"
+            .to_string(),
+    )
 }
 
 fn extract_markdown_value<'a>(content: &'a str, label: &str) -> Option<&'a str> {
@@ -1821,6 +1864,70 @@ Observed something.
 ";
         let failure = validate_commitment_section(content).expect("expected failure");
         assert!(failure.contains("Concrete commitments for next cycle"));
+    }
+
+    #[test]
+    fn rejects_open_questions_none_when_question_for_eva_filed() {
+        // Mirrors cycle 458 review F4: body mentions filing a question-for-eva
+        // but the Open questions section claims none.
+        let content = "\
+## 2026-04-08 — Cycle 458: Example
+
+### What I tried
+
+For the chronic journal-quality escalation: filed question-for-eva #2293 with options.
+
+### Concrete commitments for next cycle
+
+1. Verify the thing.
+
+### Open questions
+
+- None.
+";
+        let failure = validate_open_questions_consistency(content).expect("expected failure");
+        assert!(failure.contains("Open questions"));
+        assert!(failure.contains("question-for-eva"));
+    }
+
+    #[test]
+    fn allows_open_questions_none_when_no_question_for_eva_mentioned() {
+        let content = "\
+## 2026-04-08 — Cycle 458: Example
+
+### What I tried
+
+Did some normal cycle work without filing any escalation.
+
+### Concrete commitments for next cycle
+
+1. Verify the thing.
+
+### Open questions
+
+- None.
+";
+        assert!(validate_open_questions_consistency(content).is_none());
+    }
+
+    #[test]
+    fn allows_open_questions_listed_even_when_question_for_eva_filed() {
+        let content = "\
+## 2026-04-08 — Cycle 458: Example
+
+### What I tried
+
+filed question-for-eva #2293.
+
+### Concrete commitments for next cycle
+
+1. Verify the thing.
+
+### Open questions
+
+- #2293 — chronic journal-quality response.
+";
+        assert!(validate_open_questions_consistency(content).is_none());
     }
 
     struct TestRepo {

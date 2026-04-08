@@ -53,7 +53,13 @@ const STEP_NAMES: [&str; 18] = [
 ];
 // Steps that have not been posted yet when pipeline-check runs at C5.5.
 // These are excluded from the current-cycle mandatory step check.
-const POST_GATE_STEP_IDS: &[&str] = &["C5.5", "C5.6", "C6", "C7", "C8"];
+// Steps whose post-step comments are emitted at or after the C5.5 gate runs.
+// These MUST NOT be required by current-cycle-steps when evaluated as part of
+// C5.5 itself, otherwise C5.5 fails on first run and only passes after manual
+// stub backfill (cycle 458 review F3 process-adherence).
+// COMPLETION_CHECKLIST.xml ordering: C5/C5.1 have prerequisite "C4.1, C4.5, C5.5",
+// so they are emitted *after* C5.5 evaluates current-cycle-steps.
+const POST_GATE_STEP_IDS: &[&str] = &["C5", "C5.1", "C5.5", "C5.6", "C6", "C7", "C8"];
 const STARTUP_STEP_IDS: &[&str] = &["0", "0.1", "0.5", "0.6", "1", "1.1", "2", "3"];
 const STEP_COMMENT_THRESHOLD: usize = 17;
 const ORCHESTRATOR_SIGNATURE: &str = "> **[main-orchestrator]**";
@@ -9584,6 +9590,68 @@ mod tests {
         let step = verify_current_cycle_step_comments(&root, 301, &Runner);
         assert_eq!(step.status, StepStatus::Pass);
         assert_eq!(step.severity, Severity::Blocking);
+    }
+
+    /// Cycle 458 review F3 (process-adherence) regression: C5/C5.1 are
+    /// emitted AFTER C5.5 in the close-out flow (per COMPLETION_CHECKLIST.xml
+    /// `prerequisite="C4.1, C4.5, C5.5"` on C5). Before this fix, C5.5
+    /// failed on first run with `current-cycle-steps` blocking on missing
+    /// C5/C5.1, and only passed after manual stub-comment backfill.
+    #[test]
+    fn current_cycle_steps_passes_when_only_c5_and_c51_missing_pre_gate() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-current-cycle-c5-post-gate-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "previous_cycle_issue": 2288,
+                "last_cycle": {
+                    "number": 458,
+                    "issue": 2288
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+                assert_eq!(issue, 2288);
+                // Mirrors the cycle 458 close-out state at C5.5 evaluation:
+                // every step EXCEPT C5/C5.1/C5.5/C5.6/C6/C7/C8 has been posted.
+                // C5.5 is currently running, and C5/C5.1 are scheduled to be
+                // posted next (after C5.5 passes). The gate must NOT block on
+                // their absence.
+                let steps: &[&str] = &[
+                    "0", "0.1", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9",
+                    "10", "C1", "C2", "C3", "C4.1", "C4.5",
+                ];
+                Ok(step_comment_bodies(458, steps))
+            }
+        }
+
+        let step = verify_current_cycle_step_comments(&root, 458, &Runner);
+        assert_eq!(
+            step.status,
+            StepStatus::Pass,
+            "C5/C5.1 must be treated as post-gate; detail was: {:?}",
+            step.detail
+        );
     }
 
     #[test]
