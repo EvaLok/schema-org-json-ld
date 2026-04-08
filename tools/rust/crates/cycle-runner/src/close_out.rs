@@ -2263,6 +2263,42 @@ mod tests {
     }
 
     #[test]
+    fn detect_prior_gate_failures_filters_stale_cycle_records() {
+        // Regression guard: cycle 456 F1 test-gap. The cycle != current_cycle
+        // check at read_prior_gate_failure_from_state must drop FAIL records
+        // belonging to a previous cycle, preventing stale failures from
+        // re-freezing the current cycle's worklog.
+        let dir = setup_temp_repo("detect-prior-gate-failures-stale-cycle");
+        fs::write(
+            dir.join("docs/state.json"),
+            serde_json::to_string_pretty(&json!({
+                "tool_pipeline": {
+                    "c4_1_initial_result": {
+                        "cycle": 344,
+                        "result": "FAIL",
+                        "summary": "previous-cycle stale FAIL"
+                    },
+                    "c5_5_initial_result": {
+                        "cycle": 344,
+                        "result": "FAIL",
+                        "summary": "previous-cycle stale FAIL"
+                    }
+                }
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let failures = detect_prior_gate_failures(&dir, 345);
+
+        assert!(
+            failures.is_empty(),
+            "stale FAIL records from cycle 344 must not bleed into cycle 345 close-out, got {failures:?}"
+        );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn close_out_run_continues_after_c4_7_failure() {
         let (dir, remote) = setup_temp_repo_with_remote("close-out-c4-7-warning");
         fs::create_dir_all(dir.join("docs/worklog/2026-03-25")).unwrap();
