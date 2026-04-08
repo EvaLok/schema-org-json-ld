@@ -2,7 +2,7 @@ use clap::{ArgGroup, Parser};
 use serde_json::{json, Value};
 use state_schema::current_cycle_from_state;
 use std::fs;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
 
@@ -19,7 +19,7 @@ const VALID_STEP_IDS: [&str; 37] = [
 #[command(group(
 	ArgGroup::new("body_source")
 		.required(true)
-		.args(["body", "body_file"])
+		.args(["body", "body_file", "body_stdin"])
 ))]
 struct Cli {
 	/// Orchestrator run issue number
@@ -41,6 +41,14 @@ struct Cli {
 	/// Path to a file containing the step outcome body
 	#[arg(long)]
 	body_file: Option<PathBuf>,
+
+	/// Read body content from stdin
+	#[arg(long)]
+	body_stdin: bool,
+
+	/// Allow literal shell template syntax in the body text
+	#[arg(long)]
+	allow_template_syntax: bool,
 
 	/// Allow reposting a step ID even if it already exists on the issue
 	#[arg(long)]
@@ -106,18 +114,47 @@ fn execute(cli: &Cli, runner: &dyn CommentPoster) -> Result<String, String> {
 }
 
 fn resolve_body(cli: &Cli) -> Result<String, String> {
+	let mut stdin = std::io::stdin();
+	resolve_body_from_reader(cli, &mut stdin)
+}
+
+fn resolve_body_from_reader<R: Read>(cli: &Cli, reader: &mut R) -> Result<String, String> {
 	// Clap enforces this for real CLI parsing, but direct struct construction in unit tests
 	// or future internal callers can bypass parser validation, so keep a fail-closed check here.
-	match (&cli.body, &cli.body_file) {
-		(Some(_), Some(_)) => Err("exactly one of --body or --body-file must be provided".to_string()),
-		(None, None) => Err("exactly one of --body or --body-file must be provided".to_string()),
-		(Some(body), None) => normalize_body_text(body),
-		(None, Some(path)) => {
+	match (&cli.body, &cli.body_file, cli.body_stdin) {
+		(Some(_), Some(_), _) | (Some(_), None, true) | (None, Some(_), true) => {
+			Err("exactly one of --body, --body-file, or --body-stdin must be provided".to_string())
+		}
+		(None, None, false) => {
+			Err("exactly one of --body, --body-file, or --body-stdin must be provided".to_string())
+		}
+		(Some(body), None, false) => validate_body(body, cli.allow_template_syntax),
+		(None, Some(path), false) => {
 			let content = fs::read_to_string(path)
 				.map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
-			normalize_body_text(&content)
+			validate_body(&content, cli.allow_template_syntax)
+		}
+		(None, None, true) => {
+			let mut content = String::new();
+			reader
+				.read_to_string(&mut content)
+				.map_err(|error| format!("failed to read stdin: {}", error))?;
+			if content.is_empty() {
+				return Err("empty stdin received for --body-stdin".to_string());
+			}
+			validate_body(&content, cli.allow_template_syntax)
 		}
 	}
+}
+
+fn validate_body(body: &str, allow_template_syntax: bool) -> Result<String, String> {
+	let normalized = normalize_body_text(body)?;
+	if allow_template_syntax {
+		return Ok(normalized);
+	}
+
+	validate_body_template_syntax(&normalized)?;
+	Ok(normalized)
 }
 
 fn validate_required_text<'a>(field_name: &str, value: &'a str) -> Result<&'a str, String> {
@@ -181,6 +218,41 @@ fn normalize_body_text(body: &str) -> Result<String, String> {
 	let normalized = body.trim_end_matches(['\r', '\n']);
 	validate_required_text("body", normalized)?;
 	Ok(normalized.to_string())
+}
+
+fn validate_body_template_syntax(body: &str) -> Result<(), String> {
+	if let Some((pattern, offset)) = find_unexpanded_template_syntax(body) {
+		return Err(format!(
+			"body contains unexpanded shell substitution pattern '{}' near offset {} — likely template-expansion failure. Use --allow-template-syntax to override or pipe pre-evaluated text via --body-stdin.",
+			pattern, offset
+		));
+	}
+
+	Ok(())
+}
+
+fn find_unexpanded_template_syntax(body: &str) -> Option<(&'static str, usize)> {
+	let command_substitution = body
+		.match_indices("$(")
+		.find(|(offset, _)| body[*offset + 2..].contains(')'))
+		.map(|(offset, _)| ("$(...)", offset));
+	let variable_expansion = body
+		.match_indices("${")
+		.find(|(offset, _)| body[*offset + 2..].contains('}'))
+		.map(|(offset, _)| ("${...}", offset));
+
+	match (command_substitution, variable_expansion) {
+		(Some(command), Some(variable)) => {
+			if command.1 <= variable.1 {
+				Some(command)
+			} else {
+				Some(variable)
+			}
+		}
+		(Some(command), None) => Some(command),
+		(None, Some(variable)) => Some(variable),
+		(None, None) => None,
+	}
 }
 
 fn format_comment(cycle: u64, step: &str, title: &str, body: &str) -> String {
@@ -411,6 +483,8 @@ mod tests {
 			title: "Check for input-from-eva issues".to_string(),
 			body: Some("Found 2 open issues.".to_string()),
 			body_file: None,
+			body_stdin: false,
+			allow_template_syntax: false,
 			force: false,
 			skip_validation: false,
 			repo_root: repo_root.clone(),
@@ -441,6 +515,8 @@ mod tests {
 			title: "Summarize completion checks".to_string(),
 			body: None,
 			body_file: Some(body_path),
+			body_stdin: false,
+			allow_template_syntax: false,
 			force: false,
 			skip_validation: false,
 			repo_root: repo_root.clone(),
@@ -468,6 +544,8 @@ mod tests {
 			title: "Check for input-from-eva issues".to_string(),
 			body: Some("Found 2 open issues.".to_string()),
 			body_file: None,
+			body_stdin: false,
+			allow_template_syntax: false,
 			force: false,
 			skip_validation: false,
 			repo_root: repo_root.clone(),
@@ -492,6 +570,8 @@ mod tests {
 			title: "Check for input-from-eva issues".to_string(),
 			body: Some("Found 2 open issues.".to_string()),
 			body_file: None,
+			body_stdin: false,
+			allow_template_syntax: false,
 			force: false,
 			skip_validation: false,
 			repo_root: repo_root.clone(),
@@ -525,9 +605,148 @@ mod tests {
 	}
 
 	#[test]
+	fn body_stdin_mutually_exclusive_with_body() {
+		let result = Cli::try_parse_from([
+			"post-step",
+			"--issue",
+			"834",
+			"--step",
+			"1",
+			"--title",
+			"Test",
+			"--body",
+			"text",
+			"--body-stdin",
+		]);
+
+		assert!(result.is_err());
+	}
+
+	#[test]
+	fn body_stdin_mutually_exclusive_with_body_file() {
+		let result = Cli::try_parse_from([
+			"post-step",
+			"--issue",
+			"834",
+			"--step",
+			"1",
+			"--title",
+			"Test",
+			"--body-file",
+			"/tmp/body.md",
+			"--body-stdin",
+		]);
+
+		assert!(result.is_err());
+	}
+
+	#[test]
+	fn body_stdin_resolves_text_from_reader() {
+		let repo_root = temp_repo_root("post-step-body-stdin");
+		let cli = Cli {
+			body_stdin: true,
+			..test_cli(repo_root)
+		};
+		let mut stdin = std::io::Cursor::new("hello world\n");
+
+		let body = resolve_body_from_reader(&cli, &mut stdin).expect("stdin body should resolve");
+
+		assert_eq!(body, "hello world");
+	}
+
+	#[test]
+	fn body_stdin_empty_input_is_rejected() {
+		let repo_root = temp_repo_root("post-step-body-stdin-empty");
+		let cli = Cli {
+			body_stdin: true,
+			..test_cli(repo_root)
+		};
+		let mut stdin = std::io::Cursor::new("");
+
+		let error =
+			resolve_body_from_reader(&cli, &mut stdin).expect_err("empty stdin should fail");
+
+		assert_eq!(error, "empty stdin received for --body-stdin");
+	}
+
+	#[test]
+	fn body_with_unexpanded_command_substitution_is_rejected() {
+		let error =
+			validate_body_template_syntax("$(ls)").expect_err("command substitution should fail");
+
+		assert_eq!(error, body_template_error("$(...)", 0));
+	}
+
+	#[test]
+	fn body_with_unexpanded_variable_expansion_is_rejected() {
+		let error =
+			validate_body_template_syntax("${HOME}").expect_err("variable expansion should fail");
+
+		assert_eq!(error, body_template_error("${...}", 0));
+	}
+
+	#[test]
+	fn body_with_dollar_alone_is_accepted() {
+		assert!(validate_body_template_syntax("price is $5").is_ok());
+	}
+
+	#[test]
+	fn body_with_allow_template_syntax_skips_validation() {
+		let repo_root = temp_repo_root("post-step-allow-template-syntax");
+		write_state_json(&repo_root, r#"{"last_cycle":{"number":198}}"#);
+		let cli = Cli {
+			body: Some("$(ls)".to_string()),
+			allow_template_syntax: true,
+			..test_cli(repo_root)
+		};
+		let poster = RecordingPoster::success();
+
+		let result = execute(&cli, &poster).expect("allow flag should bypass validation");
+
+		assert_eq!(result, "Step 1 posted to EvaLok/schema-org-json-ld#834");
+		assert_eq!(
+			poster.posted_bodies(),
+			vec!["> **[main-orchestrator]** | Cycle 198 | Step 1\n\n### Test\n\n$(ls)".to_string()]
+		);
+	}
+
+	#[test]
+	fn body_template_validation_runs_for_all_three_sources() {
+		let repo_root = temp_repo_root("post-step-template-validation-all-sources");
+		let body_cli = Cli {
+			body: Some("$(ls)".to_string()),
+			..test_cli(repo_root.clone())
+		};
+		let body_path = repo_root.join("body.md");
+		fs::write(&body_path, "$(ls)\n").unwrap();
+		let file_cli = Cli {
+			body_file: Some(body_path),
+			..test_cli(repo_root.clone())
+		};
+		let stdin_cli = Cli {
+			body_stdin: true,
+			..test_cli(repo_root)
+		};
+		let body_error = resolve_body_from_reader(&body_cli, &mut std::io::Cursor::new(""))
+			.expect_err("body text should be validated");
+		let file_error = resolve_body_from_reader(&file_cli, &mut std::io::Cursor::new(""))
+			.expect_err("body file text should be validated");
+		let mut stdin = std::io::Cursor::new("$(ls)\n");
+		let stdin_error = resolve_body_from_reader(&stdin_cli, &mut stdin)
+			.expect_err("stdin text should be validated");
+
+		assert_eq!(body_error, body_template_error("$(...)", 0));
+		assert_eq!(file_error, body_template_error("$(...)", 0));
+		assert_eq!(stdin_error, body_template_error("$(...)", 0));
+	}
+
+	#[test]
 	fn valid_step_ids_are_accepted() {
 		for step in ["0", "0.5", "1", "C1", "C4.5", "10"] {
-			assert!(validate_step_id(step).is_ok(), "expected {step} to be valid");
+			assert!(
+				validate_step_id(step).is_ok(),
+				"expected {step} to be valid"
+			);
 		}
 	}
 
@@ -582,6 +801,8 @@ mod tests {
 			title: "Non-standard step".to_string(),
 			body: Some("Posted intentionally.".to_string()),
 			body_file: None,
+			body_stdin: false,
+			allow_template_syntax: false,
 			force: false,
 			skip_validation: true,
 			repo_root: repo_root.clone(),
@@ -603,6 +824,8 @@ mod tests {
 			title: "Whitespace step".to_string(),
 			body: Some("Body.".to_string()),
 			body_file: None,
+			body_stdin: false,
+			allow_template_syntax: false,
 			force: false,
 			skip_validation: false,
 			repo_root: repo_root.clone(),
@@ -626,6 +849,8 @@ mod tests {
 		assert!(help.contains("--title"));
 		assert!(help.contains("--body"));
 		assert!(help.contains("--body-file"));
+		assert!(help.contains("--body-stdin"));
+		assert!(help.contains("--allow-template-syntax"));
 		assert!(help.contains("--force"));
 		assert!(help.contains("--skip-validation"));
 		assert!(help.contains("--repo-root"));
@@ -641,6 +866,8 @@ mod tests {
 			title: "Check for input-from-eva issues".to_string(),
 			body: Some("Found 2 open issues.".to_string()),
 			body_file: None,
+			body_stdin: false,
+			allow_template_syntax: false,
 			force: false,
 			skip_validation: false,
 			repo_root: repo_root.clone(),
@@ -663,6 +890,8 @@ mod tests {
 			title: "Check for input-from-eva issues".to_string(),
 			body: Some("Found 2 open issues.".to_string()),
 			body_file: None,
+			body_stdin: false,
+			allow_template_syntax: false,
 			force: false,
 			skip_validation: false,
 			repo_root: repo_root.clone(),
@@ -687,6 +916,8 @@ mod tests {
 			title: "Check for input-from-eva issues".to_string(),
 			body: Some("Found 2 open issues.".to_string()),
 			body_file: None,
+			body_stdin: false,
+			allow_template_syntax: false,
 			force: false,
 			skip_validation: false,
 			repo_root: repo_root.clone(),
@@ -714,6 +945,8 @@ mod tests {
 			title: "Check for input-from-eva issues".to_string(),
 			body: Some("Found 2 open issues.".to_string()),
 			body_file: None,
+			body_stdin: false,
+			allow_template_syntax: false,
 			force: true,
 			skip_validation: false,
 			repo_root: repo_root.clone(),
@@ -738,6 +971,8 @@ mod tests {
 			title: "Check for input-from-eva issues".to_string(),
 			body: Some("Found 2 open issues.".to_string()),
 			body_file: None,
+			body_stdin: false,
+			allow_template_syntax: false,
 			force: false,
 			skip_validation: false,
 			repo_root: repo_root.clone(),
@@ -794,7 +1029,8 @@ mod tests {
 
 	#[test]
 	fn parse_paginated_json_parses_single_page_output() {
-		let comments = parse_paginated_json(r#"[{"body":"hello"}]"#).expect("single page should parse");
+		let comments =
+			parse_paginated_json(r#"[{"body":"hello"}]"#).expect("single page should parse");
 
 		assert_eq!(comment_bodies(&comments), vec!["hello"]);
 	}
@@ -839,6 +1075,8 @@ mod tests {
 			title: "Check for input-from-eva issues".to_string(),
 			body: Some("Found 2 open issues.".to_string()),
 			body_file: None,
+			body_stdin: false,
+			allow_template_syntax: false,
 			force: false,
 			skip_validation: false,
 			repo_root: repo_root.clone(),
@@ -849,6 +1087,28 @@ mod tests {
 
 		assert_eq!(error, "gh api failed with status 1: rate limited");
 		assert!(poster.posted_bodies().is_empty());
+	}
+
+	fn test_cli(repo_root: PathBuf) -> Cli {
+		Cli {
+			issue: 834,
+			step: "1".to_string(),
+			title: "Test".to_string(),
+			body: None,
+			body_file: None,
+			body_stdin: false,
+			allow_template_syntax: false,
+			force: false,
+			skip_validation: false,
+			repo_root,
+		}
+	}
+
+	fn body_template_error(pattern: &str, offset: usize) -> String {
+		format!(
+			"body contains unexpanded shell substitution pattern '{}' near offset {} — likely template-expansion failure. Use --allow-template-syntax to override or pipe pre-evaluated text via --body-stdin.",
+			pattern, offset
+		)
 	}
 
 	fn temp_repo_root(prefix: &str) -> PathBuf {
