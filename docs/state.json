@@ -6944,6 +6944,7 @@
       "title": "[Cycle Review] Cycle 460 end-of-cycle review"
     },
     {
+      "addresses_finding": "460:1",
       "dispatched_at": "2026-04-08T21:48:55Z",
       "issue": 2310,
       "model": "gpt-5.4",
@@ -7841,7 +7842,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 459"
+        "last_refreshed": "cycle 461"
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
@@ -8059,18 +8060,19 @@
           "added_cycle": 201,
           "category": "process-adherence",
           "chosen_path": "structural-fix",
-          "rationale": "Cycle 406 chronic-category refresh: process-adherence appeared in 5/7 reviews (cycles 399-404). Current findings shifted from missing step comments to gate overrides (advancing past C4.1 FAIL) and retroactive step backfilling. Latest structural fix: temporal-ordering check (PR #1976, cycle 405) detects retroactively posted steps. Cycle 406 is the first validation cycle with this check active. If category persists, investigate gate-override enforcement.",
-          "root_cause": "Three sub-causes: (1) Missing step comments (fixed by post-step tool, cycle 200). (2) Retroactive step posting (addressed by temporal-ordering check, cycle 405). (3) Gate overrides — advancing past blocking C4.1/C5.5 failures (no mechanical enforcement yet).",
-          "updated_cycle": 406,
-          "verification_cycle": 406
+          "rationale": "Cycle 461 refresh: chronic 5/6 escalation re-triggered by cycle 460 F3 (record-dispatch did not backfill addresses_finding on existing in_flight session for #2301; cycle 461 confirmed the same bug skipping addresses_finding for #2310). New sub-cause identified: record-dispatch update path treats duplicate-issue as error instead of merging the new addresses_finding metadata. Structural follow-up dispatched as #2310 (PR #2311 in flight): updates apply_dispatch_patch to update existing in_flight session in place. Verification will be confirmed once #2311 merges and cycle 462 review confirms no further linkage gaps.",
+          "root_cause": "Four sub-causes: (1) Missing step comments (fixed by post-step tool, cycle 200). (2) Retroactive step posting (addressed by temporal-ordering check, cycle 405). (3) Gate overrides — advancing past blocking C4.1/C5.5 failures (no mechanical enforcement yet). (4) record-dispatch addresses_finding lost on duplicate-issue update path (cycle 460/461; structural fix dispatched as #2310 cycle 461).",
+          "updated_cycle": 461,
+          "verification_cycle": 461
         },
         {
           "added_cycle": 204,
           "category": "receipt-integrity",
           "chosen_path": "structural-fix",
-          "rationale": "receipt-integrity findings in cycles 197-203 consistently flagged nonexistent SHA hashes and stale metrics in hand-assembled worklog receipt tables. The structural fix has two layers: (1) cycle-receipts tool (merged cycle 200) generates receipts mechanically from git log, and (2) cycle-close enhancement (#884, dispatched cycle 204) will embed receipt tables in closing comments automatically. The root cause is manual assembly — the fix is automation.",
+          "rationale": "receipt-integrity findings in cycles 197-203 consistently flagged nonexistent SHA hashes and stale metrics in hand-assembled worklog receipt tables. The structural fix has two layers: (1) cycle-receipts tool (merged cycle 200) generates receipts mechanically from git log, and (2) cycle-close enhancement (#884) embeds receipt tables in closing comments automatically. Cycle 461 re-verification: receipt-integrity has not appeared in any of the last 16 review cycles (444-460); cycle-receipts and the receipt-validate tool remain in active use on every cycle (cycle 461 close-out invokes both). Structural fix is holding.",
           "root_cause": "Orchestrator hand-assembled receipt tables by copying SHAs from tool output, sometimes recording wrong or stale hashes. The cycle-receipts tool exists but was not consistently used to generate the worklog receipt table.",
-          "verification_cycle": 204
+          "updated_cycle": 461,
+          "verification_cycle": 461
         },
         {
           "added_cycle": 209,
@@ -8085,18 +8087,19 @@
           "added_cycle": 243,
           "category": "state-integrity",
           "chosen_path": "structural-fix",
-          "rationale": "Cycle 414 chronic-category refresh: state-integrity appeared in 5/6 reviews (cycles 408-413). Cycle 413 review F3: field-inventory freshness markers stale for chronic_category_responses (cycle 406) and step_comment_acknowledged_gaps (cycle 402). Root cause persists: freshness markers are not updated in the same commit as the analysis that validates them. The field-inventory pipeline check catches staleness mechanically, but the orchestrator must manually update markers after performing analysis. Actioned this cycle: updated all chronic category response entries and refreshed stale field-inventory markers.",
-          "root_cause": "Four sub-causes: (1) cycle-complete mechanically bumping markers (fixed cycle 243). (2) Manual marker bumping without verification (caught by cross-check cycle 266). (3) verify-review-events fail-open (fixed cycle 270). (4) Freshness markers not updated when associated analysis is performed (behavioral, partially caught by field-inventory check).",
-          "updated_cycle": 414,
-          "verification_cycle": 406
+          "rationale": "Cycle 461 refresh: state-integrity chronic 5/6 re-triggered by cycle 460 F2 (process-merge backfilled a duplicate agent_sessions row for PR #2299, leaving the originating row {issue:2298,pr:2299} alongside the backfill {issue:2300,pr:2299}). New sub-cause identified: process-merge update_agent_sessions matches on (issue OR pr) so a wrong-issue invocation appends a backfill instead of merging into the existing PR row. Structural follow-up dispatched as #2310 (PR #2311 in flight): makes process-merge per-PR idempotent and collapses duplicates. Cycle 462 will verify after #2311 lands.",
+          "root_cause": "Five sub-causes: (1) cycle-complete mechanically bumping markers (fixed cycle 243). (2) Manual marker bumping without verification (caught by cross-check cycle 266). (3) verify-review-events fail-open (fixed cycle 270). (4) Freshness markers not updated when associated analysis is performed (behavioral, partially caught by field-inventory check). (5) process-merge backfill appends duplicate row for same PR when invoked with non-originating issue (cycle 460/461; structural fix dispatched as #2310 cycle 461).",
+          "updated_cycle": 461,
+          "verification_cycle": 461
         },
         {
           "added_cycle": 246,
           "category": "code-quality",
           "chosen_path": "structural-fix",
-          "rationale": "Dispatched #1176 to fix write-entry auto-derivation gating on args.cycle instead of resolved cycle, and to add regression tests for the default (omitted-cycle) invocation path. The pattern generator is insufficient test coverage for default invocation paths.",
+          "rationale": "Dispatched #1176 (cycle 258) to fix write-entry auto-derivation gating on args.cycle instead of resolved cycle, and to add regression tests for the default (omitted-cycle) invocation path. Cycle 461 re-verification: code-quality has appeared in only 1 of the last 16 review cycles (cycle 459 F4, audit-inbound-lifecycle baseline matcher), and that finding was a different sub-pattern (legacy ack matcher gap, not default-path test coverage). The cycle 258 structural fix is holding for its original sub-cause.",
           "root_cause": "Tool code is merged with tests that only exercise the explicit-argument path (cycle: Some(N)), not the default production path (cycle: None, resolved from state.json). Bugs in the default invocation are invisible to CI.",
-          "verification_cycle": 258
+          "updated_cycle": 461,
+          "verification_cycle": 461
         },
         {
           "added_cycle": 250,
@@ -8111,10 +8114,10 @@
           "added_cycle": 260,
           "category": "review-evidence",
           "chosen_path": "structural-fix",
-          "rationale": "Behavioral part adopted (gh pr review --approve since cycle 260). Tool hardened cycle 270 (PR #1300): APPROVED-only filter, self-review rejection, post-merge rejection, fail-closed on missing PRs. Tool re-run cycle 270 verified successfully against cycles 269-270 (marker advanced to 270). All filtering paths covered by unit tests.",
+          "rationale": "Behavioral part adopted (gh pr review --approve since cycle 260). Tool hardened cycle 270 (PR #1300): APPROVED-only filter, self-review rejection, post-merge rejection, fail-closed on missing PRs. Cycle 461 re-verification: review-evidence has not appeared in any of the last 16 review cycles (444-460); verify-review-events runs every cycle as part of close-out and review_events_verified_through_cycle continues to advance with each cycle. Structural fix is holding.",
           "root_cause": "Review events were optional and unverified. No tool, checklist step, or invariant confirmed that GitHub review events existed on PRs before merge. The orchestrator merged PRs with only worklog/journal claims of review, which are self-reported and not auditable.",
-          "updated_cycle": 282,
-          "verification_cycle": 282
+          "updated_cycle": 461,
+          "verification_cycle": 461
         },
         {
           "added_cycle": 383,
