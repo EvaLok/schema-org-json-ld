@@ -6947,8 +6947,10 @@
       "addresses_finding": "460:1",
       "dispatched_at": "2026-04-08T21:48:55Z",
       "issue": 2310,
+      "merged_at": "2026-04-08T23:35:05Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2311,
+      "status": "merged",
       "title": "Tool: structural fix for cycle 460 chronic findings (worklog deadline derivation, process-merge dedupe, record-dispatch addresses_finding update)"
     },
     {
@@ -7947,12 +7949,12 @@
       }
     }
   },
-  "in_flight_sessions": 4,
+  "in_flight_sessions": 3,
   "last_cycle": {
     "duration_minutes": 39,
     "issue": 2314,
     "number": 462,
-    "summary": "3 dispatches, 2 merges (PR #2305, PR #2308)",
+    "summary": "1 dispatches, 1 merges",
     "timestamp": "2026-04-08T23:14:51Z"
   },
   "last_eva_comment_check": "2026-04-08T23:14:51Z",
