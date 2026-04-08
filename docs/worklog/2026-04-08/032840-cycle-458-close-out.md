@@ -16,12 +16,12 @@
 
 - None.
 
-## Pre-dispatch state
+## Cycle state
 
-*Snapshot before review dispatch — final counters may differ after C6.*
 
 - **In-flight agent sessions**: 2
-- **Pipeline status**: FAIL (6 warnings, 2 blocking: frozen-commit-verify, current-cycle-steps)
+- **Pipeline status**: FAIL→PASS (C5.5 initially failed: FAIL (5 warnings, 2 blocking: frozen-commit-verify, current-cycle-steps); resolved by re-running close-out after fixes)
+- **Close-out gate failures**: C5.5 FAIL: FAIL (5 warnings, 2 blocking: frozen-commit-verify, current-cycle-steps)
 - **Publish gate**: published
 
 ## Next steps
