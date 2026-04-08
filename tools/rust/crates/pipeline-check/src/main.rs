@@ -9,9 +9,9 @@ use state_schema::{
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::hash::{Hash, Hasher};
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::sync::LazyLock;
 
 const HOUSEKEEPING_FINDINGS_KEY: &str = "items_needing_attention";
@@ -2531,11 +2531,11 @@ fn frozen_worklog_immutability_status(repo_root: &Path) -> Result<(StepStatus, S
                 cycle
             ));
         };
-        let current_hash = worklog_content_hash(&current_content);
-        let baseline_hash = worklog_content_hash(&baseline_content);
+        let current_hash = worklog_content_hash(&current_content)?;
+        let baseline_hash = worklog_content_hash(&baseline_content)?;
         if current_hash != baseline_hash {
             divergences.push(format!(
-                "{} diverged from cycle-complete baseline {} (cycle {}, current hash {:016x}, baseline hash {:016x})",
+                "{} diverged from cycle-complete baseline {} (cycle {}, current hash {}, baseline hash {})",
                 worklog_path.display(),
                 short_commit(&baseline_commit),
                 cycle,
@@ -2895,10 +2895,30 @@ fn cycle_complete_worklog_content(
     )))
 }
 
-fn worklog_content_hash(content: &str) -> u64 {
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    content.hash(&mut hasher);
-    hasher.finish()
+fn worklog_content_hash(content: &str) -> Result<String, String> {
+    let mut child = Command::new("git")
+        .args(["hash-object", "--stdin"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .map_err(|error| format!("failed to execute git hash-object: {}", error))?;
+    {
+        let stdin = child
+            .stdin
+            .as_mut()
+            .ok_or_else(|| "failed to open stdin for git hash-object".to_string())?;
+        stdin
+            .write_all(content.as_bytes())
+            .map_err(|error| format!("failed to write content to git hash-object: {}", error))?;
+    }
+    let output = child
+        .wait_with_output()
+        .map_err(|error| format!("failed to wait for git hash-object: {}", error))?;
+    if !output.status.success() {
+        return Err(command_failure_message("git hash-object", &output));
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
 fn worklog_pipeline_status_value(content: &str) -> Option<&str> {

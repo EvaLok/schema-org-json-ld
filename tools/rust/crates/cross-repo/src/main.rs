@@ -1311,10 +1311,7 @@ fn validate_repo_root(repo_root: &Path) -> Result<(), String> {
     Ok(())
 }
 
-fn write_create_audit_inbound_input(
-    title: &str,
-    body: &str,
-) -> Result<PathBuf, String> {
+fn write_create_audit_inbound_input(title: &str, body: &str) -> Result<PathBuf, String> {
     let payload = serde_json::json!({
         "title": title,
         "body": body,
@@ -1753,14 +1750,12 @@ mod tests {
         .expect("body file should be written");
         let runner = MockRunner::with_results(
             vec![],
-            vec![ok_json(json!([[
-                audit_inbound_issue_json(
-                    812,
-                    "[Audit] Existing response",
-                    "Responding to https://github.com/EvaLok/schema-org-json-ld-audit/issues/348",
-                    TRUSTED_AUTHOR
-                )
-            ]]))],
+            vec![ok_json(json!([[audit_inbound_issue_json(
+                812,
+                "[Audit] Existing response",
+                "Responding to https://github.com/EvaLok/schema-org-json-ld-audit/issues/348",
+                TRUSTED_AUTHOR
+            )]]))],
         );
         let cli = Cli {
             repo_root: repo.path().to_path_buf(),
@@ -1805,14 +1800,12 @@ mod tests {
         let runner = MockRunner::with_results(
             vec![],
             vec![
-                ok_json(json!([[
-                    audit_inbound_issue_json(
-                        812,
-                        "[Audit] Existing response",
-                        "Responding to https://github.com/EvaLok/schema-org-json-ld-audit/issues/348",
-                        TRUSTED_AUTHOR
-                    )
-                ]])),
+                ok_json(json!([[audit_inbound_issue_json(
+                    812,
+                    "[Audit] Existing response",
+                    "Responding to https://github.com/EvaLok/schema-org-json-ld-audit/issues/348",
+                    TRUSTED_AUTHOR
+                )]])),
                 ok_json(json!({
                     "number": 913
                 })),
@@ -1853,14 +1846,12 @@ mod tests {
         fs::write(&body_file, "Responding to audit #501").expect("body file should be written");
         let runner = MockRunner::with_results(
             vec![],
-            vec![ok_json(json!([[
-                audit_inbound_issue_json(
-                    920,
-                    "[Audit] Closed response",
-                    "Previously handled in audit #501.",
-                    TRUSTED_AUTHOR
-                )
-            ]]))],
+            vec![ok_json(json!([[audit_inbound_issue_json(
+                920,
+                "[Audit] Closed response",
+                "Previously handled in audit #501.",
+                TRUSTED_AUTHOR
+            )]]))],
         );
         let cli = Cli {
             repo_root: repo.path().to_path_buf(),
