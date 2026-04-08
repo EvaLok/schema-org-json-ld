@@ -914,9 +914,18 @@ fn validate_commitment_section(content: &str) -> Option<String> {
 /// the entry body says it filed a question-for-eva, but the trailing
 /// "Open questions" section claims there are none.
 ///
+/// Journal files contain multiple cycle entries (one per `## YYYY-MM-DD —
+/// Cycle N:` heading). Only the LATEST cycle entry is checked, so historical
+/// entries with already-shipped contradictions don't block future cycles.
+///
 /// Pure text check, no GitHub queries — chronic-category structural fix.
 fn validate_open_questions_consistency(content: &str) -> Option<String> {
-    let section = extract_section_body(content, OPEN_QUESTIONS_HEADING)?;
+    // Scope to the most recent cycle entry. Look for the first `## ` heading
+    // and slice from there to the next `## ` heading. If no cycle headings
+    // exist, fall back to checking the whole content (for the test fixtures).
+    let entry = latest_cycle_entry(content).unwrap_or(content);
+
+    let section = extract_section_body(entry, OPEN_QUESTIONS_HEADING)?;
 
     let bullet_lines: Vec<&str> = section
         .lines()
@@ -931,8 +940,8 @@ fn validate_open_questions_consistency(content: &str) -> Option<String> {
         return None;
     }
 
-    let body_before = match content.find(OPEN_QUESTIONS_HEADING) {
-        Some(idx) => &content[..idx],
+    let body_before = match entry.find(OPEN_QUESTIONS_HEADING) {
+        Some(idx) => &entry[..idx],
         None => return None,
     };
     let lowered = body_before.to_lowercase();
@@ -947,6 +956,23 @@ fn validate_open_questions_consistency(content: &str) -> Option<String> {
         "journal entry's 'Open questions' section says 'None' but the body references filing a question-for-eva — list the open question or rephrase the body"
             .to_string(),
     )
+}
+
+/// Returns the slice of `content` covering the most recent cycle entry,
+/// delimited by H2 headings (`## `). Returns None if no H2 headings are
+/// found in the content.
+fn latest_cycle_entry(content: &str) -> Option<&str> {
+    let first_h2 = content.find("\n## ").map(|i| i + 1).or_else(|| {
+        if content.starts_with("## ") {
+            Some(0)
+        } else {
+            None
+        }
+    })?;
+    let after_first = &content[first_h2..];
+    let next_h2 = after_first[3..].find("\n## ").map(|i| i + 3);
+    let end = next_h2.unwrap_or(after_first.len());
+    Some(&after_first[..end])
 }
 
 fn extract_markdown_value<'a>(content: &'a str, label: &str) -> Option<&'a str> {
@@ -1908,6 +1934,83 @@ Did some normal cycle work without filing any escalation.
 - None.
 ";
         assert!(validate_open_questions_consistency(content).is_none());
+    }
+
+    #[test]
+    fn open_questions_check_only_inspects_latest_cycle_entry() {
+        // Cycle 459 hotfix: F4 must scope to the most recent cycle entry only,
+        // otherwise an already-shipped historical contradiction (cycle 458's
+        // entry, which prompted the fix) would block every subsequent cycle's
+        // close-out.
+        let content = "\
+## 2026-04-08 — Cycle 458: example with historical contradiction
+
+### What I tried
+
+filed question-for-eva #2293 with options.
+
+### Concrete commitments for next cycle
+
+1. Verify the thing.
+
+### Open questions
+
+- None.
+
+## 2026-04-08 — Cycle 459: clean entry
+
+### What I tried
+
+Did normal cycle work.
+
+### Concrete commitments for next cycle
+
+1. Verify another thing.
+
+### Open questions
+
+- None.
+";
+        // Latest entry (cycle 459) has no question-for-eva mention, so the
+        // check should pass even though the cycle 458 entry above contains
+        // the contradiction the check was designed to catch.
+        assert!(validate_open_questions_consistency(content).is_none());
+    }
+
+    #[test]
+    fn open_questions_check_still_catches_latest_entry_contradiction() {
+        let content = "\
+## 2026-04-08 — Cycle 458: clean entry
+
+### What I tried
+
+Routine work.
+
+### Concrete commitments for next cycle
+
+1. Verify the thing.
+
+### Open questions
+
+- None.
+
+## 2026-04-08 — Cycle 459: contradiction in newest entry
+
+### What I tried
+
+filed question-for-eva #2293 with options.
+
+### Concrete commitments for next cycle
+
+1. Verify the thing.
+
+### Open questions
+
+- None.
+";
+        // Latest entry (cycle 459) has the contradiction, so the check fails.
+        let failure = validate_open_questions_consistency(content).expect("expected failure");
+        assert!(failure.contains("Open questions"));
     }
 
     #[test]
