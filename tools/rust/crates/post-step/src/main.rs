@@ -114,8 +114,8 @@ fn execute(cli: &Cli, runner: &dyn CommentPoster) -> Result<String, String> {
 }
 
 fn resolve_body(cli: &Cli) -> Result<String, String> {
-	let mut stdin_handle = std::io::stdin();
-	resolve_body_from_reader(cli, &mut stdin_handle)
+	let mut stdin_reader = std::io::stdin();
+	resolve_body_from_reader(cli, &mut stdin_reader)
 }
 
 fn resolve_body_from_reader<R: Read>(cli: &Cli, reader: &mut R) -> Result<String, String> {
@@ -220,12 +220,16 @@ fn normalize_body_text(body: &str) -> Result<String, String> {
 	Ok(normalized.to_string())
 }
 
+fn body_template_error(pattern: &str, offset: usize) -> String {
+	format!(
+		"body contains unexpanded shell substitution pattern '{}' near offset {} — likely template-expansion failure. Use --allow-template-syntax to override or pipe pre-evaluated text via --body-stdin.",
+		pattern, offset
+	)
+}
+
 fn validate_body_template_syntax(body: &str) -> Result<(), String> {
 	if let Some((pattern, offset)) = find_unexpanded_template_syntax(body) {
-		return Err(format!(
-			"body contains unexpanded shell substitution pattern '{}' near offset {} — likely template-expansion failure. Use --allow-template-syntax to override or pipe pre-evaluated text via --body-stdin.",
-			pattern, offset
-		));
+		return Err(body_template_error(pattern, offset));
 	}
 
 	Ok(())
@@ -1102,13 +1106,6 @@ mod tests {
 			skip_validation: false,
 			repo_root,
 		}
-	}
-
-	fn body_template_error(pattern: &str, offset: usize) -> String {
-		format!(
-			"body contains unexpanded shell substitution pattern '{}' near offset {} — likely template-expansion failure. Use --allow-template-syntax to override or pipe pre-evaluated text via --body-stdin.",
-			pattern, offset
-		)
 	}
 
 	fn temp_repo_root(prefix: &str) -> PathBuf {
