@@ -6950,6 +6950,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Tool: structural fix for cycle 460 chronic findings (worklog deadline derivation, process-merge dedupe, record-dispatch addresses_finding update)"
+    },
+    {
+      "dispatched_at": "2026-04-08T22:08:50Z",
+      "issue": 2312,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 461 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -7657,7 +7664,7 @@
       "resolved_ref": "docs/reviews/cycle-458.md"
     }
   ],
-  "dispatch_log_latest": "#2310 Tool: structural fix for cycle 460 chronic findings (worklog deadline derivation, process-merge dedupe, record-dispatch addresses_finding update) (cycle 461)",
+  "dispatch_log_latest": "#2312 [Cycle Review] Cycle 461 end-of-cycle review (cycle 461)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7930,12 +7937,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 3,
   "last_cycle": {
     "duration_minutes": 39,
     "issue": 2309,
     "number": 461,
-    "summary": "1 dispatches, 2 merges (PR #2305, PR #2308)",
+    "summary": "2 dispatches, 2 merges (PR #2305, PR #2308)",
     "timestamp": "2026-04-08T21:56:05Z"
   },
   "last_eva_comment_check": "2026-04-08T21:56:05Z",
@@ -13653,7 +13660,7 @@
     ],
     "last_review_cycle": 460
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 461,
   "schema_status": {
     "directory_layout": {
