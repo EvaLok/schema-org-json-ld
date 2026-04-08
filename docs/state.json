@@ -6885,8 +6885,10 @@
       "addresses_finding": "455:2",
       "dispatched_at": "2026-04-08T03:23:20Z",
       "issue": 2291,
+      "merged_at": "2026-04-08T05:21:13Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2292,
+      "status": "merged",
       "title": "Tool fix: cycle 455 review F2 + F4 — close_out parser broken; record-dispatch leaves last_cycle.summary stale (re-dispatch of #2274)"
     },
     {
@@ -7873,12 +7875,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 25,
     "issue": 2296,
     "number": 459,
-    "summary": "0 dispatches, 2 merges",
+    "summary": "0 dispatches, 3 merges",
     "timestamp": "2026-04-08T04:50:37Z"
   },
   "last_eva_comment_check": "2026-04-08T04:50:37Z",
