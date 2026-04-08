@@ -7060,6 +7060,51 @@ mod tests {
     }
 
     #[test]
+    fn audit_inbound_lifecycle_errors_when_issue_fetch_fails() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-audit-inbound-lifecycle-error-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "audit_processed": [385]
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("issue comment fetch not expected");
+            }
+
+            fn fetch_audit_inbound_issues(&self) -> Result<Vec<AuditInboundIssue>, String> {
+                Err("failed to execute gh api".to_string())
+            }
+        }
+
+        let step = verify_audit_inbound_lifecycle(&root, &Runner);
+
+        assert_eq!(step.status, StepStatus::Error);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert_eq!(step.detail.as_deref(), Some("failed to execute gh api"));
+    }
+
+    #[test]
     fn deferral_accumulation_passes_when_review_history_is_empty() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
