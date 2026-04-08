@@ -6928,8 +6928,10 @@
       "addresses_finding": "459:3",
       "dispatched_at": "2026-04-08T09:42:31Z",
       "issue": 2304,
+      "merged_at": "2026-04-08T21:51:25Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2305,
+      "status": "merged",
       "title": "Tool: process-review chronic_category_responses auto-update + pipeline-check currency gate (cycle 459 F3 plus audit 388 fix)"
     },
     {
@@ -7927,12 +7929,12 @@
       }
     }
   },
-  "in_flight_sessions": 3,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 26,
     "issue": 2309,
     "number": 461,
-    "summary": "1 dispatch, 1 merges",
+    "summary": "1 dispatches, 2 merges",
     "timestamp": "2026-04-08T21:16:53Z"
   },
   "last_eva_comment_check": "2026-04-08T21:16:53Z",
