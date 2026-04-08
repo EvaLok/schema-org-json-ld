@@ -114,8 +114,8 @@ fn execute(cli: &Cli, runner: &dyn CommentPoster) -> Result<String, String> {
 }
 
 fn resolve_body(cli: &Cli) -> Result<String, String> {
-	let mut stdin = std::io::stdin();
-	resolve_body_from_reader(cli, &mut stdin)
+	let mut stdin_handle = std::io::stdin();
+	resolve_body_from_reader(cli, &mut stdin_handle)
 }
 
 fn resolve_body_from_reader<R: Read>(cli: &Cli, reader: &mut R) -> Result<String, String> {
@@ -242,8 +242,8 @@ fn find_unexpanded_template_syntax(body: &str) -> Option<(&'static str, usize)> 
 		.map(|(offset, _)| ("${...}", offset));
 
 	match (command_substitution, variable_expansion) {
-		(Some(command), Some(variable)) => {
-			if command.1 <= variable.1 {
+		(Some(command @ (_, command_offset)), Some(variable @ (_, variable_offset))) => {
+			if command_offset <= variable_offset {
 				Some(command)
 			} else {
 				Some(variable)
