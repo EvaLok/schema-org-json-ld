@@ -7636,7 +7636,8 @@
       "category": "test-gap",
       "deadline_cycle": 461,
       "deferred_cycle": 456,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "commit 8d7db229 (test detect_prior_gate_failures_filters_stale_cycle_records added cycle 461)"
     },
     {
       "category": "worklog-accuracy",
