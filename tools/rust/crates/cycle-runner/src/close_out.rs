@@ -1571,6 +1571,13 @@ mod tests {
         .unwrap();
     }
 
+    fn setup_gh_mock(bin_dir: &std::path::Path, issue: u64) {
+        fs::create_dir_all(bin_dir).unwrap();
+        let gh_path = bin_dir.join("gh");
+        write_gh_script(&gh_path, issue, &[], true);
+        make_executable(&gh_path);
+    }
+
     fn setup_temp_repo_with_remote(name: &str) -> (std::path::PathBuf, std::path::PathBuf) {
         let dir = setup_temp_repo(name);
         let remote = unique_temp_dir(&format!("cycle-runner-close-out-remote-{}", name));
@@ -2361,10 +2368,7 @@ mod tests {
             .unwrap();
 
         let bin_dir = dir.join("bin");
-        fs::create_dir_all(&bin_dir).unwrap();
-        let gh_path = bin_dir.join("gh");
-        write_gh_script(&gh_path, 123, &[], true);
-        make_executable(&gh_path);
+        setup_gh_mock(&bin_dir, 123);
 
         with_path_prefix(&bin_dir, || run(&dir, 123, Some(345), false)).unwrap();
 
@@ -2497,10 +2501,7 @@ mod tests {
             .unwrap();
 
         let bin_dir = dir.join("bin");
-        fs::create_dir_all(&bin_dir).unwrap();
-        let gh_path = bin_dir.join("gh");
-        write_gh_script(&gh_path, 123, &[], true);
-        make_executable(&gh_path);
+        setup_gh_mock(&bin_dir, 123);
 
         with_path_prefix(&bin_dir, || run(&dir, 123, Some(345), false)).unwrap();
 
@@ -2642,10 +2643,7 @@ mod tests {
             .unwrap();
 
         let bin_dir = dir.join("bin");
-        fs::create_dir_all(&bin_dir).unwrap();
-        let gh_path = bin_dir.join("gh");
-        write_gh_script(&gh_path, 123, &[], true);
-        make_executable(&gh_path);
+        setup_gh_mock(&bin_dir, 123);
 
         with_path_prefix(&bin_dir, || run(&dir, 123, Some(345), false)).unwrap();
 
@@ -2777,10 +2775,7 @@ mod tests {
             .unwrap();
 
         let bin_dir = dir.join("bin");
-        fs::create_dir_all(&bin_dir).unwrap();
-        let gh_path = bin_dir.join("gh");
-        write_gh_script(&gh_path, 123, &[], true);
-        make_executable(&gh_path);
+        setup_gh_mock(&bin_dir, 123);
 
         with_path_prefix(&bin_dir, || run(&dir, 123, Some(345), false)).unwrap();
 
