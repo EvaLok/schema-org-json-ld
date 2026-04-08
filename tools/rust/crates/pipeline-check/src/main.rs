@@ -194,7 +194,7 @@ trait CommandRunner {
     fn run(&self, script_path: &Path, args: &[String]) -> Result<ExecutionResult, String>;
     fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String>;
     fn fetch_audit_inbound_issues(&self) -> Result<Vec<AuditInboundIssue>, String> {
-        Err("audit-inbound issue fetch not implemented".to_string())
+        Err("audit-inbound issue fetch not supported by this runner".to_string())
     }
     fn fetch_issue_comments_with_timestamps(
         &self,
@@ -2737,7 +2737,7 @@ fn audit_inbound_lifecycle_assessment(
         .map(|audit_issue| {
             u64::try_from(audit_issue).map_err(|_| {
                 format!(
-                    "audit_processed must contain only non-negative integers (found {audit_issue})"
+                    "audit_processed must contain only valid u64 integers (found {audit_issue})"
                 )
             })
         })
@@ -2792,13 +2792,30 @@ fn audit_inbound_lifecycle_assessment(
 }
 
 fn audit_inbound_issue_matches(issue: &AuditInboundIssue, audit_issue: u64) -> bool {
-    let audit_reference = format!("#{audit_issue}");
     issue.title.contains("[audit-inbound]")
-        && (issue.title.contains(&audit_reference) || issue.body.contains(&audit_reference))
+        && (contains_audit_issue_reference(&issue.title, audit_issue)
+            || contains_audit_issue_reference(&issue.body, audit_issue))
 }
 
 fn audit_inbound_suggested_title(audit_issue: u64) -> String {
     format!("[audit-inbound] Acknowledge audit #{audit_issue}")
+}
+
+fn contains_audit_issue_reference(text: &str, audit_issue: u64) -> bool {
+    let audit_reference = format!("#{audit_issue}");
+    let mut start = 0;
+
+    while let Some(offset) = text[start..].find(&audit_reference) {
+        let absolute = start + offset;
+        let end = absolute + audit_reference.len();
+        let trailing_char = text[end..].chars().next();
+        if !matches!(trailing_char, Some(ch) if ch.is_ascii_digit()) {
+            return true;
+        }
+        start = end;
+    }
+
+    false
 }
 
 fn deferral_accumulation_assessment(repo_root: &Path) -> Result<StepAssessment, String> {
@@ -7102,6 +7119,58 @@ mod tests {
         assert_eq!(step.status, StepStatus::Error);
         assert_eq!(step.severity, Severity::Blocking);
         assert_eq!(step.detail.as_deref(), Some("failed to execute gh api"));
+    }
+
+    #[test]
+    fn audit_inbound_lifecycle_does_not_match_longer_issue_numbers() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-audit-inbound-lifecycle-boundary-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "audit_processed": [382]
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("issue comment fetch not expected");
+            }
+
+            fn fetch_audit_inbound_issues(&self) -> Result<Vec<AuditInboundIssue>, String> {
+                Ok(vec![AuditInboundIssue {
+                    title: "[audit-inbound] Acknowledge audit #3821".to_string(),
+                    body: String::new(),
+                    state: "open".to_string(),
+                }])
+            }
+        }
+
+        let step = verify_audit_inbound_lifecycle(&root, &Runner);
+
+        assert_eq!(step.status, StepStatus::Fail);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("#382"));
     }
 
     #[test]
