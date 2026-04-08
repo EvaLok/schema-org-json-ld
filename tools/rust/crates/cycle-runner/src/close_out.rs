@@ -77,7 +77,7 @@ pub fn run(
     eprintln!("Worklog: {}", worklog.display());
     eprintln!("Journal: {}", journal.display());
 
-    let prior_gate_failures = detect_prior_gate_failures(repo_root, issue, cycle);
+    let prior_gate_failures = detect_prior_gate_failures(repo_root, cycle);
 
     // C4.1: Validate docs — GATE
     step_c4_1(repo_root, issue, cycle, &worklog, &journal)?;
@@ -138,73 +138,30 @@ pub fn run(
     Ok(())
 }
 
-fn detect_prior_gate_failures(repo_root: &Path, issue: u64, cycle: u64) -> Vec<String> {
-    let mut failures = Vec::new();
-
-    // State-based source of truth: tool_pipeline.c5_5_initial_result records the
-    // first C5.5 failure for the current cycle (set by record_initial_c5_5_failure).
-    // This is what survives the F2 dispatch (#2274) — comment parsing is unreliable
-    // because the orchestrator's posted comment shape does not match the parsers.
-    if let Ok(state) = read_state_value(repo_root) {
-        if let Some(initial) = state.pointer("/tool_pipeline/c5_5_initial_result") {
-            let cycle_match = initial
-                .get("cycle")
-                .and_then(Value::as_u64)
-                .map(|c| c == cycle)
-                .unwrap_or(false);
-            let result_fail = initial
-                .get("result")
-                .and_then(Value::as_str)
-                .map(|s| s.eq_ignore_ascii_case("FAIL"))
-                .unwrap_or(false);
-            if cycle_match && result_fail {
-                if let Some(summary) = initial
-                    .get("summary")
-                    .and_then(Value::as_str)
-                    .map(str::trim)
-                    .filter(|s| !s.is_empty())
-                {
-                    failures.push(format!("C5.5 FAIL: {summary}"));
-                }
-            }
-        }
-    }
-
-    let comments_path = format!("repos/{}/issues/{}/comments", MAIN_REPO, issue);
-    let output = match Command::new("gh")
-        .current_dir(repo_root)
-        .args(["api", &comments_path, "--paginate", "--jq", ".[].body"])
-        .output()
-    {
-        Ok(output) => output,
+fn detect_prior_gate_failures(repo_root: &Path, cycle: u64) -> Vec<String> {
+    let state = match read_state_value(repo_root) {
+        Ok(state) => state,
         Err(error) => {
-            eprintln!("Warning: unable to query prior gate failures from issue comments: {error}");
-            return failures;
+            eprintln!("Warning: unable to read prior gate failures from docs/state.json: {error}");
+            return Vec::new();
         }
     };
 
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-        eprintln!("Warning: unable to query prior gate failures from issue comments: {stderr}");
-        return failures;
+    let mut failures = Vec::new();
+    if let Some(failure) = read_prior_gate_failure_from_state(
+        &state,
+        "/tool_pipeline/c4_1_initial_result",
+        cycle,
+        "C4.1",
+    ) {
+        failures.push(failure);
     }
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let comment_bodies = stdout
-        .lines()
-        .filter(|line| !line.trim().is_empty())
-        .map(|line| match serde_json::from_str::<String>(line) {
-            Ok(body) => body,
-            Err(error) => {
-                eprintln!(
-                    "Warning: unable to parse gh api comment body as JSON string, using raw output: {error}"
-                );
-                line.trim().to_string()
-            }
-        })
-        .collect::<Vec<_>>();
-
-    for failure in parse_prior_gate_failures_from_comment_bodies(comment_bodies.iter().map(String::as_str)) {
+    if let Some(failure) = read_prior_gate_failure_from_state(
+        &state,
+        "/tool_pipeline/c5_5_initial_result",
+        cycle,
+        "C5.5",
+    ) {
         if !failures.contains(&failure) {
             failures.push(failure);
         }
@@ -212,80 +169,34 @@ fn detect_prior_gate_failures(repo_root: &Path, issue: u64, cycle: u64) -> Vec<S
     failures
 }
 
-fn parse_prior_gate_failures_from_comment_bodies<'a>(
-    bodies: impl IntoIterator<Item = &'a str>,
-) -> Vec<String> {
-    let mut failures = Vec::new();
-    for body in bodies {
-        if let Some(failure) = parse_prior_gate_failure_from_comment_body(body) {
-            if !failures.contains(&failure) {
-                failures.push(failure);
-            }
-        }
+fn read_prior_gate_failure_from_state(
+    state: &Value,
+    pointer: &str,
+    cycle: u64,
+    step: &str,
+) -> Option<String> {
+    // Production state does not yet populate /tool_pipeline/c4_1_initial_result
+    // during C4.1 failures, so real close-out currently only freezes C4.1
+    // history from state if a future writer starts emitting it. We still read
+    // the field here to keep the state-based path ready once that writer exists.
+    let result = state.pointer(pointer)?;
+    if result.get("cycle").and_then(Value::as_u64) != Some(cycle) {
+        return None;
     }
-    failures
-}
-
-fn parse_prior_gate_failure_from_comment_body(body: &str) -> Option<String> {
-    if body.contains("### Step C4.1") {
-        return parse_c4_1_gate_failure(body).map(|reason| format!("C4.1 FAIL: {reason}"));
-    }
-    if body.contains("### Step C5.5") {
-        return parse_c5_5_gate_failure(body).map(|reason| format!("C5.5 FAIL: {reason}"));
-    }
-    None
-}
-
-fn parse_c4_1_gate_failure(body: &str) -> Option<String> {
-    let worklog_failure = body
-        .lines()
-        .find_map(|line| line.trim().strip_prefix("Worklog validation: FAIL:"))
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
-        .map(ToOwned::to_owned);
-    let journal_failure = body
-        .lines()
-        .find_map(|line| line.trim().strip_prefix("Journal validation: FAIL:"))
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
-        .map(ToOwned::to_owned);
-
-    match (worklog_failure, journal_failure) {
-        (Some(worklog), None) => Some(worklog),
-        (None, Some(journal)) => Some(journal),
-        (Some(worklog), Some(journal)) => {
-            Some(format_combined_c4_1_gate_failure(&worklog, &journal))
-        }
-        (None, None) => None,
-    }
-}
-
-fn format_combined_c4_1_gate_failure(worklog: &str, journal: &str) -> String {
-    format!("worklog: {worklog}; journal: {journal}")
-}
-
-fn parse_c5_5_gate_failure(body: &str) -> Option<String> {
-    if let Some(reason) = body
-        .lines()
-        .find_map(|line| line.trim().strip_prefix("- gate_failure_reason:"))
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
+    if !result
+        .get("result")
+        .and_then(Value::as_str)
+        .is_some_and(|value| value.eq_ignore_ascii_case("FAIL"))
     {
-        return Some(reason.to_string());
+        return None;
     }
 
-    body.lines()
-        .find_map(|line| line.trim().strip_prefix("Pipeline: FAIL"))
+    result
+        .get("summary")
+        .and_then(Value::as_str)
         .map(str::trim)
-        .map(|detail| {
-            detail
-                .strip_prefix('(')
-                .and_then(|value| value.strip_suffix(')'))
-                .unwrap_or(detail)
-                .trim()
-                .to_string()
-        })
-        .filter(|detail| !detail.is_empty())
+        .filter(|summary| !summary.is_empty())
+        .map(|summary| format!("{step} FAIL: {summary}"))
 }
 
 fn complete_close_out_phase(repo_root: &Path, cycle: u64) -> Result<(), String> {
@@ -694,7 +605,7 @@ fn format_frozen_pipeline_status(pipeline_summary: &str, prior_gate_failures: &[
         .iter()
         .map(|failure| summarize_prior_gate_failure(failure))
         .collect::<Vec<_>>();
-    details.push("resolved by re-running close-out after fixes".to_string());
+    details.push("resolved by re-run".to_string());
     format!("FAIL→PASS ({})", details.join("; "))
 }
 
@@ -703,9 +614,6 @@ fn summarize_prior_gate_failure(failure: &str) -> String {
         return format!("C4.1 initially failed: {}", reason);
     }
     if let Some(reason) = failure.strip_prefix("C5.5 FAIL:").map(str::trim) {
-        return format!("C5.5 initially failed: {}", reason);
-    }
-    if let Some(reason) = failure.strip_prefix("C5.5 initial FAIL:").map(str::trim) {
         return format!("C5.5 initially failed: {}", reason);
     }
     format!("blocking gate initially failed: {}", failure.trim())
@@ -1663,6 +1571,13 @@ mod tests {
         .unwrap();
     }
 
+    fn setup_gh_mock(bin_dir: &std::path::Path, issue: u64) {
+        fs::create_dir_all(bin_dir).unwrap();
+        let gh_path = bin_dir.join("gh");
+        write_gh_script(&gh_path, issue, &[], true);
+        make_executable(&gh_path);
+    }
+
     fn setup_temp_repo_with_remote(name: &str) -> (std::path::PathBuf, std::path::PathBuf) {
         let dir = setup_temp_repo(name);
         let remote = unique_temp_dir(&format!("cycle-runner-close-out-remote-{}", name));
@@ -2283,47 +2198,55 @@ mod tests {
     }
 
     #[test]
-    fn detect_prior_gate_failures_parses_c4_1_fail_step_comments() {
+    fn detect_prior_gate_failures_reads_c4_1_fail_from_state() {
         let dir = setup_temp_repo("detect-prior-gate-failures-c4-1");
-        let bin_dir = dir.join("bin");
-        fs::create_dir_all(&bin_dir).unwrap();
-        let gh_path = bin_dir.join("gh");
-        write_gh_script(
-            &gh_path,
-            123,
-            &["> **[main-orchestrator]** | Cycle 345\n\n### Step C4.1 — Documentation validation\n\nWorklog validation: FAIL: mismatch in receipts\nJournal validation: PASS"],
-            false,
-        );
-        make_executable(&gh_path);
+        fs::write(
+            dir.join("docs/state.json"),
+            serde_json::to_string_pretty(&json!({
+                "tool_pipeline": {
+                    "c4_1_initial_result": {
+                        "cycle": 345,
+                        "result": "FAIL",
+                        "summary": "worklog: mismatch in receipts"
+                    }
+                }
+            }))
+            .unwrap(),
+        )
+        .unwrap();
 
-        let failures = with_path_prefix(&bin_dir, || detect_prior_gate_failures(&dir, 123, 345));
+        let failures = detect_prior_gate_failures(&dir, 345);
 
         assert_eq!(
             failures,
-            vec!["C4.1 FAIL: mismatch in receipts".to_string()]
+            vec!["C4.1 FAIL: worklog: mismatch in receipts".to_string()]
         );
         let _ = fs::remove_dir_all(&dir);
     }
 
     #[test]
-    fn detect_prior_gate_failures_parses_c5_5_fail_step_comments() {
+    fn detect_prior_gate_failures_reads_c5_5_fail_from_state() {
         let dir = setup_temp_repo("detect-prior-gate-failures-c5-5");
-        let bin_dir = dir.join("bin");
-        fs::create_dir_all(&bin_dir).unwrap();
-        let gh_path = bin_dir.join("gh");
-        write_gh_script(
-            &gh_path,
-            123,
-            &["> **[main-orchestrator]** | Cycle 345\n\n### Step C5.5 — Final pipeline gate\n\nPipeline: FAIL (1 blocking finding)\n- gate_failure_reason: doc-validation stale"],
-            false,
-        );
-        make_executable(&gh_path);
+        fs::write(
+            dir.join("docs/state.json"),
+            serde_json::to_string_pretty(&json!({
+                "tool_pipeline": {
+                    "c5_5_initial_result": {
+                        "cycle": 345,
+                        "result": "FAIL",
+                        "summary": "FAIL (1 blocking finding)"
+                    }
+                }
+            }))
+            .unwrap(),
+        )
+        .unwrap();
 
-        let failures = with_path_prefix(&bin_dir, || detect_prior_gate_failures(&dir, 123, 345));
+        let failures = detect_prior_gate_failures(&dir, 345);
 
         assert_eq!(
             failures,
-            vec!["C5.5 FAIL: doc-validation stale".to_string()]
+            vec!["C5.5 FAIL: FAIL (1 blocking finding)".to_string()]
         );
         let _ = fs::remove_dir_all(&dir);
     }
@@ -2331,18 +2254,9 @@ mod tests {
     #[test]
     fn detect_prior_gate_failures_returns_empty_vec_when_no_failures_exist() {
         let dir = setup_temp_repo("detect-prior-gate-failures-empty");
-        let bin_dir = dir.join("bin");
-        fs::create_dir_all(&bin_dir).unwrap();
-        let gh_path = bin_dir.join("gh");
-        write_gh_script(
-            &gh_path,
-            123,
-            &["> **[main-orchestrator]** | Cycle 345\n\n### Step C4.1 — Documentation validation\n\nWorklog validation: PASS\nJournal validation: PASS"],
-            false,
-        );
-        make_executable(&gh_path);
+        fs::write(dir.join("docs/state.json"), "{}\n").unwrap();
 
-        let failures = with_path_prefix(&bin_dir, || detect_prior_gate_failures(&dir, 123, 345));
+        let failures = detect_prior_gate_failures(&dir, 345);
 
         assert!(failures.is_empty());
         let _ = fs::remove_dir_all(&dir);
@@ -2379,7 +2293,12 @@ mod tests {
                     }
                 },
                 "tool_pipeline": {
-                    "status": "phase_5_active"
+                    "status": "phase_5_active",
+                    "c4_1_initial_result": {
+                        "cycle": 345,
+                        "result": "FAIL",
+                        "summary": "mismatch in receipts"
+                    }
                 },
                 "publish_gate": {
                     "status": "published"
@@ -2449,15 +2368,7 @@ mod tests {
             .unwrap();
 
         let bin_dir = dir.join("bin");
-        fs::create_dir_all(&bin_dir).unwrap();
-        let gh_path = bin_dir.join("gh");
-        write_gh_script(
-            &gh_path,
-            123,
-            &["> **[main-orchestrator]** | Cycle 345\n\n### Step C4.1 — Documentation validation\n\nWorklog validation: FAIL: mismatch in receipts\nJournal validation: PASS"],
-            true,
-        );
-        make_executable(&gh_path);
+        setup_gh_mock(&bin_dir, 123);
 
         with_path_prefix(&bin_dir, || run(&dir, 123, Some(345), false)).unwrap();
 
@@ -2515,7 +2426,12 @@ mod tests {
                     }
                 },
                 "tool_pipeline": {
-                    "status": "phase_5_active"
+                    "status": "phase_5_active",
+                    "c5_5_initial_result": {
+                        "cycle": 345,
+                        "result": "FAIL",
+                        "summary": "FAIL (1 warning, 1 blocking: foo)"
+                    }
                 },
                 "publish_gate": {
                     "status": "published"
@@ -2585,15 +2501,7 @@ mod tests {
             .unwrap();
 
         let bin_dir = dir.join("bin");
-        fs::create_dir_all(&bin_dir).unwrap();
-        let gh_path = bin_dir.join("gh");
-        write_gh_script(
-            &gh_path,
-            123,
-            &["> **[main-orchestrator]** | Cycle 345\n\n### Step C4.1 — Documentation validation\n\nWorklog validation: FAIL: mismatch in receipts\nJournal validation: PASS"],
-            true,
-        );
-        make_executable(&gh_path);
+        setup_gh_mock(&bin_dir, 123);
 
         with_path_prefix(&bin_dir, || run(&dir, 123, Some(345), false)).unwrap();
 
@@ -2604,8 +2512,14 @@ mod tests {
         assert!(!worklog.contains("## Pre-dispatch state"));
         assert!(!worklog.contains("Snapshot before review dispatch"));
         assert!(worklog.contains("- **In-flight agent sessions**: 0"));
-        assert!(worklog.contains("- **Pipeline status**: FAIL→PASS (C4.1 initially failed: mismatch in receipts; resolved by re-running close-out after fixes)"));
-        assert!(worklog.contains("- **Close-out gate failures**: C4.1 FAIL: mismatch in receipts"));
+        assert!(
+            worklog.contains(
+                "- **Pipeline status**: FAIL→PASS (C5.5 initially failed: FAIL (1 warning, 1 blocking: foo); resolved by re-run)"
+            )
+        );
+        assert!(worklog.contains(
+            "- **Close-out gate failures**: C5.5 FAIL: FAIL (1 warning, 1 blocking: foo)"
+        ));
         assert!(worklog.contains("- **Publish gate**: published"));
         assert!(worklog.contains("## Next steps\n\n1. None.\n"));
         assert!(!worklog.contains("post-dispatch"));
@@ -2654,7 +2568,12 @@ mod tests {
                     }
                 },
                 "tool_pipeline": {
-                    "status": "phase_5_active"
+                    "status": "phase_5_active",
+                    "c5_5_initial_result": {
+                        "cycle": 345,
+                        "result": "FAIL",
+                        "summary": "FAIL (1 warning, 1 blocking: foo)"
+                    }
                 },
                 "publish_gate": {
                     "status": "published"
@@ -2724,10 +2643,7 @@ mod tests {
             .unwrap();
 
         let bin_dir = dir.join("bin");
-        fs::create_dir_all(&bin_dir).unwrap();
-        let gh_path = bin_dir.join("gh");
-        write_gh_script(&gh_path, 123, &[], true);
-        make_executable(&gh_path);
+        setup_gh_mock(&bin_dir, 123);
 
         with_path_prefix(&bin_dir, || run(&dir, 123, Some(345), false)).unwrap();
 
@@ -2735,12 +2651,139 @@ mod tests {
             fs::read_to_string(dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"))
                 .unwrap();
         assert!(worklog.contains("- **In-flight agent sessions**: 0"));
-        assert!(worklog.contains("- **Pipeline status**: PASS (1 warning)"));
-        assert!(!worklog.contains("- **Pipeline status**: FAIL (1 blocking finding)"));
+        assert!(
+            worklog.contains(
+                "- **Pipeline status**: FAIL→PASS (C5.5 initially failed: FAIL (1 warning, 1 blocking: foo); resolved by re-run)"
+            )
+        );
+        assert!(!worklog.contains("- **Pipeline status**: PASS (1 warning)"));
+        assert!(worklog.contains(
+            "- **Close-out gate failures**: C5.5 FAIL: FAIL (1 warning, 1 blocking: foo)"
+        ));
         assert!(worklog.contains("- **Publish gate**: published"));
         assert!(!worklog.contains("post-dispatch"));
         assert_eq!(worklog.matches("- **Pipeline status**:").count(), 1);
         assert!(worklog.contains("## Next steps\n\n1. Plan next dispatch\n"));
+
+        let _ = fs::remove_dir_all(&dir);
+        let _ = fs::remove_dir_all(&remote);
+    }
+
+    #[test]
+    fn close_out_run_ignores_prior_c5_5_failure_from_other_cycle() {
+        let (dir, remote) = setup_temp_repo_with_remote("close-out-worklog-other-cycle-fail");
+        fs::create_dir_all(dir.join("docs/worklog/2026-03-25")).unwrap();
+        fs::create_dir_all(dir.join("docs/journal")).unwrap();
+        fs::write(
+            dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"),
+            "# Cycle 345\n\n### Issues processed\n\n- None.\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: published\n\n## Next steps\n\n1. Plan next dispatch\n",
+        )
+        .unwrap();
+        fs::write(dir.join("docs/journal/2026-03-25.md"), "# Journal\n").unwrap();
+        fs::write(
+            dir.join("docs/state.json"),
+            serde_json::to_string_pretty(&json!({
+                "cycle_phase": {
+                    "cycle": 345,
+                    "phase": "close_out",
+                    "phase_entered_at": "2026-03-25T00:00:00Z"
+                },
+                "last_cycle": {
+                    "number": 345,
+                    "timestamp": "2026-03-24T00:00:00Z"
+                },
+                "field_inventory": {
+                    "fields": {
+                        "cycle_phase": {
+                            "last_refreshed": "cycle 344"
+                        }
+                    }
+                },
+                "tool_pipeline": {
+                    "status": "phase_5_active",
+                    "c5_5_initial_result": {
+                        "cycle": 344,
+                        "result": "FAIL",
+                        "summary": "FAIL (1 warning, 1 blocking: foo)"
+                    }
+                },
+                "publish_gate": {
+                    "status": "published"
+                },
+                "in_flight_sessions": 0,
+                "copilot_metrics": {
+                    "total_dispatches": 1,
+                    "produced_pr": 1,
+                    "merged": 1,
+                    "pr_merge_rate": "100.0%",
+                    "in_flight": 0
+                },
+                "agent_sessions": []
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        let args_path = dir.join("post-step-args.txt");
+        write_post_step_append_capture_script(&dir, &args_path);
+        fs::write(
+            dir.join("tools/validate-docs"),
+            "#!/usr/bin/env bash\nset -euo pipefail\n",
+        )
+        .unwrap();
+        fs::write(
+            dir.join("tools/verify-review-events"),
+            "#!/usr/bin/env bash\nset -euo pipefail\n",
+        )
+        .unwrap();
+        fs::write(
+            dir.join("tools/receipt-validate"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"result\":\"pass\",\"canonical_receipts\":1,\"worklog_receipts\":1,\"genuinely_missing\":0}'\n",
+        )
+        .unwrap();
+        fs::write(
+            dir.join("tools/pipeline-check"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"overall\":\"pass\",\"has_blocking_findings\":false,\"steps\":[{\"name\":\"doc-validation\",\"status\":\"warn\"}]}'\n",
+        )
+        .unwrap();
+        fs::write(
+            dir.join("tools/dispatch-review"),
+            format!(
+                "#!/usr/bin/env bash\nset -euo pipefail\npython - <<'PY'\nimport json\nfrom pathlib import Path\nstate_path = Path({state_path:?})\nstate = json.loads(state_path.read_text())\nstate['in_flight_sessions'] = 1\nstate['publish_gate']['status'] = 'blocked pending review'\nstate['dispatch_log_latest'] = '#1470 [Cycle Review] Cycle 345 end-of-cycle review (cycle 345)'\nstate['agent_sessions'] = [{{'issue': 1470, 'title': '[Cycle Review] Cycle 345 end-of-cycle review', 'status': 'in_flight', 'dispatched_at': '2026-03-25T03:00:00Z'}}]\nstate_path.write_text(json.dumps(state, indent=2) + '\\n')\nPY\ngit -C {repo:?} add docs/state.json\ngit -C {repo:?} commit -m 'state(record-dispatch): #1470 dispatched [cycle 345]' >/dev/null\nprintf '%s\\n' 'Created review issue #1470 from orchestrator issue #123: https://github.com/EvaLok/schema-org-json-ld/issues/1470'\n",
+                state_path = dir.join("docs/state.json"),
+                repo = dir,
+            ),
+        )
+        .unwrap();
+
+        Command::new("git")
+            .arg("-C")
+            .arg(&dir)
+            .args(["add", "."])
+            .output()
+            .unwrap();
+        Command::new("git")
+            .arg("-C")
+            .arg(&dir)
+            .args(["commit", "-m", "initial test state"])
+            .output()
+            .unwrap();
+        Command::new("git")
+            .arg("-C")
+            .arg(&dir)
+            .args(["push", "-u", "origin", "master"])
+            .output()
+            .unwrap();
+
+        let bin_dir = dir.join("bin");
+        setup_gh_mock(&bin_dir, 123);
+
+        with_path_prefix(&bin_dir, || run(&dir, 123, Some(345), false)).unwrap();
+
+        let worklog =
+            fs::read_to_string(dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"))
+                .unwrap();
+        assert!(worklog.contains("- **Pipeline status**: PASS (1 warning)"));
+        assert!(!worklog.contains("FAIL→PASS"));
 
         let _ = fs::remove_dir_all(&dir);
         let _ = fs::remove_dir_all(&remote);
