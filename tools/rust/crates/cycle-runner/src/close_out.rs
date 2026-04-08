@@ -175,8 +175,10 @@ fn read_prior_gate_failure_from_state(
     cycle: u64,
     step: &str,
 ) -> Option<String> {
-    // TODO: populate /tool_pipeline/c4_1_initial_result during C4.1 failures so
-    // close-out can freeze C4.1 history from state alone, matching the C5.5 path.
+    // Production state does not yet populate /tool_pipeline/c4_1_initial_result
+    // during C4.1 failures, so real close-out currently only freezes C4.1
+    // history from state if a future writer starts emitting it. We still read
+    // the field here to keep the state-based path ready once that writer exists.
     let result = state.pointer(pointer)?;
     if result.get("cycle").and_then(Value::as_u64) != Some(cycle) {
         return None;

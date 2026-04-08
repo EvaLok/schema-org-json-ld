@@ -602,12 +602,7 @@ fn check_last_cycle_summary_receipts(repo_root: &Path, state: &StateJson) -> Che
             )
         }
     };
-    if summary_reports_zero_dispatches(summary)
-        && state
-            .dispatch_log_latest
-            .as_deref()
-            .and_then(dispatch_log_cycle)
-            == Some(cycle)
+    if summary_reports_zero_dispatches(summary) && current_dispatch_log_cycle(state) == Some(cycle)
     {
         return fail(
             "last_cycle_summary_receipts",
@@ -643,7 +638,7 @@ fn summary_has_zero_dispatches_and_merges(summary: &str) -> bool {
 }
 
 fn summary_reports_zero_dispatches(summary: &str) -> bool {
-    summary.trim().starts_with("0 dispatches,") || summary.trim().starts_with("0 dispatch,")
+    summary.trim().starts_with("0 dispatches,")
 }
 
 fn dispatch_log_cycle(dispatch_log_latest: &str) -> Option<u64> {
@@ -654,6 +649,10 @@ fn dispatch_log_cycle(dispatch_log_latest: &str) -> Option<u64> {
         .strip_suffix(')')?
         .parse()
         .ok()
+}
+
+fn current_dispatch_log_cycle(state: &StateJson) -> Option<u64> {
+    state.dispatch_log_latest.as_deref().and_then(dispatch_log_cycle)
 }
 
 fn count_receipt_activity_for_cycle(

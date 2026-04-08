@@ -381,6 +381,8 @@ fn sync_last_cycle_summary_after_dispatch(
 }
 
 fn increment_last_cycle_dispatch_count(summary: &str) -> Option<String> {
+    // Leave custom or unparseable summary formats untouched rather than guessing
+    // how to rewrite them during dispatch recording.
     let (dispatches, remainder) = summary
         .split_once(" dispatches, ")
         .or_else(|| summary.split_once(" dispatch, "))?;
