@@ -6875,8 +6875,10 @@
     {
       "dispatched_at": "2026-04-08T03:21:26Z",
       "issue": 2289,
+      "merged_at": "2026-04-08T05:09:33Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2290,
+      "status": "merged",
       "title": "Tool: pipeline-check audit-inbound-lifecycle step (re-dispatch of #2284, audit #385 structural fix)"
     },
     {
@@ -7869,12 +7871,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 25,
     "issue": 2296,
     "number": 459,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-08T04:50:37Z"
   },
   "last_eva_comment_check": "2026-04-08T04:50:37Z",
