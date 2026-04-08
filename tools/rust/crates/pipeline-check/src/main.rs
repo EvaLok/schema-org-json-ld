@@ -19,6 +19,13 @@ const CYCLE_STATUS_DIRECTIVES_PATH: &str = "/eva_input/comments_since_last_cycle
 const ARTIFACT_VERIFY_STEP_NAME: &str = "artifact-verify";
 const DISPOSITION_MATCH_STEP_NAME: &str = "disposition-match";
 const AUDIT_INBOUND_LIFECYCLE_STEP_NAME: &str = "audit-inbound-lifecycle";
+/// Audit-inbound-lifecycle baseline. The audit-inbound issue convention was
+/// formally established by audit #372 (cycle 446-447) per STARTUP_CHECKLIST.xml
+/// S5.inbound-mandatory provenance. Audits processed before this number
+/// pre-date the convention and may legitimately lack an audit-inbound issue.
+/// Cycle 459 hotfix: PR #2290 initially checked all historical audits and
+/// flagged 111 missing, blocking C5.5.
+const AUDIT_INBOUND_LIFECYCLE_BASELINE_AUDIT: u64 = 372;
 const DEFERRAL_ACCUMULATION_STEP_NAME: &str = "deferral-accumulation";
 const DEFERRAL_DEADLINES_STEP_NAME: &str = "deferral-deadlines";
 const MASS_DEFERRAL_GATE_STEP_NAME: &str = "mass-deferral-gate";
@@ -2747,7 +2754,10 @@ fn audit_inbound_lifecycle_assessment(
                 )
             })
         })
-        .collect::<Result<Vec<_>, _>>()?;
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
+        .filter(|audit_issue| *audit_issue >= AUDIT_INBOUND_LIFECYCLE_BASELINE_AUDIT)
+        .collect::<Vec<_>>();
 
     if audit_processed.is_empty() {
         return Ok(StepAssessment {
@@ -2798,7 +2808,14 @@ fn audit_inbound_lifecycle_assessment(
 }
 
 fn audit_inbound_issue_matches(issue: &AuditInboundIssue, audit_issue: u64) -> bool {
-    issue.title.contains("[audit-inbound]")
+    // Accept both the current `[audit-inbound]` convention and the legacy
+    // `[AUDIT-ACK]` titles used before cycle 446. Cycle 459 hotfix: PR #2290's
+    // initial matcher only recognized `[audit-inbound]`, which flagged 111
+    // historical audits as missing acknowledgments and blocked C5.5.
+    let has_inbound_marker = issue.title.contains("[audit-inbound]")
+        || issue.title.contains("[AUDIT-ACK]")
+        || issue.title.contains("[audit-ack]");
+    has_inbound_marker
         && (contains_audit_issue_reference(&issue.title, audit_issue)
             || contains_audit_issue_reference(&issue.body, audit_issue))
 }
@@ -2808,19 +2825,43 @@ fn audit_inbound_suggested_title(audit_issue: u64) -> String {
 }
 
 fn contains_audit_issue_reference(text: &str, audit_issue: u64) -> bool {
-    let audit_reference = format!("#{audit_issue}");
-    let mut start = 0;
+    if find_token(text, &format!("#{audit_issue}")) {
+        return true;
+    }
+    // Legacy `[AUDIT-ACK]` titles sometimes wrote `(audit 345)` without the
+    // `#`. Accept those too — only when preceded by the literal word "audit".
+    if find_audit_word_token(text, audit_issue) {
+        return true;
+    }
+    false
+}
 
-    while let Some(offset) = text[start..].find(&audit_reference) {
+fn find_token(text: &str, needle: &str) -> bool {
+    let mut start = 0;
+    while let Some(offset) = text[start..].find(needle) {
         let absolute = start + offset;
-        let end = absolute + audit_reference.len();
+        let end = absolute + needle.len();
         let trailing_char = text[end..].chars().next();
         if !matches!(trailing_char, Some(ch) if ch.is_ascii_digit()) {
             return true;
         }
         start = end;
     }
+    false
+}
 
+fn find_audit_word_token(text: &str, audit_issue: u64) -> bool {
+    let needle = format!("audit {audit_issue}");
+    let mut start = 0;
+    while let Some(offset) = text[start..].to_lowercase().find(&needle) {
+        let absolute = start + offset;
+        let end = absolute + needle.len();
+        let trailing_char = text[end..].chars().next();
+        if !matches!(trailing_char, Some(ch) if ch.is_ascii_digit()) {
+            return true;
+        }
+        start = end;
+    }
     false
 }
 
@@ -7069,6 +7110,79 @@ mod tests {
         assert_eq!(
             step.detail.as_deref(),
             Some("no audit dispositions to verify")
+        );
+    }
+
+    /// Cycle 459 hotfix regression: PR #2290's initial check flagged 111
+    /// historical audits below the convention baseline as missing. The
+    /// baseline filter (#372) and legacy `[AUDIT-ACK]` matcher must let
+    /// pre-baseline audits through without requiring acknowledgment, AND
+    /// recognize legacy acknowledgments where they exist.
+    #[test]
+    fn audit_inbound_lifecycle_skips_pre_baseline_audits_and_accepts_legacy_ack() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-audit-inbound-lifecycle-baseline-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        // 15 and 200 are below the 372 baseline; 372 and 385 are at/above.
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "audit_processed": [15, 200, 372, 385]
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("issue comment fetch not expected");
+            }
+
+            fn fetch_audit_inbound_issues(&self) -> Result<Vec<AuditInboundIssue>, String> {
+                Ok(vec![
+                    // Legacy [AUDIT-ACK] format with `audit N` (no `#`).
+                    // Should NOT be required because audit 372 matches the
+                    // baseline differently — but this verifies legacy matcher
+                    // works for an above-baseline audit too.
+                    AuditInboundIssue {
+                        title: "[AUDIT-ACK] Accept lifecycle audit 372".to_string(),
+                        body: String::new(),
+                        state: "closed".to_string(),
+                    },
+                    AuditInboundIssue {
+                        title: "[audit-inbound] Acknowledge audit #385".to_string(),
+                        body: String::new(),
+                        state: "open".to_string(),
+                    },
+                ])
+            }
+        }
+
+        let step = verify_audit_inbound_lifecycle(&root, &Runner);
+
+        assert_eq!(
+            step.status,
+            StepStatus::Pass,
+            "audit-inbound-lifecycle should not require acknowledgment for audits below the baseline (#15, #200) and should accept legacy [AUDIT-ACK] matches; detail was: {:?}",
+            step.detail
+        );
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("verified 2 audit disposition acknowledgments")
         );
     }
 
