@@ -350,10 +350,7 @@ fn field_has_stale_after_change_marker(
         );
         return Ok(false);
     };
-    let cadence = field
-        .get("cadence")
-        .and_then(Value::as_str)
-        .map(str::trim);
+    let cadence = field.get("cadence").and_then(Value::as_str).map(str::trim);
     let Some(cadence) = cadence.filter(|cadence| !cadence.is_empty()) else {
         eprintln!(
             "Warning: skipping refresh for missing or invalid field_inventory cadence: {}",
@@ -1260,9 +1257,9 @@ mod tests {
     use super::{
         apply_fixes, check, collect_fix_updates, collect_refreshable_unchanged_fields,
         count_php_tests_in_content, count_ts_tests_in_content, get_i64_from_map,
-        get_i64_from_option, get_typescript_stats, is_php_test_method_line,
-        is_ts_test_method_line, parse_cycle_number, read_state_file, set_value_at_pointer,
-        staleness_threshold, CheckResult,
+        get_i64_from_option, get_typescript_stats, is_php_test_method_line, is_ts_test_method_line,
+        parse_cycle_number, read_state_file, set_value_at_pointer, staleness_threshold,
+        CheckResult,
     };
     use serde_json::json;
     use std::fs;
