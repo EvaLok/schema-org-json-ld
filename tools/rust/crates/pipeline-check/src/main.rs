@@ -11930,32 +11930,42 @@ mod tests {
             }
 
             fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
-                assert_eq!(issue, 2309);
-                let current_cycle_steps = EXPECTED_STEP_IDS
-                    .iter()
-                    .copied()
-                    .filter(|step| !POST_GATE_STEP_IDS.contains(step))
-                    .collect::<Vec<_>>();
-                Ok(step_comment_bodies(461, &current_cycle_steps))
+                match issue {
+                    2300 => Ok(String::new()),
+                    2309 => {
+                        let current_cycle_steps = EXPECTED_STEP_IDS
+                            .iter()
+                            .copied()
+                            .filter(|step| !POST_GATE_STEP_IDS.contains(step))
+                            .collect::<Vec<_>>();
+                        Ok(step_comment_bodies(461, &current_cycle_steps))
+                    }
+                    other => panic!("unexpected issue {other}"),
+                }
             }
 
             fn fetch_issue_comments_with_timestamps(
                 &self,
                 issue: u64,
             ) -> Result<Vec<(String, String)>, String> {
-                assert_eq!(issue, 2309);
-                Ok(EXPECTED_STEP_IDS
-                    .iter()
-                    .copied()
-                    .filter(|step| !POST_GATE_STEP_IDS.contains(step))
-                    .enumerate()
-                    .map(|(index, step)| {
-                        (
-                            format!("> **[main-orchestrator]** | Cycle 461 | Step {step}\n"),
-                            format!("2026-04-09T04:{:02}:00Z", index),
-                        )
-                    })
-                    .collect())
+                match issue {
+                    2300 => Ok(Vec::new()),
+                    2309 => {
+                        Ok(EXPECTED_STEP_IDS
+                            .iter()
+                            .copied()
+                            .filter(|step| !POST_GATE_STEP_IDS.contains(step))
+                            .enumerate()
+                            .map(|(index, step)| {
+                                (
+                                    format!("> **[main-orchestrator]** | Cycle 461 | Step {step}\n"),
+                                    format!("2026-04-09T04:{:02}:00Z", index),
+                                )
+                            })
+                            .collect())
+                    }
+                    other => panic!("unexpected issue {other}"),
+                }
             }
         }
 
@@ -12005,15 +12015,20 @@ mod tests {
 
             fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
                 self.seen_issues.lock().unwrap().push(issue);
-                assert_eq!(issue, 2309);
-                let current_cycle_steps = EXPECTED_STEP_IDS
-                    .iter()
-                    .copied()
-                    .filter(|step| !POST_GATE_STEP_IDS.contains(step))
-                    .collect::<Vec<_>>();
-                let mut bodies = step_comment_bodies(460, &EXPECTED_STEP_IDS);
-                bodies.push_str(&step_comment_bodies(461, &current_cycle_steps));
-                Ok(bodies)
+                match issue {
+                    2300 => Ok(String::new()),
+                    2309 => {
+                        let current_cycle_steps = EXPECTED_STEP_IDS
+                            .iter()
+                            .copied()
+                            .filter(|step| !POST_GATE_STEP_IDS.contains(step))
+                            .collect::<Vec<_>>();
+                        let mut bodies = step_comment_bodies(460, &EXPECTED_STEP_IDS);
+                        bodies.push_str(&step_comment_bodies(461, &current_cycle_steps));
+                        Ok(bodies)
+                    }
+                    other => panic!("unexpected issue {other}"),
+                }
             }
         }
 
@@ -12033,7 +12048,9 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("issue #2309"));
-        assert_eq!(*runner.seen_issues.lock().unwrap(), vec![2309, 2309]);
+        // verify_step_comments tries previous_cycle_issue (2300) first, falls back to 2309;
+        // verify_current_cycle_step_comments uses cycle_issues [2309]
+        assert_eq!(*runner.seen_issues.lock().unwrap(), vec![2300, 2309, 2309]);
     }
 
     #[test]
@@ -12076,7 +12093,8 @@ mod tests {
                         bodies.push_str(&step_comment_bodies(461, &current_cycle_steps));
                         Ok(bodies)
                     }
-                    2300 => Ok(step_comment_bodies(460, &["0", "0.5"])),
+                    // Previous cycle's steps live on the previous issue
+                    2300 => Ok(step_comment_bodies(460, &EXPECTED_STEP_IDS)),
                     other => panic!("unexpected issue {other}"),
                 }
             }
@@ -12110,7 +12128,9 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("2300"));
-        assert_eq!(*runner.seen_issues.lock().unwrap(), vec![2309, 2309]);
+        // verify_step_comments uses previous_cycle_issue (2300) for previous cycle;
+        // verify_current_cycle_step_comments uses cycle_issues [2309]
+        assert_eq!(*runner.seen_issues.lock().unwrap(), vec![2300, 2309]);
     }
 
     #[test]
