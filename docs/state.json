@@ -7049,10 +7049,12 @@
       "title": "[Cycle Review] Cycle 465 end-of-cycle review"
     },
     {
+      "closed_at": "2026-04-09T21:22:00Z",
+      "closed_reason": "Agent session failed — PR #2343 contained only Initial plan commit with zero code changes. Closed in cycle 467.",
       "dispatched_at": "2026-04-09T09:49:27Z",
       "issue": 2342,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed",
       "title": "Fix cycle-complete last_cycle.summary derivation bug and freeze summary post-close-out"
     },
     {
@@ -8087,7 +8089,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 2,
     "issue": 2348,
