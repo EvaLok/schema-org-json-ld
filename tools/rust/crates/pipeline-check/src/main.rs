@@ -9,8 +9,9 @@ use state_schema::{
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::sync::LazyLock;
 
 const HOUSEKEEPING_FINDINGS_KEY: &str = "items_needing_attention";
@@ -19,6 +20,7 @@ const CYCLE_STATUS_DIRECTIVES_PATH: &str = "/eva_input/comments_since_last_cycle
 const ARTIFACT_VERIFY_STEP_NAME: &str = "artifact-verify";
 const DISPOSITION_MATCH_STEP_NAME: &str = "disposition-match";
 const AUDIT_INBOUND_LIFECYCLE_STEP_NAME: &str = "audit-inbound-lifecycle";
+const AGENT_SESSIONS_LIFECYCLE_STEP_NAME: &str = "agent-sessions-lifecycle";
 /// Audit-inbound-lifecycle baseline. The audit-inbound issue convention was
 /// formally established by audit #372 (cycle 446-447) per STARTUP_CHECKLIST.xml
 /// S5.inbound-mandatory provenance. Audits processed before this number
@@ -35,11 +37,13 @@ const DOC_VALIDATION_STEP_NAME: &str = "doc-validation";
 const FROZEN_COMMIT_VERIFY_STEP_NAME: &str = "frozen-commit-verify";
 const WORKLOG_DEDUP_STEP_NAME: &str = "worklog-dedup";
 const WORKLOG_IMMUTABILITY_STEP_NAME: &str = "worklog-immutability";
+const FROZEN_WORKLOG_IMMUTABILITY_STEP_NAME: &str = "frozen-worklog-immutability";
+const PR_BASE_CURRENCY_STEP_NAME: &str = "pr-base-currency";
 const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const CURRENT_CYCLE_STEPS_STEP_NAME: &str = "current-cycle-steps";
 const WORKLOG_PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
-const STEP_NAMES: [&str; 19] = [
+const STEP_NAMES: [&str; 22] = [
     "metric-snapshot",
     "field-inventory",
     "housekeeping-scan",
@@ -49,6 +53,7 @@ const STEP_NAMES: [&str; 19] = [
     ARTIFACT_VERIFY_STEP_NAME,
     DISPOSITION_MATCH_STEP_NAME,
     AUDIT_INBOUND_LIFECYCLE_STEP_NAME,
+    AGENT_SESSIONS_LIFECYCLE_STEP_NAME,
     DEFERRAL_ACCUMULATION_STEP_NAME,
     DEFERRAL_DEADLINES_STEP_NAME,
     MASS_DEFERRAL_GATE_STEP_NAME,
@@ -57,6 +62,8 @@ const STEP_NAMES: [&str; 19] = [
     FROZEN_COMMIT_VERIFY_STEP_NAME,
     WORKLOG_DEDUP_STEP_NAME,
     WORKLOG_IMMUTABILITY_STEP_NAME,
+    FROZEN_WORKLOG_IMMUTABILITY_STEP_NAME,
+    PR_BASE_CURRENCY_STEP_NAME,
     STEP_COMMENTS_STEP_NAME,
     CURRENT_CYCLE_STEPS_STEP_NAME,
 ];
@@ -205,11 +212,31 @@ struct AuditInboundIssue {
     state: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct OpenAgentTaskPullRequest {
+    number: u64,
+    title: String,
+    head_sha: String,
+    base_sha: String,
+}
+
 trait CommandRunner {
     fn run(&self, script_path: &Path, args: &[String]) -> Result<ExecutionResult, String>;
     fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String>;
+    fn fetch_issue_state(&self, issue: u64) -> Result<String, String> {
+        Err(format!(
+            "issue state fetch not supported by this runner for issue #{}",
+            issue
+        ))
+    }
     fn fetch_audit_inbound_issues(&self) -> Result<Vec<AuditInboundIssue>, String> {
         Err("audit-inbound issue fetch not supported by this runner".to_string())
+    }
+    fn fetch_open_agent_task_pull_requests(&self) -> Result<Vec<OpenAgentTaskPullRequest>, String> {
+        Ok(Vec::new())
+    }
+    fn compare_head_to_master_ahead_by(&self, _head_sha: &str) -> Result<u64, String> {
+        Err("head-to-master comparison not supported by this runner".to_string())
     }
     fn fetch_issue_comments_with_timestamps(
         &self,
@@ -260,6 +287,27 @@ impl CommandRunner for ProcessRunner {
         }
 
         Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    }
+
+    fn fetch_issue_state(&self, issue: u64) -> Result<String, String> {
+        let output = Command::new("gh")
+            .arg("api")
+            .arg(format!("repos/{MAIN_REPO}/issues/{issue}"))
+            .arg("--jq")
+            .arg(".state")
+            .output()
+            .map_err(|error| format!("failed to execute gh api: {}", error))?;
+
+        if !output.status.success() {
+            return Err(command_failure_message("gh api", &output));
+        }
+
+        let state = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if state.is_empty() {
+            return Err(format!("gh api returned empty state for issue #{}", issue));
+        }
+
+        Ok(state)
     }
 
     fn fetch_issue_comments_with_timestamps(
@@ -354,6 +402,106 @@ impl CommandRunner for ProcessRunner {
         }
 
         Ok(issues)
+    }
+
+    fn fetch_open_agent_task_pull_requests(&self) -> Result<Vec<OpenAgentTaskPullRequest>, String> {
+        let output = Command::new("gh")
+            .arg("api")
+            .arg("--paginate")
+            .arg("--slurp")
+            .arg("-X")
+            .arg("GET")
+            .arg(format!(
+                "repos/{MAIN_REPO}/issues?labels=agent-task&state=open&per_page=100"
+            ))
+            .output()
+            .map_err(|error| format!("failed to execute gh api: {}", error))?;
+
+        if !output.status.success() {
+            return Err(command_failure_message("gh api", &output));
+        }
+
+        let pages: Vec<Value> = serde_json::from_slice(&output.stdout)
+            .map_err(|error| format!("failed to parse gh api search payload: {}", error))?;
+        let mut pull_requests = Vec::new();
+        for page in pages {
+            let items = page
+                .as_array()
+                .ok_or_else(|| "gh api issues payload must be an array".to_string())?;
+            for item in items {
+                if item.get("pull_request").is_none() {
+                    continue;
+                }
+                let number = item.get("number").and_then(Value::as_u64).ok_or_else(|| {
+                    "agent-task issue payload missing numeric field 'number'".to_string()
+                })?;
+                let pull_output = Command::new("gh")
+                    .arg("api")
+                    .arg(format!("repos/{MAIN_REPO}/pulls/{number}"))
+                    .output()
+                    .map_err(|error| format!("failed to execute gh api: {}", error))?;
+                if !pull_output.status.success() {
+                    return Err(command_failure_message("gh api", &pull_output));
+                }
+                let pull: Value = serde_json::from_slice(&pull_output.stdout)
+                    .map_err(|error| format!("failed to parse gh api pull payload: {}", error))?;
+                let title = pull
+                    .get("title")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| {
+                        format!("pull #{} payload missing string field 'title'", number)
+                    })?
+                    .to_string();
+                let head_sha = pull
+                    .get("head")
+                    .and_then(|value| value.get("sha"))
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| {
+                        format!("pull #{} payload missing string field 'head.sha'", number)
+                    })?
+                    .to_string();
+                let base_sha = pull
+                    .get("base")
+                    .and_then(|value| value.get("sha"))
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| {
+                        format!("pull #{} payload missing string field 'base.sha'", number)
+                    })?
+                    .to_string();
+                pull_requests.push(OpenAgentTaskPullRequest {
+                    number,
+                    title,
+                    head_sha,
+                    base_sha,
+                });
+            }
+        }
+
+        Ok(pull_requests)
+    }
+
+    fn compare_head_to_master_ahead_by(&self, head_sha: &str) -> Result<u64, String> {
+        let output = Command::new("gh")
+            .arg("api")
+            .arg(format!("repos/{MAIN_REPO}/compare/{head_sha}...master"))
+            .output()
+            .map_err(|error| format!("failed to execute gh api: {}", error))?;
+
+        if !output.status.success() {
+            return Err(command_failure_message("gh api", &output));
+        }
+
+        let compare: Value = serde_json::from_slice(&output.stdout)
+            .map_err(|error| format!("failed to parse gh api compare payload: {}", error))?;
+        compare
+            .get("ahead_by")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| {
+                format!(
+                    "compare payload missing numeric field 'ahead_by' for head {}",
+                    head_sha
+                )
+            })
     }
 }
 
@@ -485,6 +633,9 @@ fn run_pipeline_with_excluded_steps(
     if !is_excluded_step(AUDIT_INBOUND_LIFECYCLE_STEP_NAME, exclude_steps) {
         steps.push(verify_audit_inbound_lifecycle(repo_root, runner));
     }
+    if !is_excluded_step(AGENT_SESSIONS_LIFECYCLE_STEP_NAME, exclude_steps) {
+        steps.push(verify_agent_sessions_lifecycle(repo_root, cycle, runner));
+    }
     if !is_excluded_step(DEFERRAL_ACCUMULATION_STEP_NAME, exclude_steps) {
         steps.push(verify_deferral_accumulation(repo_root));
     }
@@ -509,6 +660,12 @@ fn run_pipeline_with_excluded_steps(
     }
     if !is_excluded_step(WORKLOG_IMMUTABILITY_STEP_NAME, exclude_steps) {
         steps.push(verify_worklog_immutability(repo_root));
+    }
+    if !is_excluded_step(FROZEN_WORKLOG_IMMUTABILITY_STEP_NAME, exclude_steps) {
+        steps.push(verify_frozen_worklog_immutability(repo_root));
+    }
+    if !is_excluded_step(PR_BASE_CURRENCY_STEP_NAME, exclude_steps) {
+        steps.push(verify_pr_base_currency(runner));
     }
     if !is_excluded_step(STEP_COMMENTS_STEP_NAME, exclude_steps) {
         steps.push(verify_step_comments(repo_root, cycle, runner));
@@ -817,6 +974,29 @@ fn verify_worklog_immutability(repo_root: &Path) -> StepReport {
     verify_worklog_immutability_for_date(repo_root, &current_utc_timestamp()[..10])
 }
 
+fn verify_frozen_worklog_immutability(repo_root: &Path) -> StepReport {
+    match frozen_worklog_immutability_status(repo_root) {
+        Ok((status, detail)) => StepReport {
+            name: FROZEN_WORKLOG_IMMUTABILITY_STEP_NAME,
+            status,
+            severity: Severity::Blocking,
+            exit_code: None,
+            detail: Some(detail),
+            findings: None,
+            summary: None,
+        },
+        Err(error) => StepReport {
+            name: FROZEN_WORKLOG_IMMUTABILITY_STEP_NAME,
+            status: StepStatus::Error,
+            severity: Severity::Blocking,
+            exit_code: None,
+            detail: Some(error),
+            findings: None,
+            summary: None,
+        },
+    }
+}
+
 fn verify_frozen_commit(repo_root: &Path) -> StepReport {
     verify_frozen_commit_for_date(repo_root, &current_utc_timestamp()[..10])
 }
@@ -1062,10 +1242,7 @@ fn verify_step_comments(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner
         }
     };
 
-    let issue = match state
-        .pointer("/previous_cycle_issue")
-        .and_then(Value::as_u64)
-    {
+    let issue = match current_cycle_issue_from_state(&state) {
         Some(issue) => issue,
         None => {
             return StepReport {
@@ -1074,7 +1251,7 @@ fn verify_step_comments(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner
 				severity: Severity::Blocking,
 				exit_code: None,
 				detail: Some(
-					"skipping step comment verification: /previous_cycle_issue is not set in docs/state.json yet"
+					"skipping step comment verification: /last_cycle/issue is not set in docs/state.json yet"
 						.to_string(),
 				),
 				findings: None,
@@ -1158,7 +1335,7 @@ fn verify_current_cycle_step_comments(
         }
     };
 
-    let issue = match state.pointer("/last_cycle/issue").and_then(Value::as_u64) {
+    let issue = match current_cycle_issue_from_state(&state) {
         Some(issue) => issue,
         None => {
             return StepReport {
@@ -1294,6 +1471,10 @@ fn verify_current_cycle_step_comments(
 struct CurrentCycleIssues {
     issues: Vec<u64>,
     detail: String,
+}
+
+fn current_cycle_issue_from_state(state: &Value) -> Option<u64> {
+    state.pointer("/last_cycle/issue").and_then(Value::as_u64)
 }
 
 fn discover_current_cycle_issues(state: &Value, issue: u64) -> Result<CurrentCycleIssues, String> {
@@ -2327,6 +2508,56 @@ fn worklog_immutability_status_for_date(
     ))
 }
 
+fn frozen_worklog_immutability_status(repo_root: &Path) -> Result<(StepStatus, String), String> {
+    let current_cycle = current_cycle_from_state(repo_root)?;
+    let historical_worklogs = historical_worklog_entries(repo_root, current_cycle)?;
+    if historical_worklogs.is_empty() {
+        return Ok((
+            StepStatus::Pass,
+            "skipped: no prior worklog entries found".to_string(),
+        ));
+    }
+
+    let mut divergences = Vec::new();
+    for (cycle, worklog_path) in &historical_worklogs {
+        let current_content = fs::read_to_string(worklog_path)
+            .map_err(|error| format!("failed to read {}: {}", worklog_path.display(), error))?;
+        let Some((baseline_commit, baseline_content)) =
+            cycle_complete_worklog_content(repo_root, worklog_path, *cycle)?
+        else {
+            return Err(format!(
+                "no cycle-complete baseline found for {} (cycle {})",
+                worklog_path.display(),
+                cycle
+            ));
+        };
+        let current_hash = worklog_content_hash(&current_content)?;
+        let baseline_hash = worklog_content_hash(&baseline_content)?;
+        if current_hash != baseline_hash {
+            divergences.push(format!(
+                "{} diverged from cycle-complete baseline {} (cycle {}, current hash {}, baseline hash {})",
+                worklog_path.display(),
+                short_commit(&baseline_commit),
+                cycle,
+                current_hash,
+                baseline_hash
+            ));
+        }
+    }
+
+    if divergences.is_empty() {
+        return Ok((
+            StepStatus::Pass,
+            format!(
+                "verified {} prior worklog file(s) remain unchanged since their cycle-complete baselines",
+                historical_worklogs.len()
+            ),
+        ));
+    }
+
+    Ok((StepStatus::Fail, divergences.join("; ")))
+}
+
 fn is_worklog_entry_filename(file_name: &str) -> bool {
     file_name.ends_with(".md")
         && file_name.len() > 10
@@ -2432,6 +2663,75 @@ fn latest_worklog_entry_for_cycle(repo_root: &Path, cycle: u64) -> Result<Option
     Ok(latest.map(|(_, _, path)| path))
 }
 
+fn historical_worklog_entries(
+    repo_root: &Path,
+    current_cycle: u64,
+) -> Result<Vec<(u64, PathBuf)>, String> {
+    let worklog_root = repo_root.join("docs/worklog");
+    if !worklog_root.is_dir() {
+        return Ok(Vec::new());
+    }
+
+    let mut entries_by_cycle = Vec::new();
+    let dates = fs::read_dir(&worklog_root)
+        .map_err(|error| format!("failed to read {}: {}", worklog_root.display(), error))?;
+    for date_entry in dates {
+        let date_entry = date_entry
+            .map_err(|error| format!("failed to read {}: {}", worklog_root.display(), error))?;
+        if !date_entry
+            .file_type()
+            .map_err(|error| {
+                format!(
+                    "failed to inspect {}: {}",
+                    date_entry.path().display(),
+                    error
+                )
+            })?
+            .is_dir()
+        {
+            continue;
+        }
+
+        let worklog_entries = fs::read_dir(date_entry.path()).map_err(|error| {
+            format!("failed to read {}: {}", date_entry.path().display(), error)
+        })?;
+        for entry in worklog_entries {
+            let entry = entry.map_err(|error| {
+                format!("failed to read {}: {}", date_entry.path().display(), error)
+            })?;
+            if !entry
+                .file_type()
+                .map_err(|error| {
+                    format!("failed to inspect {}: {}", entry.path().display(), error)
+                })?
+                .is_file()
+            {
+                continue;
+            }
+            let file_name = match entry.file_name().into_string() {
+                Ok(value) => value,
+                Err(_) => continue,
+            };
+            if !is_worklog_entry_filename(&file_name) {
+                continue;
+            }
+            let Some(cycle) = extract_worklog_cycle_from_filename(&file_name) else {
+                continue;
+            };
+            if cycle >= current_cycle {
+                continue;
+            }
+            entries_by_cycle.push((cycle, entry.path()));
+        }
+    }
+    entries_by_cycle.sort_by(|left, right| {
+        left.0
+            .cmp(&right.0)
+            .then_with(|| left.1.as_os_str().cmp(right.1.as_os_str()))
+    });
+    Ok(entries_by_cycle)
+}
+
 fn last_cycle_committed_worklog_content(
     repo_root: &Path,
     worklog_path: &Path,
@@ -2510,20 +2810,176 @@ fn last_cycle_committed_worklog_content(
         }
     };
 
+    match show_git_file_content(repo_root, &baseline_commit, &repo_relative_path) {
+        Ok(content) => Ok(Some((baseline_commit, content))),
+        Err(error) if is_missing_path_at_commit_error(&error) => {
+            let historical_path =
+                resolve_worklog_path_at_commit(repo_root, &repo_relative_path, &baseline_commit)?;
+            let Some(historical_path) = historical_path else {
+                return Err(error);
+            };
+            let content = show_git_file_content(repo_root, &baseline_commit, &historical_path)?;
+            Ok(Some((baseline_commit, content)))
+        }
+        Err(error) => Err(error),
+    }
+}
+
+fn cycle_complete_worklog_content(
+    repo_root: &Path,
+    worklog_path: &Path,
+    cycle: u64,
+) -> Result<Option<(String, String)>, String> {
+    let repo_relative_path = worklog_path
+        .strip_prefix(repo_root)
+        .map_err(|error| {
+            format!(
+                "failed to relativize {} against {}: {}",
+                worklog_path.display(),
+                repo_root.display(),
+                error
+            )
+        })?
+        .to_string_lossy()
+        .to_string();
+    let cycle_tag = format!("[cycle {}]", cycle);
+    let log_output = Command::new("git")
+        .current_dir(repo_root)
+        .args([
+            "log",
+            "--follow",
+            "--format=%H",
+            "--fixed-strings",
+            "--grep",
+            "state(cycle-complete",
+            "--grep",
+            &cycle_tag,
+            "--all-match",
+            "-n",
+            "1",
+            "--",
+            &repo_relative_path,
+        ])
+        .output()
+        .map_err(|error| format!("failed to execute git log: {}", error))?;
+    if !log_output.status.success() {
+        return Err(command_failure_message("git log", &log_output));
+    }
+
+    let cycle_complete_commit = String::from_utf8_lossy(&log_output.stdout)
+        .lines()
+        .next()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(str::to_string);
+
+    if cycle_complete_commit.is_none() {
+        return last_cycle_committed_worklog_content(repo_root, worklog_path, cycle);
+    }
+
+    let baseline_commit = cycle_complete_commit.unwrap_or_default();
+    let content = show_git_file_content(repo_root, &baseline_commit, &repo_relative_path)?;
+    Ok(Some((baseline_commit, content)))
+}
+
+fn show_git_file_content(
+    repo_root: &Path,
+    commit: &str,
+    repo_relative_path: &str,
+) -> Result<String, String> {
     let show_output = Command::new("git")
         .current_dir(repo_root)
         .arg("show")
-        .arg(format!("{}:{}", baseline_commit, repo_relative_path))
+        .arg(format!("{}:{}", commit, repo_relative_path))
         .output()
         .map_err(|error| format!("failed to execute git show: {}", error))?;
     if !show_output.status.success() {
         return Err(command_failure_message("git show", &show_output));
     }
 
-    Ok(Some((
-        baseline_commit,
-        String::from_utf8_lossy(&show_output.stdout).into_owned(),
-    )))
+    Ok(String::from_utf8_lossy(&show_output.stdout).into_owned())
+}
+
+fn is_missing_path_at_commit_error(error: &str) -> bool {
+    error.contains("exists on disk, but not in") || error.contains("does not exist in")
+}
+
+fn resolve_worklog_path_at_commit(
+    repo_root: &Path,
+    repo_relative_path: &str,
+    target_commit: &str,
+) -> Result<Option<String>, String> {
+    let log_output = Command::new("git")
+        .current_dir(repo_root)
+        .args([
+            "log",
+            "--follow",
+            "--format=commit:%H",
+            "--name-status",
+            "--",
+            repo_relative_path,
+        ])
+        .output()
+        .map_err(|error| format!("failed to execute git log: {}", error))?;
+    if !log_output.status.success() {
+        return Err(command_failure_message("git log", &log_output));
+    }
+
+    let mut current_path = repo_relative_path.to_string();
+    for line in String::from_utf8_lossy(&log_output.stdout).lines() {
+        if let Some(commit) = line.strip_prefix("commit:") {
+            if commit.trim() == target_commit {
+                return Ok(Some(current_path));
+            }
+            continue;
+        }
+
+        // git log --name-status emits tab-delimited records such as:
+        // `R100\told_path\tnew_path` or `C100\told_path\tnew_path`.
+        let mut parts = line.split('\t');
+        let Some(status) = parts.next() else {
+            continue;
+        };
+        if status.starts_with('R') || status.starts_with('C') {
+            let Some(old_path) = parts.next() else {
+                continue;
+            };
+            let Some(new_path) = parts.next() else {
+                continue;
+            };
+            if new_path == current_path {
+                current_path = old_path.to_string();
+            }
+        }
+    }
+
+    Ok(None)
+}
+
+fn worklog_content_hash(content: &str) -> Result<String, String> {
+    let mut child = Command::new("git")
+        .args(["hash-object", "--stdin"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .map_err(|error| format!("failed to execute git hash-object: {}", error))?;
+    {
+        let stdin = child
+            .stdin
+            .as_mut()
+            .ok_or_else(|| "failed to open stdin for git hash-object".to_string())?;
+        stdin
+            .write_all(content.as_bytes())
+            .map_err(|error| format!("failed to write content to git hash-object: {}", error))?;
+    }
+    let output = child
+        .wait_with_output()
+        .map_err(|error| format!("failed to wait for git hash-object: {}", error))?;
+    if !output.status.success() {
+        return Err(command_failure_message("git hash-object", &output));
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
 fn worklog_pipeline_status_value(content: &str) -> Option<&str> {
@@ -2574,6 +3030,33 @@ fn verify_audit_inbound_lifecycle(repo_root: &Path, runner: &dyn CommandRunner) 
         },
         Err(error) => StepReport {
             name: AUDIT_INBOUND_LIFECYCLE_STEP_NAME,
+            status: StepStatus::Error,
+            severity: Severity::Blocking,
+            exit_code: None,
+            detail: Some(error),
+            findings: None,
+            summary: None,
+        },
+    }
+}
+
+fn verify_agent_sessions_lifecycle(
+    repo_root: &Path,
+    current_cycle: u64,
+    runner: &dyn CommandRunner,
+) -> StepReport {
+    match agent_sessions_lifecycle_assessment(repo_root, current_cycle, runner) {
+        Ok(assessment) => StepReport {
+            name: AGENT_SESSIONS_LIFECYCLE_STEP_NAME,
+            status: assessment.status,
+            severity: assessment.severity,
+            exit_code: None,
+            detail: Some(assessment.detail),
+            findings: None,
+            summary: None,
+        },
+        Err(error) => StepReport {
+            name: AGENT_SESSIONS_LIFECYCLE_STEP_NAME,
             status: StepStatus::Error,
             severity: Severity::Blocking,
             exit_code: None,
@@ -2691,6 +3174,29 @@ fn verify_dispatch_finding_reconciliation(repo_root: &Path) -> StepReport {
             name: DISPATCH_FINDING_RECONCILIATION_STEP_NAME,
             status: StepStatus::Error,
             severity: Severity::Warning,
+            exit_code: None,
+            detail: Some(error),
+            findings: None,
+            summary: None,
+        },
+    }
+}
+
+fn verify_pr_base_currency(runner: &dyn CommandRunner) -> StepReport {
+    match pr_base_currency_assessment(runner) {
+        Ok(assessment) => StepReport {
+            name: PR_BASE_CURRENCY_STEP_NAME,
+            status: assessment.status,
+            severity: assessment.severity,
+            exit_code: None,
+            detail: Some(assessment.detail),
+            findings: None,
+            summary: None,
+        },
+        Err(error) => StepReport {
+            name: PR_BASE_CURRENCY_STEP_NAME,
+            status: StepStatus::Error,
+            severity: Severity::Blocking,
             exit_code: None,
             detail: Some(error),
             findings: None,
@@ -2848,6 +3354,96 @@ fn audit_inbound_issue_matches(issue: &AuditInboundIssue, audit_issue: u64) -> b
             || contains_audit_issue_reference(&issue.body, audit_issue))
 }
 
+fn agent_sessions_lifecycle_assessment(
+    repo_root: &Path,
+    current_cycle: u64,
+    runner: &dyn CommandRunner,
+) -> Result<StepAssessment, String> {
+    let state_value = read_state_value(repo_root)?;
+    let state: StateJson = serde_json::from_value(state_value)
+        .map_err(|error| format!("failed to parse state.json: {}", error))?;
+    let mut warnings = Vec::new();
+    let mut failures = Vec::new();
+    let mut checked = 0usize;
+
+    for session in state
+        .agent_sessions
+        .iter()
+        .filter(|session| session.status.as_deref() == Some("in_flight"))
+    {
+        checked += 1;
+        let issue = session
+            .issue
+            .ok_or_else(|| "in_flight agent session is missing issue number".to_string())
+            .and_then(|issue| {
+                u64::try_from(issue).map_err(|_| {
+                    format!("in_flight agent session issue must be a valid u64 (found {issue})")
+                })
+            })?;
+        let issue_state = runner.fetch_issue_state(issue)?;
+        if issue_state != "closed" {
+            continue;
+        }
+
+        let title = session.title.as_deref().unwrap_or("<untitled>");
+        let detail = format!(
+            "agent session issue #{} \"{}\" is closed on GitHub but still marked in_flight",
+            issue, title
+        );
+        let last_seen_stale_at_cycle = session
+            .extra
+            .get("last_seen_stale_at_cycle")
+            .map(|value| {
+                value.as_u64().ok_or_else(|| {
+                    format!(
+                        "agent session issue #{} has non-numeric last_seen_stale_at_cycle",
+                        issue
+                    )
+                })
+            })
+            .transpose()?;
+        if last_seen_stale_at_cycle.is_some_and(|seen_cycle| seen_cycle < current_cycle) {
+            failures.push(format!(
+                "{} (already stale in cycle {})",
+                detail,
+                last_seen_stale_at_cycle.unwrap_or(current_cycle)
+            ));
+        } else {
+            warnings.push(detail);
+        }
+    }
+
+    if !failures.is_empty() {
+        let mut details = failures;
+        details.extend(warnings);
+        return Ok(StepAssessment {
+            status: StepStatus::Fail,
+            severity: Severity::Blocking,
+            detail: details.join("; "),
+        });
+    }
+    if !warnings.is_empty() {
+        return Ok(StepAssessment {
+            status: StepStatus::Warn,
+            severity: Severity::Warning,
+            detail: warnings.join("; "),
+        });
+    }
+
+    Ok(StepAssessment {
+        status: StepStatus::Pass,
+        severity: Severity::Blocking,
+        detail: if checked == 0 {
+            "no in_flight agent sessions to verify".to_string()
+        } else {
+            format!(
+                "verified {} in_flight agent session issue(s) remain open",
+                checked
+            )
+        },
+    })
+}
+
 fn audit_inbound_suggested_title(audit_issue: u64) -> String {
     format!("[audit-inbound] Acknowledge audit #{audit_issue}")
 }
@@ -2917,8 +3513,16 @@ fn chronic_category_currency_status(repo_root: &Path) -> Result<(StepStatus, Str
         if entry.get("chosen_path").and_then(Value::as_str) != Some("structural-fix") {
             continue;
         }
+        let category = entry
+            .get("category")
+            .and_then(Value::as_str)
+            .unwrap_or("<unknown>");
         let Some(verification_cycle) = entry.get("verification_cycle").and_then(Value::as_u64)
         else {
+            failures.push(format!(
+                "{} structural-fix entry is malformed: verification_cycle must be a numeric value",
+                category
+            ));
             continue;
         };
         let gap = current_cycle.saturating_sub(verification_cycle);
@@ -2926,10 +3530,6 @@ fn chronic_category_currency_status(repo_root: &Path) -> Result<(StepStatus, Str
             continue;
         }
 
-        let category = entry
-            .get("category")
-            .and_then(Value::as_str)
-            .unwrap_or("<unknown>");
         let detail = format!(
             "{} entry verification_cycle {} is {} cycles stale (current cycle {}) — refresh after structural fix lands",
             category, verification_cycle, gap, current_cycle
@@ -2954,6 +3554,70 @@ fn chronic_category_currency_status(repo_root: &Path) -> Result<(StepStatus, Str
         StepStatus::Pass,
         "no structural-fix chronic category responses exceed currency threshold".to_string(),
     ))
+}
+
+fn pr_base_currency_assessment(runner: &dyn CommandRunner) -> Result<StepAssessment, String> {
+    let pull_requests = runner.fetch_open_agent_task_pull_requests()?;
+    if pull_requests.is_empty() {
+        return Ok(StepAssessment {
+            status: StepStatus::Pass,
+            severity: Severity::Blocking,
+            detail: "skipped: no open agent-task PRs".to_string(),
+        });
+    }
+
+    let mut warnings = Vec::new();
+    let mut failures = Vec::new();
+    let mut fresh = 0usize;
+    for pull_request in pull_requests {
+        let ahead_by = runner.compare_head_to_master_ahead_by(&pull_request.head_sha)?;
+        if ahead_by == 0 {
+            fresh += 1;
+            continue;
+        }
+
+        let detail = format!(
+            "PR #{} \"{}\" is {} commit(s) behind master (base {}, head {})",
+            pull_request.number,
+            pull_request.title,
+            ahead_by,
+            short_commit(&pull_request.base_sha),
+            short_commit(&pull_request.head_sha)
+        );
+        if ahead_by >= 15 {
+            failures.push(detail);
+        } else if ahead_by >= 5 {
+            warnings.push(detail);
+        } else {
+            fresh += 1;
+        }
+    }
+
+    if !failures.is_empty() {
+        let mut details = failures;
+        details.extend(warnings);
+        return Ok(StepAssessment {
+            status: StepStatus::Fail,
+            severity: Severity::Blocking,
+            detail: details.join("; "),
+        });
+    }
+    if !warnings.is_empty() {
+        return Ok(StepAssessment {
+            status: StepStatus::Warn,
+            severity: Severity::Warning,
+            detail: warnings.join("; "),
+        });
+    }
+
+    Ok(StepAssessment {
+        status: StepStatus::Pass,
+        severity: Severity::Blocking,
+        detail: format!(
+            "all {} open agent-task PR(s) are current with master",
+            fresh
+        ),
+    })
 }
 
 fn deferral_accumulation_assessment(repo_root: &Path) -> Result<StepAssessment, String> {
@@ -3704,6 +4368,34 @@ mod tests {
         run_git(root, &["commit", "-m", message]);
     }
 
+    fn write_cycle_complete_worklog(
+        root: &Path,
+        date: &str,
+        cycle: u64,
+        timestamp: &str,
+        content: &str,
+    ) -> PathBuf {
+        let worklog_path = root
+            .join("docs/worklog")
+            .join(date)
+            .join(format!("{timestamp}-cycle-{cycle}-summary.md"));
+        if let Some(parent) = worklog_path.parent() {
+            fs::create_dir_all(parent).unwrap();
+        }
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({"last_cycle": {"number": cycle}}).to_string(),
+        )
+        .unwrap();
+        fs::write(&worklog_path, content).unwrap();
+        commit_all(
+            root,
+            &format!("state(cycle-complete-phase): cycle {cycle} frozen [cycle {cycle}]"),
+        );
+        worklog_path
+    }
+
     #[test]
     fn warning_steps_get_warn_status_not_fail() {
         let execution = ExecutionResult {
@@ -4341,7 +5033,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 19);
+        assert_eq!(report.steps.len(), 22);
         assert_eq!(report.steps[0].status, StepStatus::Pass);
         assert_eq!(report.steps[1].status, StepStatus::Pass);
         assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -4363,27 +5055,33 @@ mod tests {
         assert_eq!(report.steps[7].status, StepStatus::Pass);
         assert_eq!(report.steps[8].name, "audit-inbound-lifecycle");
         assert_eq!(report.steps[8].status, StepStatus::Pass);
-        assert_eq!(report.steps[9].name, "deferral-accumulation");
+        assert_eq!(report.steps[9].name, "agent-sessions-lifecycle");
         assert_eq!(report.steps[9].status, StepStatus::Pass);
-        assert_eq!(report.steps[10].name, "deferral-deadlines");
+        assert_eq!(report.steps[10].name, "deferral-accumulation");
         assert_eq!(report.steps[10].status, StepStatus::Pass);
-        assert_eq!(report.steps[11].name, "mass-deferral-gate");
+        assert_eq!(report.steps[11].name, "deferral-deadlines");
         assert_eq!(report.steps[11].status, StepStatus::Pass);
-        assert_eq!(report.steps[12].name, "dispatch-finding-reconciliation");
+        assert_eq!(report.steps[12].name, "mass-deferral-gate");
         assert_eq!(report.steps[12].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].name, "doc-validation");
+        assert_eq!(report.steps[13].name, "dispatch-finding-reconciliation");
         assert_eq!(report.steps[13].status, StepStatus::Pass);
-        assert_eq!(report.steps[14].name, "frozen-commit-verify");
+        assert_eq!(report.steps[14].name, "doc-validation");
         assert_eq!(report.steps[14].status, StepStatus::Pass);
-        assert_eq!(report.steps[15].name, "worklog-dedup");
+        assert_eq!(report.steps[15].name, "frozen-commit-verify");
         assert_eq!(report.steps[15].status, StepStatus::Pass);
-        assert_eq!(report.steps[16].name, "worklog-immutability");
+        assert_eq!(report.steps[16].name, "worklog-dedup");
         assert_eq!(report.steps[16].status, StepStatus::Pass);
-        assert_eq!(report.steps[16].severity, Severity::Blocking);
-        assert_eq!(report.steps[17].name, "step-comments");
+        assert_eq!(report.steps[17].name, "worklog-immutability");
         assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].name, "current-cycle-steps");
+        assert_eq!(report.steps[17].severity, Severity::Blocking);
+        assert_eq!(report.steps[18].name, "frozen-worklog-immutability");
         assert_eq!(report.steps[18].status, StepStatus::Pass);
+        assert_eq!(report.steps[19].name, "pr-base-currency");
+        assert_eq!(report.steps[19].status, StepStatus::Pass);
+        assert_eq!(report.steps[20].name, "step-comments");
+        assert_eq!(report.steps[20].status, StepStatus::Pass);
+        assert_eq!(report.steps[21].name, "current-cycle-steps");
+        assert_eq!(report.steps[21].status, StepStatus::Pass);
     }
 
     #[test]
@@ -4571,7 +5269,7 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 19);
+        assert_eq!(report.steps.len(), 22);
         assert!(report.steps[..6]
             .iter()
             .all(|step| matches!(step.status, StepStatus::Error)));
@@ -4823,7 +5521,7 @@ mod tests {
             root.join("docs/state.json"),
             json!({
                 "previous_cycle_issue": 834,
-                "last_cycle": {"number": 257},
+                "last_cycle": {"number": 257, "issue": 834},
                 "cycle_phase": {"phase": "close_out"},
                 "copilot_metrics": {
                     "total_dispatches": 3,
@@ -4926,27 +5624,32 @@ mod tests {
 
             fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
                 assert_eq!(issue, 834);
-                Ok(step_comment_bodies(
-                    256,
-                    &["0", "0.5", "0.6", "1", "2", "3", "4", "5", "6"],
-                ))
+                let steps = EXPECTED_STEP_IDS
+                    .iter()
+                    .copied()
+                    .filter(|step| *step != "C4.5")
+                    .collect::<Vec<_>>();
+                Ok(step_comment_bodies(256, &steps))
             }
         }
 
         let report = run_pipeline(&root, 257, &CascadeRunner);
-        assert_eq!(report.steps[13].name, "doc-validation");
-        assert_eq!(report.steps[13].status, StepStatus::Cascade);
-        assert_eq!(report.steps[14].name, "frozen-commit-verify");
-        assert_eq!(report.steps[14].status, StepStatus::Pass);
-        assert_eq!(report.steps[15].name, "worklog-dedup");
+        assert_eq!(report.steps[14].name, "doc-validation");
+        assert_eq!(report.steps[14].status, StepStatus::Cascade);
+        assert_eq!(report.steps[15].name, "frozen-commit-verify");
         assert_eq!(report.steps[15].status, StepStatus::Pass);
-        assert_eq!(report.steps[16].name, "worklog-immutability");
+        assert_eq!(report.steps[16].name, "worklog-dedup");
         assert_eq!(report.steps[16].status, StepStatus::Pass);
-        assert_eq!(report.steps[17].name, "step-comments");
-        // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[17].status, StepStatus::Warn);
-        assert_eq!(report.overall, StepStatus::Pass);
-        assert!(!report.has_blocking_findings);
+        assert_eq!(report.steps[17].name, "worklog-immutability");
+        assert_eq!(report.steps[17].status, StepStatus::Pass);
+        assert_eq!(report.steps[18].name, "frozen-worklog-immutability");
+        assert_eq!(report.steps[18].status, StepStatus::Pass);
+        assert_eq!(report.steps[19].name, "pr-base-currency");
+        assert_eq!(report.steps[19].status, StepStatus::Pass);
+        assert_eq!(report.steps[20].name, "step-comments");
+        assert_eq!(report.steps[20].status, StepStatus::Fail);
+        assert_eq!(report.overall, StepStatus::Fail);
+        assert!(report.has_blocking_findings);
     }
 
     #[test]
@@ -4966,7 +5669,7 @@ mod tests {
             root.join("docs/state.json"),
             json!({
                 "previous_cycle_issue": 834,
-                "last_cycle": {"number": 257},
+                "last_cycle": {"number": 257, "issue": 834},
                 "cycle_phase": {"phase": "close_out"},
                 "copilot_metrics": {
                     "total_dispatches": 3,
@@ -5069,27 +5772,32 @@ mod tests {
 
             fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
                 assert_eq!(issue, 834);
-                Ok(step_comment_bodies(
-                    256,
-                    &["0", "0.5", "0.6", "1", "2", "3", "4", "5", "6"],
-                ))
+                let steps = EXPECTED_STEP_IDS
+                    .iter()
+                    .copied()
+                    .filter(|step| *step != "C4.5")
+                    .collect::<Vec<_>>();
+                Ok(step_comment_bodies(256, &steps))
             }
         }
 
         let report = run_pipeline(&root, 257, &MultiCauseCascadeRunner);
-        assert_eq!(report.steps[13].name, "doc-validation");
-        assert_eq!(report.steps[13].status, StepStatus::Cascade);
-        assert_eq!(report.steps[14].name, "frozen-commit-verify");
-        assert_eq!(report.steps[14].status, StepStatus::Pass);
-        assert_eq!(report.steps[15].name, "worklog-dedup");
+        assert_eq!(report.steps[14].name, "doc-validation");
+        assert_eq!(report.steps[14].status, StepStatus::Cascade);
+        assert_eq!(report.steps[15].name, "frozen-commit-verify");
         assert_eq!(report.steps[15].status, StepStatus::Pass);
-        assert_eq!(report.steps[16].name, "worklog-immutability");
+        assert_eq!(report.steps[16].name, "worklog-dedup");
         assert_eq!(report.steps[16].status, StepStatus::Pass);
-        assert_eq!(report.steps[17].name, "step-comments");
-        // Previous-cycle backstop is downgraded to Warn — no blocking failures remain
-        assert_eq!(report.steps[17].status, StepStatus::Warn);
-        assert_eq!(report.overall, StepStatus::Pass);
-        assert!(!report.has_blocking_findings);
+        assert_eq!(report.steps[17].name, "worklog-immutability");
+        assert_eq!(report.steps[17].status, StepStatus::Pass);
+        assert_eq!(report.steps[18].name, "frozen-worklog-immutability");
+        assert_eq!(report.steps[18].status, StepStatus::Pass);
+        assert_eq!(report.steps[19].name, "pr-base-currency");
+        assert_eq!(report.steps[19].status, StepStatus::Pass);
+        assert_eq!(report.steps[20].name, "step-comments");
+        assert_eq!(report.steps[20].status, StepStatus::Fail);
+        assert_eq!(report.overall, StepStatus::Fail);
+        assert!(report.has_blocking_findings);
     }
 
     #[test]
@@ -5111,7 +5819,7 @@ mod tests {
             root.join("docs/state.json"),
             json!({
                 "previous_cycle_issue": 842,
-                "last_cycle": {"number": CURRENT_CYCLE},
+                "last_cycle": {"number": CURRENT_CYCLE, "issue": 842},
                 "cycle_phase": {"phase": "close_out"},
                 "copilot_metrics": {
                     "total_dispatches": 3,
@@ -5213,15 +5921,22 @@ mod tests {
                     .copied()
                     .filter(|step| *step != "C5.1")
                     .collect::<Vec<_>>();
-                Ok(step_comment_bodies(OVERRIDE_CYCLE - 1, &steps))
+                let mut bodies = step_comment_bodies(OVERRIDE_CYCLE - 1, &steps);
+                let current_cycle_steps = EXPECTED_STEP_IDS
+                    .iter()
+                    .copied()
+                    .filter(|step| !POST_GATE_STEP_IDS.contains(step))
+                    .collect::<Vec<_>>();
+                bodies.push_str(&step_comment_bodies(OVERRIDE_CYCLE, &current_cycle_steps));
+                Ok(bodies)
             }
         }
 
         let report = run_pipeline(&root, OVERRIDE_CYCLE, &OverrideRunner);
-        assert_eq!(report.steps[17].name, "step-comments");
-        assert_eq!(report.steps[17].status, StepStatus::Warn);
-        assert_eq!(report.steps[17].severity, Severity::Warning);
-        assert!(report.steps[17]
+        assert_eq!(report.steps[20].name, "step-comments");
+        assert_eq!(report.steps[20].status, StepStatus::Warn);
+        assert_eq!(report.steps[20].severity, Severity::Warning);
+        assert!(report.steps[20]
             .detail
             .as_deref()
             .unwrap_or_default()
@@ -5253,7 +5968,7 @@ mod tests {
             root.join("docs/state.json"),
             json!({
                 "previous_cycle_issue": 834,
-                "last_cycle": {"number": 257},
+                "last_cycle": {"number": 257, "issue": 834},
                 "cycle_phase": {"phase": "close_out"},
                 "copilot_metrics": {
                     "total_dispatches": 3,
@@ -5364,16 +6079,16 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &IndependentFailureRunner);
-        assert_eq!(report.steps[13].name, "doc-validation");
-        assert_eq!(report.steps[13].status, StepStatus::Fail);
-        assert_eq!(report.steps[14].name, "frozen-commit-verify");
-        assert_eq!(report.steps[14].status, StepStatus::Pass);
-        assert_eq!(report.steps[15].name, "worklog-dedup");
+        assert_eq!(report.steps[14].name, "doc-validation");
+        assert_eq!(report.steps[14].status, StepStatus::Fail);
+        assert_eq!(report.steps[15].name, "frozen-commit-verify");
         assert_eq!(report.steps[15].status, StepStatus::Pass);
-        assert_eq!(report.steps[16].name, "worklog-immutability");
+        assert_eq!(report.steps[16].name, "worklog-dedup");
         assert_eq!(report.steps[16].status, StepStatus::Pass);
+        assert_eq!(report.steps[17].name, "worklog-immutability");
+        assert_eq!(report.steps[17].status, StepStatus::Pass);
         // Previous-cycle backstop is downgraded to Warn
-        assert_eq!(report.steps[17].status, StepStatus::Warn);
+        assert_eq!(report.steps[20].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -5496,7 +6211,7 @@ mod tests {
             &ExcludeDocValidationRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 18);
+        assert_eq!(report.steps.len(), 21);
         assert!(!report
             .steps
             .iter()
@@ -5633,7 +6348,7 @@ mod tests {
             &UnknownExcludeRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 19);
+        assert_eq!(report.steps.len(), 22);
         assert!(report
             .steps
             .iter()
@@ -5774,7 +6489,7 @@ mod tests {
         );
 
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 18);
+        assert_eq!(report.steps.len(), 21);
         assert!(!report.steps.iter().any(|step| step.name == "worklog-dedup"));
         assert!(report
             .steps
@@ -6110,6 +6825,46 @@ mod tests {
     }
 
     #[test]
+    fn last_cycle_committed_worklog_content_follows_rename_chain_for_add_commit() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-worklog-rename-chain-fallback-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs/worklog/2026-03-21")).unwrap();
+
+        let original_relative =
+            "docs/worklog/2026-03-21/142252-validate-docs-fix-probe-housekeeping.md";
+        let intermediate_relative =
+            "docs/worklog/2026-03-21/161353-resumed-cycle-329-probe-escalation.md";
+        let current_relative =
+            "docs/worklog/2026-03-21/161353-resumed-cycle-328-probe-escalation.md";
+
+        fs::write(root.join(original_relative), "root content\n").unwrap();
+        commit_all(&root, "add original worklog root");
+
+        fs::copy(
+            root.join(original_relative),
+            root.join(intermediate_relative),
+        )
+        .unwrap();
+        run_git(&root, &["add", intermediate_relative]);
+        commit_all(&root, "copy worklog to resumed-cycle-329 name");
+
+        run_git(&root, &["mv", intermediate_relative, current_relative]);
+        commit_all(&root, "rename worklog to resumed-cycle-328 name");
+
+        let committed =
+            last_cycle_committed_worklog_content(&root, &root.join(current_relative), 328)
+                .expect("rename-aware fallback should succeed")
+                .expect("baseline should exist");
+
+        assert_eq!(committed.1, "root content\n");
+    }
+
+    #[test]
     fn worklog_immutability_passes_when_last_cycle_commit_matches_current() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -6414,6 +7169,93 @@ mod tests {
         let detail = step.detail.as_deref().unwrap_or_default();
         assert!(detail.contains("120100-cycle-411-summary.md"));
         assert!(!detail.contains("120000-cycle-410-summary.md"));
+    }
+
+    #[test]
+    fn frozen_worklog_immutability_fails_when_prior_cycle_worklog_diverges() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-frozen-worklog-immutability-fail-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+
+        let older_worklog = write_cycle_complete_worklog(
+            &root,
+            "2026-03-01",
+            1,
+            "010000",
+            "# Cycle 1\n\n- **Pipeline status**: PASS\n",
+        );
+        let _newer_worklog = write_cycle_complete_worklog(
+            &root,
+            "2026-03-02",
+            2,
+            "020000",
+            "# Cycle 2\n\n- **Pipeline status**: PASS\n",
+        );
+        fs::write(
+            root.join("docs/state.json"),
+            json!({"last_cycle": {"number": 3}}).to_string(),
+        )
+        .unwrap();
+        fs::write(
+            &older_worklog,
+            "# Cycle 1\n\n- **Pipeline status**: FAIL (mutated after freeze)\n",
+        )
+        .unwrap();
+
+        let step = verify_frozen_worklog_immutability(&root);
+
+        assert_eq!(step.status, StepStatus::Fail);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("cycle-1-summary.md"));
+    }
+
+    #[test]
+    fn frozen_worklog_immutability_passes_when_prior_cycle_worklogs_match_frozen_baselines() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-frozen-worklog-immutability-pass-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+
+        write_cycle_complete_worklog(
+            &root,
+            "2026-03-01",
+            1,
+            "010000",
+            "# Cycle 1\n\n- **Pipeline status**: PASS\n",
+        );
+        write_cycle_complete_worklog(
+            &root,
+            "2026-03-02",
+            2,
+            "020000",
+            "# Cycle 2\n\n- **Pipeline status**: PASS\n",
+        );
+        fs::write(
+            root.join("docs/state.json"),
+            json!({"last_cycle": {"number": 3}}).to_string(),
+        )
+        .unwrap();
+
+        let step = verify_frozen_worklog_immutability(&root);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("verified 2 prior worklog file(s)"));
     }
 
     #[test]
@@ -7441,6 +8283,278 @@ mod tests {
     }
 
     #[test]
+    fn agent_sessions_lifecycle_warns_when_closed_issue_remains_in_flight() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-agent-sessions-lifecycle-warn",
+            json!({
+                "last_cycle": {"number": 462},
+                "agent_sessions": [{
+                    "issue": 2317,
+                    "title": "Structural fix dispatch",
+                    "status": "in_flight"
+                }]
+            }),
+        );
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("issue comment fetch not expected");
+            }
+
+            fn fetch_issue_state(&self, issue: u64) -> Result<String, String> {
+                assert_eq!(issue, 2317);
+                Ok("closed".to_string())
+            }
+        }
+
+        let step = verify_agent_sessions_lifecycle(&root, 462, &Runner);
+
+        assert_eq!(step.status, StepStatus::Warn);
+        assert_eq!(step.severity, Severity::Warning);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("issue #2317"));
+    }
+
+    #[test]
+    fn agent_sessions_lifecycle_fails_when_stale_marker_carries_into_next_cycle() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-agent-sessions-lifecycle-fail",
+            json!({
+                "last_cycle": {"number": 463},
+                "agent_sessions": [{
+                    "issue": 2318,
+                    "title": "Older stale dispatch",
+                    "status": "in_flight",
+                    "last_seen_stale_at_cycle": 462
+                }]
+            }),
+        );
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("issue comment fetch not expected");
+            }
+
+            fn fetch_issue_state(&self, issue: u64) -> Result<String, String> {
+                assert_eq!(issue, 2318);
+                Ok("closed".to_string())
+            }
+        }
+
+        let step = verify_agent_sessions_lifecycle(&root, 463, &Runner);
+
+        assert_eq!(step.status, StepStatus::Fail);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("already stale in cycle 462"));
+    }
+
+    #[test]
+    fn agent_sessions_lifecycle_passes_when_in_flight_issue_remains_open() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-agent-sessions-lifecycle-pass",
+            json!({
+                "last_cycle": {"number": 462},
+                "agent_sessions": [{
+                    "issue": 2319,
+                    "title": "Healthy dispatch",
+                    "status": "in_flight"
+                }]
+            }),
+        );
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("issue comment fetch not expected");
+            }
+
+            fn fetch_issue_state(&self, issue: u64) -> Result<String, String> {
+                assert_eq!(issue, 2319);
+                Ok("open".to_string())
+            }
+        }
+
+        let step = verify_agent_sessions_lifecycle(&root, 462, &Runner);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("verified 1 in_flight agent session issue(s) remain open")
+        );
+    }
+
+    #[test]
+    fn pr_base_currency_warns_when_pr_is_six_commits_behind_master() {
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("issue comment fetch not expected");
+            }
+
+            fn fetch_open_agent_task_pull_requests(
+                &self,
+            ) -> Result<Vec<OpenAgentTaskPullRequest>, String> {
+                Ok(vec![OpenAgentTaskPullRequest {
+                    number: 2311,
+                    title: "Refresh pipeline check".to_string(),
+                    head_sha: "abcdef1234567890".to_string(),
+                    base_sha: "1234567890abcdef".to_string(),
+                }])
+            }
+
+            fn compare_head_to_master_ahead_by(&self, head_sha: &str) -> Result<u64, String> {
+                assert_eq!(head_sha, "abcdef1234567890");
+                Ok(6)
+            }
+        }
+
+        let step = verify_pr_base_currency(&Runner);
+
+        assert_eq!(step.status, StepStatus::Warn);
+        assert_eq!(step.severity, Severity::Warning);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("6 commit(s) behind master"));
+    }
+
+    #[test]
+    fn pr_base_currency_fails_when_pr_is_sixteen_commits_behind_master() {
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("issue comment fetch not expected");
+            }
+
+            fn fetch_open_agent_task_pull_requests(
+                &self,
+            ) -> Result<Vec<OpenAgentTaskPullRequest>, String> {
+                Ok(vec![OpenAgentTaskPullRequest {
+                    number: 2312,
+                    title: "Rebase stale PR".to_string(),
+                    head_sha: "fedcba0987654321".to_string(),
+                    base_sha: "0123456789abcdef".to_string(),
+                }])
+            }
+
+            fn compare_head_to_master_ahead_by(&self, head_sha: &str) -> Result<u64, String> {
+                assert_eq!(head_sha, "fedcba0987654321");
+                Ok(16)
+            }
+        }
+
+        let step = verify_pr_base_currency(&Runner);
+
+        assert_eq!(step.status, StepStatus::Fail);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("16 commit(s) behind master"));
+    }
+
+    #[test]
+    fn pr_base_currency_passes_when_pr_base_is_current() {
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("issue comment fetch not expected");
+            }
+
+            fn fetch_open_agent_task_pull_requests(
+                &self,
+            ) -> Result<Vec<OpenAgentTaskPullRequest>, String> {
+                Ok(vec![OpenAgentTaskPullRequest {
+                    number: 2313,
+                    title: "Fresh PR".to_string(),
+                    head_sha: "0011223344556677".to_string(),
+                    base_sha: "8899aabbccddeeff".to_string(),
+                }])
+            }
+
+            fn compare_head_to_master_ahead_by(&self, head_sha: &str) -> Result<u64, String> {
+                assert_eq!(head_sha, "0011223344556677");
+                Ok(0)
+            }
+        }
+
+        let step = verify_pr_base_currency(&Runner);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("all 1 open agent-task PR(s) are current with master")
+        );
+    }
+
+    #[test]
     fn deferral_accumulation_passes_when_review_history_is_empty() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -8003,6 +9117,41 @@ mod tests {
     }
 
     #[test]
+    fn chronic_category_currency_fails_closed_on_malformed_structural_fix_entry() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-chronic-category-currency-malformed",
+            json!({
+                "last_cycle": {"number": 220},
+                "review_agent": {
+                    "history": [],
+                    "chronic_category_responses": {
+                        "entries": [
+                            {
+                                "category": "worklog-accuracy",
+                                "chosen_path": "structural-fix"
+                            },
+                            {
+                                "category": "state-integrity",
+                                "chosen_path": "structural-fix",
+                                "verification_cycle": "not-a-number"
+                            }
+                        ]
+                    }
+                }
+            }),
+        );
+
+        let step = verify_chronic_category_currency(&root);
+
+        assert_eq!(step.status, StepStatus::Fail);
+        assert_eq!(step.severity, Severity::Blocking);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("worklog-accuracy"));
+        assert!(detail.contains("state-integrity"));
+        assert!(detail.contains("verification_cycle must be a numeric value"));
+    }
+
+    #[test]
     fn mass_deferral_gate_warns_at_seventy_five_percent() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -8483,7 +9632,7 @@ mod tests {
             json!({
                 "previous_cycle_issue": 834,
                 "last_cycle": {
-                    "issue": 999,
+                    "issue": 834,
                     "number": 257
                 }
             })
@@ -8554,7 +9703,8 @@ mod tests {
             json!({
                 "previous_cycle_issue": 996,
                 "last_cycle": {
-                    "number": 257
+                    "number": 257,
+                    "issue": 996
                 },
                 "cycle_phase": {
                     "phase": "close_out"
@@ -8620,7 +9770,7 @@ mod tests {
         fs::create_dir_all(root.join("docs")).unwrap();
         fs::write(
             root.join("docs/state.json"),
-            json!({"last_cycle": {"issue": 834}}).to_string(),
+            json!({"last_cycle": {"number": 257}}).to_string(),
         )
         .unwrap();
 
@@ -8636,14 +9786,17 @@ mod tests {
             }
 
             fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
-                panic!("gh api should not run when previous_cycle_issue is missing");
+                panic!("gh api should not run when last_cycle.issue is missing");
             }
         }
 
         let step = verify_step_comments(&root, 257, &StepCommentRunner);
         assert_eq!(step.status, StepStatus::Pass);
         assert_eq!(step.severity, Severity::Blocking);
-        assert_eq!(step.detail.as_deref(), Some("skipping step comment verification: /previous_cycle_issue is not set in docs/state.json yet"));
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("skipping step comment verification: /last_cycle/issue is not set in docs/state.json yet")
+        );
     }
 
     #[test]
@@ -8698,7 +9851,9 @@ mod tests {
         fs::write(
             root.join("docs/state.json"),
             json!({
-                "previous_cycle_issue": 836
+                "last_cycle": {
+                    "issue": 836
+                }
             })
             .to_string(),
         )
@@ -8742,7 +9897,8 @@ mod tests {
             json!({
                 "previous_cycle_issue": 839,
                 "last_cycle": {
-                    "number": 254
+                    "number": 254,
+                    "issue": 839
                 }
             })
             .to_string(),
@@ -8798,7 +9954,8 @@ mod tests {
             json!({
                 "previous_cycle_issue": 840,
                 "last_cycle": {
-                    "number": 257
+                    "number": 257,
+                    "issue": 840
                 }
             })
             .to_string(),
@@ -8856,7 +10013,8 @@ mod tests {
             json!({
                 "previous_cycle_issue": 841,
                 "last_cycle": {
-                    "number": 254
+                    "number": 254,
+                    "issue": 841
                 }
             })
             .to_string(),
@@ -8913,7 +10071,8 @@ mod tests {
             json!({
                 "previous_cycle_issue": 835,
                 "last_cycle": {
-                    "number": 257
+                    "number": 257,
+                    "issue": 835
                 }
             })
             .to_string(),
@@ -8976,7 +10135,8 @@ mod tests {
             json!({
                 "previous_cycle_issue": 843,
                 "last_cycle": {
-                    "number": 257
+                    "number": 257,
+                    "issue": 843
                 }
             })
             .to_string(),
@@ -9037,7 +10197,8 @@ mod tests {
             json!({
                 "previous_cycle_issue": 844,
                 "last_cycle": {
-                    "number": 257
+                    "number": 257,
+                    "issue": 844
                 }
             })
             .to_string(),
@@ -9093,7 +10254,8 @@ mod tests {
             json!({
                 "previous_cycle_issue": 837,
                 "last_cycle": {
-                    "number": 257
+                    "number": 257,
+                    "issue": 837
                 }
             })
             .to_string(),
@@ -9154,7 +10316,8 @@ mod tests {
             json!({
                 "previous_cycle_issue": 838,
                 "last_cycle": {
-                    "number": 257
+                    "number": 257,
+                    "issue": 838
                 }
             })
             .to_string(),
@@ -9212,7 +10375,8 @@ mod tests {
             json!({
                 "previous_cycle_issue": 846,
                 "last_cycle": {
-                    "number": 257
+                    "number": 257,
+                    "issue": 846
                 },
                 "step_comment_acknowledged_gaps": [
                     {
@@ -9280,7 +10444,8 @@ mod tests {
             json!({
                 "previous_cycle_issue": 847,
                 "last_cycle": {
-                    "number": 257
+                    "number": 257,
+                    "issue": 847
                 },
                 "step_comment_acknowledged_gaps": [
                     {
@@ -9347,7 +10512,8 @@ mod tests {
             json!({
                 "previous_cycle_issue": 848,
                 "last_cycle": {
-                    "number": 257
+                    "number": 257,
+                    "issue": 848
                 },
                 "step_comment_acknowledged_gaps": []
             })
@@ -9406,7 +10572,8 @@ mod tests {
             json!({
                 "previous_cycle_issue": 845,
                 "last_cycle": {
-                    "number": 316
+                    "number": 316,
+                    "issue": 845
                 }
             })
             .to_string(),
@@ -10429,6 +11596,143 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("skipping current-cycle step verification"));
+    }
+
+    #[test]
+    fn step_comments_and_current_cycle_steps_share_current_cycle_issue_number() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-shared-current-cycle-issue",
+            json!({
+                "previous_cycle_issue": 2300,
+                "cycle_issues": [2309],
+                "last_cycle": {
+                    "number": 461,
+                    "issue": 2309
+                }
+            }),
+        );
+
+        struct Runner {
+            seen_issues: Mutex<Vec<u64>>,
+        }
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+                self.seen_issues.lock().unwrap().push(issue);
+                assert_eq!(issue, 2309);
+                let current_cycle_steps = EXPECTED_STEP_IDS
+                    .iter()
+                    .copied()
+                    .filter(|step| !POST_GATE_STEP_IDS.contains(step))
+                    .collect::<Vec<_>>();
+                let mut bodies = step_comment_bodies(460, &EXPECTED_STEP_IDS);
+                bodies.push_str(&step_comment_bodies(461, &current_cycle_steps));
+                Ok(bodies)
+            }
+        }
+
+        let runner = Runner {
+            seen_issues: Mutex::new(Vec::new()),
+        };
+        let step_comments = verify_step_comments(&root, 461, &runner);
+        let current_cycle_steps = verify_current_cycle_step_comments(&root, 461, &runner);
+
+        assert!(step_comments
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("issue #2309"));
+        assert!(current_cycle_steps
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("issue #2309"));
+        assert_eq!(*runner.seen_issues.lock().unwrap(), vec![2309, 2309]);
+    }
+
+    #[test]
+    fn step_comments_and_current_cycle_steps_use_current_issue_not_previous_issue() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-current-vs-previous-issue",
+            json!({
+                "previous_cycle_issue": 2300,
+                "cycle_issues": [2309],
+                "last_cycle": {
+                    "number": 461,
+                    "issue": 2309
+                }
+            }),
+        );
+
+        struct Runner {
+            seen_issues: Mutex<Vec<u64>>,
+        }
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+                self.seen_issues.lock().unwrap().push(issue);
+                match issue {
+                    2309 => {
+                        let current_cycle_steps = EXPECTED_STEP_IDS
+                            .iter()
+                            .copied()
+                            .filter(|step| !POST_GATE_STEP_IDS.contains(step))
+                            .collect::<Vec<_>>();
+                        let mut bodies = step_comment_bodies(460, &EXPECTED_STEP_IDS);
+                        bodies.push_str(&step_comment_bodies(461, &current_cycle_steps));
+                        Ok(bodies)
+                    }
+                    2300 => Ok(step_comment_bodies(460, &["0", "0.5"])),
+                    other => panic!("unexpected issue {other}"),
+                }
+            }
+        }
+
+        let runner = Runner {
+            seen_issues: Mutex::new(Vec::new()),
+        };
+        let step_comments = verify_step_comments(&root, 461, &runner);
+        let current_cycle_steps = verify_current_cycle_step_comments(&root, 461, &runner);
+
+        assert_eq!(step_comments.status, StepStatus::Pass);
+        assert_eq!(current_cycle_steps.status, StepStatus::Pass);
+        assert!(step_comments
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("issue #2309"));
+        assert!(current_cycle_steps
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("issue #2309"));
+        assert!(!step_comments
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("2300"));
+        assert!(!current_cycle_steps
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("2300"));
+        assert_eq!(*runner.seen_issues.lock().unwrap(), vec![2309, 2309]);
     }
 
     #[test]
