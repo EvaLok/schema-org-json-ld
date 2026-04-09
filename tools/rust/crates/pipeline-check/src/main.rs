@@ -2810,20 +2810,20 @@ fn last_cycle_committed_worklog_content(
         }
     };
 
-    let show_output = Command::new("git")
-        .current_dir(repo_root)
-        .arg("show")
-        .arg(format!("{}:{}", baseline_commit, repo_relative_path))
-        .output()
-        .map_err(|error| format!("failed to execute git show: {}", error))?;
-    if !show_output.status.success() {
-        return Err(command_failure_message("git show", &show_output));
+    match show_git_file_content(repo_root, &baseline_commit, &repo_relative_path) {
+        Ok(content) => Ok(Some((baseline_commit, content))),
+        Err(error) if is_missing_path_at_commit_error(&error) => {
+            let historical_path =
+                resolve_worklog_path_at_commit(repo_root, &repo_relative_path, &baseline_commit)?
+                    .filter(|historical_path| historical_path != &repo_relative_path);
+            let Some(historical_path) = historical_path else {
+                return Err(error);
+            };
+            let content = show_git_file_content(repo_root, &baseline_commit, &historical_path)?;
+            Ok(Some((baseline_commit, content)))
+        }
+        Err(error) => Err(error),
     }
-
-    Ok(Some((
-        baseline_commit,
-        String::from_utf8_lossy(&show_output.stdout).into_owned(),
-    )))
 }
 
 fn cycle_complete_worklog_content(
@@ -2879,20 +2879,80 @@ fn cycle_complete_worklog_content(
     }
 
     let baseline_commit = cycle_complete_commit.unwrap_or_default();
+    let content = show_git_file_content(repo_root, &baseline_commit, &repo_relative_path)?;
+    Ok(Some((baseline_commit, content)))
+}
+
+fn show_git_file_content(
+    repo_root: &Path,
+    commit: &str,
+    repo_relative_path: &str,
+) -> Result<String, String> {
     let show_output = Command::new("git")
         .current_dir(repo_root)
         .arg("show")
-        .arg(format!("{}:{}", baseline_commit, repo_relative_path))
+        .arg(format!("{}:{}", commit, repo_relative_path))
         .output()
         .map_err(|error| format!("failed to execute git show: {}", error))?;
     if !show_output.status.success() {
         return Err(command_failure_message("git show", &show_output));
     }
 
-    Ok(Some((
-        baseline_commit,
-        String::from_utf8_lossy(&show_output.stdout).into_owned(),
-    )))
+    Ok(String::from_utf8_lossy(&show_output.stdout).into_owned())
+}
+
+fn is_missing_path_at_commit_error(error: &str) -> bool {
+    error.contains("exists on disk, but not in") || error.contains("does not exist in")
+}
+
+fn resolve_worklog_path_at_commit(
+    repo_root: &Path,
+    repo_relative_path: &str,
+    target_commit: &str,
+) -> Result<Option<String>, String> {
+    let log_output = Command::new("git")
+        .current_dir(repo_root)
+        .args([
+            "log",
+            "--follow",
+            "--format=commit:%H",
+            "--name-status",
+            "--",
+            repo_relative_path,
+        ])
+        .output()
+        .map_err(|error| format!("failed to execute git log: {}", error))?;
+    if !log_output.status.success() {
+        return Err(command_failure_message("git log", &log_output));
+    }
+
+    let mut current_path = repo_relative_path.to_string();
+    for line in String::from_utf8_lossy(&log_output.stdout).lines() {
+        if let Some(commit) = line.strip_prefix("commit:") {
+            if commit.trim() == target_commit {
+                return Ok(Some(current_path));
+            }
+            continue;
+        }
+
+        let mut parts = line.split('\t');
+        let Some(status) = parts.next() else {
+            continue;
+        };
+        if status.starts_with('R') || status.starts_with('C') {
+            let Some(old_path) = parts.next() else {
+                continue;
+            };
+            let Some(new_path) = parts.next() else {
+                continue;
+            };
+            if new_path == current_path {
+                current_path = old_path.to_string();
+            }
+        }
+    }
+
+    Ok(None)
 }
 
 fn worklog_content_hash(content: &str) -> Result<String, String> {
@@ -6761,6 +6821,46 @@ mod tests {
         assert!(detail.contains("changed"));
         assert!(detail.contains("FAIL (4 warnings)"));
         assert!(detail.contains("PASS (2 warnings)"));
+    }
+
+    #[test]
+    fn last_cycle_committed_worklog_content_follows_rename_chain_for_add_commit() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-worklog-rename-chain-fallback-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs/worklog/2026-03-21")).unwrap();
+
+        let original_relative =
+            "docs/worklog/2026-03-21/142252-validate-docs-fix-probe-housekeeping.md";
+        let intermediate_relative =
+            "docs/worklog/2026-03-21/161353-resumed-cycle-329-probe-escalation.md";
+        let current_relative =
+            "docs/worklog/2026-03-21/161353-resumed-cycle-328-probe-escalation.md";
+
+        fs::write(root.join(original_relative), "root content\n").unwrap();
+        commit_all(&root, "add original worklog root");
+
+        fs::copy(
+            root.join(original_relative),
+            root.join(intermediate_relative),
+        )
+        .unwrap();
+        run_git(&root, &["add", intermediate_relative]);
+        commit_all(&root, "copy worklog to resumed-cycle-329 name");
+
+        run_git(&root, &["mv", intermediate_relative, current_relative]);
+        commit_all(&root, "rename worklog to resumed-cycle-328 name");
+
+        let committed =
+            last_cycle_committed_worklog_content(&root, &root.join(current_relative), 328)
+                .expect("rename-aware fallback should succeed")
+                .expect("baseline should exist");
+
+        assert_eq!(committed.1, "root content\n");
     }
 
     #[test]
