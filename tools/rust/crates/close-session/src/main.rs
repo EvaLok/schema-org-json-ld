@@ -38,7 +38,7 @@ fn main() {
 }
 
 fn run(cli: Cli) -> Result<(), String> {
-    let reason = cli.reason.trim();
+    let reason = cli.reason.trim().to_string();
     if reason.is_empty() {
         return Err("--reason must not be empty".to_string());
     }
@@ -46,7 +46,7 @@ fn run(cli: Cli) -> Result<(), String> {
     let mut state = read_state_value(&cli.repo_root)?;
     let before = serialize_state(&state)?;
     let closed_at = current_utc_timestamp();
-    let in_flight = close_session_in_state(&mut state, cli.issue, reason, &closed_at)?;
+    let in_flight = close_session_in_state(&mut state, cli.issue, &reason, &closed_at)?;
     let after = serialize_state(&state)?;
 
     if cli.dry_run {
