@@ -7074,6 +7074,14 @@
       "pr": 2347,
       "status": "merged",
       "title": "[Cycle Review] Cycle 466 end-of-cycle review"
+    },
+    {
+      "addresses_finding": "466:1",
+      "dispatched_at": "2026-04-09T21:28:07Z",
+      "issue": 2349,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix cycle-complete last_cycle.summary derivation bug and freeze last_cycle after close-out"
     }
   ],
   "audit_dropped": [
@@ -7824,7 +7832,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2346 [Cycle Review] Cycle 466 end-of-cycle review (cycle 466)",
+  "dispatch_log_latest": "#2349 Fix cycle-complete last_cycle.summary derivation bug and freeze last_cycle after close-out (cycle 467)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8097,13 +8105,13 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 2,
     "issue": 2348,
     "number": 467,
-    "summary": "0 dispatches, 2 merges",
-    "timestamp": "2026-04-09T21:16:17Z"
+    "summary": "1 dispatch, 2 merges",
+    "timestamp": "2026-04-09T21:28:07Z"
   },
   "last_eva_comment_check": "2026-04-09T21:16:17Z",
   "last_tool_audit_cycle": 403,
@@ -13988,12 +13996,13 @@
         ],
         "complacency_score": 2,
         "cycle": 466,
-        "deferred": 3,
+        "deferred": 2,
+        "dispatch_created": 1,
         "finding_count": 3,
         "finding_dispositions": [
           {
             "category": "state-integrity",
-            "disposition": "deferred"
+            "disposition": "dispatch_created"
           },
           {
             "category": "state-integrity",
