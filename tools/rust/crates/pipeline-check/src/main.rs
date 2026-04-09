@@ -21,6 +21,8 @@ const ARTIFACT_VERIFY_STEP_NAME: &str = "artifact-verify";
 const DISPOSITION_MATCH_STEP_NAME: &str = "disposition-match";
 const AUDIT_INBOUND_LIFECYCLE_STEP_NAME: &str = "audit-inbound-lifecycle";
 const AGENT_SESSIONS_LIFECYCLE_STEP_NAME: &str = "agent-sessions-lifecycle";
+const CHRONIC_CATEGORY_CURRENCY_WARN_GAP: u64 = 10;
+const CHRONIC_CATEGORY_CURRENCY_FAIL_GAP: u64 = 15;
 /// Audit-inbound-lifecycle baseline. The audit-inbound issue convention was
 /// formally established by audit #372 (cycle 446-447) per STARTUP_CHECKLIST.xml
 /// S5.inbound-mandatory provenance. Audits processed before this number
@@ -3641,7 +3643,7 @@ fn chronic_category_currency_status(
             continue;
         };
         let gap = current_cycle.saturating_sub(verification_cycle);
-        if gap <= 15 {
+        if gap <= CHRONIC_CATEGORY_CURRENCY_FAIL_GAP {
             let cited_pull_requests = entry
                 .get("rationale")
                 .and_then(Value::as_str)
@@ -3666,7 +3668,7 @@ fn chronic_category_currency_status(
             }
         }
 
-        if gap <= 10 {
+        if gap <= CHRONIC_CATEGORY_CURRENCY_WARN_GAP {
             continue;
         }
 
@@ -3674,7 +3676,7 @@ fn chronic_category_currency_status(
             "{} entry verification_cycle {} is {} cycles stale (current cycle {}) — refresh after structural fix lands",
             category, verification_cycle, gap, current_cycle
         );
-        if gap > 15 {
+        if gap > CHRONIC_CATEGORY_CURRENCY_FAIL_GAP {
             failures.push(detail);
         } else {
             warnings.push(detail);
@@ -9556,6 +9558,57 @@ mod tests {
                             "chosen_path": "structural-fix",
                             "verification_cycle": 100,
                             "rationale": "Cycle 100: refreshed via PR(s) #700"
+                        }]
+                    }
+                }
+            }),
+        );
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("issue comment fetch not expected");
+            }
+
+            fn fetch_pull_request_state(&self, issue: u64) -> Result<String, String> {
+                assert_eq!(issue, 700);
+                Ok("MERGED".to_string())
+            }
+        }
+
+        let step = verify_chronic_category_currency_with_runner(&root, &Runner);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("no structural-fix chronic category responses exceed currency threshold")
+        );
+    }
+
+    #[test]
+    fn chronic_category_currency_passes_when_cited_pr_url_is_merged() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-chronic-category-currency-merged-pr-url",
+            json!({
+                "last_cycle": {"number": 105},
+                "review_agent": {
+                    "history": [],
+                    "chronic_category_responses": {
+                        "entries": [{
+                            "category": "state-integrity",
+                            "chosen_path": "structural-fix",
+                            "verification_cycle": 100,
+                            "rationale": "Cycle 100: refreshed via https://github.com/EvaLok/schema-org-json-ld/pull/700"
                         }]
                     }
                 }
