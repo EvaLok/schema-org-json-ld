@@ -134,6 +134,12 @@ static PULL_REQUEST_LABEL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)\bprs?\b(?P<refs>(?:\s*#\d+\s*(?:/|,|and)?\s*)+)")
         .expect("pull request label regex should compile")
 });
+static CHRONIC_CATEGORY_PR_LABEL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?i)(?:\bpr(?:\(s\)|s)?\b|\bvia\b)(?P<refs>(?:\s+(?:[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)?#\d+\s*(?:/|,|and)?\s*)+)",
+    )
+    .expect("chronic category pull request label regex should compile")
+});
 static ISSUE_LABEL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)\bissues?\b(?P<refs>(?:\s*#\d+\s*(?:/|,|and)?\s*)+)")
         .expect("issue label regex should compile")
@@ -673,7 +679,7 @@ fn run_pipeline_with_excluded_steps(
             .map(|spec| run_step(repo_root, spec, runner)),
     );
     if !is_excluded_step(CHRONIC_CATEGORY_CURRENCY_STEP_NAME, exclude_steps) {
-        steps.push(verify_chronic_category_currency(repo_root));
+        steps.push(verify_chronic_category_currency_with_runner(repo_root, runner));
     }
     if !is_excluded_step(ARTIFACT_VERIFY_STEP_NAME, exclude_steps) {
         steps.push(verify_artifacts(repo_root));
@@ -3167,8 +3173,11 @@ fn verify_deferral_accumulation(repo_root: &Path) -> StepReport {
     }
 }
 
-fn verify_chronic_category_currency(repo_root: &Path) -> StepReport {
-    match chronic_category_currency_status(repo_root) {
+fn verify_chronic_category_currency_with_runner(
+    repo_root: &Path,
+    runner: &dyn CommandRunner,
+) -> StepReport {
+    match chronic_category_currency_status(repo_root, runner) {
         Ok((status, detail)) => StepReport {
             name: CHRONIC_CATEGORY_CURRENCY_STEP_NAME,
             status,
@@ -3592,7 +3601,10 @@ fn find_audit_word_token(text: &str, audit_issue: u64) -> bool {
     false
 }
 
-fn chronic_category_currency_status(repo_root: &Path) -> Result<(StepStatus, String), String> {
+fn chronic_category_currency_status(
+    repo_root: &Path,
+    runner: &dyn CommandRunner,
+) -> Result<(StepStatus, String), String> {
     let current_cycle = current_cycle_from_state(repo_root)?;
     let state_value = read_state_value(repo_root)?;
     let state: StateJson = serde_json::from_value(state_value)
@@ -3629,6 +3641,31 @@ fn chronic_category_currency_status(repo_root: &Path) -> Result<(StepStatus, Str
             continue;
         };
         let gap = current_cycle.saturating_sub(verification_cycle);
+        if gap <= 15 {
+            let cited_pull_requests = entry
+                .get("rationale")
+                .and_then(Value::as_str)
+                .map(extract_chronic_category_pull_requests)
+                .unwrap_or_default();
+            if !cited_pull_requests.is_empty() {
+                let mut unmerged_pull_request = None;
+                for pull_request in cited_pull_requests {
+                    let state = runner.fetch_pull_request_state(pull_request)?;
+                    if state != "MERGED" {
+                        unmerged_pull_request = Some((pull_request, state));
+                        break;
+                    }
+                }
+                if let Some((pull_request, state)) = unmerged_pull_request {
+                    warnings.push(format!(
+                        "category '{}' verification_cycle={} cites PR #{} which is not merged (state={})",
+                        category, verification_cycle, pull_request, state
+                    ));
+                    continue;
+                }
+            }
+        }
+
         if gap <= 10 {
             continue;
         }
@@ -3657,6 +3694,41 @@ fn chronic_category_currency_status(repo_root: &Path) -> Result<(StepStatus, Str
         StepStatus::Pass,
         "no structural-fix chronic category responses exceed currency threshold".to_string(),
     ))
+}
+
+fn extract_chronic_category_pull_requests(rationale: &str) -> BTreeSet<u64> {
+    let mut pull_requests = BTreeSet::new();
+
+    for captures in CHRONIC_CATEGORY_PR_LABEL_REGEX.captures_iter(rationale) {
+        let Some(reference_block) = captures.name("refs").map(|match_| match_.as_str()) else {
+            continue;
+        };
+        collect_hash_numbers(reference_block, &mut pull_requests);
+    }
+
+    for captures in PULL_REQUEST_URL_REGEX.captures_iter(rationale) {
+        let Some(pull_request) = captures
+            .get(1)
+            .and_then(|capture| capture.as_str().parse::<u64>().ok())
+        else {
+            continue;
+        };
+        pull_requests.insert(pull_request);
+    }
+
+    pull_requests
+}
+
+fn collect_hash_numbers(text: &str, numbers: &mut BTreeSet<u64>) {
+    for captures in HASH_REFERENCE_REGEX.captures_iter(text) {
+        let Some(number) = captures
+            .get(1)
+            .and_then(|capture| capture.as_str().parse::<u64>().ok())
+        else {
+            continue;
+        };
+        numbers.insert(number);
+    }
 }
 
 fn pr_base_currency_assessment(runner: &dyn CommandRunner) -> Result<StepAssessment, String> {
@@ -9323,7 +9395,7 @@ mod tests {
             }),
         );
 
-        let step = verify_chronic_category_currency(&root);
+        let step = verify_chronic_category_currency_with_runner(&root, &ProcessRunner);
 
         assert_eq!(step.name, CHRONIC_CATEGORY_CURRENCY_STEP_NAME);
         assert_eq!(step.status, StepStatus::Warn);
@@ -9353,7 +9425,7 @@ mod tests {
             }),
         );
 
-        let step = verify_chronic_category_currency(&root);
+        let step = verify_chronic_category_currency_with_runner(&root, &ProcessRunner);
 
         assert_eq!(step.status, StepStatus::Fail);
         assert_eq!(step.severity, Severity::Blocking);
@@ -9381,7 +9453,7 @@ mod tests {
             }),
         );
 
-        let step = verify_chronic_category_currency(&root);
+        let step = verify_chronic_category_currency_with_runner(&root, &ProcessRunner);
 
         assert_eq!(step.status, StepStatus::Pass);
         assert_eq!(
@@ -9409,13 +9481,166 @@ mod tests {
             }),
         );
 
-        let step = verify_chronic_category_currency(&root);
+        let step = verify_chronic_category_currency_with_runner(&root, &ProcessRunner);
 
         assert_eq!(step.status, StepStatus::Pass);
         assert_eq!(
             step.detail.as_deref(),
             Some("no structural-fix chronic category responses exceed currency threshold")
         );
+    }
+
+    #[test]
+    fn chronic_category_currency_fails_when_cited_pr_is_not_merged() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-chronic-category-currency-open-pr",
+            json!({
+                "last_cycle": {"number": 105},
+                "review_agent": {
+                    "history": [],
+                    "chronic_category_responses": {
+                        "entries": [{
+                            "category": "state-integrity",
+                            "chosen_path": "structural-fix",
+                            "verification_cycle": 100,
+                            "rationale": "Cycle 100: refreshed via PR EvaLok/schema-org-json-ld#700"
+                        }]
+                    }
+                }
+            }),
+        );
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("issue comment fetch not expected");
+            }
+
+            fn fetch_pull_request_state(&self, issue: u64) -> Result<String, String> {
+                assert_eq!(issue, 700);
+                Ok("OPEN".to_string())
+            }
+        }
+
+        let step = verify_chronic_category_currency_with_runner(&root, &Runner);
+
+        assert_eq!(step.status, StepStatus::Warn);
+        assert_eq!(step.severity, Severity::Blocking);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("category 'state-integrity'"));
+        assert!(detail.contains("verification_cycle=100"));
+        assert!(detail.contains("PR #700"));
+        assert!(detail.contains("state=OPEN"));
+    }
+
+    #[test]
+    fn chronic_category_currency_passes_when_cited_pr_is_merged() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-chronic-category-currency-merged-pr",
+            json!({
+                "last_cycle": {"number": 105},
+                "review_agent": {
+                    "history": [],
+                    "chronic_category_responses": {
+                        "entries": [{
+                            "category": "state-integrity",
+                            "chosen_path": "structural-fix",
+                            "verification_cycle": 100,
+                            "rationale": "Cycle 100: refreshed via PR(s) #700"
+                        }]
+                    }
+                }
+            }),
+        );
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("issue comment fetch not expected");
+            }
+
+            fn fetch_pull_request_state(&self, issue: u64) -> Result<String, String> {
+                assert_eq!(issue, 700);
+                Ok("MERGED".to_string())
+            }
+        }
+
+        let step = verify_chronic_category_currency_with_runner(&root, &Runner);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("no structural-fix chronic category responses exceed currency threshold")
+        );
+    }
+
+    #[test]
+    fn chronic_category_currency_no_pr_in_rationale_falls_through_to_gap_check() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-chronic-category-currency-no-pr",
+            json!({
+                "last_cycle": {"number": 111},
+                "review_agent": {
+                    "history": [],
+                    "chronic_category_responses": {
+                        "entries": [{
+                            "category": "state-integrity",
+                            "chosen_path": "structural-fix",
+                            "verification_cycle": 100,
+                            "rationale": "Cycle 100: refreshed after follow-up review"
+                        }]
+                    }
+                }
+            }),
+        );
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("issue comment fetch not expected");
+            }
+
+            fn fetch_pull_request_state(&self, _issue: u64) -> Result<String, String> {
+                panic!("pull request state fetch not expected");
+            }
+        }
+
+        let step = verify_chronic_category_currency_with_runner(&root, &Runner);
+
+        assert_eq!(step.status, StepStatus::Warn);
+        assert_eq!(step.severity, Severity::Blocking);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("state-integrity"));
+        assert!(detail.contains("verification_cycle 100"));
+        assert!(detail.contains("11 cycles stale"));
     }
 
     #[test]
@@ -9443,7 +9668,7 @@ mod tests {
             }),
         );
 
-        let step = verify_chronic_category_currency(&root);
+        let step = verify_chronic_category_currency_with_runner(&root, &ProcessRunner);
 
         assert_eq!(step.status, StepStatus::Fail);
         assert_eq!(step.severity, Severity::Blocking);
