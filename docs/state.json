@@ -7033,8 +7033,10 @@
     {
       "dispatched_at": "2026-04-09T07:48:10Z",
       "issue": 2336,
+      "merged_at": "2026-04-09T09:41:02Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2337,
+      "status": "merged",
       "title": "Harden chronic-category-currency to verify cited PRs are merged (audit #396 Tier 1, cycle 464 review F3)"
     },
     {
@@ -8063,12 +8065,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 2,
     "issue": 2341,
     "number": 466,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-09T09:28:21Z"
   },
   "last_eva_comment_check": "2026-04-09T09:28:21Z",
