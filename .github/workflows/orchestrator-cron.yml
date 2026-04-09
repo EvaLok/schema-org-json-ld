@@ -14,7 +14,39 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Check for ghost cycles
+        id: ghost_cycle_check
+        run: |
+          recent_issues=$(gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --label "orchestrator-run" \
+            --state open \
+            --json number,comments \
+            --limit 5)
+
+          ghost_issue_numbers=$(jq '[.[] | select(.comments == 0) | .number]' <<<"$recent_issues")
+          ghost_cycle_count=$(jq 'length' <<<"$ghost_issue_numbers")
+
+          if [ "$ghost_cycle_count" -ge 2 ]; then
+            ghost_issue_list=$(jq -r 'map("- #\(.)") | join("\n")' <<<"$ghost_issue_numbers")
+            alert_body=$(printf '%s\n\nGhost cycle issues:\n%s\n\nPlease investigate the orchestrator workflow before creating another cycle.' \
+              "Found ${ghost_cycle_count} open orchestrator-run issues with 0 comments, which suggests the orchestrator is not responding to cycle triggers." \
+              "$ghost_issue_list")
+
+            gh issue create \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "[ghost-cycle-alert] Orchestrator may be broken — ${ghost_cycle_count} consecutive ghost cycles detected" \
+              --label "question-for-eva" \
+              --body "$alert_body"
+
+            echo "should_create_issue=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_create_issue=true" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.ORCHESTRATOR_PAT }}
       - name: Create orchestrator issue
+        if: steps.ghost_cycle_check.outputs.should_create_issue == 'true'
         run: |
           TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
           gh issue create \
