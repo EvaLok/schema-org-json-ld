@@ -48,6 +48,17 @@ const DOC_LINT_STEP_NAME: &str = "doc-lint";
 const COMMITMENT_DROP_VERIFICATION_STEP_NAME: &str = "commitment-drop-verification";
 const WORKLOG_PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
+const COMMITMENT_DROP_RATIONALE_MARKERS: &[&str] = &[
+    " with rationale",
+    " — structural rationale",
+    " - structural rationale",
+    " — rationale",
+    " - rationale",
+    " rationale:",
+    " because ",
+    " due to ",
+];
+const NON_SURFACE_CYCLE_PREFIX: &str = "cycle-";
 const STEP_NAMES: [&str; 25] = [
     "metric-snapshot",
     "field-inventory",
@@ -1338,21 +1349,12 @@ fn extract_commitment_drop_pr_numbers(text: &str) -> BTreeSet<u64> {
 
 fn extract_commitment_target_surfaces(text: &str) -> BTreeSet<String> {
     let lowercase = text.to_ascii_lowercase();
-    let target_scope = [
-        " with rationale",
-        " — structural rationale",
-        " - structural rationale",
-        " — rationale",
-        " - rationale",
-        " rationale:",
-        " because ",
-        " due to ",
-    ]
-    .iter()
-    .filter_map(|marker| lowercase.find(marker))
-    .min()
-    .map(|index| &text[..index])
-    .unwrap_or(text);
+    let target_scope = COMMITMENT_DROP_RATIONALE_MARKERS
+        .iter()
+        .filter_map(|marker| lowercase.find(marker))
+        .min()
+        .map(|index| &text[..index])
+        .unwrap_or(text);
 
     let mut surfaces = BTreeSet::new();
     for captures in TOOL_PATH_REGEX.captures_iter(target_scope) {
@@ -1366,11 +1368,15 @@ fn extract_commitment_target_surfaces(text: &str) -> BTreeSet<String> {
             continue;
         };
         let normalized = surface.as_str().to_ascii_lowercase();
-        if normalized.starts_with("cycle-") {
+        // "cycle-###" tokens come from worklog bookkeeping rather than a code surface, so
+        // ignore them when trying to match dropped-commitment targets to changed files.
+        if normalized.starts_with(NON_SURFACE_CYCLE_PREFIX) {
             continue;
         }
         surfaces.insert(normalized);
     }
+    // Worklog commitments that mention adding or hardening a "substep" are referring to a
+    // pipeline-check verification surface, even when the tool name is omitted.
     if target_scope.to_ascii_lowercase().contains("substep") {
         surfaces.insert("pipeline-check".to_string());
     }
