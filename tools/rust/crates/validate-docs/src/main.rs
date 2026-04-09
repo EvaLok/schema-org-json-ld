@@ -935,9 +935,7 @@ fn validate_open_questions_consistency(content: &str) -> Option<String> {
     if bullet_lines.is_empty() {
         return None;
     }
-    let says_none = bullet_lines
-        .iter()
-        .all(|line| reports_no_self_modifications(line));
+    let says_none = bullet_lines.iter().all(|line| reports_no_self_modifications(line));
     if !says_none {
         return None;
     }

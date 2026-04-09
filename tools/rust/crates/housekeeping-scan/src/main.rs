@@ -116,10 +116,7 @@ fn total_findings(report: &Report) -> usize {
         + report.stale_qc_inbound.len()
 }
 
-fn scan_stale_agent_issues(
-    now: DateTime<Utc>,
-    draft_prs: &[DraftPrInfo],
-) -> Result<Vec<Finding>, String> {
+fn scan_stale_agent_issues(now: DateTime<Utc>, draft_prs: &[DraftPrInfo]) -> Result<Vec<Finding>, String> {
     let path = format!(
         "repos/{}/issues?assignee={}&state=open",
         REPO, AGENT_ISSUE_ASSIGNEE
@@ -128,12 +125,7 @@ fn scan_stale_agent_issues(
     let items = value
         .as_array()
         .ok_or_else(|| "unexpected response for stale agent issues query".to_string())?;
-    Ok(find_stale_agent_issues(
-        items,
-        draft_prs,
-        now,
-        &fetch_open_linked_prs,
-    ))
+    Ok(find_stale_agent_issues(items, draft_prs, now, &fetch_open_linked_prs))
 }
 
 fn find_stale_agent_issues<F>(
@@ -262,17 +254,11 @@ fn parse_open_copilot_draft_prs(prs: &[Value]) -> Result<Vec<DraftPrInfo>, Strin
     Ok(draft_prs)
 }
 
-fn scan_orphan_draft_prs(
-    now: DateTime<Utc>,
-    draft_prs: &[DraftPrInfo],
-) -> Result<Vec<Finding>, String> {
+fn scan_orphan_draft_prs(now: DateTime<Utc>, draft_prs: &[DraftPrInfo]) -> Result<Vec<Finding>, String> {
     find_orphan_draft_prs(draft_prs, now)
 }
 
-fn find_orphan_draft_prs(
-    draft_prs: &[DraftPrInfo],
-    now: DateTime<Utc>,
-) -> Result<Vec<Finding>, String> {
+fn find_orphan_draft_prs(draft_prs: &[DraftPrInfo], now: DateTime<Utc>) -> Result<Vec<Finding>, String> {
     let mut findings = Vec::new();
 
     for pr in draft_prs {
@@ -621,7 +607,8 @@ mod tests {
         // GraphQL linkage probe must be consulted before flagging.
         let now = parse_time("2026-03-04T12:00:00Z").unwrap();
         let issues = vec![json!({"number": 2240, "created_at": "2026-03-04T09:00:00Z"})];
-        let findings = find_stale_agent_issues(&issues, &[], now, &linked_for(vec![2240]));
+        let findings =
+            find_stale_agent_issues(&issues, &[], now, &linked_for(vec![2240]));
         assert!(findings.is_empty());
     }
 
@@ -713,10 +700,7 @@ mod tests {
 
         assert_eq!(findings.len(), 2);
         assert_eq!(
-            findings
-                .iter()
-                .map(|finding| finding.identifier.as_str())
-                .collect::<Vec<_>>(),
+            findings.iter().map(|finding| finding.identifier.as_str()).collect::<Vec<_>>(),
             vec!["#747", "#748"]
         );
     }
