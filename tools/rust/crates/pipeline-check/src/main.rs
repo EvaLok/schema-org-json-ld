@@ -45,9 +45,10 @@ const PR_BASE_CURRENCY_STEP_NAME: &str = "pr-base-currency";
 const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const CURRENT_CYCLE_STEPS_STEP_NAME: &str = "current-cycle-steps";
 const DOC_LINT_STEP_NAME: &str = "doc-lint";
+const COMMITMENT_DROP_VERIFICATION_STEP_NAME: &str = "commitment-drop-verification";
 const WORKLOG_PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
-const STEP_NAMES: [&str; 24] = [
+const STEP_NAMES: [&str; 25] = [
     "metric-snapshot",
     "field-inventory",
     "housekeeping-scan",
@@ -72,6 +73,7 @@ const STEP_NAMES: [&str; 24] = [
     STEP_COMMENTS_STEP_NAME,
     CURRENT_CYCLE_STEPS_STEP_NAME,
     DOC_LINT_STEP_NAME,
+    COMMITMENT_DROP_VERIFICATION_STEP_NAME,
 ];
 // Steps that have not been posted yet when pipeline-check runs at C5.5.
 // These are excluded from the current-cycle mandatory step check.
@@ -143,6 +145,23 @@ static CHRONIC_CATEGORY_PR_LABEL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
         r"(?i)(?:\bpr(?:\(s\)|s)?\b|\bvia\b)(?P<refs>(?:\s+(?:[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)?#\d+\s*(?:/|,|and)?\s*)+)",
     )
     .expect("chronic category pull request label regex should compile")
+});
+static COMMITMENT_DROP_PR_LABEL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?i)\bpr(?:\(s\)|s)?\b(?P<refs>(?:\s+(?:[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)?#\d+\s*(?:/|,|and)?\s*)+)",
+    )
+    .expect("commitment drop pull request label regex should compile")
+});
+static BRACKETED_HASH_REFERENCE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\[#(\d+)\]").expect("bracketed hash reference regex should compile")
+});
+static TOOL_PATH_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"tools/(?:rust/crates/)?([A-Za-z0-9][A-Za-z0-9-]*)")
+        .expect("tool path regex should compile")
+});
+static HYPHENATED_TARGET_SURFACE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\b([A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)+)\b")
+        .expect("hyphenated target surface regex should compile")
 });
 static ISSUE_LABEL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)\bissues?\b(?P<refs>(?:\s*#\d+\s*(?:/|,|and)?\s*)+)")
@@ -258,6 +277,12 @@ trait CommandRunner {
             issue
         ))
     }
+    fn fetch_pull_request_files(&self, issue: u64) -> Result<Vec<String>, String> {
+        Err(format!(
+            "pull request file fetch not supported by this runner for PR #{}",
+            issue
+        ))
+    }
     fn fetch_issue_state(&self, issue: u64) -> Result<String, String> {
         Err(format!(
             "issue state fetch not supported by this runner for issue #{}",
@@ -348,6 +373,28 @@ impl CommandRunner for ProcessRunner {
         }
 
         Ok(state)
+    }
+
+    fn fetch_pull_request_files(&self, issue: u64) -> Result<Vec<String>, String> {
+        let output = Command::new("gh")
+            .arg("api")
+            .arg(format!("repos/{MAIN_REPO}/pulls/{issue}/files"))
+            .arg("--paginate")
+            .arg("--jq")
+            .arg(".[].filename")
+            .output()
+            .map_err(|error| format!("failed to execute gh api: {}", error))?;
+
+        if !output.status.success() {
+            return Err(command_failure_message("gh api", &output));
+        }
+
+        Ok(String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+            .map(str::to_string)
+            .collect())
     }
 
     fn fetch_issue_state(&self, issue: u64) -> Result<String, String> {
@@ -742,6 +789,9 @@ fn run_pipeline_with_excluded_steps(
     if !is_excluded_step(DOC_LINT_STEP_NAME, exclude_steps) {
         steps.push(verify_doc_lint(repo_root, cycle));
     }
+    if !is_excluded_step(COMMITMENT_DROP_VERIFICATION_STEP_NAME, exclude_steps) {
+        steps.push(verify_commitment_drop_verification(repo_root, runner));
+    }
     // Doc validation runs before step-comments so it can pass the pre-step-comments
     // pipeline status through to validate-docs. Reclassify afterward, once the real
     // step-comments result is known, but before computing the final overall status.
@@ -1070,6 +1120,29 @@ fn verify_doc_lint(repo_root: &Path, cycle: u64) -> StepReport {
     }
 }
 
+fn verify_commitment_drop_verification(repo_root: &Path, runner: &dyn CommandRunner) -> StepReport {
+    match commitment_drop_verification_status(repo_root, runner) {
+        Ok((status, detail)) => StepReport {
+            name: COMMITMENT_DROP_VERIFICATION_STEP_NAME,
+            status,
+            severity: Severity::Warning,
+            exit_code: None,
+            detail: Some(detail),
+            findings: None,
+            summary: None,
+        },
+        Err(error) => StepReport {
+            name: COMMITMENT_DROP_VERIFICATION_STEP_NAME,
+            status: StepStatus::Error,
+            severity: Severity::Warning,
+            exit_code: None,
+            detail: Some(error),
+            findings: None,
+            summary: None,
+        },
+    }
+}
+
 fn doc_lint_status(repo_root: &Path, cycle: u64) -> Result<(StepStatus, Vec<String>), String> {
     let mut warnings = Vec::new();
 
@@ -1109,6 +1182,200 @@ fn doc_lint_status(repo_root: &Path, cycle: u64) -> Result<(StepStatus, Vec<Stri
         StepStatus::Warn
     };
     Ok((status, warnings))
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct CommitmentDropEntry {
+    text: String,
+    target_surfaces: BTreeSet<String>,
+    cited_pull_requests: BTreeSet<u64>,
+}
+
+fn commitment_drop_verification_status(
+    repo_root: &Path,
+    runner: &dyn CommandRunner,
+) -> Result<(StepStatus, String), String> {
+    let today = &current_utc_timestamp()[..10];
+    let Some(worklog_path) = latest_worklog_entry_for_date(repo_root, today)? else {
+        return Ok((
+            StepStatus::Pass,
+            format!(
+                "no worklog entry found for today ({}); no commitment drops to verify",
+                today
+            ),
+        ));
+    };
+
+    let content = fs::read_to_string(&worklog_path)
+        .map_err(|error| format!("failed to read {}: {}", worklog_path.display(), error))?;
+    let dropped_commitments = extract_commitment_drop_entries(&content);
+    if dropped_commitments.is_empty() {
+        return Ok((
+            StepStatus::Pass,
+            format!(
+                "no dropped commitments with cited PRs found in {}",
+                worklog_path.display()
+            ),
+        ));
+    }
+
+    let mut warnings = Vec::new();
+    let mut verified_pull_requests = 0usize;
+    for entry in dropped_commitments {
+        for pull_request in &entry.cited_pull_requests {
+            verified_pull_requests += 1;
+            let changed_files = runner.fetch_pull_request_files(*pull_request)?;
+            if entry.target_surfaces.is_empty() {
+                warnings.push(format!(
+                    "dropped commitment '{}' cites PR #{} but no target surface could be extracted",
+                    entry.text, pull_request
+                ));
+                continue;
+            }
+
+            let has_overlap = changed_files.iter().any(|path| {
+                let normalized_path = path.to_ascii_lowercase();
+                entry
+                    .target_surfaces
+                    .iter()
+                    .any(|surface| normalized_path.contains(surface))
+            });
+            if !has_overlap {
+                warnings.push(format!(
+                    "dropped commitment '{}' cites PR #{} but changed files do not overlap target surface [{}]",
+                    entry.text,
+                    pull_request,
+                    entry
+                        .target_surfaces
+                        .iter()
+                        .cloned()
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ));
+            }
+        }
+    }
+
+    if warnings.is_empty() {
+        Ok((
+            StepStatus::Pass,
+            format!(
+                "verified {} cited PR(s) for dropped commitments in {}",
+                verified_pull_requests,
+                worklog_path.display()
+            ),
+        ))
+    } else {
+        Ok((StepStatus::Warn, warnings.join("; ")))
+    }
+}
+
+fn extract_commitment_drop_entries(content: &str) -> Vec<CommitmentDropEntry> {
+    content
+        .lines()
+        .filter_map(parse_commitment_drop_entry)
+        .collect()
+}
+
+fn parse_commitment_drop_entry(line: &str) -> Option<CommitmentDropEntry> {
+    let trimmed = line.trim();
+    if !is_commitment_drop_candidate(trimmed) {
+        return None;
+    }
+
+    let cited_pull_requests = extract_commitment_drop_pr_numbers(trimmed);
+    if cited_pull_requests.is_empty() {
+        return None;
+    }
+
+    Some(CommitmentDropEntry {
+        text: trimmed.to_string(),
+        target_surfaces: extract_commitment_target_surfaces(trimmed),
+        cited_pull_requests,
+    })
+}
+
+fn is_commitment_drop_candidate(line: &str) -> bool {
+    let lowercase = line.to_ascii_lowercase();
+    lowercase.starts_with("- dropped")
+        || lowercase.starts_with("* dropped")
+        || lowercase.starts_with("dropped ")
+        || lowercase.contains("**dropped**")
+}
+
+fn extract_commitment_drop_pr_numbers(text: &str) -> BTreeSet<u64> {
+    let mut pull_requests = BTreeSet::new();
+
+    for captures in COMMITMENT_DROP_PR_LABEL_REGEX.captures_iter(text) {
+        let Some(reference_block) = captures.name("refs").map(|capture| capture.as_str()) else {
+            continue;
+        };
+        collect_hash_numbers(reference_block, &mut pull_requests);
+    }
+
+    for captures in BRACKETED_HASH_REFERENCE_REGEX.captures_iter(text) {
+        let Some(pull_request) = captures
+            .get(1)
+            .and_then(|capture| capture.as_str().parse::<u64>().ok())
+        else {
+            continue;
+        };
+        pull_requests.insert(pull_request);
+    }
+
+    for captures in PULL_REQUEST_URL_REGEX.captures_iter(text) {
+        let Some(pull_request) = captures
+            .get(1)
+            .and_then(|capture| capture.as_str().parse::<u64>().ok())
+        else {
+            continue;
+        };
+        pull_requests.insert(pull_request);
+    }
+
+    pull_requests
+}
+
+fn extract_commitment_target_surfaces(text: &str) -> BTreeSet<String> {
+    let lowercase = text.to_ascii_lowercase();
+    let target_scope = [
+        " with rationale",
+        " — structural rationale",
+        " - structural rationale",
+        " — rationale",
+        " - rationale",
+        " rationale:",
+        " because ",
+        " due to ",
+    ]
+    .iter()
+    .filter_map(|marker| lowercase.find(marker))
+    .min()
+    .map(|index| &text[..index])
+    .unwrap_or(text);
+
+    let mut surfaces = BTreeSet::new();
+    for captures in TOOL_PATH_REGEX.captures_iter(target_scope) {
+        let Some(surface) = captures.get(1) else {
+            continue;
+        };
+        surfaces.insert(surface.as_str().to_ascii_lowercase());
+    }
+    for captures in HYPHENATED_TARGET_SURFACE_REGEX.captures_iter(target_scope) {
+        let Some(surface) = captures.get(1) else {
+            continue;
+        };
+        let normalized = surface.as_str().to_ascii_lowercase();
+        if normalized.starts_with("cycle-") {
+            continue;
+        }
+        surfaces.insert(normalized);
+    }
+    if target_scope.to_ascii_lowercase().contains("substep") {
+        surfaces.insert("pipeline-check".to_string());
+    }
+
+    surfaces
 }
 
 fn extract_worklog_file_claims(content: &str) -> Vec<String> {
@@ -5596,7 +5863,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 24);
+        assert_eq!(report.steps.len(), 25);
         assert_eq!(report.steps[0].status, StepStatus::Pass);
         assert_eq!(report.steps[1].status, StepStatus::Pass);
         assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -5837,7 +6104,7 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 24);
+        assert_eq!(report.steps.len(), 25);
         assert!(report.steps[..6]
             .iter()
             .all(|step| matches!(step.status, StepStatus::Error)));
@@ -6779,7 +7046,7 @@ mod tests {
             &ExcludeDocValidationRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 23);
+        assert_eq!(report.steps.len(), 24);
         assert!(!report
             .steps
             .iter()
@@ -6916,11 +7183,15 @@ mod tests {
             &UnknownExcludeRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 24);
+        assert_eq!(report.steps.len(), 25);
         assert!(report
             .steps
             .iter()
             .any(|step| step.name == "doc-validation"));
+        assert!(report
+            .steps
+            .iter()
+            .any(|step| step.name == COMMITMENT_DROP_VERIFICATION_STEP_NAME));
         assert!(report.steps.iter().any(|step| step.name == "worklog-dedup"));
     }
 
@@ -7057,7 +7328,7 @@ mod tests {
         );
 
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 23);
+        assert_eq!(report.steps.len(), 24);
         assert!(!report.steps.iter().any(|step| step.name == "worklog-dedup"));
         assert!(report
             .steps
@@ -12893,5 +13164,130 @@ mod tests {
         assert!(warnings
             .iter()
             .any(|w| w.contains("tools/nonexistent-tool")));
+    }
+
+    #[test]
+    fn commitment_drop_pr_extraction_handles_pr_labels_and_bracket_refs() {
+        let pull_requests = extract_commitment_drop_pr_numbers(
+            "- Dropped tool hardening with rationale: PR EvaLok/schema-org-json-ld#2345 addresses this and [#2346] contains the follow-up",
+        );
+
+        assert_eq!(pull_requests, BTreeSet::from([2345, 2346]));
+    }
+
+    #[test]
+    fn commitment_drop_target_surface_extraction_detects_pipeline_check_substeps() {
+        let surfaces = extract_commitment_target_surfaces(
+            "- Dropped deferred-resolution-merge-gate substep because PR #2050 already landed",
+        );
+
+        assert!(surfaces.contains("deferred-resolution-merge-gate"));
+        assert!(surfaces.contains("pipeline-check"));
+        assert!(!surfaces.contains("landed"));
+    }
+
+    #[test]
+    fn commitment_drop_target_surface_extraction_detects_tool_names_and_flags() {
+        let surfaces = extract_commitment_target_surfaces(
+            "- Dropped cycle 462 review F3 (post-step --body-stdin + --allow-template-syntax + literal validation) with rationale: F3's --in-flight CLI override is deleted by [PR #2323](https://github.com/EvaLok/schema-org-json-ld/pull/2323)",
+        );
+
+        assert!(surfaces.contains("post-step"));
+        assert!(surfaces.contains("body-stdin"));
+        assert!(surfaces.contains("allow-template-syntax"));
+        assert!(!surfaces.contains("close-session"));
+    }
+
+    #[test]
+    fn commitment_drop_verification_warns_when_pr_files_do_not_overlap_target_surface() {
+        struct PullRequestFilesRunner;
+
+        impl CommandRunner for PullRequestFilesRunner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                Err("not used".to_string())
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                Err("not used".to_string())
+            }
+
+            fn fetch_pull_request_files(&self, issue: u64) -> Result<Vec<String>, String> {
+                assert_eq!(issue, 2323);
+                Ok(vec![
+                    "tools/rust/crates/close-session/src/main.rs".to_string()
+                ])
+            }
+        }
+
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-commitment-drop-warn-{}", run_id));
+        let today = &current_utc_timestamp()[..10];
+        fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
+        fs::write(
+            root.join("docs/worklog")
+                .join(today)
+                .join("010203-cycle-999-summary.md"),
+            "- Dropped cycle 462 review F3 (post-step --body-stdin + --allow-template-syntax + literal validation) with rationale: F3's --in-flight CLI override is deleted by [PR #2323](https://github.com/EvaLok/schema-org-json-ld/pull/2323)\n",
+        )
+        .unwrap();
+
+        let (status, detail) = commitment_drop_verification_status(&root, &PullRequestFilesRunner)
+            .expect("status should resolve");
+
+        assert_eq!(status, StepStatus::Warn);
+        assert!(detail.contains("PR #2323"));
+        assert!(detail.contains("post-step"));
+    }
+
+    #[test]
+    fn commitment_drop_verification_passes_when_pr_files_overlap_target_surface() {
+        struct PullRequestFilesRunner;
+
+        impl CommandRunner for PullRequestFilesRunner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                Err("not used".to_string())
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                Err("not used".to_string())
+            }
+
+            fn fetch_pull_request_files(&self, issue: u64) -> Result<Vec<String>, String> {
+                assert_eq!(issue, 2345);
+                Ok(vec![
+                    "tools/rust/crates/pipeline-check/src/main.rs".to_string()
+                ])
+            }
+        }
+
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-commitment-drop-pass-{}", run_id));
+        let today = &current_utc_timestamp()[..10];
+        fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
+        fs::write(
+            root.join("docs/worklog")
+                .join(today)
+                .join("010203-cycle-999-summary.md"),
+            "- Dropped [audit #395](https://github.com/EvaLok/schema-org-json-ld-audit/issues/395) Tier 1 (drop-rationale verification substep) — structural rationale: [PR #2345](https://github.com/EvaLok/schema-org-json-ld/pull/2345) covers the pipeline-check surface\n",
+        )
+        .unwrap();
+
+        let (status, detail) = commitment_drop_verification_status(&root, &PullRequestFilesRunner)
+            .expect("status should resolve");
+
+        assert_eq!(status, StepStatus::Pass);
+        assert!(detail.contains("verified 1 cited PR"));
     }
 }
