@@ -7814,6 +7814,12 @@
       "deadline_cycle": 470,
       "deferred_cycle": 465,
       "resolved": false
+    },
+    {
+      "category": "process-adherence",
+      "deadline_cycle": 471,
+      "deferred_cycle": 466,
+      "resolved": false
     }
   ],
   "dispatch_log_latest": "#2346 [Cycle Review] Cycle 466 end-of-cycle review (cycle 466)",
@@ -7997,7 +8003,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 466"
+        "last_refreshed": "cycle 467"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -13971,9 +13977,36 @@
         ],
         "ignored": 0,
         "note": "F1 state-integrity (last_cycle.summary wrong): DEFERRED — cycle-complete derivation bug needs dispatch. F2 process-adherence (audit #395 misrepresented as dispatched): ACTIONED — correcting audit state this cycle. F3 journal-quality (audit #395 dropped from commitments): DEFERRED — retroactive fix not possible, carrying forward as cycle 466 commitment. F4 state-integrity (stale chronic narratives): ACTIONED — refreshing narratives this cycle."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "process-adherence",
+          "state-integrity"
+        ],
+        "complacency_score": 2,
+        "cycle": 466,
+        "deferred": 3,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "state-integrity",
+            "disposition": "deferred"
+          },
+          {
+            "category": "state-integrity",
+            "disposition": "deferred"
+          },
+          {
+            "category": "process-adherence",
+            "disposition": "deferred"
+          }
+        ],
+        "ignored": 0,
+        "note": "F1+F2: last_cycle.summary derivation bug and post-close-out mutation — dispatch #2342 failed (agent session empty), will re-dispatch this cycle. F3: review_events_verified_through_cycle advanced without tool run — behavioral fix, will ensure tool-only advancement going forward."
       }
     ],
-    "last_review_cycle": 465
+    "last_review_cycle": 466
   },
   "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 466,
