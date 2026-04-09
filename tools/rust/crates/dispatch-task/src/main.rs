@@ -1,8 +1,8 @@
 use clap::{ArgAction, Parser};
 use record_dispatch::{
     apply_dispatch_patch, build_dispatch_patch, concurrency_warning_message,
-    dispatch_commit_message, enforce_pipeline_gate, fixup_latest_worklog_in_flight, resolve_model,
-    CommandRunner, PipelineGateError, ProcessRunner, WorklogFixupOutcome,
+    dispatch_commit_message, enforce_pipeline_gate, push_to_origin_master, resolve_model,
+    CommandRunner, PipelineGateError, ProcessRunner,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -288,15 +288,6 @@ fn record_dispatch_state(
     let commit_message = dispatch_commit_message(issue, patch.current_cycle);
     let receipt = commit_state_json(repo_root, &commit_message)?;
 
-    match fixup_latest_worklog_in_flight(repo_root, patch.in_flight)? {
-        WorklogFixupOutcome::Updated(path) => {
-            println!("Worklog in-flight count updated in {}", path.display());
-        }
-        WorklogFixupOutcome::NotFound => {
-            warn("Latest worklog not found; skipping in-flight count fixup");
-        }
-    }
-
     if patch.in_flight >= 3 {
         warn(&concurrency_warning_message(patch.in_flight));
     }
@@ -403,19 +394,6 @@ fn read_body_file(path: &Path, allow_empty: bool) -> Result<String, String> {
         return Err(format!("{} must not be empty", path.display()));
     }
     Ok(normalized.to_string())
-}
-
-fn push_to_origin_master(repo_root: &Path) -> Result<(), String> {
-    let output = Command::new("git")
-        .arg("-C")
-        .arg(repo_root)
-        .args(["push", "origin", "master"])
-        .output()
-        .map_err(|error| format!("failed to execute git push: {}", error))?;
-    if !output.status.success() {
-        return Err(command_failure_message("git push origin master", &output));
-    }
-    Ok(())
 }
 
 fn reconcile_review_history_dispatch(

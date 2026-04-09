@@ -120,9 +120,6 @@ struct WorklogArgs {
     /// Publish gate summary for the current state section
     #[arg(long = "publish-gate")]
     publish_gate: Option<String>,
-    /// Number of in-flight agent sessions
-    #[arg(long = "in-flight")]
-    in_flight: Option<u64>,
     /// Commit receipt in TOOL:SHA form
     #[arg(long = "receipt")]
     receipt: Vec<String>,
@@ -472,10 +469,7 @@ fn resolve_worklog_input_for_cycle(
                 &parse_issue_processed(&args.issue_processed)?,
             ),
             current_state: CurrentState {
-                in_flight_sessions: match args.in_flight {
-                    Some(value) => value,
-                    None => state_extra_in_flight_sessions(state.as_ref())?,
-                },
+                in_flight_sessions: state_extra_in_flight_sessions(state.as_ref())?,
                 pipeline_status: resolve_pipeline_status(args, repo_root, cycle, state.as_ref())?,
                 prior_gate_failures: resolve_prior_gate_failures(args, repo_root, state.as_ref())?,
                 publish_gate: match &args.publish_gate {
@@ -534,10 +528,7 @@ fn validate_worklog_flag_combinations(args: &WorklogArgs) -> Result<(), String> 
 }
 
 fn requires_worklog_state(args: &WorklogArgs) -> bool {
-    args.auto_next
-        || args.auto_gate_history
-        || args.publish_gate.is_none()
-        || args.in_flight.is_none()
+    args.auto_next || args.auto_gate_history || args.publish_gate.is_none()
 }
 
 fn load_worklog_state(repo_root: &Path, required: bool) -> Result<Option<StateJson>, String> {
@@ -949,7 +940,6 @@ fn has_inline_worklog_content(args: &WorklogArgs) -> bool {
         || args.auto_gate_history
         || args.auto_pipeline
         || args.publish_gate.is_some()
-        || args.in_flight.is_some()
         || !args.receipt.is_empty()
 }
 
@@ -3226,6 +3216,7 @@ fn parse_digits(chars: &[char], start: usize) -> (String, usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
     use std::process::Command as ProcessCommand;
     use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -3249,6 +3240,18 @@ mod tests {
                 run_id
             ));
             fs::create_dir_all(&path).unwrap();
+            fs::create_dir_all(path.join("docs")).unwrap();
+            fs::write(
+                path.join("docs/state.json"),
+                r#"{
+  "last_cycle": {"number": 154},
+  "cycle_phase": {"cycle": 154},
+  "agent_sessions": [],
+  "in_flight_sessions": 0
+}
+"#,
+            )
+            .unwrap();
             Self { path }
         }
     }
@@ -3302,7 +3305,6 @@ mod tests {
             auto_gate_history: false,
             auto_pipeline: false,
             publish_gate: None,
-            in_flight: None,
             receipt: Vec::new(),
             auto_receipts: false,
             dry_run: false,
@@ -3457,8 +3459,27 @@ mod tests {
 
     fn write_state_file(repo_root: &Path, payload: &str) {
         fs::create_dir_all(repo_root.join("docs")).expect("failed to create docs directory");
-        fs::write(repo_root.join("docs/state.json"), payload)
-            .expect("failed to write test state.json");
+        let mut value: Value = serde_json::from_str(payload).expect("test state JSON should parse");
+        if value.get("in_flight_sessions").is_none() {
+            let in_flight = value
+                .get("agent_sessions")
+                .and_then(Value::as_array)
+                .map(|sessions| {
+                    sessions
+                        .iter()
+                        .filter(|session| {
+                            session.get("status").and_then(Value::as_str) == Some("in_flight")
+                        })
+                        .count() as u64
+                })
+                .unwrap_or(0);
+            value["in_flight_sessions"] = json!(in_flight);
+        }
+        fs::write(
+            repo_root.join("docs/state.json"),
+            serde_json::to_string_pretty(&value).expect("test state JSON should serialize"),
+        )
+        .expect("failed to write test state.json");
     }
 
     #[test]
@@ -3707,7 +3728,6 @@ mod tests {
             "C5.5 FAIL: doc-validation".to_string(),
         ];
         args.publish_gate = Some("clear".to_string());
-        args.in_flight = Some(0);
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
@@ -3740,7 +3760,6 @@ mod tests {
         args.auto_gate_history = true;
         args.pipeline = Some("PASS (2 warnings)".to_string());
         args.publish_gate = Some("clear".to_string());
-        args.in_flight = Some(0);
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
@@ -3778,7 +3797,6 @@ mod tests {
         ];
         args.pipeline = Some("PASS (2 warnings)".to_string());
         args.publish_gate = Some("clear".to_string());
-        args.in_flight = Some(0);
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
@@ -3807,7 +3825,6 @@ mod tests {
         args.auto_gate_history = true;
         args.pipeline = Some("PASS (2 warnings)".to_string());
         args.publish_gate = Some("clear".to_string());
-        args.in_flight = Some(0);
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
@@ -3839,7 +3856,6 @@ mod tests {
         args.auto_gate_history = true;
         args.pipeline = Some("PASS (2 warnings)".to_string());
         args.publish_gate = Some("clear".to_string());
-        args.in_flight = Some(0);
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
@@ -3938,6 +3954,52 @@ mod tests {
     }
 
     #[test]
+    fn worklog_uses_canonical_in_flight_sessions_from_state() {
+        let repo_root = TempRepoDir::new("worklog-canonical-in-flight");
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "cycle": 154
+                },
+                "in_flight_sessions": 3,
+                "tool_pipeline": {
+                    "status": "PASS (6/6)"
+                },
+                "publish_gate": {
+                    "status": "open"
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 101,
+                        "title": "First active dispatch",
+                        "status": "in_flight"
+                    },
+                    {
+                        "issue": 102,
+                        "title": "Second active dispatch",
+                        "status": "in_flight"
+                    },
+                    {
+                        "issue": 103,
+                        "title": "Third active dispatch",
+                        "status": "in_flight"
+                    }
+                ]
+            }"#,
+        );
+
+        let mut args = worklog_args("Canonical in flight");
+        args.done = vec!["Closed review loop".to_string()];
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains("- **In-flight agent sessions**: 3"));
+    }
+
+    #[test]
     fn worklog_inline_flags_use_frozen_c5_5_state_when_present() {
         let repo_root = TempRepoDir::new("worklog-c5-5-frozen-state");
         init_git_repo(&repo_root.path);
@@ -4031,7 +4093,6 @@ mod tests {
         args.auto_receipts = true;
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
@@ -4107,7 +4168,6 @@ mod tests {
         args.auto_receipts = true;
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
@@ -4146,7 +4206,6 @@ mod tests {
         args.pr_merged = vec![1226];
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
@@ -4180,7 +4239,6 @@ mod tests {
         args.pr_reviewed = vec![1226];
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
@@ -4214,7 +4272,6 @@ mod tests {
         args.pr_reviewed = vec![1226];
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
@@ -4275,7 +4332,6 @@ mod tests {
         args.auto_receipts = true;
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
 
         let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
         let cycle = resolve_cycle(args.cycle, &repo_root.path).unwrap();
@@ -4377,7 +4433,6 @@ mod tests {
         args.auto_receipts = true;
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
 
         let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
         let cycle = resolve_cycle(args.cycle, &repo_root.path).unwrap();
@@ -4430,7 +4485,6 @@ mod tests {
         args.auto_receipts = true;
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
 
         let error = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap_err();
 
@@ -4447,7 +4501,6 @@ mod tests {
         args.auto_receipts = true;
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
 
         let error = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap_err();
 
@@ -4491,7 +4544,6 @@ mod tests {
         args.auto_self_modifications = true;
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
 
         let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
         let warnings =
@@ -4572,8 +4624,6 @@ mod tests {
             "PASS (6/6)",
             "--publish-gate",
             "open",
-            "--in-flight",
-            "0",
         ])
         .unwrap();
         let args = match cli.command {
@@ -4662,8 +4712,6 @@ mod tests {
             "PASS (6/6)",
             "--publish-gate",
             "open",
-            "--in-flight",
-            "0",
         ])
         .unwrap();
         let args = match cli.command {
@@ -4736,8 +4784,6 @@ mod tests {
             "PASS (6/6)",
             "--publish-gate",
             "open",
-            "--in-flight",
-            "0",
         ])
         .unwrap();
         let args = match cli.command {
@@ -4804,8 +4850,6 @@ mod tests {
             "PASS (6/6)",
             "--publish-gate",
             "open",
-            "--in-flight",
-            "0",
         ])
         .unwrap();
         let args = match cli.command {
@@ -4902,8 +4946,6 @@ mod tests {
             "PASS (6/6)",
             "--publish-gate",
             "open",
-            "--in-flight",
-            "0",
         ])
         .unwrap();
         let args = match cli.command {
@@ -5001,7 +5043,6 @@ mod tests {
         args.auto_issues = true;
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
 
         let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
         let warnings =
@@ -5069,7 +5110,6 @@ mod tests {
         args.done = vec!["Closed follow-up issue #42 after validation".to_string()];
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
 
         let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
         let warnings =
@@ -5124,7 +5164,6 @@ mod tests {
         ];
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
 
         let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
         let warnings =
@@ -5197,7 +5236,6 @@ mod tests {
         args.auto_issues = true;
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
 
         let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
         let warnings =
@@ -5233,8 +5271,6 @@ mod tests {
             "PASS (6/6)",
             "--publish-gate",
             "open",
-            "--in-flight",
-            "0",
         ])
         .unwrap();
         let args = match cli.command {
@@ -5414,7 +5450,6 @@ mod tests {
         args.receipt = vec!["cycle-start:abc1234".to_string()];
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
 
         let error = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap_err();
 
@@ -5437,6 +5472,7 @@ mod tests {
             &repo_root.path,
             r#"{
                 "last_cycle": {"number": 154},
+                "in_flight_sessions": 1,
                 "copilot_metrics": {
                     "total_dispatches": 45,
                     "produced_pr": 42,
@@ -5455,7 +5491,6 @@ mod tests {
         args.done = vec!["Merged PR #123".to_string()];
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("pre-publish".to_string());
-        args.in_flight = Some(1);
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
@@ -5595,6 +5630,7 @@ mod tests {
     #[test]
     fn worklog_inline_flags_fail_closed_when_state_status_is_unavailable() {
         let repo_root = TempRepoDir::new("worklog-status-missing");
+        fs::remove_file(repo_root.path.join("docs/state.json")).unwrap();
         let mut args = worklog_args("Missing status");
         args.done = vec!["Merged PR #123".to_string()];
 
@@ -5612,7 +5648,6 @@ mod tests {
         args.done = vec!["Merged PR #123".to_string()];
         args.auto_pipeline = true;
         args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
 
         let error = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap_err();
         assert!(error.contains("pipeline-check did not produce a parseable overall summary"));
@@ -5904,7 +5939,6 @@ mod tests {
         let mut args = worklog_args("Invalid receipt");
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("published".to_string());
-        args.in_flight = Some(0);
         args.receipt = vec!["cycle-start:not-a-sha".to_string()];
 
         let error = resolve_worklog_input(&args, &repo_root.path).unwrap_err();
@@ -5920,7 +5954,6 @@ mod tests {
         args.receipt = vec!["cycle-start:abc1234".to_string()];
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
 
         let error = resolve_worklog_input(&args, &repo_root.path).unwrap_err();
         assert!(error.contains("--auto-receipts"));
@@ -5936,7 +5969,6 @@ mod tests {
         args.self_modification = vec!["AGENTS.md: manual override".to_string()];
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
 
         let error = resolve_worklog_input(&args, &repo_root.path).unwrap_err();
         assert!(error.contains("--auto-self-modifications"));
@@ -5951,7 +5983,6 @@ mod tests {
         args.auto_pipeline = true;
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
 
         let error = resolve_worklog_input(&args, &repo_root.path).unwrap_err();
         assert!(error.contains("--auto-pipeline"));
@@ -5993,7 +6024,6 @@ mod tests {
         args.auto_receipts = true;
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
@@ -6043,7 +6073,6 @@ mod tests {
         args.auto_receipts = true;
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let argv = fs::read_to_string(args_log).unwrap();
@@ -6101,7 +6130,6 @@ mod tests {
         args.auto_self_modifications = true;
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("open".to_string());
-        args.in_flight = Some(0);
 
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
@@ -6930,8 +6958,6 @@ Reflective log for the schema-org-json-ld orchestrator.
             "PASS (6/6)",
             "--publish-gate",
             "open",
-            "--in-flight",
-            "1",
             "--receipt",
             "cycle-start:abc1234",
         ])
@@ -6951,7 +6977,6 @@ Reflective log for the schema-org-json-ld orchestrator.
                 assert!(args.self_modification.is_empty());
                 assert_eq!(args.next, vec!["Review PR #124".to_string()]);
                 assert_eq!(args.pipeline.as_deref(), Some("PASS (6/6)"));
-                assert_eq!(args.in_flight, Some(1));
                 assert_eq!(args.receipt, vec!["cycle-start:abc1234".to_string()]);
             }
             Command::Journal(_) => panic!("expected worklog command"),
@@ -7019,6 +7044,23 @@ Reflective log for the schema-org-json-ld orchestrator.
             }
             Command::Journal(_) => panic!("expected worklog command"),
         }
+    }
+
+    #[test]
+    fn cli_rejects_removed_in_flight_flag() {
+        let error = match Cli::try_parse_from([
+            "write-entry",
+            "worklog",
+            "--title",
+            "test",
+            "--in-flight",
+            "1",
+        ]) {
+            Ok(_) => panic!("--in-flight should no longer parse"),
+            Err(error) => error,
+        };
+
+        assert!(error.to_string().contains("--in-flight"));
     }
 
     #[test]

@@ -1,0 +1,11 @@
+[package]
+name = "close-session"
+version = "0.1.0"
+edition = "2021"
+description = "Explicitly close stale agent_sessions rows in docs/state.json"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+record-dispatch = { path = "../record-dispatch" }
+serde_json = "1"
+state-schema = { path = "../state-schema" }
