@@ -33,6 +33,7 @@ const DEFERRAL_ACCUMULATION_STEP_NAME: &str = "deferral-accumulation";
 const DEFERRAL_DEADLINES_STEP_NAME: &str = "deferral-deadlines";
 const MASS_DEFERRAL_GATE_STEP_NAME: &str = "mass-deferral-gate";
 const DISPATCH_FINDING_RECONCILIATION_STEP_NAME: &str = "dispatch-finding-reconciliation";
+const DEFERRED_RESOLUTION_MERGE_GATE_STEP_NAME: &str = "deferred-resolution-merge-gate";
 const DOC_VALIDATION_STEP_NAME: &str = "doc-validation";
 const FROZEN_COMMIT_VERIFY_STEP_NAME: &str = "frozen-commit-verify";
 const WORKLOG_DEDUP_STEP_NAME: &str = "worklog-dedup";
@@ -43,7 +44,7 @@ const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const CURRENT_CYCLE_STEPS_STEP_NAME: &str = "current-cycle-steps";
 const WORKLOG_PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
-const STEP_NAMES: [&str; 22] = [
+const STEP_NAMES: [&str; 23] = [
     "metric-snapshot",
     "field-inventory",
     "housekeeping-scan",
@@ -58,6 +59,7 @@ const STEP_NAMES: [&str; 22] = [
     DEFERRAL_DEADLINES_STEP_NAME,
     MASS_DEFERRAL_GATE_STEP_NAME,
     DISPATCH_FINDING_RECONCILIATION_STEP_NAME,
+    DEFERRED_RESOLUTION_MERGE_GATE_STEP_NAME,
     DOC_VALIDATION_STEP_NAME,
     FROZEN_COMMIT_VERIFY_STEP_NAME,
     WORKLOG_DEDUP_STEP_NAME,
@@ -119,6 +121,23 @@ const BLOCKERS_PATH: &str = "/blockers";
 const DEFERRAL_ACCUMULATION_THRESHOLD: usize = 3;
 static REVIEW_FINDING_HEADER_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?m)^## \d+\.").expect("review finding regex should compile"));
+static HASH_REFERENCE_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"#(\d+)").expect("hash reference regex should compile"));
+static PULL_REQUEST_URL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"github\.com/[^/\s]+/[^/\s]+/pull/(\d+)")
+        .expect("pull request url regex should compile")
+});
+static ISSUE_URL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"github\.com/[^/\s]+/[^/\s]+/issues/(\d+)").expect("issue url regex should compile")
+});
+static PULL_REQUEST_LABEL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)\bprs?\b(?P<refs>(?:\s*#\d+\s*(?:/|,|and)?\s*)+)")
+        .expect("pull request label regex should compile")
+});
+static ISSUE_LABEL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)\bissues?\b(?P<refs>(?:\s*#\d+\s*(?:/|,|and)?\s*)+)")
+        .expect("issue label regex should compile")
+});
 
 #[derive(Parser)]
 #[command(name = "pipeline-check")]
@@ -223,6 +242,12 @@ struct OpenAgentTaskPullRequest {
 trait CommandRunner {
     fn run(&self, script_path: &Path, args: &[String]) -> Result<ExecutionResult, String>;
     fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String>;
+    fn fetch_pull_request_state(&self, issue: u64) -> Result<String, String> {
+        Err(format!(
+            "pull request state fetch not supported by this runner for PR #{}",
+            issue
+        ))
+    }
     fn fetch_issue_state(&self, issue: u64) -> Result<String, String> {
         Err(format!(
             "issue state fetch not supported by this runner for issue #{}",
@@ -287,6 +312,32 @@ impl CommandRunner for ProcessRunner {
         }
 
         Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    }
+
+    fn fetch_pull_request_state(&self, issue: u64) -> Result<String, String> {
+        let output = Command::new("gh")
+            .arg("pr")
+            .arg("view")
+            .arg(issue.to_string())
+            .arg("--repo")
+            .arg(MAIN_REPO)
+            .arg("--json")
+            .arg("state")
+            .arg("--jq")
+            .arg(".state")
+            .output()
+            .map_err(|error| format!("failed to execute gh pr view: {}", error))?;
+
+        if !output.status.success() {
+            return Err(command_failure_message("gh pr view", &output));
+        }
+
+        let state = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if state.is_empty() {
+            return Err(format!("gh pr view returned empty state for PR #{}", issue));
+        }
+
+        Ok(state)
     }
 
     fn fetch_issue_state(&self, issue: u64) -> Result<String, String> {
@@ -647,6 +698,9 @@ fn run_pipeline_with_excluded_steps(
     }
     if !is_excluded_step(DISPATCH_FINDING_RECONCILIATION_STEP_NAME, exclude_steps) {
         steps.push(verify_dispatch_finding_reconciliation(repo_root));
+    }
+    if !is_excluded_step(DEFERRED_RESOLUTION_MERGE_GATE_STEP_NAME, exclude_steps) {
+        steps.push(verify_deferred_resolution_merge_gate(repo_root, runner));
     }
     let pipeline_status = pipeline_overall_status(&steps);
     if !is_excluded_step(DOC_VALIDATION_STEP_NAME, exclude_steps) {
@@ -1259,7 +1313,7 @@ fn verify_step_comments(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner
 			};
         }
     };
-    let found = match fetch_step_comments_for_issue(runner, issue, previous_cycle) {
+    let previous_cycle_found = match fetch_step_comments_for_issue(runner, issue, previous_cycle) {
         Ok(found) => found,
         Err(error) => {
             return StepReport {
@@ -1273,7 +1327,30 @@ fn verify_step_comments(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner
             };
         }
     };
-    let acknowledged = match acknowledged_step_comment_ids(&state, previous_cycle) {
+    let (found, assessed_cycle, scope) = if previous_cycle_found.is_empty() {
+        let current_cycle_found = match fetch_step_comments_for_issue(runner, issue, cycle) {
+            Ok(found) => found,
+            Err(error) => {
+                return StepReport {
+                    name: STEP_COMMENTS_STEP_NAME,
+                    status: StepStatus::Error,
+                    severity: Severity::Blocking,
+                    exit_code: None,
+                    detail: Some(error),
+                    findings: None,
+                    summary: None,
+                };
+            }
+        };
+        (current_cycle_found, cycle, StepCommentCheckScope::CurrentCycle)
+    } else {
+        (
+            previous_cycle_found,
+            previous_cycle,
+            StepCommentCheckScope::PreviousCycle,
+        )
+    };
+    let acknowledged = match acknowledged_step_comment_ids(&state, assessed_cycle) {
         Ok(acknowledged) => acknowledged,
         Err(error) => {
             return StepReport {
@@ -1295,8 +1372,8 @@ fn verify_step_comments(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner
     merged_found.extend(effective_acknowledged.iter().copied());
     let issue_assessment = assess_step_comment_completeness_with_acknowledged(
         &merged_found,
-        previous_cycle,
-        StepCommentCheckScope::PreviousCycle,
+        assessed_cycle,
+        scope,
         &found,
         &effective_acknowledged,
     );
@@ -3182,6 +3259,32 @@ fn verify_dispatch_finding_reconciliation(repo_root: &Path) -> StepReport {
     }
 }
 
+fn verify_deferred_resolution_merge_gate(
+    repo_root: &Path,
+    runner: &dyn CommandRunner,
+) -> StepReport {
+    match deferred_resolution_merge_gate_assessment(repo_root, runner) {
+        Ok(assessment) => StepReport {
+            name: DEFERRED_RESOLUTION_MERGE_GATE_STEP_NAME,
+            status: assessment.status,
+            severity: assessment.severity,
+            exit_code: None,
+            detail: Some(assessment.detail),
+            findings: None,
+            summary: None,
+        },
+        Err(error) => StepReport {
+            name: DEFERRED_RESOLUTION_MERGE_GATE_STEP_NAME,
+            status: StepStatus::Error,
+            severity: Severity::Blocking,
+            exit_code: None,
+            detail: Some(error),
+            findings: None,
+            summary: None,
+        },
+    }
+}
+
 fn verify_pr_base_currency(runner: &dyn CommandRunner) -> StepReport {
     match pr_base_currency_assessment(runner) {
         Ok(assessment) => StepReport {
@@ -3750,6 +3853,200 @@ fn deferral_deadlines_status(repo_root: &Path) -> Result<(StepStatus, String), S
         StepStatus::Pass,
         "no active deferred findings are due".to_string(),
     ))
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum DeferredResolutionTargetKind {
+    PullRequest,
+    Issue,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+struct DeferredResolutionTarget {
+    kind: DeferredResolutionTargetKind,
+    number: u64,
+}
+
+fn deferred_resolution_merge_gate_assessment(
+    repo_root: &Path,
+    runner: &dyn CommandRunner,
+) -> Result<StepAssessment, String> {
+    let state_value = read_state_value(repo_root)?;
+    let state: StateJson = serde_json::from_value(state_value)
+        .map_err(|error| format!("failed to parse state.json: {}", error))?;
+
+    let active_findings = state
+        .deferred_findings
+        .iter()
+        .filter(|finding| finding.resolved && finding.dropped_rationale.is_none())
+        .filter_map(|finding| {
+            finding
+                .resolved_ref
+                .as_deref()
+                .map(str::trim)
+                .filter(|resolved_ref| !resolved_ref.is_empty())
+                .map(|resolved_ref| (finding, resolved_ref))
+        })
+        .collect::<Vec<_>>();
+
+    if active_findings.is_empty() {
+        return Ok(StepAssessment {
+            status: StepStatus::Pass,
+            severity: Severity::Blocking,
+            detail: "no resolved deferred findings to verify".to_string(),
+        });
+    }
+
+    let mut checked_targets = 0usize;
+    let mut failures = Vec::new();
+    for (finding, resolved_ref) in active_findings {
+        let targets = parse_deferred_resolution_targets(resolved_ref);
+        if targets.is_empty() {
+            continue;
+        }
+
+        for target in targets {
+            checked_targets += 1;
+            match target.kind {
+                DeferredResolutionTargetKind::PullRequest => {
+                    let state = runner.fetch_pull_request_state(target.number)?;
+                    match state.as_str() {
+                        "MERGED" => {}
+                        "OPEN" => failures.push(format!(
+                            "category '{}' resolved_ref '{}' points to open PR #{}",
+                            finding.category, resolved_ref, target.number
+                        )),
+                        "CLOSED" => failures.push(format!(
+                            "category '{}' resolved_ref '{}' points to closed-without-merge PR #{}",
+                            finding.category, resolved_ref, target.number
+                        )),
+                        other => {
+                            return Err(format!(
+                                "gh pr view returned unexpected state '{}' for PR #{}",
+                                other, target.number
+                            ))
+                        }
+                    }
+                }
+                DeferredResolutionTargetKind::Issue => {
+                    let state = runner.fetch_issue_state(target.number)?;
+                    match state.as_str() {
+                        "CLOSED" => {}
+                        "OPEN" => failures.push(format!(
+                            "category '{}' resolved_ref '{}' points to open issue #{}",
+                            finding.category, resolved_ref, target.number
+                        )),
+                        other => {
+                            return Err(format!(
+                                "gh issue state query returned unexpected state '{}' for issue #{}",
+                                other, target.number
+                            ))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if !failures.is_empty() {
+        return Ok(StepAssessment {
+            status: StepStatus::Fail,
+            severity: Severity::Blocking,
+            detail: failures.join("; "),
+        });
+    }
+
+    let detail = if checked_targets == 0 {
+        "no resolved deferred-finding PR/issue refs required merge verification".to_string()
+    } else if checked_targets == 1 {
+        "verified 1 resolved deferred-finding PR/issue ref is terminal on GitHub".to_string()
+    } else {
+        format!(
+            "verified {} resolved deferred-finding PR/issue refs are terminal on GitHub",
+            checked_targets
+        )
+    };
+    Ok(StepAssessment {
+        status: StepStatus::Pass,
+        severity: Severity::Blocking,
+        detail,
+    })
+}
+
+fn parse_deferred_resolution_targets(resolved_ref: &str) -> Vec<DeferredResolutionTarget> {
+    let mut targets = BTreeSet::new();
+    collect_labeled_deferred_resolution_targets(
+        resolved_ref,
+        &PULL_REQUEST_LABEL_REGEX,
+        DeferredResolutionTargetKind::PullRequest,
+        &mut targets,
+    );
+    collect_labeled_deferred_resolution_targets(
+        resolved_ref,
+        &ISSUE_LABEL_REGEX,
+        DeferredResolutionTargetKind::Issue,
+        &mut targets,
+    );
+    collect_url_deferred_resolution_targets(
+        resolved_ref,
+        &PULL_REQUEST_URL_REGEX,
+        DeferredResolutionTargetKind::PullRequest,
+        &mut targets,
+    );
+    collect_url_deferred_resolution_targets(
+        resolved_ref,
+        &ISSUE_URL_REGEX,
+        DeferredResolutionTargetKind::Issue,
+        &mut targets,
+    );
+    targets.into_iter().collect()
+}
+
+fn collect_labeled_deferred_resolution_targets(
+    resolved_ref: &str,
+    regex: &Regex,
+    kind: DeferredResolutionTargetKind,
+    targets: &mut BTreeSet<DeferredResolutionTarget>,
+) {
+    for captures in regex.captures_iter(resolved_ref) {
+        let Some(reference_block) = captures.name("refs").map(|match_| match_.as_str()) else {
+            continue;
+        };
+        collect_hash_targets(reference_block, kind, targets);
+    }
+}
+
+fn collect_url_deferred_resolution_targets(
+    resolved_ref: &str,
+    regex: &Regex,
+    kind: DeferredResolutionTargetKind,
+    targets: &mut BTreeSet<DeferredResolutionTarget>,
+) {
+    for captures in regex.captures_iter(resolved_ref) {
+        let Some(number) = captures
+            .get(1)
+            .and_then(|capture| capture.as_str().parse::<u64>().ok())
+        else {
+            continue;
+        };
+        targets.insert(DeferredResolutionTarget { kind, number });
+    }
+}
+
+fn collect_hash_targets(
+    resolved_ref: &str,
+    kind: DeferredResolutionTargetKind,
+    targets: &mut BTreeSet<DeferredResolutionTarget>,
+) {
+    for captures in HASH_REFERENCE_REGEX.captures_iter(resolved_ref) {
+        let Some(number) = captures
+            .get(1)
+            .and_then(|capture| capture.as_str().parse::<u64>().ok())
+        else {
+            continue;
+        };
+        targets.insert(DeferredResolutionTarget { kind, number });
+    }
 }
 
 fn mass_deferral_gate_assessment(repo_root: &Path) -> Result<StepAssessment, String> {
@@ -5033,7 +5330,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 22);
+        assert_eq!(report.steps.len(), 23);
         assert_eq!(report.steps[0].status, StepStatus::Pass);
         assert_eq!(report.steps[1].status, StepStatus::Pass);
         assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -5065,23 +5362,28 @@ mod tests {
         assert_eq!(report.steps[12].status, StepStatus::Pass);
         assert_eq!(report.steps[13].name, "dispatch-finding-reconciliation");
         assert_eq!(report.steps[13].status, StepStatus::Pass);
-        assert_eq!(report.steps[14].name, "doc-validation");
+        assert_eq!(
+            report.steps[14].name,
+            DEFERRED_RESOLUTION_MERGE_GATE_STEP_NAME
+        );
         assert_eq!(report.steps[14].status, StepStatus::Pass);
-        assert_eq!(report.steps[15].name, "frozen-commit-verify");
+        assert_eq!(report.steps[15].name, "doc-validation");
         assert_eq!(report.steps[15].status, StepStatus::Pass);
-        assert_eq!(report.steps[16].name, "worklog-dedup");
+        assert_eq!(report.steps[16].name, "frozen-commit-verify");
         assert_eq!(report.steps[16].status, StepStatus::Pass);
-        assert_eq!(report.steps[17].name, "worklog-immutability");
+        assert_eq!(report.steps[17].name, "worklog-dedup");
         assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[17].severity, Severity::Blocking);
-        assert_eq!(report.steps[18].name, "frozen-worklog-immutability");
+        assert_eq!(report.steps[18].name, "worklog-immutability");
         assert_eq!(report.steps[18].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].name, "pr-base-currency");
+        assert_eq!(report.steps[18].severity, Severity::Blocking);
+        assert_eq!(report.steps[19].name, "frozen-worklog-immutability");
         assert_eq!(report.steps[19].status, StepStatus::Pass);
-        assert_eq!(report.steps[20].name, "step-comments");
+        assert_eq!(report.steps[20].name, "pr-base-currency");
         assert_eq!(report.steps[20].status, StepStatus::Pass);
-        assert_eq!(report.steps[21].name, "current-cycle-steps");
+        assert_eq!(report.steps[21].name, "step-comments");
         assert_eq!(report.steps[21].status, StepStatus::Pass);
+        assert_eq!(report.steps[22].name, "current-cycle-steps");
+        assert_eq!(report.steps[22].status, StepStatus::Pass);
     }
 
     #[test]
@@ -5269,7 +5571,7 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 22);
+        assert_eq!(report.steps.len(), 23);
         assert!(report.steps[..6]
             .iter()
             .all(|step| matches!(step.status, StepStatus::Error)));
@@ -5634,20 +5936,20 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &CascadeRunner);
-        assert_eq!(report.steps[14].name, "doc-validation");
-        assert_eq!(report.steps[14].status, StepStatus::Cascade);
-        assert_eq!(report.steps[15].name, "frozen-commit-verify");
-        assert_eq!(report.steps[15].status, StepStatus::Pass);
-        assert_eq!(report.steps[16].name, "worklog-dedup");
+        assert_eq!(report.steps[15].name, "doc-validation");
+        assert_eq!(report.steps[15].status, StepStatus::Cascade);
+        assert_eq!(report.steps[16].name, "frozen-commit-verify");
         assert_eq!(report.steps[16].status, StepStatus::Pass);
-        assert_eq!(report.steps[17].name, "worklog-immutability");
+        assert_eq!(report.steps[17].name, "worklog-dedup");
         assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].name, "frozen-worklog-immutability");
+        assert_eq!(report.steps[18].name, "worklog-immutability");
         assert_eq!(report.steps[18].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].name, "pr-base-currency");
+        assert_eq!(report.steps[19].name, "frozen-worklog-immutability");
         assert_eq!(report.steps[19].status, StepStatus::Pass);
-        assert_eq!(report.steps[20].name, "step-comments");
-        assert_eq!(report.steps[20].status, StepStatus::Fail);
+        assert_eq!(report.steps[20].name, "pr-base-currency");
+        assert_eq!(report.steps[20].status, StepStatus::Pass);
+        assert_eq!(report.steps[21].name, "step-comments");
+        assert_eq!(report.steps[21].status, StepStatus::Fail);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -5782,20 +6084,20 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &MultiCauseCascadeRunner);
-        assert_eq!(report.steps[14].name, "doc-validation");
-        assert_eq!(report.steps[14].status, StepStatus::Cascade);
-        assert_eq!(report.steps[15].name, "frozen-commit-verify");
-        assert_eq!(report.steps[15].status, StepStatus::Pass);
-        assert_eq!(report.steps[16].name, "worklog-dedup");
+        assert_eq!(report.steps[15].name, "doc-validation");
+        assert_eq!(report.steps[15].status, StepStatus::Cascade);
+        assert_eq!(report.steps[16].name, "frozen-commit-verify");
         assert_eq!(report.steps[16].status, StepStatus::Pass);
-        assert_eq!(report.steps[17].name, "worklog-immutability");
+        assert_eq!(report.steps[17].name, "worklog-dedup");
         assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].name, "frozen-worklog-immutability");
+        assert_eq!(report.steps[18].name, "worklog-immutability");
         assert_eq!(report.steps[18].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].name, "pr-base-currency");
+        assert_eq!(report.steps[19].name, "frozen-worklog-immutability");
         assert_eq!(report.steps[19].status, StepStatus::Pass);
-        assert_eq!(report.steps[20].name, "step-comments");
-        assert_eq!(report.steps[20].status, StepStatus::Fail);
+        assert_eq!(report.steps[20].name, "pr-base-currency");
+        assert_eq!(report.steps[20].status, StepStatus::Pass);
+        assert_eq!(report.steps[21].name, "step-comments");
+        assert_eq!(report.steps[21].status, StepStatus::Fail);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -5933,10 +6235,10 @@ mod tests {
         }
 
         let report = run_pipeline(&root, OVERRIDE_CYCLE, &OverrideRunner);
-        assert_eq!(report.steps[20].name, "step-comments");
-        assert_eq!(report.steps[20].status, StepStatus::Warn);
-        assert_eq!(report.steps[20].severity, Severity::Warning);
-        assert!(report.steps[20]
+        assert_eq!(report.steps[21].name, "step-comments");
+        assert_eq!(report.steps[21].status, StepStatus::Warn);
+        assert_eq!(report.steps[21].severity, Severity::Warning);
+        assert!(report.steps[21]
             .detail
             .as_deref()
             .unwrap_or_default()
@@ -6079,16 +6381,16 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &IndependentFailureRunner);
-        assert_eq!(report.steps[14].name, "doc-validation");
-        assert_eq!(report.steps[14].status, StepStatus::Fail);
-        assert_eq!(report.steps[15].name, "frozen-commit-verify");
-        assert_eq!(report.steps[15].status, StepStatus::Pass);
-        assert_eq!(report.steps[16].name, "worklog-dedup");
+        assert_eq!(report.steps[15].name, "doc-validation");
+        assert_eq!(report.steps[15].status, StepStatus::Fail);
+        assert_eq!(report.steps[16].name, "frozen-commit-verify");
         assert_eq!(report.steps[16].status, StepStatus::Pass);
-        assert_eq!(report.steps[17].name, "worklog-immutability");
+        assert_eq!(report.steps[17].name, "worklog-dedup");
         assert_eq!(report.steps[17].status, StepStatus::Pass);
+        assert_eq!(report.steps[18].name, "worklog-immutability");
+        assert_eq!(report.steps[18].status, StepStatus::Pass);
         // Previous-cycle backstop is downgraded to Warn
-        assert_eq!(report.steps[20].status, StepStatus::Warn);
+        assert_eq!(report.steps[21].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -6211,7 +6513,7 @@ mod tests {
             &ExcludeDocValidationRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 21);
+        assert_eq!(report.steps.len(), 22);
         assert!(!report
             .steps
             .iter()
@@ -6348,7 +6650,7 @@ mod tests {
             &UnknownExcludeRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 22);
+        assert_eq!(report.steps.len(), 23);
         assert!(report
             .steps
             .iter()
@@ -6489,7 +6791,7 @@ mod tests {
         );
 
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 21);
+        assert_eq!(report.steps.len(), 22);
         assert!(!report.steps.iter().any(|step| step.name == "worklog-dedup"));
         assert!(report
             .steps
@@ -11596,6 +11898,78 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("skipping current-cycle step verification"));
+    }
+
+    #[test]
+    fn step_comments_uses_current_cycle_consistently_with_current_cycle_steps() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-step-comments-current-cycle-consistency",
+            json!({
+                "previous_cycle_issue": 2300,
+                "cycle_issues": [2309],
+                "last_cycle": {
+                    "number": 461,
+                    "issue": 2309
+                }
+            }),
+        );
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+                assert_eq!(issue, 2309);
+                let current_cycle_steps = EXPECTED_STEP_IDS
+                    .iter()
+                    .copied()
+                    .filter(|step| !POST_GATE_STEP_IDS.contains(step))
+                    .collect::<Vec<_>>();
+                Ok(step_comment_bodies(461, &current_cycle_steps))
+            }
+
+            fn fetch_issue_comments_with_timestamps(
+                &self,
+                issue: u64,
+            ) -> Result<Vec<(String, String)>, String> {
+                assert_eq!(issue, 2309);
+                Ok(EXPECTED_STEP_IDS
+                    .iter()
+                    .copied()
+                    .filter(|step| !POST_GATE_STEP_IDS.contains(step))
+                    .enumerate()
+                    .map(|(index, step)| {
+                        (
+                            format!("> **[main-orchestrator]** | Cycle 461 | Step {step}\n"),
+                            format!("2026-04-09T04:{:02}:00Z", index),
+                        )
+                    })
+                    .collect())
+            }
+        }
+
+        let step_comments = verify_step_comments(&root, 461, &Runner);
+        let current_cycle_steps = verify_current_cycle_step_comments(&root, 461, &Runner);
+
+        assert_eq!(step_comments.findings, current_cycle_steps.findings);
+        assert_eq!(step_comments.findings, Some(20));
+        assert!(step_comments
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("found 20 unique step comments"));
+        assert!(current_cycle_steps
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("20 pre-gate mandatory steps present"));
     }
 
     #[test]

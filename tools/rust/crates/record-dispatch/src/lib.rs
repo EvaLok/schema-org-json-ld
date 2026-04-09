@@ -1,5 +1,5 @@
 use serde_json::{json, Value};
-use state_schema::default_agent_model;
+use state_schema::{current_utc_timestamp, default_agent_model};
 use std::{fs, path::Path, process::Command};
 
 pub const PIPELINE_GATE_FAILURE_MESSAGE: &str =
@@ -466,6 +466,7 @@ fn sync_last_cycle_summary_after_dispatch(
         return Ok(());
     };
     last_cycle.insert("summary".to_string(), json!(updated_summary));
+    last_cycle.insert("timestamp".to_string(), json!(current_utc_timestamp()));
     Ok(())
 }
 
@@ -582,6 +583,7 @@ mod tests {
             ],
             "last_cycle": {
                 "number": 164,
+                "timestamp": "2026-03-07T12:00:00Z",
                 "summary": "0 dispatches, 1 merges (PR #700)"
             },
             "copilot_metrics": {
@@ -867,6 +869,10 @@ mod tests {
     #[test]
     fn apply_dispatch_patch_increments_last_cycle_summary_dispatches() {
         let mut state = sample_state();
+        let original_timestamp = state["last_cycle"]["timestamp"]
+            .as_str()
+            .expect("sample state should include last_cycle timestamp")
+            .to_string();
         let model = default_test_model();
         let patch = build_dispatch_patch(
             &state,
@@ -884,6 +890,10 @@ mod tests {
             state["last_cycle"]["summary"],
             json!("1 dispatch, 1 merges (PR #700)")
         );
+        let updated_timestamp = state["last_cycle"]["timestamp"]
+            .as_str()
+            .expect("dispatch patch should refresh last_cycle timestamp");
+        assert_ne!(updated_timestamp, original_timestamp);
     }
 
     #[test]
