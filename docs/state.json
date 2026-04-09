@@ -6964,8 +6964,10 @@
       "addresses_finding": "461:1",
       "dispatched_at": "2026-04-08T23:30:32Z",
       "issue": 2317,
+      "merged_at": "2026-04-09T03:32:15Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2318,
+      "status": "merged",
       "title": "Tool: pipeline-check structural hardening (cycle 461 F1+F3, audit #392 Tier 1, audit #393 Tier 2, pr-base-currency)"
     },
     {
@@ -7970,12 +7972,12 @@
       }
     }
   },
-  "in_flight_sessions": 3,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 22,
     "issue": 2321,
     "number": 463,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-09T03:02:43Z"
   },
   "last_eva_comment_check": "2026-04-09T03:02:43Z",
