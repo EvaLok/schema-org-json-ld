@@ -44,9 +44,10 @@ const FROZEN_WORKLOG_IMMUTABILITY_STEP_NAME: &str = "frozen-worklog-immutability
 const PR_BASE_CURRENCY_STEP_NAME: &str = "pr-base-currency";
 const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const CURRENT_CYCLE_STEPS_STEP_NAME: &str = "current-cycle-steps";
+const DOC_LINT_STEP_NAME: &str = "doc-lint";
 const WORKLOG_PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
-const STEP_NAMES: [&str; 23] = [
+const STEP_NAMES: [&str; 24] = [
     "metric-snapshot",
     "field-inventory",
     "housekeeping-scan",
@@ -70,6 +71,7 @@ const STEP_NAMES: [&str; 23] = [
     PR_BASE_CURRENCY_STEP_NAME,
     STEP_COMMENTS_STEP_NAME,
     CURRENT_CYCLE_STEPS_STEP_NAME,
+    DOC_LINT_STEP_NAME,
 ];
 // Steps that have not been posted yet when pipeline-check runs at C5.5.
 // These are excluded from the current-cycle mandatory step check.
@@ -681,7 +683,9 @@ fn run_pipeline_with_excluded_steps(
             .map(|spec| run_step(repo_root, spec, runner)),
     );
     if !is_excluded_step(CHRONIC_CATEGORY_CURRENCY_STEP_NAME, exclude_steps) {
-        steps.push(verify_chronic_category_currency_with_runner(repo_root, runner));
+        steps.push(verify_chronic_category_currency_with_runner(
+            repo_root, runner,
+        ));
     }
     if !is_excluded_step(ARTIFACT_VERIFY_STEP_NAME, exclude_steps) {
         steps.push(verify_artifacts(repo_root));
@@ -734,6 +738,9 @@ fn run_pipeline_with_excluded_steps(
     }
     if !is_excluded_step(CURRENT_CYCLE_STEPS_STEP_NAME, exclude_steps) {
         steps.push(verify_current_cycle_step_comments(repo_root, cycle, runner));
+    }
+    if !is_excluded_step(DOC_LINT_STEP_NAME, exclude_steps) {
+        steps.push(verify_doc_lint(repo_root, cycle));
     }
     // Doc validation runs before step-comments so it can pass the pre-step-comments
     // pipeline status through to validate-docs. Reclassify afterward, once the real
@@ -1036,6 +1043,173 @@ fn verify_worklog_immutability(repo_root: &Path) -> StepReport {
     verify_worklog_immutability_for_date(repo_root, &current_utc_timestamp()[..10])
 }
 
+fn verify_doc_lint(repo_root: &Path, cycle: u64) -> StepReport {
+    match doc_lint_status(repo_root, cycle) {
+        Ok((status, warnings)) => StepReport {
+            name: DOC_LINT_STEP_NAME,
+            status,
+            severity: Severity::Warning,
+            exit_code: None,
+            detail: if warnings.is_empty() {
+                Some("no doc-lint issues found".to_string())
+            } else {
+                Some(warnings.join("; "))
+            },
+            findings: None,
+            summary: None,
+        },
+        Err(error) => StepReport {
+            name: DOC_LINT_STEP_NAME,
+            status: StepStatus::Error,
+            severity: Severity::Warning,
+            exit_code: None,
+            detail: Some(error),
+            findings: None,
+            summary: None,
+        },
+    }
+}
+
+fn doc_lint_status(repo_root: &Path, cycle: u64) -> Result<(StepStatus, Vec<String>), String> {
+    let mut warnings = Vec::new();
+
+    // 1. Worklog file-claim verification
+    if let Some(worklog_path) = latest_worklog_entry_for_cycle(repo_root, cycle)? {
+        let content = fs::read_to_string(&worklog_path)
+            .map_err(|e| format!("failed to read {}: {}", worklog_path.display(), e))?;
+        for claimed_path in extract_worklog_file_claims(&content) {
+            let full_path = repo_root.join(&claimed_path);
+            if !full_path.exists() {
+                warnings.push(format!(
+                    "worklog claims '{}' but file does not exist in tree",
+                    claimed_path
+                ));
+            }
+        }
+    }
+
+    // 2. Journal commitment command verification
+    let journal_dir = repo_root.join("docs/journal");
+    if journal_dir.is_dir() {
+        if let Some(latest_date) = latest_journal_file_date(&journal_dir)? {
+            let journal_path = journal_dir.join(format!("{}.md", latest_date));
+            if journal_path.is_file() {
+                let content = fs::read_to_string(&journal_path)
+                    .map_err(|e| format!("failed to read {}: {}", journal_path.display(), e))?;
+                for cmd_ref in extract_journal_command_references(&content) {
+                    warnings.extend(check_command_reference(repo_root, &cmd_ref));
+                }
+            }
+        }
+    }
+
+    let status = if warnings.is_empty() {
+        StepStatus::Pass
+    } else {
+        StepStatus::Warn
+    };
+    Ok((status, warnings))
+}
+
+fn extract_worklog_file_claims(content: &str) -> Vec<String> {
+    static COMMIT_CREATE_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?:committed|created)(?:\s+file)?\s+`([^`]+)`").unwrap());
+    static SELF_MOD_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"^- \*\*`([^`]+)`\*\*").unwrap());
+
+    let mut claims = Vec::new();
+    let mut in_self_modifications = false;
+
+    for line in content.lines() {
+        if line.starts_with("## Self-modifications") {
+            in_self_modifications = true;
+            continue;
+        }
+        if in_self_modifications && line.starts_with("## ") {
+            in_self_modifications = false;
+        }
+
+        if in_self_modifications {
+            if let Some(captures) = SELF_MOD_RE.captures(line) {
+                if let Some(path) = captures.get(1) {
+                    claims.push(path.as_str().to_string());
+                }
+            }
+        } else {
+            for captures in COMMIT_CREATE_RE.captures_iter(line) {
+                if let Some(path) = captures.get(1) {
+                    claims.push(path.as_str().to_string());
+                }
+            }
+        }
+    }
+    claims
+}
+
+fn extract_journal_command_references(content: &str) -> Vec<String> {
+    static BACKTICK_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"`([^`]+)`").unwrap());
+
+    let mut commands = Vec::new();
+    let mut in_commitments = false;
+
+    for line in content.lines() {
+        if line.starts_with("### Concrete commitments for next cycle") {
+            in_commitments = true;
+            continue;
+        }
+        if in_commitments && (line.starts_with("### ") || line.starts_with("## ")) {
+            in_commitments = false;
+        }
+
+        if in_commitments {
+            for captures in BACKTICK_RE.captures_iter(line) {
+                if let Some(cmd) = captures.get(1) {
+                    let cmd_str = cmd.as_str();
+                    if cmd_str.starts_with("bash ") || cmd_str.starts_with("cargo ") {
+                        commands.push(cmd_str.to_string());
+                    }
+                }
+            }
+        }
+    }
+    commands
+}
+
+fn check_command_reference(repo_root: &Path, cmd: &str) -> Vec<String> {
+    let mut issues = Vec::new();
+    if let Some(rest) = cmd.strip_prefix("bash ") {
+        let tool = rest.split_whitespace().next().unwrap_or_default();
+        if !tool.is_empty() {
+            let tool_path = repo_root.join(tool);
+            if !tool_path.exists() {
+                issues.push(format!(
+                    "journal commitment references 'bash {}' but '{}' does not exist",
+                    tool, tool
+                ));
+            }
+        }
+    } else if cmd.starts_with("cargo ") {
+        let words: Vec<&str> = cmd.split_whitespace().collect();
+        let mut i = 0;
+        while i < words.len() {
+            if words[i] == "-p" && i + 1 < words.len() {
+                let crate_name = words[i + 1];
+                let crate_dir = repo_root.join("tools/rust/crates").join(crate_name);
+                if !crate_dir.is_dir() {
+                    issues.push(format!(
+                        "journal commitment references 'cargo -p {}' but crate directory does not exist",
+                        crate_name
+                    ));
+                }
+                i += 2;
+            } else {
+                i += 1;
+            }
+        }
+    }
+    issues
+}
+
 fn verify_frozen_worklog_immutability(repo_root: &Path) -> StepReport {
     match frozen_worklog_immutability_status(repo_root) {
         Ok((status, detail)) => StepReport {
@@ -1325,20 +1499,21 @@ fn verify_step_comments(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner
         .pointer("/previous_cycle_issue")
         .and_then(Value::as_u64)
         .unwrap_or(issue);
-    let previous_cycle_found = match fetch_step_comments_for_issue(runner, previous_cycle_issue, previous_cycle) {
-        Ok(found) => found,
-        Err(error) => {
-            return StepReport {
-                name: STEP_COMMENTS_STEP_NAME,
-                status: StepStatus::Error,
-                severity: Severity::Blocking,
-                exit_code: None,
-                detail: Some(error),
-                findings: None,
-                summary: None,
-            };
-        }
-    };
+    let previous_cycle_found =
+        match fetch_step_comments_for_issue(runner, previous_cycle_issue, previous_cycle) {
+            Ok(found) => found,
+            Err(error) => {
+                return StepReport {
+                    name: STEP_COMMENTS_STEP_NAME,
+                    status: StepStatus::Error,
+                    severity: Severity::Blocking,
+                    exit_code: None,
+                    detail: Some(error),
+                    findings: None,
+                    summary: None,
+                };
+            }
+        };
     let (found, assessed_cycle, scope) = if previous_cycle_found.is_empty() {
         let current_cycle_found = match fetch_step_comments_for_issue(runner, issue, cycle) {
             Ok(found) => found,
@@ -1354,7 +1529,11 @@ fn verify_step_comments(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner
                 };
             }
         };
-        (current_cycle_found, cycle, StepCommentCheckScope::CurrentCycle)
+        (
+            current_cycle_found,
+            cycle,
+            StepCommentCheckScope::CurrentCycle,
+        )
     } else {
         (
             previous_cycle_found,
@@ -3708,7 +3887,9 @@ fn extract_chronic_category_pull_requests(rationale: &str) -> BTreeSet<u64> {
     let mut pull_requests = BTreeSet::new();
 
     for captures in CHRONIC_CATEGORY_PR_LABEL_REGEX.captures_iter(rationale) {
-        let Some(reference_block) = captures.name("refs").map(|refs_capture| refs_capture.as_str())
+        let Some(reference_block) = captures
+            .name("refs")
+            .map(|refs_capture| refs_capture.as_str())
         else {
             continue;
         };
@@ -5411,7 +5592,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 23);
+        assert_eq!(report.steps.len(), 24);
         assert_eq!(report.steps[0].status, StepStatus::Pass);
         assert_eq!(report.steps[1].status, StepStatus::Pass);
         assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -5652,7 +5833,7 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 23);
+        assert_eq!(report.steps.len(), 24);
         assert!(report.steps[..6]
             .iter()
             .all(|step| matches!(step.status, StepStatus::Error)));
@@ -6594,7 +6775,7 @@ mod tests {
             &ExcludeDocValidationRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 22);
+        assert_eq!(report.steps.len(), 23);
         assert!(!report
             .steps
             .iter()
@@ -6731,7 +6912,7 @@ mod tests {
             &UnknownExcludeRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 23);
+        assert_eq!(report.steps.len(), 24);
         assert!(report
             .steps
             .iter()
@@ -6872,7 +7053,7 @@ mod tests {
         );
 
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 22);
+        assert_eq!(report.steps.len(), 23);
         assert!(!report.steps.iter().any(|step| step.name == "worklog-dedup"));
         assert!(report
             .steps
@@ -12231,20 +12412,18 @@ mod tests {
             ) -> Result<Vec<(String, String)>, String> {
                 match issue {
                     2300 => Ok(Vec::new()),
-                    2309 => {
-                        Ok(EXPECTED_STEP_IDS
-                            .iter()
-                            .copied()
-                            .filter(|step| !POST_GATE_STEP_IDS.contains(step))
-                            .enumerate()
-                            .map(|(index, step)| {
-                                (
-                                    format!("> **[main-orchestrator]** | Cycle 461 | Step {step}\n"),
-                                    format!("2026-04-09T04:{:02}:00Z", index),
-                                )
-                            })
-                            .collect())
-                    }
+                    2309 => Ok(EXPECTED_STEP_IDS
+                        .iter()
+                        .copied()
+                        .filter(|step| !POST_GATE_STEP_IDS.contains(step))
+                        .enumerate()
+                        .map(|(index, step)| {
+                            (
+                                format!("> **[main-orchestrator]** | Cycle 461 | Step {step}\n"),
+                                format!("2026-04-09T04:{:02}:00Z", index),
+                            )
+                        })
+                        .collect()),
                     other => panic!("unexpected issue {other}"),
                 }
             }
@@ -12580,5 +12759,93 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("Journal current (last entry 2026-03-09)"));
+    }
+
+    #[test]
+    fn doc_lint_warns_when_worklog_claims_nonexistent_committed_file() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!("pipeline-check-doc-lint-missing-{}", run_id));
+        fs::create_dir_all(root.join("docs/worklog/2026-03-12")).unwrap();
+        fs::write(
+            root.join("docs/worklog/2026-03-12/010203-cycle-300-summary.md"),
+            "## What was done\n\ncommitted `tools/nonexistent.sh` to repo\n",
+        )
+        .unwrap();
+
+        let (status, warnings) = doc_lint_status(&root, 300).unwrap();
+        assert_eq!(status, StepStatus::Warn);
+        assert!(warnings.iter().any(|w| w.contains("tools/nonexistent.sh")));
+    }
+
+    #[test]
+    fn doc_lint_passes_when_worklog_self_modification_paths_exist() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-doc-lint-valid-paths-{}", run_id));
+        fs::create_dir_all(root.join("docs/worklog/2026-03-12")).unwrap();
+        fs::create_dir_all(root.join("tools")).unwrap();
+        fs::write(root.join("tools/existing-script"), "#!/bin/bash\n").unwrap();
+        fs::write(
+            root.join("docs/worklog/2026-03-12/010203-cycle-301-summary.md"),
+            "## Self-modifications\n\n- **`tools/existing-script`**: modified\n",
+        )
+        .unwrap();
+
+        let (status, warnings) = doc_lint_status(&root, 301).unwrap();
+        assert_eq!(status, StepStatus::Pass);
+        assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn doc_lint_warns_when_journal_commitment_references_nonexistent_bash_tool() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-doc-lint-bad-tool-{}", run_id));
+        fs::create_dir_all(root.join("docs/journal")).unwrap();
+        fs::write(
+            root.join("docs/journal/2026-03-12.md"),
+            "### Concrete commitments for next cycle\n\n1. Run `bash tools/nonexistent-tool --help` to verify.\n",
+        )
+        .unwrap();
+
+        let (status, warnings) = doc_lint_status(&root, 999).unwrap();
+        assert_eq!(status, StepStatus::Warn);
+        assert!(warnings
+            .iter()
+            .any(|w| w.contains("tools/nonexistent-tool")));
+    }
+
+    #[test]
+    fn doc_lint_passes_when_journal_commitment_references_existing_cargo_crate() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-doc-lint-valid-crate-{}", run_id));
+        fs::create_dir_all(root.join("docs/journal")).unwrap();
+        fs::create_dir_all(root.join("tools/rust/crates/pipeline-check")).unwrap();
+        fs::write(
+            root.join("docs/journal/2026-03-12.md"),
+            "### Concrete commitments for next cycle\n\n1. Verify `cargo test -p pipeline-check` passes.\n",
+        )
+        .unwrap();
+
+        let (status, warnings) = doc_lint_status(&root, 999).unwrap();
+        assert_eq!(status, StepStatus::Pass);
+        assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn doc_lint_passes_gracefully_when_no_worklog_or_journal_exists() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!("pipeline-check-doc-lint-no-docs-{}", run_id));
+        fs::create_dir_all(&root).unwrap();
+
+        let (status, warnings) = doc_lint_status(&root, 999).unwrap();
+        assert_eq!(status, StepStatus::Pass);
+        assert!(warnings.is_empty());
     }
 }

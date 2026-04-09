@@ -607,7 +607,9 @@ fn build_state_patch(
 fn build_forward_work_counter_update(cycle: u64, state: &StateJson) -> Option<PatchUpdate> {
     let forward_work = state.extra.get("cycles_since_last_forward_work")?;
 
-    let last_forward_cycle = forward_work.get("last_forward_cycle").and_then(Value::as_u64);
+    let last_forward_cycle = forward_work
+        .get("last_forward_cycle")
+        .and_then(Value::as_u64);
 
     let count = match last_forward_cycle {
         Some(last_forward_cycle) if last_forward_cycle > 0 => {
@@ -2049,10 +2051,9 @@ mod tests {
     #[test]
     fn forward_work_counter_defaults_to_zero_when_last_forward_cycle_missing_or_zero() {
         let mut missing = StateJson::default();
-        missing.extra.insert(
-            "cycles_since_last_forward_work".to_string(),
-            json!({}),
-        );
+        missing
+            .extra
+            .insert("cycles_since_last_forward_work".to_string(), json!({}));
         let missing_update =
             build_forward_work_counter_update(436, &missing).expect("update should exist");
         assert_eq!(missing_update.value, json!(0));
@@ -2064,7 +2065,8 @@ mod tests {
                 "last_forward_cycle": 0
             }),
         );
-        let zero_update = build_forward_work_counter_update(436, &zero).expect("update should exist");
+        let zero_update =
+            build_forward_work_counter_update(436, &zero).expect("update should exist");
         assert_eq!(zero_update.value, json!(0));
     }
 
