@@ -120,17 +120,31 @@ impl TempFixture {
 
     fn install_fake_tools(&self, head_ref_name: &str, head_sha: &str) {
         let fake_gh = format!(
-            "#!/usr/bin/env bash\nset -euo pipefail\nif [ \"$1\" = \"pr\" ] && [ \"$2\" = \"view\" ] && [ \"$3\" = \"{}\" ] && [ \"$4\" = \"--json\" ] && [ \"$5\" = \"headRefName,headRefOid\" ]; then\n\tprintf '%s\\n' '{{\"headRefName\":\"{}\",\"headRefOid\":\"{}\"}}'\n\texit 0\nfi\necho \"unexpected gh args: $*\" >&2\nexit 1\n",
-            self.pr_number, head_ref_name, head_sha
+            r#"#!/usr/bin/env bash
+set -euo pipefail
+if [ "$1" = "pr" ] && [ "$2" = "view" ] && [ "$3" = "{pr_number}" ] && [ "$4" = "--json" ] && [ "$5" = "headRefName,headRefOid" ]; then
+	printf '%s\n' '{{"headRefName":"{head_ref_name}","headRefOid":"{head_sha}"}}'
+	exit 0
+fi
+echo "unexpected gh args: $*" >&2
+exit 1
+"#,
+            pr_number = self.pr_number,
+            head_ref_name = head_ref_name,
+            head_sha = head_sha
         );
         fs::write(self.bin_root.join("gh"), fake_gh).expect("fake gh should be written");
         make_executable(&self.bin_root.join("gh"));
 
         let real_git = real_git_path();
         let fake_git = format!(
-            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\\n' \"$*\" >> '{}'\nexec '{}' \"$@\"\n",
-            self.git_log.display(),
-            real_git
+            r#"#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >> '{git_log}'
+exec '{real_git}' "$@"
+"#,
+            git_log = self.git_log.display(),
+            real_git = real_git
         );
         fs::write(self.bin_root.join("git"), fake_git).expect("fake git should be written");
         make_executable(&self.bin_root.join("git"));
