@@ -7009,6 +7009,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Combined: pipeline-check step-comments cycle bug + record-dispatch timestamp coherence + deferred-resolution-merge-gate substep (cycle 463 review F1+F4, cycle 462 commitment 3)"
+    },
+    {
+      "dispatched_at": "2026-04-09T05:21:28Z",
+      "issue": 2329,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Tool: tools/rebase-pr helper automates Copilot PR rebase onto current master (cycle 462 commitment 4)"
     }
   ],
   "audit_dropped": [
@@ -7732,7 +7739,7 @@
       "resolved_ref": "docs/reviews/cycle-463.md"
     }
   ],
-  "dispatch_log_latest": "#2327 Combined: pipeline-check step-comments cycle bug + record-dispatch timestamp coherence + deferred-resolution-merge-gate substep (cycle 463 review F1+F4, cycle 462 commitment 3) (cycle 464)",
+  "dispatch_log_latest": "#2329 Tool: tools/rebase-pr helper automates Copilot PR rebase onto current master (cycle 462 commitment 4) (cycle 464)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8005,12 +8012,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 55,
     "issue": 2326,
     "number": 464,
-    "summary": "1 dispatch, 2 merges",
+    "summary": "2 dispatches, 2 merges",
     "timestamp": "2026-04-09T04:48:17Z"
   },
   "last_eva_comment_check": "2026-04-09T04:48:17Z",
