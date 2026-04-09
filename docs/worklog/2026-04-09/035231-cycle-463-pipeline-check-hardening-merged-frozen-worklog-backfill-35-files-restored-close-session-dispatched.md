@@ -28,7 +28,7 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 3
-- **Pipeline status**: PASS
+- **Pipeline status**: PASS (1 blocking warning, 4 warnings)
 - **Publish gate**: published
 
 ## Next steps
