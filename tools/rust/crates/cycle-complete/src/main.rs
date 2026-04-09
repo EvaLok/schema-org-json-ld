@@ -232,7 +232,7 @@ fn main() {
     };
 
     let now = Utc::now();
-    let summary = match resolve_summary(cli.summary.as_deref(), &cli.repo_root, &state, now) {
+    let summary = match resolve_summary(cli.summary.as_deref(), &cli.repo_root, cycle, now) {
         Ok(summary) => summary,
         Err(error) => {
             eprintln!("Error: {}", error);
@@ -308,14 +308,14 @@ fn validate_cli_flags(cli: &Cli) -> Result<(), String> {
 fn resolve_summary(
     provided_summary: Option<&str>,
     repo_root: &Path,
-    state: &StateJson,
+    cycle: u64,
     now: DateTime<Utc>,
 ) -> Result<String, String> {
     if let Some(summary) = provided_summary {
         return Ok(summary.to_string());
     }
 
-    derive_cycle_summary(repo_root, state, now)
+    derive_cycle_summary(repo_root, cycle, now)
 }
 
 fn read_state_json(repo_root: &Path) -> Result<StateJson, String> {
@@ -327,21 +327,16 @@ fn read_state_json(repo_root: &Path) -> Result<StateJson, String> {
 
 fn derive_cycle_summary(
     repo_root: &Path,
-    state: &StateJson,
+    cycle: u64,
     now: DateTime<Utc>,
 ) -> Result<String, String> {
-    let cycle_start = cycle_window_start(state)?;
-    if cycle_start > now {
-        return Err("cycle summary window start is in the future".to_string());
-    }
-
-    let commits = read_git_receipt_commits(repo_root, cycle_start, now)?;
+    let commits = read_git_receipt_commits(repo_root, now)?;
     let mut dispatches = 0usize;
     let mut merged_prs = BTreeSet::new();
     let mut merges = 0usize;
 
     for commit in commits {
-        if !timestamp_in_cycle_window(commit.committed_at, cycle_start, now) {
+        if commit.committed_at > now || extract_cycle_tag(&commit.subject) != Some(cycle) {
             continue;
         }
 
@@ -380,7 +375,6 @@ fn derive_cycle_summary(
 
 fn read_git_receipt_commits(
     repo_root: &Path,
-    cycle_start: DateTime<Utc>,
     now: DateTime<Utc>,
 ) -> Result<Vec<GitReceiptCommit>, String> {
     let output = Command::new("git")
@@ -390,8 +384,6 @@ fn read_git_receipt_commits(
             "log",
             "--date=iso-strict",
             "--pretty=format:%cI%x09%s",
-            "--since",
-            &cycle_start.to_rfc3339(),
             "--until",
             &now.to_rfc3339(),
         ])
@@ -420,6 +412,14 @@ fn parse_git_receipt_line(line: &str) -> Result<GitReceiptCommit, String> {
     })
 }
 
+fn extract_cycle_tag(subject: &str) -> Option<u64> {
+    let marker = "[cycle ";
+    let start = subject.find(marker)?;
+    let remainder = &subject[start + marker.len()..];
+    let end = remainder.find(']')?;
+    remainder[..end].trim().parse::<u64>().ok()
+}
+
 fn extract_merge_pr_number(subject: &str) -> Option<i64> {
     let pr_fragment = subject.split("PR #").nth(1)?;
     let digits: String = pr_fragment
@@ -432,31 +432,10 @@ fn extract_merge_pr_number(subject: &str) -> Option<i64> {
     digits.parse::<i64>().ok().filter(|pr| *pr > 0)
 }
 
-fn cycle_window_start(state: &StateJson) -> Result<DateTime<Utc>, String> {
-    let start = state
-        .last_cycle
-        .timestamp
-        .as_deref()
-        .or(state.cycle_phase.phase_entered_at.as_deref())
-        .ok_or_else(|| {
-            "missing docs/state.json last_cycle.timestamp and cycle_phase.phase_entered_at"
-                .to_string()
-        })?;
-    parse_timestamp(start, "cycle summary window start")
-}
-
 fn parse_timestamp(value: &str, field_name: &str) -> Result<DateTime<Utc>, String> {
     DateTime::parse_from_rfc3339(value)
         .map(|timestamp| timestamp.with_timezone(&Utc))
         .map_err(|error| format!("invalid {field_name}: {error}"))
-}
-
-fn timestamp_in_cycle_window(
-    timestamp: DateTime<Utc>,
-    cycle_start: DateTime<Utc>,
-    now: DateTime<Utc>,
-) -> bool {
-    timestamp >= cycle_start && timestamp <= now
 }
 
 fn assemble_report(
@@ -1364,17 +1343,6 @@ mod tests {
         }
     }
 
-    fn state_with_cycle_window_at(last_cycle_timestamp: &str, phase_entered_at: &str) -> StateJson {
-        let mut state = StateJson::default();
-        state.cycle_phase.phase_entered_at = Some(phase_entered_at.to_string());
-        state.last_cycle.timestamp = Some(last_cycle_timestamp.to_string());
-        state
-    }
-
-    fn state_with_cycle_window() -> StateJson {
-        state_with_cycle_window_at("2026-03-05T04:00:00Z", "2026-03-05T04:00:00Z")
-    }
-
     fn temp_repo_root(test_name: &str) -> PathBuf {
         let unique = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -1749,10 +1717,9 @@ mod tests {
             "2026-03-05T04:30:00Z",
         );
 
-        let summary =
-            resolve_summary(None, &repo_root, &state_with_cycle_window(), fixed_now()).unwrap();
+        let summary = resolve_summary(None, &repo_root, 153, fixed_now()).unwrap();
 
-        assert_eq!(summary, "2 dispatches, 0 merges");
+        assert_eq!(summary, "3 dispatches, 0 merges");
     }
 
     #[test]
@@ -1788,10 +1755,9 @@ mod tests {
             "2026-03-05T03:29:00Z",
         );
 
-        let state = state_with_cycle_window_at("2026-03-05T03:00:00Z", "2026-03-05T04:00:00Z");
-        let summary = resolve_summary(None, &repo_root, &state, fixed_now()).unwrap();
+        let summary = resolve_summary(None, &repo_root, 153, fixed_now()).unwrap();
 
-        assert_eq!(summary, "2 dispatches, 1 merges (PR #1801)");
+        assert_eq!(summary, "3 dispatches, 1 merges (PR #1801)");
     }
 
     #[test]
@@ -1838,21 +1804,15 @@ mod tests {
             commit_receipt(&repo_root, "notes.txt", contents, subject, timestamp);
         }
 
-        let summary =
-            resolve_summary(None, &repo_root, &state_with_cycle_window(), fixed_now()).unwrap();
+        let summary = resolve_summary(None, &repo_root, 153, fixed_now()).unwrap();
 
         assert_eq!(summary, "3 dispatches, 3 merges (PR #42, PR #44, PR #50)");
     }
 
     #[test]
     fn resolve_summary_prefers_manual_override() {
-        let summary = resolve_summary(
-            Some("manual summary"),
-            Path::new("."),
-            &StateJson::default(),
-            fixed_now(),
-        )
-        .unwrap();
+        let summary =
+            resolve_summary(Some("manual summary"), Path::new("."), 153, fixed_now()).unwrap();
 
         assert_eq!(summary, "manual summary");
     }
@@ -1876,10 +1836,44 @@ mod tests {
             "2026-03-05T04:25:00Z",
         );
 
-        let summary =
-            resolve_summary(None, &repo_root, &state_with_cycle_window(), fixed_now()).unwrap();
+        let summary = resolve_summary(None, &repo_root, 153, fixed_now()).unwrap();
 
         assert_eq!(summary, "1 dispatches, 1 merges (PR #77)");
+    }
+
+    #[test]
+    fn resolve_summary_counts_cycle_receipts_even_when_last_cycle_timestamp_would_skip_merges() {
+        let repo_root = temp_repo_root("receipt-summary-cycle-tag-regression");
+        init_git_repo(&repo_root);
+        for (contents, subject, timestamp) in [
+            (
+                "merge 2339\n",
+                "state(process-merge): merged PR #2339 [cycle 466]",
+                "2026-04-09T09:40:00Z",
+            ),
+            (
+                "merge 2337\n",
+                "state(process-merge): merged PR #2337 [cycle 466]",
+                "2026-04-09T09:45:00Z",
+            ),
+            (
+                "dispatch 2400\n",
+                "state(record-dispatch): #2400 dispatched [cycle 466]",
+                "2026-04-09T09:58:50Z",
+            ),
+        ] {
+            commit_receipt(&repo_root, "notes.txt", contents, subject, timestamp);
+        }
+
+        let summary = resolve_summary(
+            None,
+            &repo_root,
+            466,
+            parse_timestamp("2026-04-09T10:00:00Z", "fixed test time").unwrap(),
+        )
+        .unwrap();
+
+        assert_eq!(summary, "1 dispatches, 2 merges (PR #2337, PR #2339)");
     }
 
     #[test]

@@ -107,6 +107,12 @@ fn run_with_runner(
 
     let model = resolve_model(cli.model.as_deref(), &cli.repo_root)?;
     let mut state_value = read_state_value(&cli.repo_root)?;
+    let current_phase = state_value
+        .pointer("/cycle_phase/phase")
+        .and_then(|value| value.as_str())
+        .unwrap_or("unknown")
+        .to_string();
+    let sealed_last_cycle = snapshot_sealed_last_cycle(&state_value, &current_phase);
     let review_dispatch_warning =
         update_review_dispatch_tracking(&mut state_value, cli.review_dispatch)?;
     if let Some(warning) = review_dispatch_warning.as_deref() {
@@ -144,17 +150,13 @@ fn run_with_runner(
     if let Some(addressed_finding) = cli.addresses_finding.as_ref() {
         reconcile_review_history_dispatch(&mut state_value, addressed_finding, warn)?;
     }
-    let current_phase = state_value
-        .pointer("/cycle_phase/phase")
-        .and_then(|value| value.as_str())
-        .unwrap_or("unknown")
-        .to_string();
     let phase_transitioned = if current_phase == "close_out" {
         transition_cycle_phase(&mut state_value, current_cycle, "complete")?;
         true
     } else {
         false
     };
+    restore_sealed_last_cycle(&mut state_value, sealed_last_cycle)?;
     write_state_value(&cli.repo_root, &state_value)?;
 
     let commit_message = dispatch_commit_message(cli.issue, patch.current_cycle);
@@ -186,6 +188,56 @@ fn run_with_runner(
         warn(&concurrency_warning_message(patch.in_flight));
     }
 
+    Ok(())
+}
+
+#[derive(Clone)]
+struct SealedLastCycleSnapshot {
+    summary: Option<serde_json::Value>,
+    timestamp: Option<serde_json::Value>,
+}
+
+fn snapshot_sealed_last_cycle(
+    state: &serde_json::Value,
+    phase: &str,
+) -> Option<SealedLastCycleSnapshot> {
+    if phase != "close_out" && phase != "complete" {
+        return None;
+    }
+    let last_cycle = state.pointer("/last_cycle")?.as_object()?;
+    Some(SealedLastCycleSnapshot {
+        summary: last_cycle.get("summary").cloned(),
+        timestamp: last_cycle.get("timestamp").cloned(),
+    })
+}
+
+fn restore_sealed_last_cycle(
+    state: &mut serde_json::Value,
+    snapshot: Option<SealedLastCycleSnapshot>,
+) -> Result<(), String> {
+    let Some(snapshot) = snapshot else {
+        return Ok(());
+    };
+    let last_cycle = state
+        .pointer_mut("/last_cycle")
+        .and_then(serde_json::Value::as_object_mut)
+        .ok_or_else(|| "missing object /last_cycle in docs/state.json".to_string())?;
+    match snapshot.summary {
+        Some(summary) => {
+            last_cycle.insert("summary".to_string(), summary);
+        }
+        None => {
+            last_cycle.remove("summary");
+        }
+    }
+    match snapshot.timestamp {
+        Some(timestamp) => {
+            last_cycle.insert("timestamp".to_string(), timestamp);
+        }
+        None => {
+            last_cycle.remove("timestamp");
+        }
+    }
     Ok(())
 }
 
@@ -640,6 +692,36 @@ mod tests {
     }
 
     #[test]
+    fn run_preserves_sealed_last_cycle_snapshot_during_close_out_dispatch() {
+        let repo = TempRepo::new();
+        repo.init_with_phase("close_out");
+        let mut initial_state = repo.read_state();
+        initial_state["last_cycle"]["summary"] = serde_json::json!("sealed summary");
+        initial_state["last_cycle"]["timestamp"] = serde_json::json!("2026-04-09T09:52:44Z");
+        repo.write_state_value(&initial_state);
+
+        run(Cli {
+            issue: 602,
+            title: "Example dispatch".to_string(),
+            model: Some("gpt-5.4".to_string()),
+            review_dispatch: true,
+            addresses_finding: None,
+            repo_root: repo.path().to_path_buf(),
+        })
+        .expect("dispatch should succeed");
+
+        let state = repo.read_state();
+        assert_eq!(
+            state.pointer("/last_cycle/summary"),
+            Some(&serde_json::json!("sealed summary"))
+        );
+        assert_eq!(
+            state.pointer("/last_cycle/timestamp"),
+            Some(&serde_json::json!("2026-04-09T09:52:44Z"))
+        );
+    }
+
+    #[test]
     fn run_keeps_work_phase_unchanged_for_mid_cycle_dispatch() {
         let repo = TempRepo::new();
         repo.init_with_phase("work");
@@ -670,6 +752,10 @@ mod tests {
                 .pointer("/field_inventory/fields/cycle_phase/last_refreshed")
                 .and_then(serde_json::Value::as_str),
             Some("cycle 163")
+        );
+        assert_eq!(
+            state.pointer("/in_flight_sessions"),
+            Some(&serde_json::json!(1))
         );
     }
 
