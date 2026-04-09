@@ -7054,6 +7054,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix cycle-complete last_cycle.summary derivation bug and freeze summary post-close-out"
+    },
+    {
+      "dispatched_at": "2026-04-09T09:51:02Z",
+      "issue": 2344,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add docs-lint pipeline-check substep for worklog/journal validation"
     }
   ],
   "audit_dropped": [
@@ -7798,7 +7805,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2342 Fix cycle-complete last_cycle.summary derivation bug and freeze summary post-close-out (cycle 466)",
+  "dispatch_log_latest": "#2344 Add docs-lint pipeline-check substep for worklog/journal validation (cycle 466)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8071,13 +8078,13 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 2,
     "issue": 2341,
     "number": 466,
-    "summary": "1 dispatch, 2 merges",
-    "timestamp": "2026-04-09T09:49:27Z"
+    "summary": "2 dispatches, 2 merges",
+    "timestamp": "2026-04-09T09:51:02Z"
   },
   "last_eva_comment_check": "2026-04-09T09:28:21Z",
   "last_tool_audit_cycle": 403,
