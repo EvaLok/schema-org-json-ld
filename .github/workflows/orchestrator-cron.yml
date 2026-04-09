@@ -20,9 +20,9 @@ jobs:
           recent_issues=$(gh issue list \
             --repo "$GITHUB_REPOSITORY" \
             --label "orchestrator-run" \
-            --state closed \
+            --state open \
             --json number,comments \
-            --limit 3)
+            --limit 5)
 
           ghost_issue_numbers=$(jq '[.[] | select(.comments == 0) | .number]' <<<"$recent_issues")
           ghost_cycle_count=$(jq 'length' <<<"$ghost_issue_numbers")
@@ -30,7 +30,7 @@ jobs:
           if [ "$ghost_cycle_count" -ge 2 ]; then
             ghost_issue_list=$(jq -r 'map("- #\(.)") | join("\n")' <<<"$ghost_issue_numbers")
             alert_body=$(printf '%s\n\nGhost cycle issues:\n%s\n\nPlease investigate the orchestrator workflow before creating another cycle.' \
-              "The last 3 closed orchestrator-run issues include ${ghost_cycle_count} ghost cycles with 0 comments, which suggests the orchestrator may not be starting." \
+              "Found ${ghost_cycle_count} open orchestrator-run issues with 0 comments, which suggests the orchestrator is not responding to cycle triggers." \
               "$ghost_issue_list")
 
             gh issue create \
