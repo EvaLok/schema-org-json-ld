@@ -6918,10 +6918,12 @@
       "title": "Backfilled: PR #2299"
     },
     {
+      "closed_at": "2026-04-09T05:10:32Z",
+      "closed_reason": "post-step body validation merged via PR #2310 in cycle 460; row left in_flight due to dispatch-task fixup gap addressed by PR #2323",
       "dispatched_at": "2026-04-08T09:40:44Z",
       "issue": 2301,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed",
       "title": "Tool: post-step body validation plus body-stdin flag (cycle 459 F2 plus audit 387 fix)"
     },
     {
@@ -7993,7 +7995,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 55,
     "issue": 2326,
