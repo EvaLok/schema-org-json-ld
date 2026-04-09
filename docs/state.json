@@ -7884,7 +7884,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 462"
+        "last_refreshed": "cycle 463"
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
@@ -8129,10 +8129,10 @@
           "added_cycle": 243,
           "category": "state-integrity",
           "chosen_path": "structural-fix",
-          "rationale": "Cycle 461 refresh: state-integrity chronic 5/6 re-triggered by cycle 460 F2 (process-merge backfilled a duplicate agent_sessions row for PR #2299, leaving the originating row {issue:2298,pr:2299} alongside the backfill {issue:2300,pr:2299}). New sub-cause identified: process-merge update_agent_sessions matches on (issue OR pr) so a wrong-issue invocation appends a backfill instead of merging into the existing PR row. Structural follow-up dispatched as #2310 (PR #2311 in flight): makes process-merge per-PR idempotent and collapses duplicates. Cycle 462 will verify after #2311 lands. | Cycle 462: refreshed via PR(s) [#2311] — PR #2311 merged in cycle 462 unifies deferred deadline rendering (write-entry), hardens agent-session reconciliation (process-merge per-PR matching, record-dispatch addresses_finding merge). Cycle 461 had recorded these as in-flight; cycle 462 verifies the merged code matches all 4 observable conditions of the cycle 461 commitment. Chronic categories now legitimately verified — no longer premature.",
+          "rationale": "Cycle 461 refresh: state-integrity chronic 5/6 re-triggered by cycle 460 F2 (process-merge backfilled a duplicate agent_sessions row for PR #2299, leaving the originating row {issue:2298,pr:2299} alongside the backfill {issue:2300,pr:2299}). New sub-cause identified: process-merge update_agent_sessions matches on (issue OR pr) so a wrong-issue invocation appends a backfill instead of merging into the existing PR row. Structural follow-up dispatched as #2310 (PR #2311 in flight): makes process-merge per-PR idempotent and collapses duplicates. Cycle 462 will verify after #2311 lands. | Cycle 462: refreshed via PR(s) [#2311] — PR #2311 merged in cycle 462 unifies deferred deadline rendering (write-entry), hardens agent-session reconciliation (process-merge per-PR matching, record-dispatch addresses_finding merge). Cycle 461 had recorded these as in-flight; cycle 462 verifies the merged code matches all 4 observable conditions of the cycle 461 commitment. Chronic categories now legitimately verified — no longer premature. | Cycle 463: refreshed via PR(s) [#2318] — agent-sessions-lifecycle substep added in PR #2318 detects in_flight rows whose GitHub issue is closed (WARN); paired with audit #392 Tier 2 close-session tool dispatched cycle 463 commitment 2 to actively reconcile",
           "root_cause": "Five sub-causes: (1) cycle-complete mechanically bumping markers (fixed cycle 243). (2) Manual marker bumping without verification (caught by cross-check cycle 266). (3) verify-review-events fail-open (fixed cycle 270). (4) Freshness markers not updated when associated analysis is performed (behavioral, partially caught by field-inventory check). (5) process-merge backfill appends duplicate row for same PR when invoked with non-originating issue (cycle 460/461; structural fix dispatched as #2310 cycle 461).",
-          "updated_cycle": 462,
-          "verification_cycle": 462
+          "updated_cycle": 463,
+          "verification_cycle": 463
         },
         {
           "added_cycle": 246,
