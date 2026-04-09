@@ -6978,6 +6978,14 @@
       "pr": 2320,
       "status": "merged",
       "title": "[Cycle Review] Cycle 462 end-of-cycle review"
+    },
+    {
+      "addresses_finding": "462:1",
+      "dispatched_at": "2026-04-09T03:40:59Z",
+      "issue": 2322,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Tool: close-session crate plus remove fixup_latest_worklog_in_flight (audit #392 Tier 2, audit #393 Tier 1, cycle 462 commitment 2)"
     }
   ],
   "audit_dropped": [
@@ -7699,7 +7707,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2319 [Cycle Review] Cycle 462 end-of-cycle review (cycle 462)",
+  "dispatch_log_latest": "#2322 Tool: close-session crate plus remove fixup_latest_worklog_in_flight (audit #392 Tier 2, audit #393 Tier 1, cycle 462 commitment 2) (cycle 463)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -7972,12 +7980,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 3,
   "last_cycle": {
     "duration_minutes": 22,
     "issue": 2321,
     "number": 463,
-    "summary": "0 dispatches, 2 merges",
+    "summary": "1 dispatch, 2 merges",
     "timestamp": "2026-04-09T03:02:43Z"
   },
   "last_eva_comment_check": "2026-04-09T03:02:43Z",
