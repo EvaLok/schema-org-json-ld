@@ -6,7 +6,7 @@
 **Evidence**:
 - The published receipt table in `docs/worklog/2026-04-09/075045-cycle-465-cycle-465-3-prs-merged-audit-395-396-accepted-chronic-currency-dispatch.md:63-75` and `bash tools/cycle-receipts --cycle 465 --repo-root .` both show the cycle-complete scope contained `1 dispatch, 3 merges`.
 - `git show 83d9f8dd^:docs/state.json` still had the correct `last_cycle.summary` of `1 dispatch, 3 merges` at `2026-04-09T07:48:10Z`.
-- `git show 83d9f8dd:docs/state.json` rewrote that to `1 dispatches, 0 merges` at cycle-complete, and the current file now says `2 dispatches, 0 merges`, which incorrectly folds in post-close-out review dispatch `#2338` while still erasing all three merges.
+- `git show 83d9f8dd:docs/state.json` rewrote that to the incorrect string `1 dispatches, 0 merges` at cycle-complete, and the current file now says `2 dispatches, 0 merges`, which incorrectly folds in post-close-out review dispatch `#2338` while still erasing all three merges.
 **Recommendation**: Make `last_cycle` derive strictly from canonical receipts through the cycle-complete boundary and freeze it after close-out. Add an invariant that rejects summaries that disagree with the cycle receipt table or that mutate when a later review-dispatch is recorded.
 
 ## 2. [process-adherence] Audit #395 was marked as “dispatch created” even though the only dispatch explicitly excludes it
