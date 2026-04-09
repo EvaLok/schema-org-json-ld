@@ -1,12 +1,6 @@
 use serde_json::{json, Value};
 use state_schema::default_agent_model;
-use std::{
-    ffi::OsStr,
-    fs,
-    path::{Path, PathBuf},
-    process::Command,
-    time::SystemTime,
-};
+use std::{fs, path::Path, process::Command};
 
 pub const PIPELINE_GATE_FAILURE_MESSAGE: &str =
     "Cannot dispatch: pipeline-check failed. Fix failures before dispatching.";
@@ -500,118 +494,30 @@ pub fn dispatch_commit_message(issue: u64, current_cycle: u64) -> String {
     )
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum WorklogFixupOutcome {
-    Updated(PathBuf),
-    NotFound,
+pub fn push_to_origin_master(repo_root: &Path) -> Result<(), String> {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(repo_root)
+        .args(["push", "origin", "master"])
+        .output()
+        .map_err(|error| format!("failed to execute git push: {}", error))?;
+    if !output.status.success() {
+        return Err(command_failure_message("git push origin master", &output));
+    }
+    Ok(())
 }
 
-const IN_FLIGHT_WORKLOG_PREFIX: &str = "- **In-flight agent sessions**: ";
-
-pub fn fixup_latest_worklog_in_flight(
-    repo_root: &Path,
-    in_flight: i64,
-) -> Result<WorklogFixupOutcome, String> {
-    let Some(worklog_path) = find_latest_worklog_file(repo_root)? else {
-        return Ok(WorklogFixupOutcome::NotFound);
-    };
-
-    let content = fs::read_to_string(&worklog_path)
-        .map_err(|error| format!("failed to read {}: {}", worklog_path.display(), error))?;
-    let updated = replace_in_flight_line(&content, in_flight).ok_or_else(|| {
-        format!(
-            "missing '{}' line in {}",
-            IN_FLIGHT_WORKLOG_PREFIX.trim_end(),
-            worklog_path.display()
-        )
-    })?;
-    fs::write(&worklog_path, updated)
-        .map_err(|error| format!("failed to write {}: {}", worklog_path.display(), error))?;
-
-    Ok(WorklogFixupOutcome::Updated(worklog_path))
-}
-
-fn find_latest_worklog_file(repo_root: &Path) -> Result<Option<PathBuf>, String> {
-    let worklog_root = repo_root.join("docs/worklog");
-    if !worklog_root.exists() {
-        return Ok(None);
+fn command_failure_message(command: &str, output: &std::process::Output) -> String {
+    let code = output.status.code().map_or_else(
+        || "terminated by signal".to_string(),
+        |value| value.to_string(),
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_owned();
+    if stderr.is_empty() {
+        format!("{command} failed with status {code}")
+    } else {
+        format!("{command} failed with status {code}: {stderr}")
     }
-    let metadata = fs::metadata(&worklog_root)
-        .map_err(|error| format!("failed to read {}: {}", worklog_root.display(), error))?;
-    if !metadata.is_dir() {
-        return Err(format!(
-            "expected {} to be a directory",
-            worklog_root.display()
-        ));
-    }
-
-    let mut latest: Option<(SystemTime, PathBuf)> = None;
-    let mut pending = vec![worklog_root];
-    while let Some(directory) = pending.pop() {
-        for entry in fs::read_dir(&directory)
-            .map_err(|error| format!("failed to read {}: {}", directory.display(), error))?
-        {
-            let entry = entry.map_err(|error| {
-                format!("failed to read entry in {}: {}", directory.display(), error)
-            })?;
-            let path = entry.path();
-            let file_type = entry.file_type().map_err(|error| {
-                format!("failed to read file type for {}: {}", path.display(), error)
-            })?;
-            if file_type.is_dir() {
-                pending.push(path);
-                continue;
-            }
-            if !file_type.is_file() || path.extension() != Some(OsStr::new("md")) {
-                continue;
-            }
-
-            let modified = entry
-                .metadata()
-                .map_err(|error| format!("failed to read {}: {}", path.display(), error))?
-                .modified()
-                .map_err(|error| {
-                    format!(
-                        "failed to read modification time for {}: {}",
-                        path.display(),
-                        error
-                    )
-                })?;
-            let should_replace = latest
-                .as_ref()
-                .is_none_or(|(current_modified, current_path)| {
-                    modified > *current_modified
-                        || (modified == *current_modified && path > *current_path)
-                });
-            if should_replace {
-                latest = Some((modified, path));
-            }
-        }
-    }
-
-    Ok(latest.map(|(_, path)| path))
-}
-
-fn replace_in_flight_line(content: &str, in_flight: i64) -> Option<String> {
-    let replacement = format!("{IN_FLIGHT_WORKLOG_PREFIX}{in_flight}");
-    let trailing_newlines = &content[content.trim_end_matches('\n').len()..];
-    let mut replaced = false;
-    let mut updated_lines = Vec::new();
-    for line in content.lines() {
-        if !replaced && line.starts_with(IN_FLIGHT_WORKLOG_PREFIX) {
-            updated_lines.push(replacement.clone());
-            replaced = true;
-        } else {
-            updated_lines.push(line.to_string());
-        }
-    }
-    if !replaced {
-        return None;
-    }
-
-    let mut updated = updated_lines.join("\n");
-    updated.push_str(trailing_newlines);
-    Some(updated)
 }
 
 #[cfg(test)]
@@ -623,6 +529,7 @@ mod tests {
         env,
         ffi::OsString,
         fs,
+        path::PathBuf,
         sync::{Mutex, OnceLock},
         time::{SystemTime, UNIX_EPOCH},
     };
@@ -1250,98 +1157,6 @@ mod tests {
 
         assert!(error.contains("unsupported value"));
         assert!(error.contains("mystery_status"));
-    }
-
-    #[test]
-    fn fixup_latest_worklog_updates_in_flight_line() {
-        let repo_root = temp_repo_root("record-dispatch-worklog");
-        let worklog_dir = repo_root.join("docs/worklog/2026-03-10");
-        fs::create_dir_all(&worklog_dir).expect("worklog dir should exist");
-        let worklog_path = worklog_dir.join("142511-cycle.md");
-        fs::write(
-            &worklog_path,
-            concat!(
-                "## Pre-dispatch state\n\n",
-                "*Snapshot before review dispatch — final counters may differ after C6.*\n",
-                "- **In-flight agent sessions**: 0\n",
-                "- **Pipeline status**: PASS (8/8)\n"
-            ),
-        )
-        .expect("worklog should be written");
-
-        let outcome =
-            fixup_latest_worklog_in_flight(&repo_root, 1).expect("worklog fixup should succeed");
-
-        assert_eq!(outcome, WorklogFixupOutcome::Updated(worklog_path.clone()));
-        let updated = fs::read_to_string(&worklog_path).expect("worklog should be readable");
-        assert!(updated.contains("- **In-flight agent sessions**: 1"));
-        assert!(!updated.contains("- **In-flight agent sessions**: 0"));
-    }
-
-    #[test]
-    fn apply_dispatch_patch_and_worklog_fixup_keep_canonical_in_flight_line_in_sync() {
-        let repo_root = temp_repo_root("record-dispatch-worklog-sync");
-        let worklog_dir = repo_root.join("docs/worklog/2026-03-10");
-        fs::create_dir_all(&worklog_dir).expect("worklog dir should exist");
-        let worklog_path = worklog_dir.join("142511-cycle.md");
-        fs::write(
-            &worklog_path,
-            concat!(
-                "# Cycle 164 — 2026-03-10 14:25 UTC\n\n",
-                "## Pre-dispatch state\n\n",
-                "*Snapshot before review dispatch — final counters may differ after C6.*\n",
-                "- **In-flight agent sessions**: 0\n",
-                "- **Pipeline status**: PASS (8/8)\n\n",
-                "## Post-dispatch addendum\n\n",
-                "- **In-flight agent sessions**: 99\n"
-            ),
-        )
-        .expect("worklog should be written");
-
-        let mut state = sample_state();
-        let model = default_test_model();
-        let patch = build_dispatch_patch(
-            &state,
-            164,
-            603,
-            "Example dispatch",
-            &model,
-            "2026-03-07T13:00:00Z",
-        )
-        .expect("patch should build");
-        apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
-
-        let outcome = fixup_latest_worklog_in_flight(&repo_root, patch.in_flight)
-            .expect("worklog fixup should succeed");
-
-        assert_eq!(outcome, WorklogFixupOutcome::Updated(worklog_path.clone()));
-        assert_eq!(state["in_flight_sessions"], json!(1));
-
-        let updated = fs::read_to_string(&worklog_path).expect("worklog should be readable");
-        let canonical_line = updated
-            .lines()
-            .find(|line| line.starts_with(IN_FLIGHT_WORKLOG_PREFIX))
-            .expect("canonical in-flight line should exist");
-        assert_eq!(canonical_line, "- **In-flight agent sessions**: 1");
-        assert!(updated.contains("## Post-dispatch addendum"));
-        assert!(updated.contains("- **In-flight agent sessions**: 99"));
-
-        let canonical_in_flight = canonical_line
-            .rsplit_once(": ")
-            .and_then(|(_, value)| value.parse::<i64>().ok())
-            .expect("canonical in-flight line should end with a number");
-        assert_eq!(
-            canonical_in_flight,
-            state["in_flight_sessions"].as_i64().unwrap()
-        );
-    }
-
-    #[test]
-    fn fixup_latest_worklog_returns_not_found_when_worklog_is_missing() {
-        let repo_root = temp_repo_root("record-dispatch-no-worklog");
-        let outcome =
-            fixup_latest_worklog_in_flight(&repo_root, 1).expect("missing worklog is not fatal");
-        assert_eq!(outcome, WorklogFixupOutcome::NotFound);
     }
 
     fn temp_repo_root(prefix: &str) -> PathBuf {

@@ -1,9 +1,8 @@
 use clap::Parser;
 use record_dispatch::{
     apply_dispatch_patch, build_dispatch_patch, concurrency_warning_message,
-    dispatch_commit_message, enforce_pipeline_gate, fixup_latest_worklog_in_flight, resolve_model,
-    update_review_dispatch_tracking, CommandRunner, PipelineGateError, ProcessRunner,
-    WorklogFixupOutcome,
+    dispatch_commit_message, enforce_pipeline_gate, resolve_model, update_review_dispatch_tracking,
+    CommandRunner, PipelineGateError, ProcessRunner,
 };
 use state_schema::{
     commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
@@ -160,14 +159,6 @@ fn run_with_runner(
 
     let commit_message = dispatch_commit_message(cli.issue, patch.current_cycle);
     let receipt = commit_state_json(&cli.repo_root, &commit_message)?;
-    match fixup_latest_worklog_in_flight(&cli.repo_root, patch.in_flight)? {
-        WorklogFixupOutcome::Updated(path) => {
-            println!("Worklog in-flight count updated in {}", path.display());
-        }
-        WorklogFixupOutcome::NotFound => {
-            warn("Latest worklog not found; skipping in-flight count fixup");
-        }
-    }
     if already_recorded {
         if phase_transitioned {
             println!(
@@ -332,7 +323,7 @@ mod tests {
         fs,
         path::Path,
         process::Command,
-        time::{Duration, SystemTime, UNIX_EPOCH},
+        time::{SystemTime, UNIX_EPOCH},
     };
 
     #[test]
@@ -550,12 +541,9 @@ mod tests {
     }
 
     #[test]
-    fn run_updates_latest_worklog_in_flight_and_commits_only_state_json() {
+    fn run_commits_only_state_json() {
         let repo = TempRepo::new();
         repo.init();
-        let older_worklog = repo.write_worklog("2026-03-09", "235959-older.md", 0);
-        std::thread::sleep(Duration::from_millis(20));
-        let latest_worklog = repo.write_worklog("2026-03-10", "142511-current.md", 0);
 
         run(Cli {
             issue: 602,
@@ -567,14 +555,6 @@ mod tests {
         })
         .expect("dispatch should succeed");
 
-        let latest_content =
-            fs::read_to_string(&latest_worklog).expect("latest worklog should be readable");
-        assert!(latest_content.contains("- **In-flight agent sessions**: 1"));
-        assert!(!latest_content.contains("- **In-flight agent sessions**: 0"));
-        let older_content =
-            fs::read_to_string(&older_worklog).expect("older worklog should be readable");
-        assert!(older_content.contains("- **In-flight agent sessions**: 0"));
-
         let output = Command::new("git")
             .arg("-C")
             .arg(repo.path())
@@ -585,7 +565,6 @@ mod tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("state(record-dispatch): #602 dispatched [cycle 164]"));
         assert!(stdout.contains("docs/state.json"));
-        assert!(!stdout.contains("docs/worklog/2026-03-10/142511-current.md"));
         let status = Command::new("git")
             .arg("-C")
             .arg(repo.path())
@@ -594,7 +573,10 @@ mod tests {
             .expect("git status should execute");
         assert!(status.status.success());
         let status_stdout = String::from_utf8_lossy(&status.stdout);
-        assert!(status_stdout.contains(" M docs/worklog/2026-03-10/142511-current.md"));
+        assert!(
+            status_stdout.trim().is_empty(),
+            "unexpected git status output: {status_stdout}"
+        );
 
         let state: serde_json::Value = serde_json::from_str(
             &fs::read_to_string(repo.path().join("docs/state.json"))
@@ -692,34 +674,6 @@ mod tests {
     }
 
     #[test]
-    fn run_succeeds_when_worklog_is_missing() {
-        let repo = TempRepo::new();
-        repo.init();
-
-        run(Cli {
-            issue: 602,
-            title: "Example dispatch".to_string(),
-            model: Some("gpt-5.4".to_string()),
-            review_dispatch: true,
-            addresses_finding: None,
-            repo_root: repo.path().to_path_buf(),
-        })
-        .expect("missing worklog should only warn");
-
-        let output = Command::new("git")
-            .arg("-C")
-            .arg(repo.path())
-            .args(["log", "-1", "--pretty=%B"])
-            .output()
-            .expect("git log should execute");
-        assert!(output.status.success());
-        assert_eq!(
-            String::from_utf8_lossy(&output.stdout).trim(),
-            "state(record-dispatch): #602 dispatched [cycle 164]"
-        );
-    }
-
-    #[test]
     fn run_fails_when_pipeline_check_fails() {
         let repo = TempRepo::new();
         repo.init();
@@ -755,7 +709,6 @@ mod tests {
     fn run_proceeds_when_pipeline_check_passes() {
         let repo = TempRepo::new();
         repo.init();
-        repo.write_worklog("2026-03-10", "142511-current.md", 0);
         let mut warnings = Vec::new();
 
         run_with_runner(
@@ -856,7 +809,6 @@ mod tests {
     fn review_dispatch_allowed_when_c5_5_gate_pass() {
         let repo = TempRepo::new();
         repo.init();
-        repo.write_worklog("2026-03-10", "142511-current.md", 0);
         let mut warnings = Vec::new();
         let runner = MockRunner::with_error("runner should not be called for review dispatch");
 
@@ -1020,7 +972,6 @@ mod tests {
     fn non_review_dispatch_resets_consecutive_bypass_counter() {
         let repo = TempRepo::new();
         repo.init();
-        repo.write_worklog("2026-03-10", "142511-current.md", 0);
         repo.set_review_dispatch_consecutive(2);
         let mut warnings = Vec::new();
         let runner = MockRunner::with_exit_code(Some(0));
@@ -1304,29 +1255,6 @@ mod tests {
                 ]
             });
             self.write_state_value(&state);
-        }
-
-        fn write_worklog(&self, date: &str, name: &str, in_flight: i64) -> PathBuf {
-            let dir = self.path().join("docs/worklog").join(date);
-            fs::create_dir_all(&dir).expect("worklog dir should be created");
-            let path = dir.join(name);
-            fs::write(
-                &path,
-                format!(
-                    "# Cycle 164 — 2026-03-10 14:25 UTC\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: {}\n- **Pipeline status**: PASS (8/8)\n",
-                    in_flight
-                ),
-            )
-            .expect("worklog should be written");
-            let relative_path = path
-                .strip_prefix(self.path())
-                .expect("worklog should be under repo root")
-                .to_string_lossy()
-                .into_owned();
-            git_success(self.path(), ["add", "--", relative_path.as_str()]);
-            let commit_message = format!("add worklog {}", name);
-            git_success(self.path(), ["commit", "-m", commit_message.as_str()]);
-            path
         }
 
         fn write_state_value(&self, state: &serde_json::Value) {

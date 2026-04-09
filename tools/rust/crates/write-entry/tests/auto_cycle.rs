@@ -105,6 +105,7 @@ fn auto_derives_cycle_from_state_json() {
         &repo_root.path.join("docs/state.json"),
         r#"{
   "last_cycle": {"number": 98},
+  "in_flight_sessions": 0,
   "cycle_phase": {
     "cycle": 99,
     "phase": "work",
@@ -125,8 +126,6 @@ fn auto_derives_cycle_from_state_json() {
             "test done",
             "--pipeline",
             "PASS",
-            "--in-flight",
-            "0",
             "--publish-gate",
             "test",
         ])
