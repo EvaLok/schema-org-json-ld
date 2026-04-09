@@ -2814,8 +2814,7 @@ fn last_cycle_committed_worklog_content(
         Ok(content) => Ok(Some((baseline_commit, content))),
         Err(error) if is_missing_path_at_commit_error(&error) => {
             let historical_path =
-                resolve_worklog_path_at_commit(repo_root, &repo_relative_path, &baseline_commit)?
-                    .filter(|historical_path| historical_path != &repo_relative_path);
+                resolve_worklog_path_at_commit(repo_root, &repo_relative_path, &baseline_commit)?;
             let Some(historical_path) = historical_path else {
                 return Err(error);
             };
@@ -2935,6 +2934,8 @@ fn resolve_worklog_path_at_commit(
             continue;
         }
 
+        // git log --name-status emits tab-delimited records such as:
+        // `R100\told_path\tnew_path` or `C100\told_path\tnew_path`.
         let mut parts = line.split('\t');
         let Some(status) = parts.next() else {
             continue;
