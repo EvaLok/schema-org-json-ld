@@ -7082,6 +7082,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix cycle-complete last_cycle.summary derivation bug and freeze last_cycle after close-out"
+    },
+    {
+      "dispatched_at": "2026-04-09T21:35:19Z",
+      "issue": 2351,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 467 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -7832,7 +7839,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2349 Fix cycle-complete last_cycle.summary derivation bug and freeze last_cycle after close-out (cycle 467)",
+  "dispatch_log_latest": "#2351 [Cycle Review] Cycle 467 end-of-cycle review (cycle 467)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8105,13 +8112,13 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 2,
     "issue": 2348,
     "number": 467,
-    "summary": "1 dispatches, 0 merges",
-    "timestamp": "2026-04-09T21:29:58Z"
+    "summary": "2 dispatches, 0 merges",
+    "timestamp": "2026-04-09T21:35:19Z"
   },
   "last_eva_comment_check": "2026-04-09T21:29:58Z",
   "last_tool_audit_cycle": 403,
@@ -14019,7 +14026,7 @@
     ],
     "last_review_cycle": 466
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 467,
   "schema_status": {
     "directory_layout": {
