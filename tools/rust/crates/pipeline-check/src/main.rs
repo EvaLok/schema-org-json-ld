@@ -1313,7 +1313,11 @@ fn verify_step_comments(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner
 			};
         }
     };
-    let previous_cycle_found = match fetch_step_comments_for_issue(runner, issue, previous_cycle) {
+    let previous_cycle_issue = state
+        .pointer("/previous_cycle_issue")
+        .and_then(Value::as_u64)
+        .unwrap_or(issue);
+    let previous_cycle_found = match fetch_step_comments_for_issue(runner, previous_cycle_issue, previous_cycle) {
         Ok(found) => found,
         Err(error) => {
             return StepReport {
