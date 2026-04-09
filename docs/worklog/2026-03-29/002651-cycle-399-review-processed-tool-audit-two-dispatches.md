@@ -25,7 +25,6 @@
 
 - **In-flight agent sessions**: 2
 - **Pipeline status**: FAIL (4 warnings)
-- **Pipeline status (post-dispatch)**: PASS (4 warnings)
 - **Publish gate**: published
 
 ## Next steps
@@ -46,5 +45,4 @@
 | cycle-tagged | dbd9510 | [dbd9510](https://github.com/EvaLok/schema-org-json-ld/commit/dbd95103e21faddc2401e6f5af3a9ae291210d90) |
 | record-dispatch | 58c2c91 | [58c2c91](https://github.com/EvaLok/schema-org-json-ld/commit/58c2c917eda72e865dba16bd773b3ecf48fd3ff2) |
 | record-dispatch | f02ffd5 | [f02ffd5](https://github.com/EvaLok/schema-org-json-ld/commit/f02ffd54aa547ec3d8be3ad6c9fe3bc838a39b73) |
-| verify-review-events | 5b24f05 | [5b24f05](https://github.com/EvaLok/schema-org-json-ld/commit/5b24f05c) |
 | cycle-complete | 651a83e | [651a83e](https://github.com/EvaLok/schema-org-json-ld/commit/651a83e3166e641ab52f804b00bb9ac01ba1ee35) |

@@ -20,9 +20,9 @@
 
 ## Current state
 
-- **In-flight agent sessions**: 1
+- **In-flight agent sessions**: 0
 - **Pipeline status**: PASS after state reconciliation (16/16 invariants, derive-metrics PASS)
-- **Copilot metrics**: 485 dispatches, 478 PRs, 468 merged, 97.9% merge rate
+- **Copilot metrics**: 484 dispatches, 478 PRs, 468 merged, 97.9% merge rate
 - **Publish gate**: published v1.0.2
 
 ## Next steps
@@ -41,4 +41,3 @@
 | cycle-325 | 6c1cfc9 | [6c1cfc9](https://github.com/EvaLok/schema-org-json-ld/commit/6c1cfc9) |
 | cycle-325 | eea2fcd | [eea2fcd](https://github.com/EvaLok/schema-org-json-ld/commit/eea2fcd) |
 | cycle-325 | b016300 | [b016300](https://github.com/EvaLok/schema-org-json-ld/commit/b016300) |
-| cycle-complete | 67854d1 | [67854d1](https://github.com/EvaLok/schema-org-json-ld/commit/67854d1) |

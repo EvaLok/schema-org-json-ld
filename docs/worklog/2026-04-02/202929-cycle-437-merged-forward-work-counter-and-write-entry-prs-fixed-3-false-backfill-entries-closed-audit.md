@@ -35,7 +35,7 @@
 
 ## Cycle state
 
-- **In-flight agent sessions**: 1
+- **In-flight agent sessions**: 0
 - **In-flight agent sessions (post-dispatch)**: 1
 - **Pipeline status**: PASS (2 warnings)
 - **Pipeline status (C1 early check)**: FAIL (2 warnings, 2 blocking: doc-validation, current-cycle-steps)

@@ -27,7 +27,6 @@
 ## Cycle state
 
 - **In-flight agent sessions**: 1
-- **In-flight agent sessions (post-dispatch)**: 2
 - **Pipeline status**: PASS (3 warnings)
 - **Pipeline status (post-dispatch)**: FAIL (3 warnings)
 - **Publish gate**: published
@@ -35,11 +34,6 @@
 ## Next steps
 
 1. Review and iterate on PR from [#1998](https://github.com/EvaLok/schema-org-json-ld/issues/1998) (Add C5 frozen-commit content verification to pipeline-check) when Copilot completes
-
-## Next steps (post-dispatch)
-
-1. Review and iterate on PR from [#1998](https://github.com/EvaLok/schema-org-json-ld/issues/1998) (Add C5 frozen-commit content verification to pipeline-check) when Copilot completes
-2. Review and iterate on PR from [#2000](https://github.com/EvaLok/schema-org-json-ld/issues/2000) ([Cycle Review] Cycle 409 end-of-cycle review) when Copilot completes
 
 ## Commit receipts
 
@@ -52,4 +46,3 @@
 | process-merge | 73fe83c | [73fe83c](https://github.com/EvaLok/schema-org-json-ld/commit/73fe83c70b0511e16077412e618f60adf65c280d) |
 | process-review | e464d14 | [e464d14](https://github.com/EvaLok/schema-org-json-ld/commit/e464d14cb3c5ba351ab9bd424a2d8d60e81c85fe) |
 | record-dispatch | 8f10549 | [8f10549](https://github.com/EvaLok/schema-org-json-ld/commit/8f105498cd08f3994e5e98e93b2b51aa42725ccf) |
-| cycle-complete | 69d3cbf | [69d3cbf](https://github.com/EvaLok/schema-org-json-ld/commit/69d3cbf0) |

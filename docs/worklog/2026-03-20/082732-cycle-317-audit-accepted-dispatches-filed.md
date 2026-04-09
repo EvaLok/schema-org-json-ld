@@ -21,9 +21,9 @@
 
 ## Current state
 
-- **In-flight agent sessions**: 3
+- **In-flight agent sessions**: 2
 - **Pipeline status**: PASS (all checks pass at close-out)
-- **Copilot metrics**: 473 dispatches, 466 PRs, 456 merged, 97.9% merge rate
+- **Copilot metrics**: 472 dispatches, 466 PRs, 456 merged, 98.7% D2PR rate
 - **Publish gate**: published
 
 ## Next steps
@@ -42,8 +42,3 @@
 | field-inventory | 223a959 | [223a959](https://github.com/EvaLok/schema-org-json-ld/commit/223a959) |
 | dispatch | c64ee08 | [c64ee08](https://github.com/EvaLok/schema-org-json-ld/commit/c64ee08) |
 | audit | ec84323 | [ec84323](https://github.com/EvaLok/schema-org-json-ld/commit/ec84323) |
-| cycle-tagged | 8f1c7ab | [8f1c7ab](https://github.com/EvaLok/schema-org-json-ld/commit/8f1c7ab) |
-| cycle-tagged | 2ca5044 | [2ca5044](https://github.com/EvaLok/schema-org-json-ld/commit/2ca5044) |
-| cycle-tagged | fd663aa | [fd663aa](https://github.com/EvaLok/schema-org-json-ld/commit/fd663aa) |
-| verify-review-events | 30ec7f1 | [30ec7f1](https://github.com/EvaLok/schema-org-json-ld/commit/30ec7f1) |
-| cycle-complete | a356f8f | [a356f8f](https://github.com/EvaLok/schema-org-json-ld/commit/a356f8f) |
