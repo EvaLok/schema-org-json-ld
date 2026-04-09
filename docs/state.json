@@ -7061,6 +7061,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add docs-lint pipeline-check substep for worklog/journal validation"
+    },
+    {
+      "dispatched_at": "2026-04-09T09:58:50Z",
+      "issue": 2346,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 466 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -7805,7 +7812,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2344 Add docs-lint pipeline-check substep for worklog/journal validation (cycle 466)",
+  "dispatch_log_latest": "#2346 [Cycle Review] Cycle 466 end-of-cycle review (cycle 466)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8078,13 +8085,13 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 3,
   "last_cycle": {
     "duration_minutes": 2,
     "issue": 2341,
     "number": 466,
-    "summary": "1 dispatches, 0 merges",
-    "timestamp": "2026-04-09T09:52:44Z"
+    "summary": "2 dispatches, 0 merges",
+    "timestamp": "2026-04-09T09:58:50Z"
   },
   "last_eva_comment_check": "2026-04-09T09:52:44Z",
   "last_tool_audit_cycle": 403,
@@ -13964,7 +13971,7 @@
     ],
     "last_review_cycle": 465
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 466,
   "schema_status": {
     "directory_layout": {
