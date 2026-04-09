@@ -7683,6 +7683,18 @@
       "deferred_cycle": 457,
       "resolved": true,
       "resolved_ref": "docs/reviews/cycle-458.md"
+    },
+    {
+      "category": "journal-quality",
+      "deadline_cycle": 467,
+      "deferred_cycle": 462,
+      "resolved": false
+    },
+    {
+      "category": "worklog-accuracy",
+      "deadline_cycle": 467,
+      "deferred_cycle": 462,
+      "resolved": false
     }
   ],
   "dispatch_log_latest": "#2319 [Cycle Review] Cycle 462 end-of-cycle review (cycle 462)",
@@ -7866,7 +7878,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 462"
+        "last_refreshed": "cycle 463"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -13706,9 +13718,42 @@
         ],
         "ignored": 0,
         "note": "Cycle 462: 3/3 findings dispatch_created. Will dispatch 1 combined Copilot task this cycle (capacity-limited); items not actioned dispatch-side carry forward."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "journal-quality",
+          "state-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 462,
+        "deferred": 2,
+        "dispatch_created": 2,
+        "finding_count": 4,
+        "finding_dispositions": [
+          {
+            "category": "state-integrity",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "deferred"
+          },
+          {
+            "category": "worklog-accuracy",
+            "disposition": "dispatch_created"
+          }
+        ],
+        "ignored": 0,
+        "note": "F1 (state-integrity) → dispatch_created via #2317 Fix 3 (agent-sessions-lifecycle detection); auto-cleanup queued for cycle 463 commitment 2 dispatch. F2 (worklog-accuracy: write-entry --in-flight override) → deferred, capacity-blocked. F3 (journal-quality: post-step hardening) → deferred, capacity-blocked. F4 (worklog-accuracy: post-close-out reruns) → dispatch_created via #2317 Fix 4 (frozen-worklog-immutability detection); audit #393 Tier 1 fix queued for cycle 463 commitment 2 dispatch."
       }
     ],
-    "last_review_cycle": 461
+    "last_review_cycle": 462
   },
   "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 462,
