@@ -6956,10 +6956,12 @@
       "title": "Tool: structural fix for cycle 460 chronic findings (worklog deadline derivation, process-merge dedupe, record-dispatch addresses_finding update)"
     },
     {
+      "closed_at": "2026-04-09T05:10:36Z",
+      "closed_reason": "cycle 461 review issue closed at 2026-04-08T23:21:07Z, PR #2313 admin-merged; row left in_flight due to dispatch-task fixup gap addressed by PR #2323",
       "dispatched_at": "2026-04-08T22:08:50Z",
       "issue": 2312,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed",
       "title": "[Cycle Review] Cycle 461 end-of-cycle review"
     },
     {
@@ -7995,7 +7997,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 55,
     "issue": 2326,
