@@ -7079,8 +7079,10 @@
       "addresses_finding": "466:1",
       "dispatched_at": "2026-04-09T21:28:07Z",
       "issue": 2349,
+      "merged_at": "2026-04-09T23:32:21Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2350,
+      "status": "merged",
       "title": "Fix cycle-complete last_cycle.summary derivation bug and freeze last_cycle after close-out"
     },
     {
@@ -8121,12 +8123,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 2,
     "issue": 2353,
     "number": 468,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-09T23:16:36Z"
   },
   "last_eva_comment_check": "2026-04-09T23:16:36Z",
