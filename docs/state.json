@@ -7015,8 +7015,10 @@
     {
       "dispatched_at": "2026-04-09T05:21:28Z",
       "issue": 2329,
+      "merged_at": "2026-04-09T07:44:34Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2330,
+      "status": "merged",
       "title": "Tool: tools/rebase-pr helper automates Copilot PR rebase onto current master (cycle 462 commitment 4)"
     },
     {
@@ -8035,12 +8037,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 35,
     "issue": 2333,
     "number": 465,
-    "summary": "0 dispatches, 2 merges",
+    "summary": "0 dispatches, 3 merges",
     "timestamp": "2026-04-09T07:33:08Z"
   },
   "last_eva_comment_check": "2026-04-09T07:33:08Z",
