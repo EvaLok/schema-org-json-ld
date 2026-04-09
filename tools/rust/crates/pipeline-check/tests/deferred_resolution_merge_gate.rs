@@ -134,7 +134,8 @@ impl PipelineFixture {
 
     fn write_fake_gh(&self, pr_state: &str) {
         let script = format!(
-            "#!/usr/bin/env bash\nset -euo pipefail\nif [[ \"$1\" == \"pr\" && \"$2\" == \"view\" && \"$3\" == \"700\" ]]; then\n  printf '%s\\n' '{pr_state}'\nelse\n  echo \"unexpected gh args: $*\" >&2\n  exit 1\nfi\n"
+            "#!/usr/bin/env bash\nset -euo pipefail\nif [[ \"$1\" == \"pr\" && \"$2\" == \"view\" && \"$3\" == \"700\" ]]; then\n  printf '%s\\n' '{}'\nelse\n  echo \"unexpected gh args: $*\" >&2\n  exit 1\nfi\n",
+            pr_state
         );
         let gh_path = self.bin_root.join("gh");
         fs::write(&gh_path, script).expect("fake gh should be written");

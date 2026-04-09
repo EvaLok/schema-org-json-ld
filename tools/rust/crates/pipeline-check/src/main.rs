@@ -3959,10 +3959,10 @@ fn deferred_resolution_merge_gate_assessment(
     let detail = if checked_targets == 0 {
         "no resolved deferred-finding PR/issue refs required merge verification".to_string()
     } else if checked_targets == 1 {
-        "verified 1 resolved deferred-finding PR/issue ref is closed on GitHub".to_string()
+        "verified 1 resolved deferred-finding PR/issue ref is terminal on GitHub".to_string()
     } else {
         format!(
-            "verified {} resolved deferred-finding PR/issue refs are closed on GitHub",
+            "verified {} resolved deferred-finding PR/issue refs are terminal on GitHub",
             checked_targets
         )
     };
