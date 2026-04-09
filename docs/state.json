@@ -7036,6 +7036,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Harden chronic-category-currency to verify cited PRs are merged (audit #396 Tier 1, cycle 464 review F3)"
+    },
+    {
+      "dispatched_at": "2026-04-09T08:01:34Z",
+      "issue": 2338,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 465 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -7773,7 +7780,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2336 Harden chronic-category-currency to verify cited PRs are merged (audit #396 Tier 1, cycle 464 review F3) (cycle 465)",
+  "dispatch_log_latest": "#2338 [Cycle Review] Cycle 465 end-of-cycle review (cycle 465)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8046,13 +8053,13 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 2,
     "issue": 2333,
     "number": 465,
-    "summary": "1 dispatches, 0 merges",
-    "timestamp": "2026-04-09T07:50:03Z"
+    "summary": "2 dispatches, 0 merges",
+    "timestamp": "2026-04-09T08:01:34Z"
   },
   "last_eva_comment_check": "2026-04-09T07:50:03Z",
   "last_tool_audit_cycle": 403,
@@ -13899,7 +13906,7 @@
     ],
     "last_review_cycle": 464
   },
-  "review_dispatch_consecutive": 4,
+  "review_dispatch_consecutive": 5,
   "review_events_verified_through_cycle": 465,
   "schema_status": {
     "directory_layout": {
