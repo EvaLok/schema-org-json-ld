@@ -1818,6 +1818,18 @@ mod tests {
     }
 
     #[test]
+    fn extract_cycle_tag_rejects_malformed_tags() {
+        assert_eq!(
+            extract_cycle_tag("state(process-merge): merged PR #1 [cycle abc]"),
+            None
+        );
+        assert_eq!(
+            extract_cycle_tag("state(process-merge): merged PR #1 [cycle ]"),
+            None
+        );
+    }
+
+    #[test]
     fn resolve_summary_uses_receipts_even_when_agent_sessions_are_empty() {
         let repo_root = temp_repo_root("receipt-summary-empty-agent-sessions");
         init_git_repo(&repo_root);
