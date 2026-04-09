@@ -7060,8 +7060,10 @@
     {
       "dispatched_at": "2026-04-09T09:51:02Z",
       "issue": 2344,
+      "merged_at": "2026-04-09T21:24:45Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2345,
+      "status": "merged",
       "title": "Add docs-lint pipeline-check substep for worklog/journal validation"
     },
     {
@@ -8095,12 +8097,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 2,
     "issue": 2348,
     "number": 467,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-09T21:16:17Z"
   },
   "last_eva_comment_check": "2026-04-09T21:16:17Z",
