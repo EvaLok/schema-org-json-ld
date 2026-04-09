@@ -7006,8 +7006,10 @@
       "addresses_finding": "463:1",
       "dispatched_at": "2026-04-09T05:18:06Z",
       "issue": 2327,
+      "merged_at": "2026-04-09T07:43:39Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2328,
+      "status": "merged",
       "title": "Combined: pipeline-check step-comments cycle bug + record-dispatch timestamp coherence + deferred-resolution-merge-gate substep (cycle 463 review F1+F4, cycle 462 commitment 3)"
     },
     {
@@ -8033,12 +8035,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 35,
     "issue": 2333,
     "number": 465,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-09T07:33:08Z"
   },
   "last_eva_comment_check": "2026-04-09T07:33:08Z",
