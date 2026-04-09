@@ -3663,6 +3663,8 @@ fn chronic_category_currency_status(
                         "category '{}' verification_cycle={} cites PR #{} which is not merged (state={})",
                         category, verification_cycle, pull_request, state
                     ));
+                    // An unmerged cited PR invalidates the refresh, so do not let the
+                    // entry fall through to the freshness-based pass path below.
                     continue;
                 }
             }
@@ -3702,7 +3704,8 @@ fn extract_chronic_category_pull_requests(rationale: &str) -> BTreeSet<u64> {
     let mut pull_requests = BTreeSet::new();
 
     for captures in CHRONIC_CATEGORY_PR_LABEL_REGEX.captures_iter(rationale) {
-        let Some(reference_block) = captures.name("refs").map(|match_| match_.as_str()) else {
+        let Some(reference_block) = captures.name("refs").map(|refs_capture| refs_capture.as_str())
+        else {
             continue;
         };
         collect_hash_numbers(reference_block, &mut pull_requests);
