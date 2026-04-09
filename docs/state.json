@@ -6983,8 +6983,10 @@
       "addresses_finding": "462:1",
       "dispatched_at": "2026-04-09T03:40:59Z",
       "issue": 2322,
+      "merged_at": "2026-04-09T05:10:10Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2323,
+      "status": "merged",
       "title": "Tool: close-session crate plus remove fixup_latest_worklog_in_flight (audit #392 Tier 2, audit #393 Tier 1, cycle 462 commitment 2)"
     },
     {
@@ -7991,12 +7993,12 @@
       }
     }
   },
-  "in_flight_sessions": 3,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 55,
     "issue": 2326,
     "number": 464,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-09T04:48:17Z"
   },
   "last_eva_comment_check": "2026-04-09T04:48:17Z",
