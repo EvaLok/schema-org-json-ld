@@ -9,7 +9,7 @@
 ## 2. [worklog-accuracy] The receipt summary note undercounted cycle events by dropping the accepted audit
 
 **File**: /home/runner/work/schema-org-json-ld/schema-org-json-ld/docs/worklog/2026-04-10/080527-cycle-471-5-prs-merged-audit-400-accepted-2-dispatches-code-change-quality-recurrence-addressed.md:52-58
-**Evidence**: The receipt note says cycle 471 had “receipt events: 2 dispatchs [sic], 3 merges, 1 review.” The table immediately below it includes a `process-audit` receipt (`4d160f5`), and `bash tools/cycle-receipts --cycle 471 --repo-root .` reproduces that same audit receipt. The worklog therefore published an event summary that omits one of the actual receipt categories present in its own evidence table.
+**Evidence**: The receipt note summarizes cycle 471 as having two dispatch events, three merge events, and one review event. The table immediately below it includes a `process-audit` receipt (`4d160f5`), and `bash tools/cycle-receipts --cycle 471 --repo-root .` reproduces that same audit receipt. The worklog therefore published an event summary that omits one of the actual receipt categories present in its own evidence table.
 **Recommendation**: Derive the receipt-event prose from the same grouped receipt data used to render the table, and include audit events whenever a `process-audit` receipt is present. This should be tool-generated, not narrated.
 
 ## 3. [code-change-quality] Cycle 471 claimed the C4.7 recurrence was addressed without producing the promised runtime evidence
