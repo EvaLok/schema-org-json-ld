@@ -5,7 +5,8 @@ use clap::{Parser, Subcommand};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 use state_schema::{
-    current_cycle_from_state, read_state_value, AgentSession, DeferredFinding, StateJson,
+    current_cycle_from_state, read_state_value, AgentSession, DeferredFinding, ReviewHistoryEntry,
+    StateJson,
 };
 use std::collections::HashSet;
 use std::ffi::OsStr;
@@ -93,6 +94,9 @@ struct WorklogArgs {
     /// Auto-derive processed issues from docs/state.json activity sources
     #[arg(long = "auto-issues", default_value_t = false)]
     auto_issues: bool,
+    /// Auto-derive a previous-cycle review disposition summary for the worklog
+    #[arg(long = "auto-review-summary", default_value_t = false)]
+    auto_review_summary: bool,
     /// Self-modification description, optionally in FILE:DESCRIPTION form
     #[arg(long = "self-modification")]
     self_modification: Vec<String>,
@@ -126,6 +130,9 @@ struct WorklogArgs {
     /// Auto-derive commit receipts from tools/cycle-receipts
     #[arg(long = "auto-receipts", default_value_t = false)]
     auto_receipts: bool,
+    /// Auto-derive the receipt note prefix from receipt tool categories
+    #[arg(long = "auto-receipt-note", default_value_t = false)]
+    auto_receipt_note: bool,
     /// Render the generated worklog to stdout without writing a file
     #[arg(long = "dry-run", default_value_t = false)]
     dry_run: bool,
@@ -1006,9 +1013,9 @@ fn apply_worklog_auto_derivations(
     input: &mut WorklogInput,
 ) -> Result<Vec<String>, String> {
     let mut warnings = Vec::new();
-    let state = match load_worklog_state(repo_root, args.auto_issues) {
+    let state = match load_worklog_state(repo_root, args.auto_issues || args.auto_review_summary) {
         Ok(state) => state,
-        Err(error) if !args.auto_issues => {
+        Err(error) if !args.auto_issues && !args.auto_review_summary => {
             warnings.push(format!(
                 "WARNING: failed to load docs/state.json for worklog auto-derivations: {}",
                 error
@@ -1057,6 +1064,16 @@ fn apply_worklog_auto_derivations(
         input.issues_processed = merge_issue_processed(&auto_issues, &input.issues_processed);
     }
 
+    if args.auto_review_summary {
+        let state = state.as_ref().ok_or_else(|| {
+            "docs/state.json not found; --auto-review-summary requires docs/state.json to be present"
+                .to_string()
+        })?;
+        input
+            .what_was_done
+            .insert(0, derive_review_summary_line(state)?);
+    }
+
     if args.auto_receipts {
         let entries = cycle_receipt_entries
             .as_ref()
@@ -1086,6 +1103,14 @@ fn apply_worklog_auto_derivations(
                 }
             },
         );
+    }
+
+    if args.auto_receipt_note {
+        let prefix = derive_receipt_note_prefix(&input.receipts)?;
+        input.receipt_note = Some(match input.receipt_note.take() {
+            Some(note) if !note.trim().is_empty() => format!("{prefix}. {note}"),
+            _ => prefix,
+        });
     }
     Ok(warnings)
 }
@@ -1322,6 +1347,88 @@ fn derive_review_history_issue_processed_entries(
             }
         }
     }
+}
+
+fn derive_review_summary_line(state: &StateJson) -> Result<String, String> {
+    let previous_cycle_issue = state
+        .extra
+        .get("previous_cycle_issue")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| {
+            "docs/state.json is missing a numeric previous_cycle_issue required by --auto-review-summary"
+                .to_string()
+        })?;
+    let review_agent = state.review_agent()?;
+    let entry = review_agent
+        .history
+        .iter()
+        .filter(|entry| review_history_entry_matches_issue(entry, previous_cycle_issue))
+        .max_by_key(|entry| entry.cycle)
+        .ok_or_else(|| {
+            format!(
+                "review_agent.history has no entry matching previous_cycle_issue {}",
+                previous_cycle_issue
+            )
+        })?;
+    let disposition_summary = summarize_review_dispositions(entry)?;
+
+    Ok(format!(
+        "Processed cycle {} review ({} findings, complacency {}/5, {})",
+        entry.cycle, entry.finding_count, entry.complacency_score, disposition_summary
+    ))
+}
+
+fn review_history_entry_matches_issue(entry: &ReviewHistoryEntry, issue: u64) -> bool {
+    entry.extra.get("issue").and_then(Value::as_u64) == Some(issue)
+        || entry.extra.get("review_issue").and_then(Value::as_u64) == Some(issue)
+}
+
+fn summarize_review_dispositions(entry: &ReviewHistoryEntry) -> Result<String, String> {
+    if entry.finding_count == 0 {
+        return Ok("no findings".to_string());
+    }
+    if entry.finding_dispositions.len() as u64 != entry.finding_count {
+        return Err(format!(
+            "review history entry for cycle {} has finding_count {} but {} finding_dispositions",
+            entry.cycle,
+            entry.finding_count,
+            entry.finding_dispositions.len()
+        ));
+    }
+
+    let Some(first) = entry.finding_dispositions.first() else {
+        return Err(format!(
+            "review history entry for cycle {} is missing finding_dispositions",
+            entry.cycle
+        ));
+    };
+
+    if entry
+        .finding_dispositions
+        .iter()
+        .all(|disposition| disposition.disposition == first.disposition)
+    {
+        return Ok(format!("all {}", first.disposition));
+    }
+
+    let mut counts = Vec::<(String, usize)>::new();
+    for disposition in &entry.finding_dispositions {
+        if let Some((_, count)) = counts
+            .iter_mut()
+            .find(|(name, _)| name == &disposition.disposition)
+        {
+            *count += 1;
+        } else {
+            counts.push((disposition.disposition.clone(), 1));
+        }
+    }
+
+    Ok(counts
+        .into_iter()
+        .map(|(disposition, count)| format_count_with_forms(count, &disposition, &disposition))
+        .flatten()
+        .collect::<Vec<_>>()
+        .join(", "))
 }
 
 fn push_issue_processed_numeric_field(
@@ -1609,6 +1716,58 @@ fn fallback_receipt_scope_note(
     format_receipt_scope_note(cycle, &scope, cycle_receipt_through)
 }
 
+fn derive_receipt_note_prefix(receipts: &[CommitReceipt]) -> Result<String, String> {
+    if receipts.is_empty() {
+        return Err(
+            "--auto-receipt-note requires at least one receipt to derive a category summary"
+                .to_string(),
+        );
+    }
+
+    let mut dispatches = 0usize;
+    let mut merges = 0usize;
+    let mut reviews = 0usize;
+    let mut audits = 0usize;
+    let mut eva_inputs = 0usize;
+
+    for receipt in receipts {
+        let tool = receipt.tool.trim().to_ascii_lowercase();
+        if tool.starts_with("record-dispatch") {
+            dispatches += 1;
+        } else if tool.starts_with("process-merge") {
+            merges += 1;
+        } else if tool.starts_with("process-review") {
+            reviews += 1;
+        } else if tool.starts_with("process-audit") {
+            audits += 1;
+        } else if tool.starts_with("process-eva") {
+            eva_inputs += 1;
+        } else if tool.starts_with("cycle-start") || tool.starts_with("cycle-complete") {
+            continue;
+        }
+    }
+
+    let parts = [
+        format_count_with_forms(dispatches, "dispatch", "dispatches"),
+        format_count_with_forms(merges, "merge", "merges"),
+        format_count_with_forms(reviews, "review", "reviews"),
+        format_count_with_forms(audits, "audit", "audits"),
+        format_count_with_forms(eva_inputs, "Eva input", "Eva inputs"),
+    ]
+    .into_iter()
+    .flatten()
+    .collect::<Vec<_>>();
+
+    if parts.is_empty() {
+        return Err(
+            "--auto-receipt-note found no countable receipt categories in the receipt list"
+                .to_string(),
+        );
+    }
+
+    Ok(parts.join(", "))
+}
+
 fn cycle_receipts_scope_command(cycle: u64, cycle_receipt_through: Option<&str>) -> String {
     match cycle_receipt_through {
         Some(timestamp) => format!("cycle-receipts --cycle {cycle} --through {timestamp}"),
@@ -1713,6 +1872,10 @@ fn pluralize(noun: &str, count: usize) -> String {
     } else {
         format!("{noun}s")
     }
+}
+
+fn format_count_with_forms(count: usize, singular: &str, plural: &str) -> Option<String> {
+    (count > 0).then(|| format!("{} {}", count, if count == 1 { singular } else { plural }))
 }
 
 fn extract_issue_references(item: &str) -> Vec<u64> {
@@ -3296,6 +3459,7 @@ mod tests {
             issue_processed: Vec::new(),
             issues_processed: Vec::new(),
             auto_issues: false,
+            auto_review_summary: false,
             self_modification: Vec::new(),
             auto_self_modifications: false,
             next: Vec::new(),
@@ -3307,6 +3471,7 @@ mod tests {
             publish_gate: None,
             receipt: Vec::new(),
             auto_receipts: false,
+            auto_receipt_note: false,
             dry_run: false,
         }
     }
@@ -5252,6 +5417,108 @@ mod tests {
     }
 
     #[test]
+    fn worklog_auto_review_summary_reports_mixed_dispositions() {
+        let repo_root = TempRepoDir::new("worklog-auto-review-summary-mixed");
+        init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "phase": "work",
+                    "phase_entered_at": "2026-03-06T01:00:00Z",
+                    "cycle": 154
+                },
+                "agent_sessions": [],
+                "previous_cycle_issue": 77,
+                "review_agent": {
+                    "history": [
+                        {
+                            "cycle": 153,
+                            "issue": 77,
+                            "finding_count": 3,
+                            "complacency_score": 2,
+                            "finding_dispositions": [
+                                {"category": "worklog-accuracy", "disposition": "deferred"},
+                                {"category": "receipt-coverage", "disposition": "dispatch_created"},
+                                {"category": "follow-up", "disposition": "deferred"}
+                            ]
+                        }
+                    ]
+                }
+            }"#,
+        );
+
+        let mut args = worklog_args("Auto review summary mixed");
+        args.auto_review_summary = true;
+        args.done = vec!["Manual done item".to_string()];
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.publish_gate = Some("open".to_string());
+
+        let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+        let warnings =
+            apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
+
+        assert!(warnings.is_empty());
+        assert_eq!(
+            input.what_was_done,
+            vec![
+                "Processed cycle 153 review (3 findings, complacency 2/5, 2 deferred, 1 dispatch_created)"
+                    .to_string(),
+                "Manual done item".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn worklog_auto_review_summary_reports_all_same_dispositions() {
+        let repo_root = TempRepoDir::new("worklog-auto-review-summary-same");
+        init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "phase": "work",
+                    "phase_entered_at": "2026-03-06T01:00:00Z",
+                    "cycle": 154
+                },
+                "agent_sessions": [],
+                "previous_cycle_issue": 78,
+                "review_agent": {
+                    "history": [
+                        {
+                            "cycle": 152,
+                            "review_issue": 78,
+                            "finding_count": 2,
+                            "complacency_score": 4,
+                            "finding_dispositions": [
+                                {"category": "worklog-accuracy", "disposition": "deferred"},
+                                {"category": "receipt-coverage", "disposition": "deferred"}
+                            ]
+                        }
+                    ]
+                }
+            }"#,
+        );
+
+        let mut args = worklog_args("Auto review summary same");
+        args.auto_review_summary = true;
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.publish_gate = Some("open".to_string());
+
+        let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+        let warnings =
+            apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
+
+        assert!(warnings.is_empty());
+        assert_eq!(
+            input.what_was_done,
+            vec!["Processed cycle 152 review (2 findings, complacency 4/5, all deferred)"]
+        );
+    }
+
+    #[test]
     fn worklog_explicit_issue_numbers_flag_renders_linked_issue_entries() {
         let repo_root = TempRepoDir::new("worklog-explicit-issue-numbers");
         init_git_repo(&repo_root.path);
@@ -6085,6 +6352,99 @@ mod tests {
         assert!(content.contains(
             "Receipt table auto-generated by `cycle-receipts --cycle 154 --through 2026-03-06T04:00:00Z`."
         ));
+    }
+
+    #[test]
+    fn worklog_auto_receipt_note_includes_all_non_excluded_categories() {
+        let repo_root = TempRepoDir::new("worklog-auto-receipt-note");
+        init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "phase": "complete",
+                    "phase_entered_at": "2026-03-06T01:00:00Z",
+                    "completed_at": "2026-03-06T04:55:00Z",
+                    "cycle": 154
+                },
+                "agent_sessions": []
+            }"#,
+        );
+        let start_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154 [cycle 154]",
+        );
+        let dispatch_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/dispatch.txt",
+            "dispatch\n",
+            "state(record-dispatch): #42 dispatched [cycle 154]",
+        );
+        let merge_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/merge.txt",
+            "merge\n",
+            "state(process-merge): PR #88 merged [cycle 154]",
+        );
+        let review_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/review.txt",
+            "review\n",
+            "state(process-review): review handled [cycle 154]",
+        );
+        let audit_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/audit.txt",
+            "audit\n",
+            "state(process-audit): audit handled [cycle 154]",
+        );
+        let eva_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/eva.txt",
+            "eva\n",
+            "state(process-eva): eva input handled [cycle 154]",
+        );
+        let complete_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/complete.txt",
+            "complete\n",
+            "state(cycle-complete): close cycle 154 [cycle 154]",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}},
+                    {{"step":"record-dispatch","receipt":"{dispatch_receipt}","commit":"state(record-dispatch): #42 dispatched [cycle 154]"}},
+                    {{"step":"process-merge","receipt":"{merge_receipt}","commit":"state(process-merge): PR #88 merged [cycle 154]"}},
+                    {{"step":"process-review","receipt":"{review_receipt}","commit":"state(process-review): review handled [cycle 154]"}},
+                    {{"step":"process-audit","receipt":"{audit_receipt}","commit":"state(process-audit): audit handled [cycle 154]"}},
+                    {{"step":"process-eva","receipt":"{eva_receipt}","commit":"state(process-eva): eva input handled [cycle 154]"}},
+                    {{"step":"cycle-complete","receipt":"{complete_receipt}","commit":"state(cycle-complete): close cycle 154 [cycle 154]"}}
+                ]"#
+            ),
+        );
+
+        let mut args = worklog_args("Auto receipt note");
+        args.auto_receipts = true;
+        args.auto_receipt_note = true;
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.publish_gate = Some("open".to_string());
+
+        let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+        let warnings =
+            apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
+
+        assert!(warnings.is_empty());
+        let note = input.receipt_note.expect("receipt note should be derived");
+        assert!(note.starts_with(
+            "1 dispatch, 1 merge, 1 review, 1 audit, 1 Eva input. Scope: cycle 154 commits through 2026-03-06T04:55:00Z (cycle-complete)"
+        ));
+        assert!(!note.contains("cycle-start): begin"));
+        assert!(!note.contains("cycle-complete): close"));
     }
 
     #[test]
@@ -6993,11 +7353,13 @@ Reflective log for the schema-org-json-ld orchestrator.
             "--issues-processed",
             "924,925",
             "--auto-issues",
+            "--auto-review-summary",
             "--auto-next",
             "--auto-pipeline",
             "--auto-gate-history",
             "--auto-self-modifications",
             "--auto-receipts",
+            "--auto-receipt-note",
             "--dry-run",
             "--done",
             "did stuff",
@@ -7019,11 +7381,13 @@ Reflective log for the schema-org-json-ld orchestrator.
                     vec!["924".to_string(), "925".to_string()]
                 );
                 assert!(args.auto_issues);
+                assert!(args.auto_review_summary);
                 assert!(args.auto_next);
                 assert!(args.auto_pipeline);
                 assert!(args.auto_gate_history);
                 assert!(args.auto_self_modifications);
                 assert!(args.auto_receipts);
+                assert!(args.auto_receipt_note);
                 assert!(args.dry_run);
                 assert_eq!(args.pr_reviewed, vec![123]);
                 assert_eq!(
