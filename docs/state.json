@@ -7123,8 +7123,10 @@
     {
       "dispatched_at": "2026-04-10T03:32:48Z",
       "issue": 2362,
+      "merged_at": "2026-04-10T05:10:34Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2363,
+      "status": "merged",
       "title": "Add verify-review-events step comment to cycle-runner close-out"
     },
     {
@@ -8174,12 +8176,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 0,
     "issue": 2366,
     "number": 470,
-    "summary": "0 dispatches, 2 merges",
+    "summary": "0 dispatches, 3 merges",
     "timestamp": "2026-04-10T04:58:22Z"
   },
   "last_eva_comment_check": "2026-04-10T04:58:22Z",
