@@ -7182,6 +7182,13 @@
       "pr": 2378,
       "status": "merged",
       "title": "Post C4.7 step comment on parse failure"
+    },
+    {
+      "dispatched_at": "2026-04-10T08:09:06Z",
+      "issue": 2379,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 471 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -7973,7 +7980,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2377 Post C4.7 step comment on parse failure (cycle 471)",
+  "dispatch_log_latest": "#2379 [Cycle Review] Cycle 471 end-of-cycle review (cycle 471)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8246,7 +8253,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 10,
     "issue": 2373,
@@ -14276,7 +14283,7 @@
     ],
     "last_review_cycle": 470
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 471,
   "schema_status": {
     "directory_layout": {
