@@ -7218,6 +7218,13 @@
       "pr": 2387,
       "status": "merged",
       "title": "[Cycle Review] Cycle 472 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-04-10T21:29:30Z",
+      "issue": 2389,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Set resolved:true when dropping deferred findings in process-review"
     }
   ],
   "audit_dropped": [
@@ -8013,7 +8020,7 @@
       "resolved_ref": "docs/reviews/cycle-472.md"
     }
   ],
-  "dispatch_log_latest": "#2386 [Cycle Review] Cycle 472 end-of-cycle review (cycle 472)",
+  "dispatch_log_latest": "#2389 Set resolved:true when dropping deferred findings in process-review (cycle 473)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8286,13 +8293,13 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 2,
     "issue": 2388,
     "number": 473,
-    "summary": "0 dispatches, 3 merges",
-    "timestamp": "2026-04-10T21:12:14Z"
+    "summary": "1 dispatch, 3 merges",
+    "timestamp": "2026-04-10T21:29:30Z"
   },
   "last_eva_comment_check": "2026-04-10T21:12:14Z",
   "last_tool_audit_cycle": 403,
@@ -14373,7 +14380,7 @@
     ],
     "last_review_cycle": 472
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 472,
   "schema_status": {
     "directory_layout": {
