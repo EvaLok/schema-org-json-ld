@@ -1,7 +1,8 @@
 use clap::Parser;
 use record_dispatch::{
     apply_dispatch_patch, build_dispatch_patch, dispatch_commit_message, enforce_pipeline_gate,
-    update_review_dispatch_tracking, ProcessRunner,
+    restore_sealed_last_cycle, snapshot_sealed_last_cycle, update_review_dispatch_tracking,
+    ProcessRunner,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -179,6 +180,12 @@ fn record_created_issue(
     }
 
     let mut state = read_state_value(repo_root)?;
+    let current_phase = state
+        .pointer("/cycle_phase/phase")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown")
+        .to_string();
+    let sealed_last_cycle = snapshot_sealed_last_cycle(&state, &current_phase);
 
     // Track consecutive review dispatches (warns at 3+)
     if let Some(warning) = update_review_dispatch_tracking(&mut state, true)? {
@@ -193,6 +200,7 @@ fn record_created_issue(
         model,
         &current_utc_timestamp(),
     )?;
+    restore_sealed_last_cycle(&mut state, sealed_last_cycle)?;
     write_state_value(repo_root, &state)?;
     let commit_message = dispatch_commit_message(issue, cycle);
     commit_state_json(repo_root, &commit_message)?;
@@ -255,6 +263,9 @@ mod tests {
     use super::*;
     use clap::CommandFactory;
     use serde_json::json;
+    use std::fs;
+    use std::process::Command;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     fn sample_state() -> Value {
         json!({
@@ -343,5 +354,145 @@ mod tests {
         assert_eq!(sessions[1]["issue"], json!(849));
         assert_eq!(sessions[1]["status"], json!("in_flight"));
         assert_eq!(sessions[1]["model"], json!("gpt-5.4"));
+    }
+
+    #[test]
+    fn record_created_issue_preserves_sealed_last_cycle_snapshot_during_close_out() {
+        let repo = TempRepo::new();
+        repo.init();
+        let mut state = repo.read_state();
+        state["last_cycle"]["summary"] = json!("sealed summary");
+        state["last_cycle"]["timestamp"] = json!("2026-04-09T09:52:44Z");
+        repo.write_state_value(&state);
+
+        record_created_issue(
+            repo.path(),
+            200,
+            849,
+            "[Cycle Review] Cycle 200 end-of-cycle review",
+            "gpt-5.4",
+        )
+        .expect("record should succeed");
+
+        let state = repo.read_state();
+        assert_eq!(
+            state.pointer("/last_cycle/summary"),
+            Some(&json!("sealed summary"))
+        );
+        assert_eq!(
+            state.pointer("/last_cycle/timestamp"),
+            Some(&json!("2026-04-09T09:52:44Z"))
+        );
+        assert_eq!(state.pointer("/agent_sessions/1/issue"), Some(&json!(849)));
+    }
+
+    struct TempRepo {
+        path: PathBuf,
+    }
+
+    impl TempRepo {
+        fn new() -> Self {
+            let unique = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("system time should be after epoch")
+                .as_nanos();
+            let path = std::env::temp_dir().join(format!(
+                "dispatch-review-test-{}-{}",
+                std::process::id(),
+                unique
+            ));
+            fs::create_dir_all(path.join("docs")).expect("temp repo should be created");
+            Self { path }
+        }
+
+        fn path(&self) -> &Path {
+            &self.path
+        }
+
+        fn init(&self) {
+            self.write_state_value(&json!({
+                "agent_sessions": [
+                    {
+                        "issue": 601,
+                        "title": "old dispatch",
+                        "dispatched_at": "2026-03-01T00:00:00Z",
+                        "model": "gpt-5.4",
+                        "status": "merged",
+                        "pr": 700,
+                        "merged_at": "2026-03-02T00:00:00Z"
+                    }
+                ],
+                "in_flight_sessions": 0,
+                "dispatch_log_latest": "#601 old dispatch (cycle 200)",
+                "field_inventory": {
+                    "fields": {
+                        "in_flight_sessions": { "last_refreshed": "cycle 199" }
+                    }
+                },
+                "last_cycle": {
+                    "number": 200,
+                    "summary": "1 dispatch, 1 merges (PR #700)",
+                    "timestamp": "2026-04-09T09:52:44Z"
+                },
+                "cycle_phase": {
+                    "cycle": 200,
+                    "phase": "close_out",
+                    "phase_entered_at": "2026-04-09T10:00:00Z"
+                },
+                "tool_pipeline": {
+                    "c5_5_gate": {
+                        "cycle": 200,
+                        "status": "PASS",
+                        "needs_reverify": false
+                    }
+                }
+            }));
+
+            git_success(self.path(), ["init"]);
+            git_success(
+                self.path(),
+                ["config", "user.name", "Dispatch Review Tests"],
+            );
+            git_success(
+                self.path(),
+                ["config", "user.email", "dispatch-review-tests@example.com"],
+            );
+            git_success(self.path(), ["add", "docs/state.json"]);
+            git_success(self.path(), ["commit", "-m", "initial state"]);
+        }
+
+        fn read_state(&self) -> Value {
+            serde_json::from_str(
+                &fs::read_to_string(self.path().join("docs/state.json"))
+                    .expect("state file should be readable"),
+            )
+            .expect("state file should parse")
+        }
+
+        fn write_state_value(&self, state: &Value) {
+            write_state_value(self.path(), state).expect("state should be written");
+        }
+    }
+
+    impl Drop for TempRepo {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.path);
+        }
+    }
+
+    fn git_success<const N: usize>(repo_root: &Path, args: [&str; N]) {
+        let output = Command::new("git")
+            .arg("-C")
+            .arg(repo_root)
+            .args(args)
+            .output()
+            .expect("git command should run");
+        assert!(
+            output.status.success(),
+            "git {:?} failed: stdout={} stderr={}",
+            args,
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
     }
 }
