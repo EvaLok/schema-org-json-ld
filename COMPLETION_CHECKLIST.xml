@@ -35,6 +35,7 @@
       <action tool="cycle-complete" command="bash tools/cycle-complete --apply --commit --issue N"/>
       <constraint>Run cycle-complete BEFORE dispatching review agent.</constraint>
     </at-cycle-end>
+    <note>When consuming a review via process-review, pass the review issue explicitly with <code>--review-issue N</code> so the resulting <code>review_agent.history</code> entry keeps the source issue linkage.</note>
   </step>
 
   <step id="C3" title="Draft documentation entries"

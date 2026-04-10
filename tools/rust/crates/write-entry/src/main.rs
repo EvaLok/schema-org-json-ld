@@ -1366,7 +1366,7 @@ fn derive_review_summary_line(state: &StateJson) -> Result<String, String> {
         .max_by_key(|entry| entry.cycle)
         .ok_or_else(|| {
             format!(
-                "review_agent.history has no entry matching previous_cycle_issue {}",
+                "review_agent.history has no entry matching previous_cycle_issue {} via issue/review_issue fields; process-review must persist the review issue on history entries",
                 previous_cycle_issue
             )
         })?;
