@@ -8011,7 +8011,8 @@
       "category": "process-adherence",
       "deadline_cycle": 474,
       "deferred_cycle": 469,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "PR#2363 verify-review-events step comment"
     },
     {
       "category": "code-change-quality",
