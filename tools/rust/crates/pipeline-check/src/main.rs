@@ -19,6 +19,7 @@ const CYCLE_STATUS_IN_FLIGHT_PATH: &str = "/concurrency/in_flight";
 const CYCLE_STATUS_DIRECTIVES_PATH: &str = "/eva_input/comments_since_last_cycle";
 const ARTIFACT_VERIFY_STEP_NAME: &str = "artifact-verify";
 const DISPOSITION_MATCH_STEP_NAME: &str = "disposition-match";
+const REVIEW_HISTORY_ACTIONED_INTEGRITY_STEP_NAME: &str = "review-history-actioned-integrity";
 const AUDIT_INBOUND_LIFECYCLE_STEP_NAME: &str = "audit-inbound-lifecycle";
 const AGENT_SESSIONS_LIFECYCLE_STEP_NAME: &str = "agent-sessions-lifecycle";
 const CHRONIC_CATEGORY_CURRENCY_WARN_GAP: u64 = 10;
@@ -60,7 +61,7 @@ const COMMITMENT_DROP_RATIONALE_MARKERS: &[&str] = &[
     " due to ",
 ];
 const NON_SURFACE_CYCLE_PREFIX: &str = "cycle-";
-const STEP_NAMES: [&str; 26] = [
+const STEP_NAMES: [&str; 27] = [
     "metric-snapshot",
     "field-inventory",
     "housekeeping-scan",
@@ -69,6 +70,7 @@ const STEP_NAMES: [&str; 26] = [
     CHRONIC_CATEGORY_CURRENCY_STEP_NAME,
     ARTIFACT_VERIFY_STEP_NAME,
     DISPOSITION_MATCH_STEP_NAME,
+    REVIEW_HISTORY_ACTIONED_INTEGRITY_STEP_NAME,
     AUDIT_INBOUND_LIFECYCLE_STEP_NAME,
     AGENT_SESSIONS_LIFECYCLE_STEP_NAME,
     DEFERRAL_ACCUMULATION_STEP_NAME,
@@ -167,6 +169,10 @@ static COMMITMENT_DROP_PR_LABEL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 });
 static BRACKETED_HASH_REFERENCE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\[#(\d+)\]").expect("bracketed hash reference regex should compile")
+});
+static REVIEW_SECTION_HEADER_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^## \d+\. \[(?P<category>[^\]]+)\]")
+        .expect("review section header regex should compile")
 });
 static TOOL_PATH_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"tools/(?:rust/crates/)?([A-Za-z0-9][A-Za-z0-9-]*)")
@@ -752,6 +758,9 @@ fn run_pipeline_with_excluded_steps(
     }
     if !is_excluded_step(DISPOSITION_MATCH_STEP_NAME, exclude_steps) {
         steps.push(verify_disposition_match(repo_root));
+    }
+    if !is_excluded_step(REVIEW_HISTORY_ACTIONED_INTEGRITY_STEP_NAME, exclude_steps) {
+        steps.push(verify_review_history_actioned_integrity(repo_root, runner));
     }
     if !is_excluded_step(AUDIT_INBOUND_LIFECYCLE_STEP_NAME, exclude_steps) {
         steps.push(verify_audit_inbound_lifecycle(repo_root, runner));
@@ -3681,6 +3690,32 @@ fn verify_agent_sessions_lifecycle(
     }
 }
 
+fn verify_review_history_actioned_integrity(
+    repo_root: &Path,
+    runner: &dyn CommandRunner,
+) -> StepReport {
+    match review_history_actioned_integrity_assessment(repo_root, runner) {
+        Ok(assessment) => StepReport {
+            name: REVIEW_HISTORY_ACTIONED_INTEGRITY_STEP_NAME,
+            status: assessment.status,
+            severity: assessment.severity,
+            exit_code: None,
+            detail: Some(assessment.detail),
+            findings: None,
+            summary: None,
+        },
+        Err(error) => StepReport {
+            name: REVIEW_HISTORY_ACTIONED_INTEGRITY_STEP_NAME,
+            status: StepStatus::Error,
+            severity: Severity::Blocking,
+            exit_code: None,
+            detail: Some(error),
+            findings: None,
+            summary: None,
+        },
+    }
+}
+
 fn verify_deferral_accumulation(repo_root: &Path) -> StepReport {
     match deferral_accumulation_assessment(repo_root) {
         Ok(assessment) => StepReport {
@@ -3852,7 +3887,13 @@ fn disposition_match_status(repo_root: &Path) -> Result<(StepStatus, String), St
     let state_value = read_state_value(repo_root)?;
     let state: StateJson = serde_json::from_value(state_value)
         .map_err(|error| format!("failed to parse state.json: {}", error))?;
-    let review_agent = state.review_agent()?;
+    let review_agent = match state.review_agent() {
+        Ok(review_agent) => review_agent,
+        Err(error) if error == "missing field: review_agent" => {
+            return Ok((StepStatus::Pass, "no review history".to_string()));
+        }
+        Err(error) => return Err(error),
+    };
     let Some(history_entry) = review_agent.history.last() else {
         return Ok((StepStatus::Pass, "no review history".to_string()));
     };
@@ -3911,6 +3952,135 @@ struct StepAssessment {
     status: StepStatus,
     severity: Severity,
     detail: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum ReviewFixReferenceKind {
+    PullRequest,
+    Issue,
+    Unknown,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+struct ReviewFixReference {
+    kind: ReviewFixReferenceKind,
+    number: u64,
+}
+
+struct ReviewFixReferenceSet {
+    references: Vec<ReviewFixReference>,
+    source: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+struct ResolvedReviewFixReference {
+    kind: ReviewFixReferenceKind,
+    number: u64,
+    current_state: String,
+    merged_at: Option<DateTime<Utc>>,
+}
+
+fn review_history_actioned_integrity_assessment(
+    repo_root: &Path,
+    runner: &dyn CommandRunner,
+) -> Result<StepAssessment, String> {
+    let state_value = read_state_value(repo_root)?;
+    let state: StateJson = serde_json::from_value(state_value)
+        .map_err(|error| format!("failed to parse state.json: {}", error))?;
+    let review_agent = match state.review_agent() {
+        Ok(review_agent) => review_agent,
+        Err(error) if error == "missing field: review_agent" => {
+            return Ok(StepAssessment {
+                status: StepStatus::Pass,
+                severity: Severity::Blocking,
+                detail: "no review history".to_string(),
+            });
+        }
+        Err(error) => return Err(error),
+    };
+    if review_agent.history.is_empty() {
+        return Ok(StepAssessment {
+            status: StepStatus::Pass,
+            severity: Severity::Blocking,
+            detail: "no review history".to_string(),
+        });
+    }
+
+    let mut warnings = Vec::new();
+    let mut failures = Vec::new();
+    let mut checked = 0usize;
+
+    for entry in &review_agent.history {
+        let actioned_categories = entry
+            .finding_dispositions
+            .iter()
+            .filter(|disposition| disposition.disposition == "actioned")
+            .map(|disposition| disposition.category.as_str())
+            .collect::<Vec<_>>();
+        if actioned_categories.is_empty() {
+            continue;
+        }
+
+        let historical_cutoff = review_history_actioned_cutoff(repo_root, entry.cycle)?;
+        for category in actioned_categories {
+            let references =
+                actioned_fix_references_for_category(repo_root, entry, category)?;
+            if references.references.is_empty() {
+                let mut detail = format!(
+                    "review_agent.history[cycle={}] marks {} as actioned, but no fix issue/PR reference was found",
+                    entry.cycle, category
+                );
+                if let Some(source) = references.source {
+                    detail.push_str(&format!(" ({source})"));
+                }
+                warnings.push(detail);
+                continue;
+            }
+
+            for reference in references.references {
+                checked += 1;
+                let resolved =
+                    resolve_review_fix_reference(&state, runner, reference)?;
+                if let Some(detail) = review_history_actioned_failure_detail(
+                    entry.cycle,
+                    category,
+                    reference,
+                    &resolved,
+                    historical_cutoff.as_ref(),
+                )? {
+                    failures.push(detail);
+                }
+            }
+        }
+    }
+
+    if !failures.is_empty() {
+        let mut details = failures;
+        details.extend(warnings);
+        return Ok(StepAssessment {
+            status: StepStatus::Fail,
+            severity: Severity::Blocking,
+            detail: details.join("; "),
+        });
+    }
+
+    if !warnings.is_empty() {
+        return Ok(StepAssessment {
+            status: StepStatus::Warn,
+            severity: Severity::Warning,
+            detail: warnings.join("; "),
+        });
+    }
+
+    Ok(StepAssessment {
+        status: StepStatus::Pass,
+        severity: Severity::Blocking,
+        detail: if checked == 0 {
+            "no actioned review-history findings required fix-reference verification".to_string()
+        } else {
+            format!("verified {} actioned review-history fix reference(s)", checked)
+        },
+    })
 }
 
 fn audit_inbound_lifecycle_assessment(
@@ -4657,6 +4827,339 @@ fn collect_hash_targets(
     }
 }
 
+fn actioned_fix_references_for_category(
+    repo_root: &Path,
+    entry: &state_schema::ReviewHistoryEntry,
+    category: &str,
+) -> Result<ReviewFixReferenceSet, String> {
+    let note_references = entry
+        .note
+        .as_deref()
+        .map(extract_review_fix_references)
+        .unwrap_or_default();
+    if !note_references.is_empty() {
+        return Ok(ReviewFixReferenceSet {
+            references: note_references,
+            source: Some("from history note".to_string()),
+        });
+    }
+
+    let review_cycle = entry.cycle.saturating_add(1);
+    let Some(section) =
+        next_cycle_review_section_for_category(repo_root, review_cycle, category)?
+    else {
+        return Ok(ReviewFixReferenceSet {
+            references: Vec::new(),
+            source: None,
+        });
+    };
+
+    let review_references = extract_review_fix_references(&section);
+    Ok(ReviewFixReferenceSet {
+        source: if review_references.is_empty() {
+            Some(format!(
+                "no reference in history note or docs/reviews/cycle-{}.md [{}] section",
+                review_cycle, category
+            ))
+        } else {
+            Some(format!(
+                "from docs/reviews/cycle-{}.md [{}] section",
+                review_cycle, category
+            ))
+        },
+        references: review_references,
+    })
+}
+
+fn extract_review_fix_references(text: &str) -> Vec<ReviewFixReference> {
+    let mut references = BTreeSet::new();
+
+    collect_labeled_review_fix_references(
+        text,
+        &PULL_REQUEST_LABEL_REGEX,
+        ReviewFixReferenceKind::PullRequest,
+        &mut references,
+    );
+    collect_labeled_review_fix_references(
+        text,
+        &ISSUE_LABEL_REGEX,
+        ReviewFixReferenceKind::Issue,
+        &mut references,
+    );
+    collect_url_review_fix_references(
+        text,
+        &PULL_REQUEST_URL_REGEX,
+        ReviewFixReferenceKind::PullRequest,
+        &mut references,
+    );
+    collect_url_review_fix_references(
+        text,
+        &ISSUE_URL_REGEX,
+        ReviewFixReferenceKind::Issue,
+        &mut references,
+    );
+
+    for captures in HASH_REFERENCE_REGEX.captures_iter(text) {
+        let Some(number) = captures
+            .get(1)
+            .and_then(|capture| capture.as_str().parse::<u64>().ok())
+        else {
+            continue;
+        };
+        if references
+            .iter()
+            .all(|reference: &ReviewFixReference| reference.number != number)
+        {
+            references.insert(ReviewFixReference {
+                kind: ReviewFixReferenceKind::Unknown,
+                number,
+            });
+        }
+    }
+
+    references.into_iter().collect()
+}
+
+fn collect_labeled_review_fix_references(
+    text: &str,
+    regex: &Regex,
+    kind: ReviewFixReferenceKind,
+    references: &mut BTreeSet<ReviewFixReference>,
+) {
+    for captures in regex.captures_iter(text) {
+        let Some(reference_block) = captures.name("refs").map(|match_| match_.as_str()) else {
+            continue;
+        };
+        collect_hash_review_fix_references(reference_block, kind, references);
+    }
+}
+
+fn collect_url_review_fix_references(
+    text: &str,
+    regex: &Regex,
+    kind: ReviewFixReferenceKind,
+    references: &mut BTreeSet<ReviewFixReference>,
+) {
+    for captures in regex.captures_iter(text) {
+        let Some(number) = captures
+            .get(1)
+            .and_then(|capture| capture.as_str().parse::<u64>().ok())
+        else {
+            continue;
+        };
+        references.insert(ReviewFixReference { kind, number });
+    }
+}
+
+fn collect_hash_review_fix_references(
+    text: &str,
+    kind: ReviewFixReferenceKind,
+    references: &mut BTreeSet<ReviewFixReference>,
+) {
+    for captures in HASH_REFERENCE_REGEX.captures_iter(text) {
+        let Some(number) = captures
+            .get(1)
+            .and_then(|capture| capture.as_str().parse::<u64>().ok())
+        else {
+            continue;
+        };
+        references.insert(ReviewFixReference { kind, number });
+    }
+}
+
+fn next_cycle_review_section_for_category(
+    repo_root: &Path,
+    review_cycle: u64,
+    category: &str,
+) -> Result<Option<String>, String> {
+    let review_path = repo_root.join(format!("docs/reviews/cycle-{}.md", review_cycle));
+    if !review_path.is_file() {
+        return Ok(None);
+    }
+
+    let review_content = fs::read_to_string(&review_path)
+        .map_err(|error| format!("failed to read {}: {}", review_path.display(), error))?;
+    let mut lines = Vec::new();
+    let mut collecting = false;
+    for line in review_content.lines() {
+        if let Some(captures) = REVIEW_SECTION_HEADER_REGEX.captures(line) {
+            if collecting {
+                break;
+            }
+            collecting = captures
+                .name("category")
+                .map(|value| value.as_str() == category)
+                .unwrap_or(false);
+        } else if collecting && line.starts_with("## Complacency score") {
+            break;
+        }
+
+        if collecting {
+            lines.push(line);
+        }
+    }
+
+    if lines.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(lines.join("\n")))
+    }
+}
+
+fn resolve_review_fix_reference(
+    state: &StateJson,
+    runner: &dyn CommandRunner,
+    reference: ReviewFixReference,
+) -> Result<ResolvedReviewFixReference, String> {
+    if let Some(resolved) = resolve_review_fix_reference_from_state(state, reference)? {
+        return Ok(resolved);
+    }
+
+    match reference.kind {
+        ReviewFixReferenceKind::PullRequest => {
+            let state = runner.fetch_pull_request_state(reference.number)?;
+            Ok(ResolvedReviewFixReference {
+                kind: ReviewFixReferenceKind::PullRequest,
+                number: reference.number,
+                current_state: state,
+                merged_at: None,
+            })
+        }
+        ReviewFixReferenceKind::Issue | ReviewFixReferenceKind::Unknown => {
+            let state = runner.fetch_issue_state(reference.number)?;
+            Ok(ResolvedReviewFixReference {
+                kind: ReviewFixReferenceKind::Issue,
+                number: reference.number,
+                current_state: state,
+                merged_at: None,
+            })
+        }
+    }
+}
+
+fn resolve_review_fix_reference_from_state(
+    state: &StateJson,
+    reference: ReviewFixReference,
+) -> Result<Option<ResolvedReviewFixReference>, String> {
+    let issue_match = state
+        .agent_sessions
+        .iter()
+        .find(|session| session.issue.and_then(|issue| u64::try_from(issue).ok()) == Some(reference.number));
+    let pr_match = state
+        .agent_sessions
+        .iter()
+        .find(|session| session.pr.and_then(|pr| u64::try_from(pr).ok()) == Some(reference.number));
+
+    let selected = match reference.kind {
+        ReviewFixReferenceKind::Issue => issue_match.map(|session| (ReviewFixReferenceKind::Issue, session)),
+        ReviewFixReferenceKind::PullRequest => {
+            pr_match.map(|session| (ReviewFixReferenceKind::PullRequest, session))
+        }
+        ReviewFixReferenceKind::Unknown => issue_match
+            .map(|session| (ReviewFixReferenceKind::Issue, session))
+            .or_else(|| pr_match.map(|session| (ReviewFixReferenceKind::PullRequest, session))),
+    };
+
+    let Some((kind, session)) = selected else {
+        return Ok(None);
+    };
+
+    let merged_at = session
+        .merged_at
+        .as_deref()
+        .map(parse_iso_timestamp)
+        .transpose()?;
+    Ok(Some(ResolvedReviewFixReference {
+        kind,
+        number: reference.number,
+        current_state: session
+            .status
+            .clone()
+            .unwrap_or_else(|| "<unknown>".to_string()),
+        merged_at,
+    }))
+}
+
+fn review_history_actioned_failure_detail(
+    cycle: u64,
+    category: &str,
+    reference: ReviewFixReference,
+    resolved: &ResolvedReviewFixReference,
+    historical_cutoff: Option<&DateTime<Utc>>,
+) -> Result<Option<String>, String> {
+    let kind_label = match resolved.kind {
+        ReviewFixReferenceKind::PullRequest => "PR",
+        ReviewFixReferenceKind::Issue | ReviewFixReferenceKind::Unknown => "issue",
+    };
+    let current_state = resolved.current_state.to_ascii_lowercase();
+    let current_unmerged_pr = resolved.kind == ReviewFixReferenceKind::PullRequest
+        && current_state != "merged"
+        && current_state != "closed";
+
+    if current_state == "in_flight" || current_state == "open" || current_unmerged_pr {
+        return Ok(Some(format!(
+            "review_agent.history[cycle={}] marks {} as actioned, but cited fix {} #{} is still {}",
+            cycle, category, kind_label, resolved.number, resolved.current_state
+        )));
+    }
+
+    if resolved.kind == ReviewFixReferenceKind::PullRequest && current_state == "closed" && resolved.merged_at.is_none() {
+        return Ok(Some(format!(
+            "review_agent.history[cycle={}] marks {} as actioned, but cited fix PR #{} is closed without merge",
+            cycle, category, resolved.number
+        )));
+    }
+
+    if let (Some(cutoff), Some(merged_at)) = (historical_cutoff, resolved.merged_at.as_ref()) {
+        if merged_at > cutoff {
+            return Ok(Some(format!(
+                "review_agent.history[cycle={}] marks {} as actioned, but cited fix {} #{} only became terminal at {} after cycle {} close (current state: {})",
+                cycle,
+                category,
+                kind_label,
+                resolved.number,
+                merged_at.to_rfc3339(),
+                cycle,
+                resolved.current_state
+            )));
+        }
+    }
+
+    let _ = reference;
+    Ok(None)
+}
+
+fn review_history_actioned_cutoff(
+    repo_root: &Path,
+    cycle: u64,
+) -> Result<Option<DateTime<Utc>>, String> {
+    let Some(worklog_path) = latest_worklog_entry_for_cycle(repo_root, cycle.saturating_add(1))? else {
+        return Ok(None);
+    };
+    parse_worklog_path_timestamp(&worklog_path).map(Some)
+}
+
+fn parse_worklog_path_timestamp(worklog_path: &Path) -> Result<DateTime<Utc>, String> {
+    let file_name = worklog_path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .ok_or_else(|| format!("invalid worklog path: {}", worklog_path.display()))?;
+    let date = worklog_path
+        .parent()
+        .and_then(Path::file_name)
+        .and_then(|value| value.to_str())
+        .ok_or_else(|| format!("invalid worklog parent path: {}", worklog_path.display()))?;
+    let time = file_name
+        .get(..6)
+        .ok_or_else(|| format!("invalid worklog filename: {}", worklog_path.display()))?;
+    parse_iso_timestamp(&format!(
+        "{date}T{}:{}:{}Z",
+        &time[0..2],
+        &time[2..4],
+        &time[4..6]
+    ))
+}
+
 fn mass_deferral_gate_assessment(repo_root: &Path) -> Result<StepAssessment, String> {
     let state_value = read_state_value(repo_root)?;
     let state: StateJson = serde_json::from_value(state_value)
@@ -5092,6 +5595,12 @@ fn is_iso_date(value: &str) -> bool {
 fn parse_iso_date(value: &str) -> Result<NaiveDate, String> {
     NaiveDate::parse_from_str(value, "%Y-%m-%d")
         .map_err(|error| format!("invalid date '{}': {}", value, error))
+}
+
+fn parse_iso_timestamp(value: &str) -> Result<DateTime<Utc>, String> {
+    DateTime::parse_from_rfc3339(value)
+        .map(|timestamp| timestamp.with_timezone(&Utc))
+        .map_err(|error| format!("invalid timestamp '{}': {}", value, error))
 }
 
 fn pipeline_exit_code(steps: &[StepReport]) -> i32 {
@@ -5939,7 +6448,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 26);
+        assert_eq!(report.steps.len(), 27);
         assert_eq!(report.steps[0].status, StepStatus::Pass);
         assert_eq!(report.steps[1].status, StepStatus::Pass);
         assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -5959,42 +6468,47 @@ mod tests {
         assert_eq!(report.steps[6].status, StepStatus::Pass);
         assert_eq!(report.steps[7].name, "disposition-match");
         assert_eq!(report.steps[7].status, StepStatus::Pass);
-        assert_eq!(report.steps[8].name, "audit-inbound-lifecycle");
-        assert_eq!(report.steps[8].status, StepStatus::Pass);
-        assert_eq!(report.steps[9].name, "agent-sessions-lifecycle");
-        assert_eq!(report.steps[9].status, StepStatus::Pass);
-        assert_eq!(report.steps[10].name, "deferral-accumulation");
-        assert_eq!(report.steps[10].status, StepStatus::Pass);
-        assert_eq!(report.steps[11].name, "deferral-deadlines");
-        assert_eq!(report.steps[11].status, StepStatus::Pass);
-        assert_eq!(report.steps[12].name, "mass-deferral-gate");
-        assert_eq!(report.steps[12].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].name, "dispatch-finding-reconciliation");
-        assert_eq!(report.steps[13].status, StepStatus::Pass);
         assert_eq!(
-            report.steps[14].name,
+            report.steps[8].name,
+            REVIEW_HISTORY_ACTIONED_INTEGRITY_STEP_NAME
+        );
+        assert_eq!(report.steps[8].status, StepStatus::Pass);
+        assert_eq!(report.steps[9].name, "audit-inbound-lifecycle");
+        assert_eq!(report.steps[9].status, StepStatus::Pass);
+        assert_eq!(report.steps[10].name, "agent-sessions-lifecycle");
+        assert_eq!(report.steps[10].status, StepStatus::Pass);
+        assert_eq!(report.steps[11].name, "deferral-accumulation");
+        assert_eq!(report.steps[11].status, StepStatus::Pass);
+        assert_eq!(report.steps[12].name, "deferral-deadlines");
+        assert_eq!(report.steps[12].status, StepStatus::Pass);
+        assert_eq!(report.steps[13].name, "mass-deferral-gate");
+        assert_eq!(report.steps[13].status, StepStatus::Pass);
+        assert_eq!(report.steps[14].name, "dispatch-finding-reconciliation");
+        assert_eq!(report.steps[14].status, StepStatus::Pass);
+        assert_eq!(
+            report.steps[15].name,
             DEFERRED_RESOLUTION_MERGE_GATE_STEP_NAME
         );
-        assert_eq!(report.steps[14].status, StepStatus::Pass);
-        assert_eq!(report.steps[15].name, "doc-validation");
         assert_eq!(report.steps[15].status, StepStatus::Pass);
-        assert_eq!(report.steps[16].name, "frozen-commit-verify");
+        assert_eq!(report.steps[16].name, "doc-validation");
         assert_eq!(report.steps[16].status, StepStatus::Pass);
-        assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
+        assert_eq!(report.steps[17].name, "frozen-commit-verify");
         assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].name, "worklog-dedup");
+        assert_eq!(report.steps[18].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[18].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].name, "worklog-immutability");
+        assert_eq!(report.steps[19].name, "worklog-dedup");
         assert_eq!(report.steps[19].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].severity, Severity::Blocking);
-        assert_eq!(report.steps[20].name, "frozen-worklog-immutability");
+        assert_eq!(report.steps[20].name, "worklog-immutability");
         assert_eq!(report.steps[20].status, StepStatus::Pass);
-        assert_eq!(report.steps[21].name, "pr-base-currency");
+        assert_eq!(report.steps[20].severity, Severity::Blocking);
+        assert_eq!(report.steps[21].name, "frozen-worklog-immutability");
         assert_eq!(report.steps[21].status, StepStatus::Pass);
-        assert_eq!(report.steps[22].name, "step-comments");
+        assert_eq!(report.steps[22].name, "pr-base-currency");
         assert_eq!(report.steps[22].status, StepStatus::Pass);
-        assert_eq!(report.steps[23].name, "current-cycle-steps");
+        assert_eq!(report.steps[23].name, "step-comments");
         assert_eq!(report.steps[23].status, StepStatus::Pass);
+        assert_eq!(report.steps[24].name, "current-cycle-steps");
+        assert_eq!(report.steps[24].status, StepStatus::Pass);
     }
 
     #[test]
@@ -6182,7 +6696,7 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 26);
+        assert_eq!(report.steps.len(), 27);
         assert!(report.steps[..6]
             .iter()
             .all(|step| matches!(step.status, StepStatus::Error)));
@@ -6548,22 +7062,22 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &CascadeRunner);
-        assert_eq!(report.steps[15].name, "doc-validation");
-        assert_eq!(report.steps[15].status, StepStatus::Cascade);
-        assert_eq!(report.steps[16].name, "frozen-commit-verify");
-        assert_eq!(report.steps[16].status, StepStatus::Pass);
-        assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
+        assert_eq!(report.steps[16].name, "doc-validation");
+        assert_eq!(report.steps[16].status, StepStatus::Cascade);
+        assert_eq!(report.steps[17].name, "frozen-commit-verify");
         assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].name, "worklog-dedup");
+        assert_eq!(report.steps[18].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[18].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].name, "worklog-immutability");
+        assert_eq!(report.steps[19].name, "worklog-dedup");
         assert_eq!(report.steps[19].status, StepStatus::Pass);
-        assert_eq!(report.steps[20].name, "frozen-worklog-immutability");
+        assert_eq!(report.steps[20].name, "worklog-immutability");
         assert_eq!(report.steps[20].status, StepStatus::Pass);
-        assert_eq!(report.steps[21].name, "pr-base-currency");
+        assert_eq!(report.steps[21].name, "frozen-worklog-immutability");
         assert_eq!(report.steps[21].status, StepStatus::Pass);
-        assert_eq!(report.steps[22].name, "step-comments");
-        assert_eq!(report.steps[22].status, StepStatus::Fail);
+        assert_eq!(report.steps[22].name, "pr-base-currency");
+        assert_eq!(report.steps[22].status, StepStatus::Pass);
+        assert_eq!(report.steps[23].name, "step-comments");
+        assert_eq!(report.steps[23].status, StepStatus::Fail);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -6699,22 +7213,22 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &MultiCauseCascadeRunner);
-        assert_eq!(report.steps[15].name, "doc-validation");
-        assert_eq!(report.steps[15].status, StepStatus::Cascade);
-        assert_eq!(report.steps[16].name, "frozen-commit-verify");
-        assert_eq!(report.steps[16].status, StepStatus::Pass);
-        assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
+        assert_eq!(report.steps[16].name, "doc-validation");
+        assert_eq!(report.steps[16].status, StepStatus::Cascade);
+        assert_eq!(report.steps[17].name, "frozen-commit-verify");
         assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].name, "worklog-dedup");
+        assert_eq!(report.steps[18].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[18].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].name, "worklog-immutability");
+        assert_eq!(report.steps[19].name, "worklog-dedup");
         assert_eq!(report.steps[19].status, StepStatus::Pass);
-        assert_eq!(report.steps[20].name, "frozen-worklog-immutability");
+        assert_eq!(report.steps[20].name, "worklog-immutability");
         assert_eq!(report.steps[20].status, StepStatus::Pass);
-        assert_eq!(report.steps[21].name, "pr-base-currency");
+        assert_eq!(report.steps[21].name, "frozen-worklog-immutability");
         assert_eq!(report.steps[21].status, StepStatus::Pass);
-        assert_eq!(report.steps[22].name, "step-comments");
-        assert_eq!(report.steps[22].status, StepStatus::Fail);
+        assert_eq!(report.steps[22].name, "pr-base-currency");
+        assert_eq!(report.steps[22].status, StepStatus::Pass);
+        assert_eq!(report.steps[23].name, "step-comments");
+        assert_eq!(report.steps[23].status, StepStatus::Fail);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -6853,10 +7367,10 @@ mod tests {
         }
 
         let report = run_pipeline(&root, OVERRIDE_CYCLE, &OverrideRunner);
-        assert_eq!(report.steps[22].name, "step-comments");
-        assert_eq!(report.steps[22].status, StepStatus::Warn);
-        assert_eq!(report.steps[22].severity, Severity::Warning);
-        assert!(report.steps[22]
+        assert_eq!(report.steps[23].name, "step-comments");
+        assert_eq!(report.steps[23].status, StepStatus::Warn);
+        assert_eq!(report.steps[23].severity, Severity::Warning);
+        assert!(report.steps[23]
             .detail
             .as_deref()
             .unwrap_or_default()
@@ -7000,18 +7514,18 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &IndependentFailureRunner);
-        assert_eq!(report.steps[15].name, "doc-validation");
-        assert_eq!(report.steps[15].status, StepStatus::Fail);
-        assert_eq!(report.steps[16].name, "frozen-commit-verify");
-        assert_eq!(report.steps[16].status, StepStatus::Pass);
-        assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
+        assert_eq!(report.steps[16].name, "doc-validation");
+        assert_eq!(report.steps[16].status, StepStatus::Fail);
+        assert_eq!(report.steps[17].name, "frozen-commit-verify");
         assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].name, "worklog-dedup");
+        assert_eq!(report.steps[18].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[18].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].name, "worklog-immutability");
+        assert_eq!(report.steps[19].name, "worklog-dedup");
         assert_eq!(report.steps[19].status, StepStatus::Pass);
+        assert_eq!(report.steps[20].name, "worklog-immutability");
+        assert_eq!(report.steps[20].status, StepStatus::Pass);
         // Previous-cycle backstop is downgraded to Warn
-        assert_eq!(report.steps[22].status, StepStatus::Warn);
+        assert_eq!(report.steps[23].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -7135,7 +7649,7 @@ mod tests {
             &ExcludeDocValidationRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 25);
+        assert_eq!(report.steps.len(), 26);
         assert!(!report
             .steps
             .iter()
@@ -7273,7 +7787,7 @@ mod tests {
             &UnknownExcludeRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 26);
+        assert_eq!(report.steps.len(), 27);
         assert!(report
             .steps
             .iter()
@@ -7419,7 +7933,7 @@ mod tests {
         );
 
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 25);
+        assert_eq!(report.steps.len(), 26);
         assert!(!report.steps.iter().any(|step| step.name == "worklog-dedup"));
         assert!(report
             .steps
@@ -8901,6 +9415,375 @@ mod tests {
 
         assert_eq!(step.status, StepStatus::Pass);
         assert_eq!(step.detail.as_deref(), Some("no review history"));
+    }
+
+    #[test]
+    fn review_history_actioned_integrity_passes_when_cited_pr_is_merged() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-review-history-actioned-pass-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "review_agent": {
+                    "history": [{
+                        "cycle": 300,
+                        "categories": ["state-integrity"],
+                        "actioned": 1,
+                        "deferred": 0,
+                        "ignored": 0,
+                        "finding_count": 1,
+                        "complacency_score": 2,
+                        "note": "Actioned in PR #900.",
+                        "finding_dispositions": [{
+                            "category": "state-integrity",
+                            "disposition": "actioned"
+                        }]
+                    }]
+                },
+                "agent_sessions": [{
+                    "issue": 899,
+                    "pr": 900,
+                    "status": "merged",
+                    "merged_at": "2026-03-01T10:00:00Z",
+                    "title": "Fix state-integrity"
+                }]
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+        impl CommandRunner for Runner {
+            fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+                unreachable!("pipeline tool wrappers should not run in this test");
+            }
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                unreachable!("issue comment lookup should not run in this test");
+            }
+        }
+
+        let step = verify_review_history_actioned_integrity(&root, &Runner);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.name, REVIEW_HISTORY_ACTIONED_INTEGRITY_STEP_NAME);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("verified 1 actioned review-history fix reference"));
+    }
+
+    #[test]
+    fn review_history_actioned_integrity_fails_when_cited_issue_is_in_flight() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-review-history-actioned-fail-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "review_agent": {
+                    "history": [{
+                        "cycle": 301,
+                        "categories": ["state-integrity"],
+                        "actioned": 1,
+                        "deferred": 0,
+                        "ignored": 0,
+                        "finding_count": 1,
+                        "complacency_score": 2,
+                        "note": "Actioned via issue #901.",
+                        "finding_dispositions": [{
+                            "category": "state-integrity",
+                            "disposition": "actioned"
+                        }]
+                    }]
+                },
+                "agent_sessions": [{
+                    "issue": 901,
+                    "status": "in_flight",
+                    "title": "Fix state-integrity"
+                }]
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+        impl CommandRunner for Runner {
+            fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+                unreachable!("pipeline tool wrappers should not run in this test");
+            }
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                unreachable!("issue comment lookup should not run in this test");
+            }
+        }
+
+        let step = verify_review_history_actioned_integrity(&root, &Runner);
+
+        assert_eq!(step.status, StepStatus::Fail);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("issue #901 is still in_flight"));
+    }
+
+    #[test]
+    fn review_history_actioned_integrity_warns_when_no_fix_reference_is_cited() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-review-history-actioned-warn-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "review_agent": {
+                    "history": [{
+                        "cycle": 302,
+                        "categories": ["state-integrity"],
+                        "actioned": 1,
+                        "deferred": 0,
+                        "ignored": 0,
+                        "finding_count": 1,
+                        "complacency_score": 2,
+                        "note": "Dropped deferral state fixed.",
+                        "finding_dispositions": [{
+                            "category": "state-integrity",
+                            "disposition": "actioned"
+                        }]
+                    }]
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+        impl CommandRunner for Runner {
+            fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+                unreachable!("pipeline tool wrappers should not run in this test");
+            }
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                unreachable!("issue comment lookup should not run in this test");
+            }
+        }
+
+        let step = verify_review_history_actioned_integrity(&root, &Runner);
+
+        assert_eq!(step.status, StepStatus::Warn);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("no fix issue/PR reference was found"));
+    }
+
+    #[test]
+    fn review_history_actioned_integrity_passes_for_dispatch_created_only_entries() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-review-history-actioned-dispatch-created-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "review_agent": {
+                    "history": [{
+                        "cycle": 303,
+                        "categories": ["state-integrity"],
+                        "actioned": 0,
+                        "deferred": 0,
+                        "dispatch_created": 1,
+                        "ignored": 0,
+                        "finding_count": 1,
+                        "complacency_score": 2,
+                        "note": "Dispatched via issue #902.",
+                        "finding_dispositions": [{
+                            "category": "state-integrity",
+                            "disposition": "dispatch_created"
+                        }]
+                    }]
+                },
+                "agent_sessions": [{
+                    "issue": 902,
+                    "status": "in_flight",
+                    "title": "Fix state-integrity"
+                }]
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+        impl CommandRunner for Runner {
+            fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+                unreachable!("pipeline tool wrappers should not run in this test");
+            }
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                unreachable!("issue comment lookup should not run in this test");
+            }
+        }
+
+        let step = verify_review_history_actioned_integrity(&root, &Runner);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("no actioned review-history findings required fix-reference verification")
+        );
+    }
+
+    #[test]
+    fn review_history_actioned_integrity_fails_when_any_cited_reference_remains_in_flight() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-review-history-actioned-mixed-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "review_agent": {
+                    "history": [{
+                        "cycle": 304,
+                        "categories": ["state-integrity"],
+                        "actioned": 1,
+                        "deferred": 0,
+                        "ignored": 0,
+                        "finding_count": 1,
+                        "complacency_score": 2,
+                        "note": "Actioned via PR #903 and issue #904.",
+                        "finding_dispositions": [{
+                            "category": "state-integrity",
+                            "disposition": "actioned"
+                        }]
+                    }]
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 903,
+                        "pr": 903,
+                        "status": "merged",
+                        "merged_at": "2026-03-01T10:00:00Z",
+                        "title": "Merged fix"
+                    },
+                    {
+                        "issue": 904,
+                        "status": "in_flight",
+                        "title": "Pending follow-up"
+                    }
+                ]
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+        impl CommandRunner for Runner {
+            fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+                unreachable!("pipeline tool wrappers should not run in this test");
+            }
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                unreachable!("issue comment lookup should not run in this test");
+            }
+        }
+
+        let step = verify_review_history_actioned_integrity(&root, &Runner);
+
+        assert_eq!(step.status, StepStatus::Fail);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("issue #904 is still in_flight"));
+        assert!(!detail.contains("PR #903"));
+    }
+
+    #[test]
+    fn review_history_actioned_integrity_uses_next_cycle_review_evidence_for_historical_failures() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-review-history-actioned-review-fallback-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs/reviews")).unwrap();
+        fs::create_dir_all(root.join("docs/worklog/2026-04-10")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "review_agent": {
+                    "history": [{
+                        "cycle": 472,
+                        "categories": ["state-integrity"],
+                        "actioned": 1,
+                        "deferred": 0,
+                        "ignored": 0,
+                        "finding_count": 1,
+                        "complacency_score": 3,
+                        "note": "F3 state-integrity: actioned, dropped deferral state fixed.",
+                        "finding_dispositions": [{
+                            "category": "state-integrity",
+                            "disposition": "actioned"
+                        }]
+                    }]
+                },
+                "agent_sessions": [{
+                    "issue": 2389,
+                    "status": "merged",
+                    "merged_at": "2026-04-11T03:00:00Z",
+                    "title": "Set resolved:true when dropping deferred findings in process-review"
+                }]
+            })
+            .to_string(),
+        )
+        .unwrap();
+        fs::write(
+            root.join("docs/reviews/cycle-473.md"),
+            concat!(
+                "# Cycle 473 Review\n\n",
+                "## 3. [state-integrity] Ledger upgraded a dispatched fix too early\n\n",
+                "Evidence: cycle 472 only dispatched #2389.\n"
+            ),
+        )
+        .unwrap();
+        fs::write(
+            root.join("docs/worklog/2026-04-10/213352-cycle-473-summary.md"),
+            "# Cycle 473\n",
+        )
+        .unwrap();
+
+        struct Runner;
+        impl CommandRunner for Runner {
+            fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+                unreachable!("pipeline tool wrappers should not run in this test");
+            }
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                unreachable!("issue comment lookup should not run in this test");
+            }
+        }
+
+        let step = verify_review_history_actioned_integrity(&root, &Runner);
+
+        assert_eq!(step.status, StepStatus::Fail);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("issue #2389 only became terminal"));
     }
 
     #[test]
