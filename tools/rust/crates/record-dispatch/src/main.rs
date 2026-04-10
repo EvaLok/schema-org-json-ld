@@ -843,9 +843,46 @@ mod tests {
     }
 
     #[test]
-    fn review_dispatch_allowed_when_c5_5_gate_pass() {
+    fn run_fails_when_c5_5_gate_is_from_previous_cycle() {
         let repo = TempRepo::new();
         repo.init();
+        let mut state = repo.read_state();
+        state["last_cycle"]["number"] = serde_json::json!(470);
+        state["cycle_phase"]["cycle"] = serde_json::json!(470);
+        repo.write_state_value(&state);
+        repo.set_c5_5_gate("PASS", false, 469);
+        let before = repo.read_state();
+        let mut warnings = Vec::new();
+        let runner = MockRunner::with_error("runner should not be called for review dispatch");
+
+        let error = run_with_runner(
+            Cli {
+                issue: 602,
+                title: "Example dispatch".to_string(),
+                model: Some("gpt-5.4".to_string()),
+                review_dispatch: true,
+                addresses_finding: None,
+                repo_root: repo.path().to_path_buf(),
+            },
+            &runner,
+            &mut |warning| warnings.push(warning.to_string()),
+        )
+        .expect_err("stale C5.5 gate should block review dispatch");
+
+        assert_eq!(
+            error,
+            "Cannot dispatch review: C5.5 gate is stale (gate cycle 469, current cycle 470)"
+        );
+        assert!(warnings.is_empty());
+        assert_eq!(runner.call_count(), 0);
+        assert_eq!(repo.read_state(), before);
+    }
+
+    #[test]
+    fn run_succeeds_when_c5_5_gate_matches_current_cycle() {
+        let repo = TempRepo::new();
+        repo.init();
+        repo.set_c5_5_gate("PASS", false, 164);
         let mut warnings = Vec::new();
         let runner = MockRunner::with_error("runner should not be called for review dispatch");
 
