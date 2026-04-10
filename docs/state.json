@@ -7144,6 +7144,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Make commitment-drop verification error path blocking in pipeline-check"
+    },
+    {
+      "dispatched_at": "2026-04-10T05:14:58Z",
+      "issue": 2368,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add --drop-deferral and --resolve-deferral flags to process-review"
     }
   ],
   "audit_dropped": [
@@ -7916,7 +7923,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2367 Make commitment-drop verification error path blocking in pipeline-check (cycle 470)",
+  "dispatch_log_latest": "#2368 Add --drop-deferral and --resolve-deferral flags to process-review (cycle 470)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8189,13 +8196,13 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 0,
     "issue": 2366,
     "number": 470,
-    "summary": "1 dispatch, 3 merges",
-    "timestamp": "2026-04-10T05:14:20Z"
+    "summary": "2 dispatches, 3 merges",
+    "timestamp": "2026-04-10T05:14:58Z"
   },
   "last_eva_comment_check": "2026-04-10T04:58:22Z",
   "last_tool_audit_cycle": 403,
