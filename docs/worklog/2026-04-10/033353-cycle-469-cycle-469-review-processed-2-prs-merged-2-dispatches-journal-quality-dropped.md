@@ -8,7 +8,7 @@
 - Verified commitment 1: pipeline-check output includes commitment-drop-verification substep (step 25 of 25), NonBlocking severity
 - Dispatched [#2360](https://github.com/EvaLok/schema-org-json-ld/issues/2360) (fix dispatch-review sealed snapshot — F1 code-change-quality)
 - Dispatched [#2362](https://github.com/EvaLok/schema-org-json-ld/issues/2362) (add verify-review-events step comment — F3 process-adherence recurrence)
-- Dropped deferred journal-quality finding (cycle 464, deadline 469) with rationale: question-for-eva [#2293](https://github.com/EvaLok/schema-org-json-ld/issues/2293) awaiting Eva response
+- Resolved deferred journal-quality finding (cycle 464, deadline 469): explicitly dropped with rationale per question-for-eva #2293 (awaiting Eva response, no structural fix path without Eva decision)
 - Cleaned up 4 dead branches
 
 ### PRs merged
