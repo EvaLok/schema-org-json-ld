@@ -391,14 +391,22 @@ fn step_c4_7_with_timeout(
             )),
         )
     } else if output.status.success() {
-        let safe_to_advance_to = parse_verify_review_events_safe_to_advance_to(&stdout)?;
-        (
-            format!(
-                "verify-review-events attempted\n- outcome: success\n- safe_to_advance_to: {}\n- state.json update: applied",
-                safe_to_advance_to
+        match parse_verify_review_events_safe_to_advance_to(&stdout) {
+            Ok(safe_to_advance_to) => (
+                format!(
+                    "verify-review-events attempted\n- outcome: success\n- safe_to_advance_to: {}\n- state.json update: applied",
+                    safe_to_advance_to
+                ),
+                None,
             ),
-            None,
-        )
+            Err(error) => (
+                format!(
+                    "verify-review-events attempted\n- outcome: warning (parse failure)\n- state.json update: applied\n- parse warning: {}",
+                    error
+                ),
+                Some(error),
+            ),
+        }
     } else {
         let mut body = format!(
             "verify-review-events attempted\n- outcome: warning (exit_code {})",
@@ -2153,6 +2161,30 @@ mod tests {
         let args = fs::read_to_string(&args_path).unwrap();
         assert!(args.contains("safe_to_advance_to: 344"));
         assert!(args.contains("state.json update: applied"));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn step_c4_7_parse_failure_posts_warning_comment_and_returns_err() {
+        let dir = setup_temp_repo("step-c4-7-parse-failure");
+        let args_path = dir.join("post-step-args.txt");
+        write_post_step_capture_script(&dir, &args_path);
+        fs::write(
+            dir.join("tools/verify-review-events"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\\n' 'Verification completed successfully, but no marker was emitted.'\n",
+        )
+        .unwrap();
+
+        let error = step_c4_7_with_timeout(&dir, 123, 1).unwrap_err();
+        assert!(error.contains("unable to extract safe_to_advance_to"));
+
+        let args = fs::read_to_string(&args_path).unwrap();
+        assert!(args.contains("---ARG---\nC4.7\n"));
+        assert!(args.contains("---ARG---\nverify-review-events execution\n"));
+        assert!(args.contains("outcome: warning (parse failure)"));
+        assert!(args.contains("state.json update: applied"));
+        assert!(args.contains("parse warning: unable to extract safe_to_advance_to"));
 
         let _ = fs::remove_dir_all(&dir);
     }
