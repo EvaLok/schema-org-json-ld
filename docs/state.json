@@ -7141,15 +7141,19 @@
     {
       "dispatched_at": "2026-04-10T05:14:20Z",
       "issue": 2367,
+      "merged_at": "2026-04-10T07:51:04Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2369,
+      "status": "merged",
       "title": "Make commitment-drop verification error path blocking in pipeline-check"
     },
     {
       "dispatched_at": "2026-04-10T05:14:58Z",
       "issue": 2368,
+      "merged_at": "2026-04-10T07:51:04Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2370,
+      "status": "merged",
       "title": "Add --drop-deferral and --resolve-deferral flags to process-review"
     },
     {
@@ -8223,12 +8227,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 1,
     "issue": 2373,
     "number": 471,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 3 merges",
     "timestamp": "2026-04-10T07:33:50Z"
   },
   "last_eva_comment_check": "2026-04-10T07:33:50Z",
