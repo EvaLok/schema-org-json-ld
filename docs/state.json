@@ -7151,6 +7151,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add --drop-deferral and --resolve-deferral flags to process-review"
+    },
+    {
+      "dispatched_at": "2026-04-10T05:19:19Z",
+      "issue": 2371,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 470 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -7923,7 +7930,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2368 Add --drop-deferral and --resolve-deferral flags to process-review (cycle 470)",
+  "dispatch_log_latest": "#2371 [Cycle Review] Cycle 470 end-of-cycle review (cycle 470)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8196,7 +8203,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 3,
   "last_cycle": {
     "duration_minutes": 1,
     "issue": 2366,
@@ -14197,7 +14204,7 @@
     ],
     "last_review_cycle": 469
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 470,
   "schema_status": {
     "directory_layout": {
