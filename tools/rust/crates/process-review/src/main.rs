@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 
 const MAX_CATEGORY_LENGTH: usize = 40;
 const DEFERRAL_DEADLINE_CYCLES: u64 = 5;
+const DROPPED_DEFERRAL_RESOLVED_REF_MAX_CHARS: usize = 100;
 const VALID_FINDING_DISPOSITIONS: &[&str] = &[
     "actioned",
     "deferred",
@@ -1209,7 +1210,16 @@ fn deferred_findings_patch(
                     category, deferred_cycle
                 )
             })?;
+        let resolved_ref = format!(
+            "dropped: {}",
+            rationale
+                .chars()
+                .take(DROPPED_DEFERRAL_RESOLVED_REF_MAX_CHARS)
+                .collect::<String>()
+        );
         finding.dropped_rationale = Some(rationale);
+        finding.resolved = true;
+        finding.resolved_ref = Some(resolved_ref);
     }
     for raw in resolve_deferrals {
         let (category, deferred_cycle, resolved_ref) =
@@ -1247,10 +1257,9 @@ fn deferred_findings_patch(
     ))
 }
 
-/// Active deferred findings are the entries still enforced by pipeline checks:
-/// they are neither resolved nor explicitly dropped.
+/// Active deferred findings are the entries that remain unresolved.
 fn is_active_deferred_finding(finding: &DeferredFinding) -> bool {
-    !finding.resolved && finding.dropped_rationale.is_none()
+    !finding.resolved
 }
 
 fn parse_deferral_update(
@@ -2716,7 +2725,8 @@ mod tests {
                     "category": "journal-quality",
                     "deferred_cycle": 464,
                     "deadline_cycle": 469,
-                    "resolved": false,
+                    "resolved": true,
+                    "resolved_ref": "dropped: awaiting Eva response",
                     "dropped_rationale": "awaiting Eva response"
                 },
                 {
@@ -2727,6 +2737,20 @@ mod tests {
                 }
             ])
         );
+    }
+
+    #[test]
+    fn dropped_deferral_is_not_an_active_deferred_finding() {
+        let finding = DeferredFinding {
+            category: "journal-quality".to_string(),
+            deferred_cycle: 464,
+            deadline_cycle: 469,
+            resolved: true,
+            resolved_ref: Some("dropped: awaiting Eva response".to_string()),
+            dropped_rationale: Some("awaiting Eva response".to_string()),
+        };
+
+        assert!(!is_active_deferred_finding(&finding));
     }
 
     #[test]
@@ -2811,7 +2835,8 @@ mod tests {
                 "category": "worklog-accuracy",
                 "deferred_cycle": 468,
                 "deadline_cycle": 473,
-                "resolved": false,
+                "resolved": true,
+                "resolved_ref": "dropped: superseded",
                 "dropped_rationale": "superseded"
             }]
         });
@@ -3084,6 +3109,14 @@ mod tests {
             Some(&json!("awaiting Eva response"))
         );
         assert_eq!(
+            updated_state.pointer("/deferred_findings/0/resolved"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            updated_state.pointer("/deferred_findings/0/resolved_ref"),
+            Some(&json!("dropped: awaiting Eva response"))
+        );
+        assert_eq!(
             updated_state.pointer("/review_agent/history"),
             Some(&json!([]))
         );
@@ -3146,6 +3179,14 @@ mod tests {
         assert_eq!(
             updated_state.pointer("/deferred_findings/0/dropped_rationale"),
             Some(&json!("awaiting Eva response"))
+        );
+        assert_eq!(
+            updated_state.pointer("/deferred_findings/0/resolved"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            updated_state.pointer("/deferred_findings/0/resolved_ref"),
+            Some(&json!("dropped: awaiting Eva response"))
         );
         assert_eq!(
             updated_state.pointer("/review_agent/history/0/cycle"),
