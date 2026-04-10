@@ -7102,6 +7102,14 @@
       "pr": 2358,
       "status": "merged",
       "title": "[Cycle Review] Cycle 468 end-of-cycle review"
+    },
+    {
+      "backfilled": true,
+      "issue": 2354,
+      "merged_at": "2026-04-10T03:18:33Z",
+      "pr": 2355,
+      "status": "merged",
+      "title": "Backfilled: PR #2355"
     }
   ],
   "audit_dropped": [
@@ -8145,7 +8153,7 @@
     "duration_minutes": 22,
     "issue": 2359,
     "number": 469,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-10T03:04:11Z"
   },
   "last_eva_comment_check": "2026-04-10T03:04:11Z",
