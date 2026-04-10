@@ -27,12 +27,12 @@
 
 - **`tools/rust/crates/pipeline-check/src/main.rs`**: modified
 
-## Pre-dispatch state
+## Cycle state
 
-*Snapshot before review dispatch — final counters may differ after C6.*
 
 - **In-flight agent sessions**: 2
-- **Pipeline status**: FAIL (5 warnings, 2 blocking: frozen-commit-verify, current-cycle-steps)
+- **Pipeline status**: FAIL→PASS (C5.5 initially failed: FAIL (1 blocking warning, 4 warnings, 1 blocking: frozen-commit-verify); resolved by re-run)
+- **Close-out gate failures**: C5.5 FAIL: FAIL (1 blocking warning, 4 warnings, 1 blocking: frozen-commit-verify)
 - **Publish gate**: published
 
 ## Next steps
