@@ -355,6 +355,7 @@ fn step_c4_7_with_timeout(
     timeout_seconds: u64,
 ) -> Result<(), String> {
     eprintln!("C4.7: Verifying review events...");
+    let step_title = "verify-review-events execution";
 
     let repo_root_str = repo_root.to_string_lossy().to_string();
     let output = match runner::run_tool_with_timeout(
@@ -366,17 +367,10 @@ fn step_c4_7_with_timeout(
         Ok(output) => output,
         Err(error) => {
             let body = format!(
-                "verify-review-events warning: {}\nNon-blocking; C5.5 will still validate state freshness.",
+                "verify-review-events attempted\n- outcome: warning\n- detail: {}\n- state.json update: not applied\n- Non-blocking; C5.5 will still validate state freshness.",
                 error
             );
-            steps::post_step(
-                repo_root,
-                issue,
-                "C4.7",
-                "Verify review events",
-                &body,
-                false,
-            )?;
+            steps::post_step(repo_root, issue, "C4.7", step_title, &body, false)?;
             return Err(error);
         }
     };
@@ -388,7 +382,7 @@ fn step_c4_7_with_timeout(
     let (body, warning) = if runner::timed_out(&output) {
         (
             format!(
-                "verify-review-events warning: timed out after {} seconds\nNon-blocking; C5.5 will still validate state freshness.",
+                "verify-review-events attempted\n- outcome: timed out after {} seconds\n- state.json update: not applied\n- Non-blocking; C5.5 will still validate state freshness.",
                 timeout_seconds
             ),
             Some(format!(
@@ -400,19 +394,20 @@ fn step_c4_7_with_timeout(
         let safe_to_advance_to = parse_verify_review_events_safe_to_advance_to(&stdout)?;
         (
             format!(
-                "verify-review-events succeeded\n- safe_to_advance_to: {}\n- state updates applied before C5 commit",
+                "verify-review-events attempted\n- outcome: success\n- safe_to_advance_to: {}\n- state.json update: applied",
                 safe_to_advance_to
             ),
             None,
         )
     } else {
         let mut body = format!(
-            "verify-review-events warning: exit_code {}",
+            "verify-review-events attempted\n- outcome: warning (exit_code {})",
             output.status.code().unwrap_or(-1)
         );
         if let Some(value) = safe_to_advance_to {
             body.push_str(&format!("\n- safe_to_advance_to: {}", value));
         }
+        body.push_str("\n- state.json update: not applied");
         if !stderr.is_empty() {
             body.push_str(&format!("\n- stderr: {}", stderr));
         } else if !stdout.is_empty() {
@@ -428,14 +423,7 @@ fn step_c4_7_with_timeout(
         )
     };
 
-    steps::post_step(
-        repo_root,
-        issue,
-        "C4.7",
-        "Verify review events",
-        &body,
-        false,
-    )?;
+    steps::post_step(repo_root, issue, "C4.7", step_title, &body, false)?;
 
     if let Some(warning) = warning {
         return Err(warning);
@@ -2141,8 +2129,10 @@ mod tests {
 
         let args = fs::read_to_string(&args_path).unwrap();
         assert!(args.contains("---ARG---\nC4.7\n"));
-        assert!(args.contains("---ARG---\nVerify review events\n"));
+        assert!(args.contains("---ARG---\nverify-review-events execution\n"));
+        assert!(args.contains("outcome: success"));
         assert!(args.contains("safe_to_advance_to: 345"));
+        assert!(args.contains("state.json update: applied"));
 
         let _ = fs::remove_dir_all(&dir);
     }
@@ -2162,6 +2152,7 @@ mod tests {
 
         let args = fs::read_to_string(&args_path).unwrap();
         assert!(args.contains("safe_to_advance_to: 344"));
+        assert!(args.contains("state.json update: applied"));
 
         let _ = fs::remove_dir_all(&dir);
     }
@@ -2192,7 +2183,34 @@ mod tests {
 
         let args = fs::read_to_string(&args_path).unwrap();
         assert!(args.contains("---ARG---\nC4.7\n"));
+        assert!(args.contains("---ARG---\nverify-review-events execution\n"));
         assert!(args.contains("timed out after 1 seconds"));
+        assert!(args.contains("state.json update: not applied"));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn step_c4_7_failure_posts_warning_comment_and_returns_err() {
+        let dir = setup_temp_repo("step-c4-7-failure");
+        let args_path = dir.join("post-step-args.txt");
+        write_post_step_capture_script(&dir, &args_path);
+        fs::write(
+            dir.join("tools/verify-review-events"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\\n' 'Safe to advance marker to 344.'\nprintf '%s\\n' 'review event mismatch' >&2\nexit 1\n",
+        )
+        .unwrap();
+
+        let error = step_c4_7_with_timeout(&dir, 123, 1).unwrap_err();
+        assert!(error.contains("failed with exit code 1"));
+
+        let args = fs::read_to_string(&args_path).unwrap();
+        assert!(args.contains("---ARG---\nC4.7\n"));
+        assert!(args.contains("---ARG---\nverify-review-events execution\n"));
+        assert!(args.contains("outcome: warning (exit_code 1)"));
+        assert!(args.contains("safe_to_advance_to: 344"));
+        assert!(args.contains("state.json update: not applied"));
+        assert!(args.contains("stderr: review event mismatch"));
 
         let _ = fs::remove_dir_all(&dir);
     }
