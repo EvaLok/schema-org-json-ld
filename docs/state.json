@@ -7110,6 +7110,13 @@
       "pr": 2355,
       "status": "merged",
       "title": "Backfilled: PR #2355"
+    },
+    {
+      "dispatched_at": "2026-04-10T03:31:58Z",
+      "issue": 2360,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix dispatch-review to preserve sealed last_cycle snapshot during close_out"
     }
   ],
   "audit_dropped": [
@@ -7875,7 +7882,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2357 [Cycle Review] Cycle 468 end-of-cycle review (cycle 468)",
+  "dispatch_log_latest": "#2360 Fix dispatch-review to preserve sealed last_cycle snapshot during close_out (cycle 469)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8148,13 +8155,13 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 22,
     "issue": 2359,
     "number": 469,
-    "summary": "0 dispatches, 2 merges",
-    "timestamp": "2026-04-10T03:04:11Z"
+    "summary": "1 dispatch, 2 merges",
+    "timestamp": "2026-04-10T03:31:58Z"
   },
   "last_eva_comment_check": "2026-04-10T03:04:11Z",
   "last_tool_audit_cycle": 403,
@@ -14120,7 +14127,7 @@
     ],
     "last_review_cycle": 468
   },
-  "review_dispatch_consecutive": 3,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 468,
   "schema_status": {
     "directory_layout": {
