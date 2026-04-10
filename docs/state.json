@@ -7996,7 +7996,8 @@
       "category": "code-change-quality",
       "deadline_cycle": 475,
       "deferred_cycle": 470,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "PR-2378-always-post-C4.7-step-comment-on-parse-failure"
     },
     {
       "category": "journal-quality",
