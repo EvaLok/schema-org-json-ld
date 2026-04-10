@@ -7117,6 +7117,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix dispatch-review to preserve sealed last_cycle snapshot during close_out"
+    },
+    {
+      "dispatched_at": "2026-04-10T03:32:48Z",
+      "issue": 2362,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add verify-review-events step comment to cycle-runner close-out"
     }
   ],
   "audit_dropped": [
@@ -7882,7 +7889,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2360 Fix dispatch-review to preserve sealed last_cycle snapshot during close_out (cycle 469)",
+  "dispatch_log_latest": "#2362 Add verify-review-events step comment to cycle-runner close-out (cycle 469)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8155,13 +8162,13 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 22,
     "issue": 2359,
     "number": 469,
-    "summary": "1 dispatch, 2 merges",
-    "timestamp": "2026-04-10T03:31:58Z"
+    "summary": "2 dispatches, 2 merges",
+    "timestamp": "2026-04-10T03:32:48Z"
   },
   "last_eva_comment_check": "2026-04-10T03:04:11Z",
   "last_tool_audit_cycle": 403,
