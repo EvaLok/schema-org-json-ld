@@ -1398,7 +1398,7 @@ fn summarize_review_dispositions(entry: &ReviewHistoryEntry) -> Result<String, S
 
     let Some(first) = entry.finding_dispositions.first() else {
         return Err(format!(
-            "review history entry for cycle {} is missing finding_dispositions",
+            "review history entry for cycle {} has empty finding_dispositions despite non-zero finding_count",
             entry.cycle
         ));
     };
@@ -1425,7 +1425,7 @@ fn summarize_review_dispositions(entry: &ReviewHistoryEntry) -> Result<String, S
 
     Ok(counts
         .into_iter()
-        .map(|(disposition, count)| format_count_with_forms(count, &disposition, &disposition))
+        .map(|(disposition, count)| format_count_with_label(count, &disposition))
         .flatten()
         .collect::<Vec<_>>()
         .join(", "))
@@ -1876,6 +1876,10 @@ fn pluralize(noun: &str, count: usize) -> String {
 
 fn format_count_with_forms(count: usize, singular: &str, plural: &str) -> Option<String> {
     (count > 0).then(|| format!("{} {}", count, if count == 1 { singular } else { plural }))
+}
+
+fn format_count_with_label(count: usize, label: &str) -> Option<String> {
+    (count > 0).then(|| format!("{count} {label}"))
 }
 
 fn extract_issue_references(item: &str) -> Vec<u64> {
