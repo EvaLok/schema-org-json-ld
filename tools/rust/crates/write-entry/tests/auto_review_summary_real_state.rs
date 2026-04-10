@@ -169,7 +169,7 @@ fn auto_review_summary_works_with_real_state_shape_after_process_review_persists
     );
 
     let stdout = String::from_utf8(write_entry.stdout).unwrap();
-    assert!(stdout.contains("Processed cycle 472 review (3 findings, complacency 3/5"));
+    assert!(stdout.contains("Processed cycle 472 review (3 findings, complacency 3/5,"));
     assert!(stdout.contains("1 dispatch_created"));
     assert!(stdout.contains("1 deferred"));
     assert!(stdout.contains("1 actioned"));

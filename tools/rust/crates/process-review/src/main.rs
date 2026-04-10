@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 const MAX_CATEGORY_LENGTH: usize = 40;
 const DEFERRAL_DEADLINE_CYCLES: u64 = 5;
 const DROPPED_DEFERRAL_RESOLVED_REF_MAX_CHARS: usize = 100;
+const REVIEW_ISSUE_LINE_SCAN_LIMIT: usize = 20;
 const VALID_FINDING_DISPOSITIONS: &[&str] = &[
     "actioned",
     "deferred",
@@ -963,7 +964,7 @@ fn resolve_review_issue_number(
 }
 
 fn extract_review_issue_from_review_content(review_content: &str) -> Option<u64> {
-    for line in review_content.lines().take(20) {
+    for line in review_content.lines().take(REVIEW_ISSUE_LINE_SCAN_LIMIT) {
         let trimmed = line.trim();
         for prefix in ["Review issue:", "Review agent issue:", "Issue:"] {
             let Some(remainder) = trimmed.strip_prefix(prefix) else {
@@ -1019,6 +1020,7 @@ fn extract_issue_number_from_reference(value: &str) -> Option<u64> {
     let digits: String = value
         .trim()
         .strip_prefix('#')?
+        .trim_start()
         .chars()
         .take_while(|character| character.is_ascii_digit())
         .collect();
@@ -1624,6 +1626,11 @@ Review issue: #2393
 "#;
 
         assert_eq!(extract_review_issue_from_review_content(review), Some(2393));
+    }
+
+    #[test]
+    fn extract_issue_number_from_reference_allows_whitespace_after_hash() {
+        assert_eq!(extract_issue_number_from_reference("# 2388"), Some(2388));
     }
 
     #[test]
