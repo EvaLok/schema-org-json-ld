@@ -1257,6 +1257,7 @@ fn deferred_findings_patch(
     ))
 }
 
+/// Active deferred findings are the entries that remain unresolved.
 fn is_active_deferred_finding(finding: &DeferredFinding) -> bool {
     !finding.resolved
 }
