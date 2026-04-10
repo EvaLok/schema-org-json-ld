@@ -4023,8 +4023,7 @@ fn review_history_actioned_integrity_assessment(
 
         let historical_cutoff = review_history_actioned_cutoff(repo_root, entry.cycle)?;
         for category in actioned_categories {
-            let references =
-                actioned_fix_references_for_category(repo_root, entry, category)?;
+            let references = actioned_fix_references_for_category(repo_root, entry, category)?;
             if references.references.is_empty() {
                 let mut detail = format!(
                     "review_agent.history[cycle={}] marks {} as actioned, but no fix issue/PR reference was found",
@@ -4039,12 +4038,10 @@ fn review_history_actioned_integrity_assessment(
 
             for reference in references.references {
                 checked += 1;
-                let resolved =
-                    resolve_review_fix_reference(&state, runner, reference)?;
+                let resolved = resolve_review_fix_reference(&state, runner, reference)?;
                 if let Some(detail) = review_history_actioned_failure_detail(
                     entry.cycle,
                     category,
-                    reference,
                     &resolved,
                     historical_cutoff.as_ref(),
                 )? {
@@ -4078,7 +4075,10 @@ fn review_history_actioned_integrity_assessment(
         detail: if checked == 0 {
             "no actioned review-history findings required fix-reference verification".to_string()
         } else {
-            format!("verified {} actioned review-history fix reference(s)", checked)
+            format!(
+                "verified {} actioned review-history fix reference(s)",
+                checked
+            )
         },
     })
 }
@@ -4835,7 +4835,7 @@ fn actioned_fix_references_for_category(
     let note_references = entry
         .note
         .as_deref()
-        .map(extract_review_fix_references)
+        .map(|note| extract_review_fix_references_for_category(note, category))
         .unwrap_or_default();
     if !note_references.is_empty() {
         return Ok(ReviewFixReferenceSet {
@@ -4845,8 +4845,7 @@ fn actioned_fix_references_for_category(
     }
 
     let review_cycle = entry.cycle.saturating_add(1);
-    let Some(section) =
-        next_cycle_review_section_for_category(repo_root, review_cycle, category)?
+    let Some(section) = next_cycle_review_section_for_category(repo_root, review_cycle, category)?
     else {
         return Ok(ReviewFixReferenceSet {
             references: Vec::new(),
@@ -4869,6 +4868,34 @@ fn actioned_fix_references_for_category(
         },
         references: review_references,
     })
+}
+
+fn extract_review_fix_references_for_category(
+    note: &str,
+    category: &str,
+) -> Vec<ReviewFixReference> {
+    extract_category_note_segment(note, category)
+        .map(|segment| extract_review_fix_references(&segment))
+        .unwrap_or_else(|| extract_review_fix_references(note))
+}
+
+fn extract_category_note_segment(note: &str, category: &str) -> Option<String> {
+    let lower_note = note.to_ascii_lowercase();
+    let needle = format!("{}:", category.to_ascii_lowercase());
+    let start = lower_note.find(&needle)?;
+    let segment = &note[start..];
+    let next_marker = segment
+        .char_indices()
+        .skip(1)
+        .find_map(|(index, _)| is_note_finding_boundary(segment, index).then_some(index))
+        .unwrap_or(segment.len());
+    Some(segment[..next_marker].trim().to_string())
+}
+
+fn is_note_finding_boundary(segment: &str, index: usize) -> bool {
+    let remainder = &segment[index..];
+    let bytes = remainder.as_bytes();
+    bytes.len() >= 3 && bytes[0] == b'F' && bytes[1].is_ascii_digit() && bytes[2] == b' '
 }
 
 fn extract_review_fix_references(text: &str) -> Vec<ReviewFixReference> {
@@ -5041,23 +5068,29 @@ fn resolve_review_fix_reference_from_state(
     state: &StateJson,
     reference: ReviewFixReference,
 ) -> Result<Option<ResolvedReviewFixReference>, String> {
-    let issue_match = state
-        .agent_sessions
-        .iter()
-        .find(|session| session.issue.and_then(|issue| u64::try_from(issue).ok()) == Some(reference.number));
-    let pr_match = state
-        .agent_sessions
-        .iter()
-        .find(|session| session.pr.and_then(|pr| u64::try_from(pr).ok()) == Some(reference.number));
-
     let selected = match reference.kind {
-        ReviewFixReferenceKind::Issue => issue_match.map(|session| (ReviewFixReferenceKind::Issue, session)),
-        ReviewFixReferenceKind::PullRequest => {
-            pr_match.map(|session| (ReviewFixReferenceKind::PullRequest, session))
-        }
-        ReviewFixReferenceKind::Unknown => issue_match
-            .map(|session| (ReviewFixReferenceKind::Issue, session))
-            .or_else(|| pr_match.map(|session| (ReviewFixReferenceKind::PullRequest, session))),
+        ReviewFixReferenceKind::Issue => state.agent_sessions.iter().find_map(|session| {
+            (session.issue.and_then(|issue| u64::try_from(issue).ok()) == Some(reference.number))
+                .then_some((ReviewFixReferenceKind::Issue, session))
+        }),
+        ReviewFixReferenceKind::PullRequest => state.agent_sessions.iter().find_map(|session| {
+            (session.pr.and_then(|pr| u64::try_from(pr).ok()) == Some(reference.number))
+                .then_some((ReviewFixReferenceKind::PullRequest, session))
+        }),
+        ReviewFixReferenceKind::Unknown => state
+            .agent_sessions
+            .iter()
+            .find_map(|session| {
+                (session.issue.and_then(|issue| u64::try_from(issue).ok())
+                    == Some(reference.number))
+                .then_some((ReviewFixReferenceKind::Issue, session))
+            })
+            .or_else(|| {
+                state.agent_sessions.iter().find_map(|session| {
+                    (session.pr.and_then(|pr| u64::try_from(pr).ok()) == Some(reference.number))
+                        .then_some((ReviewFixReferenceKind::PullRequest, session))
+                })
+            }),
     };
 
     let Some((kind, session)) = selected else {
@@ -5083,7 +5116,6 @@ fn resolve_review_fix_reference_from_state(
 fn review_history_actioned_failure_detail(
     cycle: u64,
     category: &str,
-    reference: ReviewFixReference,
     resolved: &ResolvedReviewFixReference,
     historical_cutoff: Option<&DateTime<Utc>>,
 ) -> Result<Option<String>, String> {
@@ -5103,7 +5135,10 @@ fn review_history_actioned_failure_detail(
         )));
     }
 
-    if resolved.kind == ReviewFixReferenceKind::PullRequest && current_state == "closed" && resolved.merged_at.is_none() {
+    if resolved.kind == ReviewFixReferenceKind::PullRequest
+        && current_state == "closed"
+        && resolved.merged_at.is_none()
+    {
         return Ok(Some(format!(
             "review_agent.history[cycle={}] marks {} as actioned, but cited fix PR #{} is closed without merge",
             cycle, category, resolved.number
@@ -5124,8 +5159,6 @@ fn review_history_actioned_failure_detail(
             )));
         }
     }
-
-    let _ = reference;
     Ok(None)
 }
 
@@ -5133,7 +5166,8 @@ fn review_history_actioned_cutoff(
     repo_root: &Path,
     cycle: u64,
 ) -> Result<Option<DateTime<Utc>>, String> {
-    let Some(worklog_path) = latest_worklog_entry_for_cycle(repo_root, cycle.saturating_add(1))? else {
+    let Some(worklog_path) = latest_worklog_entry_for_cycle(repo_root, cycle.saturating_add(1))?
+    else {
         return Ok(None);
     };
     parse_worklog_path_timestamp(&worklog_path).map(Some)
@@ -9459,7 +9493,11 @@ mod tests {
 
         struct Runner;
         impl CommandRunner for Runner {
-            fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
                 unreachable!("pipeline tool wrappers should not run in this test");
             }
             fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
@@ -9518,7 +9556,11 @@ mod tests {
 
         struct Runner;
         impl CommandRunner for Runner {
-            fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
                 unreachable!("pipeline tool wrappers should not run in this test");
             }
             fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
@@ -9571,7 +9613,11 @@ mod tests {
 
         struct Runner;
         impl CommandRunner for Runner {
-            fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
                 unreachable!("pipeline tool wrappers should not run in this test");
             }
             fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
@@ -9630,7 +9676,11 @@ mod tests {
 
         struct Runner;
         impl CommandRunner for Runner {
-            fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
                 unreachable!("pipeline tool wrappers should not run in this test");
             }
             fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
@@ -9696,7 +9746,11 @@ mod tests {
 
         struct Runner;
         impl CommandRunner for Runner {
-            fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
                 unreachable!("pipeline tool wrappers should not run in this test");
             }
             fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
@@ -9768,7 +9822,11 @@ mod tests {
 
         struct Runner;
         impl CommandRunner for Runner {
-            fn run(&self, _script_path: &Path, _args: &[String]) -> Result<ExecutionResult, String> {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
                 unreachable!("pipeline tool wrappers should not run in this test");
             }
             fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
