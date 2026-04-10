@@ -89,6 +89,22 @@ fn enforce_review_dispatch_gate(repo_root: &Path) -> Result<(), PipelineGateErro
             status, cycle
         )));
     }
+    let current_cycle = state
+        .pointer("/cycle_phase/cycle")
+        .and_then(Value::as_u64)
+        .or_else(|| state.pointer("/last_cycle/number").and_then(Value::as_u64))
+        .ok_or_else(|| {
+            PipelineGateError::ReviewDispatchBlocked(
+                "Cannot dispatch review: missing /cycle_phase/cycle or /last_cycle/number in state.json"
+                    .to_string(),
+            )
+        })?;
+    if cycle != current_cycle {
+        return Err(PipelineGateError::ReviewDispatchBlocked(format!(
+            "Cannot dispatch review: C5.5 gate is stale (gate cycle {}, current cycle {})",
+            cycle, current_cycle
+        )));
+    }
 
     let needs_reverify = gate
         .get("needs_reverify")
@@ -830,6 +846,41 @@ mod tests {
         assert_eq!(
             recorded_args.lines().collect::<Vec<_>>(),
             PIPELINE_CHECK_ARGS
+        );
+    }
+
+    #[test]
+    fn enforce_pipeline_gate_blocks_stale_review_dispatch_gate() {
+        let repo_root = temp_repo_root("record-dispatch-stale-review-gate");
+        let mut state = sample_state();
+        state["last_cycle"]["number"] = json!(470);
+        state["cycle_phase"] = json!({
+            "cycle": 470,
+            "phase": "complete",
+            "phase_entered_at": "2026-03-07T12:00:00Z"
+        });
+        state["tool_pipeline"] = json!({
+            "c5_5_gate": {
+                "cycle": 469,
+                "status": "PASS",
+                "needs_reverify": false
+            }
+        });
+        fs::write(
+            repo_root.join("docs/state.json"),
+            serde_json::to_string_pretty(&state).expect("state should serialize"),
+        )
+        .expect("state file should be written");
+
+        let error = enforce_pipeline_gate(&repo_root, true, &ProcessRunner)
+            .expect_err("stale review gate should fail closed");
+
+        assert_eq!(
+            error,
+            PipelineGateError::ReviewDispatchBlocked(
+                "Cannot dispatch review: C5.5 gate is stale (gate cycle 469, current cycle 470)"
+                    .to_string()
+            )
         );
     }
 
