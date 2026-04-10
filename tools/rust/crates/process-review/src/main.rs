@@ -1193,7 +1193,8 @@ fn deferred_findings_patch(
         }
     }
     for raw in drop_deferrals {
-        let (category, deferred_cycle, rationale) = parse_drop_deferral(raw)?;
+        let (category, deferred_cycle, rationale) =
+            parse_deferral_update(raw, "--drop-deferral", "RATIONALE")?;
         let finding = deferred_findings
             .iter_mut()
             .rev()
@@ -1211,7 +1212,8 @@ fn deferred_findings_patch(
         finding.dropped_rationale = Some(rationale);
     }
     for raw in resolve_deferrals {
-        let (category, deferred_cycle, resolved_ref) = parse_resolve_deferral(raw)?;
+        let (category, deferred_cycle, resolved_ref) =
+            parse_deferral_update(raw, "--resolve-deferral", "RESOLVED_REF")?;
         let finding = deferred_findings
             .iter_mut()
             .rev()
@@ -1245,20 +1247,10 @@ fn deferred_findings_patch(
     ))
 }
 
+/// Active deferred findings are the entries still enforced by pipeline checks:
+/// they are neither resolved nor explicitly dropped.
 fn is_active_deferred_finding(finding: &DeferredFinding) -> bool {
     !finding.resolved && finding.dropped_rationale.is_none()
-}
-
-fn parse_drop_deferral(raw: &str) -> Result<(String, u64, String), String> {
-    let (category, deferred_cycle, rationale) =
-        parse_deferral_update(raw, "--drop-deferral", "RATIONALE")?;
-    Ok((category, deferred_cycle, rationale))
-}
-
-fn parse_resolve_deferral(raw: &str) -> Result<(String, u64, String), String> {
-    let (category, deferred_cycle, resolved_ref) =
-        parse_deferral_update(raw, "--resolve-deferral", "RESOLVED_REF")?;
-    Ok((category, deferred_cycle, resolved_ref))
 }
 
 fn parse_deferral_update(
