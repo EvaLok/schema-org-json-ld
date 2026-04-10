@@ -81,6 +81,14 @@ struct Cli {
     #[arg(long)]
     note: Option<String>,
 
+    /// Drop an active deferred finding in CATEGORY:DEFERRED_CYCLE:RATIONALE form
+    #[arg(long = "drop-deferral")]
+    drop_deferrals: Vec<String>,
+
+    /// Resolve an active deferred finding in CATEGORY:DEFERRED_CYCLE:RESOLVED_REF form
+    #[arg(long = "resolve-deferral")]
+    resolve_deferrals: Vec<String>,
+
     /// Chronic category id(s) to refresh after a structural fix lands
     #[arg(long = "update-chronic-category")]
     update_chronic_categories: Vec<String>,
@@ -161,11 +169,10 @@ fn main() {
 
 fn run(cli: Cli) -> Result<(), String> {
     let has_review_processing = cli.review_file.is_some();
+    let has_deferral_update = !cli.drop_deferrals.is_empty() || !cli.resolve_deferrals.is_empty();
     let has_chronic_update = !cli.update_chronic_categories.is_empty();
-    if !has_review_processing && !has_chronic_update {
-        return Err(
-            "either --review-file or --update-chronic-category must be provided".to_string(),
-        );
+    if !has_review_processing && !has_deferral_update && !has_chronic_update {
+        return Err("either --review-file, --drop-deferral, --resolve-deferral, or --update-chronic-category must be provided".to_string());
     }
 
     let mut state_value = read_state_value(&cli.repo_root)?;
@@ -191,8 +198,14 @@ fn run(cli: Cli) -> Result<(), String> {
         }
         let entry = build_history_entry(&parsed_review, &cli, finding_dispositions);
 
-        let (patch, warnings) =
-            build_state_patch(&state_value, parsed_review.cycle, current_cycle, &entry)?;
+        let (patch, warnings) = build_state_patch(
+            &state_value,
+            parsed_review.cycle,
+            current_cycle,
+            &entry,
+            &cli.drop_deferrals,
+            &cli.resolve_deferrals,
+        )?;
         for warning in warnings {
             eprintln!("{}", warning);
         }
@@ -207,6 +220,22 @@ fn run(cli: Cli) -> Result<(), String> {
     } else {
         None
     };
+
+    if !has_review_processing && has_deferral_update {
+        let (patch, warnings) = deferred_findings_patch(
+            &state_value,
+            None,
+            None,
+            &cli.drop_deferrals,
+            &cli.resolve_deferrals,
+        )?;
+        for warning in warnings {
+            eprintln!("{}", warning);
+        }
+        if let Some(patch) = patch {
+            apply_patch(&mut state_value, &[patch])?;
+        }
+    }
 
     let chronic_update_summary = if has_chronic_update {
         Some(update_chronic_category_responses(
@@ -225,6 +254,7 @@ fn run(cli: Cli) -> Result<(), String> {
         let commit_message = build_commit_message(
             review_summary.as_ref(),
             chronic_update_summary.as_ref(),
+            has_deferral_update,
             current_cycle,
         );
         Some(commit_state_json(&cli.repo_root, &commit_message)?)
@@ -262,25 +292,44 @@ fn run(cli: Cli) -> Result<(), String> {
 fn build_commit_message(
     review_summary: Option<&ReviewRunSummary>,
     chronic_update_summary: Option<&ChronicUpdateSummary>,
+    has_deferral_update: bool,
     current_cycle: u64,
 ) -> String {
-    match (review_summary, chronic_update_summary) {
-        (Some(review_summary), Some(chronic_update_summary)) => format!(
+    match (review_summary, chronic_update_summary, has_deferral_update) {
+        (Some(review_summary), Some(chronic_update_summary), true) => format!(
+            "state(process-review): cycle {} review consumed + refreshed chronic categories {} + updated deferred findings [cycle {}]",
+            review_summary.cycle,
+            chronic_update_summary.categories.join(", "),
+            current_cycle
+        ),
+        (Some(review_summary), Some(chronic_update_summary), false) => format!(
             "state(process-review): cycle {} review consumed + refreshed chronic categories {} [cycle {}]",
             review_summary.cycle,
             chronic_update_summary.categories.join(", "),
             current_cycle
         ),
-        (Some(review_summary), None) => format!(
+        (Some(review_summary), None, true) => format!(
+            "state(process-review): cycle {} review consumed, score {}/5 + updated deferred findings [cycle {}]",
+            review_summary.cycle, review_summary.complacency_score, current_cycle
+        ),
+        (Some(review_summary), None, false) => format!(
             "state(process-review): cycle {} review consumed, score {}/5 [cycle {}]",
             review_summary.cycle, review_summary.complacency_score, current_cycle
         ),
-        (None, Some(chronic_update_summary)) => format!(
+        (None, Some(chronic_update_summary), true) => format!(
+            "state(process-review): refreshed chronic categories {} + updated deferred findings [cycle {}]",
+            chronic_update_summary.categories.join(", "),
+            current_cycle
+        ),
+        (None, Some(chronic_update_summary), false) => format!(
             "state(process-review): refreshed chronic categories {} [cycle {}]",
             chronic_update_summary.categories.join(", "),
             current_cycle
         ),
-        (None, None) => format!("state(process-review): no-op [cycle {}]", current_cycle),
+        (None, None, true) => {
+            format!("state(process-review): updated deferred findings [cycle {}]", current_cycle)
+        }
+        (None, None, false) => format!("state(process-review): no-op [cycle {}]", current_cycle),
     }
 }
 
@@ -877,6 +926,8 @@ fn build_state_patch(
     review_cycle: u64,
     current_cycle: u64,
     entry: &ReviewHistoryEntry,
+    drop_deferrals: &[String],
+    resolve_deferrals: &[String],
 ) -> Result<(Vec<PatchUpdate>, Vec<String>), String> {
     let history = state
         .pointer("/review_agent/history")
@@ -891,8 +942,13 @@ fn build_state_patch(
         .iter()
         .position(|item| item.get("cycle").and_then(Value::as_u64) == Some(entry.cycle));
 
-    let (deferred_findings_patch, mut warnings) =
-        deferred_findings_patch(state, review_cycle, entry)?;
+    let (deferred_findings_patch, mut warnings) = deferred_findings_patch(
+        state,
+        Some(review_cycle),
+        Some(entry),
+        drop_deferrals,
+        resolve_deferrals,
+    )?;
 
     if let Some(index) = existing_index {
         next_history[index] = entry_value;
@@ -1058,8 +1114,10 @@ fn chronic_refresh_rationale(cycle: u64, prs: &[u64], rationale_text: Option<&st
 
 fn deferred_findings_patch(
     state: &Value,
-    review_cycle: u64,
-    entry: &ReviewHistoryEntry,
+    review_cycle: Option<u64>,
+    entry: Option<&ReviewHistoryEntry>,
+    drop_deferrals: &[String],
+    resolve_deferrals: &[String],
 ) -> Result<(Option<PatchUpdate>, Vec<String>), String> {
     let mut deferred_findings = match state.get("deferred_findings") {
         Some(Value::Array(_)) => serde_json::from_value::<Vec<DeferredFinding>>(
@@ -1078,58 +1136,96 @@ fn deferred_findings_patch(
         None => Vec::new(),
     };
     let existing_snapshot = deferred_findings.clone();
-    let resolved_ref = format!("docs/reviews/cycle-{}.md", review_cycle);
+    let mut warnings = Vec::new();
+    if let (Some(review_cycle), Some(entry)) = (review_cycle, entry) {
+        let resolved_ref = format!("docs/reviews/cycle-{}.md", review_cycle);
 
-    let resolved_categories = entry
-        .finding_dispositions
-        .iter()
-        .filter(|disposition| {
-            matches!(
-                disposition.disposition.as_str(),
-                "actioned" | "dispatch_created" | "verified_resolved"
-            )
-        })
-        .map(|disposition| disposition.category.clone())
-        .collect::<BTreeSet<_>>();
-    for category in resolved_categories {
-        if let Some(existing) = deferred_findings
-            .iter_mut()
-            .rev()
-            .find(|finding| finding.category == category && !finding.resolved)
-        {
-            existing.resolved = true;
-            existing.resolved_ref = Some(resolved_ref.clone());
+        let resolved_categories = entry
+            .finding_dispositions
+            .iter()
+            .filter(|disposition| {
+                matches!(
+                    disposition.disposition.as_str(),
+                    "actioned" | "dispatch_created" | "verified_resolved"
+                )
+            })
+            .map(|disposition| disposition.category.clone())
+            .collect::<BTreeSet<_>>();
+        for category in resolved_categories {
+            if let Some(existing) = deferred_findings
+                .iter_mut()
+                .rev()
+                .find(|finding| finding.category == category && is_active_deferred_finding(finding))
+            {
+                existing.resolved = true;
+                existing.resolved_ref = Some(resolved_ref.clone());
+            }
+        }
+
+        let deferred_categories = entry
+            .finding_dispositions
+            .iter()
+            .filter(|disposition| disposition.disposition == "deferred")
+            .map(|disposition| disposition.category.clone())
+            .collect::<BTreeSet<_>>();
+        for category in deferred_categories {
+            if deferred_findings
+                .iter()
+                .any(|finding| finding.category == category && is_active_deferred_finding(finding))
+            {
+                warnings.push(format!(
+                    "warning: category '{}' already has an unresolved deferred finding; keeping the existing entry",
+                    category
+                ));
+                continue;
+            }
+
+            deferred_findings.push(DeferredFinding {
+                category,
+                deferred_cycle: review_cycle,
+                deadline_cycle: review_cycle
+                    .checked_add(DEFERRAL_DEADLINE_CYCLES)
+                    .ok_or_else(|| "review cycle overflowed deadline calculation".to_string())?,
+                resolved: false,
+                resolved_ref: None,
+                dropped_rationale: None,
+            });
         }
     }
-
-    let mut warnings = Vec::new();
-    let deferred_categories = entry
-        .finding_dispositions
-        .iter()
-        .filter(|disposition| disposition.disposition == "deferred")
-        .map(|disposition| disposition.category.clone())
-        .collect::<BTreeSet<_>>();
-    for category in deferred_categories {
-        if deferred_findings.iter().any(|finding| {
-            finding.category == category && !finding.resolved && finding.dropped_rationale.is_none()
-        }) {
-            warnings.push(format!(
-                "warning: category '{}' already has an unresolved deferred finding; keeping the existing entry",
-                category
-            ));
-            continue;
-        }
-
-        deferred_findings.push(DeferredFinding {
-            category,
-            deferred_cycle: review_cycle,
-            deadline_cycle: review_cycle
-                .checked_add(DEFERRAL_DEADLINE_CYCLES)
-                .ok_or_else(|| "review cycle overflowed deadline calculation".to_string())?,
-            resolved: false,
-            resolved_ref: None,
-            dropped_rationale: None,
-        });
+    for raw in drop_deferrals {
+        let (category, deferred_cycle, rationale) = parse_drop_deferral(raw)?;
+        let finding = deferred_findings
+            .iter_mut()
+            .find(|finding| {
+                finding.category == category
+                    && finding.deferred_cycle == deferred_cycle
+                    && is_active_deferred_finding(finding)
+            })
+            .ok_or_else(|| {
+                format!(
+                    "no active deferred finding found for category '{}' deferred in cycle {} to drop",
+                    category, deferred_cycle
+                )
+            })?;
+        finding.dropped_rationale = Some(rationale);
+    }
+    for raw in resolve_deferrals {
+        let (category, deferred_cycle, resolved_ref) = parse_resolve_deferral(raw)?;
+        let finding = deferred_findings
+            .iter_mut()
+            .find(|finding| {
+                finding.category == category
+                    && finding.deferred_cycle == deferred_cycle
+                    && is_active_deferred_finding(finding)
+            })
+            .ok_or_else(|| {
+                format!(
+                    "no active deferred finding found for category '{}' deferred in cycle {} to resolve",
+                    category, deferred_cycle
+                )
+            })?;
+        finding.resolved = true;
+        finding.resolved_ref = Some(resolved_ref);
     }
 
     if state.get("deferred_findings").is_none() && deferred_findings == existing_snapshot {
@@ -1145,6 +1241,61 @@ fn deferred_findings_patch(
         }),
         warnings,
     ))
+}
+
+fn is_active_deferred_finding(finding: &DeferredFinding) -> bool {
+    !finding.resolved && finding.dropped_rationale.is_none()
+}
+
+fn parse_drop_deferral(raw: &str) -> Result<(String, u64, String), String> {
+    let (category, deferred_cycle, rationale) =
+        parse_deferral_update(raw, "--drop-deferral", "RATIONALE")?;
+    Ok((category, deferred_cycle, rationale))
+}
+
+fn parse_resolve_deferral(raw: &str) -> Result<(String, u64, String), String> {
+    let (category, deferred_cycle, resolved_ref) =
+        parse_deferral_update(raw, "--resolve-deferral", "RESOLVED_REF")?;
+    Ok((category, deferred_cycle, resolved_ref))
+}
+
+fn parse_deferral_update(
+    raw: &str,
+    flag_name: &str,
+    trailing_field_name: &str,
+) -> Result<(String, u64, String), String> {
+    let mut parts = raw.splitn(3, ':');
+    let category_raw = parts.next().unwrap_or_default();
+    let deferred_cycle_raw = parts.next().unwrap_or_default();
+    let trailing_value_raw = parts.next().unwrap_or_default();
+    if category_raw.is_empty() || deferred_cycle_raw.is_empty() || trailing_value_raw.is_empty() {
+        return Err(format!(
+            "invalid {} '{}': expected CATEGORY:DEFERRED_CYCLE:{}",
+            flag_name, raw, trailing_field_name
+        ));
+    }
+
+    let category = normalize_category(category_raw).ok_or_else(|| {
+        format!(
+            "invalid {} category '{}': category must normalize to a non-empty slug",
+            flag_name, category_raw
+        )
+    })?;
+    let deferred_cycle = deferred_cycle_raw.parse::<u64>().map_err(|_| {
+        format!(
+            "invalid {} deferred cycle '{}': expected an unsigned integer",
+            flag_name, deferred_cycle_raw
+        )
+    })?;
+    let trailing_value = trailing_value_raw.trim();
+    if trailing_value.is_empty() {
+        return Err(format!(
+            "invalid {} '{}': {} must be non-empty",
+            flag_name, raw, trailing_field_name
+        ));
+    }
+
+    Ok((category, deferred_cycle, trailing_value.to_string()))
 }
 
 fn insert_missing_top_level_path(state: &mut Value, path: &str, value: Value) -> bool {
@@ -1241,6 +1392,8 @@ mod tests {
         assert!(help.contains("--disposition"));
         assert!(help.contains("--lenient"));
         assert!(help.contains("--note"));
+        assert!(help.contains("--drop-deferral"));
+        assert!(help.contains("--resolve-deferral"));
         assert!(help.contains("--update-chronic-category"));
         assert!(help.contains("--update-chronic-pr"));
         assert!(help.contains("--update-chronic-cycle"));
@@ -1285,6 +1438,26 @@ mod tests {
                 "data-integrity:dispatch_created".to_string(),
                 "process-integrity:actioned_failed".to_string()
             ]
+        );
+    }
+
+    #[test]
+    fn cli_parses_deferral_update_flags() {
+        let cli = Cli::parse_from([
+            "process-review",
+            "--drop-deferral",
+            "journal-quality:464:awaiting Eva response",
+            "--resolve-deferral",
+            "worklog-accuracy:468:docs/reviews/cycle-470.md",
+        ]);
+
+        assert_eq!(
+            cli.drop_deferrals,
+            vec!["journal-quality:464:awaiting Eva response".to_string()]
+        );
+        assert_eq!(
+            cli.resolve_deferrals,
+            vec!["worklog-accuracy:468:docs/reviews/cycle-470.md".to_string()]
         );
     }
 
@@ -2192,7 +2365,7 @@ mod tests {
         };
 
         let (patch, warnings) =
-            build_state_patch(&state, 163, 163, &entry).expect("patch should build");
+            build_state_patch(&state, 163, 163, &entry, &[], &[]).expect("patch should build");
         assert!(warnings.is_empty());
         assert_eq!(patch.len(), 3);
         assert_eq!(patch[0].path, "/review_agent/last_review_cycle");
@@ -2247,7 +2420,7 @@ mod tests {
         };
 
         let (patch, warnings) =
-            build_state_patch(&state, 163, 163, &entry).expect("patch should build");
+            build_state_patch(&state, 163, 163, &entry, &[], &[]).expect("patch should build");
 
         assert_eq!(warnings.len(), 1);
         assert!(
@@ -2312,7 +2485,7 @@ mod tests {
         };
 
         let (_patch, warnings) =
-            build_state_patch(&state, 200, 200, &entry).expect("patch should build");
+            build_state_patch(&state, 200, 200, &entry, &[], &[]).expect("patch should build");
 
         assert_eq!(warnings.len(), 1);
         assert!(
@@ -2374,7 +2547,7 @@ mod tests {
         };
 
         let (patch, warnings) =
-            build_state_patch(&state, 163, 164, &entry).expect("patch should build");
+            build_state_patch(&state, 163, 164, &entry, &[], &[]).expect("patch should build");
 
         assert!(warnings.is_empty());
         assert_eq!(patch.len(), 4);
@@ -2440,7 +2613,7 @@ mod tests {
         };
 
         let (patch, warnings) =
-            build_state_patch(&state, 164, 165, &entry).expect("patch should build");
+            build_state_patch(&state, 164, 165, &entry, &[], &[]).expect("patch should build");
 
         assert!(warnings.is_empty());
         assert_eq!(patch[2].path, "/deferred_findings");
@@ -2496,7 +2669,7 @@ mod tests {
         };
 
         let (patch, warnings) =
-            build_state_patch(&state, 163, 164, &entry).expect("patch should build");
+            build_state_patch(&state, 163, 164, &entry, &[], &[]).expect("patch should build");
 
         assert_eq!(patch[2].path, "/deferred_findings");
         assert_eq!(
@@ -2511,6 +2684,156 @@ mod tests {
         assert_eq!(warnings.len(), 1);
         assert!(warnings[0].contains("review-accounting"));
         assert!(warnings[0].contains("already has an unresolved deferred finding"));
+    }
+
+    #[test]
+    fn drop_deferral_sets_dropped_rationale_on_matching_entry() {
+        let state = json!({
+            "deferred_findings": [
+                {
+                    "category": "journal-quality",
+                    "deferred_cycle": 464,
+                    "deadline_cycle": 469,
+                    "resolved": false
+                },
+                {
+                    "category": "journal-quality",
+                    "deferred_cycle": 465,
+                    "deadline_cycle": 470,
+                    "resolved": false
+                }
+            ]
+        });
+
+        let (patch, warnings) = deferred_findings_patch(
+            &state,
+            None,
+            None,
+            &["journal-quality:464:awaiting Eva response".to_string()],
+            &[],
+        )
+        .expect("drop update should succeed");
+
+        assert!(warnings.is_empty());
+        assert_eq!(
+            patch.expect("patch should be generated").value,
+            json!([
+                {
+                    "category": "journal-quality",
+                    "deferred_cycle": 464,
+                    "deadline_cycle": 469,
+                    "resolved": false,
+                    "dropped_rationale": "awaiting Eva response"
+                },
+                {
+                    "category": "journal-quality",
+                    "deferred_cycle": 465,
+                    "deadline_cycle": 470,
+                    "resolved": false
+                }
+            ])
+        );
+    }
+
+    #[test]
+    fn drop_deferral_errors_when_no_matching_entry_exists() {
+        let state = json!({
+            "deferred_findings": [{
+                "category": "journal-quality",
+                "deferred_cycle": 464,
+                "deadline_cycle": 469,
+                "resolved": true,
+                "resolved_ref": "docs/reviews/cycle-470.md"
+            }]
+        });
+
+        let error = deferred_findings_patch(
+            &state,
+            None,
+            None,
+            &["journal-quality:464:awaiting Eva response".to_string()],
+            &[],
+        )
+        .expect_err("drop update should fail");
+
+        assert!(error.contains("journal-quality"));
+        assert!(error.contains("464"));
+        assert!(error.contains("drop"));
+    }
+
+    #[test]
+    fn resolve_deferral_sets_resolved_fields_on_matching_entry() {
+        let state = json!({
+            "deferred_findings": [
+                {
+                    "category": "worklog-accuracy",
+                    "deferred_cycle": 468,
+                    "deadline_cycle": 473,
+                    "resolved": false
+                },
+                {
+                    "category": "worklog-accuracy",
+                    "deferred_cycle": 467,
+                    "deadline_cycle": 472,
+                    "resolved": false
+                }
+            ]
+        });
+
+        let (patch, warnings) = deferred_findings_patch(
+            &state,
+            None,
+            None,
+            &[],
+            &["worklog-accuracy:468:docs/reviews/cycle-470.md".to_string()],
+        )
+        .expect("resolve update should succeed");
+
+        assert!(warnings.is_empty());
+        assert_eq!(
+            patch.expect("patch should be generated").value,
+            json!([
+                {
+                    "category": "worklog-accuracy",
+                    "deferred_cycle": 468,
+                    "deadline_cycle": 473,
+                    "resolved": true,
+                    "resolved_ref": "docs/reviews/cycle-470.md"
+                },
+                {
+                    "category": "worklog-accuracy",
+                    "deferred_cycle": 467,
+                    "deadline_cycle": 472,
+                    "resolved": false
+                }
+            ])
+        );
+    }
+
+    #[test]
+    fn resolve_deferral_errors_when_no_matching_entry_exists() {
+        let state = json!({
+            "deferred_findings": [{
+                "category": "worklog-accuracy",
+                "deferred_cycle": 468,
+                "deadline_cycle": 473,
+                "resolved": false,
+                "dropped_rationale": "superseded"
+            }]
+        });
+
+        let error = deferred_findings_patch(
+            &state,
+            None,
+            None,
+            &[],
+            &["worklog-accuracy:468:docs/reviews/cycle-470.md".to_string()],
+        )
+        .expect_err("resolve update should fail");
+
+        assert!(error.contains("worklog-accuracy"));
+        assert!(error.contains("468"));
+        assert!(error.contains("resolve"));
     }
 
     #[test]
@@ -2726,6 +3049,114 @@ mod tests {
         assert_eq!(parsed.cycle, 162);
         assert_eq!(parsed.complacency_score, 2);
         assert_eq!(parsed.finding_count, 3);
+    }
+
+    #[test]
+    fn run_accepts_drop_deferral_without_review_file() {
+        let repo_root = write_temp_state_repo(json!({
+            "last_cycle": {"number": 500},
+            "cycle_phase": {"cycle": 500},
+            "review_agent": {
+                "last_review_cycle": 499,
+                "history": []
+            },
+            "deferred_findings": [{
+                "category": "journal-quality",
+                "deferred_cycle": 464,
+                "deadline_cycle": 469,
+                "resolved": false
+            }],
+            "field_inventory": {
+                "fields": {
+                    "review_agent": {"last_refreshed": "cycle 499"}
+                }
+            }
+        }));
+        init_temp_git_repo(&repo_root);
+
+        let cli = Cli::parse_from([
+            "process-review",
+            "--repo-root",
+            repo_root.to_str().expect("repo path should be valid UTF-8"),
+            "--drop-deferral",
+            "journal-quality:464:awaiting Eva response",
+        ]);
+
+        run(cli).expect("deferral-only run should succeed");
+
+        let updated_state = read_state_value(&repo_root).expect("state should be readable");
+        assert_eq!(
+            updated_state.pointer("/deferred_findings/0/dropped_rationale"),
+            Some(&json!("awaiting Eva response"))
+        );
+        assert_eq!(
+            updated_state.pointer("/review_agent/history"),
+            Some(&json!([]))
+        );
+    }
+
+    #[test]
+    fn run_applies_drop_deferral_alongside_review_processing() {
+        let repo_root = write_temp_state_repo(json!({
+            "last_cycle": {"number": 500},
+            "cycle_phase": {"cycle": 500},
+            "review_agent": {
+                "last_review_cycle": 499,
+                "history": []
+            },
+            "deferred_findings": [{
+                "category": "worklog-accuracy",
+                "deferred_cycle": 468,
+                "deadline_cycle": 473,
+                "resolved": false
+            }],
+            "field_inventory": {
+                "fields": {
+                    "review_agent": {"last_refreshed": "cycle 499"}
+                }
+            }
+        }));
+        init_temp_git_repo(&repo_root);
+        let review_dir = repo_root.join("docs/reviews");
+        fs::create_dir_all(&review_dir).expect("review directory should exist");
+        fs::write(
+            review_dir.join("cycle-500.md"),
+            r#"# Cycle 500 Review
+
+## Findings
+
+1. **[review-accounting] Review accounting finding**
+
+## Complacency score
+
+2/5
+"#,
+        )
+        .expect("review file should be written");
+
+        let cli = Cli::parse_from([
+            "process-review",
+            "--repo-root",
+            repo_root.to_str().expect("repo path should be valid UTF-8"),
+            "--review-file",
+            "docs/reviews/cycle-500.md",
+            "--actioned",
+            "1",
+            "--drop-deferral",
+            "worklog-accuracy:468:awaiting Eva response",
+        ]);
+
+        run(cli).expect("combined review and deferral run should succeed");
+
+        let updated_state = read_state_value(&repo_root).expect("state should be readable");
+        assert_eq!(
+            updated_state.pointer("/deferred_findings/0/dropped_rationale"),
+            Some(&json!("awaiting Eva response"))
+        );
+        assert_eq!(
+            updated_state.pointer("/review_agent/history/0/cycle"),
+            Some(&json!(500))
+        );
     }
 
     #[test]
