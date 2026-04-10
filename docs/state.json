@@ -7137,6 +7137,13 @@
       "pr": 2365,
       "status": "merged",
       "title": "[Cycle Review] Cycle 469 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-04-10T05:14:20Z",
+      "issue": 2367,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Make commitment-drop verification error path blocking in pipeline-check"
     }
   ],
   "audit_dropped": [
@@ -7909,7 +7916,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2364 [Cycle Review] Cycle 469 end-of-cycle review (cycle 469)",
+  "dispatch_log_latest": "#2367 Make commitment-drop verification error path blocking in pipeline-check (cycle 470)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8182,13 +8189,13 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 0,
     "issue": 2366,
     "number": 470,
-    "summary": "0 dispatches, 3 merges",
-    "timestamp": "2026-04-10T04:58:22Z"
+    "summary": "1 dispatch, 3 merges",
+    "timestamp": "2026-04-10T05:14:20Z"
   },
   "last_eva_comment_check": "2026-04-10T04:58:22Z",
   "last_tool_audit_cycle": 403,
@@ -14183,7 +14190,7 @@
     ],
     "last_review_cycle": 469
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 469,
   "schema_status": {
     "directory_layout": {
