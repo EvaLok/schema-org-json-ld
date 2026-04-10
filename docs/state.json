@@ -7124,6 +7124,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add verify-review-events step comment to cycle-runner close-out"
+    },
+    {
+      "dispatched_at": "2026-04-10T03:44:54Z",
+      "issue": 2364,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 469 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -7889,7 +7896,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2362 Add verify-review-events step comment to cycle-runner close-out (cycle 469)",
+  "dispatch_log_latest": "#2364 [Cycle Review] Cycle 469 end-of-cycle review (cycle 469)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8162,13 +8169,13 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 3,
   "last_cycle": {
     "duration_minutes": 0,
     "issue": 2359,
     "number": 469,
-    "summary": "2 dispatches, 2 merges (PR #2355, PR #2358)",
-    "timestamp": "2026-04-10T03:33:01Z"
+    "summary": "3 dispatches, 2 merges (PR #2355, PR #2358)",
+    "timestamp": "2026-04-10T03:44:54Z"
   },
   "last_eva_comment_check": "2026-04-10T03:33:01Z",
   "last_tool_audit_cycle": 403,
@@ -14134,7 +14141,7 @@
     ],
     "last_review_cycle": 468
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 469,
   "schema_status": {
     "directory_layout": {
