@@ -1145,7 +1145,7 @@ fn verify_commitment_drop_verification(repo_root: &Path, runner: &dyn CommandRun
         Err(error) => StepReport {
             name: COMMITMENT_DROP_VERIFICATION_STEP_NAME,
             status: StepStatus::Error,
-            severity: Severity::Warning,
+            severity: Severity::Blocking,
             exit_code: None,
             detail: Some(error),
             findings: None,
@@ -13249,6 +13249,50 @@ mod tests {
         assert_eq!(status, StepStatus::Warn);
         assert!(detail.contains("PR #2323"));
         assert!(detail.contains("post-step"));
+    }
+
+    #[test]
+    fn commitment_drop_verification_reports_blocking_error_when_pr_file_fetch_fails() {
+        struct PullRequestFilesRunner;
+
+        impl CommandRunner for PullRequestFilesRunner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                Err("not used".to_string())
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                Err("not used".to_string())
+            }
+
+            fn fetch_pull_request_files(&self, issue: u64) -> Result<Vec<String>, String> {
+                assert_eq!(issue, 2323);
+                Err("simulated fetch failure".to_string())
+            }
+        }
+
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-commitment-drop-error-{}", run_id));
+        let today = &current_utc_timestamp()[..10];
+        fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
+        fs::write(
+            root.join("docs/worklog")
+                .join(today)
+                .join("010203-cycle-999-summary.md"),
+            "- Dropped cycle 462 review F3 (post-step --body-stdin + --allow-template-syntax + literal validation) with rationale: F3's --in-flight CLI override is deleted by [PR #2323](https://github.com/EvaLok/schema-org-json-ld/pull/2323)\n",
+        )
+        .unwrap();
+
+        let step = verify_commitment_drop_verification(&root, &PullRequestFilesRunner);
+
+        assert_eq!(step.status, StepStatus::Error);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert_eq!(step.detail.as_deref(), Some("simulated fetch failure"));
     }
 
     #[test]
