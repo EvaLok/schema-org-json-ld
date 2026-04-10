@@ -187,6 +187,12 @@ pub struct DispatchPatch {
     pub current_cycle: u64,
 }
 
+#[derive(Clone)]
+pub struct SealedLastCycleSnapshot {
+    summary: Option<serde_json::Value>,
+    timestamp: Option<serde_json::Value>,
+}
+
 pub fn resolve_model(
     cli_model: Option<&str>,
     repo_root: &std::path::Path,
@@ -358,6 +364,50 @@ pub fn apply_dispatch_patch(state: &mut Value, patch: &DispatchPatch) -> Result<
         sync_last_cycle_summary_after_dispatch(state, patch.current_cycle)?;
     }
 
+    Ok(())
+}
+
+pub fn snapshot_sealed_last_cycle(
+    state: &serde_json::Value,
+    phase: &str,
+) -> Option<SealedLastCycleSnapshot> {
+    if phase != "close_out" && phase != "complete" {
+        return None;
+    }
+    let last_cycle = state.pointer("/last_cycle")?.as_object()?;
+    Some(SealedLastCycleSnapshot {
+        summary: last_cycle.get("summary").cloned(),
+        timestamp: last_cycle.get("timestamp").cloned(),
+    })
+}
+
+pub fn restore_sealed_last_cycle(
+    state: &mut serde_json::Value,
+    snapshot: Option<SealedLastCycleSnapshot>,
+) -> Result<(), String> {
+    let Some(snapshot) = snapshot else {
+        return Ok(());
+    };
+    let last_cycle = state
+        .pointer_mut("/last_cycle")
+        .and_then(serde_json::Value::as_object_mut)
+        .ok_or_else(|| "missing object /last_cycle in docs/state.json".to_string())?;
+    match snapshot.summary {
+        Some(summary) => {
+            last_cycle.insert("summary".to_string(), summary);
+        }
+        None => {
+            last_cycle.remove("summary");
+        }
+    }
+    match snapshot.timestamp {
+        Some(timestamp) => {
+            last_cycle.insert("timestamp".to_string(), timestamp);
+        }
+        None => {
+            last_cycle.remove("timestamp");
+        }
+    }
     Ok(())
 }
 

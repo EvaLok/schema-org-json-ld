@@ -1,8 +1,9 @@
 use clap::Parser;
 use record_dispatch::{
     apply_dispatch_patch, build_dispatch_patch, concurrency_warning_message,
-    dispatch_commit_message, enforce_pipeline_gate, resolve_model, update_review_dispatch_tracking,
-    CommandRunner, PipelineGateError, ProcessRunner,
+    dispatch_commit_message, enforce_pipeline_gate, resolve_model, restore_sealed_last_cycle,
+    snapshot_sealed_last_cycle, update_review_dispatch_tracking, CommandRunner, PipelineGateError,
+    ProcessRunner,
 };
 use state_schema::{
     commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
@@ -188,56 +189,6 @@ fn run_with_runner(
         warn(&concurrency_warning_message(patch.in_flight));
     }
 
-    Ok(())
-}
-
-#[derive(Clone)]
-struct SealedLastCycleSnapshot {
-    summary: Option<serde_json::Value>,
-    timestamp: Option<serde_json::Value>,
-}
-
-fn snapshot_sealed_last_cycle(
-    state: &serde_json::Value,
-    phase: &str,
-) -> Option<SealedLastCycleSnapshot> {
-    if phase != "close_out" && phase != "complete" {
-        return None;
-    }
-    let last_cycle = state.pointer("/last_cycle")?.as_object()?;
-    Some(SealedLastCycleSnapshot {
-        summary: last_cycle.get("summary").cloned(),
-        timestamp: last_cycle.get("timestamp").cloned(),
-    })
-}
-
-fn restore_sealed_last_cycle(
-    state: &mut serde_json::Value,
-    snapshot: Option<SealedLastCycleSnapshot>,
-) -> Result<(), String> {
-    let Some(snapshot) = snapshot else {
-        return Ok(());
-    };
-    let last_cycle = state
-        .pointer_mut("/last_cycle")
-        .and_then(serde_json::Value::as_object_mut)
-        .ok_or_else(|| "missing object /last_cycle in docs/state.json".to_string())?;
-    match snapshot.summary {
-        Some(summary) => {
-            last_cycle.insert("summary".to_string(), summary);
-        }
-        None => {
-            last_cycle.remove("summary");
-        }
-    }
-    match snapshot.timestamp {
-        Some(timestamp) => {
-            last_cycle.insert("timestamp".to_string(), timestamp);
-        }
-        None => {
-            last_cycle.remove("timestamp");
-        }
-    }
     Ok(())
 }
 
