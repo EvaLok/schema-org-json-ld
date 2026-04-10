@@ -7232,6 +7232,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add blocking pipeline invariant for verify-review-events execution"
+    },
+    {
+      "dispatched_at": "2026-04-10T21:38:18Z",
+      "issue": 2393,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 473 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -8027,7 +8034,7 @@
       "resolved_ref": "docs/reviews/cycle-472.md"
     }
   ],
-  "dispatch_log_latest": "#2391 Add blocking pipeline invariant for verify-review-events execution (cycle 473)",
+  "dispatch_log_latest": "#2393 [Cycle Review] Cycle 473 end-of-cycle review (cycle 473)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8300,7 +8307,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 3,
   "last_cycle": {
     "duration_minutes": 1,
     "issue": 2388,
@@ -14387,7 +14394,7 @@
     ],
     "last_review_cycle": 472
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 473,
   "schema_status": {
     "directory_layout": {
