@@ -7114,8 +7114,10 @@
     {
       "dispatched_at": "2026-04-10T03:31:58Z",
       "issue": 2360,
+      "merged_at": "2026-04-10T05:10:30Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2361,
+      "status": "merged",
       "title": "Fix dispatch-review to preserve sealed last_cycle snapshot during close_out"
     },
     {
@@ -8172,12 +8174,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 0,
     "issue": 2366,
     "number": 470,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-10T04:58:22Z"
   },
   "last_eva_comment_check": "2026-04-10T04:58:22Z",
