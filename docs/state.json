@@ -7860,6 +7860,7 @@
       "category": "journal-quality",
       "deadline_cycle": 469,
       "deferred_cycle": 464,
+      "dropped_rationale": "Dropped cycle 469: question-for-eva #2293 awaiting Eva response, no structural fix path without Eva calibration decision",
       "resolved": false
     },
     {
