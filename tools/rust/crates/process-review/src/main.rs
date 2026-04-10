@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 
 const MAX_CATEGORY_LENGTH: usize = 40;
 const DEFERRAL_DEADLINE_CYCLES: u64 = 5;
+const DROPPED_DEFERRAL_RESOLVED_REF_MAX_CHARS: usize = 100;
 const VALID_FINDING_DISPOSITIONS: &[&str] = &[
     "actioned",
     "deferred",
@@ -1211,7 +1212,10 @@ fn deferred_findings_patch(
             })?;
         let resolved_ref = format!(
             "dropped: {}",
-            rationale.chars().take(100).collect::<String>()
+            rationale
+                .chars()
+                .take(DROPPED_DEFERRAL_RESOLVED_REF_MAX_CHARS)
+                .collect::<String>()
         );
         finding.dropped_rationale = Some(rationale);
         finding.resolved = true;
