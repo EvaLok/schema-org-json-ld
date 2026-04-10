@@ -13252,7 +13252,7 @@ mod tests {
     }
 
     #[test]
-    fn commitment_drop_verification_errors_block_when_pr_file_fetch_fails() {
+    fn commitment_drop_verification_reports_blocking_error_when_pr_file_fetch_fails() {
         struct PullRequestFilesRunner;
 
         impl CommandRunner for PullRequestFilesRunner {
