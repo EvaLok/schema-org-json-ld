@@ -1196,6 +1196,7 @@ fn deferred_findings_patch(
         let (category, deferred_cycle, rationale) = parse_drop_deferral(raw)?;
         let finding = deferred_findings
             .iter_mut()
+            .rev()
             .find(|finding| {
                 finding.category == category
                     && finding.deferred_cycle == deferred_cycle
@@ -1213,6 +1214,7 @@ fn deferred_findings_patch(
         let (category, deferred_cycle, resolved_ref) = parse_resolve_deferral(raw)?;
         let finding = deferred_findings
             .iter_mut()
+            .rev()
             .find(|finding| {
                 finding.category == category
                     && finding.deferred_cycle == deferred_cycle
