@@ -7205,6 +7205,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Auto-derive review disposition summary and receipt note in write-entry worklog"
+    },
+    {
+      "dispatched_at": "2026-04-10T09:51:22Z",
+      "issue": 2386,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 472 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -7997,7 +8004,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2384 Auto-derive review disposition summary and receipt note in write-entry worklog (cycle 472)",
+  "dispatch_log_latest": "#2386 [Cycle Review] Cycle 472 end-of-cycle review (cycle 472)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8270,7 +8277,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 3,
   "last_cycle": {
     "duration_minutes": 2,
     "issue": 2381,
@@ -14328,7 +14335,7 @@
     ],
     "last_review_cycle": 471
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 472,
   "schema_status": {
     "directory_layout": {
