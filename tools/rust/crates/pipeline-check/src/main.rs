@@ -38,6 +38,7 @@ const DISPATCH_FINDING_RECONCILIATION_STEP_NAME: &str = "dispatch-finding-reconc
 const DEFERRED_RESOLUTION_MERGE_GATE_STEP_NAME: &str = "deferred-resolution-merge-gate";
 const DOC_VALIDATION_STEP_NAME: &str = "doc-validation";
 const FROZEN_COMMIT_VERIFY_STEP_NAME: &str = "frozen-commit-verify";
+const REVIEW_EVENTS_VERIFIED_STEP_NAME: &str = "review-events-verified";
 const WORKLOG_DEDUP_STEP_NAME: &str = "worklog-dedup";
 const WORKLOG_IMMUTABILITY_STEP_NAME: &str = "worklog-immutability";
 const FROZEN_WORKLOG_IMMUTABILITY_STEP_NAME: &str = "frozen-worklog-immutability";
@@ -59,7 +60,7 @@ const COMMITMENT_DROP_RATIONALE_MARKERS: &[&str] = &[
     " due to ",
 ];
 const NON_SURFACE_CYCLE_PREFIX: &str = "cycle-";
-const STEP_NAMES: [&str; 25] = [
+const STEP_NAMES: [&str; 26] = [
     "metric-snapshot",
     "field-inventory",
     "housekeeping-scan",
@@ -77,6 +78,7 @@ const STEP_NAMES: [&str; 25] = [
     DEFERRED_RESOLUTION_MERGE_GATE_STEP_NAME,
     DOC_VALIDATION_STEP_NAME,
     FROZEN_COMMIT_VERIFY_STEP_NAME,
+    REVIEW_EVENTS_VERIFIED_STEP_NAME,
     WORKLOG_DEDUP_STEP_NAME,
     WORKLOG_IMMUTABILITY_STEP_NAME,
     FROZEN_WORKLOG_IMMUTABILITY_STEP_NAME,
@@ -778,6 +780,9 @@ fn run_pipeline_with_excluded_steps(
     }
     if !is_excluded_step(FROZEN_COMMIT_VERIFY_STEP_NAME, exclude_steps) {
         steps.push(verify_frozen_commit(repo_root));
+    }
+    if !is_excluded_step(REVIEW_EVENTS_VERIFIED_STEP_NAME, exclude_steps) {
+        steps.push(verify_review_events_verified(repo_root));
     }
     if !is_excluded_step(WORKLOG_DEDUP_STEP_NAME, exclude_steps) {
         steps.push(verify_worklog_dedup(repo_root));
@@ -1512,6 +1517,29 @@ fn verify_frozen_worklog_immutability(repo_root: &Path) -> StepReport {
 
 fn verify_frozen_commit(repo_root: &Path) -> StepReport {
     verify_frozen_commit_for_date(repo_root, &current_utc_timestamp()[..10])
+}
+
+fn verify_review_events_verified(repo_root: &Path) -> StepReport {
+    match review_events_verified_status(repo_root) {
+        Ok((status, detail)) => StepReport {
+            name: REVIEW_EVENTS_VERIFIED_STEP_NAME,
+            status,
+            severity: Severity::Blocking,
+            exit_code: None,
+            detail: Some(detail),
+            findings: None,
+            summary: None,
+        },
+        Err(error) => StepReport {
+            name: REVIEW_EVENTS_VERIFIED_STEP_NAME,
+            status: StepStatus::Error,
+            severity: Severity::Blocking,
+            exit_code: None,
+            detail: Some(error),
+            findings: None,
+            summary: None,
+        },
+    }
 }
 
 fn verify_doc_validation_for_date(
@@ -2838,6 +2866,47 @@ fn frozen_commit_status_for_date(
             missing.join(", ")
         ),
     ))
+}
+
+fn review_events_verified_status(repo_root: &Path) -> Result<(StepStatus, String), String> {
+    let state = read_state_value(repo_root)?;
+    let phase = state.pointer("/cycle_phase/phase").and_then(Value::as_str);
+    if phase != Some("close_out") {
+        return Ok((
+            StepStatus::Pass,
+            "skipped: review-events verification freshness only blocks during close_out"
+                .to_string(),
+        ));
+    }
+
+    let current_cycle = state
+        .pointer(LAST_CYCLE_NUMBER_PATH)
+        .and_then(Value::as_u64)
+        .ok_or_else(|| "missing numeric field: /last_cycle/number".to_string())?;
+    let verified_through_cycle = state
+        .pointer("/review_agent/review_events_verified_through_cycle")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| {
+            "missing numeric field: /review_agent/review_events_verified_through_cycle".to_string()
+        })?;
+
+    if verified_through_cycle == current_cycle {
+        Ok((
+            StepStatus::Pass,
+            format!(
+                "review_events_verified_through_cycle matches current cycle {}",
+                current_cycle
+            ),
+        ))
+    } else {
+        Ok((
+            StepStatus::Fail,
+            format!(
+                "review_events_verified_through_cycle({}) does not match last_cycle.number({}) during close_out; verify-review-events must run and advance the counter before C5.5 can pass",
+                verified_through_cycle, current_cycle
+            ),
+        ))
+    }
 }
 
 fn worklog_dedup_status_for_date(
@@ -5779,7 +5848,8 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": 135
+                    "last_review_cycle": 135,
+                    "review_events_verified_through_cycle": 135
                 }
             })
             .to_string(),
@@ -5869,7 +5939,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 25);
+        assert_eq!(report.steps.len(), 26);
         assert_eq!(report.steps[0].status, StepStatus::Pass);
         assert_eq!(report.steps[1].status, StepStatus::Pass);
         assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -5910,19 +5980,21 @@ mod tests {
         assert_eq!(report.steps[15].status, StepStatus::Pass);
         assert_eq!(report.steps[16].name, "frozen-commit-verify");
         assert_eq!(report.steps[16].status, StepStatus::Pass);
-        assert_eq!(report.steps[17].name, "worklog-dedup");
+        assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].name, "worklog-immutability");
+        assert_eq!(report.steps[18].name, "worklog-dedup");
         assert_eq!(report.steps[18].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].severity, Severity::Blocking);
-        assert_eq!(report.steps[19].name, "frozen-worklog-immutability");
+        assert_eq!(report.steps[19].name, "worklog-immutability");
         assert_eq!(report.steps[19].status, StepStatus::Pass);
-        assert_eq!(report.steps[20].name, "pr-base-currency");
+        assert_eq!(report.steps[19].severity, Severity::Blocking);
+        assert_eq!(report.steps[20].name, "frozen-worklog-immutability");
         assert_eq!(report.steps[20].status, StepStatus::Pass);
-        assert_eq!(report.steps[21].name, "step-comments");
+        assert_eq!(report.steps[21].name, "pr-base-currency");
         assert_eq!(report.steps[21].status, StepStatus::Pass);
-        assert_eq!(report.steps[22].name, "current-cycle-steps");
+        assert_eq!(report.steps[22].name, "step-comments");
         assert_eq!(report.steps[22].status, StepStatus::Pass);
+        assert_eq!(report.steps[23].name, "current-cycle-steps");
+        assert_eq!(report.steps[23].status, StepStatus::Pass);
     }
 
     #[test]
@@ -6110,7 +6182,7 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 25);
+        assert_eq!(report.steps.len(), 26);
         assert!(report.steps[..6]
             .iter()
             .all(|step| matches!(step.status, StepStatus::Error)));
@@ -6376,7 +6448,8 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": 257
+                    "last_review_cycle": 257,
+                    "review_events_verified_through_cycle": 257
                 }
             })
             .to_string(),
@@ -6479,16 +6552,18 @@ mod tests {
         assert_eq!(report.steps[15].status, StepStatus::Cascade);
         assert_eq!(report.steps[16].name, "frozen-commit-verify");
         assert_eq!(report.steps[16].status, StepStatus::Pass);
-        assert_eq!(report.steps[17].name, "worklog-dedup");
+        assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].name, "worklog-immutability");
+        assert_eq!(report.steps[18].name, "worklog-dedup");
         assert_eq!(report.steps[18].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].name, "frozen-worklog-immutability");
+        assert_eq!(report.steps[19].name, "worklog-immutability");
         assert_eq!(report.steps[19].status, StepStatus::Pass);
-        assert_eq!(report.steps[20].name, "pr-base-currency");
+        assert_eq!(report.steps[20].name, "frozen-worklog-immutability");
         assert_eq!(report.steps[20].status, StepStatus::Pass);
-        assert_eq!(report.steps[21].name, "step-comments");
-        assert_eq!(report.steps[21].status, StepStatus::Fail);
+        assert_eq!(report.steps[21].name, "pr-base-currency");
+        assert_eq!(report.steps[21].status, StepStatus::Pass);
+        assert_eq!(report.steps[22].name, "step-comments");
+        assert_eq!(report.steps[22].status, StepStatus::Fail);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -6524,7 +6599,8 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": 257
+                    "last_review_cycle": 257,
+                    "review_events_verified_through_cycle": 257
                 }
             })
             .to_string(),
@@ -6627,16 +6703,18 @@ mod tests {
         assert_eq!(report.steps[15].status, StepStatus::Cascade);
         assert_eq!(report.steps[16].name, "frozen-commit-verify");
         assert_eq!(report.steps[16].status, StepStatus::Pass);
-        assert_eq!(report.steps[17].name, "worklog-dedup");
+        assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].name, "worklog-immutability");
+        assert_eq!(report.steps[18].name, "worklog-dedup");
         assert_eq!(report.steps[18].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].name, "frozen-worklog-immutability");
+        assert_eq!(report.steps[19].name, "worklog-immutability");
         assert_eq!(report.steps[19].status, StepStatus::Pass);
-        assert_eq!(report.steps[20].name, "pr-base-currency");
+        assert_eq!(report.steps[20].name, "frozen-worklog-immutability");
         assert_eq!(report.steps[20].status, StepStatus::Pass);
-        assert_eq!(report.steps[21].name, "step-comments");
-        assert_eq!(report.steps[21].status, StepStatus::Fail);
+        assert_eq!(report.steps[21].name, "pr-base-currency");
+        assert_eq!(report.steps[21].status, StepStatus::Pass);
+        assert_eq!(report.steps[22].name, "step-comments");
+        assert_eq!(report.steps[22].status, StepStatus::Fail);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -6674,7 +6752,8 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": CURRENT_CYCLE
+                    "last_review_cycle": CURRENT_CYCLE,
+                    "review_events_verified_through_cycle": CURRENT_CYCLE
                 }
             })
             .to_string(),
@@ -6774,10 +6853,10 @@ mod tests {
         }
 
         let report = run_pipeline(&root, OVERRIDE_CYCLE, &OverrideRunner);
-        assert_eq!(report.steps[21].name, "step-comments");
-        assert_eq!(report.steps[21].status, StepStatus::Warn);
-        assert_eq!(report.steps[21].severity, Severity::Warning);
-        assert!(report.steps[21]
+        assert_eq!(report.steps[22].name, "step-comments");
+        assert_eq!(report.steps[22].status, StepStatus::Warn);
+        assert_eq!(report.steps[22].severity, Severity::Warning);
+        assert!(report.steps[22]
             .detail
             .as_deref()
             .unwrap_or_default()
@@ -6823,7 +6902,8 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": 257
+                    "last_review_cycle": 257,
+                    "review_events_verified_through_cycle": 257
                 }
             })
             .to_string(),
@@ -6924,12 +7004,14 @@ mod tests {
         assert_eq!(report.steps[15].status, StepStatus::Fail);
         assert_eq!(report.steps[16].name, "frozen-commit-verify");
         assert_eq!(report.steps[16].status, StepStatus::Pass);
-        assert_eq!(report.steps[17].name, "worklog-dedup");
+        assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].name, "worklog-immutability");
+        assert_eq!(report.steps[18].name, "worklog-dedup");
         assert_eq!(report.steps[18].status, StepStatus::Pass);
+        assert_eq!(report.steps[19].name, "worklog-immutability");
+        assert_eq!(report.steps[19].status, StepStatus::Pass);
         // Previous-cycle backstop is downgraded to Warn
-        assert_eq!(report.steps[21].status, StepStatus::Warn);
+        assert_eq!(report.steps[22].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -6963,7 +7045,8 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": 257
+                    "last_review_cycle": 257,
+                    "review_events_verified_through_cycle": 257
                 }
             })
             .to_string(),
@@ -7052,7 +7135,7 @@ mod tests {
             &ExcludeDocValidationRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 24);
+        assert_eq!(report.steps.len(), 25);
         assert!(!report
             .steps
             .iter()
@@ -7093,7 +7176,8 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": 257
+                    "last_review_cycle": 257,
+                    "review_events_verified_through_cycle": 257
                 }
             })
             .to_string(),
@@ -7189,7 +7273,7 @@ mod tests {
             &UnknownExcludeRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 25);
+        assert_eq!(report.steps.len(), 26);
         assert!(report
             .steps
             .iter()
@@ -7230,7 +7314,8 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": 257
+                    "last_review_cycle": 257,
+                    "review_events_verified_through_cycle": 257
                 }
             })
             .to_string(),
@@ -7334,7 +7419,7 @@ mod tests {
         );
 
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 24);
+        assert_eq!(report.steps.len(), 25);
         assert!(!report.steps.iter().any(|step| step.name == "worklog-dedup"));
         assert!(report
             .steps
@@ -8362,6 +8447,93 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("no cycle-tagged commit found"));
+    }
+
+    #[test]
+    fn review_events_verified_passes_when_counter_matches_current_cycle() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-review-events-pass-{}", run_id));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "close_out"},
+                "review_agent": {"review_events_verified_through_cycle": 410}
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_review_events_verified(&root);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("matches current cycle 410"));
+    }
+
+    #[test]
+    fn review_events_verified_fails_when_counter_is_stale_during_close_out() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-review-events-fail-{}", run_id));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "close_out"},
+                "review_agent": {"review_events_verified_through_cycle": 409}
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_review_events_verified(&root);
+
+        assert_eq!(step.status, StepStatus::Fail);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("does not match last_cycle.number(410) during close_out"));
+    }
+
+    #[test]
+    fn review_events_verified_skips_outside_close_out_phase() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-review-events-skip-{}", run_id));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "work"},
+                "review_agent": {"review_events_verified_through_cycle": 409}
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_review_events_verified(&root);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("only blocks during close_out"));
     }
 
     #[test]
