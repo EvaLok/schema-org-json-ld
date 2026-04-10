@@ -488,6 +488,10 @@ fn build_state_patch(
             value: json!([issue]),
         },
         PatchUpdate {
+            path: "/eva_input_issues/closed_this_cycle".to_string(),
+            value: json!([]),
+        },
+        PatchUpdate {
             path: "/field_inventory/fields/last_cycle/last_refreshed".to_string(),
             value: json!(format!("cycle {}", cycle)),
         },
@@ -1497,6 +1501,7 @@ mod tests {
                 "/last_eva_comment_check",
                 "/open_questions_for_eva",
                 "/cycle_issues",
+                "/eva_input_issues/closed_this_cycle",
                 "/field_inventory/fields/last_cycle/last_refreshed",
                 "/field_inventory/fields/last_eva_comment_check/last_refreshed",
                 "/field_inventory/fields/open_questions_for_eva/last_refreshed",
@@ -1509,18 +1514,19 @@ mod tests {
         assert_eq!(patch[1].value, json!(592));
         assert_eq!(patch[4].value, json!([600, 601]));
         assert_eq!(patch[5].value, json!([592]));
-        assert_eq!(patch[6].value, json!("cycle 163"));
-        assert_eq!(patch[8].value, json!("cycle 163"));
+        assert_eq!(patch[6].value, json!([]));
+        assert_eq!(patch[7].value, json!("cycle 163"));
+        assert_eq!(patch[9].value, json!("cycle 163"));
         assert_eq!(
-            patch[9].value,
+            patch[10].value,
             json!({
                 "cadence": "every cycle",
                 "last_refreshed": "cycle 163",
             })
         );
-        assert_eq!(patch[10].value, json!(591));
+        assert_eq!(patch[11].value, json!(591));
         assert_eq!(
-            patch[11].value,
+            patch[12].value,
             json!({
                 "cadence": "every cycle",
                 "last_refreshed": "cycle 163",
@@ -1538,6 +1544,36 @@ mod tests {
             .expect("open_questions_for_eva patch should exist");
 
         assert_eq!(open_questions.value, json!([]));
+    }
+
+    #[test]
+    fn state_patch_clears_closed_this_cycle_when_applied() {
+        let patch = build_state_patch(163, 592, None, "2026-03-06T18:00:00Z", &[600, 601]);
+        let mut state = json!({
+            "last_cycle": {},
+            "last_eva_comment_check": "2026-03-05T18:00:00Z",
+            "open_questions_for_eva": [],
+            "cycle_issues": [],
+            "eva_input_issues": {
+                "closed_this_cycle": [100, 200]
+            },
+            "field_inventory": {
+                "fields": {
+                    "last_cycle": {},
+                    "last_eva_comment_check": {},
+                    "open_questions_for_eva": {},
+                    "cycle_issues": {},
+                    "previous_cycle_issue": {}
+                }
+            }
+        });
+
+        apply_state_patch(&mut state, &patch).expect("patch should apply");
+
+        assert_eq!(
+            state.pointer("/eva_input_issues/closed_this_cycle"),
+            Some(&json!([]))
+        );
     }
 
     #[test]
