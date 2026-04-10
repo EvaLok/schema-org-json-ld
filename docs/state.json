@@ -7168,15 +7168,19 @@
     {
       "dispatched_at": "2026-04-10T07:54:34Z",
       "issue": 2375,
+      "merged_at": "2026-04-10T08:03:51Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2376,
+      "status": "merged",
       "title": "Add cycle verification to enforce_review_dispatch_gate"
     },
     {
       "dispatched_at": "2026-04-10T07:55:20Z",
       "issue": 2377,
+      "merged_at": "2026-04-10T08:03:51Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2378,
+      "status": "merged",
       "title": "Post C4.7 step comment on parse failure"
     }
   ],
@@ -8242,12 +8246,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 1,
     "issue": 2373,
     "number": 471,
-    "summary": "2 dispatches, 3 merges",
+    "summary": "1 dispatches, 2 merges",
     "timestamp": "2026-04-10T07:55:20Z"
   },
   "last_eva_comment_check": "2026-04-10T07:33:50Z",
