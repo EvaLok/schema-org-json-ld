@@ -7949,6 +7949,7 @@
       "category": "complacency-detection",
       "deadline_cycle": 472,
       "deferred_cycle": 467,
+      "dropped_rationale": "Audit #395 drop-rationale chain resolved: underlying gate-bypass vulnerability fixed via audit #400 and PR #2376 (enforce_review_dispatch_gate cycle verification). A dedicated drop-rationale validator remains low-value relative to other pipeline improvements. The audit chain (#395->#398->#400) has been fully processed with structural fixes where impactful.",
       "resolved": false
     },
     {
