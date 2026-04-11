@@ -30,12 +30,12 @@
 - Added `COMPLETION_CHECKLIST.xml` constraint `issues-processed-scope` (C3, mandatory) — commit da695c96. Rationale: cycle 476 F1 flagged that cycle 476 worklog listed #2293 as "processed" despite no cycle-scoped receipt; this constraint procedurally bans that pattern.
 - Added `COMPLETION_CHECKLIST.xml` constraint `commitment-carryover-ban` (C3, mandatory) — commit 6f0118c5. Rationale: cycle 476 F3 flagged that the cycle 476 journal carried commitments 4-7 for the 3rd cycle in a row while explicitly violating the self-aware recurrence-escalation rule; this constraint forces such commitments to be either actioned or demoted to an explicit `Backlog (capacity-blocked)` section.
 
-## Pre-dispatch state
+## Cycle state
 
-*Snapshot before review dispatch — final counters may differ after C6.*
 
 - **In-flight agent sessions**: 2
-- **Pipeline status**: PASS
+- **Pipeline status**: FAIL→PASS (C5.5 initially failed: FAIL (1 blocking warning, 4 warnings, 1 blocking: current-cycle-steps); resolved by re-run)
+- **Close-out gate failures**: C5.5 FAIL: FAIL (1 blocking warning, 4 warnings, 1 blocking: current-cycle-steps)
 - **Publish gate**: published
 
 *Context: both in-flight slots are draft PRs awaiting Copilot iteration — #2397 on integration test rebase-fragility (pin `--cycle 474`), #2399 on rebase + commit-hash fix-ref detection. No new dispatches possible until at least one iteration lands.*
