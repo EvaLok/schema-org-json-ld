@@ -88,6 +88,30 @@
       re-flagged the same pattern one cycle after cycle 474 cited receipt
       drift. Structural tool fix (cycle-receipts/receipt-validate warning on
       mixed-source rows) remains queued.</constraint>
+    <constraint id="issues-processed-scope" severity="mandatory">
+      The worklog "Issues processed" section MUST list only issues on which
+      the cycle took a concrete cycle-scoped action: a new comment posted
+      this cycle, a PR opened or merged against the issue this cycle, the
+      issue closed or re-labeled this cycle, or a dispatch tied to the
+      issue number in the current cycle window. Do NOT list issues that
+      are only referenced in prose as:
+        - deferred-target dependencies (e.g., "F2 already dispatched to #2293")
+        - structural blockers cited as context
+        - commitment carryovers from prior cycles without new activity
+        - named examples in narrative explanation
+      The auto-issues derive function (write-entry --auto-issues) scans
+      what_was_done for #NNN references and is known to over-include. After
+      running it, review the rendered "Issues processed" list and manually
+      drop any entries that lack a matching cycle-scoped receipt (comment,
+      merge, dispatch, close, label). An issue referenced only as the home
+      for a deferred structural response is NOT a processed issue.
+      Recurrence escalation: worklog-accuracy (chronic) — cycle 476 F1
+      flagged #2293 listed as "processed" when it was only cited as the
+      structural home for a deferred journal-quality response. Matches the
+      cycle 474/475 receipt-integrity pattern of auto-derivation over-
+      inclusion. Structural tool fix (derive_issue_processed_entries filter
+      on cycle-scope receipts) remains queued; this procedural constraint
+      is the in-cycle backstop.</constraint>
   </step>
 
   <step id="C4.1" title="Validate documentation (BLOCKING GATE)"
