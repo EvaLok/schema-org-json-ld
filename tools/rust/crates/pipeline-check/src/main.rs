@@ -145,6 +145,9 @@ static REVIEW_FINDING_HEADER_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?m)^## \d+\.").expect("review finding regex should compile"));
 static HASH_REFERENCE_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"#(\d+)").expect("hash reference regex should compile"));
+static COMMIT_REFERENCE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)\(commit ([0-9a-f]{7,40})\)").expect("commit reference regex should compile")
+});
 static PULL_REQUEST_URL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"github\.com/[^/\s]+/[^/\s]+/pull/(\d+)")
         .expect("pull request url regex should compile")
@@ -3973,13 +3976,15 @@ struct StepAssessment {
 enum ReviewFixReferenceKind {
     PullRequest,
     Issue,
+    Commit,
     Unknown,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 struct ReviewFixReference {
     kind: ReviewFixReferenceKind,
-    number: u64,
+    number: Option<u64>,
+    commit_sha: Option<String>,
 }
 
 struct ReviewFixReferenceSet {
@@ -3990,9 +3995,29 @@ struct ReviewFixReferenceSet {
 #[derive(Debug, Clone)]
 struct ResolvedReviewFixReference {
     kind: ReviewFixReferenceKind,
-    number: u64,
+    number: Option<u64>,
     current_state: String,
     merged_at: Option<DateTime<Utc>>,
+}
+
+fn review_fix_reference_number(reference: &ReviewFixReference) -> Result<u64, String> {
+    reference.number.ok_or_else(|| {
+        format!(
+            "review fix reference {:?} is missing numeric identifier",
+            reference.kind
+        )
+    })
+}
+
+fn resolved_review_fix_reference_number(
+    reference: &ResolvedReviewFixReference,
+) -> Result<u64, String> {
+    reference.number.ok_or_else(|| {
+        format!(
+            "resolved review fix reference {:?} is missing numeric identifier",
+            reference.kind
+        )
+    })
 }
 
 fn review_history_actioned_integrity_assessment(
@@ -4050,7 +4075,7 @@ fn review_history_actioned_integrity_assessment(
             let references = actioned_fix_references_for_category(repo_root, entry, category)?;
             if references.references.is_empty() {
                 let mut detail = format!(
-                    "review_agent.history[cycle={}] marks {} as actioned, but no fix issue/PR reference was found",
+                    "review_agent.history[cycle={}] marks {} as actioned, but no fix issue/PR/commit reference was found",
                     entry.cycle, category
                 );
                 if let Some(source) = references.source {
@@ -5033,6 +5058,20 @@ fn is_note_finding_boundary(segment: &str, index: usize) -> bool {
 fn extract_review_fix_references(text: &str) -> Vec<ReviewFixReference> {
     let mut references = BTreeSet::new();
 
+    for captures in COMMIT_REFERENCE_REGEX.captures_iter(text) {
+        let Some(commit_sha) = captures
+            .get(1)
+            .map(|capture| capture.as_str().to_ascii_lowercase())
+        else {
+            continue;
+        };
+        references.insert(ReviewFixReference {
+            kind: ReviewFixReferenceKind::Commit,
+            number: None,
+            commit_sha: Some(commit_sha),
+        });
+    }
+
     collect_labeled_review_fix_references(
         text,
         &PULL_REQUEST_LABEL_REGEX,
@@ -5067,11 +5106,12 @@ fn extract_review_fix_references(text: &str) -> Vec<ReviewFixReference> {
         };
         if references
             .iter()
-            .all(|reference: &ReviewFixReference| reference.number != number)
+            .all(|reference: &ReviewFixReference| reference.number != Some(number))
         {
             references.insert(ReviewFixReference {
                 kind: ReviewFixReferenceKind::Unknown,
-                number,
+                number: Some(number),
+                commit_sha: None,
             });
         }
     }
@@ -5106,7 +5146,11 @@ fn collect_url_review_fix_references(
         else {
             continue;
         };
-        references.insert(ReviewFixReference { kind, number });
+        references.insert(ReviewFixReference {
+            kind,
+            number: Some(number),
+            commit_sha: None,
+        });
     }
 }
 
@@ -5122,7 +5166,11 @@ fn collect_hash_review_fix_references(
         else {
             continue;
         };
-        references.insert(ReviewFixReference { kind, number });
+        references.insert(ReviewFixReference {
+            kind,
+            number: Some(number),
+            commit_sha: None,
+        });
     }
 }
 
@@ -5170,25 +5218,33 @@ fn resolve_review_fix_reference(
     runner: &dyn CommandRunner,
     reference: ReviewFixReference,
 ) -> Result<ResolvedReviewFixReference, String> {
-    if let Some(resolved) = resolve_review_fix_reference_from_state(state, reference)? {
+    if let Some(resolved) = resolve_review_fix_reference_from_state(state, &reference)? {
         return Ok(resolved);
     }
 
     match reference.kind {
+        ReviewFixReferenceKind::Commit => Ok(ResolvedReviewFixReference {
+            kind: ReviewFixReferenceKind::Commit,
+            number: None,
+            current_state: "present".to_string(),
+            merged_at: None,
+        }),
         ReviewFixReferenceKind::PullRequest => {
-            let state = runner.fetch_pull_request_state(reference.number)?;
+            let number = review_fix_reference_number(&reference)?;
+            let state = runner.fetch_pull_request_state(number)?;
             Ok(ResolvedReviewFixReference {
                 kind: ReviewFixReferenceKind::PullRequest,
-                number: reference.number,
+                number: Some(number),
                 current_state: state,
                 merged_at: None,
             })
         }
         ReviewFixReferenceKind::Issue | ReviewFixReferenceKind::Unknown => {
-            let state = runner.fetch_issue_state(reference.number)?;
+            let number = review_fix_reference_number(&reference)?;
+            let state = runner.fetch_issue_state(number)?;
             Ok(ResolvedReviewFixReference {
                 kind: ReviewFixReferenceKind::Issue,
-                number: reference.number,
+                number: Some(number),
                 current_state: state,
                 merged_at: None,
             })
@@ -5198,28 +5254,28 @@ fn resolve_review_fix_reference(
 
 fn resolve_review_fix_reference_from_state(
     state: &StateJson,
-    reference: ReviewFixReference,
+    reference: &ReviewFixReference,
 ) -> Result<Option<ResolvedReviewFixReference>, String> {
     let selected = match reference.kind {
         ReviewFixReferenceKind::Issue => state.agent_sessions.iter().find_map(|session| {
-            (session.issue.and_then(|issue| u64::try_from(issue).ok()) == Some(reference.number))
+            (session.issue.and_then(|issue| u64::try_from(issue).ok()) == reference.number)
                 .then_some((ReviewFixReferenceKind::Issue, session))
         }),
         ReviewFixReferenceKind::PullRequest => state.agent_sessions.iter().find_map(|session| {
-            (session.pr.and_then(|pr| u64::try_from(pr).ok()) == Some(reference.number))
+            (session.pr.and_then(|pr| u64::try_from(pr).ok()) == reference.number)
                 .then_some((ReviewFixReferenceKind::PullRequest, session))
         }),
+        ReviewFixReferenceKind::Commit => None,
         ReviewFixReferenceKind::Unknown => state
             .agent_sessions
             .iter()
             .find_map(|session| {
-                (session.issue.and_then(|issue| u64::try_from(issue).ok())
-                    == Some(reference.number))
-                .then_some((ReviewFixReferenceKind::Issue, session))
+                (session.issue.and_then(|issue| u64::try_from(issue).ok()) == reference.number)
+                    .then_some((ReviewFixReferenceKind::Issue, session))
             })
             .or_else(|| {
                 state.agent_sessions.iter().find_map(|session| {
-                    (session.pr.and_then(|pr| u64::try_from(pr).ok()) == Some(reference.number))
+                    (session.pr.and_then(|pr| u64::try_from(pr).ok()) == reference.number)
                         .then_some((ReviewFixReferenceKind::PullRequest, session))
                 })
             }),
@@ -5251,9 +5307,14 @@ fn review_history_actioned_failure_detail(
     resolved: &ResolvedReviewFixReference,
     historical_cutoff: Option<&DateTime<Utc>>,
 ) -> Result<Option<String>, String> {
+    if resolved.kind == ReviewFixReferenceKind::Commit {
+        return Ok(None);
+    }
+
     let kind_label = match resolved.kind {
         ReviewFixReferenceKind::PullRequest => "PR",
         ReviewFixReferenceKind::Issue | ReviewFixReferenceKind::Unknown => "issue",
+        ReviewFixReferenceKind::Commit => "commit",
     };
     let current_state = resolved.current_state.to_ascii_lowercase();
     let current_unmerged_pr = resolved.kind == ReviewFixReferenceKind::PullRequest
@@ -5261,9 +5322,10 @@ fn review_history_actioned_failure_detail(
         && current_state != "closed";
 
     if current_state == "in_flight" || current_state == "open" || current_unmerged_pr {
+        let number = resolved_review_fix_reference_number(resolved)?;
         return Ok(Some(format!(
             "review_agent.history[cycle={}] marks {} as actioned, but cited fix {} #{} is still {}",
-            cycle, category, kind_label, resolved.number, resolved.current_state
+            cycle, category, kind_label, number, resolved.current_state
         )));
     }
 
@@ -5271,20 +5333,22 @@ fn review_history_actioned_failure_detail(
         && current_state == "closed"
         && resolved.merged_at.is_none()
     {
+        let number = resolved_review_fix_reference_number(resolved)?;
         return Ok(Some(format!(
             "review_agent.history[cycle={}] marks {} as actioned, but cited fix PR #{} is closed without merge",
-            cycle, category, resolved.number
+            cycle, category, number
         )));
     }
 
     if let (Some(cutoff), Some(merged_at)) = (historical_cutoff, resolved.merged_at.as_ref()) {
         if merged_at > cutoff {
+            let number = resolved_review_fix_reference_number(resolved)?;
             return Ok(Some(format!(
                 "review_agent.history[cycle={}] marks {} as actioned, but cited fix {} #{} only became terminal at {} after cycle {} close (current state: {})",
                 cycle,
                 category,
                 kind_label,
-                resolved.number,
+                number,
                 merged_at.to_rfc3339(),
                 cycle,
                 resolved.current_state
@@ -9672,6 +9736,63 @@ mod tests {
     }
 
     #[test]
+    fn review_history_actioned_integrity_passes_when_cited_commit_hash_is_present() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-review-history-actioned-commit-pass-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "review_agent": {
+                    "history": [{
+                        "cycle": 300,
+                        "categories": ["receipt-integrity"],
+                        "actioned": 1,
+                        "deferred": 0,
+                        "ignored": 0,
+                        "finding_count": 1,
+                        "complacency_score": 2,
+                        "note": "F1 (receipt-integrity, chronic) actioned via COMPLETION_CHECKLIST.xml receipt-table-machine-scope constraint (commit b4b6e57).",
+                        "finding_dispositions": [{
+                            "category": "receipt-integrity",
+                            "disposition": "actioned"
+                        }]
+                    }]
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                unreachable!("pipeline tool wrappers should not run in this test");
+            }
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                unreachable!("issue comment lookup should not run in this test");
+            }
+        }
+
+        let step = verify_review_history_actioned_integrity(&root, Some(300), &Runner);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("verified 1 actioned review-history fix reference"));
+    }
+
+    #[test]
     fn review_history_actioned_integrity_fails_when_cited_issue_is_in_flight() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -9787,7 +9908,7 @@ mod tests {
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("no fix issue/PR reference was found"));
+            .contains("no fix issue/PR/commit reference was found"));
     }
 
     #[test]
@@ -10140,7 +10261,7 @@ mod tests {
 
         assert_eq!(step.status, StepStatus::Warn);
         let detail = step.detail.as_deref().unwrap_or_default();
-        assert!(detail.contains("no fix issue/PR reference was found"));
+        assert!(detail.contains("no fix issue/PR/commit reference was found"));
         assert!(!detail.contains("#2410"));
     }
 
@@ -10386,6 +10507,8 @@ mod tests {
         assert_eq!(step.status, StepStatus::Warn);
         let detail = step.detail.as_deref().unwrap_or_default();
         assert!(detail.contains("skipped"));
+        assert!(!detail.contains("review_agent.history[cycle=475] marks receipt-integrity as actioned"));
+        assert!(!detail.contains("review_agent.history[cycle=476] marks worklog-accuracy as actioned"));
     }
 
     #[test]
