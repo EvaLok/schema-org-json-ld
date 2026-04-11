@@ -14983,18 +14983,17 @@
   "tool_pipeline": {
     "blocks_publish": false,
     "c5_5_gate": {
-      "cycle": 473,
-      "needs_reverify": false,
-      "pipeline_summary": "PASS (1 blocking warning, 4 warnings)",
-      "status": "PASS"
+      "cycle": 474,
+      "needs_reverify": true,
+      "status": "FAIL"
     },
     "c5_5_initial_result": {
-      "cycle": 469,
-      "exit_code": 2,
+      "cycle": 474,
+      "exit_code": 1,
       "has_blocking_findings": true,
       "overall": "fail",
       "result": "FAIL",
-      "summary": "FAIL (1 blocking warning, 4 warnings, 1 blocking: frozen-commit-verify)"
+      "summary": "FAIL (1 blocking warning, 3 warnings, 1 blocking: step-comments)"
     },
     "eva_directive": 436,
     "phases": [
