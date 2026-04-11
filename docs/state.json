@@ -8039,7 +8039,8 @@
       "category": "journal-quality",
       "deadline_cycle": 475,
       "deferred_cycle": 470,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "Eva decision #2293: journal becomes append-only via draft-then-promote; review agent becomes sole commitment grader. Dispatch 1 orchestrator infrastructure pending capacity."
     },
     {
       "category": "state-integrity",
