@@ -1370,12 +1370,13 @@ fn resolve_review_issue_for_summary(
 
 fn derive_previous_cycle_review_issue(state: &StateJson, cycle: u64) -> Option<u64> {
     let review_cycle = cycle.checked_sub(1)?;
-    let expected_title = format!("[Cycle Review] Cycle {} end-of-cycle review", review_cycle);
+    let expected_review_session_title =
+        format!("[Cycle Review] Cycle {} end-of-cycle review", review_cycle);
     for session in state.agent_sessions.iter().rev() {
         let Some(title) = session.title.as_deref() else {
             continue;
         };
-        if title != expected_title {
+        if title != expected_review_session_title {
             continue;
         }
         return session.issue.and_then(|issue| u64::try_from(issue).ok());
@@ -1389,7 +1390,7 @@ fn derive_previous_cycle_review_issue(state: &StateJson, cycle: u64) -> Option<u
             .and_then(|metrics| metrics.dispatch_log_latest.as_deref()),
     ];
     for reference in dispatch_reference_sources.into_iter().flatten() {
-        if !reference.contains(&expected_title) {
+        if !reference.contains(&expected_review_session_title) {
             continue;
         }
         if let Some(issue) = extract_issue_number_from_reference(reference) {
@@ -1404,6 +1405,7 @@ fn extract_issue_number_from_reference(value: &str) -> Option<u64> {
     let digits: String = value
         .trim()
         .strip_prefix('#')?
+        .trim_start()
         .chars()
         .take_while(|character| character.is_ascii_digit())
         .collect();
