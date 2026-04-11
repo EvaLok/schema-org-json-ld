@@ -153,6 +153,8 @@ fn auto_review_summary_works_with_real_state_shape_after_process_review_persists
             "worklog",
             "--title",
             "real state review summary",
+            "--cycle",
+            "474",
             "--auto-review-summary",
             "--dry-run",
             "--pipeline",
