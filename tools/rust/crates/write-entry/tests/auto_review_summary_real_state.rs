@@ -85,7 +85,7 @@ fn init_git_repo(repo_root: &Path) {
 }
 
 #[test]
-fn auto_review_summary_works_with_real_state_shape_after_process_review_persists_issue() {
+fn auto_review_summary_works_with_real_state_shape_after_process_review_persists_review_issue() {
     let source_repo = repo_root_from_manifest();
     let repo_root = TempDir::new("write-entry-real-state-auto-review-summary");
 
@@ -94,8 +94,8 @@ fn auto_review_summary_works_with_real_state_shape_after_process_review_persists
         &repo_root.path.join("docs/state.json"),
     );
     copy_file(
-        &source_repo.join("docs/reviews/cycle-472.md"),
-        &repo_root.path.join("docs/reviews/cycle-472.md"),
+        &source_repo.join("docs/reviews/cycle-473.md"),
+        &repo_root.path.join("docs/reviews/cycle-473.md"),
     );
     init_git_repo(&repo_root.path);
 
@@ -111,9 +111,9 @@ fn auto_review_summary_works_with_real_state_shape_after_process_review_persists
             "--repo-root",
             repo_root.path.to_str().unwrap(),
             "--review-file",
-            "docs/reviews/cycle-472.md",
+            "docs/reviews/cycle-473.md",
             "--review-issue",
-            "2388",
+            "2393",
             "--actioned",
             "1",
             "--deferred",
@@ -121,7 +121,7 @@ fn auto_review_summary_works_with_real_state_shape_after_process_review_persists
             "--dispatch-created",
             "1",
             "--disposition",
-            "worklog-accuracy:dispatch_created",
+            "code-change-quality:dispatch_created",
             "--disposition",
             "journal-quality:deferred",
             "--disposition",
@@ -138,13 +138,13 @@ fn auto_review_summary_works_with_real_state_shape_after_process_review_persists
     let updated_state: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(repo_root.path.join("docs/state.json")).unwrap())
             .unwrap();
-    let cycle_472_entry = updated_state["review_agent"]["history"]
+    let cycle_473_entry = updated_state["review_agent"]["history"]
         .as_array()
         .unwrap()
         .iter()
-        .find(|entry| entry["cycle"].as_u64() == Some(472))
-        .expect("cycle 472 history entry should exist");
-    assert_eq!(cycle_472_entry["issue"].as_u64(), Some(2388));
+        .find(|entry| entry["cycle"].as_u64() == Some(473))
+        .expect("cycle 473 history entry should exist");
+    assert_eq!(cycle_473_entry["review_issue"].as_u64(), Some(2393));
 
     let write_entry = Command::new(binary_path("write-entry"))
         .args([
@@ -169,7 +169,7 @@ fn auto_review_summary_works_with_real_state_shape_after_process_review_persists
     );
 
     let stdout = String::from_utf8(write_entry.stdout).unwrap();
-    assert!(stdout.contains("Processed cycle 472 review (3 findings, complacency 3/5,"));
+    assert!(stdout.contains("Processed cycle 473 review (3 findings, complacency 3/5,"));
     assert!(stdout.contains("1 dispatch_created"));
     assert!(stdout.contains("1 deferred"));
     assert!(stdout.contains("1 actioned"));

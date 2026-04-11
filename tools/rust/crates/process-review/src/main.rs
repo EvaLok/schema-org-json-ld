@@ -12,7 +12,6 @@ use std::path::{Path, PathBuf};
 const MAX_CATEGORY_LENGTH: usize = 40;
 const DEFERRAL_DEADLINE_CYCLES: u64 = 5;
 const DROPPED_DEFERRAL_RESOLVED_REF_MAX_CHARS: usize = 100;
-const REVIEW_ISSUE_LINE_SCAN_LIMIT: usize = 20;
 const VALID_FINDING_DISPOSITIONS: &[&str] = &[
     "actioned",
     "deferred",
@@ -43,7 +42,7 @@ struct Cli {
     #[arg(long)]
     review_file: Option<PathBuf>,
 
-    /// Review issue number for the review file being processed
+    /// Review dispatch issue number for the review file being processed
     #[arg(long)]
     review_issue: Option<u64>,
 
@@ -118,7 +117,7 @@ struct ReviewHistoryEntry {
     finding_count: u64,
     complacency_score: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    issue: Option<u64>,
+    review_issue: Option<u64>,
     categories: Vec<String>,
     actioned: u64,
     deferred: u64,
@@ -184,13 +183,6 @@ fn run(cli: Cli) -> Result<(), String> {
     }
 
     let mut state_value = read_state_value(&cli.repo_root)?;
-    let state: StateJson = serde_json::from_value(state_value.clone()).map_err(|error| {
-        format!(
-            "failed to parse {}: {}",
-            cli.repo_root.join("docs/state.json").display(),
-            error
-        )
-    })?;
     let current_cycle = current_cycle_from_state(&cli.repo_root).map_err(|error| {
         if error == "missing /cycle_phase/cycle or /last_cycle/number in state.json" {
             "missing numeric /cycle_phase/cycle or /last_cycle/number in docs/state.json"
@@ -208,13 +200,12 @@ fn run(cli: Cli) -> Result<(), String> {
 
         let parsed_review = parse_review(&review_path, &review_content, cli.lenient)?;
         let finding_dispositions = validate_dispositions(&cli, &parsed_review)?;
-        let review_issue = resolve_review_issue_number(
-            &cli,
-            &state,
-            parsed_review.cycle,
-            current_cycle,
-            &review_content,
-        )?;
+        let review_issue = cli.review_issue.ok_or_else(|| {
+            format!(
+                "--review-issue is required when processing review file {}",
+                review_path.display()
+            )
+        })?;
         for warning in validate_categories(&cli.repo_root, &parsed_review.categories)? {
             eprintln!("{}", warning);
         }
@@ -932,7 +923,7 @@ fn build_history_entry(
         cycle: parsed_review.cycle,
         finding_count: parsed_review.finding_count,
         complacency_score: parsed_review.complacency_score,
-        issue: Some(review_issue),
+        review_issue: Some(review_issue),
         categories: parsed_review.categories.clone(),
         actioned: cli.actioned,
         deferred: cli.deferred,
@@ -943,104 +934,6 @@ fn build_history_entry(
         note: cli.note.clone(),
         finding_dispositions,
     }
-}
-
-fn resolve_review_issue_number(
-    cli: &Cli,
-    state: &StateJson,
-    review_cycle: u64,
-    current_cycle: u64,
-    review_content: &str,
-) -> Result<u64, String> {
-    cli.review_issue
-        .or_else(|| extract_review_issue_from_review_content(review_content))
-        .or_else(|| derive_review_issue_from_state(state, review_cycle, current_cycle))
-        .ok_or_else(|| {
-            format!(
-                "unable to determine review issue for cycle {}; pass --review-issue <number>",
-                review_cycle
-            )
-        })
-}
-
-fn extract_review_issue_from_review_content(review_content: &str) -> Option<u64> {
-    for line in review_content.lines().take(REVIEW_ISSUE_LINE_SCAN_LIMIT) {
-        let trimmed = line.trim();
-        for prefix in ["Review issue:", "Review agent issue:", "Issue:"] {
-            let Some(remainder) = trimmed.strip_prefix(prefix) else {
-                continue;
-            };
-            let remainder = remainder.trim();
-            if let Some(issue) = extract_issue_number_from_reference(remainder) {
-                return Some(issue);
-            }
-            if let Some(issue) = extract_issue_number_from_issue_url(remainder) {
-                return Some(issue);
-            }
-        }
-    }
-
-    None
-}
-
-fn derive_review_issue_from_state(
-    state: &StateJson,
-    review_cycle: u64,
-    current_cycle: u64,
-) -> Option<u64> {
-    let dispatch_reference_sources = [
-        state.dispatch_log_latest.as_deref(),
-        state
-            .copilot_metrics
-            .as_ref()
-            .and_then(|metrics| metrics.dispatch_log_latest.as_deref()),
-    ];
-    for reference in dispatch_reference_sources.into_iter().flatten() {
-        if !reference.contains("[Cycle Review]")
-            || !reference.contains(&format!("(cycle {})", review_cycle))
-        {
-            continue;
-        }
-        if let Some(issue) = extract_issue_number_from_reference(reference) {
-            return Some(issue);
-        }
-    }
-
-    if review_cycle + 1 == current_cycle {
-        return state
-            .extra
-            .get("previous_cycle_issue")
-            .and_then(Value::as_u64);
-    }
-
-    None
-}
-
-fn extract_issue_number_from_reference(value: &str) -> Option<u64> {
-    let digits: String = value
-        .trim()
-        .strip_prefix('#')?
-        .trim_start()
-        .chars()
-        .take_while(|character| character.is_ascii_digit())
-        .collect();
-    if digits.is_empty() {
-        return None;
-    }
-    digits.parse().ok()
-}
-
-fn extract_issue_number_from_issue_url(value: &str) -> Option<u64> {
-    let digits: String = value
-        .split("/issues/")
-        .nth(1)?
-        .chars()
-        .take_while(|character| character.is_ascii_digit())
-        .collect();
-    if digits.is_empty() {
-        return None;
-    }
-    digits.parse().ok()
 }
 
 fn build_state_patch(
@@ -1531,6 +1424,8 @@ mod tests {
             "process-review",
             "--review-file",
             "docs/reviews/cycle-162.md",
+            "--review-issue",
+            "2388",
             "--lenient",
         ])
         .is_ok());
@@ -1611,52 +1506,55 @@ mod tests {
     }
 
     #[test]
-    fn extract_review_issue_from_review_content_reads_explicit_issue_line() {
-        let review = r#"# Cycle 500 Review
-
-Review issue: #2393
+    fn run_rejects_review_processing_without_review_issue() {
+        let repo_root = write_temp_state_repo(json!({
+            "last_cycle": {"number": 500},
+            "cycle_phase": {"cycle": 500},
+            "review_agent": {
+                "last_review_cycle": 499,
+                "history": []
+            },
+            "field_inventory": {
+                "fields": {
+                    "review_agent": {"last_refreshed": "cycle 499"}
+                }
+            }
+        }));
+        init_temp_git_repo(&repo_root);
+        let review_dir = repo_root.join("docs/reviews");
+        fs::create_dir_all(&review_dir).expect("review directory should exist");
+        fs::write(
+            review_dir.join("cycle-500.md"),
+            r#"# Cycle 500 Review
 
 ## Findings
 
-1. **[review-accounting] Finding**
+1. **[review-accounting] Review accounting finding**
 
 ## Complacency score
 
 2/5
-"#;
+"#,
+        )
+        .expect("review file should be written");
 
-        assert_eq!(extract_review_issue_from_review_content(review), Some(2393));
-    }
+        let cli = Cli::parse_from([
+            "process-review",
+            "--repo-root",
+            repo_root.to_str().expect("repo path should be valid UTF-8"),
+            "--review-file",
+            "docs/reviews/cycle-500.md",
+            "--actioned",
+            "1",
+        ]);
 
-    #[test]
-    fn extract_issue_number_from_reference_allows_whitespace_after_hash() {
-        assert_eq!(extract_issue_number_from_reference("# 2388"), Some(2388));
-    }
-
-    #[test]
-    fn derive_review_issue_from_state_uses_previous_cycle_issue_for_prior_cycle_reviews() {
-        let state: StateJson = serde_json::from_value(json!({
-            "last_cycle": {"number": 473},
-            "cycle_phase": {"cycle": 473},
-            "previous_cycle_issue": 2388,
-            "review_agent": {"history": []}
-        }))
-        .expect("state should deserialize");
-
-        assert_eq!(derive_review_issue_from_state(&state, 472, 473), Some(2388));
-    }
-
-    #[test]
-    fn derive_review_issue_from_state_uses_matching_cycle_review_dispatch_reference() {
-        let state: StateJson = serde_json::from_value(json!({
-            "last_cycle": {"number": 474},
-            "cycle_phase": {"cycle": 474},
-            "dispatch_log_latest": "#2393 [Cycle Review] Cycle 473 end-of-cycle review (cycle 473)",
-            "review_agent": {"history": []}
-        }))
-        .expect("state should deserialize");
-
-        assert_eq!(derive_review_issue_from_state(&state, 473, 474), Some(2393));
+        assert_eq!(
+            run(cli),
+            Err(format!(
+                "--review-issue is required when processing review file {}",
+                review_dir.join("cycle-500.md").display()
+            ))
+        );
     }
 
     #[test]
@@ -1999,7 +1897,7 @@ Review issue: #2393
         assert_eq!(entry.cycle, 162);
         assert_eq!(entry.finding_count, 8);
         assert_eq!(entry.complacency_score, 2);
-        assert_eq!(entry.issue, Some(2388));
+        assert_eq!(entry.review_issue, Some(2388));
         assert_eq!(entry.actioned, 1);
         assert_eq!(entry.deferred, 1);
         assert_eq!(entry.dispatch_created, 2);
@@ -2052,7 +1950,7 @@ Review issue: #2393
             cycle: 163,
             finding_count: 3,
             complacency_score: 1,
-            issue: None,
+            review_issue: None,
             categories: vec!["state-consistency".to_string()],
             actioned: 1,
             deferred: 1,
@@ -2080,7 +1978,7 @@ Review issue: #2393
             cycle: 163,
             finding_count: 3,
             complacency_score: 1,
-            issue: Some(2393),
+            review_issue: Some(2393),
             categories: vec!["state-consistency".to_string()],
             actioned: 1,
             deferred: 0,
@@ -2102,7 +2000,7 @@ Review issue: #2393
         assert_eq!(object.get("dispatch_created"), Some(&json!(1)));
         assert_eq!(object.get("actioned_failed"), Some(&json!(1)));
         assert_eq!(object.get("verified_resolved"), Some(&json!(1)));
-        assert_eq!(object.get("issue"), Some(&json!(2393)));
+        assert_eq!(object.get("review_issue"), Some(&json!(2393)));
         assert_eq!(
             object.get("finding_dispositions"),
             Some(&json!([{
@@ -2535,7 +2433,7 @@ Review issue: #2393
             cycle: 163,
             finding_count: 3,
             complacency_score: 1,
-            issue: None,
+            review_issue: None,
             categories: vec!["state-consistency".to_string()],
             actioned: 1,
             deferred: 1,
@@ -2591,7 +2489,7 @@ Review issue: #2393
             cycle: 163,
             finding_count: 3,
             complacency_score: 2,
-            issue: None,
+            review_issue: None,
             categories: vec!["state-consistency".to_string()],
             actioned: 0,
             deferred: 1,
@@ -2657,7 +2555,7 @@ Review issue: #2393
             cycle: 200,
             finding_count: 1,
             complacency_score: 1,
-            issue: None,
+            review_issue: None,
             categories: vec!["x".to_string()],
             actioned: 0,
             deferred: 1,
@@ -2708,7 +2606,7 @@ Review issue: #2393
             cycle: 163,
             finding_count: 2,
             complacency_score: 2,
-            issue: None,
+            review_issue: None,
             categories: vec![
                 "review-accounting".to_string(),
                 "tooling-contract".to_string(),
@@ -2784,7 +2682,7 @@ Review issue: #2393
             cycle: 164,
             finding_count: 1,
             complacency_score: 2,
-            issue: None,
+            review_issue: None,
             categories: vec!["tooling-contract".to_string()],
             actioned: 0,
             deferred: 0,
@@ -2841,7 +2739,7 @@ Review issue: #2393
             cycle: 163,
             finding_count: 1,
             complacency_score: 2,
-            issue: None,
+            review_issue: None,
             categories: vec!["review-accounting".to_string()],
             actioned: 0,
             deferred: 1,
@@ -3382,7 +3280,7 @@ Review issue: #2393
             Some(&json!(500))
         );
         assert_eq!(
-            updated_state.pointer("/review_agent/history/0/issue"),
+            updated_state.pointer("/review_agent/history/0/review_issue"),
             Some(&json!(900))
         );
     }
