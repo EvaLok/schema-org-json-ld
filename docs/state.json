@@ -7222,15 +7222,19 @@
     {
       "dispatched_at": "2026-04-10T21:29:30Z",
       "issue": 2389,
+      "merged_at": "2026-04-10T23:28:26Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2390,
+      "status": "merged",
       "title": "Set resolved:true when dropping deferred findings in process-review"
     },
     {
       "dispatched_at": "2026-04-10T21:30:53Z",
       "issue": 2391,
+      "merged_at": "2026-04-10T23:28:26Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2392,
+      "status": "merged",
       "title": "Add blocking pipeline invariant for verify-review-events execution"
     },
     {
@@ -8309,12 +8313,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 1,
     "issue": 2401,
     "number": 474,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 3 merges",
     "timestamp": "2026-04-10T23:12:14Z"
   },
   "last_eva_comment_check": "2026-04-10T23:12:14Z",
