@@ -5061,7 +5061,7 @@ fn extract_review_fix_references(text: &str) -> Vec<ReviewFixReference> {
     for captures in COMMIT_REFERENCE_REGEX.captures_iter(text) {
         let Some(commit_sha) = captures
             .get(1)
-            .map(|capture| capture.as_str().to_ascii_lowercase())
+            .map(|capture| capture.as_str().to_lowercase())
         else {
             continue;
         };
@@ -5308,6 +5308,9 @@ fn review_history_actioned_failure_detail(
     historical_cutoff: Option<&DateTime<Utc>>,
 ) -> Result<Option<String>, String> {
     if resolved.kind == ReviewFixReferenceKind::Commit {
+        // Checklist-constraint actioning cites the fixing commit directly in the
+        // review-history note. Treat that citation as sufficient evidence for
+        // this invariant instead of attempting a separate historical-state check.
         return Ok(None);
     }
 
