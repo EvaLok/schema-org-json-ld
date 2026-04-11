@@ -74,6 +74,20 @@
       later actioned or dispatched), the journal must report the final counts.
       Verify against state.json review_agent.history before writing.
       Recurrence escalation: journal-quality in cycle 430.</constraint>
+    <constraint id="receipt-table-machine-scope" severity="mandatory">
+      The commit receipts table in the worklog MUST be strictly machine-scoped
+      to cycle-receipts output. Never append manual "direct-edit" rows or
+      post-cycle-complete commits to the auto-generated table. If a post-cycle
+      corrective commit needs to be documented (e.g., in_flight_sessions
+      reconcile, state counter sync), record it in a separate narrative section
+      BELOW the table (e.g., "Post-cycle-complete corrections") so the table's
+      stated cutoff time remains honest. Mixing manual entries into the
+      auto-generated table corrupts receipt-integrity: a reader cannot trust
+      the --through timestamp if rows landed after it.
+      Recurrence escalation: receipt-integrity (chronic) — cycle 475 F1
+      re-flagged the same pattern one cycle after cycle 474 cited receipt
+      drift. Structural tool fix (cycle-receipts/receipt-validate warning on
+      mixed-source rows) remains queued.</constraint>
   </step>
 
   <step id="C4.1" title="Validate documentation (BLOCKING GATE)"
