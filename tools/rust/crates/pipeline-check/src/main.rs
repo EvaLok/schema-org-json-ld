@@ -2884,10 +2884,10 @@ fn review_events_verified_status(repo_root: &Path) -> Result<(StepStatus, String
         .and_then(Value::as_u64)
         .ok_or_else(|| "missing numeric field: /last_cycle/number".to_string())?;
     let verified_through_cycle = state
-        .pointer("/review_agent/review_events_verified_through_cycle")
+        .pointer("/review_events_verified_through_cycle")
         .and_then(Value::as_u64)
         .ok_or_else(|| {
-            "missing numeric field: /review_agent/review_events_verified_through_cycle".to_string()
+            "missing numeric field: /review_events_verified_through_cycle".to_string()
         })?;
 
     if verified_through_cycle == current_cycle {
@@ -5848,9 +5848,9 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": 135,
-                    "review_events_verified_through_cycle": 135
-                }
+                    "last_review_cycle": 135
+                },
+                "review_events_verified_through_cycle": 135
             })
             .to_string(),
         )
@@ -6448,9 +6448,9 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": 257,
-                    "review_events_verified_through_cycle": 257
-                }
+                    "last_review_cycle": 257
+                },
+                "review_events_verified_through_cycle": 257
             })
             .to_string(),
         )
@@ -6599,9 +6599,9 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": 257,
-                    "review_events_verified_through_cycle": 257
-                }
+                    "last_review_cycle": 257
+                },
+                "review_events_verified_through_cycle": 257
             })
             .to_string(),
         )
@@ -6752,9 +6752,9 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": CURRENT_CYCLE,
-                    "review_events_verified_through_cycle": CURRENT_CYCLE
-                }
+                    "last_review_cycle": CURRENT_CYCLE
+                },
+                "review_events_verified_through_cycle": CURRENT_CYCLE
             })
             .to_string(),
         )
@@ -6902,9 +6902,9 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": 257,
-                    "review_events_verified_through_cycle": 257
-                }
+                    "last_review_cycle": 257
+                },
+                "review_events_verified_through_cycle": 257
             })
             .to_string(),
         )
@@ -7045,9 +7045,9 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": 257,
-                    "review_events_verified_through_cycle": 257
-                }
+                    "last_review_cycle": 257
+                },
+                "review_events_verified_through_cycle": 257
             })
             .to_string(),
         )
@@ -7176,9 +7176,9 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": 257,
-                    "review_events_verified_through_cycle": 257
-                }
+                    "last_review_cycle": 257
+                },
+                "review_events_verified_through_cycle": 257
             })
             .to_string(),
         )
@@ -7314,9 +7314,9 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": 257,
-                    "review_events_verified_through_cycle": 257
-                }
+                    "last_review_cycle": 257
+                },
+                "review_events_verified_through_cycle": 257
             })
             .to_string(),
         )
@@ -8461,7 +8461,7 @@ mod tests {
             json!({
                 "last_cycle": {"number": 410},
                 "cycle_phase": {"phase": "close_out"},
-                "review_agent": {"review_events_verified_through_cycle": 410}
+                "review_events_verified_through_cycle": 410
             })
             .to_string(),
         )
@@ -8490,7 +8490,7 @@ mod tests {
             json!({
                 "last_cycle": {"number": 410},
                 "cycle_phase": {"phase": "close_out"},
-                "review_agent": {"review_events_verified_through_cycle": 409}
+                "review_events_verified_through_cycle": 409
             })
             .to_string(),
         )
@@ -8519,7 +8519,7 @@ mod tests {
             json!({
                 "last_cycle": {"number": 410},
                 "cycle_phase": {"phase": "work"},
-                "review_agent": {"review_events_verified_through_cycle": 409}
+                "review_events_verified_through_cycle": 409
             })
             .to_string(),
         )
