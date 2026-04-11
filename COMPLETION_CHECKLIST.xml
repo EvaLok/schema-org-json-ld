@@ -68,6 +68,30 @@
       defer a commitment whose condition is already checkable. Do not reference
       pipeline phases or tool outputs that do not yet exist.
       Recurrence escalation: journal-quality in cycles 420-421.</constraint>
+    <constraint id="commitment-carryover-ban" severity="mandatory">
+      When writing the "Concrete commitments for next cycle" section, any
+      commitment that has appeared on the list for 2+ prior cycles WITHOUT
+      action (tracked via previous-commitment follow-through section) MUST
+      be handled in one of two ways:
+        (a) ACTIONED or dispatched this cycle. Drop from the commitments
+            list and cite the action/dispatch in "What was done".
+        (b) DEMOTED out of the commitments list into a separate "Backlog
+            (capacity-blocked)" section that follows the commitments
+            section. Each demoted item must carry a one-line rationale
+            explaining why it cannot be actioned (e.g., "dispatch-required,
+            all slots full"). Once demoted, an item must NOT be re-promoted
+            to commitments without new action on it.
+      The journal MUST NOT contain a "commitments for next cycle" list that
+      names an item while the same journal's prose acknowledges the
+      recurrence-escalation rule requires action-or-drop. That is a
+      self-aware rule violation and will be flagged by the review agent.
+      Recurrence escalation: journal-quality (chronic) — cycle 476 F3
+      caught the cycle 476 journal doing exactly this: it quoted the
+      STARTUP_CHECKLIST.xml recurrence rule ("must action this cycle or
+      drop with rationale") and then said "I am choosing to carry rather
+      than drop" for commitments 4-7. This constraint makes the rule
+      procedurally enforceable in the checklist, not just a norm cited
+      in prose and then overridden.</constraint>
     <constraint id="final-state-accuracy">Journal decision summaries MUST reflect
       the FINAL disposition state, not the initial S0.5 assessment. If review
       finding dispositions change during the cycle (e.g., a deferred finding is
