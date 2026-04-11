@@ -7249,8 +7249,10 @@
     {
       "dispatched_at": "2026-04-11T05:27:43Z",
       "issue": 2406,
+      "merged_at": "2026-04-11T07:54:10Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2407,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 474 end-of-cycle review"
     }
   ],
@@ -7512,8 +7514,8 @@
   ],
   "cycle_phase": {
     "cycle": 475,
-    "phase": "work",
-    "phase_entered_at": "2026-04-11T07:23:49Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-04-11T07:54:10Z"
   },
   "cycles_since_last_forward_work": {
     "added_in_cycle": 411,
@@ -8167,7 +8169,7 @@
       },
       "dispatch_log_latest": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 474"
+        "last_refreshed": "cycle 475"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
@@ -8179,7 +8181,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 474"
+        "last_refreshed": "cycle 475"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -8187,7 +8189,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 474"
+        "last_refreshed": "cycle 475"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -8207,7 +8209,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 474"
+        "last_refreshed": "cycle 475"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -8219,7 +8221,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 474"
+        "last_refreshed": "cycle 475"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -8243,7 +8245,7 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 474"
+        "last_refreshed": "cycle 475"
       },
       "review_events_verified_through_cycle": {
         "cadence": "managed by verify-review-events tool only",
@@ -8255,7 +8257,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 474"
+        "last_refreshed": "cycle 475"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -8329,13 +8331,13 @@
   },
   "in_flight_sessions": 1,
   "last_cycle": {
-    "duration_minutes": 274,
+    "duration_minutes": 30,
     "issue": 2409,
     "number": 475,
-    "summary": "Crash recovery cycle: resumed from #2395 to #2401 after mid-close-out crash; processed cycle 473 review (3 findings, 2 dispatched, 1 deferred); refreshed 5 chronic_category_responses entries; added new code-change-quality chronic via direct jq edit (tool gap #2402); deferred audit #402 to cycle 475; backfilled process-merge for #2390/#2392",
-    "timestamp": "2026-04-11T07:23:49Z"
+    "summary": "0 dispatches, 0 merges",
+    "timestamp": "2026-04-11T07:54:10Z"
   },
-  "last_eva_comment_check": "2026-04-11T07:23:49Z",
+  "last_eva_comment_check": "2026-04-11T07:54:10Z",
   "last_tool_audit_cycle": 403,
   "open_questions_for_eva": [
     2405,
