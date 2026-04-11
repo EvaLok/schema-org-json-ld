@@ -7502,7 +7502,8 @@
   },
   "cycle_issues": [
     2395,
-    2401
+    2401,
+    2404
   ],
   "cycle_phase": {
     "cycle": 474,
@@ -8317,7 +8318,7 @@
   "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 274,
-    "issue": 2401,
+    "issue": 2404,
     "number": 474,
     "summary": "Crash recovery cycle: resumed from #2395 to #2401 after mid-close-out crash; processed cycle 473 review (3 findings, 2 dispatched, 1 deferred); refreshed 5 chronic_category_responses entries; added new code-change-quality chronic via direct jq edit (tool gap #2402); deferred audit #402 to cycle 475; backfilled process-merge for #2390/#2392",
     "timestamp": "2026-04-11T03:45:51Z"
@@ -8362,7 +8363,7 @@
     "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
     "started_at": "cycle 199"
   },
-  "previous_cycle_issue": 2395,
+  "previous_cycle_issue": 2401,
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
     "burn_in_target": 6,
