@@ -26,12 +26,12 @@
 
 - None.
 
-## Pre-dispatch state
+## Cycle state
 
-*Snapshot before review dispatch — final counters may differ after C6.*
 
 - **In-flight agent sessions**: 0
-- **Pipeline status**: FAIL (4 warnings, 4 blocking: deferral-accumulation, doc-validation, review-events-verified, current-cycle-steps)
+- **Pipeline status**: FAIL→PASS (C5.5 initially failed: FAIL (1 blocking warning, 3 warnings, 1 blocking: deferral-accumulation); resolved by re-run)
+- **Close-out gate failures**: C5.5 FAIL: FAIL (1 blocking warning, 3 warnings, 1 blocking: deferral-accumulation)
 - **Publish gate**: published
 
 ## Next steps
