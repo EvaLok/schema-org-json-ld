@@ -1072,10 +1072,10 @@ fn apply_worklog_auto_derivations(
             "docs/state.json not found; --auto-review-summary requires docs/state.json to be present"
                 .to_string()
         })?;
-        let review_issue = resolve_review_issue_for_summary(args, state, cycle)?;
+        let review_summary_target = resolve_review_issue_for_summary(args, state, cycle)?;
         input
             .what_was_done
-            .insert(0, derive_review_summary_line(state, review_issue)?);
+            .insert(0, derive_review_summary_line(state, review_summary_target)?);
     }
 
     if args.auto_receipts {
@@ -1357,9 +1357,21 @@ fn resolve_review_issue_for_summary(
     args: &WorklogArgs,
     state: &StateJson,
     cycle: u64,
-) -> Result<u64, String> {
-    args.review_issue
-        .or_else(|| derive_previous_cycle_review_issue(state, cycle))
+) -> Result<ReviewSummaryTarget, String> {
+    let review_cycle = cycle.checked_sub(1).ok_or_else(|| {
+        format!(
+            "unable to derive previous review cycle for cycle {}; --auto-review-summary requires cycle >= 1",
+            cycle
+        )
+    })?;
+    let review_issue = args
+        .review_issue
+        .or_else(|| derive_previous_cycle_review_issue(state, review_cycle));
+    review_issue
+        .map(|review_issue| ReviewSummaryTarget {
+            review_cycle,
+            review_issue,
+        })
         .ok_or_else(|| {
             format!(
                 "unable to resolve review dispatch issue for cycle {}; pass --review-issue <number> or ensure docs/state.json records the prior [Cycle Review] agent session",
@@ -1368,8 +1380,13 @@ fn resolve_review_issue_for_summary(
         })
 }
 
-fn derive_previous_cycle_review_issue(state: &StateJson, cycle: u64) -> Option<u64> {
-    let review_cycle = cycle.checked_sub(1)?;
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ReviewSummaryTarget {
+    review_cycle: u64,
+    review_issue: u64,
+}
+
+fn derive_previous_cycle_review_issue(state: &StateJson, review_cycle: u64) -> Option<u64> {
     let expected_review_session_title =
         format!("[Cycle Review] Cycle {} end-of-cycle review", review_cycle);
     for session in state.agent_sessions.iter().rev() {
@@ -1415,17 +1432,20 @@ fn extract_issue_number_from_reference(value: &str) -> Option<u64> {
     digits.parse().ok()
 }
 
-fn derive_review_summary_line(state: &StateJson, review_issue: u64) -> Result<String, String> {
+fn derive_review_summary_line(
+    state: &StateJson,
+    target: ReviewSummaryTarget,
+) -> Result<String, String> {
     let review_agent = state.review_agent()?;
     let entry = review_agent
         .history
         .iter()
-        .filter(|entry| review_history_entry_matches_review_issue(entry, review_issue))
+        .filter(|entry| review_history_entry_matches_target(entry, target))
         .max_by_key(|entry| entry.cycle)
         .ok_or_else(|| {
             format!(
-                "review_agent.history has no entry matching review_issue {}; process-review must persist review_issue on history entries",
-                review_issue
+                "review_agent.history has no entry matching review_issue {} or legacy cycle {}; process-review must persist review_issue on history entries",
+                target.review_issue, target.review_cycle
             )
         })?;
     let disposition_summary = summarize_review_dispositions(entry)?;
@@ -1436,11 +1456,12 @@ fn derive_review_summary_line(state: &StateJson, review_issue: u64) -> Result<St
     ))
 }
 
-fn review_history_entry_matches_review_issue(
+fn review_history_entry_matches_target(
     entry: &ReviewHistoryEntry,
-    review_issue: u64,
+    target: ReviewSummaryTarget,
 ) -> bool {
-    entry.extra.get("review_issue").and_then(Value::as_u64) == Some(review_issue)
+    entry.extra.get("review_issue").and_then(Value::as_u64) == Some(target.review_issue)
+        || (entry.extra.get("review_issue").is_none() && entry.cycle == target.review_cycle)
 }
 
 fn summarize_review_dispositions(entry: &ReviewHistoryEntry) -> Result<String, String> {
@@ -5590,6 +5611,60 @@ mod tests {
         assert_eq!(
             input.what_was_done,
             vec!["Processed cycle 152 review (2 findings, complacency 4/5, all deferred)"]
+        );
+    }
+
+    #[test]
+    fn worklog_auto_review_summary_falls_back_to_legacy_cycle_match_when_review_issue_missing() {
+        let repo_root = TempRepoDir::new("worklog-auto-review-summary-legacy-cycle-fallback");
+        init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "phase": "work",
+                    "phase_entered_at": "2026-03-06T01:00:00Z",
+                    "cycle": 154
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 79,
+                        "title": "[Cycle Review] Cycle 153 end-of-cycle review",
+                        "status": "merged"
+                    }
+                ],
+                "review_agent": {
+                    "history": [
+                        {
+                            "cycle": 153,
+                            "finding_count": 2,
+                            "complacency_score": 1,
+                            "finding_dispositions": [
+                                {"category": "worklog-accuracy", "disposition": "actioned"},
+                                {"category": "receipt-coverage", "disposition": "deferred"}
+                            ]
+                        }
+                    ]
+                }
+            }"#,
+        );
+
+        let mut args = worklog_args("Auto review summary legacy fallback");
+        args.auto_review_summary = true;
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.publish_gate = Some("open".to_string());
+
+        let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+        let warnings =
+            apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
+
+        assert!(warnings.is_empty());
+        assert_eq!(
+            input.what_was_done,
+            vec![
+                "Processed cycle 153 review (2 findings, complacency 1/5, 1 actioned, 1 deferred)"
+            ]
         );
     }
 
