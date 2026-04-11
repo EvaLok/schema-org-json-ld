@@ -27,12 +27,12 @@
 
 - tools/rust/crates/pipeline-check/src/main.rs — tool-first exception ([264683e](https://github.com/EvaLok/schema-org-json-ld/commit/264683e)): fixed `review_events_verified_status()` pointer path from `/review_agent/review_events_verified_through_cycle` to root `/review_events_verified_through_cycle` plus all 10 test fixtures that nested the field inside `review_agent`. PR #2392 merged green because its test fixtures placed the field in the wrong location (the same synthetic-fixture vs real-state chronic pattern cycle 473 F1 flagged). Taken as in-cycle fix because C5.5 gate is hard-gated on review-events-verified and close-out could not proceed. Filed as tool-first exception [question-for-eva #2403](https://github.com/EvaLok/schema-org-json-ld/issues/2403) with commitment to build an integration-harness test against real state shape in cycle 475.
 
-## Pre-dispatch state
+## Cycle state
 
-*Snapshot before review dispatch — final counters may differ after C6.*
 
 - **In-flight agent sessions**: 0
-- **Pipeline status**: FAIL (5 warnings, 1 blocking: step-comments)
+- **Pipeline status**: FAIL→PASS (C5.5 initially failed: FAIL (1 blocking warning, 3 warnings, 1 blocking: step-comments); resolved by re-run)
+- **Close-out gate failures**: C5.5 FAIL: FAIL (1 blocking warning, 3 warnings, 1 blocking: step-comments)
 - **Publish gate**: published
 
 ## Next steps
