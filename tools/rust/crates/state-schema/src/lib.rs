@@ -122,6 +122,24 @@ pub struct ReviewAgent {
     pub description: Option<String>,
     pub history: Vec<ReviewHistoryEntry>,
     pub chronic_category_responses: Option<Value>,
+    #[serde(default)]
+    pub enforcement: ReviewAgentEnforcement,
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+#[serde(default, rename_all = "snake_case")]
+pub struct ReviewAgentEnforcement {
+    pub review_history_actioned_integrity: ReviewHistoryActionedIntegrityEnforcement,
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+#[serde(default, rename_all = "snake_case")]
+pub struct ReviewHistoryActionedIntegrityEnforcement {
+    pub last_enforced_cycle: Option<u64>,
     #[serde(flatten)]
     pub extra: BTreeMap<String, Value>,
 }

@@ -249,6 +249,22 @@ Your session runs in a GitHub Actions runner with the following pre-installed (v
 
 Do not push code that you haven't verified passes tests and lint. The CI pipeline will catch failures, but verifying locally first saves a round-trip.
 
+## Pipeline-check enforcement cutoffs
+
+Some pipeline-check invariants intentionally start enforcing only from a specific cycle so that new guards can land without immediately failing on historical debt. The current review-history actioned-integrity cutoff is stored in:
+
+- `docs/state.json` → `review_agent.enforcement.review_history_actioned_integrity.last_enforced_cycle`
+
+Current default:
+
+- `473`
+
+When future remediation is complete and you want to raise the cutoff:
+
+1. Dry-run the stricter boundary with `bash tools/pipeline-check --since-cycle <N>`
+2. Update `docs/state.json` in the same PR to set `last_enforced_cycle` to the new value
+3. Re-run `bash tools/pipeline-check` before merging
+
 ## Quality Checklist
 
 Before marking your PR as ready:

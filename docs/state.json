@@ -14393,7 +14393,12 @@
         "note": "F1 worklog-accuracy: dispatch_created, PR #2385 auto-derives disposition summaries. F2 journal-quality: deferred, no journal validation dispatch. F3 state-integrity: actioned, dropped deferral state fixed."
       }
     ],
-    "last_review_cycle": 472
+    "last_review_cycle": 472,
+    "enforcement": {
+      "review_history_actioned_integrity": {
+        "last_enforced_cycle": 473
+      }
+    }
   },
   "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 473,

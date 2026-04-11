@@ -140,6 +140,7 @@ const LAST_CYCLE_NUMBER_PATH: &str = "/last_cycle/number";
 const REVIEW_LAST_CYCLE_PATH: &str = "/review_agent/last_review_cycle";
 const BLOCKERS_PATH: &str = "/blockers";
 const DEFERRAL_ACCUMULATION_THRESHOLD: usize = 3;
+const DEFAULT_REVIEW_HISTORY_ACTIONED_LAST_ENFORCED_CYCLE: u64 = 473;
 static REVIEW_FINDING_HEADER_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?m)^## \d+\.").expect("review finding regex should compile"));
 static HASH_REFERENCE_REGEX: LazyLock<Regex> =
@@ -201,6 +202,9 @@ struct Cli {
 
     #[arg(long)]
     refresh_inventory: bool,
+
+    #[arg(long)]
+    since_cycle: Option<u64>,
 
     #[arg(
         long = "exclude-step",
@@ -645,8 +649,13 @@ fn main() {
         },
     };
     let runner = ProcessRunner;
-    let report =
-        run_pipeline_with_excluded_steps(&cli.repo_root, cycle, &cli.exclude_steps, &runner);
+    let report = run_pipeline_with_excluded_steps(
+        &cli.repo_root,
+        cycle,
+        &cli.exclude_steps,
+        cli.since_cycle,
+        &runner,
+    );
     let exit_code = pipeline_exit_code(&report.steps);
 
     if cli.refresh_inventory {
@@ -676,13 +685,14 @@ fn main() {
 
 #[cfg(test)]
 fn run_pipeline(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner) -> PipelineReport {
-    run_pipeline_with_excluded_steps(repo_root, cycle, &[], runner)
+    run_pipeline_with_excluded_steps(repo_root, cycle, &[], None, runner)
 }
 
 fn run_pipeline_with_excluded_steps(
     repo_root: &Path,
     cycle: u64,
     exclude_steps: &[String],
+    since_cycle: Option<u64>,
     runner: &dyn CommandRunner,
 ) -> PipelineReport {
     let specs = [
@@ -760,7 +770,11 @@ fn run_pipeline_with_excluded_steps(
         steps.push(verify_disposition_match(repo_root));
     }
     if !is_excluded_step(REVIEW_HISTORY_ACTIONED_INTEGRITY_STEP_NAME, exclude_steps) {
-        steps.push(verify_review_history_actioned_integrity(repo_root, runner));
+        steps.push(verify_review_history_actioned_integrity(
+            repo_root,
+            since_cycle,
+            runner,
+        ));
     }
     if !is_excluded_step(AUDIT_INBOUND_LIFECYCLE_STEP_NAME, exclude_steps) {
         steps.push(verify_audit_inbound_lifecycle(repo_root, runner));
@@ -3692,9 +3706,10 @@ fn verify_agent_sessions_lifecycle(
 
 fn verify_review_history_actioned_integrity(
     repo_root: &Path,
+    since_cycle: Option<u64>,
     runner: &dyn CommandRunner,
 ) -> StepReport {
-    match review_history_actioned_integrity_assessment(repo_root, runner) {
+    match review_history_actioned_integrity_assessment(repo_root, since_cycle, runner) {
         Ok(assessment) => StepReport {
             name: REVIEW_HISTORY_ACTIONED_INTEGRITY_STEP_NAME,
             status: assessment.status,
@@ -3982,6 +3997,7 @@ struct ResolvedReviewFixReference {
 
 fn review_history_actioned_integrity_assessment(
     repo_root: &Path,
+    since_cycle: Option<u64>,
     runner: &dyn CommandRunner,
 ) -> Result<StepAssessment, String> {
     let state_value = read_state_value(repo_root)?;
@@ -4006,11 +4022,19 @@ fn review_history_actioned_integrity_assessment(
         });
     }
 
+    let last_enforced_cycle =
+        review_history_actioned_last_enforced_cycle(&review_agent, since_cycle);
     let mut warnings = Vec::new();
     let mut failures = Vec::new();
     let mut checked = 0usize;
+    let mut skipped = 0usize;
 
     for entry in &review_agent.history {
+        if entry.cycle < last_enforced_cycle {
+            skipped += 1;
+            continue;
+        }
+
         let actioned_categories = entry
             .finding_dispositions
             .iter()
@@ -4057,7 +4081,11 @@ fn review_history_actioned_integrity_assessment(
         return Ok(StepAssessment {
             status: StepStatus::Fail,
             severity: Severity::Blocking,
-            detail: details.join("; "),
+            detail: append_review_history_actioned_skip_note(
+                details.join("; "),
+                skipped,
+                last_enforced_cycle,
+            ),
         });
     }
 
@@ -4065,22 +4093,62 @@ fn review_history_actioned_integrity_assessment(
         return Ok(StepAssessment {
             status: StepStatus::Warn,
             severity: Severity::Warning,
-            detail: warnings.join("; "),
+            detail: append_review_history_actioned_skip_note(
+                warnings.join("; "),
+                skipped,
+                last_enforced_cycle,
+            ),
         });
     }
 
     Ok(StepAssessment {
         status: StepStatus::Pass,
         severity: Severity::Blocking,
-        detail: if checked == 0 {
-            "no actioned review-history findings required fix-reference verification".to_string()
-        } else {
-            format!(
-                "verified {} actioned review-history fix reference(s)",
-                checked
-            )
-        },
+        detail: append_review_history_actioned_skip_note(
+            if checked == 0 {
+                "no actioned review-history findings required fix-reference verification"
+                    .to_string()
+            } else {
+                format!(
+                    "verified {} actioned review-history fix reference(s)",
+                    checked
+                )
+            },
+            skipped,
+            last_enforced_cycle,
+        ),
     })
+}
+
+fn review_history_actioned_last_enforced_cycle(
+    review_agent: &state_schema::ReviewAgent,
+    since_cycle: Option<u64>,
+) -> u64 {
+    since_cycle.unwrap_or(
+        review_agent
+            .enforcement
+            .review_history_actioned_integrity
+            .last_enforced_cycle
+            .unwrap_or(DEFAULT_REVIEW_HISTORY_ACTIONED_LAST_ENFORCED_CYCLE),
+    )
+}
+
+fn append_review_history_actioned_skip_note(
+    detail: String,
+    skipped: usize,
+    last_enforced_cycle: u64,
+) -> String {
+    if skipped == 0 {
+        detail
+    } else {
+        format!(
+            "{}; skipped {} historical review-history entr{} before cycle {}",
+            detail,
+            skipped,
+            if skipped == 1 { "y" } else { "ies" },
+            last_enforced_cycle
+        )
+    }
 }
 
 fn audit_inbound_lifecycle_assessment(
@@ -5844,6 +5912,16 @@ mod tests {
         worklog_path
     }
 
+    fn test_repo_root() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .ancestors()
+            .find(|ancestor| {
+                ancestor.join("AGENTS.md").is_file() && ancestor.join("docs/state.json").is_file()
+            })
+            .map(Path::to_path_buf)
+            .expect("repo root should contain AGENTS.md and docs/state.json")
+    }
+
     #[test]
     fn warning_steps_get_warn_status_not_fail() {
         let execution = ExecutionResult {
@@ -6550,6 +6628,7 @@ mod tests {
         let cli = Cli::try_parse_from(["pipeline-check", "--repo-root", "."]).unwrap();
         assert_eq!(cli.repo_root, PathBuf::from("."));
         assert_eq!(cli.cycle, None);
+        assert_eq!(cli.since_cycle, None);
         assert!(!cli.refresh_inventory);
         assert!(cli.exclude_steps.is_empty());
     }
@@ -6579,6 +6658,15 @@ mod tests {
                 .unwrap();
 
         assert!(cli.refresh_inventory);
+    }
+
+    #[test]
+    fn cli_accepts_since_cycle_override() {
+        let cli =
+            Cli::try_parse_from(["pipeline-check", "--repo-root", ".", "--since-cycle", "473"])
+                .unwrap();
+
+        assert_eq!(cli.since_cycle, Some(473));
     }
 
     #[test]
@@ -7680,6 +7768,7 @@ mod tests {
             &root,
             257,
             &["doc-validation".to_string()],
+            None,
             &ExcludeDocValidationRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
@@ -7818,6 +7907,7 @@ mod tests {
             &root,
             257,
             &["not-a-real-step".to_string()],
+            None,
             &UnknownExcludeRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
@@ -7963,6 +8053,7 @@ mod tests {
             &root,
             257,
             &["worklog-dedup".to_string()],
+            None,
             &ExcludeWorklogDedupRunner,
         );
 
@@ -9505,7 +9596,7 @@ mod tests {
             }
         }
 
-        let step = verify_review_history_actioned_integrity(&root, &Runner);
+        let step = verify_review_history_actioned_integrity(&root, Some(300), &Runner);
 
         assert_eq!(step.status, StepStatus::Pass);
         assert_eq!(step.name, REVIEW_HISTORY_ACTIONED_INTEGRITY_STEP_NAME);
@@ -9568,7 +9659,7 @@ mod tests {
             }
         }
 
-        let step = verify_review_history_actioned_integrity(&root, &Runner);
+        let step = verify_review_history_actioned_integrity(&root, Some(301), &Runner);
 
         assert_eq!(step.status, StepStatus::Fail);
         assert!(step
@@ -9625,7 +9716,7 @@ mod tests {
             }
         }
 
-        let step = verify_review_history_actioned_integrity(&root, &Runner);
+        let step = verify_review_history_actioned_integrity(&root, Some(302), &Runner);
 
         assert_eq!(step.status, StepStatus::Warn);
         assert!(step
@@ -9688,7 +9779,7 @@ mod tests {
             }
         }
 
-        let step = verify_review_history_actioned_integrity(&root, &Runner);
+        let step = verify_review_history_actioned_integrity(&root, Some(303), &Runner);
 
         assert_eq!(step.status, StepStatus::Pass);
         assert_eq!(
@@ -9758,7 +9849,7 @@ mod tests {
             }
         }
 
-        let step = verify_review_history_actioned_integrity(&root, &Runner);
+        let step = verify_review_history_actioned_integrity(&root, Some(304), &Runner);
 
         assert_eq!(step.status, StepStatus::Fail);
         let detail = step.detail.as_deref().unwrap_or_default();
@@ -9834,7 +9925,7 @@ mod tests {
             }
         }
 
-        let step = verify_review_history_actioned_integrity(&root, &Runner);
+        let step = verify_review_history_actioned_integrity(&root, Some(472), &Runner);
 
         assert_eq!(step.status, StepStatus::Fail);
         assert!(step
@@ -9842,6 +9933,253 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("issue #2389 only became terminal"));
+    }
+
+    #[test]
+    fn review_history_actioned_integrity_skips_entries_before_last_enforced_cycle() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-review-history-actioned-cutoff-skip-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "review_agent": {
+                    "enforcement": {
+                        "review_history_actioned_integrity": {
+                            "last_enforced_cycle": 473
+                        }
+                    },
+                    "history": [{
+                        "cycle": 472,
+                        "categories": ["state-integrity"],
+                        "actioned": 1,
+                        "deferred": 0,
+                        "ignored": 0,
+                        "finding_count": 1,
+                        "complacency_score": 3,
+                        "note": "Actioned in PR #906.",
+                        "finding_dispositions": [{
+                            "category": "state-integrity",
+                            "disposition": "actioned"
+                        }]
+                    }]
+                },
+                "agent_sessions": [{
+                    "issue": 905,
+                    "pr": 906,
+                    "status": "open",
+                    "title": "Unmerged state-integrity fix"
+                }]
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                unreachable!("pipeline tool wrappers should not run in this test");
+            }
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                unreachable!("issue comment lookup should not run in this test");
+            }
+        }
+
+        let step = verify_review_history_actioned_integrity(&root, None, &Runner);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("skipped 1 historical review-history entry before cycle 473"));
+    }
+
+    #[test]
+    fn review_history_actioned_integrity_enforces_entries_at_or_after_last_enforced_cycle() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-review-history-actioned-cutoff-enforce-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "review_agent": {
+                    "enforcement": {
+                        "review_history_actioned_integrity": {
+                            "last_enforced_cycle": 473
+                        }
+                    },
+                    "history": [{
+                        "cycle": 473,
+                        "categories": ["state-integrity"],
+                        "actioned": 1,
+                        "deferred": 0,
+                        "ignored": 0,
+                        "finding_count": 1,
+                        "complacency_score": 3,
+                        "note": "Actioned in PR #907.",
+                        "finding_dispositions": [{
+                            "category": "state-integrity",
+                            "disposition": "actioned"
+                        }]
+                    }]
+                },
+                "agent_sessions": [{
+                    "issue": 906,
+                    "pr": 907,
+                    "status": "open",
+                    "title": "Unmerged state-integrity fix"
+                }]
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                unreachable!("pipeline tool wrappers should not run in this test");
+            }
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                unreachable!("issue comment lookup should not run in this test");
+            }
+        }
+
+        let step = verify_review_history_actioned_integrity(&root, None, &Runner);
+
+        assert_eq!(step.status, StepStatus::Fail);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("PR #907 is still open"));
+    }
+
+    #[test]
+    fn review_history_actioned_integrity_since_cycle_override_can_reenable_historical_entry_checks()
+    {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-review-history-actioned-since-cycle-override-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "review_agent": {
+                    "enforcement": {
+                        "review_history_actioned_integrity": {
+                            "last_enforced_cycle": 473
+                        }
+                    },
+                    "history": [{
+                        "cycle": 472,
+                        "categories": ["state-integrity"],
+                        "actioned": 1,
+                        "deferred": 0,
+                        "ignored": 0,
+                        "finding_count": 1,
+                        "complacency_score": 3,
+                        "note": "Actioned via issue #908.",
+                        "finding_dispositions": [{
+                            "category": "state-integrity",
+                            "disposition": "actioned"
+                        }]
+                    }]
+                },
+                "agent_sessions": [{
+                    "issue": 908,
+                    "status": "in_flight",
+                    "title": "Historical state-integrity fix"
+                }]
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                unreachable!("pipeline tool wrappers should not run in this test");
+            }
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                unreachable!("issue comment lookup should not run in this test");
+            }
+        }
+
+        let skipped_step = verify_review_history_actioned_integrity(&root, None, &Runner);
+        assert_eq!(skipped_step.status, StepStatus::Pass);
+
+        let enforced_step = verify_review_history_actioned_integrity(&root, Some(472), &Runner);
+        assert_eq!(enforced_step.status, StepStatus::Fail);
+        assert!(enforced_step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("issue #908 is still in_flight"));
+    }
+
+    #[test]
+    fn review_history_actioned_integrity_passes_against_real_state_with_default_cutoff() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-review-history-actioned-real-state-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+
+        let repo_root = test_repo_root();
+        fs::copy(
+            repo_root.join("docs/state.json"),
+            root.join("docs/state.json"),
+        )
+        .unwrap();
+
+        struct Runner;
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                unreachable!("pipeline tool wrappers should not run in this test");
+            }
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                unreachable!("issue comment lookup should not run in this test");
+            }
+        }
+
+        let step = verify_review_history_actioned_integrity(&root, None, &Runner);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("skipped"));
     }
 
     #[test]
