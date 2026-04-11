@@ -7281,6 +7281,14 @@
       "pr": 2418,
       "status": "merged",
       "title": "[Cycle Review] Cycle 477 end-of-cycle review"
+    },
+    {
+      "backfilled": true,
+      "issue": 2396,
+      "merged_at": "2026-04-11T23:33:41Z",
+      "pr": 2397,
+      "status": "merged",
+      "title": "Backfilled: PR #2397"
     }
   ],
   "audit_dropped": [
@@ -8375,7 +8383,7 @@
     "duration_minutes": 30,
     "issue": 2419,
     "number": 478,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-11T23:10:14Z"
   },
   "last_eva_comment_check": "2026-04-11T23:10:14Z",
