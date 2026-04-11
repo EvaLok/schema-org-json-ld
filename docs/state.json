@@ -8265,7 +8265,7 @@
       },
       "review_events_verified_through_cycle": {
         "cadence": "managed by verify-review-events tool only",
-        "last_refreshed": "cycle 475"
+        "last_refreshed": "cycle 476"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -14531,7 +14531,7 @@
     "last_review_cycle": 475
   },
   "review_dispatch_consecutive": 3,
-  "review_events_verified_through_cycle": 475,
+  "review_events_verified_through_cycle": 476,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
@@ -15073,7 +15073,7 @@
   "tool_pipeline": {
     "blocks_publish": false,
     "c5_5_gate": {
-      "cycle": 475,
+      "cycle": 476,
       "needs_reverify": false,
       "pipeline_summary": "PASS (1 blocking warning, 4 warnings)",
       "status": "PASS"
