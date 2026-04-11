@@ -2907,10 +2907,10 @@ fn review_events_verified_status(repo_root: &Path) -> Result<(StepStatus, String
         .and_then(Value::as_u64)
         .ok_or_else(|| "missing numeric field: /last_cycle/number".to_string())?;
     let verified_through_cycle = state
-        .pointer("/review_agent/review_events_verified_through_cycle")
+        .pointer("/review_events_verified_through_cycle")
         .and_then(Value::as_u64)
         .ok_or_else(|| {
-            "missing numeric field: /review_agent/review_events_verified_through_cycle".to_string()
+            "missing numeric field: /review_events_verified_through_cycle".to_string()
         })?;
 
     if verified_through_cycle == current_cycle {
@@ -4921,7 +4921,8 @@ fn actioned_fix_references_for_category(
         });
     };
 
-    let review_references = extract_review_fix_references(&section);
+    let review_references =
+        extract_review_fix_references_from_next_cycle_section(&section, entry.cycle);
     Ok(ReviewFixReferenceSet {
         source: if review_references.is_empty() {
             Some(format!(
@@ -4938,18 +4939,47 @@ fn actioned_fix_references_for_category(
     })
 }
 
+fn extract_review_fix_references_from_next_cycle_section(
+    section: &str,
+    referenced_cycle: u64,
+) -> Vec<ReviewFixReference> {
+    let cycle_marker = format!("cycle {}", referenced_cycle);
+    let hyphenated_cycle_marker = format!("cycle-{}", referenced_cycle);
+    let anchored_lines = section
+        .lines()
+        .filter(|line| {
+            let lower_line = line.to_ascii_lowercase();
+            lower_line.contains(&cycle_marker) || lower_line.contains(&hyphenated_cycle_marker)
+        })
+        .collect::<Vec<_>>();
+
+    if anchored_lines.is_empty() {
+        Vec::new()
+    } else {
+        extract_review_fix_references(&anchored_lines.join("\n"))
+    }
+}
+
 fn extract_review_fix_references_for_category(
     note: &str,
     category: &str,
 ) -> Vec<ReviewFixReference> {
     extract_category_note_segment(note, category)
-        .map(|segment| extract_review_fix_references(&segment))
+        .map(|segment| extract_review_fix_references(first_note_sentence(&segment)))
         .unwrap_or_else(|| extract_review_fix_references(note))
 }
 
 fn extract_category_note_segment(note: &str, category: &str) -> Option<String> {
+    let lower_category = category.to_ascii_lowercase();
+    if let Some(segment) = split_note_finding_segments(note)
+        .into_iter()
+        .find(|segment| segment.to_ascii_lowercase().contains(&lower_category))
+    {
+        return Some(segment);
+    }
+
     let lower_note = note.to_ascii_lowercase();
-    let needle = format!("{}:", category.to_ascii_lowercase());
+    let needle = format!("{}:", lower_category);
     let start = lower_note.find(&needle)?;
     let segment = &note[start..];
     let next_marker = segment
@@ -4958,6 +4988,40 @@ fn extract_category_note_segment(note: &str, category: &str) -> Option<String> {
         .find_map(|(index, _)| is_note_finding_boundary(segment, index).then_some(index))
         .unwrap_or(segment.len());
     Some(segment[..next_marker].trim().to_string())
+}
+
+fn split_note_finding_segments(note: &str) -> Vec<String> {
+    let mut boundaries = note
+        .char_indices()
+        .filter_map(|(index, _)| is_note_finding_boundary(note, index).then_some(index))
+        .collect::<Vec<_>>();
+
+    if note
+        .as_bytes()
+        .get(0..3)
+        .is_some_and(|prefix| prefix[0] == b'F' && prefix[1].is_ascii_digit() && prefix[2] == b' ')
+    {
+        boundaries.insert(0, 0);
+    }
+
+    boundaries.dedup();
+
+    boundaries
+        .iter()
+        .enumerate()
+        .map(|(position, start)| {
+            let end = boundaries.get(position + 1).copied().unwrap_or(note.len());
+            note[*start..end].trim().to_string()
+        })
+        .filter(|segment| !segment.is_empty())
+        .collect()
+}
+
+fn first_note_sentence(segment: &str) -> &str {
+    segment
+        .find(". ")
+        .map(|index| &segment[..index + 1])
+        .unwrap_or(segment)
 }
 
 fn is_note_finding_boundary(segment: &str, index: usize) -> bool {
@@ -6469,9 +6533,9 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": 135,
-                    "review_events_verified_through_cycle": 135
-                }
+                    "last_review_cycle": 135
+                },
+                "review_events_verified_through_cycle": 135
             })
             .to_string(),
         )
@@ -7084,9 +7148,9 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": 257,
-                    "review_events_verified_through_cycle": 257
-                }
+                    "last_review_cycle": 257
+                },
+                "review_events_verified_through_cycle": 257
             })
             .to_string(),
         )
@@ -7235,9 +7299,9 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": 257,
-                    "review_events_verified_through_cycle": 257
-                }
+                    "last_review_cycle": 257
+                },
+                "review_events_verified_through_cycle": 257
             })
             .to_string(),
         )
@@ -7388,9 +7452,9 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": CURRENT_CYCLE,
-                    "review_events_verified_through_cycle": CURRENT_CYCLE
-                }
+                    "last_review_cycle": CURRENT_CYCLE
+                },
+                "review_events_verified_through_cycle": CURRENT_CYCLE
             })
             .to_string(),
         )
@@ -7538,9 +7602,9 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": 257,
-                    "review_events_verified_through_cycle": 257
-                }
+                    "last_review_cycle": 257
+                },
+                "review_events_verified_through_cycle": 257
             })
             .to_string(),
         )
@@ -7681,9 +7745,9 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": 257,
-                    "review_events_verified_through_cycle": 257
-                }
+                    "last_review_cycle": 257
+                },
+                "review_events_verified_through_cycle": 257
             })
             .to_string(),
         )
@@ -7813,9 +7877,9 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": 257,
-                    "review_events_verified_through_cycle": 257
-                }
+                    "last_review_cycle": 257
+                },
+                "review_events_verified_through_cycle": 257
             })
             .to_string(),
         )
@@ -7952,9 +8016,9 @@ mod tests {
                     "pr_merge_rate": "50.0%"
                 },
                 "review_agent": {
-                    "last_review_cycle": 257,
-                    "review_events_verified_through_cycle": 257
-                }
+                    "last_review_cycle": 257
+                },
+                "review_events_verified_through_cycle": 257
             })
             .to_string(),
         )
@@ -9100,7 +9164,7 @@ mod tests {
             json!({
                 "last_cycle": {"number": 410},
                 "cycle_phase": {"phase": "close_out"},
-                "review_agent": {"review_events_verified_through_cycle": 410}
+                "review_events_verified_through_cycle": 410
             })
             .to_string(),
         )
@@ -9129,7 +9193,7 @@ mod tests {
             json!({
                 "last_cycle": {"number": 410},
                 "cycle_phase": {"phase": "close_out"},
-                "review_agent": {"review_events_verified_through_cycle": 409}
+                "review_events_verified_through_cycle": 409
             })
             .to_string(),
         )
@@ -9158,7 +9222,7 @@ mod tests {
             json!({
                 "last_cycle": {"number": 410},
                 "cycle_phase": {"phase": "work"},
-                "review_agent": {"review_events_verified_through_cycle": 409}
+                "review_events_verified_through_cycle": 409
             })
             .to_string(),
         )
@@ -9858,6 +9922,80 @@ mod tests {
     }
 
     #[test]
+    fn review_history_actioned_integrity_ignores_other_finding_references_in_non_colon_notes() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-review-history-actioned-note-segmentation-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "review_agent": {
+                    "enforcement": {
+                        "review_history_actioned_integrity": {
+                            "last_enforced_cycle": 473
+                        }
+                    },
+                    "history": [{
+                        "cycle": 474,
+                        "categories": ["receipt-integrity", "journal-quality", "state-integrity"],
+                        "actioned": 1,
+                        "deferred": 2,
+                        "finding_count": 3,
+                        "complacency_score": 1,
+                        "ignored": 0,
+                        "note": "Cycle 474 review processed cycle 475. F1 (receipt-integrity, chronic) actioned via PR #2412 implementing COMPLETION_CHECKLIST.xml receipt-table-machine-scope constraint. F2 (journal-quality, chronic) deferred — structural response already dispatched via Eva #2293. F3 (state-integrity, chronic) deferred — tool-first exceptions filed as appends to #2402.",
+                        "finding_dispositions": [{
+                            "category": "receipt-integrity",
+                            "disposition": "actioned"
+                        }, {
+                            "category": "journal-quality",
+                            "disposition": "deferred"
+                        }, {
+                            "category": "state-integrity",
+                            "disposition": "deferred"
+                        }]
+                    }]
+                },
+                "agent_sessions": [{
+                    "issue": 2411,
+                    "pr": 2412,
+                    "status": "merged",
+                    "merged_at": "2026-04-11T08:00:00Z",
+                    "title": "Fix receipt-integrity constraint scope"
+                }]
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                unreachable!("pipeline tool wrappers should not run in this test");
+            }
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                unreachable!("issue comment lookup should not run in this test");
+            }
+        }
+
+        let step = verify_review_history_actioned_integrity(&root, None, &Runner);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("verified 1 actioned review-history fix reference"));
+        assert!(!detail.contains("#2293"));
+        assert!(!detail.contains("#2402"));
+    }
+
+    #[test]
     fn review_history_actioned_integrity_uses_next_cycle_review_evidence_for_historical_failures() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -9933,6 +10071,77 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("issue #2389 only became terminal"));
+    }
+
+    #[test]
+    fn review_history_actioned_integrity_ignores_next_cycle_review_refs_without_prior_cycle_anchor()
+    {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-review-history-actioned-review-fallback-unanchored-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs/reviews")).unwrap();
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "review_agent": {
+                    "enforcement": {
+                        "review_history_actioned_integrity": {
+                            "last_enforced_cycle": 473
+                        }
+                    },
+                    "history": [{
+                        "cycle": 474,
+                        "categories": ["state-integrity"],
+                        "actioned": 1,
+                        "deferred": 0,
+                        "ignored": 0,
+                        "finding_count": 1,
+                        "complacency_score": 2,
+                        "note": "F3 state-integrity actioned via direct-edit rollback.",
+                        "finding_dispositions": [{
+                            "category": "state-integrity",
+                            "disposition": "actioned"
+                        }]
+                    }]
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+        fs::write(
+            root.join("docs/reviews/cycle-475.md"),
+            concat!(
+                "# Cycle 475 Review\n\n",
+                "## 3. [state-integrity] Cycle 475 closed with a stale summary\n\n",
+                "Evidence: dispatch issue #2410 was created for the current cycle.\n"
+            ),
+        )
+        .unwrap();
+
+        struct Runner;
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                unreachable!("pipeline tool wrappers should not run in this test");
+            }
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                unreachable!("issue comment lookup should not run in this test");
+            }
+        }
+
+        let step = verify_review_history_actioned_integrity(&root, None, &Runner);
+
+        assert_eq!(step.status, StepStatus::Warn);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("no fix issue/PR reference was found"));
+        assert!(!detail.contains("#2410"));
     }
 
     #[test]
@@ -10142,7 +10351,7 @@ mod tests {
     }
 
     #[test]
-    fn review_history_actioned_integrity_passes_against_real_state_with_default_cutoff() {
+    fn review_history_actioned_integrity_non_blocking_with_default_cutoff() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root = std::env::temp_dir().join(format!(
@@ -10174,12 +10383,9 @@ mod tests {
 
         let step = verify_review_history_actioned_integrity(&root, None, &Runner);
 
-        assert_eq!(step.status, StepStatus::Pass);
-        assert!(step
-            .detail
-            .as_deref()
-            .unwrap_or_default()
-            .contains("skipped"));
+        assert_eq!(step.status, StepStatus::Warn);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("skipped"));
     }
 
     #[test]
