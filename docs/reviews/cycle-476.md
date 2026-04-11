@@ -9,7 +9,7 @@
 ## 2. [state-integrity] Cycle 476 again leaves `last_cycle.summary` inconsistent with the live dispatch ledger
 
 **File**: docs/state.json:7268-7272,8084,8355-8361
-**Evidence**: The live state records cycle-review dispatch `#2413` in `agent_sessions` (`status: "in_flight"`) and sets `dispatch_log_latest` to `#2413 [Cycle Review] Cycle 476 end-of-cycle review (cycle 476)`, with `in_flight_sessions: 1`. But `last_cycle.summary` still says `0 dispatches, 1 merges (PR #2411)`. Re-running `bash tools/state-invariants` fails invariant 8 on exactly this contradiction: `last_cycle.summary reports 0 dispatches for cycle 476, but dispatch_log_latest also reports cycle 476 activity: #2413`.
+**Evidence**: The live state records cycle-review dispatch `#2413` in `agent_sessions` with `status: "in_flight"` (`docs/state.json:7268-7272`). It also sets `dispatch_log_latest` to `#2413 [Cycle Review] Cycle 476 end-of-cycle review (cycle 476)` and `in_flight_sessions` to `1` (`docs/state.json:8084,8355`). But `last_cycle.summary` still says `0 dispatches, 1 merges (PR #2411)` (`docs/state.json:8356-8361`). Re-running `bash tools/state-invariants` fails invariant 8 on the same contradiction: `last_cycle.summary reports 0 dispatches for cycle 476, but dispatch_log_latest also reports cycle 476 activity: #2413`.
 **Recommendation**: Make the close-out truth model consistent. Either refresh `last_cycle.summary` when `record-dispatch`/`process-merge` mutate the same-cycle ledger during `close_out`, or formally exclude those late mutations from both `dispatch_log_latest`-based invariants and generated cycle summaries.
 
 ## 3. [journal-quality] The journal explicitly acknowledges the recurrence-escalation rule and then chooses to ignore it
