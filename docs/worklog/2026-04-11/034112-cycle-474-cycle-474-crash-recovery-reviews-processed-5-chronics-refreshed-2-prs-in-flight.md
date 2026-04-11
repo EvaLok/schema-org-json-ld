@@ -25,7 +25,7 @@
 
 ## Self-modifications
 
-- None.
+- tools/rust/crates/pipeline-check/src/main.rs — tool-first exception ([264683e](https://github.com/EvaLok/schema-org-json-ld/commit/264683e)): fixed `review_events_verified_status()` pointer path from `/review_agent/review_events_verified_through_cycle` to root `/review_events_verified_through_cycle` plus all 10 test fixtures that nested the field inside `review_agent`. PR #2392 merged green because its test fixtures placed the field in the wrong location (the same synthetic-fixture vs real-state chronic pattern cycle 473 F1 flagged). Taken as in-cycle fix because C5.5 gate is hard-gated on review-events-verified and close-out could not proceed. Filed as tool-first exception [question-for-eva #2403](https://github.com/EvaLok/schema-org-json-ld/issues/2403) with commitment to build an integration-harness test against real state shape in cycle 475.
 
 ## Pre-dispatch state
 
@@ -37,9 +37,12 @@
 
 ## Next steps
 
-1. Merge PRs [#2397](https://github.com/EvaLok/schema-org-json-ld/issues/2397) and [#2399](https://github.com/EvaLok/schema-org-json-ld/issues/2399) once CI green; verify observable 'write-entry --auto-review-summary succeeds against real docs/state.json' for [#2397](https://github.com/EvaLok/schema-org-json-ld/issues/2397) and 'pipeline-check review-history-actioned-integrity step runs cleanly' for [#2399](https://github.com/EvaLok/schema-org-json-ld/issues/2399)
-2. Build process-review --add-chronic-category creation capability to close tool gap (question-for-eva [#2402](https://github.com/EvaLok/schema-org-json-ld/issues/2402))
-3. Dispatch [audit #402](https://github.com/EvaLok/schema-org-json-ld-audit/issues/402) structural fix: pipeline-check auto-refresh for holding chronic categories plus >15-cycle Fail escalation
+1. **Revision dispatch** PRs [#2397](https://github.com/EvaLok/schema-org-json-ld/pull/2397) and [#2399](https://github.com/EvaLok/schema-org-json-ld/pull/2399) — Eva deferred both merges this cycle. PR [#2399](https://github.com/EvaLok/schema-org-json-ld/pull/2399) revision: add `last_enforced_cycle` state field and `--since-cycle` flag so enforcement starts at cycle 473 going forward with a separate remediation task for 24 historical `actioned`-before-merged entries (Eva's Option A). PR [#2397](https://github.com/EvaLok/schema-org-json-ld/pull/2397) revision: disambiguate two semantic entities (orchestrator cycle issue vs review dispatch issue) — persist `review_issue` on `review_agent.history` entries (not existing `issue` which holds finding issue), and have `derive_review_summary_line` look up by `review_issue == args.review_issue`. Observable for #2397: `bash tools/write-entry worklog --auto-review-summary --dry-run` succeeds against real `docs/state.json`. Observable for #2399: merged PR does not turn pipeline-check red on historical entries (enforcement cutoff honored).
+2. Build `process-review --add-chronic-category` creation capability to close tool gap ([question-for-eva #2402](https://github.com/EvaLok/schema-org-json-ld/issues/2402)); also retire the dual direct-edit tool-first exceptions taken this cycle ([#2402](https://github.com/EvaLok/schema-org-json-ld/issues/2402), [#2403](https://github.com/EvaLok/schema-org-json-ld/issues/2403)).
+3. Dispatch [audit #402](https://github.com/EvaLok/schema-org-json-ld-audit/issues/402) structural fix: pipeline-check auto-refresh for holding chronic categories plus >15-cycle FAIL escalation for stale verification_cycle markers.
+4. Build an integration-harness test that runs write-side tools (process-review, write-entry, pipeline-check) against an actual copy of `docs/state.json` as part of CI, so synthetic-fixture vs real-shape mismatches (PR #2392 review-events path bug, PR #2397 history lookup bug) cannot merge green. This is the common root cause of both tool-first exceptions this cycle.
+5. Re-verify `chronic_category_responses` entries for `state-integrity` and `code-change-quality` once their cycle 475 revision dispatches land — the cycle 474 `verification_cycle=474` citations to un-merged PRs [#2399](https://github.com/EvaLok/schema-org-json-ld/pull/2399) and [#2397](https://github.com/EvaLok/schema-org-json-ld/pull/2397) are premature and pipeline-check `chronic-category-currency` correctly WARNs about them.
+6. **Structural fix for [#2405](https://github.com/EvaLok/schema-org-json-ld/issues/2405)**: delete the `/previous_cycle_issue` update in `update_cycle_issues_for_resume` at `tools/rust/crates/cycle-start/src/main.rs:592-603`. That field is a cycle-transition concept and must never be touched by resume paths. Observable: unit test where cycle N resumes across two session issues leaves `/previous_cycle_issue` unchanged, still pointing at cycle N-1's orchestrator issue.
 
 ## Commit receipts
 
