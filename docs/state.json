@@ -8498,10 +8498,10 @@
           "added_cycle": 260,
           "category": "review-evidence",
           "chosen_path": "structural-fix",
-          "rationale": "Behavioral part adopted (gh pr review --approve since cycle 260). Tool hardened cycle 270 (PR #1300): APPROVED-only filter, self-review rejection, post-merge rejection, fail-closed on missing PRs. Cycle 461 re-verification: review-evidence has not appeared in any of the last 16 review cycles (444-460); verify-review-events runs every cycle as part of close-out and review_events_verified_through_cycle continues to advance with each cycle. Structural fix is holding.",
+          "rationale": "Behavioral part adopted (gh pr review --approve since cycle 260). Tool hardened cycle 270 (PR #1300): APPROVED-only filter, self-review rejection, post-merge rejection, fail-closed on missing PRs. Cycle 461 re-verification: review-evidence has not appeared in any of the last 16 review cycles (444-460); verify-review-events runs every cycle as part of close-out and review_events_verified_through_cycle continues to advance with each cycle. Structural fix is holding. | Cycle 474: refreshed via PR(s) — Cycle 474 hygiene refresh: review-evidence has not appeared in reviews 464-473 (10-review lookback clear). verify-review-events runs every cycle and review_events_verified_through_cycle continues to advance. Structural fix continues to hold.",
           "root_cause": "Review events were optional and unverified. No tool, checklist step, or invariant confirmed that GitHub review events existed on PRs before merge. The orchestrator merged PRs with only worklog/journal claims of review, which are self-reported and not auditable.",
-          "updated_cycle": 461,
-          "verification_cycle": 461
+          "updated_cycle": 474,
+          "verification_cycle": 474
         },
         {
           "added_cycle": 383,
