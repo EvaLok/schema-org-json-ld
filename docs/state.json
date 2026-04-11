@@ -14461,9 +14461,10 @@
           "receipt-integrity",
           "state-integrity"
         ],
-        "complacency_score": 2,
+        "complacency_score": 1,
         "cycle": 474,
-        "deferred": 2,
+        "deferred": 1,
+        "dispatch_created": 1,
         "finding_count": 3,
         "finding_dispositions": [
           {
@@ -14472,7 +14473,7 @@
           },
           {
             "category": "journal-quality",
-            "disposition": "deferred"
+            "disposition": "dispatch_created"
           },
           {
             "category": "state-integrity",
@@ -14480,7 +14481,7 @@
           }
         ],
         "ignored": 0,
-        "note": "Cycle 474 review processed cycle 475. F1 receipt-integrity deferred (dispatch capacity full). F2 journal-quality deferred (Eva #2293 structural answer landed mid-cycle; dispatch sequencing pending capacity). F3 state-integrity actioned via direct-edit rollback of state-integrity verification_cycle 474->463 (code-change-quality entry left with honest cited-PR WARN as no prior legit value). Tool-first exception filed as append to #2402."
+        "note": "Cycle 474 review processed cycle 475. F1 receipt-integrity deferred (dispatch capacity full). F2 journal-quality reclassified deferred->dispatch_created (cycle 475 tool-first exception 4/4): Eva #2293 Option E decision landed mid-cycle 475 before review processing, making it an active in-flight structural dispatch — same entity referenced by --resolve-deferral 0fca59e. Classification 'deferred' in process-review 191aa94 was incorrect; correct disposition is dispatch_created pointing at existing #2293 dispatch. F3 state-integrity actioned via direct-edit rollback of state-integrity verification_cycle 474->463 (code-change-quality entry left with honest cited-PR WARN as no prior legit value). Tool-first exceptions 1-4 filed as appends to #2402."
       }
     ],
     "last_review_cycle": 474
