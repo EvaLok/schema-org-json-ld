@@ -58,3 +58,4 @@
 | process-review | 4704ef8 | [4704ef8](https://github.com/EvaLok/schema-org-json-ld/commit/4704ef8) |
 | process-review | 92cd1ad | [92cd1ad](https://github.com/EvaLok/schema-org-json-ld/commit/92cd1ad) |
 | process-audit | 5427fdf | [5427fdf](https://github.com/EvaLok/schema-org-json-ld/commit/5427fdf) |
+| cycle-complete | ee64fb8 | [ee64fb8](https://github.com/EvaLok/schema-org-json-ld/commit/ee64fb8) |
