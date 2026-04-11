@@ -42,6 +42,10 @@ struct Cli {
     #[arg(long)]
     review_file: Option<PathBuf>,
 
+    /// Review dispatch issue number for the review file being processed
+    #[arg(long)]
+    review_issue: Option<u64>,
+
     /// Repository root path
     #[arg(long, default_value = ".")]
     repo_root: PathBuf,
@@ -112,6 +116,8 @@ struct ReviewHistoryEntry {
     cycle: u64,
     finding_count: u64,
     complacency_score: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    review_issue: Option<u64>,
     categories: Vec<String>,
     actioned: u64,
     deferred: u64,
@@ -194,10 +200,16 @@ fn run(cli: Cli) -> Result<(), String> {
 
         let parsed_review = parse_review(&review_path, &review_content, cli.lenient)?;
         let finding_dispositions = validate_dispositions(&cli, &parsed_review)?;
+        let review_issue = cli.review_issue.ok_or_else(|| {
+            format!(
+                "--review-issue is required when processing review file {}",
+                review_path.display()
+            )
+        })?;
         for warning in validate_categories(&cli.repo_root, &parsed_review.categories)? {
             eprintln!("{}", warning);
         }
-        let entry = build_history_entry(&parsed_review, &cli, finding_dispositions);
+        let entry = build_history_entry(&parsed_review, &cli, review_issue, finding_dispositions);
 
         let (patch, warnings) = build_state_patch(
             &state_value,
@@ -904,12 +916,14 @@ fn find_number_before_token(text: &str, token: &str) -> Option<(u64, usize)> {
 fn build_history_entry(
     parsed_review: &ParsedReview,
     cli: &Cli,
+    review_issue: u64,
     finding_dispositions: Vec<FindingDisposition>,
 ) -> ReviewHistoryEntry {
     ReviewHistoryEntry {
         cycle: parsed_review.cycle,
         finding_count: parsed_review.finding_count,
         complacency_score: parsed_review.complacency_score,
+        review_issue: Some(review_issue),
         categories: parsed_review.categories.clone(),
         actioned: cli.actioned,
         deferred: cli.deferred,
@@ -1385,6 +1399,7 @@ mod tests {
         command.write_long_help(&mut output).unwrap();
         let help = String::from_utf8(output).unwrap();
         assert!(help.contains("--review-file"));
+        assert!(help.contains("--review-issue"));
         assert!(help.contains("--repo-root"));
         assert!(help.contains("--actioned"));
         assert!(help.contains("--deferred"));
@@ -1409,6 +1424,8 @@ mod tests {
             "process-review",
             "--review-file",
             "docs/reviews/cycle-162.md",
+            "--review-issue",
+            "2388",
             "--lenient",
         ])
         .is_ok());
@@ -1420,6 +1437,8 @@ mod tests {
             "process-review",
             "--review-file",
             "docs/reviews/cycle-162.md",
+            "--review-issue",
+            "2388",
             "--dispatch-created",
             "2",
             "--actioned-failed",
@@ -1435,6 +1454,7 @@ mod tests {
         assert_eq!(cli.dispatch_created, 2);
         assert_eq!(cli.actioned_failed, 3);
         assert_eq!(cli.verified_resolved, 4);
+        assert_eq!(cli.review_issue, Some(2388));
         assert_eq!(
             cli.finding_dispositions,
             vec![
@@ -1483,6 +1503,58 @@ mod tests {
         );
         assert_eq!(cli.update_chronic_prs, vec![2266]);
         assert_eq!(cli.update_chronic_cycle, Some(460));
+    }
+
+    #[test]
+    fn run_rejects_review_processing_without_review_issue() {
+        let repo_root = write_temp_state_repo(json!({
+            "last_cycle": {"number": 500},
+            "cycle_phase": {"cycle": 500},
+            "review_agent": {
+                "last_review_cycle": 499,
+                "history": []
+            },
+            "field_inventory": {
+                "fields": {
+                    "review_agent": {"last_refreshed": "cycle 499"}
+                }
+            }
+        }));
+        init_temp_git_repo(&repo_root);
+        let review_dir = repo_root.join("docs/reviews");
+        fs::create_dir_all(&review_dir).expect("review directory should exist");
+        fs::write(
+            review_dir.join("cycle-500.md"),
+            r#"# Cycle 500 Review
+
+## Findings
+
+1. **[review-accounting] Review accounting finding**
+
+## Complacency score
+
+2/5
+"#,
+        )
+        .expect("review file should be written");
+
+        let cli = Cli::parse_from([
+            "process-review",
+            "--repo-root",
+            repo_root.to_str().expect("repo path should be valid UTF-8"),
+            "--review-file",
+            "docs/reviews/cycle-500.md",
+            "--actioned",
+            "1",
+        ]);
+
+        assert_eq!(
+            run(cli),
+            Err(format!(
+                "--review-issue is required when processing review file {}",
+                review_dir.join("cycle-500.md").display()
+            ))
+        );
     }
 
     #[test]
@@ -1819,11 +1891,13 @@ mod tests {
         let entry = build_history_entry(
             &parsed,
             &cli,
+            2388,
             validate_dispositions(&cli, &parsed).expect("dispositions should validate"),
         );
         assert_eq!(entry.cycle, 162);
         assert_eq!(entry.finding_count, 8);
         assert_eq!(entry.complacency_score, 2);
+        assert_eq!(entry.review_issue, Some(2388));
         assert_eq!(entry.actioned, 1);
         assert_eq!(entry.deferred, 1);
         assert_eq!(entry.dispatch_created, 2);
@@ -1876,6 +1950,7 @@ mod tests {
             cycle: 163,
             finding_count: 3,
             complacency_score: 1,
+            review_issue: None,
             categories: vec!["state-consistency".to_string()],
             actioned: 1,
             deferred: 1,
@@ -1903,6 +1978,7 @@ mod tests {
             cycle: 163,
             finding_count: 3,
             complacency_score: 1,
+            review_issue: Some(2393),
             categories: vec!["state-consistency".to_string()],
             actioned: 1,
             deferred: 0,
@@ -1924,6 +2000,7 @@ mod tests {
         assert_eq!(object.get("dispatch_created"), Some(&json!(1)));
         assert_eq!(object.get("actioned_failed"), Some(&json!(1)));
         assert_eq!(object.get("verified_resolved"), Some(&json!(1)));
+        assert_eq!(object.get("review_issue"), Some(&json!(2393)));
         assert_eq!(
             object.get("finding_dispositions"),
             Some(&json!([{
@@ -2356,6 +2433,7 @@ mod tests {
             cycle: 163,
             finding_count: 3,
             complacency_score: 1,
+            review_issue: None,
             categories: vec!["state-consistency".to_string()],
             actioned: 1,
             deferred: 1,
@@ -2411,6 +2489,7 @@ mod tests {
             cycle: 163,
             finding_count: 3,
             complacency_score: 2,
+            review_issue: None,
             categories: vec!["state-consistency".to_string()],
             actioned: 0,
             deferred: 1,
@@ -2476,6 +2555,7 @@ mod tests {
             cycle: 200,
             finding_count: 1,
             complacency_score: 1,
+            review_issue: None,
             categories: vec!["x".to_string()],
             actioned: 0,
             deferred: 1,
@@ -2526,6 +2606,7 @@ mod tests {
             cycle: 163,
             finding_count: 2,
             complacency_score: 2,
+            review_issue: None,
             categories: vec![
                 "review-accounting".to_string(),
                 "tooling-contract".to_string(),
@@ -2601,6 +2682,7 @@ mod tests {
             cycle: 164,
             finding_count: 1,
             complacency_score: 2,
+            review_issue: None,
             categories: vec!["tooling-contract".to_string()],
             actioned: 0,
             deferred: 0,
@@ -2657,6 +2739,7 @@ mod tests {
             cycle: 163,
             finding_count: 1,
             complacency_score: 2,
+            review_issue: None,
             categories: vec!["review-accounting".to_string()],
             actioned: 0,
             deferred: 1,
@@ -3043,6 +3126,8 @@ mod tests {
             repo_root.to_str().expect("repo path should be valid UTF-8"),
             "--review-file",
             "docs/reviews/cycle-500.md",
+            "--review-issue",
+            "900",
             "--actioned",
             "1",
         ]);
@@ -3167,6 +3252,8 @@ mod tests {
             repo_root.to_str().expect("repo path should be valid UTF-8"),
             "--review-file",
             "docs/reviews/cycle-500.md",
+            "--review-issue",
+            "900",
             "--actioned",
             "1",
             "--drop-deferral",
@@ -3191,6 +3278,10 @@ mod tests {
         assert_eq!(
             updated_state.pointer("/review_agent/history/0/cycle"),
             Some(&json!(500))
+        );
+        assert_eq!(
+            updated_state.pointer("/review_agent/history/0/review_issue"),
+            Some(&json!(900))
         );
     }
 
