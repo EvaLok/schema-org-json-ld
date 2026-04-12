@@ -2944,7 +2944,10 @@ fn current_cycle_journal_section_status_for_date(
     // This invariant is intentionally structural: close_out requires the
     // cycle heading prefix `## YYYY-MM-DD — Cycle N:` to be present in today's
     // journal. Additional title text after the colon is allowed.
-    if content.lines().any(|line| line.trim().starts_with(&expected_heading)) {
+    if content
+        .lines()
+        .any(|line| line.trim().starts_with(&expected_heading))
+    {
         Ok((
             StepStatus::Pass,
             format!(
