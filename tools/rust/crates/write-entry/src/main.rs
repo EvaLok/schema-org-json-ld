@@ -2367,6 +2367,8 @@ fn derive_prs_from_cycle_receipt_entries(
         return Ok(Vec::new());
     }
 
+    // Treat receipt parsing as all-or-nothing so a partially parsed PR list
+    // cannot silently disagree with the number of process-merge receipt rows.
     let receipt_prs = derive_prs_directly_from_merge_receipts(&merge_entries);
     if receipt_prs.len() == merge_entries.len() {
         return Ok(receipt_prs);
@@ -2494,6 +2496,8 @@ fn derive_prs_from_state_for_merge_receipt_count(
     }
 
     merged_sessions.sort_by_key(|(merged_at, _)| *merged_at);
+    // When receipt rows do not expose PR numbers, align the fallback list to the
+    // receipt table by taking the most recent merges recorded inside the cycle window.
     let skip = merged_sessions.len().saturating_sub(merge_receipt_count);
     let selected_sessions = merged_sessions.into_iter().skip(skip).collect::<Vec<_>>();
     let mut seen = HashSet::new();
@@ -4654,6 +4658,56 @@ mod tests {
     }
 
     #[test]
+    fn worklog_auto_receipts_derives_prs_directly_from_receipt_commit_message() {
+        let repo_root = TempRepoDir::new("worklog-auto-derives-prs-from-receipt-commit");
+        init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "cycle": 154,
+                    "phase_entered_at": "2026-03-06T01:00:00Z"
+                },
+                "agent_sessions": []
+            }"#,
+        );
+        let start_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154 [cycle 154]",
+        );
+        let merge_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/merge.txt",
+            "merged\n",
+            "state(process-merge): PR #88 merged [cycle 154]",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}},
+                    {{"step":"process-merge","receipt":"{merge_receipt}","commit":"state(process-merge): PR #88 merged [cycle 154]"}}
+                ]"#
+            ),
+        );
+
+        let mut args = worklog_args("Receipt commit derived PRs");
+        args.auto_receipts = true;
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.publish_gate = Some("open".to_string());
+
+        let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+        let warnings =
+            apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
+
+        assert!(warnings.is_empty());
+        assert_eq!(input.prs_merged, vec![88]);
+    }
+
+    #[test]
     fn worklog_auto_receipts_derives_dispatch_count_and_replaces_conflicting_manual_text() {
         let repo_root = TempRepoDir::new("worklog-auto-derives-dispatch-count");
         init_git_repo(&repo_root.path);
@@ -4710,6 +4764,56 @@ mod tests {
         assert!(warnings.iter().any(|warning| {
             warning.contains("worklog text 'No new dispatches.' claimed 0 dispatches")
                 && warning.contains("1 dispatch")
+        }));
+    }
+
+    #[test]
+    fn worklog_auto_receipts_zero_dispatches_replace_conflicting_manual_count() {
+        let repo_root = TempRepoDir::new("worklog-auto-zero-dispatches");
+        init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "cycle": 154,
+                    "phase_entered_at": "2026-03-06T01:00:00Z"
+                },
+                "agent_sessions": []
+            }"#,
+        );
+        let start_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154 [cycle 154]",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}}
+                ]"#
+            ),
+        );
+
+        let mut args = worklog_args("Receipt derived zero dispatch count");
+        args.done = vec!["Recorded 2 dispatches.".to_string()];
+        args.auto_receipts = true;
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.publish_gate = Some("open".to_string());
+
+        let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+        let warnings =
+            apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
+        let content = render_worklog(154, fixed_now(), &input);
+
+        assert_eq!(input.what_was_done, vec!["No new dispatches.".to_string()]);
+        assert!(content.contains("- No new dispatches."));
+        assert!(!content.contains("- Recorded 2 dispatches."));
+        assert!(warnings.iter().any(|warning| {
+            warning.contains("worklog text 'Recorded 2 dispatches.' claimed 2 dispatches")
+                && warning.contains("0 dispatches")
         }));
     }
 
