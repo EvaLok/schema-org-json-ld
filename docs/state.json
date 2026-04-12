@@ -7327,8 +7327,10 @@
     {
       "dispatched_at": "2026-04-12T07:56:04Z",
       "issue": 2439,
+      "merged_at": "2026-04-12T09:27:38Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2440,
+      "status": "merged",
       "title": "pipeline-check journal-section invariant (re-dispatch of #2429)"
     },
     {
@@ -8454,12 +8456,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 1,
     "issue": 2443,
     "number": 481,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-12T09:17:41Z"
   },
   "last_eva_comment_check": "2026-04-12T09:17:41Z",
