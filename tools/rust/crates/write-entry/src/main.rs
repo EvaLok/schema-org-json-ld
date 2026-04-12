@@ -1123,10 +1123,10 @@ fn apply_worklog_auto_derivations(
                 remove_manual_no_dispatch_claims(&mut input.what_was_done);
             if removed_no_dispatch_claims > 0 {
                 warnings.push(format!(
-                    "WARNING: removed {} manual no-dispatch claim(s) because cycle-receipts recorded {} record-dispatch entr{}",
+                    "WARNING: removed {} manual no-dispatch claim(s) because cycle-receipts recorded {} record-dispatch {}",
                     removed_no_dispatch_claims,
                     dispatch_count,
-                    if dispatch_count == 1 { "y" } else { "ies" }
+                    pluralize("entry", dispatch_count)
                 ));
             }
         }
@@ -2349,9 +2349,22 @@ fn title_for_pr_number(state: &StateJson, pr: u64) -> Option<String> {
 
 fn render_pr_merged_entry(entry: &MergedPrEntry) -> String {
     match entry.title.as_deref() {
-        Some(title) => format!("PR #{} ({})", entry.number, title),
+        Some(title) => format!(
+            "PR #{} ({})",
+            entry.number,
+            escape_markdown_inline_text(title)
+        ),
         None => format!("PR #{}", entry.number),
     }
+}
+
+fn escape_markdown_inline_text(value: &str) -> String {
+    value
+        .replace('\\', "\\\\")
+        .replace('[', "\\[")
+        .replace(']', "\\]")
+        .replace('(', "\\(")
+        .replace(')', "\\)")
 }
 
 fn extract_pr_references(item: &str) -> Vec<u64> {
@@ -3907,6 +3920,16 @@ mod tests {
                 .count(),
             1
         );
+    }
+
+    #[test]
+    fn render_pr_merged_entry_escapes_markdown_significant_title_characters() {
+        let rendered = render_pr_merged_entry(&MergedPrEntry {
+            number: 240,
+            title: Some("Fix parser (phase [1])".to_string()),
+        });
+
+        assert_eq!(rendered, r"PR #240 (Fix parser \(phase \[1\]\))");
     }
 
     #[test]
