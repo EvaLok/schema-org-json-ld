@@ -8350,7 +8350,7 @@
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
-        "last_refreshed": "cycle 461"
+        "last_refreshed": "cycle 482"
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
@@ -8434,11 +8434,11 @@
       },
       "total_enums": {
         "cadence": "after enum additions",
-        "last_refreshed": "cycle 461"
+        "last_refreshed": "cycle 482"
       },
       "total_schema_classes": {
         "cadence": "after schema class additions",
-        "last_refreshed": "cycle 461"
+        "last_refreshed": "cycle 482"
       },
       "total_schema_types": {
         "cadence": "after schema type additions",
