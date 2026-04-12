@@ -2,7 +2,7 @@ use clap::{ArgGroup, Parser};
 use serde_json::{json, Value};
 use state_schema::current_cycle_from_state;
 use std::fs;
-use std::io::Write;
+use std::io::{self, Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
 
@@ -19,7 +19,7 @@ const VALID_STEP_IDS: [&str; 38] = [
 #[command(group(
 	ArgGroup::new("body_source")
 		.required(true)
-		.args(["body", "body_file"])
+		.args(["body", "body_file", "body_stdin"])
 ))]
 struct Cli {
     /// Orchestrator run issue number
@@ -42,6 +42,10 @@ struct Cli {
     #[arg(long)]
     body_file: Option<PathBuf>,
 
+    /// Read the step outcome body from stdin
+    #[arg(long)]
+    body_stdin: bool,
+
     /// Allow reposting a step ID even if it already exists on the issue
     #[arg(long)]
     force: bool,
@@ -49,6 +53,10 @@ struct Cli {
     /// Skip step ID validation for non-standard step names
     #[arg(long)]
     skip_validation: bool,
+
+    /// Skip validation that rejects likely unexpanded shell or template text in the body
+    #[arg(long)]
+    skip_body_validation: bool,
 
     /// Repository root containing docs/state.json
     #[arg(long, default_value = ".")]
@@ -79,6 +87,7 @@ fn execute(cli: &Cli, runner: &dyn CommentPoster) -> Result<String, String> {
         validate_step_id(step)?;
     }
     let title = validate_required_text("title", &cli.title)?;
+    let body = resolve_body(cli)?;
     let cycle = current_cycle_from_state(&cli.repo_root).map_err(|error| {
         if error == "missing /cycle_phase/cycle or /last_cycle/number in state.json" {
             "missing numeric /cycle_phase/cycle or /last_cycle/number in docs/state.json"
@@ -87,7 +96,6 @@ fn execute(cli: &Cli, runner: &dyn CommentPoster) -> Result<String, String> {
             error
         }
     })?;
-    let body = resolve_body(cli)?;
     let comment = format_comment(cycle, step, title, &body);
 
     if !cli.force {
@@ -108,18 +116,117 @@ fn execute(cli: &Cli, runner: &dyn CommentPoster) -> Result<String, String> {
 fn resolve_body(cli: &Cli) -> Result<String, String> {
     // Clap enforces this for real CLI parsing, but direct struct construction in unit tests
     // or future internal callers can bypass parser validation, so keep a fail-closed check here.
-    match (&cli.body, &cli.body_file) {
-        (Some(_), Some(_)) => {
-            Err("exactly one of --body or --body-file must be provided".to_string())
+    let source_count = usize::from(cli.body.is_some())
+        + usize::from(cli.body_file.is_some())
+        + usize::from(cli.body_stdin);
+    if source_count != 1 {
+        return Err(
+            "exactly one of --body, --body-file, or --body-stdin must be provided".to_string(),
+        );
+    }
+
+    let body = if let Some(body) = &cli.body {
+        body.clone()
+    } else if let Some(path) = &cli.body_file {
+        fs::read_to_string(path)
+            .map_err(|error| format!("failed to read {}: {}", path.display(), error))?
+    } else {
+        read_body_from_stdin()?
+    };
+
+    normalize_body_text(&body, cli.skip_body_validation)
+}
+
+fn read_body_from_stdin() -> Result<String, String> {
+    let mut content = String::new();
+    io::stdin()
+        .read_to_string(&mut content)
+        .map_err(|error| format!("failed to read stdin: {}", error))?;
+    Ok(content)
+}
+
+fn validate_body_text(body: &str) -> Result<(), String> {
+    if body.contains("$(") {
+        return Err(body_validation_error(
+            "unexpanded shell command substitution `$(`",
+        ));
+    }
+
+    if body.contains("${") {
+        return Err(body_validation_error("unexpanded shell variable `${`"));
+    }
+
+    if has_backtick_wrapped_command(body) {
+        return Err(body_validation_error("backtick-wrapped command text"));
+    }
+
+    if let Some(pattern) = find_placeholder_pattern(body) {
+        return Err(body_validation_error(pattern));
+    }
+
+    Ok(())
+}
+
+fn body_validation_error(pattern: &str) -> String {
+    format!(
+        "body contains {pattern}; use --skip-body-validation only when literal text is intentional"
+    )
+}
+
+fn has_backtick_wrapped_command(body: &str) -> bool {
+    let mut in_code_span = false;
+    let mut code_span = String::new();
+
+    for character in body.chars() {
+        if character == '`' {
+            if in_code_span && is_shell_like_code_span(&code_span) {
+                return true;
+            }
+            if in_code_span {
+                code_span.clear();
+            }
+            in_code_span = !in_code_span;
+            continue;
         }
-        (None, None) => Err("exactly one of --body or --body-file must be provided".to_string()),
-        (Some(body), None) => normalize_body_text(body),
-        (None, Some(path)) => {
-            let content = fs::read_to_string(path)
-                .map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
-            normalize_body_text(&content)
+
+        if in_code_span {
+            code_span.push(character);
         }
     }
+
+    false
+}
+
+fn is_shell_like_code_span(code_span: &str) -> bool {
+    let trimmed = code_span.trim();
+    !trimmed.is_empty()
+        && trimmed.chars().all(|character| {
+            character.is_ascii_alphanumeric()
+                || matches!(
+                    character,
+                    '_' | '-' | '/' | '.' | ':' | '=' | '$' | ' ' | '\t' | '(' | ')'
+                )
+        })
+}
+
+fn find_placeholder_pattern(body: &str) -> Option<&'static str> {
+    let normalized = body.to_ascii_lowercase();
+    for (pattern, message) in [
+        ("{{", "unexpanded template marker `{{`"),
+        ("}}", "unexpanded template marker `}}`"),
+        ("<placeholder", "placeholder marker `<placeholder`"),
+        ("[placeholder", "placeholder marker `[placeholder`"),
+        ("<fill in", "placeholder marker `<fill in`"),
+        ("[fill in", "placeholder marker `[fill in`"),
+        ("[insert", "placeholder marker `[insert`"),
+        ("replace_me", "placeholder marker `REPLACE_ME`"),
+    ] {
+        if normalized.contains(pattern) {
+            return Some(message);
+        }
+    }
+
+    None
 }
 
 fn validate_required_text<'a>(field_name: &str, value: &'a str) -> Result<&'a str, String> {
@@ -179,9 +286,12 @@ fn step_token_prefix(segment: &str) -> &str {
     &segment[..end]
 }
 
-fn normalize_body_text(body: &str) -> Result<String, String> {
+fn normalize_body_text(body: &str, skip_body_validation: bool) -> Result<String, String> {
     let normalized = body.trim_end_matches(['\r', '\n']);
     validate_required_text("body", normalized)?;
+    if !skip_body_validation {
+        validate_body_text(normalized)?;
+    }
     Ok(normalized.to_string())
 }
 
@@ -423,8 +533,10 @@ mod tests {
             title: "Check for input-from-eva issues".to_string(),
             body: Some("Found 2 open issues.".to_string()),
             body_file: None,
+            body_stdin: false,
             force: false,
             skip_validation: false,
+            skip_body_validation: false,
             repo_root: repo_root.clone(),
         };
         let poster = RecordingPoster::success();
@@ -453,8 +565,10 @@ mod tests {
             title: "Summarize completion checks".to_string(),
             body: None,
             body_file: Some(body_path),
+            body_stdin: false,
             force: false,
             skip_validation: false,
+            skip_body_validation: false,
             repo_root: repo_root.clone(),
         };
         let poster = RecordingPoster::success();
@@ -480,8 +594,10 @@ mod tests {
             title: "Check for input-from-eva issues".to_string(),
             body: Some("Found 2 open issues.".to_string()),
             body_file: None,
+            body_stdin: false,
             force: false,
             skip_validation: false,
+            skip_body_validation: false,
             repo_root: repo_root.clone(),
         };
         let poster = RecordingPoster::success();
@@ -504,8 +620,10 @@ mod tests {
             title: "Check for input-from-eva issues".to_string(),
             body: Some("Found 2 open issues.".to_string()),
             body_file: None,
+            body_stdin: false,
             force: false,
             skip_validation: false,
+            skip_body_validation: false,
             repo_root: repo_root.clone(),
         };
         let poster = RecordingPoster::failing("gh api failed with status 1: rate limited");
@@ -542,6 +660,18 @@ mod tests {
             "/tmp/body.md",
         ]);
         assert!(both.is_err());
+
+        let body_stdin = Cli::try_parse_from([
+            "post-step",
+            "--issue",
+            "834",
+            "--step",
+            "1",
+            "--title",
+            "Test",
+            "--body-stdin",
+        ]);
+        assert!(body_stdin.is_ok());
     }
 
     #[test]
@@ -596,6 +726,69 @@ mod tests {
     }
 
     #[test]
+    fn body_validation_rejects_command_substitution() {
+        let error = normalize_body_text("result: $(date)", false).expect_err("body should fail");
+
+        assert_eq!(
+            error,
+            "body contains unexpanded shell command substitution `$(`; use --skip-body-validation only when literal text is intentional"
+        );
+    }
+
+    #[test]
+    fn body_validation_rejects_shell_variable_expansion() {
+        let error = normalize_body_text("result: ${USER}", false).expect_err("body should fail");
+
+        assert_eq!(
+            error,
+            "body contains unexpanded shell variable `${`; use --skip-body-validation only when literal text is intentional"
+        );
+    }
+
+    #[test]
+    fn body_validation_rejects_backtick_wrapped_commands() {
+        let error = normalize_body_text("Captured output from `date`.", false)
+            .expect_err("body should fail");
+
+        assert_eq!(
+            error,
+            "body contains backtick-wrapped command text; use --skip-body-validation only when literal text is intentional"
+        );
+    }
+
+    #[test]
+    fn body_validation_accepts_normal_markdown_text() {
+        let body = normalize_body_text("- Completed validation.\n- No placeholders remain.", false)
+            .expect("body should pass");
+
+        assert_eq!(body, "- Completed validation.\n- No placeholders remain.");
+    }
+
+    #[test]
+    fn skip_body_validation_allows_literal_shell_text() {
+        let repo_root = temp_repo_root("post-step-skip-body-validation");
+        write_state_json(&repo_root, r#"{"last_cycle":{"number":198}}"#);
+        let cli = Cli {
+            issue: 834,
+            step: "1".to_string(),
+            title: "Literal shell example".to_string(),
+            body: Some("Example output: $(date)".to_string()),
+            body_file: None,
+            body_stdin: false,
+            force: false,
+            skip_validation: false,
+            skip_body_validation: true,
+            repo_root: repo_root.clone(),
+        };
+        let poster = RecordingPoster::success();
+
+        let result = execute(&cli, &poster).expect("skip flag should allow literal body text");
+
+        assert_eq!(result, "Step 1 posted to EvaLok/schema-org-json-ld#834");
+        assert_eq!(poster.posted_bodies().len(), 1);
+    }
+
+    #[test]
     fn skip_validation_allows_non_standard_step_ids() {
         let repo_root = temp_repo_root("post-step-skip-validation");
         write_state_json(&repo_root, r#"{"last_cycle":{"number":198}}"#);
@@ -605,8 +798,10 @@ mod tests {
             title: "Non-standard step".to_string(),
             body: Some("Posted intentionally.".to_string()),
             body_file: None,
+            body_stdin: false,
             force: false,
             skip_validation: true,
+            skip_body_validation: false,
             repo_root: repo_root.clone(),
         };
         let poster = RecordingPoster::success();
@@ -626,8 +821,10 @@ mod tests {
             title: "Whitespace step".to_string(),
             body: Some("Body.".to_string()),
             body_file: None,
+            body_stdin: false,
             force: false,
             skip_validation: false,
+            skip_body_validation: false,
             repo_root: repo_root.clone(),
         };
         let poster = RecordingPoster::success();
@@ -649,8 +846,10 @@ mod tests {
         assert!(help.contains("--title"));
         assert!(help.contains("--body"));
         assert!(help.contains("--body-file"));
+        assert!(help.contains("--body-stdin"));
         assert!(help.contains("--force"));
         assert!(help.contains("--skip-validation"));
+        assert!(help.contains("--skip-body-validation"));
         assert!(help.contains("--repo-root"));
     }
 
@@ -664,8 +863,10 @@ mod tests {
             title: "Check for input-from-eva issues".to_string(),
             body: Some("Found 2 open issues.".to_string()),
             body_file: None,
+            body_stdin: false,
             force: false,
             skip_validation: false,
+            skip_body_validation: false,
             repo_root: repo_root.clone(),
         };
         let poster = RecordingPoster::with_existing_comments(&[]);
@@ -686,8 +887,10 @@ mod tests {
             title: "Check for input-from-eva issues".to_string(),
             body: Some("Found 2 open issues.".to_string()),
             body_file: None,
+            body_stdin: false,
             force: false,
             skip_validation: false,
+            skip_body_validation: false,
             repo_root: repo_root.clone(),
         };
         let poster = RecordingPoster::with_existing_comments(&[
@@ -710,8 +913,10 @@ mod tests {
             title: "Check for input-from-eva issues".to_string(),
             body: Some("Found 2 open issues.".to_string()),
             body_file: None,
+            body_stdin: false,
             force: false,
             skip_validation: false,
+            skip_body_validation: false,
             repo_root: repo_root.clone(),
         };
         let poster = RecordingPoster::with_existing_comments(&[
@@ -737,8 +942,10 @@ mod tests {
             title: "Check for input-from-eva issues".to_string(),
             body: Some("Found 2 open issues.".to_string()),
             body_file: None,
+            body_stdin: false,
             force: true,
             skip_validation: false,
+            skip_body_validation: false,
             repo_root: repo_root.clone(),
         };
         let poster = RecordingPoster::with_existing_comments(&[
@@ -761,8 +968,10 @@ mod tests {
             title: "Check for input-from-eva issues".to_string(),
             body: Some("Found 2 open issues.".to_string()),
             body_file: None,
+            body_stdin: false,
             force: false,
             skip_validation: false,
+            skip_body_validation: false,
             repo_root: repo_root.clone(),
         };
         let poster = RecordingPoster::with_existing_comments(&[
@@ -863,8 +1072,10 @@ mod tests {
             title: "Check for input-from-eva issues".to_string(),
             body: Some("Found 2 open issues.".to_string()),
             body_file: None,
+            body_stdin: false,
             force: false,
             skip_validation: false,
+            skip_body_validation: false,
             repo_root: repo_root.clone(),
         };
         let poster = RecordingPoster::fetch_failing("gh api failed with status 1: rate limited");
