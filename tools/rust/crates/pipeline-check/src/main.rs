@@ -62,7 +62,7 @@ const COMMITMENT_DROP_RATIONALE_MARKERS: &[&str] = &[
     " due to ",
 ];
 const NON_SURFACE_CYCLE_PREFIX: &str = "cycle-";
-const STEP_NAMES: [&str; 27] = [
+const STEP_NAMES: [&str; 28] = [
     "metric-snapshot",
     "field-inventory",
     "housekeeping-scan",
@@ -6870,7 +6870,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 27);
+        assert_eq!(report.steps.len(), 28);
         assert_eq!(report.steps[0].status, StepStatus::Pass);
         assert_eq!(report.steps[1].status, StepStatus::Pass);
         assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -7128,7 +7128,7 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 27);
+        assert_eq!(report.steps.len(), 28);
         assert!(report.steps[..6]
             .iter()
             .all(|step| matches!(step.status, StepStatus::Error)));
@@ -8082,7 +8082,7 @@ mod tests {
             &ExcludeDocValidationRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 26);
+        assert_eq!(report.steps.len(), 27);
         assert!(!report
             .steps
             .iter()
@@ -8221,7 +8221,7 @@ mod tests {
             &UnknownExcludeRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 27);
+        assert_eq!(report.steps.len(), 28);
         assert!(report
             .steps
             .iter()
@@ -8368,7 +8368,7 @@ mod tests {
         );
 
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 26);
+        assert_eq!(report.steps.len(), 27);
         assert!(!report.steps.iter().any(|step| step.name == "worklog-dedup"));
         assert!(report
             .steps
