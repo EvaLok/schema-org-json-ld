@@ -1,9 +1,11 @@
 use clap::Parser;
 use serde_json::Value;
-use state_schema::{SchemaStatus, StateJson, TypescriptPlan};
+use state_schema::{
+    read_state_value, update_freshness, write_state_value, SchemaStatus, StateJson, TypescriptPlan,
+};
 use std::collections::BTreeSet;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process;
 
 /// Field inventory completeness check for state.json.
@@ -19,6 +21,9 @@ struct Cli {
     /// Current cycle number for cadence-based staleness checks
     #[arg(long)]
     cycle: Option<u64>,
+    /// Refresh stale inventory entries whose corresponding fields this tool can confirm exist
+    #[arg(long, requires = "cycle")]
+    refresh_verified: bool,
 }
 
 /// Top-level keys excluded from tracking (append-only or static).
@@ -57,7 +62,8 @@ const EXCLUDED_TYPESCRIPT_PLAN: &[&str] = &[
 fn main() {
     let cli = Cli::parse();
 
-    let state = read_state_file(&cli.repo_root.join("docs/state.json"));
+    let state_path = cli.repo_root.join("docs/state.json");
+    let mut state = read_state_file(&state_path);
 
     let inventoried = get_inventoried_fields(&state);
     let mut gaps: BTreeSet<String> = BTreeSet::new();
@@ -103,17 +109,51 @@ fn main() {
         gaps.insert(eva_check);
     }
 
-    let stale = cli
+    let mut stale = cli
         .cycle
         .map(|current_cycle| detect_stale_fields(&state, current_cycle))
         .unwrap_or_default();
+    let mut refreshed = Vec::new();
+
+    if cli.refresh_verified {
+        let cycle = cli
+            .cycle
+            .expect("--refresh-verified requires --cycle to be present");
+        refreshed = refresh_verified_stale_fields(&cli.repo_root, cycle).unwrap_or_else(|error| {
+            eprintln!(
+                "Error refreshing verified field inventory entries: {}",
+                error
+            );
+            process::exit(1);
+        });
+        if !refreshed.is_empty() {
+            state = read_state_file(&state_path);
+            stale = detect_stale_fields(&state, cycle);
+        }
+    }
 
     if gaps.is_empty() && stale.is_empty() {
+        if !refreshed.is_empty() {
+            println!(
+                "REFRESHED VERIFIED FIELD INVENTORY: {} stale field(s) updated",
+                refreshed.len()
+            );
+        }
         println!(
             "PASS: All mutable fields have field_inventory entries ({} tracked)",
             inventoried.len()
         );
     } else {
+        if !refreshed.is_empty() {
+            println!(
+                "REFRESHED VERIFIED FIELD INVENTORY: {} stale field(s) updated",
+                refreshed.len()
+            );
+            for field in &refreshed {
+                println!("  - {}", field);
+            }
+            println!();
+        }
         if !gaps.is_empty() {
             println!(
                 "GAPS FOUND: {} mutable field(s) without inventory entries:",
@@ -170,6 +210,79 @@ fn read_state_file(path: &PathBuf) -> StateJson {
 
 fn get_inventoried_fields(state: &StateJson) -> BTreeSet<String> {
     state.field_inventory.fields.keys().cloned().collect()
+}
+
+fn collect_verified_inventory_fields(
+    state: &StateJson,
+    inventoried: &BTreeSet<String>,
+) -> BTreeSet<String> {
+    let mut verified = BTreeSet::new();
+
+    for key in state_top_level_keys(state) {
+        if EXCLUDED_TOP_LEVEL.contains(&key.as_str()) {
+            continue;
+        }
+        if inventoried.contains(&key) {
+            verified.insert(key);
+        }
+    }
+
+    for key in schema_status_keys(state) {
+        if EXCLUDED_SCHEMA_STATUS.contains(&key.as_str()) {
+            continue;
+        }
+        let prefixed = format!("schema_status.{}", key);
+        if inventoried.contains(&prefixed) {
+            verified.insert(prefixed);
+        } else if inventoried.contains(&key) {
+            verified.insert(key);
+        }
+    }
+
+    for key in typescript_plan_keys(state) {
+        if EXCLUDED_TYPESCRIPT_PLAN.contains(&key.as_str()) {
+            continue;
+        }
+        let path = format!("typescript_plan.{}", key);
+        if inventoried.contains(&path) {
+            verified.insert(path);
+        }
+    }
+
+    let eva_check = "eva_input_issues.closed_this_cycle".to_string();
+    if inventoried.contains(&eva_check) {
+        verified.insert(eva_check);
+    }
+
+    verified
+}
+
+fn refresh_verified_stale_fields(repo_root: &Path, cycle: u64) -> Result<Vec<String>, String> {
+    let cycle_u32 =
+        u32::try_from(cycle).map_err(|_| format!("cycle {} must fit in u32 range", cycle))?;
+    let mut state_value = read_state_value(repo_root)?;
+    let state: StateJson = serde_json::from_value(state_value.clone())
+        .map_err(|error| format!("failed to parse docs/state.json: {}", error))?;
+    let inventoried = get_inventoried_fields(&state);
+    let verified = collect_verified_inventory_fields(&state, &inventoried);
+    let stale = detect_stale_fields(&state, cycle);
+    let refreshable = stale
+        .into_iter()
+        .filter(|field| verified.contains(&field.name))
+        .map(|field| field.name)
+        .collect::<Vec<_>>();
+
+    if refreshable.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    for field in &refreshable {
+        update_freshness(&mut state_value, field, cycle_u32)?;
+    }
+
+    write_state_value(repo_root, &state_value)?;
+
+    Ok(refreshable)
 }
 
 /// Check if a top-level key is inventoried (exact match or has sub-field entries).
@@ -453,5 +566,95 @@ mod tests {
     #[test]
     fn excluded_top_level_includes_pending_audit_implementations() {
         assert!(EXCLUDED_TOP_LEVEL.contains(&"pending_audit_implementations"));
+    }
+
+    #[test]
+    fn collect_verified_inventory_fields_prefers_existing_inventory_names() {
+        let mut state = StateJson::default();
+        state
+            .field_inventory
+            .fields
+            .insert("blockers".to_string(), json!({"cadence": "after changes"}));
+        state.field_inventory.fields.insert(
+            "type_classification".to_string(),
+            json!({"cadence": "after changes"}),
+        );
+        state.field_inventory.fields.insert(
+            "schema_status.phpstan_level".to_string(),
+            json!({"cadence": "after changes"}),
+        );
+        let inventoried = get_inventoried_fields(&state);
+
+        let verified = collect_verified_inventory_fields(&state, &inventoried);
+
+        assert!(verified.contains("blockers"));
+        assert!(verified.contains("type_classification"));
+        assert!(verified.contains("schema_status.phpstan_level"));
+    }
+
+    #[test]
+    fn refresh_verified_stale_fields_updates_only_verified_entries() {
+        let suffix = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("clock must be after unix epoch")
+            .as_nanos();
+        let temp_dir = std::env::temp_dir().join(format!("check-field-inventory-refresh-{suffix}"));
+        fs::create_dir_all(temp_dir.join("docs")).expect("docs dir should be created");
+        fs::write(
+            temp_dir.join("docs/state.json"),
+            r#"{
+  "blockers": [],
+  "qc_status": {
+    "state": "green"
+  },
+  "field_inventory": {
+    "fields": {
+      "blockers": {
+        "cadence": "after blocker state changes",
+        "last_refreshed": "cycle 450"
+      },
+      "qc_status": {
+        "cadence": "after QC interactions",
+        "last_refreshed": "cycle 450"
+      },
+      "orphan_field": {
+        "cadence": "after changes",
+        "last_refreshed": "cycle 450"
+      }
+    }
+  }
+}"#,
+        )
+        .expect("state fixture should be written");
+
+        let refreshed =
+            refresh_verified_stale_fields(&temp_dir, 483).expect("refresh should succeed");
+
+        assert_eq!(
+            refreshed,
+            vec!["blockers".to_string(), "qc_status".to_string()]
+        );
+
+        let refreshed_state = read_state_value(&temp_dir).expect("state should be readable");
+        assert_eq!(
+            refreshed_state
+                .pointer("/field_inventory/fields/blockers/last_refreshed")
+                .and_then(Value::as_str),
+            Some("cycle 483")
+        );
+        assert_eq!(
+            refreshed_state
+                .pointer("/field_inventory/fields/qc_status/last_refreshed")
+                .and_then(Value::as_str),
+            Some("cycle 483")
+        );
+        assert_eq!(
+            refreshed_state
+                .pointer("/field_inventory/fields/orphan_field/last_refreshed")
+                .and_then(Value::as_str),
+            Some("cycle 450")
+        );
+
+        fs::remove_dir_all(temp_dir).expect("temp dir should be removed");
     }
 }
