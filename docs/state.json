@@ -7379,6 +7379,13 @@
       "pr": 2452,
       "status": "merged",
       "title": "[Cycle Review] Cycle 482 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-04-12T23:28:44Z",
+      "issue": 2455,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Expand field-inventory auto-refresh to cover all 22 stale entries"
     }
   ],
   "audit_dropped": [
@@ -8226,7 +8233,7 @@
       "resolved_ref": "docs/reviews/cycle-481.md"
     }
   ],
-  "dispatch_log_latest": "#2451 [Cycle Review] Cycle 482 end-of-cycle review (cycle 482)",
+  "dispatch_log_latest": "#2455 Expand field-inventory auto-refresh to cover all 22 stale entries (cycle 483)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8497,13 +8504,13 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 4,
     "issue": 2453,
     "number": 483,
-    "summary": "0 dispatches, 2 merges",
-    "timestamp": "2026-04-12T23:11:20Z"
+    "summary": "1 dispatch, 2 merges",
+    "timestamp": "2026-04-12T23:28:44Z"
   },
   "last_eva_comment_check": "2026-04-12T23:11:20Z",
   "last_tool_audit_cycle": 403,
@@ -14895,7 +14902,7 @@
     ],
     "last_review_cycle": 482
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 482,
   "schema_status": {
     "directory_layout": {
