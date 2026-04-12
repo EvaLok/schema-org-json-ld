@@ -310,6 +310,18 @@
         then pass it via --body-file. Use --dry-run to preview.</note>
       <constraint>Agent must commit findings as docs/reviews/cycle-NNN.md (agents cannot post issue comments).</constraint>
     </dispatch-mechanics>
+
+    <substep id="C6.chronic-refresh-invalidation" title="chronic-refresh-invalidation">
+      <description>After this cycle's review is consumed, run the warning-only
+        pipeline-check chronic-refresh-invalidation step to detect chronic
+        category refreshes from the reviewed cycle that were invalidated by
+        that same cycle's review categories.</description>
+      <action>If flagged, manually run <code>process-review --rollback-chronic-category CATEGORY:PRIOR_VC:RATIONALE</code>
+        for each listed category before treating the chronic response as current.</action>
+      <constraint>Tier 1 backstop: do not leave same-cycle fabricated freshness
+        markers in <code>review_agent.chronic_category_responses</code> after
+        adversarial review consumption.</constraint>
+    </substep>
   </step>
 
   <!-- C6.1: Fallback self-review -->

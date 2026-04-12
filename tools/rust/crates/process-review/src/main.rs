@@ -109,6 +109,10 @@ struct Cli {
     /// Optional human-readable rationale appended to refreshed chronic entries
     #[arg(long = "update-chronic-rationale")]
     update_chronic_rationale: Option<String>,
+
+    /// Roll back chronic category refreshes in CATEGORY:PRIOR_VC:RATIONALE form
+    #[arg(long = "rollback-chronic-category")]
+    rollback_chronic_categories: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -178,8 +182,13 @@ fn run(cli: Cli) -> Result<(), String> {
     let has_review_processing = cli.review_file.is_some();
     let has_deferral_update = !cli.drop_deferrals.is_empty() || !cli.resolve_deferrals.is_empty();
     let has_chronic_update = !cli.update_chronic_categories.is_empty();
-    if !has_review_processing && !has_deferral_update && !has_chronic_update {
-        return Err("either --review-file, --drop-deferral, --resolve-deferral, or --update-chronic-category must be provided".to_string());
+    let has_chronic_rollback = !cli.rollback_chronic_categories.is_empty();
+    if !has_review_processing
+        && !has_deferral_update
+        && !has_chronic_update
+        && !has_chronic_rollback
+    {
+        return Err("either --review-file, --drop-deferral, --resolve-deferral, --update-chronic-category, or --rollback-chronic-category must be provided".to_string());
     }
 
     let mut state_value = read_state_value(&cli.repo_root)?;
@@ -261,12 +270,22 @@ fn run(cli: Cli) -> Result<(), String> {
     } else {
         None
     };
+    let chronic_rollback_summary = if has_chronic_rollback {
+        Some(rollback_chronic_category_responses(
+            &mut state_value,
+            &cli.rollback_chronic_categories,
+            current_cycle,
+        )?)
+    } else {
+        None
+    };
 
     let receipt = if state_value != original_state_value {
         write_state_value(&cli.repo_root, &state_value)?;
         let commit_message = build_commit_message(
             review_summary.as_ref(),
             chronic_update_summary.as_ref(),
+            chronic_rollback_summary.as_ref(),
             has_deferral_update,
             current_cycle,
         );
@@ -293,6 +312,13 @@ fn run(cli: Cli) -> Result<(), String> {
             chronic_update_summary.categories.join(", ")
         );
     }
+    if let Some(chronic_rollback_summary) = chronic_rollback_summary.as_ref() {
+        println!(
+            "Rolled back {} chronic_category_responses entries for categories: {}",
+            chronic_rollback_summary.updated_entries,
+            chronic_rollback_summary.categories.join(", ")
+        );
+    }
     match (review_summary.is_some(), receipt.as_deref()) {
         (true, Some(receipt)) => println!("History entry added (receipt: {})", receipt),
         (false, Some(receipt)) => println!("State updated (receipt: {})", receipt),
@@ -305,45 +331,73 @@ fn run(cli: Cli) -> Result<(), String> {
 fn build_commit_message(
     review_summary: Option<&ReviewRunSummary>,
     chronic_update_summary: Option<&ChronicUpdateSummary>,
+    chronic_rollback_summary: Option<&ChronicUpdateSummary>,
     has_deferral_update: bool,
     current_cycle: u64,
 ) -> String {
-    match (review_summary, chronic_update_summary, has_deferral_update) {
-        (Some(review_summary), Some(chronic_update_summary), true) => format!(
-            "state(process-review): cycle {} review consumed + refreshed chronic categories {} + updated deferred findings [cycle {}]",
-            review_summary.cycle,
-            chronic_update_summary.categories.join(", "),
+    if review_summary.is_none()
+        && chronic_update_summary.is_none()
+        && chronic_rollback_summary.is_none()
+        && has_deferral_update
+    {
+        return format!(
+            "state(process-review): updated deferred findings [cycle {}]",
             current_cycle
-        ),
-        (Some(review_summary), Some(chronic_update_summary), false) => format!(
-            "state(process-review): cycle {} review consumed + refreshed chronic categories {} [cycle {}]",
-            review_summary.cycle,
-            chronic_update_summary.categories.join(", "),
-            current_cycle
-        ),
-        (Some(review_summary), None, true) => format!(
-            "state(process-review): cycle {} review consumed, score {}/5 + updated deferred findings [cycle {}]",
-            review_summary.cycle, review_summary.complacency_score, current_cycle
-        ),
-        (Some(review_summary), None, false) => format!(
-            "state(process-review): cycle {} review consumed, score {}/5 [cycle {}]",
-            review_summary.cycle, review_summary.complacency_score, current_cycle
-        ),
-        (None, Some(chronic_update_summary), true) => format!(
-            "state(process-review): refreshed chronic categories {} + updated deferred findings [cycle {}]",
-            chronic_update_summary.categories.join(", "),
-            current_cycle
-        ),
-        (None, Some(chronic_update_summary), false) => format!(
-            "state(process-review): refreshed chronic categories {} [cycle {}]",
-            chronic_update_summary.categories.join(", "),
-            current_cycle
-        ),
-        (None, None, true) => {
-            format!("state(process-review): updated deferred findings [cycle {}]", current_cycle)
-        }
-        (None, None, false) => format!("state(process-review): no-op [cycle {}]", current_cycle),
+        );
     }
+    if review_summary.is_none()
+        && chronic_update_summary.is_none()
+        && chronic_rollback_summary.is_none()
+        && !has_deferral_update
+    {
+        return format!("state(process-review): no-op [cycle {}]", current_cycle);
+    }
+
+    let mut details = Vec::new();
+    if let Some(review_summary) = review_summary {
+        if chronic_update_summary.is_none()
+            && chronic_rollback_summary.is_none()
+            && !has_deferral_update
+        {
+            details.push(format!("score {}/5", review_summary.complacency_score));
+        }
+    }
+    if let Some(chronic_update_summary) = chronic_update_summary {
+        details.push(format!(
+            "refreshed chronic categories {}",
+            chronic_update_summary.categories.join(", ")
+        ));
+    }
+    if let Some(chronic_rollback_summary) = chronic_rollback_summary {
+        details.push(format!(
+            "rolled back chronic categories {}",
+            chronic_rollback_summary.categories.join(", ")
+        ));
+    }
+    if has_deferral_update {
+        details.push("updated deferred findings".to_string());
+    }
+
+    let prefix = match review_summary {
+        Some(review_summary) => format!(
+            "state(process-review): cycle {} review consumed",
+            review_summary.cycle
+        ),
+        None if chronic_update_summary.is_none()
+            && chronic_rollback_summary.is_some()
+            && !has_deferral_update =>
+        {
+            "state(process-review): chronic rollback".to_string()
+        }
+        None => "state(process-review): state update".to_string(),
+    };
+
+    format!(
+        "{}: {} [cycle {}]",
+        prefix,
+        details.join(" + "),
+        current_cycle
+    )
 }
 
 fn validate_dispositions(
@@ -1103,6 +1157,157 @@ fn update_chronic_category_responses(
     })
 }
 
+fn rollback_chronic_category_responses(
+    state: &mut Value,
+    rollbacks: &[String],
+    current_cycle: u64,
+) -> Result<ChronicUpdateSummary, String> {
+    let parsed_rollbacks = rollbacks
+        .iter()
+        .map(|raw| parse_chronic_rollback(raw))
+        .collect::<Result<Vec<_>, _>>()?;
+    let requested_categories = parsed_rollbacks
+        .iter()
+        .map(|(category, _, _)| category.clone())
+        .collect::<BTreeSet<_>>();
+    let requested_category_list = requested_categories.iter().cloned().collect::<Vec<_>>();
+    let entries_snapshot = state
+        .pointer("/review_agent/chronic_category_responses/entries")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            "missing /review_agent/chronic_category_responses/entries array in docs/state.json"
+                .to_string()
+        })?;
+    let mut matched_categories = BTreeSet::new();
+
+    for (category, prior_verification_cycle, _) in &parsed_rollbacks {
+        let mut matched = false;
+        for (entry_index, entry) in entries_snapshot.iter().enumerate() {
+            let entry_object = entry.as_object().ok_or_else(|| {
+                format!(
+                    "review_agent.chronic_category_responses.entries[{}] must be an object",
+                    entry_index
+                )
+            })?;
+            let Some(entry_category) = entry_object.get("category").and_then(Value::as_str) else {
+                continue;
+            };
+            if entry_category != category {
+                continue;
+            }
+
+            matched = true;
+            matched_categories.insert(category.clone());
+            let current_verification_cycle = entry_object
+				.get("verification_cycle")
+				.and_then(Value::as_u64)
+				.ok_or_else(|| {
+					format!(
+						"review_agent.chronic_category_responses.entries[{}].verification_cycle must be a numeric value",
+						entry_index
+					)
+				})?;
+            if *prior_verification_cycle >= current_verification_cycle {
+                return Err(format!(
+					"invalid --rollback-chronic-category prior verification cycle {} for category '{}': must be less than current verification_cycle {}",
+					prior_verification_cycle, category, current_verification_cycle
+				));
+            }
+            entry_object
+                .get("updated_cycle")
+                .and_then(Value::as_u64)
+                .ok_or_else(|| {
+                    format!(
+						"review_agent.chronic_category_responses.entries[{}].updated_cycle must be a numeric value",
+						entry_index
+					)
+                })?;
+            match entry_object.get("rationale") {
+                Some(Value::String(_)) | Some(Value::Null) | None => {}
+                Some(_) => {
+                    return Err(format!(
+						"review_agent.chronic_category_responses.entries[{}].rationale must be a string when present",
+						entry_index
+					))
+                }
+            }
+        }
+        if !matched {
+            return Err(format!(
+                "no chronic_category_responses entries found for categories: {}",
+                category
+            ));
+        }
+    }
+
+    let entries = state
+        .pointer_mut("/review_agent/chronic_category_responses/entries")
+        .and_then(Value::as_array_mut)
+        .ok_or_else(|| {
+            "missing /review_agent/chronic_category_responses/entries array in docs/state.json"
+                .to_string()
+        })?;
+    let mut updated_entries = 0usize;
+
+    for (category, prior_verification_cycle, rationale_text) in parsed_rollbacks {
+        for (entry_index, entry) in entries.iter_mut().enumerate() {
+            let entry_object = entry.as_object_mut().ok_or_else(|| {
+                format!(
+                    "review_agent.chronic_category_responses.entries[{}] must be an object",
+                    entry_index
+                )
+            })?;
+            let Some(entry_category) = entry_object.get("category").and_then(Value::as_str) else {
+                continue;
+            };
+            if entry_category != category {
+                continue;
+            }
+
+            let prior_updated_cycle = entry_object
+                .get("updated_cycle")
+                .and_then(Value::as_u64)
+                .expect("updated_cycle should be validated before mutation");
+            let existing_rationale = match entry_object.get("rationale") {
+                Some(Value::String(value)) => Some(value.clone()),
+                Some(Value::Null) | None => None,
+                Some(_) => unreachable!("rationale type validated before mutation"),
+            };
+            let rollback_marker = format!(
+                "Cycle {}: rollback of cycle {} refresh — {}",
+                current_cycle, prior_updated_cycle, rationale_text
+            );
+            let next_rationale = match existing_rationale
+                .as_deref()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+            {
+                Some(existing) => format!("{} | {}", existing, rollback_marker),
+                None => rollback_marker,
+            };
+
+            entry_object.insert(
+                "verification_cycle".to_string(),
+                json!(prior_verification_cycle),
+            );
+            entry_object.insert("updated_cycle".to_string(), json!(current_cycle));
+            entry_object.insert("rationale".to_string(), Value::String(next_rationale));
+            updated_entries += 1;
+        }
+    }
+
+    set_value_at_pointer(
+        state,
+        "/field_inventory/fields/review_agent.chronic_category_responses/last_refreshed",
+        json!(format!("cycle {}", current_cycle)),
+    )?;
+
+    Ok(ChronicUpdateSummary {
+        updated_entries,
+        categories: requested_category_list,
+    })
+}
+
 fn chronic_refresh_rationale(cycle: u64, prs: &[u64], rationale_text: Option<&str>) -> String {
     let mut rationale = format!("Cycle {}: refreshed via PR(s)", cycle);
     if !prs.is_empty() {
@@ -1281,14 +1486,40 @@ fn parse_deferral_update(
     flag_name: &str,
     trailing_field_name: &str,
 ) -> Result<(String, u64, String), String> {
+    parse_category_cycle_text_update(
+        raw,
+        flag_name,
+        "DEFERRED_CYCLE",
+        "deferred cycle",
+        trailing_field_name,
+    )
+}
+
+fn parse_chronic_rollback(raw: &str) -> Result<(String, u64, String), String> {
+    parse_category_cycle_text_update(
+        raw,
+        "--rollback-chronic-category",
+        "PRIOR_VC",
+        "prior verification cycle",
+        "RATIONALE",
+    )
+}
+
+fn parse_category_cycle_text_update(
+    raw: &str,
+    flag_name: &str,
+    cycle_component_name: &str,
+    cycle_field_name: &str,
+    trailing_field_name: &str,
+) -> Result<(String, u64, String), String> {
     let mut parts = raw.splitn(3, ':');
     let category_raw = parts.next().unwrap_or_default();
-    let deferred_cycle_raw = parts.next().unwrap_or_default();
+    let cycle_raw = parts.next().unwrap_or_default();
     let trailing_value_raw = parts.next().unwrap_or_default();
-    if category_raw.is_empty() || deferred_cycle_raw.is_empty() || trailing_value_raw.is_empty() {
+    if category_raw.is_empty() || cycle_raw.is_empty() || trailing_value_raw.is_empty() {
         return Err(format!(
-            "invalid {} '{}': expected CATEGORY:DEFERRED_CYCLE:{}",
-            flag_name, raw, trailing_field_name
+            "invalid {} '{}': expected CATEGORY:{}:{}",
+            flag_name, raw, cycle_component_name, trailing_field_name
         ));
     }
 
@@ -1298,10 +1529,10 @@ fn parse_deferral_update(
             flag_name, category_raw
         )
     })?;
-    let deferred_cycle = deferred_cycle_raw.parse::<u64>().map_err(|_| {
+    let cycle = cycle_raw.parse::<u64>().map_err(|_| {
         format!(
-            "invalid {} deferred cycle '{}': expected an unsigned integer",
-            flag_name, deferred_cycle_raw
+            "invalid {} {} '{}': expected an unsigned integer",
+            flag_name, cycle_field_name, cycle_raw
         )
     })?;
     let trailing_value = trailing_value_raw.trim();
@@ -1312,7 +1543,7 @@ fn parse_deferral_update(
         ));
     }
 
-    Ok((category, deferred_cycle, trailing_value.to_string()))
+    Ok((category, cycle, trailing_value.to_string()))
 }
 
 fn insert_missing_top_level_path(state: &mut Value, path: &str, value: Value) -> bool {
@@ -1416,6 +1647,7 @@ mod tests {
         assert!(help.contains("--update-chronic-pr"));
         assert!(help.contains("--update-chronic-cycle"));
         assert!(help.contains("--update-chronic-rationale"));
+        assert!(help.contains("--rollback-chronic-category"));
     }
 
     #[test]
@@ -1503,6 +1735,21 @@ mod tests {
         );
         assert_eq!(cli.update_chronic_prs, vec![2266]);
         assert_eq!(cli.update_chronic_cycle, Some(460));
+    }
+
+    #[test]
+    fn cli_accepts_rollback_chronic_without_review_file() {
+        let cli = Cli::parse_from([
+            "process-review",
+            "--rollback-chronic-category",
+            "receipt-integrity:461:rollback rationale",
+        ]);
+
+        assert_eq!(cli.review_file, None);
+        assert_eq!(
+            cli.rollback_chronic_categories,
+            vec!["receipt-integrity:461:rollback rationale".to_string()]
+        );
     }
 
     #[test]
@@ -3076,6 +3323,118 @@ mod tests {
     }
 
     #[test]
+    fn rollback_chronic_category_restores_verification_cycle() {
+        let mut state = chronic_state_fixture(json!([{
+            "category": "receipt-integrity",
+            "chosen_path": "structural-fix",
+            "rationale": "existing",
+            "updated_cycle": 474,
+            "verification_cycle": 474
+        }]));
+
+        let summary = rollback_chronic_category_responses(
+            &mut state,
+            &["receipt-integrity:461:rollback rationale".to_string()],
+            500,
+        )
+        .expect("rollback should succeed");
+
+        assert_eq!(summary.updated_entries, 1);
+        let entry = &state["review_agent"]["chronic_category_responses"]["entries"][0];
+        assert_eq!(entry["updated_cycle"], json!(500));
+        assert_eq!(entry["verification_cycle"], json!(461));
+    }
+
+    #[test]
+    fn rollback_chronic_category_appends_rationale_with_prior_refresh_cycle() {
+        let mut state = chronic_state_fixture(json!([{
+            "category": "receipt-integrity",
+            "chosen_path": "structural-fix",
+            "rationale": "existing",
+            "updated_cycle": 474,
+            "verification_cycle": 474
+        }]));
+
+        rollback_chronic_category_responses(
+            &mut state,
+            &["receipt-integrity:461:rollback rationale".to_string()],
+            500,
+        )
+        .expect("rollback should succeed");
+
+        assert_eq!(
+            state["review_agent"]["chronic_category_responses"]["entries"][0]["rationale"],
+            json!("existing | Cycle 500: rollback of cycle 474 refresh — rollback rationale")
+        );
+    }
+
+    #[test]
+    fn rollback_chronic_category_errors_when_category_missing() {
+        let mut state = chronic_state_fixture(json!([{
+            "category": "receipt-integrity",
+            "chosen_path": "structural-fix",
+            "rationale": "existing",
+            "updated_cycle": 474,
+            "verification_cycle": 474
+        }]));
+
+        let error = rollback_chronic_category_responses(
+            &mut state,
+            &["process-adherence:462:rollback rationale".to_string()],
+            500,
+        )
+        .expect_err("rollback should fail");
+
+        assert!(error.contains("no chronic_category_responses entries found"));
+        assert!(error.contains("process-adherence"));
+    }
+
+    #[test]
+    fn rollback_chronic_category_rejects_non_regressive_prior_cycle() {
+        let mut state = chronic_state_fixture(json!([{
+            "category": "receipt-integrity",
+            "chosen_path": "structural-fix",
+            "rationale": "existing",
+            "updated_cycle": 474,
+            "verification_cycle": 474
+        }]));
+
+        let error = rollback_chronic_category_responses(
+            &mut state,
+            &["receipt-integrity:474:rollback rationale".to_string()],
+            500,
+        )
+        .expect_err("rollback should fail");
+
+        assert!(error.contains("prior verification cycle 474"));
+        assert!(error.contains("current verification_cycle 474"));
+    }
+
+    #[test]
+    fn rollback_chronic_category_bumps_field_inventory_marker() {
+        let mut state = chronic_state_fixture(json!([{
+            "category": "receipt-integrity",
+            "chosen_path": "structural-fix",
+            "rationale": "existing",
+            "updated_cycle": 474,
+            "verification_cycle": 474
+        }]));
+
+        rollback_chronic_category_responses(
+            &mut state,
+            &["receipt-integrity:461:rollback rationale".to_string()],
+            500,
+        )
+        .expect("rollback should succeed");
+
+        assert_eq!(
+            state["field_inventory"]["fields"]["review_agent.chronic_category_responses"]
+                ["last_refreshed"],
+            json!("cycle 500")
+        );
+    }
+
+    #[test]
     fn update_chronic_category_does_nothing_when_no_flags() {
         let chronic_entries = json!([{
             "category": "worklog-accuracy",
@@ -3205,6 +3564,45 @@ mod tests {
             updated_state.pointer("/review_agent/history"),
             Some(&json!([]))
         );
+    }
+
+    #[test]
+    fn run_accepts_rollback_chronic_without_review_file() {
+        let repo_root = write_temp_state_repo(chronic_state_fixture(json!([{
+            "category": "receipt-integrity",
+            "chosen_path": "structural-fix",
+            "rationale": "existing",
+            "updated_cycle": 474,
+            "verification_cycle": 474
+        }])));
+        init_temp_git_repo(&repo_root);
+
+        let cli = Cli::parse_from([
+            "process-review",
+            "--repo-root",
+            repo_root.to_str().expect("repo path should be valid UTF-8"),
+            "--rollback-chronic-category",
+            "receipt-integrity:461:rollback rationale",
+        ]);
+
+        run(cli).expect("rollback-only run should succeed");
+
+        let updated_state = read_state_value(&repo_root).expect("state should be readable");
+        assert_eq!(
+            updated_state
+                .pointer("/review_agent/chronic_category_responses/entries/0/verification_cycle"),
+            Some(&json!(461))
+        );
+        let commit_subject = std::process::Command::new("git")
+            .arg("-C")
+            .arg(&repo_root)
+            .args(["log", "-1", "--pretty=%s"])
+            .output()
+            .expect("git log should execute");
+        assert!(commit_subject.status.success(), "git log should succeed");
+        let subject =
+            String::from_utf8(commit_subject.stdout).expect("git log output should be UTF-8");
+        assert!(subject.contains("state(process-review): chronic rollback"));
     }
 
     #[test]
