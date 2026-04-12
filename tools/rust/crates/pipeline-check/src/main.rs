@@ -2941,6 +2941,9 @@ fn current_cycle_journal_section_status_for_date(
 
     let content = fs::read_to_string(&journal_path)
         .map_err(|error| format!("failed to read {}: {}", journal_path.display(), error))?;
+    // This invariant is intentionally structural: close_out requires the exact
+    // cycle heading form `## YYYY-MM-DD — Cycle N:` to be present in today's
+    // journal so the section is unambiguous and machine-checkable.
     if content.lines().any(|line| line.trim() == expected_heading) {
         Ok((
             StepStatus::Pass,
@@ -6269,6 +6272,12 @@ mod tests {
         assert_eq!(report.steps[22].status, StepStatus::Pass);
         assert_eq!(report.steps[23].name, "current-cycle-steps");
         assert_eq!(report.steps[23].status, StepStatus::Pass);
+        let current_cycle_journal_section = report
+            .steps
+            .iter()
+            .find(|step| step.name == CURRENT_CYCLE_JOURNAL_SECTION_STEP_NAME)
+            .expect("current-cycle-journal-section step should be present");
+        assert_eq!(current_cycle_journal_section.status, StepStatus::Pass);
     }
 
     #[test]
