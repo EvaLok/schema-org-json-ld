@@ -8556,10 +8556,10 @@
           "added_cycle": 246,
           "category": "code-quality",
           "chosen_path": "structural-fix",
-          "rationale": "Dispatched #1176 (cycle 258) to fix write-entry auto-derivation gating on args.cycle instead of resolved cycle, and to add regression tests for the default (omitted-cycle) invocation path. Cycle 461 re-verification: code-quality has appeared in only 1 of the last 16 review cycles (cycle 459 F4, audit-inbound-lifecycle baseline matcher), and that finding was a different sub-pattern (legacy ack matcher gap, not default-path test coverage). The cycle 258 structural fix is holding for its original sub-cause. | Cycle 474: refreshed via PR(s) — Cycle 474 hygiene refresh: code-quality has not appeared in reviews 464-473 (10-review lookback clear). NOTE: a distinct code-change-quality chronic was added in cycle 474 for the testing-sub-pattern variant — see question-for-eva #2402 about potential canonicalization.",
+          "rationale": "Dispatched #1176 (cycle 258) to fix write-entry auto-derivation gating on args.cycle instead of resolved cycle, and to add regression tests for the default (omitted-cycle) invocation path. Cycle 461 re-verification: code-quality has appeared in only 1 of the last 16 review cycles (cycle 459 F4, audit-inbound-lifecycle baseline matcher), and that finding was a different sub-pattern (legacy ack matcher gap, not default-path test coverage). The cycle 258 structural fix is holding for its original sub-cause. | Cycle 474: refreshed via PR(s) — Cycle 474 hygiene refresh: code-quality has not appeared in reviews 464-473 (10-review lookback clear). NOTE: a distinct code-change-quality chronic was added in cycle 474 for the testing-sub-pattern variant — see question-for-eva #2402 about potential canonicalization. | Cycle 478: rollback of cycle 474 refresh — no direct review flag, but refreshed on the same fabricated lookback pattern as the flagged entries per audit EvaLok/schema-org-json-ld#405",
           "root_cause": "Tool code is merged with tests that only exercise the explicit-argument path (cycle: Some(N)), not the default production path (cycle: None, resolved from state.json). Bugs in the default invocation are invisible to CI.",
-          "updated_cycle": 474,
-          "verification_cycle": 474
+          "updated_cycle": 478,
+          "verification_cycle": 461
         },
         {
           "added_cycle": 250,
