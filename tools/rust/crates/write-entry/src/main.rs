@@ -253,6 +253,8 @@ struct CycleReceiptJsonEntry {
     #[serde(alias = "hash")]
     receipt: String,
     #[serde(default)]
+    commit: Option<String>,
+    #[serde(default)]
     url: Option<String>,
     #[serde(default)]
     _aliases: Vec<String>,
@@ -1088,8 +1090,16 @@ fn apply_worklog_auto_derivations(
             "docs/state.json not found; --auto-receipts requires docs/state.json to derive merged PRs"
                 .to_string()
         })?;
-        let derived_prs = derive_prs_from_cycle_receipt_entries(state, cycle)?;
-        input.prs_merged = merge_numbered_refs(&input.prs_merged, &derived_prs);
+        let derived_prs = derive_prs_from_cycle_receipt_entries(entries, state, cycle)?;
+        if !input.prs_merged.is_empty() && !same_numbered_refs(&input.prs_merged, &derived_prs) {
+            warnings.push(format!(
+                "WARNING: --auto-receipts derived merged PRs {} from cycle-receipts but manual PR list was {}; using receipt-derived PRs instead",
+                format_pr_refs(&derived_prs),
+                format_pr_refs(&input.prs_merged),
+            ));
+        }
+        input.prs_merged = derived_prs;
+        apply_dispatch_count_derivation(entries, &mut input.what_was_done, &mut warnings);
         input.receipt_note = Some(
             match derive_receipt_scope_note(
                 cycle,
@@ -1119,19 +1129,6 @@ fn apply_worklog_auto_derivations(
     Ok(warnings)
 }
 
-fn merge_numbered_refs(existing: &[u64], derived: &[u64]) -> Vec<u64> {
-    let mut seen = HashSet::new();
-    let mut merged = Vec::new();
-
-    for number in existing.iter().chain(derived.iter()) {
-        if seen.insert(*number) {
-            merged.push(*number);
-        }
-    }
-
-    merged
-}
-
 fn merge_issue_processed(existing: &[String], derived: &[String]) -> Vec<String> {
     let mut seen = HashSet::new();
     let mut merged = Vec::new();
@@ -1144,6 +1141,27 @@ fn merge_issue_processed(existing: &[String], derived: &[String]) -> Vec<String>
     }
 
     merged
+}
+
+fn same_numbered_refs(existing: &[u64], derived: &[u64]) -> bool {
+    let mut existing_refs = existing.to_vec();
+    let mut derived_refs = derived.to_vec();
+    existing_refs.sort_unstable();
+    existing_refs.dedup();
+    derived_refs.sort_unstable();
+    derived_refs.dedup();
+    existing_refs == derived_refs
+}
+
+fn format_pr_refs(prs: &[u64]) -> String {
+    if prs.is_empty() {
+        "none".to_string()
+    } else {
+        prs.iter()
+            .map(|pr| format!("PR #{pr}"))
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
 }
 
 fn issue_processed_key(item: &str) -> String {
@@ -1947,6 +1965,86 @@ fn summarize_counts<const N: usize>(label: &str, counts: [(&str, usize); N]) -> 
     }
 }
 
+fn apply_dispatch_count_derivation(
+    entries: &[CycleReceiptJsonEntry],
+    what_was_done: &mut Vec<String>,
+    warnings: &mut Vec<String>,
+) {
+    let dispatch_count = count_receipt_entries(entries, "record-dispatch");
+    let mut filtered = Vec::new();
+
+    for item in what_was_done.drain(..) {
+        match explicit_dispatch_count_claim(&item) {
+            Some(claimed_count) if claimed_count != dispatch_count => {
+                warnings.push(format!(
+                    "WARNING: --auto-receipts derived {} from cycle-receipts but worklog text '{}' claimed {}; using receipt-derived dispatch count instead",
+                    format_dispatch_count(dispatch_count),
+                    item.trim(),
+                    format_dispatch_count(claimed_count),
+                ));
+            }
+            Some(_) => {}
+            None => filtered.push(item),
+        }
+    }
+
+    filtered.push(format_dispatch_narrative_item(dispatch_count));
+    *what_was_done = filtered;
+}
+
+fn count_receipt_entries(entries: &[CycleReceiptJsonEntry], tool_name: &str) -> usize {
+    entries
+        .iter()
+        .filter(|entry| entry.tool.trim().eq_ignore_ascii_case(tool_name))
+        .count()
+}
+
+fn explicit_dispatch_count_claim(item: &str) -> Option<usize> {
+    let normalized = item.trim().to_ascii_lowercase();
+    if normalized.contains("no new dispatches")
+        || normalized.contains("no dispatches")
+        || normalized.contains("no dispatch")
+    {
+        return Some(0);
+    }
+
+    let normalized_tokens = normalized
+        .chars()
+        .map(|character| {
+            if character.is_ascii_alphanumeric() {
+                character
+            } else {
+                ' '
+            }
+        })
+        .collect::<String>();
+    let tokens = normalized_tokens.split_whitespace().collect::<Vec<_>>();
+
+    tokens.windows(2).find_map(|window| {
+        if window[1].starts_with("dispatch") {
+            window[0].parse::<usize>().ok()
+        } else {
+            None
+        }
+    })
+}
+
+fn format_dispatch_count(count: usize) -> String {
+    match count {
+        0 => "0 dispatches".to_string(),
+        1 => "1 dispatch".to_string(),
+        _ => format!("{count} dispatches"),
+    }
+}
+
+fn format_dispatch_narrative_item(count: usize) -> String {
+    if count == 0 {
+        "No new dispatches.".to_string()
+    } else {
+        format!("Recorded {}.", format_dispatch_count(count))
+    }
+}
+
 fn pluralize(noun: &str, count: usize) -> String {
     if count == 1 {
         noun.to_string()
@@ -2257,18 +2355,115 @@ fn cycle_receipt_entries_to_receipts(
 }
 
 fn derive_prs_from_cycle_receipt_entries(
+    entries: &[CycleReceiptJsonEntry],
     state: &StateJson,
     cycle: u64,
 ) -> Result<Vec<u64>, String> {
-    let start = cycle_window_start(cycle, state, "receipt-backed PR derivation")?;
+    let merge_entries = entries
+        .iter()
+        .filter(|entry| entry.tool.trim().eq_ignore_ascii_case("process-merge"))
+        .collect::<Vec<_>>();
+    if merge_entries.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let receipt_prs = derive_prs_directly_from_merge_receipts(&merge_entries);
+    if receipt_prs.len() == merge_entries.len() {
+        return Ok(receipt_prs);
+    }
+
+    derive_prs_from_state_for_merge_receipt_count(state, cycle, merge_entries.len())
+}
+
+fn derive_prs_directly_from_merge_receipts(entries: &[&CycleReceiptJsonEntry]) -> Vec<u64> {
     let mut seen = HashSet::new();
     let mut prs = Vec::new();
+
+    for entry in entries {
+        let entry_prs = extract_prs_from_merge_receipt_entry(entry);
+        if entry_prs.len() != 1 {
+            return Vec::new();
+        }
+        let pr = entry_prs[0];
+        if !seen.insert(pr) {
+            return Vec::new();
+        }
+        prs.push(pr);
+    }
+
+    prs
+}
+
+fn extract_prs_from_merge_receipt_entry(entry: &CycleReceiptJsonEntry) -> Vec<u64> {
+    let mut seen = HashSet::new();
+    let mut prs = Vec::new();
+
+    if let Some(commit) = entry.commit.as_deref() {
+        push_pr_references(commit, &mut prs, &mut seen);
+    }
+    if prs.is_empty() {
+        if let Some(url) = entry.url.as_deref().and_then(extract_pr_reference_from_url) {
+            if seen.insert(url) {
+                prs.push(url);
+            }
+        }
+    }
+
+    prs
+}
+
+fn push_pr_references(item: &str, prs: &mut Vec<u64>, seen: &mut HashSet<u64>) {
+    let marker = "PR #";
+    let mut remainder = item;
+
+    while let Some(index) = remainder.find(marker) {
+        let pr_fragment = &remainder[index + marker.len()..];
+        let digits = pr_fragment
+            .chars()
+            .take_while(|character| character.is_ascii_digit())
+            .collect::<String>();
+        if let Ok(pr) = digits.parse::<u64>() {
+            if pr > 0 && seen.insert(pr) {
+                prs.push(pr);
+            }
+        }
+        remainder = pr_fragment;
+    }
+}
+
+fn extract_pr_reference_from_url(url: &str) -> Option<u64> {
+    for marker in ["/pull/", "/issues/"] {
+        let Some(pr_fragment) = url.split(marker).nth(1) else {
+            continue;
+        };
+        let digits = pr_fragment
+            .chars()
+            .take_while(|character| character.is_ascii_digit())
+            .collect::<String>();
+        if let Ok(pr) = digits.parse::<u64>() {
+            if pr > 0 {
+                return Some(pr);
+            }
+        }
+    }
+
+    None
+}
+
+fn derive_prs_from_state_for_merge_receipt_count(
+    state: &StateJson,
+    cycle: u64,
+    merge_receipt_count: usize,
+) -> Result<Vec<u64>, String> {
+    let start = cycle_window_start(cycle, state, "receipt-backed PR derivation")?;
+    let mut merged_sessions = Vec::new();
 
     for (index, session) in state.agent_sessions.iter().enumerate() {
         let Some(merged_at) = session.merged_at.as_deref() else {
             continue;
         };
-        if parse_timestamp(merged_at, "agent_sessions[].merged_at")? < start {
+        let merged_at = parse_timestamp(merged_at, "agent_sessions[].merged_at")?;
+        if merged_at < start {
             continue;
         }
         let Some(pr) = session.pr else {
@@ -2286,9 +2481,31 @@ fn derive_prs_from_cycle_receipt_entries(
                 index
             ));
         }
-        if seen.insert(pr) {
-            prs.push(pr);
+        merged_sessions.push((merged_at, pr));
+    }
+
+    if merged_sessions.len() < merge_receipt_count {
+        return Err(format!(
+            "cycle-receipts reported {} process-merge receipts but docs/state.json only records {} merged PRs in cycle {}",
+            merge_receipt_count,
+            merged_sessions.len(),
+            cycle
+        ));
+    }
+
+    merged_sessions.sort_by_key(|(merged_at, _)| *merged_at);
+    let skip = merged_sessions.len().saturating_sub(merge_receipt_count);
+    let selected_sessions = merged_sessions.into_iter().skip(skip).collect::<Vec<_>>();
+    let mut seen = HashSet::new();
+    let mut prs = Vec::new();
+    for (_, pr) in selected_sessions {
+        if !seen.insert(pr) {
+            return Err(format!(
+                "docs/state.json merged PR fallback for cycle {} resolved duplicate PR #{} across {} process-merge receipts",
+                cycle, pr, merge_receipt_count
+            ));
         }
+        prs.push(pr);
     }
 
     Ok(prs)
@@ -4311,7 +4528,7 @@ mod tests {
             &repo_root.path,
             "tools/rust/crates/write-entry/src/main.rs",
             "changed\n",
-            "state(process-merge): update worklog [cycle 154]",
+            "state(process-merge): PR #88 merged [cycle 154]",
         );
         create_git_commit_with_message(
             &repo_root.path,
@@ -4330,7 +4547,7 @@ mod tests {
             &format!(
                 r#"[
                     {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154, issue #1 [cycle 154]"}},
-                    {{"step":"process-merge","receipt":"{merge_receipt}","commit":"state(process-merge): update worklog [cycle 154]"}}
+                    {{"step":"process-merge","receipt":"{merge_receipt}","commit":"state(process-merge): PR #88 merged [cycle 154]"}}
                 ]"#
             ),
         );
@@ -4364,7 +4581,7 @@ mod tests {
     }
 
     #[test]
-    fn worklog_auto_derives_pr_sections_from_cycle_bounded_agent_sessions() {
+    fn worklog_auto_receipts_prefers_receipt_derived_prs_over_manual_pr_flags() {
         let repo_root = TempRepoDir::new("worklog-auto-derives-prs");
         init_git_repo(&repo_root.path);
         write_state_file(
@@ -4377,14 +4594,8 @@ mod tests {
                 },
                 "agent_sessions": [
                     {
-                        "issue": 1041,
-                        "pr": 237,
-                        "merged_at": "2026-03-06T00:59:59Z",
-                        "status": "merged"
-                    },
-                    {
                         "issue": 1042,
-                        "pr": 240,
+                        "pr": 88,
                         "merged_at": "2026-03-06T01:00:01Z",
                         "status": "merged"
                     }
@@ -4408,30 +4619,170 @@ mod tests {
             &format!(
                 r#"[
                     {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154, issue #1 [cycle 154]"}},
-                    {{"step":"process-merge","receipt":"{merge_receipt}","commit":"state(process-merge): PR #237, PR #240 merged [cycle 154]"}}
+                    {{"step":"process-merge","receipt":"{merge_receipt}","commit":"state(process-merge): PR #88 merged [cycle 154]"}}
                 ]"#
             ),
         );
 
-        let mut args = worklog_args("Auto derive PR sections");
+        let mut args = worklog_args("Receipt derived PR sections");
+        args.cycle = None;
+        args.done = vec!["Closed EvaLok/schema-org-json-ld#1042".to_string()];
+        args.pr_merged = vec![999];
+        args.auto_receipts = true;
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.publish_gate = Some("open".to_string());
+
+        let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+        let warnings =
+            apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
+        let content = render_worklog(154, fixed_now(), &input);
+
+        assert!(content.contains("### PRs merged"));
+        assert!(
+            content.contains("[PR #88](https://github.com/EvaLok/schema-org-json-ld/issues/88)")
+        );
+        assert!(
+            !content.contains("[PR #999](https://github.com/EvaLok/schema-org-json-ld/issues/999)")
+        );
+        assert_eq!(input.prs_merged, vec![88]);
+        assert!(warnings.iter().any(|warning| {
+            warning.contains("manual PR list was PR #999")
+                && warning.contains("receipt-derived PRs instead")
+        }));
+        assert!(!content.contains("### PRs reviewed"));
+        assert!(!content.contains("### PRs merged\n\n- None."));
+    }
+
+    #[test]
+    fn worklog_auto_receipts_derives_dispatch_count_and_replaces_conflicting_manual_text() {
+        let repo_root = TempRepoDir::new("worklog-auto-derives-dispatch-count");
+        init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "cycle": 154,
+                    "phase_entered_at": "2026-03-06T01:00:00Z"
+                },
+                "agent_sessions": []
+            }"#,
+        );
+        let start_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154 [cycle 154]",
+        );
+        let dispatch_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/dispatch.txt",
+            "dispatch\n",
+            "state(record-dispatch): #42 dispatched [cycle 154]",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}},
+                    {{"step":"record-dispatch","receipt":"{dispatch_receipt}","commit":"state(record-dispatch): #42 dispatched [cycle 154]"}}
+                ]"#
+            ),
+        );
+
+        let mut args = worklog_args("Receipt derived dispatch count");
+        args.done = vec!["No new dispatches.".to_string()];
+        args.auto_receipts = true;
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.publish_gate = Some("open".to_string());
+
+        let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+        let warnings =
+            apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
+        let content = render_worklog(154, fixed_now(), &input);
+
+        assert_eq!(
+            input.what_was_done,
+            vec!["Recorded 1 dispatch.".to_string()]
+        );
+        assert!(content.contains("- Recorded 1 dispatch."));
+        assert!(!content.contains("- No new dispatches."));
+        assert!(warnings.iter().any(|warning| {
+            warning.contains("worklog text 'No new dispatches.' claimed 0 dispatches")
+                && warning.contains("1 dispatch")
+        }));
+    }
+
+    #[test]
+    fn worklog_auto_receipts_falls_back_to_latest_cycle_merge_when_receipt_row_lacks_pr() {
+        let repo_root = TempRepoDir::new("worklog-auto-derives-prs-from-state-fallback");
+        init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "cycle": 154,
+                    "phase_entered_at": "2026-03-06T01:00:00Z"
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 1041,
+                        "pr": 237,
+                        "merged_at": "2026-03-06T01:00:01Z",
+                        "status": "merged"
+                    },
+                    {
+                        "issue": 1042,
+                        "pr": 240,
+                        "merged_at": "2026-03-06T01:00:02Z",
+                        "status": "merged"
+                    }
+                ]
+            }"#,
+        );
+        let start_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154, issue #1 [cycle 154]",
+        );
+        let merge_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/merge.txt",
+            "merged\n",
+            "state(process-merge): update worklog [cycle 154]",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154, issue #1 [cycle 154]"}},
+                    {{"step":"process-merge","receipt":"{merge_receipt}","commit":"state(process-merge): update worklog [cycle 154]"}}
+                ]"#
+            ),
+        );
+
+        let mut args = worklog_args("Auto derive PR fallback");
         args.cycle = None;
         args.done = vec!["Closed EvaLok/schema-org-json-ld#1042".to_string()];
         args.auto_receipts = true;
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("open".to_string());
 
-        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
-        let content = fs::read_to_string(path).unwrap();
+        let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+        let warnings =
+            apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
+        let content = render_worklog(154, fixed_now(), &input);
 
-        assert!(content.contains("### PRs merged"));
+        assert!(warnings.is_empty());
+        assert_eq!(input.prs_merged, vec![240]);
         assert!(
             content.contains("[PR #240](https://github.com/EvaLok/schema-org-json-ld/issues/240)")
         );
         assert!(
             !content.contains("[PR #237](https://github.com/EvaLok/schema-org-json-ld/issues/237)")
         );
-        assert!(!content.contains("### PRs reviewed"));
-        assert!(!content.contains("### PRs merged\n\n- None."));
     }
 
     #[test]
@@ -4558,7 +4909,7 @@ mod tests {
             &repo_root.path,
             "tools/rust/crates/write-entry/src/main.rs",
             "changed\n",
-            "state(process-merge): update worklog [cycle 154]",
+            "state(process-merge): PR #88 merged [cycle 154]",
         );
         create_git_commit_with_message(
             &repo_root.path,
@@ -4571,7 +4922,7 @@ mod tests {
             &format!(
                 r#"[
                     {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154, issue #1 [cycle 154]"}},
-                    {{"step":"process-merge","receipt":"{merge_receipt}","commit":"state(process-merge): update worklog [cycle 154]"}}
+                    {{"step":"process-merge","receipt":"{merge_receipt}","commit":"state(process-merge): PR #88 merged [cycle 154]"}}
                 ]"#
             ),
         );
@@ -4710,6 +5061,7 @@ mod tests {
         let entries = vec![CycleReceiptJsonEntry {
             tool: "record-dispatch".to_string(),
             receipt: "abcdef1".to_string(),
+            commit: None,
             url: Some(
                 "https://github.com/EvaLok/schema-org-json-ld/commit/abcdef1234567890".to_string(),
             ),
