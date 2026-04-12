@@ -69,6 +69,16 @@
       defer a commitment whose condition is already checkable. Do not reference
       pipeline phases or tool outputs that do not yet exist.
       Recurrence escalation: journal-quality in cycles 420-421.</constraint>
+    <constraint id="commitment-live-verification" severity="mandatory">
+      Commitment follow-through grading MUST verify the named observable
+      survived the LIVE cycle path, not just that the implementing PR merged.
+      "Merged" ≠ "worked." If a same-cycle hotfix was required to make the
+      merged implementation actually pass in the live close-out, record the
+      commitment as "met-after-fix" or "partially met" with an explanation,
+      NOT as a clean success. Grading a commitment as fully met when its
+      implementation failed on the live path and required a follow-up fix
+      is dishonest and will be flagged.
+      Recurrence escalation: journal-quality in cycle 481 (F2).</constraint>
     <constraint id="commitment-carryover-ban" severity="mandatory">
       When writing the "Concrete commitments for next cycle" section, any
       commitment that has appeared on the list for 2+ prior cycles WITHOUT
