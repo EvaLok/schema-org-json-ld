@@ -87,7 +87,6 @@ fn execute(cli: &Cli, runner: &dyn CommentPoster) -> Result<String, String> {
         validate_step_id(step)?;
     }
     let title = validate_required_text("title", &cli.title)?;
-    let body = resolve_body(cli)?;
     let cycle = current_cycle_from_state(&cli.repo_root).map_err(|error| {
         if error == "missing /cycle_phase/cycle or /last_cycle/number in state.json" {
             "missing numeric /cycle_phase/cycle or /last_cycle/number in docs/state.json"
@@ -96,6 +95,7 @@ fn execute(cli: &Cli, runner: &dyn CommentPoster) -> Result<String, String> {
             error
         }
     })?;
+    let body = resolve_body(cli)?;
     let comment = format_comment(cycle, step, title, &body);
 
     if !cli.force {
@@ -197,15 +197,15 @@ fn has_backtick_wrapped_command(body: &str) -> bool {
     false
 }
 
+/// Treat inline code spans as suspicious command text when they are composed only of
+/// shell-safe command characters. This is intentionally conservative so obvious
+/// backtick-wrapped commands like `date` or `gh api` fail closed unless explicitly allowed.
 fn is_shell_like_code_span(code_span: &str) -> bool {
     let trimmed = code_span.trim();
     !trimmed.is_empty()
         && trimmed.chars().all(|character| {
             character.is_ascii_alphanumeric()
-                || matches!(
-                    character,
-                    '_' | '-' | '/' | '.' | ':' | '=' | '$' | ' ' | '\t' | '(' | ')'
-                )
+                || matches!(character, '_' | '-' | '/' | '.' | ':' | '=' | ' ' | '\t')
         })
 }
 
@@ -219,7 +219,10 @@ fn find_placeholder_pattern(body: &str) -> Option<&'static str> {
         ("<fill in", "placeholder marker `<fill in`"),
         ("[fill in", "placeholder marker `[fill in`"),
         ("[insert", "placeholder marker `[insert`"),
-        ("replace_me", "placeholder marker `REPLACE_ME`"),
+        (
+            "replace_me",
+            "placeholder marker `replace_me` (matched case-insensitively)",
+        ),
     ] {
         if normalized.contains(pattern) {
             return Some(message);
