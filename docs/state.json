@@ -15286,8 +15286,9 @@
     "blocks_publish": false,
     "c5_5_gate": {
       "cycle": 480,
-      "needs_reverify": true,
-      "status": "FAIL"
+      "needs_reverify": false,
+      "pipeline_summary": "PASS (2 blocking warnings, 5 warnings)",
+      "status": "PASS"
     },
     "c5_5_initial_result": {
       "cycle": 480,
