@@ -2941,10 +2941,10 @@ fn current_cycle_journal_section_status_for_date(
 
     let content = fs::read_to_string(&journal_path)
         .map_err(|error| format!("failed to read {}: {}", journal_path.display(), error))?;
-    // This invariant is intentionally structural: close_out requires the exact
-    // cycle heading form `## YYYY-MM-DD — Cycle N:` to be present in today's
-    // journal so the section is unambiguous and machine-checkable.
-    if content.lines().any(|line| line.trim() == expected_heading) {
+    // This invariant is intentionally structural: close_out requires the
+    // cycle heading prefix `## YYYY-MM-DD — Cycle N:` to be present in today's
+    // journal. Additional title text after the colon is allowed.
+    if content.lines().any(|line| line.trim().starts_with(&expected_heading)) {
         Ok((
             StepStatus::Pass,
             format!(
