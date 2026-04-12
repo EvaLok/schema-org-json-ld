@@ -258,7 +258,8 @@ fn collect_verified_inventory_fields(
 }
 
 fn refresh_verified_stale_fields(repo_root: &Path, cycle: u64) -> Result<Vec<String>, String> {
-    let cycle_u32 = u32::try_from(cycle).map_err(|_| "cycle must fit in u32 range".to_string())?;
+    let cycle_u32 =
+        u32::try_from(cycle).map_err(|_| format!("cycle {} must fit in u32 range", cycle))?;
     let mut state_value = read_state_value(repo_root)?;
     let state: StateJson = serde_json::from_value(state_value.clone())
         .map_err(|error| format!("failed to parse docs/state.json: {}", error))?;
@@ -267,7 +268,8 @@ fn refresh_verified_stale_fields(repo_root: &Path, cycle: u64) -> Result<Vec<Str
     let stale = detect_stale_fields(&state, cycle);
     let refreshable = stale
         .into_iter()
-        .filter_map(|field| verified.contains(&field.name).then_some(field.name))
+        .filter(|field| verified.contains(&field.name))
+        .map(|field| field.name)
         .collect::<Vec<_>>();
 
     if refreshable.is_empty() {

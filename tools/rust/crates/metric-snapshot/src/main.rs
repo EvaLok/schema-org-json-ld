@@ -527,7 +527,33 @@ fn derived_total_sub_types(classification: &state_schema::TypeClassification) ->
 fn note_contains_numbers(note: &str, numbers: &[i64]) -> bool {
     numbers
         .iter()
-        .all(|number| note.contains(&number.to_string()))
+        .all(|number| note_contains_number(note, *number))
+}
+
+fn note_contains_number(note: &str, number: i64) -> bool {
+    let needle = number.to_string();
+    let mut start = 0_usize;
+
+    while let Some(offset) = note[start..].find(&needle) {
+        let match_start = start + offset;
+        let match_end = match_start + needle.len();
+        let previous_is_digit = note[..match_start]
+            .chars()
+            .next_back()
+            .is_some_and(|character| character.is_ascii_digit());
+        let next_is_digit = note[match_end..]
+            .chars()
+            .next()
+            .is_some_and(|character| character.is_ascii_digit());
+
+        if !previous_is_digit && !next_is_digit {
+            return true;
+        }
+
+        start = match_start + needle.len();
+    }
+
+    false
 }
 
 fn read_state_file(path: &Path) -> StateJson {
@@ -1413,8 +1439,8 @@ mod tests {
         apply_fixes, check, collect_fix_updates, collect_refreshable_unchanged_fields,
         count_php_tests_in_content, count_ts_tests_in_content, fix_target_for_check,
         get_i64_from_map, get_i64_from_option, get_typescript_stats, is_php_test_method_line,
-        is_ts_test_method_line, parse_cycle_number, read_state_file, set_value_at_pointer,
-        staleness_threshold, CheckResult,
+        is_ts_test_method_line, note_contains_number, parse_cycle_number, read_state_file,
+        set_value_at_pointer, staleness_threshold, CheckResult,
     };
     use serde_json::json;
     use std::fs;
@@ -1499,8 +1525,16 @@ it('direct test', () => {});
         assert_eq!(2, staleness_threshold("every cycle"));
         assert_eq!(
             10,
-            staleness_threshold("every merge that adds/removes tests")
+            staleness_threshold("every merge that adds/removes PHP or TS tests")
         );
+        assert_eq!(10, staleness_threshold("after schema class additions"));
+    }
+
+    #[test]
+    fn note_contains_number_requires_numeric_boundaries() {
+        assert!(note_contains_number("Total: 123, enums: 12", 123));
+        assert!(note_contains_number("Total: 123, enums: 12", 12));
+        assert!(!note_contains_number("Total: 123", 12));
     }
 
     #[test]
