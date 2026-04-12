@@ -8137,7 +8137,9 @@
       "category": "worklog-accuracy",
       "deadline_cycle": 482,
       "deferred_cycle": 477,
-      "resolved": false
+      "dropped_rationale": "Dropping worklog-accuracy deferral chain (cycles 477-479). Root cause: write-entry derives dispatch claims from manual prose, not receipts. Structural fix dispatched as #2431 (cycle 479) but agent stalled — re-dispatch planned. The fix is clear and scoped; continued deferral cycling adds no value. Will re-dispatch this cycle.",
+      "resolved": true,
+      "resolved_ref": "dropped: Dropping worklog-accuracy deferral chain (cycles 477-479). Root cause: write-entry derives dispatch "
     },
     {
       "category": "journal-quality",
