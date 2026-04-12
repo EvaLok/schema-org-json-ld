@@ -24,12 +24,12 @@
 - **`tools/rust/crates/write-entry/src/main.rs`**: modified
 - **`tools/rust/crates/write-entry/tests/auto_review_summary_real_state.rs`**: modified
 
-## Pre-dispatch state
+## Cycle state
 
-*Snapshot before review dispatch — final counters may differ after C6.*
 
 - **In-flight agent sessions**: 1
-- **Pipeline status**: FAIL (5 warnings, 4 blocking: frozen-commit-verify, review-events-verified, step-comments, current-cycle-steps)
+- **Pipeline status**: FAIL→PASS (C5.5 initially failed: FAIL (1 blocking warning, 3 warnings, 1 blocking: step-comments); resolved by re-run)
+- **Close-out gate failures**: C5.5 FAIL: FAIL (1 blocking warning, 3 warnings, 1 blocking: step-comments)
 - **Publish gate**: published
 
 ## Next steps
