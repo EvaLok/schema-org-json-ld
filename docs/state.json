@@ -7293,9 +7293,20 @@
     {
       "dispatched_at": "2026-04-12T00:15:25Z",
       "issue": 2421,
+      "merged_at": "2026-04-12T05:13:31Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2422,
+      "status": "merged",
       "title": "Tier 1 structural fix for audit #405 — chronic-refresh-invalidation on own-review consumption"
+    },
+    {
+      "dispatched_at": "2026-04-12T03:36:57Z",
+      "issue": 2424,
+      "merged_at": "2026-04-12T05:09:49Z",
+      "model": "gpt-5.4",
+      "pr": 2425,
+      "status": "merged",
+      "title": "[Cycle Review] Cycle 478 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -7490,7 +7501,10 @@
     396,
     398,
     400,
-    402
+    402,
+    405,
+    406,
+    407
   ],
   "blockers": [
     {
@@ -7552,17 +7566,17 @@
     "total_classes_converted": 54
   },
   "cycle_issues": [
-    2419
+    2426
   ],
   "cycle_phase": {
-    "cycle": 478,
+    "cycle": 479,
     "phase": "work",
-    "phase_entered_at": "2026-04-11T23:10:15Z"
+    "phase_entered_at": "2026-04-12T04:58:17Z"
   },
   "cycles_since_last_forward_work": {
     "added_in_cycle": 411,
     "added_per": "audit #345",
-    "count": 67,
+    "count": 68,
     "last_forward_cycle": 411,
     "last_forward_description": "#2011 Article test coverage expansion",
     "threshold": 10
@@ -8112,9 +8126,15 @@
       "deadline_cycle": 482,
       "deferred_cycle": 477,
       "resolved": false
+    },
+    {
+      "category": "journal-quality",
+      "deadline_cycle": 483,
+      "deferred_cycle": 478,
+      "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2421 Tier 1 structural fix for audit #405 — chronic-refresh-invalidation on own-review consumption (cycle 478)",
+  "dispatch_log_latest": "#2424 [Cycle Review] Cycle 478 end-of-cycle review (cycle 478)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8204,7 +8224,7 @@
       },
       "audit_processed": {
         "cadence": "after processing audit issues",
-        "last_refreshed": "cycle 474"
+        "last_refreshed": "cycle 479"
       },
       "blockers": {
         "cadence": "after blocker state changes",
@@ -8212,16 +8232,16 @@
       },
       "cycle_issues": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 478"
+        "last_refreshed": "cycle 479"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
-        "last_refreshed": "cycle 478",
+        "last_refreshed": "cycle 479",
         "notes": "Tracks cycle, phase, phase_entered_at, and completed_at when phase is complete."
       },
       "cycles_since_last_forward_work": {
         "cadence": "every cycle (reset on forward work dispatch)",
-        "last_refreshed": "cycle 478"
+        "last_refreshed": "cycle 479"
       },
       "dispatch_log_latest": {
         "cadence": "every dispatch or merge",
@@ -8229,27 +8249,27 @@
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 478"
+        "last_refreshed": "cycle 479"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 478"
+        "last_refreshed": "cycle 479"
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 478"
+        "last_refreshed": "cycle 479"
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 478"
+        "last_refreshed": "cycle 479"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 477"
+        "last_refreshed": "cycle 478"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 478"
+        "last_refreshed": "cycle 479"
       },
       "last_tool_audit_cycle": {
         "cadence": "every 10 cycles",
@@ -8257,7 +8277,7 @@
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 478"
+        "last_refreshed": "cycle 479"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -8265,11 +8285,11 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 477"
+        "last_refreshed": "cycle 478"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 478"
+        "last_refreshed": "cycle 479"
       },
       "project_mode": {
         "cadence": "when mode or counter changes",
@@ -8277,7 +8297,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 477"
+        "last_refreshed": "cycle 478"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -8293,19 +8313,19 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 478"
+        "last_refreshed": "cycle 479"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 475"
+        "last_refreshed": "cycle 478"
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 477"
+        "last_refreshed": "cycle 478"
       },
       "review_events_verified_through_cycle": {
         "cadence": "managed by verify-review-events tool only",
-        "last_refreshed": "cycle 477"
+        "last_refreshed": "cycle 478"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -8385,15 +8405,15 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
-    "duration_minutes": 30,
-    "issue": 2419,
-    "number": 478,
-    "summary": "1 dispatch, 2 merges",
-    "timestamp": "2026-04-12T00:15:25Z"
+    "duration_minutes": 180,
+    "issue": 2426,
+    "number": 479,
+    "summary": "0 dispatches, 2 merges",
+    "timestamp": "2026-04-12T04:58:17Z"
   },
-  "last_eva_comment_check": "2026-04-11T23:10:14Z",
+  "last_eva_comment_check": "2026-04-12T04:58:17Z",
   "last_tool_audit_cycle": 403,
   "open_questions_for_eva": [
     2416,
@@ -8437,7 +8457,7 @@
     "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
     "started_at": "cycle 199"
   },
-  "previous_cycle_issue": 2415,
+  "previous_cycle_issue": 2423,
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
     "burn_in_target": 6,
@@ -8520,19 +8540,19 @@
           "added_cycle": 201,
           "category": "process-adherence",
           "chosen_path": "structural-fix",
-          "rationale": "Cycle 461 refresh: chronic 5/6 escalation re-triggered by cycle 460 F3 (record-dispatch did not backfill addresses_finding on existing in_flight session for #2301; cycle 461 confirmed the same bug skipping addresses_finding for #2310). New sub-cause identified: record-dispatch update path treats duplicate-issue as error instead of merging the new addresses_finding metadata. Structural follow-up dispatched as #2310 (PR #2311 in flight): updates apply_dispatch_patch to update existing in_flight session in place. Verification will be confirmed once #2311 merges and cycle 462 review confirms no further linkage gaps. | Cycle 462: refreshed via PR(s) [#2311] — PR #2311 merged in cycle 462 unifies deferred deadline rendering (write-entry), hardens agent-session reconciliation (process-merge per-PR matching, record-dispatch addresses_finding merge). Cycle 461 had recorded these as in-flight; cycle 462 verifies the merged code matches all 4 observable conditions of the cycle 461 commitment. Chronic categories now legitimately verified — no longer premature. | Cycle 474: refreshed via PR(s) — Cycle 474 hygiene refresh: process-adherence has not appeared in reviews 464-473 (10-review lookback clear). Previous cycle 474 crashed before committing this refresh. Structural fix at cycle 461 (PR #2311) continues to hold. Re-attempting the refresh after crash recovery.",
+          "rationale": "Cycle 461 refresh: chronic 5/6 escalation re-triggered by cycle 460 F3 (record-dispatch did not backfill addresses_finding on existing in_flight session for #2301; cycle 461 confirmed the same bug skipping addresses_finding for #2310). New sub-cause identified: record-dispatch update path treats duplicate-issue as error instead of merging the new addresses_finding metadata. Structural follow-up dispatched as #2310 (PR #2311 in flight): updates apply_dispatch_patch to update existing in_flight session in place. Verification will be confirmed once #2311 merges and cycle 462 review confirms no further linkage gaps. | Cycle 462: refreshed via PR(s) [#2311] — PR #2311 merged in cycle 462 unifies deferred deadline rendering (write-entry), hardens agent-session reconciliation (process-merge per-PR matching, record-dispatch addresses_finding merge). Cycle 461 had recorded these as in-flight; cycle 462 verifies the merged code matches all 4 observable conditions of the cycle 461 commitment. Chronic categories now legitimately verified — no longer premature. | Cycle 474: refreshed via PR(s) — Cycle 474 hygiene refresh: process-adherence has not appeared in reviews 464-473 (10-review lookback clear). Previous cycle 474 crashed before committing this refresh. Structural fix at cycle 461 (PR #2311) continues to hold. Re-attempting the refresh after crash recovery. | Cycle 478: rollback of cycle 474 refresh — cycle 476 F3 process-adherence (recurrence-escalation rule violation) invalidated the cycle 474 hygiene refresh",
           "root_cause": "Four sub-causes: (1) Missing step comments (fixed by post-step tool, cycle 200). (2) Retroactive step posting (addressed by temporal-ordering check, cycle 405). (3) Gate overrides — advancing past blocking C4.1/C5.5 failures (no mechanical enforcement yet). (4) record-dispatch addresses_finding lost on duplicate-issue update path (cycle 460/461; structural fix dispatched as #2310 cycle 461).",
-          "updated_cycle": 474,
-          "verification_cycle": 474
+          "updated_cycle": 478,
+          "verification_cycle": 462
         },
         {
           "added_cycle": 204,
           "category": "receipt-integrity",
           "chosen_path": "structural-fix",
-          "rationale": "receipt-integrity findings in cycles 197-203 consistently flagged nonexistent SHA hashes and stale metrics in hand-assembled worklog receipt tables. The structural fix has two layers: (1) cycle-receipts tool (merged cycle 200) generates receipts mechanically from git log, and (2) cycle-close enhancement (#884) embeds receipt tables in closing comments automatically. Cycle 461 re-verification: receipt-integrity has not appeared in any of the last 16 review cycles (444-460); cycle-receipts and the receipt-validate tool remain in active use on every cycle (cycle 461 close-out invokes both). Structural fix is holding. | Cycle 474: refreshed via PR(s) — Cycle 474 hygiene refresh: receipt-integrity has not appeared in reviews 464-473 (10-review lookback clear). Previous cycle 474 crashed before committing this refresh. cycle-receipts tool remains in active use every cycle. Structural fix continues to hold.",
+          "rationale": "receipt-integrity findings in cycles 197-203 consistently flagged nonexistent SHA hashes and stale metrics in hand-assembled worklog receipt tables. The structural fix has two layers: (1) cycle-receipts tool (merged cycle 200) generates receipts mechanically from git log, and (2) cycle-close enhancement (#884) embeds receipt tables in closing comments automatically. Cycle 461 re-verification: receipt-integrity has not appeared in any of the last 16 review cycles (444-460); cycle-receipts and the receipt-validate tool remain in active use on every cycle (cycle 461 close-out invokes both). Structural fix is holding. | Cycle 474: refreshed via PR(s) — Cycle 474 hygiene refresh: receipt-integrity has not appeared in reviews 464-473 (10-review lookback clear). Previous cycle 474 crashed before committing this refresh. cycle-receipts tool remains in active use every cycle. Structural fix continues to hold. | Cycle 478: rollback of cycle 474 refresh — cycle 474 F1 receipt-integrity and cycle 475 F1 receipt-integrity invalidated the cycle 474 hygiene refresh",
           "root_cause": "Orchestrator hand-assembled receipt tables by copying SHAs from tool output, sometimes recording wrong or stale hashes. The cycle-receipts tool exists but was not consistently used to generate the worklog receipt table.",
-          "updated_cycle": 474,
-          "verification_cycle": 474
+          "updated_cycle": 478,
+          "verification_cycle": 461
         },
         {
           "added_cycle": 209,
@@ -8556,10 +8576,10 @@
           "added_cycle": 246,
           "category": "code-quality",
           "chosen_path": "structural-fix",
-          "rationale": "Dispatched #1176 (cycle 258) to fix write-entry auto-derivation gating on args.cycle instead of resolved cycle, and to add regression tests for the default (omitted-cycle) invocation path. Cycle 461 re-verification: code-quality has appeared in only 1 of the last 16 review cycles (cycle 459 F4, audit-inbound-lifecycle baseline matcher), and that finding was a different sub-pattern (legacy ack matcher gap, not default-path test coverage). The cycle 258 structural fix is holding for its original sub-cause. | Cycle 474: refreshed via PR(s) — Cycle 474 hygiene refresh: code-quality has not appeared in reviews 464-473 (10-review lookback clear). NOTE: a distinct code-change-quality chronic was added in cycle 474 for the testing-sub-pattern variant — see question-for-eva #2402 about potential canonicalization.",
+          "rationale": "Dispatched #1176 (cycle 258) to fix write-entry auto-derivation gating on args.cycle instead of resolved cycle, and to add regression tests for the default (omitted-cycle) invocation path. Cycle 461 re-verification: code-quality has appeared in only 1 of the last 16 review cycles (cycle 459 F4, audit-inbound-lifecycle baseline matcher), and that finding was a different sub-pattern (legacy ack matcher gap, not default-path test coverage). The cycle 258 structural fix is holding for its original sub-cause. | Cycle 474: refreshed via PR(s) — Cycle 474 hygiene refresh: code-quality has not appeared in reviews 464-473 (10-review lookback clear). NOTE: a distinct code-change-quality chronic was added in cycle 474 for the testing-sub-pattern variant — see question-for-eva #2402 about potential canonicalization. | Cycle 478: rollback of cycle 474 refresh — no direct review flag, but refreshed on the same fabricated lookback pattern as the flagged entries per audit EvaLok/schema-org-json-ld#405",
           "root_cause": "Tool code is merged with tests that only exercise the explicit-argument path (cycle: Some(N)), not the default production path (cycle: None, resolved from state.json). Bugs in the default invocation are invisible to CI.",
-          "updated_cycle": 474,
-          "verification_cycle": 474
+          "updated_cycle": 478,
+          "verification_cycle": 461
         },
         {
           "added_cycle": 250,
@@ -8574,10 +8594,10 @@
           "added_cycle": 260,
           "category": "review-evidence",
           "chosen_path": "structural-fix",
-          "rationale": "Behavioral part adopted (gh pr review --approve since cycle 260). Tool hardened cycle 270 (PR #1300): APPROVED-only filter, self-review rejection, post-merge rejection, fail-closed on missing PRs. Cycle 461 re-verification: review-evidence has not appeared in any of the last 16 review cycles (444-460); verify-review-events runs every cycle as part of close-out and review_events_verified_through_cycle continues to advance with each cycle. Structural fix is holding. | Cycle 474: refreshed via PR(s) — Cycle 474 hygiene refresh: review-evidence has not appeared in reviews 464-473 (10-review lookback clear). verify-review-events runs every cycle and review_events_verified_through_cycle continues to advance. Structural fix continues to hold.",
+          "rationale": "Behavioral part adopted (gh pr review --approve since cycle 260). Tool hardened cycle 270 (PR #1300): APPROVED-only filter, self-review rejection, post-merge rejection, fail-closed on missing PRs. Cycle 461 re-verification: review-evidence has not appeared in any of the last 16 review cycles (444-460); verify-review-events runs every cycle as part of close-out and review_events_verified_through_cycle continues to advance with each cycle. Structural fix is holding. | Cycle 474: refreshed via PR(s) — Cycle 474 hygiene refresh: review-evidence has not appeared in reviews 464-473 (10-review lookback clear). verify-review-events runs every cycle and review_events_verified_through_cycle continues to advance. Structural fix continues to hold. | Cycle 478: rollback of cycle 474 refresh — no direct review flag, but refreshed on the same fabricated lookback pattern as the flagged entries per audit EvaLok/schema-org-json-ld#405",
           "root_cause": "Review events were optional and unverified. No tool, checklist step, or invariant confirmed that GitHub review events existed on PRs before merge. The orchestrator merged PRs with only worklog/journal claims of review, which are self-reported and not auditable.",
-          "updated_cycle": 474,
-          "verification_cycle": 474
+          "updated_cycle": 478,
+          "verification_cycle": 461
         },
         {
           "added_cycle": 383,
@@ -14624,17 +14644,50 @@
         ],
         "ignored": 0,
         "note": "F1 worklog-accuracy deferred: linked to chronic state-integrity root cause (in_flight counter drift in state.json), already escalated in #2416. F2 journal-quality actioned via retroactive cycle 477 journal entry (commit 3212d79) plus commitment to add pipeline-check current-cycle-journal-section invariant next cycle. F3 state-integrity reclassified deferred->dispatch_created [cycle 478 tool-first exception per cycle 475 precedent 58fd1f64]: question-for-eva #2416 is the structural escalation for this exact chronic pattern (3-consecutive state-integrity deferrals 475/476/477 about the same `last_cycle.summary` drift bug). #2416 IS the dispatch equivalent for state-integrity this cycle — pending Eva's structural option decision — not a passive deferral. Classification 'deferred' in process-review b96d331b was incomplete; correct disposition is dispatch_created pointing at existing #2416 escalation. Tool gap: process-review needs --reclassify-finding-disposition CYCLE:CATEGORY:NEW_DISPOSITION (tracked on #2402)."
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "journal-quality",
+          "state-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 3,
+        "cycle": 478,
+        "deferred": 4,
+        "finding_count": 4,
+        "finding_dispositions": [
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred"
+          },
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "deferred"
+          },
+          {
+            "category": "state-integrity",
+            "disposition": "deferred"
+          }
+        ],
+        "ignored": 0,
+        "note": "All 4 findings deferred: F1/F2 worklog-accuracy (write-entry tool improvement needed), F3 journal-quality (structural invariant carried from cycle 477), F4 state-integrity (chronic, mutator auto-refresh needed). Complacency 3/5.",
+        "review_issue": 2424
       }
     ],
-    "last_review_cycle": 477,
+    "last_review_cycle": 478,
     "enforcement": {
       "review_history_actioned_integrity": {
         "last_enforced_cycle": 473
       }
     }
   },
-  "review_dispatch_consecutive": 5,
-  "review_events_verified_through_cycle": 477,
+  "review_dispatch_consecutive": 6,
+  "review_events_verified_through_cycle": 478,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
@@ -15176,18 +15229,18 @@
   "tool_pipeline": {
     "blocks_publish": false,
     "c5_5_gate": {
-      "cycle": 477,
+      "cycle": 478,
       "needs_reverify": false,
       "pipeline_summary": "PASS (1 blocking warning, 4 warnings)",
       "status": "PASS"
     },
     "c5_5_initial_result": {
-      "cycle": 477,
+      "cycle": 478,
       "exit_code": 1,
       "has_blocking_findings": true,
       "overall": "fail",
       "result": "FAIL",
-      "summary": "FAIL (1 blocking warning, 4 warnings, 1 blocking: current-cycle-steps)"
+      "summary": "FAIL (1 blocking warning, 3 warnings, 1 blocking: step-comments)"
     },
     "eva_directive": 436,
     "phases": [

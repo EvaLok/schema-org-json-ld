@@ -32,6 +32,7 @@ const CHRONIC_CATEGORY_CURRENCY_FAIL_GAP: u64 = 15;
 /// flagged 111 missing, blocking C5.5.
 const AUDIT_INBOUND_LIFECYCLE_BASELINE_AUDIT: u64 = 372;
 const CHRONIC_CATEGORY_CURRENCY_STEP_NAME: &str = "chronic-category-currency";
+const CHRONIC_REFRESH_INVALIDATION_STEP_NAME: &str = "chronic-refresh-invalidation";
 const DEFERRAL_ACCUMULATION_STEP_NAME: &str = "deferral-accumulation";
 const DEFERRAL_DEADLINES_STEP_NAME: &str = "deferral-deadlines";
 const MASS_DEFERRAL_GATE_STEP_NAME: &str = "mass-deferral-gate";
@@ -89,6 +90,7 @@ const STEP_NAMES: [&str; 27] = [
     CURRENT_CYCLE_STEPS_STEP_NAME,
     DOC_LINT_STEP_NAME,
     COMMITMENT_DROP_VERIFICATION_STEP_NAME,
+    CHRONIC_REFRESH_INVALIDATION_STEP_NAME,
 ];
 // Steps that have not been posted yet when pipeline-check runs at C5.5.
 // These are excluded from the current-cycle mandatory step check.
@@ -143,6 +145,10 @@ const DEFERRAL_ACCUMULATION_THRESHOLD: usize = 3;
 const DEFAULT_REVIEW_HISTORY_ACTIONED_LAST_ENFORCED_CYCLE: u64 = 473;
 static REVIEW_FINDING_HEADER_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?m)^## \d+\.").expect("review finding regex should compile"));
+static REVIEW_CATEGORY_TAG_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?m)^(?:##\s*)?\d+\.\s+(?:\*\*)?\[(?P<category>[^\]]+)\]")
+        .expect("review category regex should compile")
+});
 static HASH_REFERENCE_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"#(\d+)").expect("hash reference regex should compile"));
 static COMMIT_REFERENCE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
@@ -833,6 +839,9 @@ fn run_pipeline_with_excluded_steps(
     }
     if !is_excluded_step(COMMITMENT_DROP_VERIFICATION_STEP_NAME, exclude_steps) {
         steps.push(verify_commitment_drop_verification(repo_root, runner));
+    }
+    if !is_excluded_step(CHRONIC_REFRESH_INVALIDATION_STEP_NAME, exclude_steps) {
+        steps.push(verify_chronic_refresh_invalidation(repo_root));
     }
     // Doc validation runs before step-comments so it can pass the pre-step-comments
     // pipeline status through to validate-docs. Reclassify afterward, once the real
@@ -3657,6 +3666,29 @@ fn verify_disposition_match(repo_root: &Path) -> StepReport {
     }
 }
 
+fn verify_chronic_refresh_invalidation(repo_root: &Path) -> StepReport {
+    match chronic_refresh_invalidation_assessment(repo_root) {
+        Ok(assessment) => StepReport {
+            name: CHRONIC_REFRESH_INVALIDATION_STEP_NAME,
+            status: assessment.status,
+            severity: assessment.severity,
+            exit_code: None,
+            detail: Some(assessment.detail),
+            findings: None,
+            summary: None,
+        },
+        Err(error) => StepReport {
+            name: CHRONIC_REFRESH_INVALIDATION_STEP_NAME,
+            status: StepStatus::Error,
+            severity: Severity::Blocking,
+            exit_code: None,
+            detail: Some(error),
+            findings: None,
+            summary: None,
+        },
+    }
+}
+
 fn verify_audit_inbound_lifecycle(repo_root: &Path, runner: &dyn CommandRunner) -> StepReport {
     match audit_inbound_lifecycle_assessment(repo_root, runner) {
         Ok(assessment) => StepReport {
@@ -4242,6 +4274,123 @@ fn audit_inbound_lifecycle_assessment(
 
     Ok(StepAssessment {
         status: StepStatus::Fail,
+        severity: Severity::Blocking,
+        detail: detail.join("\n"),
+    })
+}
+
+fn chronic_refresh_invalidation_assessment(repo_root: &Path) -> Result<StepAssessment, String> {
+    let state_value = read_state_value(repo_root)?;
+    let state: StateJson = serde_json::from_value(state_value.clone())
+        .map_err(|error| format!("failed to parse state.json: {}", error))?;
+    let review_agent = match state.review_agent() {
+        Ok(review_agent) => review_agent,
+        Err(_) => {
+            return Ok(StepAssessment {
+                status: StepStatus::Pass,
+                severity: Severity::Blocking,
+                detail: "no review_agent state available for chronic refresh invalidation check"
+                    .to_string(),
+            })
+        }
+    };
+    let Some(history_entry) = review_agent.history.last() else {
+        return Ok(StepAssessment {
+            status: StepStatus::Pass,
+            severity: Severity::Blocking,
+            detail: "no consumed review available for chronic refresh invalidation check"
+                .to_string(),
+        });
+    };
+    let review_cycle = history_entry.cycle;
+    let review_relative_path = format!("docs/reviews/cycle-{}.md", review_cycle);
+    let review_path = repo_root.join(&review_relative_path);
+    if !review_path.is_file() {
+        return Ok(StepAssessment {
+            status: StepStatus::Warn,
+            severity: Severity::Blocking,
+            detail: format!(
+                "cannot verify chronic refresh invalidation because review file is missing: {}",
+                review_relative_path
+            ),
+        });
+    }
+    let review_content = fs::read_to_string(&review_path)
+        .map_err(|error| format!("failed to read {}: {}", review_path.display(), error))?;
+    let review_categories = extract_review_categories(&review_content);
+    if review_categories.is_empty() {
+        return Ok(StepAssessment {
+            status: StepStatus::Pass,
+            severity: Severity::Blocking,
+            detail: format!(
+                "no review category tags found in {} for chronic refresh invalidation check",
+                review_relative_path
+            ),
+        });
+    }
+
+    let Some(entries) = state_value
+        .pointer("/review_agent/chronic_category_responses/entries")
+        .and_then(Value::as_array)
+    else {
+        return Ok(StepAssessment {
+            status: StepStatus::Pass,
+            severity: Severity::Blocking,
+            detail:
+                "no chronic category responses available for chronic refresh invalidation check"
+                    .to_string(),
+        });
+    };
+
+    let mut invalidated = Vec::new();
+    for entry in entries {
+        let Some(category_raw) = entry.get("category").and_then(Value::as_str) else {
+            continue;
+        };
+        let Some(category) = normalize_review_category(category_raw) else {
+            continue;
+        };
+        if !review_categories.contains(&category) {
+            continue;
+        }
+        let verification_cycle = entry.get("verification_cycle").and_then(Value::as_u64);
+        let updated_cycle = entry.get("updated_cycle").and_then(Value::as_u64);
+        if verification_cycle != Some(review_cycle) && updated_cycle != Some(review_cycle) {
+            continue;
+        }
+
+        invalidated.push(format!(
+			"- category '{}' intersects review cycle {} (verification_cycle={}, updated_cycle={}); manually run process-review --rollback-chronic-category {}:PRIOR_VC:RATIONALE",
+			category,
+			review_cycle,
+			verification_cycle
+				.map(|value| value.to_string())
+				.unwrap_or_else(|| "null".to_string()),
+			updated_cycle
+				.map(|value| value.to_string())
+				.unwrap_or_else(|| "null".to_string()),
+			category
+		));
+    }
+
+    if invalidated.is_empty() {
+        return Ok(StepAssessment {
+            status: StepStatus::Pass,
+            severity: Severity::Blocking,
+            detail: format!(
+                "no same-cycle chronic refresh invalidations detected for review cycle {}",
+                review_cycle
+            ),
+        });
+    }
+
+    let mut detail = vec![format!(
+		"review cycle {} invalidates same-cycle chronic refreshes; roll them back manually before treating them as current:",
+		review_cycle
+	)];
+    detail.extend(invalidated);
+    Ok(StepAssessment {
+        status: StepStatus::Warn,
         severity: Severity::Blocking,
         detail: detail.join("\n"),
     })
@@ -5629,6 +5778,36 @@ fn count_review_findings(review_content: &str) -> Result<u64, String> {
         .find_iter(review_content)
         .count();
     u64::try_from(count).map_err(|error| format!("review finding count overflow: {}", error))
+}
+
+fn extract_review_categories(review_content: &str) -> BTreeSet<String> {
+    REVIEW_CATEGORY_TAG_REGEX
+        .captures_iter(review_content)
+        .filter_map(|captures| captures.name("category").map(|value| value.as_str()))
+        .filter_map(normalize_review_category)
+        .collect()
+}
+
+fn normalize_review_category(category: &str) -> Option<String> {
+    let mut normalized = String::new();
+    let mut last_dash = false;
+
+    for ch in category.chars() {
+        if ch.is_ascii_alphanumeric() {
+            normalized.push(ch.to_ascii_lowercase());
+            last_dash = false;
+        } else if !last_dash {
+            normalized.push('-');
+            last_dash = true;
+        }
+    }
+
+    let trimmed = normalized.trim_matches('-').to_string();
+    if trimmed.is_empty() || trimmed.len() > 40 {
+        None
+    } else {
+        Some(trimmed)
+    }
 }
 
 fn checked_disposition_sum(
@@ -11844,6 +12023,95 @@ mod tests {
         assert_eq!(
             step.detail.as_deref(),
             Some("no structural-fix chronic category responses exceed currency threshold")
+        );
+    }
+
+    #[test]
+    fn chronic_refresh_invalidation_warns_on_review_overlap() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-chronic-refresh-invalidation-warn",
+            json!({
+                "last_cycle": {"number": 475},
+                "review_agent": {
+                    "history": [{
+                        "cycle": 474,
+                        "finding_count": 1,
+                        "complacency_score": 2,
+                        "categories": ["receipt-integrity"],
+                        "actioned": 0,
+                        "deferred": 1,
+                        "ignored": 0
+                    }],
+                    "chronic_category_responses": {
+                        "entries": [{
+                            "category": "receipt-integrity",
+                            "chosen_path": "structural-fix",
+                            "updated_cycle": 474,
+                            "verification_cycle": 474
+                        }]
+                    }
+                }
+            }),
+        );
+        fs::create_dir_all(root.join("docs/reviews")).unwrap();
+        fs::write(
+            root.join("docs/reviews/cycle-474.md"),
+            "# Cycle 474 Review\n\n## 1. [receipt-integrity] Receipt drift persists\n",
+        )
+        .unwrap();
+
+        let step = verify_chronic_refresh_invalidation(&root);
+
+        assert_eq!(step.name, CHRONIC_REFRESH_INVALIDATION_STEP_NAME);
+        assert_eq!(step.status, StepStatus::Warn);
+        assert_eq!(step.severity, Severity::Blocking);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("review cycle 474"));
+        assert!(detail.contains("receipt-integrity"));
+        assert!(detail.contains("--rollback-chronic-category receipt-integrity:PRIOR_VC:RATIONALE"));
+    }
+
+    #[test]
+    fn chronic_refresh_invalidation_passes_without_review_overlap() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-chronic-refresh-invalidation-pass",
+            json!({
+                "last_cycle": {"number": 475},
+                "review_agent": {
+                    "history": [{
+                        "cycle": 474,
+                        "finding_count": 1,
+                        "complacency_score": 2,
+                        "categories": ["journal-quality"],
+                        "actioned": 0,
+                        "deferred": 1,
+                        "ignored": 0
+                    }],
+                    "chronic_category_responses": {
+                        "entries": [{
+                            "category": "receipt-integrity",
+                            "chosen_path": "structural-fix",
+                            "updated_cycle": 474,
+                            "verification_cycle": 474
+                        }]
+                    }
+                }
+            }),
+        );
+        fs::create_dir_all(root.join("docs/reviews")).unwrap();
+        fs::write(
+            root.join("docs/reviews/cycle-474.md"),
+            "# Cycle 474 Review\n\n## 1. [journal-quality] Commitment drift persists\n",
+        )
+        .unwrap();
+
+        let step = verify_chronic_refresh_invalidation(&root);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("no same-cycle chronic refresh invalidations detected for review cycle 474")
         );
     }
 
