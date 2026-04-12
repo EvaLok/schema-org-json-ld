@@ -4537,9 +4537,17 @@ fn deferral_accumulation_assessment(repo_root: &Path) -> Result<StepAssessment, 
         })
         .collect::<Vec<_>>()
         .join("; ");
-    let has_recent_accumulation = accumulations
-        .iter()
-        .any(|accumulation| accumulation.cycles.last() == Some(&latest_cycle));
+    let has_recent_accumulation = accumulations.iter().any(|accumulation| {
+        if accumulation.cycles.last() != Some(&latest_cycle) {
+            return false;
+        }
+        // Check if this category's deferral has been resolved or dropped
+        !state.deferred_findings.iter().any(|finding| {
+            finding.category == accumulation.category
+                && (finding.resolved || finding.dropped_rationale.is_some())
+                && accumulation.cycles.contains(&finding.deferred_cycle)
+        })
+    });
 
     Ok(if has_recent_accumulation {
         StepAssessment {
