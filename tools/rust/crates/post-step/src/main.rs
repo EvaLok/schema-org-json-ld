@@ -156,10 +156,6 @@ fn validate_body_text(body: &str) -> Result<(), String> {
         return Err(body_validation_error("unexpanded shell variable `${`"));
     }
 
-    if has_backtick_wrapped_command(body) {
-        return Err(body_validation_error("backtick-wrapped command text"));
-    }
-
     if let Some(pattern) = find_placeholder_pattern(body) {
         return Err(body_validation_error(pattern));
     }
@@ -171,42 +167,6 @@ fn body_validation_error(pattern: &str) -> String {
     format!(
         "body contains {pattern}; use --skip-body-validation only when literal text is intentional"
     )
-}
-
-fn has_backtick_wrapped_command(body: &str) -> bool {
-    let mut in_code_span = false;
-    let mut code_span = String::new();
-
-    for character in body.chars() {
-        if character == '`' {
-            if in_code_span && is_shell_like_code_span(&code_span) {
-                return true;
-            }
-            if in_code_span {
-                code_span.clear();
-            }
-            in_code_span = !in_code_span;
-            continue;
-        }
-
-        if in_code_span {
-            code_span.push(character);
-        }
-    }
-
-    false
-}
-
-/// Treat inline code spans as suspicious command text when they are composed only of
-/// shell-safe command characters. This is intentionally conservative so obvious
-/// backtick-wrapped commands like `date` or `gh api` fail closed unless explicitly allowed.
-fn is_shell_like_code_span(code_span: &str) -> bool {
-    let trimmed = code_span.trim();
-    !trimmed.is_empty()
-        && trimmed.chars().all(|character| {
-            character.is_ascii_alphanumeric()
-                || matches!(character, '_' | '-' | '/' | '.' | ':' | '=' | ' ' | '\t')
-        })
 }
 
 fn find_placeholder_pattern(body: &str) -> Option<&'static str> {
@@ -749,14 +709,11 @@ mod tests {
     }
 
     #[test]
-    fn body_validation_rejects_backtick_wrapped_commands() {
-        let error = normalize_body_text("Captured output from `date`.", false)
-            .expect_err("body should fail");
+    fn body_validation_allows_backtick_wrapped_commands() {
+        let body = normalize_body_text("Captured output from `date`.", false)
+            .expect("backtick-wrapped inline code should be allowed");
 
-        assert_eq!(
-            error,
-            "body contains backtick-wrapped command text; use --skip-body-validation only when literal text is intentional"
-        );
+        assert_eq!(body, "Captured output from `date`.");
     }
 
     #[test]
