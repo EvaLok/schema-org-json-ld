@@ -1030,34 +1030,27 @@ fn apply_worklog_auto_derivations(
         Err(error) => return Err(error),
     };
 
-    let cycle_receipt_through = if args.auto_receipts || args.auto_self_modifications {
+    let cycle_receipt_through = if args.auto_receipts {
         cycle_receipt_boundary_timestamp(state.as_ref())?
     } else {
         None
     };
 
-    let cycle_receipt_entries = if args.auto_receipts || args.auto_self_modifications {
-        let receipt_flag = match (args.auto_receipts, args.auto_self_modifications) {
-            (true, true) => "--auto-receipts/--auto-self-modifications",
-            (true, false) => "--auto-receipts",
-            (false, true) => "--auto-self-modifications",
-            (false, false) => {
-                unreachable!("receipt auto-derivation should only run when requested")
-            }
-        };
+    let cycle_receipt_entries = if args.auto_receipts {
         Some(
             derive_cycle_receipt_entries(repo_root, cycle, cycle_receipt_through.as_deref())
-                .map_err(|error| format!("{} failed: {}", receipt_flag, error))?,
+                .map_err(|error| format!("--auto-receipts failed: {}", error))?,
         )
     } else {
         None
     };
 
     if args.auto_self_modifications {
-        let entries = cycle_receipt_entries.as_ref().expect(
-            "BUG: cycle_receipt_entries should be Some when auto_self_modifications is true",
-        );
-        input.self_modifications = derive_self_modifications_from_receipts(repo_root, entries)?;
+        let self_modification_receipt_entries =
+            derive_cycle_receipt_entries(repo_root, cycle, None)
+                .map_err(|error| format!("--auto-self-modifications failed: {}", error))?;
+        input.self_modifications =
+            derive_self_modifications_from_receipts(repo_root, &self_modification_receipt_entries)?;
     }
 
     if args.auto_issues {
@@ -7136,6 +7129,53 @@ mod tests {
 
         assert!(content.contains("## Self-modifications\n\n- **`AGENTS.md`**: modified"));
         assert!(!content.contains("tools/rust/crates/write-entry/src/main.rs"));
+    }
+
+    #[test]
+    fn worklog_auto_self_modifications_include_cycle_tagged_commit_after_cycle_complete() {
+        let repo_root = TempRepoDir::new("worklog-auto-self-modifications-close-out");
+        init_git_repo(&repo_root.path);
+        let start_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154 [cycle 154]",
+        );
+        let cycle_complete_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/complete.txt",
+            "complete\n",
+            "state(cycle-complete): close cycle 154 [cycle 154]",
+        );
+        let close_out_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "tools/rust/crates/write-entry/src/main.rs",
+            "close-out fix\n",
+            "docs: close-out corrective fix [cycle 154]",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154 [cycle 154]","url":"https://github.com/EvaLok/schema-org-json-ld/commit/{start_receipt}","aliases":["cycle-tagged"]}},
+                    {{"step":"cycle-complete","receipt":"{cycle_complete_receipt}","commit":"state(cycle-complete): close cycle 154 [cycle 154]","url":"https://github.com/EvaLok/schema-org-json-ld/commit/{cycle_complete_receipt}","aliases":[]}},
+                    {{"step":"close-out-corrective","receipt":"{close_out_receipt}","commit":"docs: close-out corrective fix [cycle 154]","url":"https://github.com/EvaLok/schema-org-json-ld/commit/{close_out_receipt}","aliases":["cycle-tagged"]}}
+                ]"#
+            ),
+        );
+
+        let mut args = worklog_args("Auto self-modification close-out");
+        args.done = vec!["Closed #42".to_string()];
+        args.auto_self_modifications = true;
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.publish_gate = Some("open".to_string());
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains(
+            "## Self-modifications\n\n- **`tools/rust/crates/write-entry/src/main.rs`**: modified"
+        ));
     }
 
     #[test]
