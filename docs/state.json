@@ -7330,6 +7330,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "pipeline-check journal-section invariant (re-dispatch of #2429)"
+    },
+    {
+      "dispatched_at": "2026-04-12T08:05:38Z",
+      "issue": 2441,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 480 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -8162,7 +8169,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2439 pipeline-check journal-section invariant (re-dispatch of #2429) (cycle 480)",
+  "dispatch_log_latest": "#2441 [Cycle Review] Cycle 480 end-of-cycle review (cycle 480)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8433,7 +8440,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 3,
   "last_cycle": {
     "duration_minutes": 1,
     "issue": 2435,
@@ -14742,7 +14749,7 @@
     ],
     "last_review_cycle": 479
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 480,
   "schema_status": {
     "directory_layout": {
