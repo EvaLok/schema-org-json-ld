@@ -2946,11 +2946,25 @@ fn current_cycle_journal_section_status_for_date(
         }
     };
 
-    let has_current_cycle_section = CURRENT_CYCLE_JOURNAL_SECTION_HEADING_REGEX
-        .captures_iter(&journal)
-        .filter_map(|captures| captures.name("cycle"))
-        .filter_map(|cycle_match| cycle_match.as_str().parse::<u64>().ok())
-        .any(|heading_cycle| heading_cycle == cycle);
+    let mut has_current_cycle_section = false;
+    for captures in CURRENT_CYCLE_JOURNAL_SECTION_HEADING_REGEX.captures_iter(&journal) {
+        let Some(cycle_match) = captures.name("cycle") else {
+            continue;
+        };
+        let heading_cycle = cycle_match.as_str().parse::<u64>().map_err(|error| {
+            format!(
+                "invalid cycle number '{}' in journal heading in {}: {}",
+                cycle_match.as_str(),
+                journal_path.display(),
+                error
+            )
+        })?;
+        if heading_cycle == cycle {
+            has_current_cycle_section = true;
+            break;
+        }
+    }
+
     if has_current_cycle_section {
         Ok((
             StepStatus::Pass,
@@ -8827,6 +8841,39 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("only runs during close_out"));
+    }
+
+    #[test]
+    fn current_cycle_journal_section_errors_when_cycle_number_cannot_be_parsed() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-journal-section-parse-{}", run_id));
+        fs::create_dir_all(root.join("docs/journal")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "close_out"}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        fs::write(
+            root.join("docs/journal/2026-03-09.md"),
+            "# Journal — 2026-03-09\n\n## 2026-03-09 — Cycle 99999999999999999999\n",
+        )
+        .unwrap();
+
+        let step = verify_current_cycle_journal_section_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Error);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("invalid cycle number"));
     }
 
     #[test]
