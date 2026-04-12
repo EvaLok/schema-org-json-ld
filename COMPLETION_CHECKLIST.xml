@@ -62,6 +62,16 @@
       early check is insufficient.
       Recurrence escalation: all three categories in cycles 442-443.
     </constraint>
+    <constraint id="gate-criteria-change-disclosure" severity="mandatory">
+      When a C5.5 FAIL is resolved by modifying the gate exclusion list or
+      gate criteria (rather than fixing the underlying condition), the worklog
+      MUST record this as a "gate-criteria change" or "gate override," NOT as
+      a "re-run" or "resolved by re-run." The specific exclusions added and
+      the architectural rationale (e.g., ADR reference) MUST be stated.
+      The journal "What fell short" section MUST acknowledge the gate-criteria
+      change as a process deviation requiring architectural justification.
+      Recurrence escalation: process-adherence in cycle 482 (F2).
+    </constraint>
     <constraint id="commitment-observability">Journal commitments MUST reference
       checks and conditions that exist today and are directly observable at grading
       time. Each commitment specifies: (1) the exact command or artifact to check,
