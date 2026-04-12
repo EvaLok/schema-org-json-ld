@@ -23,6 +23,7 @@ const EXCLUDED_STEPS: &[&str] = &[
     "dispatch-finding-reconciliation",
     "doc-validation",
     "frozen-commit-verify",
+    "current-cycle-journal-section",
     "review-events-verified",
     "worklog-dedup",
     "worklog-immutability",

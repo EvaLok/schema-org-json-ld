@@ -39,6 +39,7 @@ const DISPATCH_FINDING_RECONCILIATION_STEP_NAME: &str = "dispatch-finding-reconc
 const DEFERRED_RESOLUTION_MERGE_GATE_STEP_NAME: &str = "deferred-resolution-merge-gate";
 const DOC_VALIDATION_STEP_NAME: &str = "doc-validation";
 const FROZEN_COMMIT_VERIFY_STEP_NAME: &str = "frozen-commit-verify";
+const CURRENT_CYCLE_JOURNAL_SECTION_STEP_NAME: &str = "current-cycle-journal-section";
 const REVIEW_EVENTS_VERIFIED_STEP_NAME: &str = "review-events-verified";
 const WORKLOG_DEDUP_STEP_NAME: &str = "worklog-dedup";
 const WORKLOG_IMMUTABILITY_STEP_NAME: &str = "worklog-immutability";
@@ -61,7 +62,7 @@ const COMMITMENT_DROP_RATIONALE_MARKERS: &[&str] = &[
     " due to ",
 ];
 const NON_SURFACE_CYCLE_PREFIX: &str = "cycle-";
-const STEP_NAMES: [&str; 27] = [
+const STEP_NAMES: [&str; 28] = [
     "metric-snapshot",
     "field-inventory",
     "housekeeping-scan",
@@ -79,6 +80,7 @@ const STEP_NAMES: [&str; 27] = [
     DEFERRED_RESOLUTION_MERGE_GATE_STEP_NAME,
     DOC_VALIDATION_STEP_NAME,
     FROZEN_COMMIT_VERIFY_STEP_NAME,
+    CURRENT_CYCLE_JOURNAL_SECTION_STEP_NAME,
     REVIEW_EVENTS_VERIFIED_STEP_NAME,
     WORKLOG_DEDUP_STEP_NAME,
     WORKLOG_IMMUTABILITY_STEP_NAME,
@@ -185,6 +187,10 @@ static HYPHENATED_TARGET_SURFACE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 static ISSUE_LABEL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)\bissues?\b(?P<refs>(?:\s*#\d+\s*(?:/|,|and)?\s*)+)")
         .expect("issue label regex should compile")
+});
+static CURRENT_CYCLE_JOURNAL_SECTION_HEADING_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?m)^## \d{4}-\d{2}-\d{2} — Cycle (?P<cycle>\d+)(?:\b|$)")
+        .expect("current cycle journal section regex should compile")
 });
 
 #[derive(Parser)]
@@ -786,6 +792,9 @@ fn run_pipeline_with_excluded_steps(
     }
     if !is_excluded_step(FROZEN_COMMIT_VERIFY_STEP_NAME, exclude_steps) {
         steps.push(verify_frozen_commit(repo_root));
+    }
+    if !is_excluded_step(CURRENT_CYCLE_JOURNAL_SECTION_STEP_NAME, exclude_steps) {
+        steps.push(verify_current_cycle_journal_section(repo_root));
     }
     if !is_excluded_step(REVIEW_EVENTS_VERIFIED_STEP_NAME, exclude_steps) {
         steps.push(verify_review_events_verified(repo_root));
@@ -1526,6 +1535,34 @@ fn verify_frozen_worklog_immutability(repo_root: &Path) -> StepReport {
 
 fn verify_frozen_commit(repo_root: &Path) -> StepReport {
     verify_frozen_commit_for_date(repo_root, &current_utc_timestamp()[..10])
+}
+
+fn verify_current_cycle_journal_section(repo_root: &Path) -> StepReport {
+    let today = Utc::now().format("%Y-%m-%d").to_string();
+    verify_current_cycle_journal_section_for_date(repo_root, &today)
+}
+
+fn verify_current_cycle_journal_section_for_date(repo_root: &Path, today: &str) -> StepReport {
+    match current_cycle_journal_section_status_for_date(repo_root, today) {
+        Ok((status, detail)) => StepReport {
+            name: CURRENT_CYCLE_JOURNAL_SECTION_STEP_NAME,
+            status,
+            severity: Severity::Blocking,
+            exit_code: None,
+            detail: Some(detail),
+            findings: None,
+            summary: None,
+        },
+        Err(error) => StepReport {
+            name: CURRENT_CYCLE_JOURNAL_SECTION_STEP_NAME,
+            status: StepStatus::Error,
+            severity: Severity::Blocking,
+            exit_code: None,
+            detail: Some(error),
+            findings: None,
+            summary: None,
+        },
+    }
 }
 
 fn verify_review_events_verified(repo_root: &Path) -> StepReport {
@@ -2875,6 +2912,63 @@ fn frozen_commit_status_for_date(
             missing.join(", ")
         ),
     ))
+}
+
+fn current_cycle_journal_section_status_for_date(
+    repo_root: &Path,
+    today: &str,
+) -> Result<(StepStatus, String), String> {
+    let state = read_state_value(repo_root)?;
+    let phase = state.pointer("/cycle_phase/phase").and_then(Value::as_str);
+    if phase != Some("close_out") {
+        return Ok((
+            StepStatus::Pass,
+            "skipped: current cycle journal section check only runs during close_out".to_string(),
+        ));
+    }
+
+    let cycle = current_cycle_from_state(repo_root)?;
+    let journal_path = repo_root.join("docs/journal").join(format!("{today}.md"));
+    let journal = match fs::read_to_string(&journal_path) {
+        Ok(journal) => journal,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok((
+                StepStatus::Fail,
+                format!("missing journal file: {}", journal_path.display()),
+            ))
+        }
+        Err(error) => {
+            return Err(format!(
+                "failed to read journal file {}: {}",
+                journal_path.display(),
+                error
+            ))
+        }
+    };
+
+    let has_current_cycle_section = CURRENT_CYCLE_JOURNAL_SECTION_HEADING_REGEX
+        .captures_iter(&journal)
+        .filter_map(|captures| captures.name("cycle"))
+        .filter_map(|cycle_match| cycle_match.as_str().parse::<u64>().ok())
+        .any(|heading_cycle| heading_cycle == cycle);
+    if has_current_cycle_section {
+        Ok((
+            StepStatus::Pass,
+            format!(
+                "found current cycle journal section for cycle {} in {}",
+                cycle,
+                journal_path.display()
+            ),
+        ))
+    } else {
+        Ok((
+            StepStatus::Fail,
+            format!(
+                "missing current cycle journal section heading `## {today} — Cycle {cycle}` in {}",
+                journal_path.display()
+            ),
+        ))
+    }
 }
 
 fn review_events_verified_status(repo_root: &Path) -> Result<(StepStatus, String), String> {
@@ -5452,6 +5546,10 @@ mod tests {
         run_git(root, &["commit", "-m", message]);
     }
 
+    fn journal_entry_for_cycle(date: &str, cycle: u64) -> String {
+        format!("# Journal — {date}\n\n## {date} — Cycle {cycle}\n")
+    }
+
     fn write_cycle_complete_worklog(
         root: &Path,
         date: &str,
@@ -6038,7 +6136,7 @@ mod tests {
         fs::create_dir_all(root.join("docs/journal")).unwrap();
         fs::write(
             root.join("docs/journal").join(format!("{}.md", today)),
-            "# Journal\n",
+            journal_entry_for_cycle(today, 135),
         )
         .unwrap();
         fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
@@ -6118,7 +6216,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 27);
+        assert_eq!(report.steps.len(), 28);
         assert_eq!(report.steps[0].status, StepStatus::Pass);
         assert_eq!(report.steps[1].status, StepStatus::Pass);
         assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -6159,21 +6257,26 @@ mod tests {
         assert_eq!(report.steps[15].status, StepStatus::Pass);
         assert_eq!(report.steps[16].name, "frozen-commit-verify");
         assert_eq!(report.steps[16].status, StepStatus::Pass);
-        assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
+        assert_eq!(
+            report.steps[17].name,
+            CURRENT_CYCLE_JOURNAL_SECTION_STEP_NAME
+        );
         assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].name, "worklog-dedup");
+        assert_eq!(report.steps[18].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[18].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].name, "worklog-immutability");
+        assert_eq!(report.steps[19].name, "worklog-dedup");
         assert_eq!(report.steps[19].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].severity, Severity::Blocking);
-        assert_eq!(report.steps[20].name, "frozen-worklog-immutability");
+        assert_eq!(report.steps[20].name, "worklog-immutability");
         assert_eq!(report.steps[20].status, StepStatus::Pass);
-        assert_eq!(report.steps[21].name, "pr-base-currency");
+        assert_eq!(report.steps[20].severity, Severity::Blocking);
+        assert_eq!(report.steps[21].name, "frozen-worklog-immutability");
         assert_eq!(report.steps[21].status, StepStatus::Pass);
-        assert_eq!(report.steps[22].name, "step-comments");
+        assert_eq!(report.steps[22].name, "pr-base-currency");
         assert_eq!(report.steps[22].status, StepStatus::Pass);
-        assert_eq!(report.steps[23].name, "current-cycle-steps");
+        assert_eq!(report.steps[23].name, "step-comments");
         assert_eq!(report.steps[23].status, StepStatus::Pass);
+        assert_eq!(report.steps[24].name, "current-cycle-steps");
+        assert_eq!(report.steps[24].status, StepStatus::Pass);
     }
 
     #[test]
@@ -6361,7 +6464,7 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 27);
+        assert_eq!(report.steps.len(), 28);
         assert!(report.steps[..6]
             .iter()
             .all(|step| matches!(step.status, StepStatus::Error)));
@@ -6643,7 +6746,7 @@ mod tests {
         .unwrap();
         fs::write(
             root.join("docs/journal").join(format!("{today}.md")),
-            "# Journal\n",
+            journal_entry_for_cycle(today, 257),
         )
         .unwrap();
         fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
@@ -6731,18 +6834,23 @@ mod tests {
         assert_eq!(report.steps[15].status, StepStatus::Cascade);
         assert_eq!(report.steps[16].name, "frozen-commit-verify");
         assert_eq!(report.steps[16].status, StepStatus::Pass);
-        assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
+        assert_eq!(
+            report.steps[17].name,
+            CURRENT_CYCLE_JOURNAL_SECTION_STEP_NAME
+        );
         assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].name, "worklog-dedup");
+        assert_eq!(report.steps[18].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[18].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].name, "worklog-immutability");
+        assert_eq!(report.steps[19].name, "worklog-dedup");
         assert_eq!(report.steps[19].status, StepStatus::Pass);
-        assert_eq!(report.steps[20].name, "frozen-worklog-immutability");
+        assert_eq!(report.steps[20].name, "worklog-immutability");
         assert_eq!(report.steps[20].status, StepStatus::Pass);
-        assert_eq!(report.steps[21].name, "pr-base-currency");
+        assert_eq!(report.steps[21].name, "frozen-worklog-immutability");
         assert_eq!(report.steps[21].status, StepStatus::Pass);
-        assert_eq!(report.steps[22].name, "step-comments");
-        assert_eq!(report.steps[22].status, StepStatus::Fail);
+        assert_eq!(report.steps[22].name, "pr-base-currency");
+        assert_eq!(report.steps[22].status, StepStatus::Pass);
+        assert_eq!(report.steps[23].name, "step-comments");
+        assert_eq!(report.steps[23].status, StepStatus::Fail);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -6794,7 +6902,7 @@ mod tests {
         .unwrap();
         fs::write(
             root.join("docs/journal").join(format!("{today}.md")),
-            "# Journal\n",
+            journal_entry_for_cycle(today, 257),
         )
         .unwrap();
         fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
@@ -6882,18 +6990,23 @@ mod tests {
         assert_eq!(report.steps[15].status, StepStatus::Cascade);
         assert_eq!(report.steps[16].name, "frozen-commit-verify");
         assert_eq!(report.steps[16].status, StepStatus::Pass);
-        assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
+        assert_eq!(
+            report.steps[17].name,
+            CURRENT_CYCLE_JOURNAL_SECTION_STEP_NAME
+        );
         assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].name, "worklog-dedup");
+        assert_eq!(report.steps[18].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[18].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].name, "worklog-immutability");
+        assert_eq!(report.steps[19].name, "worklog-dedup");
         assert_eq!(report.steps[19].status, StepStatus::Pass);
-        assert_eq!(report.steps[20].name, "frozen-worklog-immutability");
+        assert_eq!(report.steps[20].name, "worklog-immutability");
         assert_eq!(report.steps[20].status, StepStatus::Pass);
-        assert_eq!(report.steps[21].name, "pr-base-currency");
+        assert_eq!(report.steps[21].name, "frozen-worklog-immutability");
         assert_eq!(report.steps[21].status, StepStatus::Pass);
-        assert_eq!(report.steps[22].name, "step-comments");
-        assert_eq!(report.steps[22].status, StepStatus::Fail);
+        assert_eq!(report.steps[22].name, "pr-base-currency");
+        assert_eq!(report.steps[22].status, StepStatus::Pass);
+        assert_eq!(report.steps[23].name, "step-comments");
+        assert_eq!(report.steps[23].status, StepStatus::Fail);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -6947,7 +7060,7 @@ mod tests {
         .unwrap();
         fs::write(
             root.join("docs/journal").join(format!("{today}.md")),
-            "# Journal\n",
+            journal_entry_for_cycle(today, CURRENT_CYCLE),
         )
         .unwrap();
         fs::write(
@@ -7032,10 +7145,10 @@ mod tests {
         }
 
         let report = run_pipeline(&root, OVERRIDE_CYCLE, &OverrideRunner);
-        assert_eq!(report.steps[22].name, "step-comments");
-        assert_eq!(report.steps[22].status, StepStatus::Warn);
-        assert_eq!(report.steps[22].severity, Severity::Warning);
-        assert!(report.steps[22]
+        assert_eq!(report.steps[23].name, "step-comments");
+        assert_eq!(report.steps[23].status, StepStatus::Warn);
+        assert_eq!(report.steps[23].severity, Severity::Warning);
+        assert!(report.steps[23]
             .detail
             .as_deref()
             .unwrap_or_default()
@@ -7097,7 +7210,7 @@ mod tests {
         .unwrap();
         fs::write(
             root.join("docs/journal").join(format!("{today}.md")),
-            "# Journal\n",
+            journal_entry_for_cycle(today, 257),
         )
         .unwrap();
         fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
@@ -7183,14 +7296,19 @@ mod tests {
         assert_eq!(report.steps[15].status, StepStatus::Fail);
         assert_eq!(report.steps[16].name, "frozen-commit-verify");
         assert_eq!(report.steps[16].status, StepStatus::Pass);
-        assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
+        assert_eq!(
+            report.steps[17].name,
+            CURRENT_CYCLE_JOURNAL_SECTION_STEP_NAME
+        );
         assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].name, "worklog-dedup");
+        assert_eq!(report.steps[18].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[18].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].name, "worklog-immutability");
+        assert_eq!(report.steps[19].name, "worklog-dedup");
         assert_eq!(report.steps[19].status, StepStatus::Pass);
+        assert_eq!(report.steps[20].name, "worklog-immutability");
+        assert_eq!(report.steps[20].status, StepStatus::Pass);
         // Previous-cycle backstop is downgraded to Warn
-        assert_eq!(report.steps[22].status, StepStatus::Warn);
+        assert_eq!(report.steps[23].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -7240,7 +7358,7 @@ mod tests {
         .unwrap();
         fs::write(
             root.join("docs/journal").join(format!("{today}.md")),
-            "# Journal\n",
+            journal_entry_for_cycle(today, 257),
         )
         .unwrap();
         fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
@@ -7314,7 +7432,7 @@ mod tests {
             &ExcludeDocValidationRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 26);
+        assert_eq!(report.steps.len(), 27);
         assert!(!report
             .steps
             .iter()
@@ -7371,7 +7489,7 @@ mod tests {
         .unwrap();
         fs::write(
             root.join("docs/journal").join(format!("{today}.md")),
-            "# Journal\n",
+            journal_entry_for_cycle(today, 257),
         )
         .unwrap();
         fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
@@ -7452,7 +7570,7 @@ mod tests {
             &UnknownExcludeRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 27);
+        assert_eq!(report.steps.len(), 28);
         assert!(report
             .steps
             .iter()
@@ -7516,7 +7634,7 @@ mod tests {
         .unwrap();
         fs::write(
             root.join("docs/journal").join(format!("{today}.md")),
-            "# Journal\n",
+            journal_entry_for_cycle(today, 257),
         )
         .unwrap();
         fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
@@ -7598,7 +7716,7 @@ mod tests {
         );
 
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 26);
+        assert_eq!(report.steps.len(), 27);
         assert!(!report.steps.iter().any(|step| step.name == "worklog-dedup"));
         assert!(report
             .steps
@@ -8579,6 +8697,128 @@ mod tests {
         commit_all(&root, "[cycle 410] freeze close-out docs");
 
         let step = verify_frozen_commit_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("only runs during close_out"));
+    }
+
+    #[test]
+    fn current_cycle_journal_section_passes_when_heading_exists() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-journal-section-pass-{}", run_id));
+        fs::create_dir_all(root.join("docs/journal")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "close_out"}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        fs::write(
+            root.join("docs/journal/2026-03-09.md"),
+            journal_entry_for_cycle("2026-03-09", 410),
+        )
+        .unwrap();
+
+        let step = verify_current_cycle_journal_section_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("found current cycle journal section"));
+    }
+
+    #[test]
+    fn current_cycle_journal_section_fails_when_heading_is_missing() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-journal-section-missing-{}", run_id));
+        fs::create_dir_all(root.join("docs/journal")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "close_out"}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        fs::write(
+            root.join("docs/journal/2026-03-09.md"),
+            "# Journal — 2026-03-09\n\n## 2026-03-09 — Cycle 409\n",
+        )
+        .unwrap();
+
+        let step = verify_current_cycle_journal_section_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Fail);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("missing current cycle journal section heading"));
+    }
+
+    #[test]
+    fn current_cycle_journal_section_fails_when_journal_file_is_missing() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-journal-section-no-file-{}", run_id));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "close_out"}
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_current_cycle_journal_section_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Fail);
+        assert_eq!(step.severity, Severity::Blocking);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("missing journal file"));
+    }
+
+    #[test]
+    fn current_cycle_journal_section_skips_when_not_in_close_out_phase() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-journal-section-skip-{}", run_id));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "work"}
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_current_cycle_journal_section_for_date(&root, "2026-03-09");
 
         assert_eq!(step.status, StepStatus::Pass);
         assert_eq!(step.severity, Severity::Blocking);
