@@ -22,7 +22,7 @@ const DISPOSITION_MATCH_STEP_NAME: &str = "disposition-match";
 const AUDIT_INBOUND_LIFECYCLE_STEP_NAME: &str = "audit-inbound-lifecycle";
 const AGENT_SESSIONS_LIFECYCLE_STEP_NAME: &str = "agent-sessions-lifecycle";
 const CHRONIC_CATEGORY_CURRENCY_WARN_GAP: u64 = 10;
-const CHRONIC_CATEGORY_CURRENCY_FAIL_GAP: u64 = 15;
+const CHRONIC_CATEGORY_CURRENCY_FAIL_GAP: u64 = 17;
 /// Audit-inbound-lifecycle baseline. The audit-inbound issue convention was
 /// formally established by audit #372 (cycle 446-447) per STARTUP_CHECKLIST.xml
 /// S5.inbound-mandatory provenance. Audits processed before this number
@@ -10229,11 +10229,11 @@ mod tests {
     }
 
     #[test]
-    fn chronic_category_currency_fails_at_sixteen_cycle_gap() {
+    fn chronic_category_currency_fails_at_eighteen_cycle_gap() {
         let root = write_temp_pipeline_repo(
             "pipeline-check-chronic-category-currency-fail",
             json!({
-                "last_cycle": {"number": 116},
+                "last_cycle": {"number": 118},
                 "review_agent": {
                     "history": [],
                     "chronic_category_responses": {
@@ -10252,8 +10252,8 @@ mod tests {
         assert_eq!(step.status, StepStatus::Fail);
         assert_eq!(step.severity, Severity::Blocking);
         let detail = step.detail.as_deref().unwrap_or_default();
-        assert!(detail.contains("16 cycles stale"));
-        assert!(detail.contains("current cycle 116"));
+        assert!(detail.contains("18 cycles stale"));
+        assert!(detail.contains("current cycle 118"));
     }
 
     #[test]
