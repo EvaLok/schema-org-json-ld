@@ -183,6 +183,8 @@ struct WorklogInput {
     #[serde(default)]
     prs_merged: Vec<u64>,
     #[serde(default)]
+    prs_merged_entries: Vec<String>,
+    #[serde(default)]
     prs_reviewed: Vec<u64>,
     #[serde(default, deserialize_with = "deserialize_issues_processed")]
     issues_processed: Vec<String>,
@@ -193,6 +195,8 @@ struct WorklogInput {
     receipts: Vec<CommitReceipt>,
     #[serde(default)]
     receipt_note: Option<String>,
+    #[serde(default)]
+    dispatch_summary: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -252,6 +256,8 @@ struct CycleReceiptJsonEntry {
     tool: String,
     #[serde(alias = "hash")]
     receipt: String,
+    #[serde(default)]
+    commit: Option<String>,
     #[serde(default)]
     url: Option<String>,
     #[serde(default)]
@@ -473,6 +479,7 @@ fn resolve_worklog_input_for_cycle(
             deferred_findings: Vec::new(),
             self_modifications: parse_self_modifications(&args.self_modification)?,
             prs_merged: args.pr_merged.clone(),
+            prs_merged_entries: Vec::new(),
             prs_reviewed: args.pr_reviewed.clone(),
             issues_processed: merge_issue_processed(
                 &parse_issue_processed_numbers(&args.issues_processed)?,
@@ -491,6 +498,7 @@ fn resolve_worklog_input_for_cycle(
             next_steps: resolve_next_steps(args, state.as_ref())?,
             receipts: parse_receipts(&args.receipt)?,
             receipt_note: None,
+            dispatch_summary: None,
         };
         validate_worklog_state_placeholders(&input, state.as_ref())?;
         return Ok(input);
@@ -502,6 +510,7 @@ fn resolve_worklog_input_for_cycle(
         deferred_findings: Vec::new(),
         self_modifications: Vec::new(),
         prs_merged: Vec::new(),
+        prs_merged_entries: Vec::new(),
         prs_reviewed: Vec::new(),
         issues_processed: Vec::new(),
         current_state: CurrentState {
@@ -514,6 +523,7 @@ fn resolve_worklog_input_for_cycle(
         next_steps: resolve_next_steps(args, state.as_ref())?,
         receipts: Vec::new(),
         receipt_note: None,
+        dispatch_summary: None,
     };
     validate_worklog_state_placeholders(&input, state.as_ref())?;
     Ok(input)
@@ -1088,8 +1098,39 @@ fn apply_worklog_auto_derivations(
             "docs/state.json not found; --auto-receipts requires docs/state.json to derive merged PRs"
                 .to_string()
         })?;
-        let derived_prs = derive_prs_from_cycle_receipt_entries(state, cycle)?;
-        input.prs_merged = merge_numbered_refs(&input.prs_merged, &derived_prs);
+        let derived_prs = derive_prs_from_cycle_receipt_entries(entries, state);
+        let derived_pr_numbers = derived_prs
+            .iter()
+            .map(|entry| entry.number)
+            .collect::<Vec<_>>();
+        if !input.prs_merged.is_empty()
+            && !same_numbered_refs(&input.prs_merged, &derived_pr_numbers)
+        {
+            warnings.push(format!(
+                "WARNING: --pr-merged values contradicted cycle-receipts for cycle {}; using receipt-derived merged PRs",
+                cycle
+            ));
+        }
+        input.prs_merged = derived_pr_numbers;
+        input.prs_merged_entries = derived_prs
+            .iter()
+            .map(render_pr_merged_entry)
+            .collect::<Vec<_>>();
+        let dispatch_summary = derive_dispatch_summary_from_cycle_receipt_entries(entries);
+        let dispatch_count = count_record_dispatch_entries(entries);
+        if dispatch_count > 0 {
+            let removed_no_dispatch_claims =
+                remove_manual_no_dispatch_claims(&mut input.what_was_done);
+            if removed_no_dispatch_claims > 0 {
+                warnings.push(format!(
+                    "WARNING: removed {} manual no-dispatch claim(s) because cycle-receipts recorded {} record-dispatch entr{}",
+                    removed_no_dispatch_claims,
+                    dispatch_count,
+                    if dispatch_count == 1 { "y" } else { "ies" }
+                ));
+            }
+        }
+        input.dispatch_summary = Some(dispatch_summary);
         input.receipt_note = Some(
             match derive_receipt_scope_note(
                 cycle,
@@ -1130,6 +1171,12 @@ fn merge_numbered_refs(existing: &[u64], derived: &[u64]) -> Vec<u64> {
     }
 
     merged
+}
+
+fn same_numbered_refs(left: &[u64], right: &[u64]) -> bool {
+    let left = merge_numbered_refs(&[], left);
+    let right = merge_numbered_refs(&[], right);
+    left == right
 }
 
 fn merge_issue_processed(existing: &[String], derived: &[String]) -> Vec<String> {
@@ -2256,42 +2303,146 @@ fn cycle_receipt_entries_to_receipts(
         .collect()
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct MergedPrEntry {
+    number: u64,
+    title: Option<String>,
+}
+
 fn derive_prs_from_cycle_receipt_entries(
+    entries: &[CycleReceiptJsonEntry],
     state: &StateJson,
-    cycle: u64,
-) -> Result<Vec<u64>, String> {
-    let start = cycle_window_start(cycle, state, "receipt-backed PR derivation")?;
+) -> Vec<MergedPrEntry> {
     let mut seen = HashSet::new();
     let mut prs = Vec::new();
 
-    for (index, session) in state.agent_sessions.iter().enumerate() {
-        let Some(merged_at) = session.merged_at.as_deref() else {
-            continue;
-        };
-        if parse_timestamp(merged_at, "agent_sessions[].merged_at")? < start {
+    for entry in entries {
+        if entry.tool.trim().to_ascii_lowercase() != "process-merge" {
             continue;
         }
-        let Some(pr) = session.pr else {
+        let Some(commit) = entry.commit.as_deref() else {
             continue;
         };
-        let pr = u64::try_from(pr).map_err(|_| {
-            format!(
-                "agent_sessions[{}].pr must be a positive integer for receipt-backed PR derivation",
-                index
-            )
-        })?;
-        if pr == 0 {
-            return Err(format!(
-                "agent_sessions[{}].pr must be a positive integer for receipt-backed PR derivation",
-                index
-            ));
-        }
-        if seen.insert(pr) {
-            prs.push(pr);
+        for pr in extract_pr_references(commit) {
+            if seen.insert(pr) {
+                prs.push(MergedPrEntry {
+                    number: pr,
+                    title: title_for_pr_number(state, pr),
+                });
+            }
         }
     }
 
-    Ok(prs)
+    prs
+}
+
+fn title_for_pr_number(state: &StateJson, pr: u64) -> Option<String> {
+    state
+        .agent_sessions
+        .iter()
+        .find(|session| session.pr.and_then(|value| u64::try_from(value).ok()) == Some(pr))
+        .and_then(|session| session.title.as_deref())
+        .map(str::trim)
+        .filter(|title| !title.is_empty())
+        .map(ToOwned::to_owned)
+}
+
+fn render_pr_merged_entry(entry: &MergedPrEntry) -> String {
+    match entry.title.as_deref() {
+        Some(title) => format!("PR #{} ({})", entry.number, title),
+        None => format!("PR #{}", entry.number),
+    }
+}
+
+fn extract_pr_references(item: &str) -> Vec<u64> {
+    let mut prs = Vec::new();
+    let bytes = item.as_bytes();
+    let mut index = 0;
+
+    while index < bytes.len() {
+        if bytes[index] != b'#' {
+            index += 1;
+            continue;
+        }
+
+        let start = index + 1;
+        let mut end = start;
+        while end < bytes.len() && bytes[end].is_ascii_digit() {
+            end += 1;
+        }
+
+        if end > start && issue_reference_looks_like_pr(item, index) {
+            if let Ok(pr) = item[start..end].parse::<u64>() {
+                prs.push(pr);
+            }
+        }
+
+        index = if end > start { end } else { index + 1 };
+    }
+
+    prs
+}
+
+fn count_record_dispatch_entries(entries: &[CycleReceiptJsonEntry]) -> usize {
+    entries
+        .iter()
+        .filter(|entry| entry.tool.trim().eq_ignore_ascii_case("record-dispatch"))
+        .count()
+}
+
+fn derive_dispatch_summary_from_cycle_receipt_entries(entries: &[CycleReceiptJsonEntry]) -> String {
+    let mut issues = Vec::new();
+    let mut seen = HashSet::new();
+
+    for entry in entries {
+        if !entry.tool.trim().eq_ignore_ascii_case("record-dispatch") {
+            continue;
+        }
+        if let Some(commit) = entry.commit.as_deref() {
+            for issue in extract_issue_references(commit) {
+                if seen.insert(issue) {
+                    issues.push(issue);
+                }
+            }
+        }
+    }
+
+    let dispatch_count = count_record_dispatch_entries(entries);
+    match (dispatch_count, issues.is_empty()) {
+        (0, _) => "Cycle receipts recorded 0 dispatches this cycle.".to_string(),
+        (1, false) => format!(
+            "Cycle receipts recorded 1 dispatch this cycle ({}).",
+            issues
+                .iter()
+                .map(|issue| format!("#{}", issue))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        (count, false) => format!(
+            "Cycle receipts recorded {} dispatches this cycle ({}).",
+            count,
+            issues
+                .iter()
+                .map(|issue| format!("#{}", issue))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        (1, true) => "Cycle receipts recorded 1 dispatch this cycle.".to_string(),
+        (count, true) => format!("Cycle receipts recorded {} dispatches this cycle.", count),
+    }
+}
+
+fn remove_manual_no_dispatch_claims(items: &mut Vec<String>) -> usize {
+    let original_len = items.len();
+    items.retain(|item| !contains_no_dispatch_claim(item));
+    original_len.saturating_sub(items.len())
+}
+
+fn contains_no_dispatch_claim(item: &str) -> bool {
+    let normalized = item.trim().to_ascii_lowercase();
+    normalized.contains("no new dispatches")
+        || normalized == "no dispatches"
+        || normalized.starts_with("no dispatches ")
 }
 
 fn parse_self_modifications(values: &[String]) -> Result<Vec<SelfModification>, String> {
@@ -2838,20 +2989,17 @@ fn render_worklog(cycle: u64, now: DateTime<Utc>, input: &WorklogInput) -> Strin
     lines.push(String::new());
     lines.push("## What was done".to_string());
     lines.push(String::new());
-    if input.what_was_done.is_empty() {
-        if input.deferred_findings.is_empty() {
-            lines.push("- None.".to_string());
-        } else {
-            for finding in active_deferred_findings(&input.deferred_findings) {
-                lines.push(format!(
-                    "- {}",
-                    convert_references(&format_deferred_finding_summary_item(finding))
-                ));
-            }
-        }
+    let has_what_was_done_content = !input.what_was_done.is_empty()
+        || input.dispatch_summary.is_some()
+        || !input.deferred_findings.is_empty();
+    if !has_what_was_done_content {
+        lines.push("- None.".to_string());
     } else {
         for item in &input.what_was_done {
             lines.push(format!("- {}", convert_references(item)));
+        }
+        if let Some(dispatch_summary) = &input.dispatch_summary {
+            lines.push(format!("- {}", convert_references(dispatch_summary)));
         }
         for finding in active_deferred_findings(&input.deferred_findings) {
             lines.push(format!(
@@ -2863,11 +3011,15 @@ fn render_worklog(cycle: u64, now: DateTime<Utc>, input: &WorklogInput) -> Strin
     lines.push(String::new());
     lines.push("### PRs merged".to_string());
     lines.push(String::new());
-    lines.extend(render_numbered_refs(
-        &input.prs_merged,
-        "PR",
-        PRIMARY_ISSUES_URL,
-    ));
+    if input.prs_merged_entries.is_empty() {
+        lines.extend(render_numbered_refs(
+            &input.prs_merged,
+            "PR",
+            PRIMARY_ISSUES_URL,
+        ));
+    } else {
+        lines.extend(render_bullet_list(&input.prs_merged_entries));
+    }
     lines.push(String::new());
     if !input.prs_reviewed.is_empty() {
         lines.push("### PRs reviewed".to_string());
@@ -3810,6 +3962,7 @@ mod tests {
                 description: "Updated per audit #117".to_string(),
             }],
             prs_merged: vec![537],
+            prs_merged_entries: Vec::new(),
             prs_reviewed: vec![543],
             issues_processed: vec!["Closed #546".to_string()],
             current_state: CurrentState {
@@ -3822,6 +3975,7 @@ mod tests {
             next_steps: vec!["Review PR #543".to_string()],
             receipts: Vec::new(),
             receipt_note: None,
+            dispatch_summary: None,
         };
         let rendered = render_worklog(154, fixed_now(), &input);
         let what_done = rendered.find("## What was done").unwrap();
@@ -3849,6 +4003,7 @@ mod tests {
                 description: String::new(),
             }],
             prs_merged: Vec::new(),
+            prs_merged_entries: Vec::new(),
             prs_reviewed: Vec::new(),
             issues_processed: Vec::new(),
             current_state: CurrentState {
@@ -3861,6 +4016,7 @@ mod tests {
             next_steps: Vec::new(),
             receipts: Vec::new(),
             receipt_note: None,
+            dispatch_summary: None,
         };
 
         let rendered = render_worklog(154, fixed_now(), &input);
@@ -3886,6 +4042,7 @@ mod tests {
             deferred_findings: vec![finding],
             self_modifications: Vec::new(),
             prs_merged: Vec::new(),
+            prs_merged_entries: Vec::new(),
             prs_reviewed: Vec::new(),
             issues_processed: Vec::new(),
             current_state: CurrentState {
@@ -3898,6 +4055,7 @@ mod tests {
             next_steps: vec![next_step.clone()],
             receipts: Vec::new(),
             receipt_note: None,
+            dispatch_summary: None,
         };
 
         let rendered = render_worklog(154, fixed_now(), &input);
@@ -3915,6 +4073,7 @@ mod tests {
             deferred_findings: Vec::new(),
             self_modifications: Vec::new(),
             prs_merged: Vec::new(),
+            prs_merged_entries: Vec::new(),
             prs_reviewed: Vec::new(),
             issues_processed: Vec::new(),
             current_state: CurrentState {
@@ -3927,6 +4086,7 @@ mod tests {
             next_steps: Vec::new(),
             receipts: Vec::new(),
             receipt_note: None,
+            dispatch_summary: None,
         };
 
         let rendered = render_worklog(154, fixed_now(), &input);
@@ -3941,6 +4101,7 @@ mod tests {
             deferred_findings: Vec::new(),
             self_modifications: Vec::new(),
             prs_merged: Vec::new(),
+            prs_merged_entries: Vec::new(),
             prs_reviewed: Vec::new(),
             issues_processed: Vec::new(),
             current_state: CurrentState {
@@ -3953,6 +4114,7 @@ mod tests {
             next_steps: Vec::new(),
             receipts: Vec::new(),
             receipt_note: None,
+            dispatch_summary: None,
         };
 
         let rendered = render_worklog(154, fixed_now(), &input);
@@ -4364,7 +4526,7 @@ mod tests {
     }
 
     #[test]
-    fn worklog_auto_derives_pr_sections_from_cycle_bounded_agent_sessions() {
+    fn worklog_auto_derives_pr_sections_from_cycle_receipts_including_resumed_merges() {
         let repo_root = TempRepoDir::new("worklog-auto-derives-prs");
         init_git_repo(&repo_root.path);
         write_state_file(
@@ -4380,13 +4542,15 @@ mod tests {
                         "issue": 1041,
                         "pr": 237,
                         "merged_at": "2026-03-06T00:59:59Z",
-                        "status": "merged"
+                        "status": "merged",
+                        "title": "Merged in prior session"
                     },
                     {
                         "issue": 1042,
                         "pr": 240,
                         "merged_at": "2026-03-06T01:00:01Z",
-                        "status": "merged"
+                        "status": "merged",
+                        "title": "Merged this cycle"
                     }
                 ]
             }"#,
@@ -4424,14 +4588,90 @@ mod tests {
         let content = fs::read_to_string(path).unwrap();
 
         assert!(content.contains("### PRs merged"));
-        assert!(
-            content.contains("[PR #240](https://github.com/EvaLok/schema-org-json-ld/issues/240)")
-        );
-        assert!(
-            !content.contains("[PR #237](https://github.com/EvaLok/schema-org-json-ld/issues/237)")
-        );
+        assert!(content
+            .contains("[PR #237](https://github.com/EvaLok/schema-org-json-ld/issues/237) ("));
+        assert!(content.contains("Merged in prior session"));
+        assert!(content
+            .contains("[PR #240](https://github.com/EvaLok/schema-org-json-ld/issues/240) ("));
+        assert!(content.contains("Merged this cycle"));
         assert!(!content.contains("### PRs reviewed"));
         assert!(!content.contains("### PRs merged\n\n- None."));
+    }
+
+    #[test]
+    fn worklog_auto_receipts_derives_dispatch_count_and_removes_manual_no_dispatch_claim() {
+        let repo_root = TempRepoDir::new("worklog-auto-derives-dispatch-summary");
+        init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "cycle": 154,
+                    "phase_entered_at": "2026-03-06T01:00:00Z"
+                },
+                "agent_sessions": []
+            }"#,
+        );
+        let start_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154 [cycle 154]",
+        );
+        let dispatch_one_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/dispatch-one.txt",
+            "dispatch one\n",
+            "state(record-dispatch): #42 dispatched [cycle 154]",
+        );
+        let dispatch_two_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/dispatch-two.txt",
+            "dispatch two\n",
+            "state(record-dispatch): #43 dispatched [cycle 154]",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}},
+                    {{"step":"record-dispatch","receipt":"{dispatch_one_receipt}","commit":"state(record-dispatch): #42 dispatched [cycle 154]"}},
+                    {{"step":"record-dispatch","receipt":"{dispatch_two_receipt}","commit":"state(record-dispatch): #43 dispatched [cycle 154]"}}
+                ]"#
+            ),
+        );
+
+        let mut args = worklog_args("Dispatch count");
+        args.done = vec![
+            "Reviewed backlog.".to_string(),
+            "No new dispatches (capacity full).".to_string(),
+        ];
+        args.auto_receipts = true;
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.publish_gate = Some("open".to_string());
+
+        let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+        let cycle = resolve_cycle(args.cycle, &repo_root.path).unwrap();
+        let warnings =
+            apply_worklog_auto_derivations(&args, &repo_root.path, cycle, &mut input).unwrap();
+        let rendered = render_worklog(cycle, fixed_now(), &input);
+
+        assert!(warnings
+            .iter()
+            .any(|warning| warning.contains("manual no-dispatch")));
+        assert!(!input
+            .what_was_done
+            .iter()
+            .any(|item| item.contains("No new dispatches")));
+        assert_eq!(
+            input.dispatch_summary.as_deref(),
+            Some("Cycle receipts recorded 2 dispatches this cycle (#42, #43).")
+        );
+        assert!(rendered.contains(
+            "Cycle receipts recorded 2 dispatches this cycle ([#42](https://github.com/EvaLok/schema-org-json-ld/issues/42), [#43](https://github.com/EvaLok/schema-org-json-ld/issues/43))."
+        ));
+        assert!(!rendered.contains("No new dispatches"));
     }
 
     #[test]
@@ -4710,6 +4950,7 @@ mod tests {
         let entries = vec![CycleReceiptJsonEntry {
             tool: "record-dispatch".to_string(),
             receipt: "abcdef1".to_string(),
+            commit: None,
             url: Some(
                 "https://github.com/EvaLok/schema-org-json-ld/commit/abcdef1234567890".to_string(),
             ),
