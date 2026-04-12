@@ -7365,8 +7365,10 @@
     {
       "dispatched_at": "2026-04-12T21:31:31Z",
       "issue": 2449,
+      "merged_at": "2026-04-12T23:24:25Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2450,
+      "status": "merged",
       "title": "Fix write-entry auto-self-modifications scope"
     },
     {
@@ -8495,12 +8497,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 4,
     "issue": 2453,
     "number": 483,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-12T23:11:20Z"
   },
   "last_eva_comment_check": "2026-04-12T23:11:20Z",
