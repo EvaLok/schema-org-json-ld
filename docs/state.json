@@ -7368,6 +7368,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix write-entry auto-self-modifications scope"
+    },
+    {
+      "dispatched_at": "2026-04-12T21:53:07Z",
+      "issue": 2451,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 482 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -8214,7 +8221,7 @@
       "resolved_ref": "docs/reviews/cycle-481.md"
     }
   ],
-  "dispatch_log_latest": "#2449 Fix write-entry auto-self-modifications scope (cycle 482)",
+  "dispatch_log_latest": "#2451 [Cycle Review] Cycle 482 end-of-cycle review (cycle 482)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8485,7 +8492,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 4,
     "issue": 2448,
@@ -14853,7 +14860,7 @@
     ],
     "last_review_cycle": 481
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 482,
   "schema_status": {
     "directory_layout": {
