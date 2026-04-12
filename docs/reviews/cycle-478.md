@@ -3,13 +3,13 @@
 ## 1. [worklog-accuracy] The worklog erased both merged PRs from the cycle summary
 
 **File**: docs/worklog/2026-04-12/031628-cycle-478-resumed-on-2423-after-2419-crashed-at-s6-audits-406-407-deferred-for-dispatch-cap-pr-2399-rebase-requested.md:10
-**Evidence**: The `### PRs merged` section says `- None.` even though `bash tools/cycle-receipts --cycle 478 --repo-root /home/runner/work/schema-org-json-ld/schema-org-json-ld` reports two in-scope `process-merge` receipts: `45ea329` for PR #2418 and `8546dc2` for PR #2397. The same worklog's receipt table also includes both merges, and the cycle-complete receipt `c69227a` summarizes the cycle as `1 dispatches, 2 merges (PR #2397, PR #2418)`.
+**Evidence**: The `### PRs merged` section says `- None.` even though `bash tools/cycle-receipts --cycle 478 --repo-root .` reports two in-scope `process-merge` receipts: `45ea329` for PR #2418 and `8546dc2` for PR #2397. The same worklog's receipt table also includes both merges, and the cycle-complete receipt `c69227a` summarizes the cycle as `1 dispatches, 2 merges (PR #2397, PR #2418)`.
 **Recommendation**: Generate the `PRs merged` section from the cycle receipt set or `last_cycle.summary` instead of manually restating a resumed-session subset.
 
 ## 2. [worklog-accuracy] The worklog says there were no new dispatches while documenting a cycle 478 dispatch
 
 **File**: docs/worklog/2026-04-12/031628-cycle-478-resumed-on-2423-after-2419-crashed-at-s6-audits-406-407-deferred-for-dispatch-cap-pr-2399-rebase-requested.md:6
-**Evidence**: The main narrative ends with `No new dispatches (capacity full)`, but line 16 of the same file says `#2421 — dispatched this cycle (record-dispatch d50032f)`. The receipt table is consistent with line 16, not line 6: `bash tools/cycle-receipts --cycle 478 --repo-root /home/runner/work/schema-org-json-ld/schema-org-json-ld` includes `record-dispatch d50032f`, and `c69227a` records `1 dispatches` in `last_cycle.summary`.
+**Evidence**: The main narrative ends with `No new dispatches (capacity full)`, but line 16 of the same file says `#2421 — dispatched this cycle (record-dispatch d50032f)`. The receipt table is consistent with line 16, not line 6: `bash tools/cycle-receipts --cycle 478 --repo-root .` includes `record-dispatch d50032f`, and `c69227a` records `1 dispatches` in `last_cycle.summary`.
 **Recommendation**: Keep resumed-session narration separate from whole-cycle accounting, or derive dispatch claims from receipts so a session-local note cannot contradict the cycle ledger.
 
 ## 3. [journal-quality] The journal undercounted the already-landed work before the resume
