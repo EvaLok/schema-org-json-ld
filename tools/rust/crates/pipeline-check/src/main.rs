@@ -46,6 +46,7 @@ const FROZEN_WORKLOG_IMMUTABILITY_STEP_NAME: &str = "frozen-worklog-immutability
 const PR_BASE_CURRENCY_STEP_NAME: &str = "pr-base-currency";
 const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const CURRENT_CYCLE_STEPS_STEP_NAME: &str = "current-cycle-steps";
+const CURRENT_CYCLE_JOURNAL_SECTION_STEP_NAME: &str = "current-cycle-journal-section";
 const DOC_LINT_STEP_NAME: &str = "doc-lint";
 const COMMITMENT_DROP_VERIFICATION_STEP_NAME: &str = "commitment-drop-verification";
 const WORKLOG_PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
@@ -61,7 +62,7 @@ const COMMITMENT_DROP_RATIONALE_MARKERS: &[&str] = &[
     " due to ",
 ];
 const NON_SURFACE_CYCLE_PREFIX: &str = "cycle-";
-const STEP_NAMES: [&str; 27] = [
+const STEP_NAMES: [&str; 28] = [
     "metric-snapshot",
     "field-inventory",
     "housekeeping-scan",
@@ -86,6 +87,7 @@ const STEP_NAMES: [&str; 27] = [
     PR_BASE_CURRENCY_STEP_NAME,
     STEP_COMMENTS_STEP_NAME,
     CURRENT_CYCLE_STEPS_STEP_NAME,
+    CURRENT_CYCLE_JOURNAL_SECTION_STEP_NAME,
     DOC_LINT_STEP_NAME,
     COMMITMENT_DROP_VERIFICATION_STEP_NAME,
     CHRONIC_REFRESH_INVALIDATION_STEP_NAME,
@@ -816,6 +818,9 @@ fn run_pipeline_with_excluded_steps(
     }
     if !is_excluded_step(CHRONIC_REFRESH_INVALIDATION_STEP_NAME, exclude_steps) {
         steps.push(verify_chronic_refresh_invalidation(repo_root));
+    }
+    if !is_excluded_step(CURRENT_CYCLE_JOURNAL_SECTION_STEP_NAME, exclude_steps) {
+        steps.push(verify_current_cycle_journal_section(repo_root));
     }
     // Doc validation runs before step-comments so it can pass the pre-step-comments
     // pipeline status through to validate-docs. Reclassify afterward, once the real
@@ -1551,6 +1556,10 @@ fn verify_review_events_verified(repo_root: &Path) -> StepReport {
     }
 }
 
+fn verify_current_cycle_journal_section(repo_root: &Path) -> StepReport {
+    verify_current_cycle_journal_section_for_date(repo_root, &current_utc_timestamp()[..10])
+}
+
 fn verify_doc_validation_for_date(
     repo_root: &Path,
     today: &str,
@@ -1734,6 +1743,29 @@ fn verify_doc_validation_for_date(
             findings: None,
             summary: None,
         }
+    }
+}
+
+fn verify_current_cycle_journal_section_for_date(repo_root: &Path, today: &str) -> StepReport {
+    match current_cycle_journal_section_status_for_date(repo_root, today) {
+        Ok((status, detail)) => StepReport {
+            name: CURRENT_CYCLE_JOURNAL_SECTION_STEP_NAME,
+            status,
+            severity: Severity::Blocking,
+            exit_code: None,
+            detail: Some(detail),
+            findings: None,
+            summary: None,
+        },
+        Err(error) => StepReport {
+            name: CURRENT_CYCLE_JOURNAL_SECTION_STEP_NAME,
+            status: StepStatus::Error,
+            severity: Severity::Blocking,
+            exit_code: None,
+            detail: Some(error),
+            findings: None,
+            summary: None,
+        },
     }
 }
 
@@ -2875,6 +2907,59 @@ fn frozen_commit_status_for_date(
             missing.join(", ")
         ),
     ))
+}
+
+fn current_cycle_journal_section_status_for_date(
+    repo_root: &Path,
+    today: &str,
+) -> Result<(StepStatus, String), String> {
+    let state = read_state_value(repo_root)?;
+    let phase = state.pointer("/cycle_phase/phase").and_then(Value::as_str);
+    if phase != Some("close_out") {
+        return Ok((
+            StepStatus::Pass,
+            "skipped: current-cycle journal section only blocks during close_out".to_string(),
+        ));
+    }
+
+    let cycle = state
+        .pointer("/cycle_phase/cycle")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| "missing numeric field: /cycle_phase/cycle".to_string())?;
+    let expected_heading = format!("## {today} — Cycle {cycle}:");
+    let journal_path = repo_root.join("docs/journal").join(format!("{today}.md"));
+    if !journal_path.is_file() {
+        return Ok((
+            StepStatus::Fail,
+            format!(
+                "missing journal file {}; expected heading '{}'",
+                journal_path.display(),
+                expected_heading
+            ),
+        ));
+    }
+
+    let content = fs::read_to_string(&journal_path)
+        .map_err(|error| format!("failed to read {}: {}", journal_path.display(), error))?;
+    if content.lines().any(|line| line.trim() == expected_heading) {
+        Ok((
+            StepStatus::Pass,
+            format!(
+                "found current cycle journal heading '{}' in {}",
+                expected_heading,
+                journal_path.display()
+            ),
+        ))
+    } else {
+        Ok((
+            StepStatus::Fail,
+            format!(
+                "missing current cycle journal heading '{}' in {}",
+                expected_heading,
+                journal_path.display()
+            ),
+        ))
+    }
 }
 
 fn review_events_verified_status(repo_root: &Path) -> Result<(StepStatus, String), String> {
@@ -5452,6 +5537,15 @@ mod tests {
         run_git(root, &["commit", "-m", message]);
     }
 
+    fn write_journal_file(root: &Path, date: &str, content: &str) -> PathBuf {
+        let journal_path = root.join("docs/journal").join(format!("{date}.md"));
+        if let Some(parent) = journal_path.parent() {
+            fs::create_dir_all(parent).unwrap();
+        }
+        fs::write(&journal_path, content).unwrap();
+        journal_path
+    }
+
     fn write_cycle_complete_worklog(
         root: &Path,
         date: &str,
@@ -6013,7 +6107,8 @@ mod tests {
                     "issue": 834
                 },
                 "cycle_phase": {
-                    "phase": "close_out"
+                    "phase": "close_out",
+                    "cycle": 135
                 },
                 "copilot_metrics": {
                     "total_dispatches": 3,
@@ -6038,7 +6133,7 @@ mod tests {
         fs::create_dir_all(root.join("docs/journal")).unwrap();
         fs::write(
             root.join("docs/journal").join(format!("{}.md", today)),
-            "# Journal\n",
+            format!("# Journal\n\n## {today} — Cycle 135:\n"),
         )
         .unwrap();
         fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
@@ -6118,7 +6213,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 27);
+        assert_eq!(report.steps.len(), 28);
         assert_eq!(report.steps[0].status, StepStatus::Pass);
         assert_eq!(report.steps[1].status, StepStatus::Pass);
         assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -6361,7 +6456,7 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 27);
+        assert_eq!(report.steps.len(), 28);
         assert!(report.steps[..6]
             .iter()
             .all(|step| matches!(step.status, StepStatus::Error)));
@@ -6506,6 +6601,98 @@ mod tests {
     }
 
     #[test]
+    fn current_cycle_journal_section_passes_when_heading_exists() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-current-cycle-journal-pass",
+            json!({
+                "cycle_phase": {
+                    "phase": "close_out",
+                    "cycle": 481
+                }
+            }),
+        );
+        let journal_path = write_journal_file(
+            &root,
+            "2026-04-12",
+            "# Journal\n\n## 2026-04-12 — Cycle 481:\n- entry\n",
+        );
+
+        let (status, detail) =
+            current_cycle_journal_section_status_for_date(&root, "2026-04-12").unwrap();
+
+        assert_eq!(status, StepStatus::Pass);
+        assert!(detail.contains("## 2026-04-12 — Cycle 481:"));
+        assert!(detail.contains(&journal_path.display().to_string()));
+    }
+
+    #[test]
+    fn current_cycle_journal_section_fails_when_heading_is_missing() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-current-cycle-journal-missing-heading",
+            json!({
+                "cycle_phase": {
+                    "phase": "close_out",
+                    "cycle": 481
+                }
+            }),
+        );
+        write_journal_file(
+            &root,
+            "2026-04-12",
+            "# Journal\n\n## 2026-04-12 — Cycle 480:\n- old cycle\n",
+        );
+
+        let (status, detail) =
+            current_cycle_journal_section_status_for_date(&root, "2026-04-12").unwrap();
+
+        assert_eq!(status, StepStatus::Fail);
+        assert!(detail.contains("missing current cycle journal heading"));
+        assert!(detail.contains("## 2026-04-12 — Cycle 481:"));
+    }
+
+    #[test]
+    fn current_cycle_journal_section_fails_when_journal_file_is_missing() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-current-cycle-journal-no-file",
+            json!({
+                "cycle_phase": {
+                    "phase": "close_out",
+                    "cycle": 481
+                }
+            }),
+        );
+
+        let (status, detail) =
+            current_cycle_journal_section_status_for_date(&root, "2026-04-12").unwrap();
+
+        assert_eq!(status, StepStatus::Fail);
+        assert!(detail.contains("missing journal file"));
+        assert!(detail.contains("docs/journal/2026-04-12.md"));
+    }
+
+    #[test]
+    fn current_cycle_journal_section_skips_outside_close_out() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-current-cycle-journal-skip",
+            json!({
+                "cycle_phase": {
+                    "phase": "work",
+                    "cycle": 481
+                }
+            }),
+        );
+
+        let (status, detail) =
+            current_cycle_journal_section_status_for_date(&root, "2026-04-12").unwrap();
+
+        assert_eq!(status, StepStatus::Pass);
+        assert_eq!(
+            detail,
+            "skipped: current-cycle journal section only blocks during close_out"
+        );
+    }
+
+    #[test]
     fn doc_validation_fails_when_validate_docs_reports_errors() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -6614,7 +6801,7 @@ mod tests {
             json!({
                 "previous_cycle_issue": 834,
                 "last_cycle": {"number": 257, "issue": 834},
-                "cycle_phase": {"phase": "close_out"},
+                "cycle_phase": {"phase": "close_out", "cycle": 257},
                 "copilot_metrics": {
                     "total_dispatches": 3,
                     "resolved": 2,
@@ -6643,7 +6830,7 @@ mod tests {
         .unwrap();
         fs::write(
             root.join("docs/journal").join(format!("{today}.md")),
-            "# Journal\n",
+            format!("# Journal\n\n## {today} — Cycle 257:\n"),
         )
         .unwrap();
         fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
@@ -6918,7 +7105,7 @@ mod tests {
             json!({
                 "previous_cycle_issue": 842,
                 "last_cycle": {"number": CURRENT_CYCLE, "issue": 842},
-                "cycle_phase": {"phase": "close_out"},
+                "cycle_phase": {"phase": "close_out", "cycle": CURRENT_CYCLE},
                 "copilot_metrics": {
                     "total_dispatches": 3,
                     "resolved": 2,
@@ -6947,7 +7134,7 @@ mod tests {
         .unwrap();
         fs::write(
             root.join("docs/journal").join(format!("{today}.md")),
-            "# Journal\n",
+            format!("# Journal\n\n## {today} — Cycle {CURRENT_CYCLE}:\n"),
         )
         .unwrap();
         fs::write(
@@ -7068,7 +7255,7 @@ mod tests {
             json!({
                 "previous_cycle_issue": 834,
                 "last_cycle": {"number": 257, "issue": 834},
-                "cycle_phase": {"phase": "close_out"},
+                "cycle_phase": {"phase": "close_out", "cycle": 257},
                 "copilot_metrics": {
                     "total_dispatches": 3,
                     "resolved": 2,
@@ -7097,7 +7284,7 @@ mod tests {
         .unwrap();
         fs::write(
             root.join("docs/journal").join(format!("{today}.md")),
-            "# Journal\n",
+            format!("# Journal\n\n## {today} — Cycle 257:\n"),
         )
         .unwrap();
         fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
@@ -7211,7 +7398,7 @@ mod tests {
             json!({
                 "previous_cycle_issue": 834,
                 "last_cycle": {"number": 257, "issue": 834},
-                "cycle_phase": {"phase": "close_out"},
+                "cycle_phase": {"phase": "close_out", "cycle": 257},
                 "copilot_metrics": {
                     "total_dispatches": 3,
                     "resolved": 2,
@@ -7240,7 +7427,7 @@ mod tests {
         .unwrap();
         fs::write(
             root.join("docs/journal").join(format!("{today}.md")),
-            "# Journal\n",
+            format!("# Journal\n\n## {today} — Cycle 257:\n"),
         )
         .unwrap();
         fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
@@ -7314,7 +7501,7 @@ mod tests {
             &ExcludeDocValidationRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 26);
+        assert_eq!(report.steps.len(), 27);
         assert!(!report
             .steps
             .iter()
@@ -7342,7 +7529,7 @@ mod tests {
             json!({
                 "previous_cycle_issue": 834,
                 "last_cycle": {"number": 257, "issue": 834},
-                "cycle_phase": {"phase": "close_out"},
+                "cycle_phase": {"phase": "close_out", "cycle": 257},
                 "copilot_metrics": {
                     "total_dispatches": 3,
                     "resolved": 2,
@@ -7371,7 +7558,7 @@ mod tests {
         .unwrap();
         fs::write(
             root.join("docs/journal").join(format!("{today}.md")),
-            "# Journal\n",
+            format!("# Journal\n\n## {today} — Cycle 257:\n"),
         )
         .unwrap();
         fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
@@ -7452,7 +7639,7 @@ mod tests {
             &UnknownExcludeRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 27);
+        assert_eq!(report.steps.len(), 28);
         assert!(report
             .steps
             .iter()
@@ -7480,7 +7667,7 @@ mod tests {
             json!({
                 "previous_cycle_issue": 834,
                 "last_cycle": {"number": 257, "issue": 834},
-                "cycle_phase": {"phase": "close_out"},
+                "cycle_phase": {"phase": "close_out", "cycle": 257},
                 "copilot_metrics": {
                     "total_dispatches": 3,
                     "resolved": 2,
@@ -7516,7 +7703,7 @@ mod tests {
         .unwrap();
         fs::write(
             root.join("docs/journal").join(format!("{today}.md")),
-            "# Journal\n",
+            format!("# Journal\n\n## {today} — Cycle 257:\n"),
         )
         .unwrap();
         fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
@@ -7598,7 +7785,7 @@ mod tests {
         );
 
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 26);
+        assert_eq!(report.steps.len(), 27);
         assert!(!report.steps.iter().any(|step| step.name == "worklog-dedup"));
         assert!(report
             .steps
