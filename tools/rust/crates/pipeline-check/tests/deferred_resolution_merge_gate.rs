@@ -1,3 +1,4 @@
+use chrono::Utc;
 use serde_json::{json, Value};
 use std::{
     fs,
@@ -108,6 +109,7 @@ impl PipelineFixture {
     }
 
     fn write_state(&self, resolved_ref: &str) {
+        let today = Utc::now().format("%Y-%m-%d").to_string();
         fs::write(
             self.repo_root.join("docs/state.json"),
             json!({
@@ -131,6 +133,15 @@ impl PipelineFixture {
             .to_string(),
         )
         .expect("state file should be written");
+        fs::create_dir_all(self.repo_root.join("docs/journal"))
+            .expect("journal dir should be created");
+        fs::write(
+            self.repo_root
+                .join("docs/journal")
+                .join(format!("{today}.md")),
+            format!("# Journal\n\n## {today} — Cycle 465:\n"),
+        )
+        .expect("journal file should be written");
     }
 
     fn write_fake_gh(&self, pr_state: &str) {
