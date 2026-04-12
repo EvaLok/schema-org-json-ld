@@ -7341,6 +7341,13 @@
       "pr": 2442,
       "status": "merged",
       "title": "[Cycle Review] Cycle 480 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-04-12T09:34:27Z",
+      "issue": 2444,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Derive worklog PRs-merged and dispatch-count sections from cycle-receipts output"
     }
   ],
   "audit_dropped": [
@@ -8185,7 +8192,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2441 [Cycle Review] Cycle 480 end-of-cycle review (cycle 480)",
+  "dispatch_log_latest": "#2444 Derive worklog PRs-merged and dispatch-count sections from cycle-receipts output (cycle 481)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8456,13 +8463,13 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 1,
     "issue": 2443,
     "number": 481,
-    "summary": "0 dispatches, 2 merges",
-    "timestamp": "2026-04-12T09:17:41Z"
+    "summary": "1 dispatch, 2 merges",
+    "timestamp": "2026-04-12T09:34:27Z"
   },
   "last_eva_comment_check": "2026-04-12T09:17:41Z",
   "last_tool_audit_cycle": 403,
@@ -14794,7 +14801,7 @@
     ],
     "last_review_cycle": 480
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 480,
   "schema_status": {
     "directory_layout": {
