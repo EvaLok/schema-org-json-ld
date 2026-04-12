@@ -7293,8 +7293,10 @@
     {
       "dispatched_at": "2026-04-12T00:15:25Z",
       "issue": 2421,
+      "merged_at": "2026-04-12T05:13:31Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2422,
+      "status": "merged",
       "title": "Tier 1 structural fix for audit #405 — chronic-refresh-invalidation on own-review consumption"
     },
     {
@@ -8403,12 +8405,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 180,
     "issue": 2426,
     "number": 479,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-12T04:58:17Z"
   },
   "last_eva_comment_check": "2026-04-12T04:58:17Z",
