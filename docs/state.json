@@ -7272,6 +7272,30 @@
       "pr": 2414,
       "status": "merged",
       "title": "[Cycle Review] Cycle 476 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-04-11T21:52:39Z",
+      "issue": 2417,
+      "merged_at": "2026-04-11T23:21:54Z",
+      "model": "gpt-5.4",
+      "pr": 2418,
+      "status": "merged",
+      "title": "[Cycle Review] Cycle 477 end-of-cycle review"
+    },
+    {
+      "backfilled": true,
+      "issue": 2396,
+      "merged_at": "2026-04-11T23:33:41Z",
+      "pr": 2397,
+      "status": "merged",
+      "title": "Backfilled: PR #2397"
+    },
+    {
+      "dispatched_at": "2026-04-12T00:15:25Z",
+      "issue": 2421,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Tier 1 structural fix for audit #405 — chronic-refresh-invalidation on own-review consumption"
     }
   ],
   "audit_dropped": [
@@ -7528,17 +7552,17 @@
     "total_classes_converted": 54
   },
   "cycle_issues": [
-    2415
+    2419
   ],
   "cycle_phase": {
-    "cycle": 477,
+    "cycle": 478,
     "phase": "work",
-    "phase_entered_at": "2026-04-11T21:09:59Z"
+    "phase_entered_at": "2026-04-11T23:10:15Z"
   },
   "cycles_since_last_forward_work": {
     "added_in_cycle": 411,
     "added_per": "audit #345",
-    "count": 66,
+    "count": 67,
     "last_forward_cycle": 411,
     "last_forward_description": "#2011 Article test coverage expansion",
     "threshold": 10
@@ -8082,9 +8106,15 @@
       "deadline_cycle": 480,
       "deferred_cycle": 475,
       "resolved": false
+    },
+    {
+      "category": "worklog-accuracy",
+      "deadline_cycle": 482,
+      "deferred_cycle": 477,
+      "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2413 [Cycle Review] Cycle 476 end-of-cycle review (cycle 476)",
+  "dispatch_log_latest": "#2421 Tier 1 structural fix for audit #405 — chronic-refresh-invalidation on own-review consumption (cycle 478)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8182,44 +8212,44 @@
       },
       "cycle_issues": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 477"
+        "last_refreshed": "cycle 478"
       },
       "cycle_phase": {
         "cadence": "every phase transition",
-        "last_refreshed": "cycle 477",
+        "last_refreshed": "cycle 478",
         "notes": "Tracks cycle, phase, phase_entered_at, and completed_at when phase is complete."
       },
       "cycles_since_last_forward_work": {
         "cadence": "every cycle (reset on forward work dispatch)",
-        "last_refreshed": "cycle 477"
+        "last_refreshed": "cycle 478"
       },
       "dispatch_log_latest": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 476"
+        "last_refreshed": "cycle 477"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
-        "last_refreshed": "cycle 477"
+        "last_refreshed": "cycle 478"
       },
       "eva_input_issues.remaining_open": {
         "cadence": "after Eva issue processing",
-        "last_refreshed": "cycle 477"
+        "last_refreshed": "cycle 478"
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 477"
+        "last_refreshed": "cycle 478"
       },
       "last_cycle": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 477"
+        "last_refreshed": "cycle 478"
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 476"
+        "last_refreshed": "cycle 477"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
-        "last_refreshed": "cycle 477"
+        "last_refreshed": "cycle 478"
       },
       "last_tool_audit_cycle": {
         "cadence": "every 10 cycles",
@@ -8227,7 +8257,7 @@
       },
       "open_questions_for_eva": {
         "cadence": "after question creation or resolution",
-        "last_refreshed": "cycle 477"
+        "last_refreshed": "cycle 478"
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
@@ -8235,11 +8265,11 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 476"
+        "last_refreshed": "cycle 477"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
-        "last_refreshed": "cycle 477"
+        "last_refreshed": "cycle 478"
       },
       "project_mode": {
         "cadence": "when mode or counter changes",
@@ -8247,7 +8277,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 476"
+        "last_refreshed": "cycle 477"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -8263,7 +8293,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 477"
+        "last_refreshed": "cycle 478"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -8271,11 +8301,11 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 476"
+        "last_refreshed": "cycle 477"
       },
       "review_events_verified_through_cycle": {
         "cadence": "managed by verify-review-events tool only",
-        "last_refreshed": "cycle 476"
+        "last_refreshed": "cycle 477"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -8283,7 +8313,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 476"
+        "last_refreshed": "cycle 477"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -8355,17 +8385,18 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
-    "duration_minutes": 24,
-    "issue": 2415,
-    "number": 477,
-    "summary": "0 dispatches, 1 merges",
-    "timestamp": "2026-04-11T21:09:59Z"
+    "duration_minutes": 30,
+    "issue": 2419,
+    "number": 478,
+    "summary": "1 dispatch, 2 merges",
+    "timestamp": "2026-04-12T00:15:25Z"
   },
-  "last_eva_comment_check": "2026-04-11T21:09:59Z",
+  "last_eva_comment_check": "2026-04-11T23:10:14Z",
   "last_tool_audit_cycle": 403,
   "open_questions_for_eva": [
+    2416,
     2405,
     2403,
     2402,
@@ -8406,7 +8437,7 @@
     "note": "Reset cycle 199: cycle 198 review found data integrity issue (PR #820 misrecorded as merged) and 5/5 complacency. Not clean.",
     "started_at": "cycle 199"
   },
-  "previous_cycle_issue": 2412,
+  "previous_cycle_issue": 2415,
   "project_mode": {
     "adr": "doc/adr/0011-pipeline-stabilization-program.md",
     "burn_in_target": 6,
@@ -14564,17 +14595,46 @@
         ],
         "ignored": 0,
         "note": "F1 (worklog-accuracy, chronic) ACTIONED via COMPLETION_CHECKLIST.xml issues-processed-scope constraint (commit da695c96) banning non-mutation-receipt entries. F2 (state-integrity, chronic) DEFERRED with fresh escalation — filed question-for-eva #2416 documenting 3-cycle-consecutive deferral (475/476/477) and 4 structural-fix options; structural fix remains dispatch-required, capacity-blocked. F3 (journal-quality, chronic) ACTIONED via cycle 477 journal-structure commitment — commitments 4-7 will be demoted to explicit Backlog (capacity-blocked) section, not listed as commitments, to comply with recurrence-escalation rule the cycle 476 journal explicitly violated."
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "journal-quality",
+          "state-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 3,
+        "cycle": 477,
+        "deferred": 1,
+        "dispatch_created": 1,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "actioned"
+          },
+          {
+            "category": "state-integrity",
+            "disposition": "dispatch_created"
+          }
+        ],
+        "ignored": 0,
+        "note": "F1 worklog-accuracy deferred: linked to chronic state-integrity root cause (in_flight counter drift in state.json), already escalated in #2416. F2 journal-quality actioned via retroactive cycle 477 journal entry (commit 3212d79) plus commitment to add pipeline-check current-cycle-journal-section invariant next cycle. F3 state-integrity reclassified deferred->dispatch_created [cycle 478 tool-first exception per cycle 475 precedent 58fd1f64]: question-for-eva #2416 is the structural escalation for this exact chronic pattern (3-consecutive state-integrity deferrals 475/476/477 about the same `last_cycle.summary` drift bug). #2416 IS the dispatch equivalent for state-integrity this cycle — pending Eva's structural option decision — not a passive deferral. Classification 'deferred' in process-review b96d331b was incomplete; correct disposition is dispatch_created pointing at existing #2416 escalation. Tool gap: process-review needs --reclassify-finding-disposition CYCLE:CATEGORY:NEW_DISPOSITION (tracked on #2402)."
       }
     ],
-    "last_review_cycle": 476,
+    "last_review_cycle": 477,
     "enforcement": {
       "review_history_actioned_integrity": {
         "last_enforced_cycle": 473
       }
     }
   },
-  "review_dispatch_consecutive": 4,
-  "review_events_verified_through_cycle": 476,
+  "review_dispatch_consecutive": 5,
+  "review_events_verified_through_cycle": 477,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
@@ -15116,18 +15176,18 @@
   "tool_pipeline": {
     "blocks_publish": false,
     "c5_5_gate": {
-      "cycle": 476,
+      "cycle": 477,
       "needs_reverify": false,
       "pipeline_summary": "PASS (1 blocking warning, 4 warnings)",
       "status": "PASS"
     },
     "c5_5_initial_result": {
-      "cycle": 475,
+      "cycle": 477,
       "exit_code": 1,
       "has_blocking_findings": true,
       "overall": "fail",
       "result": "FAIL",
-      "summary": "FAIL (1 blocking warning, 3 warnings, 1 blocking: deferral-accumulation)"
+      "summary": "FAIL (1 blocking warning, 4 warnings, 1 blocking: current-cycle-steps)"
     },
     "eva_directive": 436,
     "phases": [

@@ -97,6 +97,9 @@ struct WorklogArgs {
     /// Auto-derive a previous-cycle review disposition summary for the worklog
     #[arg(long = "auto-review-summary", default_value_t = false)]
     auto_review_summary: bool,
+    /// Review dispatch issue number to use for auto-review-summary
+    #[arg(long = "review-issue")]
+    review_issue: Option<u64>,
     /// Self-modification description, optionally in FILE:DESCRIPTION form
     #[arg(long = "self-modification")]
     self_modification: Vec<String>,
@@ -1069,9 +1072,10 @@ fn apply_worklog_auto_derivations(
             "docs/state.json not found; --auto-review-summary requires docs/state.json to be present"
                 .to_string()
         })?;
+        let review_summary_target = resolve_review_issue_for_summary(args, state, cycle)?;
         input
             .what_was_done
-            .insert(0, derive_review_summary_line(state)?);
+            .insert(0, derive_review_summary_line(state, review_summary_target)?);
     }
 
     if args.auto_receipts {
@@ -1349,25 +1353,99 @@ fn derive_review_history_issue_processed_entries(
     }
 }
 
-fn derive_review_summary_line(state: &StateJson) -> Result<String, String> {
-    let previous_cycle_issue = state
-        .extra
-        .get("previous_cycle_issue")
-        .and_then(Value::as_u64)
+fn resolve_review_issue_for_summary(
+    args: &WorklogArgs,
+    state: &StateJson,
+    cycle: u64,
+) -> Result<ReviewSummaryTarget, String> {
+    let review_cycle = cycle.checked_sub(1).ok_or_else(|| {
+        format!(
+            "unable to derive previous review cycle for cycle {}; --auto-review-summary requires cycle >= 1",
+            cycle
+        )
+    })?;
+    let review_issue = args
+        .review_issue
+        .or_else(|| derive_previous_cycle_review_issue(state, review_cycle));
+    review_issue
+        .map(|review_issue| ReviewSummaryTarget {
+            review_cycle,
+            review_issue,
+        })
         .ok_or_else(|| {
-            "docs/state.json is missing a numeric previous_cycle_issue required by --auto-review-summary"
-                .to_string()
-        })?;
+            format!(
+                "unable to resolve review dispatch issue for cycle {}; pass --review-issue <number> or ensure docs/state.json records the prior [Cycle Review] agent session",
+                cycle
+            )
+        })
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ReviewSummaryTarget {
+    review_cycle: u64,
+    review_issue: u64,
+}
+
+fn derive_previous_cycle_review_issue(state: &StateJson, review_cycle: u64) -> Option<u64> {
+    let expected_review_session_title =
+        format!("[Cycle Review] Cycle {} end-of-cycle review", review_cycle);
+    for session in state.agent_sessions.iter().rev() {
+        let Some(title) = session.title.as_deref() else {
+            continue;
+        };
+        if title != expected_review_session_title {
+            continue;
+        }
+        return session.issue.and_then(|issue| u64::try_from(issue).ok());
+    }
+
+    let dispatch_reference_sources = [
+        state.dispatch_log_latest.as_deref(),
+        state
+            .copilot_metrics
+            .as_ref()
+            .and_then(|metrics| metrics.dispatch_log_latest.as_deref()),
+    ];
+    for reference in dispatch_reference_sources.into_iter().flatten() {
+        if !reference.contains(&expected_review_session_title) {
+            continue;
+        }
+        if let Some(issue) = extract_issue_number_from_reference(reference) {
+            return Some(issue);
+        }
+    }
+
+    None
+}
+
+fn extract_issue_number_from_reference(value: &str) -> Option<u64> {
+    let digits: String = value
+        .trim()
+        .strip_prefix('#')?
+        .trim_start()
+        .chars()
+        .take_while(|character| character.is_ascii_digit())
+        .collect();
+    if digits.is_empty() {
+        return None;
+    }
+    digits.parse().ok()
+}
+
+fn derive_review_summary_line(
+    state: &StateJson,
+    target: ReviewSummaryTarget,
+) -> Result<String, String> {
     let review_agent = state.review_agent()?;
     let entry = review_agent
         .history
         .iter()
-        .filter(|entry| review_history_entry_matches_issue(entry, previous_cycle_issue))
+        .filter(|entry| review_history_entry_matches_target(entry, target))
         .max_by_key(|entry| entry.cycle)
         .ok_or_else(|| {
             format!(
-                "review_agent.history has no entry matching previous_cycle_issue {}",
-                previous_cycle_issue
+                "review_agent.history has no entry matching review_issue {} or legacy cycle {}; process-review must persist review_issue on history entries",
+                target.review_issue, target.review_cycle
             )
         })?;
     let disposition_summary = summarize_review_dispositions(entry)?;
@@ -1378,9 +1456,12 @@ fn derive_review_summary_line(state: &StateJson) -> Result<String, String> {
     ))
 }
 
-fn review_history_entry_matches_issue(entry: &ReviewHistoryEntry, issue: u64) -> bool {
-    entry.extra.get("issue").and_then(Value::as_u64) == Some(issue)
-        || entry.extra.get("review_issue").and_then(Value::as_u64) == Some(issue)
+fn review_history_entry_matches_target(
+    entry: &ReviewHistoryEntry,
+    target: ReviewSummaryTarget,
+) -> bool {
+    entry.extra.get("review_issue").and_then(Value::as_u64) == Some(target.review_issue)
+        || (entry.extra.get("review_issue").is_none() && entry.cycle == target.review_cycle)
 }
 
 fn summarize_review_dispositions(entry: &ReviewHistoryEntry) -> Result<String, String> {
@@ -3464,6 +3545,7 @@ mod tests {
             issues_processed: Vec::new(),
             auto_issues: false,
             auto_review_summary: false,
+            review_issue: None,
             self_modification: Vec::new(),
             auto_self_modifications: false,
             next: Vec::new(),
@@ -5433,13 +5515,18 @@ mod tests {
                     "phase_entered_at": "2026-03-06T01:00:00Z",
                     "cycle": 154
                 },
-                "agent_sessions": [],
-                "previous_cycle_issue": 77,
+                "agent_sessions": [
+                    {
+                        "issue": 77,
+                        "title": "[Cycle Review] Cycle 153 end-of-cycle review",
+                        "status": "merged"
+                    }
+                ],
                 "review_agent": {
                     "history": [
                         {
                             "cycle": 153,
-                            "issue": 77,
+                            "review_issue": 77,
                             "finding_count": 3,
                             "complacency_score": 2,
                             "finding_dispositions": [
@@ -5487,8 +5574,13 @@ mod tests {
                     "phase_entered_at": "2026-03-06T01:00:00Z",
                     "cycle": 154
                 },
-                "agent_sessions": [],
-                "previous_cycle_issue": 78,
+                "agent_sessions": [
+                    {
+                        "issue": 78,
+                        "title": "[Cycle Review] Cycle 153 end-of-cycle review",
+                        "status": "merged"
+                    }
+                ],
                 "review_agent": {
                     "history": [
                         {
@@ -5519,6 +5611,94 @@ mod tests {
         assert_eq!(
             input.what_was_done,
             vec!["Processed cycle 152 review (2 findings, complacency 4/5, all deferred)"]
+        );
+    }
+
+    #[test]
+    fn worklog_auto_review_summary_falls_back_to_legacy_cycle_match_when_review_issue_missing() {
+        let repo_root = TempRepoDir::new("worklog-auto-review-summary-legacy-cycle-fallback");
+        init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "phase": "work",
+                    "phase_entered_at": "2026-03-06T01:00:00Z",
+                    "cycle": 154
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 79,
+                        "title": "[Cycle Review] Cycle 153 end-of-cycle review",
+                        "status": "merged"
+                    }
+                ],
+                "review_agent": {
+                    "history": [
+                        {
+                            "cycle": 153,
+                            "finding_count": 2,
+                            "complacency_score": 1,
+                            "finding_dispositions": [
+                                {"category": "worklog-accuracy", "disposition": "actioned"},
+                                {"category": "receipt-coverage", "disposition": "deferred"}
+                            ]
+                        }
+                    ]
+                }
+            }"#,
+        );
+
+        let mut args = worklog_args("Auto review summary legacy fallback");
+        args.auto_review_summary = true;
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.publish_gate = Some("open".to_string());
+
+        let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+        let warnings =
+            apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
+
+        assert!(warnings.is_empty());
+        assert_eq!(
+            input.what_was_done,
+            vec![
+                "Processed cycle 153 review (2 findings, complacency 1/5, 1 actioned, 1 deferred)"
+            ]
+        );
+    }
+
+    #[test]
+    fn worklog_auto_review_summary_fails_when_review_issue_cannot_be_resolved() {
+        let repo_root = TempRepoDir::new("worklog-auto-review-summary-missing-review-issue");
+        init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "phase": "work",
+                    "phase_entered_at": "2026-03-06T01:00:00Z",
+                    "cycle": 154
+                },
+                "agent_sessions": [],
+                "review_agent": {
+                    "history": []
+                }
+            }"#,
+        );
+
+        let mut args = worklog_args("Auto review summary missing issue");
+        args.auto_review_summary = true;
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.publish_gate = Some("open".to_string());
+
+        let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+        let error = apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input)
+            .expect_err("auto review summary should fail without a resolvable review issue");
+        assert!(
+            error.contains("pass --review-issue <number>"),
+            "unexpected error: {error}"
         );
     }
 
@@ -7358,6 +7538,8 @@ Reflective log for the schema-org-json-ld orchestrator.
             "924,925",
             "--auto-issues",
             "--auto-review-summary",
+            "--review-issue",
+            "777",
             "--auto-next",
             "--auto-pipeline",
             "--auto-gate-history",
@@ -7386,6 +7568,7 @@ Reflective log for the schema-org-json-ld orchestrator.
                 );
                 assert!(args.auto_issues);
                 assert!(args.auto_review_summary);
+                assert_eq!(args.review_issue, Some(777));
                 assert!(args.auto_next);
                 assert!(args.auto_pipeline);
                 assert!(args.auto_gate_history);
