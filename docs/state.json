@@ -8317,7 +8317,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 478"
+        "last_refreshed": "cycle 479"
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
@@ -8531,10 +8531,10 @@
           "added_cycle": 161,
           "category": "journal-quality",
           "chosen_path": "recalibrate",
-          "rationale": "journal-quality findings in cycles 155-160 were positive/confirmatory (5/5 positive). Recurrence reflects consistent verification of a healthy practice, not a chronic problem. No structural fix needed — the review agent should continue checking journal quality but the category is expected to appear regularly. | Cycle 464: refreshed via PR(s) — Cycle 463 review F1+F4+commitment-3 dispatch filed in cycle 464; cycle 463 review F2 (worklog-accuracy chronic) and F3 (journal-quality chronic) structural fix planned as docs-lint crate dispatch in cycle 465. Refresh marker reflects in-progress structural response; will mark runtime_verified once docs-lint tool ships and runtime-validates against cycle 463-style defects. | Cycle 466: refreshed via PR(s) [#2337] — Cycle 466: PR #2337 merged (chronic-category-currency cited-PR merge verification, audit #396 Tier 1). Docs-lint substep planned for cycle 466 dispatch. Prior narratives claiming cycle-465 docs-lint dispatch were stale — corrected.",
+          "rationale": "journal-quality findings in cycles 155-160 were positive/confirmatory (5/5 positive). Recurrence reflects consistent verification of a healthy practice, not a chronic problem. No structural fix needed — the review agent should continue checking journal quality but the category is expected to appear regularly. | Cycle 464: refreshed via PR(s) — Cycle 463 review F1+F4+commitment-3 dispatch filed in cycle 464; cycle 463 review F2 (worklog-accuracy chronic) and F3 (journal-quality chronic) structural fix planned as docs-lint crate dispatch in cycle 465. Refresh marker reflects in-progress structural response; will mark runtime_verified once docs-lint tool ships and runtime-validates against cycle 463-style defects. | Cycle 466: refreshed via PR(s) [#2337] — Cycle 466: PR #2337 merged (chronic-category-currency cited-PR merge verification, audit #396 Tier 1). Docs-lint substep planned for cycle 466 dispatch. Prior narratives claiming cycle-465 docs-lint dispatch were stale — corrected. | Cycle 479: refreshed via PR(s) [#2422] — Audit #406 Tier 3: refreshing stale entries after PR #2422 landed chronic-refresh invalidation gate",
           "root_cause": "Review agent consistently evaluates journal quality each cycle. Findings are overwhelmingly positive (confirming reflective, causally-linked entries). The category recurs because journal evaluation is a standing review criterion, not because of a persistent deficiency.",
-          "updated_cycle": 466,
-          "verification_cycle": 466
+          "updated_cycle": 479,
+          "verification_cycle": 479
         },
         {
           "added_cycle": 201,
@@ -8558,10 +8558,10 @@
           "added_cycle": 209,
           "category": "worklog-accuracy",
           "chosen_path": "structural-fix",
-          "rationale": "Cycle 450 refresh: worklog-accuracy 6/6 reviews persists. PR #2220 (auto-gate-history) handles gate failure history aggregation but does NOT enforce that the current cycle's own C5.5 result is recorded before worklog freeze. Cycle 449 review F1 confirmed the gap: the worklog froze with pipeline summary 'PASS (4 warnings)' before any cycle 449 C5.5 state existed (state still held cycle 448 FAIL). Remaining sub-causes: (a) freeze-before-state-write ordering (NEW from F1), (b) pipeline warning names, (c) self-modifications from cycle diff. | Cycle 464: refreshed via PR(s) — Cycle 463 review F1+F4+commitment-3 dispatch filed in cycle 464; cycle 463 review F2 (worklog-accuracy chronic) and F3 (journal-quality chronic) structural fix planned as docs-lint crate dispatch in cycle 465. Refresh marker reflects in-progress structural response; will mark runtime_verified once docs-lint tool ships and runtime-validates against cycle 463-style defects. | Cycle 466: refreshed via PR(s) [#2337] — Cycle 466: PR #2337 merged (chronic-category-currency cited-PR merge verification, audit #396 Tier 1). Docs-lint substep planned for cycle 466 dispatch. Prior narratives claiming cycle-465 docs-lint dispatch were stale — corrected.",
+          "rationale": "Cycle 450 refresh: worklog-accuracy 6/6 reviews persists. PR #2220 (auto-gate-history) handles gate failure history aggregation but does NOT enforce that the current cycle's own C5.5 result is recorded before worklog freeze. Cycle 449 review F1 confirmed the gap: the worklog froze with pipeline summary 'PASS (4 warnings)' before any cycle 449 C5.5 state existed (state still held cycle 448 FAIL). Remaining sub-causes: (a) freeze-before-state-write ordering (NEW from F1), (b) pipeline warning names, (c) self-modifications from cycle diff. | Cycle 464: refreshed via PR(s) — Cycle 463 review F1+F4+commitment-3 dispatch filed in cycle 464; cycle 463 review F2 (worklog-accuracy chronic) and F3 (journal-quality chronic) structural fix planned as docs-lint crate dispatch in cycle 465. Refresh marker reflects in-progress structural response; will mark runtime_verified once docs-lint tool ships and runtime-validates against cycle 463-style defects. | Cycle 466: refreshed via PR(s) [#2337] — Cycle 466: PR #2337 merged (chronic-category-currency cited-PR merge verification, audit #396 Tier 1). Docs-lint substep planned for cycle 466 dispatch. Prior narratives claiming cycle-465 docs-lint dispatch were stale — corrected. | Cycle 479: refreshed via PR(s) [#2422] — Audit #406 Tier 3: refreshing stale entries after PR #2422 landed chronic-refresh invalidation gate",
           "root_cause": "Worklog state section was written before review dispatch (C6), so published counters were structurally stale. C6.5 patches the worklog after dispatch, but the primary cycle-state line (in-flight sessions) is not re-derived from committed state.json. The addendum pattern (post-dispatch lines) was intended to solve this but doesn't update the primary line. Cycle 449 F1 added a fourth manifestation: the pipeline summary was frozen before the current-cycle pipeline state was written.",
-          "updated_cycle": 466,
-          "verification_cycle": 466
+          "updated_cycle": 479,
+          "verification_cycle": 479
         },
         {
           "added_cycle": 243,
@@ -8585,10 +8585,10 @@
           "added_cycle": 250,
           "category": "journal-quality",
           "chosen_path": "structural-fix",
-          "rationale": "Cycle 450 refresh: journal-quality 6/6 reviews continues. Cycle 449 review F2 specifically flagged the cycle dropping its overdue journal-quality deferral from the forward plan when the rewrite swapped the action item for a review issue link. Behavioral fix alone is insufficient — the orchestrator keeps dropping deferred-finding commitments under workload pressure. Structural path: write-entry must enforce that any unresolved deferred_finding from state.json is repeated as a forward-plan commitment until resolved. Tool fix dispatch will be filed once concurrency frees. Cycle 450 demonstrates manual compliance by explicitly carrying forward a journal-quality discipline commitment with observable completion condition tied to the next-cycle review. | Cycle 464: refreshed via PR(s) — Cycle 463 review F1+F4+commitment-3 dispatch filed in cycle 464; cycle 463 review F2 (worklog-accuracy chronic) and F3 (journal-quality chronic) structural fix planned as docs-lint crate dispatch in cycle 465. Refresh marker reflects in-progress structural response; will mark runtime_verified once docs-lint tool ships and runtime-validates against cycle 463-style defects. | Cycle 466: refreshed via PR(s) [#2337] — Cycle 466: PR #2337 merged (chronic-category-currency cited-PR merge verification, audit #396 Tier 1). Docs-lint substep planned for cycle 466 dispatch. Prior narratives claiming cycle-465 docs-lint dispatch were stale — corrected.",
+          "rationale": "Cycle 450 refresh: journal-quality 6/6 reviews continues. Cycle 449 review F2 specifically flagged the cycle dropping its overdue journal-quality deferral from the forward plan when the rewrite swapped the action item for a review issue link. Behavioral fix alone is insufficient — the orchestrator keeps dropping deferred-finding commitments under workload pressure. Structural path: write-entry must enforce that any unresolved deferred_finding from state.json is repeated as a forward-plan commitment until resolved. Tool fix dispatch will be filed once concurrency frees. Cycle 450 demonstrates manual compliance by explicitly carrying forward a journal-quality discipline commitment with observable completion condition tied to the next-cycle review. | Cycle 464: refreshed via PR(s) — Cycle 463 review F1+F4+commitment-3 dispatch filed in cycle 464; cycle 463 review F2 (worklog-accuracy chronic) and F3 (journal-quality chronic) structural fix planned as docs-lint crate dispatch in cycle 465. Refresh marker reflects in-progress structural response; will mark runtime_verified once docs-lint tool ships and runtime-validates against cycle 463-style defects. | Cycle 466: refreshed via PR(s) [#2337] — Cycle 466: PR #2337 merged (chronic-category-currency cited-PR merge verification, audit #396 Tier 1). Docs-lint substep planned for cycle 466 dispatch. Prior narratives claiming cycle-465 docs-lint dispatch were stale — corrected. | Cycle 479: refreshed via PR(s) [#2422] — Audit #406 Tier 3: refreshing stale entries after PR #2422 landed chronic-refresh invalidation gate",
           "root_cause": "Two layers: (1) Behavioral — orchestrator drops deferred-finding commitments from worklog/journal forward plans when they collide with newer work, leaving overdue debt invisible. Cycle 449 instance: the original cycle 449 worklog carried 'Address journal-quality deferral deadline' but a later refresh removed it. (2) Tooling gap — write-entry has no mechanism to require unresolved deferred_findings to remain as forward-plan items.",
-          "updated_cycle": 466,
-          "verification_cycle": 466
+          "updated_cycle": 479,
+          "verification_cycle": 479
         },
         {
           "added_cycle": 260,
@@ -8603,10 +8603,10 @@
           "added_cycle": 383,
           "category": "worklog-accuracy",
           "chosen_path": "behavioral-fix",
-          "rationale": "Cycle 448 refresh: sub-causes (warning names, self-modifications) remain. PR #2220 merged. Dispatch for remaining blocked by mass-deferral-gate. | Cycle 464: refreshed via PR(s) — Cycle 463 review F1+F4+commitment-3 dispatch filed in cycle 464; cycle 463 review F2 (worklog-accuracy chronic) and F3 (journal-quality chronic) structural fix planned as docs-lint crate dispatch in cycle 465. Refresh marker reflects in-progress structural response; will mark runtime_verified once docs-lint tool ships and runtime-validates against cycle 463-style defects. | Cycle 466: refreshed via PR(s) [#2337] — Cycle 466: PR #2337 merged (chronic-category-currency cited-PR merge verification, audit #396 Tier 1). Docs-lint substep planned for cycle 466 dispatch. Prior narratives claiming cycle-465 docs-lint dispatch were stale — corrected.",
+          "rationale": "Cycle 448 refresh: sub-causes (warning names, self-modifications) remain. PR #2220 merged. Dispatch for remaining blocked by mass-deferral-gate. | Cycle 464: refreshed via PR(s) — Cycle 463 review F1+F4+commitment-3 dispatch filed in cycle 464; cycle 463 review F2 (worklog-accuracy chronic) and F3 (journal-quality chronic) structural fix planned as docs-lint crate dispatch in cycle 465. Refresh marker reflects in-progress structural response; will mark runtime_verified once docs-lint tool ships and runtime-validates against cycle 463-style defects. | Cycle 466: refreshed via PR(s) [#2337] — Cycle 466: PR #2337 merged (chronic-category-currency cited-PR merge verification, audit #396 Tier 1). Docs-lint substep planned for cycle 466 dispatch. Prior narratives claiming cycle-465 docs-lint dispatch were stale — corrected. | Cycle 479: refreshed via PR(s) [#2422] — Audit #406 Tier 3: refreshing stale entries after PR #2422 landed chronic-refresh invalidation gate",
           "root_cause": "Two remaining sub-causes: (1) disposition staleness when writing worklog at C3 (original cause, cycle 383), (2) worklog section semantics inconsistency for Issues processed vs narrative closures.",
-          "updated_cycle": 466,
-          "verification_cycle": 466
+          "updated_cycle": 479,
+          "verification_cycle": 479
         },
         {
           "added_cycle": 474,
