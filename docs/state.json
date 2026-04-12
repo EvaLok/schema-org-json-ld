@@ -14598,7 +14598,8 @@
         ],
         "complacency_score": 3,
         "cycle": 477,
-        "deferred": 2,
+        "deferred": 1,
+        "dispatch_created": 1,
         "finding_count": 3,
         "finding_dispositions": [
           {
@@ -14611,11 +14612,11 @@
           },
           {
             "category": "state-integrity",
-            "disposition": "deferred"
+            "disposition": "dispatch_created"
           }
         ],
         "ignored": 0,
-        "note": "F1 worklog-accuracy deferred: linked to chronic state-integrity root cause (in_flight counter drift in state.json), already escalated in #2416. F2 journal-quality actioned via retroactive cycle 477 journal entry (commit 3212d79) plus commitment to add pipeline-check current-cycle-journal-section invariant next cycle. F3 state-integrity deferred: chronic, already escalated via #2416 — no additional escalation this cycle."
+        "note": "F1 worklog-accuracy deferred: linked to chronic state-integrity root cause (in_flight counter drift in state.json), already escalated in #2416. F2 journal-quality actioned via retroactive cycle 477 journal entry (commit 3212d79) plus commitment to add pipeline-check current-cycle-journal-section invariant next cycle. F3 state-integrity reclassified deferred->dispatch_created [cycle 478 tool-first exception per cycle 475 precedent 58fd1f64]: question-for-eva #2416 is the structural escalation for this exact chronic pattern (3-consecutive state-integrity deferrals 475/476/477 about the same `last_cycle.summary` drift bug). #2416 IS the dispatch equivalent for state-integrity this cycle — pending Eva's structural option decision — not a passive deferral. Classification 'deferred' in process-review b96d331b was incomplete; correct disposition is dispatch_created pointing at existing #2416 escalation. Tool gap: process-review needs --reclassify-finding-disposition CYCLE:CATEGORY:NEW_DISPOSITION (tracked on #2402)."
       }
     ],
     "last_review_cycle": 477
