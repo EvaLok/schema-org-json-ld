@@ -7347,8 +7347,10 @@
     {
       "dispatched_at": "2026-04-12T09:34:27Z",
       "issue": 2444,
+      "merged_at": "2026-04-12T21:27:36Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2445,
+      "status": "merged",
       "title": "Derive worklog PRs-merged and dispatch-count sections from cycle-receipts output"
     },
     {
@@ -8474,12 +8476,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 6,
     "issue": 2448,
     "number": 482,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-12T21:10:48Z"
   },
   "last_eva_comment_check": "2026-04-12T21:10:48Z",
