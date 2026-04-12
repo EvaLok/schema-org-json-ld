@@ -8297,7 +8297,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 475"
+        "last_refreshed": "cycle 478"
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
@@ -8529,10 +8529,10 @@
           "added_cycle": 204,
           "category": "receipt-integrity",
           "chosen_path": "structural-fix",
-          "rationale": "receipt-integrity findings in cycles 197-203 consistently flagged nonexistent SHA hashes and stale metrics in hand-assembled worklog receipt tables. The structural fix has two layers: (1) cycle-receipts tool (merged cycle 200) generates receipts mechanically from git log, and (2) cycle-close enhancement (#884) embeds receipt tables in closing comments automatically. Cycle 461 re-verification: receipt-integrity has not appeared in any of the last 16 review cycles (444-460); cycle-receipts and the receipt-validate tool remain in active use on every cycle (cycle 461 close-out invokes both). Structural fix is holding. | Cycle 474: refreshed via PR(s) — Cycle 474 hygiene refresh: receipt-integrity has not appeared in reviews 464-473 (10-review lookback clear). Previous cycle 474 crashed before committing this refresh. cycle-receipts tool remains in active use every cycle. Structural fix continues to hold.",
+          "rationale": "receipt-integrity findings in cycles 197-203 consistently flagged nonexistent SHA hashes and stale metrics in hand-assembled worklog receipt tables. The structural fix has two layers: (1) cycle-receipts tool (merged cycle 200) generates receipts mechanically from git log, and (2) cycle-close enhancement (#884) embeds receipt tables in closing comments automatically. Cycle 461 re-verification: receipt-integrity has not appeared in any of the last 16 review cycles (444-460); cycle-receipts and the receipt-validate tool remain in active use on every cycle (cycle 461 close-out invokes both). Structural fix is holding. | Cycle 474: refreshed via PR(s) — Cycle 474 hygiene refresh: receipt-integrity has not appeared in reviews 464-473 (10-review lookback clear). Previous cycle 474 crashed before committing this refresh. cycle-receipts tool remains in active use every cycle. Structural fix continues to hold. | Cycle 478: rollback of cycle 474 refresh — cycle 474 F1 receipt-integrity and cycle 475 F1 receipt-integrity invalidated the cycle 474 hygiene refresh",
           "root_cause": "Orchestrator hand-assembled receipt tables by copying SHAs from tool output, sometimes recording wrong or stale hashes. The cycle-receipts tool exists but was not consistently used to generate the worklog receipt table.",
-          "updated_cycle": 474,
-          "verification_cycle": 474
+          "updated_cycle": 478,
+          "verification_cycle": 461
         },
         {
           "added_cycle": 209,
