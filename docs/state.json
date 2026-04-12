@@ -7323,6 +7323,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "post-step body validation (audit #409 Tier 1)"
+    },
+    {
+      "dispatched_at": "2026-04-12T07:56:04Z",
+      "issue": 2439,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "pipeline-check journal-section invariant (re-dispatch of #2429)"
     }
   ],
   "audit_dropped": [
@@ -8155,7 +8162,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2436 post-step body validation (audit #409 Tier 1) (cycle 480)",
+  "dispatch_log_latest": "#2439 pipeline-check journal-section invariant (re-dispatch of #2429) (cycle 480)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8426,13 +8433,13 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 21,
     "issue": 2435,
     "number": 480,
-    "summary": "1 dispatch, 1 merges",
-    "timestamp": "2026-04-12T07:53:59Z"
+    "summary": "2 dispatches, 1 merges",
+    "timestamp": "2026-04-12T07:56:04Z"
   },
   "last_eva_comment_check": "2026-04-12T07:31:01Z",
   "last_tool_audit_cycle": 403,
