@@ -663,6 +663,12 @@ fn pipeline_check_args(repo_root: &Path, cycle: u64) -> Vec<String> {
         "doc-validation".to_string(),
         "--exclude-step".to_string(),
         "current-cycle-steps".to_string(),
+        // Exclude the same systemic checks that the C5.5 gate excludes.
+        // These create circular dependencies and are informational only.
+        "--exclude-step".to_string(),
+        "deferral-accumulation".to_string(),
+        "--exclude-step".to_string(),
+        "chronic-category-currency".to_string(),
     ]
 }
 
@@ -1268,6 +1274,10 @@ mod tests {
                 "doc-validation".to_string(),
                 "--exclude-step".to_string(),
                 "current-cycle-steps".to_string(),
+                "--exclude-step".to_string(),
+                "deferral-accumulation".to_string(),
+                "--exclude-step".to_string(),
+                "chronic-category-currency".to_string(),
             ]
         );
     }
