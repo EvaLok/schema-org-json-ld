@@ -2241,7 +2241,7 @@ fn derive_self_modifications_from_receipts(
         .output()
         .map_err(|error| {
             format!(
-                "failed to run git diff between {} and HEAD in {}: {}",
+                "failed to run git diff from cycle start ({}) to HEAD (including post-cycle changes) in {}: {}",
                 first_receipt,
                 repo_root.display(),
                 error
@@ -2726,7 +2726,13 @@ fn derive_chronic_status_from_state(repo_root: &Path) -> Result<Option<String>, 
 
     let mut rows = Vec::new();
     for entry in &entries {
-        let category = entry.get("category").and_then(Value::as_str).unwrap_or("");
+        let Some(category) = entry
+            .get("category")
+            .and_then(Value::as_str)
+            .filter(|s| !s.is_empty())
+        else {
+            continue;
+        };
         let verification_cycle = match entry.get("verification_cycle") {
             Some(Value::Number(n)) => n.to_string(),
             Some(Value::String(s)) => s.clone(),
