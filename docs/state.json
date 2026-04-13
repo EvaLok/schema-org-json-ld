@@ -7440,6 +7440,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix write-entry worklog scope label to match actual data source"
+    },
+    {
+      "dispatched_at": "2026-04-13T07:58:30Z",
+      "issue": 2472,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix frozen-commit-verify to validate worklog and journal paths in blessed commit"
     }
   ],
   "audit_dropped": [
@@ -8314,7 +8321,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2471 Fix write-entry worklog scope label to match actual data source (cycle 486)",
+  "dispatch_log_latest": "#2472 Fix frozen-commit-verify to validate worklog and journal paths in blessed commit (cycle 486)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8585,13 +8592,13 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 3,
     "issue": 2469,
     "number": 486,
-    "summary": "1 dispatch, 3 merges",
-    "timestamp": "2026-04-13T07:57:40Z"
+    "summary": "2 dispatches, 3 merges",
+    "timestamp": "2026-04-13T07:58:30Z"
   },
   "last_eva_comment_check": "2026-04-13T07:35:47Z",
   "last_tool_audit_cycle": 403,
