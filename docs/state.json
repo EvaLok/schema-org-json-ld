@@ -7419,8 +7419,10 @@
     {
       "dispatched_at": "2026-04-13T05:18:15Z",
       "issue": 2465,
+      "merged_at": "2026-04-13T07:51:53Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2466,
+      "status": "merged",
       "title": "Add C5.5 rerun receipt tracking and fix frozen-commit-verify skip messaging"
     },
     {
@@ -8576,12 +8578,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 3,
     "issue": 2469,
     "number": 486,
-    "summary": "0 dispatches, 2 merges",
+    "summary": "0 dispatches, 3 merges",
     "timestamp": "2026-04-13T07:35:47Z"
   },
   "last_eva_comment_check": "2026-04-13T07:35:47Z",
