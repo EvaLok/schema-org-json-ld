@@ -8317,8 +8317,8 @@
       "category": "worklog-accuracy",
       "deadline_cycle": 488,
       "deferred_cycle": 483,
-      "resolved": true,
-      "resolved_ref": "#2471"
+      "resolved": false,
+      "resolved_ref": "dispatch_created: #2471 (PR #2473 pending merge)"
     },
     {
       "category": "state-integrity",
