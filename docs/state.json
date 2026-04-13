@@ -8306,7 +8306,8 @@
       "category": "worklog-accuracy",
       "deadline_cycle": 488,
       "deferred_cycle": 483,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "#2471"
     },
     {
       "category": "state-integrity",
