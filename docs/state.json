@@ -8374,6 +8374,18 @@
       "deadline_cycle": 492,
       "deferred_cycle": 487,
       "resolved": false
+    },
+    {
+      "category": "journal-quality",
+      "deadline_cycle": 493,
+      "deferred_cycle": 488,
+      "resolved": false
+    },
+    {
+      "category": "worklog-accuracy",
+      "deadline_cycle": 493,
+      "deferred_cycle": 488,
+      "resolved": false
     }
   ],
   "dispatch_log_latest": "#2485 [Cycle Review] Cycle 488 end-of-cycle review (cycle 488)",
@@ -8555,7 +8567,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 488"
+        "last_refreshed": "cycle 489"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -15191,9 +15203,37 @@
         "ignored": 0,
         "note": "F1+F2: dispatching write-entry improvement to auto-derive chronic status and self-modifications. F3: state-integrity contradiction is transient between record-dispatch and next cycle-start; self-resolves.",
         "review_issue": 2478
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "journal-quality",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 3,
+        "cycle": 488,
+        "deferred": 3,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "deferred"
+          },
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred"
+          }
+        ],
+        "ignored": 0,
+        "note": "3 findings all deferred: F1 receipt scope label (needs freeze-path fix), F2 commitment verification timing (needs journal recompute at C5), F3 issues-processed under-inclusion (needs auto-derive fix). Dispatch slots full (2/2). Recurrence-escalation applies for worklog-accuracy and journal-quality — structural fixes in-flight via #2481 but not covering these specific sub-causes.",
+        "review_issue": 2485
       }
     ],
-    "last_review_cycle": 487
+    "last_review_cycle": 488
   },
   "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 488,
