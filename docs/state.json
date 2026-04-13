@@ -7473,8 +7473,10 @@
     {
       "dispatched_at": "2026-04-13T21:34:33Z",
       "issue": 2481,
+      "merged_at": "2026-04-13T23:40:29Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2482,
+      "status": "merged",
       "title": "write-entry: auto-derive chronic status + expand self-modifications range"
     },
     {
@@ -8661,12 +8663,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 3,
     "issue": 2487,
     "number": 489,
-    "summary": "0 dispatches, 2 merges",
+    "summary": "0 dispatches, 3 merges",
     "timestamp": "2026-04-13T23:17:32Z"
   },
   "last_eva_comment_check": "2026-04-13T23:17:32Z",
