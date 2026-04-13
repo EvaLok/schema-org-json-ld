@@ -921,21 +921,21 @@ fn normalize_category(category: &str) -> Option<String> {
     }
 }
 
-fn validate_chronic_category_format(category: &str) -> Result<(), String> {
+fn split_chronic_category(category: &str) -> Result<Vec<&str>, String> {
     let parts = category.split('/').collect::<Vec<_>>();
     match parts.len() {
         1 => {
             if parts[0].trim().is_empty() {
                 Err("empty category".to_string())
             } else {
-                Ok(())
+                Ok(parts)
             }
         }
         2 => {
             if parts[0].trim().is_empty() || parts[1].trim().is_empty() {
                 Err("empty segment in sub-category".to_string())
             } else {
-                Ok(())
+                Ok(parts)
             }
         }
         _ => Err(format!(
@@ -945,10 +945,14 @@ fn validate_chronic_category_format(category: &str) -> Result<(), String> {
     }
 }
 
+fn validate_chronic_category_format(category: &str) -> Result<(), String> {
+    split_chronic_category(category).map(|_| ())
+}
+
 fn normalize_chronic_category(category: &str) -> Option<String> {
-    validate_chronic_category_format(category).ok()?;
-    let parts = category
-        .split('/')
+    let parts = split_chronic_category(category)
+        .ok()?
+        .into_iter()
         .map(normalize_category)
         .collect::<Option<Vec<_>>>()?;
     Some(parts.join("/"))
