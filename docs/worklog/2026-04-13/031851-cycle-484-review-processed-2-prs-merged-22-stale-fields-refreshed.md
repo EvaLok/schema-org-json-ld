@@ -22,12 +22,12 @@
 - **`tools/rust/crates/check-field-inventory/src/main.rs`**: modified
 - **`tools/rust/crates/metric-snapshot/src/main.rs`**: modified
 
-## Pre-dispatch state
+## Cycle state
 
-*Snapshot before review dispatch — final counters may differ after C6.*
 
 - **In-flight agent sessions**: 0
-- **Pipeline status**: FAIL (4 warnings, 5 blocking: chronic-category-currency, frozen-commit-verify, review-events-verified, current-cycle-steps, current-cycle-journal-section)
+- **Pipeline status**: FAIL→PASS (C5.5 initially failed: FAIL (2 warnings, 1 blocking: frozen-commit-verify); resolved by re-run)
+- **Close-out gate failures**: C5.5 FAIL: FAIL (2 warnings, 1 blocking: frozen-commit-verify)
 - **Publish gate**: published
 
 ## Next steps
