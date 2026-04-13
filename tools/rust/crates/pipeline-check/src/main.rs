@@ -50,6 +50,7 @@ const CURRENT_CYCLE_JOURNAL_SECTION_STEP_NAME: &str = "current-cycle-journal-sec
 const DOC_LINT_STEP_NAME: &str = "doc-lint";
 const COMMITMENT_DROP_VERIFICATION_STEP_NAME: &str = "commitment-drop-verification";
 const WORKLOG_PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
+const STATE_JSON_PATH: &str = "docs/state.json";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const COMMITMENT_DROP_RATIONALE_MARKERS: &[&str] = &[
     " with rationale",
@@ -293,6 +294,26 @@ struct OpenAgentTaskPullRequest {
 trait CommandRunner {
     fn run(&self, script_path: &Path, args: &[String]) -> Result<ExecutionResult, String>;
     fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String>;
+    fn find_cycle_tagged_commit(
+        &self,
+        _repo_root: &Path,
+        cycle_tag: &str,
+    ) -> Result<Option<String>, String> {
+        Err(format!(
+            "cycle-tagged commit lookup not supported by this runner for tag {:?}",
+            cycle_tag
+        ))
+    }
+    fn list_changed_files_for_commit(
+        &self,
+        _repo_root: &Path,
+        commit: &str,
+    ) -> Result<Vec<String>, String> {
+        Err(format!(
+            "changed-file listing not supported by this runner for commit {}",
+            commit
+        ))
+    }
     fn fetch_pull_request_state(&self, issue: u64) -> Result<String, String> {
         Err(format!(
             "pull request state fetch not supported by this runner for PR #{}",
@@ -352,6 +373,58 @@ impl CommandRunner for ProcessRunner {
             exit_code: output.status.code(),
             stdout: String::from_utf8_lossy(&output.stdout).trim().to_string(),
         })
+    }
+
+    fn find_cycle_tagged_commit(
+        &self,
+        repo_root: &Path,
+        cycle_tag: &str,
+    ) -> Result<Option<String>, String> {
+        let output = Command::new("git")
+            .current_dir(repo_root)
+            .args([
+                "log",
+                "--format=%H",
+                "--fixed-strings",
+                "--grep",
+                cycle_tag,
+                "-n",
+                "1",
+            ])
+            .output()
+            .map_err(|error| format!("failed to execute git log: {}", error))?;
+        if !output.status.success() {
+            return Err(command_failure_message("git log", &output));
+        }
+
+        Ok(String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .next()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+            .map(str::to_string))
+    }
+
+    fn list_changed_files_for_commit(
+        &self,
+        repo_root: &Path,
+        commit: &str,
+    ) -> Result<Vec<String>, String> {
+        let output = Command::new("git")
+            .current_dir(repo_root)
+            .args(["show", "--name-only", "--format=", commit])
+            .output()
+            .map_err(|error| format!("failed to execute git show: {}", error))?;
+        if !output.status.success() {
+            return Err(command_failure_message("git show", &output));
+        }
+
+        Ok(String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+            .map(str::to_string)
+            .collect())
     }
 
     fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
@@ -2810,6 +2883,14 @@ fn frozen_commit_status_for_date(
     repo_root: &Path,
     today: &str,
 ) -> Result<(StepStatus, String), String> {
+    frozen_commit_status_for_date_with_runner(repo_root, today, &ProcessRunner)
+}
+
+fn frozen_commit_status_for_date_with_runner(
+    repo_root: &Path,
+    today: &str,
+    runner: &dyn CommandRunner,
+) -> Result<(StepStatus, String), String> {
     let state = read_state_value(repo_root)?;
     let phase = state.pointer("/cycle_phase/phase").and_then(Value::as_str);
     if phase != Some("close_out") {
@@ -2821,81 +2902,44 @@ fn frozen_commit_status_for_date(
 
     let cycle = current_cycle_from_state(repo_root)?;
     let cycle_tag = format!("[cycle {}]", cycle);
-    let log_output = Command::new("git")
-        .current_dir(repo_root)
-        .args([
-            "log",
-            "--format=%H",
-            "--fixed-strings",
-            "--grep",
-            &cycle_tag,
-            "-n",
-            "1",
-        ])
-        .output()
-        .map_err(|error| format!("failed to execute git log: {}", error))?;
-    if !log_output.status.success() {
-        return Err(command_failure_message("git log", &log_output));
-    }
-
-    let Some(commit) = String::from_utf8_lossy(&log_output.stdout)
-        .lines()
-        .next()
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
-        .map(str::to_string)
-    else {
+    let Some(commit) = runner.find_cycle_tagged_commit(repo_root, &cycle_tag)? else {
         return Ok((
             StepStatus::Skip,
             format!("skipped: no cycle-tagged commit found for cycle {}", cycle),
         ));
     };
 
-    // Use git ls-tree to check the commit's tree (not diff) for artifacts.
-    // This handles resumed cycles where docs were committed before the frozen commit.
-    let tree_output = Command::new("git")
-        .current_dir(repo_root)
-        .args([
-            "ls-tree",
-            "-r",
-            "--name-only",
-            &commit,
-            "--",
-            "docs/worklog/",
-            "docs/journal/",
-            "docs/state.json",
-        ])
-        .output()
-        .map_err(|error| format!("failed to execute git ls-tree: {}", error))?;
-    if !tree_output.status.success() {
-        return Err(command_failure_message("git ls-tree", &tree_output));
-    }
-
-    let tree_listing = String::from_utf8_lossy(&tree_output.stdout);
-    let has_worklog = tree_listing
-        .lines()
-        .any(|line| line.starts_with("docs/worklog/") && line.ends_with(".md"));
+    let changed_files = runner.list_changed_files_for_commit(repo_root, &commit)?;
+    let worklog_missing_display = format!("docs/worklog/{today}/*.md");
+    let worklog_prefix = format!("docs/worklog/{today}/");
+    let has_worklog = changed_files
+        .iter()
+        .any(|line| line.starts_with(&worklog_prefix) && line.ends_with(".md"));
     let journal_path = format!("docs/journal/{today}.md");
-    let has_journal = tree_listing.lines().any(|line| line == journal_path);
-    let has_state = tree_listing.lines().any(|line| line == "docs/state.json");
+    let has_journal = changed_files.iter().any(|line| line == &journal_path);
+    let has_state = changed_files.iter().any(|line| line == STATE_JSON_PATH);
 
     let mut missing = Vec::new();
     if !has_worklog {
-        missing.push("docs/worklog/**/*.md");
+        missing.push(worklog_missing_display);
     }
-    if !has_journal {
-        missing.push(journal_path.as_str());
-    }
-    if !has_state {
-        missing.push("docs/state.json");
+    if !has_journal && !has_state {
+        missing.push(format!("{journal_path} or {STATE_JSON_PATH}"));
     }
 
     if missing.is_empty() {
+        let supporting_path = if has_journal {
+            journal_path
+        } else {
+            STATE_JSON_PATH.to_string()
+        };
         return Ok((
             StepStatus::Pass,
             format!(
-                "verified frozen commit {} contains worklog, journal, and state artifacts",
-                short_commit(&commit)
+                "verified frozen commit {} changes {} and {}",
+                short_commit(&commit),
+                worklog_prefix,
+                supporting_path
             ),
         ));
     }
@@ -2903,7 +2947,7 @@ fn frozen_commit_status_for_date(
     Ok((
         StepStatus::Fail,
         format!(
-            "frozen commit {} is missing required artifacts: {}",
+            "frozen commit {} is missing required close-out artifact paths: {}",
             short_commit(&commit),
             missing.join(", ")
         ),
@@ -8630,7 +8674,8 @@ mod tests {
         assert_eq!(step.severity, Severity::Blocking);
         let detail = step.detail.as_deref().unwrap_or_default();
         assert!(detail.contains(&baseline_commit[..7]));
-        assert!(detail.contains("contains worklog, journal, and state artifacts"));
+        assert!(detail.contains("changes docs/worklog/2026-03-09/"));
+        assert!(detail.contains("docs/journal/2026-03-09.md"));
     }
 
     #[test]
@@ -8674,15 +8719,15 @@ mod tests {
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("docs/worklog/**/*.md"));
+            .contains("docs/worklog/2026-03-09/*.md"));
     }
 
     #[test]
-    fn frozen_commit_verify_fails_when_journal_is_missing() {
+    fn frozen_commit_verify_passes_when_journal_is_missing_but_state_is_present() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root = std::env::temp_dir().join(format!(
-            "pipeline-check-frozen-commit-missing-journal-{}",
+            "pipeline-check-frozen-commit-journal-missing-{}",
             run_id
         ));
         init_git_repo(&root);
@@ -8716,21 +8761,21 @@ mod tests {
 
         let step = verify_frozen_commit_for_date(&root, "2026-03-09");
 
-        assert_eq!(step.status, StepStatus::Fail);
+        assert_eq!(step.status, StepStatus::Pass);
         assert_eq!(step.severity, Severity::Blocking);
         assert!(step
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("docs/journal/2026-03-09.md"));
+            .contains("docs/state.json"));
     }
 
     #[test]
-    fn frozen_commit_verify_fails_when_state_json_is_missing() {
+    fn frozen_commit_verify_passes_when_state_json_is_missing_but_journal_is_present() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root = std::env::temp_dir().join(format!(
-            "pipeline-check-frozen-commit-missing-state-{}",
+            "pipeline-check-frozen-commit-state-missing-{}",
             run_id
         ));
         init_git_repo(&root);
@@ -8767,13 +8812,61 @@ mod tests {
 
         let step = verify_frozen_commit_for_date(&root, "2026-03-09");
 
-        assert_eq!(step.status, StepStatus::Fail);
+        assert_eq!(step.status, StepStatus::Pass);
         assert_eq!(step.severity, Severity::Blocking);
         assert!(step
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("docs/state.json"));
+            .contains("docs/journal/2026-03-09.md"));
+    }
+
+    #[test]
+    fn frozen_commit_verify_fails_when_worklog_and_journal_arrive_after_blessed_commit() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-frozen-commit-late-docs-{}", run_id));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+        fs::create_dir_all(root.join("docs/journal")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "dispatch"}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        commit_all(&root, "seed state");
+
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "close_out"}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        commit_all(&root, "[cycle 410] freeze close-out docs");
+
+        fs::write(
+            root.join("docs/worklog/2026-03-09/120000-cycle-410-summary.md"),
+            "# Worklog\n",
+        )
+        .unwrap();
+        fs::write(root.join("docs/journal/2026-03-09.md"), "# Journal\n").unwrap();
+        commit_all(&root, "add close-out docs after blessed commit");
+
+        let step = verify_frozen_commit_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Fail);
+        assert_eq!(step.severity, Severity::Blocking);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("docs/worklog/2026-03-09/*.md"));
+        assert!(!detail.contains("docs/journal/2026-03-09.md or docs/state.json"));
     }
 
     #[test]
