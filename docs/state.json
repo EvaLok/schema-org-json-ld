@@ -7487,8 +7487,10 @@
     {
       "dispatched_at": "2026-04-13T21:44:56Z",
       "issue": 2485,
+      "merged_at": "2026-04-13T23:27:57Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2486,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 488 end-of-cycle review"
     }
   ],
@@ -8497,7 +8499,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 488"
+        "last_refreshed": "cycle 489"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -8645,12 +8647,12 @@
       }
     }
   },
-  "in_flight_sessions": 3,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 3,
     "issue": 2487,
     "number": 489,
-    "summary": "2 dispatches, 1 merges (PR #2479)",
+    "summary": "0 dispatches, 1 merges",
     "timestamp": "2026-04-13T23:17:32Z"
   },
   "last_eva_comment_check": "2026-04-13T23:17:32Z",
