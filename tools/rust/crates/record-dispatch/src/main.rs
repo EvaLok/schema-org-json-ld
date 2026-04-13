@@ -161,7 +161,7 @@ fn run_with_runner(
         false
     };
     restore_sealed_last_cycle(&mut state_value, sealed_last_cycle)?;
-    if !skipped_existing_error && !updated_existing {
+    if (!skipped_existing_error && !updated_existing) || phase_transitioned {
         sync_last_cycle_summary_after_dispatch(&mut state_value, patch.current_cycle)?;
     }
     write_state_value(&cli.repo_root, &state_value)?;
@@ -688,6 +688,104 @@ mod tests {
         assert!(
             updated_timestamp.contains('T') && updated_timestamp.ends_with('Z'),
             "refreshed timestamp should keep RFC 3339 UTC shape"
+        );
+    }
+
+    #[test]
+    fn sync_runs_when_session_prerecorded_and_phase_transitions() {
+        // Reproduces the close_out bug: dispatch-review pre-records a session for an
+        // issue as "in_flight", then record-dispatch runs for the same issue during
+        // close_out phase. apply_dispatch_patch merges the existing session and returns
+        // updated_existing = true, so the old guard (!skipped && !updated) skipped
+        // sync. The fix adds || phase_transitioned so sync always runs on close_out.
+        let repo = TempRepo::new();
+        repo.init_with_phase("close_out");
+        let mut initial_state = repo.read_state();
+        initial_state["last_cycle"]["summary"] =
+            serde_json::json!("0 dispatches, 1 merges (PR #700)");
+        initial_state["last_cycle"]["timestamp"] = serde_json::json!("2026-03-07T12:00:00Z");
+        // Pre-record a session for issue 602 with status "in_flight", simulating
+        // what dispatch-review does when it creates the session before record-dispatch.
+        initial_state["agent_sessions"]
+            .as_array_mut()
+            .expect("agent_sessions should be an array")
+            .push(serde_json::json!({
+                "issue": 602,
+                "title": "Pre-recorded by dispatch-review",
+                "dispatched_at": "2026-03-07T11:00:00Z",
+                "model": "gpt-5.4",
+                "status": "in_flight"
+            }));
+        repo.write_state_value(&initial_state);
+
+        run(Cli {
+            issue: 602,
+            title: "Cycle review dispatch".to_string(),
+            model: Some("gpt-5.4".to_string()),
+            review_dispatch: true,
+            addresses_finding: None,
+            repo_root: repo.path().to_path_buf(),
+        })
+        .expect("dispatch should succeed even when session was pre-recorded");
+
+        let state = repo.read_state();
+        assert_eq!(
+            state.pointer("/last_cycle/summary"),
+            Some(&serde_json::json!("1 dispatch, 1 merges (PR #700)"))
+        );
+        assert_eq!(
+            state.pointer("/cycle_phase/phase"),
+            Some(&serde_json::json!("complete"))
+        );
+    }
+
+    #[test]
+    fn sync_skipped_when_session_prerecorded_and_no_phase_transition() {
+        // Verify that work-phase re-dispatches (updated_existing = true,
+        // phase_transitioned = false) do NOT increment last_cycle.summary,
+        // preventing double-counting.
+        let repo = TempRepo::new();
+        repo.init_with_phase("work");
+        let mut initial_state = repo.read_state();
+        initial_state["last_cycle"]["summary"] =
+            serde_json::json!("0 dispatches, 1 merges (PR #700)");
+        initial_state["last_cycle"]["timestamp"] = serde_json::json!("2026-03-07T12:00:00Z");
+        initial_state["agent_sessions"]
+            .as_array_mut()
+            .expect("agent_sessions should be an array")
+            .push(serde_json::json!({
+                "issue": 602,
+                "title": "Pre-recorded session",
+                "dispatched_at": "2026-03-07T11:00:00Z",
+                "model": "gpt-5.4",
+                "status": "in_flight"
+            }));
+        repo.write_state_value(&initial_state);
+        let runner = MockRunner::with_exit_code(Some(0));
+
+        run_with_runner(
+            Cli {
+                issue: 602,
+                title: "Work phase re-dispatch".to_string(),
+                model: Some("gpt-5.4".to_string()),
+                review_dispatch: false,
+                addresses_finding: None,
+                repo_root: repo.path().to_path_buf(),
+            },
+            &runner,
+            &mut |_| {},
+        )
+        .expect("work-phase re-dispatch should succeed");
+
+        let state = repo.read_state();
+        assert_eq!(
+            state.pointer("/last_cycle/summary"),
+            Some(&serde_json::json!("0 dispatches, 1 merges (PR #700)")),
+            "summary must not be incremented for work-phase re-dispatches"
+        );
+        assert_eq!(
+            state.pointer("/cycle_phase/phase"),
+            Some(&serde_json::json!("work"))
         );
     }
 
