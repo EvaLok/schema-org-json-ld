@@ -8903,8 +8903,8 @@ mod tests {
     fn frozen_commit_verify_fails_when_docs_missing_from_disk_and_commit() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir()
-            .join(format!("pipeline-check-frozen-commit-no-docs-{}", run_id));
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-frozen-commit-no-docs-{}", run_id));
         init_git_repo(&root);
         fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
         fs::create_dir_all(root.join("docs/journal")).unwrap();

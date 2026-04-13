@@ -166,6 +166,9 @@ struct JournalArgs {
     /// Follow-through detail for the previous cycle commitment
     #[arg(long = "previous-commitment-detail")]
     previous_commitment_detail: Option<String>,
+    /// Auto-derive chronic category status table from docs/state.json
+    #[arg(long = "auto-chronic-status", default_value_t = false)]
+    auto_chronic_status: bool,
 }
 
 #[derive(Debug)]
@@ -428,6 +431,12 @@ fn execute_journal(
             ));
         }
     }
+    let chronic_status = if args.auto_chronic_status {
+        derive_chronic_status_from_state(repo_root)
+            .map_err(|error| format!("--auto-chronic-status failed: {}", error))?
+    } else {
+        None
+    };
     let worklog_link = find_worklog_relative_path(repo_root, cycle)?;
     let entry = sanitize_escaped_newlines(&render_journal_entry(
         cycle,
@@ -437,6 +446,7 @@ fn execute_journal(
         status,
         previous.as_deref(),
         worklog_link.as_deref(),
+        chronic_status.as_deref(),
     ));
     reject_duplicate_journal_section_headers(&entry)?;
     emit_generated_markdown_sha_warnings("journal", &entry, repo_root);
@@ -2214,7 +2224,7 @@ fn derive_self_modifications_from_receipts(
         .map(|entry| entry.receipt.trim())
         .filter(|receipt| !receipt.is_empty())
         .ok_or_else(|| "cycle-receipts returned no first receipt".to_string())?;
-    let last_receipt = entries
+    let _last_receipt = entries
         .last()
         .map(|entry| entry.receipt.trim())
         .filter(|receipt| !receipt.is_empty())
@@ -2223,7 +2233,7 @@ fn derive_self_modifications_from_receipts(
         .arg("diff")
         .arg("--name-only")
         .arg(first_receipt)
-        .arg(last_receipt)
+        .arg("HEAD")
         .arg("--")
         .args(INFRASTRUCTURE_ROOTS)
         .args(INFRASTRUCTURE_FILES)
@@ -2231,9 +2241,8 @@ fn derive_self_modifications_from_receipts(
         .output()
         .map_err(|error| {
             format!(
-                "failed to run git diff between {} and {} in {}: {}",
+                "failed to run git diff between {} and HEAD in {}: {}",
                 first_receipt,
-                last_receipt,
                 repo_root.display(),
                 error
             )
@@ -2692,7 +2701,59 @@ fn resolve_journal_input(args: &JournalArgs) -> Result<JournalInput, String> {
 }
 
 fn has_inline_journal_content(args: &JournalArgs) -> bool {
-    !args.section.is_empty() || !args.commitment.is_empty()
+    !args.section.is_empty() || !args.commitment.is_empty() || args.auto_chronic_status
+}
+
+fn derive_chronic_status_from_state(repo_root: &Path) -> Result<Option<String>, String> {
+    let value = match read_state_value(repo_root) {
+        Ok(v) => v,
+        Err(_) => return Ok(None),
+    };
+    let state: StateJson = serde_json::from_value(value)
+        .map_err(|error| format!("failed to parse docs/state.json: {}", error))?;
+    let review_agent = match state.review_agent() {
+        Ok(ra) => ra,
+        Err(_) => return Ok(None),
+    };
+    let chronic = match review_agent.chronic_category_responses {
+        Some(v) => v,
+        None => return Ok(None),
+    };
+    let entries = match chronic.get("entries").and_then(Value::as_array) {
+        Some(e) if !e.is_empty() => e.clone(),
+        _ => return Ok(None),
+    };
+
+    let mut rows = Vec::new();
+    for entry in &entries {
+        let category = entry.get("category").and_then(Value::as_str).unwrap_or("");
+        let verification_cycle = match entry.get("verification_cycle") {
+            Some(Value::Number(n)) => n.to_string(),
+            Some(Value::String(s)) => s.clone(),
+            Some(Value::Null) | None => "—".to_string(),
+            _ => "—".to_string(),
+        };
+        let status = entry
+            .get("chosen_path")
+            .and_then(Value::as_str)
+            .unwrap_or("—");
+        rows.push(format!(
+            "| {} | {} | {} |",
+            category, verification_cycle, status
+        ));
+    }
+
+    if rows.is_empty() {
+        return Ok(None);
+    }
+
+    let mut lines = Vec::new();
+    lines.push("### Chronic category status".to_string());
+    lines.push(String::new());
+    lines.push("| Category | Verification cycle | Status |".to_string());
+    lines.push("|---|---|---|".to_string());
+    lines.extend(rows);
+    Ok(Some(lines.join("\n")))
 }
 
 fn parse_receipts(values: &[String]) -> Result<Vec<CommitReceipt>, String> {
@@ -3397,6 +3458,7 @@ fn render_journal_entry(
     status: CommitmentStatus,
     previous_commitment: Option<&str>,
     worklog_relative_path: Option<&str>,
+    chronic_status: Option<&str>,
 ) -> String {
     let title = strip_cycle_prefix(title);
     let mut lines = Vec::new();
@@ -3438,6 +3500,10 @@ fn render_journal_entry(
         lines.push(format!("### {}", convert_references(&section.heading)));
         lines.push(String::new());
         lines.push(convert_references(&section.body));
+        lines.push(String::new());
+    }
+    if let Some(chronic) = chronic_status {
+        lines.push(chronic.to_string());
         lines.push(String::new());
     }
     lines.push("### Concrete commitments for next cycle".to_string());
@@ -3894,6 +3960,7 @@ mod tests {
             commitment: Vec::new(),
             previous_commitment_status: None,
             previous_commitment_detail: None,
+            auto_chronic_status: false,
         }
     }
 
@@ -4673,7 +4740,8 @@ mod tests {
 
         assert!(content.contains("### Issues processed\n\n- None."));
         assert!(content.contains("- **`tools/rust/crates/write-entry/src/main.rs`**: modified"));
-        assert!(!content.contains("- **`AGENTS.md`**: modified"));
+        // AGENTS.md committed after last receipt is now captured because we diff to HEAD
+        assert!(content.contains("- **`AGENTS.md`**: modified"));
         assert!(!content.contains("README.md"));
         assert!(content.contains("## Commit receipts"));
         assert!(content.contains(&format!(
@@ -5148,11 +5216,12 @@ mod tests {
 
         assert!(warnings.is_empty());
         assert!(input.issues_processed.is_empty());
-        assert_eq!(input.self_modifications.len(), 1);
+        // With first..HEAD range, write-entry AND post-receipt AGENTS.md are both captured
+        assert_eq!(input.self_modifications.len(), 2);
         assert!(input.self_modifications.iter().any(|item| item.file
             == "tools/rust/crates/write-entry/src/main.rs"
             && item.description == "modified"));
-        assert!(!input
+        assert!(input
             .self_modifications
             .iter()
             .any(|item| item.file == "AGENTS.md" && item.description == "modified"));
@@ -5332,11 +5401,12 @@ mod tests {
             "end\n",
             "state(process-merge): canonical receipt [cycle 154]",
         );
+        // No infrastructure changes at all (neither between receipts nor after)
         create_git_commit_with_message(
             &repo_root.path,
-            "AGENTS.md",
-            "late infra change\n",
-            "docs: late infrastructure edit [cycle 154]",
+            "docs/worklog/2026-03-06/summary.md",
+            "worklog\n",
+            "docs: worklog entry [cycle 154]",
         );
         write_cycle_receipts_script(
             &repo_root.path,
@@ -6439,6 +6509,7 @@ mod tests {
             CommitmentStatus::NoPriorCommitment,
             None,
             Some("../worklog/2026-03-11/123451-cycle-226-summary.md"),
+            None,
         );
 
         assert!(
@@ -7280,7 +7351,7 @@ mod tests {
     }
 
     #[test]
-    fn worklog_auto_self_modifications_ignores_changes_after_last_receipt() {
+    fn worklog_auto_self_modifications_includes_changes_after_last_receipt() {
         let repo_root = TempRepoDir::new("worklog-auto-self-modifications-range");
         init_git_repo(&repo_root.path);
         let start_receipt = create_git_commit_with_message(
@@ -7327,7 +7398,8 @@ mod tests {
         let content = fs::read_to_string(path).unwrap();
 
         assert!(content.contains("## Self-modifications\n\n- **`AGENTS.md`**: modified"));
-        assert!(!content.contains("tools/rust/crates/write-entry/src/main.rs"));
+        // Post-receipt infrastructure changes up to HEAD are now included
+        assert!(content.contains("tools/rust/crates/write-entry/src/main.rs"));
     }
 
     #[test]
@@ -8411,5 +8483,175 @@ Reflective log for the schema-org-json-ld orchestrator.
 
         let state_after = fs::read_to_string(repo_root.path.join("docs/state.json")).unwrap();
         assert_eq!(state_after, original_state);
+    }
+
+    #[test]
+    fn journal_auto_chronic_status_renders_table_from_state() {
+        let repo_root = TempRepoDir::new("journal-auto-chronic-status");
+        fs::create_dir_all(repo_root.path.join("docs")).unwrap();
+        write_root_journal_index(&repo_root.path, "");
+        write_worklog_fixture(&repo_root.path, fixed_now(), 154, "Chronic status test");
+        fs::write(
+            repo_root.path.join("docs/state.json"),
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {"cycle": 154},
+                "review_agent": {
+                    "history": [],
+                    "chronic_category_responses": {
+                        "entries": [
+                            {"category": "worklog-accuracy", "verification_cycle": 487, "chosen_path": "confirmed-holding"},
+                            {"category": "journal-quality", "verification_cycle": 487, "chosen_path": "confirmed-holding"},
+                            {"category": "state-integrity", "verification_cycle": 466, "chosen_path": "confirmed-holding"},
+                            {"category": "process-adherence", "verification_cycle": 466, "chosen_path": "confirmed-holding"}
+                        ]
+                    }
+                }
+            }"#,
+        )
+        .unwrap();
+
+        let mut args = journal_args("Chronic status test");
+        args.auto_chronic_status = true;
+        args.commitment = vec!["Ship docs-lint.".to_string()];
+        args.previous_commitment_status = Some("no_prior_commitment".to_string());
+        args.previous_commitment_detail = Some("No prior commitment recorded.".to_string());
+
+        let path = execute_journal(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains("### Chronic category status"));
+        assert!(content.contains("| Category | Verification cycle | Status |"));
+        assert!(content.contains("| worklog-accuracy | 487 | confirmed-holding |"));
+        assert!(content.contains("| journal-quality | 487 | confirmed-holding |"));
+        assert!(content.contains("| state-integrity | 466 | confirmed-holding |"));
+        assert!(content.contains("| process-adherence | 466 | confirmed-holding |"));
+        // Section must appear before commitments
+        let chronic_pos = content.find("### Chronic category status").unwrap();
+        let commitments_pos = content
+            .find("### Concrete commitments for next cycle")
+            .unwrap();
+        assert!(chronic_pos < commitments_pos);
+    }
+
+    #[test]
+    fn journal_auto_chronic_status_skips_section_when_no_entries() {
+        let repo_root = TempRepoDir::new("journal-auto-chronic-status-empty");
+        fs::create_dir_all(repo_root.path.join("docs")).unwrap();
+        write_root_journal_index(&repo_root.path, "");
+        write_worklog_fixture(
+            &repo_root.path,
+            fixed_now(),
+            154,
+            "Chronic status empty test",
+        );
+        fs::write(
+            repo_root.path.join("docs/state.json"),
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {"cycle": 154},
+                "review_agent": {
+                    "history": [],
+                    "chronic_category_responses": {
+                        "entries": []
+                    }
+                }
+            }"#,
+        )
+        .unwrap();
+
+        let mut args = journal_args("Chronic status empty test");
+        args.auto_chronic_status = true;
+        args.commitment = vec!["Keep going.".to_string()];
+        args.previous_commitment_status = Some("no_prior_commitment".to_string());
+        args.previous_commitment_detail = Some("No prior commitment recorded.".to_string());
+
+        let path = execute_journal(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(!content.contains("### Chronic category status"));
+    }
+
+    #[test]
+    fn journal_auto_chronic_status_skips_section_when_no_review_agent() {
+        let repo_root = TempRepoDir::new("journal-auto-chronic-status-no-agent");
+        fs::create_dir_all(repo_root.path.join("docs")).unwrap();
+        write_root_journal_index(&repo_root.path, "");
+        write_worklog_fixture(
+            &repo_root.path,
+            fixed_now(),
+            154,
+            "Chronic status no agent test",
+        );
+        fs::write(
+            repo_root.path.join("docs/state.json"),
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {"cycle": 154}
+            }"#,
+        )
+        .unwrap();
+
+        let mut args = journal_args("Chronic status no agent test");
+        args.auto_chronic_status = true;
+        args.commitment = vec!["Keep going.".to_string()];
+        args.previous_commitment_status = Some("no_prior_commitment".to_string());
+        args.previous_commitment_detail = Some("No prior commitment recorded.".to_string());
+
+        let path = execute_journal(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(!content.contains("### Chronic category status"));
+    }
+
+    #[test]
+    fn journal_auto_chronic_status_compatible_with_section_flag() {
+        let repo_root = TempRepoDir::new("journal-auto-chronic-status-with-section");
+        fs::create_dir_all(repo_root.path.join("docs")).unwrap();
+        write_root_journal_index(&repo_root.path, "");
+        write_worklog_fixture(
+            &repo_root.path,
+            fixed_now(),
+            154,
+            "Chronic with section test",
+        );
+        fs::write(
+            repo_root.path.join("docs/state.json"),
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {"cycle": 154},
+                "review_agent": {
+                    "history": [],
+                    "chronic_category_responses": {
+                        "entries": [
+                            {"category": "worklog-accuracy", "verification_cycle": 487, "chosen_path": "confirmed-holding"}
+                        ]
+                    }
+                }
+            }"#,
+        )
+        .unwrap();
+
+        let mut args = journal_args("Chronic with section test");
+        args.auto_chronic_status = true;
+        args.section = vec!["What fell short::Nothing.".to_string()];
+        args.commitment = vec!["Keep going.".to_string()];
+        args.previous_commitment_status = Some("no_prior_commitment".to_string());
+        args.previous_commitment_detail = Some("No prior commitment recorded.".to_string());
+
+        let path = execute_journal(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains("### What fell short"));
+        assert!(content.contains("### Chronic category status"));
+        assert!(content.contains("| worklog-accuracy | 487 | confirmed-holding |"));
+        // Custom section must appear BEFORE chronic status
+        let section_pos = content.find("### What fell short").unwrap();
+        let chronic_pos = content.find("### Chronic category status").unwrap();
+        let commitments_pos = content
+            .find("### Concrete commitments for next cycle")
+            .unwrap();
+        assert!(section_pos < chronic_pos);
+        assert!(chronic_pos < commitments_pos);
     }
 }
