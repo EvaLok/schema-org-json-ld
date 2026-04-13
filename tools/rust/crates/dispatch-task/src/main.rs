@@ -2,7 +2,7 @@ use clap::{ArgAction, Parser};
 use record_dispatch::{
     apply_dispatch_patch, build_dispatch_patch, concurrency_warning_message,
     dispatch_commit_message, enforce_pipeline_gate, push_to_origin_master, resolve_model,
-    CommandRunner, PipelineGateError, ProcessRunner,
+    sync_last_cycle_summary_after_dispatch, CommandRunner, PipelineGateError, ProcessRunner,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -272,7 +272,10 @@ fn record_dispatch_state(
         model,
         &dispatched_at,
     )?;
-    apply_dispatch_patch(&mut state_value, &patch)?;
+    let updated_existing = apply_dispatch_patch(&mut state_value, &patch)?;
+    if !updated_existing {
+        sync_last_cycle_summary_after_dispatch(&mut state_value, patch.current_cycle)?;
+    }
 
     let addresses_finding = dedupe_addressed_findings(addresses_finding);
     set_session_addresses_findings(&mut state_value, issue, &addresses_finding)?;

@@ -133,7 +133,7 @@ fn apply_dispatch_record(
     dispatched_at: &str,
 ) -> Result<(), String> {
     let patch = build_dispatch_patch(state, cycle, issue, title, model, dispatched_at)?;
-    apply_dispatch_patch(state, &patch)
+    apply_dispatch_patch(state, &patch).map(|_| ())
 }
 
 fn read_body_file(path: &Path) -> Result<String, String> {

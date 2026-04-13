@@ -327,7 +327,7 @@ fn is_terminal_status(status: &str) -> bool {
     TERMINAL_AGENT_SESSION_STATUSES.contains(&status)
 }
 
-pub fn apply_dispatch_patch(state: &mut Value, patch: &DispatchPatch) -> Result<(), String> {
+pub fn apply_dispatch_patch(state: &mut Value, patch: &DispatchPatch) -> Result<bool, String> {
     let cycle_marker = format!("cycle {}", patch.current_cycle);
     let new_issue = patch
         .agent_session
@@ -380,11 +380,7 @@ pub fn apply_dispatch_patch(state: &mut Value, patch: &DispatchPatch) -> Result<
         .ok_or_else(|| "docs/state.json root must be an object".to_string())?
         .insert("in_flight_sessions".to_string(), json!(patch.in_flight));
     update_field_inventory_last_refreshed(state, "in_flight_sessions", &cycle_marker)?;
-    if !updated_existing {
-        sync_last_cycle_summary_after_dispatch(state, patch.current_cycle)?;
-    }
-
-    Ok(())
+    Ok(updated_existing)
 }
 
 pub fn snapshot_sealed_last_cycle(
@@ -516,7 +512,15 @@ fn session_value_present(value: &Value) -> bool {
     }
 }
 
-fn sync_last_cycle_summary_after_dispatch(
+/// Increment the current cycle's `last_cycle.summary` dispatch count after a new
+/// dispatch is recorded.
+///
+/// Call this after `apply_dispatch_patch` only when that function returns
+/// `updated_existing == false`, meaning a new session entry was created rather
+/// than merged into an existing live session. Callers that temporarily restore
+/// a sealed `last_cycle` snapshot during close-out should invoke this helper
+/// after the restore step so the new dispatch count is not clobbered.
+pub fn sync_last_cycle_summary_after_dispatch(
     state: &mut Value,
     current_cycle: u64,
 ) -> Result<(), String> {
@@ -927,8 +931,10 @@ mod tests {
         )
         .expect("patch should build");
 
-        apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
+        let updated_existing =
+            apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
 
+        assert!(!updated_existing);
         let sessions = state["agent_sessions"]
             .as_array()
             .expect("agent_sessions array");
@@ -962,8 +968,10 @@ mod tests {
         )
         .expect("patch should build");
 
-        apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
+        let updated_existing =
+            apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
 
+        assert!(!updated_existing);
         assert_eq!(state["in_flight_sessions"], json!(patch.in_flight));
         assert_eq!(
             state["field_inventory"]["fields"]["in_flight_sessions"]["last_refreshed"],
@@ -972,7 +980,7 @@ mod tests {
     }
 
     #[test]
-    fn apply_dispatch_patch_increments_last_cycle_summary_dispatches() {
+    fn sync_last_cycle_summary_after_dispatch_increments_last_cycle_summary_dispatches() {
         let mut state = sample_state();
         let original_timestamp = state["last_cycle"]["timestamp"]
             .as_str()
@@ -989,7 +997,11 @@ mod tests {
         )
         .expect("patch should build");
 
-        apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
+        let updated_existing =
+            apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
+        assert!(!updated_existing);
+        sync_last_cycle_summary_after_dispatch(&mut state, patch.current_cycle)
+            .expect("summary sync should succeed");
 
         assert_eq!(
             state["last_cycle"]["summary"],
@@ -1002,7 +1014,7 @@ mod tests {
     }
 
     #[test]
-    fn apply_dispatch_patch_preserves_unparseable_last_cycle_summary() {
+    fn sync_last_cycle_summary_after_dispatch_preserves_unparseable_last_cycle_summary() {
         let mut state = sample_state();
         state["last_cycle"]["summary"] = json!("custom summary");
         let original_last_cycle = state["last_cycle"].clone();
@@ -1017,13 +1029,17 @@ mod tests {
         )
         .expect("patch should build");
 
-        apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
+        let updated_existing =
+            apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
+        assert!(!updated_existing);
+        sync_last_cycle_summary_after_dispatch(&mut state, patch.current_cycle)
+            .expect("summary sync should succeed");
 
         assert_eq!(state["last_cycle"], original_last_cycle);
     }
 
     #[test]
-    fn apply_dispatch_patch_leaves_last_cycle_summary_unchanged_for_other_cycle() {
+    fn sync_last_cycle_summary_after_dispatch_leaves_other_cycle_unchanged() {
         let mut state = sample_state();
         state["last_cycle"]["number"] = json!(163);
         let original_last_cycle = state["last_cycle"].clone();
@@ -1038,7 +1054,11 @@ mod tests {
         )
         .expect("patch should build");
 
-        apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
+        let updated_existing =
+            apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
+        assert!(!updated_existing);
+        sync_last_cycle_summary_after_dispatch(&mut state, patch.current_cycle)
+            .expect("summary sync should succeed");
 
         assert_eq!(state["last_cycle"], original_last_cycle);
     }
@@ -1067,9 +1087,10 @@ mod tests {
         )
         .expect("patch should build");
 
-        apply_dispatch_patch(&mut state, &patch)
+        let updated_existing = apply_dispatch_patch(&mut state, &patch)
             .expect("duplicate in-flight issue should be updated in place");
 
+        assert!(updated_existing);
         let sessions = state["agent_sessions"]
             .as_array()
             .expect("agent_sessions array");
@@ -1113,9 +1134,10 @@ mod tests {
             current_cycle: 164,
         };
 
-        apply_dispatch_patch(&mut state, &patch)
+        let updated_existing = apply_dispatch_patch(&mut state, &patch)
             .expect("duplicate recovery should update in place");
 
+        assert!(updated_existing);
         let sessions = state["agent_sessions"]
             .as_array()
             .expect("agent_sessions array");
@@ -1146,8 +1168,10 @@ mod tests {
         )
         .expect("patch should build");
 
-        apply_dispatch_patch(&mut state, &patch).expect("terminal duplicate should be allowed");
+        let updated_existing =
+            apply_dispatch_patch(&mut state, &patch).expect("terminal duplicate should be allowed");
 
+        assert!(!updated_existing);
         let sessions = state["agent_sessions"]
             .as_array()
             .expect("agent_sessions array");
@@ -1182,9 +1206,10 @@ mod tests {
         )
         .expect("patch should build");
 
-        apply_dispatch_patch(&mut state, &patch)
+        let updated_existing = apply_dispatch_patch(&mut state, &patch)
             .expect("duplicate live issue should update the existing row");
 
+        assert!(updated_existing);
         assert_eq!(state["agent_sessions"], original["agent_sessions"]);
         assert_eq!(
             state["last_cycle"]["summary"],
@@ -1245,8 +1270,10 @@ mod tests {
         )
         .expect("patch should build");
 
-        apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
+        let updated_existing =
+            apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
 
+        assert!(!updated_existing);
         assert_eq!(
             state["dispatch_log_latest"],
             json!("#603 Example dispatch (cycle 164)")
