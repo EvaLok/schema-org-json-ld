@@ -8333,7 +8333,9 @@
       "category": "journal-quality",
       "deadline_cycle": 490,
       "deferred_cycle": 485,
-      "resolved": false
+      "dropped_rationale": "Behavioral finding (journal narrated incorrect dispatch capacity at cycle start). Root cause: free-form journal narrative derived capacity from later mid-cycle state, not cycle-start receipt. Not toolable — write-entry journal auto-derivation correctly tracks structured fields. question-for-eva #2293 pending on journal-quality structural responses.",
+      "resolved": true,
+      "resolved_ref": "dropped: Behavioral finding (journal narrated incorrect dispatch capacity at cycle start). Root cause: free-f"
     }
   ],
   "dispatch_log_latest": "#2475 [Cycle Review] Cycle 486 end-of-cycle review (cycle 486)",
