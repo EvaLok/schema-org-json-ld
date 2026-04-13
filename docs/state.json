@@ -7480,8 +7480,10 @@
     {
       "dispatched_at": "2026-04-13T21:35:43Z",
       "issue": 2483,
+      "merged_at": "2026-04-13T23:39:54Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2484,
+      "status": "merged",
       "title": "record-dispatch: fix summary sync skip when session pre-recorded by dispatch-review"
     },
     {
@@ -8659,12 +8661,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 3,
     "issue": 2487,
     "number": 489,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-13T23:17:32Z"
   },
   "last_eva_comment_check": "2026-04-13T23:17:32Z",
