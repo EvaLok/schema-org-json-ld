@@ -7503,6 +7503,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add sub-category support to chronic category tracking (audit #415)"
+    },
+    {
+      "dispatched_at": "2026-04-13T23:53:47Z",
+      "issue": 2491,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 489 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -8400,7 +8407,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2489 Add sub-category support to chronic category tracking (audit #415) (cycle 489)",
+  "dispatch_log_latest": "#2491 [Cycle Review] Cycle 489 end-of-cycle review (cycle 489)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8671,7 +8678,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 2,
     "issue": 2487,
@@ -15247,7 +15254,7 @@
     ],
     "last_review_cycle": 488
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 489,
   "schema_status": {
     "directory_layout": {
