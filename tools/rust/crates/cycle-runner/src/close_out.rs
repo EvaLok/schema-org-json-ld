@@ -856,7 +856,6 @@ fn record_c5_5_pass(repo_root: &Path, cycle: u64, pipeline_summary: &str) -> Res
         .is_some_and(|initial_result| {
             initial_result
                 .get("result")
-                .or_else(|| initial_result.get("status"))
                 .and_then(Value::as_str)
                 .is_some_and(|status| status.eq_ignore_ascii_case("FAIL"))
         });
