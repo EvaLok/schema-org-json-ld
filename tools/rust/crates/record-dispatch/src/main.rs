@@ -2,8 +2,8 @@ use clap::Parser;
 use record_dispatch::{
     apply_dispatch_patch, build_dispatch_patch, concurrency_warning_message,
     dispatch_commit_message, enforce_pipeline_gate, resolve_model, restore_sealed_last_cycle,
-    snapshot_sealed_last_cycle, update_review_dispatch_tracking, CommandRunner, PipelineGateError,
-    ProcessRunner,
+    snapshot_sealed_last_cycle, sync_last_cycle_summary_after_dispatch,
+    update_review_dispatch_tracking, CommandRunner, PipelineGateError, ProcessRunner,
 };
 use state_schema::{
     commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
@@ -137,14 +137,15 @@ fn run_with_runner(
         &model,
         &dispatched_at,
     )?;
-    let already_recorded = match apply_dispatch_patch(&mut state_value, &patch) {
-        Ok(()) => false,
+    let (already_recorded, updated_existing) = match apply_dispatch_patch(&mut state_value, &patch)
+    {
+        Ok(updated_existing) => (false, updated_existing),
         Err(error) if error.contains("already contains an entry for issue") => {
             eprintln!(
                 "Note: session for #{} already recorded (likely by dispatch-review); skipping append, applying phase transition only",
                 cli.issue
             );
-            true
+            (true, false)
         }
         Err(error) => return Err(error),
     };
@@ -158,6 +159,9 @@ fn run_with_runner(
         false
     };
     restore_sealed_last_cycle(&mut state_value, sealed_last_cycle)?;
+    if !already_recorded && !updated_existing {
+        sync_last_cycle_summary_after_dispatch(&mut state_value, patch.current_cycle)?;
+    }
     write_state_value(&cli.repo_root, &state_value)?;
 
     let commit_message = dispatch_commit_message(cli.issue, patch.current_cycle);
@@ -643,11 +647,13 @@ mod tests {
     }
 
     #[test]
-    fn run_preserves_sealed_last_cycle_snapshot_during_close_out_dispatch() {
+    fn run_preserves_close_out_snapshot_without_clobbering_dispatch_count() {
         let repo = TempRepo::new();
         repo.init_with_phase("close_out");
         let mut initial_state = repo.read_state();
-        initial_state["last_cycle"]["summary"] = serde_json::json!("sealed summary");
+        initial_state["last_cycle"]["summary"] = serde_json::json!(
+            "0 dispatches, 2 merges (PR EvaLok/schema-org-json-ld#100, PR EvaLok/schema-org-json-ld#200)"
+        );
         initial_state["last_cycle"]["timestamp"] = serde_json::json!("2026-04-09T09:52:44Z");
         repo.write_state_value(&initial_state);
 
@@ -664,11 +670,15 @@ mod tests {
         let state = repo.read_state();
         assert_eq!(
             state.pointer("/last_cycle/summary"),
-            Some(&serde_json::json!("sealed summary"))
+            Some(&serde_json::json!(
+                "1 dispatch, 2 merges (PR EvaLok/schema-org-json-ld#100, PR EvaLok/schema-org-json-ld#200)"
+            ))
         );
-        assert_eq!(
-            state.pointer("/last_cycle/timestamp"),
-            Some(&serde_json::json!("2026-04-09T09:52:44Z"))
+        assert_ne!(
+            state
+                .pointer("/last_cycle/timestamp")
+                .and_then(serde_json::Value::as_str),
+            Some("2026-04-09T09:52:44Z")
         );
     }
 
