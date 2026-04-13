@@ -50,6 +50,7 @@ const CURRENT_CYCLE_JOURNAL_SECTION_STEP_NAME: &str = "current-cycle-journal-sec
 const DOC_LINT_STEP_NAME: &str = "doc-lint";
 const COMMITMENT_DROP_VERIFICATION_STEP_NAME: &str = "commitment-drop-verification";
 const WORKLOG_PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
+const STATE_JSON_PATH: &str = "docs/state.json";
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const COMMITMENT_DROP_RATIONALE_MARKERS: &[&str] = &[
     " with rationale",
@@ -2909,28 +2910,28 @@ fn frozen_commit_status_for_date_with_runner(
     };
 
     let changed_files = runner.list_changed_files_for_commit(repo_root, &commit)?;
-    let worklog_glob = format!("docs/worklog/{today}/*.md");
+    let worklog_missing_display = format!("docs/worklog/{today}/*.md");
     let worklog_prefix = format!("docs/worklog/{today}/");
     let has_worklog = changed_files
         .iter()
         .any(|line| line.starts_with(&worklog_prefix) && line.ends_with(".md"));
     let journal_path = format!("docs/journal/{today}.md");
     let has_journal = changed_files.iter().any(|line| line == &journal_path);
-    let has_state = changed_files.iter().any(|line| line == "docs/state.json");
+    let has_state = changed_files.iter().any(|line| line == STATE_JSON_PATH);
 
     let mut missing = Vec::new();
     if !has_worklog {
-        missing.push(worklog_glob);
+        missing.push(worklog_missing_display);
     }
     if !has_journal && !has_state {
-        missing.push(format!("{journal_path} or docs/state.json"));
+        missing.push(format!("{journal_path} or {STATE_JSON_PATH}"));
     }
 
     if missing.is_empty() {
         let supporting_path = if has_journal {
             journal_path
         } else {
-            "docs/state.json".to_string()
+            STATE_JSON_PATH.to_string()
         };
         return Ok((
             StepStatus::Pass,
@@ -8726,7 +8727,7 @@ mod tests {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root = std::env::temp_dir().join(format!(
-            "pipeline-check-frozen-commit-state-only-pass-{}",
+            "pipeline-check-frozen-commit-journal-missing-{}",
             run_id
         ));
         init_git_repo(&root);
@@ -8774,7 +8775,7 @@ mod tests {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root = std::env::temp_dir().join(format!(
-            "pipeline-check-frozen-commit-journal-only-pass-{}",
+            "pipeline-check-frozen-commit-state-missing-{}",
             run_id
         ));
         init_git_repo(&root);
