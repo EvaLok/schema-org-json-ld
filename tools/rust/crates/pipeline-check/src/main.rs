@@ -216,6 +216,7 @@ struct Cli {
 #[serde(rename_all = "lowercase")]
 enum StepStatus {
     Pass,
+    Skip,
     Warn,
     Cascade,
     Fail,
@@ -2813,7 +2814,7 @@ fn frozen_commit_status_for_date(
     let phase = state.pointer("/cycle_phase/phase").and_then(Value::as_str);
     if phase != Some("close_out") {
         return Ok((
-            StepStatus::Pass,
+            StepStatus::Skip,
             "skipped: frozen commit verification only runs during close_out".to_string(),
         ));
     }
@@ -2845,7 +2846,7 @@ fn frozen_commit_status_for_date(
         .map(str::to_string)
     else {
         return Ok((
-            StepStatus::Pass,
+            StepStatus::Skip,
             format!("skipped: no cycle-tagged commit found for cycle {}", cycle),
         ));
     };
@@ -2944,7 +2945,10 @@ fn current_cycle_journal_section_status_for_date(
     // This invariant is intentionally structural: close_out requires the
     // cycle heading prefix `## YYYY-MM-DD — Cycle N:` to be present in today's
     // journal. Additional title text after the colon is allowed.
-    if content.lines().any(|line| line.trim().starts_with(&expected_heading)) {
+    if content
+        .lines()
+        .any(|line| line.trim().starts_with(&expected_heading))
+    {
         Ok((
             StepStatus::Pass,
             format!(
@@ -5465,6 +5469,7 @@ fn refresh_tool_pipeline_inventory(repo_root: &Path, cycle: u64) -> Result<(), S
 fn step_status_label(status: StepStatus) -> &'static str {
     match status {
         StepStatus::Pass => "PASS",
+        StepStatus::Skip => "SKIP",
         StepStatus::Warn => "WARN",
         StepStatus::Cascade => "CASCADE",
         StepStatus::Fail => "FAIL",
@@ -5901,13 +5906,22 @@ mod tests {
     }
 
     #[test]
-    fn pipeline_exit_code_maps_pass_warn_fail_and_error() {
+    fn pipeline_exit_code_maps_pass_skip_warn_fail_and_error() {
         let pass_steps = vec![StepReport {
             name: "metric-snapshot",
             status: StepStatus::Pass,
             severity: Severity::Blocking,
             exit_code: Some(0),
             detail: None,
+            findings: None,
+            summary: None,
+        }];
+        let skip_steps = vec![StepReport {
+            name: "frozen-commit-verify",
+            status: StepStatus::Skip,
+            severity: Severity::Blocking,
+            exit_code: None,
+            detail: Some("skipped outside close_out".to_string()),
             findings: None,
             summary: None,
         }];
@@ -5940,6 +5954,7 @@ mod tests {
         }];
 
         assert_eq!(pipeline_exit_code(&pass_steps), 0);
+        assert_eq!(pipeline_exit_code(&skip_steps), 0);
         assert_eq!(pipeline_exit_code(&warn_steps), 0);
         assert_eq!(pipeline_exit_code(&fail_steps), 1);
         assert_eq!(pipeline_exit_code(&error_steps), 2);
@@ -6264,7 +6279,7 @@ mod tests {
         assert_eq!(report.steps[15].name, "doc-validation");
         assert_eq!(report.steps[15].status, StepStatus::Pass);
         assert_eq!(report.steps[16].name, "frozen-commit-verify");
-        assert_eq!(report.steps[16].status, StepStatus::Pass);
+        assert_eq!(report.steps[16].status, StepStatus::Skip);
         assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[17].status, StepStatus::Pass);
         assert_eq!(report.steps[18].name, "worklog-dedup");
@@ -6934,7 +6949,7 @@ mod tests {
         assert_eq!(report.steps[15].name, "doc-validation");
         assert_eq!(report.steps[15].status, StepStatus::Cascade);
         assert_eq!(report.steps[16].name, "frozen-commit-verify");
-        assert_eq!(report.steps[16].status, StepStatus::Pass);
+        assert_eq!(report.steps[16].status, StepStatus::Skip);
         assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[17].status, StepStatus::Pass);
         assert_eq!(report.steps[18].name, "worklog-dedup");
@@ -7085,7 +7100,7 @@ mod tests {
         assert_eq!(report.steps[15].name, "doc-validation");
         assert_eq!(report.steps[15].status, StepStatus::Cascade);
         assert_eq!(report.steps[16].name, "frozen-commit-verify");
-        assert_eq!(report.steps[16].status, StepStatus::Pass);
+        assert_eq!(report.steps[16].status, StepStatus::Skip);
         assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[17].status, StepStatus::Pass);
         assert_eq!(report.steps[18].name, "worklog-dedup");
@@ -7386,7 +7401,7 @@ mod tests {
         assert_eq!(report.steps[15].name, "doc-validation");
         assert_eq!(report.steps[15].status, StepStatus::Fail);
         assert_eq!(report.steps[16].name, "frozen-commit-verify");
-        assert_eq!(report.steps[16].status, StepStatus::Pass);
+        assert_eq!(report.steps[16].status, StepStatus::Skip);
         assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[17].status, StepStatus::Pass);
         assert_eq!(report.steps[18].name, "worklog-dedup");
@@ -8784,7 +8799,7 @@ mod tests {
 
         let step = verify_frozen_commit_for_date(&root, "2026-03-09");
 
-        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.status, StepStatus::Skip);
         assert_eq!(step.severity, Severity::Blocking);
         assert!(step
             .detail
@@ -8823,7 +8838,7 @@ mod tests {
 
         let step = verify_frozen_commit_for_date(&root, "2026-03-09");
 
-        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.status, StepStatus::Skip);
         assert_eq!(step.severity, Severity::Blocking);
         assert!(step
             .detail
