@@ -200,12 +200,18 @@ fn build_checks(repo_root: &Path, state: &StateJson) -> Vec<CheckResult> {
 /// Auto-fix plan entry for a failed metric check.
 ///
 /// `pointer` is the concrete JSON pointer path to mutate in `state.json`.
-/// `freshness_field` is the corresponding `field_inventory.fields.<name>` key
-/// whose `last_refreshed` marker should be updated when this pointer changes.
+/// `freshness_fields` are the corresponding `field_inventory.fields.<name>` keys
+/// whose `last_refreshed` markers should be updated when this pointer changes.
 struct FixUpdate {
     pointer: &'static str,
     value: Value,
-    freshness_field: &'static str,
+    freshness_fields: &'static [&'static str],
+}
+
+#[derive(Clone, Copy)]
+struct FixTarget {
+    pointer: &'static str,
+    freshness_fields: &'static [&'static str],
 }
 
 fn apply_fixes(
@@ -222,7 +228,7 @@ fn apply_fixes(
 
     for update in updates {
         if set_value_at_pointer(&mut state_value, update.pointer, update.value)? {
-            changed_fields.insert(update.freshness_field);
+            changed_fields.extend(update.freshness_fields.iter().copied());
             changed_count += 1;
         }
     }
@@ -268,16 +274,16 @@ fn collect_fix_updates(checks: &[CheckResult]) -> Vec<FixUpdate> {
         if check.pass {
             continue;
         }
-        let Some((pointer, freshness_field)) = fix_target_for_check(check.name) else {
+        let Some(target) = fix_target_for_check(check.name) else {
             continue;
         };
 
         deduped.insert(
-            pointer,
+            target.pointer,
             FixUpdate {
-                pointer,
+                pointer: target.pointer,
                 value: check.actual.clone(),
-                freshness_field,
+                freshness_fields: target.freshness_fields,
             },
         );
     }
@@ -285,27 +291,48 @@ fn collect_fix_updates(checks: &[CheckResult]) -> Vec<FixUpdate> {
     deduped.into_values().collect()
 }
 
-fn fix_target_for_check(check_name: &str) -> Option<(&'static str, &'static str)> {
+fn fix_target_for_check(check_name: &str) -> Option<FixTarget> {
     match check_name {
-        "php_schema_classes" => Some(("/total_schema_classes", "total_schema_classes")),
-        "php_enum_classes" => Some(("/total_enums", "total_enums")),
-        "ts_schema_types" => Some((
-            "/schema_status/typescript_stats/schema_types",
-            "typescript_stats",
-        )),
-        "ts_enum_types" => Some(("/schema_status/typescript_stats/enums", "typescript_stats")),
-        "ts_core_modules" => Some((
-            "/schema_status/typescript_stats/core_modules",
-            "typescript_stats",
-        )),
-        "ts_total_modules" => Some((
-            "/schema_status/typescript_stats/total_modules",
-            "typescript_stats",
-        )),
-        "test_count_php" => Some(("/test_count/php", "test_count")),
-        "test_count_ts" => Some(("/test_count/ts", "test_count")),
-        "test_count_total" => Some(("/test_count/total", "test_count")),
-        "phpstan_level" => Some(("/schema_status/phpstan_level", "phpstan_level")),
+        "php_schema_classes" => Some(FixTarget {
+            pointer: "/total_schema_classes",
+            freshness_fields: &["total_schema_classes", "total_schema_types"],
+        }),
+        "php_enum_classes" => Some(FixTarget {
+            pointer: "/total_enums",
+            freshness_fields: &["total_enums"],
+        }),
+        "ts_schema_types" => Some(FixTarget {
+            pointer: "/schema_status/typescript_stats/schema_types",
+            freshness_fields: &["typescript_stats", "total_schema_types"],
+        }),
+        "ts_enum_types" => Some(FixTarget {
+            pointer: "/schema_status/typescript_stats/enums",
+            freshness_fields: &["typescript_stats"],
+        }),
+        "ts_core_modules" => Some(FixTarget {
+            pointer: "/schema_status/typescript_stats/core_modules",
+            freshness_fields: &["typescript_stats"],
+        }),
+        "ts_total_modules" => Some(FixTarget {
+            pointer: "/schema_status/typescript_stats/total_modules",
+            freshness_fields: &["typescript_stats"],
+        }),
+        "test_count_php" => Some(FixTarget {
+            pointer: "/test_count/php",
+            freshness_fields: &["test_count"],
+        }),
+        "test_count_ts" => Some(FixTarget {
+            pointer: "/test_count/ts",
+            freshness_fields: &["test_count"],
+        }),
+        "test_count_total" => Some(FixTarget {
+            pointer: "/test_count/total",
+            freshness_fields: &["test_count"],
+        }),
+        "phpstan_level" => Some(FixTarget {
+            pointer: "/schema_status/phpstan_level",
+            freshness_fields: &["phpstan_level"],
+        }),
         _ => None,
     }
 }
@@ -322,14 +349,22 @@ fn collect_refreshable_unchanged_fields(
             continue;
         }
 
-        let Some((_, freshness_field)) = fix_target_for_check(check.name) else {
+        let Some(target) = fix_target_for_check(check.name) else {
             continue;
         };
 
-        if field_has_stale_after_change_marker(state, freshness_field, current_cycle)? {
-            refreshable.insert(freshness_field);
+        for freshness_field in target.freshness_fields.iter().copied() {
+            if field_has_stale_after_change_marker(state, freshness_field, current_cycle)? {
+                refreshable.insert(freshness_field);
+            }
         }
     }
+
+    refreshable.extend(collect_derived_refreshable_fields(
+        state,
+        checks,
+        current_cycle,
+    )?);
 
     Ok(refreshable)
 }
@@ -359,10 +394,6 @@ fn field_has_stale_after_change_marker(
         return Ok(false);
     };
 
-    if !cadence.to_ascii_lowercase().contains("after") {
-        return Ok(false);
-    }
-
     let threshold = staleness_threshold(cadence);
     let last_cycle = field
         .get("last_refreshed")
@@ -373,6 +404,156 @@ fn field_has_stale_after_change_marker(
         Some(last_cycle) => current_cycle.saturating_sub(last_cycle) > threshold,
         None => true,
     })
+}
+
+fn collect_derived_refreshable_fields(
+    state: &Value,
+    checks: &[CheckResult],
+    current_cycle: i64,
+) -> Result<BTreeSet<&'static str>, String> {
+    let mut refreshable = BTreeSet::new();
+    let state_json: StateJson = serde_json::from_value(state.clone())
+        .map_err(|error| format!("failed to parse docs/state.json: {}", error))?;
+
+    let schema_count = passed_check_i64(checks, "php_schema_classes")
+        .or_else(|| passed_check_i64(checks, "ts_schema_types"));
+    let enum_count = passed_check_i64(checks, "php_enum_classes")
+        .or_else(|| passed_check_i64(checks, "ts_enum_types"));
+
+    if let Some(schema_count) = schema_count {
+        if state_json.total_schema_types == Some(schema_count)
+            && field_has_stale_after_change_marker(state, "total_schema_types", current_cycle)?
+        {
+            refreshable.insert("total_schema_types");
+        }
+    }
+
+    let Some(classification) = state_json.schema_status.type_classification.as_ref() else {
+        return Ok(refreshable);
+    };
+
+    if let Some(total_sub_types) = derived_total_sub_types(classification) {
+        if state_json.total_sub_types == Some(total_sub_types)
+            && field_has_stale_after_change_marker(state, "total_sub_types", current_cycle)?
+        {
+            refreshable.insert("total_sub_types");
+        }
+    }
+
+    if let (Some(schema_count), Some(enum_count)) = (schema_count, enum_count) {
+        let total_testable_types = schema_count - enum_count;
+        if state_json.total_testable_types == Some(total_testable_types)
+            && field_has_stale_after_change_marker(state, "total_testable_types", current_cycle)?
+        {
+            refreshable.insert("total_testable_types");
+        }
+
+        if let (Some(standalone_parity_testable), Some(building_block_only)) = (
+            classification.standalone_parity_testable,
+            classification.building_block_only,
+        ) {
+            if standalone_parity_testable == total_testable_types - building_block_only
+                && state_json.total_standalone_testable_types == Some(standalone_parity_testable)
+                && field_has_stale_after_change_marker(
+                    state,
+                    "total_standalone_testable_types",
+                    current_cycle,
+                )?
+            {
+                refreshable.insert("total_standalone_testable_types");
+            }
+
+            if state_json
+                .total_testable_types_note
+                .as_deref()
+                .is_some_and(|note| {
+                    note_contains_numbers(
+                        note,
+                        &[
+                            schema_count,
+                            enum_count,
+                            total_testable_types,
+                            building_block_only,
+                            standalone_parity_testable,
+                        ],
+                    )
+                })
+                && field_has_stale_after_change_marker(
+                    state,
+                    "total_testable_types_note",
+                    current_cycle,
+                )?
+            {
+                refreshable.insert("total_testable_types_note");
+            }
+
+            if classification.note.as_deref().is_some_and(|note| {
+                note_contains_numbers(
+                    note,
+                    &[
+                        schema_count,
+                        enum_count,
+                        building_block_only,
+                        standalone_parity_testable,
+                    ],
+                )
+            }) && state_json.total_standalone_testable_types == Some(standalone_parity_testable)
+                && field_has_stale_after_change_marker(state, "type_classification", current_cycle)?
+            {
+                refreshable.insert("type_classification");
+            }
+        }
+    }
+
+    Ok(refreshable)
+}
+
+fn passed_check_i64(checks: &[CheckResult], check_name: &str) -> Option<i64> {
+    checks
+        .iter()
+        .find(|check| check.name == check_name && check.pass)
+        .and_then(|check| check.actual.as_i64())
+}
+
+fn derived_total_sub_types(classification: &state_schema::TypeClassification) -> Option<i64> {
+    Some(
+        classification.standalone_testable?
+            + classification.building_block?
+            + classification.building_block_only?
+            + classification.enums?,
+    )
+}
+
+fn note_contains_numbers(note: &str, numbers: &[i64]) -> bool {
+    numbers
+        .iter()
+        .all(|number| note_contains_number(note, *number))
+}
+
+fn note_contains_number(note: &str, number: i64) -> bool {
+    let needle = number.to_string();
+    let mut start = 0_usize;
+
+    while let Some(offset) = note[start..].find(&needle) {
+        let match_start = start + offset;
+        let match_end = match_start + needle.len();
+        let previous_is_digit = note[..match_start]
+            .chars()
+            .next_back()
+            .is_some_and(|character| character.is_ascii_digit());
+        let next_is_digit = note[match_end..]
+            .chars()
+            .next()
+            .is_some_and(|character| character.is_ascii_digit());
+
+        if !previous_is_digit && !next_is_digit {
+            return true;
+        }
+
+        start = match_start + needle.len();
+    }
+
+    false
 }
 
 fn read_state_file(path: &Path) -> StateJson {
@@ -1256,10 +1437,10 @@ fn value_to_display(value: &Value) -> String {
 mod tests {
     use super::{
         apply_fixes, check, collect_fix_updates, collect_refreshable_unchanged_fields,
-        count_php_tests_in_content, count_ts_tests_in_content, get_i64_from_map,
-        get_i64_from_option, get_typescript_stats, is_php_test_method_line, is_ts_test_method_line,
-        parse_cycle_number, read_state_file, set_value_at_pointer, staleness_threshold,
-        CheckResult,
+        count_php_tests_in_content, count_ts_tests_in_content, fix_target_for_check,
+        get_i64_from_map, get_i64_from_option, get_typescript_stats, is_php_test_method_line,
+        is_ts_test_method_line, note_contains_number, parse_cycle_number, read_state_file,
+        set_value_at_pointer, staleness_threshold, CheckResult,
     };
     use serde_json::json;
     use std::fs;
@@ -1344,8 +1525,16 @@ it('direct test', () => {});
         assert_eq!(2, staleness_threshold("every cycle"));
         assert_eq!(
             10,
-            staleness_threshold("every merge that adds/removes tests")
+            staleness_threshold("every merge that adds/removes PHP or TS tests")
         );
+        assert_eq!(10, staleness_threshold("after schema class additions"));
+    }
+
+    #[test]
+    fn note_contains_number_requires_numeric_boundaries() {
+        assert!(note_contains_number("Total: 123, enums: 12", 123));
+        assert!(note_contains_number("Total: 123, enums: 12", 12));
+        assert!(!note_contains_number("Total: 123", 12));
     }
 
     #[test]
@@ -1432,13 +1621,33 @@ it('direct test', () => {});
         let updates = collect_fix_updates(&checks);
         assert_eq!(updates.len(), 1);
         assert_eq!(updates[0].pointer, "/test_count/php");
-        assert_eq!(updates[0].freshness_field, "test_count");
+        assert_eq!(updates[0].freshness_fields, &["test_count"]);
         assert_eq!(updates[0].value, json!(441));
     }
 
     #[test]
-    fn collect_refreshable_unchanged_fields_only_includes_stale_after_change_checks() {
+    fn fix_target_for_check_includes_expanded_refresh_mappings() {
+        let php_schema_target =
+            fix_target_for_check("php_schema_classes").expect("schema classes should be fixable");
+        assert_eq!(php_schema_target.pointer, "/total_schema_classes");
+        assert_eq!(
+            php_schema_target.freshness_fields,
+            &["total_schema_classes", "total_schema_types"]
+        );
+
+        let ts_schema_target =
+            fix_target_for_check("ts_schema_types").expect("TS schema types should be fixable");
+        assert_eq!(
+            ts_schema_target.freshness_fields,
+            &["typescript_stats", "total_schema_types"]
+        );
+    }
+
+    #[test]
+    fn collect_refreshable_unchanged_fields_refreshes_stale_verified_checks_regardless_of_cadence()
+    {
         let state = json!({
+            "total_schema_types": 89,
             "field_inventory": {
                 "fields": {
                     "total_schema_classes": {
@@ -1451,6 +1660,10 @@ it('direct test', () => {});
                     },
                     "test_count": {
                         "cadence": "every merge that adds/removes PHP or TS tests",
+                        "last_refreshed": "cycle 100"
+                    },
+                    "total_schema_types": {
+                        "cadence": "every cycle",
                         "last_refreshed": "cycle 100"
                     },
                     "total_enums": {
@@ -1496,10 +1709,12 @@ it('direct test', () => {});
         ];
 
         let refreshable = collect_refreshable_unchanged_fields(&state, &checks, 121)
-            .expect("should identify stale after-change fields with passing checks");
+            .expect("should identify stale verified fields with passing checks");
 
-        assert_eq!(refreshable.len(), 1);
+        assert_eq!(refreshable.len(), 3);
         assert!(refreshable.contains("total_schema_classes"));
+        assert!(refreshable.contains("test_count"));
+        assert!(refreshable.contains("total_schema_types"));
     }
 
     #[test]
@@ -1548,8 +1763,9 @@ it('direct test', () => {});
         let refreshable = collect_refreshable_unchanged_fields(&state, &checks, 121)
             .expect("missing field_inventory entries should be skipped, not fatal");
 
-        assert_eq!(refreshable.len(), 1);
+        assert_eq!(refreshable.len(), 2);
         assert!(refreshable.contains("total_schema_classes"));
+        assert!(refreshable.contains("test_count"));
         assert!(!refreshable.contains("phpstan_level"));
     }
 
