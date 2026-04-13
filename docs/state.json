@@ -7444,8 +7444,10 @@
     {
       "dispatched_at": "2026-04-13T07:58:30Z",
       "issue": 2472,
+      "merged_at": "2026-04-13T09:47:15Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2474,
+      "status": "merged",
       "title": "Fix frozen-commit-verify to validate worklog and journal paths in blessed commit"
     },
     {
@@ -8602,12 +8604,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 2,
     "issue": 2477,
     "number": 487,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-13T09:36:04Z"
   },
   "last_eva_comment_check": "2026-04-13T09:36:04Z",
