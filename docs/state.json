@@ -7433,6 +7433,13 @@
       "pr": 2468,
       "status": "merged",
       "title": "[Cycle Review] Cycle 485 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-04-13T07:57:40Z",
+      "issue": 2471,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix write-entry worklog scope label to match actual data source"
     }
   ],
   "audit_dropped": [
@@ -8307,7 +8314,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2467 [Cycle Review] Cycle 485 end-of-cycle review (cycle 485)",
+  "dispatch_log_latest": "#2471 Fix write-entry worklog scope label to match actual data source (cycle 486)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8578,13 +8585,13 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 3,
     "issue": 2469,
     "number": 486,
-    "summary": "0 dispatches, 3 merges",
-    "timestamp": "2026-04-13T07:35:47Z"
+    "summary": "1 dispatch, 3 merges",
+    "timestamp": "2026-04-13T07:57:40Z"
   },
   "last_eva_comment_check": "2026-04-13T07:35:47Z",
   "last_tool_audit_cycle": 403,
@@ -15042,13 +15049,13 @@
         ],
         "complacency_score": 2,
         "cycle": 485,
-        "deferred": 2,
-        "dispatch_created": 1,
+        "deferred": 1,
+        "dispatch_created": 2,
         "finding_count": 3,
         "finding_dispositions": [
           {
             "category": "worklog-accuracy",
-            "disposition": "deferred"
+            "disposition": "dispatch_created"
           },
           {
             "category": "process-adherence",
@@ -15066,7 +15073,7 @@
     ],
     "last_review_cycle": 485
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 485,
   "schema_status": {
     "directory_layout": {
