@@ -674,11 +674,18 @@ mod tests {
                 "1 dispatch, 2 merges (PR EvaLok/schema-org-json-ld#100, PR EvaLok/schema-org-json-ld#200)"
             ))
         );
-        assert_ne!(
-            state
-                .pointer("/last_cycle/timestamp")
-                .and_then(serde_json::Value::as_str),
-            Some("2026-04-09T09:52:44Z")
+        let updated_timestamp = state
+            .pointer("/last_cycle/timestamp")
+            .and_then(serde_json::Value::as_str)
+            .expect("dispatch should refresh last_cycle timestamp");
+        assert_ne!(updated_timestamp, "2026-04-09T09:52:44Z");
+        assert!(
+            updated_timestamp > "2026-04-09T09:52:44Z",
+            "timestamp should advance after re-sync"
+        );
+        assert!(
+            updated_timestamp.contains('T') && updated_timestamp.ends_with('Z'),
+            "refreshed timestamp should keep RFC 3339 UTC shape"
         );
     }
 

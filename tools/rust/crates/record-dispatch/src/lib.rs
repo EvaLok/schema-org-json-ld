@@ -512,6 +512,13 @@ fn session_value_present(value: &Value) -> bool {
     }
 }
 
+/// Increment the current cycle's `last_cycle.summary` dispatch count after a new
+/// dispatch is recorded.
+///
+/// Call this after `apply_dispatch_patch` only when the dispatch created a new
+/// session entry (`updated_existing == false`). Callers that temporarily restore
+/// a sealed `last_cycle` snapshot during close-out should invoke this helper
+/// after the restore step so the new dispatch count is not clobbered.
 pub fn sync_last_cycle_summary_after_dispatch(
     state: &mut Value,
     current_cycle: u64,
