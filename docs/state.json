@@ -7469,6 +7469,13 @@
       "pr": 2479,
       "status": "merged",
       "title": "[Cycle Review] Cycle 487 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-04-13T21:34:33Z",
+      "issue": 2481,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "write-entry: auto-derive chronic status + expand self-modifications range"
     }
   ],
   "audit_dropped": [
@@ -8353,7 +8360,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2478 [Cycle Review] Cycle 487 end-of-cycle review (cycle 487)",
+  "dispatch_log_latest": "#2481 write-entry: auto-derive chronic status + expand self-modifications range (cycle 488)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8624,13 +8631,13 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 19,
     "issue": 2480,
     "number": 488,
-    "summary": "0 dispatches, 1 merges",
-    "timestamp": "2026-04-13T21:17:33Z"
+    "summary": "1 dispatch, 1 merges",
+    "timestamp": "2026-04-13T21:34:33Z"
   },
   "last_eva_comment_check": "2026-04-13T21:17:33Z",
   "last_tool_audit_cycle": 403,
@@ -15172,7 +15179,7 @@
     ],
     "last_review_cycle": 487
   },
-  "review_dispatch_consecutive": 2,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 487,
   "schema_status": {
     "directory_layout": {
