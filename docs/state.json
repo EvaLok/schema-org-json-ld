@@ -7413,6 +7413,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix record-dispatch last_cycle.summary clobber during close-out phase"
+    },
+    {
+      "dispatched_at": "2026-04-13T05:18:15Z",
+      "issue": 2465,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add C5.5 rerun receipt tracking and fix frozen-commit-verify skip messaging"
     }
   ],
   "audit_dropped": [
@@ -8279,7 +8286,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2463 Fix record-dispatch last_cycle.summary clobber during close-out phase (cycle 485)",
+  "dispatch_log_latest": "#2465 Add C5.5 rerun receipt tracking and fix frozen-commit-verify skip messaging (cycle 485)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8550,13 +8557,13 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 14,
     "issue": 2462,
     "number": 485,
-    "summary": "1 dispatch, 1 merges",
-    "timestamp": "2026-04-13T05:17:18Z"
+    "summary": "2 dispatches, 1 merges",
+    "timestamp": "2026-04-13T05:18:15Z"
   },
   "last_eva_comment_check": "2026-04-13T05:03:51Z",
   "last_tool_audit_cycle": 403,
@@ -14984,8 +14991,8 @@
         ],
         "complacency_score": 2,
         "cycle": 484,
-        "deferred": 2,
-        "dispatch_created": 1,
+        "deferred": 1,
+        "dispatch_created": 2,
         "finding_count": 3,
         "finding_dispositions": [
           {
@@ -14998,7 +15005,7 @@
           },
           {
             "category": "process-adherence",
-            "disposition": "deferred"
+            "disposition": "dispatch_created"
           }
         ],
         "ignored": 0,
