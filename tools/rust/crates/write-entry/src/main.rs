@@ -46,6 +46,8 @@ const AGENT_SESSION_STATUS_TIMESTAMP_FIELDS: [&str; 5] = [
 ];
 const STATE_CYCLE_PHASE_COMPLETED_AT_LABEL: &str = "docs/state.json cycle_phase.completed_at";
 const STATE_LAST_CYCLE_TIMESTAMP_LABEL: &str = "docs/state.json last_cycle.timestamp";
+const RECEIPT_SCOPE_LABEL_CYCLE_COMPLETE: &str = "cycle-complete";
+const RECEIPT_SCOPE_LABEL_C5_5_FINAL_GATE: &str = "C5.5 final gate";
 
 #[derive(Parser)]
 #[command(name = "write-entry")]
@@ -212,6 +214,11 @@ struct CurrentState {
     publish_gate: String,
     #[serde(default)]
     preliminary: bool,
+}
+
+struct ReceiptScopeBoundary {
+    timestamp: String,
+    label: &'static str,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1030,16 +1037,22 @@ fn apply_worklog_auto_derivations(
         Err(error) => return Err(error),
     };
 
-    let cycle_receipt_through = if args.auto_receipts {
-        cycle_receipt_boundary_timestamp(state.as_ref())?
+    let receipt_scope_boundary = if args.auto_receipts {
+        cycle_receipt_boundary(repo_root, cycle, state.as_ref())?
     } else {
         None
     };
 
     let cycle_receipt_entries = if args.auto_receipts {
         Some(
-            derive_cycle_receipt_entries(repo_root, cycle, cycle_receipt_through.as_deref())
-                .map_err(|error| format!("--auto-receipts failed: {}", error))?,
+            derive_cycle_receipt_entries(
+                repo_root,
+                cycle,
+                receipt_scope_boundary
+                    .as_ref()
+                    .map(|boundary| boundary.timestamp.as_str()),
+            )
+            .map_err(|error| format!("--auto-receipts failed: {}", error))?,
         )
     } else {
         None
@@ -1098,7 +1111,7 @@ fn apply_worklog_auto_derivations(
                 cycle,
                 Some(state),
                 entries,
-                cycle_receipt_through.as_deref(),
+                receipt_scope_boundary.as_ref(),
             ) {
                 Ok(note) => note,
                 Err(error) => {
@@ -1106,7 +1119,7 @@ fn apply_worklog_auto_derivations(
                         "WARNING: failed to derive receipt scope note for cycle {}: {}",
                         cycle, error
                     ));
-                    fallback_receipt_scope_note(cycle, entries, cycle_receipt_through.as_deref())
+                    fallback_receipt_scope_note(cycle, entries, receipt_scope_boundary.as_ref())
                 }
             },
         );
@@ -1696,10 +1709,27 @@ fn format_named_issue_processed_entry(label: &str, issue: u64, detail: Option<&s
     }
 }
 
-fn cycle_receipt_boundary_timestamp(state: Option<&StateJson>) -> Result<Option<String>, String> {
+fn cycle_receipt_boundary(
+    repo_root: &Path,
+    cycle: u64,
+    state: Option<&StateJson>,
+) -> Result<Option<ReceiptScopeBoundary>, String> {
     let Some(state) = state else {
         return Ok(None);
     };
+
+    if frozen_c5_5_pipeline_status(Some(state), cycle).is_some() {
+        let timestamp = c5_5_gate_commit_timestamp(repo_root, cycle)?.ok_or_else(|| {
+            format!(
+                "missing docs/state.json commit timestamp for tool_pipeline.c5_5_gate in cycle {}",
+                cycle
+            )
+        })?;
+        return Ok(Some(ReceiptScopeBoundary {
+            timestamp,
+            label: RECEIPT_SCOPE_LABEL_C5_5_FINAL_GATE,
+        }));
+    }
 
     let completed_at = state
         .cycle_phase
@@ -1722,14 +1752,75 @@ fn cycle_receipt_boundary_timestamp(state: Option<&StateJson>) -> Result<Option<
         return Ok(None);
     };
     parse_timestamp(timestamp, label)?;
-    Ok(Some(timestamp.to_string()))
+    Ok(Some(ReceiptScopeBoundary {
+        timestamp: timestamp.to_string(),
+        label: RECEIPT_SCOPE_LABEL_CYCLE_COMPLETE,
+    }))
+}
+
+fn c5_5_gate_commit_timestamp(repo_root: &Path, cycle: u64) -> Result<Option<String>, String> {
+    let output = ProcessCommand::new("git")
+        .arg("log")
+        .arg("--date=iso-strict")
+        .arg("--pretty=format:%cI%x09%s")
+        .arg("--")
+        .arg("docs/state.json")
+        .current_dir(repo_root)
+        .output()
+        .map_err(|error| {
+            format!(
+                "failed to inspect docs/state.json history in {}: {}",
+                repo_root.display(),
+                error
+            )
+        })?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(format!("git log for docs/state.json failed: {}", stderr));
+    }
+
+    let history = String::from_utf8(output.stdout).map_err(|error| {
+        format!(
+            "failed to decode docs/state.json git history as UTF-8: {}",
+            error
+        )
+    })?;
+    for line in history.lines().filter(|line| !line.trim().is_empty()) {
+        let mut parts = line.splitn(2, '\t');
+        let timestamp = parts.next().ok_or_else(|| {
+            format!(
+                "invalid docs/state.json git log line (missing timestamp): {}",
+                line
+            )
+        })?;
+        let subject = parts.next().ok_or_else(|| {
+            format!(
+                "invalid docs/state.json git log line (missing subject): {}",
+                line
+            )
+        })?;
+        if !is_c5_5_gate_commit_subject(subject, cycle) {
+            continue;
+        }
+        parse_timestamp(timestamp, "docs/state.json C5.5 gate commit timestamp")?;
+        return Ok(Some(timestamp.to_string()));
+    }
+
+    Ok(None)
+}
+
+fn is_c5_5_gate_commit_subject(subject: &str, cycle: u64) -> bool {
+    let cycle_suffix = format!("for cycle {cycle} [cycle {cycle}]");
+    subject.starts_with("state(pipeline): record ")
+        && subject.contains("C5.5 ")
+        && subject.ends_with(&cycle_suffix)
 }
 
 fn derive_receipt_scope_note(
     cycle: u64,
     state: Option<&StateJson>,
     entries: &[CycleReceiptJsonEntry],
-    cycle_receipt_through: Option<&str>,
+    receipt_scope_boundary: Option<&ReceiptScopeBoundary>,
 ) -> Result<String, String> {
     let mut scope_bits = Vec::new();
 
@@ -1776,8 +1867,11 @@ fn derive_receipt_scope_note(
         scope_bits.push(event_summary);
     }
 
-    let mut scope = match cycle_receipt_through {
-        Some(timestamp) => format!("cycle {cycle} commits through {timestamp} (cycle-complete)"),
+    let mut scope = match receipt_scope_boundary {
+        Some(boundary) => format!(
+            "cycle {cycle} commits through {} ({})",
+            boundary.timestamp, boundary.label
+        ),
         None => format!("cycle {cycle} commits (unbounded)"),
     };
     if !scope_bits.is_empty() {
@@ -1788,24 +1882,31 @@ fn derive_receipt_scope_note(
     Ok(format_receipt_scope_note(
         cycle,
         &scope,
-        cycle_receipt_through,
+        receipt_scope_boundary.map(|boundary| boundary.timestamp.as_str()),
     ))
 }
 
 fn fallback_receipt_scope_note(
     cycle: u64,
     entries: &[CycleReceiptJsonEntry],
-    cycle_receipt_through: Option<&str>,
+    receipt_scope_boundary: Option<&ReceiptScopeBoundary>,
 ) -> String {
-    let mut scope = match cycle_receipt_through {
-        Some(timestamp) => format!("cycle {cycle} commits through {timestamp} (cycle-complete)"),
+    let mut scope = match receipt_scope_boundary {
+        Some(boundary) => format!(
+            "cycle {cycle} commits through {} ({})",
+            boundary.timestamp, boundary.label
+        ),
         None => format!("cycle {cycle} commits (unbounded)"),
     };
     if let Some(event_summary) = summarize_receipt_events(entries) {
         scope.push_str(" — ");
         scope.push_str(&event_summary);
     }
-    format_receipt_scope_note(cycle, &scope, cycle_receipt_through)
+    format_receipt_scope_note(
+        cycle,
+        &scope,
+        receipt_scope_boundary.map(|boundary| boundary.timestamp.as_str()),
+    )
 }
 
 fn derive_receipt_note_prefix(receipts: &[CommitReceipt]) -> Result<String, String> {
@@ -6984,6 +7085,96 @@ mod tests {
             .contains("Scope: cycle 154 commits through 2026-03-06T04:00:00Z (cycle-complete)"));
         assert!(content.contains(
             "Receipt table auto-generated by `cycle-receipts --cycle 154 --through 2026-03-06T04:00:00Z`."
+        ));
+    }
+
+    #[test]
+    fn worklog_auto_receipts_scope_note_prefers_c5_5_final_gate_boundary() {
+        let repo_root = TempRepoDir::new("worklog-auto-receipts-c5-5-boundary");
+        init_git_repo(&repo_root.path);
+        let cycle_complete_state = r#"{
+            "last_cycle": {"number": 154},
+            "cycle_phase": {
+                "phase": "complete",
+                "phase_entered_at": "2026-03-06T01:00:00Z",
+                "completed_at": "2026-03-06T04:00:00Z",
+                "cycle": 154
+            },
+            "publish_gate": {
+                "status": "open"
+            },
+            "agent_sessions": []
+        }"#;
+        create_git_commit_at(
+            &repo_root.path,
+            "docs/state.json",
+            cycle_complete_state,
+            "state(cycle-complete): close cycle 154 [cycle 154]",
+            "2026-03-06T04:00:00Z",
+        );
+        let c5_5_final_state = r#"{
+            "last_cycle": {"number": 154},
+            "cycle_phase": {
+                "phase": "complete",
+                "phase_entered_at": "2026-03-06T01:00:00Z",
+                "completed_at": "2026-03-06T04:00:00Z",
+                "cycle": 154
+            },
+            "in_flight_sessions": 2,
+            "publish_gate": {
+                "status": "open"
+            },
+            "tool_pipeline": {
+                "status": "phase_5_active",
+                "c5_5_gate": {
+                    "cycle": 154,
+                    "status": "PASS",
+                    "needs_reverify": false,
+                    "pipeline_summary": "PASS (6/6)"
+                }
+            },
+            "agent_sessions": []
+        }"#;
+        create_git_commit_at(
+            &repo_root.path,
+            "docs/state.json",
+            c5_5_final_state,
+            "state(pipeline): record C5.5 PASS for cycle 154 [cycle 154]",
+            "2026-03-06T04:30:00Z",
+        );
+        let start_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154 [cycle 154]",
+        );
+        let args_log = repo_root.path.join("cycle-receipts-args.txt");
+        write_cycle_receipts_script_with_args_log(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}}
+                ]"#
+            ),
+            &args_log,
+        );
+
+        let mut args = worklog_args("Auto receipts C5.5 boundary");
+        args.cycle = Some(154);
+        args.done = vec!["Closed #42".to_string()];
+        args.auto_receipts = true;
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let argv = fs::read_to_string(args_log).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(argv.contains("--through"));
+        assert!(argv.contains("2026-03-06T04:30:00Z"));
+        assert!(content
+            .contains("Scope: cycle 154 commits through 2026-03-06T04:30:00Z (C5.5 final gate)"));
+        assert!(!content.contains("(cycle-complete)"));
+        assert!(content.contains(
+            "Receipt table auto-generated by `cycle-receipts --cycle 154 --through 2026-03-06T04:30:00Z`."
         ));
     }
 
