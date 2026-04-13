@@ -15671,8 +15671,9 @@
     "blocks_publish": false,
     "c5_5_gate": {
       "cycle": 487,
-      "needs_reverify": true,
-      "status": "FAIL"
+      "needs_reverify": false,
+      "pipeline_summary": "PASS (2 warnings)",
+      "status": "PASS"
     },
     "c5_5_initial_result": {
       "cycle": 487,
@@ -15681,6 +15682,12 @@
       "overall": "fail",
       "result": "FAIL",
       "summary": "FAIL (2 warnings, 1 blocking: frozen-commit-verify)"
+    },
+    "c5_5_rerun_receipt": {
+      "cycle": 487,
+      "initial_status": "FAIL",
+      "rerun_status": "PASS",
+      "timestamp": "2026-04-13T10:09:39Z"
     },
     "eva_directive": 436,
     "phases": [
