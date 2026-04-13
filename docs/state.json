@@ -7496,6 +7496,13 @@
       "pr": 2486,
       "status": "merged",
       "title": "[Cycle Review] Cycle 488 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-04-13T23:47:00Z",
+      "issue": 2489,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add sub-category support to chronic category tracking (audit #415)"
     }
   ],
   "audit_dropped": [
@@ -8393,7 +8400,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2485 [Cycle Review] Cycle 488 end-of-cycle review (cycle 488)",
+  "dispatch_log_latest": "#2489 Add sub-category support to chronic category tracking (audit #415) (cycle 489)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8664,13 +8671,13 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 3,
     "issue": 2487,
     "number": 489,
-    "summary": "0 dispatches, 3 merges",
-    "timestamp": "2026-04-13T23:17:32Z"
+    "summary": "1 dispatch, 3 merges",
+    "timestamp": "2026-04-13T23:47:00Z"
   },
   "last_eva_comment_check": "2026-04-13T23:17:32Z",
   "last_tool_audit_cycle": 403,
@@ -15240,7 +15247,7 @@
     ],
     "last_review_cycle": 488
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 488,
   "schema_status": {
     "directory_layout": {
