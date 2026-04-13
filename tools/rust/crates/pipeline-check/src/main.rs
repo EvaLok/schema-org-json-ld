@@ -4249,10 +4249,13 @@ fn chronic_refresh_invalidation_assessment(repo_root: &Path) -> Result<StepAsses
         let Some(category_raw) = entry.get("category").and_then(Value::as_str) else {
             continue;
         };
-        let Some(category) = normalize_review_category(category_raw) else {
+        let Some(category) = normalize_review_category_path(category_raw) else {
             continue;
         };
-        if !review_categories.contains(&category) {
+        if !review_categories
+            .iter()
+            .any(|review_category| category_matches_review(&category, review_category))
+        {
             continue;
         }
         let verification_cycle = entry.get("verification_cycle").and_then(Value::as_u64);
@@ -5221,8 +5224,22 @@ fn extract_review_categories(review_content: &str) -> BTreeSet<String> {
     REVIEW_CATEGORY_TAG_REGEX
         .captures_iter(review_content)
         .filter_map(|captures| captures.name("category").map(|value| value.as_str()))
-        .filter_map(normalize_review_category)
+        .filter_map(normalize_review_category_path)
         .collect()
+}
+
+fn normalize_review_category_path(category: &str) -> Option<String> {
+    let parts = category.split('/').collect::<Vec<_>>();
+    if parts.is_empty() || parts.len() > 2 || parts.iter().any(|part| part.trim().is_empty()) {
+        return None;
+    }
+
+    let normalized_parts = parts
+        .into_iter()
+        .map(normalize_review_category)
+        .collect::<Option<Vec<_>>>()?;
+
+    Some(normalized_parts.join("/"))
 }
 
 fn normalize_review_category(category: &str) -> Option<String> {
@@ -5245,6 +5262,13 @@ fn normalize_review_category(category: &str) -> Option<String> {
     } else {
         Some(trimmed)
     }
+}
+
+fn category_matches_review(entry_category: &str, review_category: &str) -> bool {
+    entry_category == review_category
+        || entry_category
+            .strip_prefix(review_category)
+            .is_some_and(|suffix| suffix.starts_with('/'))
 }
 
 fn checked_disposition_sum(
@@ -10840,6 +10864,62 @@ mod tests {
         assert!(detail.contains("review cycle 474"));
         assert!(detail.contains("receipt-integrity"));
         assert!(detail.contains("--rollback-chronic-category receipt-integrity:PRIOR_VC:RATIONALE"));
+    }
+
+    #[test]
+    fn chronic_refresh_invalidation_warns_on_parent_review_overlap_for_subcategory_only() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-chronic-refresh-invalidation-subcategory-warn",
+            json!({
+                "last_cycle": {"number": 475},
+                "review_agent": {
+                    "history": [{
+                        "cycle": 474,
+                        "finding_count": 1,
+                        "complacency_score": 2,
+                        "categories": ["worklog-accuracy"],
+                        "actioned": 0,
+                        "deferred": 1,
+                        "ignored": 0
+                    }],
+                    "chronic_category_responses": {
+                        "entries": [
+                            {
+                                "category": "worklog-accuracy/scope-labels",
+                                "chosen_path": "structural-fix",
+                                "updated_cycle": 474,
+                                "verification_cycle": 474
+                            },
+                            {
+                                "category": "journal-quality/commitment-followthrough",
+                                "chosen_path": "structural-fix",
+                                "updated_cycle": 474,
+                                "verification_cycle": 474
+                            }
+                        ]
+                    }
+                }
+            }),
+        );
+        fs::create_dir_all(root.join("docs/reviews")).unwrap();
+        fs::write(
+            root.join("docs/reviews/cycle-474.md"),
+            "# Cycle 474 Review\n\n## 1. [worklog-accuracy] Scope labels remain inaccurate\n",
+        )
+        .unwrap();
+
+        let step = verify_chronic_refresh_invalidation(&root);
+
+        assert_eq!(step.name, CHRONIC_REFRESH_INVALIDATION_STEP_NAME);
+        assert_eq!(step.status, StepStatus::Warn);
+        assert_eq!(step.severity, Severity::Blocking);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("review cycle 474"));
+        assert!(detail.contains("worklog-accuracy/scope-labels"));
+        assert!(detail.contains(
+            "--rollback-chronic-category worklog-accuracy/scope-labels:PRIOR_VC:RATIONALE"
+        ));
+        assert!(!detail.contains("journal-quality/commitment-followthrough"));
     }
 
     #[test]
