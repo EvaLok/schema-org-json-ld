@@ -7420,6 +7420,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add C5.5 rerun receipt tracking and fix frozen-commit-verify skip messaging"
+    },
+    {
+      "dispatched_at": "2026-04-13T05:27:42Z",
+      "issue": 2467,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 485 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -8286,7 +8293,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2465 Add C5.5 rerun receipt tracking and fix frozen-commit-verify skip messaging (cycle 485)",
+  "dispatch_log_latest": "#2467 [Cycle Review] Cycle 485 end-of-cycle review (cycle 485)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8557,7 +8564,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 3,
   "last_cycle": {
     "duration_minutes": 3,
     "issue": 2462,
@@ -15015,7 +15022,7 @@
     ],
     "last_review_cycle": 484
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 485,
   "schema_status": {
     "directory_layout": {
