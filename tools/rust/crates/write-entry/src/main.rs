@@ -1759,10 +1759,18 @@ fn cycle_receipt_boundary(
 }
 
 fn c5_5_gate_commit_timestamp(repo_root: &Path, cycle: u64) -> Result<Option<String>, String> {
-    let output = ProcessCommand::new("git")
+    let subjects = c5_5_gate_commit_subjects(cycle);
+    let mut command = ProcessCommand::new("git");
+    command
         .arg("log")
         .arg("--date=iso-strict")
         .arg("--pretty=format:%cI%x09%s")
+        .arg("--fixed-strings")
+        .arg("--max-count=10");
+    for subject in &subjects {
+        command.arg("--grep").arg(subject);
+    }
+    let output = command
         .arg("--")
         .arg("docs/state.json")
         .current_dir(repo_root)
@@ -1799,7 +1807,7 @@ fn c5_5_gate_commit_timestamp(repo_root: &Path, cycle: u64) -> Result<Option<Str
                 line
             )
         })?;
-        if !is_c5_5_gate_commit_subject(subject, cycle) {
+        if !subjects.iter().any(|candidate| candidate == subject) {
             continue;
         }
         parse_timestamp(timestamp, "docs/state.json C5.5 gate commit timestamp")?;
@@ -1809,11 +1817,11 @@ fn c5_5_gate_commit_timestamp(repo_root: &Path, cycle: u64) -> Result<Option<Str
     Ok(None)
 }
 
-fn is_c5_5_gate_commit_subject(subject: &str, cycle: u64) -> bool {
-    let cycle_suffix = format!("for cycle {cycle} [cycle {cycle}]");
-    subject.starts_with("state(pipeline): record ")
-        && subject.contains("C5.5 ")
-        && subject.ends_with(&cycle_suffix)
+fn c5_5_gate_commit_subjects(cycle: u64) -> [String; 2] {
+    [
+        format!("state(pipeline): record C5.5 PASS for cycle {cycle} [cycle {cycle}]"),
+        format!("state(pipeline): record initial C5.5 FAIL for cycle {cycle} [cycle {cycle}]"),
+    ]
 }
 
 fn derive_receipt_scope_note(
