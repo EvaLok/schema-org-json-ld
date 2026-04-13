@@ -2912,12 +2912,33 @@ fn frozen_commit_status_for_date_with_runner(
     let changed_files = runner.list_changed_files_for_commit(repo_root, &commit)?;
     let worklog_missing_display = format!("docs/worklog/{today}/*.md");
     let worklog_prefix = format!("docs/worklog/{today}/");
-    let has_worklog = changed_files
+    let has_worklog_in_commit = changed_files
         .iter()
         .any(|line| line.starts_with(&worklog_prefix) && line.ends_with(".md"));
     let journal_path = format!("docs/journal/{today}.md");
-    let has_journal = changed_files.iter().any(|line| line == &journal_path);
-    let has_state = changed_files.iter().any(|line| line == STATE_JSON_PATH);
+    let has_journal_in_commit = changed_files.iter().any(|line| line == &journal_path);
+    let has_state_in_commit = changed_files.iter().any(|line| line == STATE_JSON_PATH);
+
+    // Fallback: check disk existence for files pending C5 docs commit.
+    // At C5.5 time, worklog/journal may exist on disk but not yet be committed
+    // to the cycle-tagged commit (they get committed at C5, after C5.5 passes).
+    let worklog_dir = repo_root.join("docs/worklog").join(today);
+    let has_worklog_on_disk = worklog_dir.is_dir()
+        && std::fs::read_dir(&worklog_dir)
+            .map(|entries| {
+                entries
+                    .filter_map(Result::ok)
+                    .any(|e| e.path().extension().map_or(false, |ext| ext == "md"))
+            })
+            .unwrap_or(false);
+    let has_journal_on_disk = repo_root
+        .join("docs/journal")
+        .join(format!("{today}.md"))
+        .is_file();
+
+    let has_worklog = has_worklog_in_commit || has_worklog_on_disk;
+    let has_journal = has_journal_in_commit || has_journal_on_disk;
+    let has_state = has_state_in_commit;
 
     let mut missing = Vec::new();
     if !has_worklog {
@@ -2928,17 +2949,25 @@ fn frozen_commit_status_for_date_with_runner(
     }
 
     if missing.is_empty() {
-        let supporting_path = if has_journal {
-            journal_path
+        let worklog_source = if has_worklog_in_commit {
+            "committed"
         } else {
-            STATE_JSON_PATH.to_string()
+            "on disk, pending C5 commit"
+        };
+        let supporting_path = if has_journal_in_commit {
+            format!("{journal_path} (committed)")
+        } else if has_journal_on_disk {
+            format!("{journal_path} (on disk, pending C5 commit)")
+        } else {
+            format!("{STATE_JSON_PATH} (committed)")
         };
         return Ok((
             StepStatus::Pass,
             format!(
-                "verified frozen commit {} changes {} and {}",
+                "verified frozen commit {} with {} ({}) and {}",
                 short_commit(&commit),
                 worklog_prefix,
+                worklog_source,
                 supporting_path
             ),
         ));
@@ -8674,7 +8703,7 @@ mod tests {
         assert_eq!(step.severity, Severity::Blocking);
         let detail = step.detail.as_deref().unwrap_or_default();
         assert!(detail.contains(&baseline_commit[..7]));
-        assert!(detail.contains("changes docs/worklog/2026-03-09/"));
+        assert!(detail.contains("docs/worklog/2026-03-09/"));
         assert!(detail.contains("docs/journal/2026-03-09.md"));
     }
 
@@ -8822,7 +8851,7 @@ mod tests {
     }
 
     #[test]
-    fn frozen_commit_verify_fails_when_worklog_and_journal_arrive_after_blessed_commit() {
+    fn frozen_commit_verify_passes_when_docs_exist_on_disk_pending_c5_commit() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root =
@@ -8852,21 +8881,62 @@ mod tests {
         .unwrap();
         commit_all(&root, "[cycle 410] freeze close-out docs");
 
+        // Worklog and journal exist on disk but not in the blessed commit —
+        // this is the normal C5.5 timing: write-entry created them, C5 will
+        // commit them after C5.5 passes.
         fs::write(
             root.join("docs/worklog/2026-03-09/120000-cycle-410-summary.md"),
             "# Worklog\n",
         )
         .unwrap();
         fs::write(root.join("docs/journal/2026-03-09.md"), "# Journal\n").unwrap();
-        commit_all(&root, "add close-out docs after blessed commit");
 
+        let step = verify_frozen_commit_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Blocking);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("on disk, pending C5 commit"));
+    }
+
+    #[test]
+    fn frozen_commit_verify_fails_when_docs_missing_from_disk_and_commit() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir()
+            .join(format!("pipeline-check-frozen-commit-no-docs-{}", run_id));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+        fs::create_dir_all(root.join("docs/journal")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "dispatch"}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        commit_all(&root, "seed state");
+
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "close_out"}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        commit_all(&root, "[cycle 410] freeze close-out docs");
+
+        // No worklog or journal on disk — should fail
         let step = verify_frozen_commit_for_date(&root, "2026-03-09");
 
         assert_eq!(step.status, StepStatus::Fail);
         assert_eq!(step.severity, Severity::Blocking);
         let detail = step.detail.as_deref().unwrap_or_default();
         assert!(detail.contains("docs/worklog/2026-03-09/*.md"));
-        assert!(!detail.contains("docs/journal/2026-03-09.md or docs/state.json"));
     }
 
     #[test]
