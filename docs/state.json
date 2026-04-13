@@ -7668,9 +7668,10 @@
     2459
   ],
   "cycle_phase": {
+    "completed_at": "2026-04-13T03:25:03Z",
     "cycle": 484,
-    "phase": "close_out",
-    "phase_entered_at": "2026-04-13T03:18:15Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-04-13T03:25:03Z"
   },
   "cycles_since_last_forward_work": {
     "added_in_cycle": 411,
