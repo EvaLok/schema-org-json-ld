@@ -7476,6 +7476,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "write-entry: auto-derive chronic status + expand self-modifications range"
+    },
+    {
+      "dispatched_at": "2026-04-13T21:35:43Z",
+      "issue": 2483,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "record-dispatch: fix summary sync skip when session pre-recorded by dispatch-review"
     }
   ],
   "audit_dropped": [
@@ -8360,7 +8367,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2481 write-entry: auto-derive chronic status + expand self-modifications range (cycle 488)",
+  "dispatch_log_latest": "#2483 record-dispatch: fix summary sync skip when session pre-recorded by dispatch-review (cycle 488)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8631,13 +8638,13 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 19,
     "issue": 2480,
     "number": 488,
-    "summary": "1 dispatch, 1 merges",
-    "timestamp": "2026-04-13T21:34:33Z"
+    "summary": "2 dispatches, 1 merges",
+    "timestamp": "2026-04-13T21:35:43Z"
   },
   "last_eva_comment_check": "2026-04-13T21:17:33Z",
   "last_tool_audit_cycle": 403,
