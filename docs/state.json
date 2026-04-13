@@ -7460,6 +7460,13 @@
       "pr": 2476,
       "status": "merged",
       "title": "[Cycle Review] Cycle 486 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-04-13T10:10:23Z",
+      "issue": 2478,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 487 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -8338,7 +8345,7 @@
       "resolved_ref": "dropped: Behavioral finding (journal narrated incorrect dispatch capacity at cycle start). Root cause: free-f"
     }
   ],
-  "dispatch_log_latest": "#2475 [Cycle Review] Cycle 486 end-of-cycle review (cycle 486)",
+  "dispatch_log_latest": "#2478 [Cycle Review] Cycle 487 end-of-cycle review (cycle 487)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8609,7 +8616,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 19,
     "issue": 2477,
@@ -15127,7 +15134,7 @@
     ],
     "last_review_cycle": 486
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 487,
   "schema_status": {
     "directory_layout": {
