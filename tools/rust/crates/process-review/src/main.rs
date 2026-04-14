@@ -20,6 +20,7 @@ const VALID_FINDING_DISPOSITIONS: &[&str] = &[
     "verified_resolved",
     "ignored",
 ];
+const VALID_CHRONIC_RESPONSE_TYPES: &[&str] = &["structural-fix", "behavioral-fix", "recalibrate"];
 const BUILTIN_KNOWN_CATEGORIES: &[&str] = &[
     "complacency-audit",
     "data-integrity",
@@ -110,6 +111,14 @@ struct Cli {
     #[arg(long = "update-chronic-rationale")]
     update_chronic_rationale: Option<String>,
 
+    /// Create a chronic category entry in CATEGORY:RESPONSE_TYPE:VERIFICATION_CYCLE form
+    #[arg(long = "create-chronic-entry")]
+    create_chronic_entries: Vec<String>,
+
+    /// Optional human-readable rationale used for new chronic entries
+    #[arg(long = "create-chronic-rationale")]
+    create_chronic_rationale: Option<String>,
+
     /// Roll back chronic category refreshes in CATEGORY:PRIOR_VC:RATIONALE form
     #[arg(long = "rollback-chronic-category")]
     rollback_chronic_categories: Vec<String>,
@@ -181,14 +190,16 @@ fn main() {
 fn run(cli: Cli) -> Result<(), String> {
     let has_review_processing = cli.review_file.is_some();
     let has_deferral_update = !cli.drop_deferrals.is_empty() || !cli.resolve_deferrals.is_empty();
+    let has_chronic_create = !cli.create_chronic_entries.is_empty();
     let has_chronic_update = !cli.update_chronic_categories.is_empty();
     let has_chronic_rollback = !cli.rollback_chronic_categories.is_empty();
     if !has_review_processing
         && !has_deferral_update
+        && !has_chronic_create
         && !has_chronic_update
         && !has_chronic_rollback
     {
-        return Err("either --review-file, --drop-deferral, --resolve-deferral, --update-chronic-category, or --rollback-chronic-category must be provided".to_string());
+        return Err("either --review-file, --drop-deferral, --resolve-deferral, --create-chronic-entry, --update-chronic-category, or --rollback-chronic-category must be provided".to_string());
     }
 
     let mut state_value = read_state_value(&cli.repo_root)?;
@@ -259,6 +270,20 @@ fn run(cli: Cli) -> Result<(), String> {
         }
     }
 
+    let chronic_create_summary = if has_chronic_create {
+        let (summary, warnings) = create_chronic_category_responses(
+            &mut state_value,
+            &cli.create_chronic_entries,
+            current_cycle,
+            cli.create_chronic_rationale.as_deref(),
+        )?;
+        for warning in warnings {
+            eprintln!("{}", warning);
+        }
+        (summary.updated_entries > 0).then_some(summary)
+    } else {
+        None
+    };
     let chronic_update_summary = if has_chronic_update {
         Some(update_chronic_category_responses(
             &mut state_value,
@@ -284,6 +309,7 @@ fn run(cli: Cli) -> Result<(), String> {
         write_state_value(&cli.repo_root, &state_value)?;
         let commit_message = build_commit_message(
             review_summary.as_ref(),
+            chronic_create_summary.as_ref(),
             chronic_update_summary.as_ref(),
             chronic_rollback_summary.as_ref(),
             has_deferral_update,
@@ -304,6 +330,13 @@ fn run(cli: Cli) -> Result<(), String> {
         } else {
             println!("Categories: {}", review_summary.categories.join(", "));
         }
+    }
+    if let Some(chronic_create_summary) = chronic_create_summary.as_ref() {
+        println!(
+            "Created {} chronic_category_responses entries for categories: {}",
+            chronic_create_summary.updated_entries,
+            chronic_create_summary.categories.join(", ")
+        );
     }
     if let Some(chronic_update_summary) = chronic_update_summary.as_ref() {
         println!(
@@ -330,12 +363,14 @@ fn run(cli: Cli) -> Result<(), String> {
 
 fn build_commit_message(
     review_summary: Option<&ReviewRunSummary>,
+    chronic_create_summary: Option<&ChronicUpdateSummary>,
     chronic_update_summary: Option<&ChronicUpdateSummary>,
     chronic_rollback_summary: Option<&ChronicUpdateSummary>,
     has_deferral_update: bool,
     current_cycle: u64,
 ) -> String {
     if review_summary.is_none()
+        && chronic_create_summary.is_none()
         && chronic_update_summary.is_none()
         && chronic_rollback_summary.is_none()
         && has_deferral_update
@@ -346,21 +381,51 @@ fn build_commit_message(
         );
     }
     if review_summary.is_none()
+        && chronic_create_summary.is_none()
         && chronic_update_summary.is_none()
         && chronic_rollback_summary.is_none()
         && !has_deferral_update
     {
         return format!("state(process-review): no-op [cycle {}]", current_cycle);
     }
+    if review_summary.is_none()
+        && chronic_create_summary.is_some()
+        && chronic_update_summary.is_none()
+        && chronic_rollback_summary.is_none()
+        && !has_deferral_update
+    {
+        let categories = &chronic_create_summary
+            .expect("create summary presence already checked")
+            .categories;
+        return if categories.len() == 1 {
+            format!(
+                "state(process-review): create chronic entry {} [cycle {}]",
+                categories[0], current_cycle
+            )
+        } else {
+            format!(
+                "state(process-review): create chronic entries {} [cycle {}]",
+                categories.join(", "),
+                current_cycle
+            )
+        };
+    }
 
     let mut details = Vec::new();
     if let Some(review_summary) = review_summary {
         if chronic_update_summary.is_none()
             && chronic_rollback_summary.is_none()
+            && chronic_create_summary.is_none()
             && !has_deferral_update
         {
             details.push(format!("score {}/5", review_summary.complacency_score));
         }
+    }
+    if let Some(chronic_create_summary) = chronic_create_summary {
+        details.push(format!(
+            "created chronic entries {}",
+            chronic_create_summary.categories.join(", ")
+        ));
     }
     if let Some(chronic_update_summary) = chronic_update_summary {
         details.push(format!(
@@ -1117,6 +1182,130 @@ fn apply_patch(state: &mut Value, updates: &[PatchUpdate]) -> Result<(), String>
     Ok(())
 }
 
+fn parse_chronic_response_type(response_type_raw: &str) -> Result<String, String> {
+    let response_type = response_type_raw.trim();
+    if VALID_CHRONIC_RESPONSE_TYPES.contains(&response_type) {
+        Ok(response_type.to_string())
+    } else {
+        Err(format!(
+            "invalid --create-chronic-entry response type '{}': expected one of {}",
+            response_type_raw,
+            VALID_CHRONIC_RESPONSE_TYPES.join(", ")
+        ))
+    }
+}
+
+fn parse_create_chronic_entry(raw: &str) -> Result<(String, String, u64), String> {
+    let mut parts = raw.splitn(3, ':');
+    let category_raw = parts.next().unwrap_or_default();
+    let response_type_raw = parts.next().unwrap_or_default();
+    let verification_cycle_raw = parts.next().unwrap_or_default();
+    if category_raw.is_empty() || response_type_raw.is_empty() || verification_cycle_raw.is_empty()
+    {
+        return Err(format!(
+            "invalid --create-chronic-entry '{}': expected CATEGORY:RESPONSE_TYPE:VERIFICATION_CYCLE",
+            raw
+        ));
+    }
+
+    let category = parse_chronic_category(category_raw, "--create-chronic-entry")?;
+    let response_type = parse_chronic_response_type(response_type_raw)?;
+    let verification_cycle = verification_cycle_raw.parse::<u64>().map_err(|_| {
+        format!(
+            "invalid --create-chronic-entry verification cycle '{}': expected an unsigned integer",
+            verification_cycle_raw
+        )
+    })?;
+
+    Ok((category, response_type, verification_cycle))
+}
+
+fn create_chronic_rationale(verification_cycle: u64, rationale_override: Option<&str>) -> String {
+    rationale_override
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToString::to_string)
+        .unwrap_or_else(|| {
+            format!(
+                "Created in cycle {} per audit EvaLok/schema-org-json-ld#417 sub-categorization adoption",
+                verification_cycle
+            )
+        })
+}
+
+fn create_chronic_category_responses(
+    state: &mut Value,
+    entries_to_create: &[String],
+    current_cycle: u64,
+    rationale_override: Option<&str>,
+) -> Result<(ChronicUpdateSummary, Vec<String>), String> {
+    let parsed_entries = entries_to_create
+        .iter()
+        .map(|raw| parse_create_chronic_entry(raw))
+        .collect::<Result<Vec<_>, _>>()?;
+    let entries = state
+        .pointer_mut("/review_agent/chronic_category_responses/entries")
+        .and_then(Value::as_array_mut)
+        .ok_or_else(|| {
+            "missing /review_agent/chronic_category_responses/entries array in docs/state.json"
+                .to_string()
+        })?;
+
+    let mut known_categories = BTreeSet::new();
+    for (entry_index, entry) in entries.iter().enumerate() {
+        let entry_object = entry.as_object().ok_or_else(|| {
+            format!(
+                "review_agent.chronic_category_responses.entries[{}] must be an object",
+                entry_index
+            )
+        })?;
+        if let Some(category) = entry_object.get("category").and_then(Value::as_str) {
+            known_categories.insert(category.to_string());
+        }
+    }
+
+    let mut warnings = Vec::new();
+    let mut created_categories = Vec::new();
+    for (category, response_type, verification_cycle) in parsed_entries {
+        if known_categories.contains(&category) {
+            warnings.push(format!(
+                "warning: chronic_category_responses entry already exists for category '{}'; skipping create",
+                category
+            ));
+            continue;
+        }
+
+        let rationale = create_chronic_rationale(verification_cycle, rationale_override);
+        entries.push(json!({
+            "added_cycle": verification_cycle,
+            "category": category.clone(),
+            "chosen_path": response_type.clone(),
+            "response_type": response_type,
+            "rationale": rationale,
+            "updated_cycle": verification_cycle,
+            "verification_cycle": verification_cycle
+        }));
+        known_categories.insert(category.clone());
+        created_categories.push(category);
+    }
+
+    if !created_categories.is_empty() {
+        set_value_at_pointer(
+            state,
+            "/field_inventory/fields/review_agent.chronic_category_responses/last_refreshed",
+            json!(format!("cycle {}", current_cycle)),
+        )?;
+    }
+
+    Ok((
+        ChronicUpdateSummary {
+            updated_entries: created_categories.len(),
+            categories: created_categories,
+        },
+        warnings,
+    ))
+}
+
 fn update_chronic_category_responses(
     state: &mut Value,
     categories: &[String],
@@ -1698,6 +1887,8 @@ mod tests {
         assert!(help.contains("--update-chronic-pr"));
         assert!(help.contains("--update-chronic-cycle"));
         assert!(help.contains("--update-chronic-rationale"));
+        assert!(help.contains("--create-chronic-entry"));
+        assert!(help.contains("--create-chronic-rationale"));
         assert!(help.contains("--rollback-chronic-category"));
     }
 
@@ -1804,6 +1995,27 @@ mod tests {
             vec!["worklog-accuracy/scope-labels".to_string()]
         );
         assert_eq!(cli.update_chronic_prs, vec![2266]);
+    }
+
+    #[test]
+    fn cli_accepts_create_chronic_without_review_file() {
+        let cli = Cli::parse_from([
+            "process-review",
+            "--create-chronic-entry",
+            "worklog-accuracy/scope-boundary:structural-fix:492",
+            "--create-chronic-rationale",
+            "custom rationale",
+        ]);
+
+        assert_eq!(cli.review_file, None);
+        assert_eq!(
+            cli.create_chronic_entries,
+            vec!["worklog-accuracy/scope-boundary:structural-fix:492".to_string()]
+        );
+        assert_eq!(
+            cli.create_chronic_rationale.as_deref(),
+            Some("custom rationale")
+        );
     }
 
     #[test]
@@ -3267,6 +3479,71 @@ mod tests {
     }
 
     #[test]
+    fn create_chronic_entry_creates_new_entry_with_correct_fields() {
+        let mut state = chronic_state_fixture(json!([]));
+
+        let (summary, warnings) = create_chronic_category_responses(
+            &mut state,
+            &["worklog-accuracy/scope-boundary:structural-fix:492".to_string()],
+            500,
+            None,
+        )
+        .expect("create should succeed");
+
+        assert!(warnings.is_empty());
+        assert_eq!(summary.updated_entries, 1);
+        assert_eq!(
+            summary.categories,
+            vec!["worklog-accuracy/scope-boundary".to_string()]
+        );
+        let entry = &state["review_agent"]["chronic_category_responses"]["entries"][0];
+        assert_eq!(entry["added_cycle"], json!(492));
+        assert_eq!(entry["category"], json!("worklog-accuracy/scope-boundary"));
+        assert_eq!(entry["chosen_path"], json!("structural-fix"));
+        assert_eq!(entry["response_type"], json!("structural-fix"));
+        assert_eq!(
+            entry["rationale"],
+            json!(
+                "Created in cycle 492 per audit EvaLok/schema-org-json-ld#417 sub-categorization adoption"
+            )
+        );
+        assert_eq!(entry["updated_cycle"], json!(492));
+        assert_eq!(entry["verification_cycle"], json!(492));
+        assert_eq!(
+            state["field_inventory"]["fields"]["review_agent.chronic_category_responses"]
+                ["last_refreshed"],
+            json!("cycle 500")
+        );
+    }
+
+    #[test]
+    fn create_chronic_entry_duplicate_warns_and_skips() {
+        let original_state = chronic_state_fixture(json!([{
+            "added_cycle": 492,
+            "category": "worklog-accuracy/scope-boundary",
+            "chosen_path": "structural-fix",
+            "rationale": "existing",
+            "updated_cycle": 492,
+            "verification_cycle": 492
+        }]));
+        let mut state = original_state.clone();
+
+        let (summary, warnings) = create_chronic_category_responses(
+            &mut state,
+            &["worklog-accuracy/scope-boundary:structural-fix:492".to_string()],
+            500,
+            None,
+        )
+        .expect("duplicate create should succeed with warning");
+
+        assert_eq!(summary.updated_entries, 0);
+        assert!(summary.categories.is_empty());
+        assert_eq!(warnings.len(), 1);
+        assert!(warnings[0].contains("worklog-accuracy/scope-boundary"));
+        assert_eq!(state, original_state);
+    }
+
+    #[test]
     fn update_chronic_category_bumps_verification_cycle() {
         let mut state = chronic_state_fixture(json!([{
             "category": "foo",
@@ -3763,6 +4040,99 @@ mod tests {
         let subject =
             String::from_utf8(commit_subject.stdout).expect("git log output should be UTF-8");
         assert!(subject.contains("state(process-review): chronic rollback"));
+    }
+
+    #[test]
+    fn run_accepts_create_chronic_without_review_file() {
+        let repo_root = write_temp_state_repo(chronic_state_fixture(json!([])));
+        init_temp_git_repo(&repo_root);
+
+        let cli = Cli::parse_from([
+            "process-review",
+            "--repo-root",
+            repo_root.to_str().expect("repo path should be valid UTF-8"),
+            "--create-chronic-entry",
+            "worklog-accuracy/scope-boundary:structural-fix:492",
+        ]);
+
+        run(cli).expect("create-only run should succeed");
+
+        let updated_state = read_state_value(&repo_root).expect("state should be readable");
+        assert_eq!(
+            updated_state.pointer("/review_agent/chronic_category_responses/entries/0/category"),
+            Some(&json!("worklog-accuracy/scope-boundary"))
+        );
+        assert_eq!(
+            updated_state.pointer("/review_agent/chronic_category_responses/entries/0/chosen_path"),
+            Some(&json!("structural-fix"))
+        );
+        assert_eq!(
+            updated_state
+                .pointer("/review_agent/chronic_category_responses/entries/0/response_type"),
+            Some(&json!("structural-fix"))
+        );
+        assert_eq!(
+            updated_state
+                .pointer("/review_agent/chronic_category_responses/entries/0/verification_cycle"),
+            Some(&json!(492))
+        );
+        let commit_subject = std::process::Command::new("git")
+            .arg("-C")
+            .arg(&repo_root)
+            .args(["log", "-1", "--pretty=%s"])
+            .output()
+            .expect("git log should execute");
+        assert!(commit_subject.status.success(), "git log should succeed");
+        let subject =
+            String::from_utf8(commit_subject.stdout).expect("git log output should be UTF-8");
+        assert_eq!(
+            subject.trim(),
+            "state(process-review): create chronic entry worklog-accuracy/scope-boundary [cycle 500]"
+        );
+    }
+
+    #[test]
+    fn run_accepts_create_chronic_alongside_update_chronic() {
+        let repo_root = write_temp_state_repo(chronic_state_fixture(json!([{
+            "category": "worklog-accuracy",
+            "chosen_path": "structural-fix",
+            "rationale": "existing",
+            "updated_cycle": 448,
+            "verification_cycle": 448
+        }])));
+        init_temp_git_repo(&repo_root);
+
+        let cli = Cli::parse_from([
+            "process-review",
+            "--repo-root",
+            repo_root.to_str().expect("repo path should be valid UTF-8"),
+            "--create-chronic-entry",
+            "worklog-accuracy/scope-boundary:structural-fix:492",
+            "--update-chronic-category",
+            "worklog-accuracy",
+            "--update-chronic-pr",
+            "2266",
+            "--update-chronic-cycle",
+            "500",
+        ]);
+
+        run(cli).expect("combined create/update run should succeed");
+
+        let updated_state = read_state_value(&repo_root).expect("state should be readable");
+        assert_eq!(
+            updated_state
+                .pointer("/review_agent/chronic_category_responses/entries/0/verification_cycle"),
+            Some(&json!(500))
+        );
+        assert_eq!(
+            updated_state.pointer("/review_agent/chronic_category_responses/entries/1/category"),
+            Some(&json!("worklog-accuracy/scope-boundary"))
+        );
+        assert_eq!(
+            updated_state
+                .pointer("/review_agent/chronic_category_responses/entries/1/verification_cycle"),
+            Some(&json!(492))
+        );
     }
 
     #[test]
