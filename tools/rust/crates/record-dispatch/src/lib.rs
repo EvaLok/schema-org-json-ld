@@ -1014,6 +1014,54 @@ mod tests {
     }
 
     #[test]
+    fn sync_last_cycle_summary_after_dispatch_updates_prerecorded_complete_phase_summary() {
+        let mut state = sample_state();
+        state["cycle_phase"] = json!({
+            "cycle": 164,
+            "phase": "complete",
+            "phase_entered_at": "2026-03-07T12:30:00Z"
+        });
+        state["last_cycle"]["summary"] = json!(
+            "0 dispatches, 2 merges (PR EvaLok/schema-org-json-ld#100, PR EvaLok/schema-org-json-ld#101)"
+        );
+        state["agent_sessions"]
+            .as_array_mut()
+            .expect("agent_sessions array")
+            .push(json!({
+                "issue": 603,
+                "title": "Pre-recorded by dispatch-review",
+                "dispatched_at": "2026-03-07T12:45:00Z",
+                "model": default_test_model(),
+                "status": "in_flight"
+            }));
+        let model = default_test_model();
+        let patch = build_dispatch_patch(
+            &state,
+            164,
+            603,
+            "Example dispatch",
+            &model,
+            "2026-03-07T13:00:00Z",
+        )
+        .expect("patch should build");
+
+        apply_dispatch_patch(&mut state, &patch).expect("patch should merge existing session");
+        let sessions = state["agent_sessions"]
+            .as_array()
+            .expect("agent_sessions should remain an array");
+        assert_eq!(sessions.len(), 3);
+        sync_last_cycle_summary_after_dispatch(&mut state, patch.current_cycle)
+            .expect("summary sync should succeed");
+
+        assert_eq!(
+            state["last_cycle"]["summary"],
+            json!(
+                "1 dispatch, 2 merges (PR EvaLok/schema-org-json-ld#100, PR EvaLok/schema-org-json-ld#101)"
+            )
+        );
+    }
+
+    #[test]
     fn sync_last_cycle_summary_after_dispatch_preserves_unparseable_last_cycle_summary() {
         let mut state = sample_state();
         state["last_cycle"]["summary"] = json!("custom summary");

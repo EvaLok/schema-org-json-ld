@@ -107,6 +107,7 @@ fn run_checks(repo_root: &Path, state: &StateJson) -> Report {
         check_in_flight_sessions_consistency(state),
         check_forward_work_counter_consistency(state),
         check_pending_audit_deadlines(state),
+        check_dispatch_created_has_sessions(state),
         check_agent_sessions_reconciliation(state),
         check_backfill_session_title_pr_match(state),
         check_eva_input_overlap(state),
@@ -1577,6 +1578,112 @@ fn check_agent_sessions_reconciliation(state: &StateJson) -> CheckResult {
     }
 }
 
+fn check_dispatch_created_has_sessions(state: &StateJson) -> CheckResult {
+    let history = match get_review_history(state) {
+        Some(value) => value,
+        None => {
+            return warn(
+                "dispatch_created_has_sessions",
+                "missing field: review_agent.history",
+            )
+        }
+    };
+
+    let mut dispatch_created_counts: HashMap<(i64, String), usize> = HashMap::new();
+    let mut history_by_cycle: HashMap<i64, &Value> = HashMap::new();
+
+    for (entry_index, entry) in history.iter().enumerate() {
+        let cycle = match entry.get("cycle").and_then(Value::as_i64) {
+            Some(value) => value,
+            None => {
+                return warn(
+                    "dispatch_created_has_sessions",
+                    format!("missing field: review_agent.history[{}].cycle", entry_index),
+                )
+            }
+        };
+        history_by_cycle.insert(cycle, entry);
+
+        let finding_dispositions = match entry.get("finding_dispositions").and_then(Value::as_array)
+        {
+            Some(value) => value,
+            None => continue,
+        };
+
+        for (finding_index, disposition) in finding_dispositions.iter().enumerate() {
+            if disposition.get("disposition").and_then(Value::as_str) != Some("dispatch_created") {
+                continue;
+            }
+            let category = match disposition.get("category").and_then(Value::as_str) {
+                Some(value) if !value.trim().is_empty() => value.trim(),
+                _ => {
+                    return warn(
+                        "dispatch_created_has_sessions",
+                        format!(
+                        "missing field: review_agent.history[{}].finding_dispositions[{}].category",
+                        entry_index, finding_index
+                    ),
+                    )
+                }
+            };
+            *dispatch_created_counts
+                .entry((cycle, category.to_string()))
+                .or_insert(0) += 1;
+        }
+    }
+
+    if dispatch_created_counts.is_empty() {
+        return pass("dispatch_created_has_sessions");
+    }
+
+    let mut session_counts: HashMap<(i64, String), usize> = HashMap::new();
+    for session in &state.agent_sessions {
+        for finding_ref in session.addresses_finding_refs() {
+            let Some((cycle, finding_index)) = parse_finding_ref(finding_ref) else {
+                continue;
+            };
+            let Some(entry) = history_by_cycle.get(&cycle) else {
+                continue;
+            };
+            let Some(category) = entry
+                .get("finding_dispositions")
+                .and_then(Value::as_array)
+                .and_then(|dispositions| dispositions.get(finding_index))
+                .and_then(|disposition| disposition.get("category"))
+                .and_then(Value::as_str)
+            else {
+                continue;
+            };
+            *session_counts
+                .entry((cycle, category.to_string()))
+                .or_insert(0) += 1;
+        }
+    }
+
+    let mut unmatched = dispatch_created_counts
+        .into_iter()
+        .filter_map(|((cycle, category), disposition_count)| {
+            let session_count = session_counts
+                .get(&(cycle, category.clone()))
+                .copied()
+                .unwrap_or(0);
+            (session_count < disposition_count).then(|| {
+                format!(
+                    "cycle {} / {}: dispatch_created={} but matching agent_sessions={}",
+                    cycle, category, disposition_count, session_count
+                )
+            })
+        })
+        .collect::<Vec<_>>();
+    unmatched.sort();
+
+    if unmatched.is_empty() {
+        pass("dispatch_created_has_sessions")
+    } else {
+        warn("dispatch_created_has_sessions", unmatched.join("; "))
+    }
+}
+
 fn check_backfill_session_title_pr_match(state: &StateJson) -> CheckResult {
     let mut failures = Vec::new();
 
@@ -1730,6 +1837,20 @@ fn extract_backfill_pr_number(title: &str) -> Option<i64> {
     }
 }
 
+fn parse_finding_ref(value: &str) -> Option<(i64, usize)> {
+    let (cycle, index) = value.split_once(':')?;
+    let cycle = cycle.parse::<i64>().ok()?;
+    let raw_index = index.parse::<usize>().ok()?;
+    if cycle <= 0 {
+        return None;
+    }
+    // Current dispatch tooling writes 1-based finding refs. When raw_index == 0 we are
+    // looking at a legacy zero-based ref still present in older docs/state.json
+    // sessions, so accept both shapes to keep invariant reconciliation historical.
+    let zero_based_index = if raw_index == 0 { 0 } else { raw_index - 1 };
+    Some((cycle, zero_based_index))
+}
+
 fn print_human_report(report: &Report) {
     println!("State Invariants Check");
     println!();
@@ -1768,6 +1889,10 @@ fn print_human_report(report: &Report) {
             "forward_work counter consistency",
         ),
         ("pending_audit_deadlines", "pending audit deadlines"),
+        (
+            "dispatch_created_has_sessions",
+            "dispatch_created has sessions",
+        ),
         (
             "agent_sessions_reconciliation",
             "agent_sessions reconciliation",
@@ -2880,6 +3005,75 @@ mod tests {
     }
 
     #[test]
+    fn dispatch_created_has_sessions_warns_when_dispatches_are_unmatched() {
+        let mut value = minimal_valid_state();
+        value["review_agent"]["history"] = json!([
+            {
+                "cycle": 10,
+                "finding_count": 1,
+                "actioned": 0,
+                "deferred": 0,
+                "ignored": 0,
+                "dispatch_created": 1,
+                "complacency_score": 2,
+                "categories": ["state-integrity"],
+                "finding_dispositions": [
+                    {
+                        "category": "state-integrity",
+                        "disposition": "dispatch_created"
+                    }
+                ]
+            }
+        ]);
+        value["review_agent"]["last_review_cycle"] = json!(10);
+
+        let state = state_from_json(value);
+        let check = check_dispatch_created_has_sessions(&state);
+
+        assert_eq!(check.status, CheckStatus::Warn);
+        let details = check.details.as_deref().unwrap_or_default();
+        assert!(details.contains("cycle 10 / state-integrity"));
+        assert!(details.contains("dispatch_created=1"));
+        assert!(details.contains("matching agent_sessions=0"));
+    }
+
+    #[test]
+    fn dispatch_created_has_sessions_accepts_legacy_zero_based_finding_refs() {
+        let mut value = minimal_valid_state();
+        value["review_agent"]["history"] = json!([
+            {
+                "cycle": 10,
+                "finding_count": 1,
+                "actioned": 0,
+                "deferred": 0,
+                "ignored": 0,
+                "dispatch_created": 1,
+                "complacency_score": 2,
+                "categories": ["state-integrity"],
+                "finding_dispositions": [
+                    {
+                        "category": "state-integrity",
+                        "disposition": "dispatch_created"
+                    }
+                ]
+            }
+        ]);
+        value["review_agent"]["last_review_cycle"] = json!(10);
+        value["agent_sessions"] = json!([
+            {
+                "issue": 300,
+                "status": "merged",
+                "addresses_finding": "10:0"
+            }
+        ]);
+
+        let state = state_from_json(value);
+        let check = check_dispatch_created_has_sessions(&state);
+
+        assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
     fn agent_sessions_reconciliation_counts_only_non_null_prs() {
         let mut value = minimal_valid_state();
         value["agent_sessions"][1]["pr"] = Value::Null;
@@ -3089,10 +3283,14 @@ mod tests {
         );
         assert_eq!(
             report.checks.get(18).map(|check| check.name),
-            Some("agent_sessions_reconciliation")
+            Some("dispatch_created_has_sessions")
         );
         assert_eq!(
             report.checks.get(19).map(|check| check.name),
+            Some("agent_sessions_reconciliation")
+        );
+        assert_eq!(
+            report.checks.get(20).map(|check| check.name),
             Some("backfill_session_title_pr_match")
         );
         assert_eq!(
