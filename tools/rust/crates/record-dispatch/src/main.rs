@@ -137,17 +137,14 @@ fn run_with_runner(
         &model,
         &dispatched_at,
     )?;
-    let (skipped_existing_error, updated_existing) = match apply_dispatch_patch(
-        &mut state_value,
-        &patch,
-    ) {
-        Ok(updated_existing) => (false, updated_existing),
+    let skipped_existing_error = match apply_dispatch_patch(&mut state_value, &patch) {
+        Ok(_updated_existing) => false,
         Err(error) if error.contains("already contains an entry for issue") => {
             eprintln!(
                 "Note: session for #{} already recorded (likely by dispatch-review); skipping append, applying phase transition only",
                 cli.issue
             );
-            (true, false)
+            true
         }
         Err(error) => return Err(error),
     };
@@ -161,9 +158,7 @@ fn run_with_runner(
         false
     };
     restore_sealed_last_cycle(&mut state_value, sealed_last_cycle)?;
-    if (!skipped_existing_error && !updated_existing) || phase_transitioned {
-        sync_last_cycle_summary_after_dispatch(&mut state_value, patch.current_cycle)?;
-    }
+    sync_last_cycle_summary_after_dispatch(&mut state_value, patch.current_cycle)?;
     write_state_value(&cli.repo_root, &state_value)?;
 
     let commit_message = dispatch_commit_message(cli.issue, patch.current_cycle);
@@ -693,11 +688,10 @@ mod tests {
 
     #[test]
     fn sync_runs_when_session_prerecorded_and_phase_transitions() {
-        // Reproduces the close_out bug: dispatch-review pre-records a session for an
-        // issue as "in_flight", then record-dispatch runs for the same issue during
-        // close_out phase. apply_dispatch_patch merges the existing session and returns
-        // updated_existing = true, so the old guard (!skipped && !updated) skipped
-        // sync. The fix adds || phase_transitioned so sync always runs on close_out.
+        // dispatch-review can pre-record a live session before record-dispatch runs.
+        // Even when record-dispatch merges that existing session instead of appending
+        // a new one, it must still re-sync last_cycle.summary after restoring the
+        // sealed close_out snapshot.
         let repo = TempRepo::new();
         repo.init_with_phase("close_out");
         let mut initial_state = repo.read_state();
@@ -740,10 +734,10 @@ mod tests {
     }
 
     #[test]
-    fn sync_skipped_when_session_prerecorded_and_no_phase_transition() {
-        // Verify that work-phase re-dispatches (updated_existing = true,
-        // phase_transitioned = false) do NOT increment last_cycle.summary,
-        // preventing double-counting.
+    fn sync_runs_when_session_prerecorded_without_phase_transition() {
+        // The summary sync is safe to run unconditionally after restoring the sealed
+        // snapshot, including when a live session was pre-recorded and the phase does
+        // not change.
         let repo = TempRepo::new();
         repo.init_with_phase("work");
         let mut initial_state = repo.read_state();
@@ -780,8 +774,7 @@ mod tests {
         let state = repo.read_state();
         assert_eq!(
             state.pointer("/last_cycle/summary"),
-            Some(&serde_json::json!("0 dispatches, 1 merges (PR #700)")),
-            "summary must not be incremented for work-phase re-dispatches"
+            Some(&serde_json::json!("1 dispatch, 1 merges (PR #700)"))
         );
         assert_eq!(
             state.pointer("/cycle_phase/phase"),
