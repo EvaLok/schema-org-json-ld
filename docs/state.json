@@ -7518,9 +7518,9 @@
     {
       "dispatched_at": "2026-04-14T03:25:52Z",
       "issue": 2496,
-      "merged_at": "2026-04-14T05:09:45Z",
+      "merged_at": "2026-04-14T05:09:56Z",
       "model": "gpt-5.4",
-      "pr": 2495,
+      "pr": 2497,
       "status": "merged",
       "title": "[Cycle Review] Cycle 490 end-of-cycle review"
     }
