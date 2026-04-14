@@ -8654,7 +8654,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 491"
+        "last_refreshed": "cycle 493"
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
@@ -8953,6 +8953,24 @@
           "root_cause": "Tool code is merged with tests that only exercise hand-written fixtures of docs/state.json shape rather than copies of the real file. Bugs in real-world shape mismatches are invisible to CI because CI runs the same synthetic fixtures. Finding taxonomy: cycle 473 F1 (write-entry --auto-review-summary matching on fabricated fields), plus four earlier appearances in the 6-cycle window. Structurally identical to the `code-quality` chronic (added_cycle 246) but focused on the testing sub-pattern rather than default-path gating.",
           "updated_cycle": 486,
           "verification_cycle": 486
+        },
+        {
+          "added_cycle": 493,
+          "category": "worklog-accuracy/scope-boundary",
+          "chosen_path": "structural-fix",
+          "rationale": "Sub-category entries per audit #417 sub-categorization adoption",
+          "response_type": "structural-fix",
+          "updated_cycle": 493,
+          "verification_cycle": 493
+        },
+        {
+          "added_cycle": 493,
+          "category": "state-integrity/last-cycle-summary-stale",
+          "chosen_path": "structural-fix",
+          "rationale": "Sub-category entries per audit #417 sub-categorization adoption",
+          "response_type": "structural-fix",
+          "updated_cycle": 493,
+          "verification_cycle": 493
         }
       ]
     },
