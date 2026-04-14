@@ -1,12 +1,12 @@
 ## 1. [worklog-accuracy] The published worklog froze a pre-dispatch snapshot as the cycle's final state
 
-**File**: docs/worklog/2026-04-14/233131-cycle-495-audit-420-partial-acceptance-rec2-diagnosed-inert-spec-pattern-surfaced.md:5-9,28-30
-**Evidence**: The worklog says `No new dispatches`, reports `In-flight agent sessions: 2`, and publishes `Pipeline status: PASS (3 warnings)`. But the cycle timeline shows the docs snapshot was committed in `b7fdeb62` at 23:34:36Z and was followed five seconds later by `9386d74` (`state(record-dispatch): #2521 dispatched [cycle 495]`). The current committed state now records `dispatch_log_latest = "#2521 ... (cycle 495)"`, `in_flight_sessions = 3`, and `last_cycle.summary = "0 dispatches, 0 merges"` (`docs/state.json:8506,8777-8782`), so the published worklog is a stale pre-dispatch snapshot presented as the cycle's final state.
+**File**: docs/worklog/2026-04-14/233131-cycle-495-audit-420-partial-acceptance-rec2-diagnosed-inert-spec-pattern-surfaced.md:9,28-29
+**Evidence**: The worklog says `No new dispatches`, reports `In-flight agent sessions: 2`, and publishes `Pipeline status: PASS (3 warnings)`. But the cycle timeline shows the docs snapshot was committed in `b7fdeb62` at 23:34:36Z and was followed five seconds later by `9386d74` (`state(record-dispatch): #2521 dispatched [cycle 495]`). The current committed state now records cycle-495 review dispatch `#2521`, `in_flight_sessions = 3`, and `last_cycle.summary = "0 dispatches, 0 merges"` (`docs/state.json:8506,8777,8782`), so the published worklog is a stale pre-dispatch snapshot presented as the cycle's final state.
 **Recommendation**: Do not freeze/publish the worklog before all same-cycle state mutations are complete. Either move review `record-dispatch` before worklog generation or regenerate the worklog after late same-cycle dispatches.
 
 ## 2. [state-integrity] Same-cycle review dispatch left `last_cycle.summary` inconsistent with the dispatch ledger
 
-**File**: docs/state.json:8506,8777-8782
+**File**: docs/state.json:8506,8777,8782
 **Evidence**: `dispatch_log_latest` now points to `#2521 [Cycle Review] Cycle 495 end-of-cycle review (cycle 495)`, and `in_flight_sessions` is `3`, but `last_cycle.summary` still says `0 dispatches, 0 merges`. Running `bash tools/state-invariants` on the current checkout fails invariant 8 with: `last_cycle.summary reports 0 dispatches for cycle 495, but dispatch_log_latest also reports cycle 495 activity`. The cycle therefore closed with a self-contradictory state snapshot, not just a wording issue.
 **Recommendation**: Make same-cycle `record-dispatch` update `last_cycle.summary` (or block such mutations after `cycle-complete`) and add a regression test covering the real `cycle-complete -> docs commit -> review record-dispatch` flow.
 
