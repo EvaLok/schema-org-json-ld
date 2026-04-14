@@ -626,8 +626,10 @@ fn load_state_at_or_before_timestamp(
     let payload = read_file_from_commit(repo_root, &commit, "docs/state.json")?;
     serde_json::from_str(&payload).map(Some).map_err(|error| {
         format!(
-            "failed to parse docs/state.json at commit {}: {}",
-            commit, error
+            "failed to parse docs/state.json at commit {} in {}: {}",
+            commit,
+            repo_root.display(),
+            error
         )
     })
 }
@@ -2883,6 +2885,8 @@ fn derive_chronic_status_from_state(repo_root: &Path) -> Result<Option<String>, 
     }
 
     parsed_entries.sort_by(|left, right| {
+        // Keep categories grouped alphabetically while preferring the most recently
+        // updated parent-level entry when duplicates need to be collapsed.
         left.full_category
             .cmp(&right.full_category)
             .then_with(|| right.updated_cycle_sort.cmp(&left.updated_cycle_sort))
@@ -2942,6 +2946,8 @@ struct ChronicStatusEntry {
 }
 
 fn split_chronic_category(category: &str) -> (&str, Option<&str>) {
+    // Treat malformed edge cases like "category/" or "/sub-category" as parent-only
+    // entries so journal rendering stays fail-safe instead of inventing a blank column.
     match category.split_once('/') {
         Some((parent, sub_category)) if !parent.is_empty() && !sub_category.is_empty() => {
             (parent, Some(sub_category))
