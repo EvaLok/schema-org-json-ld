@@ -7539,6 +7539,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Fix record-dispatch last_cycle sync + dispatch_created invariant"
+    },
+    {
+      "dispatched_at": "2026-04-14T07:54:10Z",
+      "issue": 2506,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add create-chronic-entry flag to process-review"
     }
   ],
   "audit_dropped": [
@@ -8451,7 +8458,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2504 Fix record-dispatch last_cycle sync + dispatch_created invariant (cycle 492)",
+  "dispatch_log_latest": "#2506 Add create-chronic-entry flag to process-review (cycle 492)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8722,13 +8729,13 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 22,
     "issue": 2501,
     "number": 492,
-    "summary": "1 dispatch, 1 merges",
-    "timestamp": "2026-04-14T07:51:44Z"
+    "summary": "2 dispatches, 1 merges",
+    "timestamp": "2026-04-14T07:54:10Z"
   },
   "last_eva_comment_check": "2026-04-14T07:33:55Z",
   "last_tool_audit_cycle": 403,
