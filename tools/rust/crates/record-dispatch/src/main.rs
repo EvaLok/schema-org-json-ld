@@ -137,7 +137,7 @@ fn run_with_runner(
         &model,
         &dispatched_at,
     )?;
-    let skipped_existing_error = match apply_dispatch_patch(&mut state_value, &patch) {
+    let duplicate_session_error = match apply_dispatch_patch(&mut state_value, &patch) {
         Ok(_) => false,
         Err(error) if error.contains("already contains an entry for issue") => {
             eprintln!(
@@ -163,7 +163,7 @@ fn run_with_runner(
 
     let commit_message = dispatch_commit_message(cli.issue, patch.current_cycle);
     let receipt = commit_state_json(&cli.repo_root, &commit_message)?;
-    if skipped_existing_error {
+    if duplicate_session_error {
         if phase_transitioned {
             println!(
                 "Phase transitioned to complete (session already recorded for #{}). (receipt: {})",

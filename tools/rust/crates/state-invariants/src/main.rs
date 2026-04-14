@@ -1844,9 +1844,9 @@ fn parse_finding_ref(value: &str) -> Option<(i64, usize)> {
     if cycle <= 0 {
         return None;
     }
-    // Current dispatch tooling writes 1-based finding refs, but docs/state.json still
-    // contains older zero-based refs from legacy sessions. Accept both so invariants
-    // reconcile historical state instead of silently dropping those sessions.
+    // Current dispatch tooling writes 1-based finding refs. When raw_index == 0 we are
+    // looking at a legacy zero-based ref still present in older docs/state.json
+    // sessions, so accept both shapes to keep invariant reconciliation historical.
     let zero_based_index = if raw_index == 0 { 0 } else { raw_index - 1 };
     Some((cycle, zero_based_index))
 }

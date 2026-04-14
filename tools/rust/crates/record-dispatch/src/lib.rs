@@ -1045,10 +1045,11 @@ mod tests {
         )
         .expect("patch should build");
 
-        let updated_existing =
-            apply_dispatch_patch(&mut state, &patch).expect("patch should merge existing session");
-
-        assert!(updated_existing);
+        apply_dispatch_patch(&mut state, &patch).expect("patch should merge existing session");
+        let sessions = state["agent_sessions"]
+            .as_array()
+            .expect("agent_sessions should remain an array");
+        assert_eq!(sessions.len(), 3);
         sync_last_cycle_summary_after_dispatch(&mut state, patch.current_cycle)
             .expect("summary sync should succeed");
 
