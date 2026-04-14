@@ -7568,6 +7568,13 @@
       "model": "gpt-5.4",
       "status": "closed",
       "title": "[Cycle Review] Cycle 493 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-04-14T21:46:34Z",
+      "issue": 2514,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix record-dispatch: real-flow integration test + summary-sync regression for late review dispatches"
     }
   ],
   "audit_dropped": [
@@ -8482,7 +8489,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2511 [Cycle Review] Cycle 493 end-of-cycle review (cycle 493)",
+  "dispatch_log_latest": "#2514 Fix record-dispatch: real-flow integration test + summary-sync regression for late review dispatches (cycle 494)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8605,7 +8612,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 493"
+        "last_refreshed": "cycle 494"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -8753,13 +8760,13 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 18,
     "issue": 2513,
     "number": 494,
-    "summary": "0 dispatches, 3 merges (PR #2505, PR #2507, PR #2509)",
-    "timestamp": "2026-04-14T21:17:55Z"
+    "summary": "1 dispatch, 3 merges (PR #2505, PR #2507, PR #2509)",
+    "timestamp": "2026-04-14T21:46:34Z"
   },
   "last_eva_comment_check": "2026-04-14T21:17:55Z",
   "last_tool_audit_cycle": 403,
@@ -15501,7 +15508,7 @@
     ],
     "last_review_cycle": 493
   },
-  "review_dispatch_consecutive": 2,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 493,
   "schema_status": {
     "directory_layout": {
