@@ -1844,6 +1844,9 @@ fn parse_finding_ref(value: &str) -> Option<(i64, usize)> {
     if cycle <= 0 {
         return None;
     }
+    // Current dispatch tooling writes 1-based finding refs, but docs/state.json still
+    // contains older zero-based refs from legacy sessions. Accept both so invariants
+    // reconcile historical state instead of silently dropping those sessions.
     let zero_based_index = if raw_index == 0 { 0 } else { raw_index - 1 };
     Some((cycle, zero_based_index))
 }
@@ -3032,6 +3035,42 @@ mod tests {
         assert!(details.contains("cycle 10 / state-integrity"));
         assert!(details.contains("dispatch_created=1"));
         assert!(details.contains("matching agent_sessions=0"));
+    }
+
+    #[test]
+    fn dispatch_created_has_sessions_accepts_legacy_zero_based_finding_refs() {
+        let mut value = minimal_valid_state();
+        value["review_agent"]["history"] = json!([
+            {
+                "cycle": 10,
+                "finding_count": 1,
+                "actioned": 0,
+                "deferred": 0,
+                "ignored": 0,
+                "dispatch_created": 1,
+                "complacency_score": 2,
+                "categories": ["state-integrity"],
+                "finding_dispositions": [
+                    {
+                        "category": "state-integrity",
+                        "disposition": "dispatch_created"
+                    }
+                ]
+            }
+        ]);
+        value["review_agent"]["last_review_cycle"] = json!(10);
+        value["agent_sessions"] = json!([
+            {
+                "issue": 300,
+                "status": "merged",
+                "addresses_finding": "10:0"
+            }
+        ]);
+
+        let state = state_from_json(value);
+        let check = check_dispatch_created_has_sessions(&state);
+
+        assert_eq!(check.status, CheckStatus::Pass);
     }
 
     #[test]

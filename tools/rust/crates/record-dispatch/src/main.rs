@@ -138,7 +138,7 @@ fn run_with_runner(
         &dispatched_at,
     )?;
     let skipped_existing_error = match apply_dispatch_patch(&mut state_value, &patch) {
-        Ok(_updated_existing) => false,
+        Ok(_) => false,
         Err(error) if error.contains("already contains an entry for issue") => {
             eprintln!(
                 "Note: session for #{} already recorded (likely by dispatch-review); skipping append, applying phase transition only",
