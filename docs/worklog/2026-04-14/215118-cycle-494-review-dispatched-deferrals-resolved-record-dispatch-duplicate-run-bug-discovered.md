@@ -48,3 +48,6 @@
 | process-review | e0c2f06 | [e0c2f06](https://github.com/EvaLok/schema-org-json-ld/commit/e0c2f064bf343eed20fdcd53717d4e3573533613) |
 | process-review | 6924d76 | [6924d76](https://github.com/EvaLok/schema-org-json-ld/commit/6924d7675833e33e87e0683b2d4afc34cd31cf36) |
 | record-dispatch | 631ab48 | [631ab48](https://github.com/EvaLok/schema-org-json-ld/commit/631ab486548d2ace6e2139dbeae0b0e60dd02796) |
+| record-dispatch (duplicate, reverted) | 46b1bb0 | [46b1bb0](https://github.com/EvaLok/schema-org-json-ld/commit/46b1bb0938ed3900dad302c0720842fb6a629c1f) |
+| revert | faa4b98 | [faa4b98](https://github.com/EvaLok/schema-org-json-ld/commit/faa4b98e2e710fb06a58e276b56e7ab8cd6e68eb) |
+| cycle-complete | 2bd8cdf | [2bd8cdf](https://github.com/EvaLok/schema-org-json-ld/commit/2bd8cdf4bfacb28ab5a4c975a9361d3cf63d53fe) |
