@@ -7546,6 +7546,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Add create-chronic-entry flag to process-review"
+    },
+    {
+      "dispatched_at": "2026-04-14T08:08:41Z",
+      "issue": 2508,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 492 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -8458,7 +8465,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2506 Add create-chronic-entry flag to process-review (cycle 492)",
+  "dispatch_log_latest": "#2508 [Cycle Review] Cycle 492 end-of-cycle review (cycle 492)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -8729,7 +8736,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 3,
   "last_cycle": {
     "duration_minutes": 6,
     "issue": 2501,
@@ -15395,7 +15402,7 @@
     ],
     "last_review_cycle": 491
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 492,
   "schema_status": {
     "directory_layout": {
