@@ -487,6 +487,14 @@ fn resolve_worklog_input_for_cycle(
 
     if has_inline_worklog_content(args) {
         let state = load_worklog_state(repo_root, requires_worklog_state(args))?;
+        let receipt_scope_boundary = if args.auto_receipts {
+            cycle_receipt_boundary(repo_root, cycle, state.as_ref())?
+        } else {
+            None
+        };
+        let bounded_current_state =
+            load_bounded_worklog_state(repo_root, state.as_ref(), receipt_scope_boundary.as_ref())?;
+        let current_state_source = bounded_current_state.as_ref().or(state.as_ref());
         let input = WorklogInput {
             what_was_done: args.done.clone(),
             deferred_findings: Vec::new(),
@@ -498,24 +506,41 @@ fn resolve_worklog_input_for_cycle(
                 &parse_issue_processed(&args.issue_processed)?,
             ),
             current_state: CurrentState {
-                in_flight_sessions: state_extra_in_flight_sessions(state.as_ref())?,
-                pipeline_status: resolve_pipeline_status(args, repo_root, cycle, state.as_ref())?,
-                prior_gate_failures: resolve_prior_gate_failures(args, repo_root, state.as_ref())?,
+                in_flight_sessions: state_extra_in_flight_sessions(current_state_source)?,
+                pipeline_status: resolve_pipeline_status(
+                    args,
+                    repo_root,
+                    cycle,
+                    current_state_source,
+                )?,
+                prior_gate_failures: resolve_prior_gate_failures(
+                    args,
+                    repo_root,
+                    current_state_source,
+                )?,
                 publish_gate: match &args.publish_gate {
                     Some(value) => value.clone(),
-                    None => state_publish_gate_status(state.as_ref())?,
+                    None => state_publish_gate_status(current_state_source)?,
                 },
-                preliminary: worklog_state_is_preliminary(state.as_ref(), cycle),
+                preliminary: worklog_state_is_preliminary(current_state_source, cycle),
             },
             next_steps: resolve_next_steps(args, state.as_ref())?,
             receipts: parse_receipts(&args.receipt)?,
             receipt_note: None,
         };
-        validate_worklog_state_placeholders(&input, state.as_ref())?;
+        validate_worklog_state_placeholders(&input, current_state_source)?;
         return Ok(input);
     }
 
     let state = load_worklog_state(repo_root, true)?;
+    let receipt_scope_boundary = if args.auto_receipts {
+        cycle_receipt_boundary(repo_root, cycle, state.as_ref())?
+    } else {
+        None
+    };
+    let bounded_current_state =
+        load_bounded_worklog_state(repo_root, state.as_ref(), receipt_scope_boundary.as_ref())?;
+    let current_state_source = bounded_current_state.as_ref().or(state.as_ref());
     let input = WorklogInput {
         what_was_done: Vec::new(),
         deferred_findings: Vec::new(),
@@ -524,17 +549,21 @@ fn resolve_worklog_input_for_cycle(
         prs_reviewed: Vec::new(),
         issues_processed: Vec::new(),
         current_state: CurrentState {
-            in_flight_sessions: state_extra_in_flight_sessions(state.as_ref())?,
-            pipeline_status: resolve_pipeline_status(args, repo_root, cycle, state.as_ref())?,
-            prior_gate_failures: resolve_prior_gate_failures(args, repo_root, state.as_ref())?,
-            publish_gate: state_publish_gate_status(state.as_ref())?,
-            preliminary: worklog_state_is_preliminary(state.as_ref(), cycle),
+            in_flight_sessions: state_extra_in_flight_sessions(current_state_source)?,
+            pipeline_status: resolve_pipeline_status(args, repo_root, cycle, current_state_source)?,
+            prior_gate_failures: resolve_prior_gate_failures(
+                args,
+                repo_root,
+                current_state_source,
+            )?,
+            publish_gate: state_publish_gate_status(current_state_source)?,
+            preliminary: worklog_state_is_preliminary(current_state_source, cycle),
         },
         next_steps: resolve_next_steps(args, state.as_ref())?,
         receipts: Vec::new(),
         receipt_note: None,
     };
-    validate_worklog_state_placeholders(&input, state.as_ref())?;
+    validate_worklog_state_placeholders(&input, current_state_source)?;
     Ok(input)
 }
 
@@ -569,6 +598,106 @@ fn load_worklog_state(repo_root: &Path, required: bool) -> Result<Option<StateJs
     serde_json::from_value(value)
         .map(Some)
         .map_err(|error| format!("failed to parse docs/state.json: {}", error))
+}
+
+fn load_bounded_worklog_state(
+    repo_root: &Path,
+    live_state: Option<&StateJson>,
+    receipt_scope_boundary: Option<&ReceiptScopeBoundary>,
+) -> Result<Option<StateJson>, String> {
+    let Some(boundary) = receipt_scope_boundary else {
+        return Ok(None);
+    };
+    if live_state.is_none() {
+        return Ok(None);
+    }
+    load_state_at_or_before_timestamp(repo_root, boundary.timestamp.as_str())
+}
+
+fn load_state_at_or_before_timestamp(
+    repo_root: &Path,
+    timestamp: &str,
+) -> Result<Option<StateJson>, String> {
+    parse_timestamp(timestamp, "docs/state.json scope timestamp")?;
+    let commit = latest_commit_for_path_at_or_before(repo_root, "docs/state.json", timestamp)?;
+    let Some(commit) = commit else {
+        return Ok(None);
+    };
+    let payload = read_file_from_commit(repo_root, &commit, "docs/state.json")?;
+    serde_json::from_str(&payload).map(Some).map_err(|error| {
+        format!(
+            "failed to parse docs/state.json at commit {}: {}",
+            commit, error
+        )
+    })
+}
+
+fn latest_commit_for_path_at_or_before(
+    repo_root: &Path,
+    path: &str,
+    timestamp: &str,
+) -> Result<Option<String>, String> {
+    let output = ProcessCommand::new("git")
+        .arg("log")
+        .arg("--format=%H")
+        .arg("--max-count=1")
+        .arg("--before")
+        .arg(timestamp)
+        .arg("--")
+        .arg(path)
+        .current_dir(repo_root)
+        .output()
+        .map_err(|error| {
+            format!(
+                "failed to inspect {} history in {}: {}",
+                path,
+                repo_root.display(),
+                error
+            )
+        })?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(format!("git log for {} failed: {}", path, stderr));
+    }
+    let commit = String::from_utf8(output.stdout)
+        .map_err(|error| format!("failed to decode git log output for {}: {}", path, error))?
+        .trim()
+        .to_string();
+    if commit.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(commit))
+    }
+}
+
+fn read_file_from_commit(repo_root: &Path, commit: &str, path: &str) -> Result<String, String> {
+    let output = ProcessCommand::new("git")
+        .arg("show")
+        .arg(format!("{}:{}", commit, path))
+        .current_dir(repo_root)
+        .output()
+        .map_err(|error| {
+            format!(
+                "failed to read {} from commit {} in {}: {}",
+                path,
+                commit,
+                repo_root.display(),
+                error
+            )
+        })?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(format!(
+            "git show for {} at commit {} failed: {}",
+            path, commit, stderr
+        ));
+    }
+    String::from_utf8(output.stdout).map_err(|error| {
+        format!(
+            "failed to decode {} from commit {}: {}",
+            path, commit, error
+        )
+    })
 }
 
 fn state_publish_gate_status(state: Option<&StateJson>) -> Result<String, String> {
@@ -2724,8 +2853,8 @@ fn derive_chronic_status_from_state(repo_root: &Path) -> Result<Option<String>, 
         _ => return Ok(None),
     };
 
-    let mut rows = Vec::new();
-    for entry in &entries {
+    let mut parsed_entries = Vec::new();
+    for (index, entry) in entries.iter().enumerate() {
         let Some(category) = entry
             .get("category")
             .and_then(Value::as_str)
@@ -2733,33 +2862,109 @@ fn derive_chronic_status_from_state(repo_root: &Path) -> Result<Option<String>, 
         else {
             continue;
         };
-        let verification_cycle = match entry.get("verification_cycle") {
-            Some(Value::Number(n)) => n.to_string(),
-            Some(Value::String(s)) => s.clone(),
-            Some(Value::Null) | None => "—".to_string(),
-            _ => "—".to_string(),
-        };
+        let (parent_category, sub_category) = split_chronic_category(category);
         let status = entry
             .get("chosen_path")
             .and_then(Value::as_str)
             .unwrap_or("—");
-        rows.push(format!(
-            "| {} | {} | {} |",
-            category, verification_cycle, status
-        ));
+        parsed_entries.push(ChronicStatusEntry {
+            full_category: category.to_string(),
+            parent_category: parent_category.to_string(),
+            sub_category: sub_category.map(ToOwned::to_owned),
+            verification_cycle: chronic_cycle_display(entry.get("verification_cycle")),
+            updated_cycle_sort: chronic_cycle_sort_key(entry.get("updated_cycle")),
+            status: status.to_string(),
+            original_index: index,
+        });
     }
 
-    if rows.is_empty() {
+    if parsed_entries.is_empty() {
         return Ok(None);
+    }
+
+    parsed_entries.sort_by(|left, right| {
+        left.full_category
+            .cmp(&right.full_category)
+            .then_with(|| right.updated_cycle_sort.cmp(&left.updated_cycle_sort))
+            .then_with(|| left.original_index.cmp(&right.original_index))
+    });
+
+    let has_sub_category = parsed_entries
+        .iter()
+        .any(|entry| entry.sub_category.is_some());
+    let mut seen_parent_categories = HashSet::new();
+    let mut rows = Vec::new();
+    for entry in parsed_entries {
+        if entry.sub_category.is_none()
+            && !seen_parent_categories.insert(entry.parent_category.clone())
+        {
+            continue;
+        }
+        rows.push(if has_sub_category {
+            format!(
+                "| {} | {} | {} | {} |",
+                entry.parent_category,
+                entry.sub_category.unwrap_or_else(|| "—".to_string()),
+                entry.verification_cycle,
+                entry.status
+            )
+        } else {
+            format!(
+                "| {} | {} | {} |",
+                entry.parent_category, entry.verification_cycle, entry.status
+            )
+        });
     }
 
     let mut lines = Vec::new();
     lines.push("### Chronic category status".to_string());
     lines.push(String::new());
-    lines.push("| Category | Verification cycle | Status |".to_string());
-    lines.push("|---|---|---|".to_string());
+    if has_sub_category {
+        lines.push("| Category | Sub-category | Verification cycle | Status |".to_string());
+        lines.push("|---|---|---|---|".to_string());
+    } else {
+        lines.push("| Category | Verification cycle | Status |".to_string());
+        lines.push("|---|---|---|".to_string());
+    }
     lines.extend(rows);
     Ok(Some(lines.join("\n")))
+}
+
+#[derive(Debug)]
+struct ChronicStatusEntry {
+    full_category: String,
+    parent_category: String,
+    sub_category: Option<String>,
+    verification_cycle: String,
+    updated_cycle_sort: Option<u64>,
+    status: String,
+    original_index: usize,
+}
+
+fn split_chronic_category(category: &str) -> (&str, Option<&str>) {
+    match category.split_once('/') {
+        Some((parent, sub_category)) if !parent.is_empty() && !sub_category.is_empty() => {
+            (parent, Some(sub_category))
+        }
+        _ => (category, None),
+    }
+}
+
+fn chronic_cycle_display(value: Option<&Value>) -> String {
+    match value {
+        Some(Value::Number(n)) => n.to_string(),
+        Some(Value::String(s)) => s.clone(),
+        Some(Value::Null) | None => "—".to_string(),
+        _ => "—".to_string(),
+    }
+}
+
+fn chronic_cycle_sort_key(value: Option<&Value>) -> Option<u64> {
+    match value {
+        Some(Value::Number(n)) => n.as_u64(),
+        Some(Value::String(s)) => s.trim().parse().ok(),
+        _ => None,
+    }
 }
 
 fn parse_receipts(values: &[String]) -> Result<Vec<CommitReceipt>, String> {
@@ -4680,6 +4885,109 @@ mod tests {
         assert!(!content.contains(LEGACY_STATE_DISCLAIMER));
         assert!(content.contains("- **Pipeline status**: PASS (6/6)"));
         assert!(!content.contains("post-dispatch"));
+    }
+
+    #[test]
+    fn worklog_auto_receipts_uses_frozen_cycle_state_at_scope_boundary() {
+        let repo_root = TempRepoDir::new("worklog-auto-receipts-frozen-cycle-state");
+        init_git_repo(&repo_root.path);
+        let start_receipt = create_git_commit_at(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154 [cycle 154]",
+            "2026-03-06T01:00:00Z",
+        );
+        let complete_receipt = create_git_commit_at(
+            &repo_root.path,
+            "notes/complete.txt",
+            "complete\n",
+            "state(cycle-complete): complete cycle 154 [cycle 154]",
+            "2026-03-06T02:00:00Z",
+        );
+        create_git_commit_at(
+            &repo_root.path,
+            "docs/state.json",
+            r#"{
+                "last_cycle": {
+                    "number": 154,
+                    "timestamp": "2026-03-06T02:30:00Z"
+                },
+                "cycle_phase": {
+                    "cycle": 154,
+                    "completed_at": "2026-03-06T02:00:00Z"
+                },
+                "in_flight_sessions": 1,
+                "tool_pipeline": {
+                    "status": "phase_5_active",
+                    "c5_5_gate": {
+                        "cycle": 154,
+                        "status": "PASS",
+                        "needs_reverify": false,
+                        "pipeline_summary": "PASS (6/6)"
+                    }
+                },
+                "publish_gate": {
+                    "status": "ready"
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 101,
+                        "title": "First active dispatch",
+                        "status": "in_flight"
+                    }
+                ]
+            }"#,
+            "state(pipeline): record C5.5 PASS for cycle 154 [cycle 154]",
+            "2026-03-06T02:30:00Z",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}},
+                    {{"step":"cycle-complete","receipt":"{complete_receipt}","commit":"state(cycle-complete): complete cycle 154 [cycle 154]"}}
+                ]"#
+            ),
+        );
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {
+                    "number": 154,
+                    "timestamp": "2026-03-06T02:30:00Z"
+                },
+                "cycle_phase": {
+                    "cycle": 154,
+                    "completed_at": "2026-03-06T02:00:00Z"
+                },
+                "in_flight_sessions": 0,
+                "tool_pipeline": {
+                    "status": "phase_5_active",
+                    "c5_5_gate": {
+                        "cycle": 154,
+                        "status": "PASS",
+                        "needs_reverify": false,
+                        "pipeline_summary": "PASS (6/6)"
+                    }
+                },
+                "publish_gate": {
+                    "status": "published"
+                },
+                "agent_sessions": []
+            }"#,
+        );
+
+        let mut args = worklog_args("Frozen cycle state");
+        args.auto_receipts = true;
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains("- **In-flight agent sessions**: 1"));
+        assert!(content.contains("- **Pipeline status**: PASS (6/6)"));
+        assert!(content.contains("- **Publish gate**: ready"));
+        assert!(!content.contains("- **Publish gate**: published"));
     }
 
     #[test]
@@ -8538,6 +8846,96 @@ Reflective log for the schema-org-json-ld orchestrator.
             .find("### Concrete commitments for next cycle")
             .unwrap();
         assert!(chronic_pos < commitments_pos);
+    }
+
+    #[test]
+    fn journal_auto_chronic_status_deduplicates_parent_categories_to_latest_updated_cycle() {
+        let repo_root = TempRepoDir::new("journal-auto-chronic-status-dedup");
+        fs::create_dir_all(repo_root.path.join("docs")).unwrap();
+        write_root_journal_index(&repo_root.path, "");
+        write_worklog_fixture(
+            &repo_root.path,
+            fixed_now(),
+            154,
+            "Chronic status dedup test",
+        );
+        fs::write(
+            repo_root.path.join("docs/state.json"),
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {"cycle": 154},
+                "review_agent": {
+                    "history": [],
+                    "chronic_category_responses": {
+                        "entries": [
+                            {"category": "journal-quality", "updated_cycle": 488, "verification_cycle": 487, "chosen_path": "confirmed-holding"},
+                            {"category": "journal-quality", "updated_cycle": 489, "verification_cycle": 489, "chosen_path": "accepted-new"},
+                            {"category": "worklog-accuracy", "updated_cycle": 487, "verification_cycle": 487, "chosen_path": "confirmed-holding"}
+                        ]
+                    }
+                }
+            }"#,
+        )
+        .unwrap();
+
+        let mut args = journal_args("Chronic status dedup test");
+        args.auto_chronic_status = true;
+        args.commitment = vec!["Ship docs-lint.".to_string()];
+        args.previous_commitment_status = Some("no_prior_commitment".to_string());
+        args.previous_commitment_detail = Some("No prior commitment recorded.".to_string());
+
+        let path = execute_journal(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains("| Category | Verification cycle | Status |"));
+        assert_eq!(content.matches("| journal-quality |").count(), 1);
+        assert!(content.contains("| journal-quality | 489 | accepted-new |"));
+        assert!(!content.contains("| journal-quality | 487 | confirmed-holding |"));
+    }
+
+    #[test]
+    fn journal_auto_chronic_status_shows_sub_category_column_when_present() {
+        let repo_root = TempRepoDir::new("journal-auto-chronic-status-sub-category");
+        fs::create_dir_all(repo_root.path.join("docs")).unwrap();
+        write_root_journal_index(&repo_root.path, "");
+        write_worklog_fixture(
+            &repo_root.path,
+            fixed_now(),
+            154,
+            "Chronic status sub-category test",
+        );
+        fs::write(
+            repo_root.path.join("docs/state.json"),
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {"cycle": 154},
+                "review_agent": {
+                    "history": [],
+                    "chronic_category_responses": {
+                        "entries": [
+                            {"category": "journal-quality/structure", "updated_cycle": 489, "verification_cycle": 489, "chosen_path": "accepted-new"},
+                            {"category": "journal-quality/citations", "updated_cycle": 488, "verification_cycle": 487, "chosen_path": "confirmed-holding"},
+                            {"category": "worklog-accuracy", "updated_cycle": 487, "verification_cycle": 487, "chosen_path": "confirmed-holding"}
+                        ]
+                    }
+                }
+            }"#,
+        )
+        .unwrap();
+
+        let mut args = journal_args("Chronic status sub-category test");
+        args.auto_chronic_status = true;
+        args.commitment = vec!["Ship docs-lint.".to_string()];
+        args.previous_commitment_status = Some("no_prior_commitment".to_string());
+        args.previous_commitment_detail = Some("No prior commitment recorded.".to_string());
+
+        let path = execute_journal(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+
+        assert!(content.contains("| Category | Sub-category | Verification cycle | Status |"));
+        assert!(content.contains("| journal-quality | citations | 487 | confirmed-holding |"));
+        assert!(content.contains("| journal-quality | structure | 489 | accepted-new |"));
+        assert!(content.contains("| worklog-accuracy | — | 487 | confirmed-holding |"));
     }
 
     #[test]
