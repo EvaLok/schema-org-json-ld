@@ -311,10 +311,31 @@
 **Recommendation**: concrete action
         ]]></template>
         <rule>Category tag MUST appear in heading inside square brackets.</rule>
+        <rule>When a finding matches a known sub-category, use the sub-category
+          label (e.g., [worklog-accuracy/scope-boundary]) instead of the parent
+          category. This enables targeted chronic-category tracking.</rule>
         <rule>Complacency score (1-5) justified with evidence.</rule>
         <scoring-cap>If cycle overrode any FAIL/blocking pipeline gate, max score = 3/5.</scoring-cap>
         <depth-preference>Three deeply investigated findings with evidence beat ten surface observations.</depth-preference>
       </output-format>
+
+      <sub-category-taxonomy>
+        <note>Use sub-categories when a finding matches one of these known patterns.
+          New sub-categories may be introduced when a parent category has distinct
+          recurring failure modes.</note>
+        <sub name="worklog-accuracy/scope-boundary">Worklog pipeline status or cycle-state
+          derived from wrong snapshot (e.g., pre-freeze vs post-freeze mismatch)</sub>
+        <sub name="worklog-accuracy/dispatch-ledger-gap">Dispatch claimed in worklog but
+          absent from agent_sessions or receipt table</sub>
+        <sub name="state-integrity/last-cycle-summary-stale">last_cycle.summary not updated
+          after post-cycle-complete dispatch or merge</sub>
+        <sub name="state-integrity/field-inventory-drift">field_inventory freshness markers
+          lag behind actual field modifications</sub>
+        <sub name="review-evidence/marker-advancement">verification_cycle bumped without
+          corresponding review events or structural fix evidence</sub>
+        <sub name="process-adherence/disposition-accuracy">Finding disposition (e.g.,
+          dispatch_created) does not match actual actions taken</sub>
+      </sub-category-taxonomy>
 
       <stabilization-overlay condition="stabilization mode active" position="before-adversarial-mandate">
         OBSERVATION MODE (ADR 0011): Log all findings in standard format.
