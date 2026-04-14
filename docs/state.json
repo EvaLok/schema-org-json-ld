@@ -8657,7 +8657,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 493"
+        "last_refreshed": "cycle 494"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -15463,9 +15463,39 @@
         "ignored": 0,
         "note": "Cycle 492 review: 4 findings, all deferred. F1 (state-integrity): PR #2505 merged but addresses summary sync, not note-text inconsistency — note-text sync needs follow-up. F2 (worklog-accuracy): structural fix needed in write-entry to derive disposition summary from post-dispatch state. F3 (journal-quality): close-out re-verification of commitment grading needed — behavioral + structural. F4 (complacency-detection): narrative overstatement — behavioral fix (accurate language in future journals). Complacency 3/5.",
         "review_issue": 2508
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "code-change-quality",
+          "journal-quality",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 3,
+        "cycle": 493,
+        "deferred": 2,
+        "dispatch_created": 1,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "code-change-quality",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "deferred"
+          }
+        ],
+        "ignored": 0,
+        "note": "F1 (code-change-quality) dispatched as #2514 (real-flow integration test + summary-sync regression). F2 (worklog-accuracy) and F3 (journal-quality) share the same root cause (late-cycle review dispatch creates state divergence after worklog freeze) — deferred pending #2514 fix.",
+        "review_issue": 2511
       }
     ],
-    "last_review_cycle": 492
+    "last_review_cycle": 493
   },
   "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 493,
