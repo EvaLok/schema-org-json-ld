@@ -21,6 +21,8 @@ const VALID_FINDING_DISPOSITIONS: &[&str] = &[
     "ignored",
 ];
 const VALID_CHRONIC_RESPONSE_TYPES: &[&str] = &["structural-fix", "behavioral-fix", "recalibrate"];
+const DEFAULT_CREATE_CHRONIC_RATIONALE_SUFFIX: &str =
+    "EvaLok/schema-org-json-ld#417 sub-categorization adoption";
 const BUILTIN_KNOWN_CATEGORIES: &[&str] = &[
     "complacency-audit",
     "data-integrity",
@@ -1227,8 +1229,8 @@ fn create_chronic_rationale(verification_cycle: u64, rationale_override: Option<
         .map(ToString::to_string)
         .unwrap_or_else(|| {
             format!(
-                "Created in cycle {} per audit EvaLok/schema-org-json-ld#417 sub-categorization adoption",
-                verification_cycle
+                "Created in cycle {} per audit {}",
+                verification_cycle, DEFAULT_CREATE_CHRONIC_RATIONALE_SUFFIX
             )
         })
 }
@@ -1276,11 +1278,12 @@ fn create_chronic_category_responses(
         }
 
         let rationale = create_chronic_rationale(verification_cycle, rationale_override);
+        let response_type_value = Value::String(response_type);
         entries.push(json!({
             "added_cycle": verification_cycle,
             "category": category.clone(),
-            "chosen_path": response_type.clone(),
-            "response_type": response_type,
+            "chosen_path": response_type_value.clone(),
+            "response_type": response_type_value,
             "rationale": rationale,
             "updated_cycle": verification_cycle,
             "verification_cycle": verification_cycle
