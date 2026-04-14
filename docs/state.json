@@ -8396,7 +8396,8 @@
       "category": "state-integrity",
       "deadline_cycle": 492,
       "deferred_cycle": 487,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "refreshed-chronic-entry-cycle-490-with-PR-2456-and-PR-2464"
     },
     {
       "category": "journal-quality",
