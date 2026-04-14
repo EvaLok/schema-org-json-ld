@@ -8600,7 +8600,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 490"
+        "last_refreshed": "cycle 491"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -15294,9 +15294,39 @@
         "ignored": 0,
         "note": "F1 worklog-accuracy: recurring scope boundary defect, needs write-entry structural fix. F2 code-quality: dispatch_created via #2489/PR #2490 sub-category support. F3 journal-quality: behavioral finding about downgrading blocking warnings.",
         "review_issue": 2491
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "review-evidence",
+          "state-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 490,
+        "deferred": 1,
+        "dispatch_created": 2,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "state-integrity",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred"
+          },
+          {
+            "category": "review-evidence",
+            "disposition": "dispatch_created"
+          }
+        ],
+        "ignored": 0,
+        "note": "F1+F3 dispatches planned for record-dispatch summary sync and review-evidence verification gating. F2 deferred: scope boundary fix (PR #2495 merged this cycle) partially addresses but text labeling needs separate fix.",
+        "review_issue": 2496
       }
     ],
-    "last_review_cycle": 489
+    "last_review_cycle": 490
   },
   "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 490,
