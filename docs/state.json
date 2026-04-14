@@ -8760,13 +8760,13 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 18,
     "issue": 2513,
     "number": 494,
-    "summary": "1 dispatch, 3 merges (PR #2505, PR #2507, PR #2509)",
-    "timestamp": "2026-04-14T21:46:34Z"
+    "summary": "2 dispatches, 3 merges (PR #2505, PR #2507, PR #2509)",
+    "timestamp": "2026-04-14T21:47:24Z"
   },
   "last_eva_comment_check": "2026-04-14T21:17:55Z",
   "last_tool_audit_cycle": 403,
