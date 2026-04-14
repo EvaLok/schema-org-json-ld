@@ -8457,13 +8457,15 @@
       "category": "journal-quality",
       "deadline_cycle": 493,
       "deferred_cycle": 488,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "#2514"
     },
     {
       "category": "worklog-accuracy",
       "deadline_cycle": 493,
       "deferred_cycle": 488,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "#2514"
     },
     {
       "category": "process-adherence",
