@@ -876,6 +876,22 @@ fn parse_cycle_marker(value: &str) -> Option<i64> {
     value.strip_prefix("cycle ")?.parse::<i64>().ok()
 }
 
+fn chronic_category_matches_response(response_category: &str, parent_category: &str) -> bool {
+    response_category == parent_category
+        || response_category
+            .strip_prefix(parent_category)
+            .is_some_and(|suffix| suffix.starts_with('/'))
+}
+
+fn has_chronic_response(responses: &[Value], parent_category: &str) -> bool {
+    responses.iter().any(|entry| {
+        entry
+            .get("category")
+            .and_then(Value::as_str)
+            .is_some_and(|category| chronic_category_matches_response(category, parent_category))
+    })
+}
+
 fn check_chronic_category_responses_freshness(state: &StateJson) -> CheckResult {
     let review_agent = match state.extra.get("review_agent") {
         Some(value) => value,
@@ -996,17 +1012,11 @@ fn check_chronic_categories(state: &StateJson) -> CheckResult {
         .and_then(|v| v.get("entries"))
         .and_then(Value::as_array);
 
-    let response_categories: HashSet<String> = match responses {
-        Some(entries) => entries
-            .iter()
-            .filter_map(|e| e.get("category").and_then(Value::as_str).map(String::from))
-            .collect(),
-        None => HashSet::new(),
-    };
+    let response_entries = responses.map(Vec::as_slice).unwrap_or(&[]);
 
     let mut untracked: Vec<String> = Vec::new();
     for (cat, count) in &chronic {
-        if !response_categories.contains(cat.as_str()) {
+        if !has_chronic_response(response_entries, cat.as_str()) {
             untracked.push(format!("{} ({}x)", cat, count));
         }
     }
@@ -2407,6 +2417,71 @@ mod tests {
         let state = state_from_json(value);
         let check = check_chronic_categories(&state);
         assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn chronic_categories_pass_when_parent_is_covered_by_subcategory_response() {
+        let mut value = minimal_valid_state();
+        let mut history = Vec::new();
+        for i in 1..=6 {
+            history.push(json!({
+                "cycle": i,
+                "finding_count": 2,
+                "actioned": 1,
+                "deferred": 0,
+                "ignored": 1,
+                "complacency_score": 3,
+                "categories": ["worklog-accuracy"]
+            }));
+        }
+        value["review_agent"]["history"] = json!(history);
+        value["review_agent"]["last_review_cycle"] = json!(6);
+        value["review_agent"]["chronic_category_responses"] = json!({
+            "entries": [{
+                "category": "worklog-accuracy/scope-labels",
+                "root_cause": "test",
+                "chosen_path": "fix"
+            }]
+        });
+
+        let state = state_from_json(value);
+        let check = check_chronic_categories(&state);
+        assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn chronic_categories_fail_when_only_unrelated_subcategory_response_exists() {
+        let mut value = minimal_valid_state();
+        let mut history = Vec::new();
+        for i in 1..=6 {
+            history.push(json!({
+                "cycle": i,
+                "finding_count": 2,
+                "actioned": 1,
+                "deferred": 0,
+                "ignored": 1,
+                "complacency_score": 3,
+                "categories": ["worklog-accuracy"]
+            }));
+        }
+        value["review_agent"]["history"] = json!(history);
+        value["review_agent"]["last_review_cycle"] = json!(6);
+        value["review_agent"]["chronic_category_responses"] = json!({
+            "entries": [{
+                "category": "journal-quality/commitment-followthrough",
+                "root_cause": "test",
+                "chosen_path": "fix"
+            }]
+        });
+
+        let state = state_from_json(value);
+        let check = check_chronic_categories(&state);
+        assert_eq!(check.status, CheckStatus::Fail);
+        assert!(check
+            .details
+            .as_deref()
+            .unwrap_or_default()
+            .contains("worklog-accuracy"));
     }
 
     #[test]

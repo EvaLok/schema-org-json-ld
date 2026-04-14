@@ -583,7 +583,7 @@ fn chronic_response_categories(value: &Value) -> BTreeSet<String> {
         .into_iter()
         .flatten()
         .filter_map(|entry| entry.get("category").and_then(Value::as_str))
-        .filter_map(normalize_category)
+        .filter_map(normalize_chronic_category)
         .collect()
 }
 
@@ -921,6 +921,59 @@ fn normalize_category(category: &str) -> Option<String> {
     }
 }
 
+fn split_chronic_category(category: &str) -> Result<Vec<&str>, String> {
+    let parts = category.split('/').collect::<Vec<_>>();
+    match parts.len() {
+        1 => {
+            if parts[0].trim().is_empty() {
+                Err("empty category".to_string())
+            } else {
+                Ok(parts)
+            }
+        }
+        2 => {
+            if parts[0].trim().is_empty() || parts[1].trim().is_empty() {
+                Err("empty segment in sub-category".to_string())
+            } else {
+                Ok(parts)
+            }
+        }
+        _ => Err(format!(
+            "category '{}' has too many segments (max 1 slash)",
+            category
+        )),
+    }
+}
+
+fn validate_chronic_category_format(category: &str) -> Result<(), String> {
+    split_chronic_category(category).map(|_| ())
+}
+
+fn normalize_chronic_category(category: &str) -> Option<String> {
+    let parts = split_chronic_category(category)
+        .ok()?
+        .into_iter()
+        .map(normalize_category)
+        .collect::<Option<Vec<_>>>()?;
+    Some(parts.join("/"))
+}
+
+fn parse_chronic_category(category_raw: &str, flag_name: &str) -> Result<String, String> {
+    validate_chronic_category_format(category_raw).map_err(|reason| {
+        format!(
+            "invalid {} category '{}': {}",
+            flag_name, category_raw, reason
+        )
+    })?;
+
+    normalize_chronic_category(category_raw).ok_or_else(|| {
+        format!(
+            "invalid {} category '{}': category segments must normalize to a non-empty slug",
+            flag_name, category_raw
+        )
+    })
+}
+
 fn strip_hash_heading_prefix(line: &str) -> &str {
     match line.strip_prefix("## ") {
         Some(remainder)
@@ -1071,7 +1124,10 @@ fn update_chronic_category_responses(
     cycle: u64,
     rationale_text: Option<&str>,
 ) -> Result<ChronicUpdateSummary, String> {
-    let requested_categories = categories.iter().cloned().collect::<BTreeSet<_>>();
+    let requested_categories = categories
+        .iter()
+        .map(|raw| parse_chronic_category(raw, "--update-chronic-category"))
+        .collect::<Result<BTreeSet<_>, _>>()?;
     let requested_category_list = requested_categories.iter().cloned().collect::<Vec<_>>();
     let entries = state
         .pointer_mut("/review_agent/chronic_category_responses/entries")
@@ -1523,12 +1579,7 @@ fn parse_category_cycle_text_update(
         ));
     }
 
-    let category = normalize_category(category_raw).ok_or_else(|| {
-        format!(
-            "invalid {} category '{}': category must normalize to a non-empty slug",
-            flag_name, category_raw
-        )
-    })?;
+    let category = parse_chronic_category(category_raw, flag_name)?;
     let cycle = cycle_raw.parse::<u64>().map_err(|_| {
         format!(
             "invalid {} {} '{}': expected an unsigned integer",
@@ -1735,6 +1786,24 @@ mod tests {
         );
         assert_eq!(cli.update_chronic_prs, vec![2266]);
         assert_eq!(cli.update_chronic_cycle, Some(460));
+    }
+
+    #[test]
+    fn cli_accepts_update_chronic_subcategory_without_review_file() {
+        let cli = Cli::parse_from([
+            "process-review",
+            "--update-chronic-category",
+            "worklog-accuracy/scope-labels",
+            "--update-chronic-pr",
+            "2266",
+        ]);
+
+        assert_eq!(cli.review_file, None);
+        assert_eq!(
+            cli.update_chronic_categories,
+            vec!["worklog-accuracy/scope-labels".to_string()]
+        );
+        assert_eq!(cli.update_chronic_prs, vec![2266]);
     }
 
     #[test]
@@ -2635,6 +2704,18 @@ mod tests {
     }
 
     #[test]
+    fn chronic_response_categories_preserve_single_subcategory_boundary() {
+        assert_eq!(
+            chronic_response_categories(&json!({
+                "entries": [
+                    {"category": "Worklog Accuracy/Scope Labels"}
+                ]
+            })),
+            BTreeSet::from(["worklog-accuracy/scope-labels".to_string()])
+        );
+    }
+
+    #[test]
     fn known_review_categories_from_state_requires_review_agent() {
         let state = StateJson::default();
 
@@ -3323,6 +3404,53 @@ mod tests {
     }
 
     #[test]
+    fn update_chronic_category_accepts_subcategory() {
+        let mut state = chronic_state_fixture(json!([{
+            "category": "worklog-accuracy/scope-labels",
+            "chosen_path": "structural-fix",
+            "rationale": "existing",
+            "updated_cycle": 448,
+            "verification_cycle": 448
+        }]));
+
+        let summary = update_chronic_category_responses(
+            &mut state,
+            &["worklog-accuracy/scope-labels".to_string()],
+            &[],
+            500,
+            None,
+        )
+        .expect("update should succeed");
+
+        assert_eq!(summary.updated_entries, 1);
+        let entry = &state["review_agent"]["chronic_category_responses"]["entries"][0];
+        assert_eq!(entry["updated_cycle"], json!(500));
+        assert_eq!(entry["verification_cycle"], json!(500));
+    }
+
+    #[test]
+    fn update_chronic_category_rejects_empty_subcategory_segment() {
+        let mut state = chronic_state_fixture(json!([{
+            "category": "worklog-accuracy/scope-labels",
+            "chosen_path": "structural-fix",
+            "updated_cycle": 448,
+            "verification_cycle": 448
+        }]));
+
+        let error = update_chronic_category_responses(
+            &mut state,
+            &["worklog-accuracy/".to_string()],
+            &[],
+            500,
+            None,
+        )
+        .expect_err("update should fail");
+
+        assert!(error.contains("--update-chronic-category"));
+        assert!(error.contains("empty segment in sub-category"));
+    }
+
+    #[test]
     fn rollback_chronic_category_restores_verification_cycle() {
         let mut state = chronic_state_fixture(json!([{
             "category": "receipt-integrity",
@@ -3335,6 +3463,29 @@ mod tests {
         let summary = rollback_chronic_category_responses(
             &mut state,
             &["receipt-integrity:461:rollback rationale".to_string()],
+            500,
+        )
+        .expect("rollback should succeed");
+
+        assert_eq!(summary.updated_entries, 1);
+        let entry = &state["review_agent"]["chronic_category_responses"]["entries"][0];
+        assert_eq!(entry["updated_cycle"], json!(500));
+        assert_eq!(entry["verification_cycle"], json!(461));
+    }
+
+    #[test]
+    fn rollback_chronic_category_accepts_subcategory() {
+        let mut state = chronic_state_fixture(json!([{
+            "category": "worklog-accuracy/scope-labels",
+            "chosen_path": "structural-fix",
+            "rationale": "existing",
+            "updated_cycle": 474,
+            "verification_cycle": 474
+        }]));
+
+        let summary = rollback_chronic_category_responses(
+            &mut state,
+            &["worklog-accuracy/scope-labels:461:rollback rationale".to_string()],
             500,
         )
         .expect("rollback should succeed");
@@ -3408,6 +3559,15 @@ mod tests {
 
         assert!(error.contains("prior verification cycle 474"));
         assert!(error.contains("current verification_cycle 474"));
+    }
+
+    #[test]
+    fn rollback_chronic_category_rejects_too_many_category_segments() {
+        let error = parse_chronic_rollback("a/b/c:461:rollback rationale")
+            .expect_err("rollback parsing should fail");
+
+        assert!(error.contains("--rollback-chronic-category"));
+        assert!(error.contains("too many segments"));
     }
 
     #[test]
