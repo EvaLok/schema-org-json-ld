@@ -7639,6 +7639,14 @@
       "pr": 2531,
       "status": "merged",
       "title": "Backfilled: PR #2531"
+    },
+    {
+      "backfilled": true,
+      "issue": 2532,
+      "merged_at": "2026-04-15T21:31:30Z",
+      "pr": 2533,
+      "status": "merged",
+      "title": "Backfilled: PR #2533"
     }
   ],
   "audit_dropped": [
@@ -8858,7 +8866,7 @@
     "duration_minutes": 14,
     "issue": 2541,
     "number": 500,
-    "summary": "0 dispatches, 2 merges",
+    "summary": "0 dispatches, 3 merges",
     "timestamp": "2026-04-15T21:19:08Z"
   },
   "last_eva_comment_check": "2026-04-15T21:19:08Z",
