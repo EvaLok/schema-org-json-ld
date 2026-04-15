@@ -17,7 +17,15 @@
 
 ## Self-modifications
 
-- None.
+- tools/rust/crates/cycle-close/src/main.rs: PR #2531 — CLI regression coverage for dispatch-review close-out state sync (transitive touch during merge integration)
+- tools/rust/crates/dispatch-review/src/main.rs: PR #2531 — dispatch-review close-out state sync CLI regression coverage
+- tools/rust/crates/dispatch-review/tests/real_flow_cycle_495.rs: PR #2531 — real-flow CLI regression test fixture
+- tools/rust/crates/pipeline-check/src/main.rs: PR #2531 / PR #2533 — associated pipeline-check updates
+- tools/rust/crates/process-merge/src/main.rs: PR #2531 — process-merge state-sync integration
+- tools/rust/crates/process-review/src/main.rs: PR #2533 — journal chronic promotion validation against state before write
+- tools/rust/crates/validate-docs/src/main.rs: PR #2533 — validate-docs chronic-promotion claim check
+- tools/rust/crates/verify-review-events/src/main.rs: PR #2533 — verify-review-events chronic claim verification
+- tools/rust/crates/write-entry/src/main.rs: PR #2533 — write-entry chronic promotion claims validated against state before write
 
 ## Pre-dispatch state
 
@@ -45,3 +53,4 @@
 | backfill-sessions | 5ee98f9 | [5ee98f9](https://github.com/EvaLok/schema-org-json-ld/commit/5ee98f9) |
 | process-review | 14c1d4f | [14c1d4f](https://github.com/EvaLok/schema-org-json-ld/commit/14c1d4f) |
 | cycle-phase | 444fb81 | [444fb81](https://github.com/EvaLok/schema-org-json-ld/commit/444fb81) |
+| cycle-complete | fe0b3bf | [fe0b3bf](https://github.com/EvaLok/schema-org-json-ld/commit/fe0b3bf) |
