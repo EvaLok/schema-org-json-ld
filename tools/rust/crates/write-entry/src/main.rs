@@ -169,6 +169,9 @@ struct JournalArgs {
     /// Auto-derive chronic category status table from docs/state.json
     #[arg(long = "auto-chronic-status", default_value_t = false)]
     auto_chronic_status: bool,
+    /// Skip validation; use only when you know what you're doing
+    #[arg(long = "skip-chronic-claim-validation", default_value_t = false)]
+    skip_chronic_claim_validation: bool,
 }
 
 #[derive(Debug)]
@@ -449,6 +452,9 @@ fn execute_journal(
         chronic_status.as_deref(),
     ));
     reject_duplicate_journal_section_headers(&entry)?;
+    if !args.skip_chronic_claim_validation {
+        validate_journal_chronic_claims(&entry, repo_root)?;
+    }
     emit_generated_markdown_sha_warnings("journal", &entry, repo_root);
     write_journal_file(&path, now.date_naive(), &entry)?;
     update_journal_index(repo_root, now.date_naive(), cycle)?;
@@ -2835,24 +2841,24 @@ fn has_inline_journal_content(args: &JournalArgs) -> bool {
     !args.section.is_empty() || !args.commitment.is_empty() || args.auto_chronic_status
 }
 
-fn derive_chronic_status_from_state(repo_root: &Path) -> Result<Option<String>, String> {
+fn load_chronic_status_entries(repo_root: &Path) -> Result<Vec<ChronicStatusEntry>, String> {
     let value = match read_state_value(repo_root) {
-        Ok(v) => v,
-        Err(_) => return Ok(None),
+        Ok(value) => value,
+        Err(_) => return Ok(Vec::new()),
     };
     let state: StateJson = serde_json::from_value(value)
         .map_err(|error| format!("failed to parse docs/state.json: {}", error))?;
     let review_agent = match state.review_agent() {
-        Ok(ra) => ra,
-        Err(_) => return Ok(None),
+        Ok(review_agent) => review_agent,
+        Err(_) => return Ok(Vec::new()),
     };
     let chronic = match review_agent.chronic_category_responses {
-        Some(v) => v,
-        None => return Ok(None),
+        Some(chronic) => chronic,
+        None => return Ok(Vec::new()),
     };
     let entries = match chronic.get("entries").and_then(Value::as_array) {
-        Some(e) if !e.is_empty() => e.clone(),
-        _ => return Ok(None),
+        Some(entries) if !entries.is_empty() => entries.clone(),
+        _ => return Ok(Vec::new()),
     };
 
     let mut parsed_entries = Vec::new();
@@ -2880,10 +2886,6 @@ fn derive_chronic_status_from_state(repo_root: &Path) -> Result<Option<String>, 
         });
     }
 
-    if parsed_entries.is_empty() {
-        return Ok(None);
-    }
-
     parsed_entries.sort_by(|left, right| {
         // Keep categories grouped alphabetically while preferring the most recently
         // updated parent-level entry when duplicates need to be collapsed.
@@ -2892,6 +2894,16 @@ fn derive_chronic_status_from_state(repo_root: &Path) -> Result<Option<String>, 
             .then_with(|| right.updated_cycle_sort.cmp(&left.updated_cycle_sort))
             .then_with(|| left.original_index.cmp(&right.original_index))
     });
+
+    Ok(parsed_entries)
+}
+
+fn derive_chronic_status_from_state(repo_root: &Path) -> Result<Option<String>, String> {
+    let parsed_entries = load_chronic_status_entries(repo_root)?;
+
+    if parsed_entries.is_empty() {
+        return Ok(None);
+    }
 
     let has_sub_category = parsed_entries
         .iter()
@@ -2934,6 +2946,44 @@ fn derive_chronic_status_from_state(repo_root: &Path) -> Result<Option<String>, 
     Ok(Some(lines.join("\n")))
 }
 
+fn validate_journal_chronic_claims(journal_text: &str, repo_root: &Path) -> Result<(), String> {
+    let claims = extract_chronic_promotion_claims(journal_text);
+    if claims.is_empty() {
+        return Ok(());
+    }
+
+    let entries = load_chronic_status_entries(repo_root)?;
+    let mut errors = Vec::new();
+    for claim in claims {
+        let Some(entry) = entries
+            .iter()
+            .find(|entry| entry.full_category == claim.category)
+        else {
+            errors.push(format!(
+                "  category: {}\n  claimed in prose: {}\n  state ledger (docs/state.json): category not found in chronic_category_responses\n  fix: run `process-review --update-chronic-category {} --update-chronic-pr <pr> --update-chronic-cycle <cycle>` before writing this journal entry, OR revise the prose to match current state.",
+                claim.category, claim.claimed_status, claim.category
+            ));
+            continue;
+        };
+
+        if claim.claimed_status != entry.status {
+            errors.push(format!(
+                "  category: {}\n  claimed in prose: {}\n  state ledger (docs/state.json): {}\n  fix: run `process-review --update-chronic-category {} --update-chronic-pr <pr> --update-chronic-cycle <cycle>` before writing this journal entry, OR revise the prose to match current state.",
+                claim.category, claim.claimed_status, entry.status, claim.category
+            ));
+        }
+    }
+
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(format!(
+            "journal chronic-claim validation failed:\n{}",
+            errors.join("\n")
+        ))
+    }
+}
+
 #[derive(Debug)]
 struct ChronicStatusEntry {
     full_category: String,
@@ -2945,6 +2995,12 @@ struct ChronicStatusEntry {
     original_index: usize,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ChronicPromotionClaim {
+    category: String,
+    claimed_status: String,
+}
+
 fn split_chronic_category(category: &str) -> (&str, Option<&str>) {
     // Treat malformed edge cases like "category/" or "/sub-category" as parent-only
     // entries so journal rendering stays fail-safe instead of inventing a blank column.
@@ -2953,6 +3009,78 @@ fn split_chronic_category(category: &str) -> (&str, Option<&str>) {
             (parent, Some(sub_category))
         }
         _ => (category, None),
+    }
+}
+
+fn extract_chronic_promotion_claims(text: &str) -> Vec<ChronicPromotionClaim> {
+    let tokens = text
+        .split_whitespace()
+        .map(normalize_chronic_claim_token)
+        .filter(|token| !token.is_empty())
+        .collect::<Vec<_>>();
+    let mut claims = Vec::new();
+    for index in 0..tokens.len() {
+        let category_index = if tokens[index].eq_ignore_ascii_case("chronic") {
+            index + 1
+        } else {
+            index
+        };
+        if category_index + 3 >= tokens.len() {
+            continue;
+        }
+        let category = &tokens[category_index];
+        if !looks_like_chronic_category(category) {
+            continue;
+        }
+        if !tokens[category_index + 1].eq_ignore_ascii_case("is")
+            || !tokens[category_index + 2].eq_ignore_ascii_case("now")
+        {
+            continue;
+        }
+        let Some(status) = normalize_chronic_status_token(&tokens[category_index + 3]) else {
+            continue;
+        };
+        claims.push(ChronicPromotionClaim {
+            category: category.to_string(),
+            claimed_status: status,
+        });
+    }
+    claims
+}
+
+fn normalize_chronic_claim_token(token: &str) -> String {
+    token
+        .trim_matches(|character: char| {
+            !character.is_ascii_alphanumeric() && !matches!(character, '-' | '_' | '/' | '.')
+        })
+        .to_string()
+}
+
+fn looks_like_chronic_category(token: &str) -> bool {
+    !token.is_empty()
+        && token.chars().all(|character| {
+            character.is_ascii_lowercase()
+                || character.is_ascii_digit()
+                || matches!(character, '-' | '_' | '/' | '.')
+        })
+        && token
+            .chars()
+            .any(|character| matches!(character, '-' | '_' | '/'))
+}
+
+fn normalize_chronic_status_token(token: &str) -> Option<String> {
+    let normalized = token
+        .trim_matches(|character: char| {
+            !character.is_ascii_alphanumeric() && !matches!(character, '-' | '_')
+        })
+        .to_ascii_lowercase()
+        .replace('_', "-");
+    match normalized.as_str() {
+        "tool-hardened" => Some("tool_hardened".to_string()),
+        "runtime-verified" => Some("runtime_verified".to_string()),
+        "structural-fix" => Some("structural-fix".to_string()),
+        "recalibrate" => Some("recalibrate".to_string()),
+        _ => None,
     }
 }
 
@@ -4178,6 +4306,7 @@ mod tests {
             previous_commitment_status: None,
             previous_commitment_detail: None,
             auto_chronic_status: false,
+            skip_chronic_claim_validation: false,
         }
     }
 
@@ -8702,6 +8831,26 @@ Reflective log for the schema-org-json-ld orchestrator.
     }
 
     #[test]
+    fn cli_parses_journal_skip_chronic_claim_validation_flag() {
+        let cli = Cli::try_parse_from([
+            "write-entry",
+            "journal",
+            "--title",
+            "test",
+            "--skip-chronic-claim-validation",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::Journal(args) => {
+                assert!(args.skip_chronic_claim_validation);
+                assert!(!args.auto_chronic_status);
+            }
+            Command::Worklog(_) => panic!("expected journal command"),
+        }
+    }
+
+    #[test]
     fn worklog_derives_cycle_from_state_when_omitted() {
         let repo_root = TempRepoDir::new("worklog-derived-cycle");
         init_git_repo(&repo_root.path);
@@ -9063,5 +9212,220 @@ Reflective log for the schema-org-json-ld orchestrator.
             .unwrap();
         assert!(section_pos < chronic_pos);
         assert!(chronic_pos < commitments_pos);
+    }
+
+    #[test]
+    fn journal_chronic_claim_validation_passes_when_state_matches() {
+        let repo_root = TempRepoDir::new("journal-chronic-claim-matching");
+        fs::create_dir_all(repo_root.path.join("docs")).unwrap();
+        write_root_journal_index(&repo_root.path, "");
+        write_worklog_fixture(&repo_root.path, fixed_now(), 154, "Matching chronic claim");
+        fs::write(
+            repo_root.path.join("docs/state.json"),
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {"cycle": 154},
+                "review_agent": {
+                    "chronic_category_responses": {
+                        "entries": [
+                            {"category": "state-integrity/last-cycle-summary-stale", "updated_cycle": 497, "chosen_path": "tool_hardened"}
+                        ]
+                    }
+                }
+            }"#,
+        )
+        .unwrap();
+
+        let mut args = journal_args("Matching chronic claim");
+        args.section = vec![
+            "What changed::state-integrity/last-cycle-summary-stale is now tool_hardened."
+                .to_string(),
+        ];
+        args.commitment = vec!["Keep it aligned.".to_string()];
+        args.previous_commitment_status = Some("no_prior_commitment".to_string());
+        args.previous_commitment_detail = Some("No prior commitment recorded.".to_string());
+
+        let path = execute_journal(&args, &repo_root.path, fixed_now()).unwrap();
+        let content = fs::read_to_string(path).unwrap();
+        assert!(content.contains("state-integrity/last-cycle-summary-stale is now tool_hardened."));
+    }
+
+    #[test]
+    fn journal_chronic_claim_validation_fails_when_state_mismatches() {
+        let repo_root = TempRepoDir::new("journal-chronic-claim-mismatch");
+        fs::create_dir_all(repo_root.path.join("docs")).unwrap();
+        write_root_journal_index(&repo_root.path, "");
+        write_worklog_fixture(
+            &repo_root.path,
+            fixed_now(),
+            154,
+            "Mismatched chronic claim",
+        );
+        fs::write(
+            repo_root.path.join("docs/state.json"),
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {"cycle": 154},
+                "review_agent": {
+                    "chronic_category_responses": {
+                        "entries": [
+                            {"category": "state-integrity/last-cycle-summary-stale", "updated_cycle": 497, "chosen_path": "structural-fix"}
+                        ]
+                    }
+                }
+            }"#,
+        )
+        .unwrap();
+
+        let mut args = journal_args("Mismatched chronic claim");
+        args.section = vec![
+            "What changed::state-integrity/last-cycle-summary-stale is now tool_hardened."
+                .to_string(),
+        ];
+        args.commitment = vec!["Keep it aligned.".to_string()];
+        args.previous_commitment_status = Some("no_prior_commitment".to_string());
+        args.previous_commitment_detail = Some("No prior commitment recorded.".to_string());
+
+        let error = execute_journal(&args, &repo_root.path, fixed_now()).unwrap_err();
+        assert!(error.contains("journal chronic-claim validation failed"));
+        assert!(error.contains("state-integrity/last-cycle-summary-stale"));
+        assert!(error.contains("claimed in prose: tool_hardened"));
+        assert!(error.contains("state ledger (docs/state.json): structural-fix"));
+    }
+
+    #[test]
+    fn journal_chronic_claim_validation_fails_when_category_missing_from_state() {
+        let repo_root = TempRepoDir::new("journal-chronic-claim-missing-category");
+        fs::create_dir_all(repo_root.path.join("docs")).unwrap();
+        write_root_journal_index(&repo_root.path, "");
+        write_worklog_fixture(&repo_root.path, fixed_now(), 154, "Unknown chronic claim");
+        fs::write(
+            repo_root.path.join("docs/state.json"),
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {"cycle": 154},
+                "review_agent": {
+                    "chronic_category_responses": {
+                        "entries": [
+                            {"category": "journal-quality", "updated_cycle": 497, "chosen_path": "tool_hardened"}
+                        ]
+                    }
+                }
+            }"#,
+        )
+        .unwrap();
+
+        let mut args = journal_args("Unknown chronic claim");
+        args.section = vec![
+            "What changed::state-integrity/last-cycle-summary-stale is now tool_hardened."
+                .to_string(),
+        ];
+        args.commitment = vec!["Keep it aligned.".to_string()];
+        args.previous_commitment_status = Some("no_prior_commitment".to_string());
+        args.previous_commitment_detail = Some("No prior commitment recorded.".to_string());
+
+        let error = execute_journal(&args, &repo_root.path, fixed_now()).unwrap_err();
+        assert!(error.contains("journal chronic-claim validation failed"));
+        assert!(error.contains("state-integrity/last-cycle-summary-stale"));
+        assert!(error.contains("category not found in chronic_category_responses"));
+    }
+
+    #[test]
+    fn journal_chronic_claim_validation_ignores_entries_without_promotion_phrases() {
+        let repo_root = TempRepoDir::new("journal-chronic-claim-no-trigger");
+        fs::create_dir_all(repo_root.path.join("docs")).unwrap();
+        write_root_journal_index(&repo_root.path, "");
+        write_worklog_fixture(&repo_root.path, fixed_now(), 154, "No chronic trigger");
+        fs::write(
+            repo_root.path.join("docs/state.json"),
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {"cycle": 154}
+            }"#,
+        )
+        .unwrap();
+
+        let mut args = journal_args("No chronic trigger");
+        args.section = vec![
+            "What changed::state-integrity/last-cycle-summary-stale remains queued.".to_string(),
+        ];
+        args.commitment = vec!["Keep it aligned.".to_string()];
+        args.previous_commitment_status = Some("no_prior_commitment".to_string());
+        args.previous_commitment_detail = Some("No prior commitment recorded.".to_string());
+
+        execute_journal(&args, &repo_root.path, fixed_now()).unwrap();
+    }
+
+    #[test]
+    fn journal_chronic_claim_validation_can_be_skipped() {
+        let repo_root = TempRepoDir::new("journal-chronic-claim-skip");
+        fs::create_dir_all(repo_root.path.join("docs")).unwrap();
+        write_root_journal_index(&repo_root.path, "");
+        write_worklog_fixture(&repo_root.path, fixed_now(), 154, "Skipped chronic claim");
+        fs::write(
+            repo_root.path.join("docs/state.json"),
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {"cycle": 154},
+                "review_agent": {
+                    "chronic_category_responses": {
+                        "entries": [
+                            {"category": "state-integrity/last-cycle-summary-stale", "updated_cycle": 497, "chosen_path": "structural-fix"}
+                        ]
+                    }
+                }
+            }"#,
+        )
+        .unwrap();
+
+        let mut args = journal_args("Skipped chronic claim");
+        args.section = vec![
+            "What changed::state-integrity/last-cycle-summary-stale is now tool-hardened."
+                .to_string(),
+        ];
+        args.commitment = vec!["Keep it aligned.".to_string()];
+        args.previous_commitment_status = Some("no_prior_commitment".to_string());
+        args.previous_commitment_detail = Some("No prior commitment recorded.".to_string());
+        args.skip_chronic_claim_validation = true;
+
+        execute_journal(&args, &repo_root.path, fixed_now()).unwrap();
+    }
+
+    #[test]
+    fn journal_chronic_claim_validation_reports_the_first_mismatch_clearly() {
+        let repo_root = TempRepoDir::new("journal-chronic-claim-multiple");
+        fs::create_dir_all(repo_root.path.join("docs")).unwrap();
+        write_root_journal_index(&repo_root.path, "");
+        write_worklog_fixture(&repo_root.path, fixed_now(), 154, "Multiple chronic claims");
+        fs::write(
+            repo_root.path.join("docs/state.json"),
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {"cycle": 154},
+                "review_agent": {
+                    "chronic_category_responses": {
+                        "entries": [
+                            {"category": "journal-quality", "updated_cycle": 497, "chosen_path": "recalibrate"},
+                            {"category": "state-integrity/last-cycle-summary-stale", "updated_cycle": 497, "chosen_path": "structural-fix"}
+                        ]
+                    }
+                }
+            }"#,
+        )
+        .unwrap();
+
+        let mut args = journal_args("Multiple chronic claims");
+        args.section = vec!["What changed::chronic journal-quality is now runtime_verified. state-integrity/last-cycle-summary-stale is now tool_hardened.".to_string()];
+        args.commitment = vec!["Keep it aligned.".to_string()];
+        args.previous_commitment_status = Some("no_prior_commitment".to_string());
+        args.previous_commitment_detail = Some("No prior commitment recorded.".to_string());
+
+        let error = execute_journal(&args, &repo_root.path, fixed_now()).unwrap_err();
+        assert!(error.contains("journal-quality"));
+        assert!(error.contains("claimed in prose: runtime_verified"));
+        assert!(error.contains("state ledger (docs/state.json): recalibrate"));
+        assert!(error.contains("state-integrity/last-cycle-summary-stale"));
+        assert!(error.contains("claimed in prose: tool_hardened"));
+        assert!(error.contains("state ledger (docs/state.json): structural-fix"));
     }
 }
