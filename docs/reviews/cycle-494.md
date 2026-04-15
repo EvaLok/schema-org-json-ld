@@ -1,0 +1,23 @@
+# Cycle 494 Review
+
+## 1. [code-change-quality] Duplicate-dispatch protection stops the row append but still mutates cycle counters
+
+**File**: tools/rust/crates/record-dispatch/src/main.rs:140-166  
+**Evidence**: `apply_dispatch_patch()` returns whether it updated an existing live session, and `sync_last_cycle_summary_after_dispatch()` is explicitly documented for the `updated_existing == false` case only (`tools/rust/crates/record-dispatch/src/lib.rs:518-523`). But `main.rs` discards that bool with `Ok(_) => false` and always runs the summary sync at line 161. In the library, `build_dispatch_patch()` precomputes `in_flight` by pushing a new synthetic session before any duplicate check (`tools/rust/crates/record-dispatch/src/lib.rs:227-259`), and `apply_dispatch_patch()` writes that inflated count back even when it merged into an existing live row (`tools/rust/crates/record-dispatch/src/lib.rs:330-383`). The helper-level regression test at `tools/rust/crates/record-dispatch/src/lib.rs:1233-1266` never exercises the full binary path. The committed receipts show the bug in production: `631ab48` has `last_cycle.summary = "1 dispatch, 3 merges..."` and one in-flight agent session; duplicate run `46b1bb0` changes that to `2 dispatches, 3 merges...` and `in_flight_sessions = 2` while `agent_sessions` still contains only one in-flight row for `#2514`; `faa4b98` immediately reverts it.  
+**Recommendation**: Preserve and honor the `updated_existing` result in `main.rs`, skip summary/in-flight counter mutations when a duplicate dispatch only merged into an existing live session, and add an end-to-end duplicate-run test that invokes the real CLI path instead of only helper functions.
+
+## 2. [worklog-accuracy] The published worklog contradicts both itself and the recorded receipts
+
+**File**: docs/worklog/2026-04-14/215118-cycle-494-review-dispatched-deferrals-resolved-record-dispatch-duplicate-run-bug-discovered.md:5-42  
+**Evidence**: The same artifact says `Merged PR #2512` (`:5`) and then says `PRs merged` → `None` (`:13-15`). It also says `Recorded 1 dispatch` (`:11`) and the receipt note says the scope runs only through `2026-04-14T21:46:34Z (cycle-complete)` (`:42`), but cycle receipts for cycle 494 show that `21:46:34Z` is commit `631ab48` (`state(record-dispatch): #2514 dispatched`) while the actual `cycle-complete` receipt is `2bd8cdf` at `2026-04-14T21:52:55Z`, recorded as `state(cycle-complete): 2 dispatches, 0 merges [cycle 494]`. GitHub metadata for PR #2512 shows it was merged at `2026-04-14T21:33:16Z`, squarely inside cycle 494. This is not a subtle interpretation dispute; the worklog contains mutually incompatible claims about merges, dispatch count, and receipt scope.  
+**Recommendation**: Generate the worklog’s PR/dispatch summary and receipt scope note from the same bounded receipt data used for the table, and fail the write if the narrative bullets or subsection totals disagree with the resolved receipt set.
+
+## 3. [journal-quality] The journal notices the bug but still narrates the cycle as if the chronic documentation drift were already understood
+
+**File**: docs/journal/2026-04-14.md:220-245  
+**Evidence**: The cycle 494 journal summary repeats the same `1 dispatch` claim (`:222`) even though the committed cycle-complete state for the cycle is `2 dispatches, 0 merges` (`2bd8cdf`) and the worklog it links to also contains unresolved contradictions about PR merges and receipt scope. The commitment section then proposes refreshing five stale chronic verification markers if `#2514` merges (`:243-245`), but `#2514` only targets the late-cycle `record-dispatch` summary/phase regression; it does not address the current cycle’s own documentation defects (`worklog` lines `5-15` and `42`). That is the chronic problem pattern in miniature: the entry correctly spots one tool bug, then treats that partial fix as sufficient basis to refresh worklog/journal chronic categories without first producing a clean artifact.  
+**Recommendation**: Do not refresh worklog-accuracy or journal-quality chronic markers on the strength of a tool fix alone; require one clean cycle artifact with reconciled counts and receipt scope, and make the next-cycle commitment explicitly observable on the documentation output itself.
+
+## Complacency score
+
+**2/5** — the cycle did real investigative work (it found, reproduced, and reverted a duplicate-dispatch defect), but the published worklog and journal still repeated the same chronic documentation categories they were supposed to be escaping. That combination — solid debugging paired with self-contradictory artifacts and premature “refresh once fix merges” framing — is materially worse than healthy skepticism.
