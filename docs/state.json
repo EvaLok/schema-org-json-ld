@@ -7884,7 +7884,7 @@
   "cycle_phase": {
     "cycle": 498,
     "phase": "close_out",
-    "phase_entered_at": "2026-04-15T08:15:16Z"
+    "phase_entered_at": "2026-04-15T08:17:40Z"
   },
   "cycles_since_last_forward_work": {
     "added_in_cycle": 411,
@@ -8823,13 +8823,13 @@
   },
   "in_flight_sessions": 0,
   "last_cycle": {
-    "duration_minutes": 4,
+    "duration_minutes": 2,
     "issue": 2529,
     "number": 498,
-    "summary": "0 dispatches, 0 merges",
-    "timestamp": "2026-04-15T08:15:16Z"
+    "summary": "0 dispatches, 1 merges (PR #2528)",
+    "timestamp": "2026-04-15T08:17:40Z"
   },
-  "last_eva_comment_check": "2026-04-15T08:15:16Z",
+  "last_eva_comment_check": "2026-04-15T08:17:40Z",
   "last_tool_audit_cycle": 403,
   "open_questions_for_eva": [
     2519,
