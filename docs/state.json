@@ -7572,8 +7572,10 @@
     {
       "dispatched_at": "2026-04-14T21:46:34Z",
       "issue": 2514,
+      "merged_at": "2026-04-15T05:07:44Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2515,
+      "status": "merged",
       "title": "Fix record-dispatch: real-flow integration test + summary-sync regression for late review dispatches"
     },
     {
@@ -8808,12 +8810,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 18,
     "issue": 2526,
     "number": 497,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-15T04:57:14Z"
   },
   "last_eva_comment_check": "2026-04-15T04:57:14Z",
