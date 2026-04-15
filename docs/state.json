@@ -8510,7 +8510,9 @@
       "category": "process-adherence",
       "deadline_cycle": 496,
       "deferred_cycle": 491,
-      "resolved": false
+      "dropped_rationale": "Deferred finding F3 (cycle 491) recommended adding corrective-rewrite support to process-review for acknowledged-wrong dispatch_created dispositions in review_history. This is a discretionary tool-capability enhancement requiring Copilot dispatch; current cycle holds dispatch capacity for audit #420 per cycle 496 commitment (b). Dropping to keep backlog honest — if the capability becomes blocking again, file a fresh dispatch rather than letting the deferral drift past deadline indefinitely.",
+      "resolved": true,
+      "resolved_ref": "dropped: Deferred finding F3 (cycle 491) recommended adding corrective-rewrite support to process-review for "
     },
     {
       "category": "state-integrity",
