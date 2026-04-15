@@ -15657,9 +15657,39 @@
         "ignored": 0,
         "note": "F1 worklog-accuracy deferred (chronic scope-boundary; awaiting structural tool fix); F2 state-integrity dispatch_created via PR #2515 (cycle-493 fix actively iterating on dispatch-review close_out transition); F3 journal-quality deferred (structural: journal tool should distinguish not-yet-due from not-followed commitments)",
         "review_issue": 2524
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "code-change-quality",
+          "journal-quality",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 497,
+        "deferred": 2,
+        "dispatch_created": 1,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "code-change-quality",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "deferred"
+          }
+        ],
+        "ignored": 0,
+        "note": "F1 code-change-quality (CLI-level regression gap for dispatch-review) — dispatch_created via #2530 with cycle-495 fixture spec. F2 worklog-accuracy (scope-boundary chronic; cycle-state section cites post-scope pipeline PASS) — deferred, structural fix needed in write-entry tool to honor scope-note boundary. F3 journal-quality (prose promotes chronic state before ledger update) — deferred, structural fix needed (journal tool validation that chronic prose ≤ state.json chronic_category_responses status). Complacency 2/5.",
+        "review_issue": 2527
       }
     ],
-    "last_review_cycle": 496
+    "last_review_cycle": 497
   },
   "review_dispatch_consecutive": 4,
   "review_events_verified_through_cycle": 497,
