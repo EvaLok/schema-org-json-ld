@@ -1,14 +1,14 @@
 use clap::Parser;
 use record_dispatch::{
     apply_dispatch_patch, build_dispatch_patch, dispatch_commit_message, enforce_pipeline_gate,
-    restore_sealed_last_cycle, snapshot_sealed_last_cycle, update_review_dispatch_tracking,
-    ProcessRunner,
+    restore_sealed_last_cycle, snapshot_sealed_last_cycle, sync_last_cycle_summary_after_dispatch,
+    update_review_dispatch_tracking, ProcessRunner,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use state_schema::{
     commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
-    write_state_value,
+    transition_cycle_phase, write_state_value,
 };
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -200,7 +200,11 @@ fn record_created_issue(
         model,
         &current_utc_timestamp(),
     )?;
+    if current_phase == "close_out" {
+        transition_cycle_phase(&mut state, cycle, "complete")?;
+    }
     restore_sealed_last_cycle(&mut state, sealed_last_cycle)?;
+    sync_last_cycle_summary_after_dispatch(&mut state, cycle)?;
     write_state_value(repo_root, &state)?;
     let commit_message = dispatch_commit_message(issue, cycle);
     commit_state_json(repo_root, &commit_message)?;
@@ -266,6 +270,10 @@ mod tests {
     use std::fs;
     use std::process::Command;
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    const CYCLE_495_CLOSE_OUT_FIXTURE: &str = include_str!(
+        "../../record-dispatch/tests/fixtures/cycle-495-post-cycle-complete-state.json"
+    );
 
     fn sample_state() -> Value {
         json!({
@@ -357,33 +365,46 @@ mod tests {
     }
 
     #[test]
-    fn record_created_issue_preserves_sealed_last_cycle_snapshot_during_close_out() {
+    fn record_created_issue_transitions_close_out_and_syncs_last_cycle_summary() {
         let repo = TempRepo::new();
-        repo.init();
-        let mut state = repo.read_state();
-        state["last_cycle"]["summary"] = json!("sealed summary");
-        state["last_cycle"]["timestamp"] = json!("2026-04-09T09:52:44Z");
-        repo.write_state_value(&state);
+        repo.init_with_state_json(CYCLE_495_CLOSE_OUT_FIXTURE);
+        let before = repo.read_state();
+        let original_timestamp = before["last_cycle"]["timestamp"]
+            .as_str()
+            .expect("fixture should include last_cycle timestamp")
+            .to_string();
 
         record_created_issue(
             repo.path(),
-            200,
-            849,
-            "[Cycle Review] Cycle 200 end-of-cycle review",
+            495,
+            2521,
+            "[Cycle Review] Cycle 495 end-of-cycle review",
             "gpt-5.4",
         )
         .expect("record should succeed");
 
         let state = repo.read_state();
         assert_eq!(
-            state.pointer("/last_cycle/summary"),
-            Some(&json!("sealed summary"))
+            state.pointer("/cycle_phase/phase"),
+            Some(&json!("complete"))
         );
         assert_eq!(
-            state.pointer("/last_cycle/timestamp"),
-            Some(&json!("2026-04-09T09:52:44Z"))
+            state.pointer("/last_cycle/summary"),
+            Some(&json!("1 dispatch, 0 merges"))
         );
-        assert_eq!(state.pointer("/agent_sessions/1/issue"), Some(&json!(849)));
+        assert_ne!(
+            state
+                .pointer("/last_cycle/timestamp")
+                .and_then(Value::as_str),
+            Some(original_timestamp.as_str())
+        );
+        assert_eq!(
+            state.pointer("/dispatch_log_latest"),
+            Some(&json!(
+                "#2521 [Cycle Review] Cycle 495 end-of-cycle review (cycle 495)"
+            ))
+        );
+        assert_eq!(state.pointer("/agent_sessions/2/issue"), Some(&json!(2521)));
     }
 
     struct TempRepo {
@@ -409,44 +430,13 @@ mod tests {
             &self.path
         }
 
-        fn init(&self) {
-            self.write_state_value(&json!({
-                "agent_sessions": [
-                    {
-                        "issue": 601,
-                        "title": "old dispatch",
-                        "dispatched_at": "2026-03-01T00:00:00Z",
-                        "model": "gpt-5.4",
-                        "status": "merged",
-                        "pr": 700,
-                        "merged_at": "2026-03-02T00:00:00Z"
-                    }
-                ],
-                "in_flight_sessions": 0,
-                "dispatch_log_latest": "#601 old dispatch (cycle 200)",
-                "field_inventory": {
-                    "fields": {
-                        "in_flight_sessions": { "last_refreshed": "cycle 199" }
-                    }
-                },
-                "last_cycle": {
-                    "number": 200,
-                    "summary": "1 dispatch, 1 merges (PR #700)",
-                    "timestamp": "2026-04-09T09:52:44Z"
-                },
-                "cycle_phase": {
-                    "cycle": 200,
-                    "phase": "close_out",
-                    "phase_entered_at": "2026-04-09T10:00:00Z"
-                },
-                "tool_pipeline": {
-                    "c5_5_gate": {
-                        "cycle": 200,
-                        "status": "PASS",
-                        "needs_reverify": false
-                    }
-                }
-            }));
+        fn init_with_state_json(&self, state_json: &str) {
+            let state: Value = serde_json::from_str(state_json).expect("fixture should parse");
+            self.init_with_state_value(&state);
+        }
+
+        fn init_with_state_value(&self, state: &Value) {
+            self.write_state_value(state);
 
             git_success(self.path(), ["init"]);
             git_success(
