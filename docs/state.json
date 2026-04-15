@@ -9568,7 +9568,7 @@
     {
       "dispatched_at": "2026-04-15T22:04:59Z",
       "issue": 2543,
-      "merged_at": "2026-04-15T23:31:02Z",
+      "merged_at": "2026-04-15T23:36:18Z",
       "model": "gpt-5.4",
       "pr": 2544,
       "status": "merged",
@@ -10803,12 +10803,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 0,
     "issue": 2545,
     "number": 501,
-    "summary": "0 dispatches, 0 merges",
+    "summary": "0 dispatches, 1 merges",
     "timestamp": "2026-04-15T23:31:02Z"
   },
   "last_eva_comment_check": "2026-04-15T23:31:02Z",
