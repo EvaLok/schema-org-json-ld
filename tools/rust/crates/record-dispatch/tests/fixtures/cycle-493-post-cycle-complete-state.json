@@ -1,0 +1,63 @@
+{
+  "agent_sessions": [
+    {
+      "dispatched_at": "2026-04-14T08:07:59Z",
+      "issue": 2504,
+      "merged_at": "2026-04-14T09:43:09Z",
+      "model": "gpt-5.4",
+      "pr": 2505,
+      "status": "merged",
+      "title": "Fix cycle-runner race during close_out"
+    },
+    {
+      "dispatched_at": "2026-04-14T08:08:20Z",
+      "issue": 2506,
+      "merged_at": "2026-04-14T09:43:14Z",
+      "model": "gpt-5.4",
+      "pr": 2507,
+      "status": "merged",
+      "title": "Preserve cycle-complete worklog receipts"
+    },
+    {
+      "dispatched_at": "2026-04-14T08:08:41Z",
+      "issue": 2508,
+      "merged_at": "2026-04-14T09:43:19Z",
+      "model": "gpt-5.4",
+      "pr": 2509,
+      "status": "merged",
+      "title": "[Cycle Review] Cycle 492 end-of-cycle review"
+    }
+  ],
+  "cycle_phase": {
+    "cycle": 493,
+    "phase": "close_out",
+    "phase_entered_at": "2026-04-14T09:50:16Z"
+  },
+  "dispatch_log_latest": "#2508 [Cycle Review] Cycle 492 end-of-cycle review (cycle 492)",
+  "field_inventory": {
+    "fields": {
+      "cycle_phase": {
+        "last_refreshed": "cycle 492"
+      }
+    }
+  },
+  "in_flight_sessions": 0,
+  "last_cycle": {
+    "duration_minutes": 18,
+    "issue": 2510,
+    "number": 493,
+    "summary": "0 dispatches, 3 merges (PR #2505, PR #2507, PR #2509)",
+    "timestamp": "2026-04-14T09:50:16Z"
+  },
+  "review_agent": {
+    "history": []
+  },
+  "review_dispatch_consecutive": 1,
+  "tool_pipeline": {
+    "c5_5_gate": {
+      "cycle": 493,
+      "needs_reverify": false,
+      "status": "PASS"
+    }
+  }
+}

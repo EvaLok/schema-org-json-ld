@@ -1062,6 +1062,41 @@ mod tests {
     }
 
     #[test]
+    fn sync_last_cycle_summary_after_dispatch_increments_zero_merge_summary() {
+        let mut state = sample_state();
+        state["last_cycle"]["summary"] = json!("0 dispatches, 0 merges");
+        let original_timestamp = state["last_cycle"]["timestamp"]
+            .as_str()
+            .expect("sample state should include last_cycle timestamp")
+            .to_string();
+        let model = default_test_model();
+        let patch = build_dispatch_patch(
+            &state,
+            164,
+            603,
+            "Example dispatch",
+            &model,
+            "2026-03-07T13:00:00Z",
+        )
+        .expect("patch should build");
+
+        let updated_existing =
+            apply_dispatch_patch(&mut state, &patch).expect("patch should apply");
+        assert!(!updated_existing);
+        sync_last_cycle_summary_after_dispatch(&mut state, patch.current_cycle)
+            .expect("summary sync should succeed");
+
+        assert_eq!(
+            state["last_cycle"]["summary"],
+            json!("1 dispatch, 0 merges")
+        );
+        let updated_timestamp = state["last_cycle"]["timestamp"]
+            .as_str()
+            .expect("dispatch patch should refresh last_cycle timestamp");
+        assert_ne!(updated_timestamp, original_timestamp);
+    }
+
+    #[test]
     fn sync_last_cycle_summary_after_dispatch_preserves_unparseable_last_cycle_summary() {
         let mut state = sample_state();
         state["last_cycle"]["summary"] = json!("custom summary");
