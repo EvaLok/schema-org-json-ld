@@ -10485,7 +10485,9 @@
       "category": "journal-quality",
       "deadline_cycle": 499,
       "deferred_cycle": 494,
-      "resolved": false
+      "dropped_rationale": "Dispatch path blocked by pipeline-gate deadlock (chronic-category-currency+deferral-accumulation+deferral-deadlines persistent FAILs in record-dispatch::enforce_pipeline_gate); escalated to Eva at EvaLok/schema-org-json-ld#2542 with dispatch payload prepared at /tmp/dispatch-f2f3-body.md; will re-dispatch as structural fix once Eva resolves gate. Dropping here to honour actioned-means-done: the deadline miss is now explicitly tracked via the open Eva question rather than a silent carry-forward.",
+      "resolved": true,
+      "resolved_ref": "dropped: Dispatch path blocked by pipeline-gate deadlock (chronic-category-currency+deferral-accumulation+def"
     },
     {
       "category": "worklog-accuracy",
