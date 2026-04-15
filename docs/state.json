@@ -8557,6 +8557,12 @@
       "deadline_cycle": 501,
       "deferred_cycle": 496,
       "resolved": false
+    },
+    {
+      "category": "state-integrity",
+      "deadline_cycle": 503,
+      "deferred_cycle": 498,
+      "resolved": false
     }
   ],
   "dispatch_log_latest": "#2536 [Cycle Review] Cycle 498 end-of-cycle review (cycle 498)",
@@ -8738,7 +8744,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 498"
+        "last_refreshed": "cycle 499"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -15695,9 +15701,38 @@
         "ignored": 0,
         "note": "F1 code-change-quality (CLI-level regression gap for dispatch-review) — dispatch_created via #2530 with cycle-495 fixture spec. F2 worklog-accuracy (scope-boundary chronic; cycle-state section cites post-scope pipeline PASS) — deferred, structural fix needed in write-entry tool to honor scope-note boundary. F3 journal-quality (prose promotes chronic state before ledger update) — deferred, structural fix needed (journal tool validation that chronic prose ≤ state.json chronic_category_responses status). Complacency 2/5.",
         "review_issue": 2527
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "journal-quality",
+          "state-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 498,
+        "deferred": 3,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "deferred"
+          },
+          {
+            "category": "state-integrity",
+            "disposition": "deferred"
+          }
+        ],
+        "ignored": 0,
+        "note": "Cycle 498 review consumed. All 3 findings deferred — dispatch capacity full (3/2 in-flight: #2530/#2531, #2532/#2533, #2536/#2537) prevents new structural dispatches this cycle. F1 worklog-accuracy/scope-boundary is chronic (scope-boundary chronic entry already tracked, deadline cycle 501). F2 journal-quality is chronic (6+ consecutive cycle deferrals) — #2532/#2533 in flight addressing a related but narrower aspect (chronic-promotion claim validation); F2's commitment-rewrite failure mode is not fully covered by #2532. F3 state-integrity is the most actionable: agent-task dispatches created outside record-dispatch caused agent_sessions drift. Structural fix required (enforce record-dispatch for every agent-task, or add backfill tool). Will dispatch when capacity clears. Complacency 2/5 accurate.",
+        "review_issue": 2536
       }
     ],
-    "last_review_cycle": 497
+    "last_review_cycle": 498
   },
   "review_dispatch_consecutive": 5,
   "review_events_verified_through_cycle": 498,
