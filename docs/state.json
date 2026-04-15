@@ -7631,6 +7631,14 @@
       "pr": 2540,
       "status": "merged",
       "title": "[Cycle Review] Cycle 499 end-of-cycle review"
+    },
+    {
+      "backfilled": true,
+      "issue": 2530,
+      "merged_at": "2026-04-15T21:30:59Z",
+      "pr": 2531,
+      "status": "merged",
+      "title": "Backfilled: PR #2531"
     }
   ],
   "audit_dropped": [
@@ -8850,7 +8858,7 @@
     "duration_minutes": 14,
     "issue": 2541,
     "number": 500,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-15T21:19:08Z"
   },
   "last_eva_comment_check": "2026-04-15T21:19:08Z",
