@@ -2958,18 +2958,15 @@ fn validate_journal_chronic_claims(journal_text: &str, repo_root: &Path) -> Resu
             .iter()
             .find(|entry| entry.full_category == claim.category)
         else {
-            errors.push(format!(
-                "  category: {}\n  claimed in prose: {}\n  state ledger (docs/state.json): category not found in chronic_category_responses\n  fix: run `process-review --update-chronic-category {} --update-chronic-pr <pr> --update-chronic-cycle <cycle>` before writing this journal entry, OR revise the prose to match current state.",
-                claim.category, claim.claimed_status, claim.category
+            errors.push(format_chronic_claim_validation_error(
+                &claim,
+                "category not found in chronic_category_responses",
             ));
             continue;
         };
 
         if claim.claimed_status != entry.status {
-            errors.push(format!(
-                "  category: {}\n  claimed in prose: {}\n  state ledger (docs/state.json): {}\n  fix: run `process-review --update-chronic-category {} --update-chronic-pr <pr> --update-chronic-cycle <cycle>` before writing this journal entry, OR revise the prose to match current state.",
-                claim.category, claim.claimed_status, entry.status, claim.category
-            ));
+            errors.push(format_chronic_claim_validation_error(&claim, &entry.status));
         }
     }
 
@@ -2981,6 +2978,16 @@ fn validate_journal_chronic_claims(journal_text: &str, repo_root: &Path) -> Resu
             errors.join("\n")
         ))
     }
+}
+
+fn format_chronic_claim_validation_error(
+    claim: &ChronicPromotionClaim,
+    ledger_status: &str,
+) -> String {
+    format!(
+        "  category: {}\n  claimed in prose: {}\n  state ledger (docs/state.json): {}\n  fix: run `process-review --update-chronic-category {} --update-chronic-pr <pr> --update-chronic-cycle <cycle>` before writing this journal entry, OR revise the prose to match current state.",
+        claim.category, claim.claimed_status, ledger_status, claim.category
+    )
 }
 
 #[derive(Debug)]
@@ -3068,6 +3075,9 @@ fn looks_like_chronic_category(token: &str) -> bool {
 }
 
 fn normalize_chronic_status_token(token: &str) -> Option<String> {
+    // Match the canonical status strings already stored in docs/state.json:
+    // `tool_hardened` and `runtime_verified` use underscores, while
+    // `structural-fix` remains hyphenated.
     let normalized = token
         .trim_matches(|character: char| {
             !character.is_ascii_alphanumeric() && !matches!(character, '-' | '_')
