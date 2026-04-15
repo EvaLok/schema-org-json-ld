@@ -1022,8 +1022,10 @@ mod tests {
     }
 
     fn sample_session_with_status(cycle: u64, status: Option<&str>) -> AgentSession {
-        let mut session = AgentSession::default();
-        session.status = status.map(str::to_string);
+        let mut session = AgentSession {
+            status: status.map(str::to_string),
+            ..AgentSession::default()
+        };
         session.extra.insert("cycle".to_string(), json!(cycle));
         session
     }

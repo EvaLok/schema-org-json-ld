@@ -397,8 +397,9 @@ fn build_commit_message(
         && !has_deferral_update
     {
         let categories = &chronic_create_summary
-            .expect("create summary presence already checked")
-            .categories;
+            .as_ref()
+            .map(|summary| &summary.categories)
+            .expect("create summary presence already checked");
         return if categories.len() == 1 {
             format!(
                 "state(process-review): create chronic entry {} [cycle {}]",

@@ -1632,7 +1632,7 @@ fn review_history_entry_matches_target(
     target: ReviewSummaryTarget,
 ) -> bool {
     entry.extra.get("review_issue").and_then(Value::as_u64) == Some(target.review_issue)
-        || (entry.extra.get("review_issue").is_none() && entry.cycle == target.review_cycle)
+        || (!entry.extra.contains_key("review_issue") && entry.cycle == target.review_cycle)
 }
 
 fn summarize_review_dispositions(entry: &ReviewHistoryEntry) -> Result<String, String> {
@@ -1677,8 +1677,7 @@ fn summarize_review_dispositions(entry: &ReviewHistoryEntry) -> Result<String, S
 
     Ok(counts
         .into_iter()
-        .map(|(disposition, count)| format_count_with_label(count, &disposition))
-        .flatten()
+        .filter_map(|(disposition, count)| format_count_with_label(count, &disposition))
         .collect::<Vec<_>>()
         .join(", "))
 }
@@ -3795,6 +3794,7 @@ fn parse_commitment_status(value: &str) -> Result<CommitmentStatus, String> {
 	}
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_journal_entry(
     cycle: u64,
     now: DateTime<Utc>,

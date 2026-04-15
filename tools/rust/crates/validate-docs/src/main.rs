@@ -723,9 +723,7 @@ fn validate_pipeline_status(content: &str, overall: &str) -> Option<String> {
     } else {
         "FAIL"
     };
-    let reported_status = if reported.starts_with("FAIL→PASS") {
-        "PASS"
-    } else if reported.starts_with("PASS") {
+    let reported_status = if reported.starts_with("FAIL→PASS") || reported.starts_with("PASS") {
         "PASS"
     } else if reported.starts_with("FAIL") {
         "FAIL"

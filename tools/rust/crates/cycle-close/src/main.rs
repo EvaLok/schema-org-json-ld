@@ -817,6 +817,8 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::sync::Mutex;
 
+    type GhCall = (Vec<String>, Option<Vec<u8>>);
+
     #[derive(Default)]
     struct MockRunner {
         git_results: Mutex<VecDeque<Result<ExecutionResult, String>>>,
@@ -824,7 +826,7 @@ mod tests {
         gh_results: Mutex<VecDeque<Result<ExecutionResult, String>>>,
         git_calls: Mutex<Vec<Vec<String>>>,
         bash_calls: Mutex<Vec<Vec<String>>>,
-        gh_calls: Mutex<Vec<(Vec<String>, Option<Vec<u8>>)>>,
+        gh_calls: Mutex<Vec<GhCall>>,
     }
 
     impl MockRunner {
@@ -845,7 +847,7 @@ mod tests {
             self.git_calls.lock().unwrap().clone()
         }
 
-        fn gh_calls(&self) -> Vec<(Vec<String>, Option<Vec<u8>>)> {
+        fn gh_calls(&self) -> Vec<GhCall> {
             self.gh_calls.lock().unwrap().clone()
         }
 
@@ -978,7 +980,7 @@ mod tests {
 
     struct HybridRunner {
         bash_calls: Mutex<Vec<Vec<String>>>,
-        gh_calls: Mutex<Vec<(Vec<String>, Option<Vec<u8>>)>>,
+        gh_calls: Mutex<Vec<GhCall>>,
     }
 
     impl HybridRunner {
