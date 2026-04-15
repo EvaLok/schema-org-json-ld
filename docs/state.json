@@ -8505,7 +8505,8 @@
       "category": "state-integrity",
       "deadline_cycle": 496,
       "deferred_cycle": 491,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-495.md"
     },
     {
       "category": "journal-quality",
@@ -8517,7 +8518,8 @@
       "category": "worklog-accuracy",
       "deadline_cycle": 499,
       "deferred_cycle": 494,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-495.md"
     }
   ],
   "dispatch_log_latest": "#2521 [Cycle Review] Cycle 495 end-of-cycle review (cycle 495)",
@@ -15566,9 +15568,39 @@
         "ignored": 0,
         "note": "Cycle 494 review: F1 code-change-quality (duplicate-dispatch protection bug in record-dispatch main.rs:140-166) — linked to already-filed #2514 (overlapping root cause: record-dispatch binary-path bugs vs library helpers); F2 worklog-accuracy (self-contradictory worklog counts vs receipts) — chronic, structural fix deferred pending dispatch slot; F3 journal-quality (premature chronic refresh narrative) — behavioral fix documented, chronic category deferred. Complacency 2/5.",
         "review_issue": 2516
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "journal-quality",
+          "state-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 3,
+        "cycle": 495,
+        "deferred": 1,
+        "dispatch_created": 2,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "worklog-accuracy",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "state-integrity",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "deferred"
+          }
+        ],
+        "ignored": 0,
+        "note": "Cycle 495 review: F1 worklog-accuracy (pre-dispatch worklog snapshot frozen as final state) and F2 state-integrity (last_cycle.summary inconsistent after post-freeze dispatch) share root cause with in-flight #2514 (close_out -> record-dispatch late-dispatch summary/phase sync bug) — linked as dispatch_created referencing #2514 PR #2515. F3 journal-quality (commitment observability: narrative says carries-forward but omits from Concrete commitments section) — behavioral finding, chronic category, deferred. Complacency 3/5 (capped due to state-invariants invariant-8 failure at cycle-495 close-out; now resolved on current master via cycle-start 496 re-sync).",
+        "review_issue": 2521
       }
     ],
-    "last_review_cycle": 494
+    "last_review_cycle": 495
   },
   "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 495,
