@@ -9568,8 +9568,10 @@
     {
       "dispatched_at": "2026-04-15T22:04:59Z",
       "issue": 2543,
+      "merged_at": "2026-04-15T23:31:02Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2544,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 500 end-of-cycle review"
     }
   ],
@@ -9842,7 +9844,7 @@
   "cycle_phase": {
     "cycle": 501,
     "phase": "close_out",
-    "phase_entered_at": "2026-04-15T23:30:49Z"
+    "phase_entered_at": "2026-04-15T23:31:02Z"
   },
   "cycles_since_last_forward_work": {
     "added_in_cycle": 411,
@@ -10803,13 +10805,13 @@
   },
   "in_flight_sessions": 1,
   "last_cycle": {
-    "duration_minutes": 14,
+    "duration_minutes": 0,
     "issue": 2545,
     "number": 501,
     "summary": "0 dispatches, 0 merges",
-    "timestamp": "2026-04-15T23:30:49Z"
+    "timestamp": "2026-04-15T23:31:02Z"
   },
-  "last_eva_comment_check": "2026-04-15T23:30:49Z",
+  "last_eva_comment_check": "2026-04-15T23:31:02Z",
   "last_tool_audit_cycle": 403,
   "open_questions_for_eva": [
     2542,
