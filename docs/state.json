@@ -10507,7 +10507,9 @@
       "category": "worklog-accuracy",
       "deadline_cycle": 501,
       "deferred_cycle": 496,
-      "resolved": false
+      "dropped_rationale": "Deadline cycle 501 reached with no structural fix landed. Same root cause (C5 freeze doesn't re-derive worklog sections after late state mutations) was re-flagged as cycle 500 review Finding 1 — now tracked as active deferral under cycle 500 (deadline 506). Dispatch of the structural fix is gate-blocked by EvaLok/schema-org-json-ld#2542. Dropping this older deferral to avoid double-counting the same issue; cycle 500 deferral carries the live tracking.",
+      "resolved": true,
+      "resolved_ref": "dropped: Deadline cycle 501 reached with no structural fix landed. Same root cause (C5 freeze doesn't re-deri"
     },
     {
       "category": "state-integrity",
