@@ -27,12 +27,12 @@
 - tools/rust/crates/verify-review-events/src/main.rs: PR #2533 — verify-review-events chronic claim verification
 - tools/rust/crates/write-entry/src/main.rs: PR #2533 — write-entry chronic promotion claims validated against state before write
 
-## Pre-dispatch state
+## Cycle state
 
-*Snapshot before review dispatch — final counters may differ after C6.*
 
 - **In-flight agent sessions**: 0
-- **Pipeline status**: FAIL (3 warnings, 7 blocking: chronic-category-currency, deferral-accumulation, deferral-deadlines, doc-validation, review-events-verified, current-cycle-steps, current-cycle-journal-section)
+- **Pipeline status**: FAIL→PASS (C5.5 initially failed: FAIL (3 warnings, 2 blocking: deferral-deadlines, current-cycle-steps); resolved by re-run)
+- **Close-out gate failures**: C5.5 FAIL: FAIL (3 warnings, 2 blocking: deferral-deadlines, current-cycle-steps)
 - **Publish gate**: published
 
 ## Next steps
