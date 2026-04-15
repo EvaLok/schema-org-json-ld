@@ -7882,10 +7882,9 @@
     2526
   ],
   "cycle_phase": {
-    "completed_at": "2026-04-15T05:15:12Z",
     "cycle": 497,
-    "phase": "complete",
-    "phase_entered_at": "2026-04-15T05:15:12Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-04-15T07:50:50Z"
   },
   "cycles_since_last_forward_work": {
     "added_in_cycle": 411,
@@ -8824,13 +8823,13 @@
   },
   "in_flight_sessions": 0,
   "last_cycle": {
-    "duration_minutes": 14,
-    "issue": 2526,
+    "duration_minutes": 156,
+    "issue": 2529,
     "number": 497,
-    "summary": "0 dispatches, 1 merges",
-    "timestamp": "2026-04-15T05:15:08Z"
+    "summary": "1 dispatches, 3 merges (PR #2515, PR #2525, PR #2528)",
+    "timestamp": "2026-04-15T07:50:50Z"
   },
-  "last_eva_comment_check": "2026-04-15T05:10:56Z",
+  "last_eva_comment_check": "2026-04-15T07:50:50Z",
   "last_tool_audit_cycle": 403,
   "open_questions_for_eva": [
     2519,
