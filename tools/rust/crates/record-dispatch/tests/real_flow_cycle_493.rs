@@ -8,6 +8,8 @@ use std::{
 
 const CYCLE_493_CLOSE_OUT_FIXTURE: &str =
     include_str!("fixtures/cycle-493-post-cycle-complete-state.json");
+const CYCLE_495_CLOSE_OUT_FIXTURE: &str =
+    include_str!("fixtures/cycle-495-post-cycle-complete-state.json");
 
 #[test]
 fn record_dispatch_replays_cycle_493_close_out_flow() {
@@ -70,6 +72,68 @@ fn record_dispatch_replays_cycle_493_close_out_flow() {
     assert_eq!(
         head_subject.trim(),
         "state(record-dispatch): #2511 dispatched [cycle 493]"
+    );
+}
+
+#[test]
+fn record_dispatch_replays_cycle_495_close_out_flow() {
+    let repo = TempRepo::new();
+    repo.init_with_state(CYCLE_495_CLOSE_OUT_FIXTURE);
+
+    let before = repo.read_state();
+    let original_timestamp = before["last_cycle"]["timestamp"]
+        .as_str()
+        .expect("fixture should include last_cycle timestamp")
+        .to_string();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_record-dispatch"))
+        .args([
+            "--repo-root",
+            repo.path()
+                .to_str()
+                .expect("repo path should be valid UTF-8"),
+            "--issue",
+            "2521",
+            "--title",
+            "[Cycle Review] Cycle 495 end-of-cycle review",
+            "--review-dispatch",
+            "--model",
+            "gpt-5.4",
+        ])
+        .output()
+        .expect("record-dispatch should execute");
+    assert!(
+        output.status.success(),
+        "record-dispatch failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let after = repo.read_state();
+    assert_eq!(
+        after.pointer("/cycle_phase/phase"),
+        Some(&serde_json::json!("complete"))
+    );
+    assert_eq!(
+        after.pointer("/last_cycle/summary"),
+        Some(&serde_json::json!("1 dispatch, 0 merges"))
+    );
+    assert_ne!(
+        after
+            .pointer("/last_cycle/timestamp")
+            .and_then(Value::as_str),
+        Some(original_timestamp.as_str())
+    );
+    assert_eq!(
+        after.pointer("/dispatch_log_latest"),
+        Some(&serde_json::json!(
+            "#2521 [Cycle Review] Cycle 495 end-of-cycle review (cycle 495)"
+        ))
+    );
+
+    let head_subject = git_output(repo.path(), ["log", "-1", "--pretty=%s"]);
+    assert_eq!(
+        head_subject.trim(),
+        "state(record-dispatch): #2521 dispatched [cycle 495]"
     );
 }
 

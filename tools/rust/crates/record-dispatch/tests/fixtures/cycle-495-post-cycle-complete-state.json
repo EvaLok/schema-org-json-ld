@@ -1,0 +1,50 @@
+{
+  "agent_sessions": [
+    {
+      "dispatched_at": "2026-04-14T21:46:34Z",
+      "issue": 2514,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix record-dispatch: real-flow integration test + summary-sync regression for late review dispatches"
+    },
+    {
+      "dispatched_at": "2026-04-14T21:57:54Z",
+      "issue": 2516,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 494 end-of-cycle review"
+    }
+  ],
+  "cycle_phase": {
+    "cycle": 495,
+    "phase": "close_out",
+    "phase_entered_at": "2026-04-14T23:30:16Z"
+  },
+  "dispatch_log_latest": "#2516 [Cycle Review] Cycle 494 end-of-cycle review (cycle 494)",
+  "field_inventory": {
+    "fields": {
+      "cycle_phase": {
+        "last_refreshed": "cycle 494"
+      }
+    }
+  },
+  "in_flight_sessions": 2,
+  "last_cycle": {
+    "duration_minutes": 12,
+    "issue": 2518,
+    "number": 495,
+    "summary": "0 dispatches, 0 merges",
+    "timestamp": "2026-04-14T23:30:16Z"
+  },
+  "review_agent": {
+    "history": []
+  },
+  "review_dispatch_consecutive": 1,
+  "tool_pipeline": {
+    "c5_5_gate": {
+      "cycle": 495,
+      "needs_reverify": false,
+      "status": "PASS"
+    }
+  }
+}
