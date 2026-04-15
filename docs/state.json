@@ -8756,7 +8756,7 @@
       },
       "review_events_verified_through_cycle": {
         "cadence": "managed by verify-review-events tool only",
-        "last_refreshed": "cycle 498"
+        "last_refreshed": "cycle 499"
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
@@ -15735,7 +15735,7 @@
     "last_review_cycle": 498
   },
   "review_dispatch_consecutive": 5,
-  "review_events_verified_through_cycle": 498,
+  "review_events_verified_through_cycle": 499,
   "schema_status": {
     "directory_layout": {
       "php": "php/src/, php/test/",
@@ -16277,9 +16277,9 @@
   "tool_pipeline": {
     "blocks_publish": false,
     "c5_5_gate": {
-      "cycle": 498,
+      "cycle": 499,
       "needs_reverify": false,
-      "pipeline_summary": "PASS (3 warnings)",
+      "pipeline_summary": "PASS (1 blocking warning, 3 warnings)",
       "status": "PASS"
     },
     "c5_5_initial_result": {
@@ -16289,12 +16289,6 @@
       "overall": "fail",
       "result": "FAIL",
       "summary": "FAIL (2 warnings, 2 blocking: state-invariants, current-cycle-steps)"
-    },
-    "c5_5_rerun_receipt": {
-      "cycle": 498,
-      "initial_status": "FAIL",
-      "rerun_status": "PASS",
-      "timestamp": "2026-04-15T08:29:33Z"
     },
     "eva_directive": 436,
     "phases": [
