@@ -510,7 +510,7 @@ mod tests {
     use clap::CommandFactory;
     use state_schema::default_agent_model;
     use std::fs;
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
     use std::process::Command;
     use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -756,7 +756,7 @@ mod tests {
         assert!(status.success());
     }
 
-    fn write_repo_state(repo_root: &PathBuf, state: Value) {
+    fn write_repo_state(repo_root: &Path, state: Value) {
         fs::create_dir_all(repo_root.join("docs")).expect("docs dir");
         fs::write(
             repo_root.join("docs/state.json"),
@@ -765,7 +765,7 @@ mod tests {
         .expect("write state.json");
     }
 
-    fn read_repo_state(repo_root: &PathBuf) -> Value {
+    fn read_repo_state(repo_root: &Path) -> Value {
         serde_json::from_str(
             &fs::read_to_string(repo_root.join("docs/state.json")).expect("read state.json"),
         )

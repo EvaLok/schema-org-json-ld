@@ -2928,7 +2928,7 @@ fn frozen_commit_status_for_date_with_runner(
             .map(|entries| {
                 entries
                     .filter_map(Result::ok)
-                    .any(|e| e.path().extension().map_or(false, |ext| ext == "md"))
+                    .any(|e| e.path().extension().is_some_and(|ext| ext == "md"))
             })
             .unwrap_or(false);
     let has_journal_on_disk = repo_root
@@ -13268,13 +13268,13 @@ mod tests {
 
             fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
                 assert_eq!(issue, 958);
-                let step_ids = EXPECTED_STEP_IDS.iter().copied().collect::<Vec<_>>();
+                let step_ids = EXPECTED_STEP_IDS.to_vec();
                 Ok(step_comment_bodies(301, &step_ids))
             }
         }
 
         let runner = Runner;
-        let step_ids = EXPECTED_STEP_IDS.iter().copied().collect::<Vec<_>>();
+        let step_ids = EXPECTED_STEP_IDS.to_vec();
         let comments = runner.fetch_issue_comments_with_timestamps(958).unwrap();
         assert_eq!(
             comments,
