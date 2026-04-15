@@ -39,6 +39,10 @@ struct Cli {
     /// Print the issue JSON without creating it
     #[arg(long)]
     dry_run: bool,
+
+    /// Record an already-created review issue number without calling gh api (testing/recovery)
+    #[arg(long)]
+    record_only: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -87,7 +91,14 @@ fn run(cli: Cli) -> Result<(), String> {
         return Ok(());
     }
 
-    let created_issue = create_issue(&payload)?;
+    let created_issue = if let Some(issue_number) = cli.record_only {
+        CreatedIssue {
+            number: issue_number,
+            html_url: format!("https://github.com/{MAIN_REPO}/issues/{issue_number}"),
+        }
+    } else {
+        create_issue(&payload)?
+    };
     let state_result = record_created_issue(
         &cli.repo_root,
         current_cycle,
@@ -309,6 +320,7 @@ mod tests {
         assert!(help.contains("--body-file"));
         assert!(help.contains("--repo-root"));
         assert!(help.contains("--dry-run"));
+        assert!(help.contains("--record-only"));
     }
 
     #[test]
