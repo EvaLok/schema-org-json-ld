@@ -9870,8 +9870,8 @@
   ],
   "cycle_phase": {
     "cycle": 504,
-    "phase": "work",
-    "phase_entered_at": "2026-04-16T07:33:30Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-04-16T07:56:08Z"
   },
   "cycles_since_last_forward_work": {
     "added_in_cycle": 411,
@@ -10691,7 +10691,7 @@
       },
       "dispatch_log_latest": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 503"
+        "last_refreshed": "cycle 504"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
@@ -10711,7 +10711,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 503"
+        "last_refreshed": "cycle 504"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -10731,7 +10731,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 503"
+        "last_refreshed": "cycle 504"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -10743,7 +10743,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 503"
+        "last_refreshed": "cycle 504"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -10767,7 +10767,7 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 503"
+        "last_refreshed": "cycle 504"
       },
       "review_events_verified_through_cycle": {
         "cadence": "managed by verify-review-events tool only",
@@ -10779,7 +10779,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 503"
+        "last_refreshed": "cycle 504"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -10856,10 +10856,10 @@
     "duration_minutes": 23,
     "issue": 2554,
     "number": 504,
-    "summary": "0 dispatches, 1 merges",
-    "timestamp": "2026-04-16T07:33:30Z"
+    "summary": "Consumed cycle 503 review (3 findings deferred, F3 instance fix applied via stale session #2549 reconciliation). Merged PR #2553 (cycle 503 review artifact) via admin override. Small process improvement: added ## Complacency score heading to cycle-503.md so process-review could parse. Structural fixes for F1/F2/F3 deferred to next cycle.",
+    "timestamp": "2026-04-16T07:56:08Z"
   },
-  "last_eva_comment_check": "2026-04-16T07:33:30Z",
+  "last_eva_comment_check": "2026-04-16T07:56:08Z",
   "last_tool_audit_cycle": 403,
   "open_questions_for_eva": [
     2542,
