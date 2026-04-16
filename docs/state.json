@@ -10586,7 +10586,8 @@
       "category": "state-integrity",
       "deadline_cycle": 508,
       "deferred_cycle": 503,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "59336848"
     }
   ],
   "dispatch_log_latest": "#2555 [Cycle Review] Cycle 504 end-of-cycle review (cycle 504)",
