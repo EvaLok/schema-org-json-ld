@@ -1,13 +1,15 @@
+use crate::git;
 use crate::runner;
 use crate::steps;
 use serde::Serialize;
-use serde_json::Value;
+use serde_json::{json, Value};
 use state_schema::{current_utc_timestamp, read_state_value, write_state_value, StepCommentGap};
 use std::path::Path;
 
 const HOUSEKEEPING_STEP_ID: &str = "7";
 const CONCURRENCY_STEP_ID: &str = "8";
 const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
+const AGENT_SESSIONS_LIFECYCLE_STEP_NAME: &str = "agent-sessions-lifecycle";
 const CASCADE_PREFIX: &str = "Cascade from cycle ";
 const AUTO_ACKNOWLEDGED_CASCADE_REASON: &str =
     "Auto-acknowledged inherited cascade from cycle {cycle} by cycle-runner startup";
@@ -119,6 +121,12 @@ pub fn run(
     {
         warnings.push(format!(
             "step-comments cascade auto-acknowledgement failed: {}",
+            error
+        ));
+    }
+    if let Err(error) = auto_mark_stale_agent_sessions(repo_root, &pipeline, cycle, &mut warnings) {
+        warnings.push(format!(
+            "stale agent-session marker update failed: {}",
             error
         ));
     }
@@ -389,6 +397,142 @@ fn auto_acknowledge_step_comment_cascades(
     }
 
     Ok(())
+}
+
+/// After pipeline-check runs, scan the `agent-sessions-lifecycle` step for
+/// drift reports (issues closed on GitHub but still `in_flight` in state) and
+/// write `last_seen_stale_at_cycle = current_cycle` on each matching session
+/// row. Without this writer the pipeline-check escalation from WARN (first
+/// detection) to FAIL (stale across cycles) never fires — the detective-only
+/// gap flagged by cycle-503 F3 review (state-integrity chronic category).
+///
+/// Idempotent: sessions whose marker is already at `current_cycle` (or later)
+/// are skipped, so a same-cycle re-run produces no new commit.
+fn auto_mark_stale_agent_sessions(
+    repo_root: &Path,
+    pipeline: &Value,
+    current_cycle: u64,
+    warnings: &mut Vec<String>,
+) -> Result<(), String> {
+    let mut state = read_state_value(repo_root)?;
+    let marked = mark_stale_agent_sessions_in_state(&mut state, pipeline, current_cycle)?;
+    if marked.is_empty() {
+        return Ok(());
+    }
+
+    write_state_value(repo_root, &state)?;
+    let summary = marked
+        .iter()
+        .map(u64::to_string)
+        .collect::<Vec<_>>()
+        .join(", ");
+    let message = format!(
+        "state(stale-session-mark): marked agent session(s) #{} stale at cycle {} [cycle {}]",
+        summary, current_cycle, current_cycle
+    );
+    git::add_and_commit(repo_root, &["docs/state.json"], &message)?;
+    git::push(repo_root)?;
+    warnings.push(format!(
+        "Marked {} stale in_flight agent session(s) with last_seen_stale_at_cycle = {}: #{}",
+        marked.len(),
+        current_cycle,
+        summary
+    ));
+    Ok(())
+}
+
+/// Pure state-mutation core of [`auto_mark_stale_agent_sessions`]. Returns the
+/// list of issue numbers whose session row was updated so the caller can emit
+/// a commit / log message. Extracted from the IO wrapper so the mutation logic
+/// can be unit tested without a real git repo.
+fn mark_stale_agent_sessions_in_state(
+    state: &mut Value,
+    pipeline: &Value,
+    current_cycle: u64,
+) -> Result<Vec<u64>, String> {
+    let Some(steps) = pipeline.get("steps").and_then(Value::as_array) else {
+        return Ok(Vec::new());
+    };
+
+    let mut stale_issues: Vec<u64> = Vec::new();
+    for step in steps {
+        if step.get("name").and_then(Value::as_str) != Some(AGENT_SESSIONS_LIFECYCLE_STEP_NAME) {
+            continue;
+        }
+        let Some(detail) = step.get("detail").and_then(Value::as_str) else {
+            continue;
+        };
+        for issue in parse_stale_session_issue_numbers(detail) {
+            if !stale_issues.contains(&issue) {
+                stale_issues.push(issue);
+            }
+        }
+    }
+
+    if stale_issues.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let Some(sessions) = state
+        .pointer_mut("/agent_sessions")
+        .and_then(Value::as_array_mut)
+    else {
+        return Ok(Vec::new());
+    };
+
+    let mut marked = Vec::new();
+    for session in sessions.iter_mut() {
+        let Some(issue) = session.get("issue").and_then(Value::as_u64) else {
+            continue;
+        };
+        if !stale_issues.contains(&issue) {
+            continue;
+        }
+        if session.get("status").and_then(Value::as_str) != Some("in_flight") {
+            continue;
+        }
+        let existing_cycle = session
+            .get("last_seen_stale_at_cycle")
+            .and_then(Value::as_u64);
+        if existing_cycle.is_some_and(|seen| seen >= current_cycle) {
+            continue;
+        }
+        session
+            .as_object_mut()
+            .ok_or_else(|| format!("agent session for issue #{issue} must be an object"))?
+            .insert(
+                "last_seen_stale_at_cycle".to_string(),
+                json!(current_cycle),
+            );
+        marked.push(issue);
+    }
+
+    Ok(marked)
+}
+
+/// Extract GitHub issue numbers referenced in an agent-sessions-lifecycle WARN
+/// or FAIL detail string. The authoritative format produced by
+/// pipeline-check's `agent_sessions_lifecycle_assessment` is:
+///   "agent session issue #N \"title\" is closed on GitHub but still marked in_flight"
+/// Multiple sessions may be joined with "; ". We take every "#N" occurrence
+/// and let the caller cross-reference against state.json, so changes to the
+/// exact wording downstream do not silently break the writer.
+fn parse_stale_session_issue_numbers(detail: &str) -> Vec<u64> {
+    let mut issues = Vec::new();
+    let mut remainder = detail;
+    while let Some(index) = remainder.find('#') {
+        let after = &remainder[index + 1..];
+        let digits: String = after.chars().take_while(|ch| ch.is_ascii_digit()).collect();
+        if !digits.is_empty() {
+            if let Ok(issue) = digits.parse::<u64>() {
+                if !issues.contains(&issue) {
+                    issues.push(issue);
+                }
+            }
+        }
+        remainder = &after[digits.len()..];
+    }
+    issues
 }
 
 fn parse_step_comment_cascade(detail: &str) -> Result<Option<StepCommentCascade>, String> {
@@ -734,5 +878,182 @@ mod tests {
             .expect("gap array should exist");
         assert_eq!(gaps.len(), 1);
         assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn parse_stale_session_issue_numbers_extracts_single_issue() {
+        let detail = "agent session issue #2317 \"Structural fix dispatch\" is closed on GitHub but still marked in_flight";
+        assert_eq!(parse_stale_session_issue_numbers(detail), vec![2317]);
+    }
+
+    #[test]
+    fn parse_stale_session_issue_numbers_extracts_multiple_issues_semicolon_joined() {
+        let detail = "agent session issue #2317 \"one\" is closed on GitHub but still marked in_flight; agent session issue #2549 \"two\" is closed on GitHub but still marked in_flight";
+        assert_eq!(
+            parse_stale_session_issue_numbers(detail),
+            vec![2317, 2549]
+        );
+    }
+
+    #[test]
+    fn parse_stale_session_issue_numbers_deduplicates() {
+        let detail = "issue #2317 ... issue #2317 (already stale in cycle 462)";
+        assert_eq!(parse_stale_session_issue_numbers(detail), vec![2317]);
+    }
+
+    #[test]
+    fn parse_stale_session_issue_numbers_ignores_non_numeric_hashes() {
+        let detail = "# header ## subheading nothing here";
+        assert!(parse_stale_session_issue_numbers(detail).is_empty());
+    }
+
+    #[test]
+    fn mark_stale_agent_sessions_sets_marker_on_first_detection() {
+        let mut state = json!({
+            "agent_sessions": [
+                {
+                    "issue": 2549,
+                    "title": "stale session",
+                    "status": "in_flight"
+                }
+            ]
+        });
+        let pipeline = json!({
+            "steps": [
+                {
+                    "name": "agent-sessions-lifecycle",
+                    "status": "Warn",
+                    "detail": "agent session issue #2549 \"stale session\" is closed on GitHub but still marked in_flight"
+                }
+            ]
+        });
+
+        let marked = mark_stale_agent_sessions_in_state(&mut state, &pipeline, 505)
+            .expect("mark should succeed");
+
+        assert_eq!(marked, vec![2549]);
+        let session = state
+            .pointer("/agent_sessions/0")
+            .expect("session row should exist");
+        assert_eq!(
+            session
+                .get("last_seen_stale_at_cycle")
+                .and_then(Value::as_u64),
+            Some(505)
+        );
+    }
+
+    #[test]
+    fn mark_stale_agent_sessions_is_idempotent_within_same_cycle() {
+        let mut state = json!({
+            "agent_sessions": [
+                {
+                    "issue": 2549,
+                    "status": "in_flight",
+                    "last_seen_stale_at_cycle": 505
+                }
+            ]
+        });
+        let pipeline = json!({
+            "steps": [
+                {
+                    "name": "agent-sessions-lifecycle",
+                    "status": "Warn",
+                    "detail": "agent session issue #2549 \"x\" is closed on GitHub but still marked in_flight"
+                }
+            ]
+        });
+
+        let marked = mark_stale_agent_sessions_in_state(&mut state, &pipeline, 505)
+            .expect("mark should succeed");
+
+        assert!(marked.is_empty());
+    }
+
+    #[test]
+    fn mark_stale_agent_sessions_refreshes_older_marker() {
+        let mut state = json!({
+            "agent_sessions": [
+                {
+                    "issue": 2549,
+                    "status": "in_flight",
+                    "last_seen_stale_at_cycle": 503
+                }
+            ]
+        });
+        let pipeline = json!({
+            "steps": [
+                {
+                    "name": "agent-sessions-lifecycle",
+                    "status": "Fail",
+                    "detail": "agent session issue #2549 \"x\" is closed on GitHub but still marked in_flight (already stale in cycle 503)"
+                }
+            ]
+        });
+
+        let marked = mark_stale_agent_sessions_in_state(&mut state, &pipeline, 505)
+            .expect("mark should succeed");
+
+        // Existing older marker means the FAIL path has already been taken;
+        // we still refresh the cycle so subsequent cycles see it as current.
+        assert_eq!(marked, vec![2549]);
+        assert_eq!(
+            state
+                .pointer("/agent_sessions/0/last_seen_stale_at_cycle")
+                .and_then(Value::as_u64),
+            Some(505)
+        );
+    }
+
+    #[test]
+    fn mark_stale_agent_sessions_skips_closed_session_rows() {
+        let mut state = json!({
+            "agent_sessions": [
+                {
+                    "issue": 2549,
+                    "status": "closed"
+                }
+            ]
+        });
+        let pipeline = json!({
+            "steps": [
+                {
+                    "name": "agent-sessions-lifecycle",
+                    "status": "Warn",
+                    "detail": "agent session issue #2549 \"x\" is closed on GitHub but still marked in_flight"
+                }
+            ]
+        });
+
+        let marked = mark_stale_agent_sessions_in_state(&mut state, &pipeline, 505)
+            .expect("mark should succeed");
+
+        // If the session row is already closed, the check is stale and we
+        // should not re-mark it. Downstream state has moved on.
+        assert!(marked.is_empty());
+    }
+
+    #[test]
+    fn mark_stale_agent_sessions_noop_without_pipeline_step() {
+        let mut state = json!({
+            "agent_sessions": [
+                {"issue": 2549, "status": "in_flight"}
+            ]
+        });
+        let pipeline = json!({
+            "steps": [
+                {"name": "other-step", "status": "Pass", "detail": "anything"}
+            ]
+        });
+
+        let marked = mark_stale_agent_sessions_in_state(&mut state, &pipeline, 505)
+            .expect("mark should succeed");
+
+        assert!(marked.is_empty());
+        assert!(state
+            .pointer("/agent_sessions/0")
+            .and_then(Value::as_object)
+            .and_then(|obj| obj.get("last_seen_stale_at_cycle"))
+            .is_none());
     }
 }
