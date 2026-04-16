@@ -4687,13 +4687,7 @@ fn deferral_accumulation_assessment(repo_root: &Path) -> Result<StepAssessment, 
         });
     }
 
-    let latest_cycle = review_agent
-        .history
-        .iter()
-        .filter(|entry| !entry.finding_dispositions.is_empty())
-        .map(|entry| entry.cycle)
-        .max()
-        .ok_or_else(|| "review history is missing per-finding disposition cycles".to_string())?;
+    let current_cycle = current_cycle_from_state(repo_root)?;
     let details = accumulations
         .iter()
         .map(|accumulation| {
@@ -4705,8 +4699,17 @@ fn deferral_accumulation_assessment(repo_root: &Path) -> Result<StepAssessment, 
         })
         .collect::<Vec<_>>()
         .join("; ");
+    // Per #2542 decision: FAIL only when an accumulation streak includes the
+    // current cycle (N) or the immediately prior cycle (N-1). Streaks whose
+    // last cycle is older than that are historical and cannot be cleared by
+    // operator action — reporting them as FAIL forever is structurally
+    // permanent. Historical closed streaks WARN instead.
+    let active_streak_threshold = current_cycle.saturating_sub(1);
     let has_recent_accumulation = accumulations.iter().any(|accumulation| {
-        if accumulation.cycles.last() != Some(&latest_cycle) {
+        let Some(&last_cycle) = accumulation.cycles.last() else {
+            return false;
+        };
+        if last_cycle < active_streak_threshold {
             return false;
         }
         // Check if this category's deferral has been resolved or dropped
@@ -10277,7 +10280,7 @@ mod tests {
     }
 
     #[test]
-    fn deferral_accumulation_warns_for_three_consecutive_deferred_cycles() {
+    fn deferral_accumulation_fails_when_recent_three_consecutive_deferred_cycles() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root = std::env::temp_dir().join(format!(
@@ -10288,6 +10291,7 @@ mod tests {
         fs::write(
             root.join("docs/state.json"),
             json!({
+                "cycle_phase": {"cycle": 350, "phase": "work"},
                 "review_agent": {
                     "history": [
                         {
@@ -10347,6 +10351,151 @@ mod tests {
     }
 
     #[test]
+    fn deferral_accumulation_warns_when_streak_ended_before_prior_cycle() {
+        // Regression for #2542 decision: a three-cycle streak whose last
+        // cycle is older than current_cycle - 1 is historical. Since no
+        // operator action can retroactively edit a closed streak, reporting
+        // FAIL forever is structurally permanent. Historical streaks WARN.
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-deferral-accumulation-stale-streak-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "cycle_phase": {"cycle": 506, "phase": "work"},
+                "review_agent": {
+                    "history": [
+                        {
+                            "cycle": 488,
+                            "categories": ["worklog-accuracy"],
+                            "actioned": 0,
+                            "deferred": 1,
+                            "ignored": 0,
+                            "finding_count": 1,
+                            "complacency_score": 2,
+                            "finding_dispositions": [{
+                                "category": "worklog-accuracy",
+                                "disposition": "deferred"
+                            }]
+                        },
+                        {
+                            "cycle": 489,
+                            "categories": ["worklog-accuracy"],
+                            "actioned": 0,
+                            "deferred": 1,
+                            "ignored": 0,
+                            "finding_count": 1,
+                            "complacency_score": 2,
+                            "finding_dispositions": [{
+                                "category": "worklog-accuracy",
+                                "disposition": "deferred"
+                            }]
+                        },
+                        {
+                            "cycle": 490,
+                            "categories": ["worklog-accuracy"],
+                            "actioned": 0,
+                            "deferred": 1,
+                            "ignored": 0,
+                            "finding_count": 1,
+                            "complacency_score": 2,
+                            "finding_dispositions": [{
+                                "category": "worklog-accuracy",
+                                "disposition": "deferred"
+                            }]
+                        }
+                    ]
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_deferral_accumulation(&root);
+
+        assert_eq!(step.status, StepStatus::Warn);
+        assert_eq!(step.severity, Severity::Warning);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("category 'worklog-accuracy' deferred in cycles 488, 489, 490")
+        );
+    }
+
+    #[test]
+    fn deferral_accumulation_fails_when_streak_ends_at_prior_cycle() {
+        // The N-1 branch of the threshold: a streak ending at the immediately
+        // prior cycle is still considered active — the current cycle has not
+        // yet had a chance to disposition anything.
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-deferral-accumulation-prior-cycle-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "cycle_phase": {"cycle": 506, "phase": "work"},
+                "review_agent": {
+                    "history": [
+                        {
+                            "cycle": 503,
+                            "categories": ["journal-quality"],
+                            "actioned": 0,
+                            "deferred": 1,
+                            "ignored": 0,
+                            "finding_count": 1,
+                            "complacency_score": 2,
+                            "finding_dispositions": [{
+                                "category": "journal-quality",
+                                "disposition": "deferred"
+                            }]
+                        },
+                        {
+                            "cycle": 504,
+                            "categories": ["journal-quality"],
+                            "actioned": 0,
+                            "deferred": 1,
+                            "ignored": 0,
+                            "finding_count": 1,
+                            "complacency_score": 2,
+                            "finding_dispositions": [{
+                                "category": "journal-quality",
+                                "disposition": "deferred"
+                            }]
+                        },
+                        {
+                            "cycle": 505,
+                            "categories": ["journal-quality"],
+                            "actioned": 0,
+                            "deferred": 1,
+                            "ignored": 0,
+                            "finding_count": 1,
+                            "complacency_score": 2,
+                            "finding_dispositions": [{
+                                "category": "journal-quality",
+                                "disposition": "deferred"
+                            }]
+                        }
+                    ]
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_deferral_accumulation(&root);
+
+        assert_eq!(step.status, StepStatus::Fail);
+        assert_eq!(step.severity, Severity::Blocking);
+    }
+
+    #[test]
     fn deferral_accumulation_warns_for_historical_three_cycle_streak() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -10358,6 +10507,7 @@ mod tests {
         fs::write(
             root.join("docs/state.json"),
             json!({
+                "cycle_phase": {"cycle": 353, "phase": "work"},
                 "review_agent": {
                     "history": [
                         {
@@ -10441,6 +10591,7 @@ mod tests {
         fs::write(
             root.join("docs/state.json"),
             json!({
+                "cycle_phase": {"cycle": 350, "phase": "work"},
                 "review_agent": {
                     "history": [
                         {
