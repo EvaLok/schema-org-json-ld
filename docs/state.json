@@ -9584,10 +9584,12 @@
       "title": "[Cycle Review] Cycle 501 end-of-cycle review"
     },
     {
+      "closed_at": "2026-04-16T07:44:13Z",
+      "closed_reason": "stale drift reconciliation: closed on GitHub 2026-04-16T05:09:11Z but left in_flight in state; cycle 503 review F3 documented this drift, reconciled in cycle 504 S0.5",
       "dispatched_at": "2026-04-16T03:23:11Z",
       "issue": 2549,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed",
       "title": "[Cycle Review] Cycle 502 end-of-cycle review"
     },
     {
@@ -10837,7 +10839,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 23,
     "issue": 2554,
