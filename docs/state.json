@@ -9604,8 +9604,10 @@
     {
       "dispatched_at": "2026-04-16T08:07:33Z",
       "issue": 2555,
+      "merged_at": "2026-04-16T09:41:08Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2556,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 504 end-of-cycle review"
     }
   ],
@@ -10710,7 +10712,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 504"
+        "last_refreshed": "cycle 505"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -10858,12 +10860,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 23,
     "issue": 2557,
     "number": 505,
-    "summary": "Consumed cycle 503 review (3 findings deferred, F3 instance fix applied via stale session #2549 reconciliation). Merged PR #2553 (cycle 503 review artifact) via admin override. Small process improvement: added ## Complacency score heading to cycle-503.md so process-review could parse. Structural fixes for F1/F2/F3 deferred to next cycle.",
+    "summary": "0 dispatches, 1 merges",
     "timestamp": "2026-04-16T09:32:26Z"
   },
   "last_eva_comment_check": "2026-04-16T09:32:26Z",
