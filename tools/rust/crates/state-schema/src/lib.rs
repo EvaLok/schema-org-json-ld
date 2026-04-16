@@ -196,9 +196,23 @@ pub fn read_state_value(repo_root: &Path) -> Result<Value, String> {
         .map_err(|error| format!("failed to parse {}: {}", state_path.display(), error))
 }
 
+/// Fallback orchestrator model used when `tools/config.json` does not
+/// set an explicit `orchestrator_model`. The orchestrator model is
+/// distinct from `default_model` (which is the Copilot coding-agent
+/// dispatch default) — mixing them is the bug that caused the
+/// cycle-runner startup opening comment to misreport the orchestrator
+/// as the coding-agent default (cycle 502 review Finding 3).
+pub const DEFAULT_ORCHESTRATOR_MODEL: &str = "Claude Opus 4.6";
+
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ToolsConfig {
     pub default_model: String,
+    /// Optional override for the orchestrator's own model identity.
+    /// Separate from `default_model`, which is the coding-agent
+    /// dispatch default. When absent, callers fall back to
+    /// `DEFAULT_ORCHESTRATOR_MODEL`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub orchestrator_model: Option<String>,
 }
 
 pub fn read_tools_config(repo_root: &Path) -> Result<ToolsConfig, String> {
@@ -220,6 +234,26 @@ pub fn default_agent_model(repo_root: &Path) -> Result<String, String> {
     }
 
     Ok(model.to_string())
+}
+
+/// Return the orchestrator's own model name — distinct from
+/// `default_agent_model`, which is the coding-agent dispatch default
+/// (currently gpt-5.4). Reads `tools/config.json` for an optional
+/// `orchestrator_model` override; otherwise returns
+/// `DEFAULT_ORCHESTRATOR_MODEL`.
+///
+/// A missing or unreadable config file is not an error here — the
+/// orchestrator identity must never be blocked on a config read
+/// failure, because that would regress the opening comment itself
+/// (which is the observability channel for diagnosing such failures).
+pub fn orchestrator_model(repo_root: &Path) -> String {
+    match read_tools_config(repo_root) {
+        Ok(config) => match config.orchestrator_model {
+            Some(value) if !value.trim().is_empty() => value.trim().to_string(),
+            _ => DEFAULT_ORCHESTRATOR_MODEL.to_string(),
+        },
+        Err(_) => DEFAULT_ORCHESTRATOR_MODEL.to_string(),
+    }
 }
 
 /// Read the current cycle number from state.json.
@@ -668,9 +702,10 @@ pub struct Blockers {
 mod tests {
     use super::{
         commit_state_json, current_cycle_from_state, current_utc_timestamp, default_agent_model,
-        read_state_value, set_value_at_pointer, transition_cycle_phase, update_freshness,
-        write_state_value, AgentSession, DeferredFinding, FindingDisposition,
-        PendingAuditImplementation, ReviewHistoryEntry, StateJson, ToolsConfig, VALID_PHASES,
+        orchestrator_model, read_state_value, set_value_at_pointer, transition_cycle_phase,
+        update_freshness, write_state_value, AgentSession, DeferredFinding, FindingDisposition,
+        PendingAuditImplementation, ReviewHistoryEntry, StateJson, ToolsConfig,
+        DEFAULT_ORCHESTRATOR_MODEL, VALID_PHASES,
     };
     use chrono::DateTime;
     use serde_json::{json, Value};
@@ -934,6 +969,7 @@ mod tests {
         let repo = TempRepo::new();
         let config = ToolsConfig {
             default_model: "gpt-5.4".to_string(),
+            orchestrator_model: None,
         };
         repo.write_tools_config(&serde_json::to_string(&config).expect("config should serialize"));
 
@@ -948,6 +984,52 @@ mod tests {
 
         let error = default_agent_model(repo.path()).expect_err("empty default should fail");
         assert!(error.contains("must define a non-empty default_model"));
+    }
+
+    #[test]
+    fn orchestrator_model_falls_back_to_default_when_not_set() {
+        let repo = TempRepo::new();
+        // Config omits orchestrator_model — cycle-runner startup.rs line 62
+        // previously reused default_agent_model here, misreporting the
+        // orchestrator as the Copilot coding-agent default.
+        repo.write_tools_config(r#"{"default_model":"gpt-5.4"}"#);
+
+        let model = orchestrator_model(repo.path());
+        assert_eq!(model, DEFAULT_ORCHESTRATOR_MODEL);
+        assert_ne!(model, "gpt-5.4");
+    }
+
+    #[test]
+    fn orchestrator_model_uses_explicit_override_when_present() {
+        let repo = TempRepo::new();
+        repo.write_tools_config(
+            r#"{"default_model":"gpt-5.4","orchestrator_model":"Claude Opus 4.7"}"#,
+        );
+
+        let model = orchestrator_model(repo.path());
+        assert_eq!(model, "Claude Opus 4.7");
+    }
+
+    #[test]
+    fn orchestrator_model_ignores_whitespace_only_override() {
+        let repo = TempRepo::new();
+        repo.write_tools_config(
+            r#"{"default_model":"gpt-5.4","orchestrator_model":"   "}"#,
+        );
+
+        let model = orchestrator_model(repo.path());
+        assert_eq!(model, DEFAULT_ORCHESTRATOR_MODEL);
+    }
+
+    #[test]
+    fn orchestrator_model_returns_default_when_config_missing() {
+        // No tools/config.json at all — orchestrator identity must still
+        // resolve so the opening comment is never blocked on a config
+        // read failure.
+        let repo = TempRepo::new();
+
+        let model = orchestrator_model(repo.path());
+        assert_eq!(model, DEFAULT_ORCHESTRATOR_MODEL);
     }
 
     #[test]

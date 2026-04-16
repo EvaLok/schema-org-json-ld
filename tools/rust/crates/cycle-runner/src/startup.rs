@@ -57,9 +57,14 @@ pub fn run(
         return Ok(());
     }
 
+    // The orchestrator's own model identity — distinct from
+    // state_schema::default_agent_model, which returns the Copilot
+    // coding-agent dispatch default (gpt-5.4). Using default_agent_model
+    // here was the source of the cycle 502 review Finding 3 bug: every
+    // cycle-run opening comment misreported the orchestrator as gpt-5.4.
     let model = match model_override {
         Some(m) => m.to_string(),
-        None => state_schema::default_agent_model(repo_root)?,
+        None => state_schema::orchestrator_model(repo_root),
     };
 
     let mut warnings: Vec<String> = Vec::new();
