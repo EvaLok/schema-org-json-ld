@@ -9888,8 +9888,8 @@
   ],
   "cycle_phase": {
     "cycle": 506,
-    "phase": "work",
-    "phase_entered_at": "2026-04-16T21:24:06Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-04-16T21:51:46Z"
   },
   "cycles_since_last_forward_work": {
     "added_in_cycle": 411,
