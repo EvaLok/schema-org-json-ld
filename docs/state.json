@@ -9889,7 +9889,7 @@
   "cycle_phase": {
     "cycle": 506,
     "phase": "close_out",
-    "phase_entered_at": "2026-04-16T21:51:46Z"
+    "phase_entered_at": "2026-04-16T22:00:00Z"
   },
   "cycles_since_last_forward_work": {
     "added_in_cycle": 411,
@@ -10718,7 +10718,7 @@
       },
       "dispatch_log_latest": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 505"
+        "last_refreshed": "cycle 506"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
@@ -10738,7 +10738,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 505"
+        "last_refreshed": "cycle 506"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -10758,7 +10758,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 505"
+        "last_refreshed": "cycle 506"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -10770,7 +10770,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 505"
+        "last_refreshed": "cycle 506"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -10794,7 +10794,7 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 505"
+        "last_refreshed": "cycle 506"
       },
       "review_events_verified_through_cycle": {
         "cadence": "managed by verify-review-events tool only",
@@ -10806,7 +10806,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 505"
+        "last_refreshed": "cycle 506"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -10880,13 +10880,13 @@
   },
   "in_flight_sessions": 0,
   "last_cycle": {
-    "duration_minutes": 22,
+    "duration_minutes": 36,
     "issue": 2561,
     "number": 506,
-    "summary": "0 dispatches, 1 merges",
-    "timestamp": "2026-04-16T21:24:05Z"
+    "summary": "Detector patches landed per Eva #2542 decision (deferral-accumulation narrowed to active streaks; chronic-category-currency downgrades to WARN when in-flight dispatch tracks the category root). Cycle 505 review F1 actioned direct-push (stale-session parser fix). F2/F3 deferred as improvement-class work per #2560 observation window. Residual chronic-category-currency FAIL reported to Eva: patch 2 cannot unblock cold-start dispatch. Cycle-503 F1 DEADLINE-HARD not met — deferred per window.",
+    "timestamp": "2026-04-16T22:00:00Z"
   },
-  "last_eva_comment_check": "2026-04-16T21:24:05Z",
+  "last_eva_comment_check": "2026-04-16T22:00:00Z",
   "last_tool_audit_cycle": 403,
   "open_questions_for_eva": [
     2542,
