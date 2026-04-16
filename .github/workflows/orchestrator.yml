@@ -59,7 +59,7 @@ jobs:
           github_token: ${{ secrets.ORCHESTRATOR_PAT }}
           prompt: ${{ steps.prompt.outputs.content }}
           claude_args: |
-            --model claude-opus-4-6
+            --model claude-opus-4-7
           settings: |
             {
               "permissions": {
