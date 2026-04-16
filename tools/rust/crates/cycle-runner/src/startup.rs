@@ -514,20 +514,20 @@ fn mark_stale_agent_sessions_in_state(
 /// or FAIL detail string. The authoritative format produced by
 /// pipeline-check's `agent_sessions_lifecycle_assessment` is:
 ///   "agent session issue #N \"title\" is closed on GitHub but still marked in_flight"
-/// Multiple sessions may be joined with "; ". We take every "#N" occurrence
-/// and let the caller cross-reference against state.json, so changes to the
-/// exact wording downstream do not silently break the writer.
+/// Multiple sessions may be joined with "; ". We parse only the `#N` token
+/// immediately following the `agent session issue ` prefix so that `#N`
+/// references embedded inside the quoted title (e.g. a dispatch titled
+/// `"step 1 of #586"`) are not mistaken for stale-session targets.
 fn parse_stale_session_issue_numbers(detail: &str) -> Vec<u64> {
+    const PREFIX: &str = "agent session issue #";
     let mut issues = Vec::new();
     let mut remainder = detail;
-    while let Some(index) = remainder.find('#') {
-        let after = &remainder[index + 1..];
+    while let Some(index) = remainder.find(PREFIX) {
+        let after = &remainder[index + PREFIX.len()..];
         let digits: String = after.chars().take_while(|ch| ch.is_ascii_digit()).collect();
-        if !digits.is_empty() {
-            if let Ok(issue) = digits.parse::<u64>() {
-                if !issues.contains(&issue) {
-                    issues.push(issue);
-                }
+        if let Ok(issue) = digits.parse::<u64>() {
+            if !issues.contains(&issue) {
+                issues.push(issue);
             }
         }
         remainder = &after[digits.len()..];
@@ -897,7 +897,7 @@ mod tests {
 
     #[test]
     fn parse_stale_session_issue_numbers_deduplicates() {
-        let detail = "issue #2317 ... issue #2317 (already stale in cycle 462)";
+        let detail = "agent session issue #2317 \"a\" is closed on GitHub but still marked in_flight; agent session issue #2317 \"a\" is closed on GitHub but still marked in_flight";
         assert_eq!(parse_stale_session_issue_numbers(detail), vec![2317]);
     }
 
@@ -905,6 +905,21 @@ mod tests {
     fn parse_stale_session_issue_numbers_ignores_non_numeric_hashes() {
         let detail = "# header ## subheading nothing here";
         assert!(parse_stale_session_issue_numbers(detail).is_empty());
+    }
+
+    #[test]
+    fn parse_stale_session_issue_numbers_ignores_hash_refs_in_quoted_title() {
+        // Regression for cycle 505 F1: the parser used to take every `#N`
+        // token in the detail string, so titles like
+        // `"step 1 of #586"` let #586 leak into the stale-target set.
+        let detail = "agent session issue #587 \"Tool: cycle-complete --apply (write-side pipeline, step 1 of #586)\" is closed on GitHub but still marked in_flight";
+        assert_eq!(parse_stale_session_issue_numbers(detail), vec![587]);
+    }
+
+    #[test]
+    fn parse_stale_session_issue_numbers_ignores_audit_refs_in_quoted_title() {
+        let detail = "agent session issue #311 \"Port QAPage + Restaurant to TypeScript (audit #37 fix)\" is closed on GitHub but still marked in_flight";
+        assert_eq!(parse_stale_session_issue_numbers(detail), vec![311]);
     }
 
     #[test]
