@@ -4470,6 +4470,8 @@ fn chronic_category_currency_status(
         ));
     };
 
+    let inflight_categories = inflight_dispatch_categories(&state);
+
     let mut warnings = Vec::new();
     let mut failures = Vec::new();
     for entry in entries {
@@ -4525,7 +4527,19 @@ fn chronic_category_currency_status(
             category, verification_cycle, gap, current_cycle
         );
         if gap > CHRONIC_CATEGORY_CURRENCY_FAIL_GAP {
-            failures.push(detail);
+            // Per #2542 decision: when an in-flight dispatch is already
+            // tracking this category's structural fix, the stale entry is
+            // waiting on that dispatch to land — not on operator inaction.
+            // Downgrade to WARN so the gate does not block the very dispatch
+            // that will eventually clear the entry.
+            if category_has_inflight_dispatch(category, &inflight_categories) {
+                warnings.push(format!(
+                    "{} (in-flight dispatch pending)",
+                    detail
+                ));
+            } else {
+                failures.push(detail);
+            }
         } else {
             warnings.push(detail);
         }
@@ -4544,6 +4558,53 @@ fn chronic_category_currency_status(
         StepStatus::Pass,
         "no structural-fix chronic category responses exceed currency threshold".to_string(),
     ))
+}
+
+/// Build the set of finding categories currently being worked by an
+/// in-flight agent session. Maps each in-flight session's
+/// `addresses_finding` reference (of the form "cycle:index") to the
+/// category recorded on that history entry's finding at that index.
+fn inflight_dispatch_categories(state: &StateJson) -> BTreeSet<String> {
+    let Ok(review_agent) = state.review_agent() else {
+        return BTreeSet::new();
+    };
+    let history_by_cycle: BTreeMap<u64, &state_schema::ReviewHistoryEntry> = review_agent
+        .history
+        .iter()
+        .map(|entry| (entry.cycle, entry))
+        .collect();
+
+    let mut categories = BTreeSet::new();
+    for session in &state.agent_sessions {
+        if session.status.as_deref() != Some("in_flight") {
+            continue;
+        }
+        for reference in session.addresses_finding_refs() {
+            let Some((cycle_text, index_text)) = reference.split_once(':') else {
+                continue;
+            };
+            let (Ok(cycle), Ok(index)) = (cycle_text.parse::<u64>(), index_text.parse::<usize>())
+            else {
+                continue;
+            };
+            let Some(history_entry) = history_by_cycle.get(&cycle) else {
+                continue;
+            };
+            if let Some(disposition) = history_entry.finding_dispositions.get(index) {
+                categories.insert(disposition.category.clone());
+            }
+        }
+    }
+    categories
+}
+
+/// Match a chronic-category entry's category (which may be sub-categorized
+/// as `root/sub`) against the set of root categories currently tracked by
+/// an in-flight dispatch. A dispatch addressing `worklog-accuracy` also
+/// counts toward `worklog-accuracy/scope-boundary`.
+fn category_has_inflight_dispatch(category: &str, inflight: &BTreeSet<String>) -> bool {
+    let root = category.split('/').next().unwrap_or(category);
+    inflight.contains(category) || inflight.contains(root)
 }
 
 fn extract_chronic_category_pull_requests(rationale: &str) -> BTreeSet<u64> {
@@ -11251,6 +11312,186 @@ mod tests {
         assert!(detail.contains("worklog-accuracy"));
         assert!(detail.contains("state-integrity"));
         assert!(detail.contains("verification_cycle must be a numeric value"));
+    }
+
+    #[test]
+    fn chronic_category_currency_downgrades_to_warn_when_inflight_dispatch_tracks_category() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-chronic-category-currency-inflight-downgrade",
+            json!({
+                "last_cycle": {"number": 118},
+                "review_agent": {
+                    "history": [{
+                        "cycle": 115,
+                        "categories": ["worklog-accuracy"],
+                        "actioned": 0,
+                        "deferred": 1,
+                        "ignored": 0,
+                        "finding_count": 1,
+                        "complacency_score": 2,
+                        "finding_dispositions": [{
+                            "index": 0,
+                            "category": "worklog-accuracy",
+                            "disposition": "dispatched"
+                        }]
+                    }],
+                    "chronic_category_responses": {
+                        "entries": [{
+                            "category": "worklog-accuracy",
+                            "chosen_path": "structural-fix",
+                            "verification_cycle": 100
+                        }]
+                    }
+                },
+                "agent_sessions": [{
+                    "issue": 9999,
+                    "status": "in_flight",
+                    "addresses_finding": "115:0"
+                }]
+            }),
+        );
+
+        let step = verify_chronic_category_currency_with_runner(&root, &ProcessRunner);
+
+        assert_eq!(step.status, StepStatus::Warn);
+        assert_eq!(step.severity, Severity::Blocking);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("worklog-accuracy"));
+        assert!(detail.contains("18 cycles stale"));
+        assert!(detail.contains("in-flight dispatch pending"));
+    }
+
+    #[test]
+    fn chronic_category_currency_inflight_dispatch_matches_sub_category_root() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-chronic-category-currency-inflight-subcategory",
+            json!({
+                "last_cycle": {"number": 118},
+                "review_agent": {
+                    "history": [{
+                        "cycle": 115,
+                        "categories": ["worklog-accuracy"],
+                        "actioned": 0,
+                        "deferred": 1,
+                        "ignored": 0,
+                        "finding_count": 1,
+                        "complacency_score": 2,
+                        "finding_dispositions": [{
+                            "index": 0,
+                            "category": "worklog-accuracy",
+                            "disposition": "dispatched"
+                        }]
+                    }],
+                    "chronic_category_responses": {
+                        "entries": [{
+                            "category": "worklog-accuracy/scope-boundary",
+                            "chosen_path": "structural-fix",
+                            "verification_cycle": 100
+                        }]
+                    }
+                },
+                "agent_sessions": [{
+                    "issue": 9999,
+                    "status": "in_flight",
+                    "addresses_finding": "115:0"
+                }]
+            }),
+        );
+
+        let step = verify_chronic_category_currency_with_runner(&root, &ProcessRunner);
+
+        assert_eq!(step.status, StepStatus::Warn);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("worklog-accuracy/scope-boundary"));
+        assert!(detail.contains("in-flight dispatch pending"));
+    }
+
+    #[test]
+    fn chronic_category_currency_still_fails_when_dispatch_tracks_different_category() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-chronic-category-currency-inflight-mismatch",
+            json!({
+                "last_cycle": {"number": 118},
+                "review_agent": {
+                    "history": [{
+                        "cycle": 115,
+                        "categories": ["state-integrity"],
+                        "actioned": 0,
+                        "deferred": 1,
+                        "ignored": 0,
+                        "finding_count": 1,
+                        "complacency_score": 2,
+                        "finding_dispositions": [{
+                            "index": 0,
+                            "category": "state-integrity",
+                            "disposition": "dispatched"
+                        }]
+                    }],
+                    "chronic_category_responses": {
+                        "entries": [{
+                            "category": "worklog-accuracy",
+                            "chosen_path": "structural-fix",
+                            "verification_cycle": 100
+                        }]
+                    }
+                },
+                "agent_sessions": [{
+                    "issue": 9999,
+                    "status": "in_flight",
+                    "addresses_finding": "115:0"
+                }]
+            }),
+        );
+
+        let step = verify_chronic_category_currency_with_runner(&root, &ProcessRunner);
+
+        assert_eq!(step.status, StepStatus::Fail);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(!detail.contains("in-flight dispatch pending"));
+    }
+
+    #[test]
+    fn chronic_category_currency_ignores_dispatch_that_is_not_in_flight() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-chronic-category-currency-not-inflight",
+            json!({
+                "last_cycle": {"number": 118},
+                "review_agent": {
+                    "history": [{
+                        "cycle": 115,
+                        "categories": ["worklog-accuracy"],
+                        "actioned": 0,
+                        "deferred": 1,
+                        "ignored": 0,
+                        "finding_count": 1,
+                        "complacency_score": 2,
+                        "finding_dispositions": [{
+                            "index": 0,
+                            "category": "worklog-accuracy",
+                            "disposition": "dispatched"
+                        }]
+                    }],
+                    "chronic_category_responses": {
+                        "entries": [{
+                            "category": "worklog-accuracy",
+                            "chosen_path": "structural-fix",
+                            "verification_cycle": 100
+                        }]
+                    }
+                },
+                "agent_sessions": [{
+                    "issue": 9999,
+                    "status": "completed",
+                    "addresses_finding": "115:0"
+                }]
+            }),
+        );
+
+        let step = verify_chronic_category_currency_with_runner(&root, &ProcessRunner);
+
+        assert_eq!(step.status, StepStatus::Fail);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(!detail.contains("in-flight dispatch pending"));
     }
 
     #[test]
