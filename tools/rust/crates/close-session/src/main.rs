@@ -1,7 +1,10 @@
 use clap::Parser;
 use record_dispatch::push_to_origin_master;
 use serde_json::{json, Value};
-use state_schema::{commit_state_json, current_utc_timestamp, read_state_value, write_state_value};
+use state_schema::{
+    commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
+    write_state_value,
+};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -55,7 +58,11 @@ fn run(cli: Cli) -> Result<(), String> {
     }
 
     write_state_value(&cli.repo_root, &state)?;
-    let commit_message = format!("state(close-session): #{} closed ({reason})", cli.issue);
+    let cycle = current_cycle_from_state(&cli.repo_root)?;
+    let commit_message = format!(
+        "state(close-session): #{} closed ({reason}) [cycle {cycle}]",
+        cli.issue
+    );
     let receipt = commit_state_json(&cli.repo_root, &commit_message)?;
     push_to_origin_master(&cli.repo_root)?;
     println!(

@@ -10,7 +10,7 @@ use std::process::Command;
 const REPO_URL: &str = "https://github.com/EvaLok/schema-org-json-ld";
 const FALLBACK_STEP: &str = "cycle-tagged";
 const POST_RECEIPT_COMMIT_PREFIXES: [&str; 2] = ["state(clean-cycle", "state(stabilization"];
-const SPECIFIC_STATE_STEPS: [&str; 10] = [
+const SPECIFIC_STATE_STEPS: [&str; 11] = [
     "cycle-start",
     "process-merge",
     "process-review",
@@ -21,6 +21,7 @@ const SPECIFIC_STATE_STEPS: [&str; 10] = [
     "commit-state-change",
     "state-fix",
     "review-format",
+    "close-session",
 ];
 
 #[derive(Debug, Parser)]
