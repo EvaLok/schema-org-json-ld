@@ -9613,8 +9613,10 @@
     {
       "dispatched_at": "2026-04-16T10:12:27Z",
       "issue": 2558,
+      "merged_at": "2026-04-16T21:33:13Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2559,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 505 end-of-cycle review"
     }
   ],
@@ -10722,7 +10724,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 505"
+        "last_refreshed": "cycle 506"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -10870,12 +10872,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 22,
     "issue": 2561,
     "number": 506,
-    "summary": "Cycle 505: Consumed cycle 504 review (3 findings; F2 receipt-integrity actioned, F1/F3 deferred). Structural fixes: (1) close-session receipts now included in cycle-receipts table via SPECIFIC_STATE_STEPS addition + [cycle N] commit tag (F2 response); (2) cycle-runner now writes last_seen_stale_at_cycle marker in startup phase, resolving cycle-503 F3 structural deferral and unblocking stale-session WARN→FAIL escalation. PR #2556 merged via admin override (cycle 504 review artifact). Gate still blocked by #2542.",
+    "summary": "0 dispatches, 1 merges",
     "timestamp": "2026-04-16T21:24:05Z"
   },
   "last_eva_comment_check": "2026-04-16T21:24:05Z",
