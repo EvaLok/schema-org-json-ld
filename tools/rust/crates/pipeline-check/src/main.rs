@@ -4864,8 +4864,8 @@ fn deferred_resolution_merge_gate_assessment(
                 DeferredResolutionTargetKind::Issue => {
                     let state = runner.fetch_issue_state(target.number)?;
                     match state.as_str() {
-                        "CLOSED" => {}
-                        "OPEN" => failures.push(format!(
+                        "closed" => {}
+                        "open" => failures.push(format!(
                             "category '{}' resolved_ref '{}' points to open issue #{}",
                             finding.category, resolved_ref, target.number
                         )),
