@@ -9600,6 +9600,13 @@
       "pr": 2553,
       "status": "merged",
       "title": "[Cycle Review] Cycle 503 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-04-16T08:07:33Z",
+      "issue": 2555,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 504 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -9869,9 +9876,10 @@
     2554
   ],
   "cycle_phase": {
+    "completed_at": "2026-04-16T08:07:33Z",
     "cycle": 504,
-    "phase": "close_out",
-    "phase_entered_at": "2026-04-16T07:56:08Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-04-16T08:07:33Z"
   },
   "cycles_since_last_forward_work": {
     "added_in_cycle": 411,
@@ -10580,7 +10588,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2552 [Cycle Review] Cycle 503 end-of-cycle review (cycle 503)",
+  "dispatch_log_latest": "#2555 [Cycle Review] Cycle 504 end-of-cycle review (cycle 504)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -10851,7 +10859,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 23,
     "issue": 2554,
@@ -17894,7 +17902,7 @@
     ],
     "last_review_cycle": 503
   },
-  "review_dispatch_consecutive": 10,
+  "review_dispatch_consecutive": 11,
   "review_events_verified_through_cycle": 504,
   "schema_status": {
     "directory_layout": {
