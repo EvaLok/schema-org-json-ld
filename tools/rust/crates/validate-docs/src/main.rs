@@ -122,7 +122,7 @@ fn main() {
             args.pipeline_status.as_deref(),
             args.worklog_commit.as_deref(),
         ),
-        Command::Journal(args) => validate_journal(&args.file),
+        Command::Journal(args) => validate_journal(&cli.repo_root, &args.file),
     };
 
     match result {
@@ -233,7 +233,7 @@ fn validate_worklog_with_options(
     Ok(failures)
 }
 
-fn validate_journal(file: &Path) -> Result<Vec<String>, String> {
+fn validate_journal(repo_root: &Path, file: &Path) -> Result<Vec<String>, String> {
     let content = fs::read_to_string(file)
         .map_err(|error| format!("failed to read {}: {}", file.display(), error))?;
     let mut failures = Vec::new();
@@ -248,6 +248,21 @@ fn validate_journal(file: &Path) -> Result<Vec<String>, String> {
     }
     if let Some(failure) = validate_open_questions_consistency(&content) {
         failures.push(failure);
+    }
+    // State-aware consistency: when docs/state.json lists pending
+    // Eva questions, the latest journal entry's Open questions
+    // section MUST NOT say "None". This closes the cycle 501 F2 /
+    // cycle 502 F1 recurrence (journal claimed "None" while state
+    // carried 7 pending question-for-eva issues, including the
+    // blocker named in the body). A state read failure does NOT
+    // produce a validation failure — the text-only check above
+    // remains authoritative in that case, and upstream tooling
+    // will surface the config/state read failure through other
+    // channels.
+    if let Ok(state) = read_state_json(repo_root) {
+        if let Some(failure) = validate_open_questions_against_state(&content, &state) {
+            failures.push(failure);
+        }
     }
 
     Ok(failures)
@@ -962,6 +977,64 @@ fn validate_open_questions_consistency(content: &str) -> Option<String> {
         "journal entry's 'Open questions' section says 'None' but the body references filing a question-for-eva — list the open question or rephrase the body"
             .to_string(),
     )
+}
+
+/// State-aware complement to `validate_open_questions_consistency`:
+/// fails when docs/state.json lists pending Eva questions but the
+/// latest journal entry's Open questions section claims there are
+/// none.
+///
+/// Catches the cycle 501 F2 / cycle 502 F1 recurrence: the text-only
+/// check requires the body to say "filed question-for-eva" (narrative
+/// pattern), but the real-world pattern is that journals name the
+/// blocker issue by number without using that specific phrase. As
+/// long as `state.open_questions_for_eva` is non-empty, a journal
+/// "None" claim is objectively wrong regardless of phrasing in the
+/// body.
+fn validate_open_questions_against_state(
+    content: &str,
+    state: &StateJson,
+) -> Option<String> {
+    if state.open_questions_for_eva.is_empty() {
+        return None;
+    }
+
+    let entry = latest_cycle_entry(content).unwrap_or(content);
+    let section = extract_section_body(entry, OPEN_QUESTIONS_HEADING)?;
+
+    let bullet_lines: Vec<&str> = section
+        .lines()
+        .map(normalize_line)
+        .filter(|line| !line.is_empty())
+        .collect();
+    if bullet_lines.is_empty() {
+        return None;
+    }
+    let says_none = bullet_lines
+        .iter()
+        .all(|line| reports_no_self_modifications(line));
+    if !says_none {
+        return None;
+    }
+
+    let issue_refs: Vec<String> = state
+        .open_questions_for_eva
+        .iter()
+        .filter_map(|value| value.as_u64().map(|n| format!("#{}", n)))
+        .collect();
+    let summary = if issue_refs.is_empty() {
+        format!(
+            "{} pending question-for-eva",
+            state.open_questions_for_eva.len()
+        )
+    } else {
+        issue_refs.join(", ")
+    };
+
+    Some(format!(
+        "journal entry's 'Open questions' section says 'None' but docs/state.json lists pending question-for-eva: {} — list the open questions or resolve them before writing 'None'",
+        summary
+    ))
 }
 
 /// Returns the slice of `content` covering the most recent cycle entry,
@@ -1830,7 +1903,8 @@ Line with escaped newline\\nshould be ignored.
 ";
         fs::write(&journal_path, content).expect("write journal");
 
-        let failures = validate_journal(&journal_path).expect("journal validation should run");
+        let failures =
+            validate_journal(temp.path(), &journal_path).expect("journal validation should run");
         assert_eq!(failures.len(), 3);
         assert!(failures
             .iter()
@@ -2041,6 +2115,123 @@ filed question-for-eva #2293.
 - #2293 — chronic journal-quality response.
 ";
         assert!(validate_open_questions_consistency(content).is_none());
+    }
+
+    #[test]
+    fn state_aware_check_catches_cycle_502_f1_recurrence() {
+        // Models the cycle 501 F2 / cycle 502 F1 pattern: body names
+        // a blocker issue by number, state has pending Eva questions,
+        // but Open questions section says "None". The text-only check
+        // above does NOT catch this because the body never uses the
+        // literal phrase "filed question-for-eva".
+        let content = "\
+## 2026-04-16 — Cycle 502: gate-blocked by #2542
+
+### Context
+
+Dispatches remain blocked by #2542.
+
+### Concrete commitments for next cycle
+
+1. Keep monitoring.
+
+### Open questions
+
+- None.
+";
+        let mut state = StateJson::default();
+        state.open_questions_for_eva =
+            vec![serde_json::json!(2542), serde_json::json!(2519)];
+
+        let failure = validate_open_questions_against_state(content, &state)
+            .expect("expected state-aware failure");
+        assert!(failure.contains("docs/state.json"));
+        assert!(failure.contains("#2542"));
+        assert!(failure.contains("#2519"));
+    }
+
+    #[test]
+    fn state_aware_check_passes_when_state_has_no_pending_questions() {
+        let content = "\
+## 2026-04-16 — Cycle 502: clean
+
+### Concrete commitments for next cycle
+
+1. Keep going.
+
+### Open questions
+
+- None.
+";
+        let state = StateJson::default();
+        assert!(validate_open_questions_against_state(content, &state).is_none());
+    }
+
+    #[test]
+    fn state_aware_check_passes_when_open_questions_are_listed() {
+        let content = "\
+## 2026-04-16 — Cycle 502: honest reporting
+
+### Concrete commitments for next cycle
+
+1. Keep going.
+
+### Open questions
+
+- #2542 — gate deadlock.
+";
+        let mut state = StateJson::default();
+        state.open_questions_for_eva = vec![serde_json::json!(2542)];
+
+        assert!(validate_open_questions_against_state(content, &state).is_none());
+    }
+
+    #[test]
+    fn state_aware_check_only_considers_latest_cycle_entry() {
+        // Historical entries may still carry the "None" claim — they
+        // are already shipped. Only the latest cycle entry must be
+        // consistent with current state.
+        let content = "\
+## 2026-04-15 — Cycle 501: old entry
+
+### Open questions
+
+- None.
+
+## 2026-04-16 — Cycle 502: latest entry lists questions
+
+### Open questions
+
+- #2542 — gate deadlock.
+";
+        let mut state = StateJson::default();
+        state.open_questions_for_eva = vec![serde_json::json!(2542)];
+
+        assert!(validate_open_questions_against_state(content, &state).is_none());
+    }
+
+    #[test]
+    fn state_aware_check_names_issues_by_number_in_failure_message() {
+        let content = "\
+## 2026-04-16 — Cycle 502: gate-blocked
+
+### Open questions
+
+- None.
+";
+        let mut state = StateJson::default();
+        state.open_questions_for_eva = vec![
+            serde_json::json!(2542),
+            serde_json::json!(2519),
+            serde_json::json!(2293),
+        ];
+
+        let failure = validate_open_questions_against_state(content, &state)
+            .expect("expected failure");
+        // Orchestrator must be able to read the failure and know
+        // exactly which open questions to list — not just that
+        // there are some.
+        assert!(failure.contains("#2542, #2519, #2293"));
     }
 
     struct TestRepo {
