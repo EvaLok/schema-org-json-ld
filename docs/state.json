@@ -10533,7 +10533,8 @@
       "category": "state-integrity",
       "deadline_cycle": 503,
       "deferred_cycle": 498,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "PR #2531 (issue #2530) and PR #2533 (issue #2532) backfilled into agent_sessions and merged; agent-sessions-lifecycle pipeline check now structurally enforces dispatch-state sync"
     },
     {
       "category": "process-adherence",
