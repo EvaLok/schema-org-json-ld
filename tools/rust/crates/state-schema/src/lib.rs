@@ -202,7 +202,7 @@ pub fn read_state_value(repo_root: &Path) -> Result<Value, String> {
 /// dispatch default) — mixing them is the bug that caused the
 /// cycle-runner startup opening comment to misreport the orchestrator
 /// as the coding-agent default (cycle 502 review Finding 3).
-pub const DEFAULT_ORCHESTRATOR_MODEL: &str = "Claude Opus 4.6";
+pub const DEFAULT_ORCHESTRATOR_MODEL: &str = "Claude Opus 4.7";
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ToolsConfig {
