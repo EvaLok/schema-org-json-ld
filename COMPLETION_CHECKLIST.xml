@@ -157,6 +157,21 @@
       inclusion. Structural tool fix (derive_issue_processed_entries filter
       on cycle-scope receipts) remains queued; this procedural constraint
       is the in-cycle backstop.</constraint>
+    <constraint id="narrative-scope-boundary" severity="mandatory">
+      When a pre-dispatch worklog declares a scope cutoff (e.g. the
+      cycle-complete commit timestamp), the narrative sections "What was
+      done" and "PRs merged" MUST only describe events that occurred at or
+      before that cutoff. PRs merged after the cutoff (including review PRs
+      merged by the same cycle's process-merge receipt) belong in the NEXT
+      cycle's worklog, not this one. Timestamp-only maintenance actions
+      (e.g. field-inventory last_refreshed bumps with no value change)
+      MUST be described as maintenance bookkeeping, not elevated as
+      substantive productivity in the lead narrative.
+      Recurrence escalation: worklog-accuracy/scope-boundary (recurrent) —
+      cycle 507 F2 and cycle 508 F3 flagged the same pattern in consecutive
+      reviews. Structural tool fix (validate-docs narrative-vs-cutoff
+      cross-check) would require a non-trivial feature addition; this
+      procedural constraint is the in-cycle backstop.</constraint>
   </step>
 
   <step id="C4.1" title="Validate documentation (BLOCKING GATE)"
