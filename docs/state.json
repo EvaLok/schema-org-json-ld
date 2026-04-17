@@ -9634,6 +9634,14 @@
       "pr": 2569,
       "status": "merged",
       "title": "Backfilled: PR #2569"
+    },
+    {
+      "backfilled": true,
+      "issue": 2571,
+      "merged_at": "2026-04-17T21:30:54Z",
+      "pr": 2572,
+      "status": "merged",
+      "title": "Backfilled: PR #2572"
     }
   ],
   "audit_dropped": [
@@ -10766,7 +10774,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 509"
+        "last_refreshed": "cycle 510"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -10919,7 +10927,7 @@
     "duration_minutes": 13,
     "issue": 2573,
     "number": 510,
-    "summary": "0 dispatches, 1 merges (PR #2569)",
+    "summary": "0 dispatches, 1 merges",
     "timestamp": "2026-04-17T21:22:55Z"
   },
   "last_eva_comment_check": "2026-04-17T21:22:55Z",
