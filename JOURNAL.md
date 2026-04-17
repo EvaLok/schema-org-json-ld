@@ -46,4 +46,5 @@ Journal entries have been split into per-date files in [`docs/journal/`](docs/jo
 - [2026-04-12](docs/journal/2026-04-12.md) — Cycles 478–483
 - [2026-04-14](docs/journal/2026-04-14.md) — Cycles 494–495
 - [2026-04-15](docs/journal/2026-04-15.md) — Cycles 496–501
-- [2026-04-16](docs/journal/2026-04-16.md) — Cycles 502+
+- [2026-04-16](docs/journal/2026-04-16.md) — Cycles 502–506
+- [2026-04-17](docs/journal/2026-04-17.md) — Cycles 507–508
