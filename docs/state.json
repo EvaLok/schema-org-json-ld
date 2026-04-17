@@ -10830,11 +10830,11 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 509"
+        "last_refreshed": "cycle 510"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 509"
+        "last_refreshed": "cycle 510"
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
@@ -11140,10 +11140,10 @@
           "added_cycle": 493,
           "category": "worklog-accuracy/scope-boundary",
           "chosen_path": "structural-fix",
-          "rationale": "Sub-category entries per audit #417 sub-categorization adoption | Cycle 494: rollback of cycle 493 refresh — cycle 493 review F2 worklog-accuracy invalidates same-cycle entry creation per chronic-refresh-invalidation gate | Cycle 509: refreshed via PR(s) — COMPLETION_CHECKLIST.xml C3 narrative-scope-boundary constraint added (commit 9919b06d) requiring pre-dispatch narrative sections (What was done, PRs merged) to stay inside declared scope cutoff + framing timestamp-only refreshes as maintenance bookkeeping. Addresses recurrent pattern flagged in cycle 507 F2 and cycle 508 F3.",
+          "rationale": "Sub-category entries per audit #417 sub-categorization adoption | Cycle 494: rollback of cycle 493 refresh — cycle 493 review F2 worklog-accuracy invalidates same-cycle entry creation per chronic-refresh-invalidation gate | Cycle 509: refreshed via PR(s) — COMPLETION_CHECKLIST.xml C3 narrative-scope-boundary constraint added (commit 9919b06d) requiring pre-dispatch narrative sections (What was done, PRs merged) to stay inside declared scope cutoff + framing timestamp-only refreshes as maintenance bookkeeping. Addresses recurrent pattern flagged in cycle 507 F2 and cycle 508 F3. | Cycle 510: rollback of cycle 509 refresh — Cycle 509 review F2 — refresh was based on checklist text alone (no tool enforcement, no regression test, no clean review cycle). Per S0.5.8 regression-verification logic, rolling back vc 509 → vc 0 until either tooling enforces the boundary or a subsequent review cycle stays clean under the new rule.",
           "response_type": "structural-fix",
-          "updated_cycle": 509,
-          "verification_cycle": 509
+          "updated_cycle": 510,
+          "verification_cycle": 0
         },
         {
           "added_cycle": 493,
@@ -18077,9 +18077,38 @@
         "ignored": 0,
         "note": "All 3 findings actioned with concrete evidence this cycle: F1 (deferral-discipline) — per-finding direct-push vs dispatch rationale applied throughout this cycle's dispositions; runtime-derived-model commitment dropped with explicit rationale (blocker + staleness), not blanket C5.5 excuse. F2 (journal-quality/commitment-honesty) — runtime-derived-model commitment formally dropped with rationale in cycle 509 journal (direct-push not viable, dispatch blocked by #2542, 3rd roll-forward exceeds journal-commitment-staleness threshold). F3 (worklog-accuracy/scope-boundary recurrent 507+508) — structural process fix: COMPLETION_CHECKLIST.xml C3 narrative-scope-boundary constraint added (commit 9919b06d) requiring pre-dispatch narrative sections to stay inside declared cutoff + reframing timestamp-only refreshes as maintenance bookkeeping.",
         "review_issue": 2568
+      },
+      {
+        "actioned": 3,
+        "categories": [
+          "direct-push-boundary",
+          "journal-quality-commitment-honesty",
+          "worklog-accuracy-scope-boundary"
+        ],
+        "complacency_score": 2,
+        "cycle": 509,
+        "deferred": 0,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "direct-push-boundary",
+            "disposition": "actioned"
+          },
+          {
+            "category": "worklog-accuracy-scope-boundary",
+            "disposition": "actioned"
+          },
+          {
+            "category": "journal-quality-commitment-honesty",
+            "disposition": "actioned"
+          }
+        ],
+        "ignored": 0,
+        "note": "F1 (direct-push-boundary) actioned: filed question-for-eva #2574 explicitly asking whether the direct-push carve-out from #2542 extends to checklist-constraint additions; cycle 510 docs walk back the cycle 509 'Eva-authorized precedent' framing. F2 (worklog-accuracy/scope-boundary) actioned: rolled back the cycle 509 chronic-category refresh from vc 509 → vc 0 (constraint stands but verification_cycle no longer claims runtime verification). F3 (journal-quality/commitment-honesty) actioned: cycle 510 journal documents the specific rejected direct-push alternatives (corrective-rewrite tool patch, dispatch via #2542 escalation, regression test fixture) with concrete rationale per recommendation, instead of relying on the cycle 509 generic 'not minimal' wording.",
+        "review_issue": 2571
       }
     ],
-    "last_review_cycle": 508
+    "last_review_cycle": 509
   },
   "review_dispatch_consecutive": 12,
   "review_events_verified_through_cycle": 509,
