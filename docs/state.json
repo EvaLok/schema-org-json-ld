@@ -9618,6 +9618,14 @@
       "pr": 2559,
       "status": "merged",
       "title": "[Cycle Review] Cycle 505 end-of-cycle review"
+    },
+    {
+      "backfilled": true,
+      "issue": 2565,
+      "merged_at": "2026-04-17T06:04:44Z",
+      "pr": 2566,
+      "status": "merged",
+      "title": "Backfilled: PR #2566"
     }
   ],
   "audit_dropped": [
@@ -10902,7 +10910,7 @@
     "duration_minutes": 13,
     "issue": 2567,
     "number": 508,
-    "summary": "Processed cycle 507 review (3 findings all deferred, score 2/5); merged review PR #2566; refreshed 9 stale field-inventory entries. No new dispatches (C5.5 gate cold-start deadlock persists per Eva #2542). Commitment: runtime-derived model structural follow-up remains blocked.",
+    "summary": "0 dispatches, 1 merges",
     "timestamp": "2026-04-17T06:03:17Z"
   },
   "last_eva_comment_check": "2026-04-17T06:03:17Z",
