@@ -10610,13 +10610,17 @@
       "category": "worklog-accuracy",
       "deadline_cycle": 506,
       "deferred_cycle": 501,
-      "resolved": false
+      "dropped_rationale": "Deadline cycle 506 reached and exceeded by 4 cycles. Structural fix attempt landed cycle 509 (COMPLETION_CHECKLIST.xml C3 narrative-scope-boundary constraint, commit 9919b06d) but cycle 509 review F2 explicitly rejected the constraint-text-alone refresh as insufficient evidence (no tool enforcement, no regression test, no clean review cycle). Refresh of the chronic-category-responses entry has been rolled back to vc 0 in cycle 510 (receipt 46c4b03). Ongoing tracking is now carried by the chronic_category_responses entry for worklog-accuracy/scope-boundary (vc 0, awaiting tool enforcement or clean cycle), plus #2542 (gate deadlock blocking dispatch) and #2574 (direct-push carve-out scope clarification). Dropping this deferred-finding to avoid double-counting the same root cause now correctly tracked by the chronic ledger.",
+      "resolved": true,
+      "resolved_ref": "dropped: Deadline cycle 506 reached and exceeded by 4 cycles. Structural fix attempt landed cycle 509 (COMPLE"
     },
     {
       "category": "journal-quality",
       "deadline_cycle": 508,
       "deferred_cycle": 503,
-      "resolved": false
+      "dropped_rationale": "Deadline cycle 508 reached and exceeded by 2 cycles. Same dispatch-path obstruction as worklog-accuracy/501 (gate deadlock #2542). Cycle 506 review F2 (commitment-honesty) was about the runtime-derived-model commitment which was formally dropped cycle 509 with rationale; the cycle 503 journal-quality deferral predates and overlaps that resolution thread. Ongoing tracking carried by the chronic_category_responses journal-quality entry (vc 491, with rollback gate active) and the standing #2293 question-for-eva on chronic journal-quality findings. Dropping to avoid double-counting.",
+      "resolved": true,
+      "resolved_ref": "dropped: Deadline cycle 508 reached and exceeded by 2 cycles. Same dispatch-path obstruction as worklog-accur"
     },
     {
       "category": "state-integrity",
