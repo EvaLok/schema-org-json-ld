@@ -9626,6 +9626,14 @@
       "pr": 2566,
       "status": "merged",
       "title": "Backfilled: PR #2566"
+    },
+    {
+      "backfilled": true,
+      "issue": 2568,
+      "merged_at": "2026-04-17T09:49:15Z",
+      "pr": 2569,
+      "status": "merged",
+      "title": "Backfilled: PR #2569"
     }
   ],
   "audit_dropped": [
@@ -10757,7 +10765,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 508"
+        "last_refreshed": "cycle 509"
       },
       "last_cycle": {
         "cadence": "every cycle",
