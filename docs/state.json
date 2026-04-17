@@ -10826,7 +10826,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 497"
+        "last_refreshed": "cycle 509"
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
@@ -11132,10 +11132,10 @@
           "added_cycle": 493,
           "category": "worklog-accuracy/scope-boundary",
           "chosen_path": "structural-fix",
-          "rationale": "Sub-category entries per audit #417 sub-categorization adoption | Cycle 494: rollback of cycle 493 refresh — cycle 493 review F2 worklog-accuracy invalidates same-cycle entry creation per chronic-refresh-invalidation gate",
+          "rationale": "Sub-category entries per audit #417 sub-categorization adoption | Cycle 494: rollback of cycle 493 refresh — cycle 493 review F2 worklog-accuracy invalidates same-cycle entry creation per chronic-refresh-invalidation gate | Cycle 509: refreshed via PR(s) — COMPLETION_CHECKLIST.xml C3 narrative-scope-boundary constraint added (commit 9919b06d) requiring pre-dispatch narrative sections (What was done, PRs merged) to stay inside declared scope cutoff + framing timestamp-only refreshes as maintenance bookkeeping. Addresses recurrent pattern flagged in cycle 507 F2 and cycle 508 F3.",
           "response_type": "structural-fix",
-          "updated_cycle": 494,
-          "verification_cycle": 0
+          "updated_cycle": 509,
+          "verification_cycle": 509
         },
         {
           "added_cycle": 493,
