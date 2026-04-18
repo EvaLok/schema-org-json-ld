@@ -221,12 +221,7 @@ fn sync_post_dispatch_worklog(
         .pointer("/last_cycle/summary")
         .and_then(serde_json::Value::as_str)
         .ok_or_else(|| "missing string /last_cycle/summary in docs/state.json".to_string())?;
-    let dispatch_count = last_cycle_summary
-        .split(',')
-        .next()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .unwrap_or(last_cycle_summary);
+    let dispatch_count = dispatch_count_clause(last_cycle_summary);
     let updated = render_post_dispatch_delta(
         &content,
         in_flight_sessions,
@@ -257,6 +252,21 @@ fn render_post_dispatch_delta(
     )
 }
 
+// `last_cycle.summary` is maintained by record-dispatch/process-merge in the
+// standard "<dispatches>, <merges>" form; the post-dispatch delta only needs the
+// first clause for display. If the summary is custom text, fall back to the full
+// string rather than inventing a dispatch count.
+fn dispatch_count_clause(summary: &str) -> &str {
+    summary
+        .split(',')
+        .next()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or(summary)
+}
+
+/// Find the most recent worklog file for `cycle` by scanning `docs/worklog/*/*.md`
+/// and matching files whose first line starts with `# Cycle {cycle} — `.
 fn find_worklog_for_cycle(repo_root: &Path, cycle: u64) -> Result<Option<PathBuf>, String> {
     let worklog_root = repo_root.join("docs").join("worklog");
     if !worklog_root.exists() {

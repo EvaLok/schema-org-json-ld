@@ -1,4 +1,5 @@
 use std::fs;
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -94,9 +95,12 @@ fn install_cycle_receipts_script(repo_root: &Path, receipt: &str) {
     );
     let path = repo_root.join("tools/cycle-receipts");
     write_file(&path, &script);
-    let mut permissions = fs::metadata(&path).unwrap().permissions();
-    permissions.set_mode(0o755);
-    fs::set_permissions(path, permissions).unwrap();
+    #[cfg(unix)]
+    {
+        let mut permissions = fs::metadata(&path).unwrap().permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(path, permissions).unwrap();
+    }
 }
 
 fn run_write_entry(repo_root: &Path, args: &[&str]) -> PathBuf {
@@ -275,6 +279,8 @@ fn record_dispatch_appends_post_dispatch_delta_matching_final_state() {
         "record-dispatch failed: {}",
         String::from_utf8_lossy(&record_dispatch.stderr)
     );
+    let record_dispatch_stdout = String::from_utf8(record_dispatch.stdout).unwrap();
+    assert!(record_dispatch_stdout.contains("Dispatch recorded"));
 
     let state: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(repo_root.path.join("docs/state.json")).unwrap())

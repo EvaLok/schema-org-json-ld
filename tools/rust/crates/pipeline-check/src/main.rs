@@ -3775,6 +3775,9 @@ fn worklog_content_hash(content: &str) -> Result<String, String> {
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
+/// Strip the appended `## Post-dispatch delta` section so frozen-worklog
+/// comparisons treat the cycle-complete body as immutable while allowing the
+/// explicit post-dispatch reconciliation block added after close-out.
 fn normalize_post_dispatch_delta(content: &str) -> String {
     content
         .find("\n## Post-dispatch delta\n")
