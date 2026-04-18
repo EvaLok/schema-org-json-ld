@@ -453,9 +453,7 @@ fn sync_last_cycle_summary(state: &mut Value, current_cycle: u64) -> Result<(), 
     let mut merges = 0usize;
     for session in sessions {
         if let Some(dispatched_at) = session.get("dispatched_at").and_then(Value::as_str) {
-            if parse_timestamp(dispatched_at, "agent_sessions[].dispatched_at")? >= cycle_start
-                && !is_review_dispatch_session(session)
-            {
+            if parse_timestamp(dispatched_at, "agent_sessions[].dispatched_at")? >= cycle_start {
                 dispatches += 1;
             }
         }
@@ -481,17 +479,6 @@ fn parse_timestamp(value: &str, label: &str) -> Result<chrono::DateTime<chrono::
     DateTime::parse_from_rfc3339(value)
         .map(|timestamp| timestamp.with_timezone(&chrono::Utc))
         .map_err(|error| format!("invalid {}: {}", label, error))
-}
-
-fn is_review_dispatch_session(session: &Value) -> bool {
-    session
-        .get("review_dispatch")
-        .and_then(Value::as_bool)
-        .unwrap_or(false)
-        || session
-            .get("title")
-            .and_then(Value::as_str)
-            .is_some_and(|title| title.contains("[Cycle Review]"))
 }
 
 fn format_pr_list(prs: &[u64]) -> String {
@@ -852,6 +839,58 @@ mod tests {
                     "number": 164,
                     "timestamp": "2026-03-05T09:00:00Z",
                     "summary": "0 dispatches, 0 merges"
+                },
+                "cycle_phase": {
+                    "cycle": 164
+                },
+                "field_inventory": {
+                    "fields": {
+                        "in_flight_sessions": {
+                            "last_refreshed": "cycle 163"
+                        }
+                    }
+                }
+            }),
+        );
+
+        run(Cli {
+            prs: vec![700],
+            issues: vec![IssueValue::Number(667)],
+            merged_at: Some("2026-03-05T12:00:00Z".to_string()),
+            repo_root: repo_root.clone(),
+        })
+        .expect("process-merge should succeed");
+
+        let state = read_repo_state(&repo_root);
+        assert_eq!(
+            state["last_cycle"]["summary"],
+            json!("2 dispatches, 1 merges")
+        );
+    }
+
+    #[test]
+    fn run_preserves_review_dispatch_count_recorded_by_record_dispatch() {
+        let repo_root = temp_repo_path("summary-review-dispatch-preserved");
+        init_git_repo(&repo_root);
+        let model = default_test_model();
+        write_repo_state(
+            &repo_root,
+            json!({
+                "agent_sessions": [
+                    {
+                        "issue": 667,
+                        "title": "[Cycle Review] review session",
+                        "dispatched_at": "2026-03-05T10:05:00Z",
+                        "model": model,
+                        "status": "in_flight",
+                        "review_dispatch": true
+                    }
+                ],
+                "in_flight_sessions": 1,
+                "last_cycle": {
+                    "number": 164,
+                    "timestamp": "2026-03-05T09:00:00Z",
+                    "summary": "1 dispatch, 0 merges"
                 },
                 "cycle_phase": {
                     "cycle": 164

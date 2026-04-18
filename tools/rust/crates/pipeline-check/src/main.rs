@@ -3322,6 +3322,11 @@ fn frozen_worklog_immutability_status(repo_root: &Path) -> Result<(StepStatus, S
         let current_hash = worklog_content_hash(&current_content)?;
         let baseline_hash = worklog_content_hash(&baseline_content)?;
         if current_hash != baseline_hash {
+            let normalized_current = normalize_post_dispatch_delta(&current_content);
+            let normalized_baseline = normalize_post_dispatch_delta(&baseline_content);
+            if normalized_current == normalized_baseline {
+                continue;
+            }
             divergences.push(format!(
                 "{} diverged from cycle-complete baseline {} (cycle {}, current hash {}, baseline hash {})",
                 worklog_path.display(),
@@ -3768,6 +3773,15 @@ fn worklog_content_hash(content: &str) -> Result<String, String> {
     }
 
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+fn normalize_post_dispatch_delta(content: &str) -> String {
+    content
+        .find("\n## Post-dispatch delta\n")
+        .map(|index| content[..index].trim_end_matches('\n'))
+        .unwrap_or(content)
+        .trim_end_matches('\n')
+        .to_string()
 }
 
 fn worklog_pipeline_status_value(content: &str) -> Option<&str> {
@@ -4533,10 +4547,7 @@ fn chronic_category_currency_status(
             // Downgrade to WARN so the gate does not block the very dispatch
             // that will eventually clear the entry.
             if category_has_inflight_dispatch(category, &inflight_categories) {
-                warnings.push(format!(
-                    "{} (in-flight dispatch pending)",
-                    detail
-                ));
+                warnings.push(format!("{} (in-flight dispatch pending)", detail));
             } else {
                 failures.push(detail);
             }
@@ -13473,6 +13484,40 @@ mod tests {
         }
 
         let step = verify_current_cycle_step_comments(&root, 301, &Runner);
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Blocking);
+    }
+
+    #[test]
+    fn frozen_worklog_immutability_ignores_trailing_post_dispatch_delta_section() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-frozen-worklog-post-dispatch-delta-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+
+        let worklog = write_cycle_complete_worklog(
+            &root,
+            "2026-03-01",
+            1,
+            "010000",
+            "# Cycle 1\n\n## Cycle state\n\n- **Pipeline status**: PASS\n",
+        );
+        fs::write(
+            root.join("docs/state.json"),
+            json!({"last_cycle": {"number": 2}}).to_string(),
+        )
+        .unwrap();
+        fs::write(
+            &worklog,
+            "# Cycle 1\n\n## Cycle state\n\n- **Pipeline status**: PASS\n\n## Post-dispatch delta\n\n- **In-flight agent sessions**: 2\n- **Dispatch count**: 1 dispatch\n- **Last-cycle summary**: 1 dispatch, 0 merges\n",
+        )
+        .unwrap();
+
+        let step = verify_frozen_worklog_immutability(&root);
+
         assert_eq!(step.status, StepStatus::Pass);
         assert_eq!(step.severity, Severity::Blocking);
     }
