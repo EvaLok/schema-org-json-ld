@@ -5293,7 +5293,9 @@ fn adjusted_review_deferred_count(state: &StateJson, entry: &ReviewHistoryEntry)
         if disposition.disposition != "deferred" {
             return count;
         }
-        if final_deferred_disposition_is_still_open(state, entry.cycle, &disposition.category) {
+        if deferred_disposition_open_state(state, entry.cycle, &disposition.category)
+            .unwrap_or(true)
+        {
             count + 1
         } else {
             count
@@ -5301,11 +5303,11 @@ fn adjusted_review_deferred_count(state: &StateJson, entry: &ReviewHistoryEntry)
     })
 }
 
-fn final_deferred_disposition_is_still_open(
+fn deferred_disposition_open_state(
     state: &StateJson,
     review_cycle: u64,
     category: &str,
-) -> bool {
+) -> Option<bool> {
     let mut matched = false;
     for finding in &state.deferred_findings {
         if finding.deferred_cycle != review_cycle || finding.category != category {
@@ -5313,10 +5315,14 @@ fn final_deferred_disposition_is_still_open(
         }
         matched = true;
         if !finding.resolved && finding.dropped_rationale.is_none() {
-            return true;
+            return Some(true);
         }
     }
-    !matched
+    if matched {
+        Some(false)
+    } else {
+        None
+    }
 }
 
 fn dispatch_finding_reconciliation_status(

@@ -1722,7 +1722,9 @@ fn summarize_review_dispositions(state: &StateJson, entry: &ReviewHistoryEntry) 
     let mut counts = Vec::<(String, usize)>::new();
     for disposition in &entry.finding_dispositions {
         if disposition.disposition == "deferred" {
-            if final_deferred_disposition_is_still_open(state, entry.cycle, &disposition.category) {
+            if deferred_disposition_open_state(state, entry.cycle, &disposition.category)
+                .unwrap_or(true)
+            {
                 increment_review_disposition_count(&mut counts, "deferred");
             }
             continue;
@@ -1771,11 +1773,11 @@ fn fallback_review_disposition_summary(entry: &ReviewHistoryEntry) -> String {
         .join(", ")
 }
 
-fn final_deferred_disposition_is_still_open(
+fn deferred_disposition_open_state(
     state: &StateJson,
     review_cycle: u64,
     category: &str,
-) -> bool {
+) -> Option<bool> {
     let mut matched = false;
     for finding in &state.deferred_findings {
         if finding.deferred_cycle != review_cycle || finding.category != category {
@@ -1783,10 +1785,14 @@ fn final_deferred_disposition_is_still_open(
         }
         matched = true;
         if !finding.resolved && finding.dropped_rationale.is_none() {
-            return true;
+            return Some(true);
         }
     }
-    !matched
+    if matched {
+        Some(false)
+    } else {
+        None
+    }
 }
 
 fn increment_review_disposition_count(counts: &mut Vec<(String, usize)>, disposition: &str) {
