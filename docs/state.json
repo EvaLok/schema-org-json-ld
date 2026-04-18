@@ -9667,6 +9667,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "write-entry/process-merge: reconcile worklog PR-merge narrative, fix post-dispatch drift, and sync dispatch accounting"
+    },
+    {
+      "dispatched_at": "2026-04-18T06:13:16Z",
+      "issue": 2583,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 512 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -9937,9 +9944,10 @@
     2580
   ],
   "cycle_phase": {
+    "completed_at": "2026-04-18T06:13:16Z",
     "cycle": 512,
-    "phase": "close_out",
-    "phase_entered_at": "2026-04-18T06:01:51Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-04-18T06:13:16Z"
   },
   "cycles_since_last_forward_work": {
     "added_in_cycle": 411,
@@ -10699,7 +10707,7 @@
       "resolved_ref": "docs/reviews/cycle-511.md"
     }
   ],
-  "dispatch_log_latest": "#2581 write-entry/process-merge: reconcile worklog PR-merge narrative, fix post-dispatch drift, and sync dispatch accounting (cycle 511)",
+  "dispatch_log_latest": "#2583 [Cycle Review] Cycle 512 end-of-cycle review (cycle 512)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -10970,13 +10978,13 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 3,
     "issue": 2580,
     "number": 512,
-    "summary": "0 dispatches, 0 merges",
-    "timestamp": "2026-04-18T06:01:51Z"
+    "summary": "1 dispatch, 0 merges",
+    "timestamp": "2026-04-18T06:13:16Z"
   },
   "last_eva_comment_check": "2026-04-18T06:01:51Z",
   "last_tool_audit_cycle": 403,
@@ -18218,7 +18226,7 @@
     ],
     "last_review_cycle": 511
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 512,
   "schema_status": {
     "directory_layout": {
