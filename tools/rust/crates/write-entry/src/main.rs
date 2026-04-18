@@ -1252,6 +1252,7 @@ fn apply_worklog_auto_derivations(
             ));
         }
         input.prs_merged = derived_prs;
+        augment_prs_merged_from_worklog_narrative(&input.what_was_done, &mut input.prs_merged);
         apply_dispatch_count_derivation(entries, &mut input.what_was_done, &mut warnings);
         input.receipt_note = Some(
             match derive_receipt_scope_note(
@@ -2641,6 +2642,19 @@ fn derive_prs_directly_from_merge_receipts(entries: &[&CycleReceiptJsonEntry]) -
     }
 
     prs
+}
+
+fn augment_prs_merged_from_worklog_narrative(items: &[String], prs_merged: &mut Vec<u64>) {
+    let mut seen = prs_merged.iter().copied().collect::<HashSet<_>>();
+    for item in items {
+        if !item.trim().to_ascii_lowercase().contains("merge") {
+            continue;
+        }
+
+        let mut referenced_prs = Vec::new();
+        push_pr_references(item, &mut referenced_prs, &mut seen);
+        prs_merged.extend(referenced_prs);
+    }
 }
 
 fn extract_prs_from_merge_receipt_entry(entry: &CycleReceiptJsonEntry) -> Vec<u64> {

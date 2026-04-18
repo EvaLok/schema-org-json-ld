@@ -6,10 +6,17 @@ use record_dispatch::{
     update_review_dispatch_tracking, CommandRunner, PipelineGateError, ProcessRunner,
 };
 use state_schema::{
-    commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
-    transition_cycle_phase, write_state_value,
+    current_cycle_from_state, current_utc_timestamp, read_state_value, transition_cycle_phase,
+    write_state_value,
 };
-use std::path::PathBuf;
+use std::{
+    ffi::OsStr,
+    fs,
+    path::{Path, PathBuf},
+    process::Command,
+};
+
+const POST_DISPATCH_DELTA_HEADING: &str = "## Post-dispatch delta";
 
 #[derive(Parser, Debug)]
 #[command(name = "record-dispatch")]
@@ -160,9 +167,12 @@ fn run_with_runner(
     restore_sealed_last_cycle(&mut state_value, sealed_last_cycle)?;
     sync_last_cycle_summary_after_dispatch(&mut state_value, patch.current_cycle)?;
     write_state_value(&cli.repo_root, &state_value)?;
+    let worklog_path =
+        sync_post_dispatch_worklog(&cli.repo_root, &state_value, patch.current_cycle)?;
 
     let commit_message = dispatch_commit_message(cli.issue, patch.current_cycle);
-    let receipt = commit_state_json(&cli.repo_root, &commit_message)?;
+    let receipt =
+        commit_dispatch_artifacts(&cli.repo_root, &commit_message, worklog_path.as_deref())?;
     if duplicate_session_error {
         if phase_transitioned {
             println!(
@@ -191,6 +201,179 @@ fn run_with_runner(
     }
 
     Ok(())
+}
+
+fn sync_post_dispatch_worklog(
+    repo_root: &Path,
+    state: &serde_json::Value,
+    cycle: u64,
+) -> Result<Option<PathBuf>, String> {
+    let Some(worklog_path) = find_worklog_for_cycle(repo_root, cycle)? else {
+        return Ok(None);
+    };
+    let content = fs::read_to_string(&worklog_path)
+        .map_err(|error| format!("failed to read {}: {}", worklog_path.display(), error))?;
+    let in_flight_sessions = state
+        .pointer("/in_flight_sessions")
+        .and_then(serde_json::Value::as_u64)
+        .ok_or_else(|| "missing numeric /in_flight_sessions in docs/state.json".to_string())?;
+    let last_cycle_summary = state
+        .pointer("/last_cycle/summary")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| "missing string /last_cycle/summary in docs/state.json".to_string())?;
+    let dispatch_count = dispatch_count_clause(last_cycle_summary);
+    let updated = render_post_dispatch_delta(
+        &content,
+        in_flight_sessions,
+        dispatch_count,
+        last_cycle_summary,
+    );
+    if updated != content {
+        fs::write(&worklog_path, updated)
+            .map_err(|error| format!("failed to write {}: {}", worklog_path.display(), error))?;
+    }
+    Ok(Some(worklog_path))
+}
+
+fn render_post_dispatch_delta(
+    content: &str,
+    in_flight_sessions: u64,
+    dispatch_count: &str,
+    last_cycle_summary: &str,
+) -> String {
+    let base = if let Some(index) = content.find(&format!("\n{POST_DISPATCH_DELTA_HEADING}\n")) {
+        &content[..index]
+    } else {
+        content
+    }
+    .trim_end_matches('\n');
+    format!(
+        "{base}\n\n{POST_DISPATCH_DELTA_HEADING}\n\n- **In-flight agent sessions**: {in_flight_sessions}\n- **Dispatch count**: {dispatch_count}\n- **Last-cycle summary**: {last_cycle_summary}\n"
+    )
+}
+
+// `last_cycle.summary` is maintained by record-dispatch/process-merge in the
+// standard "<dispatches>, <merges>" form; the post-dispatch delta only needs the
+// first clause for display. If the summary is custom text, fall back to the full
+// string rather than inventing a dispatch count.
+fn dispatch_count_clause(summary: &str) -> &str {
+    summary
+        .split(',')
+        .next()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or(summary)
+}
+
+/// Find the most recent worklog file for `cycle` by scanning `docs/worklog/*/*.md`
+/// and matching files whose first line starts with `# Cycle {cycle} — `.
+fn find_worklog_for_cycle(repo_root: &Path, cycle: u64) -> Result<Option<PathBuf>, String> {
+    let worklog_root = repo_root.join("docs").join("worklog");
+    if !worklog_root.exists() {
+        return Ok(None);
+    }
+
+    let mut candidates = Vec::new();
+    for date_entry in fs::read_dir(&worklog_root)
+        .map_err(|error| format!("failed to read {}: {}", worklog_root.display(), error))?
+    {
+        let date_entry = date_entry.map_err(|error| {
+            format!(
+                "failed to read entry in {}: {}",
+                worklog_root.display(),
+                error
+            )
+        })?;
+        let date_path = date_entry.path();
+        if !date_path.is_dir() {
+            continue;
+        }
+        for file_entry in fs::read_dir(&date_path)
+            .map_err(|error| format!("failed to read {}: {}", date_path.display(), error))?
+        {
+            let file_entry = file_entry.map_err(|error| {
+                format!("failed to read entry in {}: {}", date_path.display(), error)
+            })?;
+            let path = file_entry.path();
+            if path.extension() != Some(OsStr::new("md")) {
+                continue;
+            }
+            let content = fs::read_to_string(&path)
+                .map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
+            if content
+                .lines()
+                .next()
+                .is_some_and(|line| line.starts_with(&format!("# Cycle {} — ", cycle)))
+            {
+                candidates.push(path);
+            }
+        }
+    }
+
+    candidates.sort();
+    Ok(candidates.into_iter().last())
+}
+
+fn commit_dispatch_artifacts(
+    repo_root: &Path,
+    message: &str,
+    worklog_path: Option<&Path>,
+) -> Result<String, String> {
+    let mut add_command = Command::new("git");
+    add_command
+        .arg("-C")
+        .arg(repo_root)
+        .arg("add")
+        .arg("docs/state.json");
+    if let Some(worklog_path) = worklog_path {
+        let relative_path = worklog_path.strip_prefix(repo_root).map_err(|error| {
+            format!(
+                "failed to compute relative worklog path for {}: {}",
+                worklog_path.display(),
+                error
+            )
+        })?;
+        add_command.arg(relative_path);
+    }
+    let add_output = add_command
+        .output()
+        .map_err(|error| format!("failed to execute git add: {}", error))?;
+    if !add_output.status.success() {
+        let stderr = String::from_utf8_lossy(&add_output.stderr)
+            .trim()
+            .to_string();
+        return Err(format!("git add dispatch artifacts failed: {}", stderr));
+    }
+
+    let commit_output = Command::new("git")
+        .arg("-C")
+        .arg(repo_root)
+        .arg("commit")
+        .arg("-m")
+        .arg(message)
+        .output()
+        .map_err(|error| format!("failed to execute git commit: {}", error))?;
+    if !commit_output.status.success() {
+        let stderr = String::from_utf8_lossy(&commit_output.stderr)
+            .trim()
+            .to_string();
+        return Err(format!("git commit failed: {}", stderr));
+    }
+
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(repo_root)
+        .args(["rev-parse", "--short=7", "HEAD"])
+        .output()
+        .map_err(|error| format!("failed to execute git rev-parse: {}", error))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(format!("git rev-parse --short=7 HEAD failed: {}", stderr));
+    }
+
+    let sha = String::from_utf8(output.stdout)
+        .map_err(|error| format!("failed to decode git rev-parse output as UTF-8: {}", error))?;
+    Ok(sha.trim().to_string())
 }
 
 fn reconcile_review_history_dispatch(
