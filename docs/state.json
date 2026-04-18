@@ -10748,7 +10748,7 @@
     "fields": {
       "audit_dropped": {
         "cadence": "after dropping a previously accepted audit recommendation",
-        "last_refreshed": "cycle 498"
+        "last_refreshed": "cycle 511"
       },
       "audit_processed": {
         "cadence": "after processing audit issues",
@@ -10756,7 +10756,7 @@
       },
       "blockers": {
         "cadence": "after blocker state changes",
-        "last_refreshed": "cycle 498"
+        "last_refreshed": "cycle 511"
       },
       "cycle_issues": {
         "cadence": "every cycle",
@@ -10829,15 +10829,15 @@
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
-        "last_refreshed": "cycle 498"
+        "last_refreshed": "cycle 511"
       },
       "qc_requests_pending": {
         "cadence": "after QC request creation or completion",
-        "last_refreshed": "cycle 498"
+        "last_refreshed": "cycle 511"
       },
       "qc_status": {
         "cadence": "after QC interactions",
-        "last_refreshed": "cycle 498"
+        "last_refreshed": "cycle 511"
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
@@ -10857,7 +10857,7 @@
       },
       "schema_status.google_rich_results_types": {
         "cadence": "after Google gallery changes or new implementations",
-        "last_refreshed": "cycle 498"
+        "last_refreshed": "cycle 511"
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
@@ -10865,23 +10865,23 @@
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
-        "last_refreshed": "cycle 498"
+        "last_refreshed": "cycle 511"
       },
       "schema_status.planned_next": {
         "cadence": "after planning or completing types",
-        "last_refreshed": "cycle 498"
+        "last_refreshed": "cycle 511"
       },
       "schema_status.property_gap_audit": {
         "cadence": "after property gap fixes",
-        "last_refreshed": "cycle 498"
+        "last_refreshed": "cycle 511"
       },
       "schema_status.remaining_audit_findings": {
         "cadence": "after property gap fixes",
-        "last_refreshed": "cycle 498"
+        "last_refreshed": "cycle 511"
       },
       "step_comment_acknowledged_gaps": {
         "cadence": "after acknowledging step comment gaps",
-        "last_refreshed": "cycle 498"
+        "last_refreshed": "cycle 511"
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
@@ -10889,7 +10889,7 @@
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
-        "last_refreshed": "cycle 498"
+        "last_refreshed": "cycle 511"
       },
       "total_enums": {
         "cadence": "after enum additions",
@@ -10925,7 +10925,7 @@
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
-        "last_refreshed": "cycle 498"
+        "last_refreshed": "cycle 511"
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
