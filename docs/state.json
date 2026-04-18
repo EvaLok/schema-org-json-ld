@@ -10700,7 +10700,9 @@
       "category": "journal-quality-commitment-grading",
       "deadline_cycle": 515,
       "deferred_cycle": 510,
-      "resolved": false
+      "dropped_rationale": "Deferred 3 consecutive cycles (510/511/512); no structural fix in flight and question-for-eva #2293 (journal-quality chronic structural responses) has been open 238h without direction. Per S0.6 2-cycle threshold, dropping from active deferrals while leaving the chronic category entry (journal-quality vc=491 recalibrate) as the tracking mechanism pending Eva response.",
+      "resolved": true,
+      "resolved_ref": "dropped: Deferred 3 consecutive cycles (510/511/512); no structural fix in flight and question-for-eva #2293 "
     },
     {
       "category": "worklog-accuracy-post-dispatch-state",
