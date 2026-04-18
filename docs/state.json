@@ -9658,6 +9658,13 @@
       "pr": 2579,
       "status": "merged",
       "title": "[Cycle Review] Cycle 511 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-04-18T05:58:11Z",
+      "issue": 2581,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "write-entry/process-merge: reconcile worklog PR-merge narrative, fix post-dispatch drift, and sync dispatch accounting"
     }
   ],
   "audit_dropped": [
@@ -10691,7 +10698,7 @@
       "resolved_ref": "docs/reviews/cycle-511.md"
     }
   ],
-  "dispatch_log_latest": "#2578 [Cycle Review] Cycle 511 end-of-cycle review (cycle 511)",
+  "dispatch_log_latest": "#2581 write-entry/process-merge: reconcile worklog PR-merge narrative, fix post-dispatch drift, and sync dispatch accounting (cycle 511)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -10962,13 +10969,13 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 9,
     "issue": 2577,
     "number": 511,
-    "summary": "1 dispatch, 1 merges",
-    "timestamp": "2026-04-18T01:59:40Z"
+    "summary": "2 dispatches, 1 merges",
+    "timestamp": "2026-04-18T05:58:11Z"
   },
   "last_eva_comment_check": "2026-04-18T01:53:03Z",
   "last_tool_audit_cycle": 403,
@@ -18210,7 +18217,7 @@
     ],
     "last_review_cycle": 511
   },
-  "review_dispatch_consecutive": 14,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 511,
   "schema_status": {
     "directory_layout": {
