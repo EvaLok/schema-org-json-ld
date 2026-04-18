@@ -10640,7 +10640,9 @@
       "category": "state-integrity",
       "deadline_cycle": 510,
       "deferred_cycle": 505,
-      "resolved": false
+      "dropped_rationale": "Overdue 1 cycle; tracked at chronic_category_responses.state-integrity verification_cycle 466 (structural-fix). Drop per cycle 510 precedent — keeping in deferred_findings duplicates the chronic ledger.",
+      "resolved": true,
+      "resolved_ref": "dropped: Overdue 1 cycle; tracked at chronic_category_responses.state-integrity verification_cycle 466 (struc"
     },
     {
       "category": "audit-handling-duplicate-acceptance",
@@ -10660,6 +10662,18 @@
       "deferred_cycle": 507,
       "resolved": true,
       "resolved_ref": "docs/reviews/cycle-508.md"
+    },
+    {
+      "category": "journal-quality-commitment-grading",
+      "deadline_cycle": 515,
+      "deferred_cycle": 510,
+      "resolved": false
+    },
+    {
+      "category": "worklog-accuracy-post-dispatch-state",
+      "deadline_cycle": 515,
+      "deferred_cycle": 510,
+      "resolved": false
     }
   ],
   "dispatch_log_latest": "#2575 [Cycle Review] Cycle 510 end-of-cycle review (cycle 510)",
@@ -10841,7 +10855,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 510"
+        "last_refreshed": "cycle 511"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -18118,9 +18132,38 @@
         "ignored": 0,
         "note": "F1 (direct-push-boundary) actioned: filed question-for-eva #2574 explicitly asking whether the direct-push carve-out from #2542 extends to checklist-constraint additions; cycle 510 docs walk back the cycle 509 'Eva-authorized precedent' framing. F2 (worklog-accuracy/scope-boundary) actioned: rolled back the cycle 509 chronic-category refresh from vc 509 → vc 0 (constraint stands but verification_cycle no longer claims runtime verification). F3 (journal-quality/commitment-honesty) actioned: cycle 510 journal documents the specific rejected direct-push alternatives (corrective-rewrite tool patch, dispatch via #2542 escalation, regression test fixture) with concrete rationale per recommendation, instead of relying on the cycle 509 generic 'not minimal' wording.",
         "review_issue": 2571
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "journal-quality-commitment-grading",
+          "state-integrity-field-inventory",
+          "worklog-accuracy-post-dispatch-state"
+        ],
+        "complacency_score": 2,
+        "cycle": 510,
+        "deferred": 2,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "worklog-accuracy-post-dispatch-state",
+            "disposition": "deferred"
+          },
+          {
+            "category": "journal-quality-commitment-grading",
+            "disposition": "deferred"
+          },
+          {
+            "category": "state-integrity-field-inventory",
+            "disposition": "actioned"
+          }
+        ],
+        "ignored": 0,
+        "note": "F3 actioned via commit dd978684 — 13 stale field_inventory markers refreshed. F1/F2 deferred to chronic ledger under conservative #2574 posture.",
+        "review_issue": 2575
       }
     ],
-    "last_review_cycle": 509
+    "last_review_cycle": 510
   },
   "review_dispatch_consecutive": 13,
   "review_events_verified_through_cycle": 510,
