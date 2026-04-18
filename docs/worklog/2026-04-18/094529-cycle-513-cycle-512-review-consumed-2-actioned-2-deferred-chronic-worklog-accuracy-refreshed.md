@@ -23,12 +23,11 @@
 - **`tools/rust/crates/write-entry/src/main.rs`**: modified
 - **`tools/rust/crates/write-entry/tests/post_dispatch_sync.rs`**: modified
 
-## Pre-dispatch state
+## Cycle state
 
-*Snapshot before review dispatch — final counters may differ after C6.*
 
 - **In-flight agent sessions**: 0
-- **Pipeline status**: FAIL (3 warnings, 5 blocking: chronic-category-currency, doc-validation, review-events-verified, current-cycle-steps, current-cycle-journal-section)
+- **Pipeline status**: PASS (2 warnings)
 - **Publish gate**: published
 
 ## Next steps
