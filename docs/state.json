@@ -9687,6 +9687,18 @@
       "pr": 2587,
       "status": "merged",
       "title": "[Cycle Review] Cycle 513 end-of-cycle review"
+    },
+    {
+      "addresses_findings": [
+        "513:1",
+        "513:2",
+        "513:3"
+      ],
+      "dispatched_at": "2026-04-18T21:39:19Z",
+      "issue": 2589,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Fix cycle 513 review F1/F2/F3: worklog headline counts, record-dispatch post-dispatch delta, pipeline-check step-comments counting"
     }
   ],
   "audit_dropped": [
@@ -10727,7 +10739,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2586 [Cycle Review] Cycle 513 end-of-cycle review (cycle 513)",
+  "dispatch_log_latest": "#2589 Fix cycle 513 review F1/F2/F3: worklog headline counts, record-dispatch post-dispatch delta, pipeline-check step-comments counting (cycle 514)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -10998,13 +11010,13 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 20,
     "issue": 2588,
     "number": 514,
-    "summary": "0 dispatches, 1 merges",
-    "timestamp": "2026-04-18T21:18:37Z"
+    "summary": "1 dispatch, 1 merges",
+    "timestamp": "2026-04-18T21:39:19Z"
   },
   "last_eva_comment_check": "2026-04-18T21:18:37Z",
   "last_tool_audit_cycle": 403,
