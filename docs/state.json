@@ -9644,10 +9644,12 @@
       "title": "Backfilled: PR #2572"
     },
     {
+      "closed_at": "2026-04-18T06:00:21Z",
+      "closed_reason": "GitHub issue closed during cycle 510 close-out; agent_sessions row missed cleanup",
       "dispatched_at": "2026-04-17T21:39:50Z",
       "issue": 2575,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed",
       "title": "[Cycle Review] Cycle 510 end-of-cycle review"
     },
     {
@@ -10968,7 +10970,7 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 9,
     "issue": 2580,
