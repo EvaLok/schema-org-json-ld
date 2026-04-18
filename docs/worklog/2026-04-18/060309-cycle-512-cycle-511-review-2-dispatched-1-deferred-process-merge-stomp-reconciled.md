@@ -21,12 +21,12 @@
 
 - None.
 
-## Pre-dispatch state
+## Cycle state
 
-*Snapshot before review dispatch — final counters may differ after C6.*
 
 - **In-flight agent sessions**: 1
-- **Pipeline status**: FAIL (3 warnings, 4 blocking: chronic-category-currency, review-events-verified, current-cycle-steps, current-cycle-journal-section)
+- **Pipeline status**: FAIL→PASS (C5.5 initially failed: FAIL (2 warnings, 1 blocking: current-cycle-steps); resolved by re-run)
+- **Close-out gate failures**: C5.5 FAIL: FAIL (2 warnings, 1 blocking: current-cycle-steps)
 - **Publish gate**: published
 
 ## Next steps
