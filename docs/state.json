@@ -9664,8 +9664,10 @@
     {
       "dispatched_at": "2026-04-18T05:58:11Z",
       "issue": 2581,
+      "merged_at": "2026-04-18T09:33:46Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2582,
+      "status": "merged",
       "title": "write-entry/process-merge: reconcile worklog PR-merge narrative, fix post-dispatch drift, and sync dispatch accounting"
     },
     {
@@ -10979,12 +10981,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 3,
     "issue": 2585,
     "number": 513,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-18T09:25:06Z"
   },
   "last_eva_comment_check": "2026-04-18T09:25:06Z",
