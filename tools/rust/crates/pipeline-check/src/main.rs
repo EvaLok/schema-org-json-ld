@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use state_schema::{
     current_cycle_from_state, current_utc_timestamp, read_state_value, update_freshness,
-    write_state_value, StateJson, StepCommentGap,
+    write_state_value, ReviewHistoryEntry, StateJson, StepCommentGap,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -43,6 +43,7 @@ const REVIEW_EVENTS_VERIFIED_STEP_NAME: &str = "review-events-verified";
 const WORKLOG_DEDUP_STEP_NAME: &str = "worklog-dedup";
 const WORKLOG_IMMUTABILITY_STEP_NAME: &str = "worklog-immutability";
 const FROZEN_WORKLOG_IMMUTABILITY_STEP_NAME: &str = "frozen-worklog-immutability";
+const POST_DISPATCH_DELTA_PRESENT_STEP_NAME: &str = "post-dispatch-delta-present";
 const PR_BASE_CURRENCY_STEP_NAME: &str = "pr-base-currency";
 const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const CURRENT_CYCLE_STEPS_STEP_NAME: &str = "current-cycle-steps";
@@ -63,7 +64,7 @@ const COMMITMENT_DROP_RATIONALE_MARKERS: &[&str] = &[
     " due to ",
 ];
 const NON_SURFACE_CYCLE_PREFIX: &str = "cycle-";
-const STEP_NAMES: [&str; 28] = [
+const STEP_NAMES: [&str; 29] = [
     "metric-snapshot",
     "field-inventory",
     "housekeeping-scan",
@@ -92,6 +93,7 @@ const STEP_NAMES: [&str; 28] = [
     DOC_LINT_STEP_NAME,
     COMMITMENT_DROP_VERIFICATION_STEP_NAME,
     CHRONIC_REFRESH_INVALIDATION_STEP_NAME,
+    POST_DISPATCH_DELTA_PRESENT_STEP_NAME,
 ];
 // Steps that have not been posted yet when pipeline-check runs at C5.5.
 // These are excluded from the current-cycle mandatory step check.
@@ -188,6 +190,10 @@ static HYPHENATED_TARGET_SURFACE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 static ISSUE_LABEL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)\bissues?\b(?P<refs>(?:\s*#\d+\s*(?:/|,|and)?\s*)+)")
         .expect("issue label regex should compile")
+});
+static STEP_COMMENT_ID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)^\s*(?:>\s*)?\*\*\[main-orchestrator\]\*\*\s*\|\s*(?:Cycle\s+\d+\s*\|\s*)?Step\s+(C?\d+(?:\.\d+)?)(?:$|[\s:|])|^\s*##+\s*Step\s+(C?\d+(?:\.\d+)?)(?:$|[\s:|])")
+        .expect("step comment id regex should compile")
 });
 
 #[derive(Parser)]
@@ -895,6 +901,9 @@ fn run_pipeline_with_excluded_steps(
     }
     if !is_excluded_step(CURRENT_CYCLE_JOURNAL_SECTION_STEP_NAME, exclude_steps) {
         steps.push(verify_current_cycle_journal_section(repo_root));
+    }
+    if !is_excluded_step(POST_DISPATCH_DELTA_PRESENT_STEP_NAME, exclude_steps) {
+        steps.push(verify_post_dispatch_delta_present(repo_root));
     }
     // Doc validation runs before step-comments so it can pass the pre-step-comments
     // pipeline status through to validate-docs. Reclassify afterward, once the real
@@ -1919,7 +1928,7 @@ fn verify_step_comments(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner
         .pointer("/previous_cycle_issue")
         .and_then(Value::as_u64)
         .unwrap_or(issue);
-    let previous_cycle_found =
+    let previous_cycle_observation =
         match fetch_step_comments_for_issue(runner, previous_cycle_issue, previous_cycle) {
             Ok(found) => found,
             Err(error) => {
@@ -1934,8 +1943,8 @@ fn verify_step_comments(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner
                 };
             }
         };
-    let (found, assessed_cycle, scope) = if previous_cycle_found.is_empty() {
-        let current_cycle_found = match fetch_step_comments_for_issue(runner, issue, cycle) {
+    let (found, unexpected, assessed_cycle, scope) = if previous_cycle_observation.found.is_empty() {
+        let current_cycle_observation = match fetch_step_comments_for_issue(runner, issue, cycle) {
             Ok(found) => found,
             Err(error) => {
                 return StepReport {
@@ -1950,13 +1959,15 @@ fn verify_step_comments(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner
             }
         };
         (
-            current_cycle_found,
+            current_cycle_observation.found,
+            current_cycle_observation.unexpected,
             cycle,
             StepCommentCheckScope::CurrentCycle,
         )
     } else {
         (
-            previous_cycle_found,
+            previous_cycle_observation.found,
+            previous_cycle_observation.unexpected,
             previous_cycle,
             StepCommentCheckScope::PreviousCycle,
         )
@@ -1986,6 +1997,7 @@ fn verify_step_comments(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner
         assessed_cycle,
         scope,
         &found,
+        &unexpected,
         &effective_acknowledged,
     );
 
@@ -2231,10 +2243,33 @@ fn fetch_step_comments_for_issue(
     runner: &dyn CommandRunner,
     issue: u64,
     cycle: u64,
-) -> Result<BTreeSet<&'static str>, String> {
+) -> Result<StepCommentObservation, String> {
     runner
         .fetch_issue_comment_bodies(issue)
-        .map(|comment_bodies| collect_step_comment_ids(&comment_bodies, cycle))
+        .map(|comment_bodies| collect_step_comment_observation(&comment_bodies, cycle))
+}
+
+struct StepCommentObservation {
+    found: BTreeSet<&'static str>,
+    unexpected: BTreeSet<String>,
+}
+
+fn collect_step_comment_observation(comment_bodies: &str, cycle: u64) -> StepCommentObservation {
+    let tokens = collect_step_comment_tokens(comment_bodies, cycle);
+    let found = tokens
+        .iter()
+        .filter_map(|candidate| {
+            EXPECTED_STEP_IDS
+                .iter()
+                .copied()
+                .find(|step| *step == candidate.as_str())
+        })
+        .collect::<BTreeSet<_>>();
+    let unexpected = tokens
+        .into_iter()
+        .filter(|candidate| !EXPECTED_STEP_IDS.contains(&candidate.as_str()))
+        .collect();
+    StepCommentObservation { found, unexpected }
 }
 
 fn collect_step_comment_ids_from_comments(
@@ -2454,7 +2489,14 @@ fn assess_step_comment_completeness(
     cycle: u64,
     scope: StepCommentCheckScope,
 ) -> StepCommentAssessment {
-    assess_step_comment_completeness_with_acknowledged(found, cycle, scope, found, &BTreeSet::new())
+    assess_step_comment_completeness_with_acknowledged(
+        found,
+        cycle,
+        scope,
+        found,
+        &BTreeSet::new(),
+        &BTreeSet::new(),
+    )
 }
 
 fn assess_step_comment_completeness_with_acknowledged(
@@ -2462,10 +2504,12 @@ fn assess_step_comment_completeness_with_acknowledged(
     cycle: u64,
     scope: StepCommentCheckScope,
     actual_found: &BTreeSet<&'static str>,
+    unexpected: &BTreeSet<String>,
     acknowledged: &BTreeSet<&'static str>,
 ) -> StepCommentAssessment {
     let found_ids = ordered_found_step_ids(found);
     let missing = missing_expected_step_ids(found);
+    let total_found = found.len() + unexpected.len();
     let (mandatory_missing, optional_missing): (Vec<_>, Vec<_>) = missing
         .into_iter()
         .partition(|step| is_mandatory_step_for_cycle(step, cycle));
@@ -2475,10 +2519,11 @@ fn assess_step_comment_completeness_with_acknowledged(
         &mandatory_missing,
         &optional_missing,
         actual_found,
+        unexpected,
         acknowledged,
     );
 
-    if found.len() < STEP_COMMENT_THRESHOLD {
+    if total_found < STEP_COMMENT_THRESHOLD {
         // The backstop only blocks for the current cycle. For the previous cycle,
         // cycle-aware filtering may legitimately reduce the per-cycle count below
         // the threshold (e.g., resumed cycles where steps span multiple cycle numbers).
@@ -2498,7 +2543,7 @@ fn assess_step_comment_completeness_with_acknowledged(
                 "{}; below backstop threshold {}",
                 detail, STEP_COMMENT_THRESHOLD
             ),
-            findings: found.len(),
+            findings: total_found,
         };
     }
 
@@ -2519,7 +2564,7 @@ fn assess_step_comment_completeness_with_acknowledged(
             } else {
                 detail
             },
-            findings: found.len(),
+            findings: total_found,
         };
     }
 
@@ -2528,7 +2573,16 @@ fn assess_step_comment_completeness_with_acknowledged(
             status: StepStatus::Warn,
             severity: Severity::Warning,
             detail,
-            findings: found.len(),
+            findings: total_found,
+        };
+    }
+
+    if !unexpected.is_empty() {
+        return StepCommentAssessment {
+            status: StepStatus::Warn,
+            severity: Severity::Warning,
+            detail,
+            findings: total_found,
         };
     }
 
@@ -2536,7 +2590,7 @@ fn assess_step_comment_completeness_with_acknowledged(
         status: StepStatus::Pass,
         severity: Severity::Blocking,
         detail,
-        findings: found.len(),
+        findings: total_found,
     }
 }
 
@@ -2546,30 +2600,35 @@ fn format_step_comment_detail(
     mandatory_missing: &[&'static str],
     optional_missing: &[&'static str],
     actual_found: &BTreeSet<&'static str>,
+    unexpected: &BTreeSet<String>,
     acknowledged: &BTreeSet<&'static str>,
 ) -> String {
+    let total_found = found.len() + unexpected.len();
+    let unexpected_ids = unexpected.iter().map(String::as_str).collect::<Vec<_>>();
     if acknowledged.is_empty() {
         return format!(
-            "found {} unique step comments [{}]; missing mandatory [{}]; missing optional [{}]",
-            found.len(),
+            "found {} unique step comments [{}]; missing mandatory [{}]; missing optional [{}]; unexpected [{}]",
+            total_found,
             format_step_id_list(found_ids),
             format_step_id_list(mandatory_missing),
-            format_step_id_list(optional_missing)
+            format_step_id_list(optional_missing),
+            format_step_id_list(&unexpected_ids)
         );
     }
 
     let actual_found_ids = ordered_found_step_ids(actual_found);
     let acknowledged_ids = ordered_found_step_ids(acknowledged);
     format!(
-		"found {} unique step comments ({} acknowledged) [{}]; actually found [{}]; {} step(s) acknowledged via gap record [{}]; missing mandatory [{}]; missing optional [{}]",
-		found.len(),
+		"found {} unique step comments ({} acknowledged) [{}]; actually found [{}]; {} step(s) acknowledged via gap record [{}]; missing mandatory [{}]; missing optional [{}]; unexpected [{}]",
+		total_found,
 		acknowledged_ids.len(),
 		format_step_id_list(found_ids),
 		format_step_id_list(&actual_found_ids),
 		acknowledged_ids.len(),
 		format_step_id_list(&acknowledged_ids),
 		format_step_id_list(mandatory_missing),
-		format_step_id_list(optional_missing)
+		format_step_id_list(optional_missing),
+		format_step_id_list(&unexpected_ids)
 	)
 }
 
@@ -2619,9 +2678,14 @@ struct StepCommentAssessment {
 /// Returned step IDs are references to the static `EXPECTED_STEP_IDS` list rather than
 /// slices of the input text. Unrecognized step tokens are ignored.
 fn collect_step_comment_ids(comment_bodies: &str, cycle: u64) -> BTreeSet<&'static str> {
-    comment_bodies
-        .lines()
-        .filter_map(|line| detect_step_comment_id(line, cycle))
+    collect_step_comment_tokens(comment_bodies, cycle)
+        .into_iter()
+        .filter_map(|candidate| {
+            EXPECTED_STEP_IDS
+                .iter()
+                .copied()
+                .find(|step| *step == candidate.as_str())
+        })
         .collect()
 }
 
@@ -2636,16 +2700,14 @@ fn detect_step_comment_id(line: &str, cycle: u64) -> Option<&'static str> {
 
 fn detect_any_step_comment_token(line: &str, cycle: u64) -> Option<&str> {
     let trimmed = line.trim();
-    if trimmed.starts_with(ORCHESTRATOR_SIGNATURE) {
-        if !orchestrator_step_comment_matches_cycle(trimmed, cycle) {
-            return None;
-        }
-        extract_step_token_after_marker(trimmed, "Step ")
-    } else if trimmed.starts_with("## Step ") {
-        extract_step_token_after_marker(trimmed, "## Step ")
-    } else {
-        None
+    if trimmed.starts_with(ORCHESTRATOR_SIGNATURE) && !orchestrator_step_comment_matches_cycle(trimmed, cycle) {
+        return None;
     }
+    let captures = STEP_COMMENT_ID_REGEX.captures(trimmed)?;
+    captures
+        .get(1)
+        .or_else(|| captures.get(2))
+        .map(|capture| capture.as_str())
 }
 
 fn orchestrator_step_comment_matches_cycle(line: &str, expected_cycle: u64) -> bool {
@@ -2672,19 +2734,11 @@ fn extract_cycle_marker(line: &str) -> Option<u64> {
     }
 }
 
-fn extract_step_token_after_marker<'a>(line: &'a str, marker: &str) -> Option<&'a str> {
-    // Callers only invoke this after confirming the line begins with the relevant marker.
-    let start = line.find(marker)? + marker.len();
-    let candidate = line[start..]
-        .split(|ch: char| ch == '|' || ch.is_whitespace())
-        .next()
-        .unwrap_or_default()
-        .trim_end_matches(':');
-    if candidate.is_empty() {
-        None
-    } else {
-        Some(candidate)
-    }
+fn collect_step_comment_tokens(comment_bodies: &str, cycle: u64) -> BTreeSet<String> {
+    comment_bodies
+        .lines()
+        .filter_map(|line| detect_any_step_comment_token(line, cycle).map(str::to_string))
+        .collect()
 }
 
 fn verify_artifacts_for_date(repo_root: &Path, today: &str) -> StepReport {
@@ -3454,6 +3508,111 @@ fn latest_worklog_entry_for_cycle(repo_root: &Path, cycle: u64) -> Result<Option
     }
 
     Ok(latest.map(|(_, _, path)| path))
+}
+
+fn verify_post_dispatch_delta_present(repo_root: &Path) -> StepReport {
+    match post_dispatch_delta_presence_assessment(repo_root) {
+        Ok(assessment) => StepReport {
+            name: POST_DISPATCH_DELTA_PRESENT_STEP_NAME,
+            status: assessment.status,
+            severity: assessment.severity,
+            exit_code: None,
+            detail: Some(assessment.detail),
+            findings: None,
+            summary: None,
+        },
+        Err(error) => StepReport {
+            name: POST_DISPATCH_DELTA_PRESENT_STEP_NAME,
+            status: StepStatus::Error,
+            severity: Severity::Blocking,
+            exit_code: None,
+            detail: Some(error),
+            findings: None,
+            summary: None,
+        },
+    }
+}
+
+fn post_dispatch_delta_presence_assessment(repo_root: &Path) -> Result<StepAssessment, String> {
+    let current_cycle = current_cycle_from_state(repo_root)?;
+    let Some(previous_cycle) = current_cycle.checked_sub(1) else {
+        return Ok(StepAssessment {
+            status: StepStatus::Skip,
+            severity: Severity::Warning,
+            detail: "cycle 0 has no previous worklog to inspect".to_string(),
+        });
+    };
+    if !record_dispatch_receipts_exist_for_cycle(repo_root, previous_cycle)? {
+        return Ok(StepAssessment {
+            status: StepStatus::Skip,
+            severity: Severity::Warning,
+            detail: format!(
+                "no record-dispatch receipts found for cycle {}; skipping post-dispatch delta check",
+                previous_cycle
+            ),
+        });
+    }
+    let Some(worklog_path) = latest_worklog_entry_for_cycle(repo_root, previous_cycle)? else {
+        return Ok(StepAssessment {
+            status: StepStatus::Fail,
+            severity: Severity::Blocking,
+            detail: format!(
+                "record-dispatch receipts exist for cycle {} but no matching worklog entry was found",
+                previous_cycle
+            ),
+        });
+    };
+    let content = fs::read_to_string(&worklog_path)
+        .map_err(|error| format!("failed to read {}: {}", worklog_path.display(), error))?;
+    if content.contains("## Post-dispatch delta") {
+        Ok(StepAssessment {
+            status: StepStatus::Pass,
+            severity: Severity::Warning,
+            detail: format!(
+                "cycle {} worklog includes post-dispatch delta ({})",
+                previous_cycle,
+                worklog_path.display()
+            ),
+        })
+    } else {
+        Ok(StepAssessment {
+            status: StepStatus::Fail,
+            severity: Severity::Blocking,
+            detail: format!(
+                "cycle {} worklog is missing ## Post-dispatch delta ({})",
+                previous_cycle,
+                worklog_path.display()
+            ),
+        })
+    }
+}
+
+fn record_dispatch_receipts_exist_for_cycle(repo_root: &Path, cycle: u64) -> Result<bool, String> {
+    let cycle_tag = format!("[cycle {}]", cycle);
+    let output = Command::new("git")
+        .current_dir(repo_root)
+        .args([
+            "log",
+            "--format=%s",
+            "--fixed-strings",
+            "--grep",
+            "state(record-dispatch):",
+            "--grep",
+            &cycle_tag,
+            "--all-match",
+        ])
+        .output()
+        .map_err(|error| format!("failed to execute git log: {}", error))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        if stderr.contains("not a git repository") {
+            return Ok(false);
+        }
+        return Err(command_failure_message("git log", &output));
+    }
+    Ok(String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .any(|line| !line.trim().is_empty()))
 }
 
 fn historical_worklog_entries(
@@ -5080,21 +5239,22 @@ fn mass_deferral_gate_assessment(repo_root: &Path) -> Result<StepAssessment, Str
         });
     }
 
+    let deferred = adjusted_review_deferred_count(&state, history_entry);
     let detail = format!(
         "review cycle {} deferred {} of {} findings ({:.1}%)",
         history_entry.cycle,
-        history_entry.deferred,
+        deferred,
         history_entry.finding_count,
-        (history_entry.deferred as f64 / history_entry.finding_count as f64) * 100.0
+        (deferred as f64 / history_entry.finding_count as f64) * 100.0
     );
-    if history_entry.deferred == history_entry.finding_count {
+    if deferred == history_entry.finding_count {
         return Ok(StepAssessment {
             status: StepStatus::Warn,
             severity: Severity::Warning,
             detail,
         });
     }
-    if meets_mass_deferral_warning_threshold(history_entry.deferred, history_entry.finding_count) {
+    if meets_mass_deferral_warning_threshold(deferred, history_entry.finding_count) {
         return Ok(StepAssessment {
             status: StepStatus::Warn,
             severity: Severity::Warning,
@@ -5111,6 +5271,52 @@ fn mass_deferral_gate_assessment(repo_root: &Path) -> Result<StepAssessment, Str
 
 fn meets_mass_deferral_warning_threshold(deferred: u64, finding_count: u64) -> bool {
     deferred.saturating_mul(4) >= finding_count.saturating_mul(3)
+}
+
+fn adjusted_review_deferred_count(state: &StateJson, entry: &ReviewHistoryEntry) -> u64 {
+    if entry.finding_dispositions.len() as u64 != entry.finding_count {
+        let matching_entries = state
+            .deferred_findings
+            .iter()
+            .filter(|finding| finding.deferred_cycle == entry.cycle)
+            .collect::<Vec<_>>();
+        if matching_entries.is_empty() {
+            return entry.deferred;
+        }
+        return matching_entries
+            .into_iter()
+            .filter(|finding| !finding.resolved && finding.dropped_rationale.is_none())
+            .count() as u64;
+    }
+
+    entry.finding_dispositions.iter().fold(0_u64, |count, disposition| {
+        if disposition.disposition != "deferred" {
+            return count;
+        }
+        if final_deferred_disposition_is_still_open(state, entry.cycle, &disposition.category) {
+            count + 1
+        } else {
+            count
+        }
+    })
+}
+
+fn final_deferred_disposition_is_still_open(
+    state: &StateJson,
+    review_cycle: u64,
+    category: &str,
+) -> bool {
+    let mut matched = false;
+    for finding in &state.deferred_findings {
+        if finding.deferred_cycle != review_cycle || finding.category != category {
+            continue;
+        }
+        matched = true;
+        if !finding.resolved && finding.dropped_rationale.is_none() {
+            return true;
+        }
+    }
+    !matched
 }
 
 fn dispatch_finding_reconciliation_status(
@@ -5766,6 +5972,111 @@ mod tests {
     }
 
     #[test]
+    fn post_dispatch_delta_present_passes_when_previous_cycle_worklog_contains_section() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-post-dispatch-delta-pass-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 513},
+                "cycle_phase": {"cycle": 514}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        fs::create_dir_all(root.join("docs/worklog/2026-04-18")).unwrap();
+        fs::write(
+            root.join("docs/worklog/2026-04-18/094529-cycle-513-summary.md"),
+            "# Cycle 513 — 2026-04-18 09:45 UTC\n\n## Post-dispatch delta\n\n- **In-flight agent sessions**: 1\n- **Dispatch count**: 1 dispatch\n- **Last-cycle summary**: 1 dispatch, 0 merges\n",
+        )
+        .unwrap();
+        commit_all(&root, "state(record-dispatch): #2586 dispatched [cycle 513]");
+
+        let step = verify_post_dispatch_delta_present(&root);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("cycle 513 worklog includes post-dispatch delta"));
+    }
+
+    #[test]
+    fn post_dispatch_delta_present_fails_when_previous_cycle_worklog_lacks_section() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-post-dispatch-delta-fail-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 513},
+                "cycle_phase": {"cycle": 514}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        fs::create_dir_all(root.join("docs/worklog/2026-04-18")).unwrap();
+        fs::write(
+            root.join("docs/worklog/2026-04-18/094529-cycle-513-summary.md"),
+            "# Cycle 513 — 2026-04-18 09:45 UTC\n\n## What was done\n\n- No new dispatches.\n",
+        )
+        .unwrap();
+        commit_all(&root, "state(record-dispatch): #2586 dispatched [cycle 513]");
+
+        let step = verify_post_dispatch_delta_present(&root);
+
+        assert_eq!(step.status, StepStatus::Fail);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("missing ## Post-dispatch delta"));
+    }
+
+    #[test]
+    fn post_dispatch_delta_present_skips_when_previous_cycle_has_no_dispatch_receipt() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-post-dispatch-delta-skip-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 513},
+                "cycle_phase": {"cycle": 514}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        commit_all(&root, "state(cycle-start): begin cycle 514 [cycle 514]");
+
+        let step = verify_post_dispatch_delta_present(&root);
+
+        assert_eq!(step.status, StepStatus::Skip);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("no record-dispatch receipts found for cycle 513"));
+    }
+
+    #[test]
     fn warning_steps_get_warn_status_not_fail() {
         let execution = ExecutionResult {
             exit_code: Some(1),
@@ -6414,7 +6725,7 @@ mod tests {
 
         let report = run_pipeline(&root, 135, &runner);
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 28);
+        assert_eq!(report.steps.len(), STEP_NAMES.len());
         assert_eq!(report.steps[0].status, StepStatus::Pass);
         assert_eq!(report.steps[1].status, StepStatus::Pass);
         assert_eq!(report.steps[2].status, StepStatus::Pass);
@@ -6663,7 +6974,7 @@ mod tests {
 
         let report = run_pipeline(&root, 140, &ErrorRunner);
         assert_eq!(report.overall, StepStatus::Fail);
-        assert_eq!(report.steps.len(), 28);
+        assert_eq!(report.steps.len(), STEP_NAMES.len());
         assert!(report.steps[..6]
             .iter()
             .all(|step| matches!(step.status, StepStatus::Error)));
@@ -7708,7 +8019,7 @@ mod tests {
             &ExcludeDocValidationRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 27);
+        assert_eq!(report.steps.len(), STEP_NAMES.len() - 1);
         assert!(!report
             .steps
             .iter()
@@ -7846,7 +8157,7 @@ mod tests {
             &UnknownExcludeRunner,
         );
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 28);
+        assert_eq!(report.steps.len(), STEP_NAMES.len());
         assert!(report
             .steps
             .iter()
@@ -7992,7 +8303,7 @@ mod tests {
         );
 
         assert_eq!(report.overall, StepStatus::Pass);
-        assert_eq!(report.steps.len(), 27);
+        assert_eq!(report.steps.len(), STEP_NAMES.len() - 1);
         assert!(!report.steps.iter().any(|step| step.name == "worklog-dedup"));
         assert!(report
             .steps
@@ -11580,6 +11891,63 @@ mod tests {
     }
 
     #[test]
+    fn mass_deferral_gate_excludes_dropped_deferrals_from_ratio() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-mass-deferral-gate-dropped-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "deferred_findings": [
+                    {
+                        "category": "receipt-coverage",
+                        "deferred_cycle": 394,
+                        "deadline_cycle": 399,
+                        "resolved": false
+                    },
+                    {
+                        "category": "follow-up",
+                        "deferred_cycle": 394,
+                        "deadline_cycle": 399,
+                        "resolved": true,
+                        "dropped_rationale": "superseded",
+                        "resolved_ref": "dropped: superseded"
+                    }
+                ],
+                "review_agent": {
+                    "history": [{
+                        "cycle": 394,
+                        "categories": ["review-accounting"],
+                        "actioned": 1,
+                        "deferred": 2,
+                        "ignored": 0,
+                        "finding_count": 3,
+                        "complacency_score": 2,
+                        "finding_dispositions": [
+                            {"category": "worklog-accuracy", "disposition": "actioned"},
+                            {"category": "receipt-coverage", "disposition": "deferred"},
+                            {"category": "follow-up", "disposition": "deferred"}
+                        ]
+                    }]
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_mass_deferral_gate(&root);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("1 of 3"));
+        assert!(!detail.contains("2 of 3"));
+    }
+
+    #[test]
     fn dispatch_finding_reconciliation_passes_when_review_has_no_dispatch_created_findings() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -13005,6 +13373,61 @@ mod tests {
         assert_eq!(assessment.severity, Severity::Blocking);
         assert!(!assessment.detail.contains("already penalized"));
         assert!(assessment.detail.contains("missing mandatory [1.1]"));
+    }
+
+    #[test]
+    fn step_comment_verification_counts_decimal_ids_and_reports_unexpected_extras() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-step-comments-decimal-{}", run_id));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {
+                    "number": 514,
+                    "issue": 2585
+                },
+                "previous_cycle_issue": 2585
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct DecimalRunner;
+
+        impl CommandRunner for DecimalRunner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+                assert_eq!(issue, 2585);
+                Ok(step_comment_bodies(
+                    513,
+                    &[
+                        "0", "0.1", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7",
+                        "8", "9", "C1", "C2", "C3", "C4.1", "C4.5", "C4.7", "C5", "C5.1",
+                        "C5.5", "C5.6", "C6", "C7", "C8",
+                    ],
+                ))
+            }
+        }
+
+        let step = verify_step_comments(&root, 514, &DecimalRunner);
+
+        assert_eq!(step.status, StepStatus::Warn);
+        assert_eq!(step.severity, Severity::Warning);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("found 27 unique step comments"));
+        assert!(!detail.contains("missing optional [0.1"));
+        assert!(detail.contains("missing optional [10]"));
+        assert!(detail.contains("unexpected [C4.7]"));
     }
 
     #[test]

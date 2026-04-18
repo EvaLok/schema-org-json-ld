@@ -368,11 +368,12 @@ fn execute_worklog_with_outcome(
     now: DateTime<Utc>,
 ) -> Result<WorklogWriteOutcome, String> {
     let (cycle, content) = render_worklog_output_with_cycle(args, repo_root, now)?;
+    let title = effective_worklog_title(args, repo_root, cycle)?;
     let (path, replaced_existing) =
         if let Some(existing_path) = find_worklog_for_cycle(repo_root, cycle)? {
             (existing_path, true)
         } else {
-            (worklog_path(repo_root, now, cycle, &args.title), false)
+            (worklog_path(repo_root, now, cycle, &title), false)
         };
     write_entry_file(&path, &content)?;
     Ok(WorklogWriteOutcome {
@@ -1620,12 +1621,82 @@ fn derive_review_summary_line(
                 target.review_issue, target.review_cycle
             )
         })?;
-    let disposition_summary = summarize_review_dispositions(entry)?;
+    let disposition_summary = summarize_review_dispositions(state, entry);
 
     Ok(format!(
         "Processed cycle {} review ({} findings, complacency {}/5, {})",
         entry.cycle, entry.finding_count, entry.complacency_score, disposition_summary
     ))
+}
+
+fn effective_worklog_title(args: &WorklogArgs, repo_root: &Path, cycle: u64) -> Result<String, String> {
+    if !args.auto_review_summary {
+        return Ok(args.title.clone());
+    }
+    let Some(state) = load_worklog_state(repo_root, false)? else {
+        return Ok(args.title.clone());
+    };
+    let target = resolve_review_issue_for_summary(args, &state, cycle)?;
+    normalize_review_summary_title(&args.title, &state, target)
+}
+
+fn normalize_review_summary_title(
+    title: &str,
+    state: &StateJson,
+    target: ReviewSummaryTarget,
+) -> Result<String, String> {
+    let prefix = format!("Cycle {} review consumed", target.review_cycle);
+    if !title
+        .to_ascii_lowercase()
+        .starts_with(&prefix.to_ascii_lowercase())
+    {
+        return Ok(title.to_string());
+    }
+
+    let review_agent = state.review_agent()?;
+    let Some(entry) = review_agent
+        .history
+        .iter()
+        .filter(|entry| review_history_entry_matches_target(entry, target))
+        .max_by_key(|entry| entry.cycle)
+    else {
+        return Ok(title.to_string());
+    };
+    let disposition_summary = summarize_review_dispositions(state, entry);
+
+    let tail = strip_leading_review_disposition_tokens(title[prefix.len()..].trim());
+    Ok(if tail.is_empty() {
+        format!("{prefix} {disposition_summary}")
+    } else {
+        format!("{prefix} {disposition_summary} {tail}")
+    })
+}
+
+fn strip_leading_review_disposition_tokens(text: &str) -> String {
+    let tokens = text.split_whitespace().collect::<Vec<_>>();
+    let mut index = 0usize;
+    while index + 1 < tokens.len() {
+        let count = tokens[index].trim_end_matches(',');
+        let label = tokens[index + 1].trim_end_matches(',');
+        if count.parse::<u64>().is_ok() && is_review_disposition_label(label) {
+            index += 2;
+        } else {
+            break;
+        }
+    }
+    tokens[index..].join(" ")
+}
+
+fn is_review_disposition_label(label: &str) -> bool {
+    matches!(
+        label,
+        "actioned"
+            | "deferred"
+            | "dispatch_created"
+            | "actioned_failed"
+            | "verified_resolved"
+            | "ignored"
+    )
 }
 
 fn review_history_entry_matches_target(
@@ -1636,51 +1707,94 @@ fn review_history_entry_matches_target(
         || (!entry.extra.contains_key("review_issue") && entry.cycle == target.review_cycle)
 }
 
-fn summarize_review_dispositions(entry: &ReviewHistoryEntry) -> Result<String, String> {
+fn summarize_review_dispositions(state: &StateJson, entry: &ReviewHistoryEntry) -> String {
     if entry.finding_count == 0 {
-        return Ok("no findings".to_string());
+        return "no findings".to_string();
     }
     if entry.finding_dispositions.len() as u64 != entry.finding_count {
-        return Err(format!(
-            "review history entry for cycle {} has finding_count {} but {} finding_dispositions",
-            entry.cycle,
-            entry.finding_count,
-            entry.finding_dispositions.len()
-        ));
+        return fallback_review_disposition_summary(entry);
     }
 
-    let Some(first) = entry.finding_dispositions.first() else {
-        return Err(format!(
-            "review history entry for cycle {} has empty finding_dispositions despite non-zero finding_count",
-            entry.cycle
-        ));
-    };
-
-    if entry
-        .finding_dispositions
-        .iter()
-        .all(|disposition| disposition.disposition == first.disposition)
-    {
-        return Ok(format!("all {}", first.disposition));
+    if entry.finding_dispositions.is_empty() {
+        return fallback_review_disposition_summary(entry);
     }
 
     let mut counts = Vec::<(String, usize)>::new();
     for disposition in &entry.finding_dispositions {
-        if let Some((_, count)) = counts
-            .iter_mut()
-            .find(|(name, _)| name == &disposition.disposition)
-        {
-            *count += 1;
-        } else {
-            counts.push((disposition.disposition.clone(), 1));
+        if disposition.disposition == "deferred" {
+            if final_deferred_disposition_is_still_open(state, entry.cycle, &disposition.category) {
+                increment_review_disposition_count(&mut counts, "deferred");
+            }
+            continue;
+        }
+
+        increment_review_disposition_count(&mut counts, &disposition.disposition);
+    }
+
+    if let Some((disposition, count)) = counts.first() {
+        if counts.len() == 1 && *count as u64 == entry.finding_count {
+            return format!("all {}", disposition);
         }
     }
 
-    Ok(counts
+    counts
         .into_iter()
         .filter_map(|(disposition, count)| format_count_with_label(count, &disposition))
         .collect::<Vec<_>>()
-        .join(", "))
+        .join(", ")
+}
+
+fn fallback_review_disposition_summary(entry: &ReviewHistoryEntry) -> String {
+    let counts = [
+        ("actioned", entry.actioned as usize),
+        ("deferred", entry.deferred as usize),
+        ("dispatch_created", entry.dispatch_created as usize),
+        ("actioned_failed", entry.actioned_failed as usize),
+        ("verified_resolved", entry.verified_resolved as usize),
+        ("ignored", entry.ignored as usize),
+    ]
+    .into_iter()
+    .filter(|(_, count)| *count > 0)
+    .map(|(label, count)| (label.to_string(), count))
+    .collect::<Vec<_>>();
+
+    if let Some((disposition, count)) = counts.first() {
+        if counts.len() == 1 && *count as u64 == entry.finding_count {
+            return format!("all {}", disposition);
+        }
+    }
+
+    counts
+        .into_iter()
+        .filter_map(|(disposition, count)| format_count_with_label(count, &disposition))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+fn final_deferred_disposition_is_still_open(
+    state: &StateJson,
+    review_cycle: u64,
+    category: &str,
+) -> bool {
+    let mut matched = false;
+    for finding in &state.deferred_findings {
+        if finding.deferred_cycle != review_cycle || finding.category != category {
+            continue;
+        }
+        matched = true;
+        if !finding.resolved && finding.dropped_rationale.is_none() {
+            return true;
+        }
+    }
+    !matched
+}
+
+fn increment_review_disposition_count(counts: &mut Vec<(String, usize)>, disposition: &str) {
+    if let Some((_, count)) = counts.iter_mut().find(|(name, _)| name == disposition) {
+        *count += 1;
+    } else {
+        counts.push((disposition.to_string(), 1));
+    }
 }
 
 fn push_issue_processed_numeric_field(
@@ -6767,6 +6881,83 @@ mod tests {
                 "Processed cycle 153 review (2 findings, complacency 1/5, 1 actioned, 1 deferred)"
             ]
         );
+    }
+
+    #[test]
+    fn worklog_auto_review_summary_excludes_dropped_deferrals_from_summary_and_slug() {
+        let repo_root = TempRepoDir::new("worklog-auto-review-summary-dropped-deferral");
+        init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "phase": "work",
+                    "phase_entered_at": "2026-03-06T01:00:00Z",
+                    "cycle": 154
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 80,
+                        "title": "[Cycle Review] Cycle 153 end-of-cycle review",
+                        "status": "merged"
+                    }
+                ],
+                "deferred_findings": [
+                    {
+                        "category": "receipt-coverage",
+                        "deferred_cycle": 153,
+                        "deadline_cycle": 158,
+                        "resolved": false
+                    },
+                    {
+                        "category": "follow-up",
+                        "deferred_cycle": 153,
+                        "deadline_cycle": 158,
+                        "resolved": true,
+                        "dropped_rationale": "superseded by chronic tracking",
+                        "resolved_ref": "dropped: superseded by chronic tracking"
+                    }
+                ],
+                "review_agent": {
+                    "history": [
+                        {
+                            "cycle": 153,
+                            "review_issue": 80,
+                            "finding_count": 3,
+                            "complacency_score": 2,
+                            "finding_dispositions": [
+                                {"category": "worklog-accuracy", "disposition": "actioned"},
+                                {"category": "receipt-coverage", "disposition": "deferred"},
+                                {"category": "follow-up", "disposition": "deferred"}
+                            ]
+                        }
+                    ]
+                }
+            }"#,
+        );
+
+        let mut args = worklog_args("Cycle 153 review consumed 1 actioned 2 deferred chronic worklog accuracy refreshed");
+        args.auto_review_summary = true;
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.publish_gate = Some("open".to_string());
+
+        let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+        let warnings =
+            apply_worklog_auto_derivations(&args, &repo_root.path, 154, &mut input).unwrap();
+
+        assert!(warnings.is_empty());
+        assert_eq!(
+            input.what_was_done,
+            vec![
+                "Processed cycle 153 review (3 findings, complacency 2/5, 1 actioned, 1 deferred)"
+            ]
+        );
+
+        let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
+        assert!(path.ends_with(
+            "docs/worklog/2026-03-06/051458-cycle-154-review-consumed-1-actioned-1-deferred-chronic-worklog-accuracy-refreshed.md"
+        ));
     }
 
     #[test]
