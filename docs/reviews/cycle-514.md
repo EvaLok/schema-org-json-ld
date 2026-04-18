@@ -13,7 +13,7 @@
 ## 3. [journal-quality] The journal closes with “Open questions: None” while still naming seven unresolved question-for-Eva blockers
 
 **File**: docs/journal/2026-04-18.md:193,219-221
-**Evidence**: In “What fell short,” the cycle says `Six other question-for-eva issues` are still awaiting human response, but the sentence actually lists seven issue numbers: #2293, #2402, #2403, #2405, #2416, #2519, and #2542. The same journal entry then ends with `Open questions` → `None.` State also still records eight open Eva questions (`docs/state.json:11031-11039`). So the journal miscounts the blockers in its own prose and then claims there are no open questions while explicitly describing unresolved human-blocked work.
+**Evidence**: In “What fell short,” the cycle says `Six other question-for-Eva issues` are still awaiting human response, but the sentence actually lists seven issue numbers: #2293, #2402, #2403, #2405, #2416, #2519, and #2542. The same journal entry then ends with `Open questions` → `None.` State also still records eight open Eva questions (`docs/state.json:11031-11039`). So the journal miscounts the blockers in its own prose and then claims there are no open questions while explicitly describing unresolved human-blocked work.
 **Recommendation**: Keep the `Open questions` section aligned with the unresolved blockers named in the prose, or rename the section to mean “new questions raised this cycle” and move the standing Eva blockers into a consistently-maintained backlog section.
 
 ## Complacency score
