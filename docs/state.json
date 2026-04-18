@@ -10658,13 +10658,17 @@
       "category": "audit-handling-duplicate-acceptance",
       "deadline_cycle": 512,
       "deferred_cycle": 507,
-      "resolved": false
+      "dropped_rationale": "Deadline cycle 512 reached; category tracked in chronic_category_responses (state-integrity vc=466 structural-fix in progress); duplicate tracking inflates WIP without adding information — drop per cycle 510/511 pattern",
+      "resolved": true,
+      "resolved_ref": "dropped: Deadline cycle 512 reached; category tracked in chronic_category_responses (state-integrity vc=466 s"
     },
     {
       "category": "journal-quality-follow-through",
       "deadline_cycle": 512,
       "deferred_cycle": 507,
-      "resolved": false
+      "dropped_rationale": "Deadline cycle 512 reached; journal-quality chronic entry (vc=491 recalibrate) and new cycle 511 deferral entry (journal-quality/commitment-grading deadline 517) already track this; drop overdue duplicate per cycle 510/511 pattern",
+      "resolved": true,
+      "resolved_ref": "dropped: Deadline cycle 512 reached; journal-quality chronic entry (vc=491 recalibrate) and new cycle 511 def"
     },
     {
       "category": "worklog-accuracy-scope-boundary",
@@ -10683,7 +10687,8 @@
       "category": "worklog-accuracy-post-dispatch-state",
       "deadline_cycle": 515,
       "deferred_cycle": 510,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-511.md"
     }
   ],
   "dispatch_log_latest": "#2578 [Cycle Review] Cycle 511 end-of-cycle review (cycle 511)",
@@ -18171,9 +18176,39 @@
         "ignored": 0,
         "note": "F3 actioned via commit dd978684 — 13 stale field_inventory markers refreshed. F1/F2 deferred to chronic ledger under conservative #2574 posture.",
         "review_issue": 2575
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "journal-quality-commitment-grading",
+          "worklog-accuracy-post-dispatch-state",
+          "worklog-accuracy-pr-merge-accounting"
+        ],
+        "complacency_score": 3,
+        "cycle": 511,
+        "deferred": 1,
+        "dispatch_created": 2,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "worklog-accuracy-pr-merge-accounting",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "worklog-accuracy-post-dispatch-state",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "journal-quality-commitment-grading",
+            "disposition": "deferred"
+          }
+        ],
+        "ignored": 0,
+        "note": "Cycle 512 dispatched issue #2581 structural fix covering F1 (write-entry narrative/PRs-merged reconciliation) and F2 (worklog post-dispatch drift + process-merge accounting sync); F3 deferred to chronic ledger vc=491. Manual state.json reconciliation in commit 9fe9a95a restored cycle 511 dispatch count after process-merge stomp.",
+        "review_issue": 2578
       }
     ],
-    "last_review_cycle": 510
+    "last_review_cycle": 511
   },
   "review_dispatch_consecutive": 14,
   "review_events_verified_through_cycle": 511,
