@@ -9769,6 +9769,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Structural fix: freeze last_cycle after cycle-complete, commit verify-review-events, fix standing-Eva-blockers state path"
+    },
+    {
+      "dispatched_at": "2026-04-19T21:55:24Z",
+      "issue": 2610,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 518 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -10039,9 +10046,10 @@
     2607
   ],
   "cycle_phase": {
+    "completed_at": "2026-04-19T21:55:24Z",
     "cycle": 518,
-    "phase": "close_out",
-    "phase_entered_at": "2026-04-19T21:43:44Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-04-19T21:55:24Z"
   },
   "cycles_since_last_forward_work": {
     "added_in_cycle": 411,
@@ -10824,7 +10832,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2608 Structural fix: freeze last_cycle after cycle-complete, commit verify-review-events, fix standing-Eva-blockers state path (cycle 518)",
+  "dispatch_log_latest": "#2610 [Cycle Review] Cycle 518 end-of-cycle review (cycle 518)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -11095,7 +11103,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 6,
     "issue": 2607,
@@ -18526,7 +18534,7 @@
     ],
     "last_review_cycle": 517
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 518,
   "schema_status": {
     "directory_layout": {
