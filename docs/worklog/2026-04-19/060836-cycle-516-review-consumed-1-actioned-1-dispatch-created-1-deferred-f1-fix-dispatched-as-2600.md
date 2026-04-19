@@ -22,12 +22,12 @@
 - **`tools/rust/crates/verify-review-events/tests/auto_cycle.rs`**: modified
 - **`tools/rust/crates/write-entry/src/main.rs`**: modified
 
-## Pre-dispatch state
+## Cycle state
 
-*Snapshot before review dispatch — final counters may differ after C6.*
 
-- **In-flight agent sessions**: 1 (#2600)
-- **Pipeline status**: FAIL (4 warnings, 6 blocking: chronic-category-currency, doc-validation, review-events-verified, current-cycle-steps, current-cycle-journal-section, post-dispatch-delta-present)
+- **In-flight agent sessions**: 1
+- **Pipeline status**: FAIL→PASS (C5.5 initially failed: FAIL (3 warnings, 1 blocking: current-cycle-steps); resolved by re-run)
+- **Close-out gate failures**: C5.5 FAIL: FAIL (3 warnings, 1 blocking: current-cycle-steps)
 - **Publish gate**: published
 
 **Note on dispatch tracking**: #2600 was dispatched via direct `gh api` call (not `record-dispatch` tool) because record-dispatch unconditionally transitions phase `close_out → complete`, which would skip C5/C5.5/C6. State.json `agent_sessions` and `in_flight_sessions` were reconciled manually mid-close-out. Tooling improvement candidate: record-dispatch should support a `--no-phase-transition` flag for non-review dispatches when in `close_out` phase.
