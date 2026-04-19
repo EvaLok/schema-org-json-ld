@@ -9696,8 +9696,10 @@
       ],
       "dispatched_at": "2026-04-18T21:39:19Z",
       "issue": 2589,
+      "merged_at": "2026-04-19T01:58:07Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2590,
+      "status": "merged",
       "title": "Fix cycle 513 review F1/F2/F3: worklog headline counts, record-dispatch post-dispatch delta, pipeline-check step-comments counting"
     },
     {
@@ -11019,12 +11021,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 2,
     "issue": 2593,
     "number": 515,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-19T01:43:23Z"
   },
   "last_eva_comment_check": "2026-04-19T01:43:23Z",
