@@ -2986,7 +2986,8 @@ fn resolve_journal_input(args: &JournalArgs) -> Result<JournalInput, String> {
 fn load_standing_eva_blockers(repo_root: &Path) -> Result<Vec<StandingEvaBlocker>, String> {
     let value = match read_state_value(repo_root) {
         Ok(value) => value,
-        Err(_) => return Ok(Vec::new()),
+        Err(error) if error.contains("failed to read") => return Ok(Vec::new()),
+        Err(error) => return Err(error),
     };
     let Some(issues) = value
         .pointer("/eva_escalations/issues")
@@ -3010,15 +3011,26 @@ fn load_standing_eva_blockers(repo_root: &Path) -> Result<Vec<StandingEvaBlocker
         let Some(age_hours) = issue.get("age_hours").and_then(Value::as_f64) else {
             continue;
         };
+        let Some(stale_hours) = ceil_age_hours(age_hours) else {
+            continue;
+        };
 
         blockers.push(StandingEvaBlocker {
             number,
             title: title.to_string(),
-            stale_hours: age_hours.ceil() as i64,
+            stale_hours,
         });
     }
 
     Ok(blockers)
+}
+
+fn ceil_age_hours(age_hours: f64) -> Option<i64> {
+    if !age_hours.is_finite() || !(0.0..=(i64::MAX as f64)).contains(&age_hours) {
+        return None;
+    }
+
+    Some(age_hours.ceil() as i64)
 }
 
 fn has_inline_journal_content(args: &JournalArgs) -> bool {
