@@ -337,11 +337,13 @@ fn find_worklog_for_cycle(repo_root: &Path, cycle: u64) -> Result<Option<PathBuf
                 .is_some_and(|line| line.starts_with(&format!("# Cycle {} — ", cycle)))
             {
                 let modified = fs::metadata(&path)
-                    .map_err(|error| format!("failed to stat {}: {}", path.display(), error))?
+                    .map_err(|error| {
+                        format!("failed to get metadata for {}: {}", path.display(), error)
+                    })?
                     .modified()
                     .map_err(|error| {
                         format!(
-                            "failed to read modified time for {}: {}",
+                            "failed to get modified time for {}: {}",
                             path.display(),
                             error
                         )
@@ -349,7 +351,7 @@ fn find_worklog_for_cycle(repo_root: &Path, cycle: u64) -> Result<Option<PathBuf
                     .duration_since(UNIX_EPOCH)
                     .map_err(|error| {
                         format!(
-                            "failed to normalize modified time for {}: {}",
+                            "failed to convert modified time for {}: {}",
                             path.display(),
                             error
                         )

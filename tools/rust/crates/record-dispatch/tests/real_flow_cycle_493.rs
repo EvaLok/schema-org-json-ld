@@ -3,7 +3,6 @@ use std::{
     fs,
     path::{Path, PathBuf},
     process::Command,
-    thread::sleep,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
@@ -290,15 +289,23 @@ fn record_dispatch_updates_replacement_worklog_after_close_out_slug_replace() {
         "999999-cycle-515-review-consumed.md",
         "# Cycle 515 — 2026-04-19 02:09 UTC\n\n## What was done\n\n- Earlier worklog before close-out rename.\n\n## Post-dispatch delta\n\n- **In-flight agent sessions**: 2\n- **Dispatch count**: 2 dispatches\n- **Last-cycle summary**: 2 dispatches, 0 merges\n",
     );
+    set_modified_time(
+        &repo.path()
+            .join("docs/worklog/2026-04-19/999999-cycle-515-review-consumed.md"),
+        1,
+    );
     git_success(repo.path(), ["add", "docs/worklog"]);
     git_success(repo.path(), ["commit", "-m", "stale worklog with prior delta"]);
-
-    sleep(Duration::from_secs(1));
 
     repo.write_worklog(
         "2026-04-19",
         "000001-cycle-515-review-consumed-replacement.md",
         "# Cycle 515 — 2026-04-19 02:29 UTC\n\n## What was done\n\n- Replacement worklog after close-out rewrite.\n",
+    );
+    set_modified_time(
+        &repo.path()
+            .join("docs/worklog/2026-04-19/000001-cycle-515-review-consumed-replacement.md"),
+        2,
     );
     git_success(repo.path(), ["add", "docs/worklog"]);
     git_success(repo.path(), ["commit", "-m", "replacement worklog"]);
@@ -454,4 +461,15 @@ where
         String::from_utf8_lossy(&output.stderr)
     );
     String::from_utf8(output.stdout).expect("git output should be UTF-8")
+}
+
+fn set_modified_time(path: &Path, seconds_since_epoch: u64) {
+    let file = fs::File::options()
+        .write(true)
+        .open(path)
+        .expect("worklog should be writable for timestamp update");
+    let times =
+        fs::FileTimes::new().set_modified(UNIX_EPOCH + Duration::from_secs(seconds_since_epoch));
+    file.set_times(times)
+        .expect("worklog timestamp should be updated");
 }
