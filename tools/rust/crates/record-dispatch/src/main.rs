@@ -14,6 +14,7 @@ use std::{
     fs,
     path::{Path, PathBuf},
     process::Command,
+    time::UNIX_EPOCH,
 };
 
 const POST_DISPATCH_DELTA_HEADING: &str = "## Post-dispatch delta";
@@ -335,13 +336,37 @@ fn find_worklog_for_cycle(repo_root: &Path, cycle: u64) -> Result<Option<PathBuf
                 .next()
                 .is_some_and(|line| line.starts_with(&format!("# Cycle {} — ", cycle)))
             {
-                candidates.push(path);
+                let modified = fs::metadata(&path)
+                    .map_err(|error| {
+                        format!("failed to get metadata for {}: {}", path.display(), error)
+                    })?
+                    .modified()
+                    .map_err(|error| {
+                        format!(
+                            "failed to get modified time for {}: {}",
+                            path.display(),
+                            error
+                        )
+                    })?
+                    .duration_since(UNIX_EPOCH)
+                    .map_err(|error| {
+                        format!(
+                            "failed to convert modified time for {}: {}",
+                            path.display(),
+                            error
+                        )
+                    })?;
+                candidates.push((modified, path));
             }
         }
     }
 
-    candidates.sort();
-    Ok(candidates.into_iter().last())
+    candidates.sort_by(|(left_modified, left_path), (right_modified, right_path)| {
+        left_modified
+            .cmp(right_modified)
+            .then_with(|| left_path.cmp(right_path))
+    });
+    Ok(candidates.into_iter().last().map(|(_, path)| path))
 }
 
 fn commit_dispatch_artifacts(
