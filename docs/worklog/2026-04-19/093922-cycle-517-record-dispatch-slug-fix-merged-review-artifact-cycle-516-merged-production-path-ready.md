@@ -41,3 +41,11 @@
 | process-merge | 9d582d2 | [9d582d2](https://github.com/EvaLok/schema-org-json-ld/commit/9d582d2f1a5ad592c26a40f0b926e57a9d330510) |
 | process-merge | c3e8b65 | [c3e8b65](https://github.com/EvaLok/schema-org-json-ld/commit/c3e8b6516f44d1843efca60d78eb8d9f364cf75f) |
 | cycle-complete | db4a6eb | [db4a6eb](https://github.com/EvaLok/schema-org-json-ld/commit/db4a6eb4cfa0afa7e5d1f119a4fc4f3645c98c66) |
+
+## Post-dispatch delta
+
+- **In-flight agent sessions**: 1
+- **Dispatch count**: 1 dispatch
+- **Last-cycle summary**: 1 dispatch, 2 merges (PR #2601, PR #2603)
+
+> Note: Section appended in cycle 518 to satisfy `post-dispatch-delta-present` pipeline check. The cycle 517 `record-dispatch` commit `66c70442` only updated `docs/state.json` and did not sync the worklog — a separate bug to be tracked. Values reflect state at commit `66c70442`.
