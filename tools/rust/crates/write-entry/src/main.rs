@@ -3112,8 +3112,13 @@ fn fetch_open_question_blocker(
         .and_then(Value::as_str)
         .ok_or_else(|| format!("gh issue view missing createdAt for #{}", issue_number))?;
     let created_at = parse_timestamp(created_at, &format!("issue #{} createdAt", issue_number))?;
-    let age_hours = now.signed_duration_since(created_at).num_seconds() as f64 / 3600.0;
-    let stale_hours = ceil_age_hours(age_hours)
+    let age_seconds = now.signed_duration_since(created_at).num_seconds();
+    if age_seconds < 0 {
+        return Err(format!("issue #{} age is invalid", issue_number));
+    }
+    let stale_hours = age_seconds
+        .checked_add(3599)
+        .map(|value| value / 3600)
         .ok_or_else(|| format!("issue #{} age is invalid", issue_number))?;
 
     Ok(StandingEvaBlocker {
@@ -4608,9 +4613,10 @@ mod tests {
     fn with_path_prefix<T>(prefix: &Path, f: impl FnOnce() -> T) -> T {
         let _guard = path_lock().lock().unwrap();
         let old_path = std::env::var_os("PATH").unwrap_or_default();
-        let mut new_path = prefix.as_os_str().to_os_string();
-        new_path.push(":");
-        new_path.push(&old_path);
+        let existing_paths: Vec<PathBuf> = std::env::split_paths(&old_path).collect();
+        let new_path =
+            std::env::join_paths(std::iter::once(prefix.to_path_buf()).chain(existing_paths))
+                .expect("joined PATH should be valid");
         std::env::set_var("PATH", &new_path);
         let result = f();
         std::env::set_var("PATH", old_path);

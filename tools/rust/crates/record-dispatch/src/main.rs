@@ -886,7 +886,7 @@ mod tests {
     }
 
     #[test]
-    fn run_preserves_close_out_snapshot_for_review_dispatch() {
+    fn run_preserves_close_out_snapshot_for_meta_review_dispatch() {
         let repo = TempRepo::new();
         repo.init_with_phase("close_out");
         let mut initial_state = repo.read_state();
@@ -907,6 +907,9 @@ mod tests {
         .expect("dispatch should succeed");
 
         let state = repo.read_state();
+        // Review dispatches recorded after close-out are meta-dispatches for the
+        // already-closing cycle review, so they must not rewrite the frozen
+        // last_cycle dispatch ledger.
         assert_eq!(
             state.pointer("/last_cycle/summary"),
             Some(&serde_json::json!(
@@ -973,7 +976,7 @@ mod tests {
     }
 
     #[test]
-    fn prerecorded_session_in_close_out_keeps_sealed_last_cycle() {
+    fn prerecorded_meta_review_session_in_close_out_keeps_sealed_last_cycle() {
         // dispatch-review can pre-record a live session before record-dispatch runs.
         // Even when record-dispatch merges that existing session instead of appending
         // a new one, the sealed close-out snapshot must stay frozen.
