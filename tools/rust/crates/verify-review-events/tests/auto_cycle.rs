@@ -175,3 +175,76 @@ fn binary_apply_advances_when_no_prs_need_verification() {
         Some(5)
     );
 }
+
+#[test]
+fn binary_commit_uses_verify_review_events_receipt_scope() {
+    let repo_root = TempDir::new("verify-review-events-commit-scope");
+    init_git_repo(&repo_root.path);
+    commit_file_at(
+        &repo_root.path,
+        "notes/cycle5.txt",
+        "cycle 5\n",
+        "state(cycle-start): begin cycle 5, issue #2 [cycle 5]",
+        "2026-03-01T00:05:00Z",
+    );
+    write_file(
+        &repo_root.path.join("docs/state.json"),
+        r#"{
+  "schema_version": 1,
+  "last_cycle": {
+    "number": 5
+  },
+  "cycle_phase": {
+    "cycle": 5,
+    "phase": "work",
+    "phase_entered_at": "2026-03-01T00:05:00Z"
+  },
+  "field_inventory": {
+    "fields": {
+      "review_events_verified_through_cycle": {
+        "last_refreshed": "cycle 4"
+      }
+    }
+  },
+  "agent_sessions": [],
+  "review_events_verified_through_cycle": 4
+}
+"#,
+    );
+
+    let output = Command::new(binary_path("verify-review-events"))
+        .args([
+            "--repo-root",
+            repo_root
+                .path
+                .to_str()
+                .expect("repo_root path should be valid UTF-8"),
+            "--apply",
+            "--commit",
+            "--json",
+        ])
+        .output()
+        .expect("verify-review-events binary should execute");
+
+    assert!(
+        output.status.success(),
+        "verify-review-events failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let report: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(report.get("committed").and_then(Value::as_bool), Some(true));
+
+    let git_log = Command::new("git")
+        .current_dir(&repo_root.path)
+        .args(["log", "-1", "--pretty=%s"])
+        .output()
+        .expect("git log should execute");
+    assert!(
+        git_log.status.success(),
+        "git log failed: {}",
+        String::from_utf8_lossy(&git_log.stderr)
+    );
+    let subject = String::from_utf8(git_log.stdout).unwrap();
+    assert!(subject.starts_with("state(verify-review-events):"));
+}
