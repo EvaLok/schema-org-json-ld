@@ -165,8 +165,12 @@ fn run_with_runner(
     } else {
         false
     };
+    let should_sync_last_cycle_summary =
+        !matches!(current_phase.as_str(), "close_out" | "complete");
     restore_sealed_last_cycle(&mut state_value, sealed_last_cycle)?;
-    sync_last_cycle_summary_after_dispatch(&mut state_value, patch.current_cycle)?;
+    if should_sync_last_cycle_summary {
+        sync_last_cycle_summary_after_dispatch(&mut state_value, patch.current_cycle)?;
+    }
     write_state_value(&cli.repo_root, &state_value)?;
     let worklog_path =
         sync_post_dispatch_worklog(&cli.repo_root, &state_value, patch.current_cycle)?;
@@ -882,7 +886,7 @@ mod tests {
     }
 
     #[test]
-    fn run_preserves_close_out_snapshot_without_clobbering_dispatch_count() {
+    fn run_preserves_close_out_snapshot_for_review_dispatch() {
         let repo = TempRepo::new();
         repo.init_with_phase("close_out");
         let mut initial_state = repo.read_state();
@@ -906,30 +910,73 @@ mod tests {
         assert_eq!(
             state.pointer("/last_cycle/summary"),
             Some(&serde_json::json!(
-                "1 dispatch, 2 merges (PR EvaLok/schema-org-json-ld#100, PR EvaLok/schema-org-json-ld#200)"
+                "0 dispatches, 2 merges (PR EvaLok/schema-org-json-ld#100, PR EvaLok/schema-org-json-ld#200)"
             ))
         );
-        let updated_timestamp = state
+        let preserved_timestamp = state
             .pointer("/last_cycle/timestamp")
             .and_then(serde_json::Value::as_str)
-            .expect("dispatch should refresh last_cycle timestamp");
-        assert_ne!(updated_timestamp, "2026-04-09T09:52:44Z");
-        assert!(
-            updated_timestamp > "2026-04-09T09:52:44Z",
-            "timestamp should advance after re-sync"
-        );
-        assert!(
-            updated_timestamp.contains('T') && updated_timestamp.ends_with('Z'),
-            "refreshed timestamp should keep RFC 3339 UTC shape"
-        );
+            .expect("dispatch should preserve last_cycle timestamp");
+        assert_eq!(preserved_timestamp, "2026-04-09T09:52:44Z");
+        let sessions = state["agent_sessions"]
+            .as_array()
+            .expect("agent_sessions should be an array");
+        assert!(sessions.iter().any(|session| {
+            session
+                .pointer("/issue")
+                .and_then(serde_json::Value::as_u64)
+                == Some(602)
+        }));
     }
 
     #[test]
-    fn sync_runs_when_session_prerecorded_and_phase_transitions() {
+    fn run_preserves_complete_phase_last_cycle_snapshot_for_review_dispatch() {
+        let repo = TempRepo::new();
+        repo.init_with_phase("complete");
+        let mut initial_state = repo.read_state();
+        initial_state["last_cycle"]["summary"] = serde_json::json!(
+            "0 dispatches, 2 merges (PR EvaLok/schema-org-json-ld#2601, PR EvaLok/schema-org-json-ld#2603)"
+        );
+        initial_state["last_cycle"]["timestamp"] = serde_json::json!("2026-04-15T18:31:00Z");
+        repo.write_state_value(&initial_state);
+
+        run(Cli {
+            issue: 602,
+            title: "Example dispatch".to_string(),
+            model: Some("gpt-5.4".to_string()),
+            review_dispatch: true,
+            addresses_finding: None,
+            repo_root: repo.path().to_path_buf(),
+        })
+        .expect("dispatch should succeed");
+
+        let state = repo.read_state();
+        assert_eq!(
+            state.pointer("/last_cycle/summary"),
+            Some(&serde_json::json!(
+                "0 dispatches, 2 merges (PR EvaLok/schema-org-json-ld#2601, PR EvaLok/schema-org-json-ld#2603)"
+            ))
+        );
+        assert_eq!(
+            state.pointer("/last_cycle/timestamp"),
+            Some(&serde_json::json!("2026-04-15T18:31:00Z"))
+        );
+        let sessions = state["agent_sessions"]
+            .as_array()
+            .expect("agent_sessions should be an array");
+        assert!(sessions.iter().any(|session| {
+            session
+                .pointer("/issue")
+                .and_then(serde_json::Value::as_u64)
+                == Some(602)
+        }));
+    }
+
+    #[test]
+    fn prerecorded_session_in_close_out_keeps_sealed_last_cycle() {
         // dispatch-review can pre-record a live session before record-dispatch runs.
         // Even when record-dispatch merges that existing session instead of appending
-        // a new one, it must still re-sync last_cycle.summary after restoring the
-        // sealed close_out snapshot.
+        // a new one, the sealed close-out snapshot must stay frozen.
         let repo = TempRepo::new();
         repo.init_with_phase("close_out");
         let mut initial_state = repo.read_state();
@@ -963,7 +1010,11 @@ mod tests {
         let state = repo.read_state();
         assert_eq!(
             state.pointer("/last_cycle/summary"),
-            Some(&serde_json::json!("1 dispatch, 1 merges (PR #700)"))
+            Some(&serde_json::json!("0 dispatches, 1 merges (PR #700)"))
+        );
+        assert_eq!(
+            state.pointer("/last_cycle/timestamp"),
+            Some(&serde_json::json!("2026-03-07T12:00:00Z"))
         );
         assert_eq!(
             state.pointer("/cycle_phase/phase"),
@@ -1021,7 +1072,8 @@ mod tests {
     }
 
     #[test]
-    fn sync_post_dispatch_worklog_falls_back_to_previous_cycle_worklog_when_current_cycle_missing() {
+    fn sync_post_dispatch_worklog_falls_back_to_previous_cycle_worklog_when_current_cycle_missing()
+    {
         let repo = TempRepo::new();
         repo.init_with_phase("work");
         let mut state = repo.read_state();

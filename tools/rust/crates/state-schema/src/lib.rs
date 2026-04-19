@@ -368,15 +368,15 @@ fn refresh_tool_pipeline_freshness(state: &mut Value, cycle: u64) -> Result<(), 
         .and_then(Value::as_object_mut)
         .ok_or_else(|| "missing object: field_inventory.fields".to_string())?;
 
-	let entry = fields
-		.entry("tool_pipeline".to_string())
-		.or_insert_with(|| serde_json::json!({ "cadence": TOOL_PIPELINE_FRESHNESS_CADENCE }));
-	let entry_object = entry
-		.as_object_mut()
-		.ok_or_else(|| "field_inventory entry must be an object: tool_pipeline".to_string())?;
-	entry_object
-		.entry("cadence".to_string())
-		.or_insert_with(|| Value::String(TOOL_PIPELINE_FRESHNESS_CADENCE.to_string()));
+    let entry = fields
+        .entry("tool_pipeline".to_string())
+        .or_insert_with(|| serde_json::json!({ "cadence": TOOL_PIPELINE_FRESHNESS_CADENCE }));
+    let entry_object = entry
+        .as_object_mut()
+        .ok_or_else(|| "field_inventory entry must be an object: tool_pipeline".to_string())?;
+    entry_object
+        .entry("cadence".to_string())
+        .or_insert_with(|| Value::String(TOOL_PIPELINE_FRESHNESS_CADENCE.to_string()));
     entry_object.insert(
         "last_refreshed".to_string(),
         Value::String(format!("cycle {}", cycle)),
