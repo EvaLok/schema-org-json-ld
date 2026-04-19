@@ -10929,7 +10929,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 514"
+        "last_refreshed": "cycle 515"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -18329,9 +18329,39 @@
         "ignored": 0,
         "note": "All three cycle 513 findings bundled into single structural dispatch (to be filed this cycle). F1 headline-counts fix, F2 record-dispatch post-dispatch delta runtime-verification, F3 pipeline-check step-comments counting.",
         "review_issue": 2586
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "journal-quality",
+          "state-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 514,
+        "deferred": 0,
+        "dispatch_created": 2,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "state-integrity",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "worklog-accuracy",
+            "disposition": "actioned"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "dispatch_created"
+          }
+        ],
+        "ignored": 0,
+        "note": "F1 state-integrity (verify-review-events provenance + tool_pipeline field-inventory) and F3 journal-quality (Open questions auto-populated) bundled into structural fix issue #2594. F2 worklog-accuracy (3-dispatched headline) actioned via PR #2590 (merged c596f6e) which fixes write-entry headline derivation from current deferred_findings state. Per cycle 514 journal: chronic worklog-accuracy refresh deferred to next-cycle runtime verification (not merge verification).",
+        "review_issue": 2591
       }
     ],
-    "last_review_cycle": 513
+    "last_review_cycle": 514
   },
   "review_dispatch_consecutive": 3,
   "review_events_verified_through_cycle": 514,
