@@ -249,6 +249,13 @@ struct JournalSection {
     body: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct StandingEvaBlocker {
+    number: u64,
+    title: String,
+    stale_hours: i64,
+}
+
 #[derive(Clone, Debug, Deserialize)]
 struct CommitReceipt {
     tool: String,
@@ -441,6 +448,7 @@ fn execute_journal(
     } else {
         None
     };
+    let standing_eva_blockers = load_standing_eva_blockers(repo_root)?;
     let worklog_link = find_worklog_relative_path(repo_root, cycle)?;
     let entry = sanitize_escaped_newlines(&render_journal_entry(
         cycle,
@@ -451,6 +459,7 @@ fn execute_journal(
         previous.as_deref(),
         worklog_link.as_deref(),
         chronic_status.as_deref(),
+        &standing_eva_blockers,
     ));
     reject_duplicate_journal_section_headers(&entry)?;
     if !args.skip_chronic_claim_validation {
@@ -1629,7 +1638,11 @@ fn derive_review_summary_line(
     ))
 }
 
-fn effective_worklog_title(args: &WorklogArgs, repo_root: &Path, cycle: u64) -> Result<String, String> {
+fn effective_worklog_title(
+    args: &WorklogArgs,
+    repo_root: &Path,
+    cycle: u64,
+) -> Result<String, String> {
     if !args.auto_review_summary {
         return Ok(args.title.clone());
     }
@@ -2970,6 +2983,56 @@ fn resolve_journal_input(args: &JournalArgs) -> Result<JournalInput, String> {
     serde_json::from_str(&payload).map_err(|error| format!("invalid journal JSON input: {}", error))
 }
 
+fn load_standing_eva_blockers(repo_root: &Path) -> Result<Vec<StandingEvaBlocker>, String> {
+    let value = match read_state_value(repo_root) {
+        Ok(value) => value,
+        Err(error) if error.contains("failed to read") => return Ok(Vec::new()),
+        Err(error) => return Err(error),
+    };
+    let Some(issues) = value
+        .pointer("/eva_escalations/issues")
+        .and_then(Value::as_array)
+    else {
+        return Ok(Vec::new());
+    };
+
+    let mut blockers = Vec::new();
+    for issue in issues {
+        let Some(number) = issue.get("number").and_then(Value::as_u64) else {
+            continue;
+        };
+        let Some(title) = issue
+            .get("title")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+        else {
+            continue;
+        };
+        let Some(age_hours) = issue.get("age_hours").and_then(Value::as_f64) else {
+            continue;
+        };
+        let Some(stale_hours) = ceil_age_hours(age_hours) else {
+            continue;
+        };
+
+        blockers.push(StandingEvaBlocker {
+            number,
+            title: title.to_string(),
+            stale_hours,
+        });
+    }
+
+    Ok(blockers)
+}
+
+fn ceil_age_hours(age_hours: f64) -> Option<i64> {
+    if !age_hours.is_finite() || !(0.0..=(i64::MAX as f64)).contains(&age_hours) {
+        return None;
+    }
+
+    Some(age_hours.ceil() as i64)
+}
+
 fn has_inline_journal_content(args: &JournalArgs) -> bool {
     !args.section.is_empty() || !args.commitment.is_empty() || args.auto_chronic_status
 }
@@ -3948,6 +4011,7 @@ fn render_journal_entry(
     previous_commitment: Option<&str>,
     worklog_relative_path: Option<&str>,
     chronic_status: Option<&str>,
+    standing_eva_blockers: &[StandingEvaBlocker],
 ) -> String {
     let title = strip_cycle_prefix(title);
     let mut lines = Vec::new();
@@ -4006,13 +4070,29 @@ fn render_journal_entry(
         }
     }
     lines.push(String::new());
-    lines.push("### Open questions".to_string());
+    lines.push("### Open questions raised this cycle".to_string());
     lines.push(String::new());
     if input.open_questions.is_empty() {
         lines.push("- None.".to_string());
     } else {
         for question in &input.open_questions {
             lines.push(format!("- {}", convert_references(question)));
+        }
+    }
+    lines.push(String::new());
+    lines.push("### Standing Eva blockers".to_string());
+    lines.push(String::new());
+    if standing_eva_blockers.is_empty() {
+        lines.push("- None recorded.".to_string());
+    } else {
+        for blocker in standing_eva_blockers {
+            lines.push(format!(
+                "- {}",
+                convert_references(&format!(
+                    "#{} — {} ({}h stale)",
+                    blocker.number, blocker.title, blocker.stale_hours
+                ))
+            ));
         }
     }
     lines.push(String::new());
@@ -6943,7 +7023,9 @@ mod tests {
             }"#,
         );
 
-        let mut args = worklog_args("Cycle 153 review consumed 1 actioned 2 deferred chronic worklog accuracy refreshed");
+        let mut args = worklog_args(
+            "Cycle 153 review consumed 1 actioned 2 deferred chronic worklog accuracy refreshed",
+        );
         args.auto_review_summary = true;
         args.pipeline = Some("PASS (6/6)".to_string());
         args.publish_gate = Some("open".to_string());
@@ -7180,6 +7262,7 @@ mod tests {
             None,
             Some("../worklog/2026-03-11/123451-cycle-226-summary.md"),
             None,
+            &[],
         );
 
         assert!(
@@ -7188,6 +7271,66 @@ mod tests {
         assert!(!rendered.contains("Cycle 226: Cycle 226:"));
         assert!(rendered.contains("Cycle 226 focused on Breaking the worklog-accuracy pattern."));
         assert!(!rendered.contains("focused on Cycle 226:"));
+    }
+
+    #[test]
+    fn render_journal_entry_adds_standing_eva_blockers_from_state() {
+        let repo_root = TempRepoDir::new("journal-standing-eva-blockers");
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {"cycle": 154},
+                "agent_sessions": [],
+                "open_questions_for_eva": [2402, 2403],
+                "eva_escalations": {
+                    "issues": [
+                        {
+                            "number": 2402,
+                            "title": "Need Eva answer on provenance wording",
+                            "age_hours": 48.1,
+                            "staleness": "STALE"
+                        },
+                        {
+                            "number": 2403,
+                            "title": "Need Eva answer on blocker policy",
+                            "age_hours": 5.0,
+                            "staleness": "ACTIVE"
+                        }
+                    ]
+                }
+            }"#,
+        );
+        let blockers =
+            load_standing_eva_blockers(&repo_root.path).expect("state blockers should load");
+        let rendered = render_journal_entry(
+            154,
+            fixed_now_on("2026-03-11"),
+            "Derived blocker journal",
+            &JournalInput {
+                previous_commitment_status: "no_prior_commitment".to_string(),
+                previous_commitment_detail: "No prior commitment recorded.".to_string(),
+                sections: Vec::new(),
+                concrete_behavior_change: String::new(),
+                commitments: Vec::new(),
+                open_questions: Vec::new(),
+            },
+            CommitmentStatus::NoPriorCommitment,
+            None,
+            None,
+            None,
+            &blockers,
+        );
+
+        assert!(rendered.contains("### Open questions raised this cycle"));
+        assert!(rendered.contains("### Open questions raised this cycle\n\n- None."));
+        assert!(rendered.contains("### Standing Eva blockers"));
+        assert!(rendered.contains("[#2402]"));
+        assert!(rendered.contains("Need Eva answer on provenance wording"));
+        assert!(rendered.contains("(49h stale)"));
+        assert!(rendered.contains("[#2403]"));
+        assert!(rendered.contains("Need Eva answer on blocker policy"));
+        assert!(rendered.contains("(5h stale)"));
     }
 
     #[test]

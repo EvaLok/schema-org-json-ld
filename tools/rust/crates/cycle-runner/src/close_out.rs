@@ -5,7 +5,7 @@ use crate::steps;
 use serde_json::Value;
 use state_schema::{
     commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
-    transition_cycle_phase, write_state_value,
+    set_c5_5_gate, transition_cycle_phase, write_state_value,
 };
 use std::fs;
 use std::path::Path;
@@ -817,19 +817,21 @@ fn record_initial_c5_5_failure(
         return Ok(());
     }
 
-    let tool_pipeline = state
-        .get_mut("tool_pipeline")
-        .and_then(Value::as_object_mut)
-        .ok_or_else(|| "missing object /tool_pipeline in docs/state.json".to_string())?;
-    tool_pipeline.insert("c5_5_initial_result".to_string(), initial_result);
-    tool_pipeline.insert(
-        "c5_5_gate".to_string(),
+    {
+        let tool_pipeline = state
+            .get_mut("tool_pipeline")
+            .and_then(Value::as_object_mut)
+            .ok_or_else(|| "missing object /tool_pipeline in docs/state.json".to_string())?;
+        tool_pipeline.insert("c5_5_initial_result".to_string(), initial_result);
+    }
+    set_c5_5_gate(
+        &mut state,
+        cycle,
         serde_json::json!({
-            "cycle": cycle,
             "status": "FAIL",
             "needs_reverify": true,
         }),
-    );
+    )?;
     write_state_value(repo_root, &state)?;
 
     let commit_message = format!(
@@ -859,32 +861,34 @@ fn record_c5_5_pass(repo_root: &Path, cycle: u64, pipeline_summary: &str) -> Res
                 .and_then(Value::as_str)
                 .is_some_and(|status| status.eq_ignore_ascii_case("FAIL"))
         });
-    let tool_pipeline = state
-        .get_mut("tool_pipeline")
-        .and_then(Value::as_object_mut)
-        .ok_or_else(|| "missing object /tool_pipeline in docs/state.json".to_string())?;
-    tool_pipeline.insert(
-        "c5_5_gate".to_string(),
+    {
+        let tool_pipeline = state
+            .get_mut("tool_pipeline")
+            .and_then(Value::as_object_mut)
+            .ok_or_else(|| "missing object /tool_pipeline in docs/state.json".to_string())?;
+        if should_record_rerun_receipt {
+            tool_pipeline.insert(
+                "c5_5_rerun_receipt".to_string(),
+                serde_json::json!({
+                    "cycle": cycle,
+                    "initial_status": "FAIL",
+                    "rerun_status": "PASS",
+                    "timestamp": current_utc_timestamp(),
+                }),
+            );
+        } else {
+            tool_pipeline.remove("c5_5_rerun_receipt");
+        }
+    }
+    set_c5_5_gate(
+        &mut state,
+        cycle,
         serde_json::json!({
-            "cycle": cycle,
             "status": "PASS",
             "needs_reverify": false,
             "pipeline_summary": pipeline_summary,
         }),
-    );
-    if should_record_rerun_receipt {
-        tool_pipeline.insert(
-            "c5_5_rerun_receipt".to_string(),
-            serde_json::json!({
-                "cycle": cycle,
-                "initial_status": "FAIL",
-                "rerun_status": "PASS",
-                "timestamp": current_utc_timestamp(),
-            }),
-        );
-    } else {
-        tool_pipeline.remove("c5_5_rerun_receipt");
-    }
+    )?;
     write_state_value(repo_root, &state)?;
 
     let commit_message = format!(
@@ -2058,6 +2062,44 @@ mod tests {
             .pointer("/tool_pipeline/c5_5_rerun_receipt/timestamp")
             .and_then(Value::as_str)
             .is_some_and(|timestamp| !timestamp.is_empty()));
+        assert_eq!(
+            state
+                .pointer("/field_inventory/fields/tool_pipeline/last_refreshed")
+                .and_then(Value::as_str),
+            Some("cycle 345")
+        );
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn c5_5_gate_write_refreshes_tool_pipeline_inventory() {
+        let dir = setup_temp_repo("step-c5-5-tool-pipeline-freshness");
+        let args_path = dir.join("post-step-args.txt");
+        write_post_step_capture_script(&dir, &args_path);
+        write_minimal_close_out_state(&dir, 345);
+        fs::write(
+            dir.join("tools/pipeline-check"),
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\n' '{\"overall\":\"pass\",\"has_blocking_findings\":false}'\n",
+        )
+        .unwrap();
+
+        let (passed, summary) = step_c5_5(&dir, 123, 345).unwrap();
+
+        assert!(passed);
+        assert_eq!(summary, "PASS");
+
+        let state = state_schema::read_state_value(&dir).unwrap();
+        assert_eq!(
+            state.pointer("/tool_pipeline/c5_5_gate/cycle"),
+            Some(&json!(345))
+        );
+        assert_eq!(
+            state
+                .pointer("/field_inventory/fields/tool_pipeline/last_refreshed")
+                .and_then(Value::as_str),
+            Some("cycle 345")
+        );
 
         let _ = fs::remove_dir_all(&dir);
     }

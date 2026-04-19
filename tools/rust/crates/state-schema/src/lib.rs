@@ -8,6 +8,7 @@ use std::process::Command;
 
 pub const SCHEMA_VERSION: u32 = 1;
 pub const TOOLS_CONFIG_RELATIVE_PATH: &str = "tools/config.json";
+const TOOL_PIPELINE_FRESHNESS_CADENCE: &str = "after pipeline phase transitions";
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(default, rename_all = "snake_case")]
@@ -339,6 +340,44 @@ pub fn update_freshness(state: &mut Value, field_name: &str, cycle: u32) -> Resu
         .ok_or_else(|| format!("field_inventory entry must be an object: {}", field_name))?;
 
     field_obj.insert(
+        "last_refreshed".to_string(),
+        Value::String(format!("cycle {}", cycle)),
+    );
+
+    Ok(())
+}
+
+pub fn set_c5_5_gate(state: &mut Value, cycle: u64, mut gate: Value) -> Result<(), String> {
+    let gate_object = gate
+        .as_object_mut()
+        .ok_or_else(|| "c5_5_gate must be a JSON object".to_string())?;
+    gate_object.insert("cycle".to_string(), serde_json::json!(cycle));
+
+    let tool_pipeline = state
+        .pointer_mut("/tool_pipeline")
+        .and_then(Value::as_object_mut)
+        .ok_or_else(|| "missing object /tool_pipeline in docs/state.json".to_string())?;
+    tool_pipeline.insert("c5_5_gate".to_string(), gate);
+
+    refresh_tool_pipeline_freshness(state, cycle)
+}
+
+fn refresh_tool_pipeline_freshness(state: &mut Value, cycle: u64) -> Result<(), String> {
+    let fields = state
+        .pointer_mut("/field_inventory/fields")
+        .and_then(Value::as_object_mut)
+        .ok_or_else(|| "missing object: field_inventory.fields".to_string())?;
+
+	let entry = fields
+		.entry("tool_pipeline".to_string())
+		.or_insert_with(|| serde_json::json!({ "cadence": TOOL_PIPELINE_FRESHNESS_CADENCE }));
+	let entry_object = entry
+		.as_object_mut()
+		.ok_or_else(|| "field_inventory entry must be an object: tool_pipeline".to_string())?;
+	entry_object
+		.entry("cadence".to_string())
+		.or_insert_with(|| Value::String(TOOL_PIPELINE_FRESHNESS_CADENCE.to_string()));
+    entry_object.insert(
         "last_refreshed".to_string(),
         Value::String(format!("cycle {}", cycle)),
     );
@@ -702,9 +741,9 @@ pub struct Blockers {
 mod tests {
     use super::{
         commit_state_json, current_cycle_from_state, current_utc_timestamp, default_agent_model,
-        orchestrator_model, read_state_value, set_value_at_pointer, transition_cycle_phase,
-        update_freshness, write_state_value, AgentSession, DeferredFinding, FindingDisposition,
-        PendingAuditImplementation, ReviewHistoryEntry, StateJson, ToolsConfig,
+        orchestrator_model, read_state_value, set_c5_5_gate, set_value_at_pointer,
+        transition_cycle_phase, update_freshness, write_state_value, AgentSession, DeferredFinding,
+        FindingDisposition, PendingAuditImplementation, ReviewHistoryEntry, StateJson, ToolsConfig,
         DEFAULT_ORCHESTRATOR_MODEL, VALID_PHASES,
     };
     use chrono::DateTime;
@@ -1013,9 +1052,7 @@ mod tests {
     #[test]
     fn orchestrator_model_ignores_whitespace_only_override() {
         let repo = TempRepo::new();
-        repo.write_tools_config(
-            r#"{"default_model":"gpt-5.4","orchestrator_model":"   "}"#,
-        );
+        repo.write_tools_config(r#"{"default_model":"gpt-5.4","orchestrator_model":"   "}"#);
 
         let model = orchestrator_model(repo.path());
         assert_eq!(model, DEFAULT_ORCHESTRATOR_MODEL);
@@ -1086,6 +1123,43 @@ mod tests {
                 .pointer("/field_inventory/fields/schema_status.typescript_stats/last_refreshed")
                 .and_then(|value| value.as_str()),
             Some("cycle 153")
+        );
+    }
+
+    #[test]
+    fn set_c5_5_gate_keeps_tool_pipeline_freshness_in_sync() {
+        let mut state = json!({
+            "field_inventory": {
+                "fields": {
+                    "tool_pipeline": {
+                        "cadence": "after pipeline phase transitions",
+                        "last_refreshed": "cycle 218"
+                    }
+                }
+            },
+            "tool_pipeline": {}
+        });
+
+        set_c5_5_gate(
+            &mut state,
+            219,
+            json!({
+                "status": "PASS",
+                "needs_reverify": false,
+                "pipeline_summary": "PASS"
+            }),
+        )
+        .expect("c5_5 gate update should succeed");
+
+        assert_eq!(
+            state.pointer("/tool_pipeline/c5_5_gate/cycle"),
+            Some(&json!(219))
+        );
+        assert_eq!(
+            state
+                .pointer("/field_inventory/fields/tool_pipeline/last_refreshed")
+                .and_then(Value::as_str),
+            Some("cycle 219")
         );
     }
 

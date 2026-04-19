@@ -10,6 +10,8 @@ const SELF_MODIFICATIONS_HEADING: &str = "## Self-modifications";
 const COMMIT_RECEIPTS_HEADING: &str = "## Commit receipts";
 const CONCRETE_COMMITMENTS_HEADING: &str = "### Concrete commitments for next cycle";
 const OPEN_QUESTIONS_HEADING: &str = "### Open questions";
+const OPEN_QUESTIONS_RAISED_THIS_CYCLE_HEADING: &str = "### Open questions raised this cycle";
+const STANDING_EVA_BLOCKERS_HEADING: &str = "### Standing Eva blockers";
 const PRE_DISPATCH_SNAPSHOT_NOTE: &str =
     "*Snapshot before review dispatch — final counters may differ after C6.*";
 const INFRASTRUCTURE_PATHS: [&str; 5] = [
@@ -944,24 +946,18 @@ fn validate_open_questions_consistency(content: &str) -> Option<String> {
     // exist, fall back to checking the whole content (for the test fixtures).
     let entry = latest_cycle_entry(content).unwrap_or(content);
 
-    let section = extract_section_body(entry, OPEN_QUESTIONS_HEADING)?;
+    let (heading, section) = extract_open_questions_section(entry)?;
 
-    let bullet_lines: Vec<&str> = section
-        .lines()
-        .map(normalize_line)
-        .filter(|line| !line.is_empty())
-        .collect();
+    let bullet_lines = section_bullet_lines(section);
     if bullet_lines.is_empty() {
         return None;
     }
-    let says_none = bullet_lines
-        .iter()
-        .all(|line| reports_no_self_modifications(line));
+    let says_none = section_reports_none(&bullet_lines);
     if !says_none {
         return None;
     }
 
-    let body_before = match entry.find(OPEN_QUESTIONS_HEADING) {
+    let body_before = match entry.find(heading) {
         Some(idx) => &entry[..idx],
         None => return None,
     };
@@ -991,29 +987,23 @@ fn validate_open_questions_consistency(content: &str) -> Option<String> {
 /// long as `state.open_questions_for_eva` is non-empty, a journal
 /// "None" claim is objectively wrong regardless of phrasing in the
 /// body.
-fn validate_open_questions_against_state(
-    content: &str,
-    state: &StateJson,
-) -> Option<String> {
+fn validate_open_questions_against_state(content: &str, state: &StateJson) -> Option<String> {
     if state.open_questions_for_eva.is_empty() {
         return None;
     }
 
     let entry = latest_cycle_entry(content).unwrap_or(content);
-    let section = extract_section_body(entry, OPEN_QUESTIONS_HEADING)?;
-
-    let bullet_lines: Vec<&str> = section
-        .lines()
-        .map(normalize_line)
-        .filter(|line| !line.is_empty())
-        .collect();
+    let (_, section) = extract_open_questions_section(entry)?;
+    let bullet_lines = section_bullet_lines(section);
     if bullet_lines.is_empty() {
         return None;
     }
-    let says_none = bullet_lines
-        .iter()
-        .all(|line| reports_no_self_modifications(line));
+    let says_none = section_reports_none(&bullet_lines);
     if !says_none {
+        return None;
+    }
+
+    if standing_eva_blockers_cover_state(entry, state) {
         return None;
     }
 
@@ -1035,6 +1025,43 @@ fn validate_open_questions_against_state(
         "journal entry's 'Open questions' section says 'None' but docs/state.json lists pending question-for-eva: {} — list the open questions or resolve them before writing 'None'",
         summary
     ))
+}
+
+fn extract_open_questions_section(entry: &str) -> Option<(&'static str, &str)> {
+    extract_section_body(entry, OPEN_QUESTIONS_RAISED_THIS_CYCLE_HEADING)
+        .map(|section| (OPEN_QUESTIONS_RAISED_THIS_CYCLE_HEADING, section))
+        .or_else(|| {
+            extract_section_body(entry, OPEN_QUESTIONS_HEADING)
+                .map(|section| (OPEN_QUESTIONS_HEADING, section))
+        })
+}
+
+fn section_bullet_lines(section: &str) -> Vec<&str> {
+    section
+        .lines()
+        .map(normalize_line)
+        .filter(|line| !line.is_empty())
+        .collect()
+}
+
+fn section_reports_none(lines: &[&str]) -> bool {
+    lines.iter().all(|line| reports_no_self_modifications(line))
+}
+
+fn standing_eva_blockers_cover_state(entry: &str, state: &StateJson) -> bool {
+    let Some(section) = extract_section_body(entry, STANDING_EVA_BLOCKERS_HEADING) else {
+        return false;
+    };
+    let bullet_lines = section_bullet_lines(section);
+    if bullet_lines.is_empty() || section_reports_none(&bullet_lines) {
+        return false;
+    }
+
+    state
+        .open_questions_for_eva
+        .iter()
+        .filter_map(|value| value.as_u64())
+        .all(|number| section.contains(&format!("#{}", number)))
 }
 
 /// Returns the slice of `content` covering the most recent cycle entry,
@@ -2118,6 +2145,32 @@ filed question-for-eva #2293.
     }
 
     #[test]
+    fn rejects_none_under_open_questions_raised_this_cycle_when_body_mentions_filing() {
+        let content = "\
+## 2026-04-08 — Cycle 458: Example
+
+### What I tried
+
+filed question-for-eva #2293 with options.
+
+### Concrete commitments for next cycle
+
+1. Verify the thing.
+
+### Open questions raised this cycle
+
+- None.
+
+### Standing Eva blockers
+
+- [#2293](https://github.com/EvaLok/schema-org-json-ld/issues/2293) — chronic journal-quality response (12h stale)
+";
+        let failure = validate_open_questions_consistency(content).expect("expected failure");
+        assert!(failure.contains("Open questions"));
+        assert!(failure.contains("question-for-eva"));
+    }
+
+    #[test]
     fn state_aware_check_catches_cycle_502_f1_recurrence() {
         // Models the cycle 501 F2 / cycle 502 F1 pattern: body names
         // a blocker issue by number, state has pending Eva questions,
@@ -2139,9 +2192,10 @@ Dispatches remain blocked by #2542.
 
 - None.
 ";
-        let mut state = StateJson::default();
-        state.open_questions_for_eva =
-            vec![serde_json::json!(2542), serde_json::json!(2519)];
+        let state = StateJson {
+            open_questions_for_eva: vec![serde_json::json!(2542), serde_json::json!(2519)],
+            ..StateJson::default()
+        };
 
         let failure = validate_open_questions_against_state(content, &state)
             .expect("expected state-aware failure");
@@ -2180,8 +2234,10 @@ Dispatches remain blocked by #2542.
 
 - #2542 — gate deadlock.
 ";
-        let mut state = StateJson::default();
-        state.open_questions_for_eva = vec![serde_json::json!(2542)];
+        let state = StateJson {
+            open_questions_for_eva: vec![serde_json::json!(2542)],
+            ..StateJson::default()
+        };
 
         assert!(validate_open_questions_against_state(content, &state).is_none());
     }
@@ -2204,8 +2260,10 @@ Dispatches remain blocked by #2542.
 
 - #2542 — gate deadlock.
 ";
-        let mut state = StateJson::default();
-        state.open_questions_for_eva = vec![serde_json::json!(2542)];
+        let state = StateJson {
+            open_questions_for_eva: vec![serde_json::json!(2542)],
+            ..StateJson::default()
+        };
 
         assert!(validate_open_questions_against_state(content, &state).is_none());
     }
@@ -2219,19 +2277,47 @@ Dispatches remain blocked by #2542.
 
 - None.
 ";
-        let mut state = StateJson::default();
-        state.open_questions_for_eva = vec![
-            serde_json::json!(2542),
-            serde_json::json!(2519),
-            serde_json::json!(2293),
-        ];
+        let state = StateJson {
+            open_questions_for_eva: vec![
+                serde_json::json!(2542),
+                serde_json::json!(2519),
+                serde_json::json!(2293),
+            ],
+            ..StateJson::default()
+        };
 
-        let failure = validate_open_questions_against_state(content, &state)
-            .expect("expected failure");
+        let failure =
+            validate_open_questions_against_state(content, &state).expect("expected failure");
         // Orchestrator must be able to read the failure and know
         // exactly which open questions to list — not just that
         // there are some.
         assert!(failure.contains("#2542, #2519, #2293"));
+    }
+
+    #[test]
+    fn state_aware_check_allows_standing_eva_blockers_for_new_journal_layout() {
+        let content = "\
+## 2026-04-16 — Cycle 502: honest reporting
+
+### Concrete commitments for next cycle
+
+1. Keep going.
+
+### Open questions raised this cycle
+
+- None.
+
+### Standing Eva blockers
+
+- [#2542](https://github.com/EvaLok/schema-org-json-ld/issues/2542) — gate deadlock (49h stale)
+- [#2519](https://github.com/EvaLok/schema-org-json-ld/issues/2519) — blocker policy (5h stale)
+";
+        let state = StateJson {
+            open_questions_for_eva: vec![serde_json::json!(2542), serde_json::json!(2519)],
+            ..StateJson::default()
+        };
+
+        assert!(validate_open_questions_against_state(content, &state).is_none());
     }
 
     struct TestRepo {
