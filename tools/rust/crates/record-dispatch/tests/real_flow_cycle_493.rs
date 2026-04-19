@@ -137,6 +137,98 @@ fn record_dispatch_replays_cycle_495_close_out_flow() {
     );
 }
 
+#[test]
+fn record_dispatch_updates_previous_cycle_worklog_when_current_cycle_worklog_is_missing() {
+    let repo = TempRepo::new();
+    repo.init_with_state(
+        r#"{
+  "agent_sessions": [],
+  "in_flight_sessions": 0,
+  "last_cycle": {
+    "number": 513,
+    "summary": "0 dispatches, 0 merges"
+  },
+  "cycle_phase": {
+    "cycle": 514,
+    "phase": "work",
+    "phase_entered_at": "2026-04-18T10:00:00Z"
+  },
+  "review_agent": {
+    "history": []
+  },
+  "field_inventory": {
+    "fields": {
+      "copilot_metrics.in_flight": {"last_refreshed": "cycle 513"},
+      "copilot_metrics.dispatch_to_pr_rate": {"last_refreshed": "cycle 513"},
+      "copilot_metrics.pr_merge_rate": {"last_refreshed": "cycle 513"}
+    }
+  },
+  "copilot_metrics": {
+    "total_dispatches": 0,
+    "resolved": 0,
+    "merged": 0,
+    "closed_without_pr": 0,
+    "reviewed_awaiting_eva": 0,
+    "in_flight": 0,
+    "produced_pr": 0,
+    "pr_merge_rate": "0.0%",
+    "dispatch_to_pr_rate": "0.0%",
+    "dispatch_log_latest": ""
+  },
+  "tool_pipeline": {
+    "c5_5_gate": {
+      "cycle": 514,
+      "status": "PASS",
+      "needs_reverify": false
+    }
+  }
+}"#,
+    );
+    repo.write_worklog(
+        "2026-04-18",
+        "094529-cycle-513-summary.md",
+        "# Cycle 513 — 2026-04-18 09:45 UTC\n\n## What was done\n\n- No new dispatches.\n",
+    );
+    git_success(repo.path(), ["add", "docs/worklog"]);
+    git_success(repo.path(), ["commit", "-m", "initial worklog"]);
+
+    let output = Command::new(env!("CARGO_BIN_EXE_record-dispatch"))
+        .args([
+            "--repo-root",
+            repo.path()
+                .to_str()
+                .expect("repo path should be valid UTF-8"),
+            "--issue",
+            "2586",
+            "--title",
+            "Cycle review dispatch",
+            "--review-dispatch",
+            "--model",
+            "gpt-5.4",
+        ])
+        .output()
+        .expect("record-dispatch should execute");
+    assert!(
+        output.status.success(),
+        "record-dispatch failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let worklog = fs::read_to_string(
+        repo.path()
+            .join("docs/worklog/2026-04-18/094529-cycle-513-summary.md"),
+    )
+    .expect("worklog should be readable");
+    assert!(worklog.contains("## Post-dispatch delta"));
+    assert!(worklog.contains("- **In-flight agent sessions**: 1"));
+    assert!(worklog.contains("- **Dispatch count**: 0 dispatches"));
+    assert!(worklog.contains("- **Last-cycle summary**: 0 dispatches, 0 merges"));
+
+    let changed_files = git_output(repo.path(), ["show", "--name-only", "--format=", "HEAD"]);
+    assert!(changed_files.contains("docs/state.json"));
+    assert!(changed_files.contains("docs/worklog/2026-04-18/094529-cycle-513-summary.md"));
+}
+
 struct TempRepo {
     path: PathBuf,
 }
@@ -186,6 +278,13 @@ impl TempRepo {
                 .expect("state file should be readable"),
         )
         .expect("state file should parse")
+    }
+
+    fn write_worklog(&self, date: &str, file_name: &str, content: &str) {
+        let path = self.path().join("docs/worklog").join(date).join(file_name);
+        fs::create_dir_all(path.parent().expect("worklog parent should exist"))
+            .expect("worklog directory should be created");
+        fs::write(path, content).expect("worklog should be written");
     }
 }
 

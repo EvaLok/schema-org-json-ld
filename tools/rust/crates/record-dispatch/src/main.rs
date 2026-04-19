@@ -208,7 +208,7 @@ fn sync_post_dispatch_worklog(
     state: &serde_json::Value,
     cycle: u64,
 ) -> Result<Option<PathBuf>, String> {
-    let Some(worklog_path) = find_worklog_for_cycle(repo_root, cycle)? else {
+    let Some(worklog_path) = resolve_post_dispatch_worklog_path(repo_root, state, cycle)? else {
         return Ok(None);
     };
     let content = fs::read_to_string(&worklog_path)
@@ -232,6 +232,36 @@ fn sync_post_dispatch_worklog(
         fs::write(&worklog_path, updated)
             .map_err(|error| format!("failed to write {}: {}", worklog_path.display(), error))?;
     }
+    Ok(Some(worklog_path))
+}
+
+fn resolve_post_dispatch_worklog_path(
+    repo_root: &Path,
+    state: &serde_json::Value,
+    cycle: u64,
+) -> Result<Option<PathBuf>, String> {
+    if let Some(worklog_path) = find_worklog_for_cycle(repo_root, cycle)? {
+        return Ok(Some(worklog_path));
+    }
+
+    let Some(previous_cycle) = state
+        .pointer("/last_cycle/number")
+        .and_then(serde_json::Value::as_u64)
+        .filter(|previous_cycle| *previous_cycle != cycle)
+    else {
+        return Ok(None);
+    };
+
+    let Some(worklog_path) = find_worklog_for_cycle(repo_root, previous_cycle)? else {
+        return Ok(None);
+    };
+
+    eprintln!(
+        "record-dispatch: no cycle {} worklog found; syncing cycle {} worklog instead ({})",
+        cycle,
+        previous_cycle,
+        worklog_path.display()
+    );
     Ok(Some(worklog_path))
 }
 
@@ -963,6 +993,40 @@ mod tests {
             state.pointer("/cycle_phase/phase"),
             Some(&serde_json::json!("work"))
         );
+    }
+
+    #[test]
+    fn sync_post_dispatch_worklog_falls_back_to_previous_cycle_worklog_when_current_cycle_missing() {
+        let repo = TempRepo::new();
+        repo.init_with_phase("work");
+        let mut state = repo.read_state();
+        state["last_cycle"] = serde_json::json!({
+            "number": 513,
+            "summary": "1 dispatch, 0 merges"
+        });
+        state["cycle_phase"]["cycle"] = serde_json::json!(514);
+        state["in_flight_sessions"] = serde_json::json!(1);
+        repo.write_state_value(&state);
+
+        let worklog_path = repo
+            .path()
+            .join("docs/worklog/2026-04-18/094529-cycle-513-summary.md");
+        fs::create_dir_all(worklog_path.parent().expect("worklog parent should exist")).unwrap();
+        fs::write(
+            &worklog_path,
+            "# Cycle 513 — 2026-04-18 09:45 UTC\n\n## What was done\n\n- No new dispatches.\n",
+        )
+        .unwrap();
+
+        let synced = sync_post_dispatch_worklog(repo.path(), &state, 514)
+            .expect("post-dispatch sync should succeed")
+            .expect("previous cycle worklog should be selected");
+
+        assert_eq!(synced, worklog_path);
+        let content = fs::read_to_string(&synced).unwrap();
+        assert!(content.contains("## Post-dispatch delta"));
+        assert!(content.contains("- **In-flight agent sessions**: 1"));
+        assert!(content.contains("- **Dispatch count**: 1 dispatch"));
     }
 
     #[test]
