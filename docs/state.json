@@ -9758,6 +9758,12 @@
       "title": "[Cycle Review] Cycle 517 end-of-cycle review"
     },
     {
+      "addresses_findings": [
+        "516:1",
+        "516:2",
+        "517:0",
+        "517:1"
+      ],
       "dispatched_at": "2026-04-19T21:37:52Z",
       "issue": 2608,
       "model": "gpt-5.4",
