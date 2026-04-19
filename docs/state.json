@@ -10793,7 +10793,9 @@
       "category": "process-adherence-step-ordering",
       "deadline_cycle": 517,
       "deferred_cycle": 512,
-      "resolved": false
+      "dropped_rationale": "Pipeline-check current-cycle-steps gate now enforces pre-gate mandatory step comments; category has not recurred since cycle 512 (6 cycles clean). Specific concern about late-posted mandatory steps is addressed structurally by the existing current-cycle-steps blocking check that would fail the close-out until missing steps are posted. Dropping to avoid stale deferral carrying indefinitely.",
+      "resolved": true,
+      "resolved_ref": "dropped: Pipeline-check current-cycle-steps gate now enforces pre-gate mandatory step comments; category has "
     },
     {
       "category": "journal-quality",
