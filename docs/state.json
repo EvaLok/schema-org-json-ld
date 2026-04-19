@@ -9738,6 +9738,13 @@
       "pr": null,
       "status": "in_flight",
       "title": "Fix cycle 515 review F1: post-dispatch-delta production path bypassed in real close-out flow"
+    },
+    {
+      "dispatched_at": "2026-04-19T06:23:32Z",
+      "issue": 2602,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 516 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -10008,9 +10015,10 @@
     2598
   ],
   "cycle_phase": {
+    "completed_at": "2026-04-19T06:23:32Z",
     "cycle": 516,
-    "phase": "close_out",
-    "phase_entered_at": "2026-04-19T06:07:59Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-04-19T06:23:32Z"
   },
   "cycles_since_last_forward_work": {
     "added_in_cycle": 411,
@@ -10784,7 +10792,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2596 [Cycle Review] Cycle 515 end-of-cycle review (cycle 515)",
+  "dispatch_log_latest": "#2602 [Cycle Review] Cycle 516 end-of-cycle review (cycle 516)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -11055,7 +11063,7 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 19,
     "issue": 2598,
@@ -18427,7 +18435,7 @@
     ],
     "last_review_cycle": 515
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 516,
   "schema_status": {
     "directory_layout": {
