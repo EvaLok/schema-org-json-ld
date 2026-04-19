@@ -3,7 +3,8 @@ use std::{
     fs,
     path::{Path, PathBuf},
     process::Command,
-    time::{SystemTime, UNIX_EPOCH},
+    thread::sleep,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 const CYCLE_493_CLOSE_OUT_FIXTURE: &str =
@@ -227,6 +228,118 @@ fn record_dispatch_updates_previous_cycle_worklog_when_current_cycle_worklog_is_
     let changed_files = git_output(repo.path(), ["show", "--name-only", "--format=", "HEAD"]);
     assert!(changed_files.contains("docs/state.json"));
     assert!(changed_files.contains("docs/worklog/2026-04-18/094529-cycle-513-summary.md"));
+}
+
+#[test]
+fn record_dispatch_updates_replacement_worklog_after_close_out_slug_replace() {
+    let repo = TempRepo::new();
+    repo.init_with_state(
+        r##"{
+  "agent_sessions": [
+    {
+      "issue": 2594,
+      "title": "Earlier review dispatch",
+      "dispatched_at": "2026-04-19T02:20:00Z",
+      "model": "gpt-5.4",
+      "status": "in_flight"
+    }
+  ],
+  "in_flight_sessions": 1,
+  "last_cycle": {
+    "number": 515,
+    "summary": "1 dispatch, 0 merges"
+  },
+  "cycle_phase": {
+    "cycle": 515,
+    "phase": "complete",
+    "phase_entered_at": "2026-04-19T02:28:54Z"
+  },
+  "review_agent": {
+    "history": []
+  },
+  "field_inventory": {
+    "fields": {
+      "copilot_metrics.in_flight": {"last_refreshed": "cycle 515"},
+      "copilot_metrics.dispatch_to_pr_rate": {"last_refreshed": "cycle 515"},
+      "copilot_metrics.pr_merge_rate": {"last_refreshed": "cycle 515"}
+    }
+  },
+  "copilot_metrics": {
+    "total_dispatches": 1,
+    "resolved": 0,
+    "merged": 0,
+    "closed_without_pr": 0,
+    "reviewed_awaiting_eva": 0,
+    "in_flight": 1,
+    "produced_pr": 0,
+    "pr_merge_rate": "0.0%",
+    "dispatch_to_pr_rate": "100.0%",
+    "dispatch_log_latest": "#2594 Earlier review dispatch (cycle 515)"
+  },
+  "tool_pipeline": {
+    "c5_5_gate": {
+      "cycle": 515,
+      "status": "PASS",
+      "needs_reverify": false
+    }
+  }
+}"##,
+    );
+    repo.write_worklog(
+        "2026-04-19",
+        "999999-cycle-515-review-consumed.md",
+        "# Cycle 515 — 2026-04-19 02:09 UTC\n\n## What was done\n\n- Earlier worklog before close-out rename.\n\n## Post-dispatch delta\n\n- **In-flight agent sessions**: 2\n- **Dispatch count**: 2 dispatches\n- **Last-cycle summary**: 2 dispatches, 0 merges\n",
+    );
+    git_success(repo.path(), ["add", "docs/worklog"]);
+    git_success(repo.path(), ["commit", "-m", "stale worklog with prior delta"]);
+
+    sleep(Duration::from_secs(1));
+
+    repo.write_worklog(
+        "2026-04-19",
+        "000001-cycle-515-review-consumed-replacement.md",
+        "# Cycle 515 — 2026-04-19 02:29 UTC\n\n## What was done\n\n- Replacement worklog after close-out rewrite.\n",
+    );
+    git_success(repo.path(), ["add", "docs/worklog"]);
+    git_success(repo.path(), ["commit", "-m", "replacement worklog"]);
+
+    let output = Command::new(env!("CARGO_BIN_EXE_record-dispatch"))
+        .args([
+            "--repo-root",
+            repo.path()
+                .to_str()
+                .expect("repo path should be valid UTF-8"),
+            "--issue",
+            "2596",
+            "--title",
+            "[Cycle Review] Cycle 515 end-of-cycle review",
+            "--review-dispatch",
+            "--model",
+            "gpt-5.4",
+        ])
+        .output()
+        .expect("record-dispatch should execute");
+    assert!(
+        output.status.success(),
+        "record-dispatch failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let replacement_path = repo.path().join(
+        "docs/worklog/2026-04-19/000001-cycle-515-review-consumed-replacement.md",
+    );
+    let replacement_worklog =
+        fs::read_to_string(&replacement_path).expect("replacement worklog should be readable");
+    assert!(replacement_worklog.contains("## Post-dispatch delta"));
+    assert!(replacement_worklog.contains("- **In-flight agent sessions**: 2"));
+    assert!(replacement_worklog.contains("- **Dispatch count**: 2 dispatches"));
+    assert!(replacement_worklog.contains("- **Last-cycle summary**: 2 dispatches, 0 merges"));
+
+    let changed_files = git_output(repo.path(), ["show", "--name-only", "--format=", "HEAD"]);
+    assert!(changed_files.contains("docs/state.json"));
+    assert!(changed_files.contains(
+        "docs/worklog/2026-04-19/000001-cycle-515-review-consumed-replacement.md"
+    ));
 }
 
 struct TempRepo {
