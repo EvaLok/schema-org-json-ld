@@ -993,9 +993,7 @@ fn validate_open_questions_against_state(content: &str, state: &StateJson) -> Op
     }
 
     let entry = latest_cycle_entry(content).unwrap_or(content);
-    let Some((_, section)) = extract_open_questions_section(entry) else {
-        return None;
-    };
+    let (_, section) = extract_open_questions_section(entry)?;
     let bullet_lines = section_bullet_lines(section);
     if bullet_lines.is_empty() {
         return None;
@@ -2194,8 +2192,10 @@ Dispatches remain blocked by #2542.
 
 - None.
 ";
-        let mut state = StateJson::default();
-        state.open_questions_for_eva = vec![serde_json::json!(2542), serde_json::json!(2519)];
+        let state = StateJson {
+            open_questions_for_eva: vec![serde_json::json!(2542), serde_json::json!(2519)],
+            ..StateJson::default()
+        };
 
         let failure = validate_open_questions_against_state(content, &state)
             .expect("expected state-aware failure");
@@ -2234,8 +2234,10 @@ Dispatches remain blocked by #2542.
 
 - #2542 — gate deadlock.
 ";
-        let mut state = StateJson::default();
-        state.open_questions_for_eva = vec![serde_json::json!(2542)];
+        let state = StateJson {
+            open_questions_for_eva: vec![serde_json::json!(2542)],
+            ..StateJson::default()
+        };
 
         assert!(validate_open_questions_against_state(content, &state).is_none());
     }
@@ -2258,8 +2260,10 @@ Dispatches remain blocked by #2542.
 
 - #2542 — gate deadlock.
 ";
-        let mut state = StateJson::default();
-        state.open_questions_for_eva = vec![serde_json::json!(2542)];
+        let state = StateJson {
+            open_questions_for_eva: vec![serde_json::json!(2542)],
+            ..StateJson::default()
+        };
 
         assert!(validate_open_questions_against_state(content, &state).is_none());
     }
@@ -2273,12 +2277,14 @@ Dispatches remain blocked by #2542.
 
 - None.
 ";
-        let mut state = StateJson::default();
-        state.open_questions_for_eva = vec![
-            serde_json::json!(2542),
-            serde_json::json!(2519),
-            serde_json::json!(2293),
-        ];
+        let state = StateJson {
+            open_questions_for_eva: vec![
+                serde_json::json!(2542),
+                serde_json::json!(2519),
+                serde_json::json!(2293),
+            ],
+            ..StateJson::default()
+        };
 
         let failure =
             validate_open_questions_against_state(content, &state).expect("expected failure");
@@ -2306,8 +2312,10 @@ Dispatches remain blocked by #2542.
 - [#2542](https://github.com/EvaLok/schema-org-json-ld/issues/2542) — gate deadlock (49h stale)
 - [#2519](https://github.com/EvaLok/schema-org-json-ld/issues/2519) — blocker policy (5h stale)
 ";
-        let mut state = StateJson::default();
-        state.open_questions_for_eva = vec![serde_json::json!(2542), serde_json::json!(2519)];
+        let state = StateJson {
+            open_questions_for_eva: vec![serde_json::json!(2542), serde_json::json!(2519)],
+            ..StateJson::default()
+        };
 
         assert!(validate_open_questions_against_state(content, &state).is_none());
     }
