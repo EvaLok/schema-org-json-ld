@@ -10803,6 +10803,12 @@
       "deferred_cycle": 515,
       "resolved": true,
       "resolved_ref": "docs/reviews/cycle-516.md"
+    },
+    {
+      "category": "journal-quality",
+      "deadline_cycle": 522,
+      "deferred_cycle": 517,
+      "resolved": false
     }
   ],
   "dispatch_log_latest": "#2605 [Cycle Review] Cycle 517 end-of-cycle review (cycle 517)",
@@ -18474,9 +18480,38 @@
         "ignored": 0,
         "note": "F1 code-change-quality actioned: PR #2601 merged, closes #2600 (production-path post-dispatch-delta fix). F2 state-integrity (verify-review-events provenance) and F3 journal-quality (standing-Eva-blockers wrong state path) dispatched together in #2608 alongside cycle-517 F1/F2.",
         "review_issue": 2602
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "journal-quality",
+          "state-integrity"
+        ],
+        "complacency_score": 2,
+        "cycle": 517,
+        "deferred": 1,
+        "dispatch_created": 2,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "state-integrity",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "state-integrity",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "deferred"
+          }
+        ],
+        "ignored": 0,
+        "note": "F1 state-integrity (last_cycle rewritten after cycle-complete) and F2 state-integrity (review_events_verified_through_cycle provenance — recurrence of cycle 516 F2) dispatched together in #2608 with Standing-Eva-blockers fix. F3 journal-quality (no observable next-cycle commitment) deferred — requires journal commitment schema work; deadline cycle 523.",
+        "review_issue": 2605
       }
     ],
-    "last_review_cycle": 516
+    "last_review_cycle": 517
   },
   "review_dispatch_consecutive": 3,
   "review_events_verified_through_cycle": 517,
