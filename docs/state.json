@@ -9714,8 +9714,10 @@
     {
       "dispatched_at": "2026-04-19T02:28:54Z",
       "issue": 2594,
+      "merged_at": "2026-04-19T06:01:31Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2595,
+      "status": "merged",
       "title": "Fix cycle 514 review F1+F3: verify-review-events provenance + journal Open questions"
     },
     {
@@ -11037,12 +11039,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 26,
     "issue": 2598,
     "number": 516,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-19T05:48:52Z"
   },
   "last_eva_comment_check": "2026-04-19T05:48:52Z",
