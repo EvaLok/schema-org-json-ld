@@ -18914,9 +18914,9 @@
   "tool_pipeline": {
     "blocks_publish": false,
     "c5_5_gate": {
-      "cycle": 514,
+      "cycle": 515,
       "needs_reverify": false,
-      "pipeline_summary": "PASS (2 warnings)",
+      "pipeline_summary": "PASS (1 blocking warning, 2 warnings)",
       "status": "PASS"
     },
     "c5_5_initial_result": {
