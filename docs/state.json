@@ -9733,10 +9733,10 @@
       "addresses_finding": "515:1",
       "dispatched_at": "2026-04-19T06:03:50Z",
       "issue": 2600,
-      "merged_at": null,
+      "merged_at": "2026-04-19T09:35:16Z",
       "model": "gpt-5.4",
-      "pr": null,
-      "status": "in_flight",
+      "pr": 2601,
+      "status": "merged",
       "title": "Fix cycle 515 review F1: post-dispatch-delta production path bypassed in real close-out flow"
     },
     {
@@ -10914,7 +10914,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 516"
+        "last_refreshed": "cycle 517"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -11062,12 +11062,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 19,
     "issue": 2604,
     "number": 517,
-    "summary": "1 dispatch (#2600), 2 merges (PR #2595, PR #2597)",
+    "summary": "0 dispatches, 1 merges",
     "timestamp": "2026-04-19T09:24:51Z"
   },
   "last_eva_comment_check": "2026-04-19T09:24:51Z",
