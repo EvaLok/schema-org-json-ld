@@ -361,7 +361,7 @@ fn step_c4_7_with_timeout(
     let output = match runner::run_tool_with_timeout(
         repo_root,
         "verify-review-events",
-        &["--apply", "--repo-root", &repo_root_str],
+        &["--apply", "--commit", "--repo-root", &repo_root_str],
         timeout_seconds,
     ) {
         Ok(output) => output,
@@ -1440,7 +1440,8 @@ fn close_out_dry_run_lines(cycle: u64, issue: u64) -> Vec<String> {
         ),
         "[dry-run] C4.1: validate-docs worklog + journal (GATE)".to_string(),
         "[dry-run] C4.5: scan doc/adr/ and post ADR check step".to_string(),
-        "[dry-run] C4.7: verify-review-events --apply (best-effort, non-blocking)".to_string(),
+        "[dry-run] C4.7: verify-review-events --apply --commit (best-effort, non-blocking)"
+            .to_string(),
         "[dry-run] C5.5: pipeline-check (GATE)".to_string(),
         "[dry-run] C5:   freeze worklog from C5.5 state, re-run validate-docs, git add docs/ && git commit && git push"
             .to_string(),
@@ -2219,21 +2220,30 @@ mod tests {
     fn step_c4_7_posts_safe_to_advance_to_on_success() {
         let dir = setup_temp_repo("step-c4-7-success");
         let args_path = dir.join("post-step-args.txt");
+        let verify_args_path = dir.join("verify-review-events-args.txt");
         write_post_step_capture_script(&dir, &args_path);
         fs::write(
             dir.join("tools/verify-review-events"),
-            "#!/usr/bin/env bash\nset -euo pipefail\nprintf 'Verification report\\n  Result: All 2 PRs verified. Safe to advance marker to 345.\\n'\n",
+            format!(
+                "#!/usr/bin/env bash\nset -euo pipefail\n{{\nfor arg in \"$@\"; do\nprintf -- '---ARG---\\n%s\\n' \"$arg\"\ndone\n}} > {}\nprintf 'Verification report\\n  Result: All 2 PRs verified. Safe to advance marker to 345.\\n'\n",
+                shell_single_quote(&verify_args_path)
+            ),
         )
         .unwrap();
 
         step_c4_7_with_timeout(&dir, 123, 1).unwrap();
 
         let args = fs::read_to_string(&args_path).unwrap();
+        let verify_args = fs::read_to_string(&verify_args_path).unwrap();
         assert!(args.contains("---ARG---\nC4.7\n"));
         assert!(args.contains("---ARG---\nverify-review-events execution\n"));
         assert!(args.contains("outcome: success"));
         assert!(args.contains("safe_to_advance_to: 345"));
         assert!(args.contains("state.json update: applied"));
+        assert!(verify_args.contains("---ARG---\n--apply\n"));
+        assert!(verify_args.contains("---ARG---\n--commit\n"));
+        assert!(verify_args.contains("---ARG---\n--repo-root\n"));
+        assert!(verify_args.contains(&format!("---ARG---\n{}\n", dir.to_string_lossy())));
 
         let _ = fs::remove_dir_all(&dir);
     }

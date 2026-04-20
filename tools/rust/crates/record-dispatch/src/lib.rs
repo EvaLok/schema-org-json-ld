@@ -517,9 +517,10 @@ fn session_value_present(value: &Value) -> bool {
 ///
 /// Call this after `apply_dispatch_patch` only when that function returns
 /// `updated_existing == false`, meaning a new session entry was created rather
-/// than merged into an existing live session. Callers that temporarily restore
-/// a sealed `last_cycle` snapshot during close-out should invoke this helper
-/// after the restore step so the new dispatch count is not clobbered.
+/// than merged into an existing live session. Callers should skip this helper
+/// when `last_cycle` has been sealed for `close_out` or `complete`, because the
+/// restored summary/timestamp must remain frozen once the cycle is closing or
+/// complete.
 pub fn sync_last_cycle_summary_after_dispatch(
     state: &mut Value,
     current_cycle: u64,

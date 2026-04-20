@@ -2989,13 +2989,42 @@ fn load_standing_eva_blockers(repo_root: &Path) -> Result<Vec<StandingEvaBlocker
         Err(error) if error.contains("failed to read") => return Ok(Vec::new()),
         Err(error) => return Err(error),
     };
-    let Some(issues) = value
+    Ok(load_standing_eva_blockers_from_state(
+        repo_root,
+        &value,
+        Utc::now(),
+    ))
+}
+
+fn load_standing_eva_blockers_from_state(
+    repo_root: &Path,
+    value: &Value,
+    now: DateTime<Utc>,
+) -> Vec<StandingEvaBlocker> {
+    if let Some(issues) = value
         .pointer("/eva_escalations/issues")
         .and_then(Value::as_array)
+    {
+        if !issues.is_empty() {
+            return standing_eva_blockers_from_escalations(issues);
+        }
+    }
+
+    let Some(issue_numbers) = value
+        .pointer("/open_questions_for_eva")
+        .and_then(Value::as_array)
     else {
-        return Ok(Vec::new());
+        return Vec::new();
     };
 
+    issue_numbers
+        .iter()
+        .filter_map(Value::as_u64)
+        .map(|issue_number| load_open_question_blocker(repo_root, issue_number, now))
+        .collect()
+}
+
+fn standing_eva_blockers_from_escalations(issues: &[Value]) -> Vec<StandingEvaBlocker> {
     let mut blockers = Vec::new();
     for issue in issues {
         let Some(number) = issue.get("number").and_then(Value::as_u64) else {
@@ -3022,7 +3051,89 @@ fn load_standing_eva_blockers(repo_root: &Path) -> Result<Vec<StandingEvaBlocker
         });
     }
 
-    Ok(blockers)
+    blockers
+}
+
+fn load_open_question_blocker(
+    repo_root: &Path,
+    issue_number: u64,
+    now: DateTime<Utc>,
+) -> StandingEvaBlocker {
+    fetch_open_question_blocker(repo_root, issue_number, now)
+        .unwrap_or_else(|_| placeholder_standing_eva_blocker(issue_number))
+}
+
+fn fetch_open_question_blocker(
+    repo_root: &Path,
+    issue_number: u64,
+    now: DateTime<Utc>,
+) -> Result<StandingEvaBlocker, String> {
+    let issue_number_str = issue_number.to_string();
+    let output = ProcessCommand::new("gh")
+        .current_dir(repo_root)
+        .args([
+            "issue",
+            "view",
+            &issue_number_str,
+            "--repo",
+            "EvaLok/schema-org-json-ld",
+            "--json",
+            "number,title,createdAt",
+        ])
+        .output()
+        .map_err(|error| {
+            format!(
+                "failed to execute gh issue view for #{}: {}",
+                issue_number, error
+            )
+        })?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(if stderr.is_empty() {
+            format!("gh issue view failed for #{}", issue_number)
+        } else {
+            format!("gh issue view failed for #{}: {}", issue_number, stderr)
+        });
+    }
+
+    let value: Value = serde_json::from_slice(&output.stdout).map_err(|error| {
+        format!(
+            "invalid gh issue view JSON for #{}: {}",
+            issue_number, error
+        )
+    })?;
+    let title = value
+        .get("title")
+        .and_then(Value::as_str)
+        .filter(|title| !title.trim().is_empty())
+        .ok_or_else(|| format!("gh issue view missing title for #{}", issue_number))?;
+    let created_at = value
+        .get("createdAt")
+        .and_then(Value::as_str)
+        .ok_or_else(|| format!("gh issue view missing createdAt for #{}", issue_number))?;
+    let created_at = parse_timestamp(created_at, &format!("issue #{} createdAt", issue_number))?;
+    let age_seconds = now.signed_duration_since(created_at).num_seconds();
+    if age_seconds < 0 {
+        return Err(format!("issue #{} age is invalid", issue_number));
+    }
+    let stale_hours = age_seconds
+        .checked_add(3599)
+        .map(|value| value / 3600)
+        .ok_or_else(|| format!("issue #{} age is invalid", issue_number))?;
+
+    Ok(StandingEvaBlocker {
+        number: issue_number,
+        title: title.to_string(),
+        stale_hours,
+    })
+}
+
+fn placeholder_standing_eva_blocker(issue_number: u64) -> StandingEvaBlocker {
+    StandingEvaBlocker {
+        number: issue_number,
+        title: "Issue metadata unavailable".to_string(),
+        stale_hours: 0,
+    }
 }
 
 fn ceil_age_hours(age_hours: f64) -> Option<i64> {
@@ -4423,8 +4534,11 @@ fn parse_digits(chars: &[char], start: usize) -> (String, usize) {
 mod tests {
     use super::*;
     use serde_json::json;
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
     use std::process::Command as ProcessCommand;
     use std::sync::atomic::{AtomicU64, Ordering};
+    use std::sync::{Mutex, OnceLock};
 
     struct TempRepoDir {
         path: PathBuf,
@@ -4489,6 +4603,31 @@ mod tests {
         DateTime::parse_from_rfc3339(&format!("{date}T05:14:58Z"))
             .unwrap()
             .with_timezone(&Utc)
+    }
+
+    fn path_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    fn with_path_prefix<T>(prefix: &Path, f: impl FnOnce() -> T) -> T {
+        let _guard = path_lock().lock().unwrap();
+        let old_path = std::env::var_os("PATH").unwrap_or_default();
+        let existing_paths: Vec<PathBuf> = std::env::split_paths(&old_path).collect();
+        let new_path =
+            std::env::join_paths(std::iter::once(prefix.to_path_buf()).chain(existing_paths))
+                .expect("joined PATH should be valid");
+        std::env::set_var("PATH", &new_path);
+        let result = f();
+        std::env::set_var("PATH", old_path);
+        result
+    }
+
+    #[cfg(unix)]
+    fn make_executable(path: &Path) {
+        let mut permissions = fs::metadata(path).unwrap().permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(path, permissions).unwrap();
     }
 
     fn worklog_args(title: &str) -> WorklogArgs {
@@ -7331,6 +7470,64 @@ mod tests {
         assert!(rendered.contains("[#2403]"));
         assert!(rendered.contains("Need Eva answer on blocker policy"));
         assert!(rendered.contains("(5h stale)"));
+    }
+
+    #[test]
+    fn load_standing_eva_blockers_falls_back_to_open_questions_for_eva() {
+        let repo_root = TempRepoDir::new("journal-standing-eva-open-questions");
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {"cycle": 154},
+                "agent_sessions": [],
+                "open_questions_for_eva": [2402, 2403]
+            }"#,
+        );
+        let bin_dir = repo_root.path.join("bin");
+        fs::create_dir_all(&bin_dir).unwrap();
+        let gh_path = bin_dir.join("gh");
+        fs::write(
+            &gh_path,
+            r#"#!/usr/bin/env bash
+set -euo pipefail
+if [ "$1" != "issue" ] || [ "$2" != "view" ]; then
+  echo "unexpected gh invocation" >&2
+  exit 1
+fi
+case "$3" in
+  2402)
+    printf '%s\n' '{"number":2402,"title":"Need Eva answer on provenance wording","createdAt":"2026-03-09T04:14:59Z"}'
+    ;;
+  2403)
+    echo "simulated gh failure" >&2
+    exit 1
+    ;;
+  *)
+    echo "unexpected issue number" >&2
+    exit 1
+    ;;
+esac
+"#,
+        )
+        .unwrap();
+        make_executable(&gh_path);
+
+        let blockers = with_path_prefix(&bin_dir, || {
+            load_standing_eva_blockers_from_state(
+                &repo_root.path,
+                &read_state_value(&repo_root.path).expect("state should parse"),
+                fixed_now_on("2026-03-11"),
+            )
+        });
+
+        assert_eq!(blockers.len(), 2);
+        assert_eq!(blockers[0].number, 2402);
+        assert_eq!(blockers[0].title, "Need Eva answer on provenance wording");
+        assert_eq!(blockers[0].stale_hours, 49);
+        assert_eq!(blockers[1].number, 2403);
+        assert_eq!(blockers[1].title, "Issue metadata unavailable");
+        assert_eq!(blockers[1].stale_hours, 0);
     }
 
     #[test]
