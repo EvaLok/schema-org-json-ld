@@ -104,6 +104,7 @@ const STEP_NAMES: [&str; 29] = [
 // COMPLETION_CHECKLIST.xml ordering: C5/C5.1 have prerequisite "C4.1, C4.5, C5.5",
 // so they are emitted *after* C5.5 evaluates current-cycle-steps.
 const POST_GATE_STEP_IDS: &[&str] = &["C5", "C5.1", "C5.5", "C5.6", "C6", "C7", "C8"];
+#[cfg(test)]
 const STARTUP_STEP_IDS: &[&str] = &["0", "0.1", "0.5", "0.6", "1", "1.1", "2", "3"];
 const STEP_COMMENT_THRESHOLD: usize = 17;
 const ORCHESTRATOR_SIGNATURE: &str = "> **[main-orchestrator]**";
@@ -2105,7 +2106,7 @@ fn verify_current_cycle_step_comments(
         }
     }
     let issue_detail = current_cycle_issues.detail;
-    let temporal_warning = assess_temporal_step_ordering(&step_timestamps);
+    let temporal_fail = assess_temporal_step_ordering(&step_timestamps);
 
     // Check only pre-gate mandatory steps (exclude post-gate steps that haven't been posted yet)
     let pre_gate_mandatory_missing: Vec<&str> = MANDATORY_STEPS
@@ -2130,11 +2131,11 @@ fn verify_current_cycle_step_comments(
         );
         let mut status = StepStatus::Pass;
         let mut severity = Severity::Blocking;
-        if let Some(temporal_warning) = temporal_warning {
-            status = StepStatus::Warn;
-            severity = Severity::Warning;
+        if let Some(temporal_fail) = temporal_fail {
+            status = StepStatus::Fail;
+            severity = Severity::Blocking;
             detail.push_str("; ");
-            detail.push_str(&temporal_warning.detail);
+            detail.push_str(&temporal_fail.detail);
         }
         StepReport {
             name: CURRENT_CYCLE_STEPS_STEP_NAME,
@@ -2152,9 +2153,9 @@ fn verify_current_cycle_step_comments(
             format_step_id_list(&pre_gate_mandatory_missing),
             format_step_id_list(&found_ids)
         );
-        if let Some(temporal_warning) = temporal_warning {
+        if let Some(temporal_fail) = temporal_fail {
             detail.push_str("; ");
-            detail.push_str(&temporal_warning.detail);
+            detail.push_str(&temporal_fail.detail);
         }
         StepReport {
             name: CURRENT_CYCLE_STEPS_STEP_NAME,
@@ -2284,7 +2285,7 @@ fn collect_step_comment_ids_from_comments(
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct TemporalOrderingWarning {
+struct TemporalOrderingFail {
     detail: String,
 }
 
@@ -2340,63 +2341,53 @@ fn record_earliest_step_timestamp(
         .or_insert(timestamp);
 }
 
-fn compare_timed_step_entries(
-    left: &(String, DateTime<Utc>),
-    right: &(String, DateTime<Utc>),
-) -> std::cmp::Ordering {
-    left.1.cmp(&right.1).then_with(|| left.0.cmp(&right.0))
-}
-
 fn assess_temporal_step_ordering(
     step_timestamps: &BTreeMap<String, DateTime<Utc>>,
-) -> Option<TemporalOrderingWarning> {
-    let startup_steps = STARTUP_STEP_IDS
+) -> Option<TemporalOrderingFail> {
+    // Build a list of (step_id, timestamp) for all MANDATORY_STEPS that have been posted,
+    // in checklist order.
+    let present_mandatory: Vec<(&str, DateTime<Utc>)> = MANDATORY_STEPS
         .iter()
-        .filter_map(|step| {
+        .filter_map(|(step_id, _)| {
             step_timestamps
-                .get(*step)
+                .get(*step_id)
                 .copied()
-                .map(|timestamp| ((*step).to_string(), timestamp))
+                .map(|ts| (*step_id, ts))
         })
-        .collect::<Vec<_>>();
-    let close_out_steps = step_timestamps
-        .iter()
-        .filter(|(step, _)| step.starts_with('C'))
-        .map(|(step, timestamp)| (step.clone(), *timestamp))
-        .collect::<Vec<_>>();
+        .collect();
 
-    if startup_steps.is_empty() || close_out_steps.is_empty() {
+    if present_mandatory.len() < 2 {
         return None;
     }
 
-    let latest_startup = startup_steps
-        .iter()
-        .map(|(_, timestamp)| *timestamp)
-        .max()?;
-    let earliest_close_out = close_out_steps
-        .iter()
-        .map(|(_, timestamp)| *timestamp)
-        .min()?;
-    if latest_startup < earliest_close_out {
+    // Track the running maximum timestamp. When a later mandatory step (in checklist order)
+    // has a timestamp below the running maximum, it was posted out of checklist order.
+    let mut max_ts = present_mandatory[0].1;
+    let mut max_step = present_mandatory[0].0;
+    let mut misordered: Vec<(String, DateTime<Utc>)> = Vec::new();
+    let mut blocking: Vec<(String, DateTime<Utc>)> = Vec::new();
+
+    for &(step_id, ts) in present_mandatory.iter().skip(1) {
+        if ts < max_ts {
+            if misordered.is_empty() {
+                blocking.push((max_step.to_string(), max_ts));
+            }
+            misordered.push((step_id.to_string(), ts));
+        } else {
+            max_ts = ts;
+            max_step = step_id;
+        }
+    }
+
+    if misordered.is_empty() {
         return None;
     }
 
-    let mut misordered_startup = startup_steps
-        .into_iter()
-        .filter(|(_, timestamp)| *timestamp >= earliest_close_out)
-        .collect::<Vec<_>>();
-    let mut misordered_close_out = close_out_steps
-        .into_iter()
-        .filter(|(_, timestamp)| *timestamp <= latest_startup)
-        .collect::<Vec<_>>();
-    misordered_startup.sort_by(compare_timed_step_entries);
-    misordered_close_out.sort_by(compare_timed_step_entries);
-
-    Some(TemporalOrderingWarning {
+    Some(TemporalOrderingFail {
         detail: format!(
-            "temporal ordering warning: startup steps [{}] were posted at or after close-out steps [{}]",
-            format_timed_step_entries(&misordered_startup),
-            format_timed_step_entries(&misordered_close_out)
+            "temporal ordering fail: mandatory steps [{}] were posted before checklist predecessor [{}]",
+            format_timed_step_entries(&misordered),
+            format_timed_step_entries(&blocking)
         ),
     })
 }
@@ -14221,11 +14212,11 @@ mod tests {
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("temporal ordering warning"));
+            .contains("temporal ordering fail"));
     }
 
     #[test]
-    fn current_cycle_steps_warn_when_startup_step_is_posted_after_close_out_step() {
+    fn current_cycle_steps_fail_when_startup_step_is_posted_after_close_out_step() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let root = std::env::temp_dir().join(format!(
@@ -14301,12 +14292,178 @@ mod tests {
         }
 
         let step = verify_current_cycle_step_comments(&root, 301, &Runner);
-        assert_eq!(step.status, StepStatus::Warn);
-        assert_eq!(step.severity, Severity::Warning);
+        assert_eq!(step.status, StepStatus::Fail);
+        assert_eq!(step.severity, Severity::Blocking);
         let detail = step.detail.as_deref().unwrap_or_default();
-        assert!(detail.contains("temporal ordering warning"));
+        assert!(detail.contains("temporal ordering fail"));
         assert!(detail.contains("3@2026-03-29T10:45:00+00:00"));
         assert!(detail.contains("C1@2026-03-29T10:30:00+00:00"));
+    }
+
+    #[test]
+    fn current_cycle_steps_fail_when_startup_auto_posts_steps_before_predecessors() {
+        // Regression test: cycle-runner startup posts S0, S4, S7, S8 at the same time
+        // before the operator's S0.5, S0.6, S1, S1.1, S2, S3, S5, S6, S9.
+        // That produces a temporal ordering violation because step 4 is posted before
+        // mandatory predecessor step 3.
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-current-cycle-startup-before-pred-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "previous_cycle_issue": 959,
+                "last_cycle": {
+                    "number": 521,
+                    "issue": 959
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("body-only fallback should not be used in temporal ordering test");
+            }
+
+            fn fetch_issue_comments_with_timestamps(
+                &self,
+                issue: u64,
+            ) -> Result<Vec<(String, String)>, String> {
+                assert_eq!(issue, 959);
+                // Simulate startup auto-posting S0, S4, S7, S8 at T+00:00,
+                // then operator posting S0.5-S3, S5, S6, S9 in checklist order.
+                Ok(timestamped_step_comments(&[
+                    ("0", "2026-04-20T10:00:00Z", 521),
+                    ("4", "2026-04-20T10:00:01Z", 521),
+                    ("7", "2026-04-20T10:00:02Z", 521),
+                    ("8", "2026-04-20T10:00:03Z", 521),
+                    ("0.5", "2026-04-20T10:05:00Z", 521),
+                    ("0.6", "2026-04-20T10:06:00Z", 521),
+                    ("1", "2026-04-20T10:07:00Z", 521),
+                    ("1.1", "2026-04-20T10:08:00Z", 521),
+                    ("2", "2026-04-20T10:09:00Z", 521),
+                    ("3", "2026-04-20T10:10:00Z", 521),
+                    ("5", "2026-04-20T10:11:00Z", 521),
+                    ("6", "2026-04-20T10:12:00Z", 521),
+                    ("9", "2026-04-20T10:13:00Z", 521),
+                    ("C1", "2026-04-20T10:20:00Z", 521),
+                    ("C2", "2026-04-20T10:21:00Z", 521),
+                    ("C3", "2026-04-20T10:22:00Z", 521),
+                    ("C4.1", "2026-04-20T10:23:00Z", 521),
+                    ("C4.5", "2026-04-20T10:24:00Z", 521),
+                    ("C5", "2026-04-20T10:25:00Z", 521),
+                    ("C5.1", "2026-04-20T10:26:00Z", 521),
+                    ("C5.5", "2026-04-20T10:27:00Z", 521),
+                    ("C6", "2026-04-20T10:28:00Z", 521),
+                    ("C7", "2026-04-20T10:29:00Z", 521),
+                    ("C8", "2026-04-20T10:30:00Z", 521),
+                ]))
+            }
+        }
+
+        let step = verify_current_cycle_step_comments(&root, 521, &Runner);
+        assert_eq!(step.status, StepStatus::Fail);
+        assert_eq!(step.severity, Severity::Blocking);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(detail.contains("temporal ordering fail"));
+        // Step 4 posted before step 3 (predecessor) should be flagged
+        assert!(detail.contains("4@2026-04-20T10:00:01+00:00"));
+    }
+
+    #[test]
+    fn current_cycle_steps_pass_when_all_steps_in_checklist_order() {
+        // Regression test: all mandatory steps posted in strict checklist order passes.
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-current-cycle-all-in-order-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "previous_cycle_issue": 960,
+                "last_cycle": {
+                    "number": 521,
+                    "issue": 960
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("body-only fallback should not be used in temporal ordering test");
+            }
+
+            fn fetch_issue_comments_with_timestamps(
+                &self,
+                issue: u64,
+            ) -> Result<Vec<(String, String)>, String> {
+                assert_eq!(issue, 960);
+                // All mandatory steps in strict checklist order, one minute apart.
+                Ok(timestamped_step_comments(&[
+                    ("0", "2026-04-20T10:00:00Z", 521),
+                    ("0.5", "2026-04-20T10:01:00Z", 521),
+                    ("0.6", "2026-04-20T10:02:00Z", 521),
+                    ("1", "2026-04-20T10:03:00Z", 521),
+                    ("1.1", "2026-04-20T10:04:00Z", 521),
+                    ("2", "2026-04-20T10:05:00Z", 521),
+                    ("3", "2026-04-20T10:06:00Z", 521),
+                    ("4", "2026-04-20T10:07:00Z", 521),
+                    ("5", "2026-04-20T10:08:00Z", 521),
+                    ("6", "2026-04-20T10:09:00Z", 521),
+                    ("7", "2026-04-20T10:10:00Z", 521),
+                    ("8", "2026-04-20T10:11:00Z", 521),
+                    ("9", "2026-04-20T10:12:00Z", 521),
+                    ("C1", "2026-04-20T10:13:00Z", 521),
+                    ("C2", "2026-04-20T10:14:00Z", 521),
+                    ("C3", "2026-04-20T10:15:00Z", 521),
+                    ("C4.1", "2026-04-20T10:16:00Z", 521),
+                    ("C4.5", "2026-04-20T10:17:00Z", 521),
+                    ("C5", "2026-04-20T10:18:00Z", 521),
+                    ("C5.1", "2026-04-20T10:19:00Z", 521),
+                    ("C5.5", "2026-04-20T10:20:00Z", 521),
+                    ("C6", "2026-04-20T10:21:00Z", 521),
+                    ("C7", "2026-04-20T10:22:00Z", 521),
+                    ("C8", "2026-04-20T10:23:00Z", 521),
+                ]))
+            }
+        }
+
+        let step = verify_current_cycle_step_comments(&root, 521, &Runner);
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Blocking);
+        let detail = step.detail.as_deref().unwrap_or_default();
+        assert!(!detail.contains("temporal ordering fail"));
     }
 
     #[test]
@@ -14375,7 +14532,7 @@ mod tests {
         assert_eq!(step.severity, Severity::Blocking);
         let detail = step.detail.as_deref().unwrap_or_default();
         assert!(detail.contains("missing pre-gate mandatory steps"));
-        assert!(!detail.contains("temporal ordering warning"));
+        assert!(!detail.contains("temporal ordering fail"));
     }
 
     #[test]

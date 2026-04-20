@@ -6,7 +6,9 @@ use serde_json::{json, Value};
 use state_schema::{current_utc_timestamp, read_state_value, write_state_value, StepCommentGap};
 use std::path::Path;
 
+#[allow(dead_code)]
 const HOUSEKEEPING_STEP_ID: &str = "7";
+#[allow(dead_code)]
 const CONCURRENCY_STEP_ID: &str = "8";
 const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const AGENT_SESSIONS_LIFECYCLE_STEP_NAME: &str = "agent-sessions-lifecycle";
@@ -30,6 +32,15 @@ pub struct SituationReport {
     pub pipeline: Value,
     pub housekeeping: Value,
     pub cycle_status: Value,
+    /// Pre-formatted body text for step 4 (pipeline check). Post this manually at
+    /// checklist position 4, after steps 0.5, 0.6, 1, 1.1, 2, 3.
+    pub step_4_body: String,
+    /// Pre-formatted body text for step 7 (housekeeping scan). Post this manually at
+    /// checklist position 7, after steps 5, 5.x, 6.
+    pub step_7_body: String,
+    /// Pre-formatted body text for step 8 (concurrency check). Post this manually at
+    /// checklist position 8, after step 7.
+    pub step_8_body: String,
     pub warnings: Vec<String>,
 }
 
@@ -44,18 +55,10 @@ pub fn run(
         eprintln!("[dry-run] 1. cycle-start --issue {} --json", issue);
         eprintln!("[dry-run] 2. post-step --step 0 (cycle initialization)");
         eprintln!("[dry-run] 3. pipeline-check --json");
-        eprintln!("[dry-run] 4. post-step --step 4 (pipeline check)");
-        eprintln!("[dry-run] 5. housekeeping-scan --json");
-        eprintln!(
-            "[dry-run] 6. post-step --step {} (housekeeping scan)",
-            HOUSEKEEPING_STEP_ID
-        );
-        eprintln!("[dry-run] 7. cycle-status --json");
-        eprintln!(
-            "[dry-run] 8. post-step --step {} (concurrency check)",
-            CONCURRENCY_STEP_ID
-        );
-        eprintln!("[dry-run] 9. Output combined situation report as JSON");
+        eprintln!("[dry-run] 4. housekeeping-scan --json");
+        eprintln!("[dry-run] 5. cycle-status --json");
+        eprintln!("[dry-run] 6. Output combined situation report as JSON");
+        eprintln!("[dry-run] NOTE: steps 4, 7, 8 are NOT auto-posted; post them manually at checklist position.");
         return Ok(());
     }
 
@@ -130,15 +133,8 @@ pub fn run(
             error
         ));
     }
-    let pipeline_body = format_pipeline_summary(&pipeline);
-    steps::post_step(
-        repo_root,
-        issue,
-        "4",
-        "Pipeline check",
-        &pipeline_body,
-        false,
-    )?;
+    // NOTE: step 4 (pipeline check) is NOT auto-posted here. Post it manually at its
+    // checklist position (after steps 0.5, 0.6, 1, 1.1, 2, 3).
 
     // --- Step 3: Run housekeeping-scan ---
     eprintln!("Running housekeeping-scan...");
@@ -149,15 +145,8 @@ pub fn run(
             Value::Null
         }
     };
-    let housekeeping_body = format_housekeeping_summary(&housekeeping);
-    steps::post_step(
-        repo_root,
-        issue,
-        HOUSEKEEPING_STEP_ID,
-        "Housekeeping scan",
-        &housekeeping_body,
-        false,
-    )?;
+    // NOTE: step 7 (housekeeping) is NOT auto-posted here. Post it manually at its
+    // checklist position (after steps 5, 5.x, 6).
 
     // --- Step 4: Run cycle-status ---
     eprintln!("Running cycle-status...");
@@ -168,17 +157,13 @@ pub fn run(
             Value::Null
         }
     };
-    let status_body = format_status_summary(&cycle_status);
-    steps::post_step(
-        repo_root,
-        issue,
-        CONCURRENCY_STEP_ID,
-        "Concurrency check",
-        &status_body,
-        false,
-    )?;
+    // NOTE: step 8 (concurrency check) is NOT auto-posted here. Post it manually at its
+    // checklist position (after step 7).
 
     // --- Output situation report ---
+    let step_4_body = format_pipeline_summary(&pipeline);
+    let step_7_body = format_housekeeping_summary(&housekeeping);
+    let step_8_body = format_status_summary(&cycle_status);
     let report = SituationReport {
         cycle,
         issue,
@@ -187,6 +172,9 @@ pub fn run(
         pipeline,
         housekeeping,
         cycle_status,
+        step_4_body,
+        step_7_body,
+        step_8_body,
         warnings,
     };
     println!(
