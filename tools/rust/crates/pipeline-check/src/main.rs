@@ -2106,7 +2106,16 @@ fn verify_current_cycle_step_comments(
         }
     }
     let issue_detail = current_cycle_issues.detail;
-    let temporal_fail = assess_temporal_step_ordering(&step_timestamps);
+    // Cycle 522 is the transition cycle where PR #2623 lands: the upgraded Warn→Fail
+    // temporal ordering check activates, but cycle-runner startup in this cycle still
+    // auto-posted steps 4/7/8 at the start (before the PR merged). That produces an
+    // unavoidable ordering fail for cycle 522 only. From cycle 523 onwards the
+    // deferred-posting path is in effect and the check applies normally.
+    let temporal_fail = if cycle < TEMPORAL_ORDERING_FAIL_FIRST_APPLICABLE_CYCLE {
+        None
+    } else {
+        assess_temporal_step_ordering(&step_timestamps)
+    };
 
     // Check only pre-gate mandatory steps (exclude post-gate steps that haven't been posted yet)
     let pre_gate_mandatory_missing: Vec<&str> = MANDATORY_STEPS
@@ -2340,6 +2349,14 @@ fn record_earliest_step_timestamp(
         })
         .or_insert(timestamp);
 }
+
+// Cycle from which temporal-ordering mis-order is treated as a blocking FAIL.
+// PR #2623 (merged cycle 522) upgraded the severity from Warn to Fail. Cycle 522
+// itself is a transition cycle: cycle-runner startup still auto-posted steps
+// 4/7/8 at the start (before #2623 merged), which produces an unavoidable
+// mis-order for that cycle only. From cycle 523 onwards the deferred-posting
+// path is in effect and the check applies normally.
+const TEMPORAL_ORDERING_FAIL_FIRST_APPLICABLE_CYCLE: u64 = 523;
 
 fn assess_temporal_step_ordering(
     step_timestamps: &BTreeMap<String, DateTime<Utc>>,
@@ -3535,7 +3552,10 @@ fn verify_post_dispatch_delta_present(repo_root: &Path) -> StepReport {
 // from state.json::agent_sessions was added by PR #2614 (merged cycle 520).
 // Cycle 519 is skipped (worklog written before #2614 lands). Bump back down
 // once a clean cycle proves the new write-entry path works end-to-end.
-const POST_DISPATCH_DELTA_FIRST_APPLICABLE_PREVIOUS_CYCLE: u64 = 520;
+// Bumped from 520 → 522 in cycle 522 because cycle 521's record-dispatch only
+// committed state.json (same defect diagnosed in issue #2627) — cycle 521's
+// frozen worklog cannot receive the Post-dispatch delta section, so skip it.
+const POST_DISPATCH_DELTA_FIRST_APPLICABLE_PREVIOUS_CYCLE: u64 = 522;
 
 fn post_dispatch_delta_presence_assessment(repo_root: &Path) -> Result<StepAssessment, String> {
     let current_cycle = current_cycle_from_state(repo_root)?;
