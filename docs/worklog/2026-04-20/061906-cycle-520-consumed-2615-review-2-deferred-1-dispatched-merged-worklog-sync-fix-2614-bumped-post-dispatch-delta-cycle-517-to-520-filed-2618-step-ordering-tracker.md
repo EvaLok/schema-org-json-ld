@@ -46,3 +46,9 @@
 | process-merge | 3f36dc9 | [3f36dc9](https://github.com/EvaLok/schema-org-json-ld/commit/3f36dc94c2928d968c6bf4f0f14f245f72f0c3ba) |
 | cycle-tagged | 2a236c6 | [2a236c6](https://github.com/EvaLok/schema-org-json-ld/commit/2a236c607e1b41fc7ccc114d84a8336816ccedd8) |
 | cycle-complete | ec57cc9 | [ec57cc9](https://github.com/EvaLok/schema-org-json-ld/commit/ec57cc98cdf65595b62373d2a8bf37251bf04973) |
+
+## Post-dispatch delta
+
+- **In-flight agent sessions**: 1
+- **Dispatch count**: 1 dispatch
+- **Last-cycle summary**: 1 dispatch, 2 merges (PR #2614, PR #2616)
