@@ -22,6 +22,7 @@ const JOURNAL_DESCRIPTION: &str = "Reflective log for the schema-org-json-ld orc
 const NOT_PROVIDED: &str = "Not provided.";
 const CYCLE_STATE_HEADING: &str = "## Cycle state";
 const LEGACY_STATE_HEADING: &str = "## Pre-dispatch state";
+const POST_DISPATCH_DELTA_HEADING: &str = "## Post-dispatch delta";
 const NEXT_STEPS_HEADING: &str = "## Next steps";
 const ISSUES_PROCESSED_HEADING: &str = "### Issues processed";
 const LEGACY_STATE_DISCLAIMER: &str =
@@ -196,6 +197,8 @@ struct WorklogInput {
     issues_processed: Vec<String>,
     current_state: CurrentState,
     #[serde(default)]
+    post_dispatch_delta: Option<PostDispatchDelta>,
+    #[serde(default)]
     next_steps: Vec<String>,
     #[serde(default)]
     receipts: Vec<CommitReceipt>,
@@ -220,6 +223,13 @@ struct CurrentState {
     publish_gate: String,
     #[serde(default)]
     preliminary: bool,
+}
+
+#[derive(Debug, Deserialize)]
+struct PostDispatchDelta {
+    in_flight_sessions: u64,
+    dispatch_count: String,
+    last_cycle_summary: String,
 }
 
 struct ReceiptScopeBoundary {
@@ -540,6 +550,7 @@ fn resolve_worklog_input_for_cycle(
                 },
                 preliminary: worklog_state_is_preliminary(current_state_source, cycle),
             },
+            post_dispatch_delta: derive_post_dispatch_delta(state.as_ref(), cycle)?,
             next_steps: resolve_next_steps(args, state.as_ref())?,
             receipts: parse_receipts(&args.receipt)?,
             receipt_note: None,
@@ -575,6 +586,7 @@ fn resolve_worklog_input_for_cycle(
             publish_gate: state_publish_gate_status(current_state_source)?,
             preliminary: worklog_state_is_preliminary(current_state_source, cycle),
         },
+        post_dispatch_delta: derive_post_dispatch_delta(state.as_ref(), cycle)?,
         next_steps: resolve_next_steps(args, state.as_ref())?,
         receipts: Vec::new(),
         receipt_note: None,
@@ -1076,6 +1088,81 @@ fn state_extra_in_flight_sessions(state: Option<&StateJson>) -> Result<u64, Stri
         .and_then(Value::as_u64)
         .ok_or_else(|| "missing in_flight_sessions in state.json".to_string())?;
     Ok(in_flight)
+}
+
+fn derive_post_dispatch_delta(
+    state: Option<&StateJson>,
+    cycle: u64,
+) -> Result<Option<PostDispatchDelta>, String> {
+    let Some(state) = state else {
+        return Ok(None);
+    };
+    let dispatched_timestamps = state
+        .agent_sessions
+        .iter()
+        .filter_map(|session| session.dispatched_at.as_deref())
+        .collect::<Vec<_>>();
+    if dispatched_timestamps.is_empty() {
+        return Ok(None);
+    }
+
+    let Some(state_cycle) = state.cycle_phase.cycle else {
+        return Ok(None);
+    };
+    if state_cycle != cycle {
+        return Ok(None);
+    }
+    let Some(phase_entered_at) = state.cycle_phase.phase_entered_at.as_deref() else {
+        return Ok(None);
+    };
+    let cycle_start = parse_timestamp(
+        phase_entered_at,
+        "docs/state.json cycle_phase.phase_entered_at",
+    )?;
+    let mut has_current_cycle_dispatch = false;
+    for timestamp in dispatched_timestamps {
+        if parse_timestamp(timestamp, "agent_sessions[].dispatched_at")? >= cycle_start {
+            has_current_cycle_dispatch = true;
+            break;
+        }
+    }
+    if !has_current_cycle_dispatch {
+        return Ok(None);
+    }
+
+    let Some(last_cycle_summary) = state
+        .last_cycle
+        .summary
+        .as_deref()
+        .map(str::trim)
+        .filter(|summary| !summary.is_empty())
+    else {
+        eprintln!(
+            "write-entry: skipping post-dispatch delta because docs/state.json last_cycle.summary is missing"
+        );
+        return Ok(None);
+    };
+    let Ok(in_flight_sessions) = state_extra_in_flight_sessions(Some(state)) else {
+        eprintln!(
+            "write-entry: skipping post-dispatch delta because docs/state.json in_flight_sessions is missing"
+        );
+        return Ok(None);
+    };
+
+    Ok(Some(PostDispatchDelta {
+        in_flight_sessions,
+        dispatch_count: dispatch_count_clause(last_cycle_summary).to_string(),
+        last_cycle_summary: last_cycle_summary.to_string(),
+    }))
+}
+
+fn dispatch_count_clause(summary: &str) -> &str {
+    summary
+        .split(',')
+        .next()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or(summary)
 }
 
 fn validate_worklog_state_placeholders(
@@ -4024,6 +4111,23 @@ fn render_worklog(cycle: u64, now: DateTime<Utc>, input: &WorklogInput) -> Strin
             }
         }
     }
+    if let Some(post_dispatch_delta) = &input.post_dispatch_delta {
+        lines.push(String::new());
+        lines.push(POST_DISPATCH_DELTA_HEADING.to_string());
+        lines.push(String::new());
+        lines.push(format!(
+            "- **In-flight agent sessions**: {}",
+            post_dispatch_delta.in_flight_sessions
+        ));
+        lines.push(format!(
+            "- **Dispatch count**: {}",
+            post_dispatch_delta.dispatch_count
+        ));
+        lines.push(format!(
+            "- **Last-cycle summary**: {}",
+            post_dispatch_delta.last_cycle_summary
+        ));
+    }
     lines.push(String::new());
     lines.join("\n")
 }
@@ -4918,6 +5022,7 @@ mod tests {
                 publish_gate: "Source diverged".to_string(),
                 preliminary: false,
             },
+            post_dispatch_delta: None,
             next_steps: vec!["Review PR #543".to_string()],
             receipts: Vec::new(),
             receipt_note: None,
@@ -4957,6 +5062,7 @@ mod tests {
                 publish_gate: NOT_PROVIDED.to_string(),
                 preliminary: false,
             },
+            post_dispatch_delta: None,
             next_steps: Vec::new(),
             receipts: Vec::new(),
             receipt_note: None,
@@ -4994,6 +5100,7 @@ mod tests {
                 publish_gate: "clear".to_string(),
                 preliminary: false,
             },
+            post_dispatch_delta: None,
             next_steps: vec![next_step.clone()],
             receipts: Vec::new(),
             receipt_note: None,
@@ -5023,6 +5130,7 @@ mod tests {
                 publish_gate: "clear".to_string(),
                 preliminary: false,
             },
+            post_dispatch_delta: None,
             next_steps: Vec::new(),
             receipts: Vec::new(),
             receipt_note: None,
@@ -5049,6 +5157,7 @@ mod tests {
                 publish_gate: "clear".to_string(),
                 preliminary: false,
             },
+            post_dispatch_delta: None,
             next_steps: Vec::new(),
             receipts: Vec::new(),
             receipt_note: None,

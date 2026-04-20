@@ -295,3 +295,89 @@ fn record_dispatch_appends_post_dispatch_delta_matching_final_state() {
     assert!(content.contains(&format!("- **Dispatch count**: {dispatch_count}")));
     assert!(content.contains(&format!("- **Last-cycle summary**: {summary}")));
 }
+
+#[test]
+fn worklog_generation_includes_post_dispatch_delta_for_current_cycle_dispatches() {
+    let repo_root = TempDir::new("write-entry-closeout-post-dispatch-delta");
+    init_git_repo(&repo_root.path);
+    write_file(
+        &repo_root.path.join("docs/state.json"),
+        r##"{
+  "agent_sessions": [
+    {
+      "issue": 701,
+      "title": "Current cycle dispatch",
+      "dispatched_at": "2026-03-07T12:15:00Z",
+      "model": "gpt-5.4",
+      "status": "in_flight"
+    },
+    {
+      "issue": 699,
+      "title": "Previous cycle dispatch",
+      "dispatched_at": "2026-03-07T11:45:00Z",
+      "model": "gpt-5.4",
+      "status": "merged",
+      "merged_at": "2026-03-07T11:55:00Z"
+    }
+  ],
+  "in_flight_sessions": 1,
+  "last_cycle": {
+    "number": 164,
+    "timestamp": "2026-03-07T12:20:00Z",
+    "summary": "1 dispatch, 0 merges"
+  },
+  "cycle_phase": {
+    "cycle": 164,
+    "phase": "close_out",
+    "phase_entered_at": "2026-03-07T12:00:00Z"
+  },
+  "review_agent": {
+    "history": []
+  },
+  "field_inventory": {
+    "fields": {
+      "cycle_phase": {"last_refreshed": "cycle 163"},
+      "copilot_metrics.in_flight": {"last_refreshed": "cycle 163"},
+      "copilot_metrics.dispatch_to_pr_rate": {"last_refreshed": "cycle 163"},
+      "copilot_metrics.pr_merge_rate": {"last_refreshed": "cycle 163"}
+    }
+  },
+  "tool_pipeline": {
+    "c5_5_gate": {
+      "cycle": 164,
+      "status": "PASS",
+      "needs_reverify": false
+    }
+  },
+  "publish_gate": {
+    "status": "published"
+  }
+}
+"##,
+    );
+
+    let worklog_path = run_write_entry(
+        &repo_root.path,
+        &[
+            "--repo-root",
+            repo_root.path.to_str().unwrap(),
+            "worklog",
+            "--title",
+            "closeout",
+            "--cycle",
+            "164",
+            "--done",
+            "Closed out the cycle.",
+            "--pipeline",
+            "PASS",
+            "--publish-gate",
+            "published",
+        ],
+    );
+
+    let content = fs::read_to_string(worklog_path).unwrap();
+    assert!(content.contains("## Post-dispatch delta"));
+    assert!(content.contains("- **In-flight agent sessions**: 1"));
+    assert!(content.contains("- **Dispatch count**: 1 dispatch"));
+    assert!(content.contains("- **Last-cycle summary**: 1 dispatch, 0 merges"));
+}
