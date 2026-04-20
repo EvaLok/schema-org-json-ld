@@ -11347,10 +11347,10 @@
           "added_cycle": 493,
           "category": "state-integrity/last-cycle-summary-stale",
           "chosen_path": "structural-fix",
-          "rationale": "Sub-category entries per audit #417 sub-categorization adoption | Cycle 494: rollback of cycle 493 refresh — cycle 493 review F1 (code-change-quality) reproduces structural defect; #2514 dispatched to fix and add real-flow regression test | Cycle 497: refreshed via PR(s) [#2515] — Runtime verified cycle 497 close-out: commit 33cdbb1c state(cycle-complete-phase) cycle 497 phase -> complete landed, last_cycle.summary resync recorded '1 dispatch, 2 merges (PR #2515, PR #2525)'. dispatch-review::record_created_issue fix path executed end-to-end with correct state mutations. | Cycle 513: refreshed via PR(s) [#2582]",
+          "rationale": "Sub-category entries per audit #417 sub-categorization adoption | Cycle 494: rollback of cycle 493 refresh — cycle 493 review F1 (code-change-quality) reproduces structural defect; #2514 dispatched to fix and add real-flow regression test | Cycle 497: refreshed via PR(s) [#2515] — Runtime verified cycle 497 close-out: commit 33cdbb1c state(cycle-complete-phase) cycle 497 phase -> complete landed, last_cycle.summary resync recorded '1 dispatch, 2 merges (PR #2515, PR #2525)'. dispatch-review::record_created_issue fix path executed end-to-end with correct state mutations. | Cycle 513: refreshed via PR(s) [#2582] | Cycle 519: refreshed via PR(s) [#2609] — PR #2609 guards sync_last_cycle_summary_after_dispatch behind phase check (skip when close_out/complete); new tests real_flow_cycle_493 and real_flow_cycle_495 assert sealed last_cycle snapshot is preserved across post-close-out review meta-dispatches.",
           "response_type": "structural-fix",
-          "updated_cycle": 513,
-          "verification_cycle": 513
+          "updated_cycle": 519,
+          "verification_cycle": 519
         }
       ]
     },
