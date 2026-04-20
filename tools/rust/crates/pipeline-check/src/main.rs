@@ -3538,11 +3538,13 @@ fn verify_post_dispatch_delta_present(repo_root: &Path) -> StepReport {
 // are immutable and predate the structural fix, so the detector skips them.
 // Bumped from 515 → 517 in cycle 516 because the cycle 515 fix only covered the
 // unit-tested code path; the production close-out path (slug-rename + sibling
-// record-dispatch) still bypassed the worklog sync. Real fix dispatched as
-// issue #2600. Cycles 515 and 516 are skipped (515 immutable; 516 worklog written
-// before #2600 lands). Bump back down once #2600 merges and a clean cycle proves
-// the production path works end-to-end.
-const POST_DISPATCH_DELTA_FIRST_APPLICABLE_PREVIOUS_CYCLE: u64 = 517;
+// record-dispatch) still bypassed the worklog sync. Bumped from 517 → 520 in
+// cycle 520 because cycle 519's worklog was frozen before #2614 landed — the
+// write-entry close-out path that generates the post-dispatch delta section
+// from state.json::agent_sessions was added by PR #2614 (merged cycle 520).
+// Cycle 519 is skipped (worklog written before #2614 lands). Bump back down
+// once a clean cycle proves the new write-entry path works end-to-end.
+const POST_DISPATCH_DELTA_FIRST_APPLICABLE_PREVIOUS_CYCLE: u64 = 520;
 
 fn post_dispatch_delta_presence_assessment(repo_root: &Path) -> Result<StepAssessment, String> {
     let current_cycle = current_cycle_from_state(repo_root)?;
