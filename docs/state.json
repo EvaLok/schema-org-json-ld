@@ -10872,6 +10872,18 @@
       "deadline_cycle": 523,
       "deferred_cycle": 518,
       "resolved": false
+    },
+    {
+      "category": "journal-quality",
+      "deadline_cycle": 525,
+      "deferred_cycle": 520,
+      "resolved": false
+    },
+    {
+      "category": "worklog-accuracy",
+      "deadline_cycle": 525,
+      "deferred_cycle": 520,
+      "resolved": false
     }
   ],
   "dispatch_log_latest": "#2619 [Cycle Review] Cycle 520 end-of-cycle review (cycle 520)",
@@ -11053,7 +11065,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 520"
+        "last_refreshed": "cycle 521"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -18632,9 +18644,43 @@
         "ignored": 0,
         "note": "F1 state-integrity deferred (chronic, capacity-blocked on #2542/#2293). F2 worklog-accuracy dispatch_created via #2613/PR #2614 (upgrade to actioned when PR merges). F3 process-adherence deferred — recurrence-escalation triggered; step-ordering checker upgrade Warn->Fail tracked for earliest available dispatch slot.",
         "review_issue": 2615
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "journal-quality",
+          "process-adherence",
+          "state-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 520,
+        "deferred": 4,
+        "finding_count": 4,
+        "finding_dispositions": [
+          {
+            "category": "state-integrity",
+            "disposition": "deferred"
+          },
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "deferred"
+          },
+          {
+            "category": "process-adherence",
+            "disposition": "deferred"
+          }
+        ],
+        "ignored": 0,
+        "note": "All 4 findings deferred: dispatch-task gate blocked by chronic-category-currency FAIL (re-posed question #2622). F4 process-adherence recurrence-escalation (2+ consecutive reviews) is capacity-blocked pending Eva response. Cycle 520 commitment (1) — dispatch #2618 via record-dispatch — NOT_FOLLOWED due to gate deadlock; gh api bypass rejected per cycle 520 guidance.",
+        "review_issue": 2619
       }
     ],
-    "last_review_cycle": 519
+    "last_review_cycle": 520
   },
   "review_dispatch_consecutive": 3,
   "review_events_verified_through_cycle": 520,
