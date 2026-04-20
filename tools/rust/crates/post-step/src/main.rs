@@ -13,6 +13,13 @@ const VALID_STEP_IDS: [&str; 38] = [
     "5.9", "5.10", "5.11", "5.12", "5.13", "6", "7", "8", "9", "10", "C1", "C2", "C3", "C4.1",
     "C4.5", "C4.7", "C5", "C5.1", "C5.5", "C5.6", "C6", "C7", "C8",
 ];
+/// Mandatory step IDs in checklist order. When posting a step, all mandatory predecessors
+/// must already be present on the issue. These are the step IDs from MANDATORY_STEPS in
+/// pipeline-check, without the effective-from-cycle thresholds.
+const MANDATORY_STEP_IDS: &[&str] = &[
+    "0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9", "C1", "C2", "C3",
+    "C4.1", "C4.5", "C5", "C5.1", "C5.5", "C6", "C7", "C8",
+];
 
 #[derive(Parser, Debug)]
 #[command(name = "post-step")]
@@ -106,6 +113,7 @@ fn execute(cli: &Cli, runner: &dyn CommentPoster) -> Result<String, String> {
 				cli.issue
 			));
         }
+        check_step_ordering(&existing_comments, step)?;
     }
 
     runner.post_comment(cli.issue, &comment)?;
@@ -272,6 +280,33 @@ fn has_matching_step_comment(existing_comments: &[String], step: &str) -> bool {
             line.starts_with(&format!("> **{ORCHESTRATOR_SIGNATURE}** | Cycle "))
                 && line.ends_with(&expected_suffix)
         })
+}
+
+/// Returns an error if posting `step` would create a checklist ordering gap: a mandatory
+/// predecessor step has not yet been posted on the issue. Bypass with --force.
+fn check_step_ordering(existing_comments: &[String], step: &str) -> Result<(), String> {
+    let step_index = match VALID_STEP_IDS.iter().position(|&s| s == step) {
+        Some(idx) => idx,
+        None => return Ok(()), // non-standard step; skip ordering check
+    };
+
+    // Collect mandatory steps that come before `step` in checklist order and are absent.
+    let missing: Vec<&str> = VALID_STEP_IDS[..step_index]
+        .iter()
+        .copied()
+        .filter(|&s| MANDATORY_STEP_IDS.contains(&s))
+        .filter(|&s| !has_matching_step_comment(existing_comments, s))
+        .collect();
+
+    if missing.is_empty() {
+        return Ok(());
+    }
+
+    Err(format!(
+        "Cannot post step {step}: mandatory predecessor step(s) not yet posted: [{}]. \
+         Post those steps first, or use --force to override.",
+        missing.join(", ")
+    ))
 }
 
 trait CommentPoster {
@@ -1065,5 +1100,129 @@ mod tests {
             .iter()
             .filter_map(|comment| comment.get("body").and_then(Value::as_str))
             .collect()
+    }
+
+    // --- Ordering enforcement tests ---
+
+    #[test]
+    fn check_step_ordering_allows_step_0_with_no_existing_comments() {
+        // Step 0 has no mandatory predecessors, so it's always allowed.
+        assert!(check_step_ordering(&[], "0").is_ok());
+    }
+
+    #[test]
+    fn check_step_ordering_allows_step_1_when_predecessor_0_is_present() {
+        let existing = vec![
+            "> **[main-orchestrator]** | Cycle 198 | Step 0\n\n### Init\n\nDone.".to_string(),
+            "> **[main-orchestrator]** | Cycle 198 | Step 0.5\n\n### Input scan\n\nDone."
+                .to_string(),
+            "> **[main-orchestrator]** | Cycle 198 | Step 0.6\n\n### Scan\n\nDone.".to_string(),
+        ];
+        assert!(check_step_ordering(&existing, "1").is_ok());
+    }
+
+    #[test]
+    fn check_step_ordering_rejects_step_4_when_predecessors_missing() {
+        // Posting step 4 when 0.5, 0.6, 1, 1.1, 2, 3 haven't been posted yet.
+        let existing = vec![
+            "> **[main-orchestrator]** | Cycle 198 | Step 0\n\n### Init\n\nDone.".to_string(),
+        ];
+        let err = check_step_ordering(&existing, "4").expect_err("should fail ordering check");
+        assert!(err.contains("Cannot post step 4"));
+        assert!(err.contains("0.5"));
+        assert!(err.contains("3"));
+    }
+
+    #[test]
+    fn check_step_ordering_rejects_step_7_when_step_5_and_6_missing() {
+        // Posting step 7 when 5 and 6 haven't been posted.
+        let mandatory_up_to_4 = [
+            "0", "0.5", "0.6", "1", "1.1", "2", "3", "4",
+        ];
+        let existing: Vec<String> = mandatory_up_to_4
+            .iter()
+            .map(|s| {
+                format!(
+                    "> **[main-orchestrator]** | Cycle 198 | Step {s}\n\n### Title\n\nDone."
+                )
+            })
+            .collect();
+        let err = check_step_ordering(&existing, "7").expect_err("should fail ordering check");
+        assert!(err.contains("Cannot post step 7"));
+        assert!(err.contains("5"));
+        assert!(err.contains("6"));
+    }
+
+    #[test]
+    fn check_step_ordering_allows_step_4_when_all_predecessors_present() {
+        let mandatory_predecessors = ["0", "0.5", "0.6", "1", "1.1", "2", "3"];
+        let existing: Vec<String> = mandatory_predecessors
+            .iter()
+            .map(|s| {
+                format!(
+                    "> **[main-orchestrator]** | Cycle 198 | Step {s}\n\n### Title\n\nDone."
+                )
+            })
+            .collect();
+        assert!(check_step_ordering(&existing, "4").is_ok());
+    }
+
+    #[test]
+    fn execute_rejects_out_of_order_step() {
+        let repo_root = temp_repo_root("post-step-ordering-reject");
+        write_state_json(&repo_root, r#"{"last_cycle":{"number":198}}"#);
+        let cli = Cli {
+            issue: 834,
+            step: "4".to_string(),
+            title: "Pipeline check".to_string(),
+            body: Some("Pipeline passed.".to_string()),
+            body_file: None,
+            body_stdin: false,
+            force: false,
+            skip_validation: false,
+            skip_body_validation: false,
+            repo_root: repo_root.clone(),
+        };
+        // Only step 0 posted; mandatory predecessors 0.5, 0.6, 1, 1.1, 2, 3 are missing.
+        let poster = RecordingPoster::with_existing_comments(&[
+            "> **[main-orchestrator]** | Cycle 198 | Step 0\n\n### Init\n\nDone.",
+        ]);
+
+        let error = execute(&cli, &poster).expect_err("out-of-order post should fail");
+
+        assert!(error.contains("Cannot post step 4"));
+        assert!(poster.posted_bodies().is_empty());
+    }
+
+    #[test]
+    fn execute_allows_out_of_order_step_with_force() {
+        let repo_root = temp_repo_root("post-step-ordering-force");
+        write_state_json(&repo_root, r#"{"last_cycle":{"number":198}}"#);
+        let cli = Cli {
+            issue: 834,
+            step: "4".to_string(),
+            title: "Pipeline check".to_string(),
+            body: Some("Pipeline passed.".to_string()),
+            body_file: None,
+            body_stdin: false,
+            force: true,
+            skip_validation: false,
+            skip_body_validation: false,
+            repo_root: repo_root.clone(),
+        };
+        let poster = RecordingPoster::with_existing_comments(&[
+            "> **[main-orchestrator]** | Cycle 198 | Step 0\n\n### Init\n\nDone.",
+        ]);
+
+        let result = execute(&cli, &poster).expect("--force should bypass ordering check");
+
+        assert_eq!(result, "Step 4 posted to EvaLok/schema-org-json-ld#834");
+        assert_eq!(poster.posted_bodies().len(), 1);
+    }
+
+    #[test]
+    fn check_step_ordering_skips_non_standard_step_ids() {
+        // Non-standard steps (not in VALID_STEP_IDS) bypass the ordering check.
+        assert!(check_step_ordering(&[], "custom-step").is_ok());
     }
 }
