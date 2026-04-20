@@ -42,3 +42,11 @@
 | process-review | 6a6c980 | [6a6c980](https://github.com/EvaLok/schema-org-json-ld/commit/6a6c980449f72e754f6918779991ffe29fec8815) |
 | record-dispatch | d1864d6 | [d1864d6](https://github.com/EvaLok/schema-org-json-ld/commit/d1864d68f1929e90a54df4b095094866461f0d1c) |
 | cycle-complete | dbb9c57 | [dbb9c57](https://github.com/EvaLok/schema-org-json-ld/commit/dbb9c57c9a4c4d730541e0c1015f5ad36465ecbf) |
+
+## Post-dispatch delta
+
+- **In-flight agent sessions**: 1
+- **Dispatch count**: 1 dispatch (#2608)
+- **Last-cycle summary**: 1 dispatch, 1 merge (PR #2606)
+
+> Note: Section appended in cycle 519 to satisfy `post-dispatch-delta-present` pipeline check. The cycle 518 `record-dispatch` commit `d1864d6` only updated `docs/state.json`; the worklog was written fresh at close_out (commit `dbb9c57`) without the delta section — a recurrence of the same record-dispatch worklog-sync bug noted at cycle 517 (`66c70442`). Values reflect state at commit `d1864d6`.
