@@ -1097,11 +1097,12 @@ fn derive_post_dispatch_delta(
     let Some(state) = state else {
         return Ok(None);
     };
-    if !state
+    let dispatched_timestamps = state
         .agent_sessions
         .iter()
-        .any(|session| session.dispatched_at.as_deref().is_some())
-    {
+        .filter_map(|session| session.dispatched_at.as_deref())
+        .collect::<Vec<_>>();
+    if dispatched_timestamps.is_empty() {
         return Ok(None);
     }
 
@@ -1119,10 +1120,7 @@ fn derive_post_dispatch_delta(
         "docs/state.json cycle_phase.phase_entered_at",
     )?;
     let mut has_current_cycle_dispatch = false;
-    for session in &state.agent_sessions {
-        let Some(timestamp) = session.dispatched_at.as_deref() else {
-            continue;
-        };
+    for timestamp in dispatched_timestamps {
         if parse_timestamp(timestamp, "agent_sessions[].dispatched_at")? >= cycle_start {
             has_current_cycle_dispatch = true;
             break;
@@ -1139,9 +1137,15 @@ fn derive_post_dispatch_delta(
         .map(str::trim)
         .filter(|summary| !summary.is_empty())
     else {
+        eprintln!(
+            "write-entry: skipping post-dispatch delta because docs/state.json last_cycle.summary is missing"
+        );
         return Ok(None);
     };
     let Ok(in_flight_sessions) = state_extra_in_flight_sessions(Some(state)) else {
+        eprintln!(
+            "write-entry: skipping post-dispatch delta because docs/state.json in_flight_sessions is missing"
+        );
         return Ok(None);
     };
 
