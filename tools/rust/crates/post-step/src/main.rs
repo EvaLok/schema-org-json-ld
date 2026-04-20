@@ -13,8 +13,9 @@ const VALID_STEP_IDS: [&str; 38] = [
     "5.9", "5.10", "5.11", "5.12", "5.13", "6", "7", "8", "9", "10", "C1", "C2", "C3", "C4.1",
     "C4.5", "C4.7", "C5", "C5.1", "C5.5", "C5.6", "C6", "C7", "C8",
 ];
-/// Mandatory steps in checklist order. When posting a step, all mandatory predecessors
-/// must already be present on the issue. Mirrors MANDATORY_STEPS in pipeline-check.
+/// Mandatory step IDs in checklist order. When posting a step, all mandatory predecessors
+/// must already be present on the issue. These are the step IDs from MANDATORY_STEPS in
+/// pipeline-check, without the effective-from-cycle thresholds.
 const MANDATORY_STEP_IDS: &[&str] = &[
     "0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9", "C1", "C2", "C3",
     "C4.1", "C4.5", "C5", "C5.1", "C5.5", "C6", "C7", "C8",

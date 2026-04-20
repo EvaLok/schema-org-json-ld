@@ -6,10 +6,6 @@ use serde_json::{json, Value};
 use state_schema::{current_utc_timestamp, read_state_value, write_state_value, StepCommentGap};
 use std::path::Path;
 
-#[allow(dead_code)]
-const HOUSEKEEPING_STEP_ID: &str = "7";
-#[allow(dead_code)]
-const CONCURRENCY_STEP_ID: &str = "8";
 const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const AGENT_SESSIONS_LIFECYCLE_STEP_NAME: &str = "agent-sessions-lifecycle";
 const CASCADE_PREFIX: &str = "Cascade from cycle ";
@@ -643,12 +639,6 @@ mod tests {
     use serde_json::json;
     use std::fs;
     use std::sync::atomic::{AtomicU64, Ordering};
-
-    #[test]
-    fn startup_step_ids_match_checklist_sections() {
-        assert_eq!(HOUSEKEEPING_STEP_ID, "7");
-        assert_eq!(CONCURRENCY_STEP_ID, "8");
-    }
 
     #[test]
     fn format_startup_brief_with_full_data() {
