@@ -6,8 +6,12 @@
 
   <automation-note>
     bash tools/cycle-runner startup --issue {N}
-    Auto-posts step comments for S0, S4, S7, S8. Outputs JSON situation report.
-    You handle judgment steps: S0.5, S0.6, S1, S1.1, S2, S3, S5, S6, S9.
+    Auto-posts step comment for S0 only. Outputs JSON situation report containing
+    pre-formatted bodies for steps 4, 7, 8 as `step_4_body`, `step_7_body`,
+    `step_8_body` — you post these manually at their correct checklist positions.
+    You handle judgment steps: S0.5, S0.6, S1, S1.1, S2, S3, S4, S5, S6, S7, S8, S9.
+    post-step now enforces checklist ordering: mandatory predecessors must be
+    posted before you can post a later step (use --force to override).
     Each judgment step = one bash tools/post-step call = one comment. NO batching.
   </automation-note>
 
@@ -198,8 +202,11 @@
 
   <!-- Steps 4-5: QC and Audit (automated data, manual judgment) -->
   <step id="S4" title="Check QC repo"
-        automation="partial" post-step="auto"
-        prerequisite="S0">
+        automation="partial" post-step="manual"
+        prerequisite="S3">
+    <note>Post step 4 manually using `step_4_body` from the cycle-runner startup
+      situation report (pipeline-check summary). Run `bash tools/cross-repo
+      process-qc` to poll for new reports if the situation report indicates.</note>
     <action>Poll qc-outbound issues on QC repo (verify author EvaLok).</action>
     <action>Process unprocessed reports: read failures, create qc-inbound issue, investigate, fix.</action>
     <action>Check pending QC-REQUESTs for QC-ACK responses.</action>
@@ -255,8 +262,10 @@
   </step>
 
   <step id="S7" title="Housekeeping"
-        automation="partial" post-step="auto"
-        prerequisite="S0">
+        automation="partial" post-step="manual"
+        prerequisite="S6">
+    <note>Post step 7 manually using `step_7_body` from the cycle-runner startup
+      situation report (housekeeping-scan summary).</note>
     <action>Close stale issues, orphan PRs, dead branches.</action>
     <action>Audit-inbound lifecycle: close processed issues older than 1 cycle.</action>
     <action>QC-outbound lifecycle: close resolved request issues.</action>
@@ -264,8 +273,10 @@
   </step>
 
   <step id="S8" title="Check concurrency"
-        automation="full" post-step="auto"
-        prerequisite="S0">
+        automation="partial" post-step="manual"
+        prerequisite="S7">
+    <note>Post step 8 manually using `step_8_body` from the cycle-runner startup
+      situation report (cycle-status summary — includes concurrency count).</note>
     <threshold ref="max-concurrent-sessions"/>
     <action>Count open Copilot issues + draft PRs. Do NOT dispatch if >= 2.</action>
     <substep id="S8.conflicts" title="Shared file conflict check">
