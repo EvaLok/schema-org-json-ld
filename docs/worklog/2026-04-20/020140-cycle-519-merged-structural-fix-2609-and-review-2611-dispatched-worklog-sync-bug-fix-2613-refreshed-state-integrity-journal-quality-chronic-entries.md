@@ -22,12 +22,11 @@
 - **`tools/rust/crates/record-dispatch/tests/real_flow_cycle_493.rs`**: modified
 - **`tools/rust/crates/write-entry/src/main.rs`**: modified
 
-## Pre-dispatch state
+## Cycle state
 
-*Snapshot before review dispatch — final counters may differ after C6.*
 
 - **In-flight agent sessions**: 0
-- **Pipeline status**: FAIL (chronic-category-currency still FAILs with 7 residual stale entries not addressable this cycle — process-adherence, receipt-integrity, worklog-accuracy, code-quality, review-evidence, code-change-quality, worklog-accuracy/scope-boundary — all queued behind structural fixes blocked by the [#2542](https://github.com/EvaLok/schema-org-json-ld/issues/2542) dispatch-task gate deadlock)
+- **Pipeline status**: PASS (3 warnings)
 - **Publish gate**: published
 
 ## Next steps
