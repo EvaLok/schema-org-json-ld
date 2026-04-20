@@ -9797,6 +9797,13 @@
       "pr": 2614,
       "status": "merged",
       "title": "Backfilled: PR #2614"
+    },
+    {
+      "dispatched_at": "2026-04-20T06:23:46Z",
+      "issue": 2619,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 520 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -10067,9 +10074,10 @@
     2617
   ],
   "cycle_phase": {
+    "completed_at": "2026-04-20T06:23:46Z",
     "cycle": 520,
-    "phase": "close_out",
-    "phase_entered_at": "2026-04-20T06:17:23Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-04-20T06:23:46Z"
   },
   "cycles_since_last_forward_work": {
     "added_in_cycle": 411,
@@ -10865,7 +10873,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2615 [Cycle Review] Cycle 519 end-of-cycle review (cycle 519)",
+  "dispatch_log_latest": "#2619 [Cycle Review] Cycle 520 end-of-cycle review (cycle 520)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -11136,13 +11144,13 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 18,
     "issue": 2617,
     "number": 520,
-    "summary": "0 dispatches, 2 merges (PR #2614, PR #2616)",
-    "timestamp": "2026-04-20T06:17:23Z"
+    "summary": "1 dispatch, 2 merges (PR #2614, PR #2616)",
+    "timestamp": "2026-04-20T06:23:46Z"
   },
   "last_eva_comment_check": "2026-04-20T06:17:23Z",
   "last_tool_audit_cycle": 403,
@@ -18627,7 +18635,7 @@
     ],
     "last_review_cycle": 519
   },
-  "review_dispatch_consecutive": 2,
+  "review_dispatch_consecutive": 3,
   "review_events_verified_through_cycle": 520,
   "schema_status": {
     "directory_layout": {
