@@ -9773,8 +9773,10 @@
     {
       "dispatched_at": "2026-04-19T21:55:24Z",
       "issue": 2610,
+      "merged_at": "2026-04-20T01:53:06Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2611,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 518 end-of-cycle review"
     }
   ],
@@ -10954,7 +10956,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 518"
+        "last_refreshed": "cycle 519"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -11102,12 +11104,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 6,
     "issue": 2612,
     "number": 519,
-    "summary": "1 dispatch (#2608), 1 merge (PR #2606)",
+    "summary": "0 dispatches, 1 merges",
     "timestamp": "2026-04-20T01:44:18Z"
   },
   "last_eva_comment_check": "2026-04-20T01:44:18Z",
