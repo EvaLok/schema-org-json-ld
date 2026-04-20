@@ -9766,8 +9766,10 @@
       ],
       "dispatched_at": "2026-04-19T21:37:52Z",
       "issue": 2608,
+      "merged_at": "2026-04-20T01:53:34Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2609,
+      "status": "merged",
       "title": "Structural fix: freeze last_cycle after cycle-complete, commit verify-review-events, fix standing-Eva-blockers state path"
     },
     {
@@ -11104,12 +11106,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 6,
     "issue": 2612,
     "number": 519,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-20T01:44:18Z"
   },
   "last_eva_comment_check": "2026-04-20T01:44:18Z",
