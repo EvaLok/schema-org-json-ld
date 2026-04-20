@@ -9815,6 +9815,14 @@
       "pr": 2625,
       "status": "merged",
       "title": "[Cycle Review] Cycle 521 end-of-cycle review"
+    },
+    {
+      "backfilled": true,
+      "issue": 2618,
+      "merged_at": "2026-04-20T21:37:59Z",
+      "pr": 2623,
+      "status": "merged",
+      "title": "Backfilled: PR #2623"
     }
   ],
   "audit_dropped": [
@@ -11171,7 +11179,7 @@
     "duration_minutes": 21,
     "issue": 2626,
     "number": 522,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-20T21:25:34Z"
   },
   "last_eva_comment_check": "2026-04-20T21:25:34Z",
