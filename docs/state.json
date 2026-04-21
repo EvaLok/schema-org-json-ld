@@ -10142,9 +10142,10 @@
     2642
   ],
   "cycle_phase": {
+    "completed_at": "2026-04-21T22:03:37Z",
     "cycle": 525,
     "phase": "complete",
-    "phase_entered_at": "2026-04-21T22:03:32Z"
+    "phase_entered_at": "2026-04-21T22:03:37Z"
   },
   "cycles_since_last_forward_work": {
     "added_in_cycle": 411,
