@@ -24,6 +24,7 @@
 
 ## Cycle state
 
+*Snapshot before review dispatch — final counters may differ after C6.*
 - **In-flight agent sessions**: 1
 - **Pipeline status**: FAIL (3 warnings, 6 blocking: state-invariants, chronic-category-currency, doc-validation, review-events-verified, current-cycle-steps, current-cycle-journal-section) — expected pre-C5.5 shape; C5.5 final gate will re-evaluate after close-out commits
 - **Publish gate**: published
