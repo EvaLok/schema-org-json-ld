@@ -9843,6 +9843,12 @@
       "title": "[Cycle Review] Cycle 523 end-of-cycle review"
     },
     {
+      "addresses_findings": [
+        "523:0",
+        "523:1",
+        "523:2",
+        "523:3"
+      ],
       "dispatched_at": "2026-04-21T06:03:42Z",
       "issue": 2636,
       "model": "gpt-5.4",
