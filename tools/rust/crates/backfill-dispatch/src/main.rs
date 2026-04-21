@@ -103,6 +103,12 @@ fn run_with_runner(cli: Cli, runner: &dyn GithubIssueRunner) -> Result<(), Strin
             cli.issue
         ));
     }
+    if !issue.state.eq_ignore_ascii_case("open") {
+        return Err(format!(
+            "issue #{} is {}, but backfill-dispatch only supports open issues so it does not guess a terminal ledger state",
+            cli.issue, issue.state
+        ));
+    }
 
     let mut state_value = read_state_value(&cli.repo_root)?;
     if state_value
@@ -142,10 +148,6 @@ fn run_with_runner(cli: Cli, runner: &dyn GithubIssueRunner) -> Result<(), Strin
         ));
     }
     annotate_backfilled_session(&mut state_value, cli.issue, cli.reason.as_deref())?;
-    if issue.state.eq_ignore_ascii_case("closed") {
-        set_session_status(&mut state_value, cli.issue, "closed_without_pr")?;
-        refresh_in_flight_sessions(&mut state_value)?;
-    }
     if should_sync_last_cycle_summary(&current_phase) {
         sync_last_cycle_summary_after_dispatch(&mut state_value, patch.current_cycle)?;
     }
@@ -199,41 +201,6 @@ fn annotate_backfilled_session(
     if let Some(reason) = reason.map(str::trim).filter(|reason| !reason.is_empty()) {
         session.insert("backfill_reason".to_string(), json!(reason));
     }
-    Ok(())
-}
-
-fn set_session_status(state: &mut Value, issue: u64, status: &str) -> Result<(), String> {
-    let session = state
-        .pointer_mut("/agent_sessions")
-        .and_then(Value::as_array_mut)
-        .and_then(|sessions| {
-            sessions
-                .iter_mut()
-                .find(|session| session.get("issue").and_then(Value::as_u64) == Some(issue))
-        })
-        .and_then(Value::as_object_mut)
-        .ok_or_else(|| format!("failed to locate agent_sessions entry for #{}", issue))?;
-    session.insert("status".to_string(), json!(status));
-    Ok(())
-}
-
-fn refresh_in_flight_sessions(state: &mut Value) -> Result<(), String> {
-    let sessions = state
-        .pointer("/agent_sessions")
-        .and_then(Value::as_array)
-        .ok_or_else(|| "missing array /agent_sessions in docs/state.json".to_string())?;
-    let in_flight = sessions.iter().filter(|session| {
-        matches!(
-            session.get("status").and_then(Value::as_str),
-            Some("in_flight") | Some("dispatched")
-        )
-    });
-    let count = i64::try_from(in_flight.count())
-        .map_err(|_| "in-flight session count does not fit in i64".to_string())?;
-    state
-        .as_object_mut()
-        .ok_or_else(|| "docs/state.json root must be an object".to_string())?
-        .insert("in_flight_sessions".to_string(), json!(count));
     Ok(())
 }
 
@@ -431,6 +398,35 @@ mod tests {
         .expect_err("cycle mismatch should fail");
 
         assert!(error.contains("does not match docs/state.json current cycle"));
+    }
+
+    #[test]
+    fn backfill_dispatch_rejects_closed_issue() {
+        let repo = TempRepo::new();
+        repo.init();
+        let runner = MockGithubIssueRunner {
+            result: Ok(GithubIssue {
+                number: 2631,
+                title: "Fix close-out ordering".to_string(),
+                created_at: "2026-04-21T02:10:00Z".to_string(),
+                state: "closed".to_string(),
+                pull_request: None,
+            }),
+        };
+
+        let error = run_with_runner(
+            Cli {
+                issue: 2631,
+                cycle: 523,
+                reason: None,
+                repo_root: repo.path().to_path_buf(),
+                dry_run: false,
+            },
+            &runner,
+        )
+        .expect_err("closed issue should fail closed");
+
+        assert!(error.contains("only supports open issues"));
     }
 
     fn git_success<I, S>(repo_root: &Path, args: I)

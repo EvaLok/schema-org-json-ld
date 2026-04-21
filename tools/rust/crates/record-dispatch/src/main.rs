@@ -252,10 +252,7 @@ fn prepare_post_dispatch_worklog_update(
         last_cycle_summary,
     );
     if updated == content {
-        return Ok(Some(WorklogUpdate {
-            path: worklog_path,
-            content,
-        }));
+        return Ok(None);
     }
     Ok(Some(WorklogUpdate {
         path: worklog_path,
@@ -369,8 +366,12 @@ fn narrated_dispatch_issue_numbers(content: &str) -> Vec<u64> {
     let mut issues = Vec::new();
     let mut seen = BTreeSet::new();
     for line in section.lines() {
-        let trimmed = line.trim();
-        let Some(rest) = trimmed.strip_prefix("- Dispatched [#") else {
+        let trimmed = line.trim_start();
+        let bullet_stripped = trimmed
+            .strip_prefix("- ")
+            .or_else(|| trimmed.strip_prefix("* "))
+            .unwrap_or(trimmed);
+        let Some(rest) = bullet_stripped.strip_prefix("Dispatched [#") else {
             continue;
         };
         let digits = rest
