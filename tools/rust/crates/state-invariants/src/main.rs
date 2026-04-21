@@ -97,6 +97,7 @@ fn run_checks(repo_root: &Path, state: &StateJson) -> Report {
         check_publish_gate_consistency(state),
         check_last_cycle_consistency(state),
         check_last_cycle_summary_receipts(repo_root, state),
+        check_completed_cycle_snapshot_matches_receipt(repo_root, state),
         check_future_cycle_freshness(state),
         check_cycle_phase_consistency(state),
         check_chronic_categories(state),
@@ -634,6 +635,56 @@ fn check_last_cycle_summary_receipts(repo_root: &Path, state: &StateJson) -> Che
     }
 }
 
+fn check_completed_cycle_snapshot_matches_receipt(
+    repo_root: &Path,
+    state: &StateJson,
+) -> CheckResult {
+    if state.cycle_phase.phase.as_deref() != Some("complete") {
+        return pass("completed_cycle_snapshot_matches_receipt");
+    }
+    let Some(cycle) = state.cycle_phase.cycle else {
+        return fail(
+            "completed_cycle_snapshot_matches_receipt",
+            "cycle_phase.phase is complete but cycle_phase.cycle is missing".to_string(),
+        );
+    };
+    let receipt_state = match read_cycle_complete_state(repo_root, cycle) {
+        Ok(Some(state)) => state,
+        Ok(None) => {
+            return fail(
+                "completed_cycle_snapshot_matches_receipt",
+                format!("missing state(cycle-complete) receipt for cycle {}", cycle),
+            )
+        }
+        Err(error) => return fail("completed_cycle_snapshot_matches_receipt", error),
+    };
+    let live_completed_at = state.cycle_phase.completed_at.as_deref();
+    let receipt_completed_at = receipt_state.cycle_phase.completed_at.as_deref();
+    if live_completed_at != receipt_completed_at {
+        return fail(
+            "completed_cycle_snapshot_matches_receipt",
+            format!(
+                "cycle_phase.completed_at mismatch for cycle {}: live={:?}, receipt={:?}",
+                cycle, live_completed_at, receipt_completed_at
+            ),
+        );
+    }
+    if state.last_cycle.extra.get("number").and_then(Value::as_u64) == Some(cycle) {
+        let live_timestamp = state.last_cycle.timestamp.as_deref();
+        let receipt_timestamp = receipt_state.last_cycle.timestamp.as_deref();
+        if live_timestamp != receipt_timestamp {
+            return fail(
+                "completed_cycle_snapshot_matches_receipt",
+                format!(
+                    "last_cycle.timestamp mismatch for cycle {}: live={:?}, receipt={:?}",
+                    cycle, live_timestamp, receipt_timestamp
+                ),
+            );
+        }
+    }
+    pass("completed_cycle_snapshot_matches_receipt")
+}
+
 fn summary_has_zero_dispatches_and_merges(summary: &str) -> bool {
     summary.trim().starts_with("0 dispatches, 0 merges")
 }
@@ -693,6 +744,37 @@ fn count_receipt_activity_for_cycle(
         .count();
 
     Ok((dispatches, merges))
+}
+
+fn read_cycle_complete_state(repo_root: &Path, cycle: u64) -> Result<Option<StateJson>, String> {
+    let cycle_tag = format!("[cycle {}]", cycle);
+    let commit = git_command(
+        repo_root,
+        &[
+            "log",
+            "--format=%H",
+            "--fixed-strings",
+            "--grep",
+            "state(cycle-complete):",
+            "--grep",
+            &cycle_tag,
+            "--all-match",
+            "--max-count=1",
+            "--",
+            "docs/state.json",
+        ],
+    )?;
+    let commit = commit.trim();
+    if commit.is_empty() {
+        return Ok(None);
+    }
+    let payload = git_command(repo_root, &["show", &format!("{commit}:docs/state.json")])?;
+    serde_json::from_str(&payload).map(Some).map_err(|error| {
+        format!(
+            "failed to parse docs/state.json from state(cycle-complete) receipt {}: {}",
+            commit, error
+        )
+    })
 }
 
 fn read_git_commits(repo_root: &Path) -> Result<Vec<GitCommit>, String> {
@@ -2284,6 +2366,110 @@ mod tests {
         assert!(details.contains("0 dispatches"));
         assert!(details.contains("dispatch_log_latest"));
         assert!(details.contains("cycle 198"));
+    }
+
+    #[test]
+    fn completed_cycle_snapshot_matches_receipt_passes_when_live_state_is_unchanged() {
+        let repo_root = temp_repo_root("complete-snapshot-pass");
+        init_git_repo(&repo_root);
+        commit_receipt(
+            &repo_root,
+            "docs/state.json",
+            r#"{
+                "schema_version": 1,
+                "schema_status": {},
+                "agent_sessions": [],
+                "qc_processed": [],
+                "qc_requests_pending": [],
+                "qc_status": {},
+                "blockers": [],
+                "open_questions_for_eva": [],
+                "eva_input_issues": {},
+                "typescript_plan": {},
+                "release": {},
+                "last_cycle": {
+                    "number": 523,
+                    "timestamp": "2026-04-21T02:04:50Z"
+                },
+                "audit_processed": [],
+                "test_count": {},
+                "tool_pipeline": {},
+                "field_inventory": {"fields": {}},
+                "cycle_phase": {
+                    "cycle": 523,
+                    "phase": "complete",
+                    "completed_at": "2026-04-21T02:04:50Z"
+                }
+            }"#,
+            "state(cycle-complete): complete cycle 523 [cycle 523]",
+            "2026-04-21T02:04:50Z",
+        );
+
+        let mut value = minimal_valid_state();
+        value["last_cycle"]["number"] = json!(523);
+        value["last_cycle"]["timestamp"] = json!("2026-04-21T02:04:50Z");
+        value["cycle_phase"] = json!({
+            "cycle": 523,
+            "phase": "complete",
+            "completed_at": "2026-04-21T02:04:50Z"
+        });
+        let state = state_from_json(value);
+
+        let check = check_completed_cycle_snapshot_matches_receipt(&repo_root, &state);
+        assert_eq!(check.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn completed_cycle_snapshot_matches_receipt_fails_when_live_state_drifted() {
+        let repo_root = temp_repo_root("complete-snapshot-fail");
+        init_git_repo(&repo_root);
+        commit_receipt(
+            &repo_root,
+            "docs/state.json",
+            r#"{
+                "schema_version": 1,
+                "schema_status": {},
+                "agent_sessions": [],
+                "qc_processed": [],
+                "qc_requests_pending": [],
+                "qc_status": {},
+                "blockers": [],
+                "open_questions_for_eva": [],
+                "eva_input_issues": {},
+                "typescript_plan": {},
+                "release": {},
+                "last_cycle": {
+                    "number": 523,
+                    "timestamp": "2026-04-21T02:04:50Z"
+                },
+                "audit_processed": [],
+                "test_count": {},
+                "tool_pipeline": {},
+                "field_inventory": {"fields": {}},
+                "cycle_phase": {
+                    "cycle": 523,
+                    "phase": "complete",
+                    "completed_at": "2026-04-21T02:04:50Z"
+                }
+            }"#,
+            "state(cycle-complete): complete cycle 523 [cycle 523]",
+            "2026-04-21T02:04:50Z",
+        );
+
+        let mut value = minimal_valid_state();
+        value["last_cycle"]["number"] = json!(523);
+        value["last_cycle"]["timestamp"] = json!("2026-04-21T02:27:22Z");
+        value["cycle_phase"] = json!({
+            "cycle": 523,
+            "phase": "complete",
+            "completed_at": "2026-04-21T02:27:22Z"
+        });
+        let state = state_from_json(value);
+
+        let check = check_completed_cycle_snapshot_matches_receipt(&repo_root, &state);
+        assert_eq!(check.status, CheckStatus::Fail);
+        let details = check.details.as_deref().unwrap_or_default();
+        assert!(details.contains("completed_at"));
     }
 
     #[test]

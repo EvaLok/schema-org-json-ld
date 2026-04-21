@@ -211,6 +211,7 @@ pub struct DispatchPatch {
 pub struct SealedLastCycleSnapshot {
     summary: Option<serde_json::Value>,
     timestamp: Option<serde_json::Value>,
+    completed_at: Option<serde_json::Value>,
 }
 
 pub fn resolve_model(
@@ -391,9 +392,11 @@ pub fn snapshot_sealed_last_cycle(
         return None;
     }
     let last_cycle = state.pointer("/last_cycle")?.as_object()?;
+    let cycle_phase = state.pointer("/cycle_phase")?.as_object()?;
     Some(SealedLastCycleSnapshot {
         summary: last_cycle.get("summary").cloned(),
         timestamp: last_cycle.get("timestamp").cloned(),
+        completed_at: cycle_phase.get("completed_at").cloned(),
     })
 }
 
@@ -424,7 +427,23 @@ pub fn restore_sealed_last_cycle(
             last_cycle.remove("timestamp");
         }
     }
+    let cycle_phase = state
+        .pointer_mut("/cycle_phase")
+        .and_then(serde_json::Value::as_object_mut)
+        .ok_or_else(|| "missing object /cycle_phase in docs/state.json".to_string())?;
+    match snapshot.completed_at {
+        Some(completed_at) => {
+            cycle_phase.insert("completed_at".to_string(), completed_at);
+        }
+        None => {
+            cycle_phase.remove("completed_at");
+        }
+    }
     Ok(())
+}
+
+pub fn should_sync_last_cycle_summary(current_phase: &str) -> bool {
+    !matches!(current_phase, "close_out" | "complete")
 }
 
 fn merge_duplicate_dispatch_session(
@@ -1012,6 +1031,13 @@ mod tests {
             .as_str()
             .expect("dispatch patch should refresh last_cycle timestamp");
         assert_ne!(updated_timestamp, original_timestamp);
+    }
+
+    #[test]
+    fn should_sync_last_cycle_summary_skips_close_out_and_complete_phases() {
+        assert!(should_sync_last_cycle_summary("work"));
+        assert!(!should_sync_last_cycle_summary("close_out"));
+        assert!(!should_sync_last_cycle_summary("complete"));
     }
 
     #[test]

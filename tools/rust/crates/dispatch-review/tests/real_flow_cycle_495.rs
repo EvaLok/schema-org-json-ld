@@ -18,10 +18,12 @@ fn dispatch_review_replays_cycle_493_close_out_flow_in_record_only_mode() {
     let body_path = repo.write_review_body("Cycle 493 review body");
 
     let before = repo.read_state();
+    let original_summary = before["last_cycle"]["summary"].clone();
     let original_timestamp = before["last_cycle"]["timestamp"]
         .as_str()
         .expect("fixture should include last_cycle timestamp")
         .to_string();
+    let original_completed_at = before.pointer("/cycle_phase/completed_at").cloned();
 
     let output = Command::new(env!("CARGO_BIN_EXE_dispatch-review"))
         .args([
@@ -53,15 +55,15 @@ fn dispatch_review_replays_cycle_493_close_out_flow_in_record_only_mode() {
     );
     assert_eq!(
         after.pointer("/last_cycle/summary"),
-        Some(&serde_json::json!(
-            "1 dispatch, 3 merges (PR #2505, PR #2507, PR #2509)"
-        ))
+        Some(&original_summary)
     );
-    assert_ne!(
-        after
-            .pointer("/last_cycle/timestamp")
-            .and_then(Value::as_str),
-        Some(original_timestamp.as_str())
+    assert_eq!(
+        after.pointer("/last_cycle/timestamp"),
+        Some(&serde_json::json!(original_timestamp))
+    );
+    assert_eq!(
+        after.pointer("/cycle_phase/completed_at"),
+        original_completed_at.as_ref()
     );
     assert_eq!(
         after.pointer("/dispatch_log_latest"),
@@ -84,10 +86,12 @@ fn dispatch_review_replays_cycle_495_close_out_flow_in_record_only_mode() {
     let body_path = repo.write_review_body("Cycle 495 review body");
 
     let before = repo.read_state();
+    let original_summary = before["last_cycle"]["summary"].clone();
     let original_timestamp = before["last_cycle"]["timestamp"]
         .as_str()
         .expect("fixture should include last_cycle timestamp")
         .to_string();
+    let original_completed_at = before.pointer("/cycle_phase/completed_at").cloned();
 
     let output = Command::new(env!("CARGO_BIN_EXE_dispatch-review"))
         .args([
@@ -119,13 +123,15 @@ fn dispatch_review_replays_cycle_495_close_out_flow_in_record_only_mode() {
     );
     assert_eq!(
         after.pointer("/last_cycle/summary"),
-        Some(&serde_json::json!("1 dispatch, 0 merges"))
+        Some(&original_summary)
     );
-    assert_ne!(
-        after
-            .pointer("/last_cycle/timestamp")
-            .and_then(Value::as_str),
-        Some(original_timestamp.as_str())
+    assert_eq!(
+        after.pointer("/last_cycle/timestamp"),
+        Some(&serde_json::json!(original_timestamp))
+    );
+    assert_eq!(
+        after.pointer("/cycle_phase/completed_at"),
+        original_completed_at.as_ref()
     );
     assert_eq!(
         after.pointer("/dispatch_log_latest"),

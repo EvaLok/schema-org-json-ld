@@ -1944,7 +1944,8 @@ fn verify_step_comments(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner
                 };
             }
         };
-    let (found, unexpected, assessed_cycle, scope) = if previous_cycle_observation.found.is_empty() {
+    let (found, unexpected, assessed_cycle, scope) = if previous_cycle_observation.found.is_empty()
+    {
         let current_cycle_observation = match fetch_step_comments_for_issue(runner, issue, cycle) {
             Ok(found) => found,
             Err(error) => {
@@ -2708,7 +2709,9 @@ fn detect_step_comment_id(line: &str, cycle: u64) -> Option<&'static str> {
 
 fn detect_any_step_comment_token(line: &str, cycle: u64) -> Option<&str> {
     let trimmed = line.trim();
-    if trimmed.starts_with(ORCHESTRATOR_SIGNATURE) && !orchestrator_step_comment_matches_cycle(trimmed, cycle) {
+    if trimmed.starts_with(ORCHESTRATOR_SIGNATURE)
+        && !orchestrator_step_comment_matches_cycle(trimmed, cycle)
+    {
         return None;
     }
     let captures = STEP_COMMENT_ID_REGEX.captures(trimmed)?;
@@ -3562,6 +3565,9 @@ fn verify_post_dispatch_delta_present(repo_root: &Path) -> StepReport {
 // CHECKLIST.xml `gate-criteria-change-disclosure` constraint) and NOT a fix.
 // The underlying record-dispatch.sync_post_dispatch_worklog defect remains open
 // in #2627 and should be structurally addressed before cycle 524's close-out.
+// TODO: remove this grandfather once the structural fix has soaked cleanly in
+// production for enough consecutive cycles that cycle 523 can be treated as the
+// last immutable pre-fix boundary rather than a standing exception.
 const POST_DISPATCH_DELTA_FIRST_APPLICABLE_PREVIOUS_CYCLE: u64 = 523;
 
 fn post_dispatch_delta_presence_assessment(repo_root: &Path) -> Result<StepAssessment, String> {
@@ -5330,18 +5336,21 @@ fn adjusted_review_deferred_count(state: &StateJson, entry: &ReviewHistoryEntry)
             .count() as u64;
     }
 
-    entry.finding_dispositions.iter().fold(0_u64, |count, disposition| {
-        if disposition.disposition != "deferred" {
-            return count;
-        }
-        if deferred_disposition_open_state(state, entry.cycle, &disposition.category)
-            .unwrap_or(true)
-        {
-            count + 1
-        } else {
-            count
-        }
-    })
+    entry
+        .finding_dispositions
+        .iter()
+        .fold(0_u64, |count, disposition| {
+            if disposition.disposition != "deferred" {
+                return count;
+            }
+            if deferred_disposition_open_state(state, entry.cycle, &disposition.category)
+                .unwrap_or(true)
+            {
+                count + 1
+            } else {
+                count
+            }
+        })
 }
 
 fn deferred_disposition_open_state(
@@ -6031,19 +6040,22 @@ mod tests {
         fs::write(
             root.join("docs/state.json"),
             json!({
-                "last_cycle": {"number": 517},
-                "cycle_phase": {"cycle": 518}
+                "last_cycle": {"number": 523},
+                "cycle_phase": {"cycle": 524}
             })
             .to_string(),
         )
         .unwrap();
-        fs::create_dir_all(root.join("docs/worklog/2026-04-19")).unwrap();
+        fs::create_dir_all(root.join("docs/worklog/2026-04-21")).unwrap();
         fs::write(
-            root.join("docs/worklog/2026-04-19/094529-cycle-517-summary.md"),
-            "# Cycle 517 — 2026-04-19 09:45 UTC\n\n## Post-dispatch delta\n\n- **In-flight agent sessions**: 1\n- **Dispatch count**: 1 dispatch\n- **Last-cycle summary**: 1 dispatch, 0 merges\n",
+            root.join("docs/worklog/2026-04-21/094529-cycle-523-summary.md"),
+            "# Cycle 523 — 2026-04-21 09:45 UTC\n\n## Post-dispatch delta\n\n- **In-flight agent sessions**: 1\n- **Dispatch count**: 1 dispatch\n- **Last-cycle summary**: 1 dispatch, 0 merges\n",
         )
         .unwrap();
-        commit_all(&root, "state(record-dispatch): #2594 dispatched [cycle 517]");
+        commit_all(
+            &root,
+            "state(record-dispatch): #2633 dispatched [cycle 523]",
+        );
 
         let step = verify_post_dispatch_delta_present(&root);
 
@@ -6052,7 +6064,7 @@ mod tests {
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("cycle 517 worklog includes post-dispatch delta"));
+            .contains("cycle 523 worklog includes post-dispatch delta"));
     }
 
     #[test]
@@ -6068,19 +6080,22 @@ mod tests {
         fs::write(
             root.join("docs/state.json"),
             json!({
-                "last_cycle": {"number": 517},
-                "cycle_phase": {"cycle": 518}
+                "last_cycle": {"number": 523},
+                "cycle_phase": {"cycle": 524}
             })
             .to_string(),
         )
         .unwrap();
-        fs::create_dir_all(root.join("docs/worklog/2026-04-19")).unwrap();
+        fs::create_dir_all(root.join("docs/worklog/2026-04-21")).unwrap();
         fs::write(
-            root.join("docs/worklog/2026-04-19/094529-cycle-517-summary.md"),
-            "# Cycle 517 — 2026-04-19 09:45 UTC\n\n## What was done\n\n- No new dispatches.\n",
+            root.join("docs/worklog/2026-04-21/094529-cycle-523-summary.md"),
+            "# Cycle 523 — 2026-04-21 09:45 UTC\n\n## What was done\n\n- No new dispatches.\n",
         )
         .unwrap();
-        commit_all(&root, "state(record-dispatch): #2594 dispatched [cycle 517]");
+        commit_all(
+            &root,
+            "state(record-dispatch): #2633 dispatched [cycle 523]",
+        );
 
         let step = verify_post_dispatch_delta_present(&root);
 
@@ -6105,13 +6120,13 @@ mod tests {
         fs::write(
             root.join("docs/state.json"),
             json!({
-                "last_cycle": {"number": 517},
-                "cycle_phase": {"cycle": 518}
+                "last_cycle": {"number": 523},
+                "cycle_phase": {"cycle": 524}
             })
             .to_string(),
         )
         .unwrap();
-        commit_all(&root, "state(cycle-start): begin cycle 518 [cycle 518]");
+        commit_all(&root, "state(cycle-start): begin cycle 524 [cycle 524]");
 
         let step = verify_post_dispatch_delta_present(&root);
 
@@ -6120,7 +6135,7 @@ mod tests {
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("no record-dispatch receipts found for cycle 517"));
+            .contains("no record-dispatch receipts found for cycle 523"));
     }
 
     #[test]
@@ -6148,7 +6163,10 @@ mod tests {
             "# Cycle 514 — 2026-04-18 21:42 UTC\n\n## What was done\n\n- Pre-fix worklog without post-dispatch delta section.\n",
         )
         .unwrap();
-        commit_all(&root, "state(record-dispatch): #2591 dispatched [cycle 514]");
+        commit_all(
+            &root,
+            "state(record-dispatch): #2591 dispatched [cycle 514]",
+        );
 
         let step = verify_post_dispatch_delta_present(&root);
 
@@ -13495,9 +13513,9 @@ mod tests {
                 Ok(step_comment_bodies(
                     513,
                     &[
-                        "0", "0.1", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7",
-                        "8", "9", "C1", "C2", "C3", "C4.1", "C4.5", "C4.7", "C5", "C5.1",
-                        "C5.5", "C5.6", "C6", "C7", "C8",
+                        "0", "0.1", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8",
+                        "9", "C1", "C2", "C3", "C4.1", "C4.5", "C4.7", "C5", "C5.1", "C5.5",
+                        "C5.6", "C6", "C7", "C8",
                     ],
                 ))
             }

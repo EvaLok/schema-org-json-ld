@@ -35,5 +35,57 @@ jobs:
       - name: Check
         run: cargo check --manifest-path tools/rust/Cargo.toml
 
+      - name: Build release binaries
+        run: cargo build --release --locked --manifest-path tools/rust/Cargo.toml --workspace
+
+      - name: Assert wrapper binaries are fresh
+        run: |
+          python - <<'PY'
+          import re
+          import sys
+          from pathlib import Path
+
+          repo_root = Path.cwd()
+          tools_dir = repo_root / "tools"
+          workspace_dir = tools_dir / "rust"
+          release_dir = workspace_dir / "target" / "release"
+          wrapper_pattern = re.compile(r'ensure_binary\s+"([^"]+)"')
+
+          binaries = set()
+          for wrapper in tools_dir.iterdir():
+              if not wrapper.is_file():
+                  continue
+              if wrapper.name.startswith("_") or wrapper.suffix in {".json", ".md", ".sh", ".ts"}:
+                  continue
+              matches = wrapper_pattern.findall(wrapper.read_text())
+              binaries.update(matches)
+
+          failures = []
+          for binary_name in sorted(binaries):
+              binary_path = release_dir / binary_name
+              crate_dir = workspace_dir / "crates" / binary_name
+              if not binary_path.exists():
+                  failures.append(f"missing release binary {binary_path}")
+                  continue
+              if not crate_dir.exists():
+                  failures.append(f"missing crate directory for {binary_name}: {crate_dir}")
+                  continue
+              sources = [workspace_dir / "Cargo.toml", crate_dir / "Cargo.toml", *crate_dir.rglob("*.rs")]
+              newest_source = max(
+                  (source for source in sources if source.exists()),
+                  key=lambda source: source.stat().st_mtime,
+              )
+              if binary_path.stat().st_mtime < newest_source.stat().st_mtime:
+                  failures.append(
+                      f"{binary_path} is older than {newest_source}"
+                  )
+
+          if failures:
+              print("Rust binary freshness assertion failed:", file=sys.stderr)
+              for failure in failures:
+                  print(f" - {failure}", file=sys.stderr)
+              sys.exit(1)
+          PY
+
       - name: Test
         run: cargo test --manifest-path tools/rust/Cargo.toml

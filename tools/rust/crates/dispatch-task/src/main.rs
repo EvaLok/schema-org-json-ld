@@ -2,7 +2,8 @@ use clap::{ArgAction, Parser};
 use record_dispatch::{
     apply_dispatch_patch, build_dispatch_patch, concurrency_warning_message,
     dispatch_commit_message, enforce_pipeline_gate, push_to_origin_master, resolve_model,
-    sync_last_cycle_summary_after_dispatch, CommandRunner, PipelineGateError, ProcessRunner,
+    should_sync_last_cycle_summary, sync_last_cycle_summary_after_dispatch, CommandRunner,
+    PipelineGateError, ProcessRunner,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -264,6 +265,11 @@ fn record_dispatch_state(
     })?;
 
     let mut state_value = read_state_value(repo_root)?;
+    let current_phase = state_value
+        .pointer("/cycle_phase/phase")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown")
+        .to_string();
     let patch = build_dispatch_patch(
         &state_value,
         current_cycle,
@@ -273,7 +279,7 @@ fn record_dispatch_state(
         &dispatched_at,
     )?;
     let updated_existing = apply_dispatch_patch(&mut state_value, &patch)?;
-    if !updated_existing {
+    if !updated_existing && should_sync_last_cycle_summary(&current_phase) {
         sync_last_cycle_summary_after_dispatch(&mut state_value, patch.current_cycle)?;
     }
 

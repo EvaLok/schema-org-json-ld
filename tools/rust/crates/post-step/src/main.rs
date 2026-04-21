@@ -1126,9 +1126,8 @@ mod tests {
     #[test]
     fn check_step_ordering_rejects_step_4_when_predecessors_missing() {
         // Posting step 4 when 0.5, 0.6, 1, 1.1, 2, 3 haven't been posted yet.
-        let existing = vec![
-            "> **[main-orchestrator]** | Cycle 198 | Step 0\n\n### Init\n\nDone.".to_string(),
-        ];
+        let existing =
+            vec!["> **[main-orchestrator]** | Cycle 198 | Step 0\n\n### Init\n\nDone.".to_string()];
         let err = check_step_ordering(&existing, "4").expect_err("should fail ordering check");
         assert!(err.contains("Cannot post step 4"));
         assert!(err.contains("0.5"));
@@ -1138,15 +1137,11 @@ mod tests {
     #[test]
     fn check_step_ordering_rejects_step_7_when_step_5_and_6_missing() {
         // Posting step 7 when 5 and 6 haven't been posted.
-        let mandatory_up_to_4 = [
-            "0", "0.5", "0.6", "1", "1.1", "2", "3", "4",
-        ];
+        let mandatory_up_to_4 = ["0", "0.5", "0.6", "1", "1.1", "2", "3", "4"];
         let existing: Vec<String> = mandatory_up_to_4
             .iter()
             .map(|s| {
-                format!(
-                    "> **[main-orchestrator]** | Cycle 198 | Step {s}\n\n### Title\n\nDone."
-                )
+                format!("> **[main-orchestrator]** | Cycle 198 | Step {s}\n\n### Title\n\nDone.")
             })
             .collect();
         let err = check_step_ordering(&existing, "7").expect_err("should fail ordering check");
@@ -1161,9 +1156,7 @@ mod tests {
         let existing: Vec<String> = mandatory_predecessors
             .iter()
             .map(|s| {
-                format!(
-                    "> **[main-orchestrator]** | Cycle 198 | Step {s}\n\n### Title\n\nDone."
-                )
+                format!("> **[main-orchestrator]** | Cycle 198 | Step {s}\n\n### Title\n\nDone.")
             })
             .collect();
         assert!(check_step_ordering(&existing, "4").is_ok());
@@ -1236,9 +1229,7 @@ mod tests {
         steps
             .iter()
             .map(|s| {
-                format!(
-                    "> **[main-orchestrator]** | Cycle 530 | Step {s}\n\n### Title\n\nDone."
-                )
+                format!("> **[main-orchestrator]** | Cycle 530 | Step {s}\n\n### Title\n\nDone.")
             })
             .collect()
     }
@@ -1248,8 +1239,8 @@ mod tests {
         // C5.5 is the first close-out step in the canonical order; it only requires
         // C4.1 and C4.5 (and the pre-close-out mandatory steps) to be present.
         let existing = mandatory_comments_up_to(&[
-            "0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9",
-            "C1", "C2", "C3", "C4.1", "C4.5",
+            "0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9", "C1", "C2",
+            "C3", "C4.1", "C4.5",
         ]);
         assert!(
             check_step_ordering(&existing, "C5.5").is_ok(),
@@ -1261,8 +1252,8 @@ mod tests {
     fn check_step_ordering_allows_c5_after_c5_5() {
         // C5 must be posted after C5.5 in the new canonical order.
         let existing = mandatory_comments_up_to(&[
-            "0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9",
-            "C1", "C2", "C3", "C4.1", "C4.5", "C5.5",
+            "0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9", "C1", "C2",
+            "C3", "C4.1", "C4.5", "C5.5",
         ]);
         assert!(
             check_step_ordering(&existing, "C5").is_ok(),
@@ -1274,8 +1265,8 @@ mod tests {
     fn check_step_ordering_allows_c5_1_after_c5_5_and_c5() {
         // C5.1 requires both C5.5 and C5 to already be posted.
         let existing = mandatory_comments_up_to(&[
-            "0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9",
-            "C1", "C2", "C3", "C4.1", "C4.5", "C5.5", "C5",
+            "0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9", "C1", "C2",
+            "C3", "C4.1", "C4.5", "C5.5", "C5",
         ]);
         assert!(
             check_step_ordering(&existing, "C5.1").is_ok(),
@@ -1288,8 +1279,8 @@ mod tests {
         // Posting C5 before C5.5 must be rejected — the pipeline gate (C5.5)
         // must run before the docs commit (C5).
         let existing = mandatory_comments_up_to(&[
-            "0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9",
-            "C1", "C2", "C3", "C4.1", "C4.5",
+            "0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9", "C1", "C2",
+            "C3", "C4.1", "C4.5",
         ]);
         let err = check_step_ordering(&existing, "C5")
             .expect_err("C5 without C5.5 should fail ordering check");
@@ -1307,8 +1298,8 @@ mod tests {
     fn check_step_ordering_rejects_c5_1_before_c5_5() {
         // Posting C5.1 before C5.5 must also be rejected.
         let existing = mandatory_comments_up_to(&[
-            "0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9",
-            "C1", "C2", "C3", "C4.1", "C4.5",
+            "0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9", "C1", "C2",
+            "C3", "C4.1", "C4.5",
         ]);
         let err = check_step_ordering(&existing, "C5.1")
             .expect_err("C5.1 without C5.5 should fail ordering check");
