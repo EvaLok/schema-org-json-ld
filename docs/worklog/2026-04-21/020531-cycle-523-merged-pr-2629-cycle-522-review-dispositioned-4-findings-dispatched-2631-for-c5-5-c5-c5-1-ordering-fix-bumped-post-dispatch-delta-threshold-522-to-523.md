@@ -19,12 +19,11 @@
 
 - **`tools/rust/crates/pipeline-check/src/main.rs`**: modified
 
-## Pre-dispatch state
+## Cycle state
 
-*Snapshot before review dispatch — final counters may differ after C6.*
 
 - **In-flight agent sessions**: 0
-- **Pipeline status**: FAIL (6 warnings, 6 blocking: chronic-category-currency, deferral-accumulation, frozen-commit-verify, review-events-verified, current-cycle-steps, current-cycle-journal-section)
+- **Pipeline status**: PASS (1 blocking warning, 4 warnings)
 - **Publish gate**: published
 
 ## Next steps
