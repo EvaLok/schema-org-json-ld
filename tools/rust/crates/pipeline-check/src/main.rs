@@ -134,6 +134,10 @@ const MANDATORY_STEPS: &[(&str, u64)] = &[
     ("C7", 0),
     ("C8", 0),
 ];
+const LEGACY_TEMPORAL_ORDERING_STEPS: &[&str] = &[
+    "0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9", "C1", "C2", "C3",
+    "C4.1", "C4.5", "C5", "C5.1", "C5.5", "C5.6", "C6", "C7", "C8",
+];
 // Keep this list aligned with the orchestrator checklist steps that are expected to
 // produce post-step comments. The pass threshold stays lower because some steps are
 // conditional, but mandatory gaps must still fail while optional gaps warn.
@@ -2110,12 +2114,13 @@ fn verify_current_cycle_step_comments(
     // Cycle 522 is the transition cycle where PR #2623 lands: the upgraded Warn→Fail
     // temporal ordering check activates, but cycle-runner startup in this cycle still
     // auto-posted steps 4/7/8 at the start (before the PR merged). That produces an
-    // unavoidable ordering fail for cycle 522 only. From cycle 523 onwards the
-    // deferred-posting path is in effect and the check applies normally.
-    let temporal_fail = if cycle < TEMPORAL_ORDERING_FAIL_FIRST_APPLICABLE_CYCLE {
+    // unavoidable ordering fail for cycle 522 only. Historical cycles should still be
+    // evaluated normally in tests and fixture replays; only the single transition
+    // cycle is exempt.
+    let temporal_fail = if cycle == TEMPORAL_ORDERING_TRANSITION_EXEMPT_CYCLE {
         None
     } else {
-        assess_temporal_step_ordering(&step_timestamps)
+        assess_temporal_step_ordering(&step_timestamps, cycle)
     };
 
     // Check only pre-gate mandatory steps (exclude post-gate steps that haven't been posted yet)
@@ -2351,26 +2356,38 @@ fn record_earliest_step_timestamp(
         .or_insert(timestamp);
 }
 
-// Cycle from which temporal-ordering mis-order is treated as a blocking FAIL.
-// PR #2623 (merged cycle 522) upgraded the severity from Warn to Fail. Cycle 522
-// itself is a transition cycle: cycle-runner startup still auto-posted steps
-// 4/7/8 at the start (before #2623 merged), which produces an unavoidable
-// mis-order for that cycle only. From cycle 523 onwards the deferred-posting
-// path is in effect and the check applies normally.
-const TEMPORAL_ORDERING_FAIL_FIRST_APPLICABLE_CYCLE: u64 = 523;
+// PR #2623 (merged cycle 522) upgraded temporal-ordering mis-order from Warn to
+// blocking Fail. Cycle 522 itself is the only transition-cycle exemption because
+// cycle-runner startup still auto-posted steps 4/7/8 at the start before the PR
+// merged. All other cycles, including historical test fixtures, should still be
+// assessed normally.
+const TEMPORAL_ORDERING_TRANSITION_EXEMPT_CYCLE: u64 = 522;
+const TEMPORAL_ORDERING_REORDER_FIRST_CYCLE: u64 = 523;
 
 fn assess_temporal_step_ordering(
     step_timestamps: &BTreeMap<String, DateTime<Utc>>,
+    cycle: u64,
 ) -> Option<TemporalOrderingFail> {
     // Build a list of (step_id, timestamp) for all MANDATORY_STEPS that have been posted,
     // in checklist order.
-    let present_mandatory: Vec<(&str, DateTime<Utc>)> = MANDATORY_STEPS
+    let step_order = if cycle < TEMPORAL_ORDERING_REORDER_FIRST_CYCLE {
+        LEGACY_TEMPORAL_ORDERING_STEPS
+    } else {
+        &EXPECTED_STEP_IDS
+    };
+    let present_mandatory: Vec<(&str, DateTime<Utc>)> = step_order
         .iter()
-        .filter_map(|(step_id, _)| {
+        .copied()
+        .filter(|step_id| {
+            MANDATORY_STEPS
+                .iter()
+                .any(|(candidate, _)| candidate == step_id)
+        })
+        .filter_map(|step_id| {
             step_timestamps
-                .get(*step_id)
+                .get(step_id)
                 .copied()
-                .map(|ts| (*step_id, ts))
+                .map(|ts| (step_id, ts))
         })
         .collect();
 
@@ -14248,7 +14265,7 @@ mod tests {
 
         let timestamps = collect_step_comment_timestamps(&comments, 301).unwrap();
         assert!(timestamps.is_empty());
-        assert!(assess_temporal_step_ordering(&timestamps).is_none());
+        assert!(assess_temporal_step_ordering(&timestamps, 301).is_none());
 
         let step = verify_current_cycle_step_comments(&root, 301, &runner);
         assert_eq!(step.status, StepStatus::Pass);
