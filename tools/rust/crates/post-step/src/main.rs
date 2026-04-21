@@ -11,14 +11,16 @@ const ORCHESTRATOR_SIGNATURE: &str = "[main-orchestrator]";
 const VALID_STEP_IDS: [&str; 38] = [
     "0", "0.1", "0.5", "0.6", "1", "1.1", "1.5", "2", "2.5", "3", "4", "5", "5.5", "5.6", "5.8",
     "5.9", "5.10", "5.11", "5.12", "5.13", "6", "7", "8", "9", "10", "C1", "C2", "C3", "C4.1",
-    "C4.5", "C4.7", "C5", "C5.1", "C5.5", "C5.6", "C6", "C7", "C8",
+    "C4.5", "C4.7", "C5.5", "C5", "C5.1", "C5.6", "C6", "C7", "C8",
 ];
 /// Mandatory step IDs in checklist order. When posting a step, all mandatory predecessors
 /// must already be present on the issue. These are the step IDs from MANDATORY_STEPS in
 /// pipeline-check, without the effective-from-cycle thresholds.
+/// Order matches the real close-out execution path: C5.5 runs first (pipeline gate),
+/// then C5 (commit docs using pipeline summary), then C5.1 (receipt validation).
 const MANDATORY_STEP_IDS: &[&str] = &[
     "0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9", "C1", "C2", "C3",
-    "C4.1", "C4.5", "C5", "C5.1", "C5.5", "C6", "C7", "C8",
+    "C4.1", "C4.5", "C5.5", "C5", "C5.1", "C6", "C7", "C8",
 ];
 
 #[derive(Parser, Debug)]
@@ -1224,5 +1226,93 @@ mod tests {
     fn check_step_ordering_skips_non_standard_step_ids() {
         // Non-standard steps (not in VALID_STEP_IDS) bypass the ordering check.
         assert!(check_step_ordering(&[], "custom-step").is_ok());
+    }
+
+    // --- C5.5 → C5 → C5.1 close-out ordering regression tests ---
+    // Validates the canonical sequence matches the real close-out execution path:
+    // C5.5 (pipeline gate) runs first, then C5 (commit docs), then C5.1 (receipt validation).
+
+    fn mandatory_comments_up_to(steps: &[&str]) -> Vec<String> {
+        steps
+            .iter()
+            .map(|s| {
+                format!(
+                    "> **[main-orchestrator]** | Cycle 530 | Step {s}\n\n### Title\n\nDone."
+                )
+            })
+            .collect()
+    }
+
+    #[test]
+    fn check_step_ordering_allows_c5_5_after_c4_1_and_c4_5() {
+        // C5.5 is the first close-out step in the canonical order; it only requires
+        // C4.1 and C4.5 (and the pre-close-out mandatory steps) to be present.
+        let existing = mandatory_comments_up_to(&[
+            "0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9",
+            "C1", "C2", "C3", "C4.1", "C4.5",
+        ]);
+        assert!(
+            check_step_ordering(&existing, "C5.5").is_ok(),
+            "C5.5 should be allowed when C4.1 and C4.5 are present"
+        );
+    }
+
+    #[test]
+    fn check_step_ordering_allows_c5_after_c5_5() {
+        // C5 must be posted after C5.5 in the new canonical order.
+        let existing = mandatory_comments_up_to(&[
+            "0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9",
+            "C1", "C2", "C3", "C4.1", "C4.5", "C5.5",
+        ]);
+        assert!(
+            check_step_ordering(&existing, "C5").is_ok(),
+            "C5 should be allowed when C5.5 is already posted"
+        );
+    }
+
+    #[test]
+    fn check_step_ordering_allows_c5_1_after_c5_5_and_c5() {
+        // C5.1 requires both C5.5 and C5 to already be posted.
+        let existing = mandatory_comments_up_to(&[
+            "0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9",
+            "C1", "C2", "C3", "C4.1", "C4.5", "C5.5", "C5",
+        ]);
+        assert!(
+            check_step_ordering(&existing, "C5.1").is_ok(),
+            "C5.1 should be allowed when both C5.5 and C5 are posted"
+        );
+    }
+
+    #[test]
+    fn check_step_ordering_rejects_c5_before_c5_5() {
+        // Posting C5 before C5.5 must be rejected — the pipeline gate (C5.5)
+        // must run before the docs commit (C5).
+        let existing = mandatory_comments_up_to(&[
+            "0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9",
+            "C1", "C2", "C3", "C4.1", "C4.5",
+        ]);
+        let err = check_step_ordering(&existing, "C5")
+            .expect_err("C5 without C5.5 should fail ordering check");
+        assert!(
+            err.contains("Cannot post step C5"),
+            "error should name the blocked step"
+        );
+        assert!(
+            err.contains("C5.5"),
+            "error should list C5.5 as the missing mandatory predecessor"
+        );
+    }
+
+    #[test]
+    fn check_step_ordering_rejects_c5_1_before_c5_5() {
+        // Posting C5.1 before C5.5 must also be rejected.
+        let existing = mandatory_comments_up_to(&[
+            "0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9",
+            "C1", "C2", "C3", "C4.1", "C4.5",
+        ]);
+        let err = check_step_ordering(&existing, "C5.1")
+            .expect_err("C5.1 without C5.5 should fail ordering check");
+        assert!(err.contains("Cannot post step C5.1"));
+        assert!(err.contains("C5.5"));
     }
 }

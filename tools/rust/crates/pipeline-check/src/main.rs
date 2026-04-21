@@ -127,9 +127,9 @@ const MANDATORY_STEPS: &[(&str, u64)] = &[
     ("C3", 0),
     ("C4.1", 0),
     ("C4.5", 0),
+    ("C5.5", 0),
     ("C5", 0),
     ("C5.1", 256),
-    ("C5.5", 0),
     ("C6", 0),
     ("C7", 0),
     ("C8", 0),
@@ -139,7 +139,7 @@ const MANDATORY_STEPS: &[(&str, u64)] = &[
 // conditional, but mandatory gaps must still fail while optional gaps warn.
 const EXPECTED_STEP_IDS: [&str; 27] = [
     "0", "0.1", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "C1", "C2",
-    "C3", "C4.1", "C4.5", "C5", "C5.1", "C5.5", "C5.6", "C6", "C7", "C8",
+    "C3", "C4.1", "C4.5", "C5.5", "C5", "C5.1", "C5.6", "C6", "C7", "C8",
 ];
 const MIN_CURRENT_CYCLE_FOR_FALLBACK_WARNING: u64 = 1;
 const LAST_CYCLE_NUMBER_PATH: &str = "/last_cycle/number";
@@ -12415,8 +12415,8 @@ mod tests {
         assert_eq!(
             missing_expected_step_ids(&found),
             vec![
-                "0.1", "0.6", "1.1", "3", "4", "5", "8", "C1", "C2", "C3", "C4.1", "C4.5", "C5",
-                "C5.1", "C5.5", "C5.6", "C6", "C7", "C8",
+                "0.1", "0.6", "1.1", "3", "4", "5", "8", "C1", "C2", "C3", "C4.1", "C4.5", "C5.5",
+                "C5", "C5.1", "C5.6", "C6", "C7", "C8",
             ]
         );
     }
@@ -12487,7 +12487,7 @@ mod tests {
             .unwrap_or_default()
             .contains("below backstop threshold 17"));
         assert!(step.detail.as_deref().unwrap_or_default().contains(
-            "missing mandatory [1.1, 7, 8, 9, C1, C2, C3, C4.1, C4.5, C5, C5.1, C5.5, C6, C7, C8]"
+            "missing mandatory [1.1, 7, 8, 9, C1, C2, C3, C4.1, C4.5, C5.5, C5, C5.1, C6, C7, C8]"
         ));
     }
 
@@ -12555,7 +12555,7 @@ mod tests {
 			.detail
 			.as_deref()
 			.unwrap_or_default()
-			.contains("missing mandatory [0.5, 0.6, 1, 1.1, 2, 3, 4, 6, 7, 8, 9, C1, C2, C3, C4.1, C4.5, C5, C5.1, C5.5, C6, C7, C8]"));
+			.contains("missing mandatory [0.5, 0.6, 1, 1.1, 2, 3, 4, 6, 7, 8, 9, C1, C2, C3, C4.1, C4.5, C5.5, C5, C5.1, C6, C7, C8]"));
         assert!(step
             .detail
             .as_deref()
