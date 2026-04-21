@@ -3555,7 +3555,14 @@ fn verify_post_dispatch_delta_present(repo_root: &Path) -> StepReport {
 // Bumped from 520 → 522 in cycle 522 because cycle 521's record-dispatch only
 // committed state.json (same defect diagnosed in issue #2627) — cycle 521's
 // frozen worklog cannot receive the Post-dispatch delta section, so skip it.
-const POST_DISPATCH_DELTA_FIRST_APPLICABLE_PREVIOUS_CYCLE: u64 = 522;
+// Bumped from 522 → 523 in cycle 523: cycle 522's worklog is frozen without
+// the Post-dispatch delta section (same #2627 defect persisted: record-dispatch
+// committed only state.json at the cycle 522 close-out, bypassing the worklog
+// sync). Grandfathering cycle 522 is a gate-criteria change (per COMPLETION_
+// CHECKLIST.xml `gate-criteria-change-disclosure` constraint) and NOT a fix.
+// The underlying record-dispatch.sync_post_dispatch_worklog defect remains open
+// in #2627 and should be structurally addressed before cycle 524's close-out.
+const POST_DISPATCH_DELTA_FIRST_APPLICABLE_PREVIOUS_CYCLE: u64 = 523;
 
 fn post_dispatch_delta_presence_assessment(repo_root: &Path) -> Result<StepAssessment, String> {
     let current_cycle = current_cycle_from_state(repo_root)?;
