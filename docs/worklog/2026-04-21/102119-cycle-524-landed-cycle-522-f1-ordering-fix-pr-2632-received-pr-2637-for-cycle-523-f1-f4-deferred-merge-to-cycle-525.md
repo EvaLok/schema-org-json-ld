@@ -41,3 +41,11 @@
 |------|---------|------|
 | cycle-start | 6e34817 | [6e34817](https://github.com/EvaLok/schema-org-json-ld/commit/6e34817f63c25dfc4dea0bb3aff3756287afea3f) |
 | cycle-complete | d9a9bd4 | [d9a9bd4](https://github.com/EvaLok/schema-org-json-ld/commit/d9a9bd42539accd6955f3ee7f0e5be4eacabafdb) |
+
+## Post-dispatch delta
+
+- **In-flight agent sessions**: 2
+- **Dispatch count**: 1 dispatch
+- **Last-cycle summary**: 1 dispatch, 0 merges
+
+> Note: Section appended in cycle 525 to satisfy `post-dispatch-delta-present` pipeline check. The cycle 524 `record-dispatch` commit `75d1c086` was run with a pre-#2637 binary that only updated `docs/state.json`; PR #2637 (merged in cycle 525) contains the structural fix so cycle 525 onwards will populate this section atomically. `frozen-worklog-immutability` explicitly ignores trailing `## Post-dispatch delta` appends. `POST_DISPATCH_DELTA_FIRST_APPLICABLE_PREVIOUS_CYCLE` remains 523 per #2636 directive — NOT bumped. Values reflect state at commit `75d1c086`.
