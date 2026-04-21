@@ -9851,8 +9851,10 @@
       ],
       "dispatched_at": "2026-04-21T06:03:42Z",
       "issue": 2636,
+      "merged_at": "2026-04-21T21:37:49Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2637,
+      "status": "merged",
       "title": "Structural fix bundle: record-dispatch atomic sync, completed-cycle freeze, pre-dispatch label retention, gh-api-direct ledger backfill (cycle 524 review findings 1-4)"
     },
     {
@@ -11085,7 +11087,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 524"
+        "last_refreshed": "cycle 525"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -11233,12 +11235,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 38,
     "issue": 2642,
     "number": 525,
-    "summary": "1 dispatch, 0 merges",
+    "summary": "0 dispatches, 1 merges",
     "timestamp": "2026-04-21T21:23:59Z"
   },
   "last_eva_comment_check": "2026-04-21T21:23:59Z",
