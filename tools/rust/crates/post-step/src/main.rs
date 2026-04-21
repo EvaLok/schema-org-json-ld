@@ -529,7 +529,7 @@ mod tests {
         write_state_json(&repo_root, r#"{"last_cycle":{"number":198}}"#);
         let cli = Cli {
             issue: 834,
-            step: "1".to_string(),
+            step: "0".to_string(),
             title: "Check for input-from-eva issues".to_string(),
             body: Some("Found 2 open issues.".to_string()),
             body_file: None,
@@ -543,11 +543,11 @@ mod tests {
 
         let result = execute(&cli, &poster).expect("execute should succeed");
 
-        assert_eq!(result, "Step 1 posted to EvaLok/schema-org-json-ld#834");
+        assert_eq!(result, "Step 0 posted to EvaLok/schema-org-json-ld#834");
         assert_eq!(
 			poster.posted_bodies(),
 			vec![
-				"> **[main-orchestrator]** | Cycle 198 | Step 1\n\n### Check for input-from-eva issues\n\nFound 2 open issues."
+				"> **[main-orchestrator]** | Cycle 198 | Step 0\n\n### Check for input-from-eva issues\n\nFound 2 open issues."
 					.to_string()
 			]
 		);
@@ -561,7 +561,7 @@ mod tests {
         fs::write(&body_path, "Line one.\n\nLine two.\n").unwrap();
         let cli = Cli {
             issue: 834,
-            step: "5.11".to_string(),
+            step: "0".to_string(),
             title: "Summarize completion checks".to_string(),
             body: None,
             body_file: Some(body_path),
@@ -578,7 +578,7 @@ mod tests {
         assert_eq!(
 			poster.posted_bodies(),
 			vec![
-				"> **[main-orchestrator]** | Cycle 198 | Step 5.11\n\n### Summarize completion checks\n\nLine one.\n\nLine two."
+				"> **[main-orchestrator]** | Cycle 198 | Step 0\n\n### Summarize completion checks\n\nLine one.\n\nLine two."
 					.to_string()
 			]
 		);
@@ -616,7 +616,7 @@ mod tests {
         write_state_json(&repo_root, r#"{"last_cycle":{"number":198}}"#);
         let cli = Cli {
             issue: 834,
-            step: "1".to_string(),
+            step: "0".to_string(),
             title: "Check for input-from-eva issues".to_string(),
             body: Some("Found 2 open issues.".to_string()),
             body_file: None,
@@ -767,7 +767,7 @@ mod tests {
         write_state_json(&repo_root, r#"{"last_cycle":{"number":198}}"#);
         let cli = Cli {
             issue: 834,
-            step: "1".to_string(),
+            step: "0".to_string(),
             title: "Literal shell example".to_string(),
             body: Some("Example output: $(date)".to_string()),
             body_file: None,
@@ -781,7 +781,7 @@ mod tests {
 
         let result = execute(&cli, &poster).expect("skip flag should allow literal body text");
 
-        assert_eq!(result, "Step 1 posted to EvaLok/schema-org-json-ld#834");
+        assert_eq!(result, "Step 0 posted to EvaLok/schema-org-json-ld#834");
         assert_eq!(poster.posted_bodies().len(), 1);
     }
 
@@ -856,7 +856,7 @@ mod tests {
         write_state_json(&repo_root, r#"{"last_cycle":{"number":198}}"#);
         let cli = Cli {
             issue: 834,
-            step: "1".to_string(),
+            step: "0".to_string(),
             title: "Check for input-from-eva issues".to_string(),
             body: Some("Found 2 open issues.".to_string()),
             body_file: None,
@@ -870,7 +870,7 @@ mod tests {
 
         let result = execute(&cli, &poster).expect("execute should succeed");
 
-        assert_eq!(result, "Step 1 posted to EvaLok/schema-org-json-ld#834");
+        assert_eq!(result, "Step 0 posted to EvaLok/schema-org-json-ld#834");
         assert_eq!(poster.posted_bodies().len(), 1);
     }
 
@@ -880,7 +880,7 @@ mod tests {
         write_state_json(&repo_root, r#"{"last_cycle":{"number":198}}"#);
         let cli = Cli {
             issue: 834,
-            step: "1".to_string(),
+            step: "0".to_string(),
             title: "Check for input-from-eva issues".to_string(),
             body: Some("Found 2 open issues.".to_string()),
             body_file: None,
@@ -896,7 +896,7 @@ mod tests {
 
         let result = execute(&cli, &poster).expect("execute should succeed");
 
-        assert_eq!(result, "Step 1 posted to EvaLok/schema-org-json-ld#834");
+        assert_eq!(result, "Step 0 posted to EvaLok/schema-org-json-ld#834");
         assert_eq!(poster.posted_bodies().len(), 1);
     }
 
