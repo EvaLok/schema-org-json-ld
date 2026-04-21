@@ -5385,7 +5385,7 @@ mod tests {
         assert!(content.contains("- **In-flight agent sessions**: 3"));
         assert!(!content.contains("- **Copilot metrics**:"));
         assert!(content.contains("- **Publish gate**: published"));
-        assert!(!content.contains("post-dispatch"));
+        assert!(!content.contains("\n## Post-dispatch delta\n"));
     }
 
     #[test]
@@ -5467,7 +5467,7 @@ mod tests {
         assert!(content.contains("## Pre-dispatch state"));
         assert!(content.contains(PRE_DISPATCH_STATE_NOTE));
         assert!(content.contains("- **Pipeline status**: PASS (6/6)"));
-        assert!(!content.contains("post-dispatch"));
+        assert!(!content.contains("\n## Post-dispatch delta\n"));
     }
 
     #[test]

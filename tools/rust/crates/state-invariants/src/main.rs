@@ -3421,10 +3421,14 @@ mod tests {
 
         assert_eq!(
             report.checks.get(8).map(|check| check.name),
-            Some("future_cycle_freshness")
+            Some("completed_cycle_snapshot_matches_receipt")
         );
         assert_eq!(
             report.checks.get(9).map(|check| check.name),
+            Some("future_cycle_freshness")
+        );
+        assert_eq!(
+            report.checks.get(10).map(|check| check.name),
             Some("cycle_phase_consistency")
         );
         assert_eq!(
@@ -3432,15 +3436,15 @@ mod tests {
             Some("last_cycle_summary_receipts")
         );
         assert_eq!(
-            report.checks.get(11).map(|check| check.name),
+            report.checks.get(12).map(|check| check.name),
             Some("chronic_category_responses_freshness")
         );
         assert_eq!(
-            report.checks.get(12).map(|check| check.name),
+            report.checks.get(13).map(|check| check.name),
             Some("chronic_verification_deadline")
         );
         assert_eq!(
-            report.checks.get(13).map(|check| check.name),
+            report.checks.get(14).map(|check| check.name),
             Some("chronic_intermediate_state")
         );
         assert_eq!(
@@ -3452,31 +3456,31 @@ mod tests {
             Some(CheckStatus::Pass)
         );
         assert_eq!(
-            report.checks.get(14).map(|check| check.name),
+            report.checks.get(15).map(|check| check.name),
             Some("review_events_verified")
         );
         assert_eq!(
-            report.checks.get(15).map(|check| check.name),
+            report.checks.get(16).map(|check| check.name),
             Some("in_flight_sessions_consistency")
         );
         assert_eq!(
-            report.checks.get(16).map(|check| check.name),
+            report.checks.get(17).map(|check| check.name),
             Some("forward_work_counter_consistency")
         );
         assert_eq!(
-            report.checks.get(17).map(|check| check.name),
+            report.checks.get(18).map(|check| check.name),
             Some("pending_audit_deadlines")
         );
         assert_eq!(
-            report.checks.get(18).map(|check| check.name),
+            report.checks.get(19).map(|check| check.name),
             Some("dispatch_created_has_sessions")
         );
         assert_eq!(
-            report.checks.get(19).map(|check| check.name),
+            report.checks.get(20).map(|check| check.name),
             Some("agent_sessions_reconciliation")
         );
         assert_eq!(
-            report.checks.get(20).map(|check| check.name),
+            report.checks.get(21).map(|check| check.name),
             Some("backfill_session_title_pr_match")
         );
         assert_eq!(

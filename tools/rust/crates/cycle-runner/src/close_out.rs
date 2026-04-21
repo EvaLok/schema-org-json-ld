@@ -13,7 +13,7 @@ use std::process::Command;
 
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const VERIFY_REVIEW_EVENTS_TIMEOUT_SECS: u64 = 30;
-const PRE_DISPATCH_STATE_HEADING: &str = "## Pre-dispatch state";
+#[cfg(test)]
 const PRE_DISPATCH_SNAPSHOT_NOTE: &str =
     "*Counters shown here are taken at C5.5/C6. For post-dispatch numbers, see the `## Post-dispatch delta` section below.*";
 const PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
@@ -555,7 +555,6 @@ fn freeze_worklog_content(
     let mut replaced_pipeline = false;
 
     for line in content.lines() {
-        let trimmed = line.trim();
         if line.starts_with(CLOSE_OUT_GATE_FAILURES_PREFIX) {
             continue;
         }
@@ -2702,7 +2701,7 @@ mod tests {
         ));
         assert!(worklog.contains("- **Publish gate**: published"));
         assert!(worklog.contains("## Next steps\n\n1. None.\n"));
-        assert!(!worklog.contains("post-dispatch"));
+        assert!(!worklog.contains("\n## Post-dispatch delta\n"));
 
         let log_output = Command::new("git")
             .arg("-C")
@@ -2841,7 +2840,7 @@ mod tests {
             "- **Close-out gate failures**: C5.5 FAIL: FAIL (1 warning, 1 blocking: foo)"
         ));
         assert!(worklog.contains("- **Publish gate**: published"));
-        assert!(!worklog.contains("post-dispatch"));
+        assert!(!worklog.contains("\n## Post-dispatch delta\n"));
         assert_eq!(worklog.matches("- **Pipeline status**:").count(), 1);
         assert!(worklog.contains("## Next steps\n\n1. Plan next dispatch\n"));
 

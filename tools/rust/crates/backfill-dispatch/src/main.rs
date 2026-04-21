@@ -8,7 +8,7 @@ use serde_json::{json, Value};
 use state_schema::{
     commit_state_json, current_cycle_from_state, read_state_value, write_state_value,
 };
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
 
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
@@ -256,6 +256,7 @@ mod tests {
     use serde_json::json;
     use state_schema::StateJson;
     use std::fs;
+    use std::path::Path;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     #[derive(Clone)]
