@@ -24,9 +24,9 @@
 
 ## Cycle state
 
-*Snapshot before review dispatch — final counters may differ after C6.*
 - **In-flight agent sessions**: 1
-- **Pipeline status**: FAIL (3 warnings, 6 blocking: state-invariants, chronic-category-currency, doc-validation, review-events-verified, current-cycle-steps, current-cycle-journal-section) — expected pre-C5.5 shape; C5.5 final gate will re-evaluate after close-out commits
+- **Pipeline status**: FAIL→PASS (C5.5 initially failed: FAIL (2 warnings, 1 blocking: state-invariants); resolved by re-run)
+- **Close-out gate failures**: C5.5 FAIL: FAIL (2 warnings, 1 blocking: state-invariants)
 - **Publish gate**: published
 
 ## Next steps
