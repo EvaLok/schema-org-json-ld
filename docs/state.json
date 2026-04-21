@@ -10136,8 +10136,8 @@
   ],
   "cycle_phase": {
     "cycle": 525,
-    "phase": "work",
-    "phase_entered_at": "2026-04-21T21:24:00Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-04-21T21:44:01Z"
   },
   "cycles_since_last_forward_work": {
     "added_in_cycle": 411,
@@ -11077,7 +11077,7 @@
       },
       "dispatch_log_latest": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 523"
+        "last_refreshed": "cycle 525"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
@@ -11097,7 +11097,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 524"
+        "last_refreshed": "cycle 525"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -11117,7 +11117,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 524"
+        "last_refreshed": "cycle 525"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -11129,7 +11129,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 524"
+        "last_refreshed": "cycle 525"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -11153,7 +11153,7 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 524"
+        "last_refreshed": "cycle 525"
       },
       "review_events_verified_through_cycle": {
         "cadence": "managed by verify-review-events tool only",
@@ -11165,7 +11165,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 523"
+        "last_refreshed": "cycle 525"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -11239,13 +11239,13 @@
   },
   "in_flight_sessions": 0,
   "last_cycle": {
-    "duration_minutes": 38,
+    "duration_minutes": 20,
     "issue": 2642,
     "number": 525,
-    "summary": "0 dispatches, 2 merges",
-    "timestamp": "2026-04-21T21:23:59Z"
+    "summary": "0 dispatches, 2 merges (PR #2637, PR #2641)",
+    "timestamp": "2026-04-21T21:44:01Z"
   },
-  "last_eva_comment_check": "2026-04-21T21:23:59Z",
+  "last_eva_comment_check": "2026-04-21T21:44:01Z",
   "last_tool_audit_cycle": 403,
   "open_questions_for_eva": [
     2638,
