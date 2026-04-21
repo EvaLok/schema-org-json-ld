@@ -134,6 +134,10 @@ const MANDATORY_STEPS: &[(&str, u64)] = &[
     ("C7", 0),
     ("C8", 0),
 ];
+const LEGACY_TEMPORAL_ORDERING_STEPS: &[&str] = &[
+    "0", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9", "C1", "C2", "C3",
+    "C4.1", "C4.5", "C5", "C5.1", "C5.5", "C5.6", "C6", "C7", "C8",
+];
 // Keep this list aligned with the orchestrator checklist steps that are expected to
 // produce post-step comments. The pass threshold stays lower because some steps are
 // conditional, but mandatory gaps must still fail while optional gaps warn.
@@ -1944,7 +1948,8 @@ fn verify_step_comments(repo_root: &Path, cycle: u64, runner: &dyn CommandRunner
                 };
             }
         };
-    let (found, unexpected, assessed_cycle, scope) = if previous_cycle_observation.found.is_empty() {
+    let (found, unexpected, assessed_cycle, scope) = if previous_cycle_observation.found.is_empty()
+    {
         let current_cycle_observation = match fetch_step_comments_for_issue(runner, issue, cycle) {
             Ok(found) => found,
             Err(error) => {
@@ -2109,12 +2114,13 @@ fn verify_current_cycle_step_comments(
     // Cycle 522 is the transition cycle where PR #2623 lands: the upgraded Warn→Fail
     // temporal ordering check activates, but cycle-runner startup in this cycle still
     // auto-posted steps 4/7/8 at the start (before the PR merged). That produces an
-    // unavoidable ordering fail for cycle 522 only. From cycle 523 onwards the
-    // deferred-posting path is in effect and the check applies normally.
-    let temporal_fail = if cycle < TEMPORAL_ORDERING_FAIL_FIRST_APPLICABLE_CYCLE {
+    // unavoidable ordering fail for cycle 522 only. Historical cycles should still be
+    // evaluated normally in tests and fixture replays; only the single transition
+    // cycle is exempt.
+    let temporal_fail = if cycle == TEMPORAL_ORDERING_TRANSITION_EXEMPT_CYCLE {
         None
     } else {
-        assess_temporal_step_ordering(&step_timestamps)
+        assess_temporal_step_ordering(&step_timestamps, cycle)
     };
 
     // Check only pre-gate mandatory steps (exclude post-gate steps that haven't been posted yet)
@@ -2350,26 +2356,38 @@ fn record_earliest_step_timestamp(
         .or_insert(timestamp);
 }
 
-// Cycle from which temporal-ordering mis-order is treated as a blocking FAIL.
-// PR #2623 (merged cycle 522) upgraded the severity from Warn to Fail. Cycle 522
-// itself is a transition cycle: cycle-runner startup still auto-posted steps
-// 4/7/8 at the start (before #2623 merged), which produces an unavoidable
-// mis-order for that cycle only. From cycle 523 onwards the deferred-posting
-// path is in effect and the check applies normally.
-const TEMPORAL_ORDERING_FAIL_FIRST_APPLICABLE_CYCLE: u64 = 523;
+// PR #2623 (merged cycle 522) upgraded temporal-ordering mis-order from Warn to
+// blocking Fail. Cycle 522 itself is the only transition-cycle exemption because
+// cycle-runner startup still auto-posted steps 4/7/8 at the start before the PR
+// merged. All other cycles, including historical test fixtures, should still be
+// assessed normally.
+const TEMPORAL_ORDERING_TRANSITION_EXEMPT_CYCLE: u64 = 522;
+const TEMPORAL_ORDERING_REORDER_FIRST_CYCLE: u64 = 523;
 
 fn assess_temporal_step_ordering(
     step_timestamps: &BTreeMap<String, DateTime<Utc>>,
+    cycle: u64,
 ) -> Option<TemporalOrderingFail> {
     // Build a list of (step_id, timestamp) for all MANDATORY_STEPS that have been posted,
     // in checklist order.
-    let present_mandatory: Vec<(&str, DateTime<Utc>)> = MANDATORY_STEPS
+    let step_order = if cycle < TEMPORAL_ORDERING_REORDER_FIRST_CYCLE {
+        LEGACY_TEMPORAL_ORDERING_STEPS
+    } else {
+        &EXPECTED_STEP_IDS
+    };
+    let present_mandatory: Vec<(&str, DateTime<Utc>)> = step_order
         .iter()
-        .filter_map(|(step_id, _)| {
+        .copied()
+        .filter(|step_id| {
+            MANDATORY_STEPS
+                .iter()
+                .any(|(candidate, _)| candidate == step_id)
+        })
+        .filter_map(|step_id| {
             step_timestamps
-                .get(*step_id)
+                .get(step_id)
                 .copied()
-                .map(|ts| (*step_id, ts))
+                .map(|ts| (step_id, ts))
         })
         .collect();
 
@@ -2708,7 +2726,9 @@ fn detect_step_comment_id(line: &str, cycle: u64) -> Option<&'static str> {
 
 fn detect_any_step_comment_token(line: &str, cycle: u64) -> Option<&str> {
     let trimmed = line.trim();
-    if trimmed.starts_with(ORCHESTRATOR_SIGNATURE) && !orchestrator_step_comment_matches_cycle(trimmed, cycle) {
+    if trimmed.starts_with(ORCHESTRATOR_SIGNATURE)
+        && !orchestrator_step_comment_matches_cycle(trimmed, cycle)
+    {
         return None;
     }
     let captures = STEP_COMMENT_ID_REGEX.captures(trimmed)?;
@@ -3562,6 +3582,9 @@ fn verify_post_dispatch_delta_present(repo_root: &Path) -> StepReport {
 // CHECKLIST.xml `gate-criteria-change-disclosure` constraint) and NOT a fix.
 // The underlying record-dispatch.sync_post_dispatch_worklog defect remains open
 // in #2627 and should be structurally addressed before cycle 524's close-out.
+// TODO: remove this grandfather once the structural fix has soaked cleanly in
+// production for enough consecutive cycles that cycle 523 can be treated as the
+// last immutable pre-fix boundary rather than a standing exception.
 const POST_DISPATCH_DELTA_FIRST_APPLICABLE_PREVIOUS_CYCLE: u64 = 523;
 
 fn post_dispatch_delta_presence_assessment(repo_root: &Path) -> Result<StepAssessment, String> {
@@ -5330,18 +5353,21 @@ fn adjusted_review_deferred_count(state: &StateJson, entry: &ReviewHistoryEntry)
             .count() as u64;
     }
 
-    entry.finding_dispositions.iter().fold(0_u64, |count, disposition| {
-        if disposition.disposition != "deferred" {
-            return count;
-        }
-        if deferred_disposition_open_state(state, entry.cycle, &disposition.category)
-            .unwrap_or(true)
-        {
-            count + 1
-        } else {
-            count
-        }
-    })
+    entry
+        .finding_dispositions
+        .iter()
+        .fold(0_u64, |count, disposition| {
+            if disposition.disposition != "deferred" {
+                return count;
+            }
+            if deferred_disposition_open_state(state, entry.cycle, &disposition.category)
+                .unwrap_or(true)
+            {
+                count + 1
+            } else {
+                count
+            }
+        })
 }
 
 fn deferred_disposition_open_state(
@@ -6031,19 +6057,22 @@ mod tests {
         fs::write(
             root.join("docs/state.json"),
             json!({
-                "last_cycle": {"number": 517},
-                "cycle_phase": {"cycle": 518}
+                "last_cycle": {"number": 523},
+                "cycle_phase": {"cycle": 524}
             })
             .to_string(),
         )
         .unwrap();
-        fs::create_dir_all(root.join("docs/worklog/2026-04-19")).unwrap();
+        fs::create_dir_all(root.join("docs/worklog/2026-04-21")).unwrap();
         fs::write(
-            root.join("docs/worklog/2026-04-19/094529-cycle-517-summary.md"),
-            "# Cycle 517 — 2026-04-19 09:45 UTC\n\n## Post-dispatch delta\n\n- **In-flight agent sessions**: 1\n- **Dispatch count**: 1 dispatch\n- **Last-cycle summary**: 1 dispatch, 0 merges\n",
+            root.join("docs/worklog/2026-04-21/094529-cycle-523-summary.md"),
+            "# Cycle 523 — 2026-04-21 09:45 UTC\n\n## Post-dispatch delta\n\n- **In-flight agent sessions**: 1\n- **Dispatch count**: 1 dispatch\n- **Last-cycle summary**: 1 dispatch, 0 merges\n",
         )
         .unwrap();
-        commit_all(&root, "state(record-dispatch): #2594 dispatched [cycle 517]");
+        commit_all(
+            &root,
+            "state(record-dispatch): #2633 dispatched [cycle 523]",
+        );
 
         let step = verify_post_dispatch_delta_present(&root);
 
@@ -6052,7 +6081,7 @@ mod tests {
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("cycle 517 worklog includes post-dispatch delta"));
+            .contains("cycle 523 worklog includes post-dispatch delta"));
     }
 
     #[test]
@@ -6068,19 +6097,22 @@ mod tests {
         fs::write(
             root.join("docs/state.json"),
             json!({
-                "last_cycle": {"number": 517},
-                "cycle_phase": {"cycle": 518}
+                "last_cycle": {"number": 523},
+                "cycle_phase": {"cycle": 524}
             })
             .to_string(),
         )
         .unwrap();
-        fs::create_dir_all(root.join("docs/worklog/2026-04-19")).unwrap();
+        fs::create_dir_all(root.join("docs/worklog/2026-04-21")).unwrap();
         fs::write(
-            root.join("docs/worklog/2026-04-19/094529-cycle-517-summary.md"),
-            "# Cycle 517 — 2026-04-19 09:45 UTC\n\n## What was done\n\n- No new dispatches.\n",
+            root.join("docs/worklog/2026-04-21/094529-cycle-523-summary.md"),
+            "# Cycle 523 — 2026-04-21 09:45 UTC\n\n## What was done\n\n- No new dispatches.\n",
         )
         .unwrap();
-        commit_all(&root, "state(record-dispatch): #2594 dispatched [cycle 517]");
+        commit_all(
+            &root,
+            "state(record-dispatch): #2633 dispatched [cycle 523]",
+        );
 
         let step = verify_post_dispatch_delta_present(&root);
 
@@ -6105,13 +6137,13 @@ mod tests {
         fs::write(
             root.join("docs/state.json"),
             json!({
-                "last_cycle": {"number": 517},
-                "cycle_phase": {"cycle": 518}
+                "last_cycle": {"number": 523},
+                "cycle_phase": {"cycle": 524}
             })
             .to_string(),
         )
         .unwrap();
-        commit_all(&root, "state(cycle-start): begin cycle 518 [cycle 518]");
+        commit_all(&root, "state(cycle-start): begin cycle 524 [cycle 524]");
 
         let step = verify_post_dispatch_delta_present(&root);
 
@@ -6120,7 +6152,7 @@ mod tests {
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("no record-dispatch receipts found for cycle 517"));
+            .contains("no record-dispatch receipts found for cycle 523"));
     }
 
     #[test]
@@ -6148,7 +6180,10 @@ mod tests {
             "# Cycle 514 — 2026-04-18 21:42 UTC\n\n## What was done\n\n- Pre-fix worklog without post-dispatch delta section.\n",
         )
         .unwrap();
-        commit_all(&root, "state(record-dispatch): #2591 dispatched [cycle 514]");
+        commit_all(
+            &root,
+            "state(record-dispatch): #2591 dispatched [cycle 514]",
+        );
 
         let step = verify_post_dispatch_delta_present(&root);
 
@@ -13495,9 +13530,9 @@ mod tests {
                 Ok(step_comment_bodies(
                     513,
                     &[
-                        "0", "0.1", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7",
-                        "8", "9", "C1", "C2", "C3", "C4.1", "C4.5", "C4.7", "C5", "C5.1",
-                        "C5.5", "C5.6", "C6", "C7", "C8",
+                        "0", "0.1", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8",
+                        "9", "C1", "C2", "C3", "C4.1", "C4.5", "C4.7", "C5", "C5.1", "C5.5",
+                        "C5.6", "C6", "C7", "C8",
                     ],
                 ))
             }
@@ -14230,7 +14265,7 @@ mod tests {
 
         let timestamps = collect_step_comment_timestamps(&comments, 301).unwrap();
         assert!(timestamps.is_empty());
-        assert!(assess_temporal_step_ordering(&timestamps).is_none());
+        assert!(assess_temporal_step_ordering(&timestamps, 301).is_none());
 
         let step = verify_current_cycle_step_comments(&root, 301, &runner);
         assert_eq!(step.status, StepStatus::Pass);

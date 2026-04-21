@@ -2,14 +2,16 @@ use clap::Parser;
 use record_dispatch::{
     apply_dispatch_patch, build_dispatch_patch, concurrency_warning_message,
     dispatch_commit_message, enforce_pipeline_gate, resolve_model, restore_sealed_last_cycle,
-    snapshot_sealed_last_cycle, sync_last_cycle_summary_after_dispatch,
-    update_review_dispatch_tracking, CommandRunner, PipelineGateError, ProcessRunner,
+    should_sync_last_cycle_summary, snapshot_sealed_last_cycle,
+    sync_last_cycle_summary_after_dispatch, update_review_dispatch_tracking, CommandRunner,
+    PipelineGateError, ProcessRunner,
 };
 use state_schema::{
     current_cycle_from_state, current_utc_timestamp, read_state_value, transition_cycle_phase,
     write_state_value,
 };
 use std::{
+    collections::BTreeSet,
     ffi::OsStr,
     fs,
     path::{Path, PathBuf},
@@ -18,6 +20,11 @@ use std::{
 };
 
 const POST_DISPATCH_DELTA_HEADING: &str = "## Post-dispatch delta";
+
+struct WorklogUpdate {
+    path: PathBuf,
+    content: String,
+}
 
 #[derive(Parser, Debug)]
 #[command(name = "record-dispatch")]
@@ -145,6 +152,7 @@ fn run_with_runner(
         &model,
         &dispatched_at,
     )?;
+    validate_worklog_dispatch_narrative(&cli.repo_root, &state_value, patch.current_cycle)?;
     let duplicate_session_error = match apply_dispatch_patch(&mut state_value, &patch) {
         Ok(_) => false,
         Err(error) if error.contains("already contains an entry for issue") => {
@@ -165,19 +173,29 @@ fn run_with_runner(
     } else {
         false
     };
-    let should_sync_last_cycle_summary =
-        !matches!(current_phase.as_str(), "close_out" | "complete");
     restore_sealed_last_cycle(&mut state_value, sealed_last_cycle)?;
-    if should_sync_last_cycle_summary {
+    if should_sync_last_cycle_summary(&current_phase) {
         sync_last_cycle_summary_after_dispatch(&mut state_value, patch.current_cycle)?;
     }
+    let worklog_update =
+        prepare_post_dispatch_worklog_update(&cli.repo_root, &state_value, patch.current_cycle)?;
     write_state_value(&cli.repo_root, &state_value)?;
-    let worklog_path =
-        sync_post_dispatch_worklog(&cli.repo_root, &state_value, patch.current_cycle)?;
+    if let Some(worklog_update) = worklog_update.as_ref() {
+        fs::write(&worklog_update.path, &worklog_update.content).map_err(|error| {
+            format!(
+                "failed to write {}: {}",
+                worklog_update.path.display(),
+                error
+            )
+        })?;
+    }
 
     let commit_message = dispatch_commit_message(cli.issue, patch.current_cycle);
-    let receipt =
-        commit_dispatch_artifacts(&cli.repo_root, &commit_message, worklog_path.as_deref())?;
+    let receipt = commit_dispatch_artifacts(
+        &cli.repo_root,
+        &commit_message,
+        worklog_update.as_ref().map(|update| update.path.as_path()),
+    )?;
     if duplicate_session_error {
         if phase_transitioned {
             println!(
@@ -208,11 +226,11 @@ fn run_with_runner(
     Ok(())
 }
 
-fn sync_post_dispatch_worklog(
+fn prepare_post_dispatch_worklog_update(
     repo_root: &Path,
     state: &serde_json::Value,
     cycle: u64,
-) -> Result<Option<PathBuf>, String> {
+) -> Result<Option<WorklogUpdate>, String> {
     let Some(worklog_path) = resolve_post_dispatch_worklog_path(repo_root, state, cycle)? else {
         return Ok(None);
     };
@@ -233,11 +251,13 @@ fn sync_post_dispatch_worklog(
         dispatch_count,
         last_cycle_summary,
     );
-    if updated != content {
-        fs::write(&worklog_path, updated)
-            .map_err(|error| format!("failed to write {}: {}", worklog_path.display(), error))?;
+    if updated == content {
+        return Ok(None);
     }
-    Ok(Some(worklog_path))
+    Ok(Some(WorklogUpdate {
+        path: worklog_path,
+        content: updated,
+    }))
 }
 
 fn resolve_post_dispatch_worklog_path(
@@ -298,6 +318,82 @@ fn dispatch_count_clause(summary: &str) -> &str {
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .unwrap_or(summary)
+}
+
+fn validate_worklog_dispatch_narrative(
+    repo_root: &Path,
+    state: &serde_json::Value,
+    cycle: u64,
+) -> Result<(), String> {
+    let Some(worklog_path) = resolve_post_dispatch_worklog_path(repo_root, state, cycle)? else {
+        return Ok(());
+    };
+    let content = fs::read_to_string(&worklog_path)
+        .map_err(|error| format!("failed to read {}: {}", worklog_path.display(), error))?;
+    let narrated_issues = narrated_dispatch_issue_numbers(&content);
+    if narrated_issues.is_empty() {
+        return Ok(());
+    }
+    let recorded_issues = state
+        .pointer("/agent_sessions")
+        .and_then(serde_json::Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|session| session.get("issue").and_then(serde_json::Value::as_u64))
+        .collect::<BTreeSet<_>>();
+    let missing = narrated_issues
+        .into_iter()
+        .filter(|issue| !recorded_issues.contains(issue))
+        .collect::<Vec<_>>();
+    if missing.is_empty() {
+        return Ok(());
+    }
+    Err(format!(
+        "{} narrates dispatch issue(s) {} in ## What was done, but docs/state.json /agent_sessions is missing them; run backfill-dispatch before record-dispatch",
+        worklog_path.display(),
+        missing
+            .iter()
+            .map(|issue| format!("#{}", issue))
+            .collect::<Vec<_>>()
+            .join(", ")
+    ))
+}
+
+fn narrated_dispatch_issue_numbers(content: &str) -> Vec<u64> {
+    let Some(section) = markdown_section(content, "## What was done") else {
+        return Vec::new();
+    };
+    let mut issues = Vec::new();
+    let mut seen = BTreeSet::new();
+    for line in section.lines() {
+        let trimmed = line.trim_start();
+        let bullet_stripped = trimmed
+            .strip_prefix("- ")
+            .or_else(|| trimmed.strip_prefix("* "))
+            .unwrap_or(trimmed);
+        let Some(rest) = bullet_stripped.strip_prefix("Dispatched [#") else {
+            continue;
+        };
+        let digits = rest
+            .chars()
+            .take_while(|character| character.is_ascii_digit())
+            .collect::<String>();
+        if let Ok(issue) = digits.parse::<u64>() {
+            if seen.insert(issue) {
+                issues.push(issue);
+            }
+        }
+    }
+    issues
+}
+
+fn markdown_section<'a>(content: &'a str, heading: &str) -> Option<&'a str> {
+    let (_, remainder) = content.split_once(&format!("{heading}\n"))?;
+    let end = remainder
+        .find("\n## ")
+        .or_else(|| remainder.find("\n### "))
+        .unwrap_or(remainder.len());
+    Some(remainder[..end].trim_end_matches('\n'))
 }
 
 /// Find the most recent worklog file for `cycle` by scanning `docs/worklog/*/*.md`
@@ -894,6 +990,7 @@ mod tests {
             "0 dispatches, 2 merges (PR EvaLok/schema-org-json-ld#100, PR EvaLok/schema-org-json-ld#200)"
         );
         initial_state["last_cycle"]["timestamp"] = serde_json::json!("2026-04-09T09:52:44Z");
+        initial_state["cycle_phase"]["completed_at"] = serde_json::json!("2026-04-09T09:52:44Z");
         repo.write_state_value(&initial_state);
 
         run(Cli {
@@ -921,6 +1018,10 @@ mod tests {
             .and_then(serde_json::Value::as_str)
             .expect("dispatch should preserve last_cycle timestamp");
         assert_eq!(preserved_timestamp, "2026-04-09T09:52:44Z");
+        assert_eq!(
+            state.pointer("/cycle_phase/completed_at"),
+            Some(&serde_json::json!("2026-04-09T09:52:44Z"))
+        );
         let sessions = state["agent_sessions"]
             .as_array()
             .expect("agent_sessions should be an array");
@@ -941,6 +1042,7 @@ mod tests {
             "0 dispatches, 2 merges (PR EvaLok/schema-org-json-ld#2601, PR EvaLok/schema-org-json-ld#2603)"
         );
         initial_state["last_cycle"]["timestamp"] = serde_json::json!("2026-04-15T18:31:00Z");
+        initial_state["cycle_phase"]["completed_at"] = serde_json::json!("2026-04-15T18:31:00Z");
         repo.write_state_value(&initial_state);
 
         run(Cli {
@@ -962,6 +1064,10 @@ mod tests {
         );
         assert_eq!(
             state.pointer("/last_cycle/timestamp"),
+            Some(&serde_json::json!("2026-04-15T18:31:00Z"))
+        );
+        assert_eq!(
+            state.pointer("/cycle_phase/completed_at"),
             Some(&serde_json::json!("2026-04-15T18:31:00Z"))
         );
         let sessions = state["agent_sessions"]
@@ -1075,8 +1181,8 @@ mod tests {
     }
 
     #[test]
-    fn sync_post_dispatch_worklog_falls_back_to_previous_cycle_worklog_when_current_cycle_missing()
-    {
+    fn prepare_post_dispatch_worklog_update_falls_back_to_previous_cycle_worklog_when_current_cycle_missing(
+    ) {
         let repo = TempRepo::new();
         repo.init_with_phase("work");
         let mut state = repo.read_state();
@@ -1098,15 +1204,24 @@ mod tests {
         )
         .unwrap();
 
-        let synced = sync_post_dispatch_worklog(repo.path(), &state, 514)
-            .expect("post-dispatch sync should succeed")
+        let synced = prepare_post_dispatch_worklog_update(repo.path(), &state, 514)
+            .expect("post-dispatch update should succeed")
             .expect("previous cycle worklog should be selected");
 
-        assert_eq!(synced, worklog_path);
-        let content = fs::read_to_string(&synced).unwrap();
+        assert_eq!(synced.path, worklog_path);
+        let content = synced.content;
         assert!(content.contains("## Post-dispatch delta"));
         assert!(content.contains("- **In-flight agent sessions**: 1"));
         assert!(content.contains("- **Dispatch count**: 1 dispatch"));
+    }
+
+    #[test]
+    fn narrated_dispatch_issue_numbers_extracts_worklog_dispatch_bullets() {
+        let issues = narrated_dispatch_issue_numbers(
+            "# Cycle 523\n\n## What was done\n\n- Dispatched [#2631](https://github.com/EvaLok/schema-org-json-ld/issues/2631) to Copilot.\n- Dispatched [#2631](https://github.com/EvaLok/schema-org-json-ld/issues/2631) again.\n- Merged [PR #2629](https://github.com/EvaLok/schema-org-json-ld/pull/2629).\n",
+        );
+
+        assert_eq!(issues, vec![2631]);
     }
 
     #[test]

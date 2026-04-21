@@ -13,10 +13,9 @@ use std::process::Command;
 
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const VERIFY_REVIEW_EVENTS_TIMEOUT_SECS: u64 = 30;
-const CYCLE_STATE_HEADING: &str = "## Cycle state";
-const PRE_DISPATCH_STATE_HEADING: &str = "## Pre-dispatch state";
+#[cfg(test)]
 const PRE_DISPATCH_SNAPSHOT_NOTE: &str =
-    "*Snapshot before review dispatch — final counters may differ after C6.*";
+    "*Counters shown here are taken at C5.5/C6. For post-dispatch numbers, see the `## Post-dispatch delta` section below.*";
 const PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
 const CLOSE_OUT_GATE_FAILURES_PREFIX: &str = "- **Close-out gate failures**: ";
 
@@ -556,14 +555,6 @@ fn freeze_worklog_content(
     let mut replaced_pipeline = false;
 
     for line in content.lines() {
-        let trimmed = line.trim();
-        if trimmed == PRE_DISPATCH_STATE_HEADING {
-            updated.push(CYCLE_STATE_HEADING.to_string());
-            continue;
-        }
-        if trimmed == PRE_DISPATCH_SNAPSHOT_NOTE {
-            continue;
-        }
         if line.starts_with(CLOSE_OUT_GATE_FAILURES_PREFIX) {
             continue;
         }
@@ -2458,7 +2449,7 @@ mod tests {
         fs::create_dir_all(dir.join("docs/journal")).unwrap();
         fs::write(
             dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"),
-            "# Cycle 345\n\n### Issues processed\n\n- None.\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: PASS\n- **Publish gate**: published\n\n## Next steps\n\n1. None.\n",
+            "# Cycle 345\n\n### Issues processed\n\n- None.\n\n## Pre-dispatch state\n\n*Counters shown here are taken at C5.5/C6. For post-dispatch numbers, see the `## Post-dispatch delta` section below.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: PASS\n- **Publish gate**: published\n\n## Next steps\n\n1. None.\n",
         )
         .unwrap();
         fs::write(dir.join("docs/journal/2026-03-25.md"), "# Journal\n").unwrap();
@@ -2591,7 +2582,7 @@ mod tests {
         fs::create_dir_all(dir.join("docs/journal")).unwrap();
         fs::write(
             dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"),
-            "# Cycle 345\n\n### Issues processed\n\n- None.\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: PASS\n- **Publish gate**: published\n\n## Next steps\n\n1. None.\n",
+            "# Cycle 345\n\n### Issues processed\n\n- None.\n\n## Pre-dispatch state\n\n*Counters shown here are taken at C5.5/C6. For post-dispatch numbers, see the `## Post-dispatch delta` section below.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: PASS\n- **Publish gate**: published\n\n## Next steps\n\n1. None.\n",
         )
         .unwrap();
         fs::write(dir.join("docs/journal/2026-03-25.md"), "# Journal\n").unwrap();
@@ -2697,9 +2688,8 @@ mod tests {
         let worklog =
             fs::read_to_string(dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"))
                 .unwrap();
-        assert!(worklog.contains("## Cycle state"));
-        assert!(!worklog.contains("## Pre-dispatch state"));
-        assert!(!worklog.contains("Snapshot before review dispatch"));
+        assert!(worklog.contains("## Pre-dispatch state"));
+        assert!(worklog.contains(PRE_DISPATCH_SNAPSHOT_NOTE));
         assert!(worklog.contains("- **In-flight agent sessions**: 0"));
         assert!(
             worklog.contains(
@@ -2711,7 +2701,7 @@ mod tests {
         ));
         assert!(worklog.contains("- **Publish gate**: published"));
         assert!(worklog.contains("## Next steps\n\n1. None.\n"));
-        assert!(!worklog.contains("post-dispatch"));
+        assert!(!worklog.contains("\n## Post-dispatch delta\n"));
 
         let log_output = Command::new("git")
             .arg("-C")
@@ -2733,7 +2723,7 @@ mod tests {
         fs::create_dir_all(dir.join("docs/journal")).unwrap();
         fs::write(
             dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"),
-            "# Cycle 345\n\n### Issues processed\n\n- None.\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: published\n\n## Next steps\n\n1. Plan next dispatch\n",
+            "# Cycle 345\n\n### Issues processed\n\n- None.\n\n## Pre-dispatch state\n\n*Counters shown here are taken at C5.5/C6. For post-dispatch numbers, see the `## Post-dispatch delta` section below.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: published\n\n## Next steps\n\n1. Plan next dispatch\n",
         )
         .unwrap();
         fs::write(dir.join("docs/journal/2026-03-25.md"), "# Journal\n").unwrap();
@@ -2850,7 +2840,7 @@ mod tests {
             "- **Close-out gate failures**: C5.5 FAIL: FAIL (1 warning, 1 blocking: foo)"
         ));
         assert!(worklog.contains("- **Publish gate**: published"));
-        assert!(!worklog.contains("post-dispatch"));
+        assert!(!worklog.contains("\n## Post-dispatch delta\n"));
         assert_eq!(worklog.matches("- **Pipeline status**:").count(), 1);
         assert!(worklog.contains("## Next steps\n\n1. Plan next dispatch\n"));
 
@@ -2865,7 +2855,7 @@ mod tests {
         fs::create_dir_all(dir.join("docs/journal")).unwrap();
         fs::write(
             dir.join("docs/worklog/2026-03-25/122700-cycle-345-summary.md"),
-            "# Cycle 345\n\n### Issues processed\n\n- None.\n\n## Pre-dispatch state\n\n*Snapshot before review dispatch — final counters may differ after C6.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: published\n\n## Next steps\n\n1. Plan next dispatch\n",
+            "# Cycle 345\n\n### Issues processed\n\n- None.\n\n## Pre-dispatch state\n\n*Counters shown here are taken at C5.5/C6. For post-dispatch numbers, see the `## Post-dispatch delta` section below.*\n- **In-flight agent sessions**: 0\n- **Pipeline status**: FAIL (1 blocking finding)\n- **Publish gate**: published\n\n## Next steps\n\n1. Plan next dispatch\n",
         )
         .unwrap();
         fs::write(dir.join("docs/journal/2026-03-25.md"), "# Journal\n").unwrap();

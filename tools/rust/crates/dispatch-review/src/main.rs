@@ -1,8 +1,8 @@
 use clap::Parser;
 use record_dispatch::{
     apply_dispatch_patch, build_dispatch_patch, dispatch_commit_message, enforce_pipeline_gate,
-    restore_sealed_last_cycle, snapshot_sealed_last_cycle, sync_last_cycle_summary_after_dispatch,
-    update_review_dispatch_tracking, ProcessRunner,
+    restore_sealed_last_cycle, should_sync_last_cycle_summary, snapshot_sealed_last_cycle,
+    sync_last_cycle_summary_after_dispatch, update_review_dispatch_tracking, ProcessRunner,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -215,7 +215,9 @@ fn record_created_issue(
         transition_cycle_phase(&mut state, cycle, "complete")?;
     }
     restore_sealed_last_cycle(&mut state, sealed_last_cycle)?;
-    sync_last_cycle_summary_after_dispatch(&mut state, cycle)?;
+    if should_sync_last_cycle_summary(&current_phase) {
+        sync_last_cycle_summary_after_dispatch(&mut state, cycle)?;
+    }
     write_state_value(repo_root, &state)?;
     let commit_message = dispatch_commit_message(issue, cycle);
     commit_state_json(repo_root, &commit_message)?;
@@ -377,14 +379,16 @@ mod tests {
     }
 
     #[test]
-    fn record_created_issue_transitions_close_out_and_syncs_last_cycle_summary() {
+    fn record_created_issue_preserves_completed_cycle_snapshot() {
         let repo = TempRepo::new();
         repo.init_with_state_json(CYCLE_495_CLOSE_OUT_FIXTURE);
         let before = repo.read_state();
+        let original_summary = before["last_cycle"]["summary"].clone();
         let original_timestamp = before["last_cycle"]["timestamp"]
             .as_str()
             .expect("fixture should include last_cycle timestamp")
             .to_string();
+        let original_completed_at = before.pointer("/cycle_phase/completed_at").cloned();
 
         record_created_issue(
             repo.path(),
@@ -402,13 +406,15 @@ mod tests {
         );
         assert_eq!(
             state.pointer("/last_cycle/summary"),
-            Some(&json!("1 dispatch, 0 merges"))
+            Some(&original_summary)
         );
-        assert_ne!(
-            state
-                .pointer("/last_cycle/timestamp")
-                .and_then(Value::as_str),
-            Some(original_timestamp.as_str())
+        assert_eq!(
+            state.pointer("/last_cycle/timestamp"),
+            Some(&json!(original_timestamp))
+        );
+        assert_eq!(
+            state.pointer("/cycle_phase/completed_at"),
+            original_completed_at.as_ref()
         );
         assert_eq!(
             state.pointer("/dispatch_log_latest"),

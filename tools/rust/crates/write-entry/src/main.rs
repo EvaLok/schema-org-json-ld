@@ -20,13 +20,12 @@ const AUDIT_ISSUES_URL: &str = "https://github.com/EvaLok/schema-org-json-ld-aud
 const PRIMARY_COMMITS_URL: &str = "https://github.com/EvaLok/schema-org-json-ld/commit";
 const JOURNAL_DESCRIPTION: &str = "Reflective log for the schema-org-json-ld orchestrator.";
 const NOT_PROVIDED: &str = "Not provided.";
-const CYCLE_STATE_HEADING: &str = "## Cycle state";
-const LEGACY_STATE_HEADING: &str = "## Pre-dispatch state";
+const PRE_DISPATCH_STATE_HEADING: &str = "## Pre-dispatch state";
 const POST_DISPATCH_DELTA_HEADING: &str = "## Post-dispatch delta";
 const NEXT_STEPS_HEADING: &str = "## Next steps";
 const ISSUES_PROCESSED_HEADING: &str = "### Issues processed";
-const LEGACY_STATE_DISCLAIMER: &str =
-    "*Snapshot before review dispatch — final counters may differ after C6.*";
+const PRE_DISPATCH_STATE_NOTE: &str =
+    "*Counters shown here are taken at C5.5/C6. For post-dispatch numbers, see the `## Post-dispatch delta` section below.*";
 const IN_FLIGHT_PREFIX: &str = "- **In-flight agent sessions**: ";
 const PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
 const CLOSE_OUT_GATE_FAILURES_PREFIX: &str = "- **Close-out gate failures**: ";
@@ -221,8 +220,6 @@ struct CurrentState {
     prior_gate_failures: Vec<String>,
     #[serde(default)]
     publish_gate: String,
-    #[serde(default)]
-    preliminary: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -548,7 +545,6 @@ fn resolve_worklog_input_for_cycle(
                     Some(value) => value.clone(),
                     None => state_publish_gate_status(current_state_source)?,
                 },
-                preliminary: worklog_state_is_preliminary(current_state_source, cycle),
             },
             post_dispatch_delta: derive_post_dispatch_delta(state.as_ref(), cycle)?,
             next_steps: resolve_next_steps(args, state.as_ref())?,
@@ -584,7 +580,6 @@ fn resolve_worklog_input_for_cycle(
                 current_state_source,
             )?,
             publish_gate: state_publish_gate_status(current_state_source)?,
-            preliminary: worklog_state_is_preliminary(current_state_source, cycle),
         },
         post_dispatch_delta: derive_post_dispatch_delta(state.as_ref(), cycle)?,
         next_steps: resolve_next_steps(args, state.as_ref())?,
@@ -791,10 +786,6 @@ fn frozen_c5_5_pipeline_status(state: Option<&StateJson>, cycle: u64) -> Option<
             .or_else(|| Some(status.to_string())),
         _ => None,
     }
-}
-
-fn worklog_state_is_preliminary(state: Option<&StateJson>, cycle: u64) -> bool {
-    frozen_c5_5_pipeline_status(state, cycle).is_none()
 }
 
 fn resolve_prior_gate_failures(
@@ -4034,19 +4025,10 @@ fn render_worklog(cycle: u64, now: DateTime<Utc>, input: &WorklogInput) -> Strin
         }
     }
     lines.push(String::new());
-    lines.push(
-        if input.current_state.preliminary {
-            LEGACY_STATE_HEADING
-        } else {
-            CYCLE_STATE_HEADING
-        }
-        .to_string(),
-    );
+    lines.push(PRE_DISPATCH_STATE_HEADING.to_string());
     lines.push(String::new());
-    if input.current_state.preliminary {
-        lines.push(LEGACY_STATE_DISCLAIMER.to_string());
-        lines.push(String::new());
-    }
+    lines.push(PRE_DISPATCH_STATE_NOTE.to_string());
+    lines.push(String::new());
     lines.push(format!(
         "{}{}",
         IN_FLIGHT_PREFIX, input.current_state.in_flight_sessions
@@ -5020,7 +5002,6 @@ mod tests {
                 pipeline_status: "5/5 phases pass".to_string(),
                 prior_gate_failures: Vec::new(),
                 publish_gate: "Source diverged".to_string(),
-                preliminary: false,
             },
             post_dispatch_delta: None,
             next_steps: vec!["Review PR #543".to_string()],
@@ -5030,13 +5011,12 @@ mod tests {
         let rendered = render_worklog(154, fixed_now(), &input);
         let what_done = rendered.find("## What was done").unwrap();
         let self_mods = rendered.find("## Self-modifications").unwrap();
-        let current = rendered.find("## Cycle state").unwrap();
+        let current = rendered.find("## Pre-dispatch state").unwrap();
         let next = rendered.find("## Next steps").unwrap();
         assert!(what_done < self_mods);
         assert!(self_mods < current);
         assert!(current < next);
-        assert!(!rendered
-            .contains("*Snapshot before review dispatch — final counters may differ after C6.*"));
+        assert!(rendered.contains(PRE_DISPATCH_STATE_NOTE));
         assert!(rendered.contains("[#42](https://github.com/EvaLok/schema-org-json-ld/issues/42)"));
         assert!(rendered.contains(
             "[audit #117](https://github.com/EvaLok/schema-org-json-ld-audit/issues/117)"
@@ -5060,7 +5040,6 @@ mod tests {
                 pipeline_status: NOT_PROVIDED.to_string(),
                 prior_gate_failures: Vec::new(),
                 publish_gate: NOT_PROVIDED.to_string(),
-                preliminary: false,
             },
             post_dispatch_delta: None,
             next_steps: Vec::new(),
@@ -5098,7 +5077,6 @@ mod tests {
                 pipeline_status: "PASS (3 warnings)".to_string(),
                 prior_gate_failures: Vec::new(),
                 publish_gate: "clear".to_string(),
-                preliminary: false,
             },
             post_dispatch_delta: None,
             next_steps: vec![next_step.clone()],
@@ -5128,7 +5106,6 @@ mod tests {
                 pipeline_status: "PASS (3 warnings)".to_string(),
                 prior_gate_failures: Vec::new(),
                 publish_gate: "clear".to_string(),
-                preliminary: false,
             },
             post_dispatch_delta: None,
             next_steps: Vec::new(),
@@ -5155,7 +5132,6 @@ mod tests {
                 pipeline_status: "PASS (3 warnings)".to_string(),
                 prior_gate_failures: vec!["C4.1 FAIL: pipeline status mismatch".to_string()],
                 publish_gate: "clear".to_string(),
-                preliminary: false,
             },
             post_dispatch_delta: None,
             next_steps: Vec::new(),
@@ -5404,12 +5380,12 @@ mod tests {
         assert!(content.contains("### Issues processed\n\n- None."));
         assert!(content.contains("## Self-modifications\n\n- None."));
         assert!(content.contains("## Pre-dispatch state"));
-        assert!(content.contains(LEGACY_STATE_DISCLAIMER));
+        assert!(content.contains(PRE_DISPATCH_STATE_NOTE));
         assert!(content.contains("- **Pipeline status**: Not provided."));
         assert!(content.contains("- **In-flight agent sessions**: 3"));
         assert!(!content.contains("- **Copilot metrics**:"));
         assert!(content.contains("- **Publish gate**: published"));
-        assert!(!content.contains("post-dispatch"));
+        assert!(!content.contains("\n## Post-dispatch delta\n"));
     }
 
     #[test]
@@ -5488,10 +5464,10 @@ mod tests {
         let path = execute_worklog(&args, &repo_root.path, fixed_now()).unwrap();
         let content = fs::read_to_string(path).unwrap();
 
-        assert!(content.contains("## Cycle state"));
-        assert!(!content.contains(LEGACY_STATE_DISCLAIMER));
+        assert!(content.contains("## Pre-dispatch state"));
+        assert!(content.contains(PRE_DISPATCH_STATE_NOTE));
         assert!(content.contains("- **Pipeline status**: PASS (6/6)"));
-        assert!(!content.contains("post-dispatch"));
+        assert!(!content.contains("\n## Post-dispatch delta\n"));
     }
 
     #[test]

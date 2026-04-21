@@ -484,10 +484,7 @@ fn mark_stale_agent_sessions_in_state(
         session
             .as_object_mut()
             .ok_or_else(|| format!("agent session for issue #{issue} must be an object"))?
-            .insert(
-                "last_seen_stale_at_cycle".to_string(),
-                json!(current_cycle),
-            );
+            .insert("last_seen_stale_at_cycle".to_string(), json!(current_cycle));
         marked.push(issue);
     }
 
@@ -867,10 +864,7 @@ mod tests {
     #[test]
     fn parse_stale_session_issue_numbers_extracts_multiple_issues_semicolon_joined() {
         let detail = "agent session issue #2317 \"one\" is closed on GitHub but still marked in_flight; agent session issue #2549 \"two\" is closed on GitHub but still marked in_flight";
-        assert_eq!(
-            parse_stale_session_issue_numbers(detail),
-            vec![2317, 2549]
-        );
+        assert_eq!(parse_stale_session_issue_numbers(detail), vec![2317, 2549]);
     }
 
     #[test]

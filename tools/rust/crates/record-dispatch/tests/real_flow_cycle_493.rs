@@ -22,6 +22,7 @@ fn record_dispatch_replays_cycle_493_close_out_flow() {
         .as_str()
         .expect("fixture should include last_cycle timestamp")
         .to_string();
+    let original_completed_at = before.pointer("/cycle_phase/completed_at").cloned();
 
     let output = Command::new(env!("CARGO_BIN_EXE_record-dispatch"))
         .args([
@@ -61,6 +62,10 @@ fn record_dispatch_replays_cycle_493_close_out_flow() {
         Some(original_timestamp.as_str())
     );
     assert_eq!(
+        after.pointer("/cycle_phase/completed_at"),
+        original_completed_at.as_ref()
+    );
+    assert_eq!(
         after.pointer("/dispatch_log_latest"),
         Some(&serde_json::json!(
             "#2511 [Cycle Review] Cycle 493 end-of-cycle review (cycle 493)"
@@ -90,6 +95,7 @@ fn record_dispatch_replays_cycle_495_close_out_flow() {
         .as_str()
         .expect("fixture should include last_cycle timestamp")
         .to_string();
+    let original_completed_at = before.pointer("/cycle_phase/completed_at").cloned();
 
     let output = Command::new(env!("CARGO_BIN_EXE_record-dispatch"))
         .args([
@@ -129,6 +135,10 @@ fn record_dispatch_replays_cycle_495_close_out_flow() {
         Some(original_timestamp.as_str())
     );
     assert_eq!(
+        after.pointer("/cycle_phase/completed_at"),
+        original_completed_at.as_ref()
+    );
+    assert_eq!(
         after.pointer("/dispatch_log_latest"),
         Some(&serde_json::json!(
             "#2521 [Cycle Review] Cycle 495 end-of-cycle review (cycle 495)"
@@ -151,7 +161,7 @@ fn record_dispatch_replays_cycle_495_close_out_flow() {
 fn record_dispatch_updates_previous_cycle_worklog_when_current_cycle_worklog_is_missing() {
     let repo = TempRepo::new();
     repo.init_with_state(
-        r#"{
+        r##"{
   "agent_sessions": [],
   "in_flight_sessions": 0,
   "last_cycle": {
@@ -192,7 +202,7 @@ fn record_dispatch_updates_previous_cycle_worklog_when_current_cycle_worklog_is_
       "needs_reverify": false
     }
   }
-}"#,
+}"##,
     );
     repo.write_worklog(
         "2026-04-18",
@@ -361,6 +371,84 @@ fn record_dispatch_updates_replacement_worklog_after_close_out_slug_replace() {
     assert!(changed_files.contains("docs/state.json"));
     assert!(changed_files
         .contains("docs/worklog/2026-04-19/000001-cycle-515-review-consumed-replacement.md"));
+}
+
+#[test]
+fn record_dispatch_rejects_worklog_with_untracked_dispatch_issue() {
+    let repo = TempRepo::new();
+    repo.init_with_state(
+        r##"{
+  "agent_sessions": [],
+  "in_flight_sessions": 0,
+  "last_cycle": {
+    "number": 523,
+    "summary": "0 dispatches, 1 merges (PR #2629)"
+  },
+  "cycle_phase": {
+    "cycle": 523,
+    "phase": "complete",
+    "phase_entered_at": "2026-04-21T02:04:50Z",
+    "completed_at": "2026-04-21T02:04:50Z"
+  },
+  "review_agent": {
+    "history": []
+  },
+  "field_inventory": {
+    "fields": {
+      "copilot_metrics.in_flight": {"last_refreshed": "cycle 523"},
+      "copilot_metrics.dispatch_to_pr_rate": {"last_refreshed": "cycle 523"},
+      "copilot_metrics.pr_merge_rate": {"last_refreshed": "cycle 523"}
+    }
+  },
+  "copilot_metrics": {
+    "total_dispatches": 0,
+    "resolved": 1,
+    "merged": 1,
+    "closed_without_pr": 0,
+    "reviewed_awaiting_eva": 0,
+    "in_flight": 0,
+    "produced_pr": 1,
+    "pr_merge_rate": "100.0%",
+    "dispatch_to_pr_rate": "0.0%",
+    "dispatch_log_latest": "#2629 merged change (cycle 523)"
+  },
+  "tool_pipeline": {
+    "c5_5_gate": {
+      "cycle": 523,
+      "status": "PASS",
+      "needs_reverify": false
+    }
+  }
+}"##,
+    );
+    repo.write_worklog(
+        "2026-04-21",
+        "020531-cycle-523-summary.md",
+        "# Cycle 523 — 2026-04-21 02:05 UTC\n\n## What was done\n\n- Dispatched [#2631](https://github.com/EvaLok/schema-org-json-ld/issues/2631) to Copilot via gh-api-direct.\n",
+    );
+    git_success(repo.path(), ["add", "docs/worklog"]);
+    git_success(repo.path(), ["commit", "-m", "initial worklog"]);
+
+    let output = Command::new(env!("CARGO_BIN_EXE_record-dispatch"))
+        .args([
+            "--repo-root",
+            repo.path()
+                .to_str()
+                .expect("repo path should be valid UTF-8"),
+            "--issue",
+            "2633",
+            "--title",
+            "[Cycle Review] Cycle 523 end-of-cycle review",
+            "--review-dispatch",
+            "--model",
+            "gpt-5.4",
+        ])
+        .output()
+        .expect("record-dispatch should execute");
+    assert!(!output.status.success(), "record-dispatch should fail fast");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("#2631"));
+    assert!(stderr.contains("backfill-dispatch"));
 }
 
 struct TempRepo {
