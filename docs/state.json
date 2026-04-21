@@ -19447,8 +19447,9 @@
     "blocks_publish": false,
     "c5_5_gate": {
       "cycle": 525,
-      "needs_reverify": true,
-      "status": "FAIL"
+      "needs_reverify": false,
+      "pipeline_summary": "PASS (1 blocking warning, 3 warnings)",
+      "status": "PASS"
     },
     "c5_5_initial_result": {
       "cycle": 525,
@@ -19459,10 +19460,10 @@
       "summary": "FAIL (1 blocking warning, 3 warnings, 1 cascade, 1 blocking: post-dispatch-delta-present)"
     },
     "c5_5_rerun_receipt": {
-      "cycle": 524,
+      "cycle": 525,
       "initial_status": "FAIL",
       "rerun_status": "PASS",
-      "timestamp": "2026-04-21T10:50:14Z"
+      "timestamp": "2026-04-21T22:02:35Z"
     },
     "eva_directive": 436,
     "phases": [
