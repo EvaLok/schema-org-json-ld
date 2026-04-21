@@ -9865,6 +9865,13 @@
       "pr": 2641,
       "status": "merged",
       "title": "[Cycle Review] Cycle 524 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-04-21T22:03:32Z",
+      "issue": 2643,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 525 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -10136,8 +10143,8 @@
   ],
   "cycle_phase": {
     "cycle": 525,
-    "phase": "close_out",
-    "phase_entered_at": "2026-04-21T21:44:01Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-04-21T22:03:32Z"
   },
   "cycles_since_last_forward_work": {
     "added_in_cycle": 411,
@@ -10966,7 +10973,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2640 [Cycle Review] Cycle 524 end-of-cycle review (cycle 524)",
+  "dispatch_log_latest": "#2643 [Cycle Review] Cycle 525 end-of-cycle review (cycle 525)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -11237,7 +11244,7 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 20,
     "issue": 2642,
@@ -18903,7 +18910,7 @@
     ],
     "last_review_cycle": 524
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 525,
   "schema_status": {
     "directory_layout": {
