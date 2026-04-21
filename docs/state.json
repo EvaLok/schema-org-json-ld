@@ -9854,6 +9854,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Structural fix bundle: record-dispatch atomic sync, completed-cycle freeze, pre-dispatch label retention, gh-api-direct ledger backfill (cycle 524 review findings 1-4)"
+    },
+    {
+      "dispatched_at": "2026-04-21T10:51:06Z",
+      "issue": 2640,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Cycle Review] Cycle 524 end-of-cycle review"
     }
   ],
   "audit_dropped": [
@@ -10124,9 +10131,10 @@
     2639
   ],
   "cycle_phase": {
+    "completed_at": "2026-04-21T10:51:06Z",
     "cycle": 524,
-    "phase": "close_out",
-    "phase_entered_at": "2026-04-21T10:19:30Z"
+    "phase": "complete",
+    "phase_entered_at": "2026-04-21T10:51:06Z"
   },
   "cycles_since_last_forward_work": {
     "added_in_cycle": 411,
@@ -10937,7 +10945,7 @@
       "resolved_ref": "docs/reviews/cycle-523.md"
     }
   ],
-  "dispatch_log_latest": "#2636 Structural fix bundle: record-dispatch atomic sync, completed-cycle freeze, pre-dispatch label retention, gh-api-direct ledger backfill (cycle 524 review findings 1-4) (cycle 523)",
+  "dispatch_log_latest": "#2640 [Cycle Review] Cycle 524 end-of-cycle review (cycle 524)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -11060,7 +11068,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 523"
+        "last_refreshed": "cycle 524"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -11208,13 +11216,13 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 38,
     "issue": 2639,
     "number": 524,
-    "summary": "0 dispatches, 0 merges",
-    "timestamp": "2026-04-21T10:19:30Z"
+    "summary": "1 dispatch, 0 merges",
+    "timestamp": "2026-04-21T10:51:06Z"
   },
   "last_eva_comment_check": "2026-04-21T10:19:30Z",
   "last_tool_audit_cycle": 403,
@@ -18840,7 +18848,7 @@
     ],
     "last_review_cycle": 523
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 524,
   "schema_status": {
     "directory_layout": {
