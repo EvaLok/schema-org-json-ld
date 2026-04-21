@@ -10906,7 +10906,8 @@
       "category": "state-integrity",
       "deadline_cycle": 523,
       "deferred_cycle": 518,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-523.md"
     },
     {
       "category": "journal-quality",
@@ -10918,7 +10919,8 @@
       "category": "worklog-accuracy",
       "deadline_cycle": 525,
       "deferred_cycle": 520,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-523.md"
     }
   ],
   "dispatch_log_latest": "#2633 [Cycle Review] Cycle 523 end-of-cycle review (cycle 523)",
@@ -18784,9 +18786,44 @@
         "ignored": 0,
         "note": "Cycle 522 review (complacency 2/5): 1 dispatch_created (F1 code-change-quality → cycle-runner close_out ordering fix), 3 deferred (F2 state-integrity, F3 worklog-accuracy, F4 journal-quality). Dispatch issue filed this cycle for F1.",
         "review_issue": 2628
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "code-change-quality",
+          "process-adherence",
+          "state-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 523,
+        "deferred": 0,
+        "dispatch_created": 4,
+        "finding_count": 4,
+        "finding_dispositions": [
+          {
+            "category": "code-change-quality",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "process-adherence",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "worklog-accuracy",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "state-integrity",
+            "disposition": "dispatch_created"
+          }
+        ],
+        "ignored": 0,
+        "note": "All 4 findings bundled into structural dispatch #2636: atomic record-dispatch commit, completed-cycle freeze, pre-dispatch label retention, gh-api-direct ledger backfill. F4 state-integrity chronic deferral deadline discharged (cycle 518 deadline was 523).",
+        "review_issue": 2633
       }
     ],
-    "last_review_cycle": 522
+    "last_review_cycle": 523
   },
   "review_dispatch_consecutive": 6,
   "review_events_verified_through_cycle": 523,
