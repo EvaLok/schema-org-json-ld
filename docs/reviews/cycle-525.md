@@ -1,9 +1,12 @@
 # Cycle 525 Review
 
-## 1. [code-change-quality] The first live close-out after PR #2637 still failed to emit the promised post-dispatch delta
+## 1. [close-out-tooling] The first live close-out after PR #2637 still failed to emit the promised post-dispatch delta
 
 **File**: docs/worklog/2026-04-21/214438-cycle-525-landed-pr-2637-structural-fix-bundle-for-cycle-523-review-f1-f4-refreshed-4-chronic-categories-merged-cycle-524-review-pr-2641.md:41-43
-**Evidence**: The worklog labels the snapshot as `## Pre-dispatch state` and says post-dispatch numbers are in the `## Post-dispatch delta` section “below,” but the file ends at the receipt table on line 68 and contains no actual `## Post-dispatch delta` heading. That means the first live cycle after PR `#2637` landed did not actually produce the artifact its fix bundle was supposed to restore. The cycle 525 journal doubles down on the same assumption: line 137 says runtime verification was deferred to cycle 526 because this was the first live run through the new binaries, line 159 says cycle 526 should verify that cycle 525 produced the delta, and line 168 makes `grep -c '## Post-dispatch delta'` returning `1` the next cycle’s observable. The observable already fails on the cycle 525 artifact itself.
+**Evidence**:
+- The worklog labels the snapshot as `## Pre-dispatch state` and says post-dispatch numbers are in the `## Post-dispatch delta` section “below,” but the file ends at the receipt table on line 68 and contains no actual `## Post-dispatch delta` heading.
+- The cycle 525 journal doubles down on that assumption: line 137 says runtime verification was deferred to cycle 526 because this was the first live run through the new binaries, and line 159 says cycle 526 should verify that cycle 525 produced the delta.
+- Line 168 then makes `grep -c '## Post-dispatch delta'` returning `1` the next cycle’s observable, but the cycle 525 artifact already fails that observable.
 **Recommendation**: Treat the close-out path as still broken until the worklog actually contains the emitted post-dispatch section. Add a live-path regression around record-dispatch/write-entry and fail close-out if a worklog references a post-dispatch section that was never written.
 
 ## 2. [state-integrity] `cycle-complete` did not seal `cycle_phase` as complete or record `completed_at`
