@@ -10186,10 +10186,10 @@
     2656
   ],
   "cycle_phase": {
-    "completed_at": "2026-04-22T21:43:14Z",
+    "completed_at": "2026-04-22T21:57:24Z",
     "cycle": 529,
     "phase": "complete",
-    "phase_entered_at": "2026-04-22T21:43:14Z"
+    "phase_entered_at": "2026-04-22T21:57:24Z"
   },
   "cycles_since_last_forward_work": {
     "added_in_cycle": 411,
@@ -11295,13 +11295,13 @@
   },
   "in_flight_sessions": 1,
   "last_cycle": {
-    "duration_minutes": 2,
+    "duration_minutes": 14,
     "issue": 2656,
     "number": 529,
     "summary": "0 dispatches, 0 merges",
-    "timestamp": "2026-04-22T21:43:14Z"
+    "timestamp": "2026-04-22T21:57:24Z"
   },
-  "last_eva_comment_check": "2026-04-22T21:43:14Z",
+  "last_eva_comment_check": "2026-04-22T21:57:24Z",
   "last_tool_audit_cycle": 403,
   "open_questions_for_eva": [
     2638,
