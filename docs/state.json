@@ -10993,7 +10993,8 @@
       "category": "code-change-quality",
       "deadline_cycle": 529,
       "deferred_cycle": 524,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "PR #2637 (merged cycle 525) added CI workspace release-build + binary freshness guard (.github/workflows CI step), providing structural workspace-level validation; cycles 525, 526, 527 reviews subsequently did not re-flag this category; cycle 527 dispatch protocol verified cargo test --workspace --release green before review-ready (observable in cycle 527 journal)."
     },
     {
       "category": "state-integrity",
