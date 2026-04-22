@@ -10157,8 +10157,8 @@
   ],
   "cycle_phase": {
     "cycle": 526,
-    "phase": "work",
-    "phase_entered_at": "2026-04-22T01:44:05Z"
+    "phase": "close_out",
+    "phase_entered_at": "2026-04-22T02:10:13Z"
   },
   "cycles_since_last_forward_work": {
     "added_in_cycle": 411,
@@ -11100,7 +11100,7 @@
       },
       "dispatch_log_latest": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 525"
+        "last_refreshed": "cycle 526"
       },
       "eva_input_issues.closed_this_cycle": {
         "cadence": "every cycle (reset even when no closures)",
@@ -11120,7 +11120,7 @@
       },
       "last_cycle.duration_minutes": {
         "cadence": "every cycle (set by cycle-complete)",
-        "last_refreshed": "cycle 525"
+        "last_refreshed": "cycle 526"
       },
       "last_eva_comment_check": {
         "cadence": "every cycle (checked even when no comments found)",
@@ -11140,7 +11140,7 @@
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
-        "last_refreshed": "cycle 525"
+        "last_refreshed": "cycle 526"
       },
       "previous_cycle_issue": {
         "cadence": "every cycle",
@@ -11152,7 +11152,7 @@
       },
       "publish_gate": {
         "cadence": "every cycle when set (divergence check)",
-        "last_refreshed": "cycle 525"
+        "last_refreshed": "cycle 526"
       },
       "qc_processed": {
         "cadence": "after processing QC issues",
@@ -11176,7 +11176,7 @@
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
-        "last_refreshed": "cycle 525"
+        "last_refreshed": "cycle 526"
       },
       "review_events_verified_through_cycle": {
         "cadence": "managed by verify-review-events tool only",
@@ -11188,7 +11188,7 @@
       },
       "schema_status.in_progress": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 525"
+        "last_refreshed": "cycle 526"
       },
       "schema_status.phpstan_max_assessment": {
         "cadence": "after PHPStan config or fix changes",
@@ -11262,13 +11262,13 @@
   },
   "in_flight_sessions": 1,
   "last_cycle": {
-    "duration_minutes": 20,
+    "duration_minutes": 3,
     "issue": 2645,
     "number": 526,
-    "summary": "1 dispatch, 1 merges",
-    "timestamp": "2026-04-22T02:06:54Z"
+    "summary": "Dispatched #2646 (close-out hardening bundle for cycle 525 review F1+F2+F3); merged PR #2644 (cycle 525 review artifact); direct-push 373da54c added startup step 2.5 to pipeline-check EXPECTED_STEP_IDS (discharges cycle 525 commitment C3)",
+    "timestamp": "2026-04-22T02:10:13Z"
   },
-  "last_eva_comment_check": "2026-04-22T01:44:04Z",
+  "last_eva_comment_check": "2026-04-22T02:10:13Z",
   "last_tool_audit_cycle": 403,
   "open_questions_for_eva": [
     2638,
