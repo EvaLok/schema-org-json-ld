@@ -9874,6 +9874,18 @@
       "pr": 2644,
       "status": "merged",
       "title": "[Cycle Review] Cycle 525 end-of-cycle review"
+    },
+    {
+      "addresses_findings": [
+        "525:1",
+        "525:2",
+        "525:3"
+      ],
+      "dispatched_at": "2026-04-22T02:06:54Z",
+      "issue": 2646,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Close-out hardening: unconditional post-dispatch-delta emission, atomic cycle_phase seal, journal placeholder guard"
     }
   ],
   "audit_dropped": [
@@ -10977,7 +10989,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2643 [Cycle Review] Cycle 525 end-of-cycle review (cycle 525)",
+  "dispatch_log_latest": "#2646 Close-out hardening: unconditional post-dispatch-delta emission, atomic cycle_phase seal, journal placeholder guard (cycle 526)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -11248,13 +11260,13 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 20,
     "issue": 2645,
     "number": 526,
-    "summary": "0 dispatches, 1 merges",
-    "timestamp": "2026-04-22T01:44:04Z"
+    "summary": "1 dispatch, 1 merges",
+    "timestamp": "2026-04-22T02:06:54Z"
   },
   "last_eva_comment_check": "2026-04-22T01:44:04Z",
   "last_tool_audit_cycle": 403,
