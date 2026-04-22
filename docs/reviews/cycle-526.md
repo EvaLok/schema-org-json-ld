@@ -2,7 +2,7 @@
 
 ## 1. [close-out-tooling] Cycle 526 shipped the same missing post-dispatch section it dispatched to fix
 
-**File**: docs/worklog/2026-04-22/021103-cycle-526-consumed-cycle-525-review-3-findings-dispatched-2646-close-out-hardening-bundle-discharged-c3-commitment-via-pipeline-check-step-2-5-allowlist-fix.md:24-49
+**File**: docs/worklog/2026-04-22/021103-cycle-526-consumed-cycle-525-review-3-findings-dispatched-2646-close-out-hardening-bundle-discharged-c3-commitment-via-pipeline-check-step-2-5-allowlist-fix.md:26-49
 **Evidence**: The worklog's `## Pre-dispatch state` block says "For post-dispatch numbers, see the `## Post-dispatch delta` section below" (line 26), but the file ends at the receipt table on line 49. There is no standalone `## Post-dispatch delta` heading anywhere in the artifact. A direct file check confirms `contains_heading=False` even though this cycle recorded one dispatch (`#2646`) and explicitly described that dispatch as the structural fix for the missing-section defect.
 **Recommendation**: Treat the live close-out path as still broken for cycle 526, not merely for cycle 525's zero-dispatch edge case. Add a regression that inspects the current cycle's frozen worklog and fail close-out whenever the forward reference appears without an actual `## Post-dispatch delta` heading.
 
