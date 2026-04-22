@@ -10945,7 +10945,8 @@
       "category": "journal-quality",
       "deadline_cycle": 525,
       "deferred_cycle": 520,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-525.md"
     },
     {
       "category": "worklog-accuracy",
@@ -10964,7 +10965,8 @@
       "category": "state-integrity",
       "deadline_cycle": 529,
       "deferred_cycle": 524,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-525.md"
     },
     {
       "category": "worklog-accuracy",
@@ -11152,7 +11154,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 525"
+        "last_refreshed": "cycle 526"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -18906,9 +18908,39 @@
         "ignored": 0,
         "note": "Cycle 524 review (complacency 2/5): 1 dispatch_created (F2 state-integrity last_cycle rewrite → already in-flight via #2636 completed-cycle freeze), 3 deferred (F1 worklog-accuracy narrative/ledger contradiction, F3 state-integrity field-inventory freshness markers, F4 code-change-quality workspace-level validation contract). Dispatch capacity full (#2636, #2640); no new dispatches possible this cycle. #2636 is the structural fix for three of four chronic categories (state-integrity, worklog-accuracy, code-change-quality).",
         "review_issue": 2640
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "close-out-tooling",
+          "journal-quality",
+          "state-integrity"
+        ],
+        "complacency_score": 2,
+        "cycle": 525,
+        "deferred": 0,
+        "dispatch_created": 3,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "close-out-tooling",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "state-integrity",
+            "disposition": "dispatch_created"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "dispatch_created"
+          }
+        ],
+        "ignored": 0,
+        "note": "Cycle 525 review (complacency 2/5): 3 findings, all bundled into a single close-out-hardening dispatch (F1 post-dispatch-delta emission, F2 cycle-complete atomic phase+completed_at seal, F3 validate-docs placeholder guard + deferred-deadline disposition requirement). Dispatch issue created this cycle.",
+        "review_issue": 2643
       }
     ],
-    "last_review_cycle": 524
+    "last_review_cycle": 525
   },
   "review_dispatch_consecutive": 2,
   "review_events_verified_through_cycle": 525,
