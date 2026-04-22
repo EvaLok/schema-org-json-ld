@@ -73,9 +73,16 @@ fn run_git(repo_root: &Path, args: &[&str]) -> String {
 }
 
 fn init_git_repo(repo_root: &Path) -> String {
+    let remote_root = repo_root.with_extension("remote.git");
     run_git(repo_root, &["init"]);
     run_git(repo_root, &["config", "user.name", "Test User"]);
     run_git(repo_root, &["config", "user.email", "test@example.com"]);
+    run_git(repo_root, &["init", "--bare", remote_root.to_str().unwrap()]);
+    run_git(&remote_root, &["symbolic-ref", "HEAD", "refs/heads/master"]);
+    run_git(
+        repo_root,
+        &["remote", "add", "origin", remote_root.to_str().unwrap()],
+    );
     write_file(&repo_root.join("notes/start.txt"), "cycle start\n");
     run_git(repo_root, &["add", "."]);
     run_git(
@@ -86,6 +93,7 @@ fn init_git_repo(repo_root: &Path) -> String {
             "state(cycle-start): begin cycle 99 [cycle 99]",
         ],
     );
+    run_git(repo_root, &["push", "-u", "origin", "HEAD:master"]);
     run_git(repo_root, &["rev-parse", "--short=7", "HEAD"])
 }
 

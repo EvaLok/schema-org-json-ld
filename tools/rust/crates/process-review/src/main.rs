@@ -4429,6 +4429,7 @@ Category: Review Accounting
     }
 
     fn init_temp_git_repo(repo_root: &Path) {
+        let remote_root = repo_root.with_extension("remote.git");
         let status = std::process::Command::new("git")
             .arg("-C")
             .arg(repo_root)
@@ -4455,5 +4456,35 @@ Category: Review Accounting
             .status()
             .expect("git config user.name should execute");
         assert!(name_status.success(), "git config user.name should succeed");
+
+        let remote_init_status = std::process::Command::new("git")
+            .arg("init")
+            .arg("--bare")
+            .arg(&remote_root)
+            .status()
+            .expect("git init --bare should execute");
+        assert!(
+            remote_init_status.success(),
+            "git init --bare should succeed"
+        );
+
+        let symbolic_ref_status = std::process::Command::new("git")
+            .current_dir(&remote_root)
+            .args(["symbolic-ref", "HEAD", "refs/heads/master"])
+            .status()
+            .expect("git symbolic-ref should execute");
+        assert!(
+            symbolic_ref_status.success(),
+            "git symbolic-ref should succeed"
+        );
+
+        let remote_add_status = std::process::Command::new("git")
+            .arg("-C")
+            .arg(repo_root)
+            .args(["remote", "add", "origin"])
+            .arg(&remote_root)
+            .status()
+            .expect("git remote add should execute");
+        assert!(remote_add_status.success(), "git remote add should succeed");
     }
 }

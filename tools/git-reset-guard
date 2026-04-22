@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+	echo "Usage: git-reset-guard --hard <ref>" >&2
+}
+
+if [ "$#" -ne 2 ] || [ "$1" != "--hard" ]; then
+	usage
+	exit 64
+fi
+
+ref="$2"
+
+git rev-parse --verify "$ref" >/dev/null 2>&1 || {
+	echo "git-reset-guard: invalid ref '$ref'" >&2
+	exit 1
+}
+
+unpushed="$(git log origin/master..HEAD --pretty=format:'%h %s')"
+if [ -n "$unpushed" ]; then
+	printf '%s\n' "$unpushed" >&2
+	echo "git-reset-guard: refusing --hard; unpushed commits present. Push or rebase first, or use 'git reset --hard <ref>' directly if you really mean to discard them." >&2
+	exit 2
+fi
+
+exec git reset --hard "$ref"

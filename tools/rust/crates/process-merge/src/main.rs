@@ -713,6 +713,10 @@ mod tests {
             fs::remove_dir_all(repo_root).expect("remove old temp repo");
         }
         fs::create_dir_all(repo_root).expect("repo root directory");
+        let remote_root = repo_root.with_extension("remote.git");
+        if remote_root.exists() {
+            fs::remove_dir_all(&remote_root).expect("remove old remote repo");
+        }
         let status = Command::new("git")
             .arg("init")
             .arg(repo_root)
@@ -740,6 +744,31 @@ mod tests {
             ])
             .status()
             .expect("git config user.email");
+        assert!(status.success());
+        let status = Command::new("git")
+            .arg("init")
+            .arg("--bare")
+            .arg(&remote_root)
+            .status()
+            .expect("git init --bare");
+        assert!(status.success());
+        let status = Command::new("git")
+            .current_dir(&remote_root)
+            .args(["symbolic-ref", "HEAD", "refs/heads/master"])
+            .status()
+            .expect("git symbolic-ref");
+        assert!(status.success());
+        let status = Command::new("git")
+            .args([
+                "-C",
+                repo_root.to_str().unwrap(),
+                "remote",
+                "add",
+                "origin",
+                remote_root.to_str().unwrap(),
+            ])
+            .status()
+            .expect("git remote add");
         assert!(status.success());
     }
 

@@ -239,6 +239,7 @@ mod tests {
 
     struct TempRepo {
         path: PathBuf,
+        remote_path: PathBuf,
     }
 
     impl TempRepo {
@@ -252,9 +253,14 @@ mod tests {
                 std::process::id(),
                 unique
             ));
+            let remote_path = std::env::temp_dir().join(format!(
+                "backfill-dispatch-test-remote-{}-{}",
+                std::process::id(),
+                unique
+            ));
             fs::create_dir_all(path.join("docs")).unwrap();
             fs::create_dir_all(path.join("tools")).unwrap();
-            Self { path }
+            Self { path, remote_path }
         }
 
         fn init(&self) {
@@ -307,6 +313,16 @@ mod tests {
             );
             git_success(self.path(), ["add", "docs/state.json", "tools/config.json"]);
             git_success(self.path(), ["commit", "-m", "initial state"]);
+            git_success(self.path(), ["init", "--bare", self.remote_path.to_str().unwrap()]);
+            git_success(
+                &self.remote_path,
+                ["symbolic-ref", "HEAD", "refs/heads/master"],
+            );
+            git_success(
+                self.path(),
+                ["remote", "add", "origin", self.remote_path.to_str().unwrap()],
+            );
+            git_success(self.path(), ["push", "-u", "origin", "HEAD:master"]);
         }
 
         fn path(&self) -> &Path {
@@ -317,6 +333,7 @@ mod tests {
     impl Drop for TempRepo {
         fn drop(&mut self) {
             let _ = fs::remove_dir_all(&self.path);
+            let _ = fs::remove_dir_all(&self.remote_path);
         }
     }
 
