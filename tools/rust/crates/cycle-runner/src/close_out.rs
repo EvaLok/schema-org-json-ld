@@ -155,11 +155,17 @@ fn ensure_post_dispatch_delta_section(
         let in_flight_sessions = state
             .pointer("/in_flight_sessions")
             .and_then(Value::as_u64)
-            .ok_or_else(|| "missing numeric /in_flight_sessions in docs/state.json".to_string())?;
+            .ok_or_else(|| {
+                "missing numeric /in_flight_sessions in docs/state.json (required for post-dispatch delta)"
+                    .to_string()
+            })?;
         let last_cycle_summary = state
             .pointer("/last_cycle/summary")
             .and_then(Value::as_str)
-            .ok_or_else(|| "missing string /last_cycle/summary in docs/state.json".to_string())?;
+            .ok_or_else(|| {
+                "missing string /last_cycle/summary in docs/state.json (required for post-dispatch delta)"
+                    .to_string()
+            })?;
         render_post_dispatch_delta(
             &content,
             &[

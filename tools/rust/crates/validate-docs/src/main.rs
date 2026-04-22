@@ -15,6 +15,7 @@ const OPEN_QUESTIONS_RAISED_THIS_CYCLE_HEADING: &str = "### Open questions raise
 const STANDING_EVA_BLOCKERS_HEADING: &str = "### Standing Eva blockers";
 const PRE_DISPATCH_SNAPSHOT_NOTE: &str =
     "*Snapshot before review dispatch — final counters may differ after C6.*";
+const PLACEHOLDER_CONTEXT_SUBSTRINGS: &[&str] = &["focused on placeholder", "placeholder.", "tbd"];
 const INFRASTRUCTURE_PATHS: [&str; 5] = [
     "STARTUP_CHECKLIST.xml",
     "COMPLETION_CHECKLIST.xml",
@@ -799,9 +800,9 @@ fn validate_journal_placeholder_content(content: &str) -> Vec<String> {
                 first_entry_paragraph(&entry.body, entry.body_start_line)
             {
                 let lowered = paragraph.to_ascii_lowercase();
-                if lowered.contains("focused on placeholder")
-                    || lowered.contains("placeholder.")
-                    || lowered.contains("tbd")
+                if PLACEHOLDER_CONTEXT_SUBSTRINGS
+                    .iter()
+                    .any(|pattern| lowered.contains(pattern))
                 {
                     failures.push(format!(
                         "line {}: journal entry contains placeholder context '{}'",
@@ -1183,6 +1184,9 @@ fn validate_deferred_finding_deadline_dispositions(
     content: &str,
     state: &StateJson,
 ) -> Option<String> {
+    // Prefer the latest journal entry's cycle number because validate-docs can run against
+    // historical journal fixtures. Fall back to live state only when the journal input does not
+    // include a cycle heading (for minimal/unit-test content).
     let current_cycle = journal_entries_with_lines(content)
         .into_iter()
         .rev()

@@ -3234,15 +3234,14 @@ fn has_inline_journal_content(args: &JournalArgs) -> bool {
         || args.context.is_some()
 }
 
+fn non_empty_trimmed(value: Option<&str>) -> Option<&str> {
+    value.map(str::trim).filter(|value| !value.is_empty())
+}
+
 fn resolve_journal_title(args: &JournalArgs) -> Result<&str, String> {
-    let title = args
-        .title
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| {
-            "journal title is required; pass --title \"<summary of the cycle>\"".to_string()
-        })?;
+    let title = non_empty_trimmed(args.title.as_deref()).ok_or_else(|| {
+        "journal title is required; pass --title \"<summary of the cycle>\"".to_string()
+    })?;
     Ok(title)
 }
 
@@ -4246,7 +4245,7 @@ fn render_journal_entry(
     }
     lines.push("### Context".to_string());
     lines.push(String::new());
-    if let Some(context) = context.map(str::trim).filter(|value| !value.is_empty()) {
+    if let Some(context) = non_empty_trimmed(context) {
         lines.push(convert_references(strip_cycle_prefix(context)));
         lines.push(String::new());
     }
