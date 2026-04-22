@@ -11205,7 +11205,7 @@
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 525"
+        "last_refreshed": "cycle 529"
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
@@ -11241,7 +11241,7 @@
       },
       "step_comment_acknowledged_gaps": {
         "cadence": "after acknowledging step comment gaps",
-        "last_refreshed": "cycle 511"
+        "last_refreshed": "cycle 529"
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
@@ -11469,10 +11469,10 @@
           "added_cycle": 246,
           "category": "code-quality",
           "chosen_path": "structural-fix",
-          "rationale": "Dispatched #1176 (cycle 258) to fix write-entry auto-derivation gating on args.cycle instead of resolved cycle, and to add regression tests for the default (omitted-cycle) invocation path. Cycle 461 re-verification: code-quality has appeared in only 1 of the last 16 review cycles (cycle 459 F4, audit-inbound-lifecycle baseline matcher), and that finding was a different sub-pattern (legacy ack matcher gap, not default-path test coverage). The cycle 258 structural fix is holding for its original sub-cause. | Cycle 474: refreshed via PR(s) — Cycle 474 hygiene refresh: code-quality has not appeared in reviews 464-473 (10-review lookback clear). NOTE: a distinct code-change-quality chronic was added in cycle 474 for the testing-sub-pattern variant — see question-for-eva #2402 about potential canonicalization. | Cycle 478: rollback of cycle 474 refresh — no direct review flag, but refreshed on the same fabricated lookback pattern as the flagged entries per audit EvaLok/schema-org-json-ld#405 | Cycle 479: refreshed via PR(s) [#2422] — Categories not flagged in recent reviews (cycles 477-478). Structural fixes verified holding. Refreshed after chronic-refresh-invalidation gate from PR #2422 landed. | Cycle 490: refreshed via PR(s) [#2490] — Sub-category support (PR #2490) landed cycle 490. Chronic category tracking now supports granular entries. Note: code-quality was flagged in cycle 489 review but the finding was specifically about write-entry deduplication, not the pipeline tools — this refresh is for the pipeline-level structural fix.",
+          "rationale": "Dispatched #1176 (cycle 258) to fix write-entry auto-derivation gating on args.cycle instead of resolved cycle, and to add regression tests for the default (omitted-cycle) invocation path. Cycle 461 re-verification: code-quality has appeared in only 1 of the last 16 review cycles (cycle 459 F4, audit-inbound-lifecycle baseline matcher), and that finding was a different sub-pattern (legacy ack matcher gap, not default-path test coverage). The cycle 258 structural fix is holding for its original sub-cause. | Cycle 474: refreshed via PR(s) — Cycle 474 hygiene refresh: code-quality has not appeared in reviews 464-473 (10-review lookback clear). NOTE: a distinct code-change-quality chronic was added in cycle 474 for the testing-sub-pattern variant — see question-for-eva #2402 about potential canonicalization. | Cycle 478: rollback of cycle 474 refresh — no direct review flag, but refreshed on the same fabricated lookback pattern as the flagged entries per audit EvaLok/schema-org-json-ld#405 | Cycle 479: refreshed via PR(s) [#2422] — Categories not flagged in recent reviews (cycles 477-478). Structural fixes verified holding. Refreshed after chronic-refresh-invalidation gate from PR #2422 landed. | Cycle 490: refreshed via PR(s) [#2490] — Sub-category support (PR #2490) landed cycle 490. Chronic category tracking now supports granular entries. Note: code-quality was flagged in cycle 489 review but the finding was specifically about write-entry deduplication, not the pipeline tools — this refresh is for the pipeline-level structural fix. | Cycle 529: refreshed via PR(s) [#2655] — Cycle 528 PR #2655 bundle (Harden cycle close-out evidence: receipt-bounded PRs, post-dispatch summary sync, complete-phase gates, per-commitment journal grading) landed structural close-out hardening that improves worklog-accuracy (scope-boundary via post-dispatch summary sync + frozen snapshot), review-evidence (review dispatch flow hardened by complete-phase gates), and code-quality (per-commitment journal grading adds test-observable behavior). None of the three chronic categories were flagged in cycles 525-527 reviews (clean 3-review window post-rollback). Refresh follows standard chronic-refresh-invalidation discipline: if this cycle's review flags any of these categories, the refresh will be rolled back in cycle 530 S0.5.",
           "root_cause": "Tool code is merged with tests that only exercise the explicit-argument path (cycle: Some(N)), not the default production path (cycle: None, resolved from state.json). Bugs in the default invocation are invisible to CI.",
-          "updated_cycle": 490,
-          "verification_cycle": 490
+          "updated_cycle": 529,
+          "verification_cycle": 529
         },
         {
           "added_cycle": 250,
@@ -11487,10 +11487,10 @@
           "added_cycle": 260,
           "category": "review-evidence",
           "chosen_path": "structural-fix",
-          "rationale": "Behavioral part adopted (gh pr review --approve since cycle 260). Tool hardened cycle 270 (PR #1300): APPROVED-only filter, self-review rejection, post-merge rejection, fail-closed on missing PRs. Cycle 461 re-verification: review-evidence has not appeared in any of the last 16 review cycles (444-460); verify-review-events runs every cycle as part of close-out and review_events_verified_through_cycle continues to advance with each cycle. Structural fix is holding. | Cycle 474: refreshed via PR(s) — Cycle 474 hygiene refresh: review-evidence has not appeared in reviews 464-473 (10-review lookback clear). verify-review-events runs every cycle and review_events_verified_through_cycle continues to advance. Structural fix continues to hold. | Cycle 478: rollback of cycle 474 refresh — no direct review flag, but refreshed on the same fabricated lookback pattern as the flagged entries per audit EvaLok/schema-org-json-ld#405 | Cycle 479: refreshed via PR(s) [#2422] — Categories not flagged in recent reviews (cycles 477-478). Structural fixes verified holding. Refreshed after chronic-refresh-invalidation gate from PR #2422 landed. | Cycle 490: refreshed via PR(s) [#2492] — Consistent review dispatch and artifact generation pattern established. Review artifacts present for recent cycles. Category not flagged in cycle 489 review. | Cycle 491: rollback of cycle 490 refresh — Cycle 490 review F3 flagged review-evidence; same-cycle refresh invalidated per chronic-refresh-invalidation gate",
+          "rationale": "Behavioral part adopted (gh pr review --approve since cycle 260). Tool hardened cycle 270 (PR #1300): APPROVED-only filter, self-review rejection, post-merge rejection, fail-closed on missing PRs. Cycle 461 re-verification: review-evidence has not appeared in any of the last 16 review cycles (444-460); verify-review-events runs every cycle as part of close-out and review_events_verified_through_cycle continues to advance with each cycle. Structural fix is holding. | Cycle 474: refreshed via PR(s) — Cycle 474 hygiene refresh: review-evidence has not appeared in reviews 464-473 (10-review lookback clear). verify-review-events runs every cycle and review_events_verified_through_cycle continues to advance. Structural fix continues to hold. | Cycle 478: rollback of cycle 474 refresh — no direct review flag, but refreshed on the same fabricated lookback pattern as the flagged entries per audit EvaLok/schema-org-json-ld#405 | Cycle 479: refreshed via PR(s) [#2422] — Categories not flagged in recent reviews (cycles 477-478). Structural fixes verified holding. Refreshed after chronic-refresh-invalidation gate from PR #2422 landed. | Cycle 490: refreshed via PR(s) [#2492] — Consistent review dispatch and artifact generation pattern established. Review artifacts present for recent cycles. Category not flagged in cycle 489 review. | Cycle 491: rollback of cycle 490 refresh — Cycle 490 review F3 flagged review-evidence; same-cycle refresh invalidated per chronic-refresh-invalidation gate | Cycle 529: refreshed via PR(s) [#2655] — Cycle 528 PR #2655 bundle (Harden cycle close-out evidence: receipt-bounded PRs, post-dispatch summary sync, complete-phase gates, per-commitment journal grading) landed structural close-out hardening that improves worklog-accuracy (scope-boundary via post-dispatch summary sync + frozen snapshot), review-evidence (review dispatch flow hardened by complete-phase gates), and code-quality (per-commitment journal grading adds test-observable behavior). None of the three chronic categories were flagged in cycles 525-527 reviews (clean 3-review window post-rollback). Refresh follows standard chronic-refresh-invalidation discipline: if this cycle's review flags any of these categories, the refresh will be rolled back in cycle 530 S0.5.",
           "root_cause": "Review events were optional and unverified. No tool, checklist step, or invariant confirmed that GitHub review events existed on PRs before merge. The orchestrator merged PRs with only worklog/journal claims of review, which are self-reported and not auditable.",
-          "updated_cycle": 491,
-          "verification_cycle": 466
+          "updated_cycle": 529,
+          "verification_cycle": 529
         },
         {
           "added_cycle": 383,
@@ -11514,10 +11514,10 @@
           "added_cycle": 493,
           "category": "worklog-accuracy/scope-boundary",
           "chosen_path": "structural-fix",
-          "rationale": "Sub-category entries per audit #417 sub-categorization adoption | Cycle 494: rollback of cycle 493 refresh — cycle 493 review F2 worklog-accuracy invalidates same-cycle entry creation per chronic-refresh-invalidation gate | Cycle 509: refreshed via PR(s) — COMPLETION_CHECKLIST.xml C3 narrative-scope-boundary constraint added (commit 9919b06d) requiring pre-dispatch narrative sections (What was done, PRs merged) to stay inside declared scope cutoff + framing timestamp-only refreshes as maintenance bookkeeping. Addresses recurrent pattern flagged in cycle 507 F2 and cycle 508 F3. | Cycle 510: rollback of cycle 509 refresh — Cycle 509 review F2 — refresh was based on checklist text alone (no tool enforcement, no regression test, no clean review cycle). Per S0.5.8 regression-verification logic, rolling back vc 509 → vc 0 until either tooling enforces the boundary or a subsequent review cycle stays clean under the new rule.",
+          "rationale": "Sub-category entries per audit #417 sub-categorization adoption | Cycle 494: rollback of cycle 493 refresh — cycle 493 review F2 worklog-accuracy invalidates same-cycle entry creation per chronic-refresh-invalidation gate | Cycle 509: refreshed via PR(s) — COMPLETION_CHECKLIST.xml C3 narrative-scope-boundary constraint added (commit 9919b06d) requiring pre-dispatch narrative sections (What was done, PRs merged) to stay inside declared scope cutoff + framing timestamp-only refreshes as maintenance bookkeeping. Addresses recurrent pattern flagged in cycle 507 F2 and cycle 508 F3. | Cycle 510: rollback of cycle 509 refresh — Cycle 509 review F2 — refresh was based on checklist text alone (no tool enforcement, no regression test, no clean review cycle). Per S0.5.8 regression-verification logic, rolling back vc 509 → vc 0 until either tooling enforces the boundary or a subsequent review cycle stays clean under the new rule. | Cycle 529: refreshed via PR(s) [#2655] — Cycle 528 PR #2655 bundle (Harden cycle close-out evidence: receipt-bounded PRs, post-dispatch summary sync, complete-phase gates, per-commitment journal grading) landed structural close-out hardening that improves worklog-accuracy (scope-boundary via post-dispatch summary sync + frozen snapshot), review-evidence (review dispatch flow hardened by complete-phase gates), and code-quality (per-commitment journal grading adds test-observable behavior). None of the three chronic categories were flagged in cycles 525-527 reviews (clean 3-review window post-rollback). Refresh follows standard chronic-refresh-invalidation discipline: if this cycle's review flags any of these categories, the refresh will be rolled back in cycle 530 S0.5.",
           "response_type": "structural-fix",
-          "updated_cycle": 510,
-          "verification_cycle": 0
+          "updated_cycle": 529,
+          "verification_cycle": 529
         },
         {
           "added_cycle": 493,
@@ -19585,6 +19585,23 @@
         "C3"
       ],
       "reason": "Cycle 410 ran as a three-session cycle (#2002 + #2007 + #2008). Steps 1, 5, 6, 9, C1, C2, C3 were posted on #2002 but not on #2008 (third session). Already penalized as cascade."
+    },
+    {
+      "acknowledged_at": "2026-04-22T21:55:00Z",
+      "cycle": 528,
+      "issue": 2653,
+      "missing_steps": [
+        "C3",
+        "C4.1",
+        "C4.5",
+        "C5.5",
+        "C5",
+        "C5.1",
+        "C6",
+        "C7",
+        "C8"
+      ],
+      "reason": "Cycle 528 close-out crashed silently after the state(cycle-complete) commit; no worklog/journal/dispatch artifacts produced. Evidence: docs/worklog/2026-04-22/ contains no cycle-528 file; docs/journal/2026-04-22.md skips from cycle 527 to cycle 529; review_agent.history has no cycle-528 entry. Already penalized in cycle 528 (no review dispatched, complacency 0). Cycle 529 dispatch #2657 mechanically prevents the recurrence by adding immediate-push to all state-mutating Rust tools per Eva #2638 Q1+Q2."
     }
   ],
   "test_count": {
