@@ -9906,6 +9906,16 @@
       "pr": 2655,
       "status": "merged",
       "title": "[Cycle Review] Cycle 527 end-of-cycle review"
+    },
+    {
+      "backfill_reason": "gh-api-direct dispatch of bundled push-discipline + git-reset-guard fix per Eva #2638 Q1/Q2",
+      "backfilled": true,
+      "dispatch_provenance": "gh-api-direct",
+      "dispatched_at": "2026-04-22T21:41:08Z",
+      "issue": 2657,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Make state-mutating Rust tools commit-and-push atomic + add git-reset-guard wrapper"
     }
   ],
   "audit_dropped": [
@@ -11011,7 +11021,7 @@
       "resolved_ref": "docs/reviews/cycle-527.md"
     }
   ],
-  "dispatch_log_latest": "#2651 [Cycle Review] Cycle 527 end-of-cycle review (cycle 527)",
+  "dispatch_log_latest": "#2657 Make state-mutating Rust tools commit-and-push atomic + add git-reset-guard wrapper (cycle 529)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -11134,7 +11144,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 528"
+        "last_refreshed": "cycle 529"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -11282,13 +11292,13 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 72,
     "issue": 2656,
     "number": 529,
-    "summary": "0 dispatches, 1 merges (PR #2655)",
-    "timestamp": "2026-04-22T21:25:56Z"
+    "summary": "1 dispatch, 1 merges (PR #2655)",
+    "timestamp": "2026-04-22T21:41:25Z"
   },
   "last_eva_comment_check": "2026-04-22T21:25:56Z",
   "last_tool_audit_cycle": 403,
