@@ -141,9 +141,9 @@ const LEGACY_TEMPORAL_ORDERING_STEPS: &[&str] = &[
 // Keep this list aligned with the orchestrator checklist steps that are expected to
 // produce post-step comments. The pass threshold stays lower because some steps are
 // conditional, but mandatory gaps must still fail while optional gaps warn.
-const EXPECTED_STEP_IDS: [&str; 27] = [
-    "0", "0.1", "0.5", "0.6", "1", "1.1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "C1", "C2",
-    "C3", "C4.1", "C4.5", "C5.5", "C5", "C5.1", "C5.6", "C6", "C7", "C8",
+const EXPECTED_STEP_IDS: [&str; 28] = [
+    "0", "0.1", "0.5", "0.6", "1", "1.1", "2", "2.5", "3", "4", "5", "6", "7", "8", "9", "10",
+    "C1", "C2", "C3", "C4.1", "C4.5", "C5.5", "C5", "C5.1", "C5.6", "C6", "C7", "C8",
 ];
 const MIN_CURRENT_CYCLE_FOR_FALLBACK_WARNING: u64 = 1;
 const LAST_CYCLE_NUMBER_PATH: &str = "/last_cycle/number";
@@ -12457,8 +12457,8 @@ mod tests {
         assert_eq!(
             missing_expected_step_ids(&found),
             vec![
-                "0.1", "0.6", "1.1", "3", "4", "5", "8", "C1", "C2", "C3", "C4.1", "C4.5", "C5.5",
-                "C5", "C5.1", "C5.6", "C6", "C7", "C8",
+                "0.1", "0.6", "1.1", "2.5", "3", "4", "5", "8", "C1", "C2", "C3", "C4.1", "C4.5",
+                "C5.5", "C5", "C5.1", "C5.6", "C6", "C7", "C8",
             ]
         );
     }
@@ -12957,7 +12957,7 @@ mod tests {
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("found 25 unique step comments"));
+            .contains("found 26 unique step comments"));
         assert!(step
             .detail
             .as_deref()
@@ -13140,7 +13140,7 @@ mod tests {
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("found 26 unique step comments"));
+            .contains("found 27 unique step comments"));
         assert!(step
             .detail
             .as_deref()
@@ -13192,7 +13192,7 @@ mod tests {
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("found 27 unique step comments"));
+            .contains("found 28 unique step comments"));
         assert!(step
             .detail
             .as_deref()
@@ -13261,12 +13261,12 @@ mod tests {
         let step = verify_step_comments(&root, 257, &StepCommentRunner);
         assert_eq!(step.status, StepStatus::Pass);
         assert_eq!(step.severity, Severity::Blocking);
-        assert_eq!(step.findings, Some(27));
+        assert_eq!(step.findings, Some(28));
         assert!(step
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("found 27 unique step comments (1 acknowledged)"));
+            .contains("found 28 unique step comments (1 acknowledged)"));
         assert!(step
             .detail
             .as_deref()
@@ -13545,7 +13545,7 @@ mod tests {
         let detail = step.detail.as_deref().unwrap_or_default();
         assert!(detail.contains("found 27 unique step comments"));
         assert!(!detail.contains("missing optional [0.1"));
-        assert!(detail.contains("missing optional [10]"));
+        assert!(detail.contains("missing optional [2.5, 10]"));
         assert!(detail.contains("unexpected [C4.7]"));
     }
 
@@ -14764,17 +14764,17 @@ mod tests {
         let current_cycle_steps = verify_current_cycle_step_comments(&root, 461, &Runner);
 
         assert_eq!(step_comments.findings, current_cycle_steps.findings);
-        assert_eq!(step_comments.findings, Some(20));
+        assert_eq!(step_comments.findings, Some(21));
         assert!(step_comments
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("found 20 unique step comments"));
+            .contains("found 21 unique step comments"));
         assert!(current_cycle_steps
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("20 pre-gate mandatory steps present"));
+            .contains("21 pre-gate mandatory steps present"));
     }
 
     #[test]
