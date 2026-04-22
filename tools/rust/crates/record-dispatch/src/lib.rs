@@ -443,7 +443,7 @@ pub fn restore_sealed_last_cycle(
 }
 
 pub fn should_sync_last_cycle_summary(current_phase: &str) -> bool {
-    !current_phase.trim().is_empty()
+    matches!(current_phase, "work" | "close_out" | "complete")
 }
 
 fn merge_duplicate_dispatch_session(
