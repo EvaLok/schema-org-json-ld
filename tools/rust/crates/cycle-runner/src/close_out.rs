@@ -5,7 +5,7 @@ use crate::steps;
 use serde_json::Value;
 use state_schema::{
     commit_state_json, current_cycle_from_state, current_utc_timestamp, read_state_value,
-    set_c5_5_gate, transition_cycle_phase, write_state_value,
+    set_c5_5_gate, write_state_value,
 };
 use std::fs;
 use std::path::Path;
@@ -13,9 +13,11 @@ use std::process::Command;
 
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const VERIFY_REVIEW_EVENTS_TIMEOUT_SECS: u64 = 30;
-#[cfg(test)]
+const PRE_DISPATCH_STATE_HEADING: &str = "## Pre-dispatch state";
+const POST_DISPATCH_DELTA_HEADING: &str = "## Post-dispatch delta";
 const PRE_DISPATCH_SNAPSHOT_NOTE: &str =
     "*Counters shown here are taken at C5.5/C6. For post-dispatch numbers, see the `## Post-dispatch delta` section below.*";
+const IN_FLIGHT_PREFIX: &str = "- **In-flight agent sessions**: ";
 const PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
 const CLOSE_OUT_GATE_FAILURES_PREFIX: &str = "- **Close-out gate failures**: ";
 
@@ -71,6 +73,7 @@ pub fn run(
 
     let worklog = review_body::find_worklog_for_cycle(repo_root, cycle)?;
     let journal = review_body::find_latest_journal(repo_root)?;
+    ensure_post_dispatch_delta_section(repo_root, cycle, &worklog)?;
 
     eprintln!("Close-out for cycle {} (issue #{})", cycle, issue);
     eprintln!("Worklog: {}", worklog.display());
@@ -125,15 +128,64 @@ pub fn run(
         review_info.as_ref(),
         &pipeline_summary,
     )?;
-    complete_close_out_phase(repo_root, cycle)?;
     git::push(repo_root).map_err(|error| {
         format!(
-            "{} (cycle phase was already committed locally; retry the push to publish the complete state)",
+            "{} (close-out docs/state.json updates were already committed locally; retry the push to publish the complete state)",
             error
         )
     })?;
 
     eprintln!("Close-out complete for cycle {}", cycle);
+    Ok(())
+}
+
+fn ensure_post_dispatch_delta_section(
+    repo_root: &Path,
+    cycle: u64,
+    worklog: &Path,
+) -> Result<(), String> {
+    let state = read_state_value(repo_root)?;
+    let content = fs::read_to_string(worklog)
+        .map_err(|error| format!("failed to read {}: {}", worklog.display(), error))?;
+    if worklog_has_post_dispatch_delta_heading(&content) {
+        return Ok(());
+    }
+
+    let updated = if had_tool_dispatches_this_cycle(&state, cycle) {
+        let in_flight_sessions = state
+            .pointer("/in_flight_sessions")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| {
+                "missing numeric /in_flight_sessions in docs/state.json (required for post-dispatch delta)"
+                    .to_string()
+            })?;
+        let last_cycle_summary = state
+            .pointer("/last_cycle/summary")
+            .and_then(Value::as_str)
+            .ok_or_else(|| {
+                "missing string /last_cycle/summary in docs/state.json (required for post-dispatch delta)"
+                    .to_string()
+            })?;
+        render_post_dispatch_delta(
+            &content,
+            &[
+                format!("- **In-flight agent sessions**: {}", in_flight_sessions),
+                format!(
+                    "- **Dispatch count**: {}",
+                    dispatch_count_clause(last_cycle_summary)
+                ),
+                format!("- **Last-cycle summary**: {}", last_cycle_summary),
+            ],
+        )
+    } else {
+        render_zero_dispatch_post_dispatch_delta(&content)?
+    };
+
+    if updated != content {
+        fs::write(worklog, updated)
+            .map_err(|error| format!("failed to write {}: {}", worklog.display(), error))?;
+    }
+
     Ok(())
 }
 
@@ -198,19 +250,6 @@ fn read_prior_gate_failure_from_state(
         .map(|summary| format!("{step} FAIL: {summary}"))
 }
 
-fn complete_close_out_phase(repo_root: &Path, cycle: u64) -> Result<(), String> {
-    let mut state = read_state_value(repo_root)?;
-    transition_cycle_phase(&mut state, cycle, "complete")?;
-    write_state_value(repo_root, &state)?;
-
-    let commit_message = format!(
-        "state(cycle-complete-phase): cycle {} phase -> complete [cycle {}]",
-        cycle, cycle
-    );
-    commit_state_json(repo_root, &commit_message)?;
-    Ok(())
-}
-
 struct DocsValidationResult {
     worklog_ok: bool,
     worklog_detail: String,
@@ -257,6 +296,73 @@ fn validate_docs(
         journal_ok,
         journal_detail,
     })
+}
+
+fn worklog_has_post_dispatch_delta_heading(content: &str) -> bool {
+    content
+        .lines()
+        .any(|line| line.trim() == POST_DISPATCH_DELTA_HEADING)
+}
+
+fn render_zero_dispatch_post_dispatch_delta(content: &str) -> Result<String, String> {
+    let section = extract_markdown_section(content, PRE_DISPATCH_STATE_HEADING)
+        .ok_or_else(|| "worklog is missing the Pre-dispatch state section".to_string())?;
+    let mut lines = Vec::new();
+    for line in section.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed == PRE_DISPATCH_SNAPSHOT_NOTE {
+            continue;
+        }
+        if let Some(value) = trimmed.strip_prefix(IN_FLIGHT_PREFIX) {
+            lines.push(format!(
+                "{}{} (unchanged: 0 new dispatches this cycle)",
+                IN_FLIGHT_PREFIX,
+                value.trim()
+            ));
+            continue;
+        }
+        if trimmed.starts_with("- **") {
+            lines.push(trimmed.to_string());
+        }
+    }
+
+    if lines.is_empty() {
+        return Err(
+            "worklog Pre-dispatch state section is missing counters needed for Post-dispatch delta"
+                .to_string(),
+        );
+    }
+
+    Ok(render_post_dispatch_delta(content, &lines))
+}
+
+fn render_post_dispatch_delta(content: &str, lines: &[String]) -> String {
+    let base = if let Some(index) = content.find(&format!("\n{POST_DISPATCH_DELTA_HEADING}\n")) {
+        &content[..index]
+    } else {
+        content
+    }
+    .trim_end_matches('\n');
+    let body = lines.join("\n");
+    format!("{base}\n\n{POST_DISPATCH_DELTA_HEADING}\n\n{body}\n")
+}
+
+fn dispatch_count_clause(summary: &str) -> &str {
+    summary
+        .split(',')
+        .next()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or(summary)
+}
+
+fn extract_markdown_section<'a>(content: &'a str, heading: &str) -> Option<&'a str> {
+    let (_, remainder) = content.split_once(&format!("{heading}\n"))?;
+    let end = remainder
+        .find("\n## ")
+        .or_else(|| remainder.find("\n### "))
+        .unwrap_or(remainder.len());
+    Some(remainder[..end].trim_end_matches('\n'))
 }
 
 fn step_c4_1(
@@ -1670,8 +1776,9 @@ mod tests {
             serde_json::to_string_pretty(&json!({
                 "cycle_phase": {
                     "cycle": cycle,
-                    "phase": "close_out",
-                    "phase_entered_at": "2026-03-25T00:00:00Z"
+                    "phase": "complete",
+                    "phase_entered_at": "2026-03-25T00:00:00Z",
+                    "completed_at": "2026-03-25T00:00:00Z"
                 },
                 "last_cycle": {
                     "number": cycle,
@@ -1691,53 +1798,6 @@ mod tests {
             .unwrap(),
         )
         .unwrap();
-    }
-
-    #[test]
-    fn complete_close_out_phase_transitions_state_and_commits_expected_message() {
-        let dir = setup_temp_repo("complete-phase");
-        let state_path = dir.join("docs/state.json");
-        fs::write(
-            &state_path,
-            serde_json::to_string_pretty(&json!({
-                "cycle_phase": {
-                    "cycle": 345,
-                    "phase": "close_out",
-                    "phase_entered_at": "2026-03-24T00:00:00Z"
-                },
-                "field_inventory": {
-                    "fields": {
-                        "cycle_phase": {
-                            "last_refreshed": "cycle 344"
-                        }
-                    }
-                }
-            }))
-            .unwrap(),
-        )
-        .unwrap();
-
-        complete_close_out_phase(&dir, 345).unwrap();
-
-        let state = state_schema::read_state_value(&dir).unwrap();
-        assert_eq!(
-            state.pointer("/cycle_phase/phase"),
-            Some(&json!("complete"))
-        );
-
-        let log_output = Command::new("git")
-            .arg("-C")
-            .arg(&dir)
-            .args(["log", "-1", "--pretty=%s"])
-            .output()
-            .unwrap();
-        assert!(log_output.status.success());
-        assert_eq!(
-            String::from_utf8(log_output.stdout).unwrap().trim(),
-            "state(cycle-complete-phase): cycle 345 phase -> complete [cycle 345]"
-        );
-
-        fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
@@ -2458,8 +2518,9 @@ mod tests {
             serde_json::to_string_pretty(&json!({
                 "cycle_phase": {
                     "cycle": 345,
-                    "phase": "close_out",
-                    "phase_entered_at": "2026-03-25T00:00:00Z"
+                    "phase": "complete",
+                    "phase_entered_at": "2026-03-25T00:00:00Z",
+                    "completed_at": "2026-03-25T00:00:00Z"
                 },
                 "last_cycle": {
                     "number": 345,
@@ -2591,8 +2652,9 @@ mod tests {
             serde_json::to_string_pretty(&json!({
                 "cycle_phase": {
                     "cycle": 345,
-                    "phase": "close_out",
-                    "phase_entered_at": "2026-03-25T00:00:00Z"
+                    "phase": "complete",
+                    "phase_entered_at": "2026-03-25T00:00:00Z",
+                    "completed_at": "2026-03-25T00:00:00Z"
                 },
                 "last_cycle": {
                     "number": 345,
@@ -2700,8 +2762,17 @@ mod tests {
             "- **Close-out gate failures**: C5.5 FAIL: FAIL (1 warning, 1 blocking: foo)"
         ));
         assert!(worklog.contains("- **Publish gate**: published"));
+        assert_eq!(
+            worklog
+                .lines()
+                .filter(|line| *line == POST_DISPATCH_DELTA_HEADING)
+                .count(),
+            1
+        );
+        assert!(worklog.contains(
+            "- **In-flight agent sessions**: 0 (unchanged: 0 new dispatches this cycle)"
+        ));
         assert!(worklog.contains("## Next steps\n\n1. None.\n"));
-        assert!(!worklog.contains("\n## Post-dispatch delta\n"));
 
         let log_output = Command::new("git")
             .arg("-C")
@@ -2732,8 +2803,9 @@ mod tests {
             serde_json::to_string_pretty(&json!({
                 "cycle_phase": {
                     "cycle": 345,
-                    "phase": "close_out",
-                    "phase_entered_at": "2026-03-25T00:00:00Z"
+                    "phase": "complete",
+                    "phase_entered_at": "2026-03-25T00:00:00Z",
+                    "completed_at": "2026-03-25T00:00:00Z"
                 },
                 "last_cycle": {
                     "number": 345,
@@ -2840,8 +2912,17 @@ mod tests {
             "- **Close-out gate failures**: C5.5 FAIL: FAIL (1 warning, 1 blocking: foo)"
         ));
         assert!(worklog.contains("- **Publish gate**: published"));
-        assert!(!worklog.contains("\n## Post-dispatch delta\n"));
-        assert_eq!(worklog.matches("- **Pipeline status**:").count(), 1);
+        assert_eq!(
+            worklog
+                .lines()
+                .filter(|line| *line == POST_DISPATCH_DELTA_HEADING)
+                .count(),
+            1
+        );
+        assert!(worklog.contains(
+            "- **In-flight agent sessions**: 0 (unchanged: 0 new dispatches this cycle)"
+        ));
+        assert_eq!(worklog.matches("- **Pipeline status**:").count(), 2);
         assert!(worklog.contains("## Next steps\n\n1. Plan next dispatch\n"));
 
         let _ = fs::remove_dir_all(&dir);
@@ -2864,8 +2945,9 @@ mod tests {
             serde_json::to_string_pretty(&json!({
                 "cycle_phase": {
                     "cycle": 345,
-                    "phase": "close_out",
-                    "phase_entered_at": "2026-03-25T00:00:00Z"
+                    "phase": "complete",
+                    "phase_entered_at": "2026-03-25T00:00:00Z",
+                    "completed_at": "2026-03-25T00:00:00Z"
                 },
                 "last_cycle": {
                     "number": 345,

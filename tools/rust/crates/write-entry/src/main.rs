@@ -150,7 +150,10 @@ struct JournalArgs {
     cycle: Option<u64>,
     /// Entry title
     #[arg(long)]
-    title: String,
+    title: Option<String>,
+    /// Optional context paragraph rendered under the Context section
+    #[arg(long)]
+    context: Option<String>,
     /// Read JSON payload from file instead of stdin
     #[arg(long)]
     input_file: Option<PathBuf>,
@@ -426,6 +429,7 @@ fn execute_journal(
     now: DateTime<Utc>,
 ) -> Result<PathBuf, String> {
     let cycle = resolve_cycle(args.cycle, repo_root)?;
+    let title = resolve_journal_title(args)?;
     let input = resolve_journal_input(args)?;
     let status = parse_commitment_status(&input.previous_commitment_status)?;
     let path = journal_path(repo_root, now);
@@ -460,7 +464,8 @@ fn execute_journal(
     let entry = sanitize_escaped_newlines(&render_journal_entry(
         cycle,
         now,
-        &args.title,
+        title,
+        args.context.as_deref(),
         &input,
         status,
         previous.as_deref(),
@@ -3223,7 +3228,21 @@ fn ceil_age_hours(age_hours: f64) -> Option<i64> {
 }
 
 fn has_inline_journal_content(args: &JournalArgs) -> bool {
-    !args.section.is_empty() || !args.commitment.is_empty() || args.auto_chronic_status
+    !args.section.is_empty()
+        || !args.commitment.is_empty()
+        || args.auto_chronic_status
+        || args.context.is_some()
+}
+
+fn non_empty_trimmed(value: Option<&str>) -> Option<&str> {
+    value.map(str::trim).filter(|value| !value.is_empty())
+}
+
+fn resolve_journal_title(args: &JournalArgs) -> Result<&str, String> {
+    let title = non_empty_trimmed(args.title.as_deref()).ok_or_else(|| {
+        "journal title is required; pass --title \"<summary of the cycle>\"".to_string()
+    })?;
+    Ok(title)
 }
 
 fn load_chronic_status_entries(repo_root: &Path) -> Result<Vec<ChronicStatusEntry>, String> {
@@ -4203,6 +4222,7 @@ fn render_journal_entry(
     cycle: u64,
     now: DateTime<Utc>,
     title: &str,
+    context: Option<&str>,
     input: &JournalInput,
     status: CommitmentStatus,
     previous_commitment: Option<&str>,
@@ -4225,12 +4245,10 @@ fn render_journal_entry(
     }
     lines.push("### Context".to_string());
     lines.push(String::new());
-    lines.push(format!(
-        "Cycle {} focused on {}.",
-        cycle,
-        convert_references(title)
-    ));
-    lines.push(String::new());
+    if let Some(context) = non_empty_trimmed(context) {
+        lines.push(convert_references(strip_cycle_prefix(context)));
+        lines.push(String::new());
+    }
     lines.push("### Previous commitment follow-through".to_string());
     lines.push(String::new());
     if let Some(previous) = previous_commitment {
@@ -4748,7 +4766,8 @@ mod tests {
     fn journal_args(title: &str) -> JournalArgs {
         JournalArgs {
             cycle: Some(154),
-            title: title.to_string(),
+            title: Some(title.to_string()),
+            context: None,
             input_file: None,
             section: Vec::new(),
             commitment: Vec::new(),
@@ -7474,6 +7493,7 @@ mod tests {
             226,
             fixed_now_on("2026-03-11"),
             "Cycle 226: Breaking the worklog-accuracy pattern",
+            Some("Cycle 226: Breaking the worklog-accuracy pattern."),
             &JournalInput {
                 previous_commitment_status: "no_prior_commitment".to_string(),
                 previous_commitment_detail: "No prior commitment recorded.".to_string(),
@@ -7493,8 +7513,8 @@ mod tests {
             rendered.contains("## 2026-03-11 — Cycle 226: Breaking the worklog-accuracy pattern")
         );
         assert!(!rendered.contains("Cycle 226: Cycle 226:"));
-        assert!(rendered.contains("Cycle 226 focused on Breaking the worklog-accuracy pattern."));
-        assert!(!rendered.contains("focused on Cycle 226:"));
+        assert!(rendered.contains("Breaking the worklog-accuracy pattern."));
+        assert!(!rendered.contains("### Context\n\nCycle 226:"));
     }
 
     #[test]
@@ -7531,6 +7551,7 @@ mod tests {
             154,
             fixed_now_on("2026-03-11"),
             "Derived blocker journal",
+            Some("Derived blocker journal."),
             &JournalInput {
                 previous_commitment_status: "no_prior_commitment".to_string(),
                 previous_commitment_detail: "No prior commitment recorded.".to_string(),
@@ -7555,6 +7576,50 @@ mod tests {
         assert!(rendered.contains("[#2403]"));
         assert!(rendered.contains("Need Eva answer on blocker policy"));
         assert!(rendered.contains("(5h stale)"));
+    }
+
+    #[test]
+    fn execute_journal_requires_title() {
+        let repo_root = TempRepoDir::new("journal-requires-title");
+        fs::create_dir_all(repo_root.path.join("docs")).unwrap();
+        write_root_journal_index(&repo_root.path, "");
+        write_worklog_fixture(&repo_root.path, fixed_now(), 154, "Required title");
+
+        let mut args = journal_args("placeholder");
+        args.title = None;
+        args.previous_commitment_status = Some("no_prior_commitment".to_string());
+        args.previous_commitment_detail = Some("No prior commitment recorded.".to_string());
+
+        let error = execute_journal(&args, &repo_root.path, fixed_now()).unwrap_err();
+        assert!(error.contains("journal title is required"));
+        assert!(error.contains("--title"));
+    }
+
+    #[test]
+    fn render_journal_entry_omits_context_paragraph_when_context_is_missing() {
+        let rendered = render_journal_entry(
+            226,
+            fixed_now_on("2026-03-11"),
+            "Breaking the worklog-accuracy pattern",
+            None,
+            &JournalInput {
+                previous_commitment_status: "no_prior_commitment".to_string(),
+                previous_commitment_detail: "No prior commitment recorded.".to_string(),
+                sections: Vec::new(),
+                concrete_behavior_change: String::new(),
+                commitments: Vec::new(),
+                open_questions: Vec::new(),
+            },
+            CommitmentStatus::NoPriorCommitment,
+            None,
+            Some("../worklog/2026-03-11/123451-cycle-226-summary.md"),
+            None,
+            &[],
+        );
+
+        assert!(rendered.contains("### Context"));
+        assert!(!rendered.contains("focused on"));
+        assert!(!rendered.contains("placeholder"));
     }
 
     #[test]
