@@ -2983,10 +2983,11 @@ fn frozen_commit_status_for_date_with_runner(
 ) -> Result<(StepStatus, String), String> {
     let state = read_state_value(repo_root)?;
     let phase = state.pointer("/cycle_phase/phase").and_then(Value::as_str);
-    if phase != Some("close_out") {
+    if !allows_close_out_gate_checks(phase) {
         return Ok((
             StepStatus::Skip,
-            "skipped: frozen commit verification only runs during close_out".to_string(),
+            "skipped: frozen commit verification only runs during close_out or complete"
+                .to_string(),
         ));
     }
 
@@ -3079,10 +3080,11 @@ fn current_cycle_journal_section_status_for_date(
 ) -> Result<(StepStatus, String), String> {
     let state = read_state_value(repo_root)?;
     let phase = state.pointer("/cycle_phase/phase").and_then(Value::as_str);
-    if phase != Some("close_out") {
+    if !allows_close_out_gate_checks(phase) {
         return Ok((
             StepStatus::Pass,
-            "skipped: current-cycle journal section only blocks during close_out".to_string(),
+            "skipped: current-cycle journal section only blocks during close_out or complete"
+                .to_string(),
         ));
     }
 
@@ -3135,10 +3137,10 @@ fn current_cycle_journal_section_status_for_date(
 fn review_events_verified_status(repo_root: &Path) -> Result<(StepStatus, String), String> {
     let state = read_state_value(repo_root)?;
     let phase = state.pointer("/cycle_phase/phase").and_then(Value::as_str);
-    if phase != Some("close_out") {
+    if !allows_close_out_gate_checks(phase) {
         return Ok((
             StepStatus::Pass,
-            "skipped: review-events verification freshness only blocks during close_out"
+            "skipped: review-events verification freshness only blocks during close_out or complete"
                 .to_string(),
         ));
     }
@@ -3166,11 +3168,15 @@ fn review_events_verified_status(repo_root: &Path) -> Result<(StepStatus, String
         Ok((
             StepStatus::Fail,
             format!(
-                "review_events_verified_through_cycle({}) does not match last_cycle.number({}) during close_out; verify-review-events must run and advance the counter before C5.5 can pass",
+                "review_events_verified_through_cycle({}) does not match last_cycle.number({}) during close_out/complete; verify-review-events must run and advance the counter before C5.5 can pass",
                 verified_through_cycle, current_cycle
             ),
         ))
     }
+}
+
+fn allows_close_out_gate_checks(phase: Option<&str>) -> bool {
+    matches!(phase, Some("close_out" | "complete"))
 }
 
 fn worklog_dedup_status_for_date(
@@ -7419,6 +7425,31 @@ mod tests {
     }
 
     #[test]
+    fn current_cycle_journal_section_passes_when_phase_is_complete() {
+        let root = write_temp_pipeline_repo(
+            "pipeline-check-current-cycle-journal-complete",
+            json!({
+                "cycle_phase": {
+                    "phase": "complete",
+                    "cycle": 481
+                }
+            }),
+        );
+        let journal_path = write_journal_file(
+            &root,
+            "2026-04-12",
+            "# Journal\n\n## 2026-04-12 — Cycle 481:\n- entry\n",
+        );
+
+        let (status, detail) =
+            current_cycle_journal_section_status_for_date(&root, "2026-04-12").unwrap();
+
+        assert_eq!(status, StepStatus::Pass);
+        assert!(detail.contains("## 2026-04-12 — Cycle 481:"));
+        assert!(detail.contains(&journal_path.display().to_string()));
+    }
+
+    #[test]
     fn current_cycle_journal_section_fails_when_heading_is_missing() {
         let root = write_temp_pipeline_repo(
             "pipeline-check-current-cycle-journal-missing-heading",
@@ -7481,7 +7512,7 @@ mod tests {
         assert_eq!(status, StepStatus::Pass);
         assert_eq!(
             detail,
-            "skipped: current-cycle journal section only blocks during close_out"
+            "skipped: current-cycle journal section only blocks during close_out or complete"
         );
     }
 
@@ -7725,6 +7756,156 @@ mod tests {
         assert_eq!(report.steps[22].status, StepStatus::Fail);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
+    }
+
+    #[test]
+    fn run_pipeline_complete_phase_keeps_overall_result_while_exercising_close_out_checks() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-complete-close-out-gates-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        let today = &current_utc_timestamp()[..10];
+        fs::create_dir_all(root.join("docs/journal")).unwrap();
+        fs::create_dir_all(root.join("docs/worklog").join(today)).unwrap();
+        fs::create_dir_all(root.join("docs/reviews")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "previous_cycle_issue": 834,
+                "last_cycle": {"number": 257, "issue": 834},
+                "cycle_phase": {
+                    "phase": "complete",
+                    "cycle": 257,
+                    "completed_at": format!("{today}T02:03:04Z")
+                },
+                "copilot_metrics": {
+                    "total_dispatches": 3,
+                    "resolved": 2,
+                    "merged": 1,
+                    "in_flight": 1,
+                    "produced_pr": 2,
+                    "closed_without_pr": 0,
+                    "reviewed_awaiting_eva": 1,
+                    "dispatch_to_pr_rate": "66.7%",
+                    "pr_merge_rate": "50.0%"
+                },
+                "review_agent": {
+                    "last_review_cycle": 257
+                },
+                "review_events_verified_through_cycle": 257
+            })
+            .to_string(),
+        )
+        .unwrap();
+        fs::write(
+            root.join("docs/worklog")
+                .join(today)
+                .join("020304-cycle-257-summary.md"),
+            "latest worklog",
+        )
+        .unwrap();
+        fs::write(
+            root.join("docs/journal").join(format!("{today}.md")),
+            format!("# Journal\n\n## {today} — Cycle 257:\n"),
+        )
+        .unwrap();
+        fs::write(root.join("docs/reviews/cycle-257.md"), "review").unwrap();
+        commit_all(&root, "[cycle 257] seed pipeline fixture");
+
+        struct CompleteRunner;
+
+        impl CommandRunner for CompleteRunner {
+            fn run(&self, script_path: &Path, args: &[String]) -> Result<ExecutionResult, String> {
+                let key = script_path
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or_default();
+                match key {
+                    "metric-snapshot" => Ok(ExecutionResult {
+                        exit_code: Some(0),
+                        stdout: json!({"summary":"13/13 checks","checks":[]}).to_string(),
+                    }),
+                    "check-field-inventory-rs" => Ok(ExecutionResult {
+                        exit_code: Some(0),
+                        stdout: "PASS: all fields covered".to_string(),
+                    }),
+                    "housekeeping-scan" => Ok(ExecutionResult {
+                        exit_code: Some(0),
+                        stdout: json!({"items_needing_attention":0}).to_string(),
+                    }),
+                    "cycle-status" => Ok(ExecutionResult {
+                        exit_code: Some(0),
+                        stdout: json!({
+                            "concurrency": {"in_flight": 1},
+                            "eva_input": {"comments_since_last_cycle": [{"x": 1}]}
+                        })
+                        .to_string(),
+                    }),
+                    "state-invariants" => Ok(ExecutionResult {
+                        exit_code: Some(0),
+                        stdout: json!({"passed":5,"failed":0}).to_string(),
+                    }),
+                    "derive-metrics" => Ok(ExecutionResult {
+                        exit_code: Some(0),
+                        stdout: json!({
+                            "total_dispatches": 3,
+                            "resolved": 2,
+                            "merged": 1,
+                            "in_flight": 1,
+                            "produced_pr": 2,
+                            "closed_without_pr": 0,
+                            "reviewed_awaiting_eva": 1,
+                            "dispatch_to_pr_rate": "66.7%",
+                            "pr_merge_rate": "50.0%"
+                        })
+                        .to_string(),
+                    }),
+                    "validate-docs" => {
+                        let mode = args.first().map(String::as_str).unwrap_or_default();
+                        if mode == "worklog" {
+                            Ok(ExecutionResult {
+                                exit_code: Some(1),
+                                stdout: "pipeline status mismatch: worklog reports 'PASS', pipeline-check overall is 'fail'".to_string(),
+                            })
+                        } else {
+                            Ok(ExecutionResult {
+                                exit_code: Some(0),
+                                stdout: String::new(),
+                            })
+                        }
+                    }
+                    other => panic!("unexpected tool invocation: {}", other),
+                }
+            }
+
+            fn fetch_issue_comment_bodies(&self, issue: u64) -> Result<String, String> {
+                assert_eq!(issue, 834);
+                let steps = EXPECTED_STEP_IDS
+                    .iter()
+                    .copied()
+                    .filter(|step| *step != "C4.5")
+                    .collect::<Vec<_>>();
+                Ok(step_comment_bodies(256, &steps))
+            }
+        }
+
+        let report = run_pipeline(&root, 257, &CompleteRunner);
+        assert_eq!(report.steps[16].name, "frozen-commit-verify");
+        assert_eq!(report.steps[16].status, StepStatus::Pass);
+        assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
+        assert_eq!(report.steps[17].status, StepStatus::Pass);
+        let current_cycle_journal_section = report
+            .steps
+            .iter()
+            .find(|step| step.name == CURRENT_CYCLE_JOURNAL_SECTION_STEP_NAME)
+            .expect("current-cycle-journal-section should be present");
+        assert_eq!(current_cycle_journal_section.status, StepStatus::Pass);
+        assert_eq!(report.steps[22].name, "step-comments");
+        assert_eq!(report.steps[22].status, StepStatus::Fail);
+        assert_eq!(report.overall, StepStatus::Fail);
     }
 
     #[test]
@@ -9656,7 +9837,45 @@ mod tests {
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("only runs during close_out"));
+            .contains("only runs during close_out or complete"));
+    }
+
+    #[test]
+    fn frozen_commit_verify_passes_when_phase_is_complete() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-frozen-commit-complete-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
+        fs::create_dir_all(root.join("docs/journal")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "complete", "cycle": 410}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        fs::write(
+            root.join("docs/worklog/2026-03-09/120000-cycle-410-summary.md"),
+            "# Worklog\n",
+        )
+        .unwrap();
+        fs::write(root.join("docs/journal/2026-03-09.md"), "# Journal\n").unwrap();
+        commit_all(&root, "[cycle 410] freeze close-out docs");
+
+        let step = verify_frozen_commit_for_date(&root, "2026-03-09");
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("verified frozen commit"));
     }
 
     #[test]
@@ -9753,7 +9972,7 @@ mod tests {
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("does not match last_cycle.number(410) during close_out"));
+            .contains("does not match last_cycle.number(410) during close_out/complete"));
     }
 
     #[test]
@@ -9782,7 +10001,35 @@ mod tests {
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("only blocks during close_out"));
+            .contains("only blocks during close_out or complete"));
+    }
+
+    #[test]
+    fn review_events_verified_passes_when_phase_is_complete() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir()
+            .join(format!("pipeline-check-review-events-complete-{}", run_id));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 410},
+                "cycle_phase": {"phase": "complete"},
+                "review_events_verified_through_cycle": 410
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let step = verify_review_events_verified(&root);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("matches current cycle 410"));
     }
 
     #[test]

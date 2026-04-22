@@ -17,7 +17,6 @@ fn record_dispatch_replays_cycle_493_close_out_flow() {
     repo.init_with_state(CYCLE_493_CLOSE_OUT_FIXTURE);
 
     let before = repo.read_state();
-    let original_summary = before["last_cycle"]["summary"].clone();
     let original_timestamp = before["last_cycle"]["timestamp"]
         .as_str()
         .expect("fixture should include last_cycle timestamp")
@@ -53,9 +52,11 @@ fn record_dispatch_replays_cycle_493_close_out_flow() {
     );
     assert_eq!(
         after.pointer("/last_cycle/summary"),
-        Some(&original_summary)
+        Some(&serde_json::json!(
+            "1 dispatch, 3 merges (PR #2505, PR #2507, PR #2509)"
+        ))
     );
-    assert_eq!(
+    assert_ne!(
         after
             .pointer("/last_cycle/timestamp")
             .and_then(Value::as_str),
@@ -90,7 +91,6 @@ fn record_dispatch_replays_cycle_495_close_out_flow() {
     repo.init_with_state(CYCLE_495_CLOSE_OUT_FIXTURE);
 
     let before = repo.read_state();
-    let original_summary = before["last_cycle"]["summary"].clone();
     let original_timestamp = before["last_cycle"]["timestamp"]
         .as_str()
         .expect("fixture should include last_cycle timestamp")
@@ -126,9 +126,9 @@ fn record_dispatch_replays_cycle_495_close_out_flow() {
     );
     assert_eq!(
         after.pointer("/last_cycle/summary"),
-        Some(&original_summary)
+        Some(&serde_json::json!("1 dispatch, 0 merges"))
     );
-    assert_eq!(
+    assert_ne!(
         after
             .pointer("/last_cycle/timestamp")
             .and_then(Value::as_str),
@@ -364,8 +364,8 @@ fn record_dispatch_updates_replacement_worklog_after_close_out_slug_replace() {
         fs::read_to_string(&replacement_path).expect("replacement worklog should be readable");
     assert!(replacement_worklog.contains("## Post-dispatch delta"));
     assert!(replacement_worklog.contains("- **In-flight agent sessions**: 2"));
-    assert!(replacement_worklog.contains("- **Dispatch count**: 1 dispatch"));
-    assert!(replacement_worklog.contains("- **Last-cycle summary**: 1 dispatch, 0 merges"));
+    assert!(replacement_worklog.contains("- **Dispatch count**: 2 dispatches"));
+    assert!(replacement_worklog.contains("- **Last-cycle summary**: 2 dispatches, 0 merges"));
 
     let changed_files = git_output(repo.path(), ["show", "--name-only", "--format=", "HEAD"]);
     assert!(changed_files.contains("docs/state.json"));

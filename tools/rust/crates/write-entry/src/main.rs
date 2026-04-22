@@ -417,6 +417,11 @@ fn render_worklog_output_with_cycle(
     emit_worklog_auto_derivation_warnings(apply_worklog_auto_derivations(
         args, repo_root, cycle, &mut input,
     )?);
+    validate_receipt_bounded_worklog_title(
+        &effective_worklog_title(args, repo_root, cycle)?,
+        &input.prs_merged,
+        args.auto_receipts,
+    )?;
     emit_unresolved_receipt_warnings(&mut input.receipts, repo_root)?;
     let content = render_worklog(cycle, now, &input);
     emit_generated_markdown_sha_warnings("worklog", &content, repo_root);
@@ -431,18 +436,10 @@ fn execute_journal(
     let cycle = resolve_cycle(args.cycle, repo_root)?;
     let title = resolve_journal_title(args)?;
     let input = resolve_journal_input(args)?;
-    let status = parse_commitment_status(&input.previous_commitment_status)?;
     let path = journal_path(repo_root, now);
     let previous = lookup_previous_concrete_behavior(repo_root, now.date_naive())?;
-    if previous.is_some() && matches!(status, CommitmentStatus::NoPriorCommitment) {
-        return Err("previous commitment found in journal but --previous-commitment-status is 'no_prior_commitment'; specify an explicit status (followed, not_followed, not_applicable)".to_string());
-    }
-    if previous.is_none() && !matches!(status, CommitmentStatus::NoPriorCommitment) {
-        return Err(
-            "--previous-commitment-status is set but no previous commitment found in journal history"
-                .to_string(),
-        );
-    }
+    let previous_commitment_resolution =
+        resolve_previous_commitment_resolution(&input.previous_commitment_status, previous.as_deref())?;
     if path.exists() {
         let existing_content = fs::read_to_string(&path)
             .map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
@@ -467,7 +464,7 @@ fn execute_journal(
         title,
         args.context.as_deref(),
         &input,
-        status,
+        &previous_commitment_resolution,
         previous.as_deref(),
         worklog_link.as_deref(),
         chronic_status.as_deref(),
@@ -1345,7 +1342,6 @@ fn apply_worklog_auto_derivations(
             ));
         }
         input.prs_merged = derived_prs;
-        augment_prs_merged_from_worklog_narrative(&input.what_was_done, &mut input.prs_merged);
         apply_dispatch_count_derivation(entries, &mut input.what_was_done, &mut warnings);
         input.receipt_note = Some(
             match derive_receipt_scope_note(
@@ -2860,19 +2856,6 @@ fn derive_prs_directly_from_merge_receipts(entries: &[&CycleReceiptJsonEntry]) -
     prs
 }
 
-fn augment_prs_merged_from_worklog_narrative(items: &[String], prs_merged: &mut Vec<u64>) {
-    let mut seen = prs_merged.iter().copied().collect::<HashSet<_>>();
-    for item in items {
-        if !item.trim().to_ascii_lowercase().contains("merge") {
-            continue;
-        }
-
-        let mut referenced_prs = Vec::new();
-        push_pr_references(item, &mut referenced_prs, &mut seen);
-        prs_merged.extend(referenced_prs);
-    }
-}
-
 fn extract_prs_from_merge_receipt_entry(entry: &CycleReceiptJsonEntry) -> Vec<u64> {
     let mut seen = HashSet::new();
     let mut prs = Vec::new();
@@ -2908,6 +2891,73 @@ fn push_pr_references(item: &str, prs: &mut Vec<u64>, seen: &mut HashSet<u64>) {
         }
         remainder = pr_fragment;
     }
+}
+
+fn validate_receipt_bounded_worklog_title(
+    title: &str,
+    receipt_prs: &[u64],
+    auto_receipts: bool,
+) -> Result<(), String> {
+    if !auto_receipts {
+        return Ok(());
+    }
+
+    let referenced_prs = extract_title_pr_references(title);
+    let allowed = receipt_prs.iter().copied().collect::<HashSet<_>>();
+    let unexpected = referenced_prs
+        .into_iter()
+        .filter(|pr| !allowed.contains(pr))
+        .collect::<Vec<_>>();
+    if unexpected.is_empty() {
+        return Ok(());
+    }
+
+    Err(format!(
+        "worklog title/slug references merged PR(s) {} that are not in the cycle-bounded receipt set {}; remove antecedent PRs from the title or move them into worklog prose",
+        format_pr_refs(&unexpected),
+        format_pr_refs(receipt_prs),
+    ))
+}
+
+fn extract_title_pr_references(title: &str) -> Vec<u64> {
+    let mut seen = HashSet::new();
+    let mut prs = Vec::new();
+    push_pr_references(title, &mut prs, &mut seen);
+
+    let tokens = title
+        .split(|character: char| !character.is_ascii_alphanumeric() && character != '#')
+        .filter(|token| !token.is_empty())
+        .collect::<Vec<_>>();
+    let mut index = 0usize;
+    while index < tokens.len() {
+        let token = tokens[index].trim_matches('#').to_ascii_lowercase();
+        if !matches!(token.as_str(), "merge" | "merged" | "merges") {
+            index += 1;
+            continue;
+        }
+
+        let mut cursor = index + 1;
+        while cursor < tokens.len() {
+            let candidate = tokens[cursor].trim_matches('#');
+            if let Ok(pr) = candidate.parse::<u64>() {
+                if pr > 0 && seen.insert(pr) {
+                    prs.push(pr);
+                }
+                cursor += 1;
+                continue;
+            }
+
+            let connector = candidate.to_ascii_lowercase();
+            if matches!(connector.as_str(), "and" | "with" | "plus" | "via") {
+                cursor += 1;
+                continue;
+            }
+            break;
+        }
+        index = cursor;
+    }
+
+    prs
 }
 
 fn extract_pr_reference_from_url(url: &str) -> Option<u64> {
@@ -4196,12 +4246,29 @@ fn render_bullet_list(items: &[String]) -> Vec<String> {
         .collect()
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum CommitmentStatus {
     Followed,
     NotFollowed,
     NotApplicable,
+    Pending,
+    Dropped,
+    Mixed,
     NoPriorCommitment,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum PriorCommitmentLabel {
+    Met,
+    Pending,
+    NotMet,
+    Dropped,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct PreviousCommitmentResolution {
+    summary_status: CommitmentStatus,
+    item_labels: Vec<PriorCommitmentLabel>,
 }
 
 fn parse_commitment_status(value: &str) -> Result<CommitmentStatus, String> {
@@ -4209,12 +4276,108 @@ fn parse_commitment_status(value: &str) -> Result<CommitmentStatus, String> {
 		"followed" => Ok(CommitmentStatus::Followed),
 		"not_followed" => Ok(CommitmentStatus::NotFollowed),
 		"not_applicable" => Ok(CommitmentStatus::NotApplicable),
+		"pending" => Ok(CommitmentStatus::Pending),
+		"dropped" => Ok(CommitmentStatus::Dropped),
+		"mixed" => Ok(CommitmentStatus::Mixed),
 		"no_prior_commitment" => Ok(CommitmentStatus::NoPriorCommitment),
+		"met" => Ok(CommitmentStatus::Followed),
+		"not_met" => Ok(CommitmentStatus::NotFollowed),
 		_ => Err(format!(
-			"invalid previous_commitment_status '{}'; expected one of: followed, not_followed, not_applicable, no_prior_commitment",
+			"invalid previous_commitment_status '{}'; expected one of: followed, not_followed, not_applicable, pending, dropped, mixed, no_prior_commitment, met, not_met",
 			value
 		)),
 	}
+}
+
+fn parse_prior_commitment_label(value: &str) -> Result<PriorCommitmentLabel, String> {
+    match value {
+        "met" | "followed" => Ok(PriorCommitmentLabel::Met),
+        "pending" => Ok(PriorCommitmentLabel::Pending),
+        "not_met" | "not_followed" => Ok(PriorCommitmentLabel::NotMet),
+        "dropped" | "not_applicable" => Ok(PriorCommitmentLabel::Dropped),
+        _ => Err(format!(
+            "invalid previous_commitment_status '{}'; expected per-commitment values met, pending, not_met, dropped",
+            value
+        )),
+    }
+}
+
+fn resolve_previous_commitment_resolution(
+    status_value: &str,
+    previous_commitment: Option<&str>,
+) -> Result<PreviousCommitmentResolution, String> {
+    let previous_items = previous_commitment
+        .map(extract_previous_commitment_items)
+        .unwrap_or_default();
+    let tokens = previous_commitment_status_tokens(status_value);
+
+    if previous_items.is_empty() {
+        if tokens.is_empty() || matches!(tokens.as_slice(), ["no_prior_commitment"]) {
+            return Ok(PreviousCommitmentResolution {
+                summary_status: CommitmentStatus::NoPriorCommitment,
+                item_labels: Vec::new(),
+            });
+        }
+        for token in &tokens {
+            parse_commitment_status(token)?;
+        }
+        return Err(
+            "--previous-commitment-status is set but no previous commitment found in journal history"
+                .to_string(),
+        );
+    }
+
+    if tokens.is_empty() || matches!(tokens.as_slice(), ["no_prior_commitment"]) {
+        return Err("previous commitment found in journal but --previous-commitment-status is 'no_prior_commitment'; specify an explicit status (followed, not_followed, not_applicable) or per-commitment labels (met, pending, not_met, dropped)".to_string());
+    }
+
+    if previous_items.len() == 1 {
+        let [token] = tokens.as_slice() else {
+            return Err(format!(
+                "expected 1 previous-commitment-status value for the carried-forward commitment, got {}",
+                tokens.len()
+            ));
+        };
+        return Ok(PreviousCommitmentResolution {
+            summary_status: parse_commitment_status(token)?,
+            item_labels: vec![parse_prior_commitment_label(token)?],
+        });
+    }
+
+    if tokens.len() != previous_items.len() {
+        return Err(format!(
+            "expected {} previous-commitment-status values for {} carried-forward commitments, got {}",
+            previous_items.len(),
+            previous_items.len(),
+            tokens.len()
+        ));
+    }
+
+    let item_labels = tokens
+        .iter()
+        .map(|token| parse_prior_commitment_label(token))
+        .collect::<Result<Vec<_>, _>>()?;
+    let summary_status = if item_labels
+        .iter()
+        .all(|label| *label == PriorCommitmentLabel::Met)
+    {
+        CommitmentStatus::Followed
+    } else {
+        CommitmentStatus::Mixed
+    };
+
+    Ok(PreviousCommitmentResolution {
+        summary_status,
+        item_labels,
+    })
+}
+
+fn previous_commitment_status_tokens(value: &str) -> Vec<&str> {
+    value
+        .split(',')
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .collect()
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -4224,7 +4387,7 @@ fn render_journal_entry(
     title: &str,
     context: Option<&str>,
     input: &JournalInput,
-    status: CommitmentStatus,
+    previous_commitment_resolution: &PreviousCommitmentResolution,
     previous_commitment: Option<&str>,
     worklog_relative_path: Option<&str>,
     chronic_status: Option<&str>,
@@ -4258,11 +4421,30 @@ fn render_journal_entry(
         ));
         lines.push(String::new());
     }
-    lines.push(format!(
-        "{} {}",
-        commitment_status_label(status),
-        convert_references(&input.previous_commitment_detail)
-    ));
+    if previous_commitment_resolution.item_labels.len() <= 1 {
+        lines.push(format!(
+            "{} {}",
+            commitment_status_label(previous_commitment_resolution.summary_status),
+            convert_references(&input.previous_commitment_detail)
+        ));
+    } else {
+        lines.push(commitment_status_label(previous_commitment_resolution.summary_status).to_string());
+    }
+    if previous_commitment_resolution.item_labels.len() > 1 {
+        if let Some(previous) = previous_commitment {
+        for (label, commitment) in previous_commitment_resolution
+            .item_labels
+            .iter()
+            .zip(extract_previous_commitment_items(previous))
+        {
+            lines.push(format!(
+                "- **{}** — {}",
+                prior_commitment_label_text(*label),
+                convert_references(&commitment)
+            ));
+        }
+        }
+    }
     lines.push(String::new());
     for section in &input.sections {
         lines.push(format!("### {}", convert_references(&section.heading)));
@@ -4368,7 +4550,19 @@ fn commitment_status_label(status: CommitmentStatus) -> &'static str {
         CommitmentStatus::Followed => "**Followed.**",
         CommitmentStatus::NotFollowed => "**Not followed.**",
         CommitmentStatus::NotApplicable => "**Not applicable.**",
+        CommitmentStatus::Pending => "**Pending.**",
+        CommitmentStatus::Dropped => "**Dropped.**",
+        CommitmentStatus::Mixed => "**Mixed.**",
         CommitmentStatus::NoPriorCommitment => "**No prior commitment.**",
+    }
+}
+
+fn prior_commitment_label_text(label: PriorCommitmentLabel) -> &'static str {
+    match label {
+        PriorCommitmentLabel::Met => "Met",
+        PriorCommitmentLabel::Pending => "Pending",
+        PriorCommitmentLabel::NotMet => "Not met",
+        PriorCommitmentLabel::Dropped => "Dropped",
     }
 }
 
@@ -4451,6 +4645,26 @@ fn extract_last_concrete_behavior(content: &str) -> Option<String> {
         }
     }
     latest
+}
+
+fn extract_previous_commitment_items(section: &str) -> Vec<String> {
+    let items = section
+        .lines()
+        .filter_map(|line| {
+            let trimmed = line.trim();
+            let (prefix, body) = trimmed.split_once(". ")?;
+            if prefix.chars().all(|character| character.is_ascii_digit()) && !body.trim().is_empty()
+            {
+                Some(body.trim().to_string())
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+    if items.is_empty() && !section.trim().is_empty() {
+        return vec![section.trim().to_string()];
+    }
+    items
 }
 
 fn line_text(content: &str, start: usize) -> &str {
@@ -5791,6 +6005,114 @@ mod tests {
 
         assert!(warnings.is_empty());
         assert_eq!(input.prs_merged, vec![88]);
+    }
+
+    #[test]
+    fn worklog_auto_receipts_keep_prs_merged_bound_to_receipt_set() {
+        let repo_root = TempRepoDir::new("worklog-auto-receipts-bounded-prs");
+        init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "cycle": 154,
+                    "phase_entered_at": "2026-03-06T01:00:00Z"
+                },
+                "agent_sessions": []
+            }"#,
+        );
+        let start_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154 [cycle 154]",
+        );
+        let merge_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/merge.txt",
+            "merged\n",
+            "state(process-merge): PR #99 merged [cycle 154]",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}},
+                    {{"step":"process-merge","receipt":"{merge_receipt}","commit":"state(process-merge): PR #99 merged [cycle 154]"}}
+                ]"#
+            ),
+        );
+
+        let mut args = worklog_args("Receipt bounded PRs");
+        args.auto_receipts = true;
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.publish_gate = Some("published".to_string());
+        args.done = vec![
+            "Antecedent context: reviewed pre-cycle PR #88 before this cycle started.".to_string(),
+            "Merged in-cycle change PR #99.".to_string(),
+        ];
+
+        let content = render_worklog_output(&args, &repo_root.path, fixed_now()).unwrap();
+        assert!(content.contains("### PRs merged"));
+        let prs_merged_section = content
+            .split("### PRs merged")
+            .nth(1)
+            .and_then(|section| section.split("### Issues processed").next())
+            .expect("PRs merged section should be present");
+        assert!(prs_merged_section
+            .contains("[PR #99](https://github.com/EvaLok/schema-org-json-ld/issues/99)"));
+        assert!(!prs_merged_section
+            .contains("[PR #88](https://github.com/EvaLok/schema-org-json-ld/issues/88)"));
+    }
+
+    #[test]
+    fn worklog_auto_receipts_reject_title_prs_outside_receipt_set() {
+        let repo_root = TempRepoDir::new("worklog-auto-receipts-title-pr-validation");
+        init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 154},
+                "cycle_phase": {
+                    "cycle": 154,
+                    "phase_entered_at": "2026-03-06T01:00:00Z"
+                },
+                "agent_sessions": []
+            }"#,
+        );
+        let start_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/start.txt",
+            "start\n",
+            "state(cycle-start): begin cycle 154 [cycle 154]",
+        );
+        let merge_receipt = create_git_commit_with_message(
+            &repo_root.path,
+            "notes/merge.txt",
+            "merged\n",
+            "state(process-merge): PR #99 merged [cycle 154]",
+        );
+        write_cycle_receipts_script(
+            &repo_root.path,
+            &format!(
+                r#"[
+                    {{"step":"cycle-start","receipt":"{start_receipt}","commit":"state(cycle-start): begin cycle 154 [cycle 154]"}},
+                    {{"step":"process-merge","receipt":"{merge_receipt}","commit":"state(process-merge): PR #99 merged [cycle 154]"}}
+                ]"#
+            ),
+        );
+
+        let mut args = worklog_args("Cycle 153 review consumed merged 88 and 99");
+        args.auto_receipts = true;
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.publish_gate = Some("published".to_string());
+
+        let error = render_worklog_output(&args, &repo_root.path, fixed_now())
+            .expect_err("title should be rejected when it mentions pre-cycle PRs");
+        assert!(error.contains("not in the cycle-bounded receipt set"));
+        assert!(error.contains("PR #88"));
+        assert!(error.contains("PR #99"));
     }
 
     #[test]
@@ -7502,7 +7824,10 @@ mod tests {
                 commitments: Vec::new(),
                 open_questions: Vec::new(),
             },
-            CommitmentStatus::NoPriorCommitment,
+            &PreviousCommitmentResolution {
+                summary_status: CommitmentStatus::NoPriorCommitment,
+                item_labels: Vec::new(),
+            },
             None,
             Some("../worklog/2026-03-11/123451-cycle-226-summary.md"),
             None,
@@ -7560,7 +7885,10 @@ mod tests {
                 commitments: Vec::new(),
                 open_questions: Vec::new(),
             },
-            CommitmentStatus::NoPriorCommitment,
+            &PreviousCommitmentResolution {
+                summary_status: CommitmentStatus::NoPriorCommitment,
+                item_labels: Vec::new(),
+            },
             None,
             None,
             None,
@@ -7610,7 +7938,10 @@ mod tests {
                 commitments: Vec::new(),
                 open_questions: Vec::new(),
             },
-            CommitmentStatus::NoPriorCommitment,
+            &PreviousCommitmentResolution {
+                summary_status: CommitmentStatus::NoPriorCommitment,
+                item_labels: Vec::new(),
+            },
             None,
             Some("../worklog/2026-03-11/123451-cycle-226-summary.md"),
             None,
@@ -7620,6 +7951,52 @@ mod tests {
         assert!(rendered.contains("### Context"));
         assert!(!rendered.contains("focused on"));
         assert!(!rendered.contains("placeholder"));
+    }
+
+    #[test]
+    fn render_journal_entry_grades_each_previous_commitment_independently() {
+        let previous_commitment = "1. Dispatch PR #546 in the same cycle.\n2. Verify close-out gate widening.";
+        let input = JournalInput {
+            previous_commitment_status: "met,pending".to_string(),
+            previous_commitment_detail: "Legacy umbrella note.".to_string(),
+            sections: Vec::new(),
+            concrete_behavior_change: String::new(),
+            commitments: Vec::new(),
+            open_questions: Vec::new(),
+        };
+        let resolution = resolve_previous_commitment_resolution(
+            &input.previous_commitment_status,
+            Some(previous_commitment),
+        )
+        .expect("multiple commitments should resolve");
+
+        let rendered = render_journal_entry(
+            226,
+            fixed_now_on("2026-03-11"),
+            "Per-commitment grading",
+            None,
+            &input,
+            &resolution,
+            Some(previous_commitment),
+            None,
+            None,
+            &[],
+        );
+
+        assert!(rendered.contains("**Mixed.**"));
+        assert!(rendered.contains("- **Met** — Dispatch [PR #546]"));
+        assert!(rendered.contains("- **Pending** — Verify close-out gate widening."));
+        assert!(!rendered.contains("**Followed.** Legacy umbrella note."));
+    }
+
+    #[test]
+    fn previous_commitment_resolution_rejects_unlabeled_commitments() {
+        let error = resolve_previous_commitment_resolution(
+            "met",
+            Some("1. Dispatch PR #546 in the same cycle.\n2. Verify close-out gate widening."),
+        )
+        .expect_err("journal generation should fail when any prior commitment is unlabeled");
+        assert!(error.contains("expected 2 previous-commitment-status values"));
     }
 
     #[test]
@@ -9338,10 +9715,10 @@ Reflective log for the schema-org-json-ld orchestrator.
         ));
 
         let error = execute_journal(&args, &repo_root.path, fixed_now()).unwrap_err();
-        assert_eq!(
-            error,
-            "previous commitment found in journal but --previous-commitment-status is 'no_prior_commitment'; specify an explicit status (followed, not_followed, not_applicable)"
-        );
+        assert!(error.contains(
+            "previous commitment found in journal but --previous-commitment-status is 'no_prior_commitment'"
+        ));
+        assert!(error.contains("followed, not_followed, not_applicable"));
     }
 
     #[test]

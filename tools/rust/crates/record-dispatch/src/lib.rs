@@ -443,7 +443,7 @@ pub fn restore_sealed_last_cycle(
 }
 
 pub fn should_sync_last_cycle_summary(current_phase: &str) -> bool {
-    !matches!(current_phase, "close_out" | "complete")
+    matches!(current_phase, "work" | "close_out" | "complete")
 }
 
 fn merge_duplicate_dispatch_session(
@@ -534,12 +534,9 @@ fn session_value_present(value: &Value) -> bool {
 /// Increment the current cycle's `last_cycle.summary` dispatch count after a new
 /// dispatch is recorded.
 ///
-/// Call this after `apply_dispatch_patch` only when that function returns
-/// `updated_existing == false`, meaning a new session entry was created rather
-/// than merged into an existing live session. Callers should skip this helper
-/// when `last_cycle` has been sealed for `close_out` or `complete`, because the
-/// restored summary/timestamp must remain frozen once the cycle is closing or
-/// complete.
+/// Call this after `apply_dispatch_patch` so `last_cycle.summary` reflects the
+/// final post-dispatch state even when the cycle has already transitioned to
+/// `close_out` or `complete`.
 pub fn sync_last_cycle_summary_after_dispatch(
     state: &mut Value,
     current_cycle: u64,
@@ -1034,10 +1031,10 @@ mod tests {
     }
 
     #[test]
-    fn should_sync_last_cycle_summary_skips_close_out_and_complete_phases() {
+    fn should_sync_last_cycle_summary_runs_for_sealed_cycles() {
         assert!(should_sync_last_cycle_summary("work"));
-        assert!(!should_sync_last_cycle_summary("close_out"));
-        assert!(!should_sync_last_cycle_summary("complete"));
+        assert!(should_sync_last_cycle_summary("close_out"));
+        assert!(should_sync_last_cycle_summary("complete"));
     }
 
     #[test]

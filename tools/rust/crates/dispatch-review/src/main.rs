@@ -383,7 +383,6 @@ mod tests {
         let repo = TempRepo::new();
         repo.init_with_state_json(CYCLE_495_CLOSE_OUT_FIXTURE);
         let before = repo.read_state();
-        let original_summary = before["last_cycle"]["summary"].clone();
         let original_timestamp = before["last_cycle"]["timestamp"]
             .as_str()
             .expect("fixture should include last_cycle timestamp")
@@ -406,9 +405,9 @@ mod tests {
         );
         assert_eq!(
             state.pointer("/last_cycle/summary"),
-            Some(&original_summary)
+            Some(&json!("1 dispatch, 0 merges"))
         );
-        assert_eq!(
+        assert_ne!(
             state.pointer("/last_cycle/timestamp"),
             Some(&json!(original_timestamp))
         );
