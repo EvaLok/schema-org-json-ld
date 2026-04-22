@@ -126,7 +126,7 @@ fn run_write_entry(repo_root: &Path, args: &[&str]) -> PathBuf {
 }
 
 #[test]
-fn narrative_merged_prs_are_added_to_prs_merged_block_when_auto_receipts_find_none() {
+fn worklog_prs_merged_block_uses_receipt_derived_prs_not_narrative_recall() {
     let repo_root = TempDir::new("write-entry-narrative-pr-sync");
     let receipt = init_git_repo(&repo_root.path);
     install_cycle_receipts_script(&repo_root.path, &receipt);
@@ -167,8 +167,7 @@ fn narrative_merged_prs_are_added_to_prs_merged_block_when_auto_receipts_find_no
         "Merged cycle 98 review [PR #88](https://github.com/EvaLok/schema-org-json-ld/issues/88)."
     ));
     assert!(content.contains("### PRs merged"));
-    assert!(content.contains("[PR #88](https://github.com/EvaLok/schema-org-json-ld/issues/88)"));
-    assert!(!content.contains("### PRs merged\n\n- None."));
+    assert!(content.contains("### PRs merged\n\n- None."));
 }
 
 #[test]

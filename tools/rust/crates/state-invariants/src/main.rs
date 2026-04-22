@@ -2369,6 +2369,30 @@ mod tests {
     }
 
     #[test]
+    fn last_cycle_summary_receipts_still_run_when_phase_is_complete() {
+        let repo_root = temp_repo_root("summary-complete-phase-mismatch");
+        init_git_repo(&repo_root);
+
+        let mut value = minimal_valid_state();
+        value["last_cycle"]["number"] = json!(198);
+        value["last_cycle"]["summary"] = json!("0 dispatches, 1 merges (PR #456)");
+        value["dispatch_log_latest"] =
+            json!("#123 [Cycle Review] Cycle 198 end-of-cycle review (cycle 198)");
+        value["cycle_phase"] = json!({
+            "cycle": 198,
+            "phase": "complete",
+            "completed_at": "2026-03-09T01:20:00Z"
+        });
+
+        let state = state_from_json(value);
+        let check = check_last_cycle_summary_receipts(&repo_root, &state);
+        assert_eq!(check.status, CheckStatus::Fail);
+        let details = check.details.as_deref().unwrap_or_default();
+        assert!(details.contains("dispatch_log_latest"));
+        assert!(details.contains("cycle 198"));
+    }
+
+    #[test]
     fn completed_cycle_snapshot_matches_receipt_passes_when_live_state_is_unchanged() {
         let repo_root = temp_repo_root("complete-snapshot-pass");
         init_git_repo(&repo_root);

@@ -1004,20 +1004,17 @@ mod tests {
         .expect("dispatch should succeed");
 
         let state = repo.read_state();
-        // Review dispatches recorded after close-out are meta-dispatches for the
-        // already-closing cycle review, so they must not rewrite the frozen
-        // last_cycle dispatch ledger.
         assert_eq!(
             state.pointer("/last_cycle/summary"),
             Some(&serde_json::json!(
-                "0 dispatches, 2 merges (PR EvaLok/schema-org-json-ld#100, PR EvaLok/schema-org-json-ld#200)"
+                "1 dispatch, 2 merges (PR EvaLok/schema-org-json-ld#100, PR EvaLok/schema-org-json-ld#200)"
             ))
         );
-        let preserved_timestamp = state
+        let updated_timestamp = state
             .pointer("/last_cycle/timestamp")
             .and_then(serde_json::Value::as_str)
-            .expect("dispatch should preserve last_cycle timestamp");
-        assert_eq!(preserved_timestamp, "2026-04-09T09:52:44Z");
+            .expect("dispatch should refresh last_cycle timestamp");
+        assert_ne!(updated_timestamp, "2026-04-09T09:52:44Z");
         assert_eq!(
             state.pointer("/cycle_phase/completed_at"),
             Some(&serde_json::json!("2026-04-09T09:52:44Z"))
@@ -1059,13 +1056,14 @@ mod tests {
         assert_eq!(
             state.pointer("/last_cycle/summary"),
             Some(&serde_json::json!(
-                "0 dispatches, 2 merges (PR EvaLok/schema-org-json-ld#2601, PR EvaLok/schema-org-json-ld#2603)"
+                "1 dispatch, 2 merges (PR EvaLok/schema-org-json-ld#2601, PR EvaLok/schema-org-json-ld#2603)"
             ))
         );
-        assert_eq!(
-            state.pointer("/last_cycle/timestamp"),
-            Some(&serde_json::json!("2026-04-15T18:31:00Z"))
-        );
+        let updated_timestamp = state
+            .pointer("/last_cycle/timestamp")
+            .and_then(serde_json::Value::as_str)
+            .expect("dispatch should refresh last_cycle timestamp");
+        assert_ne!(updated_timestamp, "2026-04-15T18:31:00Z");
         assert_eq!(
             state.pointer("/cycle_phase/completed_at"),
             Some(&serde_json::json!("2026-04-15T18:31:00Z"))
@@ -1119,12 +1117,13 @@ mod tests {
         let state = repo.read_state();
         assert_eq!(
             state.pointer("/last_cycle/summary"),
-            Some(&serde_json::json!("0 dispatches, 1 merges (PR #700)"))
+            Some(&serde_json::json!("1 dispatch, 1 merges (PR #700)"))
         );
-        assert_eq!(
-            state.pointer("/last_cycle/timestamp"),
-            Some(&serde_json::json!("2026-03-07T12:00:00Z"))
-        );
+        let updated_timestamp = state
+            .pointer("/last_cycle/timestamp")
+            .and_then(serde_json::Value::as_str)
+            .expect("dispatch should refresh last_cycle timestamp");
+        assert_ne!(updated_timestamp, "2026-03-07T12:00:00Z");
         assert_eq!(
             state.pointer("/cycle_phase/phase"),
             Some(&serde_json::json!("complete"))
