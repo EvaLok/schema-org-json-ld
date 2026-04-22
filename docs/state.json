@@ -9883,8 +9883,10 @@
       ],
       "dispatched_at": "2026-04-22T02:06:54Z",
       "issue": 2646,
+      "merged_at": "2026-04-22T06:16:19Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2647,
+      "status": "merged",
       "title": "Close-out hardening: unconditional post-dispatch-delta emission, atomic cycle_phase seal, journal placeholder guard"
     },
     {
@@ -11268,12 +11270,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 3,
     "issue": 2645,
     "number": 526,
-    "summary": "Dispatched #2646 (close-out hardening bundle for cycle 525 review F1+F2+F3); merged PR #2644 (cycle 525 review artifact); direct-push 373da54c added startup step 2.5 to pipeline-check EXPECTED_STEP_IDS (discharges cycle 525 commitment C3)",
+    "summary": "1 dispatches, 1 merges",
     "timestamp": "2026-04-22T02:10:13Z"
   },
   "last_eva_comment_check": "2026-04-22T02:10:13Z",
