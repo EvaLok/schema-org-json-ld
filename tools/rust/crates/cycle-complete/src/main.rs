@@ -892,7 +892,7 @@ fn apply_close_out_phase_transition(state_value: &mut Value) -> Result<(), Strin
         .pointer("/cycle_phase/cycle")
         .and_then(Value::as_u64)
         .ok_or_else(|| "missing numeric /cycle_phase/cycle in docs/state.json".to_string())?;
-    transition_cycle_phase(state_value, cycle, "close_out")
+    transition_cycle_phase(state_value, cycle, "complete")
 }
 
 fn print_patch_apply_summary(changed_paths: &[String]) {
@@ -2107,7 +2107,7 @@ mod tests {
 
         assert_eq!(
             raw_state.pointer("/cycle_phase/phase"),
-            Some(&json!("close_out"))
+            Some(&json!("complete"))
         );
         assert_eq!(raw_state.pointer("/cycle_phase/cycle"), Some(&json!(153)));
         assert_ne!(
@@ -2116,12 +2116,121 @@ mod tests {
                 .and_then(Value::as_str),
             Some("2026-03-05T00:00:00Z")
         );
+        let completed_at = raw_state
+            .pointer("/cycle_phase/completed_at")
+            .and_then(Value::as_str)
+            .expect("completed_at should be set");
+        assert!(
+            DateTime::parse_from_rfc3339(completed_at).is_ok(),
+            "completed_at should be RFC3339: {completed_at}"
+        );
         assert_eq!(
             raw_state
                 .pointer("/field_inventory/fields/cycle_phase/last_refreshed")
                 .and_then(Value::as_str),
             Some("cycle 153")
         );
+    }
+
+    #[test]
+    fn committed_cycle_complete_state_seals_phase_and_completed_at_atomically() {
+        let repo_root = temp_repo_root("cycle-complete-commit-seal");
+        init_git_repo(&repo_root);
+        let raw_state = json!({
+            "last_cycle": {
+                "number": 120,
+                "issue": 100,
+                "timestamp": "2026-02-01T00:00:00Z",
+                "duration_minutes": 15,
+                "summary": "old summary"
+            },
+            "last_eva_comment_check": "2026-02-01T00:00:00Z",
+            "cycle_phase": {
+                "cycle": 153,
+                "phase": "work",
+                "phase_entered_at": "2026-03-05T00:00:00Z"
+            },
+            "field_inventory": {
+                "fields": {
+                    "last_cycle": {"last_refreshed": "cycle 120"},
+                    "last_cycle.duration_minutes": {"last_refreshed": "cycle 120"},
+                    "last_eva_comment_check": {"last_refreshed": "cycle 120"},
+                    "cycle_phase": {"last_refreshed": "cycle 152"}
+                }
+            }
+        });
+        write_state_value(&repo_root, &raw_state).expect("failed to write test state.json");
+        let initial_commit = Command::new("git")
+            .arg("-C")
+            .arg(&repo_root)
+            .args(["add", "docs/state.json"])
+            .status()
+            .expect("git add should run");
+        assert!(initial_commit.success(), "git add should succeed");
+        let initial_commit = Command::new("git")
+            .arg("-C")
+            .arg(&repo_root)
+            .args(["commit", "-m", "initial state"])
+            .status()
+            .expect("git commit should run");
+        assert!(initial_commit.success(), "git commit should succeed");
+
+        let mut state = StateJson::default();
+        state.last_cycle.timestamp = Some("2026-03-05T04:19:37Z".to_string());
+        state.field_inventory.fields.insert(
+            "last_cycle".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "last_cycle.duration_minutes".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+        state.field_inventory.fields.insert(
+            "last_eva_comment_check".to_string(),
+            json!({"last_refreshed": "cycle 120"}),
+        );
+
+        let report = assemble_report(
+            153,
+            700,
+            fixed_now(),
+            &state,
+            &no_cycle_changes(),
+            "0 dispatches, 0 merges",
+            &[],
+        )
+        .unwrap();
+
+        apply_cycle_patch(&repo_root, &report.state_json_patch).unwrap();
+        commit_state_json(
+            &repo_root,
+            "state(cycle-complete): 0 dispatches, 0 merges [cycle 153]",
+        )
+        .unwrap();
+
+        let committed_state = Command::new("git")
+            .arg("-C")
+            .arg(&repo_root)
+            .args(["show", "HEAD:docs/state.json"])
+            .output()
+            .expect("git show should run");
+        assert!(committed_state.status.success(), "git show should succeed");
+        let committed_state: Value =
+            serde_json::from_slice(&committed_state.stdout).expect("committed state should parse");
+        assert_eq!(
+            committed_state.pointer("/cycle_phase/phase"),
+            Some(&json!("complete"))
+        );
+        let completed_at = committed_state
+            .pointer("/cycle_phase/completed_at")
+            .and_then(Value::as_str)
+            .expect("completed_at should be committed");
+        assert!(
+            DateTime::parse_from_rfc3339(completed_at).is_ok(),
+            "completed_at should be RFC3339: {completed_at}"
+        );
+
+        std::fs::remove_dir_all(repo_root).unwrap();
     }
 
     #[test]

@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
 use serde::Deserialize;
+use serde_json::Value;
 use state_schema::StateJson;
 use std::collections::BTreeSet;
 use std::fs;
@@ -241,6 +242,7 @@ fn validate_journal(repo_root: &Path, file: &Path) -> Result<Vec<String>, String
     let mut failures = Vec::new();
 
     failures.extend(validate_journal_headings(&content));
+    failures.extend(validate_journal_placeholder_content(&content));
     failures.extend(validate_no_duplicate_cycles(&content));
     failures.extend(validate_no_duplicate_section_headers(&content));
     failures.extend(validate_no_escaped_newlines(&content));
@@ -263,6 +265,9 @@ fn validate_journal(repo_root: &Path, file: &Path) -> Result<Vec<String>, String
     // channels.
     if let Ok(state) = read_state_json(repo_root) {
         if let Some(failure) = validate_open_questions_against_state(&content, &state) {
+            failures.push(failure);
+        }
+        if let Some(failure) = validate_deferred_finding_deadline_dispositions(&content, &state) {
             failures.push(failure);
         }
     }
@@ -774,6 +779,41 @@ fn validate_journal_headings(content: &str) -> Vec<String> {
         .collect()
 }
 
+fn validate_journal_placeholder_content(content: &str) -> Vec<String> {
+    journal_entries_with_lines(content)
+        .into_iter()
+        .flat_map(|entry| {
+            let mut failures = Vec::new();
+            let heading_suffix = entry
+                .heading
+                .rsplit_once(':')
+                .map(|(_, suffix)| suffix.trim())
+                .unwrap_or("");
+            if matches_placeholder_token(heading_suffix) {
+                failures.push(format!(
+                    "line {}: journal heading ends with placeholder text '{}'",
+                    entry.heading_line, heading_suffix
+                ));
+            }
+            if let Some((line_number, paragraph)) =
+                first_entry_paragraph(&entry.body, entry.body_start_line)
+            {
+                let lowered = paragraph.to_ascii_lowercase();
+                if lowered.contains("focused on placeholder")
+                    || lowered.contains("placeholder.")
+                    || lowered.contains("tbd")
+                {
+                    failures.push(format!(
+                        "line {}: journal entry contains placeholder context '{}'",
+                        line_number, paragraph
+                    ));
+                }
+            }
+            failures
+        })
+        .collect()
+}
+
 fn validate_worklog_links(content: &str, journal_file: &Path) -> Vec<String> {
     extract_cycle_links(content)
         .into_iter()
@@ -1079,6 +1119,152 @@ fn latest_cycle_entry(content: &str) -> Option<&str> {
     let next_h2 = after_first[3..].find("\n## ").map(|i| i + 3);
     let end = next_h2.unwrap_or(after_first.len());
     Some(&after_first[..end])
+}
+
+struct JournalEntryBlock {
+    heading: String,
+    heading_line: usize,
+    cycle: Option<u64>,
+    body: String,
+    body_start_line: usize,
+}
+
+fn journal_entries_with_lines(content: &str) -> Vec<JournalEntryBlock> {
+    let mut headings = Vec::new();
+    for (index, line) in content.lines().enumerate() {
+        if heading_level(line.trim()) == Some(2) {
+            headings.push((index + 1, line));
+        }
+    }
+    let lines: Vec<&str> = content.lines().collect();
+    let mut entries = Vec::new();
+    for (index, (heading_line, heading)) in headings.iter().enumerate() {
+        let body_start = *heading_line;
+        let body_end = headings
+            .get(index + 1)
+            .map(|(line_number, _)| line_number.saturating_sub(1))
+            .unwrap_or(lines.len());
+        let body = if body_start >= body_end {
+            String::new()
+        } else {
+            lines[body_start..body_end].join("\n")
+        };
+        entries.push(JournalEntryBlock {
+            heading: (*heading).to_string(),
+            heading_line: *heading_line,
+            cycle: extract_first_cycle_number(heading.trim()),
+            body,
+            body_start_line: body_start + 1,
+        });
+    }
+    entries
+}
+
+fn matches_placeholder_token(value: &str) -> bool {
+    matches!(
+        value.trim().to_ascii_lowercase().as_str(),
+        "placeholder" | "todo" | "tbd"
+    )
+}
+
+fn first_entry_paragraph<'a>(body: &'a str, start_line: usize) -> Option<(usize, &'a str)> {
+    for (offset, line) in body.lines().enumerate() {
+        let trimmed = line.trim();
+        if trimmed.is_empty()
+            || trimmed.starts_with("Worklog:")
+            || heading_level(trimmed).is_some()
+        {
+            continue;
+        }
+        return Some((start_line + offset, trimmed));
+    }
+    None
+}
+
+fn validate_deferred_finding_deadline_dispositions(content: &str, state: &StateJson) -> Option<String> {
+    let current_cycle = journal_entries_with_lines(content)
+        .into_iter()
+        .rev()
+        .find_map(|entry| entry.cycle)
+        .or(state.cycle_phase.cycle)
+        .or_else(|| state.last_cycle.extra.get("number").and_then(Value::as_u64))?;
+
+    let overdue = state
+        .deferred_findings
+        .iter()
+        .filter(|finding| !finding.resolved && finding.deadline_cycle <= current_cycle)
+        .collect::<Vec<_>>();
+    if overdue.is_empty() {
+        return None;
+    }
+
+    let review_agent = match state.review_agent() {
+        Ok(review_agent) => review_agent,
+        Err(_) => {
+            return Some(format!(
+                "overdue deferred finding deadline(s) in docs/state.json require review_agent.history for cycle {}: {}",
+                current_cycle,
+                overdue
+                    .iter()
+                    .map(|finding| format!(
+                        "{} (deferred cycle {}, deadline cycle {})",
+                        finding.category, finding.deferred_cycle, finding.deadline_cycle
+                    ))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ))
+        }
+    };
+    let history_entry = review_agent
+        .history
+        .iter()
+        .find(|entry| entry.cycle == current_cycle);
+    let Some(history_entry) = history_entry else {
+        return Some(format!(
+            "overdue deferred finding deadline(s) in docs/state.json lack a review_agent.history entry for cycle {}: {}",
+            current_cycle,
+            overdue
+                .iter()
+                .map(|finding| format!(
+                    "{} (deferred cycle {}, deadline cycle {})",
+                    finding.category, finding.deferred_cycle, finding.deadline_cycle
+                ))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    };
+
+    let missing = overdue
+        .into_iter()
+        .filter(|finding| {
+            !history_entry.finding_dispositions.iter().any(|disposition| {
+                disposition.category == finding.category
+                    && matches!(
+                        disposition.disposition.as_str(),
+                        "actioned"
+                            | "dispatch_created"
+                            | "dropped"
+                            | "verified_resolved"
+                            | "ignored"
+                    )
+            })
+        })
+        .map(|finding| {
+            format!(
+                "{} (deferred cycle {}, deadline cycle {})",
+                finding.category, finding.deferred_cycle, finding.deadline_cycle
+            )
+        })
+        .collect::<Vec<_>>();
+    if missing.is_empty() {
+        return None;
+    }
+
+    Some(format!(
+        "overdue deferred finding deadline(s) in docs/state.json must be actioned, dispatch_created, dropped, verified_resolved, or ignored in review_agent.history cycle {}: {}",
+        current_cycle,
+        missing.join(", ")
+    ))
 }
 
 fn extract_markdown_value<'a>(content: &'a str, label: &str) -> Option<&'a str> {
@@ -2388,6 +2574,68 @@ Dispatches remain blocked by #2542.
                 );
             }
         }
+    }
+
+    #[test]
+    fn validate_journal_rejects_placeholder_heading_with_line_number() {
+        let repo = TestDir::new();
+        fs::create_dir_all(repo.path().join("docs")).unwrap();
+        fs::write(repo.path().join("docs/state.json"), "{}").unwrap();
+        let journal_path = repo.path().join("journal.md");
+        let mut content = "\n".repeat(114);
+        content.push_str("## 2026-04-21 — Cycle 525: placeholder\n\n### Context\n\nCycle 525 focused on placeholder.\n");
+        fs::write(&journal_path, content).unwrap();
+
+        let failures = validate_journal(repo.path(), &journal_path).expect("journal validation should run");
+
+        assert!(failures.iter().any(|failure| failure.contains("line 115")));
+        assert!(failures
+            .iter()
+            .any(|failure| failure.contains("placeholder")));
+    }
+
+    #[test]
+    fn validate_journal_rejects_overdue_deferred_finding_without_disposition() {
+        let content = "\
+## 2026-04-21 — Cycle 525: Close-out hardening
+
+### Concrete commitments for next cycle
+
+1. Finish the hardening.
+
+### Open questions
+
+- None.
+";
+        let mut state = StateJson {
+            deferred_findings: vec![state_schema::DeferredFinding {
+                category: "journal-quality".to_string(),
+                deferred_cycle: 520,
+                deadline_cycle: 525,
+                resolved: false,
+                resolved_ref: None,
+                dropped_rationale: None,
+            }],
+            ..StateJson::default()
+        };
+        state.extra.insert(
+            "review_agent".to_string(),
+            serde_json::json!({
+                "history": [{
+                    "cycle": 525,
+                    "finding_dispositions": [{
+                        "category": "other-category",
+                        "disposition": "actioned"
+                    }]
+                }]
+            }),
+        );
+
+        let failure = validate_deferred_finding_deadline_dispositions(content, &state)
+            .expect("expected deferred deadline failure");
+        assert!(failure.contains("journal-quality"));
+        assert!(failure.contains("deadline cycle 525"));
+        assert!(failure.contains("dispatch_created"));
     }
 
     fn receipts_table(receipts: &[&str]) -> String {
