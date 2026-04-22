@@ -1170,9 +1170,7 @@ fn matches_placeholder_token(value: &str) -> bool {
 fn first_entry_paragraph<'a>(body: &'a str, start_line: usize) -> Option<(usize, &'a str)> {
     for (offset, line) in body.lines().enumerate() {
         let trimmed = line.trim();
-        if trimmed.is_empty()
-            || trimmed.starts_with("Worklog:")
-            || heading_level(trimmed).is_some()
+        if trimmed.is_empty() || trimmed.starts_with("Worklog:") || heading_level(trimmed).is_some()
         {
             continue;
         }
@@ -1181,7 +1179,10 @@ fn first_entry_paragraph<'a>(body: &'a str, start_line: usize) -> Option<(usize,
     None
 }
 
-fn validate_deferred_finding_deadline_dispositions(content: &str, state: &StateJson) -> Option<String> {
+fn validate_deferred_finding_deadline_dispositions(
+    content: &str,
+    state: &StateJson,
+) -> Option<String> {
     let current_cycle = journal_entries_with_lines(content)
         .into_iter()
         .rev()
@@ -1237,17 +1238,20 @@ fn validate_deferred_finding_deadline_dispositions(content: &str, state: &StateJ
     let missing = overdue
         .into_iter()
         .filter(|finding| {
-            !history_entry.finding_dispositions.iter().any(|disposition| {
-                disposition.category == finding.category
-                    && matches!(
-                        disposition.disposition.as_str(),
-                        "actioned"
-                            | "dispatch_created"
-                            | "dropped"
-                            | "verified_resolved"
-                            | "ignored"
-                    )
-            })
+            !history_entry
+                .finding_dispositions
+                .iter()
+                .any(|disposition| {
+                    disposition.category == finding.category
+                        && matches!(
+                            disposition.disposition.as_str(),
+                            "actioned"
+                                | "dispatch_created"
+                                | "dropped"
+                                | "verified_resolved"
+                                | "ignored"
+                        )
+                })
         })
         .map(|finding| {
             format!(
@@ -2586,7 +2590,8 @@ Dispatches remain blocked by #2542.
         content.push_str("## 2026-04-21 — Cycle 525: placeholder\n\n### Context\n\nCycle 525 focused on placeholder.\n");
         fs::write(&journal_path, content).unwrap();
 
-        let failures = validate_journal(repo.path(), &journal_path).expect("journal validation should run");
+        let failures =
+            validate_journal(repo.path(), &journal_path).expect("journal validation should run");
 
         assert!(failures.iter().any(|failure| failure.contains("line 115")));
         assert!(failures

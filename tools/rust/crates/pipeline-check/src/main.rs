@@ -43,8 +43,7 @@ const REVIEW_EVENTS_VERIFIED_STEP_NAME: &str = "review-events-verified";
 const WORKLOG_DEDUP_STEP_NAME: &str = "worklog-dedup";
 const WORKLOG_IMMUTABILITY_STEP_NAME: &str = "worklog-immutability";
 const FROZEN_WORKLOG_IMMUTABILITY_STEP_NAME: &str = "frozen-worklog-immutability";
-const POST_DISPATCH_DELTA_HEADING_REQUIRED_STEP_NAME: &str =
-    "post-dispatch-delta-heading-required";
+const POST_DISPATCH_DELTA_HEADING_REQUIRED_STEP_NAME: &str = "post-dispatch-delta-heading-required";
 const POST_DISPATCH_DELTA_PRESENT_STEP_NAME: &str = "post-dispatch-delta-present";
 const PR_BASE_CURRENCY_STEP_NAME: &str = "pr-base-currency";
 const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
@@ -910,7 +909,10 @@ fn run_pipeline_with_excluded_steps(
     if !is_excluded_step(CURRENT_CYCLE_JOURNAL_SECTION_STEP_NAME, exclude_steps) {
         steps.push(verify_current_cycle_journal_section(repo_root));
     }
-    if !is_excluded_step(POST_DISPATCH_DELTA_HEADING_REQUIRED_STEP_NAME, exclude_steps) {
+    if !is_excluded_step(
+        POST_DISPATCH_DELTA_HEADING_REQUIRED_STEP_NAME,
+        exclude_steps,
+    ) {
         steps.push(verify_post_dispatch_delta_heading_required(repo_root));
     }
     if !is_excluded_step(POST_DISPATCH_DELTA_PRESENT_STEP_NAME, exclude_steps) {
@@ -3590,7 +3592,9 @@ fn verify_post_dispatch_delta_heading_required(repo_root: &Path) -> StepReport {
     }
 }
 
-fn post_dispatch_delta_heading_required_assessment(repo_root: &Path) -> Result<StepAssessment, String> {
+fn post_dispatch_delta_heading_required_assessment(
+    repo_root: &Path,
+) -> Result<StepAssessment, String> {
     let cycle = current_cycle_from_state(repo_root)?;
     let Some(worklog_path) = latest_worklog_entry_for_cycle(repo_root, cycle)? else {
         return Ok(StepAssessment {
