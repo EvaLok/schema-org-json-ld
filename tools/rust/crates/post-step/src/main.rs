@@ -55,8 +55,8 @@ struct Cli {
     #[arg(long)]
     body_stdin: bool,
 
-    /// Allow reposting a step ID even if it already exists on the issue; does
-    /// not bypass the branch guard
+    /// Allow reposting a step ID even if it already exists on the issue; use
+    /// --force-branch to bypass the branch guard instead
     #[arg(long)]
     force: bool,
 
@@ -110,9 +110,9 @@ fn execute(cli: &Cli, runner: &dyn CommentPoster) -> Result<String, String> {
             error
         }
     })?;
+    enforce_master_branch(&cli.repo_root, cli.force_branch)?;
     let body = resolve_body(cli)?;
     let comment = format_comment(cycle, step, title, &body);
-    enforce_master_branch(&cli.repo_root, cli.force_branch)?;
 
     if !cli.force {
         let existing_comments = runner.existing_comments(cli.issue)?;
