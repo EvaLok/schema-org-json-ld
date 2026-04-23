@@ -152,11 +152,16 @@ fn binary_path(name: &str) -> String {
         })
 }
 
-fn process_merge_wrapper_path() -> String {
+fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../../tools/process-merge")
-        .display()
-        .to_string()
+        .ancestors()
+        .nth(4)
+        .expect("repo root should exist")
+        .to_path_buf()
+}
+
+fn process_merge_wrapper_path() -> String {
+    repo_root().join("tools/process-merge").display().to_string()
 }
 
 fn make_executable(path: &Path) {
