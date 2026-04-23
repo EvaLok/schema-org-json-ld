@@ -1373,6 +1373,7 @@ mod tests {
 
     struct TempGitRepo {
         path: PathBuf,
+        remote_path: PathBuf,
     }
 
     impl TempGitRepo {
@@ -1383,6 +1384,11 @@ mod tests {
                 .as_nanos();
             let path = std::env::temp_dir().join(format!(
                 "cycle-start-stale-close-out-{}-{}",
+                std::process::id(),
+                unique
+            ));
+            let remote_path = std::env::temp_dir().join(format!(
+                "cycle-start-stale-close-out-remote-{}-{}",
                 std::process::id(),
                 unique
             ));
@@ -1402,8 +1408,15 @@ mod tests {
             );
             run_git(&path, &["add", "docs/state.json"]);
             run_git(&path, &["commit", "-m", "initial state"]);
+            run_git(&path, &["init", "--bare", remote_path.to_str().unwrap()]);
+            run_git(&remote_path, &["symbolic-ref", "HEAD", "refs/heads/master"]);
+            run_git(
+                &path,
+                &["remote", "add", "origin", remote_path.to_str().unwrap()],
+            );
+            run_git(&path, &["push", "-u", "origin", "HEAD:master"]);
 
-            Self { path }
+            Self { path, remote_path }
         }
 
         fn path(&self) -> &Path {
@@ -1414,6 +1427,7 @@ mod tests {
     impl Drop for TempGitRepo {
         fn drop(&mut self) {
             let _ = fs::remove_dir_all(&self.path);
+            let _ = fs::remove_dir_all(&self.remote_path);
         }
     }
 

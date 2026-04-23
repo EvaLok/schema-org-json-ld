@@ -2160,6 +2160,25 @@ mod tests {
             }
         });
         write_state_value(&repo_root, &raw_state).expect("failed to write test state.json");
+        let remote_root = repo_root.with_extension("remote.git");
+        Command::new("git")
+            .arg("init")
+            .arg("--bare")
+            .arg(&remote_root)
+            .status()
+            .expect("git init --bare should run");
+        Command::new("git")
+            .current_dir(&remote_root)
+            .args(["symbolic-ref", "HEAD", "refs/heads/master"])
+            .status()
+            .expect("git symbolic-ref should run");
+        Command::new("git")
+            .arg("-C")
+            .arg(&repo_root)
+            .args(["remote", "add", "origin"])
+            .arg(&remote_root)
+            .status()
+            .expect("git remote add should run");
         let initial_commit = Command::new("git")
             .arg("-C")
             .arg(&repo_root)
@@ -2174,6 +2193,13 @@ mod tests {
             .status()
             .expect("git commit should run");
         assert!(initial_commit.success(), "git commit should succeed");
+        let initial_push = Command::new("git")
+            .arg("-C")
+            .arg(&repo_root)
+            .args(["push", "-u", "origin", "HEAD:master"])
+            .status()
+            .expect("git push should run");
+        assert!(initial_push.success(), "git push should succeed");
 
         let mut state = StateJson::default();
         state.last_cycle.timestamp = Some("2026-03-05T04:19:37Z".to_string());

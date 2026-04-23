@@ -198,17 +198,6 @@ fn execute(cli: &Cli, runner: &dyn CommandRunner) -> Result<String, String> {
         cli.pr, cli.issue, receipt
     ));
 
-    let push_output = runner.git(
-        &cli.repo_root,
-        &[
-            "push".to_string(),
-            "origin".to_string(),
-            "master".to_string(),
-        ],
-    )?;
-    ensure_success("git push origin master", &push_output)?;
-    lines.push("Pushed origin/master state updates".to_string());
-
     let delete_branch_command = format!("git push origin --delete {}", branch_name);
     let deleted_branch_message = format!("Deleted remote branch {}", branch_name);
     let skipped_branch_message = format!(
@@ -367,7 +356,6 @@ fn render_dry_run(cli: &Cli) -> String {
         cli.issue,
         cli.repo_root.display()
     ));
-    lines.push("Would run: git push origin master".to_string());
     lines.push(format!(
         "Would query PR #{} for headRefName and run: git push origin --delete <headRefName>",
         cli.pr
@@ -671,7 +659,7 @@ mod tests {
         assert!(output.contains("already merged; skipping readiness and merge steps"));
         assert!(output.contains("receipt: deadbeef"));
         assert_eq!(runner.gh_calls().len(), 1);
-        assert_eq!(runner.git_calls().len(), 3);
+        assert_eq!(runner.git_calls().len(), 2);
         assert_eq!(runner.process_merge_calls().len(), 1);
     }
 

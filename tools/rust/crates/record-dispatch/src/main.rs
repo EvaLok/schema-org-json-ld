@@ -7,15 +7,14 @@ use record_dispatch::{
     PipelineGateError, ProcessRunner,
 };
 use state_schema::{
-    current_cycle_from_state, current_utc_timestamp, read_state_value, transition_cycle_phase,
-    write_state_value,
+    commit_and_push, current_cycle_from_state, current_utc_timestamp, read_state_value,
+    transition_cycle_phase, write_state_value,
 };
 use std::{
     collections::BTreeSet,
     ffi::OsStr,
     fs,
     path::{Path, PathBuf},
-    process::Command,
     time::UNIX_EPOCH,
 };
 
@@ -191,11 +190,23 @@ fn run_with_runner(
     }
 
     let commit_message = dispatch_commit_message(cli.issue, patch.current_cycle);
-    let receipt = commit_dispatch_artifacts(
-        &cli.repo_root,
-        &commit_message,
-        worklog_update.as_ref().map(|update| update.path.as_path()),
-    )?;
+    let relative_worklog_path = worklog_update
+        .as_ref()
+        .map(|update| {
+            update.path.strip_prefix(&cli.repo_root).map_err(|error| {
+                format!(
+                    "failed to compute relative worklog path for {}: {}",
+                    update.path.display(),
+                    error
+                )
+            })
+        })
+        .transpose()?;
+    let mut paths_to_commit: Vec<&Path> = vec![Path::new("docs/state.json")];
+    if let Some(path) = relative_worklog_path.as_deref() {
+        paths_to_commit.push(path);
+    }
+    let receipt = commit_and_push(&cli.repo_root, &commit_message, &paths_to_commit)?;
     if duplicate_session_error {
         if phase_transitioned {
             println!(
@@ -467,68 +478,6 @@ fn find_worklog_for_cycle(repo_root: &Path, cycle: u64) -> Result<Option<PathBuf
             .then_with(|| left_path.cmp(right_path))
     });
     Ok(candidates.into_iter().last().map(|(_, path)| path))
-}
-
-fn commit_dispatch_artifacts(
-    repo_root: &Path,
-    message: &str,
-    worklog_path: Option<&Path>,
-) -> Result<String, String> {
-    let mut add_command = Command::new("git");
-    add_command
-        .arg("-C")
-        .arg(repo_root)
-        .arg("add")
-        .arg("docs/state.json");
-    if let Some(worklog_path) = worklog_path {
-        let relative_path = worklog_path.strip_prefix(repo_root).map_err(|error| {
-            format!(
-                "failed to compute relative worklog path for {}: {}",
-                worklog_path.display(),
-                error
-            )
-        })?;
-        add_command.arg(relative_path);
-    }
-    let add_output = add_command
-        .output()
-        .map_err(|error| format!("failed to execute git add: {}", error))?;
-    if !add_output.status.success() {
-        let stderr = String::from_utf8_lossy(&add_output.stderr)
-            .trim()
-            .to_string();
-        return Err(format!("git add dispatch artifacts failed: {}", stderr));
-    }
-
-    let commit_output = Command::new("git")
-        .arg("-C")
-        .arg(repo_root)
-        .arg("commit")
-        .arg("-m")
-        .arg(message)
-        .output()
-        .map_err(|error| format!("failed to execute git commit: {}", error))?;
-    if !commit_output.status.success() {
-        let stderr = String::from_utf8_lossy(&commit_output.stderr)
-            .trim()
-            .to_string();
-        return Err(format!("git commit failed: {}", stderr));
-    }
-
-    let output = Command::new("git")
-        .arg("-C")
-        .arg(repo_root)
-        .args(["rev-parse", "--short=7", "HEAD"])
-        .output()
-        .map_err(|error| format!("failed to execute git rev-parse: {}", error))?;
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-        return Err(format!("git rev-parse --short=7 HEAD failed: {}", stderr));
-    }
-
-    let sha = String::from_utf8(output.stdout)
-        .map_err(|error| format!("failed to decode git rev-parse output as UTF-8: {}", error))?;
-    Ok(sha.trim().to_string())
 }
 
 fn reconcile_review_history_dispatch(
@@ -1661,6 +1610,7 @@ mod tests {
 
     struct TempRepo {
         path: PathBuf,
+        remote_path: PathBuf,
     }
 
     impl TempRepo {
@@ -1674,8 +1624,13 @@ mod tests {
                 std::process::id(),
                 unique
             ));
+            let remote_path = std::env::temp_dir().join(format!(
+                "record-dispatch-main-test-remote-{}-{}",
+                std::process::id(),
+                unique
+            ));
             fs::create_dir_all(path.join("docs")).expect("temp repo should be created");
-            Self { path }
+            Self { path, remote_path }
         }
 
         fn path(&self) -> &Path {
@@ -1699,6 +1654,24 @@ mod tests {
             );
             git_success(self.path(), ["add", "docs/state.json"]);
             git_success(self.path(), ["commit", "-m", "initial state"]);
+            git_success(
+                self.path(),
+                ["init", "--bare", self.remote_path.to_str().unwrap()],
+            );
+            git_success(
+                &self.remote_path,
+                ["symbolic-ref", "HEAD", "refs/heads/master"],
+            );
+            git_success(
+                self.path(),
+                [
+                    "remote",
+                    "add",
+                    "origin",
+                    self.remote_path.to_str().unwrap(),
+                ],
+            );
+            git_success(self.path(), ["push", "-u", "origin", "HEAD:master"]);
         }
 
         fn write_state(&self, phase: &str) {
@@ -1894,6 +1867,7 @@ mod tests {
     impl Drop for TempRepo {
         fn drop(&mut self) {
             let _ = fs::remove_dir_all(&self.path);
+            let _ = fs::remove_dir_all(&self.remote_path);
         }
     }
 

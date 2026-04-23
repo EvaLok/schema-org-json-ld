@@ -74,14 +74,22 @@ fn run_git(repo_root: &Path, args: &[&str]) {
 }
 
 fn init_git_repo(repo_root: &Path) {
+    let remote_root = repo_root.with_extension("remote.git");
     run_git(repo_root, &["init"]);
     run_git(repo_root, &["config", "user.name", "Test User"]);
     run_git(repo_root, &["config", "user.email", "test@example.com"]);
+    run_git(repo_root, &["init", "--bare", remote_root.to_str().unwrap()]);
+    run_git(&remote_root, &["symbolic-ref", "HEAD", "refs/heads/master"]);
+    run_git(
+        repo_root,
+        &["remote", "add", "origin", remote_root.to_str().unwrap()],
+    );
     run_git(repo_root, &["add", "."]);
     run_git(
         repo_root,
         &["commit", "-m", "test: seed real docs state fixture"],
     );
+    run_git(repo_root, &["push", "-u", "origin", "HEAD:master"]);
 }
 
 #[test]

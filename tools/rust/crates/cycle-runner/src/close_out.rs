@@ -1635,7 +1635,9 @@ mod tests {
 
     fn setup_temp_repo(name: &str) -> std::path::PathBuf {
         let dir = unique_temp_dir(&format!("cycle-runner-close-out-{}", name));
+        let remote = unique_temp_dir(&format!("cycle-runner-close-out-remote-{}", name));
         let _ = fs::remove_dir_all(&dir);
+        let _ = fs::remove_dir_all(&remote);
         fs::create_dir_all(dir.join("docs")).unwrap();
         fs::create_dir_all(dir.join("tools")).unwrap();
         Command::new("git")
@@ -1654,6 +1656,24 @@ mod tests {
             .arg("-C")
             .arg(&dir)
             .args(["config", "user.name", "Test"])
+            .output()
+            .unwrap();
+        Command::new("git")
+            .arg("init")
+            .arg("--bare")
+            .arg(&remote)
+            .output()
+            .unwrap();
+        Command::new("git")
+            .current_dir(&remote)
+            .args(["symbolic-ref", "HEAD", "refs/heads/master"])
+            .output()
+            .unwrap();
+        Command::new("git")
+            .arg("-C")
+            .arg(&dir)
+            .args(["remote", "add", "origin"])
+            .arg(&remote)
             .output()
             .unwrap();
         dir
@@ -1713,22 +1733,17 @@ mod tests {
 
     fn setup_temp_repo_with_remote(name: &str) -> (std::path::PathBuf, std::path::PathBuf) {
         let dir = setup_temp_repo(name);
-        let remote = unique_temp_dir(&format!("cycle-runner-close-out-remote-{}", name));
-        let _ = fs::remove_dir_all(&remote);
-        Command::new("git")
-            .arg("init")
-            .arg("--bare")
-            .arg(&remote)
-            .output()
-            .unwrap();
-        Command::new("git")
-            .arg("-C")
-            .arg(&dir)
-            .args(["remote", "add", "origin"])
-            .arg(&remote)
-            .output()
-            .unwrap();
-        (dir, remote)
+        let remote = String::from_utf8(
+            Command::new("git")
+                .arg("-C")
+                .arg(&dir)
+                .args(["remote", "get-url", "origin"])
+                .output()
+                .unwrap()
+                .stdout,
+        )
+        .unwrap();
+        (dir, std::path::PathBuf::from(remote.trim()))
     }
 
     fn path_lock() -> &'static Mutex<()> {

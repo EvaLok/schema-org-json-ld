@@ -249,6 +249,10 @@ Your session runs in a GitHub Actions runner with the following pre-installed (v
 
 Do not push code that you haven't verified passes tests and lint. The CI pipeline will catch failures, but verifying locally first saves a round-trip.
 
+## State-mutating tool discipline
+
+**State-mutating tool discipline.** Every `cycle-start`, `record-dispatch`, `process-review`, `process-merge`, `cycle-complete`, `merge-pr`, and direct-push state commit MUST be pushed to `origin/master` before the next tool runs. The Rust crates listed above commit-and-push atomically; do not batch. Before any `git reset --hard <ref>` invocation, run `bash tools/git-reset-guard --hard <ref>` instead — it refuses to discard unpushed commits. Source: [EvaLok/schema-org-json-ld#2638](https://github.com/EvaLok/schema-org-json-ld/issues/2638) Q1+Q2 directive.
+
 ## Quality Checklist
 
 Before marking your PR as ready:

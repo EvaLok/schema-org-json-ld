@@ -453,6 +453,7 @@ fn record_dispatch_rejects_worklog_with_untracked_dispatch_issue() {
 
 struct TempRepo {
     path: PathBuf,
+    remote_path: PathBuf,
 }
 
 impl TempRepo {
@@ -466,8 +467,13 @@ impl TempRepo {
             std::process::id(),
             unique
         ));
+        let remote_path = std::env::temp_dir().join(format!(
+            "record-dispatch-real-flow-remote-{}-{}",
+            std::process::id(),
+            unique
+        ));
         fs::create_dir_all(path.join("docs")).expect("temp repo should be created");
-        Self { path }
+        Self { path, remote_path }
     }
 
     fn path(&self) -> &Path {
@@ -492,6 +498,24 @@ impl TempRepo {
         );
         git_success(self.path(), ["add", "docs/state.json"]);
         git_success(self.path(), ["commit", "-m", "initial state"]);
+        git_success(
+            self.path(),
+            ["init", "--bare", self.remote_path.to_str().unwrap()],
+        );
+        git_success(
+            &self.remote_path,
+            ["symbolic-ref", "HEAD", "refs/heads/master"],
+        );
+        git_success(
+            self.path(),
+            [
+                "remote",
+                "add",
+                "origin",
+                self.remote_path.to_str().unwrap(),
+            ],
+        );
+        git_success(self.path(), ["push", "-u", "origin", "HEAD:master"]);
     }
 
     fn read_state(&self) -> Value {
@@ -513,6 +537,7 @@ impl TempRepo {
 impl Drop for TempRepo {
     fn drop(&mut self) {
         let _ = fs::remove_dir_all(&self.path);
+        let _ = fs::remove_dir_all(&self.remote_path);
     }
 }
 

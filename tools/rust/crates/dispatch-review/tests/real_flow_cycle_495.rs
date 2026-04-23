@@ -149,6 +149,7 @@ fn dispatch_review_replays_cycle_495_close_out_flow_in_record_only_mode() {
 
 struct TempRepo {
     path: PathBuf,
+    remote_path: PathBuf,
 }
 
 impl TempRepo {
@@ -162,9 +163,14 @@ impl TempRepo {
             std::process::id(),
             unique
         ));
+        let remote_path = std::env::temp_dir().join(format!(
+            "dispatch-review-real-flow-remote-{}-{}",
+            std::process::id(),
+            unique
+        ));
         fs::create_dir_all(path.join("docs")).expect("temp repo should be created");
         fs::create_dir_all(path.join("tools")).expect("temp repo tools dir should be created");
-        Self { path }
+        Self { path, remote_path }
     }
 
     fn path(&self) -> &Path {
@@ -194,6 +200,16 @@ impl TempRepo {
         );
         git_success(self.path(), ["add", "docs/state.json"]);
         git_success(self.path(), ["commit", "-m", "initial state"]);
+        git_success(self.path(), ["init", "--bare", self.remote_path.to_str().unwrap()]);
+        git_success(
+            &self.remote_path,
+            ["symbolic-ref", "HEAD", "refs/heads/master"],
+        );
+        git_success(
+            self.path(),
+            ["remote", "add", "origin", self.remote_path.to_str().unwrap()],
+        );
+        git_success(self.path(), ["push", "-u", "origin", "HEAD:master"]);
     }
 
     fn write_review_body(&self, content: &str) -> PathBuf {
@@ -214,6 +230,7 @@ impl TempRepo {
 impl Drop for TempRepo {
     fn drop(&mut self) {
         let _ = fs::remove_dir_all(&self.path);
+        let _ = fs::remove_dir_all(&self.remote_path);
     }
 }
 

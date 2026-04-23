@@ -277,19 +277,23 @@ pub fn write_state_value(repo_root: &Path, state: &Value) -> Result<(), String> 
         .map_err(|error| format!("failed to write {}: {}", state_path.display(), error))
 }
 
-pub fn commit_state_json(repo_root: &Path, message: &str) -> Result<String, String> {
+/// Commit the provided paths and immediately push the resulting commit with
+/// `git push origin HEAD` so a success result implies both commit and push
+/// succeeded. Tests/CI may bypass the push by setting
+/// `ORCHESTRATOR_SKIP_PUSH=1`.
+pub fn commit_and_push(repo_root: &Path, message: &str, paths: &[&Path]) -> Result<String, String> {
     let add_output = Command::new("git")
         .arg("-C")
         .arg(repo_root)
         .arg("add")
-        .arg("docs/state.json")
+        .args(paths)
         .output()
         .map_err(|error| format!("failed to execute git add: {}", error))?;
     if !add_output.status.success() {
         let stderr = String::from_utf8_lossy(&add_output.stderr)
             .trim()
             .to_string();
-        return Err(format!("git add docs/state.json failed: {}", stderr));
+        return Err(format!("git add failed: {}", stderr));
     }
 
     let commit_output = Command::new("git")
@@ -322,7 +326,28 @@ pub fn commit_state_json(repo_root: &Path, message: &str) -> Result<String, Stri
 
     let sha = String::from_utf8(output.stdout)
         .map_err(|error| format!("failed to decode git rev-parse output as UTF-8: {}", error))?;
-    Ok(sha.trim().to_string())
+    let sha = sha.trim().to_string();
+
+    if std::env::var("ORCHESTRATOR_SKIP_PUSH").ok().as_deref() != Some("1") {
+        let push_output = Command::new("git")
+            .arg("-C")
+            .arg(repo_root)
+            .args(["push", "origin", "HEAD"])
+            .output()
+            .map_err(|error| format!("failed to execute git push: {}", error))?;
+        if !push_output.status.success() {
+            let stderr = String::from_utf8_lossy(&push_output.stderr)
+                .trim()
+                .to_string();
+            return Err(format!("git push origin HEAD failed: {}", stderr));
+        }
+    }
+
+    Ok(sha)
+}
+
+pub fn commit_state_json(repo_root: &Path, message: &str) -> Result<String, String> {
+    commit_and_push(repo_root, message, &[Path::new("docs/state.json")])
 }
 
 pub fn update_freshness(state: &mut Value, field_name: &str, cycle: u32) -> Result<(), String> {
@@ -740,11 +765,11 @@ pub struct Blockers {
 #[cfg(test)]
 mod tests {
     use super::{
-        commit_state_json, current_cycle_from_state, current_utc_timestamp, default_agent_model,
-        orchestrator_model, read_state_value, set_c5_5_gate, set_value_at_pointer,
-        transition_cycle_phase, update_freshness, write_state_value, AgentSession, DeferredFinding,
-        FindingDisposition, PendingAuditImplementation, ReviewHistoryEntry, StateJson, ToolsConfig,
-        DEFAULT_ORCHESTRATOR_MODEL, VALID_PHASES,
+        commit_and_push, commit_state_json, current_cycle_from_state, current_utc_timestamp,
+        default_agent_model, orchestrator_model, read_state_value, set_c5_5_gate,
+        set_value_at_pointer, transition_cycle_phase, update_freshness, write_state_value,
+        AgentSession, DeferredFinding, FindingDisposition, PendingAuditImplementation,
+        ReviewHistoryEntry, StateJson, ToolsConfig, DEFAULT_ORCHESTRATOR_MODEL, VALID_PHASES,
     };
     use chrono::DateTime;
     use serde_json::{json, Value};
@@ -753,6 +778,7 @@ mod tests {
     use std::fs;
     use std::path::{Path, PathBuf};
     use std::process::Command;
+    use std::sync::{Mutex, OnceLock};
     use std::time::{SystemTime, UNIX_EPOCH};
 
     struct TempRepo {
@@ -831,6 +857,93 @@ mod tests {
             rendered_args.join(" "),
             String::from_utf8_lossy(&output.stderr)
         );
+    }
+
+    fn env_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    struct TempRemoteRepo {
+        root: PathBuf,
+        repo_path: PathBuf,
+        remote_path: PathBuf,
+    }
+
+    impl TempRemoteRepo {
+        fn new(name: &str) -> Self {
+            let unique = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("system time should be after epoch")
+                .as_nanos();
+            let root = env::temp_dir().join(format!(
+                "state-schema-remote-test-{name}-{}-{unique}",
+                std::process::id()
+            ));
+            let repo_path = root.join("repo");
+            let remote_path = root.join("remote.git");
+            fs::create_dir_all(&root).expect("temp root should be created");
+
+            Self {
+                root,
+                repo_path,
+                remote_path,
+            }
+        }
+
+        fn init(&self) {
+            assert_git_success(
+                &self.root,
+                ["init", "--bare", self.remote_path.to_str().unwrap()],
+            );
+            assert_git_success(
+                &self.remote_path,
+                ["symbolic-ref", "HEAD", "refs/heads/master"],
+            );
+            assert_git_success(
+                &self.root,
+                [
+                    "clone",
+                    self.remote_path.to_str().unwrap(),
+                    self.repo_path.to_str().unwrap(),
+                ],
+            );
+            assert_git_success(
+                &self.repo_path,
+                ["config", "user.name", "State Schema Tests"],
+            );
+            assert_git_success(
+                &self.repo_path,
+                ["config", "user.email", "state-schema-tests@example.com"],
+            );
+            fs::create_dir_all(self.repo_path.join("docs")).expect("docs dir should exist");
+            write_state_value(&self.repo_path, &json!({"last_cycle": {"number": 1}}))
+                .expect("state should be written");
+            assert_git_success(&self.repo_path, ["add", "docs/state.json"]);
+            assert_git_success(&self.repo_path, ["commit", "-m", "initial state"]);
+            assert_git_success(&self.repo_path, ["push", "-u", "origin", "HEAD:master"]);
+        }
+
+        fn repo_path(&self) -> &Path {
+            &self.repo_path
+        }
+
+        fn remote_head(&self) -> String {
+            let output = Command::new("git")
+                .arg("--git-dir")
+                .arg(&self.remote_path)
+                .args(["rev-parse", "HEAD"])
+                .output()
+                .expect("git rev-parse should execute");
+            assert!(output.status.success(), "remote rev-parse should succeed");
+            String::from_utf8_lossy(&output.stdout).trim().to_string()
+        }
+    }
+
+    impl Drop for TempRemoteRepo {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.root);
+        }
     }
 
     #[test]
@@ -1692,18 +1805,19 @@ mod tests {
 
     #[test]
     fn commit_state_json_commits_state_file_and_returns_short_sha() {
-        let repo = TempRepo::new();
-        repo.init_git();
-        repo.write_state(&json!({"last_cycle": {"number": 166}}));
+        let repo = TempRemoteRepo::new("commit-state-json");
+        repo.init();
+        write_state_value(repo.repo_path(), &json!({"last_cycle": {"number": 166}}))
+            .expect("state should be written");
 
-        let sha =
-            commit_state_json(repo.path(), "state(test): update").expect("commit should succeed");
+        let sha = commit_state_json(repo.repo_path(), "state(test): update")
+            .expect("commit should succeed");
         assert_eq!(sha.len(), 7);
         assert!(sha.chars().all(|character| character.is_ascii_hexdigit()));
 
         let output = Command::new("git")
             .arg("-C")
-            .arg(repo.path())
+            .arg(repo.repo_path())
             .args(["log", "-1", "--pretty=%B"])
             .output()
             .expect("git log should execute");
@@ -1712,5 +1826,44 @@ mod tests {
             String::from_utf8_lossy(&output.stdout).trim(),
             "state(test): update"
         );
+    }
+
+    #[test]
+    fn commit_and_push_skips_push_when_env_requests_it() {
+        let _guard = env_lock().lock().expect("env lock should not be poisoned");
+        let repo = TempRemoteRepo::new("skip-push");
+        repo.init();
+        let remote_before = repo.remote_head();
+        write_state_value(repo.repo_path(), &json!({"last_cycle": {"number": 2}}))
+            .expect("state should be updated");
+
+        env::set_var("ORCHESTRATOR_SKIP_PUSH", "1");
+        let result = commit_and_push(
+            repo.repo_path(),
+            "state(test): skip push",
+            &[Path::new("docs/state.json")],
+        );
+        env::remove_var("ORCHESTRATOR_SKIP_PUSH");
+
+        let sha = result.expect("commit should succeed when push is skipped");
+        assert_eq!(sha.len(), 7);
+        assert_eq!(repo.remote_head(), remote_before);
+    }
+
+    #[test]
+    fn commit_and_push_fails_when_push_fails() {
+        let _guard = env_lock().lock().expect("env lock should not be poisoned");
+        let repo = TempRepo::new();
+        repo.init_git();
+        repo.write_state(&json!({"last_cycle": {"number": 166}}));
+
+        let error = commit_and_push(
+            repo.path(),
+            "state(test): missing remote",
+            &[Path::new("docs/state.json")],
+        )
+        .expect_err("push without origin should fail");
+
+        assert!(error.contains("git push origin HEAD failed"));
     }
 }
