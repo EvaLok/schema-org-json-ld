@@ -78,6 +78,10 @@ impl TempFixture {
     "summary": "0 dispatches, 0 merges"
   },
   "cycle_phase": {"cycle": 164},
+  "copilot_metrics": {
+    "in_flight": 1,
+    "merged": 0
+  },
   "field_inventory": {
     "fields": {
       "in_flight_sessions": {"last_refreshed": "cycle 163"}
@@ -101,7 +105,7 @@ impl TempFixture {
         fs::create_dir_all(self.repo_root.join("tools")).expect("tools dir should exist");
         let wrapper = format!(
             "#!/usr/bin/env bash\nset -euo pipefail\nexec '{}' \"$@\"\n",
-            binary_path("process-merge")
+            process_merge_wrapper_path()
         );
         fs::write(self.repo_root.join("tools/process-merge"), wrapper)
             .expect("process-merge wrapper should be written");
@@ -146,6 +150,13 @@ fn binary_path(name: &str) -> String {
                 .display()
                 .to_string()
         })
+}
+
+fn process_merge_wrapper_path() -> String {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../../tools/process-merge")
+        .display()
+        .to_string()
 }
 
 fn make_executable(path: &Path) {
