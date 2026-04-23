@@ -19671,8 +19671,9 @@
     "blocks_publish": false,
     "c5_5_gate": {
       "cycle": 530,
-      "needs_reverify": true,
-      "status": "FAIL"
+      "needs_reverify": false,
+      "pipeline_summary": "PASS (4 warnings)",
+      "status": "PASS"
     },
     "c5_5_initial_result": {
       "cycle": 530,
@@ -19683,10 +19684,10 @@
       "summary": "FAIL (4 warnings, 1 blocking: current-cycle-steps)"
     },
     "c5_5_rerun_receipt": {
-      "cycle": 529,
+      "cycle": 530,
       "initial_status": "FAIL",
       "rerun_status": "PASS",
-      "timestamp": "2026-04-22T22:09:45Z"
+      "timestamp": "2026-04-23T02:34:15Z"
     },
     "eva_directive": 436,
     "phases": [
