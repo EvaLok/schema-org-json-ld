@@ -9949,8 +9949,10 @@
     {
       "dispatched_at": "2026-04-23T09:54:05Z",
       "issue": 2669,
+      "merged_at": "2026-04-23T21:33:55Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2670,
+      "status": "merged",
       "title": "[audit #435] Add orchestrator-run staleness check to housekeeping-scan"
     },
     {
@@ -11369,12 +11371,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 22,
     "issue": 2673,
     "number": 533,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-23T21:24:03Z"
   },
   "last_eva_comment_check": "2026-04-23T21:24:03Z",
