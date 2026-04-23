@@ -9913,8 +9913,10 @@
       "dispatch_provenance": "gh-api-direct",
       "dispatched_at": "2026-04-22T21:41:08Z",
       "issue": 2657,
+      "merged_at": "2026-04-23T06:08:55Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2658,
+      "status": "merged",
       "title": "Make state-mutating Rust tools commit-and-push atomic + add git-reset-guard wrapper"
     },
     {
@@ -11335,12 +11337,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 18,
     "issue": 2664,
     "number": 531,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-23T05:51:35Z"
   },
   "last_eva_comment_check": "2026-04-23T05:51:35Z",
