@@ -7,7 +7,7 @@
 
 The live artifacts disagree:
 
-- Issue `#2664` has `Step C6` / `Step C7` comments saying `Review dispatched as #2666` and `Dispatch state push`.
+- Issue #2664 has `Step C6` / `Step C7` comments saying `Review dispatched as #2666` and `Dispatch state push`.
 - `docs/state.json:9941-9945` records issue `2666` as `status: "in_flight"`.
 - `docs/state.json:11348` sets `in_flight_sessions` to `1`.
 - `docs/state.json:11349-11354` says `last_cycle.summary` is `1 dispatch, 2 merges (PR #2658, PR #2663)`.
@@ -18,7 +18,7 @@ The live artifacts disagree:
 **File**: tools/rust/crates/state-schema/src/lib.rs:280-342
 **Evidence**:
 
-- The code added by PR `#2658` explicitly documents and executes `git push origin HEAD`.
+- The code added by PR #2658 explicitly documents and executes `git push origin HEAD`.
 - It does **not** push `HEAD:master`, and it does **not** refuse to run off `master`.
 - `AGENTS.md:252-254` says every state-mutating commit `MUST be pushed to origin/master`.
 - Cycle 531's journal still says a post-step branch guard remains owed at `docs/journal/2026-04-23.md:123,142-143`.
@@ -43,11 +43,11 @@ A simple reproducible parse of `docs/state.json` (`python` + JSON load + compare
 ## 4. [process-adherence] Audit #435 was accepted and closed without the same-cycle dispatch the journal says might be required
 
 **File**: docs/journal/2026-04-23.md:107-115
-**Evidence**: The journal says audit `#435` was accepted, says the three candidate structural fixes are "Not yet dispatched", and explicitly notes that the reviewer should flag the cycle if the directive requires a same-cycle dispatch. The acceptance issue on main (`#2665`) repeats the same position: accepted, corrected the acknowledgement text, structural fix "Not yet dispatched".
+**Evidence**: The journal says audit #435 was accepted, says the three candidate structural fixes are "Not yet dispatched", and explicitly notes that the reviewer should flag the cycle if the directive requires a same-cycle dispatch. The acceptance issue on main (#2665) repeats the same position: accepted, corrected the acknowledgement text, structural fix "Not yet dispatched".
 
 That is hard to square with the cycle's own stated rule: "When accepting an audit finding that requires a Copilot dispatch, you MUST dispatch it in the same cycle you accept it." Cycle 531 accepted the finding, closed the inbound issue, and still deferred all concrete dispatchable follow-up to cycle 532+.
 **Recommendation**: Treat "accepted but queued for later" as non-compliant when the accepted fix path requires Copilot work. Either dispatch one chosen structural candidate in the acceptance cycle, or keep the audit in observation/triage status until a concrete same-cycle dispatch is ready.
 
 ## Complacency score
 
-2/5 — Cycle 531 did produce receipts, merged the two PRs with passing Rust workspace tests, and posted 28 step comments on `#2664`, but it still published a worklog that contradicts the final state, overclaimed the scope of the atomic-push fix, carried 23 stale field-inventory markers forward again, and accepted an audit while openly deferring the dispatch that may have been required by its own rule.
+2/5 — Cycle 531 did produce receipts, merged the two PRs with passing Rust workspace tests, and posted 28 step comments on issue #2664, but it still published a worklog that contradicts the final state, overclaimed the scope of the atomic-push fix, carried 23 stale field-inventory markers forward again, and accepted an audit while openly deferring the dispatch that may have been required by its own rule.
