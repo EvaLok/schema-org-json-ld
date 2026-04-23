@@ -313,22 +313,14 @@ mod tests {
             );
             git_success(self.path(), ["add", "docs/state.json", "tools/config.json"]);
             git_success(self.path(), ["commit", "-m", "initial state"]);
-            git_success(
-                self.path(),
-                ["init", "--bare", self.remote_path.to_str().unwrap()],
-            );
+            git_success(self.path(), ["init", "--bare", self.remote_path.to_str().unwrap()]);
             git_success(
                 &self.remote_path,
                 ["symbolic-ref", "HEAD", "refs/heads/master"],
             );
             git_success(
                 self.path(),
-                [
-                    "remote",
-                    "add",
-                    "origin",
-                    self.remote_path.to_str().unwrap(),
-                ],
+                ["remote", "add", "origin", self.remote_path.to_str().unwrap()],
             );
             git_success(self.path(), ["push", "-u", "origin", "HEAD:master"]);
         }
