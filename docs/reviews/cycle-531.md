@@ -24,7 +24,7 @@ The live artifacts disagree:
 - Cycle 531's journal still says a post-step branch guard remains owed at `docs/journal/2026-04-23.md:123,142-143`.
 - The same journal entry nevertheless says PR `#2658` "closed the ... atomic-push gap" and that "every subsequent state-mutating tool pushed atomically" at `docs/journal/2026-04-23.md:86,103-105`.
 
-That means the merged code guarantees "push whatever branch is checked out", not "update the canonical branch required by policy".
+That means the merged code guarantees "push the currently checked out branch". It does not guarantee "update `origin/master`", which is the actual policy requirement.
 **Recommendation**: Enforce the canonical branch in the helper itself: either refuse to run unless `HEAD` tracks `origin/master`, or push `HEAD:master` explicitly. Add a regression test that proves a non-master checkout cannot report success while leaving `origin/master` behind.
 
 ## 3. [state-integrity] Field-inventory freshness is still badly out of cadence
@@ -37,13 +37,15 @@ That means the merged code guarantees "push whatever branch is checked out", not
 - `phpstan_level`, the `total_*` counters, and `type_classification` are still marked `cycle 508`.
 - `qc_*`, several `schema_status.*` entries, and `typescript_plan.status` are still marked `cycle 511`.
 
-A direct parse of the current file finds 23 entries that are at least 10 cycles stale. `bash tools/metric-snapshot` still passes, so the values themselves are coherent. The problem is the freshness ledger: it continues to claim cadences that the process is not actually maintaining.
+A simple reproducible parse of `docs/state.json` (`python` + JSON load + compare `last_cycle.number` against each `field_inventory.fields[*].last_refreshed`) finds 23 entries that are at least 10 cycles stale. `bash tools/metric-snapshot` still passes, so the values themselves are coherent. The problem is the freshness ledger: it continues to claim cadences that the process is not actually maintaining.
 **Recommendation**: Either refresh these entries whenever cycle close-out re-verifies them, or narrow/remove cadences that are no longer operationally true. Leaving the stale markers in place turns `field_inventory` into decorative metadata instead of a trustworthy verification ledger.
 
 ## 4. [process-adherence] Audit #435 was accepted and closed without the same-cycle dispatch the journal says might be required
 
 **File**: docs/journal/2026-04-23.md:107-115
-**Evidence**: The journal says audit `#435` was accepted, says the three candidate structural fixes are "Not yet dispatched", and explicitly notes that the reviewer should flag the cycle if the directive requires a same-cycle dispatch. The acceptance issue on main (`#2665`) repeats the same position: accepted, corrected the acknowledgement text, structural fix "Not yet dispatched". That is hard to square with the cycle's own stated rule: "When accepting an audit finding that requires a Copilot dispatch, you MUST dispatch it in the same cycle you accept it." This cycle accepted the finding, closed the inbound issue, and still deferred all concrete dispatchable follow-up to cycle 532+.
+**Evidence**: The journal says audit `#435` was accepted, says the three candidate structural fixes are "Not yet dispatched", and explicitly notes that the reviewer should flag the cycle if the directive requires a same-cycle dispatch. The acceptance issue on main (`#2665`) repeats the same position: accepted, corrected the acknowledgement text, structural fix "Not yet dispatched".
+
+That is hard to square with the cycle's own stated rule: "When accepting an audit finding that requires a Copilot dispatch, you MUST dispatch it in the same cycle you accept it." Cycle 531 accepted the finding, closed the inbound issue, and still deferred all concrete dispatchable follow-up to cycle 532+.
 **Recommendation**: Treat "accepted but queued for later" as non-compliant when the accepted fix path requires Copilot work. Either dispatch one chosen structural candidate in the acceptance cycle, or keep the audit in observation/triage status until a concrete same-cycle dispatch is ready.
 
 ## Complacency score
