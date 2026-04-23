@@ -9963,6 +9963,14 @@
       "pr": 2672,
       "status": "merged",
       "title": "[Cycle Review] Cycle 532 end-of-cycle review"
+    },
+    {
+      "addresses_finding": "531:2",
+      "dispatched_at": "2026-04-23T21:42:58Z",
+      "issue": 2675,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Harden orchestrator commit/post to master — commit_and_push + post-step branch guards (cycle 530/531 review F2)"
     }
   ],
   "audit_dropped": [
@@ -11100,7 +11108,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2671 [Cycle Review] Cycle 532 end-of-cycle review (cycle 532)",
+  "dispatch_log_latest": "#2675 Harden orchestrator commit/post to master — commit_and_push + post-step branch guards (cycle 530/531 review F2) (cycle 533)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -11371,13 +11379,13 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 22,
     "issue": 2673,
     "number": 533,
-    "summary": "0 dispatches, 2 merges",
-    "timestamp": "2026-04-23T21:24:03Z"
+    "summary": "1 dispatch, 2 merges",
+    "timestamp": "2026-04-23T21:42:58Z"
   },
   "last_eva_comment_check": "2026-04-23T21:24:03Z",
   "last_tool_audit_cycle": 403,
@@ -19197,8 +19205,8 @@
         ],
         "complacency_score": 2,
         "cycle": 531,
-        "deferred": 3,
-        "dispatch_created": 1,
+        "deferred": 2,
+        "dispatch_created": 2,
         "finding_count": 4,
         "finding_dispositions": [
           {
@@ -19207,7 +19215,7 @@
           },
           {
             "category": "code-change-quality",
-            "disposition": "deferred"
+            "disposition": "dispatch_created"
           },
           {
             "category": "state-integrity",
