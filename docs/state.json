@@ -11055,6 +11055,12 @@
       "deadline_cycle": 534,
       "deferred_cycle": 529,
       "resolved": false
+    },
+    {
+      "category": "process-adherence",
+      "deadline_cycle": 535,
+      "deferred_cycle": 530,
+      "resolved": false
     }
   ],
   "dispatch_log_latest": "#2662 [Cycle Review] Cycle 530 end-of-cycle review (cycle 530)",
@@ -11236,11 +11242,11 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 530"
+        "last_refreshed": "cycle 531"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
-        "last_refreshed": "cycle 530"
+        "last_refreshed": "cycle 531"
       },
       "review_dispatch_consecutive": {
         "cadence": "every cycle (updated by record-dispatch tool)",
@@ -11549,10 +11555,10 @@
           "added_cycle": 493,
           "category": "worklog-accuracy/scope-boundary",
           "chosen_path": "structural-fix",
-          "rationale": "Sub-category entries per audit #417 sub-categorization adoption | Cycle 494: rollback of cycle 493 refresh — cycle 493 review F2 worklog-accuracy invalidates same-cycle entry creation per chronic-refresh-invalidation gate | Cycle 509: refreshed via PR(s) — COMPLETION_CHECKLIST.xml C3 narrative-scope-boundary constraint added (commit 9919b06d) requiring pre-dispatch narrative sections (What was done, PRs merged) to stay inside declared scope cutoff + framing timestamp-only refreshes as maintenance bookkeeping. Addresses recurrent pattern flagged in cycle 507 F2 and cycle 508 F3. | Cycle 510: rollback of cycle 509 refresh — Cycle 509 review F2 — refresh was based on checklist text alone (no tool enforcement, no regression test, no clean review cycle). Per S0.5.8 regression-verification logic, rolling back vc 509 → vc 0 until either tooling enforces the boundary or a subsequent review cycle stays clean under the new rule. | Cycle 529: refreshed via PR(s) [#2655] — Cycle 528 PR #2655 bundle (Harden cycle close-out evidence: receipt-bounded PRs, post-dispatch summary sync, complete-phase gates, per-commitment journal grading) landed structural close-out hardening that improves worklog-accuracy (scope-boundary via post-dispatch summary sync + frozen snapshot), review-evidence (review dispatch flow hardened by complete-phase gates), and code-quality (per-commitment journal grading adds test-observable behavior). None of the three chronic categories were flagged in cycles 525-527 reviews (clean 3-review window post-rollback). Refresh follows standard chronic-refresh-invalidation discipline: if this cycle's review flags any of these categories, the refresh will be rolled back in cycle 530 S0.5. | Cycle 530: refreshed via PR(s) — rollback same-cycle refresh (cycle 529): review cycle 529 flagged worklog-accuracy finding #1, so chronic refresh done at verification_cycle 529 was invalidated by the same cycle's review consumption | Cycle 530: rollback of cycle 530 refresh — cycle 529 review F1 worklog-accuracy invalidates the cycle 529 same-cycle refresh (vc 529) per chronic-refresh-invalidation gate; also rolls back erroneous cycle 530 S0.5 refresh (accidentally applied via --update-chronic-category instead of --rollback, receipt 300bfb05). Restoring to vc 0 consistent with cycle 510 rollback state.",
+          "rationale": "Sub-category entries per audit #417 sub-categorization adoption | Cycle 494: rollback of cycle 493 refresh — cycle 493 review F2 worklog-accuracy invalidates same-cycle entry creation per chronic-refresh-invalidation gate | Cycle 509: refreshed via PR(s) — COMPLETION_CHECKLIST.xml C3 narrative-scope-boundary constraint added (commit 9919b06d) requiring pre-dispatch narrative sections (What was done, PRs merged) to stay inside declared scope cutoff + framing timestamp-only refreshes as maintenance bookkeeping. Addresses recurrent pattern flagged in cycle 507 F2 and cycle 508 F3. | Cycle 510: rollback of cycle 509 refresh — Cycle 509 review F2 — refresh was based on checklist text alone (no tool enforcement, no regression test, no clean review cycle). Per S0.5.8 regression-verification logic, rolling back vc 509 → vc 0 until either tooling enforces the boundary or a subsequent review cycle stays clean under the new rule. | Cycle 529: refreshed via PR(s) [#2655] — Cycle 528 PR #2655 bundle (Harden cycle close-out evidence: receipt-bounded PRs, post-dispatch summary sync, complete-phase gates, per-commitment journal grading) landed structural close-out hardening that improves worklog-accuracy (scope-boundary via post-dispatch summary sync + frozen snapshot), review-evidence (review dispatch flow hardened by complete-phase gates), and code-quality (per-commitment journal grading adds test-observable behavior). None of the three chronic categories were flagged in cycles 525-527 reviews (clean 3-review window post-rollback). Refresh follows standard chronic-refresh-invalidation discipline: if this cycle's review flags any of these categories, the refresh will be rolled back in cycle 530 S0.5. | Cycle 530: refreshed via PR(s) — rollback same-cycle refresh (cycle 529): review cycle 529 flagged worklog-accuracy finding #1, so chronic refresh done at verification_cycle 529 was invalidated by the same cycle's review consumption | Cycle 530: rollback of cycle 530 refresh — cycle 529 review F1 worklog-accuracy invalidates the cycle 529 same-cycle refresh (vc 529) per chronic-refresh-invalidation gate; also rolls back erroneous cycle 530 S0.5 refresh (accidentally applied via --update-chronic-category instead of --rollback, receipt 300bfb05). Restoring to vc 0 consistent with cycle 510 rollback state. | Cycle 531: rollback of cycle 530 refresh — cycle 530 review F3 — re-refresh in cycle 530 (receipt 2257541) re-promoted the same chronic that the cycle 529 review had just invalidated; rolling back vc 530 → 0 per F3 recommendation",
           "response_type": "structural-fix",
-          "updated_cycle": 530,
-          "verification_cycle": 530
+          "updated_cycle": 531,
+          "verification_cycle": 0
         },
         {
           "added_cycle": 493,
@@ -19114,9 +19120,38 @@
         "ignored": 0,
         "note": "All 3 findings deferred: awaiting Eva responses on #2293, #2416, #2622; concurrency 2/2 blocks dispatch.",
         "review_issue": 2659
+      },
+      {
+        "actioned": 1,
+        "categories": [
+          "complacency-detection",
+          "process-adherence",
+          "state-integrity"
+        ],
+        "complacency_score": 3,
+        "cycle": 530,
+        "deferred": 2,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "state-integrity",
+            "disposition": "deferred"
+          },
+          {
+            "category": "process-adherence",
+            "disposition": "deferred"
+          },
+          {
+            "category": "complacency-detection",
+            "disposition": "actioned"
+          }
+        ],
+        "ignored": 0,
+        "note": "F1 state-integrity: deferred — same Eva-blocker chain (#2416 268h+); structural fix requires field-inventory cadence-vs-refresh decision. F2 process-adherence: deferred — committed to adding post-step branch guard (warn/refuse if HEAD != master). F3 complacency-detection: actioned via rollback chronic worklog-accuracy/scope-boundary vc 530 → 0.",
+        "review_issue": 2662
       }
     ],
-    "last_review_cycle": 529
+    "last_review_cycle": 530
   },
   "review_dispatch_consecutive": 6,
   "review_events_verified_through_cycle": 530,
