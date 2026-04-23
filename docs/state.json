@@ -9945,6 +9945,13 @@
       "pr": 2667,
       "status": "merged",
       "title": "[Cycle Review] Cycle 531 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-04-23T09:54:05Z",
+      "issue": 2669,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[audit #435] Add orchestrator-run staleness check to housekeeping-scan"
     }
   ],
   "audit_dropped": [
@@ -11075,7 +11082,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2666 [Cycle Review] Cycle 531 end-of-cycle review (cycle 531)",
+  "dispatch_log_latest": "#2669 [audit #435] Add orchestrator-run staleness check to housekeeping-scan (cycle 532)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -11346,13 +11353,13 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 22,
     "issue": 2668,
     "number": 532,
-    "summary": "0 dispatches, 1 merges",
-    "timestamp": "2026-04-23T09:43:51Z"
+    "summary": "1 dispatch, 1 merges",
+    "timestamp": "2026-04-23T09:54:05Z"
   },
   "last_eva_comment_check": "2026-04-23T09:43:51Z",
   "last_tool_audit_cycle": 403,
