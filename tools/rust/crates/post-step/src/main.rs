@@ -3,7 +3,7 @@ use serde_json::{json, Value};
 use state_schema::current_cycle_from_state;
 use std::fs;
 use std::io::{self, Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
@@ -55,9 +55,15 @@ struct Cli {
     #[arg(long)]
     body_stdin: bool,
 
-    /// Allow reposting a step ID even if it already exists on the issue
+    /// Allow reposting a step ID even if it already exists on the issue; does
+    /// not bypass the branch guard
     #[arg(long)]
     force: bool,
+
+    /// Bypass only the master-branch guard; unlike --force, this does not
+    /// bypass duplicate-step protection
+    #[arg(long)]
+    force_branch: bool,
 
     /// Skip step ID validation for non-standard step names
     #[arg(long)]
@@ -106,6 +112,7 @@ fn execute(cli: &Cli, runner: &dyn CommentPoster) -> Result<String, String> {
     })?;
     let body = resolve_body(cli)?;
     let comment = format_comment(cycle, step, title, &body);
+    enforce_master_branch(&cli.repo_root, cli.force_branch)?;
 
     if !cli.force {
         let existing_comments = runner.existing_comments(cli.issue)?;
@@ -121,6 +128,46 @@ fn execute(cli: &Cli, runner: &dyn CommentPoster) -> Result<String, String> {
     runner.post_comment(cli.issue, &comment)?;
 
     Ok(format!("Step {} posted to {MAIN_REPO}#{}", step, cli.issue))
+}
+
+fn enforce_master_branch(repo_root: &Path, force_branch: bool) -> Result<(), String> {
+    if force_branch
+        || std::env::var("ORCHESTRATOR_SKIP_BRANCH_CHECK")
+            .ok()
+            .as_deref()
+            == Some("1")
+    {
+        return Ok(());
+    }
+
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(repo_root)
+        .args(["symbolic-ref", "--short", "HEAD"])
+        .output()
+        .map_err(|error| format!("failed to execute git symbolic-ref --short HEAD: {}", error))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(format!("git symbolic-ref --short HEAD failed: {}", stderr));
+    }
+
+    let branch = String::from_utf8(output.stdout)
+        .map_err(|error| {
+            format!(
+                "failed to decode git symbolic-ref --short HEAD output as UTF-8: {}",
+                error
+            )
+        })?
+        .trim()
+        .to_string();
+    if branch != "master" {
+        return Err(format!(
+            "post-step refuses to run off master: HEAD={}; pass --force-branch to override",
+            branch
+        ));
+    }
+
+    Ok(())
 }
 
 fn resolve_body(cli: &Cli) -> Result<String, String> {
@@ -435,6 +482,7 @@ mod tests {
     use clap::CommandFactory;
     use std::fs;
     use std::path::Path;
+    use std::sync::{Mutex, OnceLock};
     use std::time::{SystemTime, UNIX_EPOCH};
 
     struct RecordingPoster {
@@ -535,6 +583,7 @@ mod tests {
             body_file: None,
             body_stdin: false,
             force: false,
+            force_branch: false,
             skip_validation: false,
             skip_body_validation: false,
             repo_root: repo_root.clone(),
@@ -554,6 +603,93 @@ mod tests {
     }
 
     #[test]
+    fn execute_refuses_to_run_off_master() {
+        let repo_root = temp_repo_root("post-step-feature-branch");
+        set_head_branch(&repo_root, "feature/test-branch");
+        write_state_json(&repo_root, r#"{"last_cycle":{"number":198}}"#);
+        let cli = Cli {
+            issue: 834,
+            step: "0".to_string(),
+            title: "Check for input-from-eva issues".to_string(),
+            body: Some("Found 2 open issues.".to_string()),
+            body_file: None,
+            body_stdin: false,
+            force: false,
+            force_branch: false,
+            skip_validation: false,
+            skip_body_validation: false,
+            repo_root: repo_root.clone(),
+        };
+        let poster = RecordingPoster::success();
+
+        let error = execute(&cli, &poster).expect_err("feature branch should be rejected");
+
+        assert_eq!(
+            error,
+            "post-step refuses to run off master: HEAD=feature/test-branch; pass --force-branch to override"
+        );
+        assert!(poster.posted_bodies().is_empty());
+    }
+
+    #[test]
+    fn execute_allows_posting_on_non_master_with_force_branch() {
+        let repo_root = temp_repo_root("post-step-force-branch");
+        set_head_branch(&repo_root, "feature/test-branch");
+        write_state_json(&repo_root, r#"{"last_cycle":{"number":198}}"#);
+        let cli = Cli {
+            issue: 834,
+            step: "0".to_string(),
+            title: "Check for input-from-eva issues".to_string(),
+            body: Some("Found 2 open issues.".to_string()),
+            body_file: None,
+            body_stdin: false,
+            force: false,
+            force_branch: true,
+            skip_validation: false,
+            skip_body_validation: false,
+            repo_root: repo_root.clone(),
+        };
+        let poster = RecordingPoster::success();
+
+        let result = execute(&cli, &poster).expect("force-branch should bypass branch guard");
+
+        assert_eq!(result, "Step 0 posted to EvaLok/schema-org-json-ld#834");
+        assert_eq!(poster.posted_bodies().len(), 1);
+    }
+
+    #[test]
+    fn execute_allows_posting_on_non_master_when_branch_check_is_skipped() {
+        let _guard = env_lock().lock().expect("env lock should not be poisoned");
+        let repo_root = temp_repo_root("post-step-skip-branch-check");
+        set_head_branch(&repo_root, "feature/test-branch");
+        write_state_json(&repo_root, r#"{"last_cycle":{"number":198}}"#);
+        let cli = Cli {
+            issue: 834,
+            step: "0".to_string(),
+            title: "Check for input-from-eva issues".to_string(),
+            body: Some("Found 2 open issues.".to_string()),
+            body_file: None,
+            body_stdin: false,
+            force: false,
+            force_branch: false,
+            skip_validation: false,
+            skip_body_validation: false,
+            repo_root: repo_root.clone(),
+        };
+        let poster = RecordingPoster::success();
+
+        std::env::set_var("ORCHESTRATOR_SKIP_BRANCH_CHECK", "1");
+        let result = execute(&cli, &poster);
+        std::env::remove_var("ORCHESTRATOR_SKIP_BRANCH_CHECK");
+
+        assert_eq!(
+            result.expect("skip env should bypass branch guard"),
+            "Step 0 posted to EvaLok/schema-org-json-ld#834"
+        );
+        assert_eq!(poster.posted_bodies().len(), 1);
+    }
+
+    #[test]
     fn execute_reads_body_from_file() {
         let repo_root = temp_repo_root("post-step-body-file");
         write_state_json(&repo_root, r#"{"last_cycle":{"number":198}}"#);
@@ -567,6 +703,7 @@ mod tests {
             body_file: Some(body_path),
             body_stdin: false,
             force: false,
+            force_branch: false,
             skip_validation: false,
             skip_body_validation: false,
             repo_root: repo_root.clone(),
@@ -596,6 +733,7 @@ mod tests {
             body_file: None,
             body_stdin: false,
             force: false,
+            force_branch: false,
             skip_validation: false,
             skip_body_validation: false,
             repo_root: repo_root.clone(),
@@ -622,6 +760,7 @@ mod tests {
             body_file: None,
             body_stdin: false,
             force: false,
+            force_branch: false,
             skip_validation: false,
             skip_body_validation: false,
             repo_root: repo_root.clone(),
@@ -773,6 +912,7 @@ mod tests {
             body_file: None,
             body_stdin: false,
             force: false,
+            force_branch: false,
             skip_validation: false,
             skip_body_validation: true,
             repo_root: repo_root.clone(),
@@ -797,6 +937,7 @@ mod tests {
             body_file: None,
             body_stdin: false,
             force: false,
+            force_branch: false,
             skip_validation: true,
             skip_body_validation: false,
             repo_root: repo_root.clone(),
@@ -820,6 +961,7 @@ mod tests {
             body_file: None,
             body_stdin: false,
             force: false,
+            force_branch: false,
             skip_validation: false,
             skip_body_validation: false,
             repo_root: repo_root.clone(),
@@ -845,6 +987,7 @@ mod tests {
         assert!(help.contains("--body-file"));
         assert!(help.contains("--body-stdin"));
         assert!(help.contains("--force"));
+        assert!(help.contains("--force-branch"));
         assert!(help.contains("--skip-validation"));
         assert!(help.contains("--skip-body-validation"));
         assert!(help.contains("--repo-root"));
@@ -862,6 +1005,7 @@ mod tests {
             body_file: None,
             body_stdin: false,
             force: false,
+            force_branch: false,
             skip_validation: false,
             skip_body_validation: false,
             repo_root: repo_root.clone(),
@@ -886,6 +1030,7 @@ mod tests {
             body_file: None,
             body_stdin: false,
             force: false,
+            force_branch: false,
             skip_validation: false,
             skip_body_validation: false,
             repo_root: repo_root.clone(),
@@ -912,6 +1057,7 @@ mod tests {
             body_file: None,
             body_stdin: false,
             force: false,
+            force_branch: false,
             skip_validation: false,
             skip_body_validation: false,
             repo_root: repo_root.clone(),
@@ -941,6 +1087,7 @@ mod tests {
             body_file: None,
             body_stdin: false,
             force: true,
+            force_branch: false,
             skip_validation: false,
             skip_body_validation: false,
             repo_root: repo_root.clone(),
@@ -967,6 +1114,7 @@ mod tests {
             body_file: None,
             body_stdin: false,
             force: false,
+            force_branch: false,
             skip_validation: false,
             skip_body_validation: false,
             repo_root: repo_root.clone(),
@@ -1071,6 +1219,7 @@ mod tests {
             body_file: None,
             body_stdin: false,
             force: false,
+            force_branch: false,
             skip_validation: false,
             skip_body_validation: false,
             repo_root: repo_root.clone(),
@@ -1090,7 +1239,43 @@ mod tests {
             .as_nanos();
         let path = std::env::temp_dir().join(format!("{prefix}-{unique}"));
         fs::create_dir_all(path.join("docs")).unwrap();
+        assert_git_success(&path, ["init"]);
+        set_head_branch(&path, "master");
         path
+    }
+
+    fn env_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    fn set_head_branch(repo_root: &Path, branch: &str) {
+        let ref_name = format!("refs/heads/{branch}");
+        assert_git_success(repo_root, ["symbolic-ref", "HEAD", &ref_name]);
+    }
+
+    fn assert_git_success<I, S>(repo_root: &Path, args: I)
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<std::ffi::OsStr>,
+    {
+        let rendered_args: Vec<String> = args
+            .into_iter()
+            .map(|argument| argument.as_ref().to_string_lossy().into_owned())
+            .collect();
+        let output = Command::new("git")
+            .arg("-C")
+            .arg(repo_root)
+            .args(&rendered_args)
+            .output()
+            .expect("git command should execute");
+        assert!(
+            output.status.success(),
+            "git command failed (git -C {} {}): {}",
+            repo_root.display(),
+            rendered_args.join(" "),
+            String::from_utf8_lossy(&output.stderr)
+        );
     }
 
     fn write_state_json(repo_root: &Path, content: &str) {
@@ -1174,6 +1359,7 @@ mod tests {
             body_file: None,
             body_stdin: false,
             force: false,
+            force_branch: false,
             skip_validation: false,
             skip_body_validation: false,
             repo_root: repo_root.clone(),
@@ -1201,6 +1387,7 @@ mod tests {
             body_file: None,
             body_stdin: false,
             force: true,
+            force_branch: false,
             skip_validation: false,
             skip_body_validation: false,
             repo_root: repo_root.clone(),

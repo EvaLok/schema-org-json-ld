@@ -9844,10 +9844,8 @@ mod tests {
     fn frozen_commit_verify_passes_when_phase_is_complete() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir().join(format!(
-            "pipeline-check-frozen-commit-complete-{}",
-            run_id
-        ));
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-frozen-commit-complete-{}", run_id));
         init_git_repo(&root);
         fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
         fs::create_dir_all(root.join("docs/journal")).unwrap();
@@ -10008,8 +10006,8 @@ mod tests {
     fn review_events_verified_passes_when_phase_is_complete() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir()
-            .join(format!("pipeline-check-review-events-complete-{}", run_id));
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-review-events-complete-{}", run_id));
         fs::create_dir_all(root.join("docs")).unwrap();
         fs::write(
             root.join("docs/state.json"),
