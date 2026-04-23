@@ -11079,6 +11079,13 @@
       "category": "process-adherence",
       "deadline_cycle": 535,
       "deferred_cycle": 530,
+      "resolved": true,
+      "resolved_ref": "docs/reviews/cycle-531.md"
+    },
+    {
+      "category": "code-change-quality",
+      "deadline_cycle": 536,
+      "deferred_cycle": 531,
       "resolved": false
     }
   ],
@@ -11261,7 +11268,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 531"
+        "last_refreshed": "cycle 532"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -19168,9 +19175,44 @@
         "ignored": 0,
         "note": "F1 state-integrity: deferred — same Eva-blocker chain (#2416 268h+); structural fix requires field-inventory cadence-vs-refresh decision. F2 process-adherence: deferred — committed to adding post-step branch guard (warn/refuse if HEAD != master). F3 complacency-detection: actioned via rollback chronic worklog-accuracy/scope-boundary vc 530 → 0.",
         "review_issue": 2662
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "code-change-quality",
+          "process-adherence",
+          "state-integrity",
+          "worklog-accuracy"
+        ],
+        "complacency_score": 2,
+        "cycle": 531,
+        "deferred": 3,
+        "dispatch_created": 1,
+        "finding_count": 4,
+        "finding_dispositions": [
+          {
+            "category": "worklog-accuracy",
+            "disposition": "deferred"
+          },
+          {
+            "category": "code-change-quality",
+            "disposition": "deferred"
+          },
+          {
+            "category": "state-integrity",
+            "disposition": "deferred"
+          },
+          {
+            "category": "process-adherence",
+            "disposition": "dispatch_created"
+          }
+        ],
+        "ignored": 0,
+        "note": "Cycle 531 review (complacency 2/5): 4 findings. F4 (process-adherence, audit #435 accept-without-dispatch) addressed via cycle 532 dispatch #2669 (housekeeping-scan orchestrator-run staleness check, audit #435 candidate b). F1 (worklog-accuracy post-dispatch-contradiction) and F3 (state-integrity field-inventory freshness) deferred — chronic, tracked in Eva-blockers #2293/#2416. F2 (code-change-quality atomic-push-no-master-guarantee) deferred for cycle 533 dispatch (post-step branch guard plus commit_and_push HEAD:master enforcement, from cycle 531 journal commitment 2).",
+        "review_issue": 2666
       }
     ],
-    "last_review_cycle": 530
+    "last_review_cycle": 531
   },
   "review_dispatch_consecutive": 7,
   "review_events_verified_through_cycle": 531,
