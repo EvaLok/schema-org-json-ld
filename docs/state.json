@@ -11317,7 +11317,7 @@
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
-        "last_refreshed": "cycle 531"
+        "last_refreshed": "cycle 532"
       },
       "total_enums": {
         "cadence": "after enum additions",
@@ -19775,9 +19775,9 @@
   "tool_pipeline": {
     "blocks_publish": false,
     "c5_5_gate": {
-      "cycle": 531,
+      "cycle": 532,
       "needs_reverify": false,
-      "pipeline_summary": "PASS (3 warnings)",
+      "pipeline_summary": "PASS (1 blocking warning, 4 warnings)",
       "status": "PASS"
     },
     "c5_5_initial_result": {
