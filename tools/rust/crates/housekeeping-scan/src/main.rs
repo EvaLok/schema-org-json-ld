@@ -13,6 +13,10 @@ const AGENT_ISSUE_ASSIGNEE: &str = "copilot-swe-agent[bot]";
 // not `copilot-swe-agent[bot]` (which is the form returned by the issues API and used
 // for assignee filtering). The two formats coexist in the GitHub API surface.
 const AGENT_PR_AUTHOR: &str = "app/copilot-swe-agent";
+// Audit EvaLok/schema-org-json-ld#435 candidate (b): an open `orchestrator-run`
+// issue older than 2× the 240-minute orchestrator cron interval (8 hours) is
+// likely orphaned by a mid-cycle termination and should be surfaced here.
+const ORCHESTRATOR_RUN_STALENESS_HOURS: i64 = 8;
 
 #[derive(Parser)]
 #[command(name = "housekeeping-scan")]
@@ -29,6 +33,7 @@ struct Cli {
 #[derive(Default, Serialize)]
 struct Report {
     stale_agent_issues: Vec<Finding>,
+    stale_orchestrator_run: Vec<Finding>,
     orphan_draft_prs: Vec<Finding>,
     dead_branches: Vec<Finding>,
     stale_audit_inbound: Vec<Finding>,
@@ -74,6 +79,10 @@ fn main() {
         Ok(value) => value,
         Err(e) => exit_with_error(e),
     };
+    report.stale_orchestrator_run = match scan_stale_orchestrator_run(now) {
+        Ok(value) => value,
+        Err(e) => exit_with_error(e),
+    };
     report.orphan_draft_prs = match scan_orphan_draft_prs(now, &draft_prs) {
         Ok(value) => value,
         Err(e) => exit_with_error(e),
@@ -110,6 +119,7 @@ fn main() {
 
 fn total_findings(report: &Report) -> usize {
     report.stale_agent_issues.len()
+        + report.stale_orchestrator_run.len()
         + report.orphan_draft_prs.len()
         + report.dead_branches.len()
         + report.stale_audit_inbound.len()
@@ -431,6 +441,25 @@ fn scan_stale_label_issues(now: DateTime<Utc>, label: &str) -> Result<Vec<Findin
     Ok(find_open_label_issues(items, now, label))
 }
 
+fn scan_stale_orchestrator_run(now: DateTime<Utc>) -> Result<Vec<Finding>, String> {
+    let value = gh_json(&[
+        "issue",
+        "list",
+        "--repo",
+        REPO,
+        "--label",
+        "orchestrator-run",
+        "--state",
+        "open",
+        "--json",
+        "number,title,createdAt",
+    ])?;
+    let items = value
+        .as_array()
+        .ok_or_else(|| "unexpected response for orchestrator-run issue list".to_string())?;
+    Ok(find_stale_orchestrator_run(items, now))
+}
+
 fn find_open_label_issues(items: &[Value], now: DateTime<Utc>, label: &str) -> Vec<Finding> {
     items
         .iter()
@@ -445,6 +474,30 @@ fn find_open_label_issues(items: &[Value], now: DateTime<Utc>, label: &str) -> V
                 identifier: format!("#{}", number),
                 age: format_duration(age),
                 recommended_action: format!("Close {} issue after processing", label),
+            })
+        })
+        .collect()
+}
+
+fn find_stale_orchestrator_run(items: &[Value], now: DateTime<Utc>) -> Vec<Finding> {
+    items
+        .iter()
+        .filter_map(|item| {
+            let number = item.get("number")?.as_u64()?;
+            let created_at = item
+                .get("createdAt")
+                .and_then(Value::as_str)
+                .and_then(parse_time)?;
+            let age = now.signed_duration_since(created_at);
+            if age <= Duration::hours(ORCHESTRATOR_RUN_STALENESS_HOURS) {
+                return None;
+            }
+            Some(Finding {
+                identifier: format!("#{}", number),
+                age: format_duration(age),
+                recommended_action:
+                    "Close orphaned orchestrator-run issue — session likely terminated mid-cycle"
+                        .to_string(),
             })
         })
         .collect()
@@ -474,6 +527,11 @@ fn print_human_report(report: &Report) {
         "  Stale agent issues:     {}{}",
         report.stale_agent_issues.len(),
         format_identifiers(&report.stale_agent_issues)
+    );
+    println!(
+        "  Stale orchestrator-run: {}{}",
+        report.stale_orchestrator_run.len(),
+        format_identifiers(&report.stale_orchestrator_run)
     );
     println!(
         "  Orphan draft PRs:       {}{}",
@@ -596,6 +654,46 @@ mod tests {
         let findings = find_stale_agent_issues(&issues, &[], now, &no_open_linked_prs);
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].identifier, "#1");
+    }
+
+    #[test]
+    fn stale_orchestrator_run_flags_issue_older_than_threshold() {
+        let now = Utc::now();
+        let issues = vec![json!({
+            "number": 528,
+            "createdAt": (now - Duration::hours(9)).to_rfc3339()
+        })];
+
+        let findings = find_stale_orchestrator_run(&issues, now);
+
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].identifier, "#528");
+    }
+
+    #[test]
+    fn stale_orchestrator_run_ignores_fresh_issue() {
+        let now = Utc::now();
+        let issues = vec![json!({
+            "number": 531,
+            "createdAt": (now - Duration::hours(2)).to_rfc3339()
+        })];
+
+        let findings = find_stale_orchestrator_run(&issues, now);
+
+        assert!(findings.is_empty());
+    }
+
+    #[test]
+    fn stale_orchestrator_run_ignores_exact_boundary() {
+        let now = Utc::now();
+        let issues = vec![json!({
+            "number": 532,
+            "createdAt": (now - Duration::hours(ORCHESTRATOR_RUN_STALENESS_HOURS)).to_rfc3339()
+        })];
+
+        let findings = find_stale_orchestrator_run(&issues, now);
+
+        assert!(findings.is_empty());
     }
 
     #[test]
