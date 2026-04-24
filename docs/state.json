@@ -10021,8 +10021,10 @@
     {
       "dispatched_at": "2026-04-24T21:37:26Z",
       "issue": 2694,
+      "merged_at": "2026-04-24T21:43:12Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2695,
+      "status": "merged",
       "title": "Fix process-merge orphan-PR fallback that corrupts unrelated in-flight session rows (cycle 536 F1)"
     }
   ],
@@ -11466,12 +11468,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 29,
     "issue": 2693,
     "number": 537,
-    "summary": "1 dispatch, 1 merges",
+    "summary": "1 dispatches, 1 merges",
     "timestamp": "2026-04-24T21:37:26Z"
   },
   "last_eva_comment_check": "2026-04-24T21:24:58Z",
