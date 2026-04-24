@@ -11154,6 +11154,18 @@
       "deadline_cycle": 539,
       "deferred_cycle": 534,
       "resolved": false
+    },
+    {
+      "category": "field-inventory",
+      "deadline_cycle": 540,
+      "deferred_cycle": 535,
+      "resolved": false
+    },
+    {
+      "category": "state-integrity",
+      "deadline_cycle": 540,
+      "deferred_cycle": 535,
+      "resolved": false
     }
   ],
   "dispatch_log_latest": "#2688 [Cycle Review] Cycle 535 end-of-cycle review (cycle 535)",
@@ -11335,7 +11347,7 @@
       },
       "review_agent": {
         "cadence": "every cycle (updated when consuming review findings)",
-        "last_refreshed": "cycle 535"
+        "last_refreshed": "cycle 536"
       },
       "review_agent.chronic_category_responses": {
         "cadence": "when chronic categories are detected (5+ in last 6 reviews)",
@@ -19364,9 +19376,38 @@
         "ignored": 0,
         "note": "All 3 findings deferred — structural drift patterns already tracked in open question-for-eva #2674 (post-dispatch worklog regeneration) pending Eva response. Findings 1 (worklog still says 'no new dispatches' post-record-dispatch), 2 (journal pipeline FAIL snapshot frozen before final PASS), and 3 (contradictory commitment grading 'deferred' + 'Met') share the root cause of pre-close-out snapshots persisting into final artifacts.",
         "review_issue": 2680
+      },
+      {
+        "actioned": 0,
+        "categories": [
+          "field-inventory",
+          "journal-quality",
+          "state-integrity"
+        ],
+        "complacency_score": 2,
+        "cycle": 535,
+        "deferred": 3,
+        "finding_count": 3,
+        "finding_dispositions": [
+          {
+            "category": "state-integrity",
+            "disposition": "deferred"
+          },
+          {
+            "category": "journal-quality",
+            "disposition": "deferred"
+          },
+          {
+            "category": "field-inventory",
+            "disposition": "deferred"
+          }
+        ],
+        "ignored": 0,
+        "note": "All 3 findings deferred. Finding #1 (state-integrity: dispatches not in ledger) requires process-level change to agent-task dispatch procedure — process fix required, not yet structured. Finding #2 (journal-quality: conditional commitments graded Met) continues the Eva-blocked chronic pattern tracked via #2293/#2674. Finding #3 (field-inventory: 23 stale markers) is the same chronic-category-currency pattern — structural fix needs cycle-runner auto-refresh on change-triggered fields. Dispatch capacity was exhausted this cycle and the chronic paths are Eva-gated.",
+        "review_issue": 2688
       }
     ],
-    "last_review_cycle": 534
+    "last_review_cycle": 535
   },
   "review_dispatch_consecutive": 11,
   "review_events_verified_through_cycle": 535,
