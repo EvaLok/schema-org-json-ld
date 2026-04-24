@@ -277,10 +277,9 @@ pub fn write_state_value(repo_root: &Path, state: &Value) -> Result<(), String> 
         .map_err(|error| format!("failed to write {}: {}", state_path.display(), error))
 }
 
-/// Commit the provided paths and immediately push the resulting commit with
-/// `git push origin HEAD` so a success result implies both commit and push
-/// succeeded. Tests/CI may bypass the push by setting
-/// `ORCHESTRATOR_SKIP_PUSH=1`.
+/// Commit the provided paths and, unless `ORCHESTRATOR_SKIP_PUSH=1`, refuse to
+/// push unless `HEAD` is on `master` before running `git push origin HEAD` so a
+/// success result implies both commit and push succeeded.
 pub fn commit_and_push(repo_root: &Path, message: &str, paths: &[&Path]) -> Result<String, String> {
     let add_output = Command::new("git")
         .arg("-C")
@@ -329,6 +328,37 @@ pub fn commit_and_push(repo_root: &Path, message: &str, paths: &[&Path]) -> Resu
     let sha = sha.trim().to_string();
 
     if std::env::var("ORCHESTRATOR_SKIP_PUSH").ok().as_deref() != Some("1") {
+        let branch_output = Command::new("git")
+            .arg("-C")
+            .arg(repo_root)
+            .args(["symbolic-ref", "--short", "HEAD"])
+            .output()
+            .map_err(|error| {
+                format!("failed to execute git symbolic-ref --short HEAD: {}", error)
+            })?;
+        if !branch_output.status.success() {
+            let stderr = String::from_utf8_lossy(&branch_output.stderr)
+                .trim()
+                .to_string();
+            return Err(format!("git symbolic-ref --short HEAD failed: {}", stderr));
+        }
+
+        let branch = String::from_utf8(branch_output.stdout)
+            .map_err(|error| {
+                format!(
+                    "failed to decode git symbolic-ref --short HEAD output as UTF-8: {}",
+                    error
+                )
+            })?
+            .trim()
+            .to_string();
+        if branch != "master" {
+            return Err(format!(
+                "commit_and_push refuses to run off master: HEAD={}",
+                branch
+            ));
+        }
+
         let push_output = Command::new("git")
             .arg("-C")
             .arg(repo_root)
@@ -1865,5 +1895,45 @@ mod tests {
         .expect_err("push without origin should fail");
 
         assert!(error.contains("git push origin HEAD failed"));
+    }
+
+    #[test]
+    fn commit_and_push_refuses_to_run_off_master() {
+        let repo = TempRemoteRepo::new("non-master-branch");
+        repo.init();
+        let remote_before = repo.remote_head();
+        assert_git_success(repo.repo_path(), ["checkout", "-b", "feature/test-branch"]);
+        write_state_value(repo.repo_path(), &json!({"last_cycle": {"number": 3}}))
+            .expect("state should be updated");
+
+        let error = commit_and_push(
+            repo.repo_path(),
+            "state(test): reject non-master branch",
+            &[Path::new("docs/state.json")],
+        )
+        .expect_err("non-master branch should be rejected");
+
+        assert!(error.contains("commit_and_push refuses to run off master"));
+        assert_eq!(repo.remote_head(), remote_before);
+    }
+
+    #[test]
+    fn commit_and_push_succeeds_on_master_with_skip_push() {
+        let _guard = env_lock().lock().expect("env lock should not be poisoned");
+        let repo = TempRemoteRepo::new("master-branch");
+        repo.init();
+        write_state_value(repo.repo_path(), &json!({"last_cycle": {"number": 4}}))
+            .expect("state should be updated");
+
+        env::set_var("ORCHESTRATOR_SKIP_PUSH", "1");
+        let result = commit_and_push(
+            repo.repo_path(),
+            "state(test): master skip push",
+            &[Path::new("docs/state.json")],
+        );
+        env::remove_var("ORCHESTRATOR_SKIP_PUSH");
+
+        let sha = result.expect("master branch should still succeed");
+        assert_eq!(sha.len(), 7);
     }
 }
