@@ -4601,7 +4601,7 @@ fn lookup_previous_concrete_behavior(
         }
     }
 
-    dated_files.sort_by(|a, b| a.0.cmp(&b.0));
+    dated_files.sort_by_key(|a| a.0);
     for (_, path) in dated_files.into_iter().rev() {
         let content = fs::read_to_string(&path)
             .map_err(|error| format!("failed to read {}: {}", path.display(), error))?;

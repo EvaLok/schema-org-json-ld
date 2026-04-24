@@ -1168,7 +1168,7 @@ fn matches_placeholder_token(value: &str) -> bool {
     )
 }
 
-fn first_entry_paragraph<'a>(body: &'a str, start_line: usize) -> Option<(usize, &'a str)> {
+fn first_entry_paragraph(body: &str, start_line: usize) -> Option<(usize, &str)> {
     for (offset, line) in body.lines().enumerate() {
         let trimmed = line.trim();
         if trimmed.is_empty() || trimmed.starts_with("Worklog:") || heading_level(trimmed).is_some()
