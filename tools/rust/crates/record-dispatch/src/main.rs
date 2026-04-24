@@ -203,7 +203,7 @@ fn run_with_runner(
         })
         .transpose()?;
     let mut paths_to_commit: Vec<&Path> = vec![Path::new("docs/state.json")];
-    if let Some(path) = relative_worklog_path.as_deref() {
+    if let Some(path) = relative_worklog_path {
         paths_to_commit.push(path);
     }
     let receipt = commit_and_push(&cli.repo_root, &commit_message, &paths_to_commit)?;
