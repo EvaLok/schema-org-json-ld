@@ -9995,9 +9995,9 @@
     {
       "dispatched_at": "2026-04-24T06:21:40Z",
       "issue": 2688,
-      "merged_at": "2026-04-24T10:02:33Z",
+      "merged_at": "2026-04-24T10:06:43Z",
       "model": "gpt-5.4",
-      "pr": 2685,
+      "pr": 2689,
       "status": "merged",
       "title": "[Cycle Review] Cycle 535 end-of-cycle review"
     }
