@@ -1014,12 +1014,11 @@ fn count_top_level_array_items(content: &str, open_index: usize) -> Option<(i64,
                 brace_depth -= 1;
                 has_token = true;
             }
-            ',' if square_depth == 0 && paren_depth == 0 && brace_depth == 0 => {
-                if has_token {
-                    count += 1;
-                    has_token = false;
-                }
+            ',' if square_depth == 0 && paren_depth == 0 && brace_depth == 0 && has_token => {
+                count += 1;
+                has_token = false;
             }
+            ',' if square_depth == 0 && paren_depth == 0 && brace_depth == 0 => {}
             _ if !ch.is_whitespace() => {
                 has_token = true;
             }
