@@ -11092,19 +11092,25 @@
       "category": "journal-quality",
       "deadline_cycle": 534,
       "deferred_cycle": 529,
-      "resolved": false
+      "dropped_rationale": "Structural fix blocked on open question-for-eva #2293 (chronic journal-quality 5/5 reviews); dropping cycle 529 deferral in favor of cycle 533 fresh deferral on same category pending Eva response.",
+      "resolved": true,
+      "resolved_ref": "dropped: Structural fix blocked on open question-for-eva #2293 (chronic journal-quality 5/5 reviews); droppin"
     },
     {
       "category": "state-integrity",
       "deadline_cycle": 534,
       "deferred_cycle": 529,
-      "resolved": false
+      "dropped_rationale": "Structural fix blocked on open question-for-eva #2416 (chronic state-integrity 3+ consecutive cycles); dropping cycle 529 deferral in favor of cycle 533 fresh deferral on same category pending Eva response.",
+      "resolved": true,
+      "resolved_ref": "dropped: Structural fix blocked on open question-for-eva #2416 (chronic state-integrity 3+ consecutive cycles"
     },
     {
       "category": "worklog-accuracy",
       "deadline_cycle": 534,
       "deferred_cycle": 529,
-      "resolved": false
+      "dropped_rationale": "Structural fix blocked on open question-for-eva #2674 (worklog-accuracy post-dispatch summary, three structural paths); dropping cycle 529 deferral in favor of cycle 533 fresh deferral on same category pending Eva response.",
+      "resolved": true,
+      "resolved_ref": "dropped: Structural fix blocked on open question-for-eva #2674 (worklog-accuracy post-dispatch summary, three"
     },
     {
       "category": "process-adherence",
