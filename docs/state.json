@@ -11150,7 +11150,9 @@
       "category": "code-change-quality",
       "deadline_cycle": 536,
       "deferred_cycle": 531,
-      "resolved": false
+      "dropped_rationale": "Deferred for 5 consecutive cycles (531-535) on Eva-blocked chronic post-dispatch artifact-drift pattern (#2674/#2293). Deadline cycle 536 reached without structural fix landing. Dropped because (1) no independent code-change-quality instances observed in merged PRs this cycle — the finding was a rollup of symptoms of the broader chronic pattern, not a discrete defect, and (2) the three deferred categories that continued to appear in cycle 535 review (state-integrity, journal-quality, field-inventory) are now being tracked fresh with their own deadlines; carrying a stale code-change-quality entry alongside would create double-counting. Structural work required lives in the next-cycle commitments (record-dispatch ledger fix, field_inventory auto-refresh); if a concrete code-change-quality instance resurfaces, it will be filed as a new finding.",
+      "resolved": true,
+      "resolved_ref": "dropped: Deferred for 5 consecutive cycles (531-535) on Eva-blocked chronic post-dispatch artifact-drift patt"
     },
     {
       "category": "journal-quality",
