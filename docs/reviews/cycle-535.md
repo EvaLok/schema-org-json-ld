@@ -1,0 +1,23 @@
+# Cycle 535 Review
+
+## 1. [state-integrity] Two claimed cycle-535 dispatches never reached the canonical ledger
+
+**File**: docs/worklog/2026-04-24/061150-cycle-535-pr-2681-cycle-534-review-artifact-merged-audit-437-accepted-dispatched-clippy-cleanup-dispatched.md:5-6,25-31,51-54; docs/state.json:9995-10000,11429-11435
+**Evidence**: Step 9 on issue [#2682](https://github.com/EvaLok/schema-org-json-ld/issues/2682) says `Two dispatches made this cycle` for issues [#2684](https://github.com/EvaLok/schema-org-json-ld/issues/2684) and [#2686](https://github.com/EvaLok/schema-org-json-ld/issues/2686). The worklog repeats those dispatch claims, but both the `state(cycle-complete)` snapshot and the committed docs snapshot still had `in_flight_sessions: 0`, `last_cycle.summary: "0 dispatches, 1 merges (PR #2681)"`, and no `agent_sessions` entry for either issue. The current committed state only records the later review dispatch `#2688`. `git log --grep 'state(record-dispatch): #2684\\|state(record-dispatch): #2686' --all` returns no matching receipt commits. Cycle 535 therefore claimed two agent-task dispatches that never entered the state ledger it tells reviewers to trust.
+**Recommendation**: Do not describe agent-task issues as dispatched until `record-dispatch` (or a replacement tool) has written the matching `agent_sessions` entries and updated `last_cycle`. If the workflow intentionally separates issue creation from dispatch recording, label the earlier action as issue filing rather than dispatch.
+
+## 2. [journal-quality] The journal repeats the same conditional-commitment misgrading the cycle had just deferred
+
+**File**: docs/journal/2026-04-24.md:86-91; docs/worklog/2026-04-24/061150-cycle-535-pr-2681-cycle-534-review-artifact-merged-audit-437-accepted-dispatched-clippy-cleanup-dispatched.md:6
+**Evidence**: Step 0.6 on issue [#2682](https://github.com/EvaLok/schema-org-json-ld/issues/2682) says the Eva-gated commitment was conditional and required **no action** because Eva had not responded, and says the clippy-cleanup commitment would only become actioned later in Step 9 if capacity allowed. The committed journal nevertheless marks both commitments `Met`. That directly repeats the category cycle 535 had just consumed from cycle 534 (`Same commitment graded both 'deferred' and 'Met'`). It is also premature against the journal's own observable for the clippy bundle: the observable required a PR plus green workspace `cargo clippy`, while the worklog says that at the C3 pre-freeze snapshot neither `#2684` nor `#2686` had opened a PR yet.
+**Recommendation**: Grade commitments against the branch and observable that actually happened. Conditional `if Eva responds ... dispatch` commitments should be carried/not-triggered when the condition is false, and delivery commitments should remain in-progress until the cited PR and verification steps exist.
+
+## 3. [field-inventory] Cycle 535 closed with 23 stale freshness markers still outstanding
+
+**File**: docs/state.json:11242-11425
+**Evidence**: The cycle's own C5.5 pipeline comment on issue [#2682](https://github.com/EvaLok/schema-org-json-ld/issues/2682) reports a `field-inventory` warning for 23 stale entries, explicitly naming fields whose `last_refreshed` markers were too old for their cadences. The committed `field_inventory` block still shows those stale values, including `audit_dropped`/`blockers` at cycle 511, `phpstan_level` at cycle 508, `project_mode` at cycle 498, `test_count` and `typescript_stats` at cycle 495, plus multiple `schema_status.*` and total-count fields still parked at cycle 508 or 511. `bash tools/metric-snapshot` passes, but the freshness inventory the cycle is supposed to maintain was knowingly stale at close-out.
+**Recommendation**: Treat field-inventory freshness as real state debt. Refresh every field that was actually checked in cycle 535, or tighten the close-out tooling so a cycle cannot leave dozens of overdue `last_refreshed` markers in place while still presenting the state inventory as adequately maintained.
+
+## Complacency score
+
+**2/5** — The cycle did keep a strong step-comment trail (28 unique step comments on issue #2682) and its receipt table through `cycle-complete` was structurally correct once the full history was fetched. But the cycle still repeated the exact artifact-drift category it had just reviewed: two claimed dispatches never entered `agent_sessions`, the journal again graded conditional commitments as `Met`, and the close-out knowingly carried 23 stale field-inventory markers. Step 0 also continued after a failed `pipeline-check`, so the score is capped at 3/5 by the review mandate; on the merits, the repeated narrative/state drift keeps this cycle at 2/5 rather than 3/5.
