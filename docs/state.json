@@ -10000,6 +10000,14 @@
       "pr": 2689,
       "status": "merged",
       "title": "[Cycle Review] Cycle 535 end-of-cycle review"
+    },
+    {
+      "backfilled": true,
+      "issue": 2686,
+      "merged_at": "2026-04-24T10:08:46Z",
+      "pr": 2687,
+      "status": "merged",
+      "title": "Backfilled: PR #2687"
     }
   ],
   "audit_dropped": [
@@ -11444,7 +11452,7 @@
     "duration_minutes": 17,
     "issue": 2690,
     "number": 536,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-24T09:43:36Z"
   },
   "last_eva_comment_check": "2026-04-24T09:43:36Z",
