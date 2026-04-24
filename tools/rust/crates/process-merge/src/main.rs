@@ -215,8 +215,6 @@ fn update_agent_sessions(
         let matching_indexes = find_matching_agent_session_indexes(sessions, *pr, issue);
         let matched_index = if !matching_indexes.is_empty() {
             collapse_agent_session_duplicates(sessions, &matching_indexes)?
-        } else if let Some(fallback_index) = find_single_unlinked_in_flight_session(sessions) {
-            fallback_index
         } else {
             usize::MAX
         };
@@ -291,39 +289,6 @@ fn find_matching_agent_session_indexes(
                 .collect()
         })
         .unwrap_or_default()
-}
-
-fn find_single_unlinked_in_flight_session(sessions: &[Value]) -> Option<usize> {
-    let live_session_indexes = sessions
-        .iter()
-        .enumerate()
-        .filter_map(|(index, session)| {
-            session
-                .get("status")
-                .and_then(Value::as_str)
-                .filter(|status| matches!(*status, "in_flight" | "dispatched"))
-                .map(|_| index)
-        })
-        .collect::<Vec<_>>();
-    if live_session_indexes.len() != 1 {
-        return None;
-    }
-
-    let candidates = sessions
-        .iter()
-        .enumerate()
-        .filter_map(|(index, session)| {
-            let status = session.get("status").and_then(Value::as_str)?;
-            let is_live = matches!(status, "in_flight" | "dispatched");
-            let has_pr = session.get("pr").is_some_and(|value| !value.is_null());
-            let is_backfilled = session
-                .get("backfilled")
-                .and_then(Value::as_bool)
-                .unwrap_or(false);
-            (is_live && !has_pr && !is_backfilled).then_some(index)
-        })
-        .collect::<Vec<_>>();
-    (candidates.len() == 1).then_some(candidates[0])
 }
 
 fn collapse_agent_session_duplicates(
@@ -1024,7 +989,7 @@ mod tests {
     }
 
     #[test]
-    fn update_agent_sessions_reuses_existing_in_flight_row_when_issue_mapping_is_wrong() {
+    fn update_agent_sessions_backfills_without_hijacking_unrelated_in_flight_row() {
         let model = default_test_model();
         let mut state = json!({
             "agent_sessions": [
@@ -1039,16 +1004,25 @@ mod tests {
         });
 
         update_agent_sessions(&mut state, &[2299], &[2300], "2026-04-08T09:00:00Z")
-            .expect("wrong issue mapping should still update the existing session");
+            .expect("wrong issue mapping should backfill a new session");
 
         let sessions = state["agent_sessions"]
             .as_array()
             .expect("agent_sessions array");
-        assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions.len(), 2);
         assert_eq!(sessions[0]["issue"], json!(2298));
-        assert_eq!(sessions[0]["pr"], json!(2299));
-        assert_eq!(sessions[0]["status"], json!("merged"));
-        assert_eq!(sessions[0]["merged_at"], json!("2026-04-08T09:00:00Z"));
+        assert_eq!(sessions[0].get("pr"), None);
+        assert_eq!(sessions[0]["status"], json!("in_flight"));
+
+        let backfilled = sessions[1].as_object().expect("backfilled session object");
+        assert_eq!(backfilled.get("issue"), Some(&json!(2300)));
+        assert_eq!(backfilled.get("pr"), Some(&json!(2299)));
+        assert_eq!(backfilled.get("status"), Some(&json!("merged")));
+        assert_eq!(
+            backfilled.get("merged_at"),
+            Some(&json!("2026-04-08T09:00:00Z"))
+        );
+        assert_eq!(backfilled.get("backfilled"), Some(&json!(true)));
     }
 
     #[test]
