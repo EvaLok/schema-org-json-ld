@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
-      CLAUDE_CODE_EFFORT_LEVEL: high
+      CLAUDE_CODE_EFFORT_LEVEL: max
     permissions:
       contents: write
       issues: write
