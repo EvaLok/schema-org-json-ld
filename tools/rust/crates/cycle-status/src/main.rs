@@ -2,7 +2,7 @@ use chrono::{DateTime, TimeDelta, Utc};
 use clap::Parser;
 use serde::Serialize;
 use serde_json::Value;
-use state_schema::{current_cycle_from_state, PublishGate, StateJson};
+use state_schema::{current_cycle_from_state, AuditProcessedEntry, PublishGate, StateJson};
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -280,13 +280,6 @@ fn read_state_json(path: &Path, errors: &mut Vec<String>) -> StateJson {
             if state.qc_processed.iter().any(|value| *value < 0) {
                 errors.push(format!(
                     "Failed to parse {}: qc_processed must contain only non-negative integers",
-                    path.display()
-                ));
-                return StateJson::default();
-            }
-            if state.audit_processed.iter().any(|value| *value < 0) {
-                errors.push(format!(
-                    "Failed to parse {}: audit_processed must contain only non-negative integers",
                     path.display()
                 ));
                 return StateJson::default();
@@ -817,7 +810,7 @@ fn check_commit_freeze(
 }
 
 fn gather_qc_status(state: &StateJson, errors: &mut Vec<String>) -> ProcessingStatus {
-    let processed_set = to_set(&state.qc_processed);
+    let processed_set = to_numeric_set(&state.qc_processed);
     gather_processing_status(
         errors,
         "QC outbound query failed",
@@ -843,7 +836,7 @@ fn gather_qc_status(state: &StateJson, errors: &mut Vec<String>) -> ProcessingSt
 }
 
 fn gather_audit_status(state: &StateJson, errors: &mut Vec<String>) -> ProcessingStatus {
-    let processed_set = to_set(&state.audit_processed);
+    let processed_set = to_audit_set(&state.audit_processed);
     gather_processing_status(
         errors,
         "Audit outbound query failed",
@@ -1261,11 +1254,15 @@ fn print_human_report(report: &Report) {
     }
 }
 
-fn to_set(values: &[i64]) -> HashSet<u64> {
+fn to_numeric_set(values: &[i64]) -> HashSet<u64> {
     values
         .iter()
         .filter_map(|value| u64::try_from(*value).ok())
         .collect()
+}
+
+fn to_audit_set(values: &[AuditProcessedEntry]) -> HashSet<u64> {
+    values.iter().map(AuditProcessedEntry::audit_issue).collect()
 }
 
 fn to_simple_issue(value: &Value) -> Option<SimpleIssue> {

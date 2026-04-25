@@ -2,7 +2,8 @@ use clap::{Args, Parser, Subcommand};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use state_schema::{
-    check_version, current_cycle_from_state, read_state_value, PublishGate, StateJson,
+    check_version, current_cycle_from_state, read_state_value, AuditProcessedEntry, PublishGate,
+    StateJson,
 };
 use std::collections::HashSet;
 use std::fs::{self, OpenOptions};
@@ -287,7 +288,8 @@ fn process_qc(
     runner: &dyn CommandRunner,
 ) -> Result<ProcessQcReport, String> {
     let issues = fetch_open_outbound_issues(repo_root, runner, QC_REPO, "qc-outbound")?;
-    let reports = filter_new_issues(&issues.trusted, &state.qc_processed, "qc_processed")?;
+    let processed_set = build_numeric_processed_set(&state.qc_processed, "qc_processed")?;
+    let reports = filter_new_issues(&issues.trusted, &processed_set)?;
     Ok(ProcessQcReport {
         summary: ProcessingSummary {
             new_count: reports.len(),
@@ -367,11 +369,8 @@ fn process_audit(
     let recommendations =
         fetch_open_outbound_issues(repo_root, runner, AUDIT_REPO, "audit-outbound")?;
     let inbound_issues = fetch_open_audit_inbound_issues(repo_root, runner)?;
-    let new_recommendations = filter_new_issues(
-        &recommendations.trusted,
-        &state.audit_processed,
-        "audit_processed",
-    )?;
+    let processed_set = build_audit_processed_set(&state.audit_processed)?;
+    let new_recommendations = filter_new_issues(&recommendations.trusted, &processed_set)?;
     let stale_accepted = detect_stale_accepted(
         &state.audit_processed,
         &inbound_issues.trusted,
@@ -673,10 +672,8 @@ fn parse_audit_inbound_issues(value: Value) -> Result<ParsedIssues<AuditInboundI
 
 fn filter_new_issues(
     issues: &[SourceIssue],
-    processed: &[i64],
-    field_name: &str,
+    processed_set: &HashSet<u64>,
 ) -> Result<Vec<PendingIssue>, String> {
-    let processed_set = build_processed_set(processed, field_name)?;
     Ok(issues
         .iter()
         .filter(|issue| !processed_set.contains(&issue.number))
@@ -690,11 +687,11 @@ fn filter_new_issues(
 }
 
 fn detect_stale_accepted(
-    processed: &[i64],
+    processed: &[AuditProcessedEntry],
     inbound_issues: &[AuditInboundIssue],
     current_cycle: u64,
 ) -> Result<Vec<StaleAcceptedRecommendation>, String> {
-    let processed_set = build_processed_set(processed, "audit_processed")?;
+    let processed_set = build_audit_processed_set(processed)?;
     let mut stale = Vec::new();
 
     for issue in inbound_issues {
@@ -964,7 +961,7 @@ fn contains_word(text: &str, needle: &str) -> bool {
         .any(|word| word == needle)
 }
 
-fn build_processed_set(values: &[i64], field_name: &str) -> Result<HashSet<u64>, String> {
+fn build_numeric_processed_set(values: &[i64], field_name: &str) -> Result<HashSet<u64>, String> {
     values
         .iter()
         .map(|number| {
@@ -972,6 +969,10 @@ fn build_processed_set(values: &[i64], field_name: &str) -> Result<HashSet<u64>,
                 .map_err(|_| format!("{} contains invalid value {}", field_name, number))
         })
         .collect()
+}
+
+fn build_audit_processed_set(values: &[AuditProcessedEntry]) -> Result<HashSet<u64>, String> {
+    Ok(values.iter().map(AuditProcessedEntry::audit_issue).collect())
 }
 
 fn build_pending_request_set(values: &[Value]) -> Result<HashSet<u64>, String> {

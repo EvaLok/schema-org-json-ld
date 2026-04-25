@@ -2,7 +2,9 @@ use chrono::{DateTime, Utc};
 use clap::Parser;
 use serde::Serialize;
 use serde_json::Value;
-use state_schema::{check_version, current_cycle_from_state, read_state_value, StateJson};
+use state_schema::{
+    check_version, current_cycle_from_state, read_state_value, AuditProcessedEntry, StateJson,
+};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -243,7 +245,7 @@ fn parse_inbound_issues(value: Value) -> Result<Vec<AuditInboundIssue>, String> 
 
 fn filter_new_recommendations(
     recommendations: &[AuditRecommendation],
-    processed: &[i64],
+    processed: &[AuditProcessedEntry],
 ) -> Result<Vec<NewRecommendation>, String> {
     let processed_set = build_processed_set(processed)?;
     Ok(recommendations
@@ -260,7 +262,7 @@ fn filter_new_recommendations(
 }
 
 fn detect_stale_accepted(
-    processed: &[i64],
+    processed: &[AuditProcessedEntry],
     inbound_issues: &[AuditInboundIssue],
     current_cycle: u64,
 ) -> Result<Vec<StaleAcceptedRecommendation>, String> {
@@ -310,14 +312,8 @@ fn detect_stale_accepted(
     Ok(stale)
 }
 
-fn build_processed_set(processed: &[i64]) -> Result<HashSet<u64>, String> {
-    processed
-        .iter()
-        .map(|number| {
-            u64::try_from(*number)
-                .map_err(|_| format!("audit_processed contains invalid value {}", number))
-        })
-        .collect()
+fn build_processed_set(processed: &[AuditProcessedEntry]) -> Result<HashSet<u64>, String> {
+    Ok(processed.iter().map(AuditProcessedEntry::audit_issue).collect())
 }
 
 fn extract_accepted_audit_references(issue: &AuditInboundIssue) -> Vec<AcceptedAuditReference> {

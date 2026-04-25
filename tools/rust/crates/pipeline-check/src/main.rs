@@ -7209,40 +7209,42 @@ mod tests {
         assert_eq!(report.steps[7].status, StepStatus::Pass);
         assert_eq!(report.steps[8].name, "audit-inbound-lifecycle");
         assert_eq!(report.steps[8].status, StepStatus::Pass);
-        assert_eq!(report.steps[9].name, "agent-sessions-lifecycle");
+        assert_eq!(report.steps[9].name, ACCEPTED_AUDIT_ADOPTION_STEP_NAME);
         assert_eq!(report.steps[9].status, StepStatus::Pass);
-        assert_eq!(report.steps[10].name, "deferral-accumulation");
+        assert_eq!(report.steps[10].name, "agent-sessions-lifecycle");
         assert_eq!(report.steps[10].status, StepStatus::Pass);
-        assert_eq!(report.steps[11].name, "deferral-deadlines");
+        assert_eq!(report.steps[11].name, "deferral-accumulation");
         assert_eq!(report.steps[11].status, StepStatus::Pass);
-        assert_eq!(report.steps[12].name, "mass-deferral-gate");
+        assert_eq!(report.steps[12].name, "deferral-deadlines");
         assert_eq!(report.steps[12].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].name, "dispatch-finding-reconciliation");
+        assert_eq!(report.steps[13].name, "mass-deferral-gate");
         assert_eq!(report.steps[13].status, StepStatus::Pass);
+        assert_eq!(report.steps[14].name, "dispatch-finding-reconciliation");
+        assert_eq!(report.steps[14].status, StepStatus::Pass);
         assert_eq!(
-            report.steps[14].name,
+            report.steps[15].name,
             DEFERRED_RESOLUTION_MERGE_GATE_STEP_NAME
         );
-        assert_eq!(report.steps[14].status, StepStatus::Pass);
-        assert_eq!(report.steps[15].name, "doc-validation");
         assert_eq!(report.steps[15].status, StepStatus::Pass);
-        assert_eq!(report.steps[16].name, "frozen-commit-verify");
-        assert_eq!(report.steps[16].status, StepStatus::Skip);
-        assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
-        assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].name, "worklog-dedup");
+        assert_eq!(report.steps[16].name, "doc-validation");
+        assert_eq!(report.steps[16].status, StepStatus::Pass);
+        assert_eq!(report.steps[17].name, "frozen-commit-verify");
+        assert_eq!(report.steps[17].status, StepStatus::Skip);
+        assert_eq!(report.steps[18].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[18].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].name, "worklog-immutability");
+        assert_eq!(report.steps[19].name, "worklog-dedup");
         assert_eq!(report.steps[19].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].severity, Severity::Blocking);
-        assert_eq!(report.steps[20].name, "frozen-worklog-immutability");
+        assert_eq!(report.steps[20].name, "worklog-immutability");
         assert_eq!(report.steps[20].status, StepStatus::Pass);
-        assert_eq!(report.steps[21].name, "pr-base-currency");
+        assert_eq!(report.steps[20].severity, Severity::Blocking);
+        assert_eq!(report.steps[21].name, "frozen-worklog-immutability");
         assert_eq!(report.steps[21].status, StepStatus::Pass);
-        assert_eq!(report.steps[22].name, "step-comments");
+        assert_eq!(report.steps[22].name, "pr-base-currency");
         assert_eq!(report.steps[22].status, StepStatus::Pass);
-        assert_eq!(report.steps[23].name, "current-cycle-steps");
+        assert_eq!(report.steps[23].name, "step-comments");
         assert_eq!(report.steps[23].status, StepStatus::Pass);
+        assert_eq!(report.steps[24].name, "current-cycle-steps");
+        assert_eq!(report.steps[24].status, StepStatus::Pass);
         let current_cycle_journal_section = report
             .steps
             .iter()
@@ -7919,22 +7921,22 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &CascadeRunner);
-        assert_eq!(report.steps[15].name, "doc-validation");
-        assert_eq!(report.steps[15].status, StepStatus::Cascade);
-        assert_eq!(report.steps[16].name, "frozen-commit-verify");
-        assert_eq!(report.steps[16].status, StepStatus::Skip);
-        assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
-        assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].name, "worklog-dedup");
+        assert_eq!(report.steps[16].name, "doc-validation");
+        assert_eq!(report.steps[16].status, StepStatus::Cascade);
+        assert_eq!(report.steps[17].name, "frozen-commit-verify");
+        assert_eq!(report.steps[17].status, StepStatus::Skip);
+        assert_eq!(report.steps[18].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[18].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].name, "worklog-immutability");
+        assert_eq!(report.steps[19].name, "worklog-dedup");
         assert_eq!(report.steps[19].status, StepStatus::Pass);
-        assert_eq!(report.steps[20].name, "frozen-worklog-immutability");
+        assert_eq!(report.steps[20].name, "worklog-immutability");
         assert_eq!(report.steps[20].status, StepStatus::Pass);
-        assert_eq!(report.steps[21].name, "pr-base-currency");
+        assert_eq!(report.steps[21].name, "frozen-worklog-immutability");
         assert_eq!(report.steps[21].status, StepStatus::Pass);
-        assert_eq!(report.steps[22].name, "step-comments");
-        assert_eq!(report.steps[22].status, StepStatus::Fail);
+        assert_eq!(report.steps[22].name, "pr-base-currency");
+        assert_eq!(report.steps[22].status, StepStatus::Pass);
+        assert_eq!(report.steps[23].name, "step-comments");
+        assert_eq!(report.steps[23].status, StepStatus::Fail);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -8074,18 +8076,18 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &CompleteRunner);
-        assert_eq!(report.steps[16].name, "frozen-commit-verify");
-        assert_eq!(report.steps[16].status, StepStatus::Pass);
-        assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
+        assert_eq!(report.steps[17].name, "frozen-commit-verify");
         assert_eq!(report.steps[17].status, StepStatus::Pass);
+        assert_eq!(report.steps[18].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
+        assert_eq!(report.steps[18].status, StepStatus::Pass);
         let current_cycle_journal_section = report
             .steps
             .iter()
             .find(|step| step.name == CURRENT_CYCLE_JOURNAL_SECTION_STEP_NAME)
             .expect("current-cycle-journal-section should be present");
         assert_eq!(current_cycle_journal_section.status, StepStatus::Pass);
-        assert_eq!(report.steps[22].name, "step-comments");
-        assert_eq!(report.steps[22].status, StepStatus::Fail);
+        assert_eq!(report.steps[23].name, "step-comments");
+        assert_eq!(report.steps[23].status, StepStatus::Fail);
         assert_eq!(report.overall, StepStatus::Fail);
     }
 
@@ -8220,22 +8222,22 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &MultiCauseCascadeRunner);
-        assert_eq!(report.steps[15].name, "doc-validation");
-        assert_eq!(report.steps[15].status, StepStatus::Cascade);
-        assert_eq!(report.steps[16].name, "frozen-commit-verify");
-        assert_eq!(report.steps[16].status, StepStatus::Skip);
-        assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
-        assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].name, "worklog-dedup");
+        assert_eq!(report.steps[16].name, "doc-validation");
+        assert_eq!(report.steps[16].status, StepStatus::Cascade);
+        assert_eq!(report.steps[17].name, "frozen-commit-verify");
+        assert_eq!(report.steps[17].status, StepStatus::Skip);
+        assert_eq!(report.steps[18].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[18].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].name, "worklog-immutability");
+        assert_eq!(report.steps[19].name, "worklog-dedup");
         assert_eq!(report.steps[19].status, StepStatus::Pass);
-        assert_eq!(report.steps[20].name, "frozen-worklog-immutability");
+        assert_eq!(report.steps[20].name, "worklog-immutability");
         assert_eq!(report.steps[20].status, StepStatus::Pass);
-        assert_eq!(report.steps[21].name, "pr-base-currency");
+        assert_eq!(report.steps[21].name, "frozen-worklog-immutability");
         assert_eq!(report.steps[21].status, StepStatus::Pass);
-        assert_eq!(report.steps[22].name, "step-comments");
-        assert_eq!(report.steps[22].status, StepStatus::Fail);
+        assert_eq!(report.steps[22].name, "pr-base-currency");
+        assert_eq!(report.steps[22].status, StepStatus::Pass);
+        assert_eq!(report.steps[23].name, "step-comments");
+        assert_eq!(report.steps[23].status, StepStatus::Fail);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -8374,10 +8376,10 @@ mod tests {
         }
 
         let report = run_pipeline(&root, OVERRIDE_CYCLE, &OverrideRunner);
-        assert_eq!(report.steps[22].name, "step-comments");
-        assert_eq!(report.steps[22].status, StepStatus::Warn);
-        assert_eq!(report.steps[22].severity, Severity::Warning);
-        assert!(report.steps[22]
+        assert_eq!(report.steps[23].name, "step-comments");
+        assert_eq!(report.steps[23].status, StepStatus::Warn);
+        assert_eq!(report.steps[23].severity, Severity::Warning);
+        assert!(report.steps[23]
             .detail
             .as_deref()
             .unwrap_or_default()
@@ -8521,18 +8523,18 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &IndependentFailureRunner);
-        assert_eq!(report.steps[15].name, "doc-validation");
-        assert_eq!(report.steps[15].status, StepStatus::Fail);
-        assert_eq!(report.steps[16].name, "frozen-commit-verify");
-        assert_eq!(report.steps[16].status, StepStatus::Skip);
-        assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
-        assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].name, "worklog-dedup");
+        assert_eq!(report.steps[16].name, "doc-validation");
+        assert_eq!(report.steps[16].status, StepStatus::Fail);
+        assert_eq!(report.steps[17].name, "frozen-commit-verify");
+        assert_eq!(report.steps[17].status, StepStatus::Skip);
+        assert_eq!(report.steps[18].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[18].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].name, "worklog-immutability");
+        assert_eq!(report.steps[19].name, "worklog-dedup");
         assert_eq!(report.steps[19].status, StepStatus::Pass);
+        assert_eq!(report.steps[20].name, "worklog-immutability");
+        assert_eq!(report.steps[20].status, StepStatus::Pass);
         // Previous-cycle backstop is downgraded to Warn
-        assert_eq!(report.steps[22].status, StepStatus::Warn);
+        assert_eq!(report.steps[23].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }

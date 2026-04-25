@@ -873,8 +873,10 @@ mod tests {
         commit_and_push, commit_state_json, current_cycle_from_state, current_utc_timestamp,
         default_agent_model, orchestrator_model, read_state_value, set_c5_5_gate,
         set_value_at_pointer, transition_cycle_phase, update_freshness, write_state_value,
-        AgentSession, DeferredFinding, FindingDisposition, PendingAuditImplementation,
-        ReviewHistoryEntry, StateJson, ToolsConfig, DEFAULT_ORCHESTRATOR_MODEL, VALID_PHASES,
+        AcceptedAuditRecommendation, AdoptionArtifactReference, AgentSession, AuditDisposition,
+        AuditProcessedEntry, DeferredFinding, FindingDisposition, PendingAuditImplementation,
+        ProcessedAudit, ReviewHistoryEntry, StateJson, ToolsConfig,
+        DEFAULT_ORCHESTRATOR_MODEL, VALID_PHASES,
     };
     use chrono::DateTime;
     use serde_json::{json, Value};
