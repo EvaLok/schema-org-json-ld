@@ -584,7 +584,7 @@ fn refresh_verified_field(state: &mut Value, field_name: &str, cycle: u32) -> Re
     );
     let Some(current_entry) = state.pointer(&field_pointer) else {
         eprintln!(
-            "Warning: skipping ledger refresh for missing field_inventory entry: {}",
+            "Warning: skipping ledger refresh for missing field_inventory entry: {} (freshness marker was not updated; add the inventory entry if this metric should participate in ledger refreshes)",
             field_name
         );
         return Ok(false);
@@ -612,7 +612,13 @@ fn ledger_commit_blocker(repo_root: &Path) -> Result<Option<String>, String> {
         .arg(repo_root)
         .args(["status", "--porcelain", "--untracked-files=no"])
         .output()
-        .map_err(|error| format!("failed to execute git status: {}", error))?;
+        .map_err(|error| {
+            format!(
+                "failed to inspect git status for {} (is git installed and is this a valid repo?): {}",
+                repo_root.display(),
+                error
+            )
+        })?;
     if !status_output.status.success() {
         let stderr = String::from_utf8_lossy(&status_output.stderr)
             .trim()
@@ -631,7 +637,7 @@ fn ledger_commit_blocker(repo_root: &Path) -> Result<Option<String>, String> {
         .arg(repo_root)
         .args(["symbolic-ref", "--short", "HEAD"])
         .output()
-        .map_err(|error| format!("failed to execute git symbolic-ref --short HEAD: {}", error))?;
+        .map_err(|error| format!("failed to read current branch: {}", error))?;
     if !branch_output.status.success() {
         let stderr = String::from_utf8_lossy(&branch_output.stderr)
             .trim()
