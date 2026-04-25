@@ -11260,7 +11260,9 @@
       "category": "field-inventory",
       "deadline_cycle": 540,
       "deferred_cycle": 535,
-      "resolved": false
+      "dropped_rationale": "Superseded by cycle 540 dispatch #2715 (auto-refresh field_inventory.last_refreshed in metric-snapshot). Cycle 535 entry is obsolete tracking; the structural fix is now in flight as a current-cycle dispatch.",
+      "resolved": true,
+      "resolved_ref": "dropped: Superseded by cycle 540 dispatch #2715 (auto-refresh field_inventory.last_refreshed in metric-snapsh"
     },
     {
       "category": "state-integrity",
