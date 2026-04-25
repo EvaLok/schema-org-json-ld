@@ -12,6 +12,7 @@ const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
 const EVA_LOGIN: &str = "EvaLok";
 const ZERO_TIME: &str = "1970-01-01T00:00:00Z";
 const EXCERPT_LIMIT: usize = 200;
+/// Comma-separated logins added to the default orchestrator author set.
 const ORCHESTRATOR_LOGINS_ENV: &str = "CHECK_EVA_RESPONSES_ORCHESTRATOR_LOGINS";
 const DEFAULT_ORCHESTRATOR_LOGINS: [&str; 3] = ["claude[bot]", "app/claude", "claude-bot"];
 
@@ -336,6 +337,8 @@ fn classify_responses(
         }
         if orchestrator_comment
             .as_ref()
+            // Equal timestamps are treated as already actioned; only strictly newer Eva comments
+            // are surfaced as new responses.
             .is_some_and(|comment| eva_comment.created_at <= comment.created_at)
         {
             continue;
@@ -372,12 +375,32 @@ fn is_closed_issue(issue: &QuestionForEvaIssue) -> bool {
 }
 
 fn excerpt(body: &str) -> String {
-    let normalized = body.split_whitespace().collect::<Vec<_>>().join(" ");
-    truncate_chars(normalized.trim(), EXCERPT_LIMIT)
-}
+    let mut excerpt = String::new();
+    let mut used_chars = 0;
 
-fn truncate_chars(value: &str, max_chars: usize) -> String {
-    value.chars().take(max_chars).collect()
+    for word in body.split_whitespace() {
+        let word_len = word.chars().count();
+        let separator_len = usize::from(!excerpt.is_empty());
+        if used_chars + separator_len >= EXCERPT_LIMIT {
+            break;
+        }
+        if separator_len == 1 {
+            excerpt.push(' ');
+            used_chars += 1;
+        }
+
+        let remaining = EXCERPT_LIMIT - used_chars;
+        if word_len <= remaining {
+            excerpt.push_str(word);
+            used_chars += word_len;
+            continue;
+        }
+
+        excerpt.extend(word.chars().take(remaining));
+        break;
+    }
+
+    excerpt
 }
 
 fn render_human_report(report: &Report) -> String {
