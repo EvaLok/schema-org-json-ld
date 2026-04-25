@@ -10080,6 +10080,14 @@
       "pr": 2713,
       "status": "merged",
       "title": "[Cycle Review] Cycle 539 end-of-cycle review"
+    },
+    {
+      "addresses_finding": "539:2",
+      "dispatched_at": "2026-04-25T21:41:49Z",
+      "issue": 2715,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Auto-refresh field_inventory.last_refreshed in metric-snapshot"
     }
   ],
   "audit_dropped": [
@@ -11283,7 +11291,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2712 [Cycle Review] Cycle 539 end-of-cycle review (cycle 539)",
+  "dispatch_log_latest": "#2715 Auto-refresh field_inventory.last_refreshed in metric-snapshot (cycle 540)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -11554,13 +11562,13 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 2,
     "issue": 2714,
     "number": 540,
-    "summary": "0 dispatches, 3 merges",
-    "timestamp": "2026-04-25T21:19:30Z"
+    "summary": "1 dispatch, 3 merges",
+    "timestamp": "2026-04-25T21:41:49Z"
   },
   "last_eva_comment_check": "2026-04-25T21:19:30Z",
   "last_tool_audit_cycle": 403,
