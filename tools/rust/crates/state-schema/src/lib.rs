@@ -30,7 +30,7 @@ pub struct StateJson {
     pub cycle_issues: Option<Vec<u64>>,
     pub last_eva_comment_check: Option<String>,
     pub dispatch_log_latest: Option<String>,
-    pub audit_processed: Vec<i64>,
+    pub audit_processed: Vec<AuditProcessedEntry>,
     pub test_count: TestCount,
     pub total_schema_types: Option<i64>,
     pub total_sub_types: Option<i64>,
@@ -50,6 +50,81 @@ pub struct StateJson {
     pub step_comment_acknowledged_gaps: Option<Vec<StepCommentGap>>,
     #[serde(flatten)]
     pub extra: BTreeMap<String, Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum AuditProcessedEntry {
+    Legacy(u64),
+    Detailed(ProcessedAudit),
+}
+
+impl Default for AuditProcessedEntry {
+    fn default() -> Self {
+        Self::Legacy(0)
+    }
+}
+
+impl AuditProcessedEntry {
+    pub fn audit_issue(&self) -> u64 {
+        match self {
+            Self::Legacy(issue) => *issue,
+            Self::Detailed(entry) => entry.issue,
+        }
+    }
+
+    pub fn accepted_recommendations(&self) -> &[AcceptedAuditRecommendation] {
+        match self {
+            Self::Legacy(_) => &[],
+            Self::Detailed(entry) => &entry.accepted_recommendations,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default, rename_all = "snake_case")]
+pub struct ProcessedAudit {
+    pub issue: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub processed_cycle: Option<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub accepted_recommendations: Vec<AcceptedAuditRecommendation>,
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, Value>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum AuditDisposition {
+    Accept,
+    Defer,
+    Reject,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default, rename_all = "snake_case")]
+pub struct AcceptedAuditRecommendation {
+    pub summary: String,
+    pub disposition: Option<AuditDisposition>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub category: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub accepted_cycle: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub justification: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub adoption_artifact_reference: Option<AdoptionArtifactReference>,
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum AdoptionArtifactReference {
+    Pr { number: u64, url: String },
+    Commit { sha: String },
+    PipelineCheckStep { name: String },
+    ToolChange { path: String, commit_sha: String },
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
@@ -1787,6 +1862,94 @@ mod tests {
                 completed: false,
                 completed_ref: None,
             }]
+        );
+    }
+
+    #[test]
+    fn audit_processed_legacy_integer_entries_still_deserialize() {
+        let state: StateJson = serde_json::from_value(json!({
+            "audit_processed": [402]
+        }))
+        .expect("state should deserialize");
+
+        assert_eq!(state.audit_processed, vec![AuditProcessedEntry::Legacy(402)]);
+    }
+
+    #[test]
+    fn audit_processed_structured_entries_round_trip_adoption_artifacts() {
+        let state: StateJson = serde_json::from_value(json!({
+            "audit_processed": [{
+                "issue": 420,
+                "processed_cycle": 495,
+                "accepted_recommendations": [
+                    {
+                        "summary": "Ask Eva about adoption-plan requirement",
+                        "category": "chronic-category-tracking",
+                        "disposition": "accept",
+                        "accepted_cycle": 495,
+                        "adoption_artifact_reference": {
+                            "type": "pr",
+                            "number": 2519,
+                            "url": "https://github.com/EvaLok/schema-org-json-ld/issues/2519"
+                        }
+                    },
+                    {
+                        "summary": "File rollback gate follow-up dispatch",
+                        "disposition": "defer",
+                        "justification": "Needs Eva answer first"
+                    }
+                ]
+            }]
+        }))
+        .expect("state should deserialize");
+
+        assert_eq!(
+            state.audit_processed,
+            vec![AuditProcessedEntry::Detailed(ProcessedAudit {
+                issue: 420,
+                processed_cycle: Some(495),
+                accepted_recommendations: vec![
+                    AcceptedAuditRecommendation {
+                        summary: "Ask Eva about adoption-plan requirement".to_string(),
+                        disposition: Some(AuditDisposition::Accept),
+                        category: Some("chronic-category-tracking".to_string()),
+                        accepted_cycle: Some(495),
+                        justification: None,
+                        adoption_artifact_reference: Some(AdoptionArtifactReference::Pr {
+                            number: 2519,
+                            url: "https://github.com/EvaLok/schema-org-json-ld/issues/2519"
+                                .to_string(),
+                        }),
+                        extra: BTreeMap::new(),
+                    },
+                    AcceptedAuditRecommendation {
+                        summary: "File rollback gate follow-up dispatch".to_string(),
+                        disposition: Some(AuditDisposition::Defer),
+                        category: None,
+                        accepted_cycle: None,
+                        justification: Some("Needs Eva answer first".to_string()),
+                        adoption_artifact_reference: None,
+                        extra: BTreeMap::new(),
+                    },
+                ],
+                extra: BTreeMap::new(),
+            })]
+        );
+
+        let round_tripped = serde_json::to_value(&state).expect("state should serialize");
+        let recommendations = round_tripped
+            .get("audit_processed")
+            .and_then(Value::as_array)
+            .and_then(|entries| entries.first())
+            .and_then(|entry| entry.get("accepted_recommendations"))
+            .and_then(Value::as_array)
+            .expect("accepted recommendations should serialize");
+        assert_eq!(
+            recommendations[0]
+                .get("adoption_artifact_reference")
+                .and_then(|value| value.get("type"))
+                .and_then(Value::as_str),
+            Some("pr")
         );
     }
 

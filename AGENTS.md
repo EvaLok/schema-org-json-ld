@@ -378,6 +378,10 @@ When adding significant new properties or sub-types to existing schema classes, 
 
 This keeps documentation in sync with code. See `doc/adr/0005-documentation-as-continuous-maintenance.md`.
 
+## Chronic-category-tracking audit adoption gate
+
+For audits in the `chronic-category-tracking` domain (`#402/#406/#415/#417/#420` chain and successors), record recommendation-level audit dispositions with structured fields in `docs/state.json`: `disposition`, `justification` (required for defer/reject), and `adoption_artifact_reference` (required for accept). `pipeline-check` now enforces `accepted-audit-adoption` during C5.5 close-out and blocks when a chronic accepted recommendation is 3+ cycles old without a valid landed adoption artifact.
+
 ## Common Pitfalls
 
 - **Don't implement `toArray()`**: Schema classes have NO methods. The JsonLdGenerator does all serialization via reflection on public properties. If you add a `toArray()` method, it will break the pattern.
