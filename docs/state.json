@@ -10060,6 +10060,13 @@
       "pr": 2708,
       "status": "merged",
       "title": "[Cycle Review] Cycle 538 end-of-cycle review"
+    },
+    {
+      "dispatched_at": "2026-04-25T09:48:54Z",
+      "issue": 2710,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Eva #2416 Option B] state-invariants check 8 narrow close-out skip"
     }
   ],
   "audit_dropped": [
@@ -11241,7 +11248,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2707 [Cycle Review] Cycle 538 end-of-cycle review (cycle 538)",
+  "dispatch_log_latest": "#2710 [Eva #2416 Option B] state-invariants check 8 narrow close-out skip (cycle 539)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -11512,13 +11519,13 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 19,
     "issue": 2709,
     "number": 539,
-    "summary": "0 dispatches, 2 merges",
-    "timestamp": "2026-04-25T09:26:41Z"
+    "summary": "1 dispatch, 2 merges",
+    "timestamp": "2026-04-25T09:48:54Z"
   },
   "last_eva_comment_check": "2026-04-25T09:26:41Z",
   "last_tool_audit_cycle": 403,
