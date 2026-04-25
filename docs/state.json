@@ -11535,13 +11535,13 @@
       }
     }
   },
-  "in_flight_sessions": 3,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 2,
     "issue": 2709,
     "number": 539,
-    "summary": "2 dispatches, 2 merges (PR #2704, PR #2708)",
-    "timestamp": "2026-04-25T10:18:06Z"
+    "summary": "1 dispatches, 2 merges (PR #2704, PR #2708)",
+    "timestamp": "2026-04-25T09:50:40Z"
   },
   "last_eva_comment_check": "2026-04-25T09:50:40Z",
   "last_tool_audit_cycle": 403,
@@ -19480,13 +19480,12 @@
         ],
         "complacency_score": 2,
         "cycle": 535,
-        "deferred": 2,
-        "dispatch_created": 1,
+        "deferred": 3,
         "finding_count": 3,
         "finding_dispositions": [
           {
             "category": "state-integrity",
-            "disposition": "dispatch_created"
+            "disposition": "deferred"
           },
           {
             "category": "journal-quality",
@@ -19592,7 +19591,7 @@
     ],
     "last_review_cycle": 538
   },
-  "review_dispatch_consecutive": 0,
+  "review_dispatch_consecutive": 1,
   "review_events_verified_through_cycle": 539,
   "schema_status": {
     "directory_layout": {
