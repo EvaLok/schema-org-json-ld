@@ -533,7 +533,6 @@ fn execute_journal(
         args.context.as_deref(),
         &input,
         &previous_commitment_resolution,
-        previous.as_deref(),
         worklog_link.as_deref(),
         chronic_status.as_deref(),
         &standing_eva_blockers,
@@ -3157,7 +3156,7 @@ fn resolve_journal_input(args: &JournalArgs) -> Result<JournalInput, String> {
             && (args.previous_commitment_status.is_some()
                 || args.previous_commitment_detail.is_some())
         {
-            return Err("cannot combine --previous-commitment-grade with deprecated --previous-commitment-status/--previous-commitment-detail".to_string());
+            return Err("cannot combine --previous-commitment-grade with legacy --previous-commitment-status/--previous-commitment-detail flags".to_string());
         }
         if matches!(
             (
@@ -4606,7 +4605,7 @@ fn legacy_status_to_grade_status(
         LegacyPreviousCommitmentStatus::Dropped => PreviousCommitmentGradeStatus::Dropped,
         LegacyPreviousCommitmentStatus::NoPriorCommitment => {
             unreachable!(
-                "no_prior_commitment should be filtered before grade conversion; this is a logic error"
+                "no_prior_commitment should be filtered before grade conversion; reaching this branch means the legacy validation logic is buggy"
             )
         }
     }
@@ -4620,7 +4619,6 @@ fn render_journal_entry(
     context: Option<&str>,
     input: &JournalInput,
     previous_commitment_resolution: &PreviousCommitmentResolution,
-    previous_commitment: Option<&str>,
     worklog_relative_path: Option<&str>,
     chronic_status: Option<&str>,
     standing_eva_blockers: &[StandingEvaBlocker],
@@ -4646,9 +4644,6 @@ fn render_journal_entry(
     }
     lines.push("### Previous commitment follow-through".to_string());
     lines.push(String::new());
-    // Resolved graded entries now carry the canonical previous commitment quotes,
-    // so rendering no longer needs the raw previous section text directly.
-    let _ = previous_commitment;
     match previous_commitment_resolution {
         PreviousCommitmentResolution::NoPriorCommitment { detail } => {
             lines.push(format!(
@@ -8049,7 +8044,6 @@ mod tests {
             &PreviousCommitmentResolution::NoPriorCommitment {
                 detail: NO_PRIOR_COMMITMENT_DETAIL.to_string(),
             },
-            None,
             Some("../worklog/2026-03-11/123451-cycle-226-summary.md"),
             None,
             &[],
@@ -8111,7 +8105,6 @@ mod tests {
             },
             None,
             None,
-            None,
             &blockers,
         );
 
@@ -8161,7 +8154,6 @@ mod tests {
             &PreviousCommitmentResolution::NoPriorCommitment {
                 detail: NO_PRIOR_COMMITMENT_DETAIL.to_string(),
             },
-            None,
             Some("../worklog/2026-03-11/123451-cycle-226-summary.md"),
             None,
             &[],
@@ -8209,7 +8201,6 @@ mod tests {
             None,
             &input,
             &resolution,
-            Some(previous_commitment),
             None,
             None,
             &[],
