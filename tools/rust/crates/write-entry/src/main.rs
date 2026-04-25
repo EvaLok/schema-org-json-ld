@@ -4544,12 +4544,12 @@ fn resolve_previous_commitment_resolution(
     let mut resolved_by_index = vec![None; previous_items.len()];
     for grade in grades {
         let quote = grade.commitment_quote.trim();
-        let matches = previous_items
+        let matching_indices = previous_items
             .iter()
             .enumerate()
             .filter_map(|(index, item)| item.contains(quote).then_some(index))
             .collect::<Vec<_>>();
-        match matches.as_slice() {
+        match matching_indices.as_slice() {
             [] => {
                 return Err(format!(
                     "previous commitment quote '{}' does not match any carried-forward commitment",
@@ -4605,7 +4605,9 @@ fn legacy_status_to_grade_status(
         LegacyPreviousCommitmentStatus::Deferred => PreviousCommitmentGradeStatus::Deferred,
         LegacyPreviousCommitmentStatus::Dropped => PreviousCommitmentGradeStatus::Dropped,
         LegacyPreviousCommitmentStatus::NoPriorCommitment => {
-            unreachable!("no_prior_commitment does not map to a graded commitment")
+            unreachable!(
+                "no_prior_commitment should be filtered before grade conversion; this is a logic error"
+            )
         }
     }
 }
@@ -4644,6 +4646,8 @@ fn render_journal_entry(
     }
     lines.push("### Previous commitment follow-through".to_string());
     lines.push(String::new());
+    // Resolved graded entries now carry the canonical previous commitment quotes,
+    // so rendering no longer needs the raw previous section text directly.
     let _ = previous_commitment;
     match previous_commitment_resolution {
         PreviousCommitmentResolution::NoPriorCommitment { detail } => {
