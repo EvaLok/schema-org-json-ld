@@ -604,17 +604,59 @@ fn check_last_cycle_summary_receipts(repo_root: &Path, state: &StateJson) -> Che
             )
         }
     };
-    if summary_reports_zero_dispatches(summary) && current_dispatch_log_cycle(state) == Some(cycle)
-    {
-        return fail(
-            "last_cycle_summary_receipts",
-            format!(
-                "last_cycle.summary reports 0 dispatches for cycle {}, but dispatch_log_latest also reports cycle {} activity: {}",
-                cycle,
-                cycle,
-                state.dispatch_log_latest.as_deref().unwrap_or_default()
-            ),
-        );
+    if summary_reports_zero_dispatches(summary) {
+        let dispatch_cycle = current_dispatch_log_cycle(state);
+        let current_cycle = current_state_cycle_number(state);
+        let phase = state.cycle_phase.phase.as_deref();
+        let expected_close_out_transient = matches!(phase, Some("close_out" | "complete"))
+            && dispatch_cycle
+                .zip(current_cycle)
+                .is_some_and(|(dispatch_cycle, current_cycle)| {
+                    dispatch_cycle == current_cycle && cycle.checked_add(1) == Some(current_cycle)
+                });
+
+        if expected_close_out_transient {
+            let current_cycle = current_cycle.expect("close-out transient requires current cycle");
+            return warn(
+                "last_cycle_summary_receipts",
+                format!(
+                    "expected close-out transient: dispatch_log_latest already reports cycle {} activity, but cycle-complete has not yet refreshed last_cycle.summary from cycle {} (phase={})",
+                    current_cycle,
+                    cycle,
+                    phase.unwrap_or("unknown")
+                ),
+            );
+        }
+
+        if dispatch_cycle
+            .zip(current_cycle)
+            .is_some_and(|(dispatch_cycle, current_cycle)| {
+                dispatch_cycle == current_cycle && cycle != current_cycle
+            })
+        {
+            return fail(
+                "last_cycle_summary_receipts",
+                format!(
+                    "last_cycle.summary reports 0 dispatches for cycle {}, but dispatch_log_latest already reports current cycle {} activity while cycle_phase.phase={}: {}",
+                    cycle,
+                    current_cycle.unwrap_or_default(),
+                    phase.unwrap_or("unknown"),
+                    state.dispatch_log_latest.as_deref().unwrap_or_default()
+                ),
+            );
+        }
+
+        if dispatch_cycle == Some(cycle) {
+            return fail(
+                "last_cycle_summary_receipts",
+                format!(
+                    "last_cycle.summary reports 0 dispatches for cycle {}, but dispatch_log_latest also reports cycle {} activity: {}",
+                    cycle,
+                    cycle,
+                    state.dispatch_log_latest.as_deref().unwrap_or_default()
+                ),
+            );
+        }
     }
     if !summary_has_zero_dispatches_and_merges(summary) {
         return pass("last_cycle_summary_receipts");
@@ -2389,6 +2431,106 @@ mod tests {
         assert_eq!(check.status, CheckStatus::Fail);
         let details = check.details.as_deref().unwrap_or_default();
         assert!(details.contains("dispatch_log_latest"));
+        assert!(details.contains("cycle 198"));
+    }
+
+    #[test]
+    fn last_cycle_summary_receipts_warn_for_close_out_transient() {
+        let repo_root = temp_repo_root("summary-close-out-transient");
+        init_git_repo(&repo_root);
+
+        let mut value = minimal_valid_state();
+        value["last_cycle"]["number"] = json!(198);
+        value["last_cycle"]["summary"] = json!("0 dispatches, 1 merges (PR #456)");
+        value["dispatch_log_latest"] =
+            json!("#123 [Cycle Review] Cycle 199 end-of-cycle review (cycle 199)");
+        value["cycle_phase"] = json!({
+            "cycle": 199,
+            "phase": "close_out"
+        });
+
+        let state = state_from_json(value);
+        let check = check_last_cycle_summary_receipts(&repo_root, &state);
+        assert_eq!(check.status, CheckStatus::Warn);
+
+        let details = check.details.as_deref().unwrap_or_default();
+        assert!(details.contains("expected close-out transient"));
+        assert!(details.contains("cycle 199"));
+        assert!(details.contains("cycle 198"));
+    }
+
+    #[test]
+    fn last_cycle_summary_receipts_warn_for_complete_phase_close_out_transient() {
+        let repo_root = temp_repo_root("summary-complete-transient");
+        init_git_repo(&repo_root);
+
+        let mut value = minimal_valid_state();
+        value["last_cycle"]["number"] = json!(198);
+        value["last_cycle"]["summary"] = json!("0 dispatches, 1 merges (PR #456)");
+        value["dispatch_log_latest"] =
+            json!("#123 [Cycle Review] Cycle 199 end-of-cycle review (cycle 199)");
+        value["cycle_phase"] = json!({
+            "cycle": 199,
+            "phase": "complete",
+            "completed_at": "2026-03-09T01:20:00Z"
+        });
+
+        let state = state_from_json(value);
+        let check = check_last_cycle_summary_receipts(&repo_root, &state);
+        assert_eq!(check.status, CheckStatus::Warn);
+
+        let details = check.details.as_deref().unwrap_or_default();
+        assert!(details.contains("expected close-out transient"));
+        assert!(details.contains("phase=complete"));
+    }
+
+    #[test]
+    fn last_cycle_summary_receipts_fail_for_genuine_drift_outside_close_out() {
+        let repo_root = temp_repo_root("summary-work-drift");
+        init_git_repo(&repo_root);
+
+        let mut value = minimal_valid_state();
+        value["last_cycle"]["number"] = json!(197);
+        value["last_cycle"]["summary"] = json!("0 dispatches, 1 merges (PR #456)");
+        value["dispatch_log_latest"] =
+            json!("#123 [Cycle Review] Cycle 199 end-of-cycle review (cycle 199)");
+        value["cycle_phase"] = json!({
+            "cycle": 199,
+            "phase": "work"
+        });
+
+        let state = state_from_json(value);
+        let check = check_last_cycle_summary_receipts(&repo_root, &state);
+        assert_eq!(check.status, CheckStatus::Fail);
+
+        let details = check.details.as_deref().unwrap_or_default();
+        assert!(details.contains("current cycle 199 activity"));
+        assert!(details.contains("phase=work"));
+        assert!(details.contains("cycle 197"));
+    }
+
+    #[test]
+    fn last_cycle_summary_receipts_fail_for_delta_one_outside_close_out() {
+        let repo_root = temp_repo_root("summary-work-delta-one");
+        init_git_repo(&repo_root);
+
+        let mut value = minimal_valid_state();
+        value["last_cycle"]["number"] = json!(198);
+        value["last_cycle"]["summary"] = json!("0 dispatches, 1 merges (PR #456)");
+        value["dispatch_log_latest"] =
+            json!("#123 [Cycle Review] Cycle 199 end-of-cycle review (cycle 199)");
+        value["cycle_phase"] = json!({
+            "cycle": 199,
+            "phase": "work"
+        });
+
+        let state = state_from_json(value);
+        let check = check_last_cycle_summary_receipts(&repo_root, &state);
+        assert_eq!(check.status, CheckStatus::Fail);
+
+        let details = check.details.as_deref().unwrap_or_default();
+        assert!(details.contains("current cycle 199 activity"));
+        assert!(details.contains("phase=work"));
         assert!(details.contains("cycle 198"));
     }
 
