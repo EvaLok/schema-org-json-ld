@@ -10046,8 +10046,10 @@
     {
       "dispatched_at": "2026-04-25T06:03:24Z",
       "issue": 2703,
+      "merged_at": "2026-04-25T09:46:00Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2704,
+      "status": "merged",
       "title": "[Eva #2293 Option B] Per-commitment status fields in write-entry / JournalInput"
     },
     {
@@ -11360,7 +11362,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 538"
+        "last_refreshed": "cycle 539"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -11508,12 +11510,12 @@
       }
     }
   },
-  "in_flight_sessions": 3,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 19,
     "issue": 2709,
     "number": 539,
-    "summary": "3 dispatches, 1 merges (PR #2698)",
+    "summary": "0 dispatches, 1 merges",
     "timestamp": "2026-04-25T09:26:41Z"
   },
   "last_eva_comment_check": "2026-04-25T09:26:41Z",
