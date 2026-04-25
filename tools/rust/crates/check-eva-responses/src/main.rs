@@ -1,5 +1,6 @@
 use chrono::{DateTime, SecondsFormat, Utc};
 use clap::Parser;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use state_schema::{check_version, read_state_value, StateJson};
@@ -14,7 +15,10 @@ const ZERO_TIME: &str = "1970-01-01T00:00:00Z";
 const EXCERPT_LIMIT: usize = 200;
 /// Comma-separated logins added to the default orchestrator author set.
 const ORCHESTRATOR_LOGINS_ENV: &str = "CHECK_EVA_RESPONSES_ORCHESTRATOR_LOGINS";
+/// Regex used against the first non-empty line to detect signed orchestrator comments.
+const ORCHESTRATOR_SIGNATURE_ENV: &str = "CHECK_EVA_RESPONSES_ORCHESTRATOR_SIGNATURE";
 const DEFAULT_ORCHESTRATOR_LOGINS: [&str; 3] = ["claude[bot]", "app/claude", "claude-bot"];
+const DEFAULT_ORCHESTRATOR_SIGNATURE_PREFIX: &str = "> **[main-orchestrator]**";
 
 #[derive(Debug, Parser)]
 #[command(name = "check-eva-responses")]
@@ -96,18 +100,24 @@ struct Report {
     new_responses: Vec<NewEvaResponse>,
 }
 
+#[derive(Debug)]
+struct OrchestratorDetector {
+    logins: HashSet<String>,
+    signature: Regex,
+}
+
 fn main() {
     let cli = Cli::parse();
     let runner = ProcessRunner;
-    let orchestrator_logins = match orchestrator_logins_from_env() {
-        Ok(logins) => logins,
+    let orchestrator_detector = match orchestrator_detector_from_env() {
+        Ok(detector) => detector,
         Err(error) => {
             eprintln!("check-eva-responses error: {}", error);
             std::process::exit(1);
         }
     };
 
-    match execute(&cli, &runner, &orchestrator_logins) {
+    match execute(&cli, &runner, &orchestrator_detector) {
         Ok(output) => println!("{}", output),
         Err(error) => {
             eprintln!("check-eva-responses error: {}", error);
@@ -119,7 +129,7 @@ fn main() {
 fn execute(
     cli: &Cli,
     runner: &dyn CommandRunner,
-    orchestrator_logins: &HashSet<String>,
+    orchestrator_detector: &OrchestratorDetector,
 ) -> Result<String, String> {
     let since = resolve_since(cli)?;
     let report = collect_report(
@@ -127,7 +137,7 @@ fn execute(
         runner,
         since,
         cli.include_closed,
-        orchestrator_logins,
+        orchestrator_detector,
     )?;
 
     if cli.json {
@@ -171,7 +181,7 @@ fn collect_report(
     runner: &dyn CommandRunner,
     since: DateTime<Utc>,
     include_closed: bool,
-    orchestrator_logins: &HashSet<String>,
+    orchestrator_detector: &OrchestratorDetector,
 ) -> Result<Report, String> {
     let issues = fetch_question_for_eva_issues(repo_root, runner, include_closed)?;
     let mut issue_comments = HashMap::new();
@@ -192,7 +202,7 @@ fn collect_report(
             &issue_comments,
             since,
             include_closed,
-            orchestrator_logins,
+            orchestrator_detector,
         ),
     })
 }
@@ -313,7 +323,7 @@ fn classify_responses(
     issue_comments: &HashMap<u64, Vec<IssueComment>>,
     since: DateTime<Utc>,
     include_closed: bool,
-    orchestrator_logins: &HashSet<String>,
+    orchestrator_detector: &OrchestratorDetector,
 ) -> Vec<NewEvaResponse> {
     let mut responses = Vec::new();
 
@@ -325,12 +335,14 @@ fn classify_responses(
         let Some(comments) = issue_comments.get(&issue.number) else {
             continue;
         };
-        let Some(eva_comment) = latest_comment_by_login(comments, |login| login == EVA_LOGIN)
-        else {
+        let Some(eva_comment) = latest_comment(comments, |comment| {
+            comment_is_eva(comment, orchestrator_detector)
+        }) else {
             continue;
         };
-        let orchestrator_comment =
-            latest_comment_by_login(comments, |login| orchestrator_logins.contains(login));
+        let orchestrator_comment = latest_comment(comments, |comment| {
+            comment_is_orchestrator(comment, orchestrator_detector)
+        });
 
         if eva_comment.created_at <= since {
             continue;
@@ -360,14 +372,34 @@ fn classify_responses(
     responses
 }
 
-fn latest_comment_by_login<F>(comments: &[IssueComment], predicate: F) -> Option<&IssueComment>
+fn latest_comment<F>(comments: &[IssueComment], predicate: F) -> Option<&IssueComment>
 where
-    F: Fn(&str) -> bool,
+    F: Fn(&IssueComment) -> bool,
 {
     comments
         .iter()
-        .filter(|comment| predicate(&comment.author_login))
+        .filter(|comment| predicate(comment))
         .max_by_key(|comment| comment.created_at)
+}
+
+fn comment_is_eva(comment: &IssueComment, orchestrator_detector: &OrchestratorDetector) -> bool {
+    comment.author_login == EVA_LOGIN && !comment_is_orchestrator(comment, orchestrator_detector)
+}
+
+fn comment_is_orchestrator(
+    comment: &IssueComment,
+    orchestrator_detector: &OrchestratorDetector,
+) -> bool {
+    orchestrator_detector.logins.contains(&comment.author_login)
+        || comment_signature_matches(comment, &orchestrator_detector.signature)
+}
+
+fn comment_signature_matches(comment: &IssueComment, signature: &Regex) -> bool {
+    non_empty_lines(&comment.body).any(|line| signature.is_match(line))
+}
+
+fn non_empty_lines(body: &str) -> impl Iterator<Item = &str> {
+    body.lines().filter(|line| !line.trim().is_empty())
 }
 
 fn is_closed_issue(issue: &QuestionForEvaIssue) -> bool {
@@ -453,8 +485,11 @@ fn gh_json(repo_root: &Path, runner: &dyn CommandRunner, args: &[String]) -> Res
     })
 }
 
-fn orchestrator_logins_from_env() -> Result<HashSet<String>, String> {
-    build_orchestrator_logins(env::var(ORCHESTRATOR_LOGINS_ENV).ok().as_deref())
+fn orchestrator_detector_from_env() -> Result<OrchestratorDetector, String> {
+    build_orchestrator_detector(
+        env::var(ORCHESTRATOR_LOGINS_ENV).ok().as_deref(),
+        env::var(ORCHESTRATOR_SIGNATURE_ENV).ok().as_deref(),
+    )
 }
 
 fn build_orchestrator_logins(extra_logins: Option<&str>) -> Result<HashSet<String>, String> {
@@ -479,6 +514,38 @@ fn build_orchestrator_logins(extra_logins: Option<&str>) -> Result<HashSet<Strin
     }
 
     Ok(logins)
+}
+
+fn build_orchestrator_signature(signature: Option<&str>) -> Result<Regex, String> {
+    let pattern = signature
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToString::to_string)
+        .unwrap_or_else(default_orchestrator_signature_pattern);
+
+    Regex::new(&pattern).map_err(|error| {
+        format!(
+            "invalid {} regex {:?}: {}",
+            ORCHESTRATOR_SIGNATURE_ENV, pattern, error
+        )
+    })
+}
+
+fn default_orchestrator_signature_pattern() -> String {
+    format!(
+        r"^\s*{}(?:\s*\|.*)?$",
+        regex::escape(DEFAULT_ORCHESTRATOR_SIGNATURE_PREFIX)
+    )
+}
+
+fn build_orchestrator_detector(
+    extra_logins: Option<&str>,
+    signature: Option<&str>,
+) -> Result<OrchestratorDetector, String> {
+    Ok(OrchestratorDetector {
+        logins: build_orchestrator_logins(extra_logins)?,
+        signature: build_orchestrator_signature(signature)?,
+    })
 }
 
 fn parse_timestamp(value: &str) -> Result<DateTime<Utc>, chrono::ParseError> {
@@ -596,7 +663,7 @@ mod tests {
             )]),
             parse_timestamp("2026-04-01T00:00:00Z").expect("parse timestamp"),
             false,
-            &default_orchestrator_logins(),
+            &default_orchestrator_detector(),
         );
 
         assert_eq!(responses.len(), 1);
@@ -633,7 +700,7 @@ mod tests {
             )]),
             parse_timestamp("2026-04-18T00:00:00Z").expect("parse timestamp"),
             false,
-            &default_orchestrator_logins(),
+            &default_orchestrator_detector(),
         );
 
         assert_eq!(responses.len(), 1);
@@ -666,7 +733,7 @@ mod tests {
             )]),
             parse_timestamp("2026-04-01T00:00:00Z").expect("parse timestamp"),
             false,
-            &default_orchestrator_logins(),
+            &default_orchestrator_detector(),
         );
 
         assert!(responses.is_empty());
@@ -687,7 +754,7 @@ mod tests {
             )]),
             parse_timestamp("2026-04-01T00:00:00Z").expect("parse timestamp"),
             false,
-            &default_orchestrator_logins(),
+            &default_orchestrator_detector(),
         );
 
         assert!(responses.is_empty());
@@ -700,7 +767,7 @@ mod tests {
             &HashMap::from([(2416, Vec::new())]),
             parse_timestamp("2026-04-01T00:00:00Z").expect("parse timestamp"),
             false,
-            &default_orchestrator_logins(),
+            &default_orchestrator_detector(),
         );
 
         assert!(responses.is_empty());
@@ -721,7 +788,7 @@ mod tests {
             )]),
             parse_timestamp("2026-04-19T00:00:00Z").expect("parse timestamp"),
             false,
-            &default_orchestrator_logins(),
+            &default_orchestrator_detector(),
         );
 
         assert!(responses.is_empty());
@@ -760,14 +827,14 @@ mod tests {
             &comments,
             since,
             false,
-            &default_orchestrator_logins(),
+            &default_orchestrator_detector(),
         );
         let with_closed = classify_responses(
             &issues,
             &comments,
             since,
             true,
-            &default_orchestrator_logins(),
+            &default_orchestrator_detector(),
         );
 
         assert_eq!(
@@ -811,7 +878,7 @@ mod tests {
         };
 
         let output =
-            execute(&cli, &runner, &default_orchestrator_logins()).expect("execute should work");
+            execute(&cli, &runner, &default_orchestrator_detector()).expect("execute should work");
         let report: Report = serde_json::from_str(&output).expect("report should parse");
 
         assert_eq!(report.since, "2026-04-25T05:43:02Z");
@@ -871,12 +938,13 @@ mod tests {
 
     #[test]
     fn extra_orchestrator_logins_are_pluggable() {
-        let logins = build_orchestrator_logins(Some("copilot-swe-agent[bot], github-actions[bot]"))
-            .expect("logins should parse");
+        let detector =
+            build_orchestrator_detector(Some("copilot-swe-agent[bot], github-actions[bot]"), None)
+                .expect("detector should parse");
 
-        assert!(logins.contains("copilot-swe-agent[bot]"));
-        assert!(logins.contains("github-actions[bot]"));
-        assert!(logins.contains("claude[bot]"));
+        assert!(detector.logins.contains("copilot-swe-agent[bot]"));
+        assert!(detector.logins.contains("github-actions[bot]"));
+        assert!(detector.logins.contains("claude[bot]"));
     }
 
     #[test]
@@ -885,6 +953,134 @@ mod tests {
             .expect_err("empty login should fail");
 
         assert!(error.contains(ORCHESTRATOR_LOGINS_ENV));
+    }
+
+    #[test]
+    fn signed_evalok_comment_is_treated_as_orchestrator() {
+        let detector = default_orchestrator_detector();
+        let comment = comment(
+            EVA_LOGIN,
+            "2026-04-25T06:04:23Z",
+            "https://example.test/orch",
+            "\n  > **[main-orchestrator]** | Cycle 538\n\nAck",
+        );
+
+        assert!(comment_is_orchestrator(&comment, &detector));
+        assert!(!comment_is_eva(&comment, &detector));
+    }
+
+    #[test]
+    fn signature_on_later_non_empty_line_is_still_treated_as_orchestrator() {
+        let detector = default_orchestrator_detector();
+        let comment = comment(
+            EVA_LOGIN,
+            "2026-04-22T21:41:15Z",
+            "https://example.test/orch-late-signature",
+            "Dispatched as #2657.\n\n> **[main-orchestrator]** | Cycle 529",
+        );
+
+        assert!(comment_is_orchestrator(&comment, &detector));
+        assert!(!comment_is_eva(&comment, &detector));
+    }
+
+    #[test]
+    fn unsigned_evalok_comment_is_treated_as_eva() {
+        let detector = default_orchestrator_detector();
+        let comment = comment(
+            EVA_LOGIN,
+            "2026-04-19T11:21:46Z",
+            "https://example.test/eva",
+            "Actual Eva response",
+        );
+
+        assert!(!comment_is_orchestrator(&comment, &detector));
+        assert!(comment_is_eva(&comment, &detector));
+    }
+
+    #[test]
+    fn signed_evalok_then_unsigned_evalok_yields_new_eva_response() {
+        let responses = classify_responses(
+            &[issue(2402, "Question", "OPEN")],
+            &HashMap::from([(
+                2402,
+                vec![
+                    comment(
+                        EVA_LOGIN,
+                        "2026-04-18T10:00:00Z",
+                        "https://example.test/orch",
+                        "> **[main-orchestrator]** | Cycle 537\n\nAck",
+                    ),
+                    comment(
+                        EVA_LOGIN,
+                        "2026-04-19T12:00:00Z",
+                        "https://example.test/eva",
+                        "Unsigned Eva follow-up",
+                    ),
+                ],
+            )]),
+            parse_timestamp("2026-04-18T00:00:00Z").expect("parse timestamp"),
+            false,
+            &default_orchestrator_detector(),
+        );
+
+        assert_eq!(responses.len(), 1);
+        assert_eq!(
+            responses[0].orchestrator_last_comment_at.as_deref(),
+            Some("2026-04-18T10:00:00Z")
+        );
+    }
+
+    #[test]
+    fn unsigned_evalok_comments_preserve_legacy_eva_behavior() {
+        let responses = classify_responses(
+            &[issue(2403, "Question", "OPEN")],
+            &HashMap::from([(
+                2403,
+                vec![
+                    comment(
+                        EVA_LOGIN,
+                        "2026-04-18T10:00:00Z",
+                        "https://example.test/eva-1",
+                        "Legacy Eva comment",
+                    ),
+                    comment(
+                        EVA_LOGIN,
+                        "2026-04-19T10:00:00Z",
+                        "https://example.test/eva-2",
+                        "Later legacy Eva comment",
+                    ),
+                ],
+            )]),
+            parse_timestamp("2026-04-18T00:00:00Z").expect("parse timestamp"),
+            false,
+            &default_orchestrator_detector(),
+        );
+
+        assert_eq!(responses.len(), 1);
+        assert_eq!(responses[0].orchestrator_last_comment_at, None);
+        assert_eq!(responses[0].eva_comment_at, "2026-04-19T10:00:00Z");
+    }
+
+    #[test]
+    fn custom_signature_regex_is_supported() {
+        let detector = build_orchestrator_detector(None, Some(r"^\s*CUSTOM-SIGNATURE(?:\b|$)"))
+            .expect("detector should parse");
+        let comment = comment(
+            EVA_LOGIN,
+            "2026-04-19T12:00:00Z",
+            "https://example.test/custom",
+            "  CUSTOM-SIGNATURE from custom deployment",
+        );
+
+        assert!(comment_is_orchestrator(&comment, &detector));
+    }
+
+    #[test]
+    fn invalid_custom_signature_regex_fails_closed() {
+        let error =
+            build_orchestrator_detector(None, Some("(")).expect_err("invalid regex should fail");
+
+        assert!(error.contains(ORCHESTRATOR_SIGNATURE_ENV));
     }
 
     fn issue(number: u64, title: &str, state: &str) -> QuestionForEvaIssue {
@@ -922,7 +1118,17 @@ mod tests {
         })
     }
 
-    fn default_orchestrator_logins() -> HashSet<String> {
-        build_orchestrator_logins(None).expect("default logins")
+    fn default_orchestrator_detector() -> OrchestratorDetector {
+        build_orchestrator_detector(None, None).expect("default detector")
+    }
+
+    fn build_orchestrator_detector(
+        extra_logins: Option<&str>,
+        signature: Option<&str>,
+    ) -> Result<OrchestratorDetector, String> {
+        Ok(OrchestratorDetector {
+            logins: build_orchestrator_logins(extra_logins)?,
+            signature: build_orchestrator_signature(signature)?,
+        })
     }
 }
