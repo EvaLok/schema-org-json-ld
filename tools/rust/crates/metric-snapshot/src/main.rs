@@ -1,13 +1,13 @@
 use clap::Parser;
 use serde_json::{json, Value};
 use state_schema::{
-    check_version, current_cycle_from_state, set_value_at_pointer, update_freshness, StateJson,
-    TypescriptStats, SCHEMA_VERSION,
+    check_version, commit_state_json, current_cycle_from_state, set_value_at_pointer,
+    update_freshness, StateJson, TypescriptStats, SCHEMA_VERSION,
 };
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process;
+use std::process::{self, Command};
 
 #[derive(Parser)]
 #[command(name = "metric-snapshot")]
@@ -31,6 +31,10 @@ struct Cli {
     /// Refresh stale after-change freshness markers for checks that already match
     #[arg(long)]
     refresh_unchanged: bool,
+
+    /// Refresh verified field_inventory freshness entries and commit docs/state.json when safe
+    #[arg(long)]
+    update_ledger: bool,
 }
 
 struct CheckResult {
@@ -62,6 +66,24 @@ fn main() {
             Ok(_) => {}
             Err(error) => {
                 eprintln!("Error applying fixes: {}", error);
+                process::exit(2);
+            }
+        }
+    }
+
+    if cli.update_ledger {
+        let cycle = resolve_fix_cycle(cli.cycle, &cli.repo_root).unwrap_or_else(|error| {
+            eprintln!("Error: {}", error);
+            process::exit(2);
+        });
+        match update_verified_ledger(&cli.repo_root, &state_path, &checks, cycle) {
+            Ok(updated) if updated > 0 => {
+                state = read_state_file(&state_path);
+                checks = build_checks(&cli.repo_root, &state);
+            }
+            Ok(_) => {}
+            Err(error) => {
+                eprintln!("Error updating freshness ledger: {}", error);
                 process::exit(2);
             }
         }
@@ -342,7 +364,20 @@ fn collect_refreshable_unchanged_fields(
     checks: &[CheckResult],
     current_cycle: i64,
 ) -> Result<BTreeSet<&'static str>, String> {
+    let verified_fields = collect_verified_fields(state, checks)?;
     let mut refreshable = BTreeSet::new();
+
+    for field_name in verified_fields {
+        if field_has_stale_after_change_marker(state, field_name, current_cycle)? {
+            refreshable.insert(field_name);
+        }
+    }
+
+    Ok(refreshable)
+}
+
+fn collect_verified_fields(state: &Value, checks: &[CheckResult]) -> Result<BTreeSet<&'static str>, String> {
+    let mut verified = BTreeSet::new();
 
     for check in checks {
         if !check.pass {
@@ -353,20 +388,12 @@ fn collect_refreshable_unchanged_fields(
             continue;
         };
 
-        for freshness_field in target.freshness_fields.iter().copied() {
-            if field_has_stale_after_change_marker(state, freshness_field, current_cycle)? {
-                refreshable.insert(freshness_field);
-            }
-        }
+        verified.extend(target.freshness_fields.iter().copied());
     }
 
-    refreshable.extend(collect_derived_refreshable_fields(
-        state,
-        checks,
-        current_cycle,
-    )?);
+    verified.extend(collect_derived_verified_fields(state, checks)?);
 
-    Ok(refreshable)
+    Ok(verified)
 }
 
 fn field_has_stale_after_change_marker(
@@ -406,12 +433,11 @@ fn field_has_stale_after_change_marker(
     })
 }
 
-fn collect_derived_refreshable_fields(
+fn collect_derived_verified_fields(
     state: &Value,
     checks: &[CheckResult],
-    current_cycle: i64,
 ) -> Result<BTreeSet<&'static str>, String> {
-    let mut refreshable = BTreeSet::new();
+    let mut verified = BTreeSet::new();
     let state_json: StateJson = serde_json::from_value(state.clone())
         .map_err(|error| format!("failed to parse docs/state.json: {}", error))?;
 
@@ -421,31 +447,25 @@ fn collect_derived_refreshable_fields(
         .or_else(|| passed_check_i64(checks, "ts_enum_types"));
 
     if let Some(schema_count) = schema_count {
-        if state_json.total_schema_types == Some(schema_count)
-            && field_has_stale_after_change_marker(state, "total_schema_types", current_cycle)?
-        {
-            refreshable.insert("total_schema_types");
+        if state_json.total_schema_types == Some(schema_count) {
+            verified.insert("total_schema_types");
         }
     }
 
     let Some(classification) = state_json.schema_status.type_classification.as_ref() else {
-        return Ok(refreshable);
+        return Ok(verified);
     };
 
     if let Some(total_sub_types) = derived_total_sub_types(classification) {
-        if state_json.total_sub_types == Some(total_sub_types)
-            && field_has_stale_after_change_marker(state, "total_sub_types", current_cycle)?
-        {
-            refreshable.insert("total_sub_types");
+        if state_json.total_sub_types == Some(total_sub_types) {
+            verified.insert("total_sub_types");
         }
     }
 
     if let (Some(schema_count), Some(enum_count)) = (schema_count, enum_count) {
         let total_testable_types = schema_count - enum_count;
-        if state_json.total_testable_types == Some(total_testable_types)
-            && field_has_stale_after_change_marker(state, "total_testable_types", current_cycle)?
-        {
-            refreshable.insert("total_testable_types");
+        if state_json.total_testable_types == Some(total_testable_types) {
+            verified.insert("total_testable_types");
         }
 
         if let (Some(standalone_parity_testable), Some(building_block_only)) = (
@@ -454,13 +474,8 @@ fn collect_derived_refreshable_fields(
         ) {
             if standalone_parity_testable == total_testable_types - building_block_only
                 && state_json.total_standalone_testable_types == Some(standalone_parity_testable)
-                && field_has_stale_after_change_marker(
-                    state,
-                    "total_standalone_testable_types",
-                    current_cycle,
-                )?
             {
-                refreshable.insert("total_standalone_testable_types");
+                verified.insert("total_standalone_testable_types");
             }
 
             if state_json
@@ -478,13 +493,8 @@ fn collect_derived_refreshable_fields(
                         ],
                     )
                 })
-                && field_has_stale_after_change_marker(
-                    state,
-                    "total_testable_types_note",
-                    current_cycle,
-                )?
             {
-                refreshable.insert("total_testable_types_note");
+                verified.insert("total_testable_types_note");
             }
 
             if classification.note.as_deref().is_some_and(|note| {
@@ -498,14 +508,13 @@ fn collect_derived_refreshable_fields(
                     ],
                 )
             }) && state_json.total_standalone_testable_types == Some(standalone_parity_testable)
-                && field_has_stale_after_change_marker(state, "type_classification", current_cycle)?
             {
-                refreshable.insert("type_classification");
+                verified.insert("type_classification");
             }
         }
     }
 
-    Ok(refreshable)
+    Ok(verified)
 }
 
 fn passed_check_i64(checks: &[CheckResult], check_name: &str) -> Option<i64> {
@@ -522,6 +531,131 @@ fn derived_total_sub_types(classification: &state_schema::TypeClassification) ->
             + classification.building_block_only?
             + classification.enums?,
     )
+}
+
+fn update_verified_ledger(
+    repo_root: &Path,
+    state_path: &Path,
+    checks: &[CheckResult],
+    cycle: i64,
+) -> Result<usize, String> {
+    let cycle = u32::try_from(cycle).map_err(|_| "cycle must fit in u32 range".to_string())?;
+    let commit_blocker = ledger_commit_blocker(repo_root)?;
+    let mut state_value = read_state_value(state_path)?;
+    let verified_fields = collect_verified_fields(&state_value, checks)?;
+    let mut updated_count = 0_usize;
+
+    for field_name in verified_fields {
+        if refresh_verified_field(&mut state_value, field_name, cycle)? {
+            updated_count += 1;
+        }
+    }
+
+    if updated_count == 0 {
+        return Ok(0);
+    }
+
+    let serialized = serde_json::to_string_pretty(&state_value)
+        .map_err(|error| format!("failed to serialize state.json: {}", error))?;
+    fs::write(state_path, format!("{}\n", serialized))
+        .map_err(|error| format!("failed to write {}: {}", state_path.display(), error))?;
+
+    if let Some(reason) = commit_blocker {
+        eprintln!(
+            "Warning: refreshed {} field_inventory entries but skipped commit/push because {}",
+            updated_count, reason
+        );
+    } else {
+        let message = format!(
+            "state(metric-snapshot): refresh {} field_inventory entries [cycle {}]",
+            updated_count, cycle
+        );
+        let receipt = commit_state_json(repo_root, &message)?;
+        eprintln!("metric-snapshot ledger refresh commit: {}", receipt);
+    }
+
+    Ok(updated_count)
+}
+
+fn refresh_verified_field(state: &mut Value, field_name: &str, cycle: u32) -> Result<bool, String> {
+    let field_pointer = format!(
+        "/field_inventory/fields/{}",
+        field_name.replace('~', "~0").replace('/', "~1")
+    );
+    let Some(current_entry) = state.pointer(&field_pointer) else {
+        eprintln!(
+            "Warning: skipping ledger refresh for missing field_inventory entry: {}",
+            field_name
+        );
+        return Ok(false);
+    };
+    if !current_entry.is_object() {
+        return Err(format!("field_inventory entry must be an object: {}", field_name));
+    }
+
+    let expected = format!("cycle {}", cycle);
+    let current = current_entry
+        .get("last_refreshed")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    if current == expected {
+        return Ok(false);
+    }
+
+    update_freshness(state, field_name, cycle)?;
+    Ok(true)
+}
+
+fn ledger_commit_blocker(repo_root: &Path) -> Result<Option<String>, String> {
+    let status_output = Command::new("git")
+        .arg("-C")
+        .arg(repo_root)
+        .args(["status", "--porcelain", "--untracked-files=no"])
+        .output()
+        .map_err(|error| format!("failed to execute git status: {}", error))?;
+    if !status_output.status.success() {
+        let stderr = String::from_utf8_lossy(&status_output.stderr)
+            .trim()
+            .to_string();
+        return Err(format!("git status --porcelain failed: {}", stderr));
+    }
+
+    let status = String::from_utf8(status_output.stdout)
+        .map_err(|error| format!("failed to decode git status output as UTF-8: {}", error))?;
+    if !status.trim().is_empty() {
+        return Ok(Some("tracked working-tree changes are present".to_string()));
+    }
+
+    let branch_output = Command::new("git")
+        .arg("-C")
+        .arg(repo_root)
+        .args(["symbolic-ref", "--short", "HEAD"])
+        .output()
+        .map_err(|error| format!("failed to execute git symbolic-ref --short HEAD: {}", error))?;
+    if !branch_output.status.success() {
+        let stderr = String::from_utf8_lossy(&branch_output.stderr)
+            .trim()
+            .to_string();
+        return Ok(Some(format!(
+            "HEAD is not attached to a pushable branch ({})",
+            stderr
+        )));
+    }
+
+    let branch = String::from_utf8(branch_output.stdout)
+        .map_err(|error| {
+            format!(
+                "failed to decode git symbolic-ref --short HEAD output as UTF-8: {}",
+                error
+            )
+        })?
+        .trim()
+        .to_string();
+    if branch != "master" {
+        return Ok(Some(format!("HEAD is on '{}' instead of 'master'", branch)));
+    }
+
+    Ok(None)
 }
 
 fn note_contains_numbers(note: &str, numbers: &[i64]) -> bool {
@@ -1439,11 +1573,43 @@ mod tests {
         count_php_tests_in_content, count_ts_tests_in_content, fix_target_for_check,
         get_i64_from_map, get_i64_from_option, get_typescript_stats, is_php_test_method_line,
         is_ts_test_method_line, note_contains_number, parse_cycle_number, read_state_file,
-        set_value_at_pointer, staleness_threshold, CheckResult,
+        set_value_at_pointer, staleness_threshold, update_verified_ledger, CheckResult,
     };
     use serde_json::json;
     use std::fs;
+    use std::path::{Path, PathBuf};
+    use std::process::Command;
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn unique_temp_dir(prefix: &str) -> PathBuf {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock must be after unix epoch")
+            .as_nanos();
+        std::env::temp_dir().join(format!("{prefix}-{suffix}"))
+    }
+
+    fn run_git(repo_root: &Path, args: &[&str]) {
+        let status = Command::new("git")
+            .arg("-C")
+            .arg(repo_root)
+            .args(args)
+            .status()
+            .expect("git command should start");
+        assert!(status.success(), "git {:?} should succeed", args);
+    }
+
+    fn init_git_repo(repo_root: &Path) {
+        fs::create_dir_all(repo_root).expect("repo root should be created");
+        run_git(repo_root, &["init", "-b", "master"]);
+        run_git(repo_root, &["config", "user.name", "Metric Snapshot Test"]);
+        run_git(repo_root, &["config", "user.email", "metric-snapshot@example.com"]);
+    }
+
+    fn commit_repo_state(repo_root: &Path, message: &str) {
+        run_git(repo_root, &["add", "."]);
+        run_git(repo_root, &["commit", "-m", message]);
+    }
 
     #[test]
     fn php_test_method_matching_works() {
@@ -1823,6 +1989,176 @@ it('direct test', () => {});
     }
 
     #[test]
+    fn update_verified_ledger_refreshes_only_verified_field_inventory_entries() {
+        let temp_dir = unique_temp_dir("metric-snapshot-update-ledger");
+        fs::create_dir_all(temp_dir.join("docs")).expect("docs dir should be created");
+        init_git_repo(&temp_dir);
+
+        fs::write(
+            temp_dir.join("docs/state.json"),
+            r#"{
+  "total_schema_types": 89,
+  "total_schema_classes": 89,
+  "total_enums": 12,
+  "test_count": {
+    "total": 7
+  },
+  "field_inventory": {
+    "fields": {
+      "total_schema_classes": {
+        "cadence": "after schema class additions",
+        "last_refreshed": "cycle 100"
+      },
+      "total_schema_types": {
+        "cadence": "after schema type additions",
+        "last_refreshed": "cycle 100"
+      },
+      "total_enums": {
+        "cadence": "after enum additions",
+        "last_refreshed": "cycle 100"
+      },
+      "test_count": {
+        "cadence": "every merge that adds/removes PHP or TS tests",
+        "last_refreshed": "cycle 100"
+      }
+    }
+  }
+}"#,
+        )
+        .expect("state fixture should be written");
+        fs::write(temp_dir.join("README.md"), "seed\n").expect("tracked file should be written");
+        commit_repo_state(&temp_dir, "seed repo");
+        fs::write(temp_dir.join("README.md"), "dirty\n").expect("dirty tracked file should be written");
+
+        let checks = vec![
+            CheckResult {
+                name: "php_schema_classes",
+                label: "PHP schema classes",
+                actual: json!(89),
+                expected: json!(89),
+                pass: true,
+                note: None,
+            },
+            CheckResult {
+                name: "php_enum_classes",
+                label: "PHP enum classes",
+                actual: json!(12),
+                expected: json!(13),
+                pass: false,
+                note: None,
+            },
+            CheckResult {
+                name: "test_count_total",
+                label: "Total test count",
+                actual: json!(7),
+                expected: json!(7),
+                pass: true,
+                note: None,
+            },
+        ];
+
+        let updated = update_verified_ledger(
+            &temp_dir,
+            &temp_dir.join("docs/state.json"),
+            &checks,
+            121,
+        )
+        .expect("ledger refresh should succeed");
+        assert_eq!(3, updated);
+
+        let refreshed = read_state_file(&temp_dir.join("docs/state.json"));
+        assert_eq!(
+            refreshed
+                .field_inventory
+                .fields
+                .get("total_schema_classes")
+                .and_then(|value| value.get("last_refreshed"))
+                .and_then(|value| value.as_str()),
+            Some("cycle 121")
+        );
+        assert_eq!(
+            refreshed
+                .field_inventory
+                .fields
+                .get("total_schema_types")
+                .and_then(|value| value.get("last_refreshed"))
+                .and_then(|value| value.as_str()),
+            Some("cycle 121")
+        );
+        assert_eq!(
+            refreshed
+                .field_inventory
+                .fields
+                .get("test_count")
+                .and_then(|value| value.get("last_refreshed"))
+                .and_then(|value| value.as_str()),
+            Some("cycle 121")
+        );
+        assert_eq!(
+            refreshed
+                .field_inventory
+                .fields
+                .get("total_enums")
+                .and_then(|value| value.get("last_refreshed"))
+                .and_then(|value| value.as_str()),
+            Some("cycle 100")
+        );
+
+        fs::remove_dir_all(temp_dir).expect("temp dir should be removed");
+    }
+
+    #[test]
+    fn update_verified_ledger_is_noop_when_all_entries_are_current() {
+        let temp_dir = unique_temp_dir("metric-snapshot-update-ledger-noop");
+        fs::create_dir_all(temp_dir.join("docs")).expect("docs dir should be created");
+        init_git_repo(&temp_dir);
+
+        let state_path = temp_dir.join("docs/state.json");
+        fs::write(
+            &state_path,
+            r#"{
+  "total_schema_types": 89,
+  "field_inventory": {
+    "fields": {
+      "total_schema_classes": {
+        "cadence": "after schema class additions",
+        "last_refreshed": "cycle 121"
+      },
+      "total_schema_types": {
+        "cadence": "after schema type additions",
+        "last_refreshed": "cycle 121"
+      }
+    }
+  }
+}"#,
+        )
+        .expect("state fixture should be written");
+        fs::write(temp_dir.join("README.md"), "seed\n").expect("tracked file should be written");
+        commit_repo_state(&temp_dir, "seed repo");
+        fs::write(temp_dir.join("README.md"), "dirty\n").expect("dirty tracked file should be written");
+
+        let before = fs::read_to_string(&state_path).expect("state fixture should be readable");
+        let checks = vec![CheckResult {
+            name: "php_schema_classes",
+            label: "PHP schema classes",
+            actual: json!(89),
+            expected: json!(89),
+            pass: true,
+            note: None,
+        }];
+
+        let updated =
+            update_verified_ledger(&temp_dir, &state_path, &checks, 121).expect("noop should succeed");
+        assert_eq!(0, updated);
+        assert_eq!(
+            before,
+            fs::read_to_string(&state_path).expect("state fixture should remain unchanged")
+        );
+
+        fs::remove_dir_all(temp_dir).expect("temp dir should be removed");
+    }
+
+    #[test]
     fn set_value_at_pointer_requires_existing_path() {
         let mut state = json!({
             "test_count": {
@@ -1865,6 +2201,30 @@ it('direct test', () => {});
         let cycle =
             super::resolve_fix_cycle(None, &temp_dir).expect("cycle should be derived from state");
         assert_eq!(172, cycle);
+
+        fs::remove_dir_all(temp_dir).expect("temp dir should be removed");
+    }
+
+    #[test]
+    fn resolve_fix_cycle_prefers_cycle_phase_cycle_from_state() {
+        let temp_dir = unique_temp_dir("metric-snapshot-cycle-phase");
+        fs::create_dir_all(temp_dir.join("docs")).expect("docs dir should be created");
+        fs::write(
+            temp_dir.join("docs/state.json"),
+            r#"{
+  "cycle_phase": {
+    "cycle": 181
+  },
+  "last_cycle": {
+    "number": 172
+  }
+}"#,
+        )
+        .expect("state fixture should be written");
+
+        let cycle =
+            super::resolve_fix_cycle(None, &temp_dir).expect("cycle should prefer cycle_phase.cycle");
+        assert_eq!(181, cycle);
 
         fs::remove_dir_all(temp_dir).expect("temp dir should be removed");
     }
