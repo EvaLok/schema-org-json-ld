@@ -10066,8 +10066,10 @@
     {
       "dispatched_at": "2026-04-25T09:48:54Z",
       "issue": 2710,
+      "merged_at": "2026-04-25T21:31:34Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2711,
+      "status": "merged",
       "title": "[Eva #2416 Option B] state-invariants check 8 narrow close-out skip"
     },
     {
@@ -11543,12 +11545,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 2,
     "issue": 2714,
     "number": 540,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-25T21:19:30Z"
   },
   "last_eva_comment_check": "2026-04-25T21:19:30Z",
