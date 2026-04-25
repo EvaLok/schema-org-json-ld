@@ -11213,7 +11213,9 @@
       "category": "worklog-accuracy",
       "deadline_cycle": 539,
       "deferred_cycle": 534,
-      "resolved": false
+      "dropped_rationale": "Deadline cycle 539 reached. Structural fix remains gate-blocked on open question-for-eva #2674 (post-dispatch summary regeneration timing) with no Eva response (35.8h). Cycle 538 review F1 re-flagged the same chronic — fresh cycle 539 deferral now carries live tracking (deadline cycle 544). Dropping cycle 534 deferral to avoid double-counting the same root cause.",
+      "resolved": true,
+      "resolved_ref": "dropped: Deadline cycle 539 reached. Structural fix remains gate-blocked on open question-for-eva #2674 (post"
     },
     {
       "category": "field-inventory",
