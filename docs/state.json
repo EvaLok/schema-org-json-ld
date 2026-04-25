@@ -10088,6 +10088,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Auto-refresh field_inventory.last_refreshed in metric-snapshot"
+    },
+    {
+      "dispatched_at": "2026-04-25T21:43:36Z",
+      "issue": 2717,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Eva #2519 Option A] Adoption-plan gate for chronic-category-tracking audits"
     }
   ],
   "audit_dropped": [
@@ -11291,7 +11298,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2715 Auto-refresh field_inventory.last_refreshed in metric-snapshot (cycle 540)",
+  "dispatch_log_latest": "#2717 [Eva #2519 Option A] Adoption-plan gate for chronic-category-tracking audits (cycle 540)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -11562,13 +11569,13 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 2,
     "issue": 2714,
     "number": 540,
-    "summary": "1 dispatch, 3 merges",
-    "timestamp": "2026-04-25T21:41:49Z"
+    "summary": "2 dispatches, 3 merges",
+    "timestamp": "2026-04-25T21:43:36Z"
   },
   "last_eva_comment_check": "2026-04-25T21:19:30Z",
   "last_tool_audit_cycle": 403,
