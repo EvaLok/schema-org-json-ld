@@ -438,10 +438,8 @@ fn execute_journal(
     let input = resolve_journal_input(args)?;
     let path = journal_path(repo_root, now);
     let previous = lookup_previous_concrete_behavior(repo_root, now.date_naive())?;
-    let previous_commitment_resolution = resolve_previous_commitment_resolution(
-        &input.previous_commitment_status,
-        previous.as_deref(),
-    )?;
+    let previous_commitment_resolution =
+        resolve_previous_commitment_resolution(&input.previous_commitment_status, previous.as_deref())?;
     if path.exists() {
         let existing_content = fs::read_to_string(&path)
             .map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
@@ -4430,23 +4428,21 @@ fn render_journal_entry(
             convert_references(&input.previous_commitment_detail)
         ));
     } else {
-        lines.push(
-            commitment_status_label(previous_commitment_resolution.summary_status).to_string(),
-        );
+        lines.push(commitment_status_label(previous_commitment_resolution.summary_status).to_string());
     }
     if previous_commitment_resolution.item_labels.len() > 1 {
         if let Some(previous) = previous_commitment {
-            for (label, commitment) in previous_commitment_resolution
-                .item_labels
-                .iter()
-                .zip(extract_previous_commitment_items(previous))
-            {
-                lines.push(format!(
-                    "- **{}** — {}",
-                    prior_commitment_label_text(*label),
-                    convert_references(&commitment)
-                ));
-            }
+        for (label, commitment) in previous_commitment_resolution
+            .item_labels
+            .iter()
+            .zip(extract_previous_commitment_items(previous))
+        {
+            lines.push(format!(
+                "- **{}** — {}",
+                prior_commitment_label_text(*label),
+                convert_references(&commitment)
+            ));
+        }
         }
     }
     lines.push(String::new());
@@ -7959,8 +7955,7 @@ mod tests {
 
     #[test]
     fn render_journal_entry_grades_each_previous_commitment_independently() {
-        let previous_commitment =
-            "1. Dispatch PR #546 in the same cycle.\n2. Verify close-out gate widening.";
+        let previous_commitment = "1. Dispatch PR #546 in the same cycle.\n2. Verify close-out gate widening.";
         let input = JournalInput {
             previous_commitment_status: "met,pending".to_string(),
             previous_commitment_detail: "Legacy umbrella note.".to_string(),
