@@ -608,42 +608,35 @@ fn check_last_cycle_summary_receipts(repo_root: &Path, state: &StateJson) -> Che
         let dispatch_cycle = current_dispatch_log_cycle(state);
         let current_cycle = current_state_cycle_number(state);
         let phase = state.cycle_phase.phase.as_deref();
-        let expected_close_out_transient = matches!(phase, Some("close_out" | "complete"))
-            && dispatch_cycle
-                .zip(current_cycle)
-                .is_some_and(|(dispatch_cycle, current_cycle)| {
-                    dispatch_cycle == current_cycle && cycle.checked_add(1) == Some(current_cycle)
-                });
+        if let (Some(dispatch_cycle), Some(current_cycle)) = (dispatch_cycle, current_cycle) {
+            let matches_close_out_transient = matches!(phase, Some("close_out" | "complete"))
+                && dispatch_cycle == current_cycle
+                && cycle.checked_add(1) == Some(current_cycle);
 
-        if expected_close_out_transient {
-            let current_cycle = current_cycle.expect("close-out transient requires current cycle");
-            return warn(
-                "last_cycle_summary_receipts",
-                format!(
-                    "expected close-out transient: dispatch_log_latest already reports cycle {} activity, but cycle-complete has not yet refreshed last_cycle.summary from cycle {} (phase={})",
-                    current_cycle,
-                    cycle,
-                    phase.unwrap_or("unknown")
-                ),
-            );
-        }
+            if matches_close_out_transient {
+                return warn(
+                    "last_cycle_summary_receipts",
+                    format!(
+                        "expected close-out transient: dispatch_log_latest already reports cycle {} activity, but cycle-complete has not yet refreshed last_cycle.summary from cycle {} (phase={})",
+                        current_cycle,
+                        cycle,
+                        phase.unwrap_or("unknown")
+                    ),
+                );
+            }
 
-        if dispatch_cycle
-            .zip(current_cycle)
-            .is_some_and(|(dispatch_cycle, current_cycle)| {
-                dispatch_cycle == current_cycle && cycle != current_cycle
-            })
-        {
-            return fail(
-                "last_cycle_summary_receipts",
-                format!(
-                    "last_cycle.summary reports 0 dispatches for cycle {}, but dispatch_log_latest already reports current cycle {} activity while cycle_phase.phase={}: {}",
-                    cycle,
-                    current_cycle.unwrap_or_default(),
-                    phase.unwrap_or("unknown"),
-                    state.dispatch_log_latest.as_deref().unwrap_or_default()
-                ),
-            );
+            if dispatch_cycle == current_cycle && cycle != current_cycle {
+                return fail(
+                    "last_cycle_summary_receipts",
+                    format!(
+                        "last_cycle.summary reports 0 dispatches for cycle {}, but dispatch_log_latest already reports current cycle {} activity while cycle_phase.phase={}: {}",
+                        cycle,
+                        current_cycle,
+                        phase.unwrap_or("unknown"),
+                        state.dispatch_log_latest.as_deref().unwrap_or_default()
+                    ),
+                );
+            }
         }
 
         if dispatch_cycle == Some(cycle) {
