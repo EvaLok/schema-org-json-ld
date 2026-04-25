@@ -395,11 +395,14 @@ fn comment_is_orchestrator(
 }
 
 fn comment_signature_matches(comment: &IssueComment, signature: &Regex) -> bool {
-    non_empty_lines(&comment.body).any(|line| signature.is_match(line))
+    non_empty_lines(&comment.body)
+        .find(|line| signature.is_match(line))
+        .is_some()
 }
 
 fn non_empty_lines(body: &str) -> impl Iterator<Item = &str> {
-    body.lines().filter(|line| !line.trim().is_empty())
+    body.lines()
+        .filter(|line| line.chars().any(|character| !character.is_whitespace()))
 }
 
 fn is_closed_issue(issue: &QuestionForEvaIssue) -> bool {
