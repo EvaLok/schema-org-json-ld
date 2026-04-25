@@ -10039,8 +10039,10 @@
     {
       "dispatched_at": "2026-04-25T06:02:03Z",
       "issue": 2705,
+      "merged_at": "2026-04-25T21:31:03Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2706,
+      "status": "merged",
       "title": "[Audit #439 dir 1] tools/check-eva-responses — poll question-for-eva for new EvaLok comments"
     },
     {
@@ -11393,7 +11395,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 539"
+        "last_refreshed": "cycle 540"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -11541,12 +11543,12 @@
       }
     }
   },
-  "in_flight_sessions": 3,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 2,
     "issue": 2714,
     "number": 540,
-    "summary": "2 dispatches, 2 merges (PR #2704, PR #2708)",
+    "summary": "0 dispatches, 1 merges",
     "timestamp": "2026-04-25T21:19:30Z"
   },
   "last_eva_comment_check": "2026-04-25T21:19:30Z",
