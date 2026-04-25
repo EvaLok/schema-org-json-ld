@@ -10042,6 +10042,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "[Audit #439 dir 1] tools/check-eva-responses — poll question-for-eva for new EvaLok comments"
+    },
+    {
+      "dispatched_at": "2026-04-25T06:03:24Z",
+      "issue": 2703,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[Eva #2293 Option B] Per-commitment status fields in write-entry / JournalInput"
     }
   ],
   "audit_dropped": [
@@ -11215,7 +11222,7 @@
       "resolved_ref": "docs/reviews/cycle-536.md"
     }
   ],
-  "dispatch_log_latest": "#2705 [Audit #439 dir 1] tools/check-eva-responses — poll question-for-eva for new EvaLok comments (cycle 538)",
+  "dispatch_log_latest": "#2703 [Eva #2293 Option B] Per-commitment status fields in write-entry / JournalInput (cycle 538)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -11486,13 +11493,13 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 9,
     "issue": 2701,
     "number": 538,
-    "summary": "1 dispatch, 1 merges",
-    "timestamp": "2026-04-25T06:02:03Z"
+    "summary": "2 dispatches, 1 merges",
+    "timestamp": "2026-04-25T06:03:24Z"
   },
   "last_eva_comment_check": "2026-04-25T05:43:02Z",
   "last_tool_audit_cycle": 403,
@@ -19516,7 +19523,7 @@
     ],
     "last_review_cycle": 537
   },
-  "review_dispatch_consecutive": 1,
+  "review_dispatch_consecutive": 0,
   "review_events_verified_through_cycle": 537,
   "schema_status": {
     "directory_layout": {
