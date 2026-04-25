@@ -11259,7 +11259,9 @@
       "category": "worklog-accuracy",
       "deadline_cycle": 543,
       "deferred_cycle": 538,
-      "resolved": false
+      "dropped_rationale": "Structural fix gate-blocked on open question-for-eva #2674 (post-dispatch summary regeneration timing) with no Eva response (35.8h). Cycle 538 review F1 deferred per Eva-block; dropping the deferred_findings entry now to acknowledge that the chain (cycles 536-537-538) cannot progress without Eva input. The deferral disposition remains in review_agent.history; the dropped_rationale here is the structural acknowledgement that completes the cycle 480 deferral-accumulation contract (chronic chain acknowledged when deferred_findings shows resolved-or-dropped entry within chain cycle range). Live tracking of worklog-accuracy continues via #2674.",
+      "resolved": true,
+      "resolved_ref": "dropped: Structural fix gate-blocked on open question-for-eva #2674 (post-dispatch summary regeneration timin"
     }
   ],
   "dispatch_log_latest": "#2710 [Eva #2416 Option B] state-invariants check 8 narrow close-out skip (cycle 539)",
