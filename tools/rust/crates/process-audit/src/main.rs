@@ -184,7 +184,7 @@ fn validate_cli(cli: Cli) -> Result<ValidatedCli, String> {
     let adoption_artifact_reference = match disposition {
         AuditDispositionArg::Accept => {
             let payload = adoption_artifact_reference.ok_or_else(|| {
-                "audit acceptance requires --adoption-artifact-reference; example: {\"type\":\"pipeline_check_step\",\"name\":\"accepted-audit-adoption\"}".to_string()
+                "audit acceptance requires --adoption-artifact-reference; examples: {\"type\":\"pr\",\"number\":2490,\"url\":\"https://github.com/EvaLok/schema-org-json-ld/pull/2490\"} | {\"type\":\"commit\",\"sha\":\"abc1234\"} | {\"type\":\"pipeline_check_step\",\"name\":\"accepted-audit-adoption\"} | {\"type\":\"tool_change\",\"path\":\"COMPLETION_CHECKLIST.xml\",\"commit_sha\":\"abc1234\"}".to_string()
             })?;
             Some(parse_adoption_artifact_reference(payload)?)
         }
