@@ -10055,8 +10055,10 @@
     {
       "dispatched_at": "2026-04-25T06:32:24Z",
       "issue": 2707,
+      "merged_at": "2026-04-25T09:33:41Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2708,
+      "status": "merged",
       "title": "[Cycle Review] Cycle 538 end-of-cycle review"
     }
   ],
@@ -11510,12 +11512,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 19,
     "issue": 2709,
     "number": 539,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-25T09:26:41Z"
   },
   "last_eva_comment_check": "2026-04-25T09:26:41Z",
