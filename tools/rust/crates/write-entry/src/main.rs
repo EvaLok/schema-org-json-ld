@@ -30,6 +30,15 @@ const IN_FLIGHT_PREFIX: &str = "- **In-flight agent sessions**: ";
 const PIPELINE_STATUS_PREFIX: &str = "- **Pipeline status**: ";
 const CLOSE_OUT_GATE_FAILURES_PREFIX: &str = "- **Close-out gate failures**: ";
 const PUBLISH_GATE_PREFIX: &str = "- **Publish gate**: ";
+const NO_PRIOR_COMMITMENT_DETAIL: &str = "No prior commitment recorded.";
+const PREVIOUS_COMMITMENT_GRADE_STATUS_VALUES: [&str; 6] = [
+    "met",
+    "partial",
+    "not_met",
+    "not_triggered",
+    "deferred",
+    "dropped",
+];
 const INFRASTRUCTURE_ROOTS: [&str; 2] = ["tools", ".claude/skills"];
 const INFRASTRUCTURE_FILES: [&str; 4] = [
     "STARTUP_CHECKLIST.xml",
@@ -163,6 +172,9 @@ struct JournalArgs {
     /// Commitment for the next cycle
     #[arg(long = "commitment")]
     commitment: Vec<String>,
+    /// Per-commitment previous-cycle follow-through in QUOTE::STATUS::DETAIL form
+    #[arg(long = "previous-commitment-grade")]
+    previous_commitment_grade: Vec<String>,
     /// Follow-through status for the previous cycle commitment
     #[arg(long = "previous-commitment-status")]
     previous_commitment_status: Option<String>,
@@ -237,12 +249,30 @@ struct ReceiptScopeBoundary {
     label: &'static str,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 struct JournalInput {
-    #[serde(default = "default_previous_commitment_status")]
-    previous_commitment_status: String,
-    #[serde(default = "default_previous_commitment_detail")]
-    previous_commitment_detail: String,
+    previous_commitments: Vec<PreviousCommitmentGrade>,
+    legacy_previous_commitment: Option<LegacyPreviousCommitmentOverride>,
+    sections: Vec<JournalSection>,
+    concrete_behavior_change: String,
+    commitments: Vec<String>,
+    open_questions: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct JournalSection {
+    heading: String,
+    body: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawJournalInput {
+    #[serde(default)]
+    previous_commitments: Vec<RawPreviousCommitmentGrade>,
+    #[serde(default)]
+    previous_commitment_status: Option<String>,
+    #[serde(default)]
+    previous_commitment_detail: Option<String>,
     #[serde(default)]
     sections: Vec<JournalSection>,
     #[serde(default)]
@@ -254,9 +284,44 @@ struct JournalInput {
 }
 
 #[derive(Debug, Deserialize)]
-struct JournalSection {
-    heading: String,
-    body: String,
+struct RawPreviousCommitmentGrade {
+    commitment_quote: String,
+    status: String,
+    detail: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct PreviousCommitmentGrade {
+    commitment_quote: String,
+    status: PreviousCommitmentGradeStatus,
+    detail: String,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum PreviousCommitmentGradeStatus {
+    Met,
+    Partial,
+    NotMet,
+    NotTriggered,
+    Deferred,
+    Dropped,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum LegacyPreviousCommitmentStatus {
+    Met,
+    Partial,
+    NotMet,
+    NotTriggered,
+    Deferred,
+    Dropped,
+    NoPriorCommitment,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct LegacyPreviousCommitmentOverride {
+    status: LegacyPreviousCommitmentStatus,
+    detail: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -438,8 +503,11 @@ fn execute_journal(
     let input = resolve_journal_input(args)?;
     let path = journal_path(repo_root, now);
     let previous = lookup_previous_concrete_behavior(repo_root, now.date_naive())?;
-    let previous_commitment_resolution =
-        resolve_previous_commitment_resolution(&input.previous_commitment_status, previous.as_deref())?;
+    let previous_commitment_resolution = resolve_previous_commitment_resolution(
+        &input.previous_commitments,
+        input.legacy_previous_commitment.as_ref(),
+        previous.as_deref(),
+    )?;
     if path.exists() {
         let existing_content = fs::read_to_string(&path)
             .map_err(|error| format!("failed to read {}: {}", path.display(), error))?;
@@ -465,7 +533,6 @@ fn execute_journal(
         args.context.as_deref(),
         &input,
         &previous_commitment_resolution,
-        previous.as_deref(),
         worklog_link.as_deref(),
         chronic_status.as_deref(),
         &standing_eva_blockers,
@@ -3079,11 +3146,18 @@ fn resolve_journal_input(args: &JournalArgs) -> Result<JournalInput, String> {
             );
         }
         let payload = read_input_file(path)?;
-        return serde_json::from_str(&payload)
-            .map_err(|error| format!("invalid journal JSON input: {}", error));
+        let raw: RawJournalInput = serde_json::from_str(&payload)
+            .map_err(|error| format!("invalid journal JSON input: {}", error))?;
+        return normalize_journal_input(raw, "JSON input");
     }
 
     if has_inline_journal_content(args) {
+        if !args.previous_commitment_grade.is_empty()
+            && (args.previous_commitment_status.is_some()
+                || args.previous_commitment_detail.is_some())
+        {
+            return Err("cannot combine --previous-commitment-grade with legacy --previous-commitment-status/--previous-commitment-detail flags".to_string());
+        }
         if matches!(
             (
                 args.previous_commitment_status.as_ref(),
@@ -3097,14 +3171,14 @@ fn resolve_journal_input(args: &JournalArgs) -> Result<JournalInput, String> {
         }
 
         return Ok(JournalInput {
-            previous_commitment_status: args
-                .previous_commitment_status
-                .clone()
-                .unwrap_or_else(default_previous_commitment_status),
-            previous_commitment_detail: args
-                .previous_commitment_detail
-                .clone()
-                .unwrap_or_else(default_previous_commitment_detail),
+            previous_commitments: parse_previous_commitment_grade_flags(
+                &args.previous_commitment_grade,
+            )?,
+            legacy_previous_commitment: legacy_previous_commitment_override(
+                args.previous_commitment_status.as_deref(),
+                args.previous_commitment_detail.as_deref(),
+                "CLI flags",
+            )?,
             sections: parse_sections(&args.section)?,
             concrete_behavior_change: String::new(),
             commitments: parse_commitments(&args.commitment),
@@ -3113,7 +3187,109 @@ fn resolve_journal_input(args: &JournalArgs) -> Result<JournalInput, String> {
     }
 
     let payload = read_stdin()?;
-    serde_json::from_str(&payload).map_err(|error| format!("invalid journal JSON input: {}", error))
+    let raw: RawJournalInput = serde_json::from_str(&payload)
+        .map_err(|error| format!("invalid journal JSON input: {}", error))?;
+    normalize_journal_input(raw, "stdin JSON input")
+}
+
+fn normalize_journal_input(raw: RawJournalInput, source: &str) -> Result<JournalInput, String> {
+    if !raw.previous_commitments.is_empty()
+        && (raw.previous_commitment_status.is_some() || raw.previous_commitment_detail.is_some())
+    {
+        return Err(format!(
+            "{source} cannot combine previous_commitments with legacy previous_commitment_status/previous_commitment_detail fields"
+        ));
+    }
+
+    Ok(JournalInput {
+        previous_commitments: raw
+            .previous_commitments
+            .into_iter()
+            .map(normalize_previous_commitment_grade)
+            .collect::<Result<Vec<_>, _>>()?,
+        legacy_previous_commitment: legacy_previous_commitment_override(
+            raw.previous_commitment_status.as_deref(),
+            raw.previous_commitment_detail.as_deref(),
+            source,
+        )?,
+        sections: raw.sections,
+        concrete_behavior_change: raw.concrete_behavior_change,
+        commitments: raw.commitments,
+        open_questions: raw.open_questions,
+    })
+}
+
+fn normalize_previous_commitment_grade(
+    grade: RawPreviousCommitmentGrade,
+) -> Result<PreviousCommitmentGrade, String> {
+    let commitment_quote = non_empty_trimmed(Some(grade.commitment_quote.as_str()))
+        .ok_or_else(|| "previous_commitments[].commitment_quote must not be empty".to_string())?
+        .to_string();
+    let detail = non_empty_trimmed(Some(grade.detail.as_str()))
+        .ok_or_else(|| "previous_commitments[].detail must not be empty".to_string())?
+        .to_string();
+
+    Ok(PreviousCommitmentGrade {
+        commitment_quote,
+        status: parse_previous_commitment_grade_status(&grade.status)?,
+        detail,
+    })
+}
+
+fn parse_previous_commitment_grade_flags(
+    values: &[String],
+) -> Result<Vec<PreviousCommitmentGrade>, String> {
+    values
+        .iter()
+        .map(|value| {
+            let mut parts = value.splitn(3, "::");
+            let commitment_quote = parts.next().unwrap_or_default();
+            let status = parts.next().ok_or_else(|| {
+                format!(
+                    "invalid --previous-commitment-grade '{}'; expected QUOTE::STATUS::DETAIL",
+                    value
+                )
+            })?;
+            let detail = parts.next().ok_or_else(|| {
+                format!(
+                    "invalid --previous-commitment-grade '{}'; expected QUOTE::STATUS::DETAIL",
+                    value
+                )
+            })?;
+            normalize_previous_commitment_grade(RawPreviousCommitmentGrade {
+                commitment_quote: commitment_quote.to_string(),
+                status: status.to_string(),
+                detail: detail.to_string(),
+            })
+        })
+        .collect()
+}
+
+fn legacy_previous_commitment_override(
+    status: Option<&str>,
+    detail: Option<&str>,
+    source: &str,
+) -> Result<Option<LegacyPreviousCommitmentOverride>, String> {
+    match (status, detail) {
+        (None, None) => Ok(None),
+        (Some(_), None) | (None, Some(_)) => Err(
+            "previous-commitment override requires both --previous-commitment-status and --previous-commitment-detail".to_string(),
+        ),
+        (Some(status), Some(detail)) => {
+            let detail = non_empty_trimmed(Some(detail))
+                .ok_or_else(|| format!("{source} previous commitment detail must not be empty"))?
+                .to_string();
+            if source == "CLI flags" {
+                eprintln!(
+                    "Warning: legacy previous commitment status/detail input is deprecated; use per-commitment previous_commitments / --previous-commitment-grade instead."
+                );
+            }
+            Ok(Some(LegacyPreviousCommitmentOverride {
+                status: parse_legacy_previous_commitment_status(status)?,
+                detail,
+            }))
+        }
+    }
 }
 
 fn load_standing_eva_blockers(repo_root: &Path) -> Result<Vec<StandingEvaBlocker>, String> {
@@ -3280,6 +3456,9 @@ fn ceil_age_hours(age_hours: f64) -> Option<i64> {
 fn has_inline_journal_content(args: &JournalArgs) -> bool {
     !args.section.is_empty()
         || !args.commitment.is_empty()
+        || !args.previous_commitment_grade.is_empty()
+        || args.previous_commitment_status.is_some()
+        || args.previous_commitment_detail.is_some()
         || args.auto_chronic_status
         || args.context.is_some()
 }
@@ -3734,14 +3913,6 @@ fn parse_commitments(values: &[String]) -> Vec<String> {
         .filter(|value| !value.is_empty())
         .map(str::to_string)
         .collect()
-}
-
-fn default_previous_commitment_status() -> String {
-    "no_prior_commitment".to_string()
-}
-
-fn default_previous_commitment_detail() -> String {
-    "No prior commitment recorded.".to_string()
 }
 
 fn worklog_path(repo_root: &Path, now: DateTime<Utc>, cycle: u64, title: &str) -> PathBuf {
@@ -4246,138 +4417,198 @@ fn render_bullet_list(items: &[String]) -> Vec<String> {
         .collect()
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum CommitmentStatus {
-    Followed,
-    NotFollowed,
-    NotApplicable,
-    Pending,
-    Dropped,
-    Mixed,
-    NoPriorCommitment,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum PriorCommitmentLabel {
-    Met,
-    Pending,
-    NotMet,
-    Dropped,
-}
-
 #[derive(Debug, PartialEq, Eq)]
-struct PreviousCommitmentResolution {
-    summary_status: CommitmentStatus,
-    item_labels: Vec<PriorCommitmentLabel>,
+enum PreviousCommitmentResolution {
+    NoPriorCommitment { detail: String },
+    Graded(Vec<ResolvedPreviousCommitmentGrade>),
 }
 
-fn parse_commitment_status(value: &str) -> Result<CommitmentStatus, String> {
-    match value {
-		"followed" => Ok(CommitmentStatus::Followed),
-		"not_followed" => Ok(CommitmentStatus::NotFollowed),
-		"not_applicable" => Ok(CommitmentStatus::NotApplicable),
-		"pending" => Ok(CommitmentStatus::Pending),
-		"dropped" => Ok(CommitmentStatus::Dropped),
-		"mixed" => Ok(CommitmentStatus::Mixed),
-		"no_prior_commitment" => Ok(CommitmentStatus::NoPriorCommitment),
-		"met" => Ok(CommitmentStatus::Followed),
-		"not_met" => Ok(CommitmentStatus::NotFollowed),
-		_ => Err(format!(
-			"invalid previous_commitment_status '{}'; expected one of: followed, not_followed, not_applicable, pending, dropped, mixed, no_prior_commitment, met, not_met",
-			value
-		)),
-	}
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct ResolvedPreviousCommitmentGrade {
+    commitment_quote: String,
+    status: PreviousCommitmentGradeStatus,
+    detail: String,
 }
 
-fn parse_prior_commitment_label(value: &str) -> Result<PriorCommitmentLabel, String> {
+fn parse_previous_commitment_grade_status(
+    value: &str,
+) -> Result<PreviousCommitmentGradeStatus, String> {
     match value {
-        "met" | "followed" => Ok(PriorCommitmentLabel::Met),
-        "pending" => Ok(PriorCommitmentLabel::Pending),
-        "not_met" | "not_followed" => Ok(PriorCommitmentLabel::NotMet),
-        "dropped" | "not_applicable" => Ok(PriorCommitmentLabel::Dropped),
+        "met" => Ok(PreviousCommitmentGradeStatus::Met),
+        "partial" => Ok(PreviousCommitmentGradeStatus::Partial),
+        "not_met" => Ok(PreviousCommitmentGradeStatus::NotMet),
+        "not_triggered" => Ok(PreviousCommitmentGradeStatus::NotTriggered),
+        "deferred" => Ok(PreviousCommitmentGradeStatus::Deferred),
+        "dropped" => Ok(PreviousCommitmentGradeStatus::Dropped),
         _ => Err(format!(
-            "invalid previous_commitment_status '{}'; expected per-commitment values met, pending, not_met, dropped",
+            "invalid previous commitment status '{}'; expected one of: {}",
+            value,
+            PREVIOUS_COMMITMENT_GRADE_STATUS_VALUES.join(", ")
+        )),
+    }
+}
+
+fn parse_legacy_previous_commitment_status(
+    value: &str,
+) -> Result<LegacyPreviousCommitmentStatus, String> {
+    match value {
+        "followed" | "met" => Ok(LegacyPreviousCommitmentStatus::Met),
+        "mixed" | "partial" => Ok(LegacyPreviousCommitmentStatus::Partial),
+        "not_followed" | "not_met" => Ok(LegacyPreviousCommitmentStatus::NotMet),
+        "not_applicable" | "not_triggered" => Ok(LegacyPreviousCommitmentStatus::NotTriggered),
+        "pending" | "deferred" => Ok(LegacyPreviousCommitmentStatus::Deferred),
+        "dropped" => Ok(LegacyPreviousCommitmentStatus::Dropped),
+        "no_prior_commitment" => Ok(LegacyPreviousCommitmentStatus::NoPriorCommitment),
+        _ => Err(format!(
+            "invalid previous_commitment_status '{}'; expected one of: followed, mixed, not_followed, not_applicable, pending, dropped, no_prior_commitment, met, partial, not_met, not_triggered, deferred",
             value
         )),
     }
 }
 
 fn resolve_previous_commitment_resolution(
-    status_value: &str,
+    grades: &[PreviousCommitmentGrade],
+    legacy_override: Option<&LegacyPreviousCommitmentOverride>,
     previous_commitment: Option<&str>,
 ) -> Result<PreviousCommitmentResolution, String> {
     let previous_items = previous_commitment
         .map(extract_previous_commitment_items)
         .unwrap_or_default();
-    let tokens = previous_commitment_status_tokens(status_value);
 
     if previous_items.is_empty() {
-        if tokens.is_empty() || matches!(tokens.as_slice(), ["no_prior_commitment"]) {
-            return Ok(PreviousCommitmentResolution {
-                summary_status: CommitmentStatus::NoPriorCommitment,
-                item_labels: Vec::new(),
+        if grades.is_empty() {
+            if let Some(legacy_override) = legacy_override {
+                if matches!(
+                    legacy_override.status,
+                    LegacyPreviousCommitmentStatus::NoPriorCommitment
+                ) {
+                    return Ok(PreviousCommitmentResolution::NoPriorCommitment {
+                        detail: legacy_override.detail.clone(),
+                    });
+                }
+                return Err(
+                    "--previous-commitment-status is set but no previous commitment found in journal history"
+                        .to_string(),
+                );
+            }
+            return Ok(PreviousCommitmentResolution::NoPriorCommitment {
+                detail: NO_PRIOR_COMMITMENT_DETAIL.to_string(),
             });
         }
-        for token in &tokens {
-            parse_commitment_status(token)?;
-        }
         return Err(
-            "--previous-commitment-status is set but no previous commitment found in journal history"
+            "previous commitment grades were supplied but no previous commitment found in journal history"
                 .to_string(),
         );
     }
 
-    if tokens.is_empty() || matches!(tokens.as_slice(), ["no_prior_commitment"]) {
-        return Err("previous commitment found in journal but --previous-commitment-status is 'no_prior_commitment'; specify an explicit status (followed, not_followed, not_applicable) or per-commitment labels (met, pending, not_met, dropped)".to_string());
-    }
-
-    if previous_items.len() == 1 {
-        let [token] = tokens.as_slice() else {
+    if let Some(legacy_override) = legacy_override {
+        if matches!(
+            legacy_override.status,
+            LegacyPreviousCommitmentStatus::NoPriorCommitment
+        ) {
+            return Err("previous commitment found in journal but deprecated previous_commitment_status is 'no_prior_commitment'; supply a per-commitment grade instead".to_string());
+        }
+        if previous_items.len() != 1 {
             return Err(format!(
-                "expected 1 previous-commitment-status value for the carried-forward commitment, got {}",
-                tokens.len()
+                "deprecated previous-commitment-status/detail input only supports a single carried-forward commitment; found {} commitments, use --previous-commitment-grade once per commitment instead",
+                previous_items.len()
             ));
-        };
-        return Ok(PreviousCommitmentResolution {
-            summary_status: parse_commitment_status(token)?,
-            item_labels: vec![parse_prior_commitment_label(token)?],
-        });
+        }
+        return Ok(PreviousCommitmentResolution::Graded(vec![
+            ResolvedPreviousCommitmentGrade {
+                commitment_quote: previous_items[0].clone(),
+                status: legacy_status_to_grade_status(legacy_override.status),
+                detail: legacy_override.detail.clone(),
+            },
+        ]));
     }
 
-    if tokens.len() != previous_items.len() {
+    if grades.is_empty() {
+        return Err(
+            "previous commitment found in journal but no previous_commitments grades were supplied"
+                .to_string(),
+        );
+    }
+
+    if grades.len() != previous_items.len() {
         return Err(format!(
-            "expected {} previous-commitment-status values for {} carried-forward commitments, got {}",
+            "expected {} previous_commitments entries for {} carried-forward commitments, got {}",
             previous_items.len(),
             previous_items.len(),
-            tokens.len()
+            grades.len()
         ));
     }
 
-    let item_labels = tokens
-        .iter()
-        .map(|token| parse_prior_commitment_label(token))
-        .collect::<Result<Vec<_>, _>>()?;
-    let summary_status = if item_labels
-        .iter()
-        .all(|label| *label == PriorCommitmentLabel::Met)
-    {
-        CommitmentStatus::Followed
-    } else {
-        CommitmentStatus::Mixed
-    };
+    let mut matched_indices = HashSet::new();
+    let mut resolved_by_index = vec![None; previous_items.len()];
+    for grade in grades {
+        let quote = grade.commitment_quote.trim();
+        let matching_indices = previous_items
+            .iter()
+            .enumerate()
+            .filter_map(|(index, item)| item.contains(quote).then_some(index))
+            .collect::<Vec<_>>();
+        match matching_indices.as_slice() {
+            [] => {
+                return Err(format!(
+                    "previous commitment quote '{}' does not match any carried-forward commitment",
+                    grade.commitment_quote
+                ))
+            }
+            [index] => {
+                if !matched_indices.insert(*index) {
+                    return Err(format!(
+                        "previous commitment quote '{}' matches a commitment that already has a grade",
+                        grade.commitment_quote
+                    ));
+                }
+                resolved_by_index[*index] = Some(ResolvedPreviousCommitmentGrade {
+                    commitment_quote: previous_items[*index].clone(),
+                    status: grade.status,
+                    detail: grade.detail.clone(),
+                });
+            }
+            _ => {
+                return Err(format!(
+                    "previous commitment quote '{}' matches multiple carried-forward commitments; use a more specific substring",
+                    grade.commitment_quote
+                ))
+            }
+        }
+    }
 
-    Ok(PreviousCommitmentResolution {
-        summary_status,
-        item_labels,
-    })
+    Ok(PreviousCommitmentResolution::Graded(
+        resolved_by_index
+            .into_iter()
+            .enumerate()
+            .map(|(index, grade)| {
+                grade.ok_or_else(|| {
+                    format!(
+                        "missing previous commitment grade for carried-forward commitment '{}'",
+                        previous_items[index]
+                    )
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+    ))
 }
 
-fn previous_commitment_status_tokens(value: &str) -> Vec<&str> {
-    value
-        .split(',')
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .collect()
+fn legacy_status_to_grade_status(
+    status: LegacyPreviousCommitmentStatus,
+) -> PreviousCommitmentGradeStatus {
+    match status {
+        LegacyPreviousCommitmentStatus::Met => PreviousCommitmentGradeStatus::Met,
+        LegacyPreviousCommitmentStatus::Partial => PreviousCommitmentGradeStatus::Partial,
+        LegacyPreviousCommitmentStatus::NotMet => PreviousCommitmentGradeStatus::NotMet,
+        LegacyPreviousCommitmentStatus::NotTriggered => PreviousCommitmentGradeStatus::NotTriggered,
+        LegacyPreviousCommitmentStatus::Deferred => PreviousCommitmentGradeStatus::Deferred,
+        LegacyPreviousCommitmentStatus::Dropped => PreviousCommitmentGradeStatus::Dropped,
+        LegacyPreviousCommitmentStatus::NoPriorCommitment => {
+            unreachable!(
+                "no_prior_commitment should be filtered before grade conversion; reaching this branch means the legacy validation logic is buggy"
+            )
+        }
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -4388,7 +4619,6 @@ fn render_journal_entry(
     context: Option<&str>,
     input: &JournalInput,
     previous_commitment_resolution: &PreviousCommitmentResolution,
-    previous_commitment: Option<&str>,
     worklog_relative_path: Option<&str>,
     chronic_status: Option<&str>,
     standing_eva_blockers: &[StandingEvaBlocker],
@@ -4414,35 +4644,27 @@ fn render_journal_entry(
     }
     lines.push("### Previous commitment follow-through".to_string());
     lines.push(String::new());
-    if let Some(previous) = previous_commitment {
-        lines.push(format!(
-            "> Previous commitment: {}",
-            convert_references(previous)
-        ));
-        lines.push(String::new());
-    }
-    if previous_commitment_resolution.item_labels.len() <= 1 {
-        lines.push(format!(
-            "{} {}",
-            commitment_status_label(previous_commitment_resolution.summary_status),
-            convert_references(&input.previous_commitment_detail)
-        ));
-    } else {
-        lines.push(commitment_status_label(previous_commitment_resolution.summary_status).to_string());
-    }
-    if previous_commitment_resolution.item_labels.len() > 1 {
-        if let Some(previous) = previous_commitment {
-        for (label, commitment) in previous_commitment_resolution
-            .item_labels
-            .iter()
-            .zip(extract_previous_commitment_items(previous))
-        {
+    match previous_commitment_resolution {
+        PreviousCommitmentResolution::NoPriorCommitment { detail } => {
             lines.push(format!(
-                "- **{}** — {}",
-                prior_commitment_label_text(*label),
-                convert_references(&commitment)
+                "**No prior commitment.** {}",
+                convert_references(detail)
             ));
         }
+        PreviousCommitmentResolution::Graded(grades) => {
+            for grade in grades {
+                lines.push(format!(
+                    "> Previous commitment: {}",
+                    convert_references(truncate_to_one_line(&grade.commitment_quote))
+                ));
+                lines.push(format!(
+                    "- **{}** — {}",
+                    previous_commitment_grade_status_label(grade.status),
+                    convert_references(&grade.detail)
+                ));
+                lines.push(String::new());
+            }
+            lines.pop();
         }
     }
     lines.push(String::new());
@@ -4545,25 +4767,19 @@ fn journal_commitments(input: &JournalInput) -> Vec<&str> {
     }
 }
 
-fn commitment_status_label(status: CommitmentStatus) -> &'static str {
+fn previous_commitment_grade_status_label(status: PreviousCommitmentGradeStatus) -> &'static str {
     match status {
-        CommitmentStatus::Followed => "**Followed.**",
-        CommitmentStatus::NotFollowed => "**Not followed.**",
-        CommitmentStatus::NotApplicable => "**Not applicable.**",
-        CommitmentStatus::Pending => "**Pending.**",
-        CommitmentStatus::Dropped => "**Dropped.**",
-        CommitmentStatus::Mixed => "**Mixed.**",
-        CommitmentStatus::NoPriorCommitment => "**No prior commitment.**",
+        PreviousCommitmentGradeStatus::Met => "Met",
+        PreviousCommitmentGradeStatus::Partial => "Partial",
+        PreviousCommitmentGradeStatus::NotMet => "Not met",
+        PreviousCommitmentGradeStatus::NotTriggered => "Not triggered",
+        PreviousCommitmentGradeStatus::Deferred => "Deferred",
+        PreviousCommitmentGradeStatus::Dropped => "Dropped",
     }
 }
 
-fn prior_commitment_label_text(label: PriorCommitmentLabel) -> &'static str {
-    match label {
-        PriorCommitmentLabel::Met => "Met",
-        PriorCommitmentLabel::Pending => "Pending",
-        PriorCommitmentLabel::NotMet => "Not met",
-        PriorCommitmentLabel::Dropped => "Dropped",
-    }
+fn truncate_to_one_line(value: &str) -> &str {
+    value.lines().next().unwrap_or(value).trim()
 }
 
 fn lookup_previous_concrete_behavior(
@@ -4985,6 +5201,7 @@ mod tests {
             input_file: None,
             section: Vec::new(),
             commitment: Vec::new(),
+            previous_commitment_grade: Vec::new(),
             previous_commitment_status: None,
             previous_commitment_detail: None,
             auto_chronic_status: false,
@@ -7817,18 +8034,16 @@ mod tests {
             "Cycle 226: Breaking the worklog-accuracy pattern",
             Some("Cycle 226: Breaking the worklog-accuracy pattern."),
             &JournalInput {
-                previous_commitment_status: "no_prior_commitment".to_string(),
-                previous_commitment_detail: "No prior commitment recorded.".to_string(),
+                previous_commitments: Vec::new(),
+                legacy_previous_commitment: None,
                 sections: Vec::new(),
                 concrete_behavior_change: String::new(),
                 commitments: Vec::new(),
                 open_questions: Vec::new(),
             },
-            &PreviousCommitmentResolution {
-                summary_status: CommitmentStatus::NoPriorCommitment,
-                item_labels: Vec::new(),
+            &PreviousCommitmentResolution::NoPriorCommitment {
+                detail: NO_PRIOR_COMMITMENT_DETAIL.to_string(),
             },
-            None,
             Some("../worklog/2026-03-11/123451-cycle-226-summary.md"),
             None,
             &[],
@@ -7878,18 +8093,16 @@ mod tests {
             "Derived blocker journal",
             Some("Derived blocker journal."),
             &JournalInput {
-                previous_commitment_status: "no_prior_commitment".to_string(),
-                previous_commitment_detail: "No prior commitment recorded.".to_string(),
+                previous_commitments: Vec::new(),
+                legacy_previous_commitment: None,
                 sections: Vec::new(),
                 concrete_behavior_change: String::new(),
                 commitments: Vec::new(),
                 open_questions: Vec::new(),
             },
-            &PreviousCommitmentResolution {
-                summary_status: CommitmentStatus::NoPriorCommitment,
-                item_labels: Vec::new(),
+            &PreviousCommitmentResolution::NoPriorCommitment {
+                detail: NO_PRIOR_COMMITMENT_DETAIL.to_string(),
             },
-            None,
             None,
             None,
             &blockers,
@@ -7931,18 +8144,16 @@ mod tests {
             "Breaking the worklog-accuracy pattern",
             None,
             &JournalInput {
-                previous_commitment_status: "no_prior_commitment".to_string(),
-                previous_commitment_detail: "No prior commitment recorded.".to_string(),
+                previous_commitments: Vec::new(),
+                legacy_previous_commitment: None,
                 sections: Vec::new(),
                 concrete_behavior_change: String::new(),
                 commitments: Vec::new(),
                 open_questions: Vec::new(),
             },
-            &PreviousCommitmentResolution {
-                summary_status: CommitmentStatus::NoPriorCommitment,
-                item_labels: Vec::new(),
+            &PreviousCommitmentResolution::NoPriorCommitment {
+                detail: NO_PRIOR_COMMITMENT_DETAIL.to_string(),
             },
-            None,
             Some("../worklog/2026-03-11/123451-cycle-226-summary.md"),
             None,
             &[],
@@ -7955,17 +8166,30 @@ mod tests {
 
     #[test]
     fn render_journal_entry_grades_each_previous_commitment_independently() {
-        let previous_commitment = "1. Dispatch PR #546 in the same cycle.\n2. Verify close-out gate widening.";
+        let previous_commitment =
+            "1. Dispatch PR #546 in the same cycle.\n2. Verify close-out gate widening.";
         let input = JournalInput {
-            previous_commitment_status: "met,pending".to_string(),
-            previous_commitment_detail: "Legacy umbrella note.".to_string(),
+            previous_commitments: vec![
+                PreviousCommitmentGrade {
+                    commitment_quote: "Dispatch PR #546".to_string(),
+                    status: PreviousCommitmentGradeStatus::Met,
+                    detail: "Merged PR #546 after review.".to_string(),
+                },
+                PreviousCommitmentGrade {
+                    commitment_quote: "Verify close-out gate widening".to_string(),
+                    status: PreviousCommitmentGradeStatus::Deferred,
+                    detail: "Deferred until the gate audit lands.".to_string(),
+                },
+            ],
+            legacy_previous_commitment: None,
             sections: Vec::new(),
             concrete_behavior_change: String::new(),
             commitments: Vec::new(),
             open_questions: Vec::new(),
         };
         let resolution = resolve_previous_commitment_resolution(
-            &input.previous_commitment_status,
+            &input.previous_commitments,
+            input.legacy_previous_commitment.as_ref(),
             Some(previous_commitment),
         )
         .expect("multiple commitments should resolve");
@@ -7977,26 +8201,32 @@ mod tests {
             None,
             &input,
             &resolution,
-            Some(previous_commitment),
             None,
             None,
             &[],
         );
 
-        assert!(rendered.contains("**Mixed.**"));
-        assert!(rendered.contains("- **Met** — Dispatch [PR #546]"));
-        assert!(rendered.contains("- **Pending** — Verify close-out gate widening."));
-        assert!(!rendered.contains("**Followed.** Legacy umbrella note."));
+        assert!(rendered.contains(
+            "> Previous commitment: Dispatch [PR #546](https://github.com/EvaLok/schema-org-json-ld/issues/546) in the same cycle."
+        ));
+        assert!(rendered.contains("- **Met** — Merged [PR #546](https://github.com/EvaLok/schema-org-json-ld/issues/546) after review."));
+        assert!(rendered.contains("> Previous commitment: Verify close-out gate widening."));
+        assert!(rendered.contains("- **Deferred** — Deferred until the gate audit lands."));
     }
 
     #[test]
-    fn previous_commitment_resolution_rejects_unlabeled_commitments() {
+    fn previous_commitment_resolution_rejects_missing_grades() {
         let error = resolve_previous_commitment_resolution(
-            "met",
+            &[PreviousCommitmentGrade {
+                commitment_quote: "Dispatch PR #546".to_string(),
+                status: PreviousCommitmentGradeStatus::Met,
+                detail: "Done.".to_string(),
+            }],
+            None,
             Some("1. Dispatch PR #546 in the same cycle.\n2. Verify close-out gate widening."),
         )
-        .expect_err("journal generation should fail when any prior commitment is unlabeled");
-        assert!(error.contains("expected 2 previous-commitment-status values"));
+        .expect_err("journal generation should fail when any prior commitment is ungraded");
+        assert!(error.contains("expected 2 previous_commitments entries"));
     }
 
     #[test]
@@ -9195,9 +9425,9 @@ Reflective log for the schema-org-json-ld orchestrator.
         let explicit_path = execute_journal(&explicit_args, &repo_root.path, fixed_now()).unwrap();
         let explicit_content = fs::read_to_string(explicit_path).unwrap();
         assert!(explicit_content.contains(
-            "> Previous commitment: 1. Dispatch [#546](https://github.com/EvaLok/schema-org-json-ld/issues/546) in the same cycle."
+            "> Previous commitment: Dispatch [#546](https://github.com/EvaLok/schema-org-json-ld/issues/546) in the same cycle."
         ));
-        assert!(explicit_content.contains("**Followed.** Done."));
+        assert!(explicit_content.contains("- **Met** — Done."));
         assert!(
             !explicit_content.contains("**No prior commitment.** No prior commitment recorded.")
         );
@@ -9205,14 +9435,8 @@ Reflective log for the schema-org-json-ld orchestrator.
         let mut default_args = journal_args("Inline default");
         default_args.section = vec!["Notes::Keep notes minimal.".to_string()];
         let default_input = resolve_journal_input(&default_args).unwrap();
-        assert_eq!(
-            default_input.previous_commitment_status,
-            "no_prior_commitment"
-        );
-        assert_eq!(
-            default_input.previous_commitment_detail,
-            "No prior commitment recorded."
-        );
+        assert!(default_input.previous_commitments.is_empty());
+        assert!(default_input.legacy_previous_commitment.is_none());
     }
 
     #[test]
@@ -9226,6 +9450,35 @@ Reflective log for the schema-org-json-ld orchestrator.
             error,
             "previous-commitment override requires both --previous-commitment-status and --previous-commitment-detail"
         );
+    }
+
+    #[test]
+    fn cli_parses_repeatable_previous_commitment_grade_flags() {
+        let cli = Cli::try_parse_from([
+            "write-entry",
+            "journal",
+            "--title",
+            "test",
+            "--previous-commitment-grade",
+            "Dispatch PR #546::met::Merged PR #546",
+            "--previous-commitment-grade",
+            "Verify close-out gate widening::deferred::Deferred to next cycle",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::Journal(args) => {
+                assert_eq!(
+                    args.previous_commitment_grade,
+                    vec![
+                        "Dispatch PR #546::met::Merged PR #546".to_string(),
+                        "Verify close-out gate widening::deferred::Deferred to next cycle"
+                            .to_string(),
+                    ]
+                );
+            }
+            Command::Worklog(_) => panic!("expected journal command"),
+        }
     }
 
     #[test]
@@ -9652,7 +9905,7 @@ Reflective log for the schema-org-json-ld orchestrator.
 
         let content = fs::read_to_string(journal_path(&repo_root.path, fixed_now())).unwrap();
         assert!(content.contains(
-            "> Previous commitment: 1. Dispatch [#546](https://github.com/EvaLok/schema-org-json-ld/issues/546) in the same cycle."
+            "> Previous commitment: Dispatch [#546](https://github.com/EvaLok/schema-org-json-ld/issues/546) in the same cycle."
         ));
     }
 
@@ -9716,9 +9969,8 @@ Reflective log for the schema-org-json-ld orchestrator.
 
         let error = execute_journal(&args, &repo_root.path, fixed_now()).unwrap_err();
         assert!(error.contains(
-            "previous commitment found in journal but --previous-commitment-status is 'no_prior_commitment'"
+            "previous commitment found in journal but no previous_commitments grades were supplied"
         ));
-        assert!(error.contains("followed, not_followed, not_applicable"));
     }
 
     #[test]
