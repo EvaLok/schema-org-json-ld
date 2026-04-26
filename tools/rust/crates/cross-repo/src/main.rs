@@ -1628,7 +1628,7 @@ mod tests {
     #[test]
     fn stale_detection_errors_when_cycle_marker_is_missing() {
         let error = detect_stale_accepted(
-			&[301],
+			&[AuditProcessedEntry::Legacy(301)],
 			&[AuditInboundIssue {
 				number: 900,
 				title: "[Audit-ACK] Accepted".to_string(),
