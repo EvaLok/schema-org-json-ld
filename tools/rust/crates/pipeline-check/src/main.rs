@@ -3760,6 +3760,10 @@ fn post_dispatch_delta_heading_required_assessment(
 // production for enough consecutive cycles that cycle 523 can be treated as the
 // last immutable pre-fix boundary rather than a standing exception.
 const POST_DISPATCH_DELTA_FIRST_APPLICABLE_PREVIOUS_CYCLE: u64 = 523;
+// PR #2732 (cycle 545 merge) introduced the post-dispatch reconciliation block.
+// record-dispatch only appends it from cycle 545 onward, so the check must not
+// fire on previous_cycle < 545 (cycle 544 closed before the tool deployed).
+const POST_DISPATCH_RECONCILIATION_FIRST_APPLICABLE_PREVIOUS_CYCLE: u64 = 545;
 
 fn post_dispatch_delta_presence_assessment(repo_root: &Path) -> Result<StepAssessment, String> {
     post_dispatch_section_presence_assessment(
@@ -3767,6 +3771,7 @@ fn post_dispatch_delta_presence_assessment(repo_root: &Path) -> Result<StepAsses
         "## Post-dispatch delta",
         "post-dispatch delta",
         Severity::Blocking,
+        POST_DISPATCH_DELTA_FIRST_APPLICABLE_PREVIOUS_CYCLE,
     )
 }
 
@@ -3778,6 +3783,7 @@ fn post_dispatch_reconciliation_presence_assessment(
         "## Post-dispatch reconciliation",
         "post-dispatch reconciliation",
         Severity::Warning,
+        POST_DISPATCH_RECONCILIATION_FIRST_APPLICABLE_PREVIOUS_CYCLE,
     )
 }
 
@@ -3786,6 +3792,7 @@ fn post_dispatch_section_presence_assessment(
     heading: &str,
     label: &str,
     severity_when_missing: Severity,
+    first_applicable_previous_cycle: u64,
 ) -> Result<StepAssessment, String> {
     let current_cycle = current_cycle_from_state(repo_root)?;
     let Some(previous_cycle) = current_cycle.checked_sub(1) else {
@@ -3795,13 +3802,13 @@ fn post_dispatch_section_presence_assessment(
             detail: "cycle 0 has no previous worklog to inspect".to_string(),
         });
     };
-    if previous_cycle < POST_DISPATCH_DELTA_FIRST_APPLICABLE_PREVIOUS_CYCLE {
+    if previous_cycle < first_applicable_previous_cycle {
         return Ok(StepAssessment {
             status: StepStatus::Skip,
             severity: Severity::Warning,
             detail: format!(
-                "cycle {} predates post-dispatch-delta structural fix (first applicable previous cycle: {}); skipping",
-                previous_cycle, POST_DISPATCH_DELTA_FIRST_APPLICABLE_PREVIOUS_CYCLE
+                "cycle {} predates {} structural fix (first applicable previous cycle: {}); skipping",
+                previous_cycle, label, first_applicable_previous_cycle
             ),
         });
     }
@@ -6485,21 +6492,21 @@ mod tests {
         fs::write(
             root.join("docs/state.json"),
             json!({
-                "last_cycle": {"number": 523},
-                "cycle_phase": {"cycle": 524}
+                "last_cycle": {"number": 545},
+                "cycle_phase": {"cycle": 546}
             })
             .to_string(),
         )
         .unwrap();
-        fs::create_dir_all(root.join("docs/worklog/2026-04-21")).unwrap();
+        fs::create_dir_all(root.join("docs/worklog/2026-04-26")).unwrap();
         fs::write(
-            root.join("docs/worklog/2026-04-21/094529-cycle-523-summary.md"),
-            "# Cycle 523 — 2026-04-21 09:45 UTC\n\n## Post-dispatch delta\n\n- **In-flight agent sessions**: 1\n- **Dispatch count**: 1 dispatch\n- **Last-cycle summary**: 1 dispatch, 0 merges\n\n## Post-dispatch reconciliation\n\n- **In-flight agent sessions**: 1\n- **Pipeline status**: PASS (6/6)\n- **Publish gate**: published\n- **Last-cycle summary**: 1 dispatch, 0 merges\n- **Dispatch log latest**: #2633 review dispatch (cycle 523)\n",
+            root.join("docs/worklog/2026-04-26/210000-cycle-545-summary.md"),
+            "# Cycle 545 — 2026-04-26 21:00 UTC\n\n## Post-dispatch delta\n\n- **In-flight agent sessions**: 1\n- **Dispatch count**: 1 dispatch\n- **Last-cycle summary**: 1 dispatch, 0 merges\n\n## Post-dispatch reconciliation\n\n- **In-flight agent sessions**: 1\n- **Pipeline status**: PASS (6/6)\n- **Publish gate**: published\n- **Last-cycle summary**: 1 dispatch, 0 merges\n- **Dispatch log latest**: #2737 review dispatch (cycle 545)\n",
         )
         .unwrap();
         commit_all(
             &root,
-            "state(record-dispatch): #2633 dispatched [cycle 523]",
+            "state(record-dispatch): #2737 dispatched [cycle 545]",
         );
 
         let step = verify_post_dispatch_reconciliation_present(&root);
@@ -6510,7 +6517,7 @@ mod tests {
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("cycle 523 worklog includes post-dispatch reconciliation"));
+            .contains("cycle 545 worklog includes post-dispatch reconciliation"));
     }
 
     #[test]
@@ -6526,21 +6533,21 @@ mod tests {
         fs::write(
             root.join("docs/state.json"),
             json!({
-                "last_cycle": {"number": 523},
-                "cycle_phase": {"cycle": 524}
+                "last_cycle": {"number": 545},
+                "cycle_phase": {"cycle": 546}
             })
             .to_string(),
         )
         .unwrap();
-        fs::create_dir_all(root.join("docs/worklog/2026-04-21")).unwrap();
+        fs::create_dir_all(root.join("docs/worklog/2026-04-26")).unwrap();
         fs::write(
-            root.join("docs/worklog/2026-04-21/094529-cycle-523-summary.md"),
-            "# Cycle 523 — 2026-04-21 09:45 UTC\n\n## Post-dispatch delta\n\n- **In-flight agent sessions**: 1\n- **Dispatch count**: 1 dispatch\n- **Last-cycle summary**: 1 dispatch, 0 merges\n",
+            root.join("docs/worklog/2026-04-26/210000-cycle-545-summary.md"),
+            "# Cycle 545 — 2026-04-26 21:00 UTC\n\n## Post-dispatch delta\n\n- **In-flight agent sessions**: 1\n- **Dispatch count**: 1 dispatch\n- **Last-cycle summary**: 1 dispatch, 0 merges\n",
         )
         .unwrap();
         commit_all(
             &root,
-            "state(record-dispatch): #2633 dispatched [cycle 523]",
+            "state(record-dispatch): #2737 dispatched [cycle 545]",
         );
 
         let step = verify_post_dispatch_reconciliation_present(&root);
@@ -6552,6 +6559,47 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("missing ## Post-dispatch reconciliation"));
+    }
+
+    #[test]
+    fn post_dispatch_reconciliation_present_skips_for_pre_deployment_cycles() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-post-dispatch-reconciliation-skip-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 544},
+                "cycle_phase": {"cycle": 545}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        fs::create_dir_all(root.join("docs/worklog/2026-04-26")).unwrap();
+        fs::write(
+            root.join("docs/worklog/2026-04-26/175616-cycle-544-summary.md"),
+            "# Cycle 544 — 2026-04-26 17:56 UTC\n\n## Post-dispatch delta\n\n- **In-flight agent sessions**: 2\n- **Dispatch count**: 2 dispatches\n- **Last-cycle summary**: 2 dispatches, 0 merges\n",
+        )
+        .unwrap();
+        commit_all(
+            &root,
+            "state(record-dispatch): #2733 dispatched [cycle 544]",
+        );
+
+        let step = verify_post_dispatch_reconciliation_present(&root);
+
+        assert_eq!(step.status, StepStatus::Skip);
+        assert_eq!(step.severity, Severity::Warning);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("predates post-dispatch reconciliation structural fix"));
     }
 
     #[test]
@@ -6622,7 +6670,7 @@ mod tests {
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("predates post-dispatch-delta structural fix"));
+            .contains("predates post-dispatch delta structural fix"));
     }
 
     #[test]
