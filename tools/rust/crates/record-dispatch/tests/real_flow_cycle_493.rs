@@ -240,9 +240,11 @@ fn record_dispatch_updates_previous_cycle_worklog_when_current_cycle_worklog_is_
     )
     .expect("worklog should be readable");
     assert!(worklog.contains("## Post-dispatch delta"));
+    assert!(worklog.contains("## Post-dispatch reconciliation"));
     assert!(worklog.contains("- **In-flight agent sessions**: 1"));
     assert!(worklog.contains("- **Dispatch count**: 0 dispatches"));
     assert!(worklog.contains("- **Last-cycle summary**: 0 dispatches, 0 merges"));
+    assert!(worklog.contains("- **Dispatch log latest**: #2586 Cycle review dispatch (cycle 514)"));
 
     let changed_files = git_output(repo.path(), ["show", "--name-only", "--format=", "HEAD"]);
     assert!(changed_files.contains("docs/state.json"));
@@ -363,9 +365,13 @@ fn record_dispatch_updates_replacement_worklog_after_close_out_slug_replace() {
     let replacement_worklog =
         fs::read_to_string(&replacement_path).expect("replacement worklog should be readable");
     assert!(replacement_worklog.contains("## Post-dispatch delta"));
+    assert!(replacement_worklog.contains("## Post-dispatch reconciliation"));
     assert!(replacement_worklog.contains("- **In-flight agent sessions**: 2"));
     assert!(replacement_worklog.contains("- **Dispatch count**: 2 dispatches"));
     assert!(replacement_worklog.contains("- **Last-cycle summary**: 2 dispatches, 0 merges"));
+    assert!(replacement_worklog.contains(
+        "- **Dispatch log latest**: #2596 [Cycle Review] Cycle 515 end-of-cycle review (cycle 515)"
+    ));
 
     let changed_files = git_output(repo.path(), ["show", "--name-only", "--format=", "HEAD"]);
     assert!(changed_files.contains("docs/state.json"));

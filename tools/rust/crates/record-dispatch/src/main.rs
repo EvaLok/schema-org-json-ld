@@ -18,11 +18,23 @@ use std::{
     time::UNIX_EPOCH,
 };
 
+const NOT_PROVIDED: &str = "Not provided.";
 const POST_DISPATCH_DELTA_HEADING: &str = "## Post-dispatch delta";
+const POST_DISPATCH_RECONCILIATION_HEADING: &str = "## Post-dispatch reconciliation";
+const POST_DISPATCH_RECONCILIATION_NOTE: &str = "> Append-only reconciliation added automatically by `record-dispatch`. The frozen C4.5 snapshot and any existing post-dispatch delta block above remain unchanged.";
 
 struct WorklogUpdate {
     path: PathBuf,
     content: String,
+}
+
+struct PostDispatchWorklogState {
+    in_flight_sessions: u64,
+    dispatch_count: String,
+    last_cycle_summary: String,
+    pipeline_status: String,
+    publish_gate: String,
+    dispatch_log_latest: String,
 }
 
 #[derive(Parser, Debug)]
@@ -247,21 +259,8 @@ fn prepare_post_dispatch_worklog_update(
     };
     let content = fs::read_to_string(&worklog_path)
         .map_err(|error| format!("failed to read {}: {}", worklog_path.display(), error))?;
-    let in_flight_sessions = state
-        .pointer("/in_flight_sessions")
-        .and_then(serde_json::Value::as_u64)
-        .ok_or_else(|| "missing numeric /in_flight_sessions in docs/state.json".to_string())?;
-    let last_cycle_summary = state
-        .pointer("/last_cycle/summary")
-        .and_then(serde_json::Value::as_str)
-        .ok_or_else(|| "missing string /last_cycle/summary in docs/state.json".to_string())?;
-    let dispatch_count = dispatch_count_clause(last_cycle_summary);
-    let updated = render_post_dispatch_delta(
-        &content,
-        in_flight_sessions,
-        dispatch_count,
-        last_cycle_summary,
-    );
+    let worklog_state = post_dispatch_worklog_state(state)?;
+    let updated = render_post_dispatch_worklog_update(&content, &worklog_state);
     if updated == content {
         return Ok(None);
     }
@@ -301,21 +300,109 @@ fn resolve_post_dispatch_worklog_path(
     Ok(Some(worklog_path))
 }
 
-fn render_post_dispatch_delta(
+fn post_dispatch_worklog_state(
+    state: &serde_json::Value,
+) -> Result<PostDispatchWorklogState, String> {
+    let in_flight_sessions = state
+        .pointer("/in_flight_sessions")
+        .and_then(serde_json::Value::as_u64)
+        .ok_or_else(|| "missing numeric /in_flight_sessions in docs/state.json".to_string())?;
+    let last_cycle_summary = state
+        .pointer("/last_cycle/summary")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| "missing string /last_cycle/summary in docs/state.json".to_string())?
+        .to_string();
+    let pipeline_status = state
+        .pointer("/tool_pipeline/status")
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or(NOT_PROVIDED)
+        .to_string();
+    let publish_gate = state
+        .pointer("/publish_gate/status")
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or(NOT_PROVIDED)
+        .to_string();
+    let dispatch_log_latest = state
+        // Newer state writes the top-level field; older/test fixtures may only have
+        // the mirrored copilot_metrics value, so accept either location.
+        .pointer("/dispatch_log_latest")
+        .or_else(|| state.pointer("/copilot_metrics/dispatch_log_latest"))
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or(NOT_PROVIDED)
+        .to_string();
+
+    Ok(PostDispatchWorklogState {
+        in_flight_sessions,
+        dispatch_count: dispatch_count_clause(&last_cycle_summary).to_string(),
+        last_cycle_summary,
+        pipeline_status,
+        publish_gate,
+        dispatch_log_latest,
+    })
+}
+
+fn render_post_dispatch_worklog_update(
     content: &str,
-    in_flight_sessions: u64,
-    dispatch_count: &str,
-    last_cycle_summary: &str,
+    worklog_state: &PostDispatchWorklogState,
 ) -> String {
-    let base = if let Some(index) = content.find(&format!("\n{POST_DISPATCH_DELTA_HEADING}\n")) {
-        &content[..index]
-    } else {
-        content
+    let without_reconciliation = strip_existing_post_dispatch_reconciliation(content);
+    let with_delta = append_post_dispatch_delta_if_missing(without_reconciliation, worklog_state);
+    let base = with_delta.trim_end_matches('\n');
+    let reconciliation = render_post_dispatch_reconciliation(worklog_state);
+    format!("{base}\n\n{reconciliation}\n")
+}
+
+fn append_post_dispatch_delta_if_missing(
+    content: &str,
+    worklog_state: &PostDispatchWorklogState,
+) -> String {
+    if contains_heading(content, POST_DISPATCH_DELTA_HEADING) {
+        return content.to_string();
     }
-    .trim_end_matches('\n');
+
+    let base = content.trim_end_matches('\n');
     format!(
-        "{base}\n\n{POST_DISPATCH_DELTA_HEADING}\n\n- **In-flight agent sessions**: {in_flight_sessions}\n- **Dispatch count**: {dispatch_count}\n- **Last-cycle summary**: {last_cycle_summary}\n"
+        "{base}\n\n{POST_DISPATCH_DELTA_HEADING}\n\n- **In-flight agent sessions**: {}\n- **Dispatch count**: {}\n- **Last-cycle summary**: {}\n",
+        worklog_state.in_flight_sessions,
+        worklog_state.dispatch_count,
+        worklog_state.last_cycle_summary
     )
+}
+
+fn render_post_dispatch_reconciliation(worklog_state: &PostDispatchWorklogState) -> String {
+    format!(
+        "{POST_DISPATCH_RECONCILIATION_HEADING}\n\n{POST_DISPATCH_RECONCILIATION_NOTE}\n\n- **In-flight agent sessions**: {}\n- **Dispatch count**: {}\n- **Pipeline status**: {}\n- **Publish gate**: {}\n- **Last-cycle summary**: {}\n- **Dispatch log latest**: {}\n",
+        worklog_state.in_flight_sessions,
+        worklog_state.dispatch_count,
+        worklog_state.pipeline_status,
+        worklog_state.publish_gate,
+        worklog_state.last_cycle_summary,
+        worklog_state.dispatch_log_latest
+    )
+}
+
+fn strip_existing_post_dispatch_reconciliation(content: &str) -> &str {
+    find_heading(content, POST_DISPATCH_RECONCILIATION_HEADING)
+        .map(|index| &content[..index])
+        .unwrap_or(content)
+}
+
+fn contains_heading(content: &str, heading: &str) -> bool {
+    find_heading(content, heading).is_some()
+}
+
+fn find_heading(content: &str, heading: &str) -> Option<usize> {
+    if content.starts_with(&format!("{heading}\n")) {
+        Some(0)
+    } else {
+        content.find(&format!("\n{heading}\n"))
+    }
 }
 
 // `last_cycle.summary` is maintained by record-dispatch/process-merge in the
@@ -1161,6 +1248,126 @@ mod tests {
         assert!(content.contains("## Post-dispatch delta"));
         assert!(content.contains("- **In-flight agent sessions**: 1"));
         assert!(content.contains("- **Dispatch count**: 1 dispatch"));
+        assert!(content.contains("## Post-dispatch reconciliation"));
+    }
+
+    #[test]
+    fn run_appends_post_dispatch_reconciliation_for_review_dispatch_without_mutating_frozen_snapshot(
+    ) {
+        let repo = TempRepo::new();
+        repo.init();
+        let worklog_path = repo
+            .path()
+            .join("docs/worklog/2026-03-07/120000-cycle-164-summary.md");
+        fs::create_dir_all(worklog_path.parent().expect("worklog parent should exist")).unwrap();
+        let frozen_snapshot =
+            "# Cycle 164 — 2026-03-07 12:00 UTC\n\n## What was done\n\n- Closed out the cycle.\n";
+        fs::write(&worklog_path, frozen_snapshot).unwrap();
+        let runner = MockRunner::with_error("runner should not be called for review dispatch");
+
+        run_with_runner(
+            Cli {
+                issue: 602,
+                title: "Cycle review dispatch".to_string(),
+                model: Some("gpt-5.4".to_string()),
+                review_dispatch: true,
+                addresses_finding: None,
+                repo_root: repo.path().to_path_buf(),
+            },
+            &runner,
+            &mut |_| {},
+        )
+        .expect("review dispatch should append reconciliation block");
+
+        let worklog = fs::read_to_string(&worklog_path).expect("worklog should be readable");
+        assert_eq!(runner.call_count(), 0);
+        assert_eq!(
+            frozen_snapshot_prefix(&worklog),
+            frozen_snapshot.trim_end_matches('\n')
+        );
+        assert!(worklog.contains("## Post-dispatch delta"));
+        assert!(worklog.contains("## Post-dispatch reconciliation"));
+        assert!(worklog.contains("- **Pipeline status**: PASS (6/6)"));
+        assert!(worklog.contains("- **Publish gate**: published"));
+        assert!(worklog.contains("- **Last-cycle summary**: 1 dispatch, 1 merges (PR #700)"));
+        assert!(
+            worklog.contains("- **Dispatch log latest**: #602 Cycle review dispatch (cycle 164)")
+        );
+    }
+
+    #[test]
+    fn run_appends_post_dispatch_reconciliation_for_non_review_dispatch() {
+        let repo = TempRepo::new();
+        repo.init();
+        let worklog_path = repo
+            .path()
+            .join("docs/worklog/2026-03-07/120000-cycle-164-summary.md");
+        fs::create_dir_all(worklog_path.parent().expect("worklog parent should exist")).unwrap();
+        fs::write(
+            &worklog_path,
+            "# Cycle 164 — 2026-03-07 12:00 UTC\n\n## What was done\n\n- Closed out the cycle.\n",
+        )
+        .unwrap();
+        let runner = MockRunner::with_exit_code(Some(0));
+
+        run_with_runner(
+            Cli {
+                issue: 602,
+                title: "Agent-task dispatch".to_string(),
+                model: Some("gpt-5.4".to_string()),
+                review_dispatch: false,
+                addresses_finding: None,
+                repo_root: repo.path().to_path_buf(),
+            },
+            &runner,
+            &mut |_| {},
+        )
+        .expect("non-review dispatch should append reconciliation block");
+
+        let worklog = fs::read_to_string(&worklog_path).expect("worklog should be readable");
+        assert_eq!(runner.call_count(), 1);
+        assert!(worklog.contains("## Post-dispatch reconciliation"));
+        assert!(worklog.contains("- **Pipeline status**: PASS (6/6)"));
+        assert!(worklog.contains("- **Publish gate**: published"));
+        assert!(worklog.contains("- **Dispatch log latest**: #602 Agent-task dispatch (cycle 164)"));
+    }
+
+    #[test]
+    fn prepare_post_dispatch_worklog_update_is_idempotent_when_reconciliation_matches_state() {
+        let repo = TempRepo::new();
+        repo.init();
+        let worklog_path = repo
+            .path()
+            .join("docs/worklog/2026-03-07/120000-cycle-164-summary.md");
+        fs::create_dir_all(worklog_path.parent().expect("worklog parent should exist")).unwrap();
+        fs::write(
+            &worklog_path,
+            "# Cycle 164 — 2026-03-07 12:00 UTC\n\n## What was done\n\n- Closed out the cycle.\n",
+        )
+        .unwrap();
+        let runner = MockRunner::with_error("runner should not be called for review dispatch");
+
+        run_with_runner(
+            Cli {
+                issue: 602,
+                title: "Cycle review dispatch".to_string(),
+                model: Some("gpt-5.4".to_string()),
+                review_dispatch: true,
+                addresses_finding: None,
+                repo_root: repo.path().to_path_buf(),
+            },
+            &runner,
+            &mut |_| {},
+        )
+        .expect("initial review dispatch should succeed");
+
+        let state = repo.read_state();
+        let update = prepare_post_dispatch_worklog_update(repo.path(), &state, 164)
+            .expect("follow-up sync should succeed");
+        assert!(
+            update.is_none(),
+            "matching reconciliation should be a no-op"
+        );
     }
 
     #[test]
@@ -1613,6 +1820,12 @@ mod tests {
         remote_path: PathBuf,
     }
 
+    fn frozen_snapshot_prefix(content: &str) -> &str {
+        find_heading(content, POST_DISPATCH_DELTA_HEADING)
+            .map(|index| content[..index].trim_end_matches('\n'))
+            .unwrap_or_else(|| content.trim_end_matches('\n'))
+    }
+
     impl TempRepo {
         fn new() -> Self {
             let unique = SystemTime::now()
@@ -1695,7 +1908,9 @@ mod tests {
                     }
                 ],
                 "last_cycle": {
-                    "number": 164
+                    "number": 164,
+                    "summary": "0 dispatches, 1 merges (PR #700)",
+                    "timestamp": "2026-03-07T12:00:00Z"
                 },
                 "cycle_phase": {
                     "cycle": 164,
@@ -1734,11 +1949,15 @@ mod tests {
                     "history": []
                 },
                 "tool_pipeline": {
+                    "status": "PASS (6/6)",
                     "c5_5_gate": {
                         "cycle": 164,
                         "status": "PASS",
                         "needs_reverify": false
                     }
+                },
+                "publish_gate": {
+                    "status": "published"
                 }
             });
             self.write_state_value(&state);
