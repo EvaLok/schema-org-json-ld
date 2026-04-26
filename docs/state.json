@@ -10113,7 +10113,7 @@
       "addresses_finding": "540:1",
       "dispatched_at": "2026-04-26T02:07:27Z",
       "issue": 2722,
-      "merged_at": "2026-04-26T06:18:51Z",
+      "merged_at": "2026-04-26T06:19:08Z",
       "model": "gpt-5.4",
       "pr": 2723,
       "status": "merged",
