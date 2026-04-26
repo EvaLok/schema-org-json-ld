@@ -774,17 +774,20 @@ fn run_pipeline_with_excluded_steps(
     exclude_steps: &[String],
     runner: &dyn CommandRunner,
 ) -> PipelineReport {
+    let update_metric_ledger = read_state_value(repo_root)
+        .ok()
+        .and_then(|state| {
+            state
+                .pointer("/cycle_phase/phase")
+                .and_then(Value::as_str)
+                .map(|phase| allows_close_out_gate_checks(Some(phase)))
+        })
+        .unwrap_or(false);
     let specs = [
         ToolSpec {
             display_name: "metric-snapshot",
             wrapper_relative_path: "tools/metric-snapshot",
-            args: vec![
-                "--json".to_string(),
-                "--cycle".to_string(),
-                cycle.to_string(),
-                "--repo-root".to_string(),
-                repo_root.display().to_string(),
-            ],
+            args: metric_snapshot_args(repo_root, cycle, update_metric_ledger),
             kind: ToolKind::MetricSnapshot,
         },
         ToolSpec {
@@ -932,6 +935,20 @@ fn run_pipeline_with_excluded_steps(
         timestamp: current_utc_timestamp(),
         steps,
     }
+}
+
+fn metric_snapshot_args(repo_root: &Path, cycle: u64, update_ledger: bool) -> Vec<String> {
+    let mut args = vec![
+        "--json".to_string(),
+        "--cycle".to_string(),
+        cycle.to_string(),
+        "--repo-root".to_string(),
+        repo_root.display().to_string(),
+    ];
+    if update_ledger {
+        args.push("--update-ledger".to_string());
+    }
+    args
 }
 
 fn is_excluded_step(name: &str, exclude_steps: &[String]) -> bool {
@@ -6846,8 +6863,13 @@ mod tests {
                 let has_cycle_arg = args.windows(2).any(|window| {
                     window[0] == "--cycle" && window[1] == self.expected_cycle.to_string()
                 });
+                let has_update_ledger = args.iter().any(|arg| arg == "--update-ledger");
                 match key.as_str() {
-                    "metric-snapshot" | "check-field-inventory-rs" => assert!(has_cycle_arg),
+                    "metric-snapshot" => {
+                        assert!(has_cycle_arg);
+                        assert!(has_update_ledger);
+                    }
+                    "check-field-inventory-rs" => assert!(has_cycle_arg),
                     "validate-docs" => {
                         let mode = args.first().map(String::as_str).unwrap_or_default();
                         assert!(matches!(mode, "worklog" | "journal"));
@@ -7068,6 +7090,17 @@ mod tests {
             .find(|step| step.name == CURRENT_CYCLE_JOURNAL_SECTION_STEP_NAME)
             .expect("current-cycle-journal-section step should be present");
         assert_eq!(current_cycle_journal_section.status, StepStatus::Pass);
+    }
+
+    #[test]
+    fn metric_snapshot_args_only_enable_ledger_refresh_for_close_out_runs() {
+        let repo_root = Path::new("/repo");
+
+        let close_out_args = metric_snapshot_args(repo_root, 540, true);
+        assert!(close_out_args.iter().any(|arg| arg == "--update-ledger"));
+
+        let work_phase_args = metric_snapshot_args(repo_root, 540, false);
+        assert!(!work_phase_args.iter().any(|arg| arg == "--update-ledger"));
     }
 
     #[test]
