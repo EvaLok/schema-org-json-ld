@@ -10127,6 +10127,13 @@
       "pr": 2726,
       "status": "merged",
       "title": "Fix cycle-runner run_tool_json to accept exit-1 with valid JSON output"
+    },
+    {
+      "dispatched_at": "2026-04-26T17:22:24Z",
+      "issue": 2729,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Replace raw gh api dispatch template with dispatch-task in orchestrator-prompt.xml (closes #2696)"
     }
   ],
   "audit_dropped": [
@@ -11431,7 +11438,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2725 Fix cycle-runner run_tool_json to accept exit-1 with valid JSON output (cycle 542)",
+  "dispatch_log_latest": "#2729 Replace raw gh api dispatch template with dispatch-task in orchestrator-prompt.xml (closes #2696) (cycle 544)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -11554,7 +11561,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 543"
+        "last_refreshed": "cycle 544"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -11702,13 +11709,13 @@
       }
     }
   },
-  "in_flight_sessions": 0,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 20,
     "issue": 2728,
     "number": 544,
-    "summary": "0 dispatches, 1 merges (PR #2726)",
-    "timestamp": "2026-04-26T17:04:44Z"
+    "summary": "1 dispatch, 1 merges (PR #2726)",
+    "timestamp": "2026-04-26T17:22:24Z"
   },
   "last_eva_comment_check": "2026-04-26T17:04:44Z",
   "last_tool_audit_cycle": 403,
