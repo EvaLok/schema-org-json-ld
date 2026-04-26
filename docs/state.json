@@ -10122,8 +10122,10 @@
     {
       "dispatched_at": "2026-04-26T06:47:08Z",
       "issue": 2725,
+      "merged_at": "2026-04-26T09:48:22Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2726,
+      "status": "merged",
       "title": "Fix cycle-runner run_tool_json to accept exit-1 with valid JSON output"
     }
   ],
@@ -11552,7 +11554,7 @@
       },
       "in_flight_sessions": {
         "cadence": "every dispatch or merge",
-        "last_refreshed": "cycle 542"
+        "last_refreshed": "cycle 543"
       },
       "last_cycle": {
         "cadence": "every cycle",
@@ -11700,12 +11702,12 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 0,
   "last_cycle": {
     "duration_minutes": 1,
     "issue": 2727,
     "number": 543,
-    "summary": "1 dispatches, 2 merges",
+    "summary": "0 dispatches, 1 merges",
     "timestamp": "2026-04-26T09:28:38Z"
   },
   "last_eva_comment_check": "2026-04-26T09:28:38Z",
