@@ -407,25 +407,19 @@ section. Execute your cycle by following the steps defined in those checklists.
 
   <coding-agent>
     <dispatch-method>
-      <rule>Use gh api with agent_assignment field. Do NOT use gh issue create --assignee Copilot (uses default model).</rule>
+      <rule>Use <code>bash tools/dispatch-task</code> to dispatch Copilot tasks. This tool creates the issue with the correct <code>agent_assignment</code> payload, enforces the pipeline gate, and records the dispatch in <code>agent_sessions</code> atomically — eliminating orphan-PR backfills.</rule>
       <model default="gpt-5.4" fallback="gpt-5.3-codex"/>
       <constraint>Do not use Anthropic models for coding agent tasks.</constraint>
+      <constraint>Do NOT dispatch via raw <code>gh api /…/issues</code> with <code>agent_assignment</code>. That path skips <code>record-dispatch</code> and produces orphan PRs that corrupt the session ledger (see cycle 536 review F1).</constraint>
+      <constraint>If adding <code>--addresses-finding</code>, ensure <code>process-review</code> has already recorded the cycle's history entry — or omit the flag and call <code>record-dispatch --addresses-finding</code> afterward.</constraint>
       <template><![CDATA[
-gh api /repos/EvaLok/schema-org-json-ld/issues --method POST --input - <<'JSON'
-{
-  "title": "Short descriptive title",
-  "body": "Detailed specification.",
-  "labels": ["agent-task"],
-  "assignees": ["copilot-swe-agent[bot]"],
-  "agent_assignment": {
-    "target_repo": "EvaLok/schema-org-json-ld",
-    "base_branch": "master",
-    "model": "gpt-5.4",
-    "custom_instructions": ""
-  }
-}
-JSON
+bash tools/dispatch-task \
+  --title "Short descriptive title" \
+  --body-file /tmp/dispatch-body.md \
+  --model gpt-5.4 \
+  --addresses-finding CYCLE:INDEX  # optional, when fixing a specific review finding
       ]]></template>
+      <constraint>For review-agent dispatches only, continue using <code>bash tools/dispatch-review</code> which sets the <code>cycle-review</code> label and bypasses the pipeline gate.</constraint>
     </dispatch-method>
 
     <review-workflow>
