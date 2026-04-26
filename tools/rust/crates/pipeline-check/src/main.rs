@@ -4515,7 +4515,6 @@ fn audit_inbound_lifecycle_assessment(
         .audit_processed
         .into_iter()
         .map(|entry| entry.audit_issue())
-        .into_iter()
         .filter(|audit_issue| *audit_issue >= AUDIT_INBOUND_LIFECYCLE_BASELINE_AUDIT)
         .collect::<Vec<_>>();
 
