@@ -10106,6 +10106,14 @@
       "pr": 2720,
       "status": "merged",
       "title": "[Cycle Review] Cycle 540 end-of-cycle review"
+    },
+    {
+      "addresses_finding": "540:2",
+      "dispatched_at": "2026-04-26T02:07:27Z",
+      "issue": 2722,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Reject Met grade when previous-commitment evidence is future-tense (cycle 540 F2 structural fix)"
     }
   ],
   "audit_dropped": [
@@ -11311,7 +11319,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2719 [Cycle Review] Cycle 540 end-of-cycle review (cycle 540)",
+  "dispatch_log_latest": "#2722 Reject Met grade when previous-commitment evidence is future-tense (cycle 540 F2 structural fix) (cycle 541)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -11582,13 +11590,13 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 3,
     "issue": 2721,
     "number": 541,
-    "summary": "0 dispatches, 2 merges",
-    "timestamp": "2026-04-26T01:43:12Z"
+    "summary": "1 dispatch, 2 merges",
+    "timestamp": "2026-04-26T02:07:27Z"
   },
   "last_eva_comment_check": "2026-04-26T01:43:12Z",
   "last_tool_audit_cycle": 403,
