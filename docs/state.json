@@ -10134,6 +10134,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "Replace raw gh api dispatch template with dispatch-task in orchestrator-prompt.xml (closes #2696)"
+    },
+    {
+      "dispatched_at": "2026-04-26T17:23:54Z",
+      "issue": 2731,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Append-only post-close-out reconciliation block in worklog (closes #2674)"
     }
   ],
   "audit_dropped": [
@@ -11438,7 +11445,7 @@
       "resolved": false
     }
   ],
-  "dispatch_log_latest": "#2729 Replace raw gh api dispatch template with dispatch-task in orchestrator-prompt.xml (closes #2696) (cycle 544)",
+  "dispatch_log_latest": "#2731 Append-only post-close-out reconciliation block in worklog (closes #2674) (cycle 544)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -11709,13 +11716,13 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 20,
     "issue": 2728,
     "number": 544,
-    "summary": "1 dispatch, 1 merges (PR #2726)",
-    "timestamp": "2026-04-26T17:22:24Z"
+    "summary": "2 dispatches, 1 merges (PR #2726)",
+    "timestamp": "2026-04-26T17:23:54Z"
   },
   "last_eva_comment_check": "2026-04-26T17:04:44Z",
   "last_tool_audit_cycle": 403,
