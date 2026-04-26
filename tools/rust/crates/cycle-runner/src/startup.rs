@@ -635,6 +635,7 @@ mod tests {
     use super::*;
     use serde_json::json;
     use std::fs;
+    use std::os::unix::fs::PermissionsExt;
     use std::sync::atomic::{AtomicU64, Ordering};
 
     #[test]
@@ -717,6 +718,19 @@ mod tests {
     fn write_state(root: &std::path::Path, state: serde_json::Value) {
         fs::write(root.join("docs/state.json"), format!("{}\n", state))
             .expect("failed to write startup test state to docs/state.json");
+    }
+
+    fn write_tool(root: &std::path::Path, tool_name: &str, script: &str) {
+        let tools_dir = root.join("tools");
+        fs::create_dir_all(&tools_dir).expect("failed to create tools directory for startup test");
+        let path = tools_dir.join(tool_name);
+        fs::write(&path, script).expect("failed to write startup test tool");
+        let mut permissions = fs::metadata(&path)
+            .expect("startup test tool metadata should exist")
+            .permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(&path, permissions)
+            .expect("failed to mark startup test tool executable");
     }
 
     #[test]
@@ -853,6 +867,60 @@ mod tests {
             .expect("gap array should exist");
         assert_eq!(gaps.len(), 1);
         assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn startup_run_auto_acknowledges_step_comment_cascade_from_non_zero_pipeline_json() {
+        let root = temp_repo_root("startup-run-cascade");
+        write_state(
+            &root,
+            json!({
+                "last_cycle": {"number": 346}
+            }),
+        );
+        write_tool(
+            &root,
+            "cycle-start",
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\\n' '{\"cycle\":346,\"resume\":false}'\n",
+        );
+        write_tool(
+            &root,
+            "post-step",
+            "#!/usr/bin/env bash\nset -euo pipefail\nexit 0\n",
+        );
+        write_tool(
+            &root,
+            "pipeline-check",
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\\n' '{\"overall\":\"fail\",\"steps\":[{\"name\":\"step-comments\",\"status\":\"Fail\",\"detail\":\"issue EvaLok/schema-org-json-ld#1680: Cascade from cycle 345: steps 0, 1.1, 4, 7, 8, C4.1 were missing (already penalized); found 21 comments\"}]}'\nexit 1\n",
+        );
+        write_tool(
+            &root,
+            "housekeeping-scan",
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\\n' '{\"items_needing_attention\":0}'\n",
+        );
+        write_tool(
+            &root,
+            "cycle-status",
+            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\\n' '{\"concurrency\":{\"total_in_flight\":0},\"action_items\":[],\"errors\":[]}'\n",
+        );
+
+        run(&root, 123, None, false).expect("startup should succeed");
+
+        let gaps = state_schema::read_state_value(&root)
+            .expect("state should be readable")
+            .get("step_comment_acknowledged_gaps")
+            .and_then(serde_json::Value::as_array)
+            .cloned()
+            .expect("gap array should exist");
+        assert_eq!(gaps.len(), 1);
+        assert_eq!(
+            gaps[0].get("cycle").and_then(serde_json::Value::as_u64),
+            Some(345)
+        );
+        assert_eq!(
+            gaps[0].get("issue").and_then(serde_json::Value::as_u64),
+            Some(1680)
+        );
     }
 
     #[test]
