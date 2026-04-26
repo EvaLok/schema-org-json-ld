@@ -5,7 +5,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use state_schema::{
     current_cycle_from_state, current_utc_timestamp, read_state_value, update_freshness,
-    write_state_value, ReviewHistoryEntry, StateJson, StepCommentGap,
+    write_state_value, AdoptionArtifactReference, AuditDisposition, ReviewHistoryEntry, StateJson,
+    StepCommentGap,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -20,6 +21,7 @@ const CYCLE_STATUS_DIRECTIVES_PATH: &str = "/eva_input/comments_since_last_cycle
 const ARTIFACT_VERIFY_STEP_NAME: &str = "artifact-verify";
 const DISPOSITION_MATCH_STEP_NAME: &str = "disposition-match";
 const AUDIT_INBOUND_LIFECYCLE_STEP_NAME: &str = "audit-inbound-lifecycle";
+const ACCEPTED_AUDIT_ADOPTION_STEP_NAME: &str = "accepted-audit-adoption";
 const AGENT_SESSIONS_LIFECYCLE_STEP_NAME: &str = "agent-sessions-lifecycle";
 const CHRONIC_CATEGORY_CURRENCY_WARN_GAP: u64 = 10;
 const CHRONIC_CATEGORY_CURRENCY_FAIL_GAP: u64 = 17;
@@ -65,7 +67,7 @@ const COMMITMENT_DROP_RATIONALE_MARKERS: &[&str] = &[
     " due to ",
 ];
 const NON_SURFACE_CYCLE_PREFIX: &str = "cycle-";
-const STEP_NAMES: [&str; 30] = [
+const STEP_NAMES: [&str; 31] = [
     "metric-snapshot",
     "field-inventory",
     "housekeeping-scan",
@@ -75,6 +77,7 @@ const STEP_NAMES: [&str; 30] = [
     ARTIFACT_VERIFY_STEP_NAME,
     DISPOSITION_MATCH_STEP_NAME,
     AUDIT_INBOUND_LIFECYCLE_STEP_NAME,
+    ACCEPTED_AUDIT_ADOPTION_STEP_NAME,
     AGENT_SESSIONS_LIFECYCLE_STEP_NAME,
     DEFERRAL_ACCUMULATION_STEP_NAME,
     DEFERRAL_DEADLINES_STEP_NAME,
@@ -345,6 +348,12 @@ trait CommandRunner {
             issue
         ))
     }
+    fn commit_is_on_master(&self, _repo_root: &Path, sha: &str) -> Result<bool, String> {
+        Err(format!(
+            "commit ancestry check not supported by this runner for commit {}",
+            sha
+        ))
+    }
     fn fetch_audit_inbound_issues(&self) -> Result<Vec<AuditInboundIssue>, String> {
         Err("audit-inbound issue fetch not supported by this runner".to_string())
     }
@@ -524,6 +533,32 @@ impl CommandRunner for ProcessRunner {
         }
 
         Ok(state)
+    }
+
+    fn commit_is_on_master(&self, repo_root: &Path, sha: &str) -> Result<bool, String> {
+        let default_ref = ["master", "refs/remotes/origin/master"]
+            .into_iter()
+            .find(|reference| {
+                Command::new("git")
+                    .current_dir(repo_root)
+                    .args(["rev-parse", "--verify", reference])
+                    .output()
+                    .map(|output| output.status.success())
+                    .unwrap_or(false)
+            })
+            .ok_or_else(|| "unable to resolve local master or origin/master ref".to_string())?;
+
+        let output = Command::new("git")
+            .current_dir(repo_root)
+            .args(["merge-base", "--is-ancestor", sha, default_ref])
+            .output()
+            .map_err(|error| format!("failed to execute git merge-base: {}", error))?;
+
+        match output.status.code() {
+            Some(0) => Ok(true),
+            Some(1) => Ok(false),
+            _ => Err(command_failure_message("git merge-base", &output)),
+        }
     }
 
     fn fetch_issue_comments_with_timestamps(
@@ -853,6 +888,9 @@ fn run_pipeline_with_excluded_steps(
     }
     if !is_excluded_step(AUDIT_INBOUND_LIFECYCLE_STEP_NAME, exclude_steps) {
         steps.push(verify_audit_inbound_lifecycle(repo_root, runner));
+    }
+    if !is_excluded_step(ACCEPTED_AUDIT_ADOPTION_STEP_NAME, exclude_steps) {
+        steps.push(verify_accepted_audit_adoption(repo_root, cycle, runner));
     }
     if !is_excluded_step(AGENT_SESSIONS_LIFECYCLE_STEP_NAME, exclude_steps) {
         steps.push(verify_agent_sessions_lifecycle(repo_root, cycle, runner));
@@ -4196,6 +4234,33 @@ fn verify_audit_inbound_lifecycle(repo_root: &Path, runner: &dyn CommandRunner) 
     }
 }
 
+fn verify_accepted_audit_adoption(
+    repo_root: &Path,
+    current_cycle: u64,
+    runner: &dyn CommandRunner,
+) -> StepReport {
+    match accepted_audit_adoption_assessment(repo_root, current_cycle, runner) {
+        Ok(assessment) => StepReport {
+            name: ACCEPTED_AUDIT_ADOPTION_STEP_NAME,
+            status: assessment.status,
+            severity: assessment.severity,
+            exit_code: None,
+            detail: Some(assessment.detail),
+            findings: None,
+            summary: None,
+        },
+        Err(error) => StepReport {
+            name: ACCEPTED_AUDIT_ADOPTION_STEP_NAME,
+            status: StepStatus::Error,
+            severity: Severity::Blocking,
+            exit_code: None,
+            detail: Some(error),
+            findings: None,
+            summary: None,
+        },
+    }
+}
+
 fn verify_agent_sessions_lifecycle(
     repo_root: &Path,
     current_cycle: u64,
@@ -4466,15 +4531,7 @@ fn audit_inbound_lifecycle_assessment(
     let audit_processed = state
         .audit_processed
         .into_iter()
-        .map(|audit_issue| {
-            u64::try_from(audit_issue).map_err(|_| {
-                format!(
-                    "audit_processed must contain only valid u64 integers (found {audit_issue})"
-                )
-            })
-        })
-        .collect::<Result<Vec<_>, _>>()?
-        .into_iter()
+        .map(|entry| entry.audit_issue())
         .filter(|audit_issue| *audit_issue >= AUDIT_INBOUND_LIFECYCLE_BASELINE_AUDIT)
         .collect::<Vec<_>>();
 
@@ -4524,6 +4581,129 @@ fn audit_inbound_lifecycle_assessment(
         severity: Severity::Blocking,
         detail: detail.join("\n"),
     })
+}
+
+fn accepted_audit_adoption_assessment(
+    repo_root: &Path,
+    current_cycle: u64,
+    runner: &dyn CommandRunner,
+) -> Result<StepAssessment, String> {
+    let state_value = read_state_value(repo_root)?;
+    let state: StateJson = serde_json::from_value(state_value)
+        .map_err(|error| format!("failed to parse state.json: {}", error))?;
+
+    if !allows_close_out_gate_checks(state.cycle_phase.phase.as_deref()) {
+        return Ok(StepAssessment {
+            status: StepStatus::Pass,
+            severity: Severity::Blocking,
+            detail: "skipped: accepted audit adoption only blocks during close_out or complete"
+                .to_string(),
+        });
+    }
+
+    let mut failures = Vec::new();
+    let mut checked = 0usize;
+
+    for entry in state.audit_processed {
+        let audit_issue = entry.audit_issue();
+        for recommendation in entry.accepted_recommendations() {
+            if recommendation.category.as_deref() != Some("chronic-category-tracking") {
+                continue;
+            }
+            if recommendation.disposition != Some(AuditDisposition::Accept) {
+                continue;
+            }
+
+            checked += 1;
+            let Some(accepted_cycle) = recommendation.accepted_cycle else {
+                failures.push(format!(
+                    "audit #{} '{}' is missing accepted_cycle",
+                    audit_issue, recommendation.summary
+                ));
+                continue;
+            };
+            let cycles_since_accepted = current_cycle.saturating_sub(accepted_cycle);
+            if cycles_since_accepted < 3 {
+                continue;
+            }
+
+            match recommendation.adoption_artifact_reference.as_ref() {
+                Some(reference) => {
+                    if !adoption_artifact_is_valid(repo_root, runner, reference)? {
+                        failures.push(format!(
+                            "audit #{} '{}' has stale or invalid adoption artifact after {} cycles: {}",
+                            audit_issue,
+                            recommendation.summary,
+                            cycles_since_accepted,
+                            describe_adoption_artifact(reference)
+                        ));
+                    }
+                }
+                None => failures.push(format!(
+                    "audit #{} '{}' has no adoption_artifact_reference after {} cycles",
+                    audit_issue, recommendation.summary, cycles_since_accepted
+                )),
+            }
+        }
+    }
+
+    if failures.is_empty() {
+        let detail = if checked == 0 {
+            "no chronic-category-tracking accepted audit recommendations to verify".to_string()
+        } else {
+            format!("verified {} chronic accepted audit recommendation(s)", checked)
+        };
+        return Ok(StepAssessment {
+            status: StepStatus::Pass,
+            severity: Severity::Blocking,
+            detail,
+        });
+    }
+
+    let mut detail = vec![format!(
+        "accepted audit adoption failed for {} chronic recommendation(s):",
+        failures.len()
+    )];
+    detail.extend(failures.into_iter().map(|failure| format!("- {}", failure)));
+    Ok(StepAssessment {
+        status: StepStatus::Fail,
+        severity: Severity::Blocking,
+        detail: detail.join("\n"),
+    })
+}
+
+fn adoption_artifact_is_valid(
+    repo_root: &Path,
+    runner: &dyn CommandRunner,
+    reference: &AdoptionArtifactReference,
+) -> Result<bool, String> {
+    match reference {
+        AdoptionArtifactReference::Pr { number, .. } => {
+            Ok(runner.fetch_pull_request_state(*number)? == "MERGED")
+        }
+        AdoptionArtifactReference::Commit { sha } => runner.commit_is_on_master(repo_root, sha),
+        AdoptionArtifactReference::PipelineCheckStep { name } => Ok(STEP_NAMES.contains(&name.as_str())),
+        AdoptionArtifactReference::ToolChange { path, commit_sha } => {
+            if !runner.commit_is_on_master(repo_root, commit_sha)? {
+                return Ok(false);
+            }
+            let changed_files = runner.list_changed_files_for_commit(repo_root, commit_sha)?;
+            Ok(changed_files.iter().any(|changed| changed == path))
+        }
+    }
+}
+
+fn describe_adoption_artifact(reference: &AdoptionArtifactReference) -> String {
+    match reference {
+        AdoptionArtifactReference::Pr { number, .. } => format!("PR #{}", number),
+        AdoptionArtifactReference::Commit { sha } => format!("commit {}", sha),
+        AdoptionArtifactReference::PipelineCheckStep { name } => {
+            format!("pipeline-check step '{}'", name)
+        }
+        AdoptionArtifactReference::ToolChange { path, commit_sha } => {
+            format!("tool change {} @ {}", path, commit_sha)
+        }
+    }
 }
 
 fn chronic_refresh_invalidation_assessment(repo_root: &Path) -> Result<StepAssessment, String> {
@@ -7050,40 +7230,42 @@ mod tests {
         assert_eq!(report.steps[7].status, StepStatus::Pass);
         assert_eq!(report.steps[8].name, "audit-inbound-lifecycle");
         assert_eq!(report.steps[8].status, StepStatus::Pass);
-        assert_eq!(report.steps[9].name, "agent-sessions-lifecycle");
+        assert_eq!(report.steps[9].name, ACCEPTED_AUDIT_ADOPTION_STEP_NAME);
         assert_eq!(report.steps[9].status, StepStatus::Pass);
-        assert_eq!(report.steps[10].name, "deferral-accumulation");
+        assert_eq!(report.steps[10].name, "agent-sessions-lifecycle");
         assert_eq!(report.steps[10].status, StepStatus::Pass);
-        assert_eq!(report.steps[11].name, "deferral-deadlines");
+        assert_eq!(report.steps[11].name, "deferral-accumulation");
         assert_eq!(report.steps[11].status, StepStatus::Pass);
-        assert_eq!(report.steps[12].name, "mass-deferral-gate");
+        assert_eq!(report.steps[12].name, "deferral-deadlines");
         assert_eq!(report.steps[12].status, StepStatus::Pass);
-        assert_eq!(report.steps[13].name, "dispatch-finding-reconciliation");
+        assert_eq!(report.steps[13].name, "mass-deferral-gate");
         assert_eq!(report.steps[13].status, StepStatus::Pass);
+        assert_eq!(report.steps[14].name, "dispatch-finding-reconciliation");
+        assert_eq!(report.steps[14].status, StepStatus::Pass);
         assert_eq!(
-            report.steps[14].name,
+            report.steps[15].name,
             DEFERRED_RESOLUTION_MERGE_GATE_STEP_NAME
         );
-        assert_eq!(report.steps[14].status, StepStatus::Pass);
-        assert_eq!(report.steps[15].name, "doc-validation");
         assert_eq!(report.steps[15].status, StepStatus::Pass);
-        assert_eq!(report.steps[16].name, "frozen-commit-verify");
-        assert_eq!(report.steps[16].status, StepStatus::Skip);
-        assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
-        assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].name, "worklog-dedup");
+        assert_eq!(report.steps[16].name, "doc-validation");
+        assert_eq!(report.steps[16].status, StepStatus::Pass);
+        assert_eq!(report.steps[17].name, "frozen-commit-verify");
+        assert_eq!(report.steps[17].status, StepStatus::Skip);
+        assert_eq!(report.steps[18].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[18].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].name, "worklog-immutability");
+        assert_eq!(report.steps[19].name, "worklog-dedup");
         assert_eq!(report.steps[19].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].severity, Severity::Blocking);
-        assert_eq!(report.steps[20].name, "frozen-worklog-immutability");
+        assert_eq!(report.steps[20].name, "worklog-immutability");
         assert_eq!(report.steps[20].status, StepStatus::Pass);
-        assert_eq!(report.steps[21].name, "pr-base-currency");
+        assert_eq!(report.steps[20].severity, Severity::Blocking);
+        assert_eq!(report.steps[21].name, "frozen-worklog-immutability");
         assert_eq!(report.steps[21].status, StepStatus::Pass);
-        assert_eq!(report.steps[22].name, "step-comments");
+        assert_eq!(report.steps[22].name, "pr-base-currency");
         assert_eq!(report.steps[22].status, StepStatus::Pass);
-        assert_eq!(report.steps[23].name, "current-cycle-steps");
+        assert_eq!(report.steps[23].name, "step-comments");
         assert_eq!(report.steps[23].status, StepStatus::Pass);
+        assert_eq!(report.steps[24].name, "current-cycle-steps");
+        assert_eq!(report.steps[24].status, StepStatus::Pass);
         let current_cycle_journal_section = report
             .steps
             .iter()
@@ -7771,22 +7953,22 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &CascadeRunner);
-        assert_eq!(report.steps[15].name, "doc-validation");
-        assert_eq!(report.steps[15].status, StepStatus::Cascade);
-        assert_eq!(report.steps[16].name, "frozen-commit-verify");
-        assert_eq!(report.steps[16].status, StepStatus::Skip);
-        assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
-        assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].name, "worklog-dedup");
+        assert_eq!(report.steps[16].name, "doc-validation");
+        assert_eq!(report.steps[16].status, StepStatus::Cascade);
+        assert_eq!(report.steps[17].name, "frozen-commit-verify");
+        assert_eq!(report.steps[17].status, StepStatus::Skip);
+        assert_eq!(report.steps[18].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[18].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].name, "worklog-immutability");
+        assert_eq!(report.steps[19].name, "worklog-dedup");
         assert_eq!(report.steps[19].status, StepStatus::Pass);
-        assert_eq!(report.steps[20].name, "frozen-worklog-immutability");
+        assert_eq!(report.steps[20].name, "worklog-immutability");
         assert_eq!(report.steps[20].status, StepStatus::Pass);
-        assert_eq!(report.steps[21].name, "pr-base-currency");
+        assert_eq!(report.steps[21].name, "frozen-worklog-immutability");
         assert_eq!(report.steps[21].status, StepStatus::Pass);
-        assert_eq!(report.steps[22].name, "step-comments");
-        assert_eq!(report.steps[22].status, StepStatus::Fail);
+        assert_eq!(report.steps[22].name, "pr-base-currency");
+        assert_eq!(report.steps[22].status, StepStatus::Pass);
+        assert_eq!(report.steps[23].name, "step-comments");
+        assert_eq!(report.steps[23].status, StepStatus::Fail);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -7926,18 +8108,18 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &CompleteRunner);
-        assert_eq!(report.steps[16].name, "frozen-commit-verify");
-        assert_eq!(report.steps[16].status, StepStatus::Pass);
-        assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
+        assert_eq!(report.steps[17].name, "frozen-commit-verify");
         assert_eq!(report.steps[17].status, StepStatus::Pass);
+        assert_eq!(report.steps[18].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
+        assert_eq!(report.steps[18].status, StepStatus::Pass);
         let current_cycle_journal_section = report
             .steps
             .iter()
             .find(|step| step.name == CURRENT_CYCLE_JOURNAL_SECTION_STEP_NAME)
             .expect("current-cycle-journal-section should be present");
         assert_eq!(current_cycle_journal_section.status, StepStatus::Pass);
-        assert_eq!(report.steps[22].name, "step-comments");
-        assert_eq!(report.steps[22].status, StepStatus::Fail);
+        assert_eq!(report.steps[23].name, "step-comments");
+        assert_eq!(report.steps[23].status, StepStatus::Fail);
         assert_eq!(report.overall, StepStatus::Fail);
     }
 
@@ -8072,22 +8254,22 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &MultiCauseCascadeRunner);
-        assert_eq!(report.steps[15].name, "doc-validation");
-        assert_eq!(report.steps[15].status, StepStatus::Cascade);
-        assert_eq!(report.steps[16].name, "frozen-commit-verify");
-        assert_eq!(report.steps[16].status, StepStatus::Skip);
-        assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
-        assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].name, "worklog-dedup");
+        assert_eq!(report.steps[16].name, "doc-validation");
+        assert_eq!(report.steps[16].status, StepStatus::Cascade);
+        assert_eq!(report.steps[17].name, "frozen-commit-verify");
+        assert_eq!(report.steps[17].status, StepStatus::Skip);
+        assert_eq!(report.steps[18].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[18].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].name, "worklog-immutability");
+        assert_eq!(report.steps[19].name, "worklog-dedup");
         assert_eq!(report.steps[19].status, StepStatus::Pass);
-        assert_eq!(report.steps[20].name, "frozen-worklog-immutability");
+        assert_eq!(report.steps[20].name, "worklog-immutability");
         assert_eq!(report.steps[20].status, StepStatus::Pass);
-        assert_eq!(report.steps[21].name, "pr-base-currency");
+        assert_eq!(report.steps[21].name, "frozen-worklog-immutability");
         assert_eq!(report.steps[21].status, StepStatus::Pass);
-        assert_eq!(report.steps[22].name, "step-comments");
-        assert_eq!(report.steps[22].status, StepStatus::Fail);
+        assert_eq!(report.steps[22].name, "pr-base-currency");
+        assert_eq!(report.steps[22].status, StepStatus::Pass);
+        assert_eq!(report.steps[23].name, "step-comments");
+        assert_eq!(report.steps[23].status, StepStatus::Fail);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -8226,10 +8408,10 @@ mod tests {
         }
 
         let report = run_pipeline(&root, OVERRIDE_CYCLE, &OverrideRunner);
-        assert_eq!(report.steps[22].name, "step-comments");
-        assert_eq!(report.steps[22].status, StepStatus::Warn);
-        assert_eq!(report.steps[22].severity, Severity::Warning);
-        assert!(report.steps[22]
+        assert_eq!(report.steps[23].name, "step-comments");
+        assert_eq!(report.steps[23].status, StepStatus::Warn);
+        assert_eq!(report.steps[23].severity, Severity::Warning);
+        assert!(report.steps[23]
             .detail
             .as_deref()
             .unwrap_or_default()
@@ -8373,18 +8555,18 @@ mod tests {
         }
 
         let report = run_pipeline(&root, 257, &IndependentFailureRunner);
-        assert_eq!(report.steps[15].name, "doc-validation");
-        assert_eq!(report.steps[15].status, StepStatus::Fail);
-        assert_eq!(report.steps[16].name, "frozen-commit-verify");
-        assert_eq!(report.steps[16].status, StepStatus::Skip);
-        assert_eq!(report.steps[17].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
-        assert_eq!(report.steps[17].status, StepStatus::Pass);
-        assert_eq!(report.steps[18].name, "worklog-dedup");
+        assert_eq!(report.steps[16].name, "doc-validation");
+        assert_eq!(report.steps[16].status, StepStatus::Fail);
+        assert_eq!(report.steps[17].name, "frozen-commit-verify");
+        assert_eq!(report.steps[17].status, StepStatus::Skip);
+        assert_eq!(report.steps[18].name, REVIEW_EVENTS_VERIFIED_STEP_NAME);
         assert_eq!(report.steps[18].status, StepStatus::Pass);
-        assert_eq!(report.steps[19].name, "worklog-immutability");
+        assert_eq!(report.steps[19].name, "worklog-dedup");
         assert_eq!(report.steps[19].status, StepStatus::Pass);
+        assert_eq!(report.steps[20].name, "worklog-immutability");
+        assert_eq!(report.steps[20].status, StepStatus::Pass);
         // Previous-cycle backstop is downgraded to Warn
-        assert_eq!(report.steps[22].status, StepStatus::Warn);
+        assert_eq!(report.steps[23].status, StepStatus::Warn);
         assert_eq!(report.overall, StepStatus::Fail);
         assert!(report.has_blocking_findings);
     }
@@ -10826,6 +11008,291 @@ mod tests {
 
         assert_eq!(step.status, StepStatus::Fail);
         assert!(step.detail.as_deref().unwrap_or_default().contains("#382"));
+    }
+
+    #[test]
+    fn accepted_audit_adoption_ignores_legacy_entries_without_category() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-accepted-audit-adoption-legacy-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "cycle_phase": {"phase": "close_out"},
+                "audit_processed": [402, {
+                    "issue": 417,
+                    "accepted_recommendations": [{
+                        "summary": "legacy migrated entry without category",
+                        "disposition": "accept",
+                        "accepted_cycle": 492
+                    }]
+                }]
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("issue comment fetch not expected");
+            }
+        }
+
+        let step = verify_accepted_audit_adoption(&root, 540, &Runner);
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("no chronic-category-tracking accepted audit recommendations to verify")
+        );
+    }
+
+    #[test]
+    fn accepted_audit_adoption_fails_when_artifact_reference_is_missing_after_three_cycles() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-accepted-audit-adoption-missing-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "cycle_phase": {"phase": "close_out"},
+                "audit_processed": [{
+                    "issue": 420,
+                    "accepted_recommendations": [{
+                        "summary": "accepted adoption gate recommendation",
+                        "category": "chronic-category-tracking",
+                        "disposition": "accept",
+                        "accepted_cycle": 495
+                    }]
+                }]
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("issue comment fetch not expected");
+            }
+        }
+
+        let step = verify_accepted_audit_adoption(&root, 540, &Runner);
+        assert_eq!(step.status, StepStatus::Fail);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("has no adoption_artifact_reference"));
+    }
+
+    #[test]
+    fn accepted_audit_adoption_passes_when_pr_artifact_is_merged() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-accepted-audit-adoption-pr-pass-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "cycle_phase": {"phase": "close_out"},
+                "audit_processed": [{
+                    "issue": 415,
+                    "accepted_recommendations": [{
+                        "summary": "sub-categorize chronic entries",
+                        "category": "chronic-category-tracking",
+                        "disposition": "accept",
+                        "accepted_cycle": 489,
+                        "adoption_artifact_reference": {
+                            "type": "pr",
+                            "number": 2490,
+                            "url": "https://github.com/EvaLok/schema-org-json-ld/pull/2490"
+                        }
+                    }]
+                }]
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("issue comment fetch not expected");
+            }
+
+            fn fetch_pull_request_state(&self, issue: u64) -> Result<String, String> {
+                assert_eq!(issue, 2490);
+                Ok("MERGED".to_string())
+            }
+        }
+
+        let step = verify_accepted_audit_adoption(&root, 540, &Runner);
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(
+            step.detail.as_deref(),
+            Some("verified 1 chronic accepted audit recommendation(s)")
+        );
+    }
+
+    #[test]
+    fn accepted_audit_adoption_fails_when_pipeline_step_artifact_is_unknown() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-accepted-audit-adoption-step-fail-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "cycle_phase": {"phase": "close_out"},
+                "audit_processed": [{
+                    "issue": 402,
+                    "accepted_recommendations": [{
+                        "summary": "structural chronic currency fix",
+                        "category": "chronic-category-tracking",
+                        "disposition": "accept",
+                        "accepted_cycle": 474,
+                        "adoption_artifact_reference": {
+                            "type": "pipeline_check_step",
+                            "name": "not-a-real-step"
+                        }
+                    }]
+                }]
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("issue comment fetch not expected");
+            }
+        }
+
+        let step = verify_accepted_audit_adoption(&root, 540, &Runner);
+        assert_eq!(step.status, StepStatus::Fail);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("not-a-real-step"));
+    }
+
+    #[test]
+    fn accepted_audit_adoption_passes_when_tool_change_commit_touches_expected_path() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-accepted-audit-adoption-tool-pass-{}",
+            run_id
+        ));
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "cycle_phase": {"phase": "close_out"},
+                "audit_processed": [{
+                    "issue": 417,
+                    "accepted_recommendations": [{
+                        "summary": "review dispatch taxonomy adoption",
+                        "category": "chronic-category-tracking",
+                        "disposition": "accept",
+                        "accepted_cycle": 492,
+                        "adoption_artifact_reference": {
+                            "type": "tool_change",
+                            "path": "COMPLETION_CHECKLIST.xml",
+                            "commit_sha": "abc1234"
+                        }
+                    }]
+                }]
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        struct Runner;
+
+        impl CommandRunner for Runner {
+            fn run(
+                &self,
+                _script_path: &Path,
+                _args: &[String],
+            ) -> Result<ExecutionResult, String> {
+                panic!("tool wrapper execution not expected");
+            }
+
+            fn fetch_issue_comment_bodies(&self, _issue: u64) -> Result<String, String> {
+                panic!("issue comment fetch not expected");
+            }
+
+            fn commit_is_on_master(&self, _repo_root: &Path, sha: &str) -> Result<bool, String> {
+                assert_eq!(sha, "abc1234");
+                Ok(true)
+            }
+
+            fn list_changed_files_for_commit(
+                &self,
+                _repo_root: &Path,
+                commit: &str,
+            ) -> Result<Vec<String>, String> {
+                assert_eq!(commit, "abc1234");
+                Ok(vec!["COMPLETION_CHECKLIST.xml".to_string()])
+            }
+        }
+
+        let step = verify_accepted_audit_adoption(&root, 540, &Runner);
+        assert_eq!(step.status, StepStatus::Pass);
     }
 
     #[test]

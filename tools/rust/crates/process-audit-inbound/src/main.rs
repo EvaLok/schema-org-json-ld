@@ -2,7 +2,9 @@ use chrono::{DateTime, Utc};
 use clap::Parser;
 use serde::Serialize;
 use serde_json::Value;
-use state_schema::{check_version, current_cycle_from_state, read_state_value, StateJson};
+use state_schema::{
+    check_version, current_cycle_from_state, read_state_value, AuditProcessedEntry, StateJson,
+};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -243,7 +245,7 @@ fn parse_inbound_issues(value: Value) -> Result<Vec<AuditInboundIssue>, String> 
 
 fn filter_new_recommendations(
     recommendations: &[AuditRecommendation],
-    processed: &[i64],
+    processed: &[AuditProcessedEntry],
 ) -> Result<Vec<NewRecommendation>, String> {
     let processed_set = build_processed_set(processed)?;
     Ok(recommendations
@@ -260,7 +262,7 @@ fn filter_new_recommendations(
 }
 
 fn detect_stale_accepted(
-    processed: &[i64],
+    processed: &[AuditProcessedEntry],
     inbound_issues: &[AuditInboundIssue],
     current_cycle: u64,
 ) -> Result<Vec<StaleAcceptedRecommendation>, String> {
@@ -310,14 +312,8 @@ fn detect_stale_accepted(
     Ok(stale)
 }
 
-fn build_processed_set(processed: &[i64]) -> Result<HashSet<u64>, String> {
-    processed
-        .iter()
-        .map(|number| {
-            u64::try_from(*number)
-                .map_err(|_| format!("audit_processed contains invalid value {}", number))
-        })
-        .collect()
+fn build_processed_set(processed: &[AuditProcessedEntry]) -> Result<HashSet<u64>, String> {
+    Ok(processed.iter().map(AuditProcessedEntry::audit_issue).collect())
 }
 
 fn extract_accepted_audit_references(issue: &AuditInboundIssue) -> Vec<AcceptedAuditReference> {
@@ -577,6 +573,8 @@ mod tests {
     use super::*;
     use clap::CommandFactory;
     use serde_json::json;
+    use state_schema::{AcceptedAuditRecommendation, ProcessedAudit};
+    use std::collections::BTreeMap;
 
     #[test]
     fn help_contains_expected_flags() {
@@ -605,8 +603,8 @@ mod tests {
             ),
         ];
 
-        let report =
-            filter_new_recommendations(&recommendations, &[160]).expect("filter should succeed");
+        let report = filter_new_recommendations(&recommendations, &legacy_entries(&[160]))
+            .expect("filter should succeed");
 
         assert_eq!(
             report,
@@ -643,8 +641,8 @@ mod tests {
 			),
 		];
 
-        let stale =
-            detect_stale_accepted(&[160, 161, 162], &inbound_issues, 200).expect("stale scan");
+        let stale = detect_stale_accepted(&legacy_entries(&[160, 161, 162]), &inbound_issues, 200)
+            .expect("stale scan");
 
         assert_eq!(
             stale,
@@ -667,7 +665,8 @@ mod tests {
 			"> **[main-orchestrator]** | Cycle 198\n\n## Audit #2: Idle cycle detection\n\n**Accepted and implemented.** Added step 2.5.\n\n## Audit #3: tools/ directory cleanup\n\n**Accepted — removed entirely.** Removed old scripts.\n\n## Audit #5: Cron frequency reduction\n\n**Deferred to Eva.** Created #245.",
 		)];
 
-        let stale = detect_stale_accepted(&[2, 3, 5], &inbound_issues, 200).expect("stale scan");
+        let stale = detect_stale_accepted(&legacy_entries(&[2, 3, 5]), &inbound_issues, 200)
+            .expect("stale scan");
 
         assert!(stale.is_empty());
         assert_eq!(
@@ -688,10 +687,47 @@ mod tests {
 			"Responding to https://github.com/EvaLok/schema-org-json-ld-audit/issues/170\n\n## Accepted\n\nWill fix later.",
 		)];
 
-        let error = detect_stale_accepted(&[170], &inbound_issues, 200)
+        let error = detect_stale_accepted(&legacy_entries(&[170]), &inbound_issues, 200)
             .expect_err("missing cycle should fail closed");
 
         assert!(error.contains("does not mention a cycle"));
+    }
+
+    #[test]
+    fn stale_detection_accepts_structured_processed_entries() {
+        let inbound_issues = vec![audit_inbound_issue(
+            904,
+            "[Audit-ACK] Accepted structured",
+            "2026-03-09T01:00:00Z",
+            "> **[main-orchestrator]** | Cycle 194\n\nResponding to https://github.com/EvaLok/schema-org-json-ld-audit/issues/171\n\n## Accepted\n\nStructured audit record exists.",
+        )];
+
+        let structured_processed = vec![
+            AuditProcessedEntry::Legacy(170),
+            AuditProcessedEntry::Detailed(ProcessedAudit {
+                issue: 171,
+                processed_cycle: Some(194),
+                accepted_recommendations: vec![AcceptedAuditRecommendation {
+                    summary: "structured acceptance".to_string(),
+                    ..AcceptedAuditRecommendation::default()
+                }],
+                extra: BTreeMap::new(),
+            }),
+        ];
+
+        let stale =
+            detect_stale_accepted(&structured_processed, &inbound_issues, 200).expect("stale scan");
+
+        assert_eq!(
+            stale,
+            vec![StaleAcceptedRecommendation {
+                audit_number: 171,
+                inbound_issue_number: 904,
+                inbound_issue_title: "[Audit-ACK] Accepted structured".to_string(),
+                accepted_cycle: 194,
+                age_cycles: 6,
+            }]
+        );
     }
 
     #[test]
@@ -743,5 +779,13 @@ mod tests {
         DateTime::parse_from_rfc3339(raw)
             .expect("timestamp should parse")
             .with_timezone(&Utc)
+    }
+
+    fn legacy_entries(numbers: &[u64]) -> Vec<AuditProcessedEntry> {
+        numbers
+            .iter()
+            .copied()
+            .map(AuditProcessedEntry::Legacy)
+            .collect()
     }
 }
