@@ -11564,7 +11564,7 @@
       },
       "phpstan_level": {
         "cadence": "after PHPStan config changes",
-        "last_refreshed": "cycle 508"
+        "last_refreshed": "cycle 541"
       },
       "pre_python_clean_cycles": {
         "cadence": "every cycle (clean cycle gate check)",
@@ -11640,7 +11640,7 @@
       },
       "test_count": {
         "cadence": "every merge that adds/removes PHP or TS tests (scope: PHP+TS only, excludes Rust tool tests)",
-        "last_refreshed": "cycle 495"
+        "last_refreshed": "cycle 541"
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
@@ -11648,35 +11648,35 @@
       },
       "total_enums": {
         "cadence": "after enum additions",
-        "last_refreshed": "cycle 508"
+        "last_refreshed": "cycle 541"
       },
       "total_schema_classes": {
         "cadence": "after schema class additions",
-        "last_refreshed": "cycle 508"
+        "last_refreshed": "cycle 541"
       },
       "total_schema_types": {
         "cadence": "after schema type additions",
-        "last_refreshed": "cycle 508"
+        "last_refreshed": "cycle 541"
       },
       "total_standalone_testable_types": {
         "cadence": "after building-block-only type changes (publish gate)",
-        "last_refreshed": "cycle 508"
+        "last_refreshed": "cycle 541"
       },
       "total_sub_types": {
         "cadence": "after sub-type additions",
-        "last_refreshed": "cycle 508"
+        "last_refreshed": "cycle 541"
       },
       "total_testable_types": {
         "cadence": "after schema class or enum additions",
-        "last_refreshed": "cycle 508"
+        "last_refreshed": "cycle 541"
       },
       "total_testable_types_note": {
         "cadence": "after classification changes",
-        "last_refreshed": "cycle 508"
+        "last_refreshed": "cycle 541"
       },
       "type_classification": {
         "cadence": "after schema class additions/reclassifications",
-        "last_refreshed": "cycle 508"
+        "last_refreshed": "cycle 541"
       },
       "typescript_plan.status": {
         "cadence": "after plan phase transitions",
@@ -11684,7 +11684,7 @@
       },
       "typescript_stats": {
         "cadence": "every merge that adds/removes TS files",
-        "last_refreshed": "cycle 495"
+        "last_refreshed": "cycle 541"
       }
     }
   },
