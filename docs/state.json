@@ -20425,8 +20425,9 @@
     "blocks_publish": false,
     "c5_5_gate": {
       "cycle": 544,
-      "needs_reverify": true,
-      "status": "FAIL"
+      "needs_reverify": false,
+      "pipeline_summary": "PASS (3 warnings)",
+      "status": "PASS"
     },
     "c5_5_initial_result": {
       "cycle": 544,
@@ -20435,6 +20436,12 @@
       "overall": "fail",
       "result": "FAIL",
       "summary": "FAIL (2 warnings, 1 blocking: step-comments)"
+    },
+    "c5_5_rerun_receipt": {
+      "cycle": 544,
+      "initial_status": "FAIL",
+      "rerun_status": "PASS",
+      "timestamp": "2026-04-26T17:59:28Z"
     },
     "eva_directive": 436,
     "phases": [
