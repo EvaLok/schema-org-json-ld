@@ -20399,6 +20399,19 @@
         "C8"
       ],
       "reason": "Cycle 541 close-out blocked at C5.5 (final pipeline gate) by accepted-audit-adoption FAIL on audit EvaLok/schema-org-json-ld-audit#417 — recommendation 'Update review dispatch spec with sub-category taxonomy' had no adoption_artifact_reference after 49 cycles. The artifact was added post-failure in cycle 541 commit 37c64ddf26656b2958aee29ccb8cfea260ffc1d2 (sha 6de2adf4 type=commit, verified on master) restoring the structural state. Steps C5/C5.1/C6/C7/C8 were never reached because the C5.5 gate correctly refused to advance past the failed final pipeline check (no review dispatch, no record-dispatch). Already penalized in cycle 541 pipeline (no review dispatched). The cycle-runner auto_acknowledge_step_comment_cascades function exists for exactly this case but did not run because pipeline-check exit-1 (FAIL is exit 1 by design) made cycle-runner's run_tool_json return Err and pass Value::Null, which the auto-ack early-returns on. Tool-improvement candidate: cycle-runner runner::run_tool_json should accept exit 1 from pipeline-check (and housekeeping-scan) when stdout is valid JSON, since FAIL/WARN-with-findings is normal output for those tools. Without that fix the auto-acknowledge path is unreachable for any cycle that cascades from a previous FAIL — which is the most common cascade scenario."
+    },
+    {
+      "acknowledged_at": "2026-04-26T17:50:00Z",
+      "cycle": 543,
+      "issue": 2727,
+      "missing_steps": [
+        "C5",
+        "C5.1",
+        "C6",
+        "C7",
+        "C8"
+      ],
+      "reason": "Cycle 543 close-out blocked at C5.5 (final pipeline gate) by chronic-category-currency FAIL — six chronic categories (process-adherence, receipt-integrity, worklog-accuracy, code-change-quality, code-quality, review-evidence) had stale verification cycles (525 or 529 vs current 543). The structural fix landed in cycle 544 via Eva-blessed one-time refresh per question-for-eva #2622 Option C (process-review --update-chronic-category × 6, receipts 44f9397, 919a127, 5c115a5, 4663196, 2e7767c, 0218c96). Steps C5/C5.1/C6/C7/C8 were never reached in cycle 543 because the C5.5 gate correctly refused to advance past the failed final pipeline check (no review dispatch, no record-dispatch). Already penalized in cycle 543 pipeline (no review dispatched). The cycle-runner auto_acknowledge_step_comment_cascades function exists for exactly this case but did not auto-fire in cycle 544 startup due to a casing bug: the function checks `step.status != \"Fail\"` (capital F) but pipeline-check serializes StepStatus as lowercase (\"fail\"), so the cascade detection always skips. Manual ack required this cycle. Tool-improvement candidate filed in next-cycle commitments: fix the case mismatch in tools/rust/crates/cycle-runner/src/startup.rs:327 (and any equivalent for housekeeping-scan if applicable) so subsequent cascade auto-ack actually runs."
     }
   ],
   "test_count": {
