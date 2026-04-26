@@ -20359,6 +20359,19 @@
         "C8"
       ],
       "reason": "Cycle 528 close-out crashed silently after the state(cycle-complete) commit; no worklog/journal/dispatch artifacts produced. Evidence: docs/worklog/2026-04-22/ contains no cycle-528 file; docs/journal/2026-04-22.md skips from cycle 527 to cycle 529; review_agent.history has no cycle-528 entry. Already penalized in cycle 528 (no review dispatched, complacency 0). CORRECTION per audit EvaLok/schema-org-json-ld#435 (cycle 531): PR EvaLok/schema-org-json-ld#2658 / issue EvaLok/schema-org-json-ld#2657 does NOT mechanically prevent recurrence of this failure class. EvaLok/schema-org-json-ld#2658 enforces atomic commit-and-push in six state-mutating Rust crates (cycle 524 class: unpushed commit silently dropped by git reset --hard). Cycle 528's failure is a different class: the state(cycle-complete) commit a74430c7 WAS pushed; the session terminated between C2 and C3 with no worklog/journal/review dispatch produced. Steps C3-C8 are not state-mutating Rust tools affected by the commit_and_push helper. Per-candidate status (updated per audit EvaLok/schema-org-json-ld#437 acceptance cycle 535): (a) cycle-runner post-C2 steps idempotent / resume-from-partial-complete — DEFERRED (detection-only via (b) currently sufficient; cycle 528 is a one-off failure class; re-raise if the class recurs). (b) housekeeping-scan orchestrator-run staleness check with threshold <= 2x cycle-duration — DISPATCHED cycle 532 issue EvaLok/schema-org-json-ld#2669 / MERGED cycle 533 PR EvaLok/schema-org-json-ld#2670. (c) reorder so C8 issue-close runs before C3 docs-draft — DROPPED (subsumed by later orchestrator refactors; post-C2 reordering is no longer structurally clean given the C5.5 gate-freeze ordering). Tracked via audit-inbound filed cycle 531 (#2665) and cycle 535 (#2683)."
+    },
+    {
+      "acknowledged_at": "2026-04-26T06:30:00Z",
+      "cycle": 541,
+      "issue": 2721,
+      "missing_steps": [
+        "C5",
+        "C5.1",
+        "C6",
+        "C7",
+        "C8"
+      ],
+      "reason": "Cycle 541 close-out blocked at C5.5 (final pipeline gate) by accepted-audit-adoption FAIL on audit EvaLok/schema-org-json-ld-audit#417 — recommendation 'Update review dispatch spec with sub-category taxonomy' had no adoption_artifact_reference after 49 cycles. The artifact was added post-failure in cycle 541 commit 37c64ddf26656b2958aee29ccb8cfea260ffc1d2 (sha 6de2adf4 type=commit, verified on master) restoring the structural state. Steps C5/C5.1/C6/C7/C8 were never reached because the C5.5 gate correctly refused to advance past the failed final pipeline check (no review dispatch, no record-dispatch). Already penalized in cycle 541 pipeline (no review dispatched). The cycle-runner auto_acknowledge_step_comment_cascades function exists for exactly this case but did not run because pipeline-check exit-1 (FAIL is exit 1 by design) made cycle-runner's run_tool_json return Err and pass Value::Null, which the auto-ack early-returns on. Tool-improvement candidate: cycle-runner runner::run_tool_json should accept exit 1 from pipeline-check (and housekeeping-scan) when stdout is valid JSON, since FAIL/WARN-with-findings is normal output for those tools. Without that fix the auto-acknowledge path is unreachable for any cycle that cascades from a previous FAIL — which is the most common cascade scenario."
     }
   ],
   "test_count": {
