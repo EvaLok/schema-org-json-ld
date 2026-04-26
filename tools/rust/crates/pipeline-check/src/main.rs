@@ -3785,7 +3785,7 @@ fn post_dispatch_section_presence_assessment(
     repo_root: &Path,
     heading: &str,
     label: &str,
-    missing_severity: Severity,
+    severity_when_missing: Severity,
 ) -> Result<StepAssessment, String> {
     let current_cycle = current_cycle_from_state(repo_root)?;
     let Some(previous_cycle) = current_cycle.checked_sub(1) else {
@@ -3841,7 +3841,7 @@ fn post_dispatch_section_presence_assessment(
     } else {
         Ok(StepAssessment {
             status: StepStatus::Fail,
-            severity: missing_severity,
+            severity: severity_when_missing,
             detail: format!(
                 "cycle {} worklog is missing {} ({})",
                 previous_cycle,

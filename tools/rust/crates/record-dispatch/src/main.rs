@@ -327,6 +327,8 @@ fn post_dispatch_worklog_state(
         .unwrap_or(NOT_PROVIDED)
         .to_string();
     let dispatch_log_latest = state
+        // Newer state writes the top-level field; older/test fixtures may only have
+        // the mirrored copilot_metrics value, so accept either location.
         .pointer("/dispatch_log_latest")
         .or_else(|| state.pointer("/copilot_metrics/dispatch_log_latest"))
         .and_then(serde_json::Value::as_str)
