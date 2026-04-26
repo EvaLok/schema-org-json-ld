@@ -11659,7 +11659,7 @@
       },
       "tool_pipeline": {
         "cadence": "after pipeline phase transitions",
-        "last_refreshed": "cycle 541"
+        "last_refreshed": "cycle 543"
       },
       "total_enums": {
         "cadence": "after enum additions",
@@ -20396,17 +20396,17 @@
   "tool_pipeline": {
     "blocks_publish": false,
     "c5_5_gate": {
-      "cycle": 541,
+      "cycle": 543,
       "needs_reverify": true,
       "status": "FAIL"
     },
     "c5_5_initial_result": {
-      "cycle": 541,
+      "cycle": 543,
       "exit_code": 1,
       "has_blocking_findings": true,
       "overall": "fail",
       "result": "FAIL",
-      "summary": "FAIL (1 blocking warning, 3 warnings, 1 blocking: accepted-audit-adoption)"
+      "summary": "FAIL (2 warnings, 2 blocking: step-comments, post-dispatch-delta-present)"
     },
     "eva_directive": 436,
     "phases": [
