@@ -10138,8 +10138,10 @@
     {
       "dispatched_at": "2026-04-26T17:23:54Z",
       "issue": 2731,
+      "merged_at": "2026-04-26T21:30:34Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2732,
+      "status": "merged",
       "title": "Append-only post-close-out reconciliation block in worklog (closes #2674)"
     },
     {
@@ -11726,12 +11728,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 7,
     "issue": 2735,
     "number": 545,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-26T21:19:43Z"
   },
   "last_eva_comment_check": "2026-04-26T21:19:43Z",
