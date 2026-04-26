@@ -39,6 +39,16 @@ const PREVIOUS_COMMITMENT_GRADE_STATUS_VALUES: [&str; 6] = [
     "deferred",
     "dropped",
 ];
+const FORBIDDEN_FUTURE_TENSE_IN_MET: &[&str] = &[
+    "will",
+    "shall",
+    "going to",
+    "to be",
+    "tbd",
+    "pending",
+    "next cycle",
+    "this cycle's",
+];
 const INFRASTRUCTURE_ROOTS: [&str; 2] = ["tools", ".claude/skills"];
 const INFRASTRUCTURE_FILES: [&str; 4] = [
     "STARTUP_CHECKLIST.xml",
@@ -3225,13 +3235,17 @@ fn normalize_previous_commitment_grade(
     let commitment_quote = non_empty_trimmed(Some(grade.commitment_quote.as_str()))
         .ok_or_else(|| "previous_commitments[].commitment_quote must not be empty".to_string())?
         .to_string();
+    let status = parse_previous_commitment_grade_status(&grade.status)?;
     let detail = non_empty_trimmed(Some(grade.detail.as_str()))
         .ok_or_else(|| "previous_commitments[].detail must not be empty".to_string())?
         .to_string();
+    if matches!(status, PreviousCommitmentGradeStatus::Met) {
+        validate_met_detail_is_past_tense(&detail)?;
+    }
 
     Ok(PreviousCommitmentGrade {
         commitment_quote,
-        status: parse_previous_commitment_grade_status(&grade.status)?,
+        status,
         detail,
     })
 }
@@ -3276,20 +3290,59 @@ fn legacy_previous_commitment_override(
             "previous-commitment override requires both --previous-commitment-status and --previous-commitment-detail".to_string(),
         ),
         (Some(status), Some(detail)) => {
+            let status = parse_legacy_previous_commitment_status(status)?;
             let detail = non_empty_trimmed(Some(detail))
                 .ok_or_else(|| format!("{source} previous commitment detail must not be empty"))?
                 .to_string();
+            if matches!(status, LegacyPreviousCommitmentStatus::Met) {
+                validate_met_detail_is_past_tense(&detail)?;
+            }
             if source == "CLI flags" {
                 eprintln!(
                     "Warning: legacy previous commitment status/detail input is deprecated; use per-commitment previous_commitments / --previous-commitment-grade instead."
                 );
             }
             Ok(Some(LegacyPreviousCommitmentOverride {
-                status: parse_legacy_previous_commitment_status(status)?,
+                status,
                 detail,
             }))
         }
     }
+}
+
+fn validate_met_detail_is_past_tense(detail: &str) -> Result<(), String> {
+    let normalized_detail = detail.to_ascii_lowercase();
+    for phrase in FORBIDDEN_FUTURE_TENSE_IN_MET {
+        if contains_forbidden_future_tense_phrase(&normalized_detail, phrase) {
+            return Err(format!(
+                "previous commitment detail for status 'Met' must cite past-tense evidence; found forbidden phrase '{}' in detail '{}'. Reword the detail to describe what was already observed.",
+                phrase, detail
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn contains_forbidden_future_tense_phrase(detail: &str, phrase: &str) -> bool {
+    detail
+        .match_indices(phrase)
+        .any(|(start, _)| phrase_has_word_boundaries(detail, start, start + phrase.len()))
+}
+
+fn phrase_has_word_boundaries(detail: &str, start: usize, end: usize) -> bool {
+    let starts_at_boundary = detail[..start]
+        .chars()
+        .next_back()
+        .is_none_or(|ch| !is_future_tense_word_char(ch));
+    let ends_at_boundary = detail[end..]
+        .chars()
+        .next()
+        .is_none_or(|ch| !is_future_tense_word_char(ch));
+    starts_at_boundary && ends_at_boundary
+}
+
+fn is_future_tense_word_char(ch: char) -> bool {
+    ch.is_ascii_alphanumeric()
 }
 
 fn load_standing_eva_blockers(repo_root: &Path) -> Result<Vec<StandingEvaBlocker>, String> {
@@ -4433,7 +4486,7 @@ struct ResolvedPreviousCommitmentGrade {
 fn parse_previous_commitment_grade_status(
     value: &str,
 ) -> Result<PreviousCommitmentGradeStatus, String> {
-    match value {
+    match value.trim().to_ascii_lowercase().as_str() {
         "met" => Ok(PreviousCommitmentGradeStatus::Met),
         "partial" => Ok(PreviousCommitmentGradeStatus::Partial),
         "not_met" => Ok(PreviousCommitmentGradeStatus::NotMet),
@@ -4451,7 +4504,7 @@ fn parse_previous_commitment_grade_status(
 fn parse_legacy_previous_commitment_status(
     value: &str,
 ) -> Result<LegacyPreviousCommitmentStatus, String> {
-    match value {
+    match value.trim().to_ascii_lowercase().as_str() {
         "followed" | "met" => Ok(LegacyPreviousCommitmentStatus::Met),
         "mixed" | "partial" => Ok(LegacyPreviousCommitmentStatus::Partial),
         "not_followed" | "not_met" => Ok(LegacyPreviousCommitmentStatus::NotMet),
@@ -9479,6 +9532,75 @@ Reflective log for the schema-org-json-ld orchestrator.
             }
             Command::Worklog(_) => panic!("expected journal command"),
         }
+    }
+
+    #[test]
+    fn validate_met_detail_is_past_tense_accepts_observed_proof() {
+        assert!(validate_met_detail_is_past_tense(
+            "Ran tools/state-invariants at receipt abc1234; check 8 emitted WARN not FAIL as required"
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn validate_met_detail_is_past_tense_rejects_each_forbidden_phrase() {
+        for phrase in FORBIDDEN_FUTURE_TENSE_IN_MET {
+            let detail = format!("Observed marker {phrase} marker");
+            let error =
+                validate_met_detail_is_past_tense(&detail).expect_err("phrase should be rejected");
+            assert!(
+                error.contains(&format!("forbidden phrase '{}'", phrase)),
+                "expected error to mention forbidden phrase {phrase}, got: {error}"
+            );
+        }
+    }
+
+    #[test]
+    fn validate_met_detail_is_past_tense_is_case_insensitive() {
+        for detail in [
+            "The check WILL pass once dispatched",
+            "The check Will pass once dispatched",
+            "The check will pass once dispatched",
+        ] {
+            let error =
+                validate_met_detail_is_past_tense(detail).expect_err("future tense should reject");
+            assert!(error.contains("forbidden phrase 'will'"));
+        }
+    }
+
+    #[test]
+    fn journal_inline_flags_reject_met_future_tense_detail() {
+        let mut args = journal_args("Future tense");
+        args.previous_commitment_status = Some("Met".to_string());
+        args.previous_commitment_detail = Some("The check will pass once dispatched".to_string());
+
+        let error = resolve_journal_input(&args).unwrap_err();
+        assert!(error.contains("forbidden phrase 'will'"));
+    }
+
+    #[test]
+    fn previous_commitment_grade_flags_reject_met_future_tense_detail() {
+        let error = parse_previous_commitment_grade_flags(&[String::from(
+            "Dispatch PR #546::Met::The check will pass once dispatched",
+        )])
+        .unwrap_err();
+        assert!(error.contains("forbidden phrase 'will'"));
+    }
+
+    #[test]
+    fn journal_inline_flags_allow_partial_future_tense_detail() {
+        let mut args = journal_args("Partial future tense");
+        args.previous_commitment_status = Some("Partial".to_string());
+        args.previous_commitment_detail = Some("The check will pass once dispatched".to_string());
+
+        let input = resolve_journal_input(&args).expect("partial detail should remain allowed");
+        assert_eq!(
+            input
+                .legacy_previous_commitment
+                .as_ref()
+                .map(|commitment| commitment.detail.as_str()),
+            Some("The check will pass once dispatched")
+        );
     }
 
     #[test]
