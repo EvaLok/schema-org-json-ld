@@ -296,6 +296,20 @@ When adding or modifying enum variants in shared crates (especially `state-schem
 
 PR #2212 added `ReviewDispatchBlocked` to `PipelineGateError` but only handled it in `record-dispatch`, breaking `dispatch-task` and causing 17+ hours of outage.
 
+### Author attribution: signature-based detection (per cycle 539 review)
+
+When a Rust tool needs to distinguish "Eva posted this" from "orchestrator posted this" on issues or PRs, **it MUST use the comment body's signature line, not `user.login`**. The orchestrator's PAT is configured under the EvaLok account, so `user.login == "EvaLok"` is true for both human Eva comments and machine orchestrator comments.
+
+The orchestrator signs every comment with a leading line of the form:
+
+```
+> **[main-orchestrator]** | Cycle N
+```
+
+Tools that scan for unacknowledged Eva responses, compute Eva blockers, or otherwise filter "who said what" should treat any comment whose body starts with `> **[main-orchestrator]**` as orchestrator-authored regardless of `user.login`. See `tools/rust/crates/check-eva-responses` for a reference implementation.
+
+PR #2706 (cycle 540) introduced this signature-based filter after a chain of incidents where orchestrator comments were misclassified as Eva responses, causing the orchestrator to "respond to itself."
+
 ## Advanced Patterns
 
 ### Array `@type` (multiple types)
