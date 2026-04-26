@@ -10094,8 +10094,10 @@
     {
       "dispatched_at": "2026-04-25T21:43:36Z",
       "issue": 2717,
+      "merged_at": "2026-04-26T02:14:11Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2718,
+      "status": "merged",
       "title": "[Eva #2519 Option A] Adoption-plan gate for chronic-category-tracking audits"
     },
     {
@@ -10309,110 +10311,110 @@
     398,
     400,
     {
-      "issue": 402,
       "accepted_recommendations": [
         {
-          "summary": "Chronic-category currency structural response",
           "category": "chronic-category-tracking",
           "disposition": "defer",
-          "justification": "Deferred in main#2400 due to dispatch-cap saturation; manual refresh cleared the immediate symptom while the structural pipeline-check work was queued for cycle 475."
+          "justification": "Deferred in main#2400 due to dispatch-cap saturation; manual refresh cleared the immediate symptom while the structural pipeline-check work was queued for cycle 475.",
+          "summary": "Chronic-category currency structural response"
         }
-      ]
+      ],
+      "issue": 402
     },
     405,
     {
-      "issue": 406,
       "accepted_recommendations": [
         {
-          "summary": "Audit-inbound deadline tracking for accepted chronic audit work",
           "category": "chronic-category-tracking",
           "disposition": "defer",
-          "justification": "Deferred in main#2427 because Tier 1 required a Copilot dispatch and Tier 3 was blocked pending PR #2422's chronic-refresh-invalidation protection."
+          "justification": "Deferred in main#2427 because Tier 1 required a Copilot dispatch and Tier 3 was blocked pending PR #2422's chronic-refresh-invalidation protection.",
+          "summary": "Audit-inbound deadline tracking for accepted chronic audit work"
         }
-      ]
+      ],
+      "issue": 406
     },
     407,
     409,
     411,
     413,
     {
-      "issue": 415,
       "accepted_recommendations": [
         {
-          "summary": "Sub-categorize chronic entries for convergence tracking",
-          "category": "chronic-category-tracking",
-          "disposition": "accept",
           "accepted_cycle": 489,
           "adoption_artifact_reference": {
-            "type": "pr",
             "number": 2490,
+            "type": "pr",
             "url": "https://github.com/EvaLok/schema-org-json-ld/pull/2490"
-          }
+          },
+          "category": "chronic-category-tracking",
+          "disposition": "accept",
+          "summary": "Sub-categorize chronic entries for convergence tracking"
         }
-      ]
+      ],
+      "issue": 415
     },
     {
-      "issue": 417,
       "accepted_recommendations": [
         {
-          "summary": "Create chronic sub-category entries",
-          "category": "chronic-category-tracking",
-          "disposition": "accept",
           "accepted_cycle": 492,
           "adoption_artifact_reference": {
-            "type": "pr",
             "number": 2507,
+            "type": "pr",
             "url": "https://github.com/EvaLok/schema-org-json-ld/pull/2507"
-          }
-        },
-        {
-          "summary": "Update review dispatch spec with sub-category taxonomy",
+          },
           "category": "chronic-category-tracking",
           "disposition": "accept",
-          "accepted_cycle": 492,
-          "adoption_artifact_reference": null
+          "summary": "Create chronic sub-category entries"
         },
         {
-          "summary": "Refine rollback gate for parent/sub matching",
+          "accepted_cycle": 492,
+          "adoption_artifact_reference": null,
+          "category": "chronic-category-tracking",
+          "disposition": "accept",
+          "summary": "Update review dispatch spec with sub-category taxonomy"
+        },
+        {
           "category": "chronic-category-tracking",
           "disposition": "defer",
-          "justification": "Deferred in main#2502 to a future dispatch while recurrence fixes took priority."
+          "justification": "Deferred in main#2502 to a future dispatch while recurrence fixes took priority.",
+          "summary": "Refine rollback gate for parent/sub matching"
         }
-      ]
+      ],
+      "issue": 417
     },
     418,
     {
-      "issue": 420,
       "accepted_recommendations": [
         {
-          "summary": "File follow-up dispatch for rollback gate refinement",
           "category": "chronic-category-tracking",
           "disposition": "defer",
-          "justification": "Deferred in main#2520 pending Eva's answer on #2519 and an open dispatch slot."
+          "justification": "Deferred in main#2520 pending Eva's answer on #2519 and an open dispatch slot.",
+          "summary": "File follow-up dispatch for rollback gate refinement"
         },
         {
-          "summary": "Diagnose why the review agent is not using sub-categories",
           "category": "chronic-category-tracking",
           "disposition": "defer",
-          "justification": "Deferred in main#2520 pending Eva's answer on #2519 and an open dispatch slot."
+          "justification": "Deferred in main#2520 pending Eva's answer on #2519 and an open dispatch slot.",
+          "summary": "Diagnose why the review agent is not using sub-categories"
         },
         {
-          "summary": "Add acceptance-completeness check",
           "category": "chronic-category-tracking",
           "disposition": "defer",
-          "justification": "Deferred in main#2520 pending Eva's answer on #2519 and an open dispatch slot."
+          "justification": "Deferred in main#2520 pending Eva's answer on #2519 and an open dispatch slot.",
+          "summary": "Add acceptance-completeness check"
         },
         {
-          "summary": "Implement adoption-plan gate for chronic-category-tracking audits",
-          "category": "chronic-category-tracking",
-          "disposition": "accept",
           "accepted_cycle": 495,
           "adoption_artifact_reference": {
-            "type": "pipeline_check_step",
-            "name": "accepted-audit-adoption"
-          }
+            "name": "accepted-audit-adoption",
+            "type": "pipeline_check_step"
+          },
+          "category": "chronic-category-tracking",
+          "disposition": "accept",
+          "summary": "Implement adoption-plan gate for chronic-category-tracking audits"
         }
-      ]
+      ],
+      "issue": 420
     },
     427,
     435,
@@ -11685,12 +11687,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 3,
     "issue": 2721,
     "number": 541,
-    "summary": "1 dispatch, 2 merges",
+    "summary": "1 dispatches, 1 merges",
     "timestamp": "2026-04-26T02:07:27Z"
   },
   "last_eva_comment_check": "2026-04-26T01:43:12Z",
