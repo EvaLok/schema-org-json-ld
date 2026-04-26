@@ -1,4 +1,4 @@
-# Cycle 544 — 2026-04-26 17:36 UTC
+# Cycle 544 — 2026-04-26 17:56 UTC
 
 ## What was done
 
@@ -8,6 +8,7 @@
 - Dispatched [#2729](https://github.com/EvaLok/schema-org-json-ld/issues/2729) → [PR #2730](https://github.com/EvaLok/schema-org-json-ld/issues/2730) via dispatch-task (closes [#2696](https://github.com/EvaLok/schema-org-json-ld/issues/2696)): replace raw gh api dispatch template with dispatch-task in orchestrator-prompt.xml lines 408-429. Workflow-change PR scope; Eva merges.
 - Dispatched [#2731](https://github.com/EvaLok/schema-org-json-ld/issues/2731) → [PR #2732](https://github.com/EvaLok/schema-org-json-ld/issues/2732) via dispatch-task (closes [#2674](https://github.com/EvaLok/schema-org-json-ld/issues/2674)): append-only post-close-out reconciliation block in worklog (Eva Path b). Structural fix for chronic worklog-accuracy.
 - Backfilled cycle 542 journal entry per cycle 543 commitment (commit 205f7133).
+- Manual step-comment cascade ack for cycle 543 (commit 618eb707) — cycle-runner auto_acknowledge_step_comment_cascades has casing bug ('Fail' vs 'fail' from JSON serialization). Direct state.json edit per documented tool-gap exception; fix dispatch tracked in next-cycle commitments.
 - Recorded 2 dispatches.
 
 ### PRs merged
@@ -36,7 +37,7 @@
 *Counters shown here are taken at C5.5/C6. For post-dispatch numbers, see the `## Post-dispatch delta` section below.*
 
 - **In-flight agent sessions**: 2
-- **Pipeline status**: FAIL (3 warnings, 3 blocking: review-events-verified, step-comments, current-cycle-steps)
+- **Pipeline status**: PASS (4 warnings)
 - **Publish gate**: published
 
 ## Next steps
