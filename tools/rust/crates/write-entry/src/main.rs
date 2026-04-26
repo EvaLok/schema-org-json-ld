@@ -18,6 +18,8 @@ const PRIMARY_ISSUES_URL: &str = "https://github.com/EvaLok/schema-org-json-ld/i
 const QC_ISSUES_URL: &str = "https://github.com/EvaLok/schema-org-json-ld-qc/issues";
 const AUDIT_ISSUES_URL: &str = "https://github.com/EvaLok/schema-org-json-ld-audit/issues";
 const PRIMARY_COMMITS_URL: &str = "https://github.com/EvaLok/schema-org-json-ld/commit";
+const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
+const TRUSTED_AUTHOR: &str = "EvaLok";
 const JOURNAL_DESCRIPTION: &str = "Reflective log for the schema-org-json-ld orchestrator.";
 const NOT_PROVIDED: &str = "Not provided.";
 const PRE_DISPATCH_STATE_HEADING: &str = "## Pre-dispatch state";
@@ -196,6 +198,9 @@ struct JournalArgs {
     /// Auto-derive chronic category status table from docs/state.json
     #[arg(long = "auto-chronic-status", default_value_t = false)]
     auto_chronic_status: bool,
+    /// Auto-derive Standing Eva blockers from live open question-for-eva issues
+    #[arg(long = "auto-blockers", default_value_t = false)]
+    auto_blockers: bool,
     /// Skip validation; use only when you know what you're doing
     #[arg(long = "skip-chronic-claim-validation", default_value_t = false)]
     skip_chronic_claim_validation: bool,
@@ -536,7 +541,12 @@ fn execute_journal(
     } else {
         None
     };
-    let standing_eva_blockers = load_standing_eva_blockers(repo_root)?;
+    let standing_eva_blockers = if args.auto_blockers {
+        load_live_standing_eva_blockers(repo_root, now)
+            .map_err(|error| format!("--auto-blockers failed: {}", error))?
+    } else {
+        load_standing_eva_blockers(repo_root)?
+    };
     let worklog_link = find_worklog_relative_path(repo_root, cycle)?;
     let entry = sanitize_escaped_newlines(&render_journal_entry(
         cycle,
@@ -3362,6 +3372,86 @@ fn load_standing_eva_blockers(repo_root: &Path) -> Result<Vec<StandingEvaBlocker
     ))
 }
 
+fn load_live_standing_eva_blockers(
+    repo_root: &Path,
+    now: DateTime<Utc>,
+) -> Result<Vec<StandingEvaBlocker>, String> {
+    let output = ProcessCommand::new("gh")
+		.current_dir(repo_root)
+		.args([
+			"api",
+			&format!(
+				"repos/{}/issues?labels=question-for-eva&state=open&creator={}&sort=created&direction=asc&per_page=100",
+				MAIN_REPO, TRUSTED_AUTHOR
+			),
+		])
+		.output()
+		.map_err(|error| format!("failed to execute gh api for question-for-eva issues: {}", error))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(if stderr.is_empty() {
+            "gh api for question-for-eva issues failed".to_string()
+        } else {
+            format!("gh api for question-for-eva issues failed: {}", stderr)
+        });
+    }
+
+    let value: Value = serde_json::from_slice(&output.stdout)
+        .map_err(|error| format!("invalid gh api JSON for question-for-eva issues: {}", error))?;
+    parse_live_standing_eva_blockers(&value, now)
+}
+
+fn parse_live_standing_eva_blockers(
+    value: &Value,
+    now: DateTime<Utc>,
+) -> Result<Vec<StandingEvaBlocker>, String> {
+    let issues = value
+        .as_array()
+        .ok_or_else(|| "question-for-eva gh api response must be a JSON array".to_string())?;
+    let mut blockers = Vec::new();
+
+    for issue in issues {
+        if issue.get("pull_request").is_some() {
+            continue;
+        }
+        let number = issue
+            .get("number")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| "question-for-eva issue missing number".to_string())?;
+        let author = issue
+            .pointer("/user/login")
+            .and_then(Value::as_str)
+            .ok_or_else(|| format!("question-for-eva issue #{} missing user.login", number))?;
+        if author != TRUSTED_AUTHOR {
+            continue;
+        }
+        let title = issue
+            .get("title")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|title| !title.is_empty())
+            .ok_or_else(|| format!("question-for-eva issue #{} missing title", number))?;
+        let created_at = issue
+            .get("created_at")
+            .and_then(Value::as_str)
+            .ok_or_else(|| format!("question-for-eva issue #{} missing created_at", number))?;
+        let created_at = parse_timestamp(
+            created_at,
+            &format!("question-for-eva issue #{} created_at", number),
+        )?;
+        let stale_hours =
+            calculate_stale_hours(created_at, now, &format!("issue #{} age", number))?;
+
+        blockers.push(StandingEvaBlocker {
+            number,
+            title: title.to_string(),
+            stale_hours,
+        });
+    }
+
+    Ok(blockers)
+}
+
 fn load_standing_eva_blockers_from_state(
     repo_root: &Path,
     value: &Value,
@@ -3478,14 +3568,8 @@ fn fetch_open_question_blocker(
         .and_then(Value::as_str)
         .ok_or_else(|| format!("gh issue view missing createdAt for #{}", issue_number))?;
     let created_at = parse_timestamp(created_at, &format!("issue #{} createdAt", issue_number))?;
-    let age_seconds = now.signed_duration_since(created_at).num_seconds();
-    if age_seconds < 0 {
-        return Err(format!("issue #{} age is invalid", issue_number));
-    }
-    let stale_hours = age_seconds
-        .checked_add(3599)
-        .map(|value| value / 3600)
-        .ok_or_else(|| format!("issue #{} age is invalid", issue_number))?;
+    let stale_hours =
+        calculate_stale_hours(created_at, now, &format!("issue #{} age", issue_number))?;
 
     Ok(StandingEvaBlocker {
         number: issue_number,
@@ -3510,6 +3594,21 @@ fn ceil_age_hours(age_hours: f64) -> Option<i64> {
     Some(age_hours.ceil() as i64)
 }
 
+fn calculate_stale_hours(
+    created_at: DateTime<Utc>,
+    now: DateTime<Utc>,
+    label: &str,
+) -> Result<i64, String> {
+    let age_seconds = now.signed_duration_since(created_at).num_seconds();
+    if age_seconds < 0 {
+        return Err(format!("{} is invalid", label));
+    }
+    age_seconds
+        .checked_add(3599)
+        .map(|value| value / 3600)
+        .ok_or_else(|| format!("{} is invalid", label))
+}
+
 fn has_inline_journal_content(args: &JournalArgs) -> bool {
     !args.section.is_empty()
         || !args.commitment.is_empty()
@@ -3517,6 +3616,7 @@ fn has_inline_journal_content(args: &JournalArgs) -> bool {
         || args.previous_commitment_status.is_some()
         || args.previous_commitment_detail.is_some()
         || args.auto_chronic_status
+        || args.auto_blockers
         || args.context.is_some()
 }
 
@@ -4759,7 +4859,7 @@ fn render_journal_entry(
     lines.push("### Standing Eva blockers".to_string());
     lines.push(String::new());
     if standing_eva_blockers.is_empty() {
-        lines.push("- None recorded.".to_string());
+        lines.push("- None.".to_string());
     } else {
         for blocker in standing_eva_blockers {
             lines.push(format!(
@@ -5262,6 +5362,7 @@ mod tests {
             previous_commitment_status: None,
             previous_commitment_detail: None,
             auto_chronic_status: false,
+            auto_blockers: false,
             skip_chronic_claim_validation: false,
         }
     }
@@ -10303,6 +10404,7 @@ Reflective log for the schema-org-json-ld orchestrator.
             "journal",
             "--title",
             "test",
+            "--auto-blockers",
             "--skip-chronic-claim-validation",
         ])
         .unwrap();
@@ -10311,6 +10413,7 @@ Reflective log for the schema-org-json-ld orchestrator.
             Command::Journal(args) => {
                 assert!(args.skip_chronic_claim_validation);
                 assert!(!args.auto_chronic_status);
+                assert!(args.auto_blockers);
             }
             Command::Worklog(_) => panic!("expected journal command"),
         }

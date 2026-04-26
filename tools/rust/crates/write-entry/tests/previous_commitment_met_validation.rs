@@ -112,7 +112,10 @@ fn cli_rejects_met_future_tense_detail() {
 
     assert!(!output.status.success(), "command should fail");
     let stderr = String::from_utf8(output.stderr).unwrap();
-    assert!(stderr.contains("forbidden phrase 'will'"), "stderr was: {stderr}");
+    assert!(
+        stderr.contains("forbidden phrase 'will'"),
+        "stderr was: {stderr}"
+    );
 }
 
 #[test]

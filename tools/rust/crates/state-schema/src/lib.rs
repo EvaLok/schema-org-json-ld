@@ -875,8 +875,8 @@ mod tests {
         set_value_at_pointer, transition_cycle_phase, update_freshness, write_state_value,
         AcceptedAuditRecommendation, AdoptionArtifactReference, AgentSession, AuditDisposition,
         AuditProcessedEntry, DeferredFinding, FindingDisposition, PendingAuditImplementation,
-        ProcessedAudit, ReviewHistoryEntry, StateJson, ToolsConfig,
-        DEFAULT_ORCHESTRATOR_MODEL, VALID_PHASES,
+        ProcessedAudit, ReviewHistoryEntry, StateJson, ToolsConfig, DEFAULT_ORCHESTRATOR_MODEL,
+        VALID_PHASES,
     };
     use chrono::DateTime;
     use serde_json::{json, Value};
@@ -1874,7 +1874,10 @@ mod tests {
         }))
         .expect("state should deserialize");
 
-        assert_eq!(state.audit_processed, vec![AuditProcessedEntry::Legacy(402)]);
+        assert_eq!(
+            state.audit_processed,
+            vec![AuditProcessedEntry::Legacy(402)]
+        );
     }
 
     #[test]
