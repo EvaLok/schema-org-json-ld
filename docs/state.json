@@ -10152,6 +10152,14 @@
       "pr": 2734,
       "status": "merged",
       "title": "[Cycle Review] Cycle 544 end-of-cycle review"
+    },
+    {
+      "addresses_finding": "544:2",
+      "dispatched_at": "2026-04-26T21:52:00Z",
+      "issue": 2736,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "Add --auto-blockers flag to write-entry journal (cycle 544 F2 structural fix)"
     }
   ],
   "audit_dropped": [
@@ -11457,7 +11465,7 @@
       "resolved_ref": "#2731"
     }
   ],
-  "dispatch_log_latest": "#2733 [Cycle Review] Cycle 544 end-of-cycle review (cycle 544)",
+  "dispatch_log_latest": "#2736 Add --auto-blockers flag to write-entry journal (cycle 544 F2 structural fix) (cycle 545)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -11728,13 +11736,13 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 7,
     "issue": 2735,
     "number": 545,
-    "summary": "0 dispatches, 2 merges",
-    "timestamp": "2026-04-26T21:19:43Z"
+    "summary": "1 dispatch, 2 merges",
+    "timestamp": "2026-04-26T21:52:00Z"
   },
   "last_eva_comment_check": "2026-04-26T21:19:43Z",
   "last_tool_audit_cycle": 403,
