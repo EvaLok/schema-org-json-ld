@@ -39,6 +39,8 @@ const PREVIOUS_COMMITMENT_GRADE_STATUS_VALUES: [&str; 6] = [
     "deferred",
     "dropped",
 ];
+/// Future-tense or incomplete-evidence phrases that are incompatible with a
+/// previous commitment being graded as Met.
 const FORBIDDEN_FUTURE_TENSE_IN_MET: &[&str] = &[
     "will",
     "shall",
@@ -3329,19 +3331,21 @@ fn contains_forbidden_future_tense_phrase(detail: &str, phrase: &str) -> bool {
         .any(|(start, _)| phrase_has_word_boundaries(detail, start, start + phrase.len()))
 }
 
+/// Accept the match only when it is bounded by non-alphanumeric characters (or
+/// string boundaries) so partial words do not trigger false positives.
 fn phrase_has_word_boundaries(detail: &str, start: usize, end: usize) -> bool {
     let starts_at_boundary = detail[..start]
         .chars()
         .next_back()
-        .is_none_or(|ch| !is_future_tense_word_char(ch));
+        .is_none_or(|ch| !is_boundary_word_char(ch));
     let ends_at_boundary = detail[end..]
         .chars()
         .next()
-        .is_none_or(|ch| !is_future_tense_word_char(ch));
+        .is_none_or(|ch| !is_boundary_word_char(ch));
     starts_at_boundary && ends_at_boundary
 }
 
-fn is_future_tense_word_char(ch: char) -> bool {
+fn is_boundary_word_char(ch: char) -> bool {
     ch.is_ascii_alphanumeric()
 }
 
