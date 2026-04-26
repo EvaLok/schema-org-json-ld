@@ -37,7 +37,8 @@
 *Counters shown here are taken at C5.5/C6. For post-dispatch numbers, see the `## Post-dispatch delta` section below.*
 
 - **In-flight agent sessions**: 2
-- **Pipeline status**: PASS (4 warnings)
+- **Pipeline status**: FAIL→PASS (C5.5 initially failed: FAIL (2 warnings, 1 blocking: step-comments); resolved by re-run)
+- **Close-out gate failures**: C5.5 FAIL: FAIL (2 warnings, 1 blocking: step-comments)
 - **Publish gate**: published
 
 ## Next steps
@@ -64,3 +65,10 @@
 | record-dispatch | 74ecad4 | [74ecad4](https://github.com/EvaLok/schema-org-json-ld/commit/74ecad45691bd96f481ca2922005de0dac9746ed) |
 | process-review | 36fe88f | [36fe88f](https://github.com/EvaLok/schema-org-json-ld/commit/36fe88fe97d1d4a6b4b142e166b4a38cbebcb139) |
 | cycle-complete | 13f3c5e | [13f3c5e](https://github.com/EvaLok/schema-org-json-ld/commit/13f3c5efc140fc3c95c49274afb2d3f3ec528622) |
+
+## Post-dispatch delta
+
+- **In-flight agent sessions**: 2 (unchanged: 0 new dispatches this cycle)
+- **Pipeline status**: FAIL→PASS (C5.5 initially failed: FAIL (2 warnings, 1 blocking: step-comments); resolved by re-run)
+- **Close-out gate failures**: C5.5 FAIL: FAIL (2 warnings, 1 blocking: step-comments)
+- **Publish gate**: published
