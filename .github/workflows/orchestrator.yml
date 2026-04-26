@@ -48,7 +48,7 @@ jobs:
         run: |
           {
             echo "content<<PROMPT_EOF"
-            cat .github/workflows/orchestrator-prompt.xml
+            cat .github/workflows/orchestrator-redesign-prompt.xml
             echo "PROMPT_EOF"
           } >> "$GITHUB_OUTPUT"
 
