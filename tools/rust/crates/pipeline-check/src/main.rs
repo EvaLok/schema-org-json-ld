@@ -47,6 +47,7 @@ const WORKLOG_IMMUTABILITY_STEP_NAME: &str = "worklog-immutability";
 const FROZEN_WORKLOG_IMMUTABILITY_STEP_NAME: &str = "frozen-worklog-immutability";
 const POST_DISPATCH_DELTA_HEADING_REQUIRED_STEP_NAME: &str = "post-dispatch-delta-heading-required";
 const POST_DISPATCH_DELTA_PRESENT_STEP_NAME: &str = "post-dispatch-delta-present";
+const POST_DISPATCH_RECONCILIATION_PRESENT_STEP_NAME: &str = "post-dispatch-reconciliation-present";
 const PR_BASE_CURRENCY_STEP_NAME: &str = "pr-base-currency";
 const STEP_COMMENTS_STEP_NAME: &str = "step-comments";
 const CURRENT_CYCLE_STEPS_STEP_NAME: &str = "current-cycle-steps";
@@ -67,7 +68,7 @@ const COMMITMENT_DROP_RATIONALE_MARKERS: &[&str] = &[
     " due to ",
 ];
 const NON_SURFACE_CYCLE_PREFIX: &str = "cycle-";
-const STEP_NAMES: [&str; 31] = [
+const STEP_NAMES: [&str; 32] = [
     "metric-snapshot",
     "field-inventory",
     "housekeeping-scan",
@@ -99,6 +100,7 @@ const STEP_NAMES: [&str; 31] = [
     CHRONIC_REFRESH_INVALIDATION_STEP_NAME,
     POST_DISPATCH_DELTA_HEADING_REQUIRED_STEP_NAME,
     POST_DISPATCH_DELTA_PRESENT_STEP_NAME,
+    POST_DISPATCH_RECONCILIATION_PRESENT_STEP_NAME,
 ];
 // Steps that have not been posted yet when pipeline-check runs at C5.5.
 // These are excluded from the current-cycle mandatory step check.
@@ -958,6 +960,12 @@ fn run_pipeline_with_excluded_steps(
     }
     if !is_excluded_step(POST_DISPATCH_DELTA_PRESENT_STEP_NAME, exclude_steps) {
         steps.push(verify_post_dispatch_delta_present(repo_root));
+    }
+    if !is_excluded_step(
+        POST_DISPATCH_RECONCILIATION_PRESENT_STEP_NAME,
+        exclude_steps,
+    ) {
+        steps.push(verify_post_dispatch_reconciliation_present(repo_root));
     }
     // Doc validation runs before step-comments so it can pass the pre-step-comments
     // pipeline status through to validate-docs. Reclassify afterward, once the real
@@ -3630,6 +3638,29 @@ fn verify_post_dispatch_delta_present(repo_root: &Path) -> StepReport {
     }
 }
 
+fn verify_post_dispatch_reconciliation_present(repo_root: &Path) -> StepReport {
+    match post_dispatch_reconciliation_presence_assessment(repo_root) {
+        Ok(assessment) => StepReport {
+            name: POST_DISPATCH_RECONCILIATION_PRESENT_STEP_NAME,
+            status: assessment.status,
+            severity: assessment.severity,
+            exit_code: None,
+            detail: Some(assessment.detail),
+            findings: None,
+            summary: None,
+        },
+        Err(error) => StepReport {
+            name: POST_DISPATCH_RECONCILIATION_PRESENT_STEP_NAME,
+            status: StepStatus::Error,
+            severity: Severity::Warning,
+            exit_code: None,
+            detail: Some(error),
+            findings: None,
+            summary: None,
+        },
+    }
+}
+
 fn verify_post_dispatch_delta_heading_required(repo_root: &Path) -> StepReport {
     match post_dispatch_delta_heading_required_assessment(repo_root) {
         Ok(assessment) => StepReport {
@@ -3731,6 +3762,31 @@ fn post_dispatch_delta_heading_required_assessment(
 const POST_DISPATCH_DELTA_FIRST_APPLICABLE_PREVIOUS_CYCLE: u64 = 523;
 
 fn post_dispatch_delta_presence_assessment(repo_root: &Path) -> Result<StepAssessment, String> {
+    post_dispatch_section_presence_assessment(
+        repo_root,
+        "## Post-dispatch delta",
+        "post-dispatch delta",
+        Severity::Blocking,
+    )
+}
+
+fn post_dispatch_reconciliation_presence_assessment(
+    repo_root: &Path,
+) -> Result<StepAssessment, String> {
+    post_dispatch_section_presence_assessment(
+        repo_root,
+        "## Post-dispatch reconciliation",
+        "post-dispatch reconciliation",
+        Severity::Warning,
+    )
+}
+
+fn post_dispatch_section_presence_assessment(
+    repo_root: &Path,
+    heading: &str,
+    label: &str,
+    missing_severity: Severity,
+) -> Result<StepAssessment, String> {
     let current_cycle = current_cycle_from_state(repo_root)?;
     let Some(previous_cycle) = current_cycle.checked_sub(1) else {
         return Ok(StepAssessment {
@@ -3771,23 +3827,25 @@ fn post_dispatch_delta_presence_assessment(repo_root: &Path) -> Result<StepAsses
     };
     let content = fs::read_to_string(&worklog_path)
         .map_err(|error| format!("failed to read {}: {}", worklog_path.display(), error))?;
-    if content.contains("## Post-dispatch delta") {
+    if content.contains(heading) {
         Ok(StepAssessment {
             status: StepStatus::Pass,
             severity: Severity::Warning,
             detail: format!(
-                "cycle {} worklog includes post-dispatch delta ({})",
+                "cycle {} worklog includes {} ({})",
                 previous_cycle,
+                label,
                 worklog_path.display()
             ),
         })
     } else {
         Ok(StepAssessment {
             status: StepStatus::Fail,
-            severity: Severity::Blocking,
+            severity: missing_severity,
             detail: format!(
-                "cycle {} worklog is missing ## Post-dispatch delta ({})",
+                "cycle {} worklog is missing {} ({})",
                 previous_cycle,
+                heading,
                 worklog_path.display()
             ),
         })
@@ -4651,7 +4709,10 @@ fn accepted_audit_adoption_assessment(
         let detail = if checked == 0 {
             "no chronic-category-tracking accepted audit recommendations to verify".to_string()
         } else {
-            format!("verified {} chronic accepted audit recommendation(s)", checked)
+            format!(
+                "verified {} chronic accepted audit recommendation(s)",
+                checked
+            )
         };
         return Ok(StepAssessment {
             status: StepStatus::Pass,
@@ -4682,7 +4743,9 @@ fn adoption_artifact_is_valid(
             Ok(runner.fetch_pull_request_state(*number)? == "MERGED")
         }
         AdoptionArtifactReference::Commit { sha } => runner.commit_is_on_master(repo_root, sha),
-        AdoptionArtifactReference::PipelineCheckStep { name } => Ok(STEP_NAMES.contains(&name.as_str())),
+        AdoptionArtifactReference::PipelineCheckStep { name } => {
+            Ok(STEP_NAMES.contains(&name.as_str()))
+        }
         AdoptionArtifactReference::ToolChange { path, commit_sha } => {
             if !runner.commit_is_on_master(repo_root, commit_sha)? {
                 return Ok(false);
@@ -6407,6 +6470,88 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("missing ## Post-dispatch delta"));
+    }
+
+    #[test]
+    fn post_dispatch_reconciliation_present_passes_when_previous_cycle_worklog_has_section() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-post-dispatch-reconciliation-pass-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 523},
+                "cycle_phase": {"cycle": 524}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        fs::create_dir_all(root.join("docs/worklog/2026-04-21")).unwrap();
+        fs::write(
+            root.join("docs/worklog/2026-04-21/094529-cycle-523-summary.md"),
+            "# Cycle 523 — 2026-04-21 09:45 UTC\n\n## Post-dispatch delta\n\n- **In-flight agent sessions**: 1\n- **Dispatch count**: 1 dispatch\n- **Last-cycle summary**: 1 dispatch, 0 merges\n\n## Post-dispatch reconciliation\n\n- **In-flight agent sessions**: 1\n- **Pipeline status**: PASS (6/6)\n- **Publish gate**: published\n- **Last-cycle summary**: 1 dispatch, 0 merges\n- **Dispatch log latest**: #2633 review dispatch (cycle 523)\n",
+        )
+        .unwrap();
+        commit_all(
+            &root,
+            "state(record-dispatch): #2633 dispatched [cycle 523]",
+        );
+
+        let step = verify_post_dispatch_reconciliation_present(&root);
+
+        assert_eq!(step.status, StepStatus::Pass);
+        assert_eq!(step.severity, Severity::Warning);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("cycle 523 worklog includes post-dispatch reconciliation"));
+    }
+
+    #[test]
+    fn post_dispatch_reconciliation_present_warns_when_previous_cycle_worklog_lacks_section() {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "pipeline-check-post-dispatch-reconciliation-fail-{}",
+            run_id
+        ));
+        init_git_repo(&root);
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(
+            root.join("docs/state.json"),
+            json!({
+                "last_cycle": {"number": 523},
+                "cycle_phase": {"cycle": 524}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        fs::create_dir_all(root.join("docs/worklog/2026-04-21")).unwrap();
+        fs::write(
+            root.join("docs/worklog/2026-04-21/094529-cycle-523-summary.md"),
+            "# Cycle 523 — 2026-04-21 09:45 UTC\n\n## Post-dispatch delta\n\n- **In-flight agent sessions**: 1\n- **Dispatch count**: 1 dispatch\n- **Last-cycle summary**: 1 dispatch, 0 merges\n",
+        )
+        .unwrap();
+        commit_all(
+            &root,
+            "state(record-dispatch): #2633 dispatched [cycle 523]",
+        );
+
+        let step = verify_post_dispatch_reconciliation_present(&root);
+
+        assert_eq!(step.status, StepStatus::Fail);
+        assert_eq!(step.severity, Severity::Warning);
+        assert!(step
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("missing ## Post-dispatch reconciliation"));
     }
 
     #[test]
@@ -10059,10 +10204,8 @@ mod tests {
     fn frozen_commit_verify_passes_when_phase_is_complete() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir().join(format!(
-            "pipeline-check-frozen-commit-complete-{}",
-            run_id
-        ));
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-frozen-commit-complete-{}", run_id));
         init_git_repo(&root);
         fs::create_dir_all(root.join("docs/worklog/2026-03-09")).unwrap();
         fs::create_dir_all(root.join("docs/journal")).unwrap();
@@ -10223,8 +10366,8 @@ mod tests {
     fn review_events_verified_passes_when_phase_is_complete() {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let run_id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir()
-            .join(format!("pipeline-check-review-events-complete-{}", run_id));
+        let root =
+            std::env::temp_dir().join(format!("pipeline-check-review-events-complete-{}", run_id));
         fs::create_dir_all(root.join("docs")).unwrap();
         fs::write(
             root.join("docs/state.json"),

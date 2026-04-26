@@ -211,7 +211,12 @@
       already-validated published cycle. The only permitted exception is a
       one-time corrective revert in a later cycle when the published file
       fails doc-validation (which itself must include a clear corrective
-      note explaining the edit). Routine "post-dispatch refresh" is forbidden.
+      note explaining the edit), plus the append-only
+      <code>## Post-dispatch reconciliation</code> block that
+      <code>record-dispatch</code> adds automatically after the final
+      dispatch-state mutation. That reconciliation block must NOT rewrite the
+      frozen snapshot or any existing <code>## Post-dispatch delta</code>
+      block. Routine "post-dispatch refresh" is forbidden.
       Recurrence escalation: worklog-accuracy + process-adherence + journal-quality
       in cycle 453 (cycle 453 review F1+F2+F3 — all three findings shared the
       same root cause: post-dispatch worklog refresh that broke doc-validation).
@@ -408,6 +413,7 @@
         automation="auto-by-cycle-runner" post-step="auto"
         prerequisite="C6">
     <action>record-dispatch already committed state change. Push immediately.</action>
+    <action><code>record-dispatch</code> also appends the append-only <code>## Post-dispatch reconciliation</code> block to the cycle worklog automatically. Do NOT write this block manually.</action>
     <constraint>This receipt appears in closing comment but NOT in worklog receipt table.</constraint>
   </step>
 
