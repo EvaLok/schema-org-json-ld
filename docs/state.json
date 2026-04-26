@@ -10085,8 +10085,10 @@
       "addresses_finding": "539:2",
       "dispatched_at": "2026-04-25T21:41:49Z",
       "issue": 2715,
+      "merged_at": "2026-04-26T01:59:47Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2716,
+      "status": "merged",
       "title": "Auto-refresh field_inventory.last_refreshed in metric-snapshot"
     },
     {
@@ -11580,12 +11582,12 @@
       }
     }
   },
-  "in_flight_sessions": 2,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 3,
     "issue": 2721,
     "number": 541,
-    "summary": "0 dispatches, 1 merges",
+    "summary": "0 dispatches, 2 merges",
     "timestamp": "2026-04-26T01:43:12Z"
   },
   "last_eva_comment_check": "2026-04-26T01:43:12Z",
