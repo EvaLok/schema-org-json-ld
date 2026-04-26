@@ -11442,7 +11442,8 @@
       "category": "worklog-accuracy",
       "deadline_cycle": 544,
       "deferred_cycle": 539,
-      "resolved": false
+      "resolved": true,
+      "resolved_ref": "#2731"
     }
   ],
   "dispatch_log_latest": "#2731 Append-only post-close-out reconciliation block in worklog (closes #2674) (cycle 544)",
