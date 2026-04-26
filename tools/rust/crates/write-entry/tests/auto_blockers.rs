@@ -75,7 +75,8 @@ fn run_write_entry_with_fake_gh(repo_root: &Path, gh_response: &str, cycle: u64)
         &gh_path,
         r#"#!/usr/bin/env bash
 set -euo pipefail
-if [ "${1:-}" != "api" ]; then
+expected_endpoint='repos/EvaLok/schema-org-json-ld/issues?labels=question-for-eva&state=open&creator=EvaLok&sort=created&direction=asc&per_page=100'
+if [ "${1:-}" != "api" ] || [ "${2:-}" != "--paginate" ] || [ "${3:-}" != "--slurp" ] || [ "${4:-}" != "$expected_endpoint" ]; then
   echo "unexpected gh invocation: $*" >&2
   exit 1
 fi
@@ -124,24 +125,28 @@ fn auto_blockers_renders_live_question_for_eva_issues_in_journal_format() {
     let now = Utc::now();
     let gh_response = format!(
         r#"[
-  {{
-    "number": 2696,
-    "title": "[question-for-eva] Replace raw gh api dispatch template in orchestrator-prompt.xml with dispatch-task (root-cause fix for cycle 536 F1)",
-    "created_at": "{}",
-    "user": {{"login": "EvaLok"}}
-  }},
-  {{
-    "number": 2638,
-    "title": "[question-for-eva] cycle-start commits without pushing — cycle 524 corrupted mid-close, F4 violation reproduced",
-    "created_at": "{}",
-    "user": {{"login": "EvaLok"}}
-  }},
-  {{
-    "number": 9999,
-    "title": "Untrusted question should not render",
-    "created_at": "{}",
-    "user": {{"login": "someone-else"}}
-  }}
+  [
+    {{
+      "number": 2696,
+      "title": "[question-for-eva] Replace raw gh api dispatch template in orchestrator-prompt.xml with dispatch-task (root-cause fix for cycle 536 F1)",
+      "created_at": "{}",
+      "user": {{"login": "EvaLok"}}
+    }}
+  ],
+  [
+    {{
+      "number": 2638,
+      "title": "[question-for-eva] cycle-start commits without pushing — cycle 524 corrupted mid-close, F4 violation reproduced",
+      "created_at": "{}",
+      "user": {{"login": "EvaLok"}}
+    }},
+    {{
+      "number": 9999,
+      "title": "Untrusted question should not render",
+      "created_at": "{}",
+      "user": {{"login": "someone-else"}}
+    }}
+  ]
 ]"#,
         (now - Duration::hours(43) - Duration::seconds(1)).to_rfc3339(),
         (now - Duration::hours(212) - Duration::seconds(1)).to_rfc3339(),
@@ -159,7 +164,7 @@ fn auto_blockers_renders_live_question_for_eva_issues_in_journal_format() {
 #[test]
 fn auto_blockers_renders_none_when_no_live_question_for_eva_issues_exist() {
     let repo_root = TempDir::new("write-entry-auto-blockers-empty");
-    let content = run_write_entry_with_fake_gh(&repo_root.path, "[]", 544);
+    let content = run_write_entry_with_fake_gh(&repo_root.path, "[[]]", 544);
 
     assert!(content.contains("### Standing Eva blockers\n\n- None.\n"));
 }

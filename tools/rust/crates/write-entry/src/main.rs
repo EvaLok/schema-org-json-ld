@@ -3380,6 +3380,8 @@ fn load_live_standing_eva_blockers(
 		.current_dir(repo_root)
 		.args([
 			"api",
+			"--paginate",
+			"--slurp",
 			&format!(
 				"repos/{}/issues?labels=question-for-eva&state=open&creator={}&sort=created&direction=asc&per_page=100",
 				MAIN_REPO, TRUSTED_AUTHOR
@@ -3405,9 +3407,7 @@ fn parse_live_standing_eva_blockers(
     value: &Value,
     now: DateTime<Utc>,
 ) -> Result<Vec<StandingEvaBlocker>, String> {
-    let issues = value
-        .as_array()
-        .ok_or_else(|| "question-for-eva gh api response must be a JSON array".to_string())?;
+    let issues = flatten_live_issue_api_response(value)?;
     let mut blockers = Vec::new();
 
     for issue in issues {
@@ -3450,6 +3450,27 @@ fn parse_live_standing_eva_blockers(
     }
 
     Ok(blockers)
+}
+
+fn flatten_live_issue_api_response(value: &Value) -> Result<Vec<&Value>, String> {
+    let pages = value
+        .as_array()
+        .ok_or_else(|| "question-for-eva gh api response must be a JSON array".to_string())?;
+    if pages.first().is_some_and(Value::is_object) {
+        return Ok(pages.iter().collect());
+    }
+
+    let mut issues = Vec::new();
+    for (index, page) in pages.iter().enumerate() {
+        let page_items = page.as_array().ok_or_else(|| {
+            format!(
+                "question-for-eva gh api response page {} must be a JSON array",
+                index + 1
+            )
+        })?;
+        issues.extend(page_items.iter());
+    }
+    Ok(issues)
 }
 
 fn load_standing_eva_blockers_from_state(
