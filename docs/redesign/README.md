@@ -34,8 +34,19 @@ unwieldy, replace it. Document migrations in `_notes/`.
 
 | Checkpoint | Status | Eva approval |
 |---|---|---|
-| Post-retrospective (after Phase 0) | Drafting | — |
+| Post-retrospective (after Phase 0) | Iterating | — |
 | Candidate-selection (after Phase 2) | Not started | — |
 | Pre-cutover (before Phase 4) | Not started | — |
 
 This table is updated as checkpoints reach review-ready state.
+
+## Iteration log on `0-retrospective.md`
+
+Multi-cycle iteration on the Phase 0 retrospective. Each entry: cycle
+number, headline change, source-of-evidence file. Eva will review the
+artifact at the post-retrospective checkpoint when she judges it ready.
+
+| Cycle | Headline change | Source |
+|---|---|---|
+| Redesign cycle 1 (2026-04-26) | Initial draft. 10 failure patterns F1–F10, working hypotheses, open-questions section. | `docs/journal/2026-04-26.md` |
+| Redesign cycle 2 (2026-04-27) | F7 sharpened with measurement: 0 schema-source commits across cycles 500–545; updated success criteria with measurable threshold; sharpened "what appears to be working" claims with caveats from F2/F8 evidence. | `_notes/cycle-2-measurements.md`, `docs/journal/2026-04-27.md` |

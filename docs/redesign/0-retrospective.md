@@ -46,12 +46,19 @@ The v1 system is roughly:
   agent. The next cycle reads that review and dispositions findings.
 
 The schema-org-json-ld domain — the proof domain that this whole apparatus
-exists to serve — is now a small minority of what each cycle does. Cycle 544
-(2026-04-26, the cycle directly before the redesign-mode PR landed) consumed
-8 Eva responses, refreshed 6 chronic categories, dispatched 2 PRs about
-dispatch tooling and worklog reconciliation. No schema work touched the cycle.
-Cycle 543 was a cycle-runner bug fix. Cycle 545 was a hotfix on the cycle-544
-work. This is the modal shape.
+exists to serve — is at zero. Not "small minority" (the cycle-1 framing of
+this section was wrong by understatement); literally zero schema-source
+commits over cycles 500–545 (46 consecutive cycles, measured cycle 2,
+`docs/redesign/_notes/cycle-2-measurements.md`). The most recent
+schema-source commit anywhere is 2026-03-24 (`59b08f89` and `7000e3255c8`,
+quiz schema work, both pre-cycle-tagged so cycle attribution requires extra
+work; the most recent `[cycle N]`-tagged schema commit is `[cycle 282]` on
+2026-03-17). The intervening period is roughly 33 days and 130+ cycles of
+zero schema output. Cycle 544 consumed 8 Eva responses, refreshed 6 chronic
+categories, dispatched 2 PRs about dispatch tooling and worklog
+reconciliation. Cycle 543 was a cycle-runner bug fix. Cycle 545 was a
+hotfix on the cycle-544 work. This is the modal shape, and the rate of
+schema work in the modal shape is zero.
 
 ---
 
@@ -225,14 +232,33 @@ checkpoints) and deep where it matters (judgment about novel circumstances).
 
 ### F7. Self-management dominance over schema work
 
+**Measured magnitude** (cycle 2, `_notes/cycle-2-measurements.md`):
+
+- Cycles 500–545 (46 consecutive cycles, 2026-04-15 → 2026-04-26): zero
+  commits to `php/src/`, `ts/src/schema/`, or `ts/src/enum/`. Confirmed via
+  `git log --since="2026-04-15" -- php/src/ ts/src/` (returns empty).
+- All ~23 PRs squash-merged in the cycle 500–545 window are
+  self-management. Approximately 9 of 23 are *cycle-N adversarial review
+  artifacts* (PRs #2678, #2681, #2689, #2692, #2698, #2708, #2713, #2720,
+  #2734) — i.e., the system's review-of-itself output. The remaining 14
+  are tool fixes, gate additions, prompt edits, and state-shape
+  adjustments. None touch schema source.
+- Last `[cycle N]`-tagged schema commit is cycle 282 on 2026-03-17. Last
+  schema-source commit anywhere is 2026-03-24. Intervening period: ~33
+  days, ~130+ cycles of zero schema output.
+- This is **pre-redesign data**. The redesign-mode prompt was installed in
+  cycle 545. The 130+ cycles of zero schema work happened under v1's
+  normal operation, not in response to the redesign. The redesign
+  authorization is a response to this state, not a cause.
+
 The cycle 544 journal entry calls cycle 544 "the first cycle to fully
 consume Eva's response queue without leaving any answered question open or
-unactioned." It is described as "the cleanest in 4 cycles." The cycle
+unactioned" and describes it as "the cleanest in 4 cycles." The cycle
 worked through 8 Eva responses, refreshed 6 chronic categories, dispatched
-2 self-management-tooling PRs. Zero schema-org work happened. The
-preceding cycles 541–543 abandoned at C5.5 from a single cycle-runner bug
-and produced no journal entries. Cycle 545 dispatched a self-management
-fix and hotfixed a self-management PR.
+2 self-management-tooling PRs. Zero schema-org work happened. By the v1
+review-agent's grading rubric, cycle 544 was a *good* cycle. By the
+proof-domain test, it produced nothing. The two assessments diverge
+completely; v1's quality signal is decoupled from its mission.
 
 The "secondary objective" in the v1 prompt is schema-org-json-ld
 expansion. The "primary objective" is "an excellent, optimised,
@@ -249,8 +275,15 @@ doing real work"). But beyond the prompt, the cycle structure itself
 biases toward self-management: chronic-category currency, Eva-blocker
 queue, audit acceptance reconciliation, review consumption, dispatch
 follow-up — all of these are checked every cycle, all expand under load,
-none have natural completion conditions. v2 needs design pressure away
-from this attractor.
+none have natural completion conditions. The review-of-cycle artifact
+production (9 of 23 recent PRs) is itself a self-replicating attractor:
+each cycle dispatches a review, each review produces findings, each
+finding becomes a follow-up dispatch, each follow-up is its own cycle's
+work. There is no exit ramp from this loop in the v1 design. v2 needs
+explicit design pressure away from this attractor — not just inverted
+prompt framing, but tool-level constructs that make self-management
+silent (background, non-cycle-consuming) when it's routine and visible
+(escalated to orchestrator judgment) only when it's not.
 
 ### F8. Abandonment cascades from single-tool defects
 
@@ -319,22 +352,49 @@ useful peer review, not external audit.
 ## What appears to be working
 
 A few things in v1 genuinely work and should be preserved through cutover.
+These claims are scoped — examine each for what specifically works and
+what failure mode the same surface still has.
 
-- **The trigger model**: cron creates an issue, workflow fires on the
-  issue label, the orchestrator session runs to completion or timeout.
-  This is robust. Cycles run reliably.
-- **The journal as reflective log**: when the cycle survives to write a
-  journal, the journal contains genuine reflection (cycle 545 graded its
-  own commitment as "partial / met-after-fix" and explained why; cycle 544
-  honestly acknowledged the parallel-implementation gap). The reflective
-  habit produces value when given the chance.
-- **Some Rust tools genuinely productive**: `write-entry` removes
-  meaningful manual work; `dispatch-task` atomicizes dispatch + state
-  mutation; `pipeline-check`'s structural drift is a v1 problem, but
-  conceptually a unified pipeline gate is sound.
-- **Eva-AI interface**: when Eva intervenes, it lands. The redesign-mode
-  authorization itself (PR #2740, cycle 545) is evidence that the
-  human-AI directive interface can carry significant load.
+- **The trigger mechanism**: cron creates an issue with the
+  `orchestrator-run` label, the workflow fires on that label, the
+  orchestrator session runs. This is robust at the GitHub Actions /
+  cron-schedule layer. *Caveat*: "cycles run to completion" is overstated.
+  Cycles 541, 542, and 543 each abandoned at C5.5 from the same single
+  cycle-runner bug (F8). The trigger fires reliably; what happens after
+  the trigger fires is the failure surface. v2 should preserve the trigger
+  shape and replace the post-trigger machinery.
+- **The journal as reflective log when it actually gets written**: cycles
+  that survive to C8 journal stage produce real reflection (cycle 545
+  graded its own commitment as "partial / met-after-fix" and explained
+  why; cycle 544 honestly acknowledged the parallel-implementation gap).
+  *Caveat*: cycles 541 and 542 produced zero journals despite real merges
+  and dispatches; cycle 543 backfilled cycle 542 from external evidence.
+  The "when given the chance" qualifier is load-bearing — the journal
+  surface degrades gracefully when the cycle works and disappears
+  entirely when the cycle abandons. v2 should make the journal surface
+  resilient to the cycle's intermediate failures, not coupled to them.
+- **A subset of Rust tools is genuinely productive**: `write-entry`
+  removes manual templating; `dispatch-task` atomicizes dispatch + state
+  mutation; the `cycle-runner`-based session entrypoint is the right
+  shape. *Caveat*: this list is "productive against v1's procedural
+  surface." Whether each tool transfers to v2 depends on whether v2
+  preserves the surface the tool was built for. The conceptual idea of a
+  unified pipeline gate is sound; the v1 implementation
+  (`pipeline-check`'s 32 sub-checks) is not what should transfer — only
+  the concept.
+- **The Eva-AI directive interface for explicit, in-band intervention**:
+  PR #2740 (the redesign authorization, cycle 545) and Eva's #2741
+  (input-from-eva) are evidence that direct, intentional Eva intervention
+  is a real channel that carries significant load. *Caveat*: F2 shows the
+  inverse failure on this same channel. Eva's batch response to 8
+  question-for-eva issues on 2026-04-19 was not detected by the
+  orchestrator for 6 days. The channel works for *foreground* Eva action
+  (issue creation with input-from-eva label, direct workflow PRs); it
+  was broken for *background* Eva action (replying to existing issues)
+  for the entire window between her response and her re-intervention.
+  The Eva-AI interface that "carries significant load" is the foreground
+  half. The background half failed silently. v2 must treat both halves
+  symmetrically.
 
 ## What might appear to work but probably doesn't
 
@@ -371,10 +431,14 @@ Honest examination of things that look fine on the surface.
 These are areas where cycle 1 reading was insufficient. Investigate before
 treating retrospective claims as load-bearing.
 
-1. **Schema-org domain time accounting** — Cycle-1 reading of recent
-   journals suggests schema work has been a small minority recently. Quantify:
-   over cycles 500–545, what fraction of cycles had any schema commit
-   (PHP or TS) vs were entirely self-management? Do not rely on impression.
+1. **Schema-org domain time accounting** — *Resolved cycle 2*
+   (`_notes/cycle-2-measurements.md`). Cycles 500–545: zero schema-source
+   commits, zero schema PRs, 100% of merged PRs are self-management. F7
+   updated. Successor questions: (a) when did schema work stop, exactly?
+   The transition zone is somewhere in cycles 280–320; identifying the
+   first full-cycle no-schema run would let us see what the system was
+   doing differently when schema work was happening. (b) Were earlier
+   periods steady or bursty?
 2. **Constraint vs tool ratio over time** — How often, when v1 encountered
    a new failure mode, did the response get encoded as a constraint vs as
    a tool? Sample the recurrence-escalation citations in checklists
@@ -426,8 +490,18 @@ Working hypothesis on success criteria — sharpen across cycles.
   upfront with explicit migration paths.
 - **Failure modes don't cascade across cycles** (F8). One tool returning
   exit 1 should not abandon three cycles.
-- **Schema work as a real fraction of cycles**. v2 should produce schema
-  commits in most cycles, not as the exception. Quantify the target.
+- **Schema work as a real fraction of cycles**. v1's measured rate is
+  zero (cycles 500–545). The v2 success criterion should be a meaningful
+  positive rate — not "produce schema commits in most cycles" (too easy
+  to game with trivial commits) but a substantive criterion like
+  "≥1 schema-source PR merged per N cycles, where N is in the
+  single digits." A working starting target: at least 1 schema-source PR
+  merged per 5 cycles in steady-state operation, with the target tightened
+  if early cycles outperform. The pre-cutover checkpoint should require an
+  explicit, measurable schema-work target written into the v2 prompt or
+  state representation, with a tool to compute and surface the running
+  rate. Without this, v2 will drift into the same self-management
+  attractor under any sufficiently complex workload.
 
 ---
 
