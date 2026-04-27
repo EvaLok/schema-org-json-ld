@@ -88,6 +88,29 @@ notes "cycle 476 F3 caught the cycle 476 journal doing exactly this."
 The constraint exists; the violation continues; a new "recurrence escalation"
 gets appended.
 
+**Aggregate measurement** (cycle 4, `_notes/cycle-4-f1-measurement.md`).
+Extending the C3 sample to all close-out constraint blocks (C3 + C5 +
+C5.5 = 13 constraint additions during cycles ~430–509) and asking, for
+each, whether a same-cycle tool fix was paired with the constraint:
+
+- **12 of 13 (92%)** are constraint-only — no paired tool fix in the cycle
+  the constraint was added. The single exception is `no-post-c5-mutation`
+  (cycle 454), paired with PR #2266 ("Freeze close-out worklogs from C5.5
+  gate state and remove post-dispatch mutation").
+- **13 of 13 (100%)** carry a "Recurrence escalation: ..." citation,
+  meaning each constraint was *insufficient* — the failure pattern
+  recurred after the constraint was in force, and the constraint body
+  itself records the recurrence. The constraint pattern self-documents
+  its own failure rate.
+- **Self-aware constraint-as-substitute**: the `rerun-step-comment-refresh`
+  constraint body says verbatim: "Recurrence escalation: cycle 449 F3
+  process-adherence (deferred 5 cycles, deadline cycle 454). **Behavioral
+  fix in lieu of tool dispatch** — when the audit #382 worklog
+  freeze-ordering fix lands, C5.5 reruns should become much rarer, but the
+  discipline remains required." This is a single-case existence proof of
+  the F1 mechanism in v1's own self-documentation: the authors knew the
+  right fix was a tool and shipped a constraint anyway.
+
 **Hypothesis**: a constraint in a 700+ line procedure is unlikely to change
 behavior under cognitive load. The orchestrator scans the checklist; the
 checklist names what it expects; constraints embedded inside expectations
@@ -514,10 +537,17 @@ properly evaluate candidates.
 ## Shared root: asymmetric communication and write-mostly state
 
 F2 (Eva-response detection), F3 (multi-candidate state drift), F4
-(frozen-artifact lifecycle, in its post-C5 mutation aspect), F8 (parallel-
-implementation cycle-runner gap, in its inbound-reconciliation aspect),
-and F11 (cycle closure as artificial completion) all share a common root,
-named explicitly here per audit #442:
+(frozen-artifact lifecycle, in its post-C5 mutation aspect), and F11
+(cycle closure as artificial completion) share a common root, named
+explicitly here per audit #442. F8 is *adjacent* to this root rather
+than centered on it (cycle 4 adversarial re-read,
+`_notes/cycle-4-adversarial-reread.md`): F8's primary failure is
+parallel-implementation duplication (`cycle-runner` was fixed,
+`cycle-start::gather_pipeline_status` was not), and the
+"asymmetric-fix-propagation" framing applies only as a secondary
+reading. F8's main implication ("fewer tools doing each job") stands
+independently of the asymmetric-communication root and should not be
+folded into it.
 
 > **Asymmetric communication / write-mostly state.** Outbound channels
 > have well-developed tools (`question-for-eva` filing, `audit-outbound`

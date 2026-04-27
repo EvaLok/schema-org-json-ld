@@ -18,6 +18,8 @@ that produced it.
 |---|---|---|
 | [`cycle-2-measurements.md`](cycle-2-measurements.md) | redesign cycle 2 (2026-04-27) | F7 schema-vs-self-management measurement: cycles 500–545 produced zero schema-source commits |
 | [`cycle-3-audit-442-integration.md`](cycle-3-audit-442-integration.md) | redesign cycle 3 (2026-04-27) | Integration of audit-repo issue #442's structural critique into `0-retrospective.md`: F9/F10 hypothesis corrections, F11/F12 additions, shared-root preamble, schema-work threshold rewrite, measurement-not-impression principle |
+| [`cycle-4-adversarial-reread.md`](cycle-4-adversarial-reread.md) | redesign cycle 4 (2026-04-27) | Adversarial re-read of cycle 3's audit-derived additions: 8 of 9 hold up; F8's role in the shared-root preamble qualified as adjacent, not centered |
+| [`cycle-4-f1-measurement.md`](cycle-4-f1-measurement.md) | redesign cycle 4 (2026-04-27) | F1 measurement (constraint-vs-tool ratio in close-out constraint blocks cycles ~430–509): 12/13 constraint-only (no paired tool fix), 13/13 cite recurrence-escalation, one self-documents as "behavioral fix in lieu of tool dispatch" |
 
 ## Conventions
 
