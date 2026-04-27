@@ -102,6 +102,20 @@ prevents the failure. Where prompt text is genuinely the right response
 (judgment-shaping rather than procedure-encoding), keep it small and
 not-easily-mistaken-for-procedure.
 
+**Audit-side parallel** (audit #442): the audit chain `#402 → #406 → #415
+→ #417 → #420` (cycles 187–201) was 16 cycles of progressive structural-
+patch recommendations on v1's chronic-category-tracking mechanism — each
+rec a more specific structural fix than the last. Rec 4 was eventually
+implemented in cycle 541 via PR #2718. But the audit was constraint-
+patching the chronic-category-tracking mechanism when the mechanism
+itself was the failure mode — v2 will replace the entire mechanism. The
+audit chain's escalation pattern was constraint-accretion in slow motion,
+with each filing a more elaborate structural patch on a surface v2
+deprecates. Pattern: when a category of audit findings recurs across
+multiple cycles, the right response may be "redesign the surface that
+produces these findings," not "patch the surface." This is F1 applied at
+the audit-system layer rather than the prompt layer.
+
 ### F2. The Eva-response detection failure
 
 `schema-org-json-ld-audit#439` (filed 2026-04-25) catalogs this precisely:
@@ -315,22 +329,35 @@ categories require structural fixes; structural fixes are usually new
 constraints in the prompt or new state fields; the new constraints get
 violated; recurrence escalation citations accumulate.
 
-**Hypothesis**: the review agent is the same model class as the
-orchestrator. Its critique converges on familiar patterns. Fresh blind
-spots aren't caught — the audit repo (a different orchestrator session
-with broader read scope) catches things the review agent misses (e.g., the
-Eva-response detection failure and the multi-candidate state drift were
-both audit-repo finds, not review-agent finds). The review-and-disposition
-loop generates work proportional to itself; in a steady state most cycle
-compute is spent on the loop's own outputs.
+**Hypothesis** (corrected from cycle 1's framing per audit #442): the
+review agent is gpt-5.x-class (Copilot); the orchestrator is Opus 4.7. So
+"same model class" is the wrong shared variable. The actual shared
+variables that produce blind-spot convergence are **prompt + state
+visibility + cycle context**: the review agent reads the same prompt
+surface as it always does, sees the orchestrator's same-cycle state, and
+operates on a one-cycle window. Findings recur because *that* combination
+is constant across cycles, not because the model is. The
+review-and-disposition loop generates work proportional to itself; in
+steady state most cycle compute is spent on the loop's own outputs.
 
-**Implication for v2**: review or critique is genuinely valuable, but
-same-model self-review may not be. The audit-repo critic catches more.
-Copilot feedback (a different model family) might catch different things.
-v2 should design the critique surface around getting genuinely independent
-perspectives, not around reflexive self-review.
+This matters because the audit repo *is* the same model class as the
+orchestrator (both Opus 4.7 since cycle 511, audit's #427 acceptance) yet
+catches different things. The audit's diversity comes from a different
+prompt, broader state visibility (cross-cycle, cross-repo), and a
+different cycle context (4-hour offset, multi-cycle window) — not from
+model diversity. F10 makes this distinction explicit.
 
-### F10. The audit repo is not as independent as it appears
+**Implication for v2**: review or critique is genuinely valuable, but the
+diversity that makes it valuable is *prompt + state + context*, not model
+class. v2's critique infrastructure should diversify those (different
+prompts for reviewer vs orchestrator; different read scopes; different
+windows), not chase model diversity for its own sake. Copilot feedback-
+only sessions catch different things because they're given a different
+prompt and don't see the orchestrator's state — same trick. v2 should
+design the critique surface around genuinely independent prompt+state+
+context, not around reflexive same-cycle self-review.
+
+### F10. Audit's value is broader read scope, not different model perspective
 
 Audit #439 explicitly self-discloses: "The audit's own cycle 199 missed
 this too." The audit's cycle 199 worklog characterized #2519 as "Eva
@@ -339,13 +366,179 @@ further guidance for rec 4." That characterization was wrong — Eva's
 response was conclusive and dispatch-ready. The audit took the
 orchestrator's "Eva-blocker" framing at face value rather than verifying
 against Eva's actual comments. Audit #439 surfaced this only after a
-cycle 200 spot-check.
+cycle 200 spot-check. The cycle 1 retrospective took this evidence and
+concluded the audit "is not a meaningfully different perspective."
 
-The audit is genuinely useful (439, 437, 435 are all real, non-trivial
-finds). But it is not a meaningfully different perspective; it is a
-co-located peer that shares many failure modes with the main orchestrator.
-v2 should treat audit feedback as a useful but not adversarial signal —
-useful peer review, not external audit.
+That conclusion understates the value-add. Two distinct properties of the
+audit should be separated (audit #442):
+
+**Property 1 (real and load-bearing): broader read scope.** The audit
+reads ~3 days of cross-cycle main state and cross-repo issue threads each
+cycle. The same-cycle review agent only sees the current cycle's
+artifacts. The audit's load-bearing recent finds are precisely the cases
+where broader read scope produced findings the same-cycle reviewer could
+not have:
+- #439 (Eva-response detection) needed cycle 518–544 cross-cycle
+  visibility on unactioned Eva responses
+- #437 (multi-candidate state drift) needed cycle 528–531's silent-
+  shelving pattern visible across multiple cycles
+- #427 (model-version repeatedly dropped from journals) needed to see
+  cycle 511's regression pattern across multiple cycle journals
+- #442 (this cycle 3 critique) needed cross-cycle visibility on the
+  audit's own escalation chain `#402 → #406 → #415 → #417 → #420`
+
+**Property 2 (illusory, do not expect it): different model perspective.**
+Both audit and main orchestrator are Claude Opus 4.7 (since cycle 511,
+audit's #427 acceptance; same family before). The audit does not catch
+different things because it's a different model. It catches different
+things because it has a different prompt, a different state visibility,
+and a different cycle context (4-hour offset, multi-cycle window). The
+cycle 1 retrospective conflated the two properties; the corrected
+framing is: model perspective is shared; *read scope and prompt are not*.
+
+**Hypothesis**: "external audit" framing is wrong; "co-located peer with
+broader read scope" is right. The peer relationship is not the bug;
+expecting model-perspective diversity from a same-class peer is the bug.
+
+**Implication for v2**: preserve property 1 explicitly — either keep the
+audit repo (with its broader read scope) or replicate the broad-read-scope
+mechanism in v2's built-in review surface. Stop expecting property 2 from
+same-class peers. For genuinely different perspectives, the lever is
+"give the same model a different prompt and different read scope" (the
+same trick that produces audit's value), not "use a different model
+family."
+
+### F11. Cycle closure as artificial completion signal
+
+The cycle ends when the cycle-issue is closed, the worklog is frozen, and
+the journal is committed. But state evolution continues after the close —
+the next cycle's `record-dispatch`, `process-merge`, `cycle-complete`,
+review-event consumption, and chronic-category refresh all mutate state
+related to the just-closed cycle. The "cycle ended" boundary is artificial:
+the cycle-issue-close is an event in the orchestrator's procedure, not a
+real boundary in state evolution.
+
+**Evidence**: F4 (frozen-artifact lifecycle) is one instance — the worklog
+freezes at C5 from C5.5 state, then state mutates after C5 (the post-C5
+record-dispatch is the obvious example) and the frozen worklog goes
+stale. F3 (multi-candidate state drift) is another — close-out marks the
+cycle complete; subsequent cycles never re-examine candidates (a) and (c)
+that were never dispatched. Audit cycle 201 noted #2293 was closed cycle
+after PR #2704 merged; #2416 and #2519 were still OPEN as of cycle 542+
+despite their work being done — close-out is decoupled from when work
+actually completes (audit #442). The state ledger's
+`step_comment_acknowledged_gaps[cycle=528]` field still reads "(not yet
+dispatched)" for candidates that were resolved or dismissed many cycles
+later, because nothing reconciles the field against post-close reality.
+
+**Hypothesis**: v1 inherited cycle-as-hard-boundary from the trigger model
+(cron creates issue, workflow fires, session ends, issue closes). The
+trigger boundary is necessary at the GitHub Actions layer; treating it as
+a state-of-record boundary is the bug. State evolves continuously; "cycle"
+should be a checkpoint event (a trigger-and-close pair plus a review
+window), not a state hard-boundary that freezes worklogs and stops
+reconciliation.
+
+**Implication for v2**: consider whether "cycle" is the right unit at all.
+If state evolves continuously, then v2's worklog representation, journal
+entry, and review dispatch should all operate on continuous state, with
+cycle-checkpoint markers indicating where review windows begin/end. This
+also resolves F4 and the F3 reconciliation gap — a continuously-evolving
+state representation cannot have a stale frozen artifact because there
+is no freeze step. The trigger-and-session-runs-then-ends pattern is
+preserved (it's a load-bearing GitHub Actions primitive); the *state
+freeze at session end* is what should go.
+
+### F12. Late-stage defense accumulation: an unmapped catalog
+
+v1 has accumulated a substantial set of *late-stage defenses* on top of
+its original architecture, each targeting a specific failure pattern that
+surfaced in production. Each defense is now load-bearing v1 behavior.
+Each has an underlying problem it's defending against. v2 will need
+explicit transfer-or-remove decisions on each, or risk re-introducing
+problems v1 had spent significant cycle compute defending against.
+
+**Evidence (catalog seeded from audit #442 + cycle 1 reading;
+incomplete — to be filled across subsequent cycles)**:
+
+Main side:
+- `step_comment_acknowledged_gaps` field — defends against silent missed
+  step comments
+- `chronic_category_responses` field — defends against chronic-category
+  refresh drift
+- `audit_acceptance_registry` field — defends against missed audit
+  acceptances
+- `field_inventory` field — defends against state field freshness drift
+- `review_agent.history` field — defends against review-finding
+  disposition drift
+- `accepted-audit-adoption` pipeline check (PR #2718, cycle 541) — blocks
+  C5.5 when accepted recommendations don't have validated adoption
+- `check-eva-responses` polling tool (PR #2706, cycle 539) — defends
+  against F2-shape detection failures
+- `c5_5_gate` for worklog freeze
+- `POST_DISPATCH_RECONCILIATION_FIRST_APPLICABLE_PREVIOUS_CYCLE = 545`
+  cutoff (cycle 545, commit `567ad66d`) — defends against retroactive
+  validation on cycles before the rule existed
+
+Audit side (per audit #442's self-disclosure):
+- Step 10.5.1 (pipeline-step verification per #383) — defends against
+  missed pipeline-step blind spots
+- Step 10.5.2 (load-bearing modification verification per cycle 191
+  blind spot) — defends against modification-impact misses
+- Step 10.5.3 (Eva-blocker freshness verification per cycle 200 blind
+  spot) — produced #439, the highest-leverage audit find of the
+  Opus 4.7 period
+
+**Hypothesis**: each defense is load-bearing now and was added because
+something failed. The catalog is itself the procedural-residue of v1's
+operational history. Compare to F1 (constraint accretion) and F5 (state-
+shape-as-fossil-record): F12 is the same mechanism viewed at a higher
+level — failure mode → defense → defense becomes load-bearing. v2 must
+account for each defense: either (a) v2's architecture eliminates the
+underlying problem so the defense is unnecessary, (b) v2 preserves the
+defense (probably reshaped as a tool, not a constraint per F1), or (c)
+v2 explicitly accepts the underlying problem and documents the trade-off.
+
+**Implication for v2**: this catalog is a load-bearing input to Phase 2
+candidate-selection. Without it, candidate designs risk silent
+re-introduction of v1's failure modes. Phase 2 design candidates should
+each demonstrate a transfer-or-remove decision for every catalog entry.
+F12 is the *placeholder* for the catalog; the full version is multi-
+cycle work. Subsequent cycles should fill in detail per entry: failure
+mode addressed, current mechanism, v2 transfer-or-remove decision
+rationale. This work belongs in Phase 0 — without it, Phase 2 cannot
+properly evaluate candidates.
+
+---
+
+## Shared root: asymmetric communication and write-mostly state
+
+F2 (Eva-response detection), F3 (multi-candidate state drift), F4
+(frozen-artifact lifecycle, in its post-C5 mutation aspect), F8 (parallel-
+implementation cycle-runner gap, in its inbound-reconciliation aspect),
+and F11 (cycle closure as artificial completion) all share a common root,
+named explicitly here per audit #442:
+
+> **Asymmetric communication / write-mostly state.** Outbound channels
+> have well-developed tools (`question-for-eva` filing, `audit-outbound`
+> filing, `dispatch-task`, `record-dispatch`, etc.). Inbound reconciliation
+> does not. Once a record is written (an Eva blocker, a multi-candidate
+> acceptance, a dispatch ledger, a frozen worklog, a closed cycle), no
+> tool reads it back to update its state when subsequent events change
+> its meaning. v1 has tools to *create* records and tools to *summarize*
+> records; it lacks tools to *reconcile* records against later events.
+
+The unification matters because v2's design implication is one-shaped:
+
+> **Every state field needs a write-tool AND a reconciliation-tool. Every
+> channel needs a poller that produces state transitions.**
+
+A v2 that adds polling to one channel but not another, or reconciliation
+to one state field but not another, will inherit v1's failure mode in
+miniature. The asymmetry is the bug, not any specific channel's missing
+poller. The cycle 2 success-criterion section already named this for the
+F2 case; F11 makes clear it's a system-wide property, not a single-
+channel fix.
 
 ---
 
@@ -394,7 +587,27 @@ what failure mode the same surface still has.
   for the entire window between her response and her re-intervention.
   The Eva-AI interface that "carries significant load" is the foreground
   half. The background half failed silently. v2 must treat both halves
-  symmetrically.
+  symmetrically. *Additional caveat (audit #442)*: the foreground channel
+  is the load-bearing path for the redesign itself — PR #2740 and #2741
+  were the foreground channel doing high-stakes architectural work, and
+  the Phase 0/2/4 checkpoint architecture in the redesign-mode prompt
+  depends on it. v2 must preserve foreground Eva intervention as a
+  *first-class* mechanism (not just one of many channels), because if the
+  foreground channel breaks, the redesign cannot complete.
+- **The lightweight per-cycle working-notes pattern** (cycle 3 addition,
+  audit #442 observation): `docs/redesign/_notes/cycle-N-<topic>.md`
+  files plus an iteration-log table in the README is producing emergent
+  behavior — the iteration log forces cycle-by-cycle accountability for
+  what changed, the notes-vs-deliverable distinction provides a natural
+  place for half-formed thoughts, and the per-cycle file naming makes
+  cross-cycle reference cheap. Audit #442 calls it "the kind of
+  light-weight scaffolding that delivers value disproportionate to its
+  design cost." *Caveat*: this is a two-cycle observation; the pattern
+  may degrade once notes accumulate beyond ~10 files (an index helps but
+  is not yet exercised at scale). v2's persistence layer should
+  generalize this pattern — for cycle observations that don't yet warrant
+  a journal entry, half-formed dispatch ideas, design alternatives under
+  consideration — but design with the scale failure mode in mind.
 
 ## What might appear to work but probably doesn't
 
@@ -450,13 +663,36 @@ treating retrospective claims as load-bearing.
 4. **State.json field decay** — How many of the 38+ state fields are
    actually read after they're written? Run a static analysis on tool
    sources to find unread fields.
-5. **Audit repo's own retrospective** — does the audit orchestrator have
-   its own equivalent of this retrospective? If so, read it. If not,
-   propose one (cross-repo posting, async).
+5. **Audit repo's own retrospective** — *Partially resolved cycle 3*
+   (audit #442). The audit confirmed it does not currently have its own
+   retrospective; audit #442 itself is the audit's first systematic
+   response to the redesign regime change, with a v0 audit-side
+   retrospective scheduled for `docs/redesign/0-audit-retrospective.md`
+   in the audit repo no later than audit cycle 204. Successor question:
+   when the audit-side retrospective lands, read it and reconcile against
+   this one — patterns that appear in both are likely robust; patterns
+   in only one need explanation (either the other side missed them, or
+   they're side-specific).
 6. **Other systems' equivalent failure modes** — does openclaw's or PAI's
-   architecture exhibit any of F1–F10? This belongs in Phase 1 research,
-   but a cycle-2 spot-check would inform whether the patterns are universal
-   or v1-specific.
+   architecture exhibit any of F1–F12? This belongs in Phase 1 research,
+   but a cycle-2 or cycle-3 spot-check would inform whether the patterns
+   are universal or v1-specific. Explicitly defer to Phase 1; do not
+   anchor on external systems before the retrospective stabilizes.
+7. **F12 catalog completion** — *Cycle 3 addition*. F12 introduces a
+   late-stage-defense catalog seeded from audit #442, but the catalog
+   is incomplete. Subsequent cycles should fill in: (a) every state field
+   currently in `state.json` (38+ top-level), categorize as defense-vs-
+   primitive; (b) every pipeline-check sub-check (~32), categorize
+   similarly; (c) every recurrence-escalation citation in the
+   checklists. Each entry: failure mode addressed, current mechanism,
+   v2 transfer-or-remove decision. This work is multi-cycle; do not
+   attempt in one cycle.
+8. **F11 verification** — *Cycle 3 addition*. F11 hypothesizes that the
+   cycle-issue-close boundary is the bug. The hypothesis would be
+   stronger with a measurement: how many state fields are mutated by
+   the post-close machinery in the next-cycle's startup, and which are
+   the corresponding fields that should have been reconciled but
+   weren't? Cheap measurement; defer to a future cycle.
 
 ---
 
@@ -490,18 +726,46 @@ Working hypothesis on success criteria — sharpen across cycles.
   upfront with explicit migration paths.
 - **Failure modes don't cascade across cycles** (F8). One tool returning
   exit 1 should not abandon three cycles.
-- **Schema work as a real fraction of cycles**. v1's measured rate is
-  zero (cycles 500–545). The v2 success criterion should be a meaningful
-  positive rate — not "produce schema commits in most cycles" (too easy
-  to game with trivial commits) but a substantive criterion like
-  "≥1 schema-source PR merged per N cycles, where N is in the
-  single digits." A working starting target: at least 1 schema-source PR
-  merged per 5 cycles in steady-state operation, with the target tightened
-  if early cycles outperform. The pre-cutover checkpoint should require an
-  explicit, measurable schema-work target written into the v2 prompt or
-  state representation, with a tool to compute and surface the running
-  rate. Without this, v2 will drift into the same self-management
-  attractor under any sufficiently complex workload.
+- **Schema work / domain output as a real fraction of cycles**. v1's
+  measured rate is zero (cycles 500–545). The v2 success criterion should
+  be a meaningful positive rate. Audit #442 named two failure modes the
+  criterion must avoid: (a) easily gamed by trivial commits — a
+  one-property addition or a typo fix could satisfy a pure-count threshold
+  without representing meaningful schema work; pair any count threshold
+  with a quality criterion (the schema work must address an item from a
+  prioritized backlog or close a QC-flagged gap, so satisfying the
+  threshold requires the same prioritization process as doing real work);
+  (b) schema-org has finite types (~800 in core), so any pure-count
+  measure degrades as easy types get implemented and the steady-state
+  assumption breaks. The long-term measure is **fraction of cycle compute
+  spent on domain output vs self-management**, where "domain output"
+  includes schema work, QC validation, end-user docs, and API consumer-
+  side improvements (the things that make the library useful). A working
+  starting target until the better measure is built: ≥1 substantive
+  schema-source PR merged per ≤5 cycles, paired with the quality criterion
+  above. The pre-cutover checkpoint should require an explicit, measurable
+  target in v2's prompt or state representation, with a tool to compute
+  and surface the running rate. The exact form of the long-term measure
+  is open and worth Phase 2 candidate-design exploration — not "pick a
+  number," but "design a metric that resists drift into the self-
+  management attractor under any sufficiently complex workload."
+- **Surface measurement, not impression** (audit #442 meta-observation,
+  promoted to v2 design principle). Where v1 expressed quality as
+  state-machine pass/fail (`pipeline-check`'s 32 sub-checks) and review-
+  agent score (1–5), v2 should require *measurable* signals on load-
+  bearing claims, with tools that surface them. The cycle 2 F7
+  measurement (zero schema-source commits over 46 cycles) is what this
+  looks like in practice: an impression ("small minority") replaced by a
+  numeric finding from a one-query measurement. The cycle 1 retrospective
+  itself softened F7 because it lacked a measurement; the discipline
+  matters even for adversarial-by-design artifacts. v2 should be designed
+  with this discipline as a stated invariant — anywhere a load-bearing
+  claim is made about cycle quality, schema progress, system health, or
+  design success, a tool should produce the measurement, and the
+  measurement should be visible without having to manually run ad-hoc
+  git queries. This applies to v1 reasoning patterns ("review score 4/5
+  is good") that look measurable but actually conflate signal with
+  artifact-quality.
 
 ---
 
@@ -510,16 +774,26 @@ Working hypothesis on success criteria — sharpen across cycles.
 This document is incomplete by design. Subsequent cycles should:
 
 - **Sharpen each F-pattern** — sample more cycles for evidence; verify
-  hypotheses; reject hypotheses that don't survive scrutiny.
-- **Add new F-patterns** as they're found through deeper reading.
-- **Solicit critique** — file a request in this repo for the audit
-  orchestrator to critique this retrospective; dispatch Copilot
-  feedback-only sessions for outside-AI perspective; let multiple lenses
-  converge or diverge.
-- **Quantify** the open questions section. Replace impression-based claims
-  with measured ones.
+  hypotheses; reject hypotheses that don't survive scrutiny. Cycle 2 did
+  this for F7 (measurement); cycle 3 did this for F9/F10 (hypothesis
+  correction per audit #442).
+- **Add new F-patterns** as they're found through deeper reading or
+  external critique. Cycle 3 added F11 and F12 from audit #442.
+- **Solicit critique** — audit critique landed unprompted via #442
+  (cycle 3); a Copilot feedback-only dispatch is a candidate for cycle
+  4 or 5 to get a different prompt-and-context lens. Continue iterating
+  the artifact between critique rounds; do not idle awaiting the next
+  one.
+- **Quantify** the open questions section. Replace impression-based
+  claims with measured ones. Open questions 7 (F12 catalog) and 8 (F11
+  verification) were added cycle 3 and need work.
 - **Demote what doesn't survive** — patterns that look weaker on
-  re-examination should be cut or qualified, not protected.
+  re-examination should be cut or qualified, not protected. Cycle 3
+  corrected F9's hypothesis (model-class explanation was wrong) and
+  F10's value-add framing.
+- **Reconcile against audit's own retrospective when it lands** (audit
+  cycle 204 or sooner). Patterns appearing in both are likely robust;
+  patterns in only one need explanation.
 
 The artifact is "ready for the post-retrospective checkpoint" only when
 Eva says it is.

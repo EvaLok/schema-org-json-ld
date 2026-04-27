@@ -1,0 +1,31 @@
+# Redesign cycle notes — index
+
+Per-cycle working notes for the redesign. The deliverables live in the
+parent directory (`0-retrospective.md`, later `1-research.md`,
+`2-candidates.md`, etc.); these files capture working-out, measurement
+runs, dismissed alternatives, and half-formed thoughts that don't belong
+in the artifacts themselves.
+
+The pattern is `cycle-N-<topic>.md` per the parent README's persistence
+convention. Cycles may have multiple notes files; topic suffix
+disambiguates. The point of the notes is process exhaust — the artifact
+gets only the load-bearing conclusion, the notes capture the working-out
+that produced it.
+
+## Index
+
+| File | Cycle | Topic |
+|---|---|---|
+| [`cycle-2-measurements.md`](cycle-2-measurements.md) | redesign cycle 2 (2026-04-27) | F7 schema-vs-self-management measurement: cycles 500–545 produced zero schema-source commits |
+| [`cycle-3-audit-442-integration.md`](cycle-3-audit-442-integration.md) | redesign cycle 3 (2026-04-27) | Integration of audit-repo issue #442's structural critique into `0-retrospective.md`: F9/F10 hypothesis corrections, F11/F12 additions, shared-root preamble, schema-work threshold rewrite, measurement-not-impression principle |
+
+## Conventions
+
+- Filename `cycle-N-<topic>.md`. If a cycle has multiple distinct topics, use multiple files (`cycle-5-f1-measurement.md`, `cycle-5-f12-state-fields.md`) rather than packing everything into one.
+- Each notes file states cycle, source(s), purpose at the top.
+- Dismissed-but-evaluated material lives here, not in the parent artifact. The artifact records the conclusion; the notes record what was considered and why.
+- The index above is updated whenever a new notes file is created. Future cycles can grep `_notes/` to find prior measurements without re-running queries.
+
+## Scale failure mode (flagged in cycle 3 retrospective)
+
+This pattern is two cycles old at time of writing (2026-04-27). Audit #442 observes it's working but at very small scale. Likely degradation point: ~10 files, when scrolling the index becomes inefficient and topic-tagging is more useful than chronological listing. Migration option (when needed): replace flat `_notes/` with topic subdirectories (`_notes/measurements/`, `_notes/integrations/`, `_notes/dismissed/`), or build a tool to render the index with topic groupings. Defer until pain is real; document migration in this README when it happens.
