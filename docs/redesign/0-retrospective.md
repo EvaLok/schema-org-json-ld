@@ -241,10 +241,51 @@ exclusion list for cycles before the field existed (see e.g. cycle 545's
 hotfix at commit 567ad66d adding
 `POST_DISPATCH_RECONCILIATION_FIRST_APPLICABLE_PREVIOUS_CYCLE = 545`).
 
+**Aggregate measurement** (cycle 5, `_notes/cycle-5-state-categorization.md`).
+Field-by-field categorization of all 42 top-level keys in `state.json`
+(cycle 1's "38+" estimate was close):
+
+- **19 of 42 (45%)** are pure **defenses** — added in response to a
+  specific v1 failure mode (`step_comment_acknowledged_gaps`,
+  `field_inventory`, `pending_audit_implementations`,
+  `last_eva_comment_check`, `cycles_since_last_forward_work`,
+  `deferred_findings`, `review_dispatch_consecutive`,
+  `review_events_verified_through_cycle`, `audit_dropped`,
+  `audit_processed`, `qc_processed`, `qc_requests_pending`,
+  `last_tool_audit_cycle`, `open_questions_for_eva`, `eva_input_issues`,
+  `step_comment_acknowledged_gaps`, `review_agent`, `in_flight_sessions`,
+  `pre_python_clean_cycles`).
+- **13 of 42 (31%)** are **primitives** — intrinsic to the schema-org
+  domain (`schema_status`, `schema_version`, type/test counts,
+  `typescript_plan`, `release`, `constructor_refactoring`). Of these,
+  7 are pure counts (could be computed on demand from schema source).
+- **10 of 42 (24%)** are **mixed** — primarily mechanical or primitive
+  but warped by defense accretion (`cycle_phase`, `cycle_issues`,
+  `tool_pipeline`, `project_mode` with stabilization sub-counters,
+  `publish_gate`, `qc_status` accumulation).
+- **Defense-character total: 19 D + 10 M ≈ 26–29 of 42 (62–69%)** of
+  state.json's top-level fields exist primarily as defense.
+- **Append-only accumulation evidence**: `agent_sessions` (922 items),
+  `review_agent.history` (356 entries), `audit_processed` (197 items),
+  `deferred_findings` (128 items). Unbounded retention is structural,
+  not policy-enforced.
+
+A v2 with a designed state model would collapse the 19 D + 10 M shapes
+into perhaps 5 ledgers (QC interaction, audit interaction, dispatch
+ledger with bounded retention, mode if preserved, single project-progress
+record) plus the 13 P fields — roughly **a 4× reduction** in top-level
+state surface from designed unification of write-mostly defense fields.
+
 **Hypothesis**: the state shape encodes the failures, not the system. Each
 field is a scar. v2 should start from a much smaller state model that is
 explicitly designed (cycles, dispatches, artifacts, reviews) — not grown
-by accretion.
+by accretion. The cycle 5 measurement quantifies the magnitude: 62%+ of
+v1's state-of-record is defense, 31% is intrinsic — and the bulk of the
+defense fields are write-mostly per the F11 measurement (post-close
+mutations are these defenses running). F5 is therefore not just a
+shape-of-state observation; it is the field-level instance of the
+shared-root pattern (asymmetric communication / write-mostly state)
+named in the preamble below.
 
 ### F6. Cyclomatic procedure depth
 
@@ -454,6 +495,36 @@ actually completes (audit #442). The state ledger's
 dispatched)" for candidates that were resolved or dismissed many cycles
 later, because nothing reconciles the field against post-close reality.
 
+**Aggregate measurement** (cycle 5,
+`_notes/cycle-5-f11-post-close-measurement.md`). Counted post-`cycle-complete`
+state mutations tagged with `[cycle N]` for cycles 543, 544, 545:
+
+- **Average 4.3 post-close state mutations per cycle** (3 / 6 / 4 in
+  cycles 543 / 544 / 545; 13 total across 3 cycles).
+- **2 of 3 cycles (67%) had new dispatches recorded after `cycle-complete`**
+  — cycle 544 recorded #2733 thirty-four minutes post-close; cycle 545
+  recorded #2738 thirteen minutes post-close. This is the F4 case made
+  explicit at scale: the frozen worklog cannot be accurate for cycles
+  whose dispatches happen post-close.
+- **5 distinct state fields routinely mutated post-close**:
+  `tool_pipeline.c5_5_gate` (3/3 cycles), `review_events_verified_through_cycle`
+  (3/3), `field_inventory` (2/3), `agent_sessions` (2/3),
+  `step_comment_acknowledged_gaps` (1/3, applied to a *previous* cycle).
+- **0 of 5 fields are reconciled in the frozen worklog** — there is no
+  mechanism in v1 that updates the C5-frozen worklog when post-close
+  mutations land. The asymmetric-communication root applies at the cycle
+  boundary directly: writes happen continuously, the worklog reads
+  nothing back.
+- **4 of 5 post-close-mutated fields are F12-cataloged defenses**
+  (`field_inventory`, `tool_pipeline`, `review_events_verified_through_cycle`,
+  `step_comment_acknowledged_gaps`). The post-close mutations *are* the
+  defense mechanisms running. F11 is therefore mechanically caused by
+  F1+F12: defenses are scheduled to refresh on the cycle boundary
+  because that's when their triggers fire (metric-snapshot triggered by
+  `cycle-complete`; verify-review-events by next cycle's startup).
+  The architecture *requires* state to evolve post-close in order to
+  keep the defenses fresh.
+
 **Hypothesis**: v1 inherited cycle-as-hard-boundary from the trigger model
 (cron creates issue, workflow fires, session ends, issue closes). The
 trigger boundary is necessary at the GitHub Actions layer; treating it as
@@ -481,24 +552,43 @@ Each has an underlying problem it's defending against. v2 will need
 explicit transfer-or-remove decisions on each, or risk re-introducing
 problems v1 had spent significant cycle compute defending against.
 
-**Evidence (catalog seeded from audit #442 + cycle 1 reading;
-incomplete — to be filled across subsequent cycles)**:
+**Evidence (catalog seeded from audit #442 + cycle 1 reading; cycle 5
+state.json sub-catalog completed below)**:
 
-Main side:
-- `step_comment_acknowledged_gaps` field — defends against silent missed
-  step comments
-- `chronic_category_responses` field — defends against chronic-category
-  refresh drift
-- `audit_acceptance_registry` field — defends against missed audit
-  acceptances
-- `field_inventory` field — defends against state field freshness drift
-- `review_agent.history` field — defends against review-finding
-  disposition drift
+Main side, state-shape sub-catalog (cycle 5,
+`_notes/cycle-5-state-categorization.md`). All 42 top-level keys in
+`state.json` categorized as defense (D), primitive (P), or mixed (M):
+
+- **19 of 42 (45%) are pure defenses**: `step_comment_acknowledged_gaps`,
+  `field_inventory`, `pending_audit_implementations`,
+  `last_eva_comment_check`, `cycles_since_last_forward_work`,
+  `deferred_findings`, `review_dispatch_consecutive`,
+  `review_events_verified_through_cycle`, `audit_dropped`,
+  `audit_processed`, `qc_processed`, `qc_requests_pending`,
+  `last_tool_audit_cycle`, `open_questions_for_eva`, `eva_input_issues`,
+  `review_agent`, `in_flight_sessions`, `pre_python_clean_cycles`,
+  `agent_sessions` (the dispatch ledger as v1 implements it).
+- **13 of 42 (31%) are domain primitives** (would exist in any v2):
+  schema/test counts, `schema_status`, `schema_version`, `release`,
+  `typescript_plan`, `constructor_refactoring`, `total_testable_types_note`.
+- **10 of 42 (24%) are mixed** — primitives whose shape is warped by
+  defense accretion (notably `tool_pipeline` whose 7 sub-keys are
+  almost entirely defense; `project_mode` with its stabilization-counter
+  sub-keys; `cycle_phase` and `cycle_issues` which encode the F11
+  artificial-completion boundary).
+- **Append-only accumulation evidence**: `agent_sessions` (922 items),
+  `review_agent.history` (356 entries), `audit_processed` (197 items),
+  `deferred_findings` (128 items). Per-field retention is unbounded.
+
+Other v1 defense surfaces (catalog continues — pipeline-check sub-checks,
+checklist recurrence-escalation citations beyond cycle 4's C3/C5/C5.5
+sample, and ADRs are sub-catalogs deferred to cycles 6+):
+
 - `accepted-audit-adoption` pipeline check (PR #2718, cycle 541) — blocks
   C5.5 when accepted recommendations don't have validated adoption
 - `check-eva-responses` polling tool (PR #2706, cycle 539) — defends
   against F2-shape detection failures
-- `c5_5_gate` for worklog freeze
+- `c5_5_gate` for worklog freeze (the F4 mechanism)
 - `POST_DISPATCH_RECONCILIATION_FIRST_APPLICABLE_PREVIOUS_CYCLE = 545`
   cutoff (cycle 545, commit `567ad66d`) — defends against retroactive
   validation on cycles before the rule existed
@@ -514,36 +604,58 @@ Audit side (per audit #442's self-disclosure):
 
 **Hypothesis**: each defense is load-bearing now and was added because
 something failed. The catalog is itself the procedural-residue of v1's
-operational history. Compare to F1 (constraint accretion) and F5 (state-
-shape-as-fossil-record): F12 is the same mechanism viewed at a higher
-level — failure mode → defense → defense becomes load-bearing. v2 must
-account for each defense: either (a) v2's architecture eliminates the
-underlying problem so the defense is unnecessary, (b) v2 preserves the
-defense (probably reshaped as a tool, not a constraint per F1), or (c)
-v2 explicitly accepts the underlying problem and documents the trade-off.
+operational history. F12 is the meta-pattern that appears in three
+substrates: F1 names it at the prompt/checklist layer (constraints
+accumulate); F5 names it at the state-shape layer (defense fields
+accumulate); F12 names the cross-substrate accumulation including
+pipeline-checks, polling tools, gates, and cutoff cycles. The cycle 5
+F11 measurement adds a fourth observation: the post-close state
+mutations *are* the defense fields running, which means the defenses
+collectively also produce the F11 artificial-completion failure (4.3
+post-close mutations per cycle, 4 of 5 mutated fields are F12-cataloged
+defenses). v2 must account for each defense: either (a) v2's
+architecture eliminates the underlying problem so the defense is
+unnecessary, (b) v2 preserves the defense (probably reshaped as a tool,
+not a constraint per F1), or (c) v2 explicitly accepts the underlying
+problem and documents the trade-off.
 
-**Implication for v2**: this catalog is a load-bearing input to Phase 2
-candidate-selection. Without it, candidate designs risk silent
-re-introduction of v1's failure modes. Phase 2 design candidates should
-each demonstrate a transfer-or-remove decision for every catalog entry.
-F12 is the *placeholder* for the catalog; the full version is multi-
-cycle work. Subsequent cycles should fill in detail per entry: failure
-mode addressed, current mechanism, v2 transfer-or-remove decision
-rationale. This work belongs in Phase 0 — without it, Phase 2 cannot
-properly evaluate candidates.
+**Implication for v2**: candidate designs without a catalog-aware
+transfer-or-remove decision risk silent re-introduction of v1's failure
+modes. The catalog is therefore an input to Phase 2 — but Phase 2 can
+proceed against a *partial* catalog so long as the partial catalog
+covers the load-bearing decisions and candidates flag explicit
+"to-be-confirmed-against-final-catalog" rationale where data is
+incomplete. The cycle 5 sub-catalog (state.json, 42 fields complete) is
+the largest of the three sub-catalogs and the most defense-dominant;
+the others (pipeline-check sub-checks, checklist recurrence-escalation
+citations) are expected to confirm the pattern at smaller scale.
+Subsequent cycles should fill those in, but Phase 2 should not block on
+catalog completion if the load-bearing inputs are in place.
 
 ---
 
 ## Shared root: asymmetric communication and write-mostly state
 
 F2 (Eva-response detection), F3 (multi-candidate state drift), F4
-(frozen-artifact lifecycle, in its post-C5 mutation aspect), and F11
-(cycle closure as artificial completion) share a common root, named
-explicitly here per audit #442. F8 is *adjacent* to this root rather
-than centered on it (cycle 4 adversarial re-read,
-`_notes/cycle-4-adversarial-reread.md`): F8's primary failure is
-parallel-implementation duplication (`cycle-runner` was fixed,
-`cycle-start::gather_pipeline_status` was not), and the
+(frozen-artifact lifecycle, in its post-C5 mutation aspect), F5
+(state-shape as procedural-implementation-leak — the field-level
+instance), and F11 (cycle closure as artificial completion) share a
+common root, named explicitly here per audit #442 and reinforced by
+cycle 5's measurements.
+
+F5's inclusion is supported by cycle 5's state.json categorization
+(`_notes/cycle-5-state-categorization.md`): 19 of 42 (45%) top-level
+state fields are pure defenses, plus 10 mixed-with-defense — the
+defense fields ARE the per-field instance of write-mostly state. Cycle
+5's F11 measurement (`_notes/cycle-5-f11-post-close-measurement.md`)
+makes the connection mechanical: 4 of the 5 fields routinely mutated
+post-close are F12-cataloged defense fields, with 0 of 5 reconciled in
+the frozen worklog.
+
+F8 is *adjacent* to this root rather than centered on it (cycle 4
+adversarial re-read, `_notes/cycle-4-adversarial-reread.md`): F8's
+primary failure is parallel-implementation duplication (`cycle-runner`
+was fixed, `cycle-start::gather_pipeline_status` was not), and the
 "asymmetric-fix-propagation" framing applies only as a secondary
 reading. F8's main implication ("fewer tools doing each job") stands
 independently of the asymmetric-communication root and should not be
@@ -708,21 +820,26 @@ treating retrospective claims as load-bearing.
    but a cycle-2 or cycle-3 spot-check would inform whether the patterns
    are universal or v1-specific. Explicitly defer to Phase 1; do not
    anchor on external systems before the retrospective stabilizes.
-7. **F12 catalog completion** — *Cycle 3 addition*. F12 introduces a
-   late-stage-defense catalog seeded from audit #442, but the catalog
-   is incomplete. Subsequent cycles should fill in: (a) every state field
-   currently in `state.json` (38+ top-level), categorize as defense-vs-
-   primitive; (b) every pipeline-check sub-check (~32), categorize
-   similarly; (c) every recurrence-escalation citation in the
-   checklists. Each entry: failure mode addressed, current mechanism,
-   v2 transfer-or-remove decision. This work is multi-cycle; do not
-   attempt in one cycle.
-8. **F11 verification** — *Cycle 3 addition*. F11 hypothesizes that the
-   cycle-issue-close boundary is the bug. The hypothesis would be
-   stronger with a measurement: how many state fields are mutated by
-   the post-close machinery in the next-cycle's startup, and which are
-   the corresponding fields that should have been reconciled but
-   weren't? Cheap measurement; defer to a future cycle.
+7. **F12 catalog completion** — *Cycle 3 addition; sub-(a) resolved
+   cycle 5* (`_notes/cycle-5-state-categorization.md`). All 42 top-level
+   `state.json` keys categorized: 19 D / 13 P / 10 M; 62%+
+   defense-character. Sub-(b) (pipeline-check sub-checks) and sub-(c)
+   (checklist recurrence-escalation citations beyond the C3/C5/C5.5
+   sample cycle 4 measured) remain open for cycles 6+. The state.json
+   sub-catalog is the largest; the others are expected to confirm the
+   pattern at smaller scale.
+8. **F11 verification** — *Resolved cycle 5*
+   (`_notes/cycle-5-f11-post-close-measurement.md`). 4.3 post-close
+   state mutations per cycle averaged across cycles 543/544/545. 5
+   distinct fields routinely mutated post-close; 4 of 5 are
+   F12-cataloged defenses; 0 of 5 are reconciled in the frozen worklog.
+   2 of 3 cycles had new dispatches recorded post-`cycle-complete`.
+   F11's hypothesis is stronger after measurement: the post-close
+   mutations *are* the defense mechanisms running, so the architecture
+   *requires* state to evolve past the artificial boundary in order to
+   keep the defenses fresh. Successor open question: extend to a
+   10–20 cycle measurement to verify the pattern at scale (low priority
+   — the systemic nature of the post-close mutations is already clear).
 
 ---
 
@@ -806,24 +923,36 @@ This document is incomplete by design. Subsequent cycles should:
 - **Sharpen each F-pattern** — sample more cycles for evidence; verify
   hypotheses; reject hypotheses that don't survive scrutiny. Cycle 2 did
   this for F7 (measurement); cycle 3 did this for F9/F10 (hypothesis
-  correction per audit #442).
+  correction per audit #442); cycle 4 did this for F1 (constraint-vs-
+  tool measurement); cycle 5 did this for F5 (state.json field-by-field
+  catalog) and F11 (post-close mutation count).
 - **Add new F-patterns** as they're found through deeper reading or
   external critique. Cycle 3 added F11 and F12 from audit #442.
 - **Solicit critique** — audit critique landed unprompted via #442
-  (cycle 3); a Copilot feedback-only dispatch is a candidate for cycle
-  4 or 5 to get a different prompt-and-context lens. Continue iterating
-  the artifact between critique rounds; do not idle awaiting the next
-  one.
+  (cycle 3); a Copilot feedback-only dispatch is a deferred candidate
+  (deferred cycles 3, 4, 5; cycle 6 must either dispatch or build the
+  proper feedback-only mechanism rather than defer indefinitely).
+  Continue iterating between critique rounds; do not idle awaiting
+  the next one.
 - **Quantify** the open questions section. Replace impression-based
-  claims with measured ones. Open questions 7 (F12 catalog) and 8 (F11
-  verification) were added cycle 3 and need work.
+  claims with measured ones. Open question 1 (cycle 2), 2 (cycle 4
+  C3/C5/C5.5 sample; cycle 5+ for full extension), 7 sub-(a) (cycle 5),
+  and 8 (cycle 5) are now resolved or substantively advanced.
 - **Demote what doesn't survive** — patterns that look weaker on
   re-examination should be cut or qualified, not protected. Cycle 3
   corrected F9's hypothesis (model-class explanation was wrong) and
-  F10's value-add framing.
+  F10's value-add framing. Cycle 4 qualified F8's role in the shared-
+  root preamble (adjacent, not centered).
+- **Connect across patterns** — cycle 5 made the F1+F5+F11+F12
+  connection mechanical: F1 produces F12 defenses → F12 defenses are
+  F5 state-shape → F5 state-shape evolves continuously past F11's
+  artificial boundary. Subsequent cycles should look for additional
+  cross-pattern connections; finding one means a single architectural
+  change resolves multiple F-patterns simultaneously.
 - **Reconcile against audit's own retrospective when it lands** (audit
-  cycle 204 or sooner). Patterns appearing in both are likely robust;
-  patterns in only one need explanation.
+  cycle 204 or sooner — not yet landed as of cycle 5 startup). Patterns
+  appearing in both are likely robust; patterns in only one need
+  explanation.
 
 The artifact is "ready for the post-retrospective checkpoint" only when
 Eva says it is.
