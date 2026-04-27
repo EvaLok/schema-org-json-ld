@@ -515,15 +515,42 @@ state mutations tagged with `[cycle N]` for cycles 543, 544, 545:
   mutations land. The asymmetric-communication root applies at the cycle
   boundary directly: writes happen continuously, the worklog reads
   nothing back.
-- **4 of 5 post-close-mutated fields are F12-cataloged defenses**
-  (`field_inventory`, `tool_pipeline`, `review_events_verified_through_cycle`,
-  `step_comment_acknowledged_gaps`). The post-close mutations *are* the
-  defense mechanisms running. F11 is therefore mechanically caused by
-  F1+F12: defenses are scheduled to refresh on the cycle boundary
-  because that's when their triggers fire (metric-snapshot triggered by
-  `cycle-complete`; verify-review-events by next cycle's startup).
-  The architecture *requires* state to evolve post-close in order to
-  keep the defenses fresh.
+- **Causal mechanism: named tools mutate named defense fields at post-close
+  trigger points** (verified cycle 6,
+  `_notes/cycle-6-mechanism-sharpening.md`). Three tools account for the
+  bulk of the post-close mutations:
+    - `verify-review-events` writes `review_events_verified_through_cycle`
+      and the matching `field_inventory` freshness marker. Fires 9-11
+      minutes after `cycle-complete` in 3 of 3 cycles in the sample
+      (commits `6177ff52` / `dc7f2eeb` / `7e3d9c33` for cycles 543/544/545).
+    - `metric-snapshot` writes `field_inventory.fields.*` entries. Fires
+      0-3 minutes after `cycle-complete` in 2 of 3 cycles (e.g. commit
+      `b21c9651` for cycle 545); also runs at next cycle's startup per
+      `STARTUP_CHECKLIST.xml` line 253.
+    - `pipeline-check` writes `tool_pipeline.c5_5_gate` as the C5.5
+      close-out mechanism. Post-close by construction — the C5.5 gate
+      *is* the close-out trigger.
+    - `record-dispatch` writes `agent_sessions` whenever a dispatch
+      happens; in 2 of 3 cycles, dispatches landed post-close.
+  Each of these fields is in the F12 defense catalog. The frozen C5
+  worklog has no mechanism that reads any of them back. The post-close
+  mutations *are* the defenses running; the worklog freeze is the F4
+  mechanism not catching the run.
+- **On count vs mechanism**. The companion finding "4 of 5 post-close-
+  mutated fields are F12-cataloged D-defenses" (or 5 of 5 defense-character
+  including M) is consistent with random sampling under the 62-69% defense-
+  character base rate (P(≥4/5 | random) ≈ 37%, P(5/5 defense-character |
+  random) ≈ 9-16%). The count alone does not establish the mechanical
+  claim. The named tool→field→trigger chain above does; the count then
+  confirms that no post-close-mutated field turned out to be a primitive
+  intrinsic-domain field (a counterexample would have weakened the claim;
+  none was found).
+- **Architectural implication**. The architecture *requires* state to
+  evolve post-close in order to keep the defenses fresh. F11 is therefore
+  mechanically caused by F1+F12: F1's constraint-accretion produces F12's
+  defense fields; those defense fields have refresh tools whose triggers
+  are cycle-boundary events; the C5 worklog freeze comes before those
+  triggers and lacks reconciliation.
 
 **Hypothesis**: v1 inherited cycle-as-hard-boundary from the trigger model
 (cron creates issue, workflow fires, session ends, issue closes). The
@@ -580,9 +607,39 @@ Main side, state-shape sub-catalog (cycle 5,
   `review_agent.history` (356 entries), `audit_processed` (197 items),
   `deferred_findings` (128 items). Per-field retention is unbounded.
 
-Other v1 defense surfaces (catalog continues — pipeline-check sub-checks,
-checklist recurrence-escalation citations beyond cycle 4's C3/C5/C5.5
-sample, and ADRs are sub-catalogs deferred to cycles 6+):
+Pipeline-check sub-catalog (cycle 6,
+`_notes/cycle-6-pipeline-check-categorization.md`). All 36 distinct
+`check_*` / `verify_*` functions in `tools/rust/crates/pipeline-check/`
+categorized; collapsed to 30 logical checks after merging six
+date-variant pairs:
+
+- **22 of 30 (73%) are pure defenses** (post-dispatch reconciliation
+  cluster of 5; chronic-category cluster of 3; worklog-immutability
+  cluster of 3; step-comment cluster of 3; deferral cluster of 4;
+  audit-lifecycle cluster of 2; plus 2 others).
+- **5 of 30 (17%) are domain primitives** (artifact existence, doc lint,
+  doc validation, worklog existence, review artifact existence).
+- **3 of 30 (10%) are mixed** (journal-section, frozen-commit verify,
+  journal-freshness — primitive existence checks warped by
+  defense-flavored sub-rules).
+- **Defense-character total (D + M): 25 of 30 = 83%** — meaningfully
+  more lopsided than state.json's 62-69%. Pipeline-check is the most
+  defense-dominant surface in the F12 catalog so far.
+- **Cluster structure**: defenses cluster around F-patterns the
+  retrospective already names. The 5-check post-dispatch cluster maps
+  to F11+F4; the 3-check chronic-category cluster maps to F9; the
+  3-check worklog-immutability cluster maps to F4; the 3-check
+  step-comment cluster maps to F6. v2 architectural moves that
+  resolve F-patterns at the design level eliminate *clusters* of
+  pipeline-check defenses, not single checks.
+- **Estimated v2 pipeline-check size**: 5-7 of 30 logical checks,
+  i.e. 4-6× reduction. Comparable to cycle 5's ~4× state-surface
+  reduction estimate. The two estimates cohere: the v2 architectural
+  resolutions of F1/F4/F5/F6/F9/F11/F12 produce similar proportional
+  reductions across both major defense surfaces.
+
+Specific cataloged defenses (representative — full list in cycle 6 and
+cycle 5 notes files):
 
 - `accepted-audit-adoption` pipeline check (PR #2718, cycle 541) — blocks
   C5.5 when accepted recommendations don't have validated adoption
@@ -592,6 +649,12 @@ sample, and ADRs are sub-catalogs deferred to cycles 6+):
 - `POST_DISPATCH_RECONCILIATION_FIRST_APPLICABLE_PREVIOUS_CYCLE = 545`
   cutoff (cycle 545, commit `567ad66d`) — defends against retroactive
   validation on cycles before the rule existed
+
+Sub-catalog (c) — full checklist recurrence-escalation citations beyond
+cycle 4's C3/C5/C5.5 sample (startup-checklist constraints, prompt-level
+constraints, ADR rationales) — deferred to cycle 7+. Cycle 4 noted the
+13-constraint close-out sample is specifically about close-out; sub-(c)
+verifies the constraint-only-ratio at the system level.
 
 Audit side (per audit #442's self-disclosure):
 - Step 10.5.1 (pipeline-step verification per #383) — defends against
@@ -609,11 +672,16 @@ substrates: F1 names it at the prompt/checklist layer (constraints
 accumulate); F5 names it at the state-shape layer (defense fields
 accumulate); F12 names the cross-substrate accumulation including
 pipeline-checks, polling tools, gates, and cutoff cycles. The cycle 5
-F11 measurement adds a fourth observation: the post-close state
-mutations *are* the defense fields running, which means the defenses
-collectively also produce the F11 artificial-completion failure (4.3
-post-close mutations per cycle, 4 of 5 mutated fields are F12-cataloged
-defenses). v2 must account for each defense: either (a) v2's
+F11 measurement plus cycle 6's mechanism check add a fourth
+observation: specific defense-refresh tools (`verify-review-events`,
+`metric-snapshot`, `pipeline-check`'s C5.5 write, `record-dispatch`)
+fire on the cycle boundary and mutate state after the C5 worklog
+freeze; the defenses *are* the post-close mutations, and the worklog
+freeze has no reconciliation tool that updates it when they fire.
+This is the F11 artificial-completion failure caused by F1+F12 at the
+mechanism level (named tools + named fields + observable trigger
+timing); the count overlap (4 of 5 D-cataloged) is consistent with
+the base rate and is confirming, not load-bearing. v2 must account for each defense: either (a) v2's
 architecture eliminates the underlying problem so the defense is
 unnecessary, (b) v2 preserves the defense (probably reshaped as a tool,
 not a constraint per F1), or (c) v2 explicitly accepts the underlying
@@ -648,9 +716,17 @@ F5's inclusion is supported by cycle 5's state.json categorization
 state fields are pure defenses, plus 10 mixed-with-defense — the
 defense fields ARE the per-field instance of write-mostly state. Cycle
 5's F11 measurement (`_notes/cycle-5-f11-post-close-measurement.md`)
-makes the connection mechanical: 4 of the 5 fields routinely mutated
-post-close are F12-cataloged defense fields, with 0 of 5 reconciled in
-the frozen worklog.
+plus cycle 6's mechanism check (`_notes/cycle-6-mechanism-sharpening.md`)
+identify the specific tool→field→trigger chain that produces the
+write-mostly-defense behavior at the cycle boundary: `verify-review-events`
+writes `review_events_verified_through_cycle` 9-11 minutes post-close
+(3 of 3 cycles); `metric-snapshot` writes `field_inventory.fields.*`
+0-3 minutes post-close (2 of 3 cycles); `pipeline-check` writes
+`tool_pipeline.c5_5_gate` as the close-out trigger; `record-dispatch`
+writes `agent_sessions` when post-close dispatches happen (2 of 3 cycles).
+0 of 5 are reconciled in the frozen worklog. The count overlap (4-of-5
+or 5-of-5 defense-character) is consistent with the base rate and is
+not load-bearing on its own; the named tool-trigger mechanism is.
 
 F8 is *adjacent* to this root rather than centered on it (cycle 4
 adversarial re-read, `_notes/cycle-4-adversarial-reread.md`): F8's
