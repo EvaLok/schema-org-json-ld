@@ -11,6 +11,46 @@ sentiment. Cite cycle numbers; quote constraints by id; link issues.
 
 ---
 
+## Glossary (brief)
+
+Operational vocabulary used in this retrospective. Added cycle 7
+(`_notes/cycle-7-copilot-feedback-evaluation.md`, lens 7) to make F-pattern
+claims legible to readers without v1 context. Full legibility sweep
+(replacing jargon with prose throughout) is queued for cycle 8+.
+
+- **C-stages (C1–C8, C5.5)** — close-out checklist roots in
+  `COMPLETION_CHECKLIST.xml`. C5 is "freeze the worklog," C5.5 is the
+  late-stage post-close validation gate added after F4 surfaced (it
+  validates the close-out happened correctly), C6 is "dispatch the
+  review," C8 is "write the journal entry."
+- **Recurrence escalation** — a citation pattern in v1 prompt/checklist
+  constraint blocks recording that the constraint *did not prevent* a
+  later occurrence of the same failure. E.g.
+  "Recurrence escalation: cycle 449 F3 process-adherence (deferred 5
+  cycles, deadline cycle 454)." A constraint with a recurrence-escalation
+  citation is a constraint that, by its own admission, did not work.
+- **Chronic-category** — a finding category from the per-cycle review
+  that recurs across 5+ of the last 6 reviews. v1 has 6+ such
+  categories. Chronic-category currency tracking is a substantial
+  fraction of v1's per-cycle compute (per F9).
+- **Foreground vs background Eva action** — "foreground" means Eva
+  files a new issue or opens a new PR; "background" means Eva replies
+  to an existing question-for-eva issue. v1 detects foreground reliably
+  and missed background for 6+ days in the F2 incident.
+- **Dispatch-task** — the v1 Rust tool that atomically files a Copilot
+  agent issue and records the dispatch in `state.agent_sessions`. The
+  conventional way for v1 to ask Copilot to do work.
+- **Audit repo / main repo** — `schema-org-json-ld-audit` runs an
+  independent orchestrator that audits this repo (`schema-org-json-ld`).
+  Both run Claude Opus 4.7. The audit repo's read scope is broader
+  (cross-cycle, cross-repo); its model class is the same as the main
+  orchestrator's.
+- **F-pattern** — one of the 12 named failure patterns cataloged below
+  (F1 through F12). They are not equally independent; cycle 7's
+  failure-family preamble groups them.
+
+---
+
 ## What v1 actually is (as of redesign cycle 1, cycle 545 era)
 
 The v1 system is roughly:
@@ -68,7 +108,65 @@ These are concrete, evidenced patterns. Each gets a name, a description,
 specific cited examples, and a hypothesis about its root cause. The hypotheses
 are working drafts; sharpen across cycles.
 
-### F1. Constraint accretion as first-line response
+### Failure families
+
+The 12 F-patterns below are not equally independent. Several pairs and
+triples are different manifestations of the same underlying mechanism at
+different scales or substrates. Cycle 7 (`_notes/cycle-7-copilot-feedback-evaluation.md`,
+lens 1) groups them into four families. Within each family the F-patterns
+retain their identities and individual evidence; the family framing is the
+load-bearing claim about how they relate.
+
+| Family | Member patterns | Core mechanism |
+|---|---|---|
+| **Defense accretion** | F1, F5, F12 (with F11 as the temporal stage) | New failures get encoded as new defenses (constraints, state fields, pipeline-checks). Defenses accumulate across substrates. |
+| **Reconciliation asymmetry** (write-mostly state) | F2, F3, F4, F11 (with F5 dual-membered) | Outbound channels and write-tools are well-developed. Inbound reconciliation does not exist. Records are written; nothing reads them back to update meaning when subsequent events change them. |
+| **Procedure / review overhead** | F6, F7, F9 | Procedural depth, review-and-disposition loops, and the chronic-category mechanism consume cycle compute disproportionate to the value they produce. |
+| **Tooling fragility** | F8 | Multiple tools doing the same job in slightly different ways; one bug cascades across cycles before the parallel path gets fixed. |
+
+F5 and F11 sit at the intersection of two families:
+- **F5** is both the storage stage of defense accretion (defenses accumulate
+  as state fields) and a manifestation of reconciliation asymmetry (write-mostly
+  state shape). Both readings are correct; neither reduces the other.
+- **F11** is both the temporal stage of defense accretion (defenses fire on
+  cycle-boundary triggers, post-close) and a manifestation of reconciliation
+  asymmetry (post-close mutations are not reconciled into the frozen worklog).
+
+**F10 is not a peer failure pattern in the same sense as F1-F9, F11, F12.**
+F10 is a corrective-hypothesis-and-design-implication pattern: it names a
+specific property of the audit repo (broader read scope) that v2 must
+preserve, and the property-1/property-2 distinction (load-bearing read scope
+vs illusory model diversity) is itself a design constraint. F10 is presented
+in its own subsection below for continuity, but it is structurally
+different from the operational failure patterns and should be read that way.
+
+The cleanest single-sentence statement of the dominant family
+(reconciliation asymmetry) is:
+
+> v1 has tools to **create** records and tools to **summarize** records;
+> it lacks tools to **reconcile** records against later events.
+
+The cleanest single-sentence statement of the defense-accretion family is:
+
+> Several v1 defenses are implemented as end-of-cycle or next-cycle
+> refreshers. Because artifacts freeze before those refreshers finish,
+> the architecture guarantees post-close divergence between frozen
+> artifacts and live state.
+> (Cycle 7 adopted this formulation from Copilot feedback PR #2749.)
+
+The two families overlap because the defense-accretion-family's temporal
+stage (F11) is the point where reconciliation-asymmetry binds — defenses
+fire post-close; the worklog freeze is pre-close; nothing reconciles. v2
+design implications for the two families converge: every state field
+needs a write-tool AND a reconciliation-tool; every channel needs a
+poller that produces state transitions; cycle boundaries should be
+checkpoint markers on a continuously-evolving state, not state
+hard-boundaries that freeze worklogs.
+
+The F-pattern naming below leads with the named pattern and the family.
+F-numbers remain as anchor IDs for cross-references but are de-emphasized.
+
+### Constraint accretion as first-line response (F1) — *Defense accretion family*
 
 When a new failure mode surfaces, the system's typical response is to add a
 constraint to the prompt or checklist. The constraints carry their own
@@ -139,7 +237,7 @@ multiple cycles, the right response may be "redesign the surface that
 produces these findings," not "patch the surface." This is F1 applied at
 the audit-system layer rather than the prompt layer.
 
-### F2. The Eva-response detection failure
+### The Eva-response detection failure (F2) — *Reconciliation asymmetry family*
 
 `schema-org-json-ld-audit#439` (filed 2026-04-25) catalogs this precisely:
 on 2026-04-19, Eva spent ~55 minutes posting prescriptive responses to 8
@@ -172,7 +270,7 @@ inbound (Eva responds) has no tool path. The asymmetry is the bug. v2 must
 treat any inbound channel (Eva, audit, QC, copilot critique) symmetrically
 to outbound — every channel needs a poller and a state transition.
 
-### F3. Multi-candidate state drift
+### Multi-candidate state drift (F3) — *Reconciliation asymmetry family*
 
 `schema-org-json-ld-audit#437` (filed 2026-04-24): an audit acceptance in
 cycle 531 enumerated three candidate fixes (a, b, c). Cycle 532 dispatched
@@ -194,7 +292,7 @@ happen.
 **Implication for v2**: any state field that holds open-ended decisions
 needs a reconciliation mechanism by design, not bolted on afterward.
 
-### F4. The frozen-artifact lifecycle is fragile
+### The frozen-artifact lifecycle is fragile (F4) — *Reconciliation asymmetry family*
 
 The C5/C5.5/C6 sequence freezes the worklog from `state.c5_5_gate`, commits
 it, then dispatches the review agent. But state mutations after C5
@@ -224,7 +322,7 @@ worklog and the state diverge. v2 either needs a worklog representation
 that updates as state updates, OR the cycle's "cycle ended" boundary needs
 to be later than the review-dispatch.
 
-### F5. State.json as procedural-implementation-leak
+### State.json as procedural-implementation-leak (F5) — *Defense accretion family + Reconciliation asymmetry family (dual-membered)*
 
 `docs/state.json` is 20,711 lines and growing. The shape mirrors v1's
 procedural failures one-for-one: `step_comment_acknowledged_gaps` exists
@@ -270,11 +368,21 @@ Field-by-field categorization of all 42 top-level keys in `state.json`
   `deferred_findings` (128 items). Unbounded retention is structural,
   not policy-enforced.
 
-A v2 with a designed state model would collapse the 19 D + 10 M shapes
-into perhaps 5 ledgers (QC interaction, audit interaction, dispatch
-ledger with bounded retention, mode if preserved, single project-progress
-record) plus the 13 P fields — roughly **a 4× reduction** in top-level
-state surface from designed unification of write-mostly defense fields.
+A v2 with a designed state model could plausibly collapse the 19 D + 10 M
+shapes into something like 5 ledgers (QC interaction, audit interaction,
+dispatch ledger with bounded retention, mode if preserved, single
+project-progress record) plus the 13 P fields. That would be roughly a
+4× reduction in top-level state surface, **but the 4× number is a
+back-of-envelope smell test, not a v2 success criterion** (cycle 7
+demotion per Copilot feedback PR #2749 lens 3.A). Top-level key count
+is a weak proxy for conceptual complexity — one ledger can hide more
+complexity than ten simple fields, and the count is gameable by
+collapsing many fields into a few giant ledgers without reducing the
+underlying surface. The 4× number is useful only as a smell test: if
+v2 still requires ~40 top-level bookkeeping structures, the redesign
+has likely failed; if v2 lands at ~5, that is consistent with success
+but not by itself proof. Better v2 measures are designed in the
+"What v2 must demonstrably do better than v1" section below.
 
 **Hypothesis**: the state shape encodes the failures, not the system. Each
 field is a scar. v2 should start from a much smaller state model that is
@@ -287,7 +395,7 @@ shape-of-state observation; it is the field-level instance of the
 shared-root pattern (asymmetric communication / write-mostly state)
 named in the preamble below.
 
-### F6. Cyclomatic procedure depth
+### Cyclomatic procedure depth (F6) — *Procedure / review overhead family*
 
 The startup checklist has 9 root steps (S0–S9) with 4–9 substeps each.
 The close-out checklist has 8 root steps (C1–C8) with multi-substep
@@ -308,7 +416,15 @@ should solve. The orchestrator's compute should not be spent on procedure
 navigation. v2 should make the procedural skeleton small (a few essential
 checkpoints) and deep where it matters (judgment about novel circumstances).
 
-### F7. Self-management dominance over schema work
+**Evidence caveat (cycle 7 per Copilot feedback PR #2749 lens 5.A)**:
+F6 evidence is impressionistic. "20+ comments before any actual work"
+is imagery, not data. A cycle-history measurement (comments-per-cycle
+distribution; median; variance; share-of-cycle-time on procedure
+navigation) is queued for cycle 8+ — comparable to cycle 2's F7
+measurement. Until measured, F6's headline claim should be read as a
+strong-prior hypothesis, not a load-bearing finding.
+
+### Self-management dominance over schema work (F7) — *Procedure / review overhead family*
 
 **Measured magnitude** (cycle 2, `_notes/cycle-2-measurements.md`):
 
@@ -363,7 +479,7 @@ prompt framing, but tool-level constructs that make self-management
 silent (background, non-cycle-consuming) when it's routine and visible
 (escalated to orchestrator judgment) only when it's not.
 
-### F8. Abandonment cascades from single-tool defects
+### Abandonment cascades from single-tool defects (F8) — *Tooling fragility family*
 
 Cycles 541, 542, 543 all abandoned at C5.5. Root cause: a single bug in
 `cycle-runner::run_tool_json` that rejected non-zero exit codes from
@@ -378,11 +494,25 @@ with the same anti-pattern, so cycle 544's startup brief still showed
 single tool returning a non-zero exit can cascade through three cycles. The
 parallel-implementation gap (cycle-runner fixed, cycle-start not fixed)
 indicates the system has multiple tools doing the same job in slightly
-different ways, with tests against one and not the other. v2 should have
-fewer tools doing each job, with explicit failure handling that does not
-cascade across cycles.
+different ways, with tests against one and not the other.
 
-### F9. Adversarial-review-and-disposition treadmill
+**Prescription qualification (cycle 7 per Copilot feedback PR #2749 lens 5.B)**:
+"v2 should have fewer tools doing each job" generalizes from the
+cycle-524 cascade case to a system-level design principle. The
+cycle-524 case demonstrates the cascade *mechanism*; whether
+parallel-implementation duplication is widespread enough across v1 to
+merit a system-level "fewer tools per job" principle requires a
+duplication-rate measurement that has not been done. F12 sub-(c)
+(checklist + prompt + ADR rationales) is queued for cycle 7+ work
+and would partially address this. Until measured, the prescription
+should be read as "the cycle-524 case argues for fewer tools per job;
+whether v1 has the broader pathology is open."
+
+The narrower hypothesis (the cycle-524 mechanism is real and v2 should
+not replicate it) is well-supported. The broader prescription depends
+on measurement.
+
+### Adversarial-review-and-disposition treadmill (F9) — *Procedure / review overhead family*
 
 Each cycle dispatches a review agent (Copilot, gpt-5.4-class). The review
 finds findings. The orchestrator dispositions them (`actioned`,
@@ -401,8 +531,20 @@ visibility + cycle context**: the review agent reads the same prompt
 surface as it always does, sees the orchestrator's same-cycle state, and
 operates on a one-cycle window. Findings recur because *that* combination
 is constant across cycles, not because the model is. The
-review-and-disposition loop generates work proportional to itself; in
-steady state most cycle compute is spent on the loop's own outputs.
+review-and-disposition loop generates work proportional to itself.
+
+**Compute-claim qualification (cycle 7 per Copilot feedback PR #2749 lens 5.C)**:
+The previous wording ("in steady state most cycle compute is spent on
+the loop's own outputs") asserts a stronger claim than F7's PR-mix
+measurement directly supports. F7 shows zero schema-source PRs across
+46 cycles, which is consistent with most-cycle-compute-on-self-management
+but does not directly measure compute attribution. The compute-attribution
+measurement is itself queued for Phase 2 (per the success-criteria
+section above; "fraction of cycle compute spent on domain output" has
+no v1 mechanism). Until measured, F9's compute claim should be read as
+"the PR mix and the cycle-2 measurement suggest a substantial fraction
+of compute lands on the loop's own outputs; direct compute-attribution
+measurement is Phase 2 work."
 
 This matters because the audit repo *is* the same model class as the
 orchestrator (both Opus 4.7 since cycle 511, audit's #427 acceptance) yet
@@ -421,7 +563,7 @@ prompt and don't see the orchestrator's state — same trick. v2 should
 design the critique surface around genuinely independent prompt+state+
 context, not around reflexive same-cycle self-review.
 
-### F10. Audit's value is broader read scope, not different model perspective
+### Audit's value is broader read scope, not different model perspective (F10) — *Design-implication pattern, not a peer failure pattern*
 
 Audit #439 explicitly self-discloses: "The audit's own cycle 199 missed
 this too." The audit's cycle 199 worklog characterized #2519 as "Eva
@@ -460,9 +602,21 @@ and a different cycle context (4-hour offset, multi-cycle window). The
 cycle 1 retrospective conflated the two properties; the corrected
 framing is: model perspective is shared; *read scope and prompt are not*.
 
-**Hypothesis**: "external audit" framing is wrong; "co-located peer with
-broader read scope" is right. The peer relationship is not the bug;
-expecting model-perspective diversity from a same-class peer is the bug.
+**Hypothesis**: for *this audit-orchestrator pair*, "external audit"
+framing is wrong; "co-located peer with broader read scope" is right.
+The peer relationship is not the bug; expecting model-perspective
+diversity from a same-class peer is the bug.
+
+**Generalization caveat (cycle 7 per Copilot feedback PR #2749 lens 5.D)**:
+The corrective-hypothesis is well-supported by the specific
+case-evidence (audit's #439/#437/#427/#442). It is *not* yet a stable
+general law about audit-as-peer relationships across all such pairings.
+The narrower claim — "the cycle-1 framing of audit's value was wrong;
+the correction is broader-read-scope vs different-model-perspective" —
+holds. The broader claim — "any same-model audit-as-peer relationship
+will exhibit this property distinction" — requires more evidence than
+this retrospective provides. Phase 1 cross-system reading (openclaw,
+PAI, others) may strengthen or weaken the generalization.
 
 **Implication for v2**: preserve property 1 explicitly — either keep the
 audit repo (with its broader read scope) or replicate the broad-read-scope
@@ -472,7 +626,7 @@ same-class peers. For genuinely different perspectives, the lever is
 same trick that produces audit's value), not "use a different model
 family."
 
-### F11. Cycle closure as artificial completion signal
+### Cycle closure as artificial completion signal (F11) — *Defense accretion family (temporal stage) + Reconciliation asymmetry family (dual-membered)*
 
 The cycle ends when the cycle-issue is closed, the worklog is frozen, and
 the journal is committed. But state evolution continues after the close —
@@ -545,12 +699,23 @@ state mutations tagged with `[cycle N]` for cycles 543, 544, 545:
   confirms that no post-close-mutated field turned out to be a primitive
   intrinsic-domain field (a counterexample would have weakened the claim;
   none was found).
-- **Architectural implication**. The architecture *requires* state to
-  evolve post-close in order to keep the defenses fresh. F11 is therefore
-  mechanically caused by F1+F12: F1's constraint-accretion produces F12's
-  defense fields; those defense fields have refresh tools whose triggers
-  are cycle-boundary events; the C5 worklog freeze comes before those
-  triggers and lacks reconciliation.
+- **Architectural implication**. *Several v1 defenses are implemented as
+  end-of-cycle or next-cycle refreshers. Because artifacts freeze before
+  those refreshers finish, the architecture guarantees post-close
+  divergence between frozen artifacts and live state.* (Cycle 7 cleaner
+  formulation per Copilot feedback PR #2749 lens 2.) The named tools
+  above (`verify-review-events`, `metric-snapshot`, `pipeline-check`'s
+  C5.5 write, `record-dispatch` on post-close dispatches) are the
+  refreshers; the C5 worklog freeze is the artifact frozen before they
+  run; `step_comment_acknowledged_gaps`, `agent_sessions`, etc. are the
+  state surfaces that diverge. F11 is the *temporal* face of the
+  defense-accretion family: defenses fire on cycle-boundary triggers,
+  the worklog freezes before those triggers, no reconciliation tool
+  reads the post-trigger state back into the frozen worklog. F1's
+  constraint-accretion (the prompt-layer face) and F12's cross-substrate
+  defense catalog (the meta face) sit upstream of this temporal
+  manifestation: F1 produces defenses; F12 catalogs them; F5 stores them
+  as state; F11 is when the freeze-vs-refresh timing collision occurs.
 
 **Hypothesis**: v1 inherited cycle-as-hard-boundary from the trigger model
 (cron creates issue, workflow fires, session ends, issue closes). The
@@ -570,7 +735,7 @@ is no freeze step. The trigger-and-session-runs-then-ends pattern is
 preserved (it's a load-bearing GitHub Actions primitive); the *state
 freeze at session end* is what should go.
 
-### F12. Late-stage defense accumulation: an unmapped catalog
+### Late-stage defense accumulation: an unmapped catalog (F12) — *Defense accretion family (cross-substrate)*
 
 v1 has accumulated a substantial set of *late-stage defenses* on top of
 its original architecture, each targeting a specific failure pattern that
@@ -665,27 +830,46 @@ Audit side (per audit #442's self-disclosure):
   spot) — produced #439, the highest-leverage audit find of the
   Opus 4.7 period
 
-**Hypothesis**: each defense is load-bearing now and was added because
-something failed. The catalog is itself the procedural-residue of v1's
-operational history. F12 is the meta-pattern that appears in three
-substrates: F1 names it at the prompt/checklist layer (constraints
-accumulate); F5 names it at the state-shape layer (defense fields
-accumulate); F12 names the cross-substrate accumulation including
-pipeline-checks, polling tools, gates, and cutoff cycles. The cycle 5
-F11 measurement plus cycle 6's mechanism check add a fourth
-observation: specific defense-refresh tools (`verify-review-events`,
+**Hypothesis**: each defense was added because something failed.
+**The catalog proves accumulation; it does not prove load-bearingness**
+(cycle 7 qualification per Copilot feedback PR #2749 lens 5.E). The
+only way to verify a defense is currently load-bearing is to test
+removal — which would require a v1 controlled experiment that has
+not been done. Some defenses may be stale, ceremonial, or dead
+residue that no longer prevents anything because the original
+failure mode has shifted, the underlying tool has changed, or the
+defense was never effective in the first place. Identifying which
+defenses are load-bearing-vs-stale is itself v2 design work: v2 must
+decide which to preserve and which to drop, and that decision needs
+better evidence than "v1 has it."
+
+F12 is the meta-pattern that appears in three substrates: F1 names
+it at the prompt/checklist layer (constraints accumulate); F5 names
+it at the state-shape layer (defense fields accumulate); F12 names
+the cross-substrate accumulation including pipeline-checks, polling
+tools, gates, and cutoff cycles. The cycle 5 F11 measurement plus
+cycle 6's mechanism check add a fourth observation at the temporal
+layer: specific defense-refresh tools (`verify-review-events`,
 `metric-snapshot`, `pipeline-check`'s C5.5 write, `record-dispatch`)
 fire on the cycle boundary and mutate state after the C5 worklog
-freeze; the defenses *are* the post-close mutations, and the worklog
-freeze has no reconciliation tool that updates it when they fire.
-This is the F11 artificial-completion failure caused by F1+F12 at the
-mechanism level (named tools + named fields + observable trigger
-timing); the count overlap (4 of 5 D-cataloged) is consistent with
-the base rate and is confirming, not load-bearing. v2 must account for each defense: either (a) v2's
-architecture eliminates the underlying problem so the defense is
-unnecessary, (b) v2 preserves the defense (probably reshaped as a tool,
-not a constraint per F1), or (c) v2 explicitly accepts the underlying
-problem and documents the trade-off.
+freeze; the defenses *are* the post-close mutations, and the
+worklog freeze has no reconciliation tool that updates it when they
+fire. The freeze-vs-refresh timing collision is the mechanism that
+binds F11 to F1+F12 (named tools + named fields + observable
+trigger timing). The count overlap (4 of 5 D-cataloged) is
+consistent with the base rate and is confirming, not load-bearing
+on its own.
+
+v2 must account for each defense: either (a) v2's architecture
+eliminates the underlying problem so the defense is unnecessary,
+(b) v2 preserves the defense (probably reshaped as a tool, not a
+constraint per F1), or (c) v2 explicitly accepts the underlying
+problem and documents the trade-off. Decision (a) requires
+identifying that the original problem is gone in v2; decision (b)
+requires verifying the defense still prevents something; decision
+(c) requires explicit trade-off documentation. Most importantly,
+"v1 has it, so v2 keeps it" is *not* a valid decision — that is
+how v1 became v1.
 
 **Implication for v2**: candidate designs without a catalog-aware
 transfer-or-remove decision risk silent re-introduction of v1's failure
@@ -702,61 +886,115 @@ catalog completion if the load-bearing inputs are in place.
 
 ---
 
-## Shared root: asymmetric communication and write-mostly state
+## Reconciliation asymmetry and defense accretion: the families in detail
 
-F2 (Eva-response detection), F3 (multi-candidate state drift), F4
-(frozen-artifact lifecycle, in its post-C5 mutation aspect), F5
-(state-shape as procedural-implementation-leak — the field-level
-instance), and F11 (cycle closure as artificial completion) share a
-common root, named explicitly here per audit #442 and reinforced by
-cycle 5's measurements.
+The "Failure families" preamble at the top of this section introduced
+the four families and the two cleanest single-sentence statements
+(reconciliation asymmetry: *create+summarize, no reconcile*;
+defense accretion: *refreshers fire after artifacts freeze*). This
+section gives the evidence for those families consolidated in one
+place; subsequent F-pattern sections give pattern-specific evidence
+without re-deriving the family-level claim.
 
-F5's inclusion is supported by cycle 5's state.json categorization
-(`_notes/cycle-5-state-categorization.md`): 19 of 42 (45%) top-level
-state fields are pure defenses, plus 10 mixed-with-defense — the
-defense fields ARE the per-field instance of write-mostly state. Cycle
-5's F11 measurement (`_notes/cycle-5-f11-post-close-measurement.md`)
-plus cycle 6's mechanism check (`_notes/cycle-6-mechanism-sharpening.md`)
-identify the specific tool→field→trigger chain that produces the
-write-mostly-defense behavior at the cycle boundary: `verify-review-events`
-writes `review_events_verified_through_cycle` 9-11 minutes post-close
-(3 of 3 cycles); `metric-snapshot` writes `field_inventory.fields.*`
-0-3 minutes post-close (2 of 3 cycles); `pipeline-check` writes
-`tool_pipeline.c5_5_gate` as the close-out trigger; `record-dispatch`
-writes `agent_sessions` when post-close dispatches happen (2 of 3 cycles).
-0 of 5 are reconciled in the frozen worklog. The count overlap (4-of-5
-or 5-of-5 defense-character) is consistent with the base rate and is
-not load-bearing on its own; the named tool-trigger mechanism is.
+**Reconciliation asymmetry / write-mostly state.** Outbound channels
+have well-developed tools (`question-for-eva` filing, `audit-outbound`
+filing, `dispatch-task`, `record-dispatch`, etc.). Inbound reconciliation
+does not. Once a record is written (an Eva blocker, a multi-candidate
+acceptance, a dispatch ledger, a frozen worklog, a closed cycle), no
+tool reads it back to update its state when subsequent events change
+its meaning. v1 has tools to *create* records and tools to *summarize*
+records; it lacks tools to *reconcile* records against later events.
 
-F8 is *adjacent* to this root rather than centered on it (cycle 4
-adversarial re-read, `_notes/cycle-4-adversarial-reread.md`): F8's
-primary failure is parallel-implementation duplication (`cycle-runner`
-was fixed, `cycle-start::gather_pipeline_status` was not), and the
+Family members and their substrate-specific manifestations:
+
+- **F2** — Eva-response detection: outbound (filing question-for-eva)
+  is well-toolified; inbound (Eva replies) has no tool path. Eva's
+  6-day batch response went unread.
+- **F3** — Multi-candidate state drift: cycle 532 dispatched candidate
+  (b) of {a, b, c}; (a) and (c) were never explicitly decided on; the
+  state ledger entry still reads "(not yet dispatched)" for all three
+  because nothing reconciles candidate state against subsequent
+  dispatch events.
+- **F4** — Frozen-artifact lifecycle: the C5 worklog freeze captures
+  one moment in cycle state; subsequent state mutations make the
+  frozen worklog arithmetically inaccurate; nothing reads the post-C5
+  state back into the freeze.
+- **F11** — Cycle closure as artificial boundary: the F4 case made
+  explicit at scale via cycle 5's measurement (`_notes/cycle-5-f11-post-close-measurement.md`).
+  4.3 post-close state mutations per cycle on average; 5 distinct
+  fields routinely mutated post-close; 0 of 5 reconciled in the
+  frozen worklog.
+
+**Defense accretion.** *Several v1 defenses are implemented as
+end-of-cycle or next-cycle refreshers. Because artifacts freeze before
+those refreshers finish, the architecture guarantees post-close
+divergence between frozen artifacts and live state.* (Cycle 7 cleaner
+formulation per Copilot feedback PR #2749.) Defenses also accumulate
+across substrates: prompts (F1), state shape (F5), pipeline-checks
+(F12 sub-(b)), and post-close timing (F11). Cycle 5's state.json
+catalog (`_notes/cycle-5-state-categorization.md`) shows 62-69%
+defense-character at the state-shape level; cycle 6's pipeline-check
+catalog (`_notes/cycle-6-pipeline-check-categorization.md`) shows 83%
+defense-character at the pipeline-check level.
+
+The freeze-vs-refresh timing collision is the mechanism that binds
+the two families. Cycle 6's mechanism check
+(`_notes/cycle-6-mechanism-sharpening.md`) names the specific tools:
+`verify-review-events` writes `review_events_verified_through_cycle`
+9-11 minutes post-close (3 of 3 cycles); `metric-snapshot` writes
+`field_inventory.fields.*` 0-3 minutes post-close (2 of 3 cycles);
+`pipeline-check` writes `tool_pipeline.c5_5_gate` as the close-out
+trigger by construction; `record-dispatch` writes `agent_sessions`
+when post-close dispatches happen (2 of 3 cycles). Each is a
+defense-refresh tool whose trigger is a cycle-boundary event; the C5
+worklog freeze precedes the triggers; no tool reconciles the
+post-trigger state into the freeze.
+
+The count-overlap evidence (4 of 5 or 5 of 5 post-close-mutated
+fields are F12-cataloged defenses) is consistent with the 62-69%
+base rate of defense-shaped fields under random sampling. The count
+alone does not establish the mechanism. The named tool→field→trigger
+chain does; the count then confirms that no post-close-mutated field
+turned out to be an intrinsic-domain primitive (a counterexample
+would have weakened the claim; none was found).
+
+**F5 sits at the intersection.** The state-shape catalog supports both
+readings: defense fields ARE write-mostly state (reconciliation
+asymmetry); defense fields ARE the storage stage of defense accretion.
+Both are correct; neither reduces the other. Cycle 7 stops trying
+to choose between them.
+
+**F8 is in a different family** (tooling fragility — see "Failure
+families" preamble). Cycle 4's adversarial re-read
+(`_notes/cycle-4-adversarial-reread.md`) found F8's primary failure
+mode is parallel-implementation duplication (`cycle-runner` was
+fixed, `cycle-start::gather_pipeline_status` was not). The
 "asymmetric-fix-propagation" framing applies only as a secondary
 reading. F8's main implication ("fewer tools doing each job") stands
-independently of the asymmetric-communication root and should not be
-folded into it.
+independently of the reconciliation-asymmetry root and is now
+correctly placed in its own family.
 
-> **Asymmetric communication / write-mostly state.** Outbound channels
-> have well-developed tools (`question-for-eva` filing, `audit-outbound`
-> filing, `dispatch-task`, `record-dispatch`, etc.). Inbound reconciliation
-> does not. Once a record is written (an Eva blocker, a multi-candidate
-> acceptance, a dispatch ledger, a frozen worklog, a closed cycle), no
-> tool reads it back to update its state when subsequent events change
-> its meaning. v1 has tools to *create* records and tools to *summarize*
-> records; it lacks tools to *reconcile* records against later events.
+The unification matters because v2's design implications converge on
+two tool-shapes:
 
-The unification matters because v2's design implication is one-shaped:
+> **Reconciliation asymmetry implication.** Every state field needs
+> a write-tool AND a reconciliation-tool. Every channel needs a
+> poller that produces state transitions.
 
-> **Every state field needs a write-tool AND a reconciliation-tool. Every
-> channel needs a poller that produces state transitions.**
+> **Defense accretion implication.** Cycle boundaries should be
+> checkpoint markers on a continuously-evolving state, not state
+> hard-boundaries that freeze worklogs and leave defense refreshers
+> stranded post-close. Defenses themselves should be re-examined for
+> load-bearingness; the catalog proves accumulation, not that each
+> defense is currently load-bearing (cycle 7 qualification per
+> Copilot lens 5.E).
 
-A v2 that adds polling to one channel but not another, or reconciliation
-to one state field but not another, will inherit v1's failure mode in
-miniature. The asymmetry is the bug, not any specific channel's missing
-poller. The cycle 2 success-criterion section already named this for the
-F2 case; F11 makes clear it's a system-wide property, not a single-
-channel fix.
+A v2 that adds polling to one channel but not another, or
+reconciliation to one state field but not another, inherits v1's
+failure mode in miniature. The asymmetry is the bug, not any specific
+channel's missing poller. The cycle 2 success-criterion section
+already named this for the F2 case; F11 makes clear it's a
+system-wide property, not a single-channel fix.
 
 ---
 
@@ -812,20 +1050,20 @@ what failure mode the same surface still has.
   depends on it. v2 must preserve foreground Eva intervention as a
   *first-class* mechanism (not just one of many channels), because if the
   foreground channel breaks, the redesign cannot complete.
-- **The lightweight per-cycle working-notes pattern** (cycle 3 addition,
-  audit #442 observation): `docs/redesign/_notes/cycle-N-<topic>.md`
-  files plus an iteration-log table in the README is producing emergent
-  behavior — the iteration log forces cycle-by-cycle accountability for
-  what changed, the notes-vs-deliverable distinction provides a natural
-  place for half-formed thoughts, and the per-cycle file naming makes
-  cross-cycle reference cheap. Audit #442 calls it "the kind of
-  light-weight scaffolding that delivers value disproportionate to its
-  design cost." *Caveat*: this is a two-cycle observation; the pattern
-  may degrade once notes accumulate beyond ~10 files (an index helps but
-  is not yet exercised at scale). v2's persistence layer should
-  generalize this pattern — for cycle observations that don't yet warrant
-  a journal entry, half-formed dispatch ideas, design alternatives under
-  consideration — but design with the scale failure mode in mind.
+- **The lightweight per-cycle working-notes pattern** (cycle 3 addition):
+  `docs/redesign/_notes/cycle-N-<topic>.md` files plus an iteration-log
+  table in the README. The iteration log records cycle-by-cycle changes;
+  the notes-vs-deliverable distinction separates half-formed thoughts
+  from the artifact; per-cycle file naming makes cross-cycle reference
+  cheap. *Caveat*: cycle 7 has 10 notes files; the index pattern works
+  at this scale but has not been exercised at larger scale. *Note*:
+  observations about "emergent behavior" or "process maturity" are
+  process commentary and belong in the README iteration log, not in
+  this section (cycle 7 sweep per Copilot feedback PR #2749 lens 4.A).
+  v2's persistence layer should generalize this pattern (for cycle
+  observations that don't yet warrant a journal entry, half-formed
+  dispatch ideas, design alternatives under consideration), with
+  explicit attention to the scale-failure mode.
 
 ## What might appear to work but probably doesn't
 
@@ -950,45 +1188,99 @@ Working hypothesis on success criteria — sharpen across cycles.
 - **Failure modes don't cascade across cycles** (F8). One tool returning
   exit 1 should not abandon three cycles.
 - **Schema work / domain output as a real fraction of cycles**. v1's
-  measured rate is zero (cycles 500–545). The v2 success criterion should
-  be a meaningful positive rate. Audit #442 named two failure modes the
-  criterion must avoid: (a) easily gamed by trivial commits — a
-  one-property addition or a typo fix could satisfy a pure-count threshold
-  without representing meaningful schema work; pair any count threshold
-  with a quality criterion (the schema work must address an item from a
-  prioritized backlog or close a QC-flagged gap, so satisfying the
-  threshold requires the same prioritization process as doing real work);
-  (b) schema-org has finite types (~800 in core), so any pure-count
-  measure degrades as easy types get implemented and the steady-state
-  assumption breaks. The long-term measure is **fraction of cycle compute
-  spent on domain output vs self-management**, where "domain output"
-  includes schema work, QC validation, end-user docs, and API consumer-
-  side improvements (the things that make the library useful). A working
-  starting target until the better measure is built: ≥1 substantive
-  schema-source PR merged per ≤5 cycles, paired with the quality criterion
-  above. The pre-cutover checkpoint should require an explicit, measurable
-  target in v2's prompt or state representation, with a tool to compute
-  and surface the running rate. The exact form of the long-term measure
-  is open and worth Phase 2 candidate-design exploration — not "pick a
-  number," but "design a metric that resists drift into the self-
-  management attractor under any sufficiently complex workload."
+  measured rate is zero across cycles 500–545 (46 consecutive cycles
+  with zero schema-source commits, cycle 2 measurement
+  `_notes/cycle-2-measurements.md`). The v2 success criterion should
+  be a meaningful positive rate. The retrospective previously named
+  "≥1 substantive schema-source PR merged per ≤5 cycles" as a
+  starting target. **Cycle 7 demotes this to a smell test, not a
+  success criterion** (per Copilot feedback PR #2749 lens 3.C).
+  The threshold has bidirectional failure modes: it is gameable
+  upward (trivial PRs can satisfy a pure count; pairing with a
+  quality criterion only partially helps), and it is impossible
+  downward as backlog sparses (schema-org has ~800 finite types;
+  once the easy ones are implemented, any per-cycle-count target
+  becomes mechanically harder to meet without representing system
+  failure). The threshold remains useful only as a smell test: a
+  v2 sustaining zero schema PRs over a 5-cycle window without a
+  named domain-side reason is showing the same pathology v1 had;
+  meeting the threshold is necessary but not sufficient.
+
+  The shape-correct measure is **fraction of cycle compute spent
+  on domain output vs self-management**, but cycle 3's uncertainty
+  flag remains: this measure has no implementation in v1 and has
+  no obvious mechanism. "Cycle compute" can be attributed by time,
+  tool invocations, lines of output, PR mix, or other proxies —
+  Phase 2 must specify the mechanism before this measure is
+  load-bearing.
+
+  Cycle 7 also adopts Copilot lens 3.B/E candidate measures as
+  candidate v2 success-measure shapes (Phase 2 picks; threshold
+  design is Phase 2 work):
+    - Number of mutable state concepts that require explicit
+      reconciliation logic (vs. write-only logic).
+    - Number of state fields with bounded retention vs.
+      append-only retention.
+    - Number of state transitions that happen after a cycle is
+      declared complete.
+    - Number of distinct tools allowed to mutate state-of-record.
+    - Share of merged PRs touching domain code vs. orchestrator
+      infrastructure (the operational shape of "domain output
+      fraction" without needing compute attribution).
+    - Backlog burn-down on prioritized schema/QC gaps (requires
+      a backlog tracking mechanism v1 does not have).
+    - Median cycles from "domain need identified" to "domain output
+      landed" (requires a need-identified event v1 does not emit).
+    - Ratio of human-intervention work to autonomous domain work.
+    - Abandonment/retry rate on domain work vs. self-management
+      work (informs whether v2's failure modes preferentially
+      degrade the proof domain).
+
+  None of these is yet load-bearing. Phase 2 candidate designs pick a
+  small subset, specify the measurement mechanism, and propose
+  thresholds. The pre-cutover checkpoint requires the picked subset
+  to have working tools producing the measurements visibly.
+
 - **Surface measurement, not impression** (audit #442 meta-observation,
   promoted to v2 design principle). Where v1 expressed quality as
-  state-machine pass/fail (`pipeline-check`'s 32 sub-checks) and review-
-  agent score (1–5), v2 should require *measurable* signals on load-
-  bearing claims, with tools that surface them. The cycle 2 F7
-  measurement (zero schema-source commits over 46 cycles) is what this
-  looks like in practice: an impression ("small minority") replaced by a
-  numeric finding from a one-query measurement. The cycle 1 retrospective
-  itself softened F7 because it lacked a measurement; the discipline
-  matters even for adversarial-by-design artifacts. v2 should be designed
-  with this discipline as a stated invariant — anywhere a load-bearing
-  claim is made about cycle quality, schema progress, system health, or
-  design success, a tool should produce the measurement, and the
-  measurement should be visible without having to manually run ad-hoc
-  git queries. This applies to v1 reasoning patterns ("review score 4/5
+  state-machine pass/fail (`pipeline-check`'s 32 sub-checks) and
+  review-agent score (1–5), v2 should require *measurable* signals
+  on load-bearing claims, with tools that surface them. F7 was
+  sharpened from impression to measurement in cycle 2: zero
+  schema-source commits across 46 cycles
+  (`_notes/cycle-2-measurements.md`). v2 should be designed with
+  this discipline as a stated invariant — anywhere a load-bearing
+  claim is made about cycle quality, schema progress, system health,
+  or design success, a tool should produce the measurement, and the
+  measurement should be visible without manually running ad-hoc git
+  queries. This applies to v1 reasoning patterns ("review score 4/5
   is good") that look measurable but actually conflate signal with
   artifact-quality.
+
+- **Prompt-evolution governance** (cycle 7 placeholder per Copilot
+  feedback PR #2749 lens 6.E — Phase 2 design work). F1 names prompt
+  accretion as a failure pattern; v2 must address how the prompt
+  itself changes over time. Open design questions for Phase 2: who
+  authorizes prompt changes; how regressions are detected; how v2
+  avoids becoming v1 again after enough cycles. Currently a placeholder;
+  the v2 design must answer.
+
+- **Stance on human intervention** (cycle 7 placeholder per Copilot
+  feedback PR #2749 lens 6.C — Phase 2 design work). F2 and the
+  redesign-mode prompt's foreground-Eva preservation imply v2 has a
+  stance, but the stance is not articulated. Open design questions:
+  when human intervention is supposed to be required in healthy
+  steady state; how quickly it should be surfaced; what kinds of
+  decisions should never be left to autonomous drift. Currently a
+  placeholder; Phase 2 must articulate.
+
+- **Other v2 measure-shapes deferred to cycle 8+**. Impact ranking
+  (lens 6.A), cost/economics analysis (lens 6.B), parallelism /
+  sub-agent structure analysis (lens 6.F), what stayed robust across
+  long periods (lens 6.D, deeper than cycle 7's preservation
+  section), and the legibility sweep through retrospective text
+  (lens 7) are queued for cycle 8+ work. Cycle 7 names them here so
+  the gap is visible to Eva-review and to candidate-design authors.
 
 ---
 
@@ -1019,12 +1311,16 @@ This document is incomplete by design. Subsequent cycles should:
   corrected F9's hypothesis (model-class explanation was wrong) and
   F10's value-add framing. Cycle 4 qualified F8's role in the shared-
   root preamble (adjacent, not centered).
-- **Connect across patterns** — cycle 5 made the F1+F5+F11+F12
-  connection mechanical: F1 produces F12 defenses → F12 defenses are
-  F5 state-shape → F5 state-shape evolves continuously past F11's
-  artificial boundary. Subsequent cycles should look for additional
-  cross-pattern connections; finding one means a single architectural
-  change resolves multiple F-patterns simultaneously.
+- **Connect across patterns** — cycle 5 named the F1+F5+F11+F12
+  connection at the count level; cycle 6 added timing-trigger evidence
+  for the mechanism (named tools fire post-close in observed cycles);
+  cycle 7 reframed the connection per Copilot feedback PR #2749 lens 2
+  ("v1 defenses are end-of-cycle/next-cycle refreshers; artifacts
+  freeze before refreshers finish; architecture guarantees post-close
+  divergence"). The connection holds; the framing is now cleaner.
+  Subsequent cycles should look for additional cross-pattern connections;
+  finding one means a single architectural change resolves multiple
+  F-patterns simultaneously.
 - **Reconcile against audit's own retrospective when it lands** (audit
   cycle 204 or sooner — not yet landed as of cycle 5 startup). Patterns
   appearing in both are likely robust; patterns in only one need
