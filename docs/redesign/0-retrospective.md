@@ -137,7 +137,7 @@ load-bearing claim about how they relate.
 
 | Family | Member patterns | Core mechanism |
 |---|---|---|
-| **Defense accretion** | F1, F5†, F12, F11† | New failures get encoded as new defenses (constraints, state fields, cycle-boundary checks, pipeline-checks). Defenses accumulate across substrates without removal-tests. |
+| **Defense accretion** | F1, F5†, F11†, F12 | New failures get encoded as new defenses (constraints, state fields, cycle-boundary checks, pipeline-checks). Defenses accumulate across substrates without removal-tests. |
 | **Reconciliation asymmetry** (write-mostly state) | F2, F3, F4, F5†, F11† | Outbound channels and write-tools are well-developed. Inbound reconciliation does not exist. Records are written; nothing reads them back to update meaning when subsequent events change them. |
 | **Procedure / review overhead** | F6, F7, F9 | Procedural depth, review-and-disposition loops, and the chronic-category mechanism consume cycle compute disproportionate to the value they produce. |
 | **Tooling fragility** | F8 | Multiple tools doing the same job in slightly different ways; one bug cascades across cycles before the parallel path gets fixed. |
@@ -167,9 +167,8 @@ The cleanest single-sentence statement of the dominant family
 The cleanest single-sentence statement of the defense-accretion family is:
 
 > When a failure surfaces, v1's response is to add a substrate-specific
-> defense (a constraint, a state field, a cycle-boundary check, an
-> additional pipeline-check) and never test whether the defense is still
-> load-bearing.
+> defense (a constraint, a state field, or a cycle-boundary check) and
+> never test whether the defense is still load-bearing.
 
 F1, F5, F11, and F12 are sibling manifestations of this response
 pattern. F1 names the prompt/checklist substrate, F5 the state-shape
