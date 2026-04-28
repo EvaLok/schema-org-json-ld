@@ -62,8 +62,10 @@ sweep (replacing jargon with prose throughout) is queued.
   orchestrator's.
 - **F-pattern** — a named failure mode in v1's behavior, with cycle
   citations and a hypothesis about its root cause. Twelve are
-  cataloged below (F1–F12); the failure-families preamble groups them
-  into four families since they are not equally independent.
+  cataloged below (F1–F12). The failure-families preamble groups them
+  into four working families as a hypothesis under iteration; the
+  grouping is the artifact's current best read on how the patterns
+  relate, not a settled taxonomy.
 
 ---
 
@@ -166,8 +168,8 @@ The cleanest single-sentence statement of the defense-accretion family is:
 
 > Several v1 defenses are implemented as end-of-cycle or next-cycle
 > refreshers. Because artifacts freeze before those refreshers finish,
-> the architecture guarantees post-close divergence between frozen
-> artifacts and live state.
+> the architecture structurally produces post-close divergence between
+> frozen artifacts and live state.
 
 The two families overlap because the defense-accretion-family's temporal
 stage (F11) is the point where reconciliation-asymmetry binds — defenses
@@ -713,8 +715,8 @@ state mutations tagged with `[cycle N]` for cycles 543, 544, 545:
   none was found).
 - **Architectural implication**. *Several v1 defenses are implemented as
   end-of-cycle or next-cycle refreshers. Because artifacts freeze before
-  those refreshers finish, the architecture guarantees post-close
-  divergence between frozen artifacts and live state.* The named tools
+  those refreshers finish, the architecture structurally produces
+  post-close divergence between frozen artifacts and live state.* The named tools
   above (`verify-review-events`, `metric-snapshot`, `pipeline-check`'s
   C5.5 write, `record-dispatch` on post-close dispatches) are the
   refreshers; the C5 worklog freeze is the artifact frozen before they
@@ -910,31 +912,13 @@ catalog completion if the load-bearing inputs are in place.
 
 ---
 
-## Cross-family notes and v2 design implications
+## v2 design implications by family
 
-Two cross-family observations not carried by the family preamble or
-F-section annotations, plus the v2 design implications collected per
-family.
-
-**F8 placement.** F8's primary failure mode is parallel-implementation
-duplication (`cycle-runner` was fixed; `cycle-start::gather_pipeline_status`
-was not), not write-mostly state. The "fewer tools doing each job"
-prescription stands independently of the reconciliation-asymmetry root.
-
-**Defense accretion appears at four substrates.** F1 (response-shape:
-constraints-instead-of-tools), F12 (cross-substrate accumulation
-without removal-tests), F5 (write-mostly state fields without
-reconciliation), and F11 (temporal: refreshers running after artifacts
-freeze) are sibling manifestations of the same family. Each has its
-own local mechanism (substrate-by-substrate breakdown in the F11
-section). v2 must address each at its own substrate; fixing one
-substrate does not automatically resolve the others.
-
-### v2 design implications
-
-> **Reconciliation asymmetry implication.** Every state field needs
-> a write-tool AND a reconciliation-tool. Every channel needs a
-> poller that produces state transitions.
+The family preamble carries the load-bearing cross-family claim
+(reconciliation asymmetry as dominant family; defense-accretion's
+four-substrate breakdown is in the F11 architectural-implication
+paragraph and the F12 hypothesis). This section collects v2 design
+implications per family for cycle-by-cycle reference during Phase 2.
 
 > **Defense accretion implication.** Cycle boundaries should be
 > checkpoint markers on a continuously-evolving state, not state
@@ -953,6 +937,11 @@ substrate does not automatically resolve the others.
 > implementations of the same job. When the cycle-524 cascade
 > happens, fixing one path while leaving the parallel path broken
 > turns one bug into multiple cycles of abandonment.
+
+The reconciliation-asymmetry implication is in the family preamble
+(every state field needs a write-tool AND a reconciliation-tool;
+every channel needs a poller that produces state transitions); not
+duplicated here.
 
 A v2 that adds polling to one channel but not another, or
 reconciliation to one state field but not another, inherits v1's
@@ -1013,13 +1002,15 @@ what failure mode the same surface still has.
   depends on it. v2 must preserve foreground Eva intervention as a
   *first-class* mechanism (not just one of many channels), because if the
   foreground channel breaks, the redesign cannot complete.
-- **The lightweight per-cycle working-notes pattern** (cycle 3 addition):
+- **The lightweight per-cycle working-notes pattern** (cycle 3 addition).
+  *This is a redesign-era addition, not a v1 working feature* — included
+  here because v2 should preserve it, not because v1 had it.
   `docs/redesign/_notes/cycle-N-<topic>.md` files plus an iteration-log
   table in the README. The iteration log records cycle-by-cycle changes;
   the notes-vs-deliverable distinction separates half-formed thoughts
   from the artifact; per-cycle file naming makes cross-cycle reference
-  cheap. *Caveat*: cycle 7 has 10 notes files; the index pattern works
-  at this scale but has not been exercised at larger scale. v2's
+  cheap. *Caveat*: ~12 notes files as of cycle 12; the index pattern
+  works at this scale but has not been exercised at larger scale. v2's
   persistence layer should generalize this pattern (for cycle
   observations that don't yet warrant a journal entry, half-formed
   dispatch ideas, design alternatives under consideration), with
