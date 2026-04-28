@@ -724,21 +724,22 @@ state mutations tagged with `[cycle N]` for cycles 543, 544, 545:
   the worklog freezes before those triggers, no reconciliation tool
   reads the post-trigger state back into the frozen worklog.
 
-  F1, F12, and F5 are parallel manifestations of defense accretion at
-  different substrates — F1 names the response-shape pattern (failures
-  encoded as constraints), F12 catalogs the cross-substrate
-  accumulation, F5 names the state-shape consequence. They are not
-  upstream stages of the freeze-vs-refresh timing collision specifically;
-  they are sibling manifestations of the same family. The freeze-vs-
-  refresh formulation is F11's local mechanism. F1's local mechanism is
-  *constraints-instead-of-tools-as-first-line-response*; F12's is
-  *unbounded-accumulation-without-removal-tests*; F5's is
-  *write-mostly-state-fields-without-reconciliation*. Each is a different
-  architectural problem; they share the family tag because the same
-  reflex (encode-the-failure-into-the-system) produces all of them. v2
-  must address each at its own substrate, not assume that fixing the
-  freeze-vs-refresh timing problem (F11/F4) automatically resolves the
-  prompt-layer (F1) or state-shape (F5) problems.
+  F1, F12, F5, and F11 (this section) are parallel manifestations of
+  defense accretion at four substrates — F1 names the response-shape
+  pattern (failures encoded as constraints), F12 catalogs the
+  cross-substrate accumulation, F5 names the state-shape consequence,
+  F11 names the temporal stage. They are not upstream stages of the
+  freeze-vs-refresh timing collision specifically; they are sibling
+  manifestations of the same family. F11's local mechanism is
+  *freeze-vs-refresh*; F1's is *constraints-instead-of-tools-as-first-
+  line-response*; F12's is *unbounded-accumulation-without-removal-tests*;
+  F5's is *write-mostly-state-fields-without-reconciliation*. Each is a
+  different architectural problem; they share the family tag because
+  the same reflex (encode-the-failure-into-the-system) produces all of
+  them. v2 must address each at its own substrate, not assume that
+  fixing the freeze-vs-refresh timing problem (F11/F4) automatically
+  resolves the prompt-layer (F1), state-shape (F5), or
+  cross-substrate-cataloging (F12) problems.
 
 **Hypothesis**: v1 inherited cycle-as-hard-boundary from the trigger model
 (cron creates issue, workflow fires, session ends, issue closes). The
@@ -865,22 +866,23 @@ defenses are load-bearing-vs-stale is itself v2 design work: v2 must
 decide which to preserve and which to drop, and that decision needs
 better evidence than "v1 has it."
 
-F12 is the meta-pattern that appears in three substrates: F1 names
-it at the prompt/checklist layer (constraints accumulate); F5 names
-it at the state-shape layer (defense fields accumulate); F12 names
-the cross-substrate accumulation including pipeline-checks, polling
-tools, gates, and cutoff cycles. The cycle 5 F11 measurement plus
-cycle 6's mechanism check add a fourth observation at the temporal
-layer: specific defense-refresh tools (`verify-review-events`,
-`metric-snapshot`, `pipeline-check`'s C5.5 write, `record-dispatch`)
-fire on the cycle boundary and mutate state after the C5 worklog
-freeze; the defenses *are* the post-close mutations, and the
-worklog freeze has no reconciliation tool that updates it when they
-fire. The freeze-vs-refresh timing collision is the mechanism that
-binds F11 to F1+F12 (named tools + named fields + observable
-trigger timing). The count overlap (4 of 5 D-cataloged) is
-consistent with the base rate and is confirming, not load-bearing
-on its own.
+Defense accretion appears at four substrates within the family. F1
+manifests at the prompt/checklist layer (constraints accumulate); F5
+at the state-shape layer (defense fields accumulate); F12 at the
+cross-substrate cataloging level (pipeline-checks, polling tools,
+gates, and cutoff cycles spanning multiple substrates); and F11 at
+the temporal layer. The cycle 5 F11 measurement plus cycle 6's
+mechanism check make the temporal substrate concrete: specific
+defense-refresh tools (`verify-review-events`, `metric-snapshot`,
+`pipeline-check`'s C5.5 write, `record-dispatch`) fire on the cycle
+boundary and mutate state after the C5 worklog freeze; the defenses
+*are* the post-close mutations, and the worklog freeze has no
+reconciliation tool that updates it when they fire. The
+freeze-vs-refresh timing collision is the mechanism that binds F11 to
+F1, F5, and F12 (named tools fire post-close, named fields are
+mutated, the catalog confirms cross-substrate spread). The count
+overlap (4 of 5 D-cataloged) is consistent with the base rate and is
+confirming, not load-bearing on its own.
 
 v2 must account for each defense: either (a) v2's architecture
 eliminates the underlying problem so the defense is unnecessary,
