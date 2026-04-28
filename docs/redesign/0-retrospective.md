@@ -13,10 +13,8 @@ sentiment. Cite cycle numbers; quote constraints by id; link issues.
 
 ## Glossary (brief)
 
-Operational vocabulary used in this retrospective. Added cycle 7
-(`_notes/cycle-7-copilot-feedback-evaluation.md`, lens 7) to make F-pattern
-claims legible to readers without v1 context. Full legibility sweep
-(replacing jargon with prose throughout) is queued for cycle 8+.
+Operational vocabulary used in this retrospective. The full legibility
+sweep (replacing jargon with prose throughout) is queued.
 
 - **C-stages (C1–C8, C5.5)** — close-out checklist roots in
   `COMPLETION_CHECKLIST.xml`. C5 is "freeze the worklog," C5.5 is a
@@ -38,8 +36,8 @@ claims legible to readers without v1 context. Full legibility sweep
   step. Central to F6 (procedural depth).
 - **Pipeline-check** — Rust tool at `tools/rust/crates/pipeline-check/`
   with ~36 sub-checks (30 logical after collapsing date variants), most
-  of them defense-flavored per F12 sub-(b). The C5.5 gate runs
-  pipeline-check.
+  of which exist to detect specific past failure modes (the F12 catalog
+  characterizes the pattern). The C5.5 gate runs pipeline-check.
 - **Recurrence escalation** — a citation pattern in v1 prompt/checklist
   constraint blocks recording that the constraint *did not prevent* a
   later occurrence of the same failure. E.g.
@@ -170,7 +168,6 @@ The cleanest single-sentence statement of the defense-accretion family is:
 > refreshers. Because artifacts freeze before those refreshers finish,
 > the architecture guarantees post-close divergence between frozen
 > artifacts and live state.
-> (Cycle 7 adopted this formulation from Copilot feedback PR #2749.)
 
 The two families overlap because the defense-accretion-family's temporal
 stage (F11) is the point where reconciliation-asymmetry binds — defenses
@@ -391,9 +388,8 @@ shapes into something like 5 ledgers (QC interaction, audit interaction,
 dispatch ledger with bounded retention, mode if preserved, single
 project-progress record) plus the 13 P fields. That would be roughly a
 4× reduction in top-level state surface, **but the 4× number is a
-back-of-envelope smell test, not a v2 success criterion** (cycle 7
-demotion per Copilot feedback PR #2749 lens 3.A). Top-level key count
-is a weak proxy for conceptual complexity — one ledger can hide more
+back-of-envelope smell test, not a v2 success criterion**. Top-level key
+count is a weak proxy for conceptual complexity — one ledger can hide more
 complexity than ten simple fields, and the count is gameable by
 collapsing many fields into a few giant ledgers without reducing the
 underlying surface. The 4× number is useful only as a smell test: if
@@ -434,13 +430,13 @@ should solve. The orchestrator's compute should not be spent on procedure
 navigation. v2 should make the procedural skeleton small (a few essential
 checkpoints) and deep where it matters (judgment about novel circumstances).
 
-**Evidence caveat (cycle 7 per Copilot feedback PR #2749 lens 5.A)**:
-F6 evidence is impressionistic. "20+ comments before any actual work"
-is imagery, not data. A cycle-history measurement (comments-per-cycle
-distribution; median; variance; share-of-cycle-time on procedure
-navigation) is queued for cycle 8+ — comparable to cycle 2's F7
-measurement. Until measured, F6's headline claim should be read as a
-strong-prior hypothesis, not a load-bearing finding.
+**Evidence caveat**: F6 evidence is impressionistic. "20+ comments
+before any actual work" is imagery, not data. A cycle-history
+measurement (comments-per-cycle distribution; median; variance;
+share-of-cycle-time on procedure navigation) is queued — comparable
+to cycle 2's F7 measurement. Until measured, F6's headline claim
+should be read as a strong-prior hypothesis, not a load-bearing
+finding.
 
 ### Self-management dominance over schema work (F7) — *Procedure / review overhead family*
 
@@ -514,17 +510,16 @@ parallel-implementation gap (cycle-runner fixed, cycle-start not fixed)
 indicates the system has multiple tools doing the same job in slightly
 different ways, with tests against one and not the other.
 
-**Prescription qualification (cycle 7 per Copilot feedback PR #2749 lens 5.B)**:
-"v2 should have fewer tools doing each job" generalizes from the
-cycle-524 cascade case to a system-level design principle. The
-cycle-524 case demonstrates the cascade *mechanism*; whether
-parallel-implementation duplication is widespread enough across v1 to
-merit a system-level "fewer tools per job" principle requires a
-duplication-rate measurement that has not been done. F12 sub-(c)
-(checklist + prompt + ADR rationales) is queued for cycle 7+ work
-and would partially address this. Until measured, the prescription
-should be read as "the cycle-524 case argues for fewer tools per job;
-whether v1 has the broader pathology is open."
+**Prescription qualification**: "v2 should have fewer tools doing
+each job" generalizes from the cycle-524 cascade case to a
+system-level design principle. The cycle-524 case demonstrates the
+cascade *mechanism*; whether parallel-implementation duplication is
+widespread enough across v1 to merit a system-level "fewer tools per
+job" principle requires a duplication-rate measurement that has not
+been done. F12 sub-(c) (checklist + prompt + ADR rationales) is
+queued and would partially address this. Until measured, the
+prescription should be read as "the cycle-524 case argues for fewer
+tools per job; whether v1 has the broader pathology is open."
 
 The narrower hypothesis (the cycle-524 mechanism is real and v2 should
 not replicate it) is well-supported. The broader prescription depends
@@ -551,10 +546,9 @@ operates on a one-cycle window. Findings recur because *that* combination
 is constant across cycles, not because the model is. The
 review-and-disposition loop generates work proportional to itself.
 
-**Compute-claim qualification (cycle 7 per Copilot feedback PR #2749 lens 5.C)**:
-The previous wording ("in steady state most cycle compute is spent on
-the loop's own outputs") asserts a stronger claim than F7's PR-mix
-measurement directly supports. F7 shows zero schema-source PRs across
+**Compute-claim qualification**: The "in steady state most cycle
+compute is spent on the loop's own outputs" framing asserts a
+stronger claim than F7's PR-mix measurement directly supports. F7 shows zero schema-source PRs across
 46 cycles, which is consistent with most-cycle-compute-on-self-management
 but does not directly measure compute attribution. The compute-attribution
 measurement is itself queued for Phase 2 (per the success-criteria
@@ -625,10 +619,10 @@ framing is wrong; "co-located peer with broader read scope" is right.
 The peer relationship is not the bug; expecting model-perspective
 diversity from a same-class peer is the bug.
 
-**Generalization caveat (cycle 7 per Copilot feedback PR #2749 lens 5.D)**:
-The corrective-hypothesis is well-supported by the specific
-case-evidence (audit's #439/#437/#427/#442). It is *not* yet a stable
-general law about audit-as-peer relationships across all such pairings.
+**Generalization caveat**: The corrective-hypothesis is well-supported
+by the specific case-evidence (audit's #439/#437/#427/#442). It is
+*not* yet a stable general law about audit-as-peer relationships
+across all such pairings.
 The narrower claim — "the cycle-1 framing of audit's value was wrong;
 the correction is broader-read-scope vs different-model-perspective" —
 holds. The broader claim — "any same-model audit-as-peer relationship
@@ -720,8 +714,7 @@ state mutations tagged with `[cycle N]` for cycles 543, 544, 545:
 - **Architectural implication**. *Several v1 defenses are implemented as
   end-of-cycle or next-cycle refreshers. Because artifacts freeze before
   those refreshers finish, the architecture guarantees post-close
-  divergence between frozen artifacts and live state.* (Cycle 7 cleaner
-  formulation per Copilot feedback PR #2749 lens 2.) The named tools
+  divergence between frozen artifacts and live state.* The named tools
   above (`verify-review-events`, `metric-snapshot`, `pipeline-check`'s
   C5.5 write, `record-dispatch` on post-close dispatches) are the
   refreshers; the C5 worklog freeze is the artifact frozen before they
@@ -745,8 +738,7 @@ state mutations tagged with `[cycle N]` for cycles 543, 544, 545:
   reflex (encode-the-failure-into-the-system) produces all of them. v2
   must address each at its own substrate, not assume that fixing the
   freeze-vs-refresh timing problem (F11/F4) automatically resolves the
-  prompt-layer (F1) or state-shape (F5) problems (cycle 8 correction
-  per `_notes/cycle-8-adversarial-reread.md` check 2).
+  prompt-layer (F1) or state-shape (F5) problems.
 
 **Hypothesis**: v1 inherited cycle-as-hard-boundary from the trigger model
 (cron creates issue, workflow fires, session ends, issue closes). The
@@ -862,9 +854,8 @@ Audit side (per audit #442's self-disclosure):
   Opus 4.7 period
 
 **Hypothesis**: each defense was added because something failed.
-**The catalog proves accumulation; it does not prove load-bearingness**
-(cycle 7 qualification per Copilot feedback PR #2749 lens 5.E). The
-only way to verify a defense is currently load-bearing is to test
+**The catalog proves accumulation; it does not prove load-bearingness.**
+The only way to verify a defense is currently load-bearing is to test
 removal — which would require a v1 controlled experiment that has
 not been done. Some defenses may be stale, ceremonial, or dead
 residue that no longer prevents anything because the original
@@ -919,37 +910,23 @@ catalog completion if the load-bearing inputs are in place.
 
 ## Cross-family notes and v2 design implications
 
-The "Failure families" preamble and per-section family annotations
-introduce the families and place each F-pattern. This section adds
-only what those don't already carry: cross-family placement notes for
-the dual-membered patterns, and the v2 design implications that
-follow from each family's mechanism. (Cycle 8 condensation per
-`_notes/cycle-8-adversarial-reread.md` check 1: prior version
-duplicated F-section evidence rather than synthesizing across them.)
+Two cross-family observations not carried by the family preamble or
+F-section annotations, plus the v2 design implications collected per
+family.
 
-**F5 dual membership.** F5 sits at the intersection of defense
-accretion (defense fields are the storage stage) and reconciliation
-asymmetry (defense fields are write-mostly state). Both readings
-are correct; neither reduces the other. Cycle 7 stops trying to
-choose between them.
+**F8 placement.** F8's primary failure mode is parallel-implementation
+duplication (`cycle-runner` was fixed; `cycle-start::gather_pipeline_status`
+was not), not write-mostly state. The "fewer tools doing each job"
+prescription stands independently of the reconciliation-asymmetry root.
 
-**F8 placement.** F8 is in the tooling-fragility family, not adjacent
-to reconciliation asymmetry. Cycle 4's adversarial re-read
-(`_notes/cycle-4-adversarial-reread.md`) found F8's primary failure
-mode is parallel-implementation duplication (`cycle-runner` was
-fixed, `cycle-start::gather_pipeline_status` was not). F8's main
-implication ("fewer tools doing each job") stands independently of
-the reconciliation-asymmetry root.
-
-**F1/F12/F5 are sibling manifestations of defense accretion, not
-upstream stages of any single mechanism.** Each substrate has its own
-local mechanism: F1 is response-shape (constraints-instead-of-tools),
-F12 is unbounded-accumulation-without-removal-tests, F5 is
-write-mostly-state-fields-without-reconciliation. The freeze-vs-refresh
-formulation is F11's local mechanism. v2 must address each at its own
-substrate; fixing the freeze-vs-refresh timing problem (F11/F4) does
-not automatically resolve the prompt-layer (F1) or state-shape (F5)
-problems. (Cycle 8 correction per check 2.)
+**Defense accretion appears at four substrates.** F1 (response-shape:
+constraints-instead-of-tools), F12 (cross-substrate accumulation
+without removal-tests), F5 (write-mostly state fields without
+reconciliation), and F11 (temporal: refreshers running after artifacts
+freeze) are sibling manifestations of the same family. Each has its
+own local mechanism (substrate-by-substrate breakdown in the F11
+section). v2 must address each at its own substrate; fixing one
+substrate does not automatically resolve the others.
 
 ### v2 design implications
 
@@ -962,8 +939,7 @@ problems. (Cycle 8 correction per check 2.)
 > hard-boundaries that freeze worklogs and leave defense refreshers
 > stranded post-close. Defenses themselves should be re-examined for
 > load-bearingness; the catalog proves accumulation, not that each
-> defense is currently load-bearing (cycle 7 qualification per
-> Copilot lens 5.E).
+> defense is currently load-bearing.
 
 > **Procedure / review overhead implication (F6/F7/F9).** Procedural
 > depth and review-disposition loops generate work proportional to
@@ -1175,9 +1151,8 @@ Working hypothesis on success criteria — sharpen across cycles.
   `_notes/cycle-2-measurements.md`). The v2 success criterion should
   be a meaningful positive rate. The retrospective previously named
   "≥1 substantive schema-source PR merged per ≤5 cycles" as a
-  starting target. **Cycle 7 demotes this to a smell test, not a
-  success criterion** (per Copilot feedback PR #2749 lens 3.C).
-  The threshold has bidirectional failure modes: it is gameable
+  starting target. **Demoted to a smell test, not a success
+  criterion.** The threshold has bidirectional failure modes: it is gameable
   upward (trivial PRs can satisfy a pure count; pairing with a
   quality criterion only partially helps), and it is impossible
   downward as backlog sparses (schema-org has ~800 finite types;
@@ -1196,8 +1171,7 @@ Working hypothesis on success criteria — sharpen across cycles.
   Phase 2 must specify the mechanism before this measure is
   load-bearing.
 
-  Cycle 7 also adopts Copilot lens 3.B/E candidate measures as
-  candidate v2 success-measure shapes (Phase 2 picks; threshold
+  Candidate v2 success-measure shapes (Phase 2 picks; threshold
   design is Phase 2 work):
     - Number of mutable state concepts that require explicit
       reconciliation logic (vs. write-only logic).
@@ -1239,21 +1213,19 @@ Working hypothesis on success criteria — sharpen across cycles.
   is good") that look measurable but actually conflate signal with
   artifact-quality.
 
-- **Prompt-evolution governance** (cycle 7 placeholder per Copilot
-  feedback PR #2749 lens 6.E — Phase 2 design work). F1 names prompt
-  accretion as a failure pattern; v2 must address how the prompt
-  itself changes over time. Open design questions for Phase 2: who
-  authorizes prompt changes; how regressions are detected; how v2
-  avoids becoming v1 again after enough cycles. Currently a placeholder;
-  the v2 design must answer.
+- **Prompt-evolution governance** (placeholder; Phase 2 design work).
+  F1 names prompt accretion as a failure pattern; v2 must address
+  how the prompt itself changes over time. Open design questions for
+  Phase 2: who authorizes prompt changes; how regressions are
+  detected; how v2 avoids becoming v1 again after enough cycles.
+  Currently a placeholder; the v2 design must answer.
 
-- **Stance on human intervention** (cycle 7 placeholder per Copilot
-  feedback PR #2749 lens 6.C — Phase 2 design work). F2 and the
-  redesign-mode prompt's foreground-Eva preservation imply v2 has a
-  stance, but the stance is not articulated. Open design questions:
-  when human intervention is supposed to be required in healthy
-  steady state; how quickly it should be surfaced; what kinds of
-  decisions should never be left to autonomous drift. Currently a
+- **Stance on human intervention** (placeholder; Phase 2 design work).
+  F2 and the redesign-mode prompt's foreground-Eva preservation imply
+  v2 has a stance, but the stance is not articulated. Open design
+  questions: when human intervention is supposed to be required in
+  healthy steady state; how quickly it should be surfaced; what kinds
+  of decisions should never be left to autonomous drift. Currently a
   placeholder; Phase 2 must articulate.
 
 - **Other v2 measure-shapes deferred to cycle 8+**. Impact ranking
