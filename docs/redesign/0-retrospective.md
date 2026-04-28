@@ -19,10 +19,27 @@ claims legible to readers without v1 context. Full legibility sweep
 (replacing jargon with prose throughout) is queued for cycle 8+.
 
 - **C-stages (C1–C8, C5.5)** — close-out checklist roots in
-  `COMPLETION_CHECKLIST.xml`. C5 is "freeze the worklog," C5.5 is the
-  late-stage post-close validation gate added after F4 surfaced (it
-  validates the close-out happened correctly), C6 is "dispatch the
-  review," C8 is "write the journal entry."
+  `COMPLETION_CHECKLIST.xml`. C5 is "freeze the worklog," C5.5 is a
+  validation gate that runs at close-out and verifies the C5 freeze
+  produced a coherent worklog (it was added late in v1's lifecycle as
+  a check-after-the-fact mechanism), C6 is "dispatch the review,"
+  C8 is "write the journal entry."
+- **Worklog** — per-cycle artifact at `docs/worklog/YYYY-MM-DD/cycle-N.md`
+  recording the cycle's actions, dispatches, merges, and pipeline state.
+  Frozen at C5 from C5.5 gate state. Central to F4 (frozen-artifact
+  lifecycle) and F11 (cycle closure as artificial completion).
+- **Review agent** — per-cycle Copilot dispatch (gpt-5.x-class) that
+  reviews the prior cycle's artifacts and posts findings as a PR. The
+  orchestrator dispositions findings on the next cycle. Central to F9
+  (adversarial-review-and-disposition treadmill).
+- **Step comments** — comments posted to the cycle issue announcing each
+  judgment step the orchestrator takes during a cycle. The v1 prompt's
+  `step-commenting` directive mandates a separate comment per judgment
+  step. Central to F6 (procedural depth).
+- **Pipeline-check** — Rust tool at `tools/rust/crates/pipeline-check/`
+  with ~36 sub-checks (30 logical after collapsing date variants), most
+  of them defense-flavored per F12 sub-(b). The C5.5 gate runs
+  pipeline-check.
 - **Recurrence escalation** — a citation pattern in v1 prompt/checklist
   constraint blocks recording that the constraint *did not prevent* a
   later occurrence of the same failure. E.g.
@@ -45,9 +62,10 @@ claims legible to readers without v1 context. Full legibility sweep
   Both run Claude Opus 4.7. The audit repo's read scope is broader
   (cross-cycle, cross-repo); its model class is the same as the main
   orchestrator's.
-- **F-pattern** — one of the 12 named failure patterns cataloged below
-  (F1 through F12). They are not equally independent; cycle 7's
-  failure-family preamble groups them.
+- **F-pattern** — a named failure mode in v1's behavior, with cycle
+  citations and a hypothesis about its root cause. Twelve are
+  cataloged below (F1–F12); the failure-families preamble groups them
+  into four families since they are not equally independent.
 
 ---
 
@@ -711,11 +729,24 @@ state mutations tagged with `[cycle N]` for cycles 543, 544, 545:
   state surfaces that diverge. F11 is the *temporal* face of the
   defense-accretion family: defenses fire on cycle-boundary triggers,
   the worklog freezes before those triggers, no reconciliation tool
-  reads the post-trigger state back into the frozen worklog. F1's
-  constraint-accretion (the prompt-layer face) and F12's cross-substrate
-  defense catalog (the meta face) sit upstream of this temporal
-  manifestation: F1 produces defenses; F12 catalogs them; F5 stores them
-  as state; F11 is when the freeze-vs-refresh timing collision occurs.
+  reads the post-trigger state back into the frozen worklog.
+
+  F1, F12, and F5 are parallel manifestations of defense accretion at
+  different substrates — F1 names the response-shape pattern (failures
+  encoded as constraints), F12 catalogs the cross-substrate
+  accumulation, F5 names the state-shape consequence. They are not
+  upstream stages of the freeze-vs-refresh timing collision specifically;
+  they are sibling manifestations of the same family. The freeze-vs-
+  refresh formulation is F11's local mechanism. F1's local mechanism is
+  *constraints-instead-of-tools-as-first-line-response*; F12's is
+  *unbounded-accumulation-without-removal-tests*; F5's is
+  *write-mostly-state-fields-without-reconciliation*. Each is a different
+  architectural problem; they share the family tag because the same
+  reflex (encode-the-failure-into-the-system) produces all of them. v2
+  must address each at its own substrate, not assume that fixing the
+  freeze-vs-refresh timing problem (F11/F4) automatically resolves the
+  prompt-layer (F1) or state-shape (F5) problems (cycle 8 correction
+  per `_notes/cycle-8-adversarial-reread.md` check 2).
 
 **Hypothesis**: v1 inherited cycle-as-hard-boundary from the trigger model
 (cron creates issue, workflow fires, session ends, issue closes). The
@@ -886,96 +917,41 @@ catalog completion if the load-bearing inputs are in place.
 
 ---
 
-## Reconciliation asymmetry and defense accretion: the families in detail
+## Cross-family notes and v2 design implications
 
-The "Failure families" preamble at the top of this section introduced
-the four families and the two cleanest single-sentence statements
-(reconciliation asymmetry: *create+summarize, no reconcile*;
-defense accretion: *refreshers fire after artifacts freeze*). This
-section gives the evidence for those families consolidated in one
-place; subsequent F-pattern sections give pattern-specific evidence
-without re-deriving the family-level claim.
+The "Failure families" preamble and per-section family annotations
+introduce the families and place each F-pattern. This section adds
+only what those don't already carry: cross-family placement notes for
+the dual-membered patterns, and the v2 design implications that
+follow from each family's mechanism. (Cycle 8 condensation per
+`_notes/cycle-8-adversarial-reread.md` check 1: prior version
+duplicated F-section evidence rather than synthesizing across them.)
 
-**Reconciliation asymmetry / write-mostly state.** Outbound channels
-have well-developed tools (`question-for-eva` filing, `audit-outbound`
-filing, `dispatch-task`, `record-dispatch`, etc.). Inbound reconciliation
-does not. Once a record is written (an Eva blocker, a multi-candidate
-acceptance, a dispatch ledger, a frozen worklog, a closed cycle), no
-tool reads it back to update its state when subsequent events change
-its meaning. v1 has tools to *create* records and tools to *summarize*
-records; it lacks tools to *reconcile* records against later events.
+**F5 dual membership.** F5 sits at the intersection of defense
+accretion (defense fields are the storage stage) and reconciliation
+asymmetry (defense fields are write-mostly state). Both readings
+are correct; neither reduces the other. Cycle 7 stops trying to
+choose between them.
 
-Family members and their substrate-specific manifestations:
-
-- **F2** — Eva-response detection: outbound (filing question-for-eva)
-  is well-toolified; inbound (Eva replies) has no tool path. Eva's
-  6-day batch response went unread.
-- **F3** — Multi-candidate state drift: cycle 532 dispatched candidate
-  (b) of {a, b, c}; (a) and (c) were never explicitly decided on; the
-  state ledger entry still reads "(not yet dispatched)" for all three
-  because nothing reconciles candidate state against subsequent
-  dispatch events.
-- **F4** — Frozen-artifact lifecycle: the C5 worklog freeze captures
-  one moment in cycle state; subsequent state mutations make the
-  frozen worklog arithmetically inaccurate; nothing reads the post-C5
-  state back into the freeze.
-- **F11** — Cycle closure as artificial boundary: the F4 case made
-  explicit at scale via cycle 5's measurement (`_notes/cycle-5-f11-post-close-measurement.md`).
-  4.3 post-close state mutations per cycle on average; 5 distinct
-  fields routinely mutated post-close; 0 of 5 reconciled in the
-  frozen worklog.
-
-**Defense accretion.** *Several v1 defenses are implemented as
-end-of-cycle or next-cycle refreshers. Because artifacts freeze before
-those refreshers finish, the architecture guarantees post-close
-divergence between frozen artifacts and live state.* (Cycle 7 cleaner
-formulation per Copilot feedback PR #2749.) Defenses also accumulate
-across substrates: prompts (F1), state shape (F5), pipeline-checks
-(F12 sub-(b)), and post-close timing (F11). Cycle 5's state.json
-catalog (`_notes/cycle-5-state-categorization.md`) shows 62-69%
-defense-character at the state-shape level; cycle 6's pipeline-check
-catalog (`_notes/cycle-6-pipeline-check-categorization.md`) shows 83%
-defense-character at the pipeline-check level.
-
-The freeze-vs-refresh timing collision is the mechanism that binds
-the two families. Cycle 6's mechanism check
-(`_notes/cycle-6-mechanism-sharpening.md`) names the specific tools:
-`verify-review-events` writes `review_events_verified_through_cycle`
-9-11 minutes post-close (3 of 3 cycles); `metric-snapshot` writes
-`field_inventory.fields.*` 0-3 minutes post-close (2 of 3 cycles);
-`pipeline-check` writes `tool_pipeline.c5_5_gate` as the close-out
-trigger by construction; `record-dispatch` writes `agent_sessions`
-when post-close dispatches happen (2 of 3 cycles). Each is a
-defense-refresh tool whose trigger is a cycle-boundary event; the C5
-worklog freeze precedes the triggers; no tool reconciles the
-post-trigger state into the freeze.
-
-The count-overlap evidence (4 of 5 or 5 of 5 post-close-mutated
-fields are F12-cataloged defenses) is consistent with the 62-69%
-base rate of defense-shaped fields under random sampling. The count
-alone does not establish the mechanism. The named tool→field→trigger
-chain does; the count then confirms that no post-close-mutated field
-turned out to be an intrinsic-domain primitive (a counterexample
-would have weakened the claim; none was found).
-
-**F5 sits at the intersection.** The state-shape catalog supports both
-readings: defense fields ARE write-mostly state (reconciliation
-asymmetry); defense fields ARE the storage stage of defense accretion.
-Both are correct; neither reduces the other. Cycle 7 stops trying
-to choose between them.
-
-**F8 is in a different family** (tooling fragility — see "Failure
-families" preamble). Cycle 4's adversarial re-read
+**F8 placement.** F8 is in the tooling-fragility family, not adjacent
+to reconciliation asymmetry. Cycle 4's adversarial re-read
 (`_notes/cycle-4-adversarial-reread.md`) found F8's primary failure
 mode is parallel-implementation duplication (`cycle-runner` was
-fixed, `cycle-start::gather_pipeline_status` was not). The
-"asymmetric-fix-propagation" framing applies only as a secondary
-reading. F8's main implication ("fewer tools doing each job") stands
-independently of the reconciliation-asymmetry root and is now
-correctly placed in its own family.
+fixed, `cycle-start::gather_pipeline_status` was not). F8's main
+implication ("fewer tools doing each job") stands independently of
+the reconciliation-asymmetry root.
 
-The unification matters because v2's design implications converge on
-two tool-shapes:
+**F1/F12/F5 are sibling manifestations of defense accretion, not
+upstream stages of any single mechanism.** Each substrate has its own
+local mechanism: F1 is response-shape (constraints-instead-of-tools),
+F12 is unbounded-accumulation-without-removal-tests, F5 is
+write-mostly-state-fields-without-reconciliation. The freeze-vs-refresh
+formulation is F11's local mechanism. v2 must address each at its own
+substrate; fixing the freeze-vs-refresh timing problem (F11/F4) does
+not automatically resolve the prompt-layer (F1) or state-shape (F5)
+problems. (Cycle 8 correction per check 2.)
+
+### v2 design implications
 
 > **Reconciliation asymmetry implication.** Every state field needs
 > a write-tool AND a reconciliation-tool. Every channel needs a
@@ -989,12 +965,21 @@ two tool-shapes:
 > defense is currently load-bearing (cycle 7 qualification per
 > Copilot lens 5.E).
 
+> **Procedure / review overhead implication (F6/F7/F9).** Procedural
+> depth and review-disposition loops generate work proportional to
+> themselves. v2's procedural skeleton should be small (a few
+> essential checkpoints) and the orchestrator's compute should land
+> on novel circumstances, not on procedure navigation.
+
+> **Tooling fragility implication (F8).** Avoid parallel
+> implementations of the same job. When the cycle-524 cascade
+> happens, fixing one path while leaving the parallel path broken
+> turns one bug into multiple cycles of abandonment.
+
 A v2 that adds polling to one channel but not another, or
 reconciliation to one state field but not another, inherits v1's
 failure mode in miniature. The asymmetry is the bug, not any specific
-channel's missing poller. The cycle 2 success-criterion section
-already named this for the F2 case; F11 makes clear it's a
-system-wide property, not a single-channel fix.
+channel's missing poller.
 
 ---
 
@@ -1056,11 +1041,8 @@ what failure mode the same surface still has.
   the notes-vs-deliverable distinction separates half-formed thoughts
   from the artifact; per-cycle file naming makes cross-cycle reference
   cheap. *Caveat*: cycle 7 has 10 notes files; the index pattern works
-  at this scale but has not been exercised at larger scale. *Note*:
-  observations about "emergent behavior" or "process maturity" are
-  process commentary and belong in the README iteration log, not in
-  this section (cycle 7 sweep per Copilot feedback PR #2749 lens 4.A).
-  v2's persistence layer should generalize this pattern (for cycle
+  at this scale but has not been exercised at larger scale. v2's
+  persistence layer should generalize this pattern (for cycle
   observations that don't yet warrant a journal entry, half-formed
   dispatch ideas, design alternatives under consideration), with
   explicit attention to the scale-failure mode.
