@@ -123,16 +123,13 @@ high" bar.
   partly tongue-in-cheek; treat architectural claims on their own
   merit, not on project gravitas.
 
-**Provisional patterns to track.**
-- Small-core / plugin-extensible architecture as a redesign-relevant
-  shape (aligns with our CORE-DESIGN-PRINCIPLE that the prompt
-  should be small and tools should be substantial)
-- "What We Will Not Merge" as a guardrail mechanism in the
-  deliverable itself
-- Memory-as-singleton-plugin-slot as a way to constrain persistence
-  mechanism complexity (one active mechanism, replaceable, not
-  layered)
-- Strong-defaults-with-operator-knobs as a security posture pattern
+**Patterns observed in openclaw** (relevance evaluation deferred to
+cross-system synthesis, gated on multi-system reading):
+- Small-core architecture with plugin-extensible capability
+- Anti-pattern list ("What We Will Not Merge") as a deliverable artifact
+- Memory as a singleton plugin slot (one active mechanism, replaceable,
+  not layered)
+- Strong-defaults-with-operator-knobs security posture
 
 ### PAI (danielmiessler/Personal_AI_Infrastructure, 12k★ / 1.6k forks / TypeScript)
 
@@ -206,16 +203,16 @@ implementation detail.
   detail will be in deeper docs and code; the README is the
   starting point, not the substance.
 
-**Provisional patterns to track.**
-- Principle-list as a deliverable artifact (PAI's deliverable
-  prominently includes its 16 principles; v2 could similarly
-  publish its design principles as load-bearing documentation)
-- The Goal → Code → CLI → Prompts → Agents hierarchy as a
-  decision tool for "where does this behavior live"
-- Closed feedback loop (Observe→...→Learn→Improve) as an
-  architectural commitment, not just an aspiration
-- "Permission to Fail" / explicit "I don't know" as a hallucination
-  countermeasure — relevant to v2's posture on uncertainty
+**Patterns observed in PAI** (relevance evaluation deferred to
+cross-system synthesis, gated on multi-system reading):
+- Principle-list published as part of the deliverable (16 named
+  principles included in PAI's README)
+- Decision hierarchy "Goal → Code → CLI → Prompts → Agents" for
+  where capability lives
+- Closed feedback loop (Observe→Think→Plan→Execute→Verify→Learn→Improve)
+  with explicit Learn → Improve closure
+- Explicit "I don't know" as a sanctioned response (PAI's Principle 16,
+  "Permission to Fail")
 
 ## Cross-system observations (preliminary)
 
