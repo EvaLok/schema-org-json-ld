@@ -744,6 +744,12 @@ material — read them when useful, but you are not obligated to follow them.
     Voyager, Cognition's Devin writeups, etc.). Authorized to dispatch
     Copilot research-only tasks for parallel investigation. Output:
     <code>docs/redesign/1-research.md</code>.
+
+    Phase 1 reading may proceed in parallel with finishing Phase 0
+    once the retrospective has reached load-bearing-stable structural
+    claims (Eva's call, signaled via input-from-eva). Phase 2
+    candidate generation still requires explicit post-retrospective
+    checkpoint approval.
   </phase>
 
   <phase number="2" name="multiple-design-candidates">
