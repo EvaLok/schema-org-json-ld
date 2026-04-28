@@ -221,7 +221,7 @@ There is a clear state/context distinction:
 - Team message thread is coordination state.
 - Runtime identity/lifecycle maps messages to agent instances.
 
-The docs do not present a single global state file as the center of the system. State is component- local and serialized through component APIs.
+The docs do not present a single global state file as the center of the system. State is component-local and serialized through component APIs.
 
 ## 3. Orchestration / planning patterns
 
@@ -380,7 +380,7 @@ Core's tool docs define tools as executable code:
 
 They connect tools to model-generated function calls:
 
-> "In the context of AI agents, tools are designed to be executed by agents in response to model- generated function calls." (`tools.ipynb`)
+> "In the context of AI agents, tools are designed to be executed by agents in response to model-generated function calls." (`tools.ipynb`)
 
 Function tools are schema-driven:
 
@@ -507,14 +507,14 @@ Then:
 
 > "Therefore, in v0.4, we do not provide a built-in function for sequential chat in the AgentChat API." (`migration-guide.md`)
 
-This is an explicit design choice: use basic Python or Core workflows rather than a too-rigid high- level helper.
+This is an explicit design choice: use basic Python or Core workflows rather than a too-rigid high-level helper.
 
 Eighth: distributed/lifecycle docs contain aspirational notes. Paging agent instances in/out is named but "not implemented yet". That should prevent a reader
 from crediting AutoGen with full actor-system lifecycle management.
 
-Ninth: external model compatibility is not guaranteed. The migration guide says about OpenAI- compatible APIs:
+Ninth: external model compatibility is not guaranteed. The migration guide says about OpenAI-compatible APIs:
 
-> "We don't test all the OpenAI-Compatible APIs, and many of them works differently from the OpenAI API even though they may claim to suppor it. Please test
+> "We don't test all the OpenAI-Compatible APIs, and many of them works differently from the OpenAI API even though they may claim to suppor [sic] it. Please test
 > them before using them." (`migration-guide.md`)
 
 Tenth: tool and code-execution safety is delegated to the application/runtime operator. Warnings about local execution, trusted MCP servers, containers, human
