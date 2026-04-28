@@ -9,8 +9,10 @@ is authoritative for the work that happens here.
 - **`0-retrospective.md`** — Phase 0 working draft. Honest catalog of v1
   failure patterns. Iterates across many cycles. Required reading before
   designing v2.
-- **`1-research.md`** — Phase 1 (later). External-system study (openclaw,
-  PAI, others).
+- **`1-research.md`** — Phase 1 (in progress, parallel with Phase 0 per
+  [#2759](https://github.com/EvaLok/schema-org-json-ld/issues/2759)).
+  External-system study (PAI, LangGraph, AutoGen, Semantic Kernel, Voyager,
+  Devin, CrewAI; openclaw pending access).
 - **`2-candidates.md` / `2-selection.md`** — Phase 2 (later). At least
   two distinct design candidates with rationale for selection.
 - **`3-experiments/`** — Phase 3 (later). Prototype, experiments,
