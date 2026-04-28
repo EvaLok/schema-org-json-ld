@@ -1,7 +1,20 @@
 ---
 name: orchestrator-prompt-editing
-description: How to modify the orchestrator's system prompt. Use when behavioral issues are identified in journal/review entries, or when the orchestrator's instructions need updating. Requires human oversight — the orchestrator cannot modify its own prompt.
+description: "[STALE — DO NOT USE] Skill is disabled pending refresh. It targets the production prompt path/structure, but redesign mode swapped to a different file with a different structure on 2026-04-27. Edit prompts manually until this skill is updated."
 user-invocable: false
+disabled: true
+---
+
+# [STALE — DO NOT USE] Editing the Orchestrator System Prompt
+
+> **This skill is disabled as of 2026-04-29.** Three known staleness issues:
+>
+> 1. **Wrong file targeted.** Skill assumes `.github/workflows/orchestrator-prompt.xml`, but redesign mode (installed 2026-04-27, commit `06c799cd`) swapped the active prompt to `.github/workflows/orchestrator-redesign-prompt.xml` via `.github/workflows/orchestrator.yml` line 51. Both files exist; only one is active. The skill predates this swap.
+> 2. **Wrong XML structure.** Skill describes the production prompt's 8 sections (`<identity>`, `<directives>`, `<definitions>`, `<environment>`, three `<phase>` sections, `<practices>`). The redesign prompt has a completely different structure: `<critical-context-read-first>`, `<mission>`, `<core-design-principle>`, `<authority>`, `<phases>`, `<checkpoints>`, `<abort-criteria>`, `<initial-directive>`, `<persistence>`, `<iteration-until-approval>`, etc.
+> 3. **"When to edit" framing is production-only.** Skill triggers are all behavioral-correction signals (recurring findings, adoption gaps, data-filtering). Redesign-mode edits are usually design-refinement (phase ordering, checkpoint tweaks, scope clarifications) — different shape entirely.
+>
+> **To make current**: detect which prompt is active (read `.github/workflows/orchestrator.yml` and find the `cat` line); document both prompt structures; add a redesign-mode editing subsection. Until then, edit prompts manually with surgical edits and validate XML afterward.
+
 ---
 
 # Editing the Orchestrator System Prompt
