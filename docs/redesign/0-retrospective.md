@@ -135,15 +135,15 @@ load-bearing claim about how they relate.
 
 | Family | Member patterns | Core mechanism |
 |---|---|---|
-| **Defense accretion** | F1, F5, F12 (with F11 as the temporal stage) | New failures get encoded as new defenses (constraints, state fields, pipeline-checks). Defenses accumulate across substrates. |
-| **Reconciliation asymmetry** (write-mostly state) | F2, F3, F4, F11 (with F5 dual-membered) | Outbound channels and write-tools are well-developed. Inbound reconciliation does not exist. Records are written; nothing reads them back to update meaning when subsequent events change them. |
+| **Defense accretion** | F1, F5†, F12, F11† | New failures get encoded as new defenses (constraints, state fields, pipeline-checks). Defenses accumulate across substrates. |
+| **Reconciliation asymmetry** (write-mostly state) | F2, F3, F4, F5†, F11† | Outbound channels and write-tools are well-developed. Inbound reconciliation does not exist. Records are written; nothing reads them back to update meaning when subsequent events change them. |
 | **Procedure / review overhead** | F6, F7, F9 | Procedural depth, review-and-disposition loops, and the chronic-category mechanism consume cycle compute disproportionate to the value they produce. |
 | **Tooling fragility** | F8 | Multiple tools doing the same job in slightly different ways; one bug cascades across cycles before the parallel path gets fixed. |
 
-F5 and F11 sit at the intersection of two families:
+† Dual-membered. F5 and F11 sit at the intersection of two families; both readings are correct, neither reduces the other:
 - **F5** is both the storage stage of defense accretion (defenses accumulate
   as state fields) and a manifestation of reconciliation asymmetry (write-mostly
-  state shape). Both readings are correct; neither reduces the other.
+  state shape).
 - **F11** is both the temporal stage of defense accretion (defenses fire on
   cycle-boundary triggers, post-close) and a manifestation of reconciliation
   asymmetry (post-close mutations are not reconciled into the frozen worklog).
@@ -724,11 +724,11 @@ state mutations tagged with `[cycle N]` for cycles 543, 544, 545:
   the worklog freezes before those triggers, no reconciliation tool
   reads the post-trigger state back into the frozen worklog.
 
-  F1, F12, F5, and F11 (this section) are parallel manifestations of
-  defense accretion at four substrates — F1 names the response-shape
-  pattern (failures encoded as constraints), F12 catalogs the
-  cross-substrate accumulation, F5 names the state-shape consequence,
-  F11 names the temporal stage. They are not upstream stages of the
+  F1, F12, F5, and F11 are parallel manifestations of defense
+  accretion at four substrates — F1 names the response-shape pattern
+  (failures encoded as constraints), F12 catalogs the cross-substrate
+  accumulation, F5 names the state-shape consequence, and F11 names
+  the temporal stage. They are not upstream stages of the
   freeze-vs-refresh timing collision specifically; they are sibling
   manifestations of the same family. F11's local mechanism is
   *freeze-vs-refresh*; F1's is *constraints-instead-of-tools-as-first-
