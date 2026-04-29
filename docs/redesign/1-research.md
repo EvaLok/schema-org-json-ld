@@ -298,6 +298,18 @@ about prompt injection from web content and risky autonomous actions
 capabilities are exposed, documented as application-operator
 responsibility, not framework guarantee.
 
+**Tool integration model.** Tool calling is schema-driven: the model
+emits a structured tool-call (name + JSON arguments matching the
+declared schema), and the host executes registered code. Agents
+themselves can be exposed as tools via `AgentTool` composition; for
+stateful agent-or-team tools, parallel execution is explicitly
+forbidden ("the same agent or team cannot be used in parallel"). The
+v0.4 migration replaces the v0.2 user-proxy tool-routing path with
+direct tool execution inside `AssistantAgent` ("which is much simpler
+and easier to understand"). Tool errors are reported as result objects
+with `is_error: true` rather than thrown exceptions, keeping error
+shape uniform with success shape.
+
 **Anti-patterns explicit in v0.4 migration guide.** v0.2
 `ConversableAgent.register_reply` callback registration is discouraged
 ("guessing what the reply_func does, all its parameters, and what the
@@ -310,7 +322,12 @@ design, you may want to implement your own agent." Some lifecycle
 features are aspirational, not implemented (agent paging in/out:
 "not implemented yet").
 
-**Anchoring caveats on AutoGen.**
+**Anchoring caveats on AutoGen.** These caveats argue *non-transfer*:
+each names a difference between AutoGen's substrate and the redesign's
+substrate that may discount specific patterns. The reverse — which
+patterns DO transfer despite these differences — is not derivable from
+this list alone. Transferability requires a positive argument per
+pattern, not just absence of a discount-reason in this section.
 - Library/framework vs autonomous orchestrator: AutoGen exposes
   abstractions for application developers to compose; the redesign
   target chooses one behavior contract and lives with it across many
@@ -343,8 +360,10 @@ cross-system synthesis, gated on multi-system reading):
   recommendation in the project README
 - Actor-model framing with runtime-mediated identity
   (`AgentID = (Agent Type, Agent Key)`)
-- Multiple orchestration patterns coexist as first-class (round-robin,
-  selector, swarm, graph, lead-orchestrator)
+- Multiple orchestration patterns coexist as first-class because
+  behavior contracts are expressed as message protocols rather than as
+  a universal orchestrator object (round-robin, selector, swarm, graph,
+  lead-orchestrator)
 - Magentic-One's Task Ledger / Progress Ledger vocabulary for
   lead-orchestrator planning and tracking
 - Stateful-by-default agents and teams with reset/resume distinction
@@ -492,7 +511,15 @@ contains 8 distinct prompt templates: `action_template.txt`,
 task-selection is split across three prompt files for sub-decisions.
 Code handles variable injection; prompts hold instructions.
 
-**Anchoring caveats on Voyager.**
+**Anchoring caveats on Voyager.** These caveats argue *non-transfer*:
+each names a difference between Voyager's substrate and the redesign's
+substrate that may discount specific patterns. The reverse — which
+patterns DO transfer despite these differences — is not derivable from
+this list alone. Transferability requires a positive argument per
+pattern, not just absence of a discount-reason in this section. The
+asymmetry is worth naming because confirmation-bias-on-aligned-
+principles (failure mode #1 in the anchoring discipline section) has a
+counterpart failure mode of over-discounting via blanket caveats.
 - **Continuous-runtime vs cold-cycle.** Voyager runs as a single
   process holding agent state in memory across many tasks; the
   redesign target runs in 75-minute cycles with cold restarts between.
@@ -610,7 +637,7 @@ identifications. Order not yet committed.
 | System | Why relevant | Mechanism | Status |
 |---|---|---|---|
 | AutoGen | Microsoft's multi-agent framework; explicit conversation patterns between agents (relevant to my orchestrator + audit + Copilot setup) | Copilot research-only dispatch | Cycle 15 dispatched (PR #2763); cycle 16 integrated above |
-| LangGraph | Production state-management for agents; explicit graph-based state | Copilot research-only dispatch or orchestrator-direct | Pending |
+| LangGraph | Production state-management for agents; explicit graph-based state | Copilot research-only dispatch or orchestrator-direct | Cycle 18 dispatched (issue [#2767](https://github.com/EvaLok/schema-org-json-ld/issues/2767), gpt-5.5, canonical cycle-15 procedure with anti-smuggling discipline pre-loaded) |
 | Voyager | Long-running self-improving Minecraft agent; skill library accumulation | Orchestrator-direct (the paper is short) | Cycle 17 read above (orchestrator-direct, abstract + code) |
 | Cognition Devin writeups | Autonomous coding agent; production deployment patterns | Orchestrator-direct (blog posts, not a repo) | Pending |
 | Semantic Kernel | Microsoft's agent SDK; planner/skills split | Copilot research-only dispatch (lower priority) | Pending |
@@ -641,17 +668,28 @@ detected; cycle-16 count claims '16 / 38' actual is '15 / 43', minor
 self-reporting discrepancy noted). LangGraph is the next dispatch
 candidate (state-management focus, Copilot research-only).
 
-Cycle 18+: dispatch options, in approximate priority order
+Cycle 18 (2026-04-29): Cold-readers on Voyager Patterns observed list
+(PASS with two minor flags — bullets 15/16 contain post-prose specs;
+three prose observations not elevated) and on Voyager anchoring caveats
+(PASS with one substantive finding — caveats are one-directional,
+several over-discount transferable patterns; preamble paragraph added
+to BOTH AutoGen and Voyager anchoring-caveats sections naming the
+asymmetry). Optional cycle-17 flags 5/6 applied: AutoGen Tool
+integration model paragraph added (~10 lines); AutoGen nav-bullet-4
+enriched with behavior-contracts-as-message-protocols framing (~1
+sentence). LangGraph dispatched (issue [#2767](https://github.com/EvaLok/schema-org-json-ld/issues/2767),
+gpt-5.5, canonical cycle-15 procedure). Tier-2 group 3 explicitly
+scoped for cycle 19+ execution (sixth-defer-without-scoping was the
+failure mode declined this cycle).
+
+Cycle 19+: dispatch options, in approximate priority order
 (adjustable by cycle's actual capacity):
-1. Copilot research-only on LangGraph (state-management focus —
-   strongest candidate after Voyager since AutoGen's state-management
-   was light and LangGraph centers it).
-2. Cognition Devin writeups (orchestrator-direct; closest analog to v2's
+1. Cognition Devin writeups (orchestrator-direct; closest analog to v2's
    "AI does software-engineering work autonomously" target).
-3. Semantic Kernel (lower priority; Copilot research-only or
+2. Semantic Kernel (lower priority; Copilot research-only or
    orchestrator-direct).
-4. Anthropic engineering posts (orchestrator-direct).
-5. Deeper second-pass orchestrator-direct on openclaw and PAI (cycle 16
+3. Anthropic engineering posts (orchestrator-direct).
+4. Deeper second-pass orchestrator-direct on openclaw and PAI (cycle 16
    noted that the deliverable-size asymmetry biases cross-system
    synthesis toward the system with the richest evidence base; bringing
    openclaw and PAI to closer parity with AutoGen's deep-dive depth is
@@ -687,7 +725,7 @@ each cycle's Phase 1 work gets a `_notes/cycle-N-*.md` file, and the
 README iteration log (when cycle 15+ updates that section) tracks
 Phase 1 cycle progression alongside Phase 0.
 
-Cycle-N-pre-commits-cycle-N+1-checks chain (twelve cycles deep as of
-cycle 17) extends to Phase 1: each cycle's Phase-1 notes file
+Cycle-N-pre-commits-cycle-N+1-checks chain (thirteen cycles deep as of
+cycle 18) extends to Phase 1: each cycle's Phase-1 notes file
 pre-commits adversarial-on-adversarial checks for the next cycle, same
 discipline as Phase 0 has used since cycle 7.
